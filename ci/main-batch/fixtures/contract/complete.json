@@ -1,0 +1,273 @@
+{
+  "schema": "openwiz.ci-main-batch.v1",
+  "batch": {
+    "repository": "synthetic/ci-example",
+    "base": "1111111111111111111111111111111111111111",
+    "head": "3333333333333333333333333333333333333333",
+    "members": [
+      {
+        "pull_request": 9001,
+        "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "merge": "2222222222222222222222222222222222222222",
+        "parent": "1111111111111111111111111111111111111111"
+      },
+      {
+        "pull_request": 9002,
+        "head": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "merge": "3333333333333333333333333333333333333333",
+        "parent": "2222222222222222222222222222222222222222"
+      }
+    ]
+  },
+  "execution": {
+    "id": 9000100,
+    "attempt": 1,
+    "event": "push",
+    "workflow": ".github/workflows/ci.yml",
+    "event_base": "1111111111111111111111111111111111111111"
+  },
+  "plan": "{\n  \"schema\": \"openwiz.ci-selection.v1\",\n  \"run\": {\n    \"id\": 9000100,\n    \"attempt\": 1,\n    \"event\": \"push\",\n    \"action\": null,\n    \"base_branch\": \"main\",\n    \"base\": \"1111111111111111111111111111111111111111\",\n    \"head\": \"3333333333333333333333333333333333333333\",\n    \"pull_request\": null\n  },\n  \"diff\": {\n    \"state\": \"not_read\"\n  },\n  \"selection\": {\n    \"mode\": \"full\",\n    \"reasons\": [\n      {\n        \"code\": \"push_main\"\n      }\n    ]\n  },\n  \"builds\": {\n    \"web_export\": {\n      \"decision\": \"run\"\n    }\n  },\n  \"lanes\": {\n    \"always\": {\n      \"decision\": \"run\",\n      \"tests\": [\n        \"always:fmt\",\n        \"always:classifier\",\n        \"always:selector\",\n        \"always:checks\"\n      ],\n      \"skipped\": []\n    },\n    \"rust\": {\n      \"decision\": \"run\",\n      \"tests\": [\n        \"rust:lib:openwiz-core\",\n        \"rust:lib:openwiz-server\",\n        \"rust:test:checks\",\n        \"rust:test:messaging\",\n        \"rust:test:web-api\"\n      ],\n      \"skipped\": []\n    },\n    \"web\": {\n      \"decision\": \"run\",\n      \"tests\": [\n        \"web:unit:api\",\n        \"web:unit:poller\",\n        \"web:browser:v1-faithful\",\n        \"web:browser:v7-soak\"\n      ],\n      \"skipped\": []\n    },\n    \"site\": {\n      \"decision\": \"run\",\n      \"tests\": [\n        \"site:build\",\n        \"site:test\",\n        \"release:package\",\n        \"release:ci2-batch-contract\"\n      ],\n      \"skipped\": []\n    },\n    \"skills\": [\n      {\n        \"skill\": \"launch-fleet\",\n        \"decision\": \"run\",\n        \"tests\": [\n          \"skill:launch-fleet\"\n        ],\n        \"skipped\": []\n      },\n      {\n        \"skill\": \"plan-graph\",\n        \"decision\": \"run\",\n        \"tests\": [\n          \"skill:plan-graph:revision\",\n          \"skill:plan-graph:approval\"\n        ],\n        \"skipped\": []\n      },\n      {\n        \"skill\": \"triage\",\n        \"decision\": \"run\",\n        \"tests\": [\n          \"skill:triage\"\n        ],\n        \"skipped\": []\n      }\n    ]\n  },\n  \"store\": {\n    \"artifact\": \"ci-selection-1\",\n    \"file\": \"ci-selection.json\"\n  }\n}\n",
+  "receipts": [
+    {
+      "lane": "always",
+      "tests": [
+        "always:fmt",
+        "always:classifier",
+        "always:selector",
+        "always:checks"
+      ],
+      "plan_sha256": "52a8c9b27ccf6a56a44bb15dd743c0cd6cf4262c12c038d9b39bb6f66f8ffcd5",
+      "run": {
+        "id": 9000100,
+        "attempt": 1,
+        "event": "push",
+        "action": null,
+        "base_branch": "main",
+        "base": "1111111111111111111111111111111111111111",
+        "head": "3333333333333333333333333333333333333333",
+        "pull_request": null
+      }
+    },
+    {
+      "lane": "rust",
+      "tests": [
+        "rust:lib:openwiz-core",
+        "rust:lib:openwiz-server",
+        "rust:test:checks",
+        "rust:test:messaging",
+        "rust:test:web-api"
+      ],
+      "plan_sha256": "52a8c9b27ccf6a56a44bb15dd743c0cd6cf4262c12c038d9b39bb6f66f8ffcd5",
+      "run": {
+        "id": 9000100,
+        "attempt": 1,
+        "event": "push",
+        "action": null,
+        "base_branch": "main",
+        "base": "1111111111111111111111111111111111111111",
+        "head": "3333333333333333333333333333333333333333",
+        "pull_request": null
+      }
+    },
+    {
+      "lane": "web",
+      "tests": [
+        "web:unit:api",
+        "web:unit:poller",
+        "web:browser:v1-faithful",
+        "web:browser:v7-soak"
+      ],
+      "plan_sha256": "52a8c9b27ccf6a56a44bb15dd743c0cd6cf4262c12c038d9b39bb6f66f8ffcd5",
+      "run": {
+        "id": 9000100,
+        "attempt": 1,
+        "event": "push",
+        "action": null,
+        "base_branch": "main",
+        "base": "1111111111111111111111111111111111111111",
+        "head": "3333333333333333333333333333333333333333",
+        "pull_request": null
+      }
+    },
+    {
+      "lane": "site",
+      "tests": [
+        "site:build",
+        "site:test"
+      ],
+      "plan_sha256": "52a8c9b27ccf6a56a44bb15dd743c0cd6cf4262c12c038d9b39bb6f66f8ffcd5",
+      "run": {
+        "id": 9000100,
+        "attempt": 1,
+        "event": "push",
+        "action": null,
+        "base_branch": "main",
+        "base": "1111111111111111111111111111111111111111",
+        "head": "3333333333333333333333333333333333333333",
+        "pull_request": null
+      }
+    },
+    {
+      "lane": "release",
+      "tests": [
+        "release:package",
+        "release:ci2-batch-contract"
+      ],
+      "plan_sha256": "52a8c9b27ccf6a56a44bb15dd743c0cd6cf4262c12c038d9b39bb6f66f8ffcd5",
+      "run": {
+        "id": 9000100,
+        "attempt": 1,
+        "event": "push",
+        "action": null,
+        "base_branch": "main",
+        "base": "1111111111111111111111111111111111111111",
+        "head": "3333333333333333333333333333333333333333",
+        "pull_request": null
+      }
+    },
+    {
+      "lane": "skill:launch-fleet",
+      "tests": [
+        "skill:launch-fleet"
+      ],
+      "plan_sha256": "52a8c9b27ccf6a56a44bb15dd743c0cd6cf4262c12c038d9b39bb6f66f8ffcd5",
+      "run": {
+        "id": 9000100,
+        "attempt": 1,
+        "event": "push",
+        "action": null,
+        "base_branch": "main",
+        "base": "1111111111111111111111111111111111111111",
+        "head": "3333333333333333333333333333333333333333",
+        "pull_request": null
+      }
+    },
+    {
+      "lane": "skill:plan-graph",
+      "tests": [
+        "skill:plan-graph:revision",
+        "skill:plan-graph:approval"
+      ],
+      "plan_sha256": "52a8c9b27ccf6a56a44bb15dd743c0cd6cf4262c12c038d9b39bb6f66f8ffcd5",
+      "run": {
+        "id": 9000100,
+        "attempt": 1,
+        "event": "push",
+        "action": null,
+        "base_branch": "main",
+        "base": "1111111111111111111111111111111111111111",
+        "head": "3333333333333333333333333333333333333333",
+        "pull_request": null
+      }
+    },
+    {
+      "lane": "skill:triage",
+      "tests": [
+        "skill:triage"
+      ],
+      "plan_sha256": "52a8c9b27ccf6a56a44bb15dd743c0cd6cf4262c12c038d9b39bb6f66f8ffcd5",
+      "run": {
+        "id": 9000100,
+        "attempt": 1,
+        "event": "push",
+        "action": null,
+        "base_branch": "main",
+        "base": "1111111111111111111111111111111111111111",
+        "head": "3333333333333333333333333333333333333333",
+        "pull_request": null
+      }
+    },
+    {
+      "lane": "build:web_export",
+      "tests": [],
+      "plan_sha256": "52a8c9b27ccf6a56a44bb15dd743c0cd6cf4262c12c038d9b39bb6f66f8ffcd5",
+      "run": {
+        "id": 9000100,
+        "attempt": 1,
+        "event": "push",
+        "action": null,
+        "base_branch": "main",
+        "base": "1111111111111111111111111111111111111111",
+        "head": "3333333333333333333333333333333333333333",
+        "pull_request": null
+      }
+    },
+    {
+      "lane": "prerequisite:toolkit",
+      "tests": [],
+      "plan_sha256": "52a8c9b27ccf6a56a44bb15dd743c0cd6cf4262c12c038d9b39bb6f66f8ffcd5",
+      "run": {
+        "id": 9000100,
+        "attempt": 1,
+        "event": "push",
+        "action": null,
+        "base_branch": "main",
+        "base": "1111111111111111111111111111111111111111",
+        "head": "3333333333333333333333333333333333333333",
+        "pull_request": null
+      }
+    }
+  ],
+  "outcomes": [
+    {
+      "name": "changes",
+      "result": "success"
+    },
+    {
+      "name": "always",
+      "result": "success"
+    },
+    {
+      "name": "rust",
+      "result": "success"
+    },
+    {
+      "name": "web",
+      "result": "success"
+    },
+    {
+      "name": "site",
+      "result": "success"
+    },
+    {
+      "name": "release",
+      "result": "success"
+    },
+    {
+      "name": "skill:launch-fleet",
+      "result": "success"
+    },
+    {
+      "name": "skill:plan-graph",
+      "result": "success"
+    },
+    {
+      "name": "skill:triage",
+      "result": "success"
+    },
+    {
+      "name": "build:web_export",
+      "result": "success"
+    },
+    {
+      "name": "prerequisite:toolkit",
+      "result": "success"
+    }
+  ],
+  "checks": [
+    {
+      "name": "ci",
+      "result": "success",
+      "head": "3333333333333333333333333333333333333333",
+      "id": 9000100,
+      "attempt": 1
+    },
+    {
+      "name": "privacy",
+      "result": "success",
+      "head": "3333333333333333333333333333333333333333",
+      "id": 9000101,
+      "attempt": 1
+    }
+  ]
+}

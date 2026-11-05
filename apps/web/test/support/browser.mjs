@@ -36,6 +36,17 @@ export async function openPage(browser, origin, { viewport = PHONE, clock = null
     timezoneId: 'UTC',
     locale: 'en-GB',
   });
+  if (clock !== null && paused) {
+    // Schedule with native setTimeout before Playwright replaces it. The
+    // callback runs after all document-start clock logs (including later
+    // runFor calls on reload), before Playwright's 100 ms real-time tick.
+    await context.addInitScript(() => {
+      setTimeout(() => { performance.now(); }, 0);
+    });
+    // pauseAt installs the clock too. Keep setup to one replay entry so an
+    // early clock read cannot make a later install resume performance time.
+    await context.clock.pauseAt(clock);
+  }
   const page = await context.newPage();
   const requests = [];
   const responses = [];
@@ -82,9 +93,8 @@ export async function openPage(browser, origin, { viewport = PHONE, clock = null
       };
     });
   }
-  if (clock !== null) {
+  if (clock !== null && !paused) {
     await page.clock.install({ time: clock });
-    if (paused) await page.clock.pauseAt(clock);
   }
   if (CPU_THROTTLE > 1) await (await context.newCDPSession(page)).send('Emulation.setCPUThrottlingRate', { rate: CPU_THROTTLE });
   await page.goto(origin + path);
@@ -180,6 +190,7 @@ export function readDetail(page) {
       configuration: field('configuration'),
       snapshot: field('snapshot'),
       age: field('age'),
+      started: field('started'),
       finalOutput: d.querySelector('[data-field="final-output"] pre')?.textContent ?? field('final-output'),
       finalOutputTruncated: !!d.querySelector('[data-part=final-output-truncated]'),
       reportedError: field('reported-error'),

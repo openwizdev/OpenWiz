@@ -20,6 +20,79 @@ use crate::support::*;
 
 const TEXT: &str = "Synthetic message for the lost acknowledgement case.";
 
+/// #1644: synthetic retained metadata in the generic store/model contract,
+/// not a live-observed CloudRoom shape or a new reconciliation read.
+#[test]
+fn cli_duplicate_refusal_retains_stored_reconciliation_metadata() {
+    use openwiz_core::messaging::Binding;
+    use openwiz_core::messaging::record::{Claim, SendRecord, SendStore};
+
+    for (case, metadata, expected) in [
+        (
+            "observed",
+            Reconciliation::Observed {
+                matching: 1,
+                total: 2,
+            },
+            json!({"kind": "observed", "matching": 1, "total": 2}),
+        ),
+        (
+            "not-read",
+            Reconciliation::NotRead,
+            json!({"kind": "not_read"}),
+        ),
+    ] {
+        let fake = SendFake::new(&format!("m06_metadata_{case}"), "send");
+        let store = fake.store();
+        let prior = SendRecord::claimed(
+            op("op-m06-metadata-prior"),
+            Binding::new(sid("thr_syn_0001"), Mode::Queue, TEXT),
+            TEXT,
+            T0,
+        );
+        assert_eq!(store.claim(&prior, T0).unwrap(), Claim::Owned);
+        let mut uncertain = Delivery::uncertain(UncertainReason::CallNotConfirmed);
+        let Delivery::Uncertain { reconciliation, .. } = &mut uncertain else {
+            unreachable!();
+        };
+        *reconciliation = metadata;
+        store
+            .update(&prior.dispatching(T0).finished(uncertain, T0))
+            .unwrap();
+        store.release(&prior.op_id);
+
+        let (code, report) = fake.cli_json(
+            &[
+                "thr_syn_0001",
+                "--op-id",
+                "op-m06-metadata-next",
+                "--",
+                TEXT,
+            ],
+            "",
+        );
+        assert_eq!(code, 9, "{case}: {report}");
+        assert_eq!(report["status"], "possible_duplicate_refused");
+        assert_eq!(
+            report["result"]["earlier"],
+            json!([{
+                "op_id": "op-m06-metadata-prior",
+                "mode": "queue",
+                "claimed_at": 1_700_000_600_000_i64,
+                "in_flight": false,
+                "reconciliation": expected,
+            }]),
+            "{case}: the owner's refusal must retain the stored metadata"
+        );
+        assert!(!fake.record_path("op-m06-metadata-next").exists());
+        assert_eq!(fake.tell_count(), 0);
+        assert!(
+            fake.invocations().is_empty(),
+            "no observation or provider read"
+        );
+    }
+}
+
 #[test]
 fn accepted_then_timed_out_is_uncertain_keeps_the_text_and_never_resends() {
     let fake = SendFake::with(
@@ -30,7 +103,9 @@ fn accepted_then_timed_out_is_uncertain_keeps_the_text_and_never_resends() {
             json!({"hang": true}),
         )],
     );
-    let first = fake.report(&request("thr_syn_0001", Mode::Queue, TEXT, "op-m06-first"));
+    let mut hung = request("thr_syn_0001", Mode::Queue, TEXT, "op-m06-first");
+    hung.budget = HANG_BUDGET;
+    let first = fake.report(&hung);
     assert_eq!(first.status, Status::Uncertain);
     assert_eq!(uncertain_reason(&first), UncertainReason::TimedOut);
     match delivery(&first) {
@@ -87,6 +162,8 @@ fn accepted_then_timed_out_is_uncertain_keeps_the_text_and_never_resends() {
     // Acknowledged: a new, explicit send.
     let mut acknowledged = request("thr_syn_0001", Mode::Queue, TEXT, "op-m06-ack");
     acknowledged.accept_possible_duplicate = true;
+    // Its call hangs too (#1260).
+    acknowledged.budget = HANG_BUDGET;
     let _ = fake.report(&acknowledged);
     assert_eq!(fake.tell_count(), 3);
 }

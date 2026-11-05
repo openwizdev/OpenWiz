@@ -1,0 +1,4 @@
+{"schema":"closedwiz.review-loops.findings.v1","cohort":"before-synthetic","findings":[
+{"pr":4201,"finding":"R1","severity":"high","report":"https://github.com/example/factory/pull/4201#issuecomment-5201","basis":"judgment","user_path":true,"why":"A user exporting twice loses the first export."},
+{"pr":4201,"finding":"R2","severity":"medium","report":"https://github.com/example/factory/pull/4201#issuecomment-5201","basis":"judgment","user_path":false,"why":"Only a hand-edited settings file reaches this branch."}
+]}

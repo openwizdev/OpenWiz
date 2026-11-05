@@ -1,0 +1,35 @@
+{
+  "schema": "openwiz.send-preview.v1",
+  "target": {
+    "id": "thr_syn_0001",
+    "title": {
+      "known": "Synthetic session 1"
+    }
+  },
+  "requested_mode": "queue",
+  "status": "ready",
+  "summary": "Queue requested · preview: a send starts a turn; may wake it; nothing was sent",
+  "effects": {
+    "read_at": 1793978204178,
+    "read_age_ms": 12,
+    "effect": {
+      "known": {
+        "kind": "starts_turn",
+        "text": "starts a turn; may wake it"
+      }
+    },
+    "paused_queue": {
+      "known": {
+        "appears_paused": false,
+        "queued_messages": {
+          "known": 0
+        },
+        "text": "no paused queue seen"
+      }
+    },
+    "needs_acknowledgement": false
+  },
+  "refusal": null,
+  "read_at": 1793978204178,
+  "gaps": []
+}

@@ -1,0 +1,147 @@
+✖ HC1 policy sets the open cap to 50 (6.267515ms)
+✖ HU2 fiftieth other open ticket refuses the fifty-first (101.093057ms)
+✖ HC1 allows work ticket 21, candidate and switch excluded (91.626261ms)
+✖ HC1 allows work ticket 50, candidate and switch excluded (96.739511ms)
+✖ HC1 gate reads the open cap from policy JSON (90.666347ms)
+✔ HC1 invalid open cap 0 fails closed (43.990872ms)
+✔ HC1 invalid open cap -1 fails closed (45.669332ms)
+✔ HC1 invalid open cap 1.5 fails closed (51.574866ms)
+✔ HC1 invalid open cap "50" fails closed (46.413473ms)
+✔ HC1 invalid open cap null fails closed (47.051604ms)
+✖ HC1 reaching 50 other tickets before posting refuses approval (144.173187ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 5
+ℹ fail 6
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 864.205737
+
+✖ failing tests:
+
+test at skills/huntr/scripts/gate.test.mjs:105:1
+✖ HC1 policy sets the open cap to 50 (6.267515ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  20 !== 50
+
+      at TestContext.<anonymous> (file:///code/ClosedWiz/skills/huntr/scripts/gate.test.mjs:107:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 20,
+    expected: 50,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at skills/huntr/scripts/gate.test.mjs:50:3
+✖ HU2 fiftieth other open ticket refuses the fifty-first (101.093057ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /open cap: 50 other huntr issues are open/. Input:
+
+  'huntr: open cap: twenty other huntr issues are open\n'
+
+      at TestContext.<anonymous> (file:///code/ClosedWiz/skills/huntr/scripts/gate.test.mjs:55:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'huntr: open cap: twenty other huntr issues are open\n',
+    expected: /open cap: 50 other huntr issues are open/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at skills/huntr/scripts/gate.test.mjs:110:32
+✖ HC1 allows work ticket 21, candidate and switch excluded (91.626261ms)
+  AssertionError [ERR_ASSERTION]: huntr: open cap: twenty other huntr issues are open
+
+
+  2 !== 0
+
+      at TestContext.<anonymous> (file:///code/ClosedWiz/skills/huntr/scripts/gate.test.mjs:114:31)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at skills/huntr/scripts/gate.test.mjs:110:32
+✖ HC1 allows work ticket 50, candidate and switch excluded (96.739511ms)
+  AssertionError [ERR_ASSERTION]: huntr: open cap: twenty other huntr issues are open
+
+
+  2 !== 0
+
+      at TestContext.<anonymous> (file:///code/ClosedWiz/skills/huntr/scripts/gate.test.mjs:114:31)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at skills/huntr/scripts/gate.test.mjs:116:1
+✖ HC1 gate reads the open cap from policy JSON (90.666347ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /open cap: 20 other huntr issues are open/. Input:
+
+  'huntr: open cap: twenty other huntr issues are open\n'
+
+      at TestContext.<anonymous> (file:///code/ClosedWiz/skills/huntr/scripts/gate.test.mjs:121:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'huntr: open cap: twenty other huntr issues are open\n',
+    expected: /open cap: 20 other huntr issues are open/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at skills/huntr/scripts/gate.test.mjs:50:3
+✖ HC1 reaching 50 other tickets before posting refuses approval (144.173187ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /open cap: 50 other huntr issues are open/. Input:
+
+  'huntr: open cap: twenty other huntr issues are open\n'
+
+      at TestContext.<anonymous> (file:///code/ClosedWiz/skills/huntr/scripts/gate.test.mjs:55:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'huntr: open cap: twenty other huntr issues are open\n',
+    expected: /open cap: 50 other huntr issues are open/,
+    operator: 'match',
+    diff: 'simple'
+  }

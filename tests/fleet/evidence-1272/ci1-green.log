@@ -1,0 +1,19 @@
+   Compiling openwiz-service v0.0.1-dev (/code/ClosedWiz-1272/crates/service)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.53s
+     Running ../../tests/service/t4b_tick.rs (target/debug/deps/t4b_tick-b9136173e6db6946)
+
+running 11 tests
+test executor::executor_process ... ok
+test executor::fake::tool_process ... ok
+test executor::command_fakes_work_without_system_python ... ok
+test executor::nested_ci_reads_and_confirmed_writes_keep_app_execution_on_success_and_error ... ok
+test schedule::failed_completion_save_recovers_before_the_next_scheduled_dispatch ... ok
+test schedule::failure_waits_for_next_schedule_and_other_jobs_keep_running ... ok
+test schedule::held_tick_reports_running_never_overlaps_and_keeps_concurrent_state ... ok
+test executor::manual_and_scheduled_ticks_have_identical_records_and_dry_run_gates ... ok
+test schedule::initial_state_save_failure_dispatches_nothing ... ok
+test service_process ... ok
+test scheduled_app_failure_is_visible_through_running_service_status ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.20s
+

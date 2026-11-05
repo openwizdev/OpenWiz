@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+"""Check a release, publish a checked export, or run the checked public candidate path."""
+import sys
+sys.dont_write_bytecode = True
+if len(sys.argv) > 1 and sys.argv[1] == "publish":
+    from publish import main
+elif len(sys.argv) > 1 and sys.argv[1] == "candidate":
+    from candidate import main
+    sys.argv.pop(1)
+else:
+    from check import main
+
+if __name__ == "__main__":
+    sys.exit(main())

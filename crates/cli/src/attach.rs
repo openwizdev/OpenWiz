@@ -1,5 +1,5 @@
 //! `--attach <path>` and `--attachment <id>` on `openwiz send` and `openwiz
-//! new` (OpenWiz 0.0.4, B2, the implementation): one parser and one preparation
+//! new` (OpenWiz 0.0.4, B2, ClosedWiz#15): one parser and one preparation
 //! for both commands.
 //!
 //! Each flag may be given any number of times; together they keep their

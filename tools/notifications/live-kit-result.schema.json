@@ -1,0 +1,514 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:openwiz:notification-live-result:v1",
+  "title": "Sanitized notification live-kit result",
+  "description": "Offline structural evidence only. Use test_live_kit.py --validate RESULT --binding BINDING for strict wire, external candidate/kit/cap equality, count and proof/gap consistency. The binding comes from the independently approved kit and installed candidate readback, never from the result. A schema or validator pass does not verify artifacts, observations, approval, CI, release, publication or acceptance. No transport binding is defined here. No earlier-version live check is a prerequisite. Native Mac gaps do not become phone proof.",
+  "type": "object",
+  "required": [
+    "schema",
+    "candidate",
+    "kit_sha256",
+    "proofs",
+    "caps",
+    "counts",
+    "forbidden_effects",
+    "service",
+    "phone",
+    "native_mac",
+    "cleanup",
+    "pa8",
+    "gaps"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "openwiz.notification-live-result.v1"
+    },
+    "candidate": {
+      "$ref": "#/$defs/candidate"
+    },
+    "kit_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "proofs": {
+      "type": "object",
+      "required": [
+        "fixture_test",
+        "live_observation",
+        "independent_review"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "fixture_test": {
+          "$ref": "#/$defs/proof"
+        },
+        "live_observation": {
+          "$ref": "#/$defs/proof"
+        },
+        "independent_review": {
+          "$ref": "#/$defs/proof"
+        }
+      }
+    },
+    "caps": {
+      "$ref": "#/$defs/caps"
+    },
+    "counts": {
+      "$ref": "#/$defs/caps"
+    },
+    "forbidden_effects": {
+      "type": "object",
+      "required": [
+        "normal_preference_changes",
+        "merges",
+        "tags",
+        "purchases",
+        "publications",
+        "access_changes",
+        "blind_retries"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "normal_preference_changes": {
+          "type": "integer",
+          "const": 0
+        },
+        "merges": {
+          "type": "integer",
+          "const": 0
+        },
+        "tags": {
+          "type": "integer",
+          "const": 0
+        },
+        "purchases": {
+          "type": "integer",
+          "const": 0
+        },
+        "publications": {
+          "type": "integer",
+          "const": 0
+        },
+        "access_changes": {
+          "type": "integer",
+          "const": 0
+        },
+        "blind_retries": {
+          "type": "integer",
+          "const": 0
+        }
+      }
+    },
+    "service": {
+      "type": "object",
+      "required": [
+        "cockpit_closed",
+        "dispatch",
+        "authenticated_bound_open"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "cockpit_closed": {
+          "type": "boolean"
+        },
+        "dispatch": {
+          "type": "string",
+          "enum": [
+            "not_attempted",
+            "pending",
+            "accepted",
+            "failed",
+            "uncertain"
+          ]
+        },
+        "authenticated_bound_open": {
+          "type": "boolean"
+        }
+      }
+    },
+    "phone": {
+      "$ref": "#/$defs/phone"
+    },
+    "native_mac": {
+      "$ref": "#/$defs/native_mac"
+    },
+    "cleanup": {
+      "$ref": "#/$defs/cleanup"
+    },
+    "pa8": {
+      "type": "string",
+      "enum": [
+        "verified",
+        "unverified"
+      ]
+    },
+    "gaps": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "phone_not_observed",
+          "emulation_only",
+          "dispatch_only",
+          "open_cockpit_only",
+          "phone_check_incomplete",
+          "native_mac_not_observed",
+          "native_mac_check_incomplete",
+          "cleanup_incomplete",
+          "service_not_verified",
+          "fixture_test_not_verified",
+          "live_observation_not_verified",
+          "independent_review_not_verified"
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "candidate": {
+      "type": "object",
+      "required": [
+        "version",
+        "head",
+        "tree"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$(?![\\s\\S])"
+        },
+        "head": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$(?![\\s\\S])"
+        },
+        "tree": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$(?![\\s\\S])"
+        }
+      }
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$(?![\\s\\S])"
+    },
+    "caps": {
+      "type": "object",
+      "required": [
+        "notification_submissions",
+        "github_records",
+        "github_comments",
+        "cloudroom_sends",
+        "cloudroom_starts",
+        "test_answers",
+        "engine_restarts",
+        "cleanup_actions",
+        "elapsed_seconds"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "notification_submissions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "github_records": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "github_comments": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cloudroom_sends": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cloudroom_starts": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "test_answers": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "engine_restarts": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cleanup_actions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "elapsed_seconds": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "proof": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "state",
+            "candidate",
+            "evidence_sha256"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "state": {
+              "const": "verified"
+            },
+            "candidate": {
+              "$ref": "#/$defs/candidate"
+            },
+            "evidence_sha256": {
+              "$ref": "#/$defs/digest"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "state",
+            "gap"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "state": {
+              "const": "unverified"
+            },
+            "gap": {
+              "type": "string",
+              "enum": [
+                "not_observed"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "phone": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "state",
+            "evidence_class",
+            "client",
+            "candidate",
+            "evidence_sha256",
+            "cockpit_closed",
+            "background_display",
+            "tap",
+            "authenticated_bound_current_item"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "state": {
+              "const": "verified"
+            },
+            "evidence_class": {
+              "const": "live_observation"
+            },
+            "client": {
+              "const": "actual_supported_phone"
+            },
+            "candidate": {
+              "$ref": "#/$defs/candidate"
+            },
+            "evidence_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "cockpit_closed": {
+              "const": true,
+              "type": "boolean"
+            },
+            "background_display": {
+              "const": true,
+              "type": "boolean"
+            },
+            "tap": {
+              "const": true,
+              "type": "boolean"
+            },
+            "authenticated_bound_current_item": {
+              "const": true,
+              "type": "boolean"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "state",
+            "client",
+            "gap"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "state": {
+              "const": "unverified"
+            },
+            "client": {
+              "type": "string",
+              "enum": [
+                "none",
+                "emulated_chromium",
+                "actual_supported_phone"
+              ]
+            },
+            "gap": {
+              "type": "string",
+              "enum": [
+                "phone_not_observed",
+                "emulation_only",
+                "dispatch_only",
+                "open_cockpit_only",
+                "phone_check_incomplete"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "native_mac": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "state",
+            "evidence_class",
+            "client",
+            "candidate",
+            "evidence_sha256",
+            "install",
+            "ls",
+            "show"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "state": {
+              "const": "verified"
+            },
+            "evidence_class": {
+              "const": "live_observation"
+            },
+            "client": {
+              "const": "native_macos"
+            },
+            "candidate": {
+              "$ref": "#/$defs/candidate"
+            },
+            "evidence_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "install": {
+              "const": true,
+              "type": "boolean"
+            },
+            "ls": {
+              "const": true,
+              "type": "boolean"
+            },
+            "show": {
+              "const": true,
+              "type": "boolean"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "state",
+            "gap"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "state": {
+              "const": "unverified"
+            },
+            "gap": {
+              "type": "string",
+              "enum": [
+                "native_mac_not_observed",
+                "native_mac_check_incomplete"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "cleanup": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "state",
+            "test_resources_remaining",
+            "test_choices_restored"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "state": {
+              "const": "complete"
+            },
+            "test_resources_remaining": {
+              "type": "integer",
+              "const": 0
+            },
+            "test_choices_restored": {
+              "const": true,
+              "type": "boolean"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "state",
+            "test_resources_remaining",
+            "test_choices_restored",
+            "gap"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "state": {
+              "const": "incomplete"
+            },
+            "test_resources_remaining": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "test_choices_restored": {
+              "type": "boolean"
+            },
+            "gap": {
+              "const": "cleanup_incomplete"
+            }
+          }
+        }
+      ]
+    },
+    "binding": {
+      "type": "object",
+      "required": [
+        "candidate",
+        "kit_sha256",
+        "caps"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "candidate": {
+          "$ref": "#/$defs/candidate"
+        },
+        "kit_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "caps": {
+          "$ref": "#/$defs/caps"
+        }
+      }
+    }
+  }
+}

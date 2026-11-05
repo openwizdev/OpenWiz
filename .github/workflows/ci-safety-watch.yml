@@ -1,0 +1,50 @@
+name: CI safety freshness
+
+on:
+  schedule:
+    - cron: '41 * * * *' # Independent of the daily CI run, with hourly detection.
+
+permissions:
+  actions: read
+
+concurrency:
+  group: ci-safety-watch
+  cancel-in-progress: false
+
+jobs:
+  safety-freshness:
+    # Keep this alert off the project runners whose backlog it monitors.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require a successful safety run within 30 hours
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -eu
+          run="$(gh api --method GET "repos/$GH_REPO/actions/workflows/ci.yml/runs" \
+            -f event=schedule -f branch=main -f status=success -f per_page=1 \
+            --jq '.workflow_runs[0] | select(.id != null and .run_attempt != null) | "\(.id)/attempts/\(.run_attempt)"')"
+          if ! [[ "$run" =~ ^[1-9][0-9]*/attempts/[1-9][0-9]*$ ]]; then
+            echo '::error::No successful scheduled CI safety run exists on main.'
+            exit 1
+          fi
+          run_id=${run%%/*}
+          attempt=${run##*/}
+          # Pin the jobs read to the successful attempt selected above.
+          completed="$(gh api --method GET "repos/$GH_REPO/actions/runs/$run/jobs" \
+            -f per_page=100 --jq "[.jobs[] | select(.run_id == $run_id and .run_attempt == $attempt and .status == \"completed\" and .conclusion == \"success\") | .completed_at] | max // empty")"
+          if [ -z "$completed" ]; then
+            echo '::error::The scheduled safety run has no successful jobs.'
+            exit 1
+          fi
+          completed_epoch="$(date -u -d "$completed" +%s)"
+          now="$(date -u +%s)"
+          age=$((now - completed_epoch))
+          # Daily cadence plus six hours for scheduling delay and run drift (R1).
+          if [ "$age" -lt 0 ] || [ "$age" -ge 108000 ]; then
+            echo '::error::No successful scheduled CI safety run completed in the last 30 hours.'
+            exit 1
+          fi
+          echo "Scheduled CI safety run $run_id completed within the last 30 hours."

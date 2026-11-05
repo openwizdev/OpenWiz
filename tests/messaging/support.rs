@@ -42,6 +42,37 @@ pub fn clock() -> FixedClock {
     FixedClock(T0)
 }
 
+/// A clock that starts at [`T0`] and advances by `step_ms` on every read, so
+/// a read and the work worked out right after it (the read age) are separated
+/// by exactly `step_ms`. Without it the fixed clock makes every age `0`, and
+/// a formatter that printed a constant `0s` would pass (#932, R1).
+pub struct AdvancingClock {
+    next: std::sync::atomic::AtomicI64,
+    step_ms: i64,
+}
+
+impl AdvancingClock {
+    pub fn new(step_ms: i64) -> Self {
+        Self {
+            next: std::sync::atomic::AtomicI64::new(T0.0),
+            step_ms,
+        }
+    }
+}
+
+impl Clock for AdvancingClock {
+    fn now(&self) -> Timestamp {
+        let at = self
+            .next
+            .fetch_add(self.step_ms, std::sync::atomic::Ordering::Relaxed);
+        Timestamp(at)
+    }
+
+    fn monotonic(&self) -> Instant {
+        Instant::now()
+    }
+}
+
 pub const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/room-cli-0.43.1");
 pub const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/..");
 
@@ -56,6 +87,27 @@ pub fn op(id: &str) -> OpId {
 
 pub fn sid(id: &str) -> SessionId {
     SessionId(id.to_owned())
+}
+
+/// The budget for a request whose call hangs (#1260): it ends the call, with
+/// room for the reads before it.
+pub const HANG_BUDGET: Duration = Duration::from_secs(1);
+
+/// Runs `check` on every item, a few at a time (#1260): for rows that share
+/// nothing and mostly wait on child processes. A row's panic fails the test.
+pub fn at_once<T: Send>(items: Vec<T>, check: impl Fn(T) + Sync) {
+    let items = Mutex::new(items.into_iter());
+    std::thread::scope(|scope| {
+        for _ in 0..4 {
+            scope.spawn(|| {
+                loop {
+                    let next = items.lock().unwrap_or_else(|p| p.into_inner()).next();
+                    let Some(item) = next else { break };
+                    check(item);
+                }
+            });
+        }
+    });
 }
 
 /// A request with a short budget, so a hung call ends in seconds.
@@ -223,9 +275,7 @@ impl SendFake {
 
     /// The cross-process tell counter: calls the fake accepted.
     pub fn tell_count(&self) -> u64 {
-        fs::read_to_string(self.dir.join("tell-calls.count"))
-            .map(|t| t.trim().parse().expect("a count"))
-            .unwrap_or(0)
+        crate::counter::read(&self.dir.join("tell-calls.count"))
     }
 
     /// The send records on disk when the fake received tell number `n`.
@@ -248,6 +298,18 @@ impl SendFake {
 
     /// `openwiz send <args>` in this process: (exit code, stdout, stderr).
     pub fn cli(&self, args: &[&str], stdin: &str) -> (i32, String, String) {
+        self.cli_with_clock(args, stdin, &clock())
+    }
+
+    /// `openwiz send <args>` in this process with `clock`, so a test can
+    /// separate the read from the work that follows it: (exit code, stdout,
+    /// stderr).
+    pub fn cli_with_clock(
+        &self,
+        args: &[&str],
+        stdin: &str,
+        clock: &dyn Clock,
+    ) -> (i32, String, String) {
         let args: Vec<String> = args.iter().map(|a| (*a).to_owned()).collect();
         let source = self.source();
         let state = self.state.clone();
@@ -263,7 +325,6 @@ impl SendFake {
         let open_attachments = move || -> Result<AttachmentStore, StoreError> {
             AttachmentStore::open(&attachments_state)
         };
-        let clock = clock();
         let mut input = stdin.as_bytes();
         let (mut out, mut err) = (Vec::new(), Vec::new());
         let code = run_send_with(
@@ -272,7 +333,7 @@ impl SendFake {
                 messenger: &source,
                 open_store: &open_store,
                 open_store_read_only: &open_store_read_only,
-                clock: &clock,
+                clock,
                 stdin: &mut input,
                 stdin_is_terminal: false,
                 new_op_id: &random_op_id,
@@ -310,7 +371,7 @@ impl SendFake {
         let mut command = Command::new(openwiz_release());
         command
             .args(args)
-            .env("PATH", self.path())
+            .env("OPENWIZ_FIXTURE_PROGRAM", self.program())
             .env("OPENWIZ_STATE_DIR", &self.state)
             .current_dir(&self.dir)
             .stdin(Stdio::piped())
@@ -391,8 +452,8 @@ pub fn openwiz_release() -> PathBuf {
                 .to_path_buf();
             let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned());
             let build = Command::new(cargo)
-                .args(["build", "--release", "--locked", "-p", "openwiz-cli"])
-                .args(["--bin", "openwiz", "--target-dir"])
+                .args(["build", "--release", "--locked", "-p", "openwiz-tests"])
+                .args(["--example", "openwiz", "--target-dir"])
                 .arg(&target)
                 .current_dir(ROOT)
                 .output()
@@ -402,7 +463,7 @@ pub fn openwiz_release() -> PathBuf {
                 "cargo build --release failed:\n{}",
                 String::from_utf8_lossy(&build.stderr)
             );
-            target.join("release").join("openwiz")
+            target.join("release").join("examples").join("openwiz")
         })
         .clone()
 }
@@ -460,7 +521,7 @@ pub fn strings(value: &Value, out: &mut Vec<String>) {
     }
 }
 
-// Sends in flight.
+// Sends in flight (#79).
 
 /// A send of `op_id` claimed by another live sender: a second store, in
 /// this process, that holds the op id's lock until it is dropped or
@@ -508,21 +569,11 @@ impl Held {
 /// Waits until no process holds `op_id`'s lock. Another test's thread may
 /// have forked a child while this process held it, and that child keeps a
 /// copy of the lock until it runs its program; a later fork can't copy a
-/// lock this process has already let go.
+/// lock this process has already let go. It reads the locks from
+/// `/proc/locks`, and never takes the lock itself to look: a fork could copy
+/// that one too (#176).
 pub fn wait_lock_free(store: &FileStore, op_id: &OpId) {
-    let path = store.sends_dir().join(format!("{op_id}.lock"));
-    let started = Instant::now();
-    loop {
-        let file = fs::File::open(&path).expect("open the lock file");
-        if file.try_lock().is_ok() {
-            return;
-        }
-        assert!(
-            started.elapsed() < Duration::from_secs(10),
-            "{op_id}'s lock stayed held"
-        );
-        std::thread::sleep(Duration::from_millis(5));
-    }
+    crate::forks::wait_until_unlocked(&store.sends_dir().join(format!("{op_id}.lock")));
 }
 
 /// The names of the files in the send record's `sends/` directory, with

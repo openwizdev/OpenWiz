@@ -3,7 +3,7 @@
 //!
 //! The racers are release `openwiz send` processes and the store-level
 //! harness (`send-harness`), which calls the core's `send` the way a server
-//! would. **There is no server send route until the implementation**, so no server
+//! would. **There is no server send route until ClosedWiz#9**, so no server
 //! process races here.
 
 use std::process::Child;
@@ -96,7 +96,8 @@ fn many_processes_racing_on_one_op_id_make_exactly_one_tell() {
         .collect();
     assert_eq!(fresh.len(), 1, "exactly one owner: {results:#?}");
     assert_eq!(fresh[0]["status"], "accepted");
-
+    // Haiku B-05: the racers really overlapped: some found the op id in
+    // progress, not only finished.
     assert!(
         results
             .iter()

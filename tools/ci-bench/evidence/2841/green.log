@@ -1,0 +1,4 @@
+# Green run, #2841, at 5e0ce567caa256f1e4d9ce295b68d26ec8fb5950 (bench.py identical to origin/main)
+# Command: python3 -I -m unittest discover -s tools/ci-bench -p 'test*.py'
+Ran 113 tests in 54.390s
+OK

@@ -1,0 +1,68 @@
+First correction R1-R4 at retained implementation 9f92b464eee376e6c798acd4de7346f78a335e9d.
+Command: python3 -I tools/war-room/test_cost.py Cost.test_r1_producer_independently_rounds_total_and_day_ratio Cost.test_r2_usage_windows_follow_each_entity_utc_days_and_exports Cost.test_r3_injected_assembly_can_follow_sample_and_source_observation Cost.test_r4_rejected_export_keeps_explicit_unknown_coverage_gap
+Exit: 1. Four affected proofs fail for the reported bugs; checkout path normalized.
+EFEF
+======================================================================
+ERROR: test_r1_producer_independently_rounds_total_and_day_ratio (__main__.Cost.test_r1_producer_independently_rounds_total_and_day_ratio) (raw=1.2345674, count=2)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/war-room/test_cost.py", line 215, in test_r1_producer_independently_rounds_total_and_day_ratio
+    m = self.metrics(self.project(journey=self.source('journey.json', doc)))
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<repo>/tools/war-room/test_cost.py", line 46, in project
+    provider = self.cost.project(AT, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<repo>/tools/war-room/cost.py", line 262, in project
+    values, identities = _journey(journey)
+                         ^^^^^^^^^^^^^^^^^
+  File "<repo>/tools/war-room/cost.py", line 119, in _journey
+    require(ratio == expected_ratio, 'native daily ratio arithmetic mismatch')
+  File "<repo>/tools/war-room/suite.py", line 18, in require
+    raise ValueError(reason)
+ValueError: native daily ratio arithmetic mismatch
+
+======================================================================
+ERROR: test_r3_injected_assembly_can_follow_sample_and_source_observation (__main__.Cost.test_r3_injected_assembly_can_follow_sample_and_source_observation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/war-room/test_cost.py", line 276, in test_r3_injected_assembly_can_follow_sample_and_source_observation
+    p = self.project(**{kind: source}, assembled_at='2030-01-03T00:00:02Z')
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<repo>/tools/war-room/test_cost.py", line 46, in project
+    provider = self.cost.project(AT, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: project() got an unexpected keyword argument 'assembled_at'
+
+======================================================================
+FAIL: test_r2_usage_windows_follow_each_entity_utc_days_and_exports (__main__.Cost.test_r2_usage_windows_follow_each_entity_utc_days_and_exports)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/war-room/test_cost.py", line 250, in test_r2_usage_windows_follow_each_entity_utc_days_and_exports
+    self.assertEqual({'since': '2030-01-01T00:00:00Z', 'until': until,
+AssertionError: {'since': '2030-01-01T00:00:00Z', 'until': '2030-01-02T00:00:00[17 chars]UTC'} != {'since': '2030-01-01T10:00:00Z', 'until': '2030-01-03T00:00:00[17 chars]UTC'}
+- {'since': '2030-01-01T00:00:00Z',
+?                       ^
+
++ {'since': '2030-01-01T10:00:00Z',
+?                       ^
+
+   'timezone': 'UTC',
+-  'until': '2030-01-02T00:00:00Z'}
+?                     ^
+
++  'until': '2030-01-03T00:00:00Z'}
+?                     ^
+
+
+======================================================================
+FAIL: test_r4_rejected_export_keeps_explicit_unknown_coverage_gap (__main__.Cost.test_r4_rejected_export_keeps_explicit_unknown_coverage_gap)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/war-room/test_cost.py", line 295, in test_r4_rejected_export_keeps_explicit_unknown_coverage_gap
+    self.assertTrue(any('rejected' in gap.lower() and 'unknown' in gap.lower()
+AssertionError: False is not true
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.217s
+
+FAILED (failures=2, errors=2)

@@ -1,0 +1,397 @@
+{
+  "source": "f29618b9323db492c844741ab06237c03f8ffe66",
+  "previousSource": "57bac829fb808e6ca27edb586ab8080804349b67",
+  "note": "Pixel comparison is diagnostic only; content timing changes are not a design quality score. Raw screenshots are unchanged.",
+  "captures": [
+    {
+      "screen": "empty",
+      "viewport": "phone",
+      "previous": {
+        "width": 390,
+        "height": 844
+      },
+      "integrated": {
+        "width": 390,
+        "height": 844
+      },
+      "differentPixels": 0
+    },
+    {
+      "screen": "empty",
+      "viewport": "desktop",
+      "previous": {
+        "width": 1440,
+        "height": 900
+      },
+      "integrated": {
+        "width": 1440,
+        "height": 900
+      },
+      "differentPixels": 0
+    },
+    {
+      "screen": "error",
+      "viewport": "phone",
+      "previous": {
+        "width": 390,
+        "height": 844
+      },
+      "integrated": {
+        "width": 390,
+        "height": 844
+      },
+      "differentPixels": 0
+    },
+    {
+      "screen": "error",
+      "viewport": "desktop",
+      "previous": {
+        "width": 1440,
+        "height": 900
+      },
+      "integrated": {
+        "width": 1440,
+        "height": 900
+      },
+      "differentPixels": 0
+    },
+    {
+      "screen": "fleet-detail",
+      "viewport": "phone",
+      "previous": {
+        "width": 390,
+        "height": 2884
+      },
+      "integrated": {
+        "width": 390,
+        "height": 2884
+      },
+      "differentPixels": 0
+    },
+    {
+      "screen": "fleet-detail",
+      "viewport": "desktop",
+      "previous": {
+        "width": 1440,
+        "height": 2908
+      },
+      "integrated": {
+        "width": 1440,
+        "height": 2908
+      },
+      "differentPixels": 0
+    },
+    {
+      "screen": "fleets",
+      "viewport": "phone",
+      "previous": {
+        "width": 390,
+        "height": 880
+      },
+      "integrated": {
+        "width": 390,
+        "height": 880
+      },
+      "differentPixels": 0
+    },
+    {
+      "screen": "fleets",
+      "viewport": "desktop",
+      "previous": {
+        "width": 1440,
+        "height": 900
+      },
+      "integrated": {
+        "width": 1440,
+        "height": 900
+      },
+      "differentPixels": 0
+    },
+    {
+      "screen": "home",
+      "viewport": "phone",
+      "previous": {
+        "width": 390,
+        "height": 1112
+      },
+      "integrated": {
+        "width": 390,
+        "height": 1112
+      },
+      "differentPixels": 0
+    },
+    {
+      "screen": "home",
+      "viewport": "desktop",
+      "previous": {
+        "width": 1440,
+        "height": 900
+      },
+      "integrated": {
+        "width": 1440,
+        "height": 900
+      },
+      "differentPixels": 0
+    },
+    {
+      "screen": "home-answer",
+      "viewport": "phone",
+      "previous": {
+        "width": 390,
+        "height": 844
+      },
+      "integrated": {
+        "width": 390,
+        "height": 844
+      },
+      "differentPixels": 0
+    },
+    {
+      "screen": "home-answer",
+      "viewport": "desktop",
+      "previous": {
+        "width": 1440,
+        "height": 1104
+      },
+      "integrated": {
+        "width": 1440,
+        "height": 1104
+      },
+      "differentPixels": 0
+    },
+    {
+      "screen": "home-empty",
+      "viewport": "phone",
+      "previous": {
+        "width": 390,
+        "height": 844
+      },
+      "integrated": {
+        "width": 390,
+        "height": 844
+      },
+      "differentPixels": 0
+    },
+    {
+      "screen": "home-empty",
+      "viewport": "desktop",
+      "previous": {
+        "width": 1440,
+        "height": 900
+      },
+      "integrated": {
+        "width": 1440,
+        "height": 900
+      },
+      "differentPixels": 0
+    },
+    {
+      "screen": "home-error",
+      "viewport": "phone",
+      "previous": {
+        "width": 390,
+        "height": 844
+      },
+      "integrated": {
+        "width": 390,
+        "height": 844
+      },
+      "differentPixels": 0
+    },
+    {
+      "screen": "home-error",
+      "viewport": "desktop",
+      "previous": {
+        "width": 1440,
+        "height": 900
+      },
+      "integrated": {
+        "width": 1440,
+        "height": 900
+      },
+      "differentPixels": 0
+    },
+    {
+      "screen": "home-live",
+      "viewport": "phone",
+      "previous": {
+        "width": 390,
+        "height": 844
+      },
+      "integrated": {
+        "width": 390,
+        "height": 844
+      },
+      "differentPixels": 0
+    },
+    {
+      "screen": "home-live",
+      "viewport": "desktop",
+      "previous": {
+        "width": 1440,
+        "height": 900
+      },
+      "integrated": {
+        "width": 1440,
+        "height": 900
+      },
+      "differentPixels": 0
+    },
+    {
+      "screen": "home-loading",
+      "viewport": "phone",
+      "previous": {
+        "width": 390,
+        "height": 844
+      },
+      "integrated": {
+        "width": 390,
+        "height": 844
+      },
+      "differentPixels": 0
+    },
+    {
+      "screen": "home-loading",
+      "viewport": "desktop",
+      "previous": {
+        "width": 1440,
+        "height": 900
+      },
+      "integrated": {
+        "width": 1440,
+        "height": 900
+      },
+      "differentPixels": 0
+    },
+    {
+      "screen": "home-stale",
+      "viewport": "phone",
+      "previous": {
+        "width": 390,
+        "height": 1532
+      },
+      "integrated": {
+        "width": 390,
+        "height": 1532
+      },
+      "differentPixels": 0
+    },
+    {
+      "screen": "home-stale",
+      "viewport": "desktop",
+      "previous": {
+        "width": 1440,
+        "height": 1268
+      },
+      "integrated": {
+        "width": 1440,
+        "height": 1268
+      },
+      "differentPixels": 0
+    },
+    {
+      "screen": "loading",
+      "viewport": "phone",
+      "previous": {
+        "width": 390,
+        "height": 844
+      },
+      "integrated": {
+        "width": 390,
+        "height": 844
+      },
+      "differentPixels": 0
+    },
+    {
+      "screen": "loading",
+      "viewport": "desktop",
+      "previous": {
+        "width": 1440,
+        "height": 900
+      },
+      "integrated": {
+        "width": 1440,
+        "height": 900
+      },
+      "differentPixels": 0
+    },
+    {
+      "screen": "new-thread",
+      "viewport": "phone",
+      "previous": {
+        "width": 390,
+        "height": 844
+      },
+      "integrated": {
+        "width": 390,
+        "height": 844
+      },
+      "differentPixels": 0
+    },
+    {
+      "screen": "new-thread",
+      "viewport": "desktop",
+      "previous": {
+        "width": 1440,
+        "height": 932
+      },
+      "integrated": {
+        "width": 1440,
+        "height": 932
+      },
+      "differentPixels": 49
+    },
+    {
+      "screen": "sessions",
+      "viewport": "phone",
+      "previous": {
+        "width": 390,
+        "height": 852
+      },
+      "integrated": {
+        "width": 390,
+        "height": 852
+      },
+      "differentPixels": 0
+    },
+    {
+      "screen": "sessions",
+      "viewport": "desktop",
+      "previous": {
+        "width": 1440,
+        "height": 932
+      },
+      "integrated": {
+        "width": 1440,
+        "height": 932
+      },
+      "differentPixels": 0
+    },
+    {
+      "screen": "thread",
+      "viewport": "phone",
+      "previous": {
+        "width": 390,
+        "height": 844
+      },
+      "integrated": {
+        "width": 390,
+        "height": 844
+      },
+      "differentPixels": 0
+    },
+    {
+      "screen": "thread",
+      "viewport": "desktop",
+      "previous": {
+        "width": 1440,
+        "height": 932
+      },
+      "integrated": {
+        "width": 1440,
+        "height": 932
+      },
+      "differentPixels": 0
+    }
+  ]
+}

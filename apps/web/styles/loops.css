@@ -1,0 +1,55 @@
+/* The loops page (#549), drawn to the approved design target in Observatory:
+   gold only on the loops that need a look; the healthy ones one press away.
+   Soft rows on tonal surfaces, no dividers, no bordered cards. */
+
+.loops { max-width: 1200px; margin: 0 auto; }
+.lp-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 16px 24px; margin-bottom: 32px; }
+.lp-head .meta { margin: 4px 0 0; }
+.lp-title { display: flex; align-items: baseline; gap: 12px; margin: 0; }
+.lp-count { font: var(--ow-type-heading); font-variant-numeric: tabular-nums; }
+.lp-group + .lp-group { margin-top: 48px; }
+.lp-section { display: flex; align-items: baseline; gap: 12px; margin: 0; font: var(--ow-type-display); letter-spacing: -.6px; }
+.lp-section.gold { color: var(--gold); }
+.lp-group > .meta { margin: 4px 0 16px; }
+.lp-empty { margin: 0; padding: 24px; border-radius: var(--ow-radius-8); background: var(--s2); color: var(--ink-2); font: var(--ow-type-body); }
+
+.lp-list { display: grid; gap: 12px; margin: 12px 0 0; padding: 0; list-style: none; }
+.lp-list[hidden] { display: none; }
+.lp-row { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; gap: 8px 24px; min-height: 76px; padding: 16px 24px; border-radius: var(--ow-radius-8); background: var(--s2); }
+.lp-row.is-problem { box-shadow: inset 3px 0 var(--gold); }
+.lp-mark { display: inline-flex; color: var(--ink-3); }
+.lp-row.is-problem .lp-mark { color: var(--gold); }
+.lp-mark .status-icon { width: 24px; height: 24px; }
+.lp-mark .status-icon.t3 { color: var(--wiz); }
+.lp-body { min-width: 0; }
+.lp-name { margin: 0; font: var(--ow-type-title); overflow-wrap: anywhere; }
+.lp-mode { font: var(--ow-type-label); }
+.lp-facts, .lp-reason { margin: 4px 0 0; overflow-wrap: anywhere; }
+
+.lp-show { display: flex; margin-top: 16px; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 48px; padding: 0 24px; border: 0; border-radius: var(--ow-radius-8); background: var(--s2); color: var(--ink); font: var(--ow-type-title); text-align: start; cursor: pointer; }
+.lp-show:hover { background: var(--s3); }
+.lp-show:focus-visible, .lp-switch:focus-visible { outline: 2px solid var(--wiz); outline-offset: 4px; }
+
+/* The switch: purple when on, grey when off; never gold. */
+.lp-switch-cell { display: grid; justify-items: end; gap: 4px; min-width: 0; }
+.lp-switch { display: inline-flex; align-items: center; gap: 12px; min-height: 44px; min-width: 44px; padding: 0 4px; border: 0; background: none; color: var(--ink); font: var(--ow-type-title); cursor: pointer; }
+.lp-switch[aria-disabled='true'] { cursor: progress; color: var(--ink-2); }
+.lp-pill { position: relative; display: inline-block; width: 52px; height: 32px; border-radius: var(--ow-radius-full); background: var(--line-2); }
+.lp-knob { position: absolute; top: 4px; left: 4px; width: 24px; height: 24px; border-radius: var(--ow-radius-full); background: var(--ink); transition: transform var(--ow-motion-fast) var(--ow-ease-out); }
+.lp-switch[aria-checked='true'] .lp-pill { background: var(--wiz); }
+.lp-switch[aria-checked='true'] .lp-knob { transform: translateX(20px); }
+.lp-said { margin: 0; max-width: 280px; text-align: end; }
+.lp-said:empty { display: none; }
+
+@media (prefers-reduced-motion: reduce) { .lp-knob { transition: none; } }
+
+/* The phone: one column, the switch under the text. Loops is not a phone tab (MD9's five stay);
+   the phone reaches it from the Plan screen (Jake, #549). */
+@media (max-width: 899px) {
+  .app-nav .nav-loops { display: none; }
+  .lp-head { margin-bottom: 24px; }
+  .lp-section { font: var(--ow-type-page); }
+  .lp-row { grid-template-columns: 24px minmax(0, 1fr); align-items: start; padding: 16px; }
+  .lp-switch-cell { grid-column: 2; justify-items: start; }
+  .lp-said { text-align: start; }
+}

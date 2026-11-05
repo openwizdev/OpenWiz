@@ -24,7 +24,7 @@ const gaps = [
   { kind: 'timed_out', subject: null, detail: 'machine list timed out after 15 s' },
   { kind: 'command_failed', subject: 'thr_web_0012', detail: 'thread show exited 1: Error: HTTP 500: Synthetic server error' },
 ];
-// two projects with the same name, and ungrouped rows with the core's reason.
+// G2: two projects with the same name, and ungrouped rows with the core's reason.
 const groupRows = [
   session(21, { group: { kind: 'project', id: 'prj_web_0004', name: { known: 'Synthetic twin project' } }, status: { known: 'active' } }),
   session(22, { group: { kind: 'project', id: 'prj_web_0005', name: { known: 'Synthetic twin project' } } }),

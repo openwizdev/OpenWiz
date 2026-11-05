@@ -1,0 +1,74 @@
+# Selector escapes (#1264, X6 of spec #1256, H5). When a full run of CI on
+# main (a push or the nightly run) fails, `find` reads its failing tests and
+# the CI selection plans (contracts/ci-selection.v1.md) of the pull requests
+# merged since the last green full run, and reports each failing test a plan
+# skipped on one needs-triage issue, once. A run it can't judge (no readable
+# plan, a failure that names no test) is unknown and fails this run, so it is
+# never read as "no escape". It runs main's own copy of the finder, never a
+# pull request's code, and reads plans only as data. See ci/escapes/README.md.
+#
+# Read access, plus issues: write for `find`'s one write. The bench
+# (tools/ci-bench) counts escapes by this run's name (the CI run and attempt)
+# and conclusion.
+name: Selector escapes
+run-name: ${{ github.event_name == 'workflow_run' && format('Selector escapes in CI run {0} attempt {1}', github.event.workflow_run.id, github.event.workflow_run.run_attempt) || 'Selector escapes, the finder''s tests' }}
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+  pull_request:
+    paths:
+      - 'ci/escapes/**'
+      - 'ci/rust-tests.sh'
+      - 'ci/selection/**'
+      - 'contracts/ci-selection.v1.schema.json'
+      - '.github/workflows/ci-escapes.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    if: github.event_name == 'pull_request'
+    runs-on: ${{ vars.CI_RUNS_ON || 'ubuntu-slim' }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Python
+        run: sh tools/ci-bench/python.sh
+      - name: The escape finder's tests
+        run: python3 -I ci/escapes/test.py
+
+  find:
+    if: >-
+      github.event_name == 'workflow_run'
+      && github.event.workflow_run.conclusion == 'failure'
+      && github.event.workflow_run.head_branch == 'main'
+      && (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'schedule')
+    runs-on: ${{ vars.CI_RUNS_ON || 'ubuntu-slim' }}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+      issues: write
+    # One at a time, so two red runs never open the same escape twice.
+    concurrency:
+      group: ci-escapes
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Python
+        run: sh tools/ci-bench/python.sh
+      - name: Find and report selector escapes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN: ${{ github.event.workflow_run.id }}
+          ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: python3 -I ci/escapes/escapes.py find --run "$RUN" --attempt "$ATTEMPT" --summary "$GITHUB_STEP_SUMMARY"

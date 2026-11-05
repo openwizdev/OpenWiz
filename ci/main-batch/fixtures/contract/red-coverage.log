@@ -1,0 +1,933 @@
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF.FFFFFFFFFFFFFFFFFFFFFFFFFFF
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (missing=0)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 92, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'missing full-work receipt')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : missing full-work receipt
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (missing=1)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 92, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'missing full-work receipt')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : missing full-work receipt
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (missing=2)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 92, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'missing full-work receipt')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : missing full-work receipt
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (missing=3)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 92, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'missing full-work receipt')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : missing full-work receipt
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (missing=4)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 92, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'missing full-work receipt')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : missing full-work receipt
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (missing=5)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 92, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'missing full-work receipt')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : missing full-work receipt
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (missing=6)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 92, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'missing full-work receipt')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : missing full-work receipt
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (missing=7)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 92, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'missing full-work receipt')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : missing full-work receipt
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (missing=8)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 92, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'missing full-work receipt')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : missing full-work receipt
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (missing=9)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 92, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'missing full-work receipt')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : missing full-work receipt
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=0, state='failure')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=0, state='cancelled')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=0, state='skipped')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=0, state='pending')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=0, state='unknown')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=1, state='failure')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=1, state='cancelled')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=1, state='skipped')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=1, state='pending')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=1, state='unknown')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=2, state='failure')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=2, state='cancelled')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=2, state='skipped')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=2, state='pending')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=2, state='unknown')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=3, state='failure')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=3, state='cancelled')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=3, state='skipped')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=3, state='pending')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=3, state='unknown')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=4, state='failure')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=4, state='cancelled')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=4, state='skipped')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=4, state='pending')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=4, state='unknown')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=5, state='failure')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=5, state='cancelled')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=5, state='skipped')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=5, state='pending')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=5, state='unknown')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=6, state='failure')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=6, state='cancelled')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=6, state='skipped')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=6, state='pending')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=6, state='unknown')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=7, state='failure')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=7, state='cancelled')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=7, state='skipped')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=7, state='pending')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=7, state='unknown')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=8, state='failure')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=8, state='cancelled')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=8, state='skipped')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=8, state='pending')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=8, state='unknown')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=9, state='failure')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=9, state='cancelled')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=9, state='skipped')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=9, state='pending')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=9, state='unknown')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=10, state='failure')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=10, state='cancelled')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=10, state='skipped')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=10, state='pending')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory) (index=10, state='unknown')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 97, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'non-success combined work')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : non-success combined work
+
+======================================================================
+FAIL: test_each_combined_receipt_and_result_is_mandatory (__main__.Contract.test_each_combined_receipt_and_result_is_mandatory)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 100, in test_each_combined_receipt_and_result_is_mandatory
+    self.refused(d, 'receipt must bind exact plan/run/tests')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : receipt must bind exact plan/run/tests
+
+======================================================================
+FAIL: test_newest_green_is_not_a_current_attempt_receipt (__main__.Contract.test_newest_green_is_not_a_current_attempt_receipt) (field='id')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 80, in test_newest_green_is_not_a_current_attempt_receipt
+    self.refused(d, 'another run or attempt must refuse')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : another run or attempt must refuse
+
+======================================================================
+FAIL: test_newest_green_is_not_a_current_attempt_receipt (__main__.Contract.test_newest_green_is_not_a_current_attempt_receipt) (field='attempt')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 80, in test_newest_green_is_not_a_current_attempt_receipt
+    self.refused(d, 'another run or attempt must refuse')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : another run or attempt must refuse
+
+======================================================================
+FAIL: test_newest_green_is_not_a_current_attempt_receipt (__main__.Contract.test_newest_green_is_not_a_current_attempt_receipt) (field='event')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 80, in test_newest_green_is_not_a_current_attempt_receipt
+    self.refused(d, 'another run or attempt must refuse')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : another run or attempt must refuse
+
+======================================================================
+FAIL: test_newest_green_is_not_a_current_attempt_receipt (__main__.Contract.test_newest_green_is_not_a_current_attempt_receipt) (plan_field='head')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 86, in test_newest_green_is_not_a_current_attempt_receipt
+    self.refused(d, 'plan must bind tested batch and current execution')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : plan must bind tested batch and current execution
+
+======================================================================
+FAIL: test_newest_green_is_not_a_current_attempt_receipt (__main__.Contract.test_newest_green_is_not_a_current_attempt_receipt) (plan_field='base')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 86, in test_newest_green_is_not_a_current_attempt_receipt
+    self.refused(d, 'plan must bind tested batch and current execution')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : plan must bind tested batch and current execution
+
+======================================================================
+FAIL: test_newest_green_is_not_a_current_attempt_receipt (__main__.Contract.test_newest_green_is_not_a_current_attempt_receipt) (plan_field='id')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 86, in test_newest_green_is_not_a_current_attempt_receipt
+    self.refused(d, 'plan must bind tested batch and current execution')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : plan must bind tested batch and current execution
+
+======================================================================
+FAIL: test_newest_green_is_not_a_current_attempt_receipt (__main__.Contract.test_newest_green_is_not_a_current_attempt_receipt) (plan_field='attempt')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 86, in test_newest_green_is_not_a_current_attempt_receipt
+    self.refused(d, 'plan must bind tested batch and current execution')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : plan must bind tested batch and current execution
+
+======================================================================
+FAIL: test_planted_missed_work_cannot_shrink_full_inventory (__main__.Contract.test_planted_missed_work_cannot_shrink_full_inventory)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 110, in test_planted_missed_work_cannot_shrink_full_inventory
+    self.refused(d, 'a self-consistent but incomplete full plan must refuse')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : a self-consistent but incomplete full plan must refuse
+
+======================================================================
+FAIL: test_safety_privacy_and_required_checks_cannot_be_omitted (__main__.Contract.test_safety_privacy_and_required_checks_cannot_be_omitted) (index=0, kind='missing')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 126, in test_safety_privacy_and_required_checks_cannot_be_omitted
+    self.refused(d, 'every required check binds its successful head')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : every required check binds its successful head
+
+======================================================================
+FAIL: test_safety_privacy_and_required_checks_cannot_be_omitted (__main__.Contract.test_safety_privacy_and_required_checks_cannot_be_omitted) (index=0, kind='failed')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 126, in test_safety_privacy_and_required_checks_cannot_be_omitted
+    self.refused(d, 'every required check binds its successful head')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : every required check binds its successful head
+
+======================================================================
+FAIL: test_safety_privacy_and_required_checks_cannot_be_omitted (__main__.Contract.test_safety_privacy_and_required_checks_cannot_be_omitted) (index=0, kind='foreign')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 126, in test_safety_privacy_and_required_checks_cannot_be_omitted
+    self.refused(d, 'every required check binds its successful head')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : every required check binds its successful head
+
+======================================================================
+FAIL: test_safety_privacy_and_required_checks_cannot_be_omitted (__main__.Contract.test_safety_privacy_and_required_checks_cannot_be_omitted) (index=0, kind='old-attempt')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 126, in test_safety_privacy_and_required_checks_cannot_be_omitted
+    self.refused(d, 'every required check binds its successful head')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : every required check binds its successful head
+
+======================================================================
+FAIL: test_safety_privacy_and_required_checks_cannot_be_omitted (__main__.Contract.test_safety_privacy_and_required_checks_cannot_be_omitted) (index=1, kind='missing')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 126, in test_safety_privacy_and_required_checks_cannot_be_omitted
+    self.refused(d, 'every required check binds its successful head')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : every required check binds its successful head
+
+======================================================================
+FAIL: test_safety_privacy_and_required_checks_cannot_be_omitted (__main__.Contract.test_safety_privacy_and_required_checks_cannot_be_omitted) (index=1, kind='failed')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 126, in test_safety_privacy_and_required_checks_cannot_be_omitted
+    self.refused(d, 'every required check binds its successful head')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : every required check binds its successful head
+
+======================================================================
+FAIL: test_safety_privacy_and_required_checks_cannot_be_omitted (__main__.Contract.test_safety_privacy_and_required_checks_cannot_be_omitted) (index=1, kind='foreign')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 126, in test_safety_privacy_and_required_checks_cannot_be_omitted
+    self.refused(d, 'every required check binds its successful head')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : every required check binds its successful head
+
+======================================================================
+FAIL: test_safety_privacy_and_required_checks_cannot_be_omitted (__main__.Contract.test_safety_privacy_and_required_checks_cannot_be_omitted) (index=1, kind='old-attempt')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 126, in test_safety_privacy_and_required_checks_cannot_be_omitted
+    self.refused(d, 'every required check binds its successful head')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : every required check binds its successful head
+
+======================================================================
+FAIL: test_safety_privacy_and_required_checks_cannot_be_omitted (__main__.Contract.test_safety_privacy_and_required_checks_cannot_be_omitted)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 129, in test_safety_privacy_and_required_checks_cannot_be_omitted
+    self.refused(d, 'ci must bind exact current execution')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : ci must bind exact current execution
+
+======================================================================
+FAIL: test_untrusted_shapes_and_claimed_switch_authority_refuse (__main__.Contract.test_untrusted_shapes_and_claimed_switch_authority_refuse)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 134, in test_untrusted_shapes_and_claimed_switch_authority_refuse
+    self.refused(d, 'schema is closed; fixtures grant no activation')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : schema is closed; fixtures grant no activation
+
+======================================================================
+FAIL: test_wrong_identity_membership_or_overlap_refuses (__main__.Contract.test_wrong_identity_membership_or_overlap_refuses) (case=0)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 72, in test_wrong_identity_membership_or_overlap_refuses
+    self.refused(d, 'foreign or ambiguous batch must refuse')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : foreign or ambiguous batch must refuse
+
+======================================================================
+FAIL: test_wrong_identity_membership_or_overlap_refuses (__main__.Contract.test_wrong_identity_membership_or_overlap_refuses) (case=1)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 72, in test_wrong_identity_membership_or_overlap_refuses
+    self.refused(d, 'foreign or ambiguous batch must refuse')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : foreign or ambiguous batch must refuse
+
+======================================================================
+FAIL: test_wrong_identity_membership_or_overlap_refuses (__main__.Contract.test_wrong_identity_membership_or_overlap_refuses) (case=2)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 72, in test_wrong_identity_membership_or_overlap_refuses
+    self.refused(d, 'foreign or ambiguous batch must refuse')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : foreign or ambiguous batch must refuse
+
+======================================================================
+FAIL: test_wrong_identity_membership_or_overlap_refuses (__main__.Contract.test_wrong_identity_membership_or_overlap_refuses) (case=3)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 72, in test_wrong_identity_membership_or_overlap_refuses
+    self.refused(d, 'foreign or ambiguous batch must refuse')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : foreign or ambiguous batch must refuse
+
+======================================================================
+FAIL: test_wrong_identity_membership_or_overlap_refuses (__main__.Contract.test_wrong_identity_membership_or_overlap_refuses) (case=4)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 72, in test_wrong_identity_membership_or_overlap_refuses
+    self.refused(d, 'foreign or ambiguous batch must refuse')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : foreign or ambiguous batch must refuse
+
+======================================================================
+FAIL: test_wrong_identity_membership_or_overlap_refuses (__main__.Contract.test_wrong_identity_membership_or_overlap_refuses) (case=5)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 72, in test_wrong_identity_membership_or_overlap_refuses
+    self.refused(d, 'foreign or ambiguous batch must refuse')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : foreign or ambiguous batch must refuse
+
+======================================================================
+FAIL: test_wrong_identity_membership_or_overlap_refuses (__main__.Contract.test_wrong_identity_membership_or_overlap_refuses) (case=6)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 72, in test_wrong_identity_membership_or_overlap_refuses
+    self.refused(d, 'foreign or ambiguous batch must refuse')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : foreign or ambiguous batch must refuse
+
+======================================================================
+FAIL: test_wrong_identity_membership_or_overlap_refuses (__main__.Contract.test_wrong_identity_membership_or_overlap_refuses) (case=7)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 72, in test_wrong_identity_membership_or_overlap_refuses
+    self.refused(d, 'foreign or ambiguous batch must refuse')
+  File "ci/main-batch/test_contract.py", line 43, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : foreign or ambiguous batch must refuse
+
+======================================================================
+FAIL: test_wrong_identity_membership_or_overlap_refuses (__main__.Contract.test_wrong_identity_membership_or_overlap_refuses)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 74, in test_wrong_identity_membership_or_overlap_refuses
+    self.assertTrue(self.refusals(context=context), 'overlap with covered checkpoint')
+AssertionError: [] is not true : overlap with covered checkpoint
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.028s
+
+FAILED (failures=93)

@@ -1,0 +1,11 @@
+{
+ "ready": false,
+ "account": null,
+ "signedOut": true,
+ "projectId": null,
+ "repository": null,
+ "model": null,
+ "error": null,
+ "signingIn": false,
+ "signInError": null
+}

@@ -1,10 +1,27 @@
+//! U5 (#12, A2): the same operation. For every #11 fixture case, each new
+//! route's answer is what the CLI prints with `--json` for the same input
+//! and clock, under the status the contract gives the CLI's exit code:
+//!
+//! - the create is `openwiz new --project-id … --yes --json` (its start read
+//!   once; the CLI's recording wait makes its follow end on the same view);
+//! - the preview is the same command without `--yes`;
+//! - the Cloud options are `openwiz models --json`;
+//! - the status is `openwiz new --status <op> --json`.
+//!
+//! The CLI runs against one fake and the server against another, with the
+//! same responses, so neither sees the other's record. A static check finds
+//! no option, outcome, effect or stage logic in the server.
+
 use serde_json::{Value, json};
 
+use crate::at_once::at_once;
 use crate::new_support::{
     NO_REMOTE, NewFake, OPTIONS, PERSONAL, PROJECT, TEXT, THREAD, body, body_with, cli_args,
     cli_json, create, file, preview_json, serve_new, status,
 };
 
+/// One #11 fixture case: the responses tried before the defaults, the
+/// project and the body.
 struct Case {
     name: &'static str,
     responses: Vec<Value>,
@@ -169,7 +186,8 @@ fn http_status(exit: i32) -> u16 {
 
 #[test]
 fn every_create_preview_and_status_is_the_clis_json() {
-    for case in cases() {
+    // Each case has its own two fakes, so they run at once (#1259).
+    at_once(&cases(), 8, |case| {
         let cli = NewFake::with(&format!("web_u5_cli_{}", case.name), case.responses.clone());
         let web = NewFake::with(&format!("web_u5_web_{}", case.name), case.responses.clone());
         let s = serve_new(&web);
@@ -248,7 +266,7 @@ fn every_create_preview_and_status_is_the_clis_json() {
         );
         assert_eq!(r.json(), want, "{} reuse", case.name);
         assert_eq!(cli.spawn_count(), web.spawn_count(), "{}", case.name);
-    }
+    });
 }
 
 #[test]
@@ -354,7 +372,9 @@ fn the_server_has_no_new_thread_logic_of_its_own() {
         if text.contains("new_thread") {
             seen_new_thread = true;
         }
-
+        // Updated for #16 (B3) with this reason: `attachments.rs` holds the
+        // attachment routes; its `FailReason` is the attachment model's
+        // (AW4 checks it), never a new-thread rule.
         if path.ends_with("attachments.rs") {
             assert!(
                 !text.contains("new_thread::"),

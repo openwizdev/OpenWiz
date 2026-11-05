@@ -1,10 +1,13 @@
 //! The web page: `apps/web`'s static export, from one directory given by
-//! `--web-root`. An explicit list that matches the export's layout:
+//! `--web-root` (A8, #46). An explicit list that matches the export's layout:
 //! `/` is `index.html`, and `/_next/static/…` and `/fonts/…` are files under
-//! the root with an extension in [`TYPES`]. Nothing else is served.
+//! the root with an extension in [`TYPES`]. Since #1029 (the installable app),
+//! the approved exception also serves exactly `/manifest.webmanifest`, `/sw.js`,
+//! `/sw-register.js` and `/icons/…`. Nothing else is served.
+//! Jake's approval is preserved in the [private record](https://github.com/jparker2006/ClosedWiz/issues/1277#issuecomment-6704800036), recorded 2026-11-07.
 //!
 //! **Loaded once, at start, into memory; no request touches the
-//! filesystem**. Replacing the root, an ancestor or a file
+//! filesystem** (Sol, round 1). Replacing the root, an ancestor or a file
 //! afterwards changes nothing, and a request can never open a FIFO. A new
 //! export needs a restart.
 //!
@@ -24,15 +27,25 @@ use std::sync::Arc;
 
 use crate::http::Reply;
 
+/// The page's Content-Security-Policy: #6's (`apps/web/test/support/serve.mjs`
+/// `PAGE_CSP`). Scripts and styles from this origin only, and no inline
+/// script or style. Since #16, `img-src` also takes `blob:`, and nothing else
+/// changes: the attachment tray's thumbnails are object URLs of the owner's
+/// own chosen file, made in the browser. Since #1029, `manifest-src` and
+/// `worker-src` take this origin: the installable app's manifest and its
+/// app-shell worker; the app's icons are this server's only images.
 pub const PAGE_CSP: &str = "default-src 'none'; script-src 'self'; style-src 'self'; \
-font-src 'self'; img-src 'self' blob:; connect-src 'self'; base-uri 'none'; \
-form-action 'none'; frame-ancestors 'none'";
+font-src 'self'; img-src 'self' blob:; connect-src 'self'; manifest-src 'self'; \
+worker-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 
-/// `Cache-Control` for `/_next/static/…` and `/fonts/…`. The builder's
-/// default: the owner's browser only, never a shared cache.
+/// `Cache-Control` for `/_next/static/…`, `/fonts/…`, `/icons/…` and
+/// `/sw-register.js`. The builder's default (#46): the owner's browser only,
+/// never a shared cache.
 pub const STATIC_CACHE: &str = "private, max-age=31536000, immutable";
 
-/// `Cache-Control` for the page itself: it names one build's assets.
+/// `Cache-Control` for the page itself (it names one build's assets), and
+/// since #1029 for the manifest and the worker, so a new build's are picked
+/// up on the next load.
 const PAGE_CACHE: &str = "no-store";
 
 /// The largest file served, in bytes. The export's largest is about 220 KB.
@@ -46,11 +59,21 @@ pub const MAX_WEB_FILES: usize = 512;
 pub const MAX_WEB_BYTES: u64 = 8 * 1024 * 1024;
 
 /// The web routes, as the log names them.
-pub const WEB_ROUTES: &[&str] = &[PAGE, STATIC, FONTS];
+pub const WEB_ROUTES: &[&str] = &[
+    PAGE, STATIC, FONTS, SETUP, MANIFEST, WORKER, REGISTER, ICONS,
+];
+
+const SETUP: &str = "/setup";
 
 const PAGE: &str = "/";
 const STATIC: &str = "/_next/static/*";
 const FONTS: &str = "/fonts/*";
+
+// #1029: the installable app's files, each an exact path but the icons.
+const MANIFEST: &str = "/manifest.webmanifest";
+const WORKER: &str = "/sw.js";
+const REGISTER: &str = "/sw-register.js";
+const ICONS: &str = "/icons/*";
 
 /// The fixed content types, by extension. Any other extension is `404`.
 const TYPES: &[(&str, &str)] = &[
@@ -59,6 +82,8 @@ const TYPES: &[(&str, &str)] = &[
     ("css", "text/css; charset=utf-8"),
     ("woff2", "font/woff2"),
     ("txt", "text/plain; charset=utf-8"),
+    ("webmanifest", "application/manifest+json"),
+    ("png", "image/png"),
 ];
 
 /// The headers on every web file, besides its type, cache and length.
@@ -115,8 +140,17 @@ impl WebRoot {
             .remove("index.html")
             .ok_or_else(|| refused("no regular index.html"))?;
         let mut served = BTreeMap::from([("/".to_owned(), index)]);
+        if let Some(setup) = files.remove("setup.html") {
+            served.insert(SETUP.to_owned(), setup.clone());
+            served.insert("/setup/".to_owned(), setup);
+        }
         for (relative, asset) in files {
-            if relative.starts_with("_next/static/") || relative.starts_with("fonts/") {
+            let exact = [MANIFEST, WORKER, REGISTER].contains(&format!("/{relative}").as_str());
+            if exact
+                || relative.starts_with("_next/static/")
+                || relative.starts_with("fonts/")
+                || relative.starts_with("icons/")
+            {
                 served.insert(format!("/{relative}"), asset);
             }
         }
@@ -215,14 +249,64 @@ fn read(path: &Path, checked: &Metadata) -> io::Result<Vec<u8>> {
     Ok(body)
 }
 
+/// Synthetic filesystem operations for setup's startup-loading proofs only.
+#[cfg(test)]
+pub(crate) struct SetupFixture(std::path::PathBuf);
+
+#[cfg(test)]
+impl SetupFixture {
+    pub(crate) fn new() -> Self {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        static NEXT: AtomicUsize = AtomicUsize::new(0);
+        let root = std::env::temp_dir().join(format!(
+            "openwiz-setup-static-{}-{}",
+            std::process::id(),
+            NEXT.fetch_add(1, Ordering::Relaxed)
+        ));
+        fs::create_dir(&root).unwrap();
+        let fixture = Self(root);
+        fs::write(fixture.0.join("index.html"), "synthetic inventory").unwrap();
+        fixture
+    }
+
+    pub(crate) fn root(&self) -> &Path {
+        &self.0
+    }
+
+    pub(crate) fn write_setup(&self, body: &str) {
+        fs::write(self.0.join("setup.html"), body).unwrap();
+    }
+
+    pub(crate) fn symlink_setup(&self) {
+        fs::remove_file(self.0.join("setup.html")).unwrap();
+        std::os::unix::fs::symlink(self.0.join("index.html"), self.0.join("setup.html")).unwrap();
+    }
+}
+
+#[cfg(test)]
+impl Drop for SetupFixture {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.0);
+    }
+}
+
 /// The web route template a path is under, if any.
 pub(crate) fn route(path: &str) -> Option<&'static str> {
-    if path == "/" {
+    if matches!(path, "/setup" | "/setup/") {
+        Some(SETUP)
+    } else if path == "/" {
         Some(PAGE)
     } else if path.starts_with("/_next/static/") {
         Some(STATIC)
     } else if path.starts_with("/fonts/") {
         Some(FONTS)
+    } else if path.starts_with("/icons/") {
+        Some(ICONS)
+    } else if let Some(exact) = [MANIFEST, WORKER, REGISTER]
+        .into_iter()
+        .find(|e| *e == path)
+    {
+        Some(exact)
     } else {
         None
     }
@@ -231,7 +315,7 @@ pub(crate) fn route(path: &str) -> Option<&'static str> {
 /// The loaded file at `path` (under `template`), or `None` (`404`).
 pub(crate) fn serve(root: &WebRoot, template: &str, path: &str) -> Option<Reply> {
     let asset = root.0.get(path)?;
-    let cache = if template == PAGE {
+    let cache = if [PAGE, SETUP, MANIFEST, WORKER].contains(&template) {
         PAGE_CACHE
     } else {
         STATIC_CACHE

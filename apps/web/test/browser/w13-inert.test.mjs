@@ -1,4 +1,9 @@
-
+// W13: accessible and inert. A pasted file is refused with words; a pasted file
+// path is text. Updated for #16 (B3) with this reason: the prompt body gains the
+// one attachment tray, so a dropped file is attached (AW10) and there is one
+// file input, the tray's "Add files"; the text field never takes a file.
+// Keyboard and screen-reader use work. The provider's and the core's
+// strings render as plain text and run nothing.
 
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
@@ -77,11 +82,11 @@ test('keyboard: Tab reaches the message and the buttons, Ctrl+Enter sends, names
       return {
         label: t.labels?.[0]?.textContent ?? null,
         status: c.querySelector('[data-part=outcome]')?.getAttribute('role'),
-        buttons: [...c.querySelectorAll('button')].map((b) => b.textContent),
+        buttons: [...c.querySelectorAll('button')].map((b) => b.getAttribute('aria-label') ?? b.textContent),
       };
     });
-
-    assert.deepEqual(names, { label: 'message', status: 'status', buttons: ['Add files', 'Queue', 'Steer'] });
+    // The reading header now lives inside the composer; icon controls retain their accessible names.
+    assert.deepEqual(names, { label: 'message', status: 'status', buttons: ['Search or jump to…', 'Sessions — close panel', 'Add files', 'Queue', 'Steer'] });
     await p.page.locator('[data-part=composer] textarea').focus();
     await p.page.keyboard.type(TEXT);
     await p.page.locator('[data-part=detail] .sheet-x').focus();

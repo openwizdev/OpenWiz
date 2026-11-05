@@ -12,6 +12,12 @@ use openwiz_core::prompt::ReadyPrompt;
 
 use crate::support::*;
 
+/// The flags `spawn` takes that OpenWiz never passes in a text-only create
+/// (spike run 3's help, v131). Kept here, not in the adapter: M12 refuses
+/// them in product sources. **B2 (ClosedWiz#15), recorded reason:** sheet
+/// B-7 lets `--file` and `--image` carry staged attachments, built only by
+/// the allowlist's one `attachment_args` (AD1, AD11); a text-only prompt
+/// still passes neither, as these tests prove.
 pub const EXCLUDED_SPAWN_FLAGS: &[&str] = &[
     "--file",
     "--image",
@@ -50,6 +56,39 @@ fn spawn(text: &str) -> SpawnRequest {
 }
 
 #[test]
+fn n01_exact_invocation_affected_contracts_preserve_original_cases() {
+    let cases: [(&str, fn()); 6] = [
+        (
+            "an_unsafe_value_is_refused_not_passed",
+            an_unsafe_value_is_refused_not_passed,
+        ),
+        (
+            "every_setting_is_explicit_once",
+            every_setting_is_explicit_once,
+        ),
+        (
+            "no_excluded_flag_is_ever_passed",
+            no_excluded_flag_is_ever_passed,
+        ),
+        (
+            "the_arguments_are_exactly_the_verified_shape",
+            the_arguments_are_exactly_the_verified_shape,
+        ),
+        (
+            "the_core_passes_the_chosen_settings_and_derived_request_id",
+            the_core_passes_the_chosen_settings_and_derived_request_id,
+        ),
+        (
+            "the_text_is_one_last_argument_byte_for_byte",
+            the_text_is_one_last_argument_byte_for_byte,
+        ),
+    ];
+    for (name, proof) in cases {
+        eprintln!("TA2 case: n01_exact_invocation::{name}");
+        proof();
+    }
+}
+
 fn the_arguments_are_exactly_the_verified_shape() {
     let s = spawn("Synthetic prompt");
     let argv = spawn_argv(&s).expect("valid");
@@ -78,7 +117,6 @@ fn the_arguments_are_exactly_the_verified_shape() {
     assert_eq!(argv, expected);
 }
 
-#[test]
 fn every_setting_is_explicit_once() {
     let argv = spawn_argv(&spawn("Synthetic")).unwrap();
     let flags = &argv[..argv.len() - 1];
@@ -102,7 +140,6 @@ fn every_setting_is_explicit_once() {
     assert_eq!(flags[machine + 1], "cloud");
 }
 
-#[test]
 fn the_text_is_one_last_argument_byte_for_byte() {
     for text in [
         "-leading dash",
@@ -121,7 +158,6 @@ fn the_text_is_one_last_argument_byte_for_byte() {
     }
 }
 
-#[test]
 fn no_excluded_flag_is_ever_passed() {
     let argv = spawn_argv(&spawn("--title Synthetic --parent-self")).unwrap();
     let flags = &argv[..argv.len() - 1];
@@ -144,7 +180,6 @@ fn no_excluded_flag_is_ever_passed() {
     }
 }
 
-#[test]
 fn an_unsafe_value_is_refused_not_passed() {
     let mut bad = Vec::new();
     let mut s = spawn("Synthetic");
@@ -170,7 +205,6 @@ fn an_unsafe_value_is_refused_not_passed() {
     }
 }
 
-#[test]
 fn the_core_passes_the_chosen_settings_and_derived_request_id() {
     let client = FakeClient::new();
     let store = MemoryStore::new();

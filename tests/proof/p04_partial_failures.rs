@@ -12,6 +12,9 @@ use openwiz_core::source::SourceError;
 
 use crate::support::*;
 
+#[path = "../support/real_time.rs"]
+mod real_time;
+
 /// Slack on top of a budget for process start-up and clean-up.
 const SLACK: Duration = Duration::from_secs(3);
 
@@ -41,17 +44,25 @@ fn thread_list_error_is_an_explicit_error() {
 #[test]
 fn thread_list_timeout_is_explicit_bounded_and_cleaned_up() {
     let fake = Fake::new("p04_thread_list_timeout", "thread-list-timeout");
-    let budget = Duration::from_secs(2);
+    // Keep the synthetic run budget below the real per-read timeout, but
+    // leave room for healthy prerequisite reads on a busy runner (#2779).
+    let budget = real_time::scaled(
+        "p04_list_timeout",
+        Duration::from_secs(1),
+        Duration::from_secs(10),
+        || {
+            Fake::new("p04_list_timeout_calibrate", "normal")
+                .list(&ListRequest::default())
+                .expect("healthy list for calibration");
+        },
+    );
     let started = Instant::now();
     let result = fake.list(&ListRequest {
         budget,
         ..ListRequest::default()
     });
-    assert!(
-        started.elapsed() < budget + SLACK,
-        "took {:?}",
-        started.elapsed()
-    );
+    let took = started.elapsed();
+    assert!(took >= budget && took < budget + SLACK, "took {took:?}");
     assert!(
         matches!(
             result,
@@ -104,6 +115,133 @@ fn project_list_failure_gives_a_partial_ungrouped_result() {
     }
 }
 
+/// Synthetic assumptions: a machine ID is repeated, with the supplied names.
+fn machine_name_rows(test: &str, names: &[String]) -> Fake {
+    use serde_json::{Value, json};
+    let fake = Fake::new(test, "normal");
+    let normal = std::path::Path::new(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/fixtures/room-cli-0.43.1/normal"
+    ));
+    let rows: Value = serde_json::from_str(
+        &std::fs::read_to_string(normal.join("machine-list.json")).expect("machine fixture"),
+    )
+    .expect("machine JSON");
+    let rows: Vec<_> = names
+        .iter()
+        .map(|name| {
+            let mut row = rows[0].clone();
+            row["name"] = json!(name);
+            row
+        })
+        .collect();
+    let scenario = json!({
+        "extends": normal,
+        "synthetic_assumptions": ["Repeated machine ID with synthetic name facts"],
+        "responses": [{"argv": ["machine", "list", "--json"], "stdout": json!(rows).to_string()}]
+    });
+    let path = fake.dir.join("scenario.json");
+    std::fs::write(&path, scenario.to_string()).expect("scenario");
+    std::fs::write(
+        fake.dir.join("fake-room-cli.scenario"),
+        path.to_str().unwrap(),
+    )
+    .expect("scenario pointer");
+    fake
+}
+
+#[test]
+fn conflicting_machine_names_are_unknown_in_the_fixture_cli_in_either_order() {
+    use serde_json::json;
+    let prefix = "x".repeat(openwiz_core::limits::FIELD_MAX_CHARS);
+    let a = "Synthetic machine A".to_owned();
+    let b = "Synthetic machine B".to_owned();
+    for (case, mut names) in [
+        vec![a.clone(), b.clone()],
+        vec![a.clone(), b.clone(), a],
+        vec![b.clone(), "Synthetic machine A".to_owned(), b],
+        vec![format!("{prefix}a"), format!("{prefix}b")],
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let mut previous = None;
+        for reverse in [false, true] {
+            if reverse {
+                names.reverse();
+            }
+            let fake = machine_name_rows(&format!("p04_machine_conflict_{case}_{reverse}"), &names);
+            let env = fake.cli_json(&["ls", "--json"]);
+            assert_eq!(env["coverage"]["state"], "partial", "{names:?}");
+            let gaps = env["gaps"].as_array().expect("gaps");
+            assert_eq!(gaps.len(), 1, "{gaps:?}");
+            assert_eq!(gaps[0]["kind"], "malformed");
+            assert_eq!(gaps[0]["subject"], "mch_syn_0001");
+            assert!(gaps[0]["detail"].as_str().unwrap().contains("conflicting"));
+            let sessions = env["data"]["sessions"].as_array().expect("sessions");
+            assert_eq!(sessions.len(), 6);
+            assert_eq!(env["coverage"]["counts"]["listed"], 6);
+            assert_eq!(env["coverage"]["counts"]["shown"], 6);
+            let local = sessions.iter().find(|s| s["id"] == "thr_syn_0002").unwrap();
+            assert_eq!(local["location"]["known"]["kind"], "local");
+            let reason = local["location"]["known"]["machine"]["unknown"]
+                .as_str()
+                .expect("unknown machine name");
+            assert!(reason.contains("conflicting"), "{reason}");
+            let cloud = sessions.iter().find(|s| s["id"] == "thr_syn_0001").unwrap();
+            assert_eq!(cloud["location"], json!({"known": {"kind": "cloud"}}));
+            assert_eq!(
+                fake.invocations(),
+                vec![
+                    vec!["--version"],
+                    vec!["thread", "list", "--json"],
+                    vec!["project", "list", "--json", "--include-personal"],
+                    vec!["machine", "list", "--json"],
+                ]
+            );
+            if let Some(previous) = previous {
+                assert_eq!(
+                    env, previous,
+                    "machine row order must not change the envelope"
+                );
+            }
+            previous = Some(env);
+        }
+    }
+}
+
+#[test]
+fn consistent_machine_names_resolve_normally_in_the_fixture_cli() {
+    // Worked example of the 200-character cap: 199 x's and one cut marker.
+    for (case, (name, expected)) in [
+        (
+            "Synthetic machine one".to_owned(),
+            "Synthetic machine one".to_owned(),
+        ),
+        ("x".repeat(300), format!("{}…", "x".repeat(199))),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        for count in [1, 3] {
+            let fake = machine_name_rows(
+                &format!("p04_machine_consistent_{case}_{count}"),
+                &vec![name.clone(); count],
+            );
+            let env = fake.cli_json(&["ls", "--json"]);
+            assert_eq!(env["coverage"]["state"], "complete");
+            assert_eq!(env["gaps"], serde_json::json!([]));
+            let local = env["data"]["sessions"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|s| s["id"] == "thr_syn_0002")
+                .unwrap();
+            assert_eq!(local["location"]["known"]["machine"]["known"], expected);
+        }
+    }
+}
+
 #[test]
 fn detail_read_error_gives_a_partial_result_with_unknown_configuration() {
     let fake = Fake::new("p04_detail_read_error", "show-error");
@@ -124,16 +262,22 @@ fn detail_read_error_gives_a_partial_result_with_unknown_configuration() {
 #[test]
 fn detail_read_timeout_gives_a_partial_result_within_the_budget() {
     let fake = Fake::new("p04_detail_read_timeout", "show-timeout");
-    let budget = Duration::from_secs(3);
+    let budget = real_time::scaled(
+        "p04_detail_timeout",
+        Duration::from_millis(1_500),
+        Duration::from_secs(10),
+        || {
+            Fake::new("p04_detail_timeout_calibrate", "normal")
+                .list(&long())
+                .expect("healthy detailed list for calibration");
+        },
+    );
     let started = Instant::now();
     let env = fake
         .list(&ListRequest { budget, ..long() })
         .expect("honest partial list");
-    assert!(
-        started.elapsed() < budget + SLACK,
-        "took {:?}",
-        started.elapsed()
-    );
+    let took = started.elapsed();
+    assert!(took >= budget && took < budget + SLACK, "took {took:?}");
     assert_eq!(env.coverage.state, Completeness::Partial);
     assert!(
         has_gap(&env.gaps, GapKind::TimedOut, "thr_syn_0002")
@@ -188,6 +332,10 @@ fn assert_stops_at_not_found(label: &str, calls: &[Vec<String>], id: &str) {
     );
 }
 
+/// Changed in ticket 1's correction round 1 (Sol S8): issue #3 says no
+/// further read is made after not-found, so the invocation log is checked.
+/// Changed after the internal Haiku review (H7): `--json` prints nothing, or
+/// a JSON value with no `data`.
 #[test]
 fn show_of_a_nonexistent_session_is_not_found() {
     let fake = Fake::new("p04_show_nonexistent", "normal");
@@ -264,7 +412,16 @@ fn final_output_read_error_gives_a_partial_show() {
 #[test]
 fn final_output_read_timeout_gives_a_partial_show_within_the_budget() {
     let fake = Fake::new("p04_final_output_read_timeout", "show-output-timeout");
-    let budget = Duration::from_secs(3);
+    let budget = real_time::scaled(
+        "p04_output_timeout",
+        Duration::from_millis(1_500),
+        Duration::from_secs(10),
+        || {
+            Fake::new("p04_output_timeout_calibrate", "normal")
+                .show("thr_syn_0002")
+                .expect("healthy show for calibration");
+        },
+    );
     let started = Instant::now();
     let env = openwiz_core::ops::show(
         &fake.source(),
@@ -275,11 +432,8 @@ fn final_output_read_timeout_gives_a_partial_show_within_the_budget() {
         },
     )
     .expect("honest partial show");
-    assert!(
-        started.elapsed() < budget + SLACK,
-        "took {:?}",
-        started.elapsed()
-    );
+    let took = started.elapsed();
+    assert!(took >= budget && took < budget + SLACK, "took {took:?}");
     assert_eq!(env.coverage.state, Completeness::Partial);
     assert!(
         has_gap(&env.gaps, GapKind::TimedOut, "thr_syn_0002")
@@ -295,11 +449,95 @@ fn final_output_read_timeout_gives_a_partial_show_within_the_budget() {
     );
 }
 
-/// Each read has a 15-second timeout, and there
+/// Whether this run is the first attempt of a pull request to `main` on
+/// GitHub Actions: exactly `GITHUB_ACTIONS=true`, `GITHUB_EVENT_NAME=
+/// pull_request`, `GITHUB_BASE_REF=main` and `GITHUB_RUN_ATTEMPT=1`. The one
+/// context the real 15-second proof below is moved out of (#1260, Q2): it
+/// still runs on every push to `main`, the nightly run, every rerun, every
+/// pull request to `release-*`, a merge group and every local run, and on any
+/// missing or odd value.
+fn first_pull_request_run_to_main(var: impl Fn(&str) -> Option<String>) -> bool {
+    [
+        ("GITHUB_ACTIONS", "true"),
+        ("GITHUB_EVENT_NAME", "pull_request"),
+        ("GITHUB_BASE_REF", "main"),
+        ("GITHUB_RUN_ATTEMPT", "1"),
+    ]
+    .iter()
+    .all(|(key, value)| var(key).as_deref() == Some(*value))
+}
+
+#[test]
+fn only_a_first_pull_request_run_to_main_moves_the_15_second_proof() {
+    let pr = [
+        ("GITHUB_ACTIONS", "true"),
+        ("GITHUB_EVENT_NAME", "pull_request"),
+        ("GITHUB_BASE_REF", "main"),
+        ("GITHUB_RUN_ATTEMPT", "1"),
+    ];
+    let with = |key: &'static str, value: Option<&'static str>| {
+        let mut env: Vec<(&str, &str)> = pr.iter().copied().filter(|(k, _)| *k != key).collect();
+        if let Some(value) = value {
+            env.push((key, value));
+        }
+        env
+    };
+    // (what the context is, its variables, whether the proof moves)
+    type Case = (String, Vec<(&'static str, &'static str)>, bool);
+    let mut cases: Vec<Case> = vec![("a first pull request run to main".into(), pr.to_vec(), true)];
+    cases.push(("no GitHub variables (a local run)".into(), vec![], false));
+    for (key, odd) in [
+        ("GITHUB_ACTIONS", vec!["false", "True", "true ", "1", ""]),
+        (
+            "GITHUB_EVENT_NAME",
+            vec![
+                "push",
+                "schedule",
+                "merge_group",
+                "workflow_dispatch",
+                "pull_request_target",
+                "Pull_request",
+                "",
+            ],
+        ),
+        (
+            "GITHUB_BASE_REF",
+            vec!["release-0.0.9", "main-null", "Main", " main", ""],
+        ),
+        ("GITHUB_RUN_ATTEMPT", vec!["2", "10", "01", "1 ", "+1", ""]),
+    ] {
+        cases.push((format!("{key} missing"), with(key, None), false));
+        for value in odd {
+            cases.push((format!("{key}={value:?}"), with(key, Some(value)), false));
+        }
+    }
+    for (name, env, moved) in cases {
+        let var = |key: &str| {
+            env.iter()
+                .find(|(k, _)| *k == key)
+                .map(|(_, v)| (*v).to_owned())
+        };
+        assert_eq!(first_pull_request_run_to_main(var), moved, "{name}");
+    }
+}
+
+/// New in ticket 2. Issue #3: each read has a 15-second timeout, and there
 /// are no retries; a timeout becomes a gap. With the default 30-second
 /// budget, a read that never answers is stopped after 15 seconds, once.
+///
+/// Moved off a first pull request run to `main` (#1260, Q2): it waits on the
+/// adapter's fixed `READ_TIMEOUT`, which no test can shorten, so it alone
+/// would hold this binary over its 10-second budget. It runs, unchanged,
+/// everywhere else (`first_pull_request_run_to_main`), and its moved-case
+/// ledger records that move in X3's evidence.
 #[test]
 fn a_read_that_never_answers_is_stopped_after_15_seconds_and_not_retried() {
+    if first_pull_request_run_to_main(|key| std::env::var(key).ok()) {
+        eprintln!(
+            "moved to main and nightly (#1260): this proof waits on the fixed 15-second read timeout"
+        );
+        return;
+    }
     assert_eq!(
         openwiz_core::limits::READ_TIMEOUT,
         Duration::from_secs(15),
@@ -307,63 +545,75 @@ fn a_read_that_never_answers_is_stopped_after_15_seconds_and_not_retried() {
     );
     let fifteen = Duration::from_secs(15);
 
-    let fake = Fake::new("p04_read_timeout_thread_list", "thread-list-timeout");
-    let started = Instant::now();
-    let result = fake.list(&ListRequest::default());
-    let took = started.elapsed();
-    assert!(
-        matches!(
-            result,
-            Err(OpError::ListFailed(SourceError::TimedOut { .. }))
-        ),
-        "{result:?}"
-    );
-    assert!(took >= fifteen && took < fifteen + SLACK, "took {took:?}");
-    let lists = fake
-        .invocations()
-        .iter()
-        .filter(|a| a.len() >= 2 && a[0] == "thread" && a[1] == "list")
-        .count();
-    assert_eq!(lists, 1, "no retry: {:?}", fake.invocations());
-    let pid = fake.hung_pid().expect("the fake hung");
-    assert!(
-        !still_running(&pid),
-        "the hung room-cli is still running or was not reaped"
-    );
-
-    let fake = Fake::new("p04_read_timeout_thread_show", "show-timeout");
-    let started = Instant::now();
-    let env = fake.list(&long()).expect("honest partial list");
-    let took = started.elapsed();
-    assert!(took >= fifteen && took < fifteen + SLACK, "took {took:?}");
-    assert!(
-        has_gap(&env.gaps, GapKind::TimedOut, "thr_syn_0002"),
-        "the read timed out; the budget did not run out: {:?}",
-        env.gaps
-    );
-    unknown_reason(&session(&env, "thr_syn_0002").reported_configuration.model);
-    for id in ["thr_syn_0001", "thr_syn_0003", "thr_syn_0006"] {
-        assert!(
-            matches!(
-                session(&env, id).reported_configuration.model,
-                Fact::Known(_)
-            ),
-            "{id} is still enriched"
-        );
-    }
-    let shows = fake
-        .invocations()
-        .iter()
-        .filter(|a| is_detail_read_of(a, "thr_syn_0002"))
-        .count();
-    assert_eq!(shows, 1, "no retry: {:?}", fake.invocations());
-    let pid = fake.hung_pid().expect("the fake hung");
-    assert!(
-        !still_running(&pid),
-        "the hung room-cli is still running or was not reaped"
-    );
+    // Both halves wait for the real 15-second timeout: they run at once,
+    // with the same assertions, so the test waits once, not twice.
+    std::thread::scope(|scope| {
+        scope.spawn(|| {
+            let fake = Fake::new("p04_read_timeout_thread_list", "thread-list-timeout");
+            let started = Instant::now();
+            let result = fake.list(&ListRequest::default());
+            let took = started.elapsed();
+            assert!(
+                matches!(
+                    result,
+                    Err(OpError::ListFailed(SourceError::TimedOut { .. }))
+                ),
+                "{result:?}"
+            );
+            assert!(took >= fifteen && took < fifteen + SLACK, "took {took:?}");
+            let lists = fake
+                .invocations()
+                .iter()
+                .filter(|a| a.len() >= 2 && a[0] == "thread" && a[1] == "list")
+                .count();
+            assert_eq!(lists, 1, "no retry: {:?}", fake.invocations());
+            let pid = fake.hung_pid().expect("the fake hung");
+            assert!(
+                !still_running(&pid),
+                "the hung room-cli is still running or was not reaped"
+            );
+        });
+        scope.spawn(|| {
+            let fake = Fake::new("p04_read_timeout_thread_show", "show-timeout");
+            let started = Instant::now();
+            let env = fake.list(&long()).expect("honest partial list");
+            let took = started.elapsed();
+            assert!(took >= fifteen && took < fifteen + SLACK, "took {took:?}");
+            assert!(
+                has_gap(&env.gaps, GapKind::TimedOut, "thr_syn_0002"),
+                "the read timed out; the budget did not run out: {:?}",
+                env.gaps
+            );
+            unknown_reason(&session(&env, "thr_syn_0002").reported_configuration.model);
+            for id in ["thr_syn_0001", "thr_syn_0003", "thr_syn_0006"] {
+                assert!(
+                    matches!(
+                        session(&env, id).reported_configuration.model,
+                        Fact::Known(_)
+                    ),
+                    "{id} is still enriched"
+                );
+            }
+            let shows = fake
+                .invocations()
+                .iter()
+                .filter(|a| is_detail_read_of(a, "thr_syn_0002"))
+                .count();
+            assert_eq!(shows, 1, "no retry: {:?}", fake.invocations());
+            let pid = fake.hung_pid().expect("the fake hung");
+            assert!(
+                !still_running(&pid),
+                "the hung room-cli is still running or was not reaped"
+            );
+        });
+    });
 }
 
+/// New in ticket 2. The exit codes `openwiz --help` documents: 0 a result
+/// (complete or partial), 1 a failed read, 2 a usage error or out-of-bounds
+/// request, 3 not found. Since #37 an untested `room-cli` version is never an
+/// error (exit 0, marked untested). For read and usage errors, stdout is
+/// empty and stderr has one `openwiz: ` message; a usage error reads nothing.
 #[test]
 fn exit_codes_are_documented_and_errors_go_to_stderr() {
     let cases: &[(&str, &[&str], i32)] = &[
@@ -415,7 +665,7 @@ fn exit_codes_are_documented_and_errors_go_to_stderr() {
     }
 }
 
-/// `openwiz --help` documents the commands, the sort key
+/// New in ticket 2. `openwiz --help` documents the commands, the sort key
 /// and the exit codes, and reads nothing.
 #[test]
 fn help_documents_the_commands_the_order_and_the_exit_codes() {
@@ -430,24 +680,31 @@ fn help_documents_the_commands_the_order_and_the_exit_codes() {
             "Exit codes:",
             "  0  a result was printed, complete or partial",
             "  1  a read failed",
+            "  1  ls, show, --help: the output could not be written or flushed;\n     some of it may already be on stdout",
+            "On an error, stdout is empty unless ls, show or --help fails to write or flush output;\nsome output may already be on stdout in that case.",
             "  2  usage error, or a request out of bounds",
             "  3  show: the session was not found",
-            "Every run reads room-cli --version and shows it. Any version runs; one other than the live-tested v127 is marked untested.",
+            "ls, show, send and new can read and show room-cli --version.",
+            "send --preview, models and new --status do not read the version. send --check and attachment never run room-cli.",
+            "Any version runs; one other than the run's own live-tested version is marked untested, or not live-tested while it has none.",
+            "Live-tested: the reads with v127; send with no version yet; new with no version yet.",
         ] {
             assert!(
                 out.contains(wanted),
                 "{flag}: help should contain {wanted:?}:\n{out}"
             );
         }
-
+        // #37: the version is never a gate, for the reads and for send.
         assert!(
             !out.lines().any(|l| l.starts_with("  4  ")),
-            "{flag}: no exit code 4 the version is never a gate:\n{out}"
+            "{flag}: no exit code 4 since #37:\n{out}"
         );
         assert!(fake.invocations().is_empty(), "help reads nothing");
     }
 }
 
+/// New in ticket 2, after the internal Haiku review (A, R2): a switch takes
+/// no value, so `--hidden=no` is a usage error, not `--hidden`.
 #[test]
 fn switches_take_no_value() {
     for (i, args) in [
@@ -467,37 +724,76 @@ fn switches_take_no_value() {
     }
 }
 
+/// New in ticket 2, after the internal Haiku review (A, R5): a response over
+/// the size bound fails as malformed, also when the program stops with an
+/// error once its output is no longer read. The native fake streams just
+/// over the 32 MiB bound through one pipe and a bounded buffer (#2779, R1).
 #[test]
 fn an_oversized_response_fails_as_malformed() {
-    use std::os::unix::fs::PermissionsExt;
-    let dir = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("p04_oversized_response");
-    let _ = std::fs::remove_dir_all(&dir);
-    crate::dirs::private_dir_all(&dir).expect("dir");
-    let program = dir.join("room-cli");
-    std::fs::write(
-        &program,
-        "#!/bin/sh\ncase \"$1\" in\n  --version) echo 0.43.1 ;;\n  *) yes | head -c 40000000 ;;\nesac\n",
-    )
-    .expect("script");
-    std::fs::set_permissions(&program, std::fs::Permissions::from_mode(0o755)).expect("chmod");
-    let source = openwiz_adapter_cloudroom::source::CloudRoomSource::new(&program);
-    // A process another test forks while this script is still open for
-    // writing can make its first starts fail with ETXTBSY ("Text file busy").
-    // That is a race in the test, not the behaviour under test: retry it.
-    let mut result = openwiz_core::ops::list(&source, &clock(), &ListRequest::default());
-    for _ in 0..50 {
-        match &result {
-            Err(e) if format!("{e:?}").contains("os error 26") => {
-                std::thread::sleep(Duration::from_millis(20));
-                result = openwiz_core::ops::list(&source, &clock(), &ListRequest::default());
-            }
-            _ => break,
-        }
+    use std::io::Write;
+    let fake = Fake::new("p04_oversized_response", "normal");
+    // Just over 32 MiB + the fixture's 1 MiB pipe: even a full pipe cannot
+    // hold the trailing bytes once the reader stops at the bound plus one.
+    let mut response = std::fs::File::create(fake.dir.join("response")).expect("response file");
+    let block = [0_u8; 64 * 1024];
+    for _ in 0..528 {
+        response.write_all(&block).expect("response bytes");
     }
+    response
+        .write_all(&[0, 0])
+        .expect("trailing response bytes");
+    drop(response);
+    let scenario = fake.dir.join("oversized.json");
+    std::fs::write(
+        &scenario,
+        serde_json::json!({
+            "synthetic_assumptions": ["The oversized list is zero-filled, 33 MiB + 2 bytes, streamed through a 1 MiB Linux fixture pipe."],
+            "responses": [
+            {"argv": ["--version"], "stdout": "0.43.1\n"},
+            {"argv": ["thread", "list", "--json"], "stream_stdout_file": "response"}
+        ]})
+        .to_string(),
+    )
+    .expect("oversized scenario");
+    std::fs::write(
+        fake.dir.join("fake-room-cli.scenario"),
+        scenario.to_str().expect("scenario path"),
+    )
+    .expect("scenario pointer");
+    let started = Instant::now();
+    let result = fake.list(&ListRequest::default());
+    eprintln!(
+        "oversized_response_read_ms={:.3}",
+        started.elapsed().as_secs_f64() * 1000.0
+    );
     match result {
         Err(OpError::ListFailed(SourceError::Malformed { detail })) => {
-            assert!(detail.contains("more than"), "{detail}")
+            assert_eq!(detail, "printed more than 33554432 bytes");
         }
         other => panic!("expected an explicit malformed error, got {other:?}"),
     }
+
+    // Independently check the fixture still exercises an unsuccessful
+    // writer when its reader stops at the size bound, not just invalid JSON.
+    use std::io::Read;
+    use std::process::Stdio;
+    let mut child = Command::new(fake.program())
+        .args(["thread", "list", "--json"])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .expect("start oversized fixture");
+    let mut bytes = Vec::new();
+    child
+        .stdout
+        .take()
+        .expect("fixture stdout")
+        .take(33_554_433)
+        .read_to_end(&mut bytes)
+        .expect("read through the size bound");
+    assert_eq!(bytes.len(), 33_554_433);
+    assert!(
+        !child.wait().expect("reap oversized fixture").success(),
+        "the oversized writer must still fail when its reader closes"
+    );
 }

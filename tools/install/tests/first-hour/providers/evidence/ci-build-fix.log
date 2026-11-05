@@ -1,0 +1,13 @@
+# CI web-build fix (#2222). Red: CI run 43363950756, job web-build at e52d1364d: npm run build's type check
+# failed with TS2307 (cannot find providers/document.ts, recording.ts): prune.sh deletes tools/install/ for web-build (classify.sh).
+# Fix: the test loads the providers at run time and types the part it uses locally.
+
+$ (providers folder moved away, as web-build prunes it) cd apps/web && npm run typecheck && npm run build
+typecheck: pass
+build: exit 0 (static export written)
+
+$ (providers present, as the web-test lanes keep them) cd apps/web && npm run typecheck && npm run check && node --test test/unit/first-hour-recovery.test.ts
+typecheck: pass
+check: 53 source files and the stylesheet pass (V1, messaging and new-thread schema parity, V3, V10, W5, W12, U5, U12 to U14, AW7, AW8, the #549 loop switch, types, spacing)
+ℹ pass 3
+ℹ fail 0

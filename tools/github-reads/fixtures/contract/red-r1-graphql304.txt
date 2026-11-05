@@ -1,0 +1,23 @@
+Before fix at 9387a46021040286e8155325cce43e3149722546
+Command: python3 -I tools/github-reads/test_contract.py Contract.test_schema_and_refusal_cases
+F
+======================================================================
+FAIL: test_schema_and_refusal_cases (__main__.Contract.test_schema_and_refusal_cases) (case='graphql conditional 304 refused')
+C1-auth/cache/budget/share: literal fixture decisions, not live proof.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-reads/test_contract.py", line 102, in test_schema_and_refusal_cases
+    self.assertEqual(assess(value['record'], value['current']), tuple(case['expect']))
+AssertionError: Tuples differ: ('fresh', 'current') != ('refused', 'conditional')
+
+First differing element 0:
+'fresh'
+'refused'
+
+- ('fresh', 'current')
++ ('refused', 'conditional')
+
+----------------------------------------------------------------------
+Ran 1 test in 0.035s
+
+FAILED (failures=1)

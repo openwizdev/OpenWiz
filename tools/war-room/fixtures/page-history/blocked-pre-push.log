@@ -1,0 +1,11 @@
+pre-push: checking cd1c49728
+pre-push: FAIL  cargo fmt --check  (0 s)
+    .githooks/pre-push: 168: cargo: not found
+pre-push: FAIL  cargo clippy --workspace --all-targets -- -D warnings  (0 s)
+    .githooks/pre-push: 168: cargo: not found
+pre-push: FAIL  cargo test -p openwiz-tests --test checks  (0 s)
+    .githooks/pre-push: 168: cargo: not found
+pre-push: ok    sh .github/actions/docs-only/test.sh  (128 s)
+pre-push: 3 of 4 checks failed at cd1c49728 in 132 s
+pre-push: push stopped: fix the mistakes above, commit, and push again
+error: failed to push some refs to 'https://github.com/jparker2006/ClosedWiz.git'

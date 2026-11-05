@@ -123,7 +123,7 @@ pub fn project_list() -> Value {
     ])
 }
 
-/// A project name made of shell syntax: it must reach a
+/// A project name made of shell syntax (Sol, round 2, R3): it must reach a
 /// printed command quoted, as free text.
 pub const SHELL_SYNTAX_NAME: &str = "Synthetic ~ ~root =ls {a,b} * $HOME `x` it's !x";
 
@@ -288,9 +288,7 @@ impl NewFake {
     }
 
     fn counter(&self, name: &str) -> u64 {
-        fs::read_to_string(self.dir.join(name))
-            .map(|t| t.trim().parse().expect("a count"))
-            .unwrap_or(0)
+        crate::counter::read(&self.dir.join(name))
     }
 
     /// The cross-process spawn counter: calls the fake accepted.
@@ -401,7 +399,7 @@ impl NewFake {
         let mut command = Command::new(openwiz_release());
         command
             .args(args)
-            .env("PATH", self.path())
+            .env("OPENWIZ_FIXTURE_PROGRAM", self.program())
             .env("OPENWIZ_STATE_DIR", &self.state)
             .current_dir(&self.dir)
             .stdin(Stdio::piped())
@@ -493,8 +491,8 @@ pub fn openwiz_release() -> PathBuf {
                 .to_path_buf();
             let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned());
             let build = Command::new(cargo)
-                .args(["build", "--release", "--locked", "-p", "openwiz-cli"])
-                .args(["--bin", "openwiz", "--target-dir"])
+                .args(["build", "--release", "--locked", "-p", "openwiz-tests"])
+                .args(["--example", "openwiz", "--target-dir"])
                 .arg(&target)
                 .current_dir(ROOT)
                 .output()
@@ -504,7 +502,7 @@ pub fn openwiz_release() -> PathBuf {
                 "cargo build --release failed:\n{}",
                 String::from_utf8_lossy(&build.stderr)
             );
-            target.join("release").join("openwiz")
+            target.join("release").join("examples").join("openwiz")
         })
         .clone()
 }

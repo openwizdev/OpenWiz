@@ -1,0 +1,94 @@
+{
+ "schema": "openwiz.inventory.v1",
+ "source": {
+  "name": "room-cli",
+  "version": {
+   "known": "v127"
+  },
+  "tested_version": "v127",
+  "version_tested": true
+ },
+ "coverage": {
+  "state": "partial",
+  "counts": {
+   "listed": 1,
+   "unreadable": 0,
+   "excluded_hidden": 0,
+   "excluded_archived": 0,
+   "hidden_read": false,
+   "archived_read": false,
+   "matched": 1,
+   "offset": 0,
+   "limit": 100,
+   "shown": 1
+  }
+ },
+ "freshness": {
+  "snapshot_at": 1700000600000
+ },
+ "gaps": [
+  {
+   "kind": "command_failed",
+   "subject": "thr_syn_0309",
+   "detail": "thread show exited 1: Error: HTTP 500 (detail withheld)"
+  }
+ ],
+ "data": {
+  "sessions": [
+   {
+    "id": "thr_syn_0301",
+    "title": {
+     "known": "Synthetic active session"
+    },
+    "provider": {
+     "known": "codex"
+    },
+    "status": {
+     "known": "active"
+    },
+    "location": {
+     "known": {
+      "kind": "cloud"
+     }
+    },
+    "group": {
+     "kind": "project",
+     "id": "prj_syn_0301",
+     "name": {
+      "known": "Synthetic project one"
+     }
+    },
+    "parent": {
+     "known": null
+    },
+    "hidden": {
+     "known": false
+    },
+    "archived": {
+     "known": false
+    },
+    "recap": {
+     "known": {
+      "kind": "purpose_as_reported",
+      "text": "Synthetic purpose 1.",
+      "truncated": false
+     }
+    },
+    "reported_configuration": {
+     "model": {
+      "known": "synthetic-model-a"
+     },
+     "effort": {
+      "known": "high"
+     }
+    },
+    "updated_at": {
+     "known": 1700000540000
+    },
+    "age_ms": {
+     "known": 60000
+    }
+   }
+  ]
+ }
+}

@@ -1,7 +1,7 @@
-//! A8: `openwiz-server` serves the web page, `apps/web`'s static
+//! A8 (#46): `openwiz-server` serves the web page, `apps/web`'s static
 //! export, from one configured directory (`--web-root`), on the same origin
 //! as the API. Claims W1-W10 in
-//! the release checks.
+//! `contracts/web-api.v1.md`.
 //!
 //! The export trees here are synthetic and made by the tests, except W8 and
 //! W9, which read `apps/web/out` as `npm run build` makes it.
@@ -36,7 +36,14 @@ const TYPES: &[(&str, &str)] = &[
     ("css", "text/css; charset=utf-8"),
     ("woff2", "font/woff2"),
     ("txt", "text/plain; charset=utf-8"),
+    // #1029: the installable app's manifest and icons.
+    ("webmanifest", "application/manifest+json"),
+    ("png", "image/png"),
 ];
+
+/// #1029: the web paths that are never stored (besides `/`): the manifest
+/// and the worker, so a new build's are picked up on the next load.
+const NO_STORE: &[&str] = &["/", "/manifest.webmanifest", "/sw.js"];
 
 const SECRET: &[u8] = b"SECRET-OUTSIDE-THE-WEB-ROOT";
 
@@ -72,6 +79,17 @@ fn served_files() -> BTreeMap<&'static str, Vec<u8>> {
         ),
         ("/fonts/Face-var.woff2", font),
         ("/fonts/OFL.txt", b"synthetic licence text\n".to_vec()),
+        // #1029: the installable app's files.
+        (
+            "/manifest.webmanifest",
+            b"{\"name\":\"synthetic\"}\n".to_vec(),
+        ),
+        ("/sw.js", b"void \"synthetic worker\";\n".to_vec()),
+        (
+            "/sw-register.js",
+            b"void \"synthetic register\";\n".to_vec(),
+        ),
+        ("/icons/app-192.png", b"\x89PNG\r\n\x1a\nsynthetic".to_vec()),
     ])
 }
 
@@ -90,6 +108,10 @@ fn tree(name: &str) -> Tree {
     // Emitted by a build, never served.
     fs::write(root.join("404.html"), b"<!DOCTYPE html>404").unwrap();
     fs::write(root.join("robots.txt"), b"synthetic").unwrap();
+    // #1029: top-level files of the new types, beside the exact PWA paths.
+    fs::write(root.join("extra.js"), b"synthetic").unwrap();
+    fs::write(root.join("extra.webmanifest"), b"synthetic").unwrap();
+    fs::write(root.join("extra.png"), b"synthetic").unwrap();
     crate::dirs::private_dir_all(root.join("_next/BUILDID_syn-1")).unwrap();
     // Secrets beside the root.
     fs::write(base.join("secret.txt"), SECRET).unwrap();
@@ -154,7 +176,11 @@ fn content_type(url: &str) -> &'static str {
 
 /// W7: exactly the page headers, once each; `bare` for a response to HEAD.
 fn assert_page_headers(what: &str, url: &str, r: &Response, bare: bool) {
-    let cache = if url == "/" { "no-store" } else { STATIC_CACHE };
+    let cache = if NO_STORE.contains(&url) {
+        "no-store"
+    } else {
+        STATIC_CACHE
+    };
     let mut want: Vec<(&str, String)> = vec![
         ("Content-Type", content_type(url).to_owned()),
         ("Cache-Control", cache.to_owned()),
@@ -225,7 +251,7 @@ fn w2_the_web_root_is_a_directory_with_a_regular_index() {
 /// One trap planted in a clean tree: `(what, plant)`.
 type Trap = (&'static str, fn(&Path, &Path));
 
-/// Each trap, alone in a clean tree, stops the start.
+/// Each trap, alone in a clean tree, stops the start (W2, Sol round 1).
 const TRAPS: &[Trap] = &[
     ("a symlink out of the root", |root, _| {
         symlink("../../secret.txt", &root.join("fonts/escape.txt"));
@@ -447,6 +473,18 @@ fn w3_serves_exactly_the_allowlist() {
         "/static/chunks/main-0a1b2c3d.js",
         "/chunks/main-0a1b2c3d.js",
         "/out/index.html",
+        // #1029: only the exact PWA paths and /icons/*.
+        "/extra.js",
+        "/extra.webmanifest",
+        "/extra.png",
+        "/icons",
+        "/icons/",
+        "/icons/missing.png",
+        "/ICONS/app-192.png",
+        "/manifest.webmanifest/",
+        "/sw.js/",
+        "/SW.js",
+        "/sw-register.js/",
     ] {
         assert_not_served(url, &s.get(url));
     }
@@ -490,7 +528,10 @@ fn w4_traversal_and_encodings_are_refused() {
         "/fonts/O:FL.txt",
         "/fonts/*.txt",
     ] {
-        assert_not_served(url, &s.get(url));
+        for suffix in ["", "?", "?synthetic=1"] {
+            let target = format!("{url}{suffix}");
+            assert_not_served(&target, &s.get(&target));
+        }
     }
     assert_eq!(s.get("/fonts/OFL.txt").status, 200);
     assert!(fake.invocations().is_empty());
@@ -551,6 +592,65 @@ fn w5_only_get_and_head_and_no_query_or_body() {
     assert!(fake.invocations().is_empty());
 }
 
+/// #800: only a loaded web path can refuse a query, after the earlier guards.
+#[test]
+fn w5_unloaded_web_paths_check_route_before_query() {
+    let fake = Fake::new("web_a8_800", "normal");
+    let t = tree("w5_800");
+    let s = serve_tree(&fake, &t);
+    let host = s.host();
+    // Competing failures retain Host, method, body order on both kinds of path.
+    for path in [
+        "/_next/static/chunks/main-0a1b2c3d.js",
+        "/_next/static/missing.js",
+        "/fonts/OFL.txt",
+        "/fonts/missing.woff2",
+    ] {
+        let target = format!("{path}?synthetic=1");
+        for (method, host, status, code) in [
+            ("POST", "other.example.invalid", 421, "misdirected"),
+            ("POST", host.as_str(), 405, "method_not_allowed"),
+            ("GET", host.as_str(), 400, "bad_request"),
+        ] {
+            let r = s.send(
+                format!("{method} {target} HTTP/1.1\r\nHost: {host}\r\nContent-Length: 1\r\n\r\nx")
+                    .as_bytes(),
+            );
+            assert_eq!((r.status, r.error().0.as_str()), (status, code), "{target}");
+            assert_api_headers(&target, &r);
+            if status == 405 {
+                assert_eq!(r.header("Allow"), Some("GET, HEAD"), "{target}");
+            }
+        }
+    }
+    for (path, status, code) in [
+        (
+            "/_next/static/chunks/main-0a1b2c3d.js",
+            400,
+            "invalid_request",
+        ),
+        ("/fonts/OFL.txt", 400, "invalid_request"),
+        ("/_next/static/missing.js", 404, "no_route"),
+        ("/fonts/missing.woff2", 404, "no_route"),
+    ] {
+        if status == 404 {
+            assert_not_served(path, &s.get(path));
+        }
+        for suffix in ["?", "?synthetic=1"] {
+            let target = format!("{path}{suffix}");
+            let r = s.get(&target);
+            assert_eq!((r.status, r.error().0.as_str()), (status, code), "{target}");
+            assert_api_headers(&target, &r);
+            let head = s.request("HEAD", &target);
+            assert_eq!(head.status, status, "HEAD {target}");
+            assert_api_headers(&target, &head);
+            assert!(head.body.is_empty(), "HEAD {target}");
+            assert_eq!(head.header("Content-Length"), None, "HEAD {target}");
+        }
+    }
+    assert!(fake.invocations().is_empty());
+}
+
 // W6, W7 -----------------------------------------------------------------
 
 #[test]
@@ -570,15 +670,21 @@ fn w7_the_page_csp_is_6s_and_runs_no_inline_script() {
     assert!(directives.contains(&"style-src 'self'"), "{PAGE_CSP}");
     assert!(directives.contains(&"default-src 'none'"), "{PAGE_CSP}");
     assert!(directives.contains(&"frame-ancestors 'none'"), "{PAGE_CSP}");
+    // #1029: the approved manifest and worker, from this origin only.
+    // Jake's approval, preserved 2026-11-07: https://github.com/jparker2006/ClosedWiz/issues/1277#issuecomment-6704800036
+    assert!(directives.contains(&"manifest-src 'self'"), "{PAGE_CSP}");
+    assert!(directives.contains(&"worker-src 'self'"), "{PAGE_CSP}");
     for banned in [
         "unsafe", "nonce-", "sha256-", "sha384-", "sha512-", "*", "data:", "http",
     ] {
         assert!(!PAGE_CSP.contains(banned), "{banned} in {PAGE_CSP}");
     }
-
+    // Updated for #16 (B3) with this reason: the attachment tray's thumbnails
+    // are object URLs of the owner's own chosen file (AW7), so `img-src`, and
+    // only `img-src`, takes `blob:`.
     let blobs: Vec<&&str> = directives.iter().filter(|d| d.contains("blob:")).collect();
     assert_eq!(blobs, [&"img-src 'self' blob:"], "{PAGE_CSP}");
-
+    // The same policy #6's proofs load the page under.
     let mjs = fs::read_to_string(WEB_SERVE_MJS).expect("apps/web/test/support/serve.mjs");
     let list = mjs
         .split("export const PAGE_CSP = [")
@@ -598,7 +704,7 @@ fn w7_the_page_csp_is_6s_and_runs_no_inline_script() {
         theirs,
         "PAGE_CSP differs from apps/web's"
     );
-    // Static assets use the documented cache policy.
+    // The builder's caching default (see the evidence README).
     assert_eq!(STATIC_CACHE, "private, max-age=31536000, immutable");
 }
 
@@ -648,11 +754,30 @@ fn w8_the_real_export_is_served_byte_for_byte() {
             assert_not_served(&rel, &s.get(&format!("/{rel}")));
             continue;
         }
+        if rel == "setup.html" {
+            for url in ["/setup", "/setup/"] {
+                let r = s.get(url);
+                assert_eq!(r.status, 200, "{url}: {}", r.status_line);
+                assert_eq!(
+                    r.body,
+                    fs::read(out.join(&rel)).unwrap(),
+                    "{url}: the bytes"
+                );
+                // HTML aliases have the same no-store/security headers as `/`.
+                assert_page_headers(url, "/", &r, false);
+            }
+            assert_not_served("/setup.html", &s.get("/setup.html"));
+            served += 1;
+            continue;
+        }
         let url = if rel == "index.html" {
             "/".to_owned()
         } else {
             assert!(
-                rel.starts_with("_next/static/") || rel.starts_with("fonts/"),
+                rel.starts_with("_next/static/")
+                    || rel.starts_with("fonts/")
+                    || rel.starts_with("icons/")
+                    || ["manifest.webmanifest", "sw.js", "sw-register.js"].contains(&rel.as_str()),
                 "the export emits {rel}, which is neither served nor on NOT_SERVED"
             );
             format!("/{rel}")
@@ -814,7 +939,7 @@ fn w9_the_real_export_has_no_inline_script() {
     assert!(pages >= 2, "{pages} pages");
 }
 
-// W11 ---------------------------------------------------------
+// W11 (Sol round 1) ---------------------------------------------------------
 
 /// `GET target`, or `None` without a whole response within `within`.
 fn get_within(addr: SocketAddr, target: &str, within: Duration) -> Option<Response> {
@@ -870,7 +995,8 @@ fn w11_the_root_replaced_changed_or_deleted_after_start_changes_nothing() {
             assert_not_served(&format!("{when}: {url}"), &s.get(url));
         }
     };
-
+    // Sol's reproduction: the root renamed, its pathname now a symlink to
+    // a directory outside with its own index.html and fonts/.
     let old = base.join("out-old");
     fs::rename(&t.root, &old).unwrap();
     symlink("outside", &t.root);
@@ -888,8 +1014,8 @@ fn w11_the_root_replaced_changed_or_deleted_after_start_changes_nothing() {
 
 // W10 --------------------------------------------------------------------
 
-/// A web server whose log lets the API's lines land late. The server
-/// logs a request after it has closed the connection, so a line may
+/// A web server whose log lets the API's lines land late (#67). The server
+/// logs a request after it has closed the connection (#46), so a line may
 /// arrive after later requests have been answered. Here each `/api/` line
 /// is held back until the page's line (`GET / 200`) arrives, or for at most
 /// a second, and every other line waits for the held ones: so they land at
@@ -1008,7 +1134,7 @@ fn w10_the_api_is_unaffected_and_web_paths_obey_host() {
     assert_eq!(r.status, 200);
     assert_eq!(r.body, t.files["/fonts/OFL.txt"]);
     // The log names the route template only, never the file or query. The
-    // server logs a request after it has closed the connection: wait
+    // server logs a request after it has closed the connection (#46): wait
     // for every earlier request's line first, then for each request's own.
     let mut log = logged(&web, sent);
     for (target, route) in [
@@ -1020,6 +1146,12 @@ fn w10_the_api_is_unaffected_and_web_paths_obey_host() {
         ("/fonts/OFL.txt", "GET /fonts/* 200"),
         ("/fonts/Secret-name.txt", "GET /fonts/* 404"),
         ("/fonts/OFL.txt?v=quiet", "GET /fonts/* 400"),
+        // #1029: the installable app's routes.
+        ("/icons/app-192.png", "GET /icons/* 200"),
+        ("/icons/Secret-icon.png", "GET /icons/* 404"),
+        ("/manifest.webmanifest", "GET /manifest.webmanifest 200"),
+        ("/sw.js", "GET /sw.js 200"),
+        ("/sw-register.js", "GET /sw-register.js 200"),
     ] {
         let _ = web.get(target);
         sent += 1;
@@ -1034,10 +1166,24 @@ fn w10_the_api_is_unaffected_and_web_paths_obey_host() {
         "OFL",
         "Secret-name",
         "quiet",
-        ".js",
+        "app-192",
+        "Secret-icon",
         ".txt",
+        ".png",
     ] {
         assert!(!log.contains(word), "the log names {word}: {log}");
     }
-    assert_eq!(WEB_ROUTES, &["/", "/_next/static/*", "/fonts/*"]);
+    assert_eq!(
+        WEB_ROUTES,
+        &[
+            "/",
+            "/_next/static/*",
+            "/fonts/*",
+            "/setup",
+            "/manifest.webmanifest",
+            "/sw.js",
+            "/sw-register.js",
+            "/icons/*"
+        ]
+    );
 }

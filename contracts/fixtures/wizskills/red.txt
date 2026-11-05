@@ -1,0 +1,38 @@
+.FFF
+======================================================================
+FAIL: test_refusal_examples (__main__.ContractTests.test_refusal_examples)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/wizskills/test_contract.py", line 140, in test_refusal_examples
+    rules = self.rules()
+            ^^^^^^^^^^^^
+  File "tools/wizskills/test_contract.py", line 119, in rules
+    self.assertTrue(CONTRACT.is_file(), 'WZ-P1 requires the WizSkills contract')
+AssertionError: False is not true : WZ-P1 requires the WizSkills contract
+
+======================================================================
+FAIL: test_standalone_resolution_examples_and_safe_diagnostics (__main__.ContractTests.test_standalone_resolution_examples_and_safe_diagnostics)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/wizskills/test_contract.py", line 157, in test_standalone_resolution_examples_and_safe_diagnostics
+    rules = self.rules()
+            ^^^^^^^^^^^^
+  File "tools/wizskills/test_contract.py", line 119, in rules
+    self.assertTrue(CONTRACT.is_file(), 'WZ-P1 requires the WizSkills contract')
+AssertionError: False is not true : WZ-P1 requires the WizSkills contract
+
+======================================================================
+FAIL: test_valid_package_and_carried_sources (__main__.ContractTests.test_valid_package_and_carried_sources)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/wizskills/test_contract.py", line 128, in test_valid_package_and_carried_sources
+    rules = self.rules()
+            ^^^^^^^^^^^^
+  File "tools/wizskills/test_contract.py", line 119, in rules
+    self.assertTrue(CONTRACT.is_file(), 'WZ-P1 requires the WizSkills contract')
+AssertionError: False is not true : WZ-P1 requires the WizSkills contract
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.001s
+
+FAILED (failures=3)

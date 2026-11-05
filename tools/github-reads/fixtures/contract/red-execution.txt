@@ -1,0 +1,35 @@
+FF
+======================================================================
+FAIL: test_ci2_read_contract_executes_and_propagates_failure (__main__.Execution.test_ci2_read_contract_executes_and_propagates_failure) (fail=False)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File ".github/actions/docs-only/test_execution.py", line 210, in test_ci2_read_contract_executes_and_propagates_failure
+    self.assertEqual(calls, ['python3 -I tools/github-reads/test_contract.py'])
+AssertionError: Lists differ: [] != ['python3 -I tools/github-reads/test_contract.py']
+
+Second list contains 1 additional elements.
+First extra element 0:
+'python3 -I tools/github-reads/test_contract.py'
+
+- []
++ ['python3 -I tools/github-reads/test_contract.py']
+
+======================================================================
+FAIL: test_ci2_read_contract_executes_and_propagates_failure (__main__.Execution.test_ci2_read_contract_executes_and_propagates_failure) (fail=True)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File ".github/actions/docs-only/test_execution.py", line 210, in test_ci2_read_contract_executes_and_propagates_failure
+    self.assertEqual(calls, ['python3 -I tools/github-reads/test_contract.py'])
+AssertionError: Lists differ: [] != ['python3 -I tools/github-reads/test_contract.py']
+
+Second list contains 1 additional elements.
+First extra element 0:
+'python3 -I tools/github-reads/test_contract.py'
+
+- []
++ ['python3 -I tools/github-reads/test_contract.py']
+
+----------------------------------------------------------------------
+Ran 1 test in 0.137s
+
+FAILED (failures=2)

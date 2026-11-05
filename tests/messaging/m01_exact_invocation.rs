@@ -106,6 +106,7 @@ fn the_text_is_one_argument_byte_for_byte() {
 
 #[test]
 fn invalid_text_is_refused_with_no_call() {
+    // Haiku B-06: the provisional cap itself, 16 KiB of UTF-8.
     assert_eq!(MAX_TEXT_BYTES, 16 * 1024);
     let fake = SendFake::new("m01_invalid_text", "send");
     let over = "a".repeat(MAX_TEXT_BYTES + 1);

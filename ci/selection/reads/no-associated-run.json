@@ -1,0 +1,22 @@
+{
+  "pull_request": 910,
+  "head": "2222222222222222222222222222222222222222",
+  "runs": [
+    {
+      "id": 9000013,
+      "workflow": ".github/workflows/ci.yml",
+      "event": "pull_request",
+      "head_sha": "2222222222222222222222222222222222222222",
+      "pull_requests": [],
+      "attempts": [
+        {
+          "attempt": 1,
+          "artifacts": {
+            "ci-selection-1": "valid/selected-mixed.json"
+          }
+        }
+      ]
+    }
+  ],
+  "expected": "unknown"
+}

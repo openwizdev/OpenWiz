@@ -1,0 +1,3 @@
+# Synthetic bound notification fixtures
+
+All identifiers, timestamps, wording, currentness, risk and target bindings are synthetic assumptions. The literal fingerprint is a shape example, not calculated source authority. The client fixture may assert independently current data to exercise existing cards. In production the exact lookup reports current only for an open grill round that the decisions owner's saved-grill verifier confirms; spec and plan requests stay unread, and the protected mapping and durable incident-owner gate (T3) remains open. No fixture proves live authentication, currentness or installed PA4/PA5.

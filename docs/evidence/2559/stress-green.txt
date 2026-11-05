@@ -1,0 +1,7 @@
+#2559 stress check with the fix (not committed as a test).
+The same temporary test built the fixed Fixture (place_script: a separate cp
+process places the fake room-cli) 200 times and launched each fixture's
+room-cli with `loop list --json` at once, while 4 threads kept spawning
+`true` from the same test process.
+
+Fixture::new then exec, 4 concurrent spawners: 200 launched, 0 ETXTBSY (errno 26), 0 other

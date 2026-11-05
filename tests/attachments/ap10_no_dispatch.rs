@@ -1,8 +1,10 @@
+//! Approval provenance: [private record](https://github.com/jparker2006/ClosedWiz/issues/1277#issuecomment-6704800036).
 //! AP10 No dispatch path. Phase 1 adds no `room-cli` call: the model names
 //! no invocation, no process and no attachment flag. P8(a) and M12 run in
 //! `cargo test --workspace`.
 //!
-//! Attachments add `--file` and `--image` to `tell`
+//! **Updated for B2 (ClosedWiz#15)**, with this recorded reason: sheet B-7
+//! (approved by Jake, 2026-10-30) adds `--file` and `--image` to `tell`
 //! and `spawn`, with staged absolute paths only. So the allowlist now names
 //! each flag exactly once, inside its one `attachment_args`, and uses the
 //! model's `StagedAttachment` and `Kind` for it; the adapter's `send` and
@@ -80,6 +82,16 @@ fn the_allowlist_names_each_attachment_flag_once_inside_its_one_builder() {
 /// call, no adapter and no write: nothing is sent or uploaded.
 #[test]
 fn only_the_store_and_the_cli_use_the_model_and_neither_dispatches() {
+    // B2: in the adapter, only the allowlist uses the model (B-7's staged
+    // attachments).
+    //
+    // Updated for #16 (B3) with this reason (the orchestrator, 2026-10-31,
+    // #16 Q2): the server serves attachments, so it must name the model (its
+    // upload cap is the core's per-file limit; its routes parse attachment
+    // ids), and `crates/server/src` leaves this word check. The server's side
+    // of the same claim is B3's: AW4 (`tests/web-api/aw04_same_operation.rs`)
+    // finds no kind, name, limit, floor, gate or retention rule in it, and A4
+    // that it starts no process and calls no `room-cli` for attachments.
     for dir in ["crates/adapters/cloudroom/src"] {
         let mut files = Vec::new();
         rust_files(&Path::new(ROOT).join(dir), &mut files);
@@ -119,7 +131,7 @@ fn only_the_store_and_the_cli_use_the_model_and_neither_dispatches() {
         }
     }
     // The CLI's module starts no process. The store's starts one program,
-    // `/bin/df`, for the free space: P8(a) checks
+    // `/bin/df`, for the free space (Jake, 2026-10-31, #14): P8(a) checks
     // that call word for word, and `program` that nothing on `PATH` runs.
     let cli = read("crates/cli/src/attachment.rs");
     assert!(!cli.contains("Command::new") && !cli.contains("process::Command"));

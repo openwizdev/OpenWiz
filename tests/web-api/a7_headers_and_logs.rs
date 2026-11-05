@@ -319,7 +319,8 @@ fn the_binary_logs_no_content_and_its_errors_name_no_path() {
         .and_then(|a| a.parse().ok());
     let result = std::panic::catch_unwind(|| {
         let addr = addr.unwrap_or_else(|| panic!("unexpected first line {first:?}"));
-
+        // #37: an unreadable version is never a gate; the run goes on to
+        // the session list, which fails too.
         let r = http::get(addr, "/api/v1/inventory?detail=2");
         assert_eq!(r.status, 502, "{}", r.text());
         let (kind, message) = r.error();

@@ -1,6 +1,6 @@
-//! AW2: owner only, and no cross-site write, for every attachment
-//! route, through the shared request checks. The
-//! owner is the tunnel's to check: the server reads no Access
+//! AW2 (#16, B3): owner only, and no cross-site write, for every attachment
+//! route, through the shared checks (WS-4, WS-6, unchanged by B-9). The
+//! owner is the tunnel's to check (WS-1 (a)): the server reads no Access
 //! header or cookie. An upload or a removal must carry the configured host
 //! name, the site's `Origin`, `Sec-Fetch-Site: same-origin` and
 //! `X-OpenWiz-Send: 1`; an upload, exactly `application/octet-stream`,
@@ -25,7 +25,8 @@ fn refusals(good: &[(String, String)], body_type: bool, port: u16) -> Vec<Refusa
     let mut case = |what: &str, headers: Vec<(String, String)>, status, kind| {
         out.push((what.to_owned(), headers, status, kind));
     };
-    // This server's own loopback name: served for reads, never for a write.
+    // This server's own loopback name: served for reads, never for a write
+    // (WS-6).
     for host in [
         format!("127.0.0.1:{port}"),
         format!("localhost:{port}"),

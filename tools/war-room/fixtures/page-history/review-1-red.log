@@ -1,0 +1,29 @@
+test_overlapping_processes_publish_latest_sample (__main__.PageHistory.test_overlapping_processes_publish_latest_sample) ... FAIL
+test_credit_interval_identities_survive_backfill (__main__.PageHistory.test_credit_interval_identities_survive_backfill) ... FAIL
+
+======================================================================
+FAIL: test_overlapping_processes_publish_latest_sample (__main__.PageHistory.test_overlapping_processes_publish_latest_sample)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-wr2/tools/war-room/test_page_history.py", line 140, in test_overlapping_processes_publish_latest_sample
+    self.assertEqual((self.root / 'page.html').read_text(), module('page').render(latest))
+AssertionError: '<!do[1253 chars]2T12:00:00Z</b> · assembled 2030-01-02T12:00:0[8470 chars]tml>' != '<!do[1253 chars]2T12:10:00Z</b> · assembled 2030-01-02T12:10:0[8470 chars]tml>'
+Diff is 22135 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_credit_interval_identities_survive_backfill (__main__.PageHistory.test_credit_interval_identities_survive_backfill)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-wr2/tools/war-room/test_page_history.py", line 323, in test_credit_interval_identities_survive_backfill
+    self.assertEqual(preserved[key], initial[key])
+AssertionError: 'sampled-drop-2' != 'sampled-drop-1'
+- sampled-drop-2
+?              ^
++ sampled-drop-1
+?              ^
+
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.188s
+
+FAILED (failures=2)

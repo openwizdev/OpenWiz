@@ -1,0 +1,259 @@
+{
+  "schema": "openwiz.cloud-options.v1",
+  "read_at": 1793978204222,
+  "label": "as reported by CloudRoom; it may answer from a saved copy",
+  "state": {
+    "kind": "offered"
+  },
+  "harnesses": [
+    {
+      "harness": "codex",
+      "provider": "codex",
+      "models": [
+        {
+          "model": "syn-codex-model-01",
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ]
+        },
+        {
+          "model": "syn-codex-model-02",
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ]
+        },
+        {
+          "model": "syn-codex-model-03",
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ]
+        },
+        {
+          "model": "syn-codex-model-04",
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ]
+        },
+        {
+          "model": "syn-codex-model-05",
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ]
+        },
+        {
+          "model": "syn-codex-model-06",
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ]
+        },
+        {
+          "model": "syn-codex-model-07",
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ]
+        },
+        {
+          "model": "syn-codex-model-08",
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ]
+        },
+        {
+          "model": "syn-codex-model-09",
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ]
+        },
+        {
+          "model": "syn-codex-model-10",
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ]
+        }
+      ],
+      "attachments": {
+        "files": true,
+        "images": true
+      },
+      "steer": true
+    },
+    {
+      "harness": "claude-code",
+      "provider": "claude-code",
+      "models": [
+        {
+          "model": "syn-claude-model-01",
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ]
+        },
+        {
+          "model": "syn-claude-model-02",
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ]
+        },
+        {
+          "model": "syn-claude-model-03",
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ]
+        },
+        {
+          "model": "syn-claude-model-04",
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ]
+        },
+        {
+          "model": "syn-claude-model-05",
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ]
+        },
+        {
+          "model": "syn-claude-model-06",
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ]
+        },
+        {
+          "model": "syn-claude-model-07",
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ]
+        },
+        {
+          "model": "syn-claude-model-08",
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ]
+        },
+        {
+          "model": "syn-claude-model-09",
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ]
+        }
+      ],
+      "attachments": {
+        "files": true,
+        "images": true
+      },
+      "steer": true
+    }
+  ],
+  "unavailable": [
+    {
+      "harness": "pi",
+      "reason": "catalogue_not_reported",
+      "text": "unavailable (catalogue not reported)"
+    },
+    {
+      "harness": "cursor",
+      "reason": "catalogue_not_reported",
+      "text": "unavailable (catalogue not reported)"
+    },
+    {
+      "harness": "fx",
+      "reason": "catalogue_not_reported",
+      "text": "unavailable (catalogue not reported)"
+    },
+    {
+      "harness": "opencode",
+      "reason": "catalogue_not_reported",
+      "text": "unavailable (catalogue not reported)"
+    },
+    {
+      "harness": "hermes",
+      "reason": "catalogue_not_reported",
+      "text": "unavailable (catalogue not reported)"
+    },
+    {
+      "harness": "devin",
+      "reason": "catalogue_not_reported",
+      "text": "unavailable (catalogue not reported)"
+    },
+    {
+      "harness": "openclaw",
+      "reason": "catalogue_not_reported",
+      "text": "unavailable (catalogue not reported)"
+    }
+  ]
+}

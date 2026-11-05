@@ -30,11 +30,11 @@ export function clock(epochMs, nowMs) {
   return sameDay ? time : `${d.getUTCFullYear()}-${two(d.getUTCMonth() + 1)}-${two(d.getUTCDate())} ${time}`;
 }
 
-const TIERS = { error: ['t1', '[x]'], active: ['t3', '[~]'], idle: ['t4', '[-]'] };
+const TIERS = { error: ['t1', ''], active: ['t3', ''], idle: ['t4', ''] };
 
 export function status(f) {
-  if (!('known' in f)) return { word: unknown(f.unknown), glyph: '[?]', tier: 't5' };
-  const [tier, glyph] = TIERS[f.known] ?? ['t5', '[?]'];
+  if (!('known' in f)) return { word: unknown(f.unknown), glyph: '', tier: 't5' };
+  const [tier, glyph] = TIERS[f.known] ?? ['t5', ''];
   return { word: f.known, glyph, tier };
 }
 
@@ -52,7 +52,7 @@ export function groups(sessions) {
     }
     g.rows.push(row(s));
   }
-  // G2: headings that share a name on this page end with the project id's last 4 characters.
+  // G2 (Jake, 2026-10-30): headings that share a name on this page end with the project id's last 4 characters.
   const projects = out.filter((g) => g.key !== 'ungrouped');
   const shared = new Set(projects.filter((g) => projects.filter((x) => x.heading === g.heading).length > 1));
   return out.map((g) => (shared.has(g) ? { ...g, heading: `${g.heading} · ${g.key.slice(-4)}` } : g));
@@ -96,6 +96,8 @@ export function detail(e, nowMs) {
     configuration: `model ${fact(s.reported_configuration.model)} · effort ${fact(s.reported_configuration.effort)}`,
     snapshot: clock(e.freshness.snapshot_at, nowMs),
     age: 'known' in s.age_ms ? age(s.age_ms.known) : unknown(s.age_ms.unknown),
+    // #539: optional; shown only when the envelope has it.
+    started: !('started_at' in s) ? null : 'known' in s.started_at ? clock(s.started_at.known, nowMs) : unknown(s.started_at.unknown),
     finalOutput: !('known' in out)
       ? unknown(out.unknown)
       : out.known.kind === 'no_final_output_yet'

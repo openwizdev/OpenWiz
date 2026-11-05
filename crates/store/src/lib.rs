@@ -1,14 +1,18 @@
 //! The send record on disk: one owner-only directory of JSON files that
 //! implements the core's [`SendStore`]. OpenWiz 0.0.4 adds the
 //! `new_thread` record kind beside it, in `new-threads/` ([`new_thread`],
-//! the implementation), on the same rules and through the same code: [`Store`] is
+//! ClosedWiz#11), on the same rules and through the same code: [`Store`] is
 //! generic over the record's [`Kind`]. [`FileStore`] is `Store<Sends>`, and
 //! [`NewThreadFileStore`] is `Store<NewThreads>`.
 //!
-//! The staged attachments (OpenWiz 0.0.4, the implementation) live in
+//! The staged attachments (OpenWiz 0.0.4, ClosedWiz#14) live in
 //! `attachments/` ([`attachments`]): not a record kind, but an [`Area`] of
 //! the same state directory, opened through the same checks.
 //! [`AttachmentStore`] is `Store<Attachments>`.
+//!
+//! OpenWiz 0.0.6 (B4, ClosedWiz#120) adds the start record, in `starts/`
+//! ([`starts`]): one record per builder or reviewer start, so a ticket never
+//! gets two builders. [`StartFileStore`] is `Store<Starts>`.
 //!
 //! Layout, under the state directory (0700), for each kind (`sends/` here;
 //! `new-threads/` the same):
@@ -22,15 +26,18 @@
 //!   a stopped owner is recognised and its record recovered.
 //!
 //! The state directory is outside the repository, in the owner's per-user
-//! state directory (see [`default_state_dir`]). Provisional; the maintainer decides.
+//! state directory (see [`default_state_dir`]). Provisional; Jake decides.
 //!
 //! Standard library only: `OpenOptions::create_new`, `File::try_lock`,
 //! `sync_all` and Unix permissions.
 
+pub mod loops;
+pub mod notifications;
+
 use std::collections::HashMap;
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, DirBuilder, File, OpenOptions, TryLockError};
-use std::io::{self, Write};
+use std::io::{self, Read, Write};
 use std::marker::PhantomData;
 use std::os::unix::fs::{DirBuilderExt, OpenOptionsExt, PermissionsExt};
 use std::path::{Component, Path, PathBuf};
@@ -42,14 +49,17 @@ use openwiz_core::messaging::record::{
     Claim, RecordState, SendRecord, SendStore, StoreError, recover,
 };
 use openwiz_core::messaging::send::Delivery;
-use openwiz_core::messaging::{Binding, OpId};
+use openwiz_core::messaging::{Binding, OpId, RECORD_SCHEMA_ID};
 use openwiz_core::model::Timestamp;
 
 pub mod attachments;
 pub mod new_thread;
+pub mod setup;
+pub mod starts;
 
 pub use attachments::{AttachmentStore, Attachments};
 pub use new_thread::{NewThreadFileStore, NewThreads};
+pub use starts::{StartFileStore, Starts};
 
 /// Overrides the state directory, for tests and for owners who want it
 /// elsewhere.
@@ -128,7 +138,7 @@ pub trait Kind: Area {
     fn body(record: &Self::Record) -> Result<Vec<u8>, String>;
 }
 
-/// The send record (OpenWiz 0.0.3, the implementation): `sends/`.
+/// The send record (OpenWiz 0.0.3, ClosedWiz#8): `sends/`.
 #[derive(Debug)]
 pub struct Sends;
 
@@ -160,8 +170,13 @@ impl Kind for Sends {
     /// (each with exactly its five keys) and checked against the binding's
     /// digest: a record whose attachments don't agree with what its op id
     /// binds is refused.
+    /// Only the supported schema is read; unknown versions are refused
+    /// without migration. Existing v1 defaults remain supported.
     fn read(text: &str) -> Result<SendRecord, String> {
         let record: SendRecord = serde_json::from_str(text).map_err(|_| String::new())?;
+        if record.schema != RECORD_SCHEMA_ID {
+            return Err(format!("its schema is not {RECORD_SCHEMA_ID}"));
+        }
         if !record.attachments_agree() {
             return Err("its attachments are not the ones its binding holds".to_owned());
         }
@@ -173,11 +188,21 @@ impl Kind for Sends {
     }
 }
 
+/// An acquired claim. A concurrent fork can inherit the file until exec;
+/// explicitly unlock before closing ours so that copy cannot retain it.
+struct ClaimLock(File);
+
+impl Drop for ClaimLock {
+    fn drop(&mut self) {
+        let _ = self.0.unlock();
+    }
+}
+
 /// The file-backed record of one [`Kind`], or one other [`Area`].
 pub struct Store<K: Area> {
     dir: PathBuf,
     /// The claims this process holds: the locked `.lock` file of each.
-    held: Mutex<HashMap<OpId, File>>,
+    held: Mutex<HashMap<OpId, ClaimLock>>,
     /// Refuses every write: opened by [`Store::open_read_only`].
     read_only: bool,
     before_lock: Option<BeforeLock>,
@@ -304,7 +329,7 @@ impl<K: Area> Store<K> {
     /// kind's directory. With `sync`, missing directories are made and the
     /// chain is synced. Without it nothing is made or synced, and a missing
     /// directory gives `None`. Named for the send record, the store's first
-    /// kind; it checks every area's directory the same way.
+    /// kind (#79); it checks every area's directory the same way.
     fn checked_sends(
         state_dir: &Path,
         sync: Option<&SyncDir<'_>>,
@@ -436,11 +461,35 @@ impl<K: Kind> Store<K> {
     }
 
     fn read_record(&self, path: &Path) -> Result<Option<K::Record>, StoreError> {
-        let text = match fs::read_to_string(path) {
-            Ok(text) => text,
+        // O_NONBLOCK on the targets guarded by attachments' compile_error:
+        // a FIFO substituted before open must not wait for a writer.
+        let nonblock = if cfg!(target_vendor = "apple") {
+            0x0004
+        } else {
+            0o4000
+        };
+        let mut file = match OpenOptions::new()
+            .read(true)
+            .custom_flags(nonblock)
+            .open(path)
+        {
+            Ok(file) => file,
             Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(None),
             Err(e) => return Err(io_error("read", path, &e)),
         };
+        let metadata = file.metadata().map_err(|e| io_error("read", path, &e))?;
+        if !metadata.is_file() {
+            return Err(StoreError(format!(
+                "{} is not a regular {} file",
+                path.display(),
+                K::WHAT
+            )));
+        }
+        // Inspect and read the same descriptor: a later path swap cannot
+        // replace the file whose type was checked above.
+        let mut text = String::new();
+        file.read_to_string(&mut text)
+            .map_err(|e| io_error("read", path, &e))?;
         let record = K::read(&text).map_err(|why| {
             let why = if why.is_empty() {
                 String::new()
@@ -528,6 +577,7 @@ impl<K: Kind> Store<K> {
             }
         }
         // This process holds the lock: nobody else is using this op id.
+        let lock = ClaimLock(lock);
         match self.record(op_id)? {
             None => {
                 self.write_record(record)?;
@@ -561,7 +611,6 @@ impl<K: Kind> Store<K> {
 
     /// Gives up this process's claim on `op_id`.
     fn release_claim(&self, op_id: &OpId) {
-        // Dropping the file releases its lock.
         self.held
             .lock()
             .unwrap_or_else(|p| p.into_inner())
@@ -596,7 +645,10 @@ impl<K: Kind> Store<K> {
             // Its owner stopped. Read again under the lock (it may have been
             // finished or withdrawn), and show what recovery would make of
             // it, in memory only: the next use of this op id records it.
-            Ok(()) => Ok(self.record(op_id)?.map(|current| K::recover(&current, now))),
+            Ok(()) => {
+                let _lock = ClaimLock(lock);
+                Ok(self.record(op_id)?.map(|current| K::recover(&current, now)))
+            }
             Err(TryLockError::WouldBlock) => Ok(Some(record)),
             Err(TryLockError::Error(e)) => Err(io_error("lock", &path, &e)),
         }
@@ -632,6 +684,7 @@ impl Store<Sends> {
         }
         match lock.try_lock() {
             Ok(()) => {
+                let _lock = ClaimLock(lock);
                 // Read again under the lock: the owner may have finished,
                 // or withdrawn it.
                 let Some(current) = self.record(&record.op_id)? else {

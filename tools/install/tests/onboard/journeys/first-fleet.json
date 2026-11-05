@@ -1,0 +1,56 @@
+{
+  "about": "A recorded onboarding conversation and its tool calls, synthetic throughout (#1108). Steps name skills/onboard/SKILL.md's numbered sections. Tool steps run the packaged helper against recording fakes; plan steps build the synthetic GitHub the fake gh answers from. Nothing here is a prewritten plan: the spec and tickets come from this conversation's grill answers.",
+  "repo": "synthetic-owner/synthetic-sheep",
+  "engine_location": "local",
+  "options": {
+    "schema": "openwiz.cloud-options.v1",
+    "read_at": 1793978204222,
+    "label": "as reported by CloudRoom; it may answer from a saved copy",
+    "state": {"kind": "offered"},
+    "harnesses": [
+      {"harness": "codex", "provider": "codex", "models": [{"model": "syn-codex-model-01", "efforts": ["low", "medium", "high"]}], "attachments": null, "steer": null},
+      {"harness": "claude", "provider": "claude-code", "models": [{"model": "syn-claude-model-01", "efforts": ["high", "xhigh"]}], "attachments": null, "steer": null}
+    ],
+    "unavailable": []
+  },
+  "turns": [
+    {"step": "explain", "agent": "You bring an idea. I grill you with a few quick questions, write it up as a spec you confirm, and split it into small tickets you approve as one plan. Each ticket gets a builder agent; a reviewer from another model family reviews each pull request, and approved green work merges. Nothing starts until you approve the plan."},
+    {"step": "project", "agent": "Pick one: a pocket weather haiku tool, a one-page fan site for your favourite synthetic band, a tiny terminal game where you herd sheep, or your own idea. Where should it go? Recommended: a new disposable repository synthetic-owner/synthetic-sheep (private, created with your gh identity, safe to delete later). You then make or pick its CloudRoom project. Or one of your repositories."},
+    {"step": "project", "user": "The sheep game, in the new demo repository."},
+    {"step": "project", "tool": ["create-repo", "--repo", "synthetic-owner/synthetic-sheep"], "exit": 12},
+    {"step": "project", "agent": "This creates one private GitHub repository, synthetic-owner/synthetic-sheep, with your gh identity. Create it?"},
+    {"step": "project", "user": "Yes.", "permits": ["create_repository"]},
+    {"step": "project", "tool": ["create-repo", "--repo", "synthetic-owner/synthetic-sheep", "--yes"], "exit": 0},
+    {"step": "project", "agent": "Created and read back. Please make a CloudRoom project for it, or pick one; setup then selects it."},
+    {"step": "project", "user": "Made it."},
+    {"step": "grill", "agent": "Q1: Smallest fun version: one field, three sheep, arrow keys move the dog (recommended), or levels too? Q2: Scoring by time to pen all sheep (recommended) or by moves? Q3: A title screen with the best time (recommended), or none?"},
+    {"step": "grill", "user": "One field, time scoring, yes to the title screen."},
+    {"step": "grill", "agent": "Summary: a terminal sheep-herding game with one field, three sheep, arrow-key dog, time scoring and a title screen. Confirm?"},
+    {"step": "grill", "user": "Confirm."},
+    {"step": "agents", "agent": "Which harness and model (offered: codex syn-codex-model-01; claude-code syn-claude-model-01)? Which effort? Where should the fleet's agents run: Cloud (recommended, uses Cloud Credits) or Local? This is separate from your engine, which runs locally."},
+    {"step": "agents", "user": "Codex, syn-codex-model-01, high, in the Cloud.", "answers": {"harness": "codex", "model": "syn-codex-model-01", "effort": "high", "agents": "cloud"}},
+    {"step": "agents", "tool": ["choose", "--harness", "codex", "--model", "syn-codex-model-01", "--effort", "high", "--agents", "cloud"], "exit": 0},
+    {"step": "plan", "agent": "Spec: Sheep herding game. One field, three sheep, a dog on the arrow keys, time scoring and a title screen with the best time. Confirm the spec?"},
+    {"step": "plan", "user": "Confirmed."},
+    {"step": "plan", "plan": {
+      "spec": {"number": 900, "title": "0.1.0 spec: sheep herding game", "body": "A terminal game: one field, three sheep, an arrow-key dog, time scoring and a title screen.\n"},
+      "tickets": [
+        {"number": 901, "title": "S1: the field and its sheep", "blockers": []},
+        {"number": 902, "title": "S2: the dog on the arrow keys", "blockers": []},
+        {"number": 903, "title": "S3: sheep flee the dog", "blockers": []},
+        {"number": 904, "title": "S4: time scoring when penned", "blockers": [901]},
+        {"number": 905, "title": "S5: title screen with best time", "blockers": [902, 903]}
+      ]
+    }},
+    {"step": "plan", "agent": "Plan: five tickets; S1, S2 and S3 can start at once, S4 and S5 after their blockers merge. Approve this plan graph?"},
+    {"step": "plan", "user": "Approve."},
+    {"step": "plan", "approve": true},
+    {"step": "plan", "tool": ["spec", "--spec", "900", "--repo", "synthetic-owner/synthetic-sheep"], "exit": 0},
+    {"step": "launch", "tool": ["launch", "--spec", "900"], "exit": 12, "tick_plan": [901, 902, 903]},
+    {"step": "launch", "agent": "Ready to start 3 Cloud builders (codex, syn-codex-model-01, high) for S1, S2 and S3. Cloud Credits: unknown until measured. Start them?"},
+    {"step": "launch", "user": "Yes.", "permits": ["start_cloud_agents"]},
+    {"step": "launch", "tool": ["launch", "--spec", "900", "--yes", "--confirm", "@preview"], "exit": 0, "tick_plan": [901, 902, 903], "tick_run": "done", "progress": ["building", "building", "building", "blocked", "blocked"]},
+    {"step": "watch", "tool": ["progress", "--spec", "900"], "exit": 0, "progress": ["building", "building", "building", "blocked", "blocked"]},
+    {"step": "watch", "agent": "Three builders are working on S1 to S3; S4 and S5 wait for their blockers."}
+  ]
+}

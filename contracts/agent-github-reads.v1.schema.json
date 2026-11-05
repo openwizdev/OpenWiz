@@ -1,0 +1,391 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openwiz.dev/contracts/agent-github-reads.v1.schema.json",
+  "title": "Synthetic agent GitHub read contract records and independently supplied current bindings",
+  "description": "Closed, credential-free conformance shapes only. test_contract.py enforces cross-field rules with an independent current binding. A pass neither verifies inputs nor authorizes a live read, approval, start or merge. Complete-request fingerprints are checked by C8 against the actual allowlisted request, never trusted from a caller.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/record"
+    },
+    {
+      "$ref": "#/$defs/current"
+    }
+  ],
+  "$defs": {
+    "request": {
+      "type": "object",
+      "required": [
+        "host",
+        "repository",
+        "api",
+        "operation",
+        "request_sha256",
+        "purpose"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "host": {
+          "const": "api.github.com"
+        },
+        "repository": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+/[a-z0-9_.-]+$"
+        },
+        "api": {
+          "type": "string",
+          "enum": [
+            "rest",
+            "graphql"
+          ]
+        },
+        "operation": {
+          "type": "string",
+          "enum": [
+            "rest-read",
+            "graphql-read"
+          ]
+        },
+        "request_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "purpose": {
+          "type": "string",
+          "enum": [
+            "display",
+            "authority"
+          ]
+        }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "required": [
+        "kind",
+        "host",
+        "installation_id",
+        "repositories",
+        "permissions",
+        "generation",
+        "state",
+        "verified_at",
+        "expires_at",
+        "storage"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "installation"
+        },
+        "host": {
+          "const": "api.github.com"
+        },
+        "installation_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "repositories": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+/[a-z0-9_.-]+$"
+          }
+        },
+        "permissions": {
+          "const": {
+            "metadata": "read",
+            "contents": "read",
+            "issues": "read",
+            "pull_requests": "read",
+            "checks": "read",
+            "actions": "read"
+          }
+        },
+        "generation": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "active",
+            "revoked",
+            "unknown"
+          ]
+        },
+        "verified_at": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expires_at": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "storage": {
+          "const": "owner-only"
+        }
+      }
+    },
+    "pool": {
+      "type": "object",
+      "required": [
+        "limit",
+        "remaining",
+        "reserved",
+        "reset_at",
+        "observed_at"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "remaining": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reserved": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reset_at": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "observed_at": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "required": [
+        "host",
+        "installation_id",
+        "scope",
+        "rest",
+        "graphql",
+        "secondary_not_before",
+        "pace_not_before"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "host": {
+          "const": "api.github.com"
+        },
+        "installation_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "scope": {
+          "const": "installation"
+        },
+        "rest": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/pool"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "graphql": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/pool"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "secondary_not_before": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pace_not_before": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "result": {
+      "type": "object",
+      "required": [
+        "state",
+        "source",
+        "status",
+        "read_started_at",
+        "fetched_at",
+        "validated_at",
+        "complete",
+        "pages",
+        "authenticated",
+        "etag_matched"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "ok",
+            "error",
+            "partial",
+            "unknown"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "network",
+            "cache",
+            "revalidated"
+          ]
+        },
+        "status": {
+          "type": "integer",
+          "enum": [
+            200,
+            304,
+            401,
+            403,
+            404,
+            429,
+            500
+          ]
+        },
+        "read_started_at": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "fetched_at": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "validated_at": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "pages": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "authenticated": {
+          "type": "boolean"
+        },
+        "etag_matched": {
+          "type": "boolean"
+        }
+      }
+    },
+    "sharing": {
+      "type": "object",
+      "required": [
+        "seam",
+        "callers",
+        "upstream_reads",
+        "lock",
+        "publish"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "seam": {
+          "type": "string",
+          "enum": [
+            "owner-filesystem",
+            "unavailable"
+          ]
+        },
+        "callers": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "upstream_reads": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "lock": {
+          "const": "exclusive"
+        },
+        "publish": {
+          "const": "atomic"
+        }
+      }
+    },
+    "record": {
+      "type": "object",
+      "required": [
+        "schema",
+        "request",
+        "auth",
+        "budget",
+        "result",
+        "sharing"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "const": "openwiz.agent-github-reads.v1"
+        },
+        "request": {
+          "$ref": "#/$defs/request"
+        },
+        "auth": {
+          "$ref": "#/$defs/auth"
+        },
+        "budget": {
+          "$ref": "#/$defs/budget"
+        },
+        "result": {
+          "$ref": "#/$defs/result"
+        },
+        "sharing": {
+          "$ref": "#/$defs/sharing"
+        }
+      }
+    },
+    "current": {
+      "type": "object",
+      "required": [
+        "schema",
+        "now",
+        "read_started_at",
+        "max_age_s",
+        "request",
+        "auth"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "const": "openwiz.agent-github-reads.current.v1"
+        },
+        "now": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "read_started_at": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_age_s": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "request": {
+          "$ref": "#/$defs/request"
+        },
+        "auth": {
+          "$ref": "#/$defs/auth"
+        }
+      }
+    }
+  }
+}

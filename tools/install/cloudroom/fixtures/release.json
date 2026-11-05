@@ -1,0 +1,31 @@
+{
+ "tag_name": "gui-v9001",
+ "draft": false,
+ "prerelease": false,
+ "assets": [
+  {
+   "name": "Cloudroom-v9001-arm64.dmg",
+   "size": 62,
+   "digest": "sha256:d50c3aa3d1345e93e65415975784f08bc2c9d78b9f0290b6ef24ae6b01d9fcbd",
+   "browser_download_url": "https://github.com/davidondrej/cloudroom/releases/download/gui-v9001/Cloudroom-v9001-arm64.dmg"
+  },
+  {
+   "name": "Cloudroom-v9001-x64.exe",
+   "size": 66,
+   "digest": "sha256:8a56e88ebe2df44b835e0bd02d196986124f60b4262849d0161ef870afda883c",
+   "browser_download_url": "https://github.com/davidondrej/cloudroom/releases/download/gui-v9001/Cloudroom-v9001-x64.exe"
+  },
+  {
+   "name": "Cloudroom-v9001-x86_64.AppImage",
+   "size": 57,
+   "digest": "sha256:22a496c5d641b0a870800c34e5cf1eb656994c35707582338d5434c6e91dc198",
+   "browser_download_url": "https://github.com/davidondrej/cloudroom/releases/download/gui-v9001/Cloudroom-v9001-x86_64.AppImage"
+  },
+  {
+   "name": "SHA256SUMS.txt",
+   "size": 280,
+   "digest": "sha256:8e39735fa7151b17ae08a36bd02efdc9372cf8eded4ad36a38a4340be7982a1c",
+   "browser_download_url": "https://github.com/davidondrej/cloudroom/releases/download/gui-v9001/SHA256SUMS.txt"
+  }
+ ]
+}

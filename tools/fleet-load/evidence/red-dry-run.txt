@@ -1,0 +1,55 @@
+$ python3 -I tools/fleet-load/standalone/dry_run_report.py --commit 01a42a68e08263f54bed3815cd886a0bf822824e
+commit 01a42a68e08263f54bed3815cd886a0bf822824e
+launch-fleet standalone: refused (44 findings)
+  standalone.script skills/launch-fleet/SKILL.md 119
+  standalone.link skills/launch-fleet/SKILL.md 274
+  standalone.script skills/launch-fleet/scripts/fleet.sh 85
+  standalone.script skills/launch-fleet/scripts/fleet.sh 159
+  standalone.script skills/launch-fleet/scripts/fleet.sh 536
+  standalone.script skills/launch-fleet/scripts/fleet.sh 540
+  standalone.read skills/launch-fleet/scripts/inbox.py 30
+  standalone.read skills/launch-fleet/scripts/limit-replacement.py 33
+  standalone.read skills/launch-fleet/scripts/limit-replacement.py 34
+  standalone.read skills/launch-fleet/scripts/limit-replacement.py 220
+  standalone.read skills/launch-fleet/scripts/loop.sh 300
+  standalone.read skills/launch-fleet/scripts/loop.sh 303
+  standalone.read skills/launch-fleet/scripts/loop.sh 319
+  standalone.read skills/launch-fleet/scripts/ops-starts.py 331
+  standalone.read skills/launch-fleet/scripts/ops-starts.py 332
+  standalone.read skills/launch-fleet/scripts/ops-starts.py 336
+  standalone.read skills/launch-fleet/scripts/test-inbox.py 336
+  standalone.read skills/launch-fleet/scripts/test-limit-replacement.py 157
+  standalone.script skills/launch-fleet/scripts/test-loop.sh 13
+  standalone.read skills/launch-fleet/scripts/test-loop.sh 28
+  standalone.script skills/launch-fleet/scripts/test-loop.sh 175
+  standalone.read skills/launch-fleet/scripts/test-ops-starts.py 33
+  standalone.read skills/launch-fleet/scripts/test-ops-starts.py 402
+  standalone.read skills/launch-fleet/scripts/test-ops-starts.py 403
+  standalone.read skills/launch-fleet/scripts/test-ops-starts.py 438
+  standalone.script skills/launch-fleet/scripts/test.sh 30
+  standalone.read skills/launch-fleet/scripts/test.sh 1252
+  standalone.read skills/launch-fleet/scripts/test.sh 2888
+  standalone.script skills/launch-fleet/test/load/README.md 104
+  standalone.script skills/launch-fleet/test/load/README.md 105
+  standalone.script skills/launch-fleet/test/load/installed.py 22
+  standalone.read skills/launch-fleet/test/load/installed.py 31
+  standalone.read skills/launch-fleet/test/load/installed.py 37
+  standalone.read skills/launch-fleet/test/load/installed.py 61
+  standalone.read skills/launch-fleet/test/load/scale.py 12
+  standalone.import skills/launch-fleet/test/load/scale.py 13
+  standalone.read skills/launch-fleet/test/load/scale.py 22
+  standalone.read skills/launch-fleet/test/load/scale.py 28
+  standalone.read skills/launch-fleet/test/load/scale.py 42
+  standalone.read skills/launch-fleet/test/load/test_seams.py 38
+  standalone.read skills/launch-fleet/test/load/test_seams.py 46
+  standalone.read skills/launch-fleet/test/load/test_seams.py 91
+  standalone.script skills/launch-fleet/test/ops-inbox/README.md 12
+  standalone.link skills/launch-fleet/test/ops-inbox/README.md 15
+launch-fleet privacy: refused (6 findings)
+  T3 staged:"skills/launch-fleet/scripts/fixtures/proof-1273.md":16
+  T3 staged:"skills/launch-fleet/scripts/fixtures/proof-1273.md":32
+  T3 staged:"skills/launch-fleet/scripts/fixtures/proof-1273.md":48
+  T3 staged:"skills/launch-fleet/scripts/fixtures/proof-1273.md":58
+  T3 staged:"skills/launch-fleet/scripts/test.sh":357
+  T3 staged:"skills/launch-fleet/scripts/test.sh":358
+exit 1

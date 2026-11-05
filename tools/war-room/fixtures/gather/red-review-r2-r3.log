@@ -1,0 +1,52 @@
+$ python3 -I tools/war-room/test_gather.py   # review R2 and R3 proofs, before the fix
+F..FFFF...
+======================================================================
+FAIL: test_a_long_run_history_keeps_the_current_ci_counts (__main__.Gather.test_a_long_run_history_keeps_the_current_ci_counts)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/war-room/test_gather.py", line 269, in test_a_long_run_history_keeps_the_current_ci_counts
+    self.assertEqual({k: v for k, v in self.values(cards['activity']).items() if k.startswith('ci-')},
+AssertionError: {} != {'ci-running-ubuntu-24.04': 1, 'ci-queued-[98 chars]': 0}
+- {}
++ {'ci-cost-today-estimate': 0,
++  'ci-queued-ubuntu-24.04': 1,
++  'ci-queued-ubuntu-slim': 1,
++  'ci-running-ubuntu-24.04': 1,
++  'ci-running-ubuntu-slim': 0}
+
+======================================================================
+FAIL: test_an_escaped_secret_in_a_valid_journey_refuses_the_gather (__main__.Gather.test_an_escaped_secret_in_a_valid_journey_refuses_the_gather) [ghp_]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/war-room/test_gather.py", line 304, in test_an_escaped_secret_in_a_valid_journey_refuses_the_gather
+    with self.assertRaises(gatherer().Fail) as refused:
+AssertionError: Fail not raised
+
+======================================================================
+FAIL: test_an_escaped_secret_in_a_valid_journey_refuses_the_gather (__main__.Gather.test_an_escaped_secret_in_a_valid_journey_refuses_the_gather) [gith]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/war-room/test_gather.py", line 304, in test_an_escaped_secret_in_a_valid_journey_refuses_the_gather
+    with self.assertRaises(gatherer().Fail) as refused:
+AssertionError: Fail not raised
+
+======================================================================
+FAIL: test_an_inconsistent_status_listing_gives_no_ci_counts (__main__.Gather.test_an_inconsistent_status_listing_gives_no_ci_counts) [twice]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/war-room/test_gather.py", line 285, in test_an_inconsistent_status_listing_gives_no_ci_counts
+    self.assertTrue(all(m['value'] is None for m in ci), name)
+AssertionError: False is not true : twice
+
+======================================================================
+FAIL: test_an_inconsistent_status_listing_gives_no_ci_counts (__main__.Gather.test_an_inconsistent_status_listing_gives_no_ci_counts) [mislabelled]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/war-room/test_gather.py", line 285, in test_an_inconsistent_status_listing_gives_no_ci_counts
+    self.assertTrue(all(m['value'] is None for m in ci), name)
+AssertionError: False is not true : mislabelled
+
+----------------------------------------------------------------------
+Ran 8 tests in 7.177s
+
+FAILED (failures=5)

@@ -66,7 +66,7 @@ fn compress(h: &mut [u32; 8], block: &[u8; 64]) {
 }
 
 /// SHA-256 over bytes that arrive in pieces, so a large file is hashed
-/// without being held in memory (OpenWiz 0.0.4, the implementation). The same
+/// without being held in memory (OpenWiz 0.0.4, ClosedWiz#14). The same
 /// hash as [`sha256_hex`] of all the pieces together.
 #[derive(Clone, Debug)]
 pub struct Sha256Hasher {

@@ -1,0 +1,30 @@
+Offline synthetic fixture run; fixture Authorization values omitted below.
+F
+======================================================================
+FAIL: test_r5_zero_age_refuses_before_admitting_a_stale_read (__main__.ReviewRegressions.test_r5_zero_age_refuses_before_admitting_a_stale_read)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-findings-2386/tools/github-reads/test_read.py", line 697, in test_r5_zero_age_refuses_before_admitting_a_stale_read
+    self.assertEqual(self.upstream(), [])
+AssertionError: Lists differ: [{'method': 'GET', 'path': '/repos/synthet[300 chars] ''}] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+{'method': 'GET', 'path': '/repos/synthetic-owner/work/issues/1', 'headers': {'Accept-Encoding': 'identity', 'Host': '127.0.0.1:40779', 'Accept': 'application/vnd.github+json', 'User-Agent': 'OpenWiz-agent-reads', 'X-Github-Api-Version': '2022-11-28', 'Authorization': '[synthetic fixture authorization omitted]', 'Connection': 'close'}, 'body': ''}
+
++ []
+- [{'body': '',
+-   'headers': {'Accept': 'application/vnd.github+json',
+-               'Accept-Encoding': 'identity',
+-               'Authorization': '[synthetic fixture authorization omitted]',
+-               'Connection': 'close',
+-               'Host': '127.0.0.1:40779',
+-               'User-Agent': 'OpenWiz-agent-reads',
+-               'X-Github-Api-Version': '2022-11-28'},
+-   'method': 'GET',
+-   'path': '/repos/synthetic-owner/work/issues/1'}]
+
+----------------------------------------------------------------------
+Ran 1 test in 0.741s
+
+FAILED (failures=1)

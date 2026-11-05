@@ -161,7 +161,7 @@ test('a lost answer is uncertain, never "not sent", and is never resent by itsel
   }
 });
 
-
+// ── Sol round 3 on #92 (0792c02), red first ──
 
 const words = (page) => page.$$eval('[data-part=composer] [data-part=outcome-marker] .word', (els) => els.map((e) => e.textContent));
 
@@ -182,7 +182,7 @@ async function threeAttempts(last) {
 }
 
 for (const last of ['sent', 'failed']) {
-  test(`1: a third attempt’s outcome (${last}) is shown, with both earlier uncertain attempts`, async () => {
+  test(`Sol R3-1: a third attempt’s outcome (${last}) is shown, with both earlier uncertain attempts`, async () => {
     const { fx, p } = await threeAttempts(last);
     try {
       const shown = await waitFor(async () => {
@@ -198,7 +198,7 @@ for (const last of ['sent', 'failed']) {
   });
 }
 
-test('3: a later attempt’s outcome is inside the live region; focus stays put', async () => {
+test('Sol R3-3: a later attempt’s outcome is inside the live region; focus stays put', async () => {
   const { fx } = await composerSite();
   let n = 0;
   fx.api.setSend((tid, b) => (n++ === 0 ? answers.uncertain(tid, b) : answers.failed(tid, b)));
@@ -216,14 +216,14 @@ test('3: a later attempt’s outcome is inside the live region; focus stays put'
       return { inRegion: !!region, focus: document.activeElement?.getAttribute('data-part') ?? document.activeElement?.tagName ?? null };
     });
     assert.equal(live.inRegion, true, 'B’s failure is announced');
-    assert.equal(live.focus, 'send-again', 'focus stays on the pressed button ');
+    assert.equal(live.focus, 'send-again', 'focus stays on the pressed button (Sol final round, finding 1)');
   } finally {
     await p.close();
     await fx.close();
   }
 });
 
-test('4: Try again and Send again show their preview’s effect and age, while the text is fixed', async () => {
+test('Sol R3-4: Try again and Send again show their preview’s effect and age, while the text is fixed', async () => {
   for (const [answer, label] of [
     [() => LOST, 'Try again'],
     [answers.uncertain, 'Send again'],
@@ -250,7 +250,7 @@ test('4: Try again and Send again show their preview’s effect and age, while t
   }
 });
 
-
+// ── Sol's final-round re-check on #92 (b60bb5e): two new findings, red first ──
 
 const focused = (page) =>
   page.evaluate(() => {
@@ -258,7 +258,7 @@ const focused = (page) =>
     return a?.getAttribute('data-part') ?? (a?.id ? `#${a.id}` : (a?.tagName ?? null));
   });
 
-test('Send again by keyboard keeps focus on it while the request is out, and after', async () => {
+test('Sol F-1a: Send again by keyboard keeps focus on it while the request is out, and after', async () => {
   const { fx } = await composerSite();
   let n = 0;
   fx.api.setSend((tid, b) => (n++ === 0 ? answers.uncertain(tid, b) : answers.failed(tid, b)));
@@ -282,7 +282,7 @@ test('Send again by keyboard keeps focus on it while the request is out, and aft
   }
 });
 
-test('Check again by keyboard keeps focus while it reads; when its row settles, focus goes to the message field', async () => {
+test('Sol F-1b: Check again by keyboard keeps focus while it reads; when its row settles, focus goes to the message field', async () => {
   const { fx } = await composerSite();
   fx.api.setSend((tid, b) => ({ after: DROP, report: report(tid, b.op_id, b.mode, b.text, result(DELIVERIES.sent)) }));
   const p = await openThread(browser, fx, 1);
@@ -305,7 +305,7 @@ test('Check again by keyboard keeps focus while it reads; when its row settles, 
   }
 });
 
-test('each preview has its own age: Queue’s keeps counting while Steer’s read is held', async () => {
+test('Sol F-2: each preview has its own age: Queue’s keeps counting while Steer’s read is held', async () => {
   // Deterministic (CI round): every step waits on an explicit state, and no answer can land on its own
   // between the clock jump and the reading. Steer's preview is held; then every detail and list read is
   // held too, so no refresh can start a second preview cycle (one landing just after the release did,

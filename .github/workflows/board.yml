@@ -1,0 +1,90 @@
+name: Board
+
+# The board, redrawn every hour on the branch `board` (#1321): the picture,
+# the startable share, the file and unlabelled links, and the ready stock
+# against builders running, day by day. Bookmark:
+# https://github.com/jparker2006/ClosedWiz/tree/board
+
+on:
+  # An hourly CloudRoom loop dispatches this; the cron is a thin backup, every 6 hours (#1313 U5 gate 3).
+  schedule:
+    - cron: '7 */6 * * *'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'private/orchestration/board/**'
+      - 'skills/plan-graph/check-links.sh'
+      - 'skills/plan-graph/test/links/**'
+      - '.github/workflows/board.yml'
+
+permissions:
+  contents: read
+
+env:
+  # The one setting: after Open development's switch, set BOARD_REPO to OpenWiz.
+  BOARD_REPO: ${{ vars.BOARD_REPO || github.repository }}
+
+jobs:
+  proof:
+    # Pull requests only: publish.sh runs the same tests before it publishes, so a dispatched or
+    # scheduled run is one job, one billed minute (#1313 U5 gate 3).
+    if: github.event_name == 'pull_request'
+    # GitHub-hosted on purpose, never vars.CI_RUNS_ON (#1313 U5 gate 3): about a minute a job, no Rust
+    # cache, and the charge shows in GitHub's own billing. The image has google-chrome to draw with.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Python
+        run: sh tools/ci-bench/python.sh
+      - name: The board's tests
+        run: python3 -I private/orchestration/board/test_board.py
+
+  preview:
+    # A pull request reads and draws on the workflow's own token, and publishes nothing.
+    needs: proof
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Python
+        run: sh tools/ci-bench/python.sh
+      - name: Read and draw, no publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -I private/orchestration/board/board.py preview --repo "$BOARD_REPO" --out "$RUNNER_TEMP/board"
+
+  publish:
+    # No `needs: proof`: publish.sh runs test_board.py first, and a failed test publishes nothing.
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # Only this job writes, and board.py pushes only refs/heads/board.
+    permissions:
+      contents: write
+      issues: read
+      pull-requests: read
+    concurrency:
+      group: board-publication
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Python
+        run: sh tools/ci-bench/python.sh
+      - name: Tests, then read, draw and publish only board
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh auth setup-git
+          sh private/orchestration/board/publish.sh "$BOARD_REPO"

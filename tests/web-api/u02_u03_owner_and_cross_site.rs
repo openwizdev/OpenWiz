@@ -1,3 +1,16 @@
+//! U2 and U3 (#12, A2): the create and the new-thread preview take the
+//! send's guard unchanged (A-13, WS-1 to WS-14).
+//!
+//! - **U2 owner only,** at the layer Jake chose (WS-1 (a)): the tunnel's
+//!   Access check. The server never reads an Access header or cookie, so no
+//!   answer depends on one (`w2_owner`'s static check covers every server
+//!   source, the new routes included). Unauthenticated, non-owner and
+//!   expired requests are refused at the edge: the live half is #13's L-10.
+//! - **U3 cross-site:** a form post, a cross-origin fetch, a missing or
+//!   foreign `Origin`, `Sec-Fetch-Site` other than `same-origin`, the wrong
+//!   content type, no custom header, and a loopback or rebinding `Host` are
+//!   each refused before any read, with zero `room-cli` calls and no record.
+
 use crate::http::TestServer;
 use crate::new_support::{NewFake, PROJECT, TEXT, body, post, preview, serve_new, threads};
 use crate::send_support::{HOST, good_headers, with, without};

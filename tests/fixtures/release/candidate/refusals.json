@@ -1,0 +1,355 @@
+[
+  {
+    "name": "synthetic_no_ship",
+    "patch": [
+      {
+        "op": "replace",
+        "path": "/decisions/ship",
+        "value": null
+      }
+    ],
+    "schema_valid": true,
+    "publication": "refuse",
+    "reason": "synthetic_ship_missing"
+  },
+  {
+    "name": "synthetic_no_changelog",
+    "patch": [
+      {
+        "op": "replace",
+        "path": "/decisions/changelog",
+        "value": null
+      }
+    ],
+    "schema_valid": true,
+    "publication": "refuse",
+    "reason": "synthetic_changelog_missing"
+  },
+  {
+    "name": "synthetic_invented_approval",
+    "patch": [
+      {
+        "op": "add",
+        "path": "/approval",
+        "value": "ship"
+      }
+    ],
+    "schema_valid": false,
+    "publication": "refuse",
+    "reason": "synthetic_unknown_field"
+  },
+  {
+    "name": "synthetic_private_source",
+    "patch": [
+      {
+        "op": "replace",
+        "path": "/candidate/source/repository",
+        "value": "example/private"
+      }
+    ],
+    "schema_valid": false,
+    "publication": "refuse",
+    "reason": "synthetic_public_source_required"
+  },
+  {
+    "name": "synthetic_no_cutover",
+    "patch": [
+      {
+        "op": "replace",
+        "path": "/gates/cutover",
+        "value": null
+      }
+    ],
+    "schema_valid": true,
+    "publication": "refuse",
+    "reason": "synthetic_cutover_missing"
+  },
+  {
+    "name": "synthetic_changed_notes",
+    "patch": [
+      {
+        "op": "replace",
+        "path": "/candidate/changelog/utf8",
+        "value": "Synthetic changed notes.\n"
+      }
+    ],
+    "schema_valid": true,
+    "publication": "refuse",
+    "reason": "synthetic_changelog_changed"
+  },
+  {
+    "name": "synthetic_changed_artifact",
+    "patch": [
+      {
+        "op": "replace",
+        "path": "/candidate/artifacts/0/sha256",
+        "value": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      }
+    ],
+    "schema_valid": true,
+    "publication": "refuse",
+    "reason": "synthetic_candidate_changed"
+  },
+  {
+    "name": "synthetic_changed_kit",
+    "patch": [
+      {
+        "op": "replace",
+        "path": "/candidate/kit/sha256",
+        "value": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      }
+    ],
+    "schema_valid": true,
+    "publication": "refuse",
+    "reason": "synthetic_candidate_changed"
+  },
+  {
+    "name": "synthetic_missing_ci",
+    "patch": [
+      {
+        "op": "replace",
+        "path": "/gates/ci",
+        "value": null
+      }
+    ],
+    "schema_valid": true,
+    "publication": "refuse",
+    "reason": "synthetic_ci_missing"
+  },
+  {
+    "name": "synthetic_failed_privacy",
+    "patch": [
+      {
+        "op": "replace",
+        "path": "/gates/privacy/status",
+        "value": "fail"
+      }
+    ],
+    "schema_valid": true,
+    "publication": "refuse",
+    "reason": "synthetic_privacy_failed"
+  },
+  {
+    "name": "synthetic_missing_claims",
+    "patch": [
+      {
+        "op": "replace",
+        "path": "/gates/claims",
+        "value": null
+      }
+    ],
+    "schema_valid": true,
+    "publication": "refuse",
+    "reason": "synthetic_claims_missing"
+  },
+  {
+    "name": "synthetic_stale_smoke",
+    "patch": [
+      {
+        "op": "replace",
+        "path": "/gates/smoke/candidate_sha256",
+        "value": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      }
+    ],
+    "schema_valid": true,
+    "publication": "refuse",
+    "reason": "synthetic_smoke_stale"
+  },
+  {
+    "name": "synthetic_fixture_smoke",
+    "patch": [
+      {
+        "op": "replace",
+        "path": "/gates/smoke/evidence_class",
+        "value": "fixture"
+      }
+    ],
+    "schema_valid": true,
+    "publication": "refuse",
+    "reason": "synthetic_live_required"
+  },
+  {
+    "name": "synthetic_dry_run_smoke",
+    "patch": [
+      {
+        "op": "replace",
+        "path": "/gates/smoke/evidence_class",
+        "value": "dry-run"
+      }
+    ],
+    "schema_valid": true,
+    "publication": "refuse",
+    "reason": "synthetic_live_required"
+  },
+  {
+    "name": "synthetic_uncertain_smoke",
+    "patch": [
+      {
+        "op": "replace",
+        "path": "/gates/smoke/status",
+        "value": "uncertain"
+      }
+    ],
+    "schema_valid": true,
+    "publication": "refuse",
+    "reason": "synthetic_smoke_uncertain"
+  },
+  {
+    "name": "synthetic_missing_promise",
+    "patch": [
+      {
+        "op": "replace",
+        "path": "/gates/smoke/coverage",
+        "value": []
+      }
+    ],
+    "schema_valid": true,
+    "publication": "refuse",
+    "reason": "synthetic_promise_missing"
+  },
+  {
+    "name": "synthetic_unknown_risk",
+    "patch": [
+      {
+        "op": "replace",
+        "path": "/candidate/risk/send/required",
+        "value": "unknown"
+      }
+    ],
+    "schema_valid": true,
+    "publication": "refuse",
+    "reason": "synthetic_risk_unknown"
+  },
+  {
+    "name": "synthetic_missing_risk_classification",
+    "patch": [
+      {
+        "op": "replace",
+        "path": "/candidate/risk/spending",
+        "value": null
+      }
+    ],
+    "schema_valid": false,
+    "publication": "refuse",
+    "reason": "synthetic_risk_missing"
+  },
+  {
+    "name": "synthetic_missing_send_live",
+    "patch": [
+      {
+        "op": "replace",
+        "path": "/candidate/risk/send/required",
+        "value": "yes"
+      }
+    ],
+    "schema_valid": true,
+    "publication": "refuse",
+    "reason": "synthetic_send_live_missing"
+  },
+  {
+    "name": "synthetic_missing_new_live",
+    "patch": [
+      {
+        "op": "replace",
+        "path": "/candidate/risk/new/required",
+        "value": "yes"
+      }
+    ],
+    "schema_valid": true,
+    "publication": "refuse",
+    "reason": "synthetic_new_live_missing"
+  },
+  {
+    "name": "synthetic_missing_app_permissions_live",
+    "patch": [
+      {
+        "op": "replace",
+        "path": "/candidate/risk/app_permissions/required",
+        "value": "yes"
+      }
+    ],
+    "schema_valid": true,
+    "publication": "refuse",
+    "reason": "synthetic_app_permissions_live_missing"
+  },
+  {
+    "name": "synthetic_missing_spending_live",
+    "patch": [
+      {
+        "op": "replace",
+        "path": "/candidate/risk/spending/required",
+        "value": "yes"
+      }
+    ],
+    "schema_valid": true,
+    "publication": "refuse",
+    "reason": "synthetic_spending_live_missing"
+  },
+  {
+    "name": "synthetic_stale_product",
+    "patch": [
+      {
+        "op": "replace",
+        "path": "/candidate/products/0/identity/source",
+        "value": "ffffffffffffffffffffffffffffffffffffffff"
+      }
+    ],
+    "schema_valid": true,
+    "publication": "refuse",
+    "reason": "synthetic_product_identity_mismatch"
+  },
+  {
+    "name": "synthetic_wrong_target",
+    "patch": [
+      {
+        "op": "replace",
+        "path": "/candidate/products/0/identity/target",
+        "value": "x86_64-unknown-linux-gnu"
+      }
+    ],
+    "schema_valid": true,
+    "publication": "refuse",
+    "reason": "synthetic_product_target_mismatch"
+  },
+  {
+    "name": "synthetic_reset_timer",
+    "patch": [
+      {
+        "op": "replace",
+        "path": "/timing/original_ship_at",
+        "value": 1893542580
+      }
+    ],
+    "schema_valid": true,
+    "publication": "refuse",
+    "reason": "synthetic_ship_time_changed"
+  },
+  {
+    "name": "synthetic_uncertain_publication",
+    "patch": [
+      {
+        "op": "replace",
+        "path": "/publication",
+        "value": {
+          "status": "uncertain",
+          "attempt_id": "synthetic-attempt-1",
+          "tag": "v0.0.99",
+          "tag_object": "3333333333333333333333333333333333333333",
+          "commit": "1111111111111111111111111111111111111111",
+          "notes_sha256": "da7e65aa955495172417dee1c7f43419a661b303576cbce1b76fd53af0285323",
+          "artifacts_sha256": "2682ef5c023a876c8173fb8622888a7d2175f07f9c51b42b412f2eceb233eb5c",
+          "immutable": true,
+          "prerelease": true,
+          "verified_at": null,
+          "evidence": {
+            "record": "synthetic:uncertain-write",
+            "sha256": "72c50adcf6b94702e94ed839895ec72a6445f8fde35b34de869b56c30a08f212"
+          }
+        }
+      }
+    ],
+    "schema_valid": true,
+    "publication": "refuse",
+    "reason": "synthetic_unsafe_retry"
+  }
+]

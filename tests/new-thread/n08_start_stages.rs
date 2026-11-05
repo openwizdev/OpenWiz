@@ -1,5 +1,5 @@
 //! N8: start stages for every status row, separate from creation, within
-//! the follow bound. Unknowns stay unknown.
+//! the follow bound (sheet A-9). Unknowns stay unknown.
 
 use std::time::Duration;
 
@@ -20,6 +20,35 @@ fn stage(file: &str) -> StartStage {
 }
 
 #[test]
+fn n08_start_stages_contracts_preserve_all_original_cases() {
+    let cases: [(&str, fn()); 5] = [
+        (
+            "a_failed_read_is_unknown_with_a_gap",
+            a_failed_read_is_unknown_with_a_gap,
+        ),
+        (
+            "a_long_last_error_is_cut_to_the_field_cap",
+            a_long_last_error_is_cut_to_the_field_cap,
+        ),
+        (
+            "a_thread_show_of_another_thread_is_not_read",
+            a_thread_show_of_another_thread_is_not_read,
+        ),
+        (
+            "every_status_row_has_its_stage",
+            every_status_row_has_its_stage,
+        ),
+        (
+            "following_stops_within_the_bound",
+            following_stops_within_the_bound,
+        ),
+    ];
+    for (name, proof) in cases {
+        eprintln!("TA2 case: n08_start_stages::{name}");
+        proof();
+    }
+}
+
 fn every_status_row_has_its_stage() {
     assert!(matches!(
         stage("thread-show-pending.json"),
@@ -52,7 +81,6 @@ fn every_status_row_has_its_stage() {
     ));
 }
 
-#[test]
 fn a_failed_read_is_unknown_with_a_gap() {
     let view = start_view(
         "thr_syn_0021",
@@ -68,7 +96,6 @@ fn a_failed_read_is_unknown_with_a_gap() {
     assert_eq!(view.gaps.len(), 1);
 }
 
-#[test]
 fn a_long_last_error_is_cut_to_the_field_cap() {
     let mut doc = fixture_json("thread-show-error.json");
     doc["thread"]["lastError"] = serde_json::json!(format!("Synthetic {}", "x".repeat(500)));
@@ -83,13 +110,11 @@ fn a_long_last_error_is_cut_to_the_field_cap() {
     assert_eq!(error.chars().count(), openwiz_core::limits::FIELD_MAX_CHARS);
 }
 
-#[test]
 fn a_thread_show_of_another_thread_is_not_read() {
     assert!(parse_shown_thread(&fixture("thread-show-active.json"), "thr_syn_0022").is_err());
     assert!(parse_shown_thread(b"Synthetic", "thr_syn_0021").is_err());
 }
 
-#[test]
 fn following_stops_within_the_bound() {
     let waiting = stage("thread-show-pending.json");
     let mut reads = 1;

@@ -1,5 +1,18 @@
+import { OutcomeGlyph } from './StatusMark.tsx';
+// The composer: one text message to the open thread, under its final output,
+// inside #6's panel and sheet (W12). The target is always the open thread's
+// id (W7). Every button that sends is a `SendControl`: one gate (listed,
+// storage working, a usable preview for its mode), with the core's effect
+// line and the read's age beside it, before pressing (W8). The draft's
+// attempts are shown as a list, every one of them, in one polite live region:
+// each with its requested mode and its reported delivery as a word and a
+// shape (W9). Every send is one press: nothing here sends on a refresh, a
+// timer or a retry of its own (W10, W11). The message field is the one prompt
+// body (`PromptBody`, #12), shared with the launcher, with the one attachment
+// tray (#16): every send button is off while an attachment isn't ready, and
+// Steer is not offered with attachments.
 
-
+import type { ReactNode } from 'react';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 import { threadTarget } from '../attachments.ts';
@@ -67,7 +80,7 @@ function draftButtons(previews: Previews, attachments: boolean): { key: string; 
   const q = previews.queue;
   const kind = q?.kind === 'ok' && q.preview.effects && 'known' in q.preview.effects.effect ? q.preview.effects.effect.known.kind : null;
   if (kind === 'starts_turn' || (q?.kind === 'ok' && q.preview.status === 'refused')) return [{ key: 'send', label: 'Send', mode: 'queue' }];
-
+  // #16: with attachments, Steer is replaced by a line saying why (the core refuses it).
   if (kind === 'queues_behind_turn' && !attachments)
     return [
       { key: 'queue', label: 'Queue', mode: 'queue' },
@@ -78,6 +91,44 @@ function draftButtons(previews: Previews, attachments: boolean): { key: string; 
 
 /** Why Steer isn't offered while the draft has attachments. */
 export const NO_STEER = 'Steer can’t carry attachments: Queue them, or remove them to Steer';
+
+/** The core's effect words, shared with the dock's quiet hint line. */
+function SendEffect({ gate, note }: { gate: Gate; note?: string }) {
+  return (
+    <p className="effect" data-part="effect">
+      {gate.off ? (
+        <span className="why">
+          can’t send: <bdi>{gate.off}</bdi>
+        </span>
+      ) : (
+        <bdi>{`${gate.effect ?? ''}${note ? ` · ${note}` : ''}`}</bdi>
+      )}
+    </p>
+  );
+}
+
+function SendRead({ gate, changed }: { gate: Gate; changed?: boolean }) {
+  return (
+    <>
+      {gate.paused ? (
+        <p className="effect paused" data-part="paused">
+          <bdi>{gate.paused}</bdi>
+        </p>
+      ) : null}
+      {gate.ageMs !== null ? (
+        <p className="meta" data-part="effect-age">
+          {/* One text node: a changing number never moves the words after it (V11's layout shift). */}
+          {`effect read ${ageText(gate.ageMs)} ago`}
+          {changed ? (
+            <span className="mod" data-part="effect-changed">
+              {' · changed'}
+            </span>
+          ) : null}
+        </p>
+      ) : null}
+    </>
+  );
+}
 
 /**
  * The only way a send button is rendered (`npm run check`). The gate's
@@ -90,6 +141,7 @@ function SendControl({
   action,
   note,
   changed,
+  hintId,
   onPress,
 }: {
   gate: Gate;
@@ -99,9 +151,11 @@ function SendControl({
   action: string;
   note?: string;
   changed?: boolean;
+  /** When present, the dock renders these words once in its shared hint line. */
+  hintId?: string;
   onPress: (p: Press) => void;
 }) {
-  // One activation, one press. A held key never presses again: its
+  // One activation, one press (Sol's re-check on #92). A held key never presses again: its
   // auto-repeat is ignored, and after a press this control stays latched until a fresh activation:
   // a new key press or release, a new pointer down, or a click with no key held (assistive
   // technology clicks without keys).
@@ -116,6 +170,7 @@ function SendControl({
           className="btn"
           data-part={part}
           data-mode={gate.press.mode}
+          aria-describedby={hintId}
           aria-disabled={gate.off !== null || !idle ? 'true' : undefined}
           onKeyDown={(e) => {
             if (e.repeat) {
@@ -142,47 +197,15 @@ function SendControl({
         >
           {gate.label}
         </button>
-        <p className="effect" data-part="effect">
-          {gate.off ? (
-            <span className="why">
-              can’t send: <bdi>{gate.off}</bdi>
-            </span>
-          ) : (
-            <bdi>{`${gate.effect ?? ''}${note ? ` · ${note}` : ''}`}</bdi>
-          )}
-        </p>
+        {hintId ? null : <SendEffect gate={gate} note={note} />}
       </div>
-      {gate.paused ? (
-        <p className="effect paused" data-part="paused">
-          <bdi>{gate.paused}</bdi>
-        </p>
-      ) : null}
-      {gate.ageMs !== null ? (
-        <p className="meta" data-part="effect-age">
-          {/* One text node: a changing number never moves the words after it (V11's layout shift). */}
-          {`effect read ${ageText(gate.ageMs)} ago`}
-          {changed ? (
-            <span className="mod" data-part="effect-changed">
-              {' · changed'}
-            </span>
-          ) : null}
-        </p>
-      ) : null}
+      {hintId ? null : <SendRead gate={gate} changed={changed} />}
     </div>
   );
 }
 
 type Shape = 'sent' | 'queued' | 'failed' | 'unsupported' | 'uncertain' | 'not-sent' | 'moving';
 
-const GLYPHS: Record<Shape, string> = {
-  sent: '[✓]',
-  queued: '[…]',
-  failed: '[x]',
-  unsupported: '[/]',
-  uncertain: '[?]',
-  'not-sent': '[-]',
-  moving: '[~]',
-};
 
 type Shown = { shape: Shape; word: string; lines: string[] };
 
@@ -291,6 +314,7 @@ export function Composer({
   snapshotAt,
   composers,
   uploads,
+  children,
 }: {
   id: string;
   listed: boolean;
@@ -298,6 +322,7 @@ export function Composer({
   snapshotAt: number;
   composers: Composers;
   uploads: Uploads;
+  children?: ReactNode;
 }) {
   const s = useSyncExternalStore(
     (onChange) => composers.subscribe(onChange),
@@ -310,6 +335,7 @@ export function Composer({
   const [changed, setChanged] = useState(false);
   const [, setTick] = useState(0);
   const reading = useRef(false);
+  const pendingPreview = useRef<(() => Promise<void>) | null>(null);
   const field = useRef<HTMLTextAreaElement>(null);
   const lastFocus = useRef<HTMLElement | null>(null);
   const stop = useRef(new AbortController());
@@ -327,16 +353,24 @@ export function Composer({
 
   // One preview at a time: on opening, on each new snapshot of the thread, and after each answer.
   useEffect(() => {
-    if (reading.current) return;
-    reading.current = true;
     const signal = stop.current.signal;
-    void (async () => {
+    // A refresh during a read replaces the pending read with the latest inputs.
+    pendingPreview.current = async () => {
       const queue = await composers.preview(id, 'queue', signal);
       const queueAt = performance.now();
       const running = queue?.kind === 'ok' && queue.preview.effects !== null && 'known' in queue.preview.effects.effect && queue.preview.effects.effect.known.kind === 'queues_behind_turn';
       const steer = queue && (running || steerWanted) ? await composers.preview(id, 'steer', signal) : null;
-      reading.current = false;
       if (queue && !signal.aborted) setPreviews({ queue, queueAt, steer, steerAt: performance.now() });
+    };
+    if (reading.current) return;
+    reading.current = true;
+    void (async () => {
+      while (pendingPreview.current && !signal.aborted) {
+        const read = pendingPreview.current;
+        pendingPreview.current = null;
+        await read();
+      }
+      reading.current = false;
     })();
   }, [composers, id, snapshotAt, s.said, steerWanted]);
 
@@ -361,7 +395,7 @@ export function Composer({
   const out = inFlight(s);
   const empty = s.draft.trim() === '';
   // What stops every send button alike; each adds its own preview's reason. An attachment not
-  // ready stops them too.
+  // ready stops them too (#16: the server's gate, mirrored; the server's is the real one).
   const off = !listed ? 'this thread is no longer listed on this page' : (composers.blocked(id) ?? composers.attachmentsOff(id));
   const gate = (label: string, mode: Mode) => gateOf(label, mode, previews, off);
   const idle = !empty && !out;
@@ -372,7 +406,9 @@ export function Composer({
   const previewState: PreviewState =
     previews.queue === null ? 'loading' : previews.queue.kind === 'failed' || previews.steer?.kind === 'failed' ? 'failed' : 'ready';
 
-
+  // What the buttons say, once a preview has answered. Before that they are a placeholder, never the
+  // baseline: the first answer is what the owner first sees, not a change (#143: a saved draft, after
+  // switching threads or a reload, was marked on every first preview).
   const key = previewState === 'loading' ? null : gates.map((g) => `${g.gate.label}:${g.gate.effect ?? ''}`).join('|');
   useEffect(() => {
     if (key === null) return;
@@ -411,135 +447,159 @@ export function Composer({
         if (e.target instanceof HTMLElement) lastFocus.current = e.target;
       }}
     >
-      <PromptBody
-        fieldId="composer-text"
-        labelId="composer-label"
-        label="message"
-        fieldRef={field}
-        value={s.draft}
-        readOnly={isLocked}
-        describedBy={off ? 'composer-said composer-off' : 'composer-said'}
-        note={note}
-        notePart="composer-note"
-        tray={{ uploads, target: threadTarget(id), locked: isLocked }}
-        onChange={(text) => composers.edit(id, text)}
-        onSubmit={onKeyDown}
-        onRefuse={setNote}
-      />
-      {off ? (
-        <p id="composer-off" className="why" data-part="send-off">
-          can’t send: <bdi>{off}</bdi>
-        </p>
-      ) : null}
-      {!isLocked && attached && steerOffered ? (
-        <p className="effect" data-part="no-steer">
-          {NO_STEER}
-        </p>
-      ) : null}
-      {isLocked ? null : (
-        <div className="acts" data-part="actions">
-          {gates.map((g) => (
-            <SendControl key={g.key} action={g.key} part="send" gate={g.gate} idle={idle} changed={changed} onPress={send} />
-          ))}
-          {anywayMode ? (
-            <SendControl
-              action="anyway"
-              part="send-anyway"
-              note="may duplicate the earlier send"
-              gate={gate('Send anyway', anywayMode)}
-              idle={idle}
-              onPress={(p) => send({ ...p, acceptPossibleDuplicate: true })}
-            />
-          ) : null}
-        </div>
-      )}
-      {/* Every attempt, in order, in one polite live region: a change in any row is announced, and focus never moves. */}
-      <div id="composer-said" role="status" data-part="outcome" data-outcome={rows.at(-1)?.shown.shape ?? 'none'}>
-        <ol className="attempts">
-        {rows.map(({ a, shown }) => (
-          <li key={keyOf(a)} className="said" data-part="attempt" data-mode={a.mode} data-outcome={shown.shape}>
-            <span className={`oc ${shown.shape}`} data-part="outcome-marker">
-              <span className="glyph" aria-hidden="true">
-                {GLYPHS[shown.shape]}
-              </span>{' '}
-              <span className="word">{shown.word}</span>
-            </span>
-            {shown.lines.map((line, i) => (
-              <p key={i} className="said-line" data-part="outcome-line">
-                <bdi>{line}</bdi>
-              </p>
-            ))}
-            {checkedLine(s, keyOf(a)) ? (
-              <p className="said-line" data-part="checked">
-                <bdi>{checkedLine(s, keyOf(a))}</bdi>
-              </p>
-            ) : null}
-            {/* Kept mounted while its own request is out (disabled), so a focused control keeps focus. */}
-            {isUnsettled(a.state) || a.state === 'checking' || (a.state === 'sending' && a.before !== null) ? (
-              <div className="acts" data-part="unsettled">
-                <div className="act">
-                  <button
-                    type="button"
-                    className="btn"
-                    data-part="check"
-                    aria-disabled={out ? 'true' : undefined}
-                    onClick={() => {
-                      if (!out) void composers.check(id, keyOf(a));
-                    }}
-                  >
-                    Check again
-                  </button>
-                  <p className="effect">looks it up; never sends</p>
-                </div>
-                {(a.state === 'unknown' || (a.state === 'sending' && a.before === 'unknown')) && a.n === s.next[a.mode] ? (
-                  <SendControl
-                    action="retry"
-                    part="retry"
-                    note="same message id: sent at most once"
-                    gate={{ ...gate('Try again', a.mode), label: 'Try again' }}
-                    idle={idle}
-                    onPress={(p) => send({ ...p, mode: a.mode, acceptPossibleDuplicate: a.acceptPossibleDuplicate })}
-                  />
+      <div className="thread-scroll" tabIndex={-1}>
+        {children}
+        {rows.length > 0 ? <h3 className="sec thread-history-label">Sent from here</h3> : null}
+        {/* Every attempt, in order, in one polite live region: a change in any row is announced, and focus never moves. */}
+        <div id="composer-said" role="status" data-part="outcome" data-outcome={rows.at(-1)?.shown.shape ?? 'none'}>
+          <ol className="attempts">
+            {rows.map(({ a, shown }) => (
+              <li key={keyOf(a)} className="said" data-part="attempt" data-mode={a.mode} data-outcome={shown.shape}>
+                <span className={`oc ${shown.shape}`} data-part="outcome-marker">
+                  <span className="glyph" aria-hidden="true">
+                    <OutcomeGlyph shape={shown.shape} />
+                  </span>{' '}
+                  <span className="word">{shown.word}</span>
+                </span>
+                {shown.lines.map((line, i) => (
+                  <p key={i} className="said-line" data-part="outcome-line">
+                    <bdi>{line}</bdi>
+                  </p>
+                ))}
+                {checkedLine(s, keyOf(a)) ? (
+                  <p className="said-line" data-part="checked">
+                    <bdi>{checkedLine(s, keyOf(a))}</bdi>
+                  </p>
                 ) : null}
+                {/* Kept mounted while its own request is out (disabled), so a focused control keeps focus. */}
+                {isUnsettled(a.state) || a.state === 'checking' || (a.state === 'sending' && a.before !== null) ? (
+                  <div className="acts" data-part="unsettled">
+                    <div className="act">
+                      <button
+                        type="button"
+                        className="btn"
+                        data-part="check"
+                        aria-disabled={out ? 'true' : undefined}
+                        onClick={() => {
+                          if (!out) void composers.check(id, keyOf(a));
+                        }}
+                      >
+                        Check again
+                      </button>
+                      <p className="effect">looks it up; never sends</p>
+                    </div>
+                    {(a.state === 'unknown' || (a.state === 'sending' && a.before === 'unknown')) && a.n === s.next[a.mode] ? (
+                      <SendControl
+                        action="retry"
+                        part="retry"
+                        note="same message id: sent at most once"
+                        gate={{ ...gate('Try again', a.mode), label: 'Try again' }}
+                        idle={idle}
+                        onPress={(p) => send({ ...p, mode: a.mode, acceptPossibleDuplicate: a.acceptPossibleDuplicate })}
+                      />
+                    ) : null}
+                  </div>
+                ) : null}
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
+      <div className="composer-dock">
+        <PromptBody
+          compact
+          fieldId="composer-text"
+          labelId="composer-label"
+          label="message"
+          fieldRef={field}
+          value={s.draft}
+          readOnly={isLocked}
+          describedBy={off ? 'composer-said composer-off' : 'composer-said'}
+          note={note}
+          notePart="composer-note"
+          tray={{ uploads, target: threadTarget(id), locked: isLocked }}
+          onChange={(text) => composers.edit(id, text)}
+          onSubmit={onKeyDown}
+          onRefuse={setNote}
+        />
+        {off ? (
+          <p id="composer-off" className="why" data-part="send-off">
+            can’t send: <bdi>{off}</bdi>
+          </p>
+        ) : null}
+        {!isLocked && attached && steerOffered ? (
+          <p className="effect" data-part="no-steer">
+            {NO_STEER}
+          </p>
+        ) : null}
+        {isLocked ? null : (
+          <div className="acts composer-actions" data-part="actions">
+            {gates.map((g) => (
+              <SendControl key={g.key} action={g.key} part="send" hintId={`composer-effect-${g.key}`} gate={g.gate} idle={idle} changed={changed} onPress={send} />
+            ))}
+            {anywayMode ? (
+              <SendControl
+                action="anyway"
+                part="send-anyway"
+                hintId="composer-effect-anyway"
+                note="may duplicate the earlier send"
+                gate={gate('Send anyway', anywayMode)}
+                idle={idle}
+                onPress={(p) => send({ ...p, acceptPossibleDuplicate: true })}
+              />
+            ) : null}
+          </div>
+        )}
+        {isLocked ? null : (
+          <div className="composer-hints">
+            {gates.map((g) => (
+              <div key={g.key} id={`composer-effect-${g.key}`} data-send-details={g.key}>
+                <SendEffect gate={g.gate} />
+                <SendRead gate={g.gate} changed={changed} />
+              </div>
+            ))}
+            {anywayMode ? (
+              <div id="composer-effect-anyway" data-send-details="anyway">
+                <SendEffect gate={gate('Send anyway', anywayMode)} note="may duplicate the earlier send" />
+                <SendRead gate={gate('Send anyway', anywayMode)} />
               </div>
             ) : null}
-          </li>
-        ))}
-        </ol>
-      </div>
-      {isLocked ? (
-        <div className="acts" data-part="unsettled">
-          {uncertain ? (
-            <SendControl
-              action="again"
-              part="send-again"
-              note="a new send: may duplicate the earlier one"
-              gate={gate('Send again', uncertain.mode)}
-              idle={idle}
-              onPress={(p) => send({ ...p, acceptPossibleDuplicate: true })}
-            />
-          ) : null}
-          <div className="act">
-            <button
-              type="button"
-              className="btn"
-              data-part="forget"
-              aria-disabled={out ? 'true' : undefined}
-              onClick={() => {
-                if (!out) composers.forget(id);
-              }}
-            >
-              Forget it
-            </button>
-            <p className="effect">keeps the text; retires these attempts’ message ids</p>
           </div>
-        </div>
-      ) : null}
-      {signedOut ? (
-        <a className="btn" href="/">
-          Sign in again
-        </a>
-      ) : null}
+        )}
+        {isLocked ? (
+          <div className="acts" data-part="unsettled">
+            {uncertain ? (
+              <SendControl
+                action="again"
+                part="send-again"
+                note="a new send: may duplicate the earlier one"
+                gate={gate('Send again', uncertain.mode)}
+                idle={idle}
+                onPress={(p) => send({ ...p, acceptPossibleDuplicate: true })}
+              />
+            ) : null}
+            <div className="act">
+              <button
+                type="button"
+                className="btn"
+                data-part="forget"
+                aria-disabled={out ? 'true' : undefined}
+                onClick={() => {
+                  if (!out) composers.forget(id);
+                }}
+              >
+                Forget it
+              </button>
+              <p className="effect">keeps the text; retires these attempts’ message ids</p>
+            </div>
+          </div>
+        ) : null}
+        {signedOut ? (
+          <a className="btn" href="/">
+            Sign in again
+          </a>
+        ) : null}
+      </div>
     </section>
   );
 }

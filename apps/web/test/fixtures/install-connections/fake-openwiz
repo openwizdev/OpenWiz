@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+"""Test-only fake of the installed `openwiz` CLI for #1105. Synthetic data only.
+Its scenario file is $SYNTHETIC_SCENARIO; each argv is appended to $SYNTHETIC_CALLS."""
+import json
+import os
+import sys
+
+scenario = json.load(open(os.environ['SYNTHETIC_SCENARIO']))
+with open(os.environ['SYNTHETIC_CALLS'], 'a') as calls:
+    calls.write(json.dumps(['openwiz', *sys.argv[1:]]) + '\n')
+args = sys.argv[1:]
+envelope = {'schema': 'openwiz.inventory.v1', 'source': {'name': 'room-cli'},
+            'coverage': {'state': 'complete'}, 'freshness': {'snapshot_at': 1}, 'gaps': []}
+if args == ['ls', '--json', '--limit', '1']:
+    if scenario['cloudroom'] == 'partial':
+        # A supporting read failed: the inventory still prints, partially.
+        print(json.dumps(dict(envelope, coverage={'state': 'partial'}, gaps=[
+            {'kind': 'command_failed', 'subject': None, 'detail': 'synthetic supporting read failed'}],
+            data={'sessions': []})))
+        sys.exit(0)
+    if scenario['cloudroom'] != 'ok':
+        sys.exit(1)
+    print(json.dumps(dict(envelope, data={'sessions': []})))
+elif args == ['models', '--json']:
+    if scenario['cloudroom'] != 'ok':
+        sys.exit(13)
+    print(json.dumps({'schema': 'openwiz.cloud-options.v1', 'read_at': 1,
+                      'label': 'as reported by CloudRoom; it may answer from a saved copy',
+                      'state': {'kind': 'offered'}, 'harnesses': scenario['harnesses'], 'unavailable': []}))
+elif len(args) == 3 and args[0] == 'show' and args[2] == '--json':
+    project = scenario['threads'].get(args[1])
+    if project is None:
+        sys.exit(3)
+    print(json.dumps(dict(envelope, data={'session': {'id': args[1], 'group': {
+        'kind': 'project', 'id': project, 'name': {'value': 'synthetic'}}}})))
+else:
+    sys.exit(2)

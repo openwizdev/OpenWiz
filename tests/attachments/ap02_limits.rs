@@ -12,6 +12,29 @@ use openwiz_core::attachment::{
 use crate::support::*;
 
 #[test]
+fn ap02_limits_affected_contracts_preserve_original_cases() {
+    let cases: [(&str, fn()); 5] = [
+        (
+            "a_file_at_25_mib_is_accepted_and_one_byte_over_is_refused",
+            a_file_at_25_mib_is_accepted_and_one_byte_over_is_refused,
+        ),
+        (
+            "a_file_cloudroom_types_as_an_image_gets_the_image_limit",
+            a_file_cloudroom_types_as_an_image_gets_the_image_limit,
+        ),
+        (
+            "an_image_at_10_mib_is_accepted_and_one_byte_over_is_refused",
+            an_image_at_10_mib_is_accepted_and_one_byte_over_is_refused,
+        ),
+        ("the_limits_are_cloudrooms", the_limits_are_cloudrooms),
+        ("there_is_no_count_cap", there_is_no_count_cap),
+    ];
+    for (name, proof) in cases {
+        eprintln!("TA2 case: ap02_limits::{name}");
+        proof();
+    }
+}
+
 fn the_limits_are_cloudrooms() {
     assert_eq!(IMAGE_MAX_BYTES, 10 * MIB, "F7: 10 MiB per image");
     assert_eq!(FILE_MAX_BYTES, 25 * MIB, "F7: 25 MiB per file");
@@ -25,7 +48,6 @@ fn the_limits_are_cloudrooms() {
     );
 }
 
-#[test]
 fn an_image_at_10_mib_is_accepted_and_one_byte_over_is_refused() {
     for (file, magic) in [
         ("synthetic.png", PNG),
@@ -46,7 +68,6 @@ fn an_image_at_10_mib_is_accepted_and_one_byte_over_is_refused() {
     }
 }
 
-#[test]
 fn a_file_at_25_mib_is_accepted_and_one_byte_over_is_refused() {
     for (file, magic) in [
         ("synthetic.pdf", PDF),
@@ -67,7 +88,6 @@ fn a_file_at_25_mib_is_accepted_and_one_byte_over_is_refused() {
     }
 }
 
-#[test]
 fn a_file_cloudroom_types_as_an_image_gets_the_image_limit() {
     for (file, magic) in [
         ("synthetic.svg", SVG),
@@ -106,7 +126,7 @@ fn a_file_cloudroom_types_as_an_image_gets_the_image_limit() {
 
 /// The table is CloudRoom's typing (F26), pinned: the extensions that
 /// `mime-types` 2.1.35 (`mime-db` 1.52.0) or 3.0.2 (`mime-db` 1.54.0) looks
-/// up as `image/*`, as recorded in the release checks.
+/// up as `image/*`, as recorded in `contracts/attachment-mime-types.v1.md`.
 #[test]
 fn the_extension_table_is_pinned() {
     const PINNED: &str = "3ds apng avci avcs avif azv b16 bmp btf btif cgm cmx dds dib djv \
@@ -122,8 +142,9 @@ fn the_extension_table_is_pinned() {
     sorted.sort_unstable();
     sorted.dedup();
     assert_eq!(sorted, pinned, "sorted, unique and lowercase");
-    let recorded = fs::read_to_string(Path::new(ROOT).join("docs/attachment-types.md"))
-        .expect("the table's source is recorded");
+    let recorded =
+        fs::read_to_string(Path::new(ROOT).join("contracts/attachment-mime-types.v1.md"))
+            .expect("the table's source is recorded");
     assert!(
         recorded.contains(
             PINNED
@@ -135,7 +156,6 @@ fn the_extension_table_is_pinned() {
     );
 }
 
-#[test]
 fn there_is_no_count_cap() {
     // 200 small files and 200 small images: every one is accepted on its
     // own, and nothing in the model counts them.
@@ -153,7 +173,7 @@ fn there_is_no_count_cap() {
 
 /// Every constant in the attachment model is one of these, and nothing else
 /// in the core names an attachment cap. Adding a count or size cap fails
-/// here.
+/// here (the negative check in the evidence).
 #[test]
 fn no_other_size_or_count_constant() {
     const ALLOWED: &[&str] = &[
@@ -168,7 +188,7 @@ fn no_other_size_or_count_constant() {
         "SNIFF_BYTES",
         "UNSENT_TTL",
         "FREE_DISK_FLOOR_BYTES",
-        // B2 (the implementation): a directory's name and a reader's keys, not
+        // B2 (ClosedWiz#15): a directory's name and a reader's keys, not
         // limits.
         "STAGING_DIR",
         "PROMPT_ATTACHMENT_KEYS",
@@ -205,7 +225,7 @@ fn no_other_size_or_count_constant() {
     // The rest of the core doesn't define an attachment limit either.
     let mut files = Vec::new();
     rust_files(&Path::new(ROOT).join("crates/core/src"), &mut files);
-    // B2 (the implementation) names three constants that are not limits: the two
+    // B2 (ClosedWiz#15) names three constants that are not limits: the two
     // headers of the attachments digest's encoding (`prompt.rs`) and the
     // words of the Steer refusal (`messaging/send.rs`).
     const NOT_LIMITS: &[&str] = &[
@@ -270,15 +290,22 @@ fn the_store_and_the_cli_add_no_cap() {
                 "PARTIAL_SUFFIX",
                 "STAGING_LOCK",
                 "ID_ATTEMPTS",
+                // macOS caches the private probe's owner UID, not a limit (#1102).
+                "PROCESS_OWNER",
                 // An open flag's value, not a limit.
                 "O_NONBLOCK",
                 // The free-space measure: its program, arguments and header.
                 "DF_ARGS",
                 "DF_HEADER",
                 "DF_PROGRAM",
-                // B2 (the implementation): the claims lock and the claim file.
+                // B2 (ClosedWiz#15): the claims lock and the claim file.
                 "CLAIMS_LOCK",
                 "CLAIM",
+                // Moved here from the CLI's list for #16 (B3) with this
+                // reason (the orchestrator, 2026-10-31, #16 Q4): the three
+                // attachment reports live in the store now (`report`), one
+                // implementation for the CLI and the web server, so their
+                // schema ids are defined here; the CLI re-exports them.
                 "ADD_SCHEMA_ID",
                 "LIST_SCHEMA_ID",
                 "REMOVE_SCHEMA_ID",

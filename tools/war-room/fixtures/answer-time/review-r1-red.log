@@ -1,0 +1,13 @@
+F
+======================================================================
+FAIL: test_existing_projected_timing_retains_its_native_fact_and_rejects_mismatch (__main__.AnswerTime.test_existing_projected_timing_retains_its_native_fact_and_rejects_mismatch) (request_ticket=4001, timing_ticket=4999)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/war-room/test_answer_time.py", line 140, in test_existing_projected_timing_retains_its_native_fact_and_rejects_mismatch
+    with self.assertRaises(ValueError):
+AssertionError: ValueError not raised
+
+----------------------------------------------------------------------
+Ran 1 test in 0.029s
+
+FAILED (failures=1)

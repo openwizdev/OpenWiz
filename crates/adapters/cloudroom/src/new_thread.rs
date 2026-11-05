@@ -1,3 +1,33 @@
+//! The CloudRoom side of new threads (OpenWiz 0.0.4, ClosedWiz#11): the
+//! [`NewThreadClient`] the core calls (A1 phase 2), over the allowlist's
+//! `cloud status --json` and `thread spawn` (sheet A-2) and the existing
+//! reads, and the pure functions it is made of (A1 phase 1):
+//!
+//! - [`spawn_argv`]: the exact `thread spawn` arguments, every setting
+//!   explicit, built only by the allowlist's [`Invocation::ThreadSpawn`];
+//! - [`parse_projects`] and [`is_github_remote`]: the projects a create may
+//!   start in (sheet A-5);
+//! - [`parse_observed_threads`]: threads seen after an uncertain create,
+//!   observations only;
+//! - [`parse_catalogue`]: `cloud status --json`, keeping only the catalogue
+//!   keys ([`CATALOGUE_KEYS`], sheet A-2) and discarding the account and
+//!   everything else before anything reads it;
+//! - [`spawn_receipt`] and [`spawn_error`]: the reply to the one call;
+//! - [`parse_shown_thread`]: a created thread's `thread show`, for its start;
+//! - [`HARNESS_PROVIDERS`] and [`CLI_REASONING_LEVELS`]: what is verified.
+//!
+//! **Evidence.** The `spawn` options, `cloud status`'s keys and types and
+//! the CLI's effort levels were observed in spike run 3 (`room-cli` v131,
+//! help and one structure-only read, 2026-10-30). The receipt, the error
+//! lines and the `pending`/`starting` statuses are **source-read, not
+//! observed** (ClosedWiz#11): only a live create shows them.
+//!
+//! Nothing `room-cli` prints reaches a reason, gap or message from here,
+//! except `lastError` on a failed start, shown as CloudRoom's words.
+//!
+//! [`NewThreadClient`]: openwiz_core::new_thread::operation::NewThreadClient
+//! [`Invocation::ThreadSpawn`]: crate::allowlist::Invocation::ThreadSpawn
+
 use std::time::Instant;
 
 use openwiz_core::messaging::InvalidRequest;
@@ -20,12 +50,19 @@ use crate::allowlist::{InvalidSpawn, Invocation, SpawnArgs, ThreadId};
 use crate::process::{self, SpawnFailure};
 use crate::source::CloudRoomSource;
 
+/// Catalogue harness ids whose `spawn --provider` id is verified, and that
+/// id. Only `codex` and `claude-code` list models (spike run 3), and both
+/// were seen as `providerId`s in capture V. Every other harness is
+/// unavailable until its mapping is verified.
 pub const HARNESS_PROVIDERS: &[(&str, &str)] =
     &[("codex", "codex"), ("claude-code", "claude-code")];
 
+/// The effort levels `thread spawn --help` lists (spike run 3, v131). The
+/// catalogue's `none`, `minimal` and `ultra` are not among them, so they are
+/// never offered.
 pub const CLI_REASONING_LEVELS: &[&str] = &["low", "medium", "high", "xhigh", "max"];
 
-/// The only `cloud status` keys OpenWiz keeps. Everything else,
+/// The only `cloud status` keys OpenWiz keeps (sheet A-2). Everything else,
 /// the account first, is discarded before anything reads the document.
 pub const CATALOGUE_KEYS: &[&str] = &["ready", "harnesses"];
 
@@ -45,6 +82,22 @@ pub const MODEL_KEYS: &[&str] = &["model", "reasoning_levels"];
 /// The only keys kept on a harness's `attachments`.
 pub const ATTACHMENT_KEYS: &[&str] = &["files", "images"];
 
+/// The exact arguments of the one create, after the program name:
+///
+/// `thread spawn --project <id> --machine cloud --provider <p> --model <m>
+/// --reasoning-level <l> --request-id <rid> --json --prompt <text>`
+///
+/// Every setting is explicit (spawn's own defaults are never relied on), the
+/// text is one argument, byte for byte, and comes last. No other flag is
+/// ever passed: no attachment, title, branch, permission or parent (N1
+/// checks every flag `spawn --help` lists). A payload with any attachment
+/// is refused. The words are the allowlist's ([`spawn_invocation`]).
+///
+/// `--prompt` takes the next argument as its value even when it starts with
+/// `-` (Commander.js's greedy option-arguments): **inferred from the parser
+/// observed in spike run 3, not observed for `spawn`**. Were it not so, the
+/// parser refuses the arguments before any request, as it does for an
+/// unknown option on `thread show` (observed).
 pub fn spawn_argv(spawn: &SpawnRequest) -> Result<Vec<String>, InvalidRequest> {
     spawn_invocation(spawn).map(|invocation| invocation.argv())
 }
@@ -79,7 +132,7 @@ fn drift(what: &str) -> SourceError {
     }
 }
 
-// The strict readers, on B1's pattern: each JSON object
+// The strict readers (Sol, round 1, R2), on B1's pattern: each JSON object
 // is read by its own visitor straight from the text, so a key given twice is
 // seen (`serde_json::Value` would keep only the last), each kept key must
 // have its type, and nothing `room-cli` printed reaches an error message.
@@ -98,7 +151,7 @@ fn required<T, E: de::Error>(slot: Option<T>, key: &'static str) -> Result<T, E>
 }
 
 /// `cloud status --json`'s top level: `ready` and `harnesses`, typed. Every
-/// other key, the account first, is dropped unread.
+/// other key, the account first, is dropped unread (sheet A-2).
 struct CatalogueDocument(Catalogue);
 
 impl<'de> Deserialize<'de> for CatalogueDocument {
@@ -140,6 +193,9 @@ impl<'de> Visitor<'de> for CatalogueVisitor {
     }
 }
 
+/// One harness row: [`HARNESS_KEYS`] only, typed; `id`, `model` and
+/// `reasoning_levels` required, as every row had them (spike run 3). Every
+/// other key is dropped unread.
 struct HarnessRow(CatalogueHarness);
 
 impl<'de> Deserialize<'de> for HarnessRow {
@@ -273,7 +329,7 @@ impl<'de> Visitor<'de> for AttachmentsVisitor {
 /// The catalogue in `cloud status --json`'s stdout, read strictly: only
 /// [`CATALOGUE_KEYS`] (and on each row [`HARNESS_KEYS`], [`MODEL_KEYS`] and
 /// [`ATTACHMENT_KEYS`]) are read, each with its type; the account and every
-/// other field are dropped unread. A key given twice at any level
+/// other field are dropped unread (sheet A-2). A key given twice at any level
 /// read, a kept key missing or of another type, or anything but an object is
 /// drift, and gives [`SourceError::Malformed`]: no options, and nothing is
 /// dispatched (N17).
@@ -289,7 +345,7 @@ pub fn parse_catalogue(stdout: &[u8]) -> Result<Catalogue, SourceError> {
 }
 
 /// The start of `room-cli`'s error line for a refused create
-/// (source-read; not observed).
+/// (source-read, ClosedWiz#11; not observed).
 pub const SPAWN_ERROR_PREFIX: &str = "Error: Failed to create thread: HTTP ";
 
 /// The documented refusals: status, the start of the message, and what it
@@ -389,7 +445,7 @@ enum RowType {
 
 /// Every key the `spawn` receipt may have, and its type: the thread row of
 /// `thread list` and `thread show` (capture C), which the receipt is
-/// source-read to be (the implementation; not observed). `id` and `projectId` are
+/// source-read to be (ClosedWiz#11; not observed). `id` and `projectId` are
 /// required; any other key is uncertain.
 pub const RECEIPT_KEYS: &[&str] = &[
     "id",
@@ -716,6 +772,14 @@ const GITHUB_PREFIXES: &[&str] = &[
     "git@github.com:",
 ];
 
+/// Whether `url`, a project's `gitRemoteUrl`, is a GitHub remote: an
+/// `https://github.com/`, `ssh://git@github.com/` or `git@github.com:` URL
+/// with a path of printable ASCII after it. Anything else (another host, a
+/// lookalike, a user, an empty path) is not, so the project is refused
+/// (sheet A-5): the safe direction, since CloudRoom copies a project
+/// without a GitHub remote from the Mac instead, a larger and different
+/// effect. **Spike run 3 observed only whether `gitRemoteUrl` is null**,
+/// never a host; this rule is OpenWiz's.
 pub fn is_github_remote(url: &str) -> bool {
     GITHUB_PREFIXES.iter().any(|prefix| {
         url.strip_prefix(prefix).is_some_and(|path| {
@@ -751,9 +815,9 @@ fn string_field(row: &Map<String, Value>, read: &str, field: &str) -> Fact<Strin
 
 /// The projects in `project list --json --include-personal`'s stdout, for a
 /// create: id, name, kind, and whether the remote is GitHub. A row with no
-/// string id can't be named, and is left out. A missing or mistyped kind
-/// or remote is unknown, so the project is refused. A key given twice
-/// anywhere refuses the whole list: nothing is created.
+/// nonempty string id can't be named, and is left out. A missing or
+/// mistyped kind or remote is unknown, so the project is refused. A key
+/// given twice anywhere refuses the whole list: nothing is created.
 pub fn parse_projects(stdout: &[u8]) -> Result<Vec<ProjectCandidate>, SourceError> {
     let read = "project list";
     // A key given twice (a `kind` or a remote) could change which project
@@ -766,6 +830,9 @@ pub fn parse_projects(stdout: &[u8]) -> Result<Vec<ProjectCandidate>, SourceErro
             let Some(Value::String(id)) = row.get("id") else {
                 return None;
             };
+            if id.is_empty() {
+                return None;
+            }
             let github_remote = match row.get("gitRemoteUrl") {
                 Some(Value::Null) => Fact::Known(false),
                 Some(Value::String(url)) => Fact::Known(is_github_remote(url)),
@@ -838,8 +905,10 @@ impl NewThreadClient for CloudRoomSource {
         crate::PROGRAM
     }
 
+    /// New's own, never the reads' (#200): `""` while no live create has
+    /// passed, which no version read equals.
     fn tested_version(&self) -> &str {
-        crate::TESTED_VERSION
+        crate::NEW_TESTED_VERSION.unwrap_or("")
     }
 
     fn cli_levels(&self) -> &[&str] {

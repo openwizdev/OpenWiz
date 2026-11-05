@@ -12,6 +12,7 @@ path = "src/main.rs"
 
 [dependencies]
 openwiz-core = { path = "../core" }
+openwiz-adapter-github = { path = "../adapters/github" }
 openwiz-adapter-cloudroom = { path = "../adapters/cloudroom" }
 openwiz-store = { path = "../store" }
 serde.workspace = true

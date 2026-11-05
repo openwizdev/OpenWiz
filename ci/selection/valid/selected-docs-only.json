@@ -1,0 +1,74 @@
+{
+  "schema": "openwiz.ci-selection.v1",
+  "run": {
+    "id": 9000014,
+    "attempt": 1,
+    "event": "pull_request",
+    "action": "synchronize",
+    "base_branch": "main",
+    "base": "1111111111111111111111111111111111111111",
+    "head": "2222222222222222222222222222222222222222",
+    "pull_request": 911
+  },
+  "diff": {
+    "state": "read",
+    "paths": [
+      "README.md"
+    ]
+  },
+  "selection": {
+    "mode": "selected"
+  },
+  "builds": {
+    "web_export": {
+      "decision": "skip",
+      "reason": "no selected test reads apps/web/out"
+    }
+  },
+  "lanes": {
+    "always": {
+      "decision": "run",
+      "tests": [
+        "always:fmt",
+        "always:classifier",
+        "always:selector",
+        "always:architecture",
+        "always:privacy"
+      ],
+      "skipped": []
+    },
+    "rust": {
+      "decision": "skip",
+      "reason": "no test reads README.md"
+    },
+    "web": {
+      "decision": "skip",
+      "reason": "no test reads README.md"
+    },
+    "site": {
+      "decision": "skip",
+      "reason": "no test reads README.md"
+    },
+    "skills": [
+      {
+        "skill": "launch-fleet",
+        "decision": "skip",
+        "reason": "no test reads README.md"
+      },
+      {
+        "skill": "plan-graph",
+        "decision": "skip",
+        "reason": "no test reads README.md"
+      },
+      {
+        "skill": "triage",
+        "decision": "skip",
+        "reason": "no test reads README.md"
+      }
+    ]
+  },
+  "store": {
+    "artifact": "ci-selection-1",
+    "file": "ci-selection.json"
+  }
+}

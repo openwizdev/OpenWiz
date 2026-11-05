@@ -1,0 +1,24 @@
+   Compiling openwiz-cli v0.0.1-dev (/code/ClosedWiz-1272/crates/cli)
+   Compiling openwiz-tests v0.0.1-dev (/code/ClosedWiz-1272/tests)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 8.35s
+     Running fleet/main.rs (target/debug/deps/fleet-e2d7203fe5d12f9f)
+
+running 15 tests
+test b5_tick::b5_r13_due_ignores_a_superseded_approval_at_the_same_head ... ok
+test b5_tick::b5_1196_recorded_fallback_replacement_waits_for_a_reviewer ... ok
+test b5_tick::edges::b5_archive_retains_reviewer_start_order_after_a_recheck ... ok
+test b5_tick::public::p4_appended_giveup_retires_every_recheck_alias ... ok
+test b5_tick::public::p4_conflicting_checked_branches_cannot_receive_ci_messages ... ok
+test b5_tick::public::p4_fallback_record_is_thread_free_and_an_injected_branch_is_refused ... ok
+test b5_tick::public::p4_github_only_due_defers_thread_free_identity_to_tick ... ok
+test b5_tick::public::p4_helper_and_other_project_titles_do_not_match_the_builder ... ok
+test b5_tick::public::p4_ambiguous_titles_and_disagreement_never_choose_an_agent ... ok
+test b5_tick::public::p4_legacy_giveup_targets_its_explicit_thread_across_new_spans ... ok
+test b5_tick::public::p4_public_approval_refuses_quoted_words_below_the_heading ... ok
+test b5_tick::public::p4_public_approval_keeps_the_same_fingerprint_and_requires_a_pointer ... ok
+test b5_tick::public::p4_quiet_giveup_closes_the_whole_span_even_after_an_in_place_edit ... ok
+test b5_tick::public::p4_recheck_lineage_merge_and_archive_with_public_and_legacy_records ... ok
+test b5_tick::public::p4_tick_writes_thread_free_records_through_merge_and_finished ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 328 filtered out; finished in 59.54s
+

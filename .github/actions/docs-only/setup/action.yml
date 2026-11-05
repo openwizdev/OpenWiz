@@ -1,0 +1,145 @@
+name: Prepare a CI lane
+description: X7 runner setup and cache trust, shared by X5 lanes
+inputs:
+  cache:
+    default: cargo-rust
+    description: The existing PC/GitHub cargo cache partition
+  cargo:
+    default: 'false'
+    description: Whether this lane uses Cargo
+  npm:
+    default: 'false'
+    description: Whether this lane reads web packages
+  browser:
+    default: 'false'
+    description: Whether this lane needs Chromium
+  hosted:
+    required: true
+    description: From the unconditional runner guard
+  save:
+    required: true
+    description: From the unconditional runner guard
+  rust-version:
+    required: true
+    description: The workflow Rust pin
+  node-version:
+    required: true
+    description: The workflow Node pin
+runs:
+  using: composite
+  steps:
+    - name: One device for the web roots
+      if: inputs.cargo == 'true' || inputs.browser == 'true'
+      shell: bash
+      # One device for a directory and its files: an overlay root (Jog's,
+      # #2467) gives directories the overlay's device and files another, and
+      # /proc/locks names a file by the overlay's. Then A8's web root reads as
+      # "an entry on another device" and tests/support/forks.rs never finds a
+      # held lock. /tmp, and Cargo's CARGO_TARGET_TMPDIR (target/tmp, where
+      # those tests make their files), go on a tmpfs when they are split.
+      run: |
+        split() {
+          probe="$(mktemp -d "$1/device.XXXXXX")"
+          : > "$probe/file"
+          dir="$(stat -c %d "$probe")" file="$(stat -c %d "$probe/file")"
+          rm -rf "$probe"
+          [ "$dir" != "$file" ]
+        }
+        if split /tmp; then
+          sudo mount -t tmpfs -o size=10g,mode=1777 closedwiz-tmp /tmp
+          mkdir -p /tmp/web-out apps/web/out
+          sudo mount --bind /tmp/web-out apps/web/out
+        fi
+        mkdir -p target/tmp
+        if split target/tmp; then
+          sudo mount -t tmpfs -o "size=10g,mode=755,uid=$(id -u),gid=$(id -g)" closedwiz-target-tmp target/tmp
+          split target/tmp && { echo "target/tmp is still split across devices" >&2; exit 1; }
+          echo "target/tmp: on a tmpfs, one device"
+        fi
+    - name: Whose runner
+      id: service
+      shell: bash
+      env:
+        HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+      # The same guard as the job's (#2467): service=jog is the one trusted
+      # hosted service that, like GitHub's own runners (inputs.hosted), uses
+      # GitHub's cache and the pinned hosted setup. It fails the lane again
+      # on a fork's untrusted runner.
+      run: sh ci/hosted/guard.sh
+    - name: The cache volume
+      id: volume
+      shell: bash
+      run: |
+        if [ -n "${NSC_CACHE_PATH:-}" ]; then
+          echo "namespace=true" >> "$GITHUB_OUTPUT"
+        fi
+    - name: Mount the lane cache volume
+      if: steps.volume.outputs.namespace == 'true' && inputs.hosted != 'true'
+      uses: namespacelabs/nscloud-cache-action@1124a6f3ce44e5cf84cc22111530961f4d2a15f9 # v1.7.0
+      with:
+        path: |
+          ~/.rustup
+          ~/.cargo/registry
+          ${{ github.workspace }}/target
+          ~/.npm
+    - name: Restore the cargo-rust cache
+      if: inputs.cargo == 'true' && inputs.hosted != 'true' && steps.service.outputs.service != 'jog' && steps.volume.outputs.namespace != 'true'
+      shell: bash
+      run: sh ci/runner/cache.sh restore "${{ inputs.cache }}" "$HOME/.cargo/registry" "$GITHUB_WORKSPACE/target"
+    - name: Restore the npm cache
+      if: inputs.npm == 'true' && inputs.hosted != 'true' && steps.service.outputs.service != 'jog' && steps.volume.outputs.namespace != 'true'
+      shell: bash
+      run: sh ci/runner/cache.sh restore npm "$HOME/.npm"
+    - name: Restore the GitHub cargo-rust cache
+      if: inputs.cargo == 'true' && (inputs.hosted == 'true' || steps.service.outputs.service == 'jog')
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ~/.cargo/registry
+          target
+        key: ${{ inputs.cache }}-${{ runner.os }}-${{ inputs.rust-version }}-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}
+        restore-keys: |
+          ${{ inputs.cache }}-${{ runner.os }}-${{ inputs.rust-version }}-${{ hashFiles('Cargo.lock') }}-
+          ${{ inputs.cache }}-${{ runner.os }}-${{ inputs.rust-version }}-
+    - name: Restore the GitHub npm cache
+      if: inputs.npm == 'true' && (inputs.hosted == 'true' || steps.service.outputs.service == 'jog')
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.npm
+        key: npm-${{ runner.os }}-${{ hashFiles('apps/web/package-lock.json') }}
+        restore-keys: npm-${{ runner.os }}-
+    - name: The hosted setup
+      if: inputs.hosted == 'true' || steps.service.outputs.service == 'jog'
+      shell: bash
+      env:
+        BROWSER: ${{ inputs.browser }}
+      run: |
+        if [ "$BROWSER" = true ]; then
+          sh ci/hosted/setup.sh python chromium zsh
+        else
+          sh ci/hosted/setup.sh python zsh
+        fi
+    - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: ${{ inputs.node-version }}
+        package-manager-cache: false
+    - name: Rust
+      if: inputs.cargo == 'true'
+      shell: bash
+      env:
+        PIN: ${{ inputs.rust-version }}
+      run: |
+        rustup toolchain install "$PIN" --profile minimal --component rustfmt,clippy --no-self-update
+        rustup default "$PIN"
+        command -v zsh >/dev/null || { sudo apt-get update -q && sudo apt-get install -y zsh; }
+    - name: The image's Chromium
+      if: inputs.browser == 'true'
+      shell: bash
+      run: |
+        bin="$(command -v chromium || command -v chromium-browser || command -v google-chrome)"
+        "$bin" --version
+        echo "OPENWIZ_CHROMIUM=$bin" >> "$GITHUB_ENV"
+    - name: Run npm ci --ignore-scripts
+      if: inputs.npm == 'true'
+      shell: bash
+      run: sh ci/retry.sh 3 -- npm ci --ignore-scripts --prefix apps/web

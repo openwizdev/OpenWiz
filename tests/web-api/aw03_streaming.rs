@@ -1,3 +1,12 @@
+//! AW3 and AW4 (#16, B3), after #16's answer (Q1, the orchestrator,
+//! 2026-10-31): **the store stages straight from the upload stream**, with no
+//! temporary file anywhere, and **the three attachment reports have one
+//! implementation, in the store**, which the CLI and the server both call.
+//! While the body arrives, its bytes are already the store's unfinished copy
+//! (`attachments/<id>/<name>.partial`); nothing else is written beside the
+//! store; and since no file is made under the owner's name, a name is staged
+//! whole, up to the header's cap.
+
 use std::fs;
 use std::io::Write;
 use std::net::TcpStream;
@@ -196,6 +205,11 @@ impl std::io::Read for Held {
     }
 }
 
+/// Sol's round 1 on #167 (R3): the free-disk floor holds across stagings
+/// at once. With room for one upload above the floor and not two, a second
+/// one, stream or file, is refused (`low_disk`) while the first is still
+/// copying; once the first stops, its reservation is released and the
+/// second fits. Deterministic: the first upload is held mid-copy.
 #[test]
 fn two_stagings_at_once_never_go_below_the_floor() {
     use openwiz_core::attachment::{FREE_DISK_FLOOR_BYTES, FailReason};
@@ -281,7 +295,7 @@ fn used(dir: &Path) -> u64 {
 /// A free-space measure over a simulated disk of `base` bytes, whose usage
 /// is the store's own files. With a `hook`, the measure runs it after
 /// taking its snapshot and before returning: another staging's copy moves
-/// on in between.
+/// on in between (Sol's re-check on #167, R3).
 struct Simulated<'a> {
     base: u64,
     hook: std::sync::Mutex<Option<Box<dyn FnOnce() + Send + 'a>>>,
@@ -297,6 +311,12 @@ impl openwiz_store::attachments::FreeSpace for Simulated<'_> {
     }
 }
 
+/// Sol's re-check on #167 (R3): a copy that advances, or finishes, while a
+/// second staging measures the free space never lets the two together go
+/// below the floor. Room for one and a half uploads above the floor: the
+/// second is refused whether the first moves on by three quarters of it or
+/// finishes between the second's two observations; and the simulated disk
+/// never ends under the floor.
 #[test]
 fn a_copy_moving_on_while_another_measures_never_crosses_the_floor() {
     moving_copy(false);

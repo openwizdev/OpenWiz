@@ -1,0 +1,13 @@
+F
+======================================================================
+FAIL: test_shadow_step_failures_do_not_replace_the_existing_required_result (__main__.Shadow.test_shadow_step_failures_do_not_replace_the_existing_required_result)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_shadow.py", line 311, in test_shadow_step_failures_do_not_replace_the_existing_required_result
+    self.assertEqual(block.count('continue-on-error: true'),2)
+AssertionError: 0 != 2
+
+----------------------------------------------------------------------
+Ran 1 test in 0.038s
+
+FAILED (failures=1)

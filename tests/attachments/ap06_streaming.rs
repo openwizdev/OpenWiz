@@ -18,6 +18,32 @@ use crate::support::PNG;
 /// metadata, far under the smaller limit (10 MiB).
 const BOUND_KIB: u64 = 4 * 1024;
 
+fn memory_growth_is_bounded(before: u64, after: u64) -> bool {
+    // Linux's approximate RSS counters can make a later VmHWM read lower.
+    if after < before {
+        eprintln!("AP6: measured peak decreased from {before} KiB to {after} KiB");
+    }
+    after.saturating_sub(before) < BOUND_KIB
+}
+
+#[test]
+fn memory_comparison_handles_decreases_and_keeps_the_strict_bound() {
+    for (before, after, expected) in [
+        (2172, 1872, true),
+        (2172, 2172, true),
+        (2172, 6267, true),
+        (2172, 6268, false),
+        (2172, 6269, false),
+        (0, u64::MAX, false),
+    ] {
+        assert_eq!(
+            memory_growth_is_bounded(before, after),
+            expected,
+            "peak from {before} KiB to {after} KiB"
+        );
+    }
+}
+
 /// Writes `len` bytes, `head` first, in pieces, and returns their SHA-256.
 fn write_large(path: &std::path::Path, head: &[u8], len: u64) -> String {
     let mut file = File::create(path).unwrap();
@@ -63,7 +89,7 @@ fn a_file_at_its_limit_is_staged_with_bounded_memory() {
         let before = measured["before_kib"].as_u64().unwrap();
         let after = measured["after_kib"].as_u64().unwrap();
         assert!(
-            after - before < BOUND_KIB,
+            memory_growth_is_bounded(before, after),
             "{name}: staging {len} bytes raised the peak from {before} KiB to {after} KiB"
         );
     }

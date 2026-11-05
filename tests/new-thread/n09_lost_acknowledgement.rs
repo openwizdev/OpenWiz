@@ -23,7 +23,8 @@ fn uncertain_create(fake: &NewFake, op_id: &str) -> Value {
         PromptPayload::text(TEXT),
         op(op_id),
     );
-    request.budget = Duration::from_secs(3);
+    // Short (#1260): a hung create waits for it.
+    request.budget = Duration::from_millis(1_500);
     let report = new_thread(&fake.source(), &fake.store(), &clock(), &request).expect("a report");
     serde_json::to_value(report).unwrap()
 }
@@ -169,4 +170,85 @@ fn observations_never_settle_an_uncertain_create() {
     assert!(!observations["threads"].as_array().unwrap().is_empty());
     assert_eq!(status["result"]["report"]["status"], "uncertain");
     assert_eq!(fake.spawn_count(), 1);
+}
+
+#[test]
+fn synthetic_status_observations_use_claim_time() {
+    // Synthetic rows straddle uncertain_create's fixed claim time by 1 ms.
+    let rows = json!([
+        {"id": "thr_syn_before", "projectId": PROJECT, "createdAt": 1_700_000_599_999_i64},
+        {"id": "thr_syn_at", "projectId": PROJECT, "createdAt": 1_700_000_600_000_i64},
+    ]);
+    let fake = NewFake::with(
+        "n09_claim_cutoff",
+        vec![
+            json!({"any_spawn": true, "abort": true}),
+            json!({"argv": ["thread", "list", "--json"], "stdout": rows.to_string()}),
+        ],
+    );
+    assert_eq!(
+        uncertain_create(&fake, "op-n09-cutoff")["status"],
+        "uncertain"
+    );
+
+    let (code, status) =
+        json_of(&fake.run_process(&["new", "--status", "op-n09-cutoff", "--json"], ""));
+    assert_eq!(code, Some(6), "{status}");
+    assert_eq!(status["result"]["report"]["status"], "uncertain");
+    let ids: Vec<_> = status["result"]["observations"]["threads"]
+        .as_array()
+        .expect("observed threads")
+        .iter()
+        .map(|thread| thread["id"].as_str().expect("observed thread ID"))
+        .collect();
+    assert_eq!(ids, ["thr_syn_at"]);
+    assert_eq!(fake.spawn_count(), 1);
+}
+
+#[test]
+fn synthetic_status_text_labels_observations_as_inconclusive() {
+    let fake = NewFake::with(
+        "n09_status_text_label",
+        vec![
+            json!({"any_spawn": true, "creates": true, "abort": true}),
+            json!({"argv": ["thread", "list", "--json"], "stdout_file": file("thread-list.json")}),
+        ],
+    );
+    let args = new_args("Synthetic project one", "op-n09-text", &["--json"], TEXT);
+    let (code, _) = json_of(&fake.run_process(&args, ""));
+    assert_eq!(code, Some(6));
+
+    let status = fake.run_process(&["new", "--status", "op-n09-text"], "");
+    let out = String::from_utf8(status.stdout).expect("UTF-8 status text");
+    assert_eq!(status.status.code(), Some(6), "{out}");
+    assert!(out.contains("seen: thr_syn_0026"), "{out}");
+    assert!(
+        out.contains(
+            "observations only: no documented field ties a listed thread \
+             to this request, so the outcome stays uncertain"
+        ),
+        "{out}"
+    );
+    assert_eq!(fake.spawn_count(), 1);
+}
+
+#[test]
+fn synthetic_status_text_preserves_known_observed_creation_time() {
+    let fake = NewFake::with(
+        "n09_status_text_created_at",
+        vec![
+            json!({"any_spawn": true, "creates": true, "abort": true}),
+            json!({"argv": ["thread", "list", "--json"], "stdout_file": file("thread-list.json")}),
+        ],
+    );
+    let report = uncertain_create(&fake, "op-n09-text-created-at");
+    assert_eq!(report["status"], "uncertain", "{report}");
+
+    let status = fake.run_process(&["new", "--status", "op-n09-text-created-at"], "");
+    let out = String::from_utf8(status.stdout).expect("UTF-8 status text");
+    assert_eq!(status.status.code(), Some(6), "{out}");
+    assert!(
+        out.contains("seen: thr_syn_0021 · created 2023-11-14T22:23:20Z"),
+        "{out}"
+    );
 }

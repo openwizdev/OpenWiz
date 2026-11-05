@@ -1,0 +1,13 @@
+F
+======================================================================
+FAIL: test_cost_projection_can_express_usd_per_pr_without_unit_conversion (__main__.Contract.test_cost_projection_can_express_usd_per_pr_without_unit_conversion)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_contract.py", line 81, in test_cost_projection_can_express_usd_per_pr_without_unit_conversion
+    with self.assertRaisesRegex(ValueError, 'arithmetic'):
+AssertionError: ValueError not raised
+
+----------------------------------------------------------------------
+Ran 1 test in 0.003s
+
+FAILED (failures=1)

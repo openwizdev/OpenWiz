@@ -26,6 +26,24 @@ fn mode_of(path: &std::path::Path) -> u32 {
     fs::metadata(path).unwrap().permissions().mode() & 0o777
 }
 
+/// Parse the complete stdout stream: a second document or prose is refused.
+fn assert_status_store_error(output: &std::process::Output) {
+    assert!(output.stdout.ends_with(b"\n"), "{output:?}");
+    let value: Value = serde_json::from_slice(&output.stdout)
+        .expect("exactly one complete JSON status error document");
+    let schema: Value =
+        serde_json::from_str(include_str!("../../contracts/cli.v1.schema.json")).unwrap();
+    assert_eq!(
+        crate::schema::validate(&schema, &value),
+        Vec::<String>::new(),
+        "{value}"
+    );
+    assert_eq!(value["schema"], "openwiz.cli-error.v1");
+    assert_eq!(value["command"], "new.status");
+    assert_eq!(value["exit_code"], 10);
+    assert_eq!(value["error"]["kind"], "store_unavailable");
+}
+
 /// Every record shape the core writes: claimed, dispatching, and finished
 /// with each outcome; by name and by id; recovered; with gaps.
 pub fn every_record() -> Vec<NewThreadRecord> {
@@ -206,6 +224,143 @@ fn a_record_that_is_not_exactly_its_shape_is_refused_and_nothing_is_created() {
 }
 
 #[test]
+fn synthetic_status_refuses_kept_text_with_wrong_hash() {
+    let fake = NewFake::new("store_bad_text_hash");
+    let store = NewThreadFileStore::open(&fake.state).unwrap();
+    let record = &every_record()[0];
+    let mut value = serde_json::to_value(record).unwrap();
+    assert_eq!(value["text"], "Synthetic\nline two");
+    assert_eq!(record.text_bytes, 18);
+
+    // Change only the text, preserving its byte length and the original binding.
+    let replacement = "synthetic\nline two";
+    assert_eq!(replacement.len(), 18);
+    value["text"] = json!(replacement);
+    fs::write(store.record_path(&record.op_id), value.to_string()).unwrap();
+
+    let output = fake.run_process(&["new", "--status", "op-store-every", "--json"], "");
+    assert_eq!(output.status.code(), Some(10), "{output:?}");
+    assert_status_store_error(&output);
+    assert_eq!(fake.spawn_count(), 0);
+}
+
+#[test]
+fn synthetic_status_refuses_claimed_record_with_created_outcome() {
+    let fake = NewFake::new("store_claimed_created");
+    let store = fake.store();
+    let record = &every_record()[3];
+    let mut value = serde_json::to_value(record).unwrap();
+    assert_eq!(value["outcome"]["kind"], "created");
+    assert_eq!(value["dispatching_at"], json!(T0.0 + 1));
+    assert_eq!(value["finished_at"], json!(T0.0 + 2));
+    // Synthetic corrupt disk input: only the phase contradicts this creation.
+    value["state"] = json!("claimed");
+    let bytes = serde_json::to_vec(&value).unwrap();
+    let path = store.record_path(&record.op_id);
+    fs::write(&path, &bytes).unwrap();
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o600)).unwrap();
+    // An existing, unlocked claim lets status recover the stopped owner.
+    let lock = path.with_extension("lock");
+    fs::write(&lock, b"").unwrap();
+    fs::set_permissions(&lock, fs::Permissions::from_mode(0o600)).unwrap();
+
+    let output = fake.run_process(&["new", "--status", "op-store-every", "--json"], "");
+    assert_eq!(
+        fs::read(&path).unwrap(),
+        bytes,
+        "status never rewrites disk"
+    );
+    assert_eq!(fake.invocations().len(), 0, "no provider call of any kind");
+    assert_eq!(fake.spawn_count(), 0);
+    assert_eq!(output.status.code(), Some(10), "{output:?}");
+    assert_status_store_error(&output);
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("is not a new-thread record"),
+        "{output:?}"
+    );
+}
+
+#[test]
+fn synthetic_status_preserves_finished_record_with_created_outcome() {
+    let fake = NewFake::new("store_finished_created");
+    let store = fake.store();
+    let record = &every_record()[3];
+    let bytes = serde_json::to_vec(record).unwrap();
+    let path = store.record_path(&record.op_id);
+    fs::write(&path, &bytes).unwrap();
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o600)).unwrap();
+
+    let output = fake.run_process(&["new", "--status", "op-store-every", "--json"], "");
+    let (code, status) = json_of(&output);
+    assert_eq!(code, Some(0), "{output:?}");
+    let report = &status["result"]["report"];
+    assert_eq!(report["status"], "created");
+    assert_eq!(report["result"]["outcome"]["kind"], "created");
+    assert_eq!(report["result"]["outcome"]["thread_id"], "thr_syn_0021");
+    assert_eq!(report["result"]["recovered"], false);
+    assert_eq!(fs::read(&path).unwrap(), bytes);
+    assert_eq!(
+        fake.invocations(),
+        vec![vec!["thread", "show", "thr_syn_0021", "--json"]]
+    );
+    assert_eq!(fake.spawn_count(), 0);
+}
+
+#[test]
+fn synthetic_created_records_require_only_a_finished_phase() {
+    for (state, expected_exit) in [("claimed", 10), ("dispatching", 10), ("finished", 0)] {
+        for (d, dispatching_at) in [Value::Null, json!(T0.0 + 1)].into_iter().enumerate() {
+            for (f, finished_at) in [Value::Null, json!(T0.0 + 2)].into_iter().enumerate() {
+                let fake = NewFake::new(&format!("store_created_{state}_{d}_{f}"));
+                let store = fake.store();
+                let record = &every_record()[3];
+                let mut value = serde_json::to_value(record).unwrap();
+                value["state"] = json!(state);
+                value["dispatching_at"] = dispatching_at.clone();
+                value["finished_at"] = finished_at;
+                let bytes = serde_json::to_vec(&value).unwrap();
+                let path = store.record_path(&record.op_id);
+                fs::write(&path, &bytes).unwrap();
+                fs::set_permissions(&path, fs::Permissions::from_mode(0o600)).unwrap();
+                let lock = path.with_extension("lock");
+                fs::write(&lock, b"").unwrap();
+                fs::set_permissions(&lock, fs::Permissions::from_mode(0o600)).unwrap();
+
+                let output = fake.run_process(&["new", "--status", "op-store-every", "--json"], "");
+                assert_eq!(
+                    output.status.code(),
+                    Some(expected_exit),
+                    "{value}: {output:?}"
+                );
+                if expected_exit == 0 {
+                    let (code, status) = json_of(&output);
+                    assert_eq!(code, Some(0), "{value}: {output:?}");
+                    assert_eq!(status["result"]["report"]["status"], "created");
+                    assert_eq!(
+                        status["result"]["report"]["result"]["outcome"],
+                        value["outcome"]
+                    );
+                    assert_eq!(
+                        fake.invocations(),
+                        vec![vec!["thread", "show", "thr_syn_0021", "--json"]]
+                    );
+                } else {
+                    assert_status_store_error(&output);
+                    assert!(
+                        String::from_utf8_lossy(&output.stderr)
+                            .contains("is not a new-thread record"),
+                        "{output:?}"
+                    );
+                    assert_eq!(fake.invocations().len(), 0);
+                }
+                assert_eq!(fake.spawn_count(), 0);
+                assert_eq!(fs::read(&path).unwrap(), bytes);
+            }
+        }
+    }
+}
+
+#[test]
 fn the_store_claims_once_and_recovers_a_stopped_owner() {
     let state = private_dir("store-claim").join("state");
     let store = NewThreadFileStore::open(&state).unwrap();
@@ -225,8 +380,14 @@ fn the_store_claims_once_and_recovers_a_stopped_owner() {
         other.inspect(&claimed.op_id, T0).unwrap().as_ref(),
         Some(claimed)
     );
-    // The owner lets go without finishing: recovered as failed, once.
+    // The owner lets go without finishing: recovered as failed, once. A
+    // child another test forked while the owner held the lock keeps a copy
+    // of it until it runs its program (#146): wait until the lock is free.
     store.release(&claimed.op_id);
+    let lock = state
+        .join("new-threads")
+        .join(format!("{}.lock", claimed.op_id));
+    crate::forks::wait_until_unlocked(&lock);
     let later = Timestamp(T0.0 + 5);
     let shown = other.inspect(&claimed.op_id, later).unwrap().unwrap();
     assert_eq!(
@@ -239,6 +400,8 @@ fn the_store_claims_once_and_recovers_a_stopped_owner() {
         Some(claimed),
         "not written"
     );
+    // `inspect` took the lock to look: the same for its copies.
+    crate::forks::wait_until_unlocked(&lock);
     match other.claim(claimed, later).unwrap() {
         openwiz_core::new_thread::record::Claim::Existing(r) => {
             assert_eq!(r, recover(claimed, later));
@@ -246,4 +409,117 @@ fn the_store_claims_once_and_recovers_a_stopped_owner() {
         claim => panic!("{claim:?}"),
     }
     assert!(other.update(&records[2]).is_err(), "only the owner writes");
+}
+
+fn bounded_status(fake: &NewFake) -> std::process::Output {
+    let mut child = fake
+        .process(&["new", "--status", "op-store-every", "--json"])
+        .spawn()
+        .unwrap();
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    while child.try_wait().unwrap().is_none() {
+        if std::time::Instant::now() >= deadline {
+            child.kill().unwrap();
+            child.wait().unwrap();
+            panic!("status blocked on a synthetic record for five seconds");
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+    child.wait_with_output().unwrap()
+}
+
+#[test]
+fn status_refuses_non_regular_records_without_provider_calls() {
+    use std::io::Write as _;
+    for kind in ["socket", "directory", "fifo", "linked-fifo", "buffered"] {
+        if kind == "buffered" && !cfg!(target_os = "linux") {
+            continue; // Opening a FIFO read/write is Linux-specific.
+        }
+        let fake = NewFake::new(&format!("nr-{kind}"));
+        let store = fake.store();
+        let path = fake.record_path("op-store-every");
+        let mut _reader = None;
+        let _socket = match kind {
+            "fifo" | "linked-fifo" | "buffered" => {
+                let fifo = if kind == "linked-fifo" {
+                    fake.dir.join("synthetic-fifo")
+                } else {
+                    path.clone()
+                };
+                assert!(
+                    std::process::Command::new("mkfifo")
+                        .args(["-m", "600"])
+                        .arg(&fifo)
+                        .status()
+                        .unwrap()
+                        .success()
+                );
+                if kind == "linked-fifo" {
+                    std::os::unix::fs::symlink(&fifo, &path).unwrap();
+                }
+                if kind == "buffered" {
+                    let mut writer = fs::OpenOptions::new()
+                        .read(true)
+                        .write(true)
+                        .open(&fifo)
+                        .unwrap();
+                    _reader = Some(fs::File::open(&fifo).unwrap());
+                    // Valid JSON with no writer: nonblocking alone would accept it.
+                    writer
+                        .write_all(&serde_json::to_vec(&every_record()[3]).unwrap())
+                        .unwrap();
+                }
+                None
+            }
+            "directory" => {
+                crate::dirs::private_dir(&path).unwrap();
+                None
+            }
+            "socket" => Some(std::os::unix::net::UnixListener::bind(&path).unwrap()),
+            _ => unreachable!(),
+        };
+        let before = fs::symlink_metadata(&path).unwrap().file_type();
+        let output = bounded_status(&fake);
+        assert_eq!(output.status.code(), Some(10), "{kind}: {output:?}");
+        assert_status_store_error(&output);
+        assert!(fake.invocations().is_empty(), "{kind}: provider was called");
+        assert_eq!(fs::symlink_metadata(&path).unwrap().file_type(), before);
+        assert_eq!(fs::read_dir(store.dir()).unwrap().count(), 1);
+    }
+}
+
+#[test]
+fn status_preserves_missing_malformed_and_valid_regular_record_behavior() {
+    let fake = NewFake::new("store_regular_controls");
+    let store = fake.store();
+    let path = fake.record_path("op-store-every");
+    let missing = bounded_status(&fake);
+    assert_eq!(missing.status.code(), Some(11), "{missing:?}");
+    let value: Value = serde_json::from_slice(&missing.stdout).unwrap();
+    assert_eq!(value["result"], json!({"kind": "no_record"}));
+    assert_eq!(fs::read_dir(store.dir()).unwrap().count(), 0);
+    assert!(fake.invocations().is_empty());
+
+    fs::write(&path, "not JSON").unwrap();
+    let malformed = bounded_status(&fake);
+    assert_eq!(malformed.status.code(), Some(10), "{malformed:?}");
+    assert_status_store_error(&malformed);
+    assert_eq!(fs::read(&path).unwrap(), b"not JSON");
+    assert!(fake.invocations().is_empty());
+
+    let bytes = serde_json::to_vec(&every_record()[3]).unwrap();
+    fs::write(&path, &bytes).unwrap();
+    let valid = bounded_status(&fake);
+    assert_eq!(valid.status.code(), Some(0), "{valid:?}");
+    let value: Value = serde_json::from_slice(&valid.stdout).unwrap();
+    assert_eq!(
+        value["result"]["report"]["result"]["outcome"]["kind"],
+        "created"
+    );
+    assert_eq!(
+        fake.invocations(),
+        vec![vec!["thread", "show", THREAD, "--json"]]
+    );
+    assert_eq!(fs::read(&path).unwrap(), bytes);
+    assert_eq!(fs::read_dir(store.dir()).unwrap().count(), 1);
 }

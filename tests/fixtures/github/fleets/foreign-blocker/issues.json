@@ -1,0 +1,638 @@
+[
+ {
+  "blockedBy": {
+   "nodes": [],
+   "totalCount": 0
+  },
+  "body": "Synthetic ticket body.\n\n**Owned paths:** `crates/example/src/c1.rs`\n\n**Relies on:** nothing\n\n**Acceptance criteria:**\n- [ ] Synthetic criterion\n",
+  "id": "syn-issue-0943",
+  "labels": [
+   {
+    "color": "synthetic",
+    "description": "Synthetic label",
+    "id": "syn-label-ready-for-agent",
+    "name": "ready-for-agent"
+   }
+  ],
+  "milestone": {
+   "description": "Synthetic milestone",
+   "dueOn": null,
+   "number": 6,
+   "title": "0.9.0"
+  },
+  "number": 943,
+  "state": "CLOSED",
+  "subIssues": {
+   "nodes": [],
+   "totalCount": 0
+  },
+  "title": "Synthetic ticket of a closed spec"
+ },
+ {
+  "blockedBy": {
+   "nodes": [],
+   "totalCount": 0
+  },
+  "body": "Synthetic spec body.\n",
+  "id": "syn-issue-0942",
+  "labels": [
+   {
+    "color": "synthetic",
+    "description": "Synthetic label",
+    "id": "syn-label-documentation",
+    "name": "documentation"
+   }
+  ],
+  "milestone": {
+   "description": "Synthetic milestone",
+   "dueOn": null,
+   "number": 6,
+   "title": "0.9.0"
+  },
+  "number": 942,
+  "state": "CLOSED",
+  "subIssues": {
+   "nodes": [
+    {
+     "id": "syn-issue-0943",
+     "number": 943,
+     "state": "CLOSED",
+     "title": "Synthetic ticket of a closed spec",
+     "url": "https://example.invalid/synthetic/issues/943"
+    }
+   ],
+   "totalCount": 1
+  },
+  "title": "Synthetic closed spec"
+ },
+ {
+  "blockedBy": {
+   "nodes": [],
+   "totalCount": 0
+  },
+  "body": "Synthetic issue body.\n",
+  "id": "syn-issue-0941",
+  "labels": [
+   {
+    "color": "synthetic",
+    "description": "Synthetic label",
+    "id": "syn-label-needs-info",
+    "name": "needs-info"
+   }
+  ],
+  "milestone": null,
+  "number": 941,
+  "state": "OPEN",
+  "subIssues": {
+   "nodes": [],
+   "totalCount": 0
+  },
+  "title": "Synthetic open issue with no sub-issues"
+ },
+ {
+  "blockedBy": {
+   "nodes": [
+    {
+     "id": "syn-issue-0931",
+     "number": 931,
+     "state": "OPEN",
+     "title": "Synthetic ticket B1",
+     "url": "https://example.invalid/synthetic/issues/931"
+    },
+    {
+     "id": "syn-issue-0902",
+     "number": 902,
+     "state": "CLOSED",
+     "title": "Synthetic ticket A1",
+     "url": "https://example.invalid/synthetic/issues/902"
+    }
+   ],
+   "totalCount": 2
+  },
+  "body": "Synthetic ticket body.\n\n**Owned paths:** `crates/example/src/b2.rs`\n**Owned paths:** `crates/example/src/b2b.rs`\n**Relies on:**\n",
+  "id": "syn-issue-0932",
+  "labels": [
+   {
+    "color": "synthetic",
+    "description": "Synthetic label",
+    "id": "syn-label-ready-for-agent",
+    "name": "ready-for-agent"
+   }
+  ],
+  "milestone": null,
+  "number": 932,
+  "state": "OPEN",
+  "subIssues": {
+   "nodes": [],
+   "totalCount": 0
+  },
+  "title": "Synthetic ticket B2"
+ },
+ {
+  "blockedBy": {
+   "nodes": [],
+   "totalCount": 0
+  },
+  "body": "Synthetic ticket body.\r\n\r\n**Owned paths:** `crates/example/src/b1.rs`\r\n\r\n**Relies on:** nothing\r\n\r\n**Acceptance criteria:**\r\n- [ ] Synthetic criterion\r\n",
+  "id": "syn-issue-0931",
+  "labels": [
+   {
+    "color": "synthetic",
+    "description": "Synthetic label",
+    "id": "syn-label-ready-for-agent",
+    "name": "ready-for-agent"
+   }
+  ],
+  "milestone": null,
+  "number": 931,
+  "state": "OPEN",
+  "subIssues": {
+   "nodes": [],
+   "totalCount": 0
+  },
+  "title": "Synthetic ticket B1"
+ },
+ {
+  "blockedBy": {
+   "nodes": [],
+   "totalCount": 0
+  },
+  "body": "Synthetic spec body.\n",
+  "id": "syn-issue-0930",
+  "labels": [
+   {
+    "color": "synthetic",
+    "description": "Synthetic label",
+    "id": "syn-label-documentation",
+    "name": "documentation"
+   }
+  ],
+  "milestone": null,
+  "number": 930,
+  "state": "OPEN",
+  "subIssues": {
+   "nodes": [
+    {
+     "id": "syn-issue-0932",
+     "number": 932,
+     "state": "OPEN",
+     "title": "Synthetic ticket B2",
+     "url": "https://example.invalid/synthetic/issues/932"
+    },
+    {
+     "id": "syn-issue-0931",
+     "number": 931,
+     "state": "OPEN",
+     "title": "Synthetic ticket B1",
+     "url": "https://example.invalid/synthetic/issues/931"
+    }
+   ],
+   "totalCount": 2
+  },
+  "title": "Synthetic spec two"
+ },
+ {
+  "blockedBy": {
+   "nodes": [],
+   "totalCount": 0
+  },
+  "body": "Synthetic ticket body.\n\n**Owned paths:** `crates/example/src/a9.rs`\n\n**Relies on:** nothing\n\n**Acceptance criteria:**\n- [ ] Synthetic criterion\n",
+  "id": "syn-issue-0910",
+  "labels": [
+   {
+    "color": "synthetic",
+    "description": "Synthetic label",
+    "id": "syn-label-ready-for-agent",
+    "name": "ready-for-agent"
+   }
+  ],
+  "milestone": {
+   "description": "Synthetic milestone",
+   "dueOn": null,
+   "number": 7,
+   "title": "0.9.1"
+  },
+  "number": 910,
+  "state": "OPEN",
+  "subIssues": {
+   "nodes": [],
+   "totalCount": 0
+  },
+  "title": "Synthetic ticket A9"
+ },
+ {
+  "blockedBy": {
+   "nodes": [],
+   "totalCount": 0
+  },
+  "body": "Synthetic ticket body.\n\n**Owned paths:** `crates/example/src/a8.rs`\n\n**Relies on:** nothing\n\n**Acceptance criteria:**\n- [ ] Synthetic criterion\n",
+  "id": "syn-issue-0909",
+  "labels": [
+   {
+    "color": "synthetic",
+    "description": "Synthetic label",
+    "id": "syn-label-ready-for-agent",
+    "name": "ready-for-agent"
+   }
+  ],
+  "milestone": {
+   "description": "Synthetic milestone",
+   "dueOn": null,
+   "number": 7,
+   "title": "0.9.1"
+  },
+  "number": 909,
+  "state": "CLOSED",
+  "subIssues": {
+   "nodes": [],
+   "totalCount": 0
+  },
+  "title": "Synthetic ticket A8"
+ },
+ {
+  "blockedBy": {
+   "nodes": [
+    {
+     "id": "syn-issue-0903",
+     "number": 903,
+     "state": "OPEN",
+     "title": "Synthetic ticket A2",
+     "url": "https://example.invalid/synthetic/issues/903"
+    },
+    {
+     "id": "syn-issue-elsewhere-0811",
+     "number": 811,
+     "state": "CLOSED",
+     "title": "Synthetic ticket from 0.9.0",
+     "url": "https://example.invalid/synthetic/issues/811"
+    },
+    {
+     "id": "syn-issue-0812",
+     "number": 812,
+     "state": "CLOSED",
+     "title": "Synthetic ticket with no milestone",
+     "url": "https://example.invalid/synthetic/issues/812"
+    }
+   ],
+   "totalCount": 3
+  },
+  "body": "Synthetic ticket body.\n\n**Owned paths:** `crates/example/src/a7.rs`\n\n**Relies on:** nothing\n\n**Acceptance criteria:**\n- [ ] Synthetic criterion\n",
+  "id": "syn-issue-0908",
+  "labels": [
+   {
+    "color": "synthetic",
+    "description": "Synthetic label",
+    "id": "syn-label-ready-for-agent",
+    "name": "ready-for-agent"
+   }
+  ],
+  "milestone": {
+   "description": "Synthetic milestone",
+   "dueOn": null,
+   "number": 7,
+   "title": "0.9.1"
+  },
+  "number": 908,
+  "state": "OPEN",
+  "subIssues": {
+   "nodes": [],
+   "totalCount": 0
+  },
+  "title": "Synthetic ticket A7"
+ },
+ {
+  "blockedBy": {
+   "nodes": [],
+   "totalCount": 0
+  },
+  "body": "Synthetic ticket body.\n\n**Owned paths:** `crates/example/src/a6.rs`\n\n**Relies on:** `contracts/example.v1.md`\n\n**Acceptance criteria:**\n- [ ] Synthetic criterion\n",
+  "id": "syn-issue-0907",
+  "labels": [
+   {
+    "color": "synthetic",
+    "description": "Synthetic label",
+    "id": "syn-label-held",
+    "name": "held"
+   }
+  ],
+  "milestone": {
+   "description": "Synthetic milestone",
+   "dueOn": null,
+   "number": 7,
+   "title": "0.9.1"
+  },
+  "number": 907,
+  "state": "OPEN",
+  "subIssues": {
+   "nodes": [],
+   "totalCount": 0
+  },
+  "title": "Synthetic ticket A6"
+ },
+ {
+  "blockedBy": {
+   "nodes": [
+    {
+     "id": "syn-issue-0902",
+     "number": 902,
+     "state": "CLOSED",
+     "title": "Synthetic ticket A1",
+     "url": "https://example.invalid/synthetic/issues/902"
+    }
+   ],
+   "totalCount": 1
+  },
+  "body": "Synthetic ticket body.\n\n**Owned paths:** `crates/example/src/a5.rs`\n\n**Relies on:** `contracts/example.v1.md`\n\n**Acceptance criteria:**\n- [ ] Synthetic criterion\n",
+  "id": "syn-issue-0906",
+  "labels": [
+   {
+    "color": "synthetic",
+    "description": "Synthetic label",
+    "id": "syn-label-ready-for-agent",
+    "name": "ready-for-agent"
+   }
+  ],
+  "milestone": {
+   "description": "Synthetic milestone",
+   "dueOn": null,
+   "number": 7,
+   "title": "0.9.1"
+  },
+  "number": 906,
+  "state": "OPEN",
+  "subIssues": {
+   "nodes": [],
+   "totalCount": 0
+  },
+  "title": "Synthetic ticket A5"
+ },
+ {
+  "blockedBy": {
+   "nodes": [],
+   "totalCount": 0
+  },
+  "body": "Synthetic ticket body.\n\n**Owned paths:** `crates/example/src/a4.rs`\n\n**Relies on:** nothing\n\n**Acceptance criteria:**\n- [ ] Synthetic criterion\n",
+  "id": "syn-issue-0905",
+  "labels": [
+   {
+    "color": "synthetic",
+    "description": "Synthetic label",
+    "id": "syn-label-ready-for-agent",
+    "name": "ready-for-agent"
+   }
+  ],
+  "milestone": {
+   "description": "Synthetic milestone",
+   "dueOn": null,
+   "number": 7,
+   "title": "0.9.1"
+  },
+  "number": 905,
+  "state": "OPEN",
+  "subIssues": {
+   "nodes": [],
+   "totalCount": 0
+  },
+  "title": "Synthetic ticket A4"
+ },
+ {
+  "blockedBy": {
+   "nodes": [],
+   "totalCount": 0
+  },
+  "body": "Synthetic ticket body.\n\n**Owned paths:** `crates/example/src/a3.rs`\n\n**Relies on:** nothing\n\n**Acceptance criteria:**\n- [ ] Synthetic criterion\n",
+  "id": "syn-issue-0904",
+  "labels": [
+   {
+    "color": "synthetic",
+    "description": "Synthetic label",
+    "id": "syn-label-needs-info",
+    "name": "needs-info"
+   },
+   {
+    "color": "synthetic",
+    "description": "Synthetic label",
+    "id": "syn-label-ready-for-agent",
+    "name": "ready-for-agent"
+   }
+  ],
+  "milestone": {
+   "description": "Synthetic milestone",
+   "dueOn": null,
+   "number": 7,
+   "title": "0.9.1"
+  },
+  "number": 904,
+  "state": "OPEN",
+  "subIssues": {
+   "nodes": [],
+   "totalCount": 0
+  },
+  "title": "Synthetic ticket A3"
+ },
+ {
+  "blockedBy": {
+   "nodes": [
+    {
+     "id": "syn-issue-0902",
+     "number": 902,
+     "state": "CLOSED",
+     "title": "Synthetic ticket A1",
+     "url": "https://example.invalid/synthetic/issues/902"
+    }
+   ],
+   "totalCount": 1
+  },
+  "body": "Synthetic ticket body.\n\n**Owned paths:** `crates/example/src/a2.rs`\n\n**Relies on:** `contracts/example.v1.md`\n\n**Acceptance criteria:**\n- [ ] Synthetic criterion\n",
+  "id": "syn-issue-0903",
+  "labels": [
+   {
+    "color": "synthetic",
+    "description": "Synthetic label",
+    "id": "syn-label-ready-for-agent",
+    "name": "ready-for-agent"
+   }
+  ],
+  "milestone": {
+   "description": "Synthetic milestone",
+   "dueOn": null,
+   "number": 7,
+   "title": "0.9.1"
+  },
+  "number": 903,
+  "state": "OPEN",
+  "subIssues": {
+   "nodes": [],
+   "totalCount": 0
+  },
+  "title": "Synthetic ticket A2"
+ },
+ {
+  "blockedBy": {
+   "nodes": [],
+   "totalCount": 0
+  },
+  "body": "Synthetic ticket body.\n\n**Owned paths:** `contracts/example.v1.md`\n\n**Relies on:** nothing\n\n**Acceptance criteria:**\n- [ ] Synthetic criterion\n",
+  "id": "syn-issue-0902",
+  "labels": [
+   {
+    "color": "synthetic",
+    "description": "Synthetic label",
+    "id": "syn-label-ready-for-agent",
+    "name": "ready-for-agent"
+   }
+  ],
+  "milestone": {
+   "description": "Synthetic milestone",
+   "dueOn": null,
+   "number": 7,
+   "title": "0.9.1"
+  },
+  "number": 902,
+  "state": "CLOSED",
+  "subIssues": {
+   "nodes": [],
+   "totalCount": 0
+  },
+  "title": "Synthetic ticket A1"
+ },
+ {
+  "blockedBy": {
+   "nodes": [],
+   "totalCount": 0
+  },
+  "body": "Synthetic spec body.\n",
+  "id": "syn-issue-0901",
+  "labels": [
+   {
+    "color": "synthetic",
+    "description": "Synthetic label",
+    "id": "syn-label-documentation",
+    "name": "documentation"
+   }
+  ],
+  "milestone": {
+   "description": "Synthetic milestone",
+   "dueOn": null,
+   "number": 7,
+   "title": "0.9.1"
+  },
+  "number": 901,
+  "state": "OPEN",
+  "subIssues": {
+   "nodes": [
+    {
+     "id": "syn-issue-0902",
+     "number": 902,
+     "state": "CLOSED",
+     "title": "Synthetic ticket A1",
+     "url": "https://example.invalid/synthetic/issues/902"
+    },
+    {
+     "id": "syn-issue-0903",
+     "number": 903,
+     "state": "OPEN",
+     "title": "Synthetic ticket A2",
+     "url": "https://example.invalid/synthetic/issues/903"
+    },
+    {
+     "id": "syn-issue-0904",
+     "number": 904,
+     "state": "OPEN",
+     "title": "Synthetic ticket A3",
+     "url": "https://example.invalid/synthetic/issues/904"
+    },
+    {
+     "id": "syn-issue-0905",
+     "number": 905,
+     "state": "OPEN",
+     "title": "Synthetic ticket A4",
+     "url": "https://example.invalid/synthetic/issues/905"
+    },
+    {
+     "id": "syn-issue-0906",
+     "number": 906,
+     "state": "OPEN",
+     "title": "Synthetic ticket A5",
+     "url": "https://example.invalid/synthetic/issues/906"
+    },
+    {
+     "id": "syn-issue-0907",
+     "number": 907,
+     "state": "OPEN",
+     "title": "Synthetic ticket A6",
+     "url": "https://example.invalid/synthetic/issues/907"
+    },
+    {
+     "id": "syn-issue-0908",
+     "number": 908,
+     "state": "OPEN",
+     "title": "Synthetic ticket A7",
+     "url": "https://example.invalid/synthetic/issues/908"
+    },
+    {
+     "id": "syn-issue-0909",
+     "number": 909,
+     "state": "CLOSED",
+     "title": "Synthetic ticket A8",
+     "url": "https://example.invalid/synthetic/issues/909"
+    },
+    {
+     "id": "syn-issue-0910",
+     "number": 910,
+     "state": "OPEN",
+     "title": "Synthetic ticket A9",
+     "url": "https://example.invalid/synthetic/issues/910"
+    }
+   ],
+   "totalCount": 9
+  },
+  "title": "Synthetic spec one"
+ },
+ {
+  "blockedBy": {
+   "nodes": [],
+   "totalCount": 0
+  },
+  "body": "Synthetic ticket body with no template lines.\n",
+  "id": "syn-issue-0812",
+  "labels": [],
+  "milestone": null,
+  "number": 812,
+  "state": "CLOSED",
+  "subIssues": {
+   "nodes": [],
+   "totalCount": 0
+  },
+  "title": "Synthetic ticket with no milestone"
+ },
+ {
+  "blockedBy": {
+   "nodes": [],
+   "totalCount": 0
+  },
+  "body": "Synthetic ticket body.\n\n**Owned paths:** `crates/example/src/old.rs`\n\n**Relies on:** nothing\n\n**Acceptance criteria:**\n- [ ] Synthetic criterion\n",
+  "id": "syn-issue-0811",
+  "labels": [
+   {
+    "color": "synthetic",
+    "description": "Synthetic label",
+    "id": "syn-label-ready-for-agent",
+    "name": "ready-for-agent"
+   }
+  ],
+  "milestone": {
+   "description": "Synthetic milestone",
+   "dueOn": null,
+   "number": 6,
+   "title": "0.9.0"
+  },
+  "number": 811,
+  "state": "CLOSED",
+  "subIssues": {
+   "nodes": [],
+   "totalCount": 0
+  },
+  "title": "Synthetic ticket from 0.9.0"
+ }
+]

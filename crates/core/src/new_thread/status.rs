@@ -6,7 +6,7 @@
 //! project since the attempt. These are **observations only**: no
 //! documented field ties a listed thread to this request, so they never
 //! settle the outcome. It stays Uncertain, and the owner resolves it in
-//! CloudRoom (no retry in 0.0.4).
+//! CloudRoom (sheet A-3: no retry in 0.0.4).
 
 use std::time::Duration;
 

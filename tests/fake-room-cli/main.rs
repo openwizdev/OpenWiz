@@ -1,3 +1,90 @@
+//! The fake `room-cli` the tests run in place of the real one. Test-only.
+//!
+//! A test makes a directory holding a symlink named `room-cli` to this
+//! binary, plus a file `fake-room-cli.scenario` with the absolute path of a
+//! fixture `scenario.json`. The fake finds that file next to the path it was
+//! started as (`argv[0]`), so tests running in parallel never share state.
+//!
+//! For each call it:
+//! 1. appends its arguments, as one JSON array per line, to `invocations.log`
+//!    in the same directory, and the **names** (never the values) of the
+//!    CloudRoom variables in its environment (`ROOM_*`, `BB_*` and
+//!    `CLOUDROOM_*`), sorted, to `environment.log` (OpenWiz 0.0.4, N2);
+//! 2. refuses anything outside the OpenWiz allowlist with exit 97;
+//! 3. answers from the scenario: stdout (inline or from a file), stderr and an
+//!    exit code, or never answers (`"hang": true`, after writing its process
+//!    id to `hang.pid`).
+//!    The oversized-response fixture uses `stream_stdout_file` to copy its
+//!    file directly to stdout rather than loading it all into memory.
+//!
+//! A scenario may `extends` another; its own responses are tried first.
+//! A `thread show` or `thread output` of an id with no response gets the
+//! not-found answer observed in capture C.
+//!
+//! **`thread tell`** (OpenWiz 0.0.3, the one write; documented, not
+//! observed). The fake accepts only the exact argument shape OpenWiz chose:
+//! `thread tell <id> --mode queue|steer --json -- <text>`. For each accepted
+//! call it first:
+//! 1. adds one to `tell-calls.count` in the fake's directory, under an
+//!    exclusive file lock, so concurrent processes are counted exactly;
+//! 2. copies every send record under the state directory's `sends/` into
+//!    `records-at-tell-<n>.json`, so a test can see what was on disk at the
+//!    moment of the call. The state directory is named by the file
+//!    `fake-room-cli.state` next to the fake, else by `$OPENWIZ_STATE_DIR`.
+//!
+//! A tell response matches on everything but the text when it has
+//! `"any_text": true`. It may also `delay_ms` before answering, `abort`
+//! (a crash: no exit code), `kill_parent` before answering (the sender dies
+//! during the call), or `kill_parent_after_answer` (the sender dies after
+//! the receipt is printed, before it can record the outcome).
+//! `kill_parent` and `kill_parent_after_answer` send SIGKILL to whatever
+//! started the fake: use them only when `openwiz` or the harness runs as its
+//! own process, never with an in-process `send` (that would kill the test
+//! runner).
+//!
+//! **`cloud status --json` and `thread spawn`** (OpenWiz 0.0.4, ClosedWiz#11,
+//! A1 phase 2; the flags observed in spike run 3's help, the call never
+//! observed). The fake accepts `spawn` only in the exact shape OpenWiz
+//! chose: `thread spawn --project <id> --machine cloud --provider
+//! codex|claude-code --model <m> --reasoning-level low|medium|high|xhigh|max
+//! --request-id ow1-<40 hex> --json --prompt <text>`. For each accepted call
+//! it first adds one to `spawn-calls.count` and copies the new-thread records
+//! under the state directory's `new-threads/` into
+//! `records-at-spawn-<n>.json`, as for `tell`. Then its **request-ID table**
+//! (`request-ids.json`, under the same kind of lock) models what the
+//! provider's source reads (#11, not observed): the same request id with
+//! the same content (project, provider, model, effort, text) creates nothing
+//! new; with different content it is refused with the documented 409 line;
+//! a new one is recorded, and counted in `threads-created.count`, when the
+//! response `creates`. A spawn response matches every accepted spawn with
+//! `"any_spawn": true`.
+//!
+//! **Attachments** (OpenWiz 0.0.4, B2, ClosedWiz#15, sheet B-7; the flags
+//! observed in spike run 3's help, a call with them never observed). The
+//! fake accepts `--file <path>` and `--image <path>` pairs on `tell` (after
+//! `--json`, before `--`, and never with `steer`) and on `spawn` (after
+//! `--json`, before `--prompt`), each path absolute and of a staged copy's
+//! shape, `…/attachments/<id>/<safe name>`, checked by its own copy of the
+//! rules. Like `room-cli` (#15's F3 and F21, source-read), it then
+//! **uploads** them before anything else: it reads every file whole, all
+//! held in memory at once, and appends one JSON line to `attachments.log`:
+//! the call, its request id (for `spawn`), each flag, path, SHA-256 and
+//! size at that moment, and its peak memory (`VmHWM`, on Linux). A file it
+//! can't read fails the call there, as an upload error would: exit 1 with a
+//! line that is no documented rejection; so does a response with
+//! `"upload_fails_after": <n>`, after reading `n` files. The request-ID table compares the
+//! text, never the attachments, as CloudRoom's does (F17). A tell response
+//! with `"any_attachments": true` matches whatever attachments the call
+//! carries.
+//!
+//! **`thread archive`** (OpenWiz 0.0.6, B4, ClosedWiz#120; observed in help
+//! (0.43.1), the call never run). The fake accepts only `thread archive
+//! <id> --json`, and counts each accepted call in `archive-calls.count`.
+//! A response with `"archives": true` archives the thread: its id is
+//! appended to `archived-threads.log`. From then on, a `thread show` of that
+//! id answers from its response's `after_archive` (a response of its own),
+//! when it has one, so a test can read an archive back.
+
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -25,6 +112,8 @@ const CONFLICT_LINE: &str =
     "Error: Failed to create thread: HTTP 409: Request ID was already used with different content";
 const ATTACHMENTS_LOG: &str = "attachments.log";
 const UPLOAD_FAILED: &str = "fake room-cli: an attachment could not be read for upload";
+const ARCHIVE_COUNT_FILE: &str = "archive-calls.count";
+const ARCHIVED_FILE: &str = "archived-threads.log";
 
 fn main() -> ExitCode {
     let mut args = std::env::args();
@@ -52,6 +141,9 @@ fn main() -> ExitCode {
         let n = count(&dir, SPAWN_COUNT_FILE);
         snapshot_records(&dir, "new-threads", &format!("records-at-spawn-{n}.json"));
     }
+    if is_archive(&argv) {
+        count(&dir, ARCHIVE_COUNT_FILE);
+    }
 
     let scenario_path = match fs::read_to_string(dir.join(SCENARIO_FILE)) {
         Ok(p) => PathBuf::from(p.trim()),
@@ -71,6 +163,17 @@ fn main() -> ExitCode {
         eprintln!("{UPLOAD_FAILED}");
         return ExitCode::from(1);
     }
+
+    if let Some((response, _)) = &found
+        && is_archive(&argv)
+        && response["archives"].as_bool() == Some(true)
+    {
+        archive(&dir, &argv[2]);
+    }
+    let found = found.map(|(response, base)| match response.get("after_archive") {
+        Some(after) if is_show(&argv) && archived(&dir, &argv[2]) => (after.clone(), base),
+        _ => (response, base),
+    });
 
     match found {
         Some((response, _)) if is_spawn(&argv) && !request_id_table(&dir, &argv, &response) => {
@@ -152,8 +255,16 @@ fn allowlisted(argv: &[String]) -> bool {
             };
             !id.starts_with('-') && staged_pairs(pairs) && (pairs.is_empty() || *mode == "queue")
         }
-
+        // OpenWiz 0.0.4: the catalogue read, and the second write in exactly
+        // its shape (the flags observed in help, spike run 3).
         ["cloud", "status", "--json"] => true,
+        // OpenWiz 0.0.6 (A6, ClosedWiz#114): one Cloud thread's branch, the
+        // read approved on #107, 2026-10-31 (approval provenance is linked
+        // by crates/adapters/cloudroom/src/allowlist.rs).
+        ["cloud", "thread-workspace", id, "--json"] => !id.starts_with('-'),
+        // OpenWiz 0.0.6 (B4, ClosedWiz#120): the third write, in exactly
+        // its shape (observed in help, 0.43.1): never `--self`.
+        ["thread", "archive", id, "--json"] => is_thread_id(id),
         [
             "thread",
             "spawn",
@@ -395,6 +506,40 @@ fn snapshot_records(dir: &Path, kind: &str, into: &str) {
     );
 }
 
+/// The fake's own copy of `ThreadId`'s rule: 1 to 128 ASCII letters,
+/// digits, `_` or `-`, not starting with `-`.
+fn is_thread_id(id: &str) -> bool {
+    (1..=128).contains(&id.len())
+        && !id.starts_with('-')
+        && id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
+}
+
+fn is_archive(argv: &[String]) -> bool {
+    argv.len() == 4 && argv[0] == "thread" && argv[1] == "archive"
+}
+
+fn is_show(argv: &[String]) -> bool {
+    argv.len() == 4 && argv[0] == "thread" && argv[1] == "show"
+}
+
+/// Records the thread `id` as archived: one line, in one write.
+fn archive(dir: &Path, id: &str) {
+    if let Ok(mut f) = fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(dir.join(ARCHIVED_FILE))
+    {
+        let _ = f.write_all(format!("{id}\n").as_bytes());
+    }
+}
+
+/// Whether a `thread archive` with `"archives": true` archived `id`.
+fn archived(dir: &Path, id: &str) -> bool {
+    fs::read_to_string(dir.join(ARCHIVED_FILE)).is_ok_and(|t| t.lines().any(|l| l == id))
+}
+
 fn is_detail_read(argv: &[String]) -> bool {
     matches!(argv.get(1).map(String::as_str), Some("show" | "output"))
 }
@@ -466,6 +611,46 @@ fn answer(response: &Value, base: &Path, dir: &Path) -> ExitCode {
         let _ = fs::write(dir.join(HANG_PID_FILE), std::process::id().to_string());
         loop {
             thread::sleep(Duration::from_secs(3600));
+        }
+    }
+    if let Some(file) = response["stream_stdout_file"].as_str() {
+        let input = fs::File::open(base.join(file))
+            .unwrap_or_else(|e| panic!("fake room-cli: cannot open {file}: {e}"));
+        // Rust's io::copy forbids its kernel shortcut from files to pipes.
+        // This immutable fixture can use Python's explicit sendfile instead;
+        // Python 3 is already required by the repository's test tooling.
+        let status = std::process::Command::new("/usr/bin/python3")
+            .args([
+                "-I",
+                "-S",
+                "-c",
+                r#"
+import errno, os, sys
+if sys.platform == "linux":
+    import fcntl
+    fcntl.fcntl(1, fcntl.F_SETPIPE_SZ, 1024 * 1024)
+offset = 0
+size = os.fstat(0).st_size
+try:
+    while offset < size:
+        copied = os.sendfile(1, 0, offset, size - offset)
+        if not copied:
+            raise RuntimeError("short fixture file")
+        offset += copied
+except OSError as error:
+    if error.errno not in (errno.EINVAL, errno.ENOSYS, errno.ENOTSOCK, errno.EOPNOTSUPP):
+        raise
+    import shutil
+    os.lseek(0, offset, os.SEEK_SET)
+    shutil.copyfileobj(sys.stdin.buffer, sys.stdout.buffer, 64 * 1024)
+    sys.stdout.buffer.flush()
+"#,
+            ])
+            .stdin(input)
+            .status()
+            .expect("stream oversized fixture");
+        if !status.success() {
+            return ExitCode::FAILURE;
         }
     }
     if let Some(file) = response["stdout_file"].as_str() {

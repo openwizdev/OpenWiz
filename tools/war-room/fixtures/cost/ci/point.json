@@ -1,0 +1,34 @@
+{
+  "schema": "closedwiz.ci-bench.v1",
+  "label": "synthetic PST day",
+  "since": "2030-01-01T08:00:00Z",
+  "until": "2030-01-02T08:00:00Z",
+  "hours": 24,
+  "robots": 1,
+  "runs": 2,
+  "jobs": 2,
+  "merged_prs": 2,
+  "merged_per_hour": 0.083333,
+  "code_runs": null,
+  "legacy": null,
+  "cost": {
+    "runner_minutes": {
+      "github": 2
+    },
+    "billed_minutes": {
+      "github": 2
+    },
+    "window_usd": 0.2,
+    "per_code_run_usd": null,
+    "unknown_minutes": 0,
+    "prices": [
+      {
+        "runner_kind": "github",
+        "compute_usd_per_minute": 0.1,
+        "platform_usd_per_minute": 0,
+        "source_url": "https://example.com/synthetic-price",
+        "verified_on": "2030-01-01"
+      }
+    ]
+  }
+}

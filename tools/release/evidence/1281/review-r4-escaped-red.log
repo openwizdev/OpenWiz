@@ -1,0 +1,15 @@
+test_r4_malformed_or_unrelated_private_links_refuse (test_review.ReviewFixes.test_r4_malformed_or_unrelated_private_links_refuse) ...
+  test_r4_malformed_or_unrelated_private_links_refuse (test_review.ReviewFixes.test_r4_malformed_or_unrelated_private_links_refuse) (text='Context: \\[private record](https://github.com/jparker2006/ClosedWiz/issues/9001#issuecomment-9000001).') ... FAIL
+
+======================================================================
+FAIL: test_r4_malformed_or_unrelated_private_links_refuse (test_review.ReviewFixes.test_r4_malformed_or_unrelated_private_links_refuse) (text='Context: \\[private record](https://github.com/jparker2006/ClosedWiz/issues/9001#issuecomment-9000001).')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-1281/tools/release/test_review.py", line 122, in test_r4_malformed_or_unrelated_private_links_refuse
+    self.assertEqual(result.returncode,1,result.stderr)
+AssertionError: 0 != 1 :
+
+----------------------------------------------------------------------
+Ran 1 test in 7.059s
+
+FAILED (failures=1)

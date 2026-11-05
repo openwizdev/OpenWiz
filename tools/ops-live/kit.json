@@ -1,0 +1,101 @@
+{
+  "format": "ops-live-kit/1",
+  "status": "prepared",
+  "discovery_2244": {
+    "record": null,
+    "lost_start_lookup": "unknown",
+    "independent_wakes": "unknown",
+    "reviewer_own_output": "unknown",
+    "affects": ["P3", "P4", "P5", "P7"]
+  },
+  "controls": {
+    "format": "ops-live-kit-controls/1",
+    "candidates": {
+      "heads": [
+        {
+          "repository": "jparker2006/ClosedWiz",
+          "branch": "main",
+          "commit": "7df2880cb92cf7d78cbddf063d73d7d23450ba23"
+        }
+      ],
+      "revisions": [
+        {"kind": "contract", "path": "contracts/ops-dispatch.v1.md", "blob": "03a00eee93c2d8ca9b8832eef3328c307e6198d5"},
+        {"kind": "contract", "path": "contracts/ops-dispatch.v1.schema.json", "blob": "31cfb782890a7e64aa340993a4f67cc44907bf68"},
+        {"kind": "contract", "path": "contracts/fleet-tick.v1.md", "blob": "a659f9a8bd2c852440a04407b47f426b66a7d3b5"},
+        {"kind": "rule", "path": "docs/adr/0016-agents-run-live-tests.md", "blob": "749ffa199ef3e1e179950711198fe2e0b5795d14"},
+        {"kind": "rule", "path": "docs/adr/0009-live-tests-run-while-jake-works.md", "blob": "c4865c7b428f9236224e2b3a3093f8253c18afc5"},
+        {"kind": "rule", "path": "docs/agents/fleet.md", "blob": "4c03a568d56f6aff306793ff60a696847d334755"},
+        {"kind": "rule", "path": "skills/launch-fleet/SKILL.md", "blob": "65280f471db8e5d59d9a6218909c3953fd16adf1"}
+      ]
+    },
+    "limits": {
+      "threads": {"active": 3, "total": 6},
+      "operations": {"active": 2, "total": 40},
+      "duration_minutes": 180
+    },
+    "permissions": {
+      "machine": {"needed": true, "granted": false, "record": null},
+      "live": {"needed": true, "granted": false, "record": null},
+      "write": {"needed": true, "granted": false, "record": null},
+      "merge": {"needed": false, "granted": false, "record": null},
+      "activation": {"needed": true, "granted": false, "record": null},
+      "spending": {"needed": true, "granted": false, "record": null}
+    },
+    "stop": {
+      "conditions": [
+        "any refusal, unexpected result or unread page",
+        "a thread, operation or duration bound is reached",
+        "any effect outside a test-owned ticket, branch or thread",
+        "any uncertain external outcome"
+      ],
+      "reconciliation": [
+        "read back every started thread, claim and operation before any retry",
+        "record each uncertain operation and end; never retry it blindly"
+      ]
+    },
+    "restoration": [
+      "resume the PC dispatcher to its recorded starting state",
+      "return each test-owned label and hold to its recorded starting state",
+      "leave every intentional pause and every production resource untouched"
+    ],
+    "cleanup": [
+      "archive every test-owned thread",
+      "close every test-owned ticket and pull request",
+      "account for every test-owned branch and claim ref; refs are never deleted or reused"
+    ]
+  },
+  "read_back": {
+    "machine": null,
+    "live": null,
+    "write": null,
+    "merge": null,
+    "activation": null,
+    "spending": null
+  },
+  "host_roles": {
+    "primary": "PC dispatcher, made unreachable only inside the test boundary",
+    "standby": "dispatcher outside the PC failure domain, woken independently",
+    "builder": "throwaway builder thread reading its GitHub inbox",
+    "reviewer": "throwaway selected reviewer thread"
+  },
+  "cloud_exposure": "throwaway Cloud threads only; no tunnel, public hostname or production loop",
+  "permitted_effects": [
+    "builder_start on a test-owned ticket",
+    "review_start on a test-owned pull request",
+    "delivery to a test-owned thread",
+    "grant on a test-owned ticket",
+    "audit of test-owned grants",
+    "hold_release of a test-owned ON1 hold"
+  ],
+  "claims": ["P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8"],
+  "measures": [
+    "grant_wait_ms",
+    "review_start_delay_ms",
+    "oldest_pending_message_age_ms",
+    "release_delay_ms",
+    "recovery_time_ms",
+    "duplicate_starts",
+    "incorrect_grants",
+    "incorrect_releases"
+  ]
+}

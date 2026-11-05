@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 
 import { TIMING } from '../../src/timing.ts';
-import { DESKTOP, launchBrowser, openPage, readDetail, readView, settleReal, waitFor } from '../support/browser.mjs';
+import { DESKTOP, launchBrowser, openPage, pageIdle, readDetail, readView, settleReal, waitFor } from '../support/browser.mjs';
 import { DROP_HELD, HANG, json } from '../support/fake-api.mjs';
 import { fakeSite } from '../support/harness.mjs';
 import { inventory, manyRows, session, sessionView } from '../support/synthetic.ts';
@@ -56,24 +56,27 @@ test('a list read slower than the interval is never overlapped', async () => {
 
 test('a detail read slower than the interval is never overlapped, and the list keeps its own single read', async () => {
   const fx = await setup();
-  const p = await openPage(browser, fx.site.origin, { clock: START });
+  const p = await openPage(browser, fx.site.origin, { clock: START, paused: true, stampReads: true });
   try {
     await waitFor(async () => (await readView(p.page)).groups.length > 0, { what: 'rows' });
     fx.api.hold('detail');
     await p.page.click('[data-session-id="thr_web_0002"]');
     await waitFor(() => fx.api.reads('detail').length === 1, { what: 'the detail read' });
     assert.ok(under(TIMING.detailIntervalMs) >= 2, 'the read is held for at least two intervals');
-    for (let i = 0; i < under(TIMING.detailIntervalMs); i++) {
-      await p.page.clock.runFor(TIMING.detailIntervalMs);
-      await settleReal(30);
+    // Only the held detail may remain unanswered. Wait for the page to consume
+    // every list answer and schedule its next interval before advancing again.
+    for (let t = 0; t < under(TIMING.detailIntervalMs) * TIMING.detailIntervalMs; t += 1_000) {
+      await p.page.clock.runFor(1_000);
+      await waitFor(() => p.page.evaluate(() => window.__reads.length - window.__readsDone === 1), { what: 'only the held detail remains unanswered' });
     }
     assert.equal(fx.api.reads('detail').length, 1, 'no second detail read while the first is in flight');
     assert.equal(fx.api.maxInFlight.detail, 1);
-    assert.ok(fx.api.reads('list').length >= 3, 'the list kept refreshing');
+    assert.equal(fx.api.reads('list').length, 4, 'the list kept refreshing: initial read, then at 10, 20 and 30 seconds');
     assert.equal(fx.api.maxInFlight.list, 1);
     fx.api.hold('detail', false);
     fx.api.release('detail');
     await waitFor(async () => (await readDetail(p.page))?.title === 'Synthetic web session 2', { what: 'the detail' });
+    await waitFor(() => pageIdle(p.page), { what: 'the page read the released detail' });
     await p.page.clock.runFor(TIMING.detailIntervalMs);
     await waitFor(() => fx.api.reads('detail').length === 2, { what: 'the next detail read' });
     assert.equal(fx.api.maxInFlight.detail, 1);
@@ -83,7 +86,7 @@ test('a detail read slower than the interval is never overlapped, and the list k
   }
 });
 
-test('a read that never answers: at its timeout the page says so, the request stays open until the server\'s bound, then the retry ', async () => {
+test('a read that never answers: at its timeout the page says so, the request stays open until the server\'s bound, then the retry (Sol 1)', async () => {
   const fx = await setup();
   fx.api.setList(() => HANG);
   const p = await openPage(browser, fx.site.origin, { clock: START });
@@ -117,7 +120,7 @@ function paged(fx) {
   });
 }
 
-test('a page change after the page\'s timeout still waits for the server to answer the old read ', async () => {
+test('a page change after the page\'s timeout still waits for the server to answer the old read (Sol 1)', async () => {
   const fx = await setup();
   paged(fx);
   const p = await openPage(browser, fx.site.origin, { clock: START, viewport: DESKTOP });
@@ -144,7 +147,7 @@ test('a page change after the page\'s timeout still waits for the server to answ
   }
 });
 
-test('after a dropped connection, a page change waits for the server\'s bound since the read was sent ', async () => {
+test('after a dropped connection, a page change waits for the server\'s bound since the read was sent (Sol 1)', async () => {
   const fx = await setup();
   const all = manyRows(250);
   let drop = false;

@@ -1,0 +1,21 @@
+   Compiling openwiz-tests v0.0.1-dev (/code/ClosedWiz-1272/tests)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.56s
+     Running fleet/main.rs (target/debug/deps/fleet-e2d7203fe5d12f9f)
+
+running 1 test
+
+thread 'b5_tick::public::p4_public_approval_keeps_the_same_fingerprint_and_requires_a_pointer' (29407) panicked at tests/fleet/b5_public.rs:263:9:
+assertion `left == right` failed: public: {"actions":[{"facts":{"reason":"graph unread"},"kind":"wake","outcome":{"state":"planned"},"rule":"look","spec":9,"ticket":null}],"default_branch":"main","mode":"dry_run","planned_at":1794041584100,"rules":{"builder":{"effort":"xhigh","harness":"claude-code","model":"claude-opus-5-5"},"builder_small":{"effort":"high","harness":"codex","model":"gpt-6.1-sol"},"ci_checks":[{"name":"rust","required_on":["main"]}],"merge":"adr_0008","reviewer_claude":{"effort":"high","harness":"codex","model":"gpt-6.1-sol"},"reviewer_gpt":{"effort":"high","harness":"claude-code","model":"claude-opus-5-5"}},"schema":"openwiz.fleet-tick.v1"}
+  left: String("look")
+ right: "frontier"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test b5_tick::public::p4_public_approval_keeps_the_same_fingerprint_and_requires_a_pointer ... FAILED
+
+failures:
+
+failures:
+    b5_tick::public::p4_public_approval_keeps_the_same_fingerprint_and_requires_a_pointer
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 336 filtered out; finished in 0.21s
+
+error: test failed, to rerun pass `-p openwiz-tests --test fleet`

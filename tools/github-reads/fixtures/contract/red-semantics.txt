@@ -1,0 +1,29 @@
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+======================================================================
+FAIL: test_schema_and_refusal_cases (__main__.Contract.test_schema_and_refusal_cases) (case='display cache')
+C1-auth/cache/budget/share: literal fixture decisions, not live proof.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-reads/test_contract.py", line 51, in test_schema_and_refusal_cases
+    self.assertEqual(assess(value['record'], value['current']), tuple(case['expect']))
+AssertionError: Tuples differ: ('fresh', 'current') != ('display', 'cache')
+
+First differing element 0:
+'fresh'
+'display'
+
+- ('fresh', 'current')
++ ('display', 'cache')
+
+======================================================================
+FAIL: test_schema_and_refusal_cases (__main__.Contract.test_schema_and_refusal_cases) (case='expired credential')
+C1-auth/cache/budget/share: literal fixture decisions, not live proof.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-reads/test_contract.py", line 51, in test_schema_and_refusal_cases
+... other refusal cases fail against the same fresh-only stub ...
+
+----------------------------------------------------------------------
+Ran 1 test in 0.043s
+
+FAILED (failures=50)

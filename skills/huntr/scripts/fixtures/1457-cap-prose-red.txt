@@ -1,0 +1,22 @@
+   Compiling openwiz-tests v0.0.1-dev (/code/ClosedWiz/tests)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.96s
+     Running checks/main.rs (target/debug/deps/checks-bb909ac66426bb75)
+
+running 1 test
+test skills::overnight_preserves_huntr_risk_tiers_and_open_cap ... FAILED
+
+failures:
+
+---- skills::overnight_preserves_huntr_risk_tiers_and_open_cap stdout ----
+
+thread 'skills::overnight_preserves_huntr_risk_tiers_and_open_cap' (21542) panicked at tests/checks/skills.rs:1170:9:
+overnight must preserve the open-ticket cap in `docs/agents/huntr.md`
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    skills::overnight_preserves_huntr_risk_tiers_and_open_cap
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p openwiz-tests --test checks`

@@ -1,0 +1,19 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.12s
+     Running checks/main.rs (target/debug/deps/checks-bda594ae6353479a)
+
+running 13 tests
+test fixture_scan::a_github_scenarios_argv_is_only_text ... ok
+test fixture_scan::every_scenario_records_its_synthetic_assumptions ... ok
+test fixture_scan::a_github_scenario_records_its_name_and_synthetic_assumptions ... ok
+test fixture_scan::no_checks_diagnostic_accepts_only_the_existing_synthetic_branch_form ... ok
+test fixture_scan::the_documented_send_shapes_pass_only_in_send_fixtures ... ok
+test fixture_scan::a_github_scenario_answers_only_calls_the_allowlist_allows ... ok
+test fixture_scan::the_github_shapes_pass_only_in_github_fixtures ... ok
+test fixture_scan::the_new_thread_shapes_pass_only_in_new_thread_fixtures ... ok
+test fixture_scan::the_observed_sent_keys_pass_only_in_send_fixtures ... ok
+test fixture_scan::observed_queued_identifiers_and_keys_are_scoped ... ok
+test fixture_scan::the_scan_catches_planted_private_data ... ok
+test fixture_scan::the_fake_gh_is_scanned_for_private_data ... ok
+test fixture_scan::fixtures_contain_only_synthetic_values ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 119 filtered out; finished in 0.14s

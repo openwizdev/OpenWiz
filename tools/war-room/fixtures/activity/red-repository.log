@@ -1,0 +1,13 @@
+F
+======================================================================
+FAIL: test_ci_reader_is_bound_to_selected_repository (__main__.ActivityTests.test_ci_reader_is_bound_to_selected_repository)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-2352/tools/war-room/test_activity.py", line 203, in test_ci_reader_is_bound_to_selected_repository
+    self.assertEqual(metrics['ci-running-ubuntu-24.04']['value'], 1)
+AssertionError: None != 1
+
+----------------------------------------------------------------------
+Ran 1 test in 0.107s
+
+FAILED (failures=1)

@@ -1,0 +1,388 @@
+{
+ "schema": "openwiz.cockpit.v1",
+ "snapshot_at": 1800000000000,
+ "projects": {
+  "coverage": {
+   "state": "complete",
+   "gaps": []
+  },
+  "freshness": {
+   "state": "fresh",
+   "snapshot_at": {
+    "known": 1800000000000
+   }
+  },
+  "items": [
+   {
+    "id": "prj_syn_atl1",
+    "name": {
+     "known": "Atlas"
+    },
+    "orchestrator": {
+     "coverage": {
+      "state": "complete",
+      "gaps": []
+     },
+     "freshness": {
+      "state": "fresh",
+      "snapshot_at": {
+       "known": 1800000000000
+      }
+     },
+     "target": {
+      "known": "thr_syn_0001"
+     }
+    }
+   },
+   {
+    "id": "prj_syn_lan2",
+    "name": {
+     "known": "Lantern"
+    },
+    "orchestrator": {
+     "coverage": {
+      "state": "complete",
+      "gaps": []
+     },
+     "freshness": {
+      "state": "fresh",
+      "snapshot_at": {
+       "known": 1800000000000
+      }
+     },
+     "target": {
+      "known": "thr_syn_0002"
+     }
+    }
+   },
+   {
+    "id": "prj_syn_orc3",
+    "name": {
+     "known": "Orchard"
+    },
+    "orchestrator": {
+     "coverage": {
+      "state": "partial",
+      "gaps": [
+       {
+        "project": "prj_syn_orc3",
+        "kind": "timed_out",
+        "detail": "Synthetic target check timed out"
+       }
+      ]
+     },
+     "freshness": {
+      "state": "unknown",
+      "snapshot_at": {
+       "unknown": "Synthetic target never read"
+      }
+     },
+     "target": {
+      "unknown": "Synthetic target not verified"
+     }
+    }
+   }
+  ]
+ },
+ "needs_you": {
+  "coverage": {
+   "state": "partial",
+   "gaps": [
+    {
+     "project": "prj_syn_orc3",
+     "kind": "command_failed",
+     "detail": "Synthetic fleet source could not be read"
+    },
+    {
+     "project": "prj_syn_atl1",
+     "kind": "unsupported",
+     "detail": "Synthetic source lacks wording, risk and waiting time for one item"
+    },
+    {
+     "project": null,
+     "kind": "unsupported",
+     "detail": "Synthetic repository matches 2 projects; one item is not assigned"
+    }
+   ]
+  },
+  "freshness": {
+   "state": "fresh",
+   "snapshot_at": {
+    "known": 1800000000000
+   }
+  },
+  "items": [
+   {
+    "project": {
+     "known": "prj_syn_atl1"
+    },
+    "kind": "needs_info",
+    "spec": 901,
+    "ticket": 904,
+    "wording": {
+     "known": "Approve the plan for #904: offline sync queue?"
+    },
+    "age_ms": {
+     "known": 720000
+    },
+    "risky": {
+     "known": false
+    }
+   },
+   {
+    "project": {
+     "known": "prj_syn_lan2"
+    },
+    "kind": "publish",
+    "spec": 700,
+    "ticket": 712,
+    "wording": {
+     "known": "Publish release Lantern v0.4?"
+    },
+    "age_ms": {
+     "known": 540000
+    },
+    "risky": {
+     "known": true
+    }
+   },
+   {
+    "project": {
+     "known": "prj_syn_atl1"
+    },
+    "kind": "held",
+    "spec": 901,
+    "ticket": 907,
+    "wording": {
+     "unknown": "the fleet source does not report proposal wording"
+    },
+    "age_ms": {
+     "unknown": "the fleet source does not report waiting time"
+    },
+    "risky": {
+     "unknown": "the fleet source does not classify risk"
+    }
+   },
+   {
+    "project": {
+     "unknown": "Synthetic repository matches 2 projects"
+    },
+    "kind": "needs_info",
+    "spec": 30,
+    "ticket": 31,
+    "wording": {
+     "unknown": "the fleet source does not report proposal wording"
+    },
+    "age_ms": {
+     "unknown": "the fleet source does not report waiting time"
+    },
+    "risky": {
+     "unknown": "the fleet source does not classify risk"
+    }
+   }
+  ]
+ },
+ "agents": {
+  "coverage": {
+   "state": "partial",
+   "gaps": [
+    {
+     "project": null,
+     "kind": "unsupported",
+     "detail": "Synthetic inventory lacks start times; one agent is not placed"
+    }
+   ]
+  },
+  "freshness": {
+   "state": "fresh",
+   "snapshot_at": {
+    "known": 1800000000000
+   }
+  },
+  "items": [
+   {
+    "thread": "thr_syn_0011",
+    "project": {
+     "known": "prj_syn_atl1"
+    },
+    "title": {
+     "known": "sync queue"
+    },
+    "fleet": {
+     "known": 901
+    },
+    "ticket": {
+     "known": 904
+    },
+    "activity": "active",
+    "model": {
+     "known": "synthetic-model-a"
+    },
+    "state": {
+     "known": "building"
+    },
+    "location": {
+     "known": {
+      "kind": "cloud"
+     }
+    },
+    "started_at": {
+     "unknown": "the inventory reports no start time"
+    }
+   },
+   {
+    "thread": "thr_syn_0012",
+    "project": {
+     "known": "prj_syn_atl1"
+    },
+    "title": {
+     "known": "conflict resolver"
+    },
+    "fleet": {
+     "known": 901
+    },
+    "ticket": {
+     "known": 905
+    },
+    "activity": "active",
+    "model": {
+     "known": "synthetic-model-b"
+    },
+    "state": {
+     "known": "building"
+    },
+    "location": {
+     "known": {
+      "kind": "cloud"
+     }
+    },
+    "started_at": {
+     "unknown": "the inventory reports no start time"
+    }
+   },
+   {
+    "thread": "thr_syn_0013",
+    "project": {
+     "known": "prj_syn_atl1"
+    },
+    "title": {
+     "known": "status badge"
+    },
+    "fleet": {
+     "known": 901
+    },
+    "ticket": {
+     "known": 910
+    },
+    "activity": "active",
+    "model": {
+     "known": "synthetic-model-c"
+    },
+    "state": {
+     "known": "in_review"
+    },
+    "location": {
+     "known": {
+      "kind": "local",
+      "machine": {
+       "unknown": "the inventory does not report machines"
+      }
+     }
+    },
+    "started_at": {
+     "unknown": "the inventory reports no start time"
+    }
+   },
+   {
+    "thread": "thr_syn_0021",
+    "project": {
+     "known": "prj_syn_lan2"
+    },
+    "title": {
+     "known": "release notes"
+    },
+    "fleet": {
+     "known": 700
+    },
+    "ticket": {
+     "known": 712
+    },
+    "activity": "active",
+    "model": {
+     "known": "synthetic-model-d"
+    },
+    "state": {
+     "known": "building"
+    },
+    "location": {
+     "known": {
+      "kind": "cloud"
+     }
+    },
+    "started_at": {
+     "unknown": "the inventory reports no start time"
+    }
+   },
+   {
+    "thread": "thr_syn_0022",
+    "project": {
+     "known": "prj_syn_lan2"
+    },
+    "title": {
+     "known": "rate limit headers"
+    },
+    "fleet": {
+     "known": 700
+    },
+    "ticket": {
+     "known": 714
+    },
+    "activity": "active",
+    "model": {
+     "known": "synthetic-model-b"
+    },
+    "state": {
+     "known": "building"
+    },
+    "location": {
+     "known": {
+      "kind": "cloud"
+     }
+    },
+    "started_at": {
+     "unknown": "the inventory reports no start time"
+    }
+   },
+   {
+    "thread": "thr_syn_0031",
+    "project": {
+     "unknown": "the session is not in a project group"
+    },
+    "title": {
+     "known": "Research: tokenizers"
+    },
+    "fleet": {
+     "unknown": "no verified ticket link"
+    },
+    "ticket": {
+     "unknown": "no verified ticket link"
+    },
+    "activity": "active",
+    "model": {
+     "known": "synthetic-model-a"
+    },
+    "state": {
+     "unknown": "not placed in a fleet"
+    },
+    "location": {
+     "known": {
+      "kind": "cloud"
+     }
+    },
+    "started_at": {
+     "unknown": "the inventory reports no start time"
+    }
+   }
+  ]
+ }
+}

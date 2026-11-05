@@ -1,0 +1,41 @@
+{
+  "files": {
+    "skills/alpha/SKILL.md": "---\nname: alpha\ndescription: A synthetic fixture skill.\n---\n# Alpha\nRead the local script.\n",
+    "skills/alpha/agents/openai.yaml": "interface:\n  display_name: \"Alpha\"\n  short_description: \"Synthetic fixture\"\n",
+    "skills/alpha/scripts/run.sh": "#!/bin/sh\nexit 0\n",
+    "skills/README.md": "# Synthetic skill rules fixture\n",
+    "contracts/decisions.v1.md": "Synthetic decisions contract placeholder.\n",
+    "contracts/decisions.v1.schema.json": "{\"synthetic\":true}\n",
+    "contracts/plan-links.v1.md": "Synthetic plan-links contract placeholder.\n",
+    "contracts/plan-links.v1.schema.json": "{\"synthetic\":true}\n",
+    "contracts/open-development.v1.md": "Synthetic open-development contract placeholder.\n",
+    "contracts/ops-dispatch.v1.md": "Synthetic ops-dispatch contract placeholder.\n",
+    "contracts/ops-dispatch.v1.schema.json": "{\"synthetic\":true}\n",
+    "contracts/github-identity.v1.md": "Synthetic GitHub identity contract placeholder.\n",
+    "contracts/cli.v1.md": "Synthetic CLI contract placeholder.\n",
+    "check/run.py": "# Synthetic check runner placeholder; never executed.\n",
+    ".github/workflows/ci.yml": "name: check\non: [push, pull_request]\npermissions:\n  contents: read\njobs:\n  check:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - run: python3 check/run.py\n",
+    ".claude-plugin/plugin.json": "{\"name\": \"openwiz\", \"version\": \"0.1.0\", \"skills\": [\"./skills/alpha\"]}\n",
+    ".claude-plugin/marketplace.json": "{\"name\": \"wizskills\", \"owner\": {\"name\": \"Synthetic\"}, \"plugins\": [{\"name\": \"openwiz\", \"source\": \"./\"}]}\n",
+    "README.md": "# Synthetic WizSkills package\nInstall examples are specified by the contract.\n",
+    "CHANGELOG.md": "# Changelog\n\n## 0.1.0 - 2030-01-02\n\n- First public release of the skills: alpha.\n",
+    "LICENSE": "Synthetic licence placeholder; real releases preserve all upstream notices.\n",
+    "install.sh": "#!/bin/sh\n# Synthetic interface placeholder; never executed.\nexit 0\n"
+  },
+  "executables": [
+    "install.sh",
+    "skills/alpha/scripts/run.sh"
+  ],
+  "tag": "v0.1.0",
+  "lock": {
+    "version": "0.1.0",
+    "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "release": {
+    "schema": "openwiz.wizskills.release.v1",
+    "version": "0.1.0",
+    "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  }
+}

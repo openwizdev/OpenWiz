@@ -1,0 +1,53 @@
+# RL0 red at the claim's assertion: each proof run against a copy of review_loops.py with its one rule undone
+# (the module-missing red in red-first.log stops before the code; these reach each claim's own assertion)
+# head under test: 32d4adce4618e2124f0133475ab0de39bc4ce84e
+
+## undone: repeated verdicts counted per verdict, not per head
+$ test_review_loops.py -k test_repeated_and_same_head_verdicts_count_once  (exit 1)
+FAIL: test_repeated_and_same_head_verdicts_count_once (__main__.Measures.test_repeated_and_same_head_verdicts_count_once)
+AssertionError: 3 != 4.0
+Ran 1 test in 0.138s
+FAILED (failures=1)
+
+## undone: a PR closing two tickets counted once per ticket
+$ test_review_loops.py -k test_shared_pr_counts_once  (exit 1)
+FAIL: test_shared_pr_counts_once (__main__.Measures.test_shared_pr_counts_once)
+AssertionError: {'rev[14 chars]'n': 1, 'unknown': 2, 'mean': 3.0, 'median': 3[819 chars]None} != {'rev[14 chars]'n': 2, 'unknown': 1, 'mean': 3.0, 'median': 3[814 chars]None}
+Ran 1 test in 0.285s
+FAILED (failures=1)
+
+## undone: an unreviewed PR read as zero rounds
+$ test_review_loops.py -k test_unreviewed_pr_is_unknown_not_zero  (exit 1)
+FAIL: test_unreviewed_pr_is_unknown_not_zero (__main__.Measures.test_unreviewed_pr_is_unknown_not_zero)
+AssertionError: Tuples differ: (0, 1, None, None) != (1, 0, 0.0, 0.0)
+Ran 1 test in 0.134s
+FAILED (failures=1)
+
+## undone: a missing receipt read as zero hours
+$ test_review_loops.py -k test_missing_receipt_is_unknown  (exit 1)
+FAIL: test_missing_receipt_is_unknown (__main__.Measures.test_missing_receipt_is_unknown)
+AssertionError: Tuples differ: (1, 2, 6.0) != (2, 1, 3.0)
+Ran 1 test in 0.134s
+FAILED (failures=1)
+
+## undone: immature PRs inside the defect rate
+$ test_review_loops.py -k test_immature_prs_stay_out_of_the_defect_rate  (exit 1)
+FAIL: test_immature_prs_stay_out_of_the_defect_rate (__main__.Measures.test_immature_prs_stay_out_of_the_defect_rate)
+AssertionError: Tuples differ: (0, 1, 0, None) != (0, 1, 0, 0.0)
+Ran 1 test in 0.133s
+FAILED (failures=1)
+
+## undone: a blocking finding without User path:/Risk: passes
+$ test_review_loops.py -k test_blocking_finding_needs_user_path_or_risk  (exit 1)
+FAIL: test_blocking_finding_needs_user_path_or_risk (__main__.Reports.test_blocking_finding_needs_user_path_or_risk)
+AssertionError: Lists differ: ['R1: a blocking finding needs a User path: or Risk: line'] != []
+Ran 1 test in 0.001s
+FAILED (failures=1)
+
+## undone: a polish finding refused for lacking a User path:
+$ test_review_loops.py -k test_polish_finding_needs_no_user_path_but_its_issue  (exit 1)
+FAIL: test_polish_finding_needs_no_user_path_but_its_issue (__main__.Reports.test_polish_finding_needs_no_user_path_but_its_issue)
+AssertionError: 'R3' unexpectedly found in 'R3: a blocking finding needs a User path: or Risk: line'
+Ran 1 test in 0.001s
+FAILED (failures=1)
+

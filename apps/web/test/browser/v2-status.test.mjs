@@ -38,13 +38,16 @@ test('every status shows the core\'s word, a glyph and a tier shape', async () =
     assert.deepEqual(
       rows.map((r) => r.status),
       [
-        { word: 'error', glyph: '[x]', tier: 't1' },
-        { word: 'active', glyph: '[~]', tier: 't3' },
-        { word: 'idle', glyph: '[-]', tier: 't4' },
-        { word: 'syn-other', glyph: '[?]', tier: 't5' },
-        { word: 'unknown (missing field status)', glyph: '[?]', tier: 't5' },
+        { word: 'error', glyph: '', tier: 't1' },
+        { word: 'active', glyph: '', tier: 't3' },
+        { word: 'idle', glyph: '', tier: 't4' },
+        { word: 'syn-other', glyph: '', tier: 't5' },
+        { word: 'unknown (missing field status)', glyph: '', tier: 't5' },
       ],
     );
+    assert.equal(await p.page.locator('[data-part=status] .glyph svg').count(), rows.length, 'every status has an inline SVG');
+    assert.equal(await p.page.locator('[data-part=status][data-tier=t1] svg path[fill="currentColor"]').count(), 1, 'error is a solid diamond');
+    assert.equal(await p.page.locator('[data-part=status][data-tier=t5] svg circle[stroke-dasharray]').count(), 2, 'other and missing are dashed rings');
     // The glyph is decoration; the word is what a screen reader hears.
     const hidden = await p.page.$$eval('[data-part=status] .glyph', (els) => els.map((e) => e.getAttribute('aria-hidden')));
     assert.ok(hidden.every((h) => h === 'true'));
@@ -64,7 +67,7 @@ async function tierMasks(page) {
   });
   const masks = {};
   for (const tier of ['t1', 't3', 't4', 't5']) {
-    const box = await page.locator(`[data-part=status][data-tier=${tier}]`).first().boundingBox();
+    const box = await page.locator(`[data-part=status][data-tier=${tier}] .glyph svg`).first().boundingBox();
     assert.ok(box, `a ${tier} marker is shown`);
     const png = await page.screenshot({ clip: { x: box.x - 4, y: box.y - 4, width: box.width + 8, height: box.height + 8 } });
     masks[tier] = inkMask(decodePng(png));

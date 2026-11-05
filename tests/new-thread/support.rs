@@ -344,6 +344,10 @@ impl MemoryStore {
 }
 
 impl NewThreadStore for MemoryStore {
+    fn load(&self, op_id: &OpId) -> Result<Option<NewThreadRecord>, StoreError> {
+        Ok(self.get(op_id))
+    }
+
     fn claim(&self, record: &NewThreadRecord, now: Timestamp) -> Result<Claim, StoreError> {
         let existing = self.records.lock().unwrap().get(&record.op_id).cloned();
         match existing {
@@ -412,8 +416,14 @@ pub fn try_create(
     new_thread(client, store, &clock(), request)
 }
 
+/// The new-thread schema, read and parsed once per test run (#1260).
 pub fn schema() -> Value {
-    serde_json::from_str(&fs::read_to_string(SCHEMA).expect("schema")).expect("JSON")
+    static SCHEMA_JSON: std::sync::OnceLock<Value> = std::sync::OnceLock::new();
+    SCHEMA_JSON
+        .get_or_init(|| {
+            serde_json::from_str(&fs::read_to_string(SCHEMA).expect("schema")).expect("JSON")
+        })
+        .clone()
 }
 
 /// Validates `value` against `$defs/<def>` of the new-thread schema.

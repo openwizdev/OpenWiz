@@ -1,4 +1,10 @@
-
+// W8, #143: the `· changed` mark says the buttons or their effect changed
+// under a draft. It is never drawn for a thread whose state did not change:
+// not after switching to another thread and back, not while the switched-back
+// composer's preview is still out, not after a reload, and not when a refresh
+// reads the same state again. A real change after switching back is still
+// marked. The baseline is the composer's first answered preview, never its
+// placeholder before one ("Queue", no effect).
 
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
@@ -46,7 +52,7 @@ const marks = (page) => page.evaluate(() => window.__marks.map((m) => m.closest(
 /**
  * Waits for two later renders of the composer: any effect of a render before
  * them has run, and anything it set is drawn. The mark is set in an effect
- * after the render it judges, and React runs a render's effects before
+ * after the render it judges (#137), and React runs a render's effects before
  * it starts the next one, so the first later render follows the effect and
  * the second draws what it set. The age line is the composer's own render
  * output; a one-second step of the page's clock always moves it.
@@ -69,7 +75,7 @@ const previewsOf = (fx, n) => fx.api.reads('preview').filter((e) => e.path.split
 for (const kind of ['idle', 'busy']) {
   const other = kind === 'idle' ? 'busy' : 'idle';
 
-  test(`a saved draft shows no “· changed” after switching to another thread and back, or after a refresh reads the same state; a real change is still marked`, async () => {
+  test(`#143 (${kind}): a saved draft shows no “· changed” after switching to another thread and back, or after a refresh reads the same state; a real change is still marked`, async () => {
     const { fx, state } = await composerSite({ kinds: { [id(1)]: kind, [id(2)]: 'idle' } });
     const p = await openThread(browser, fx, 1, { stampReads: true });
     try {
@@ -117,7 +123,7 @@ for (const kind of ['idle', 'busy']) {
   });
 }
 
-test('no “· changed” while the switched-back composer’s preview is out, nor when it answers with the same state', async () => {
+test('#143: no “· changed” while the switched-back composer’s preview is out, nor when it answers with the same state', async () => {
   const { fx } = await composerSite({ kinds: { [id(1)]: 'idle', [id(2)]: 'idle' } });
   const p = await openThread(browser, fx, 1);
   try {
@@ -147,7 +153,7 @@ test('no “· changed” while the switched-back composer’s preview is out, n
   }
 });
 
-test('a draft restored after a reload shows no “· changed”', async () => {
+test('#143: a draft restored after a reload shows no “· changed”', async () => {
   const { fx } = await composerSite({ kinds: { [id(1)]: 'idle' } });
   const p = await openThread(browser, fx, 1);
   try {

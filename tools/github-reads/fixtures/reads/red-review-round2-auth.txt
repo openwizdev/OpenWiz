@@ -1,0 +1,35 @@
+FF
+======================================================================
+FAIL: test_r2_older_mint_cannot_restore_a_newer_invalidated_generation (__main__.ReviewRegressions.test_r2_older_mint_cannot_restore_a_newer_invalidated_generation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-findings-2386/tools/github-reads/test_read.py", line 637, in test_r2_older_mint_cannot_restore_a_newer_invalidated_generation
+    self.assertEqual((first.returncode, out, err.decode().strip()),
+AssertionError: Tuples differ: (0, b'{"number": 1}\n', 'fresh: current') != (1, b'', 'refused: credential')
+
+First differing element 0:
+0
+1
+
+- (0, b'{"number": 1}\n', 'fresh: current')
++ (1, b'', 'refused: credential')
+
+======================================================================
+FAIL: test_r5_mint_observation_age_includes_the_publication_lock_wait (__main__.ReviewRegressions.test_r5_mint_observation_age_includes_the_publication_lock_wait)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-findings-2386/tools/github-reads/test_read.py", line 651, in test_r5_mint_observation_age_includes_the_publication_lock_wait
+    self.assertEqual((proc.returncode, out, err.decode().strip()),
+AssertionError: Tuples differ: (0, b'{"number": 1}\n', 'fresh: current') != (1, b'', 'refused: freshness')
+
+First differing element 0:
+0
+1
+
+- (0, b'{"number": 1}\n', 'fresh: current')
++ (1, b'', 'refused: freshness')
+
+----------------------------------------------------------------------
+Ran 2 tests in 3.507s
+
+FAILED (failures=2)

@@ -1,0 +1,12 @@
+test_cli_prints_a_projected_provider_for_source_selection (__main__.StageWaits.test_cli_prints_a_projected_provider_for_source_selection) ... ok
+test_default_fixture_counts_waits_and_ticket_linked_misses (__main__.StageWaits.test_default_fixture_counts_waits_and_ticket_linked_misses) ... ok
+test_each_stage_at_below_and_above_its_loaded_limit (__main__.StageWaits.test_each_stage_at_below_and_above_its_loaded_limit) ... ok
+test_projection_starts_nothing_and_has_no_authority (__main__.StageWaits.test_projection_starts_nothing_and_has_no_authority) ... ok
+test_refused_or_missing_producer_evidence_is_grey_never_a_miss (__main__.StageWaits.test_refused_or_missing_producer_evidence_is_grey_never_a_miss) ... ok
+test_saved_sample_and_page_carry_the_stage_group (__main__.StageWaits.test_saved_sample_and_page_carry_the_stage_group) ... ok
+test_unknown_gated_and_stale_stay_unknown_even_under_tiny_limits (__main__.StageWaits.test_unknown_gated_and_stale_stay_unknown_even_under_tiny_limits) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in N s
+
+OK

@@ -1,0 +1,142 @@
+EEEEEFFFF
+======================================================================
+ERROR: test_r1_native_stock_ratio_and_bounded_proportions (__main__.Contract.test_r1_native_stock_ratio_and_bounded_proportions)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_contract.py", line 46, in test_r1_native_stock_ratio_and_bounded_proportions
+    result = suite.compose('2030-01-02T12:00:00Z', [provider])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 216, in compose
+    validate(record)
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 183, in validate
+    _metric(metric, definition['groups'], assembled)
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 142, in _metric
+    require(type(numerator) is int and numerator <= denominator, 'ratio numerator exceeds cohort')
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 18, in require
+    raise ValueError(reason)
+ValueError: ratio numerator exceeds cohort
+
+======================================================================
+ERROR: test_r2_native_board_rounding_and_exact_quotients (__main__.Contract.test_r2_native_board_rounding_and_exact_quotients) (unit='percent', numerator=2, denominator=3)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_contract.py", line 68, in test_r2_native_board_rounding_and_exact_quotients
+    result = suite.compose('2030-01-02T12:00:00Z', [provider])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 206, in compose
+    _shape(provider, SCHEMA['$defs']['provider'])
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 82, in _shape
+    _shape(item, rule['properties'][key])
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 89, in _shape
+    _shape(item, rule['items'])
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 60, in _shape
+    return _shape(value, SCHEMA['$defs'][rule['$ref'].removeprefix('#/$defs/')])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 80, in _shape
+    require(set(value) == set(rule['required']), 'unexpected or missing fields')
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 18, in require
+    raise ValueError(reason)
+ValueError: unexpected or missing fields
+
+======================================================================
+ERROR: test_r2_native_board_rounding_and_exact_quotients (__main__.Contract.test_r2_native_board_rounding_and_exact_quotients) (unit='ratio', numerator=1, denominator=3)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_contract.py", line 68, in test_r2_native_board_rounding_and_exact_quotients
+    result = suite.compose('2030-01-02T12:00:00Z', [provider])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 206, in compose
+    _shape(provider, SCHEMA['$defs']['provider'])
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 82, in _shape
+    _shape(item, rule['properties'][key])
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 89, in _shape
+    _shape(item, rule['items'])
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 60, in _shape
+    return _shape(value, SCHEMA['$defs'][rule['$ref'].removeprefix('#/$defs/')])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 80, in _shape
+    require(set(value) == set(rule['required']), 'unexpected or missing fields')
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 18, in require
+    raise ValueError(reason)
+ValueError: unexpected or missing fields
+
+======================================================================
+ERROR: test_r2_native_board_rounding_and_exact_quotients (__main__.Contract.test_r2_native_board_rounding_and_exact_quotients) (unit='percent', numerator=1, denominator=8)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_contract.py", line 68, in test_r2_native_board_rounding_and_exact_quotients
+    result = suite.compose('2030-01-02T12:00:00Z', [provider])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 206, in compose
+    _shape(provider, SCHEMA['$defs']['provider'])
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 82, in _shape
+    _shape(item, rule['properties'][key])
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 89, in _shape
+    _shape(item, rule['items'])
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 60, in _shape
+    return _shape(value, SCHEMA['$defs'][rule['$ref'].removeprefix('#/$defs/')])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 80, in _shape
+    require(set(value) == set(rule['required']), 'unexpected or missing fields')
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 18, in require
+    raise ValueError(reason)
+ValueError: unexpected or missing fields
+
+======================================================================
+ERROR: test_r2_native_board_rounding_and_exact_quotients (__main__.Contract.test_r2_native_board_rounding_and_exact_quotients) (unit='ratio', numerator=1, denominator=4)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_contract.py", line 68, in test_r2_native_board_rounding_and_exact_quotients
+    result = suite.compose('2030-01-02T12:00:00Z', [provider])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 206, in compose
+    _shape(provider, SCHEMA['$defs']['provider'])
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 82, in _shape
+    _shape(item, rule['properties'][key])
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 89, in _shape
+    _shape(item, rule['items'])
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 60, in _shape
+    return _shape(value, SCHEMA['$defs'][rule['$ref'].removeprefix('#/$defs/')])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 80, in _shape
+    require(set(value) == set(rule['required']), 'unexpected or missing fields')
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 18, in require
+    raise ValueError(reason)
+ValueError: unexpected or missing fields
+
+======================================================================
+FAIL: test_r3_interval_endpoints_cannot_exceed_source_observation (__main__.Contract.test_r3_interval_endpoints_cannot_exceed_source_observation) (start='2030-01-02T11:56:00Z', end='2030-01-02T12:04:00Z', observed='2030-01-02T12:00:00Z')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_contract.py", line 116, in test_r3_interval_endpoints_cannot_exceed_source_observation
+    with self.assertRaises(ValueError):
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_r3_interval_endpoints_cannot_exceed_source_observation (__main__.Contract.test_r3_interval_endpoints_cannot_exceed_source_observation) (start='2030-01-02T12:01:00Z', end=None, observed='2030-01-02T12:00:00Z')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_contract.py", line 116, in test_r3_interval_endpoints_cannot_exceed_source_observation
+    with self.assertRaises(ValueError):
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_r3_interval_endpoints_cannot_exceed_source_observation (__main__.Contract.test_r3_interval_endpoints_cannot_exceed_source_observation) (start='2030-01-02T11:56:00Z', end=None, observed=None)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_contract.py", line 116, in test_r3_interval_endpoints_cannot_exceed_source_observation
+    with self.assertRaises(ValueError):
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_r4_partial_provider_requires_observed_source_evidence (__main__.Contract.test_r4_partial_provider_requires_observed_source_evidence)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_contract.py", line 126, in test_r4_partial_provider_requires_observed_source_evidence
+    with self.assertRaises(ValueError):
+AssertionError: ValueError not raised
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.011s
+
+FAILED (failures=4, errors=5)

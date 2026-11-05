@@ -1,6 +1,6 @@
 {
   "name": "openwiz",
-  "description": "OpenWiz's fleet skills: grill a design, plan it as a graph of tickets, launch a fleet of builders, build and review each ticket, hand off, set up a project and triage its issues.",
+  "description": "OpenWiz's skills: grill a design, plan it as a graph of tickets, launch a fleet of builders, build and review each ticket, hand off, set up a project and triage its issues; onboard a new user to a first fleet; and chart a big effort, see where things stand, picture a UI, research a question and diagnose a bug. Ask ask-wiz which skill or flow fits your question.",
   "author": {
     "name": "OpenWiz"
   },
@@ -20,6 +20,19 @@
     "./skills/review-ticket",
     "./skills/handoff",
     "./skills/setup",
-    "./skills/triage"
+    "./skills/triage",
+    "./skills/wayfind",
+    "./skills/where-are-we",
+    "./skills/image",
+    "./skills/research",
+    "./skills/diagnose",
+    "./skills/overnight",
+    "./skills/huntr",
+    "./skills/hill-climb",
+    "./skills/ask-wiz",
+    "./skills/feedback-triage",
+    "./skills/onboard",
+    "./skills/feedback",
+    "./skills/install"
   ]
 }

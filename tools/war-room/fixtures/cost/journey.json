@@ -1,0 +1,284 @@
+{
+  "schema": "closedwiz.journey.v1",
+  "repo": "example/synthetic",
+  "history": "unknown",
+  "duplicates": 0,
+  "specs": [
+    {
+      "spec": 3001,
+      "events": [
+        {
+          "id": "e2",
+          "kind": "spec",
+          "at": "2030-01-01T10:00:00Z",
+          "source": "s1",
+          "completeness": "complete"
+        }
+      ],
+      "usage": [
+        {
+          "provider": "claude",
+          "unit": "tokens",
+          "status": "known",
+          "value": 0,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "claude",
+          "unit": "credits",
+          "status": "known",
+          "value": 0,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "claude",
+          "unit": "usd",
+          "status": "known",
+          "value": 2,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "gpt",
+          "unit": "tokens",
+          "status": "known",
+          "value": 0,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "gpt",
+          "unit": "credits",
+          "status": "known",
+          "value": 0,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "gpt",
+          "unit": "usd",
+          "status": "known",
+          "value": 2,
+          "missing_days": [],
+          "attribution": "thread-record"
+        }
+      ]
+    }
+  ],
+  "tickets": [
+    {
+      "ticket": 3101,
+      "spec": 3001,
+      "state": "merged",
+      "pull_requests": [
+        4001
+      ],
+      "events": [
+        {
+          "id": "e3",
+          "kind": "ticket",
+          "at": "2030-01-01T11:00:00Z",
+          "source": "s1",
+          "completeness": "complete"
+        }
+      ],
+      "gaps": [],
+      "usage": [
+        {
+          "provider": "claude",
+          "unit": "tokens",
+          "status": "known",
+          "value": 0,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "claude",
+          "unit": "credits",
+          "status": "known",
+          "value": 0,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "claude",
+          "unit": "usd",
+          "status": "known",
+          "value": 1,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "gpt",
+          "unit": "tokens",
+          "status": "known",
+          "value": 0,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "gpt",
+          "unit": "credits",
+          "status": "known",
+          "value": 0,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "gpt",
+          "unit": "usd",
+          "status": "known",
+          "value": 1,
+          "missing_days": [],
+          "attribution": "thread-record"
+        }
+      ]
+    },
+    {
+      "ticket": 3102,
+      "spec": 3001,
+      "state": "merged",
+      "pull_requests": [
+        4001
+      ],
+      "events": [
+        {
+          "id": "e4",
+          "kind": "ticket",
+          "at": "2030-01-01T11:30:00Z",
+          "source": "s1",
+          "completeness": "complete"
+        }
+      ],
+      "gaps": [],
+      "usage": [
+        {
+          "provider": "claude",
+          "unit": "tokens",
+          "status": "known",
+          "value": 0,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "claude",
+          "unit": "credits",
+          "status": "known",
+          "value": 0,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "claude",
+          "unit": "usd",
+          "status": "known",
+          "value": 1,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "gpt",
+          "unit": "tokens",
+          "status": "known",
+          "value": 0,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "gpt",
+          "unit": "credits",
+          "status": "known",
+          "value": 0,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "gpt",
+          "unit": "usd",
+          "status": "known",
+          "value": 1,
+          "missing_days": [],
+          "attribution": "thread-record"
+        }
+      ]
+    }
+  ],
+  "pull_requests": [
+    {
+      "number": 4001,
+      "tickets": [
+        3101,
+        3102
+      ],
+      "state": "merged",
+      "revisions": {
+        "base": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "head": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "merge": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "experiment": null,
+      "events": [
+        {
+          "id": "e1",
+          "kind": "merge",
+          "at": "2030-01-01T12:00:00Z",
+          "source": "s1",
+          "completeness": "complete",
+          "commit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        }
+      ],
+      "findings": []
+    }
+  ],
+  "daily_usage": [
+    {
+      "date": "2030-01-01",
+      "merged_prs": 2,
+      "totals": {
+        "claude": {
+          "tokens": {
+            "total": 1000,
+            "per_merged_pr": 500.0
+          },
+          "credits": {
+            "total": 2,
+            "per_merged_pr": 1.0
+          },
+          "usd": {
+            "total": 3,
+            "per_merged_pr": 1.5
+          }
+        },
+        "gpt": {
+          "tokens": {
+            "total": 6000,
+            "per_merged_pr": 3000.0
+          },
+          "credits": {
+            "total": 9,
+            "per_merged_pr": 4.5
+          },
+          "usd": {
+            "total": 6,
+            "per_merged_pr": 3.0
+          }
+        },
+        "sandbox": {
+          "hours": {
+            "total": 6,
+            "per_merged_pr": 3.0
+          },
+          "usd": {
+            "total": 3,
+            "per_merged_pr": 1.5
+          }
+        }
+      }
+    }
+  ],
+  "sources": {
+    "s1": "https://github.com/example/synthetic/pull/4001"
+  }
+}

@@ -1,3 +1,25 @@
+//! Reading a stored new-thread record back (A1 phase 2): hand-written and
+//! strict, never serde's derived readers.
+//!
+//! **Why not derived readers** (Sol, phase 1 round 2, and B1's rounds 1
+//! and 2): they also take a struct as a positional array, ignore an extra
+//! field, default a missing nullable one, and take a unit variant as an
+//! externally tagged object (`{"claimed": null}`). So no new-thread type
+//! has a serde reader at all (`no_readers` still proves it for every one).
+//! The bytes are read into a [`StrictJson`] tree, whose one hand-written
+//! reader refuses a key given twice, and [`NewThreadRecord::read`] reads the
+//! record from the tree on B1's rules:
+//! - an object only from a JSON object with **exactly** its keys: every one
+//!   required, none extra, each once;
+//! - a label only from a string in its fixed list;
+//! - a tagged outcome only with its `kind` and exactly that kind's keys;
+//! - every checked string (op id, request id, settings, hashes, the
+//!   project reference, the text) through the core's own rule;
+//! - everything else refused, with the path of what was refused.
+//!
+//! The contract tables in `tests/new-thread/contract_tables.rs` run every
+//! good and bad form through this reader and the schema alike.
+
 use std::fmt;
 
 use serde::de::{self, Deserialize, Deserializer, MapAccess, SeqAccess, Visitor};
@@ -126,8 +148,8 @@ impl<'a> Object<'a> {
         let Json::Object(entries) = json else {
             return refused(path, "not an object");
         };
-        if let Some((key, _)) = entries.iter().find(|(k, _)| !keys.contains(&k.as_str())) {
-            return refused(path, &format!("the key {key:?} is not one it has"));
+        if entries.iter().any(|(k, _)| !keys.contains(&k.as_str())) {
+            return refused(path, "has a key that is not one of its keys");
         }
         if let Some(key) = keys.iter().find(|k| !entries.iter().any(|(e, _)| e == *k)) {
             return refused(path, &format!("the key {key:?} is missing"));
@@ -527,7 +549,7 @@ fn gap(json: &Json, path: &str) -> Read<Gap> {
     })
 }
 
-/// The keys of a claim file (B2, the implementation).
+/// The keys of a claim file (B2, ClosedWiz#15).
 pub const OP_REF_KEYS: &[&str] = &["kind", "op_id"];
 
 /// The operation a claim file names (B2), read strictly: exactly `kind`
@@ -573,7 +595,9 @@ impl NewThreadRecord {
     /// Beyond the contract's shape, a record must also agree with itself:
     /// its request id is its op id's, a kept text has the binding's hash
     /// and the recorded size, and its attachments (absent means none, B2)
-    /// have the binding's digest. A record that doesn't is refused.
+    /// have the binding's digest. A created outcome requires a finished
+    /// state; this adds no timestamp invariant. A record that doesn't
+    /// agree with itself is refused.
     pub fn read(json: &StrictJson) -> Result<Self, ReadError> {
         let path = "record";
         let with_attachments = matches!(&json.0, Json::Object(entries)
@@ -625,6 +649,81 @@ impl NewThreadRecord {
         {
             return refused("record.text", "not the bound text");
         }
+        if matches!(record.outcome, Some(Outcome::Created { .. }))
+            && record.state != RecordState::Finished
+        {
+            return refused(
+                "record.state",
+                "a created outcome requires a finished state",
+            );
+        }
         Ok(record)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unknown_record_keys_remain_refused_at_each_level() {
+        let cases: [(&str, fn()); 2] = [
+            (
+                "an_unexpected_key_is_refused_without_its_text",
+                an_unexpected_key_is_refused_without_its_text,
+            ),
+            (
+                "an_unexpected_nested_key_is_refused_without_its_text",
+                an_unexpected_nested_key_is_refused_without_its_text,
+            ),
+        ];
+        for (name, case) in cases {
+            if let Err(failure) = std::panic::catch_unwind(case) {
+                let detail = failure
+                    .downcast_ref::<String>()
+                    .map(String::as_str)
+                    .or_else(|| failure.downcast_ref::<&str>().copied())
+                    .unwrap_or("non-string panic payload");
+                panic!("{name}\n{detail}");
+            }
+        }
+    }
+
+    fn an_unexpected_key_is_refused_without_its_text() {
+        let extra = ("SYNTHETIC_KEY".to_owned(), Json::Int(1));
+        let schema = (
+            "schema".to_owned(),
+            Json::String(RECORD_SCHEMA_ID.to_owned()),
+        );
+        for entries in [vec![extra.clone()], vec![schema, extra]] {
+            let err =
+                NewThreadRecord::read(&StrictJson(Json::Object(entries))).expect_err("refused");
+            assert_eq!(err.0, "record: has a key that is not one of its keys");
+        }
+    }
+
+    fn an_unexpected_nested_key_is_refused_without_its_text() {
+        for key in ["SYNTHETIC_KEY", "SYNTHETIC_OTHER_KEY"] {
+            // Only fields read before binding need values: the refusal must
+            // occur at binding, before any of the remaining fields are read.
+            let entries = RECORD_KEYS
+                .iter()
+                .map(|name| {
+                    let value = match *name {
+                        "schema" => Json::String(RECORD_SCHEMA_ID.to_owned()),
+                        "op_id" => Json::String("op-synthetic-508".to_owned()),
+                        "binding" => Json::Object(vec![(key.to_owned(), Json::Int(1))]),
+                        _ => Json::Null,
+                    };
+                    ((*name).to_owned(), value)
+                })
+                .collect();
+            let err =
+                NewThreadRecord::read(&StrictJson(Json::Object(entries))).expect_err("refused");
+            assert_eq!(
+                err.0,
+                "record.binding: has a key that is not one of its keys"
+            );
+        }
     }
 }

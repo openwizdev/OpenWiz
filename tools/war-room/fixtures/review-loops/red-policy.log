@@ -1,0 +1,14 @@
+# RL0 red: compare accepted BEFORE and AFTER benches with different defect policies (head 32d4adce4618e2124f0133475ab0de39bc4ce84e plus this test)
+F
+======================================================================
+FAIL: test_a_changed_defect_policy_refuses_the_comparison (__main__.Compare.test_a_changed_defect_policy_refuses_the_comparison)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_review_loops.py", line 334, in test_a_changed_defect_policy_refuses_the_comparison
+    with self.assertRaisesRegex(ValueError, 'defect policy'):
+AssertionError: ValueError not raised
+
+----------------------------------------------------------------------
+Ran 1 test in 0.261s
+
+FAILED (failures=1)

@@ -130,7 +130,8 @@ const ANSWERING: &[&str] = &[
 
 #[test]
 fn every_error_drift_and_version_case_matches_the_cli() {
-    for scenario in ANSWERING {
+    // Each scenario has its own fake and server, so they run at once (#1259).
+    crate::at_once::at_once(ANSWERING, 4, |scenario| {
         let fake = Fake::new(&format!("web_a6_{scenario}"), scenario);
         let server = serve(&fake);
         for (target, args) in [
@@ -155,7 +156,7 @@ fn every_error_drift_and_version_case_matches_the_cli() {
         ] {
             assert_matches(&server, &fake, target, &args);
         }
-    }
+    });
 }
 
 #[test]
@@ -178,7 +179,11 @@ fn every_timeout_case_matches_the_cli() {
             let name = format!("web_a6_{scenario}_{n}");
             cases.push(thread::spawn(move || {
                 let fake = Fake::new(&name, scenario);
-                let server = serve(&fake);
+                let source = timeout_source(&fake);
+                let server = crate::http::serve_source(
+                    std::sync::Arc::new(source.clone()),
+                    Default::default(),
+                );
                 let by_server = {
                     let addr = server.addr;
                     let target = target.to_owned();
@@ -186,7 +191,7 @@ fn every_timeout_case_matches_the_cli() {
                 };
                 let mut argv = args.clone();
                 argv.push("--json");
-                let (code, out, err) = fake.cli(&argv);
+                let (code, out, err) = crate::fake::cli_with(&source, &argv);
                 let r = by_server.join().expect("server request");
                 compare_timeout(target, &argv, &r, code, &out, &err);
             }));
@@ -199,7 +204,7 @@ fn every_timeout_case_matches_the_cli() {
 
 /// [`compare`] for a timeout case. The server and the CLI each measure
 /// their own read timeout, so "timed out after N ms" may differ by a
-/// millisecond: N is ignored on both sides, everything else is
+/// millisecond (#62): N is ignored on both sides, everything else is
 /// compared byte for byte.
 fn compare_timeout(target: &str, argv: &[&str], r: &Response, code: i32, out: &str, err: &str) {
     let r = Response {
@@ -209,6 +214,10 @@ fn compare_timeout(target: &str, argv: &[&str], r: &Response, code: i32, out: &s
     compare(target, argv, &r, code, &any_ms(out), &any_ms(err));
 }
 
+/// `s` with N in each complete "timed out after N ms" replaced by `f(N)`.
+/// Only that exact form, with ASCII digits and the ` ms` unit, is touched;
+/// any other count or unit after "timed out after " is left as it is (Sol,
+/// PR #63).
 fn map_ms(s: &str, f: impl Fn(u64) -> String) -> String {
     const AT: &str = "timed out after ";
     const UNIT: &str = " ms";
@@ -230,6 +239,8 @@ fn map_ms(s: &str, f: impl Fn(u64) -> String) -> String {
     mapped
 }
 
+/// Sol, PR #63: the normalization covers only "timed out after N ms".
+/// Other counts, other units and different read names stay distinct.
 #[test]
 fn only_the_millisecond_count_is_ignored() {
     assert_eq!(
@@ -270,6 +281,9 @@ fn one_ms_later(s: &str) -> String {
     map_ms(s, |ms| (ms + 1).to_string())
 }
 
+/// #62: the server and the CLI each measure their own read timeout, so
+/// one may say 15001 ms where the other says 15000 ms. A forced 1 ms
+/// difference, on an error and on a partial result, is not a mismatch.
 #[test]
 fn a_timeout_one_ms_apart_still_matches() {
     let cases = [
@@ -285,7 +299,7 @@ fn a_timeout_one_ms_apart_still_matches() {
             let fake = Fake::new(&format!("web_a6_one_ms_{scenario}"), scenario);
             let mut argv = args;
             argv.push("--json");
-            let (code, out, err) = fake.cli(&argv);
+            let (code, out, err) = crate::fake::cli_with(&timeout_source(&fake), &argv);
             assert!(
                 out.contains("timed out after ") || err.contains("timed out after "),
                 "{scenario}: no timeout in {out}{err}"
@@ -318,4 +332,72 @@ fn a_timeout_one_ms_apart_still_matches() {
         any_ms("thread list timed out after 15000 ms"),
         any_ms("thread show timed out after 15000 ms")
     );
+}
+
+// A per-read seam must not turn later reads into budget_exhausted (#1259).
+#[test]
+fn x2_a_fixture_read_cap_reaps_the_hang_and_keeps_later_reads_available() {
+    use openwiz_core::model::SessionId;
+    use openwiz_core::source::{SessionSource, SourceError};
+    use std::time::{Duration, Instant};
+    let fake = Fake::new("x2-per-source-cap", "show-timeout");
+    // As in the timeout parity proofs, allow executable startup under CI load.
+    // The shared deadline must also leave room for the later successful reads.
+    let source = fake
+        .source()
+        .with_read_timeout_for_fixtures(Duration::from_secs(1));
+    let deadline = Instant::now() + Duration::from_secs(10);
+    let answer = source.session_detail(&SessionId("thr_syn_0002".into()), deadline);
+    assert!(
+        matches!(answer, Err(SourceError::TimedOut { .. })),
+        "{answer:?}"
+    );
+    let pid = fake.hung_pid().expect("the hung read must start");
+    assert!(
+        !std::path::Path::new("/proc").join(pid.trim()).exists(),
+        "child must be reaped"
+    );
+    assert_eq!(
+        source.version(deadline),
+        Ok("v127".into()),
+        "the next read keeps its run budget"
+    );
+    let zero = fake.source().with_read_timeout_for_fixtures(Duration::ZERO);
+    assert!(matches!(
+        zero.version(deadline),
+        Err(SourceError::TimedOut { after_ms: 0 })
+    ));
+    assert_eq!(
+        fake.source().version(deadline),
+        Ok("v127".into()),
+        "a default source is unaffected"
+    );
+}
+
+fn timeout_source(fake: &Fake) -> openwiz_adapter_cloudroom::source::CloudRoomSource {
+    fake.source().with_read_timeout_for_fixtures(timeout())
+}
+
+/// The read timeout, once per run: every read but the hung one must finish
+/// inside it on a busy host too (#2645), so it is scaled to one unheld
+/// detailed inventory read timed now. The adapter keeps it at or below its
+/// own 15-second read timeout.
+fn timeout() -> std::time::Duration {
+    static TIMEOUT: std::sync::OnceLock<std::time::Duration> = std::sync::OnceLock::new();
+    *TIMEOUT.get_or_init(|| {
+        crate::real_time::scaled(
+            "a6_timeout_parity",
+            crate::real_time::pick(
+                "a6_timeout_parity",
+                std::time::Duration::from_secs(15),
+                std::time::Duration::from_secs(1),
+            ),
+            std::time::Duration::from_secs(15),
+            || {
+                let fake = Fake::new("web_a6_timeout_calibrate", "normal");
+                let server = serve(&fake);
+                assert_eq!(server.get("/api/v1/inventory?detail=2").status, 200);
+            },
+        )
+    })
 }

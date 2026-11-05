@@ -98,7 +98,7 @@ fn text_shows_ungrouped_sessions_with_their_reason() {
     assert!(text.contains(&reason), "the reason is shown:\n{text}");
 }
 
-/// One source is read twice;
+/// New in ticket 1's correction round 1 (Sol S6). One source is read twice;
 /// between the runs a project disappears, then comes back. Each run groups by
 /// its own project list only, so a mapping kept from an earlier run is caught.
 #[test]
@@ -171,7 +171,7 @@ fn grouping_uses_only_the_current_runs_project_list() {
     }
 }
 
-/// Shared project
+/// New in ticket 1's correction round 1 (Sol S6). Issue #3: shared project
 /// names are shown as `name~<last 6 characters of the id>`; a unique name is
 /// shown as it is. JSON keeps the reported name; the suffix is display only.
 #[test]
@@ -209,6 +209,11 @@ fn shared_project_names_are_shown_with_the_last_six_characters_of_the_id() {
     );
 }
 
+/// New in ticket 2, after the Sol review (S1): text groups follow the
+/// verified project id, never the printed name. A project named
+/// `_ungrouped`, and two names that print the same once unsafe characters
+/// are replaced, each keep their own header, distinct from the others and
+/// from `/factories/_ungrouped/`.
 #[test]
 fn text_groups_follow_the_project_id_not_the_printed_name() {
     use openwiz_core::source::ProjectRecord;
@@ -272,6 +277,8 @@ fn text_groups_follow_the_project_id_not_the_printed_name() {
     );
 }
 
+/// New in ticket 2, after the Sol re-check (S1, residual): headers stay
+/// distinct even when a project's name is another one's widened header.
 #[test]
 fn group_headers_stay_distinct_when_a_name_copies_a_widened_header() {
     use openwiz_core::source::ProjectRecord;

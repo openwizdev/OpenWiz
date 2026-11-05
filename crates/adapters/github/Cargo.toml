@@ -1,0 +1,17 @@
+[package]
+name = "openwiz-adapter-github"
+description = "OpenWiz adapter for GitHub: fleet reads through gh, each on its module's part of the allowlist"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+# serde and serde_json for the strict hand-written readers its modules
+# will have (B1's pattern, PR #88), as the CloudRoom adapter does.
+[dependencies]
+openwiz-core = { path = "../../core" }
+serde.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

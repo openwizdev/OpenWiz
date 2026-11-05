@@ -1,0 +1,524 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:openwiz:schema:cli:v1",
+  "title": "openwiz.cli.v1",
+  "description": "Agent catalogue, additive CLI errors/help/capability, and the unchanged local loop-switch event. Semantic requirements and implementation boundaries: cli.v1.md.",
+  "oneOf": [
+    {"$ref":"#/$defs/engine_report"},
+    {
+      "$ref": "#/$defs/catalogue"
+    },
+    {
+      "$ref": "#/$defs/error"
+    },
+    {
+      "$ref": "#/$defs/help"
+    },
+    {
+      "$ref": "#/$defs/terminal_capability"
+    },
+    {
+      "$ref": "#/$defs/loop_switch"
+    },
+    {
+      "$ref": "#/$defs/fleet_due"
+    }
+  ],
+  "$defs": {
+    "catalogue": {
+      "type": "object",
+      "required": [
+        "schema",
+        "kind",
+        "flags",
+        "commands",
+        "notes"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "const": "openwiz.cli.v1"
+        },
+        "kind": {
+          "const": "catalogue"
+        },
+        "flags": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/flag"
+          }
+        },
+        "commands": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/command"
+          }
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "flag": {
+      "type": "object",
+      "required": [
+        "name",
+        "aliases",
+        "arity",
+        "default",
+        "description",
+        "inline",
+        "repeatable"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "aliases": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "arity": {
+          "enum": [
+            "switch",
+            "value",
+            "delimiter"
+          ]
+        },
+        "default": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "inline": {
+          "type": "boolean"
+        },
+        "repeatable": {
+          "type": "boolean"
+        }
+      }
+    },
+    "argument": {
+      "type": "object",
+      "required": [
+        "name",
+        "required",
+        "repeatable",
+        "description"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "repeatable": {
+          "type": "boolean"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "result": {
+      "type": "object",
+      "required": [
+        "schema",
+        "reference",
+        "when"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reference": {
+          "type": "string",
+          "minLength": 1
+        },
+        "when": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "exit": {
+      "type": "object",
+      "required": [
+        "code",
+        "meaning"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "enum": [
+            0,
+            1,
+            2,
+            3,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14
+          ]
+        },
+        "meaning": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "command": {
+      "type": "object",
+      "required": [
+        "name",
+        "argv",
+        "aliases",
+        "flags",
+        "required_flags",
+        "arguments",
+        "stdin",
+        "effects",
+        "sources",
+        "results",
+        "exits",
+        "examples",
+        "rules",
+        "json"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "argv": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "aliases": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "flags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required_flags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "arguments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/argument"
+          }
+        },
+        "stdin": {
+          "enum": [
+            "never",
+            "text_if_absent"
+          ]
+        },
+        "effects": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "none",
+              "source_read",
+              "state_read",
+              "state_write",
+              "send",
+              "create",
+              "stage",
+              "delete",
+              "loop_switch",
+              "fleet_action"
+            ]
+          }
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "room-cli",
+              "gh",
+              "df",
+              "git",
+              "/usr/bin/python3",
+              "/usr/bin/openssl",
+              "/usr/bin/curl"
+            ]
+          }
+        },
+        "results": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/result"
+          }
+        },
+        "exits": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/exit"
+          }
+        },
+        "examples": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "json": {
+          "type": "boolean"
+        }
+      }
+    },
+    "error": {
+      "type": "object",
+      "required": [
+        "schema",
+        "command",
+        "exit_code",
+        "error"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "const": "openwiz.cli-error.v1"
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "exit_code": {
+          "enum": [
+            1,
+            2,
+            3,
+            5,
+            10
+          ]
+        },
+        "error": {
+          "type": "object",
+          "required": [
+            "kind",
+            "message"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "usage",
+                "read_failed",
+                "not_found",
+                "store_unavailable",
+                "unavailable"
+              ]
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "help": {
+      "type": "object",
+      "required": [
+        "schema",
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "const": "openwiz.cli-help.v1"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "terminal_capability": {
+      "type": "object",
+      "required": [
+        "schema",
+        "available",
+        "executable",
+        "transport",
+        "actions",
+        "reason"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "const": "openwiz.terminal-capability.v1"
+        },
+        "available": {
+          "type": "boolean"
+        },
+        "executable": {
+          "const": "openwiz-terminal"
+        },
+        "transport": {
+          "const": "loopback-http"
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "answer",
+              "send",
+              "new_thread"
+            ]
+          }
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "loop_switch": {
+      "type": "object",
+      "required": [
+        "loop_id",
+        "definition_revision",
+        "repository",
+        "project",
+        "enabled",
+        "actor",
+        "at_ms"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "loop_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "definition_revision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "repository": {
+          "type": "string",
+          "minLength": 1
+        },
+        "project": {
+          "type": "string",
+          "minLength": 1
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "actor": {
+          "type": "string",
+          "minLength": 1
+        },
+        "at_ms": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "fleet_due": {
+      "type": "object",
+      "required": [
+        "schema",
+        "candidates"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "const": "openwiz.fleet-due.v1"
+        },
+        "candidates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "spec",
+              "ticket"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "spec": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "ticket": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "engine_selection": {"type":"object","additionalProperties":false,"required":["location","revision","runtime","operation_id","fingerprint","cost"],"properties":{"location":{"enum":["cloud","local"]},"revision":{"type":"integer","minimum":0,"maximum":9007199254740991},"runtime":{"type":"string","pattern":"^0\\.[0-9]{1,10}\\.[0-9]{1,10} [0-9a-f]{40}$"},"operation_id":{"type":"string","pattern":"^[0-9a-f]{32}$"},"fingerprint":{"type":"string","pattern":"^[0-9a-f]{64}$"},"cost":{"oneOf":[{"type":"null"},{"$ref":"#/$defs/engine_cost_evidence"}]}}},
+    "engine_cost_evidence": {"type":"object","additionalProperties":false,"required":["source","provenance","credits","window_s","free_allowance","observed_at","allowance_at"],"properties":{"source":{"const":"cloudroom_usage"},"provenance":{"enum":["measured","estimated"]},"credits":{"type":"number","minimum":0},"window_s":{"type":"number","exclusiveMinimum":0},"free_allowance":{"type":"number","minimum":0},"observed_at":{"type":"integer","minimum":0,"maximum":9007199254740991},"allowance_at":{"type":"integer","minimum":0,"maximum":9007199254740991}}},
+    "engine_report": {"type":"object","additionalProperties":false,"required":["schema","engine","operation","activation_allowed","location_status","reason","cost","default_location","service_config","pc_activation","login"],"properties":{"schema":{"const":"openwiz.engine.v1"},"engine":{"oneOf":[{"type":"null"},{"$ref":"#/$defs/engine_selection"}]},"operation":{"oneOf":[{"type":"null"},{"$ref":"#/$defs/engine_operation"}]},"activation_allowed":{"const":false},"location_status":{"enum":["not_activated","held","unknown"]},"reason":{"type":"string","minLength":1},"cost":{"$ref":"#/$defs/engine_cost"},"default_location":{"enum":[null,"cloud","local"]},"service_config":{"oneOf":[{"type":"null"},{"type":"object","description":"service/config.json: written by Jake's setup, never by the service.","required":["schema","repository","project","orchestrator_thread","service_issue","github_app","tick","health","server"],"additionalProperties":false,"properties":{"schema":{"const":"openwiz.service-config.v1"},"repository":{"type":"object","required":["owner","name"],"additionalProperties":false,"properties":{"owner":{"type":"string","minLength":1,"pattern":"^[A-Za-z0-9][-A-Za-z0-9]*$"},"name":{"type":"string","minLength":1,"pattern":"^[-A-Za-z0-9_.]*$"}}},"operator":{"type":"string","minLength":1,"description":"Optional explicit local operator identity set at install. Switch writes require it and refuse blank or NUL-containing values. Never inferred from an owner or request."},"project":{"type":"string","minLength":1,"maxLength":128,"pattern":"^[A-Za-z0-9_][-A-Za-z0-9_]*$","description":"A CloudRoom id (thread, loop, project): the adapter's rule, 1 to 128 ASCII letters, digits, _ or -, not starting with -."},"orchestrator_thread":{"type":"string","minLength":1,"maxLength":128,"pattern":"^[A-Za-z0-9_][-A-Za-z0-9_]*$","description":"A CloudRoom id (thread, loop, project): the adapter's rule, 1 to 128 ASCII letters, digits, _ or -, not starting with -."},"service_issue":{"type":"integer","minimum":1,"description":"A GitHub issue's number."},"github_app":{"type":"object","required":["app_id","installation_id"],"additionalProperties":false,"properties":{"app_id":{"type":"integer","minimum":1,"description":"A GitHub App's or installation's id: not a secret."},"installation_id":{"type":"integer","minimum":1,"description":"A GitHub App's or installation's id: not a secret."}}},"tick":{"type":"object","required":["every_s"],"additionalProperties":false,"properties":{"every_s":{"type":"integer","minimum":1,"description":"A duration in whole seconds, at least 1."}}},"health":{"type":"object","required":["every_s"],"additionalProperties":false,"properties":{"every_s":{"type":"integer","minimum":1,"description":"A duration in whole seconds, at least 1."}}},"server":{"type":"object","required":["port","allowed_host","probe_timeout_s"],"additionalProperties":false,"properties":{"port":{"type":"integer","minimum":1,"description":"1 to 65535. The maximum is the md's rule: this checker has no maximum keyword."},"allowed_host":{"oneOf":[{"type":"null"},{"type":"string","minLength":1}]},"probe_timeout_s":{"type":"integer","minimum":1,"description":"A duration in whole seconds, at least 1."}}}}}]},"pc_activation":{"$ref":"#/$defs/engine_pc_activation"},"login":{"const":"unknown","description":"Reported, never inferred (LE1)."}}},
+    "engine_pc_activation": {"type":"object","additionalProperties":false,"required":["state","operation_id"],"description":"The T9 PC activation journal outcome, read with its strict reader.","properties":{"state":{"enum":["absent","unreadable","proposed","held","applied"]},"operation_id":{"oneOf":[{"type":"null"},{"type":"string","pattern":"^[0-9a-f]{32}$"}]}}},
+    "engine_cost": {"type":"object","additionalProperties":false,"required":["provenance","credits","window_s","monthly_projection","free_allowance","reason"],"properties":{"provenance":{"enum":["measured","estimated","unknown"]},"credits":{"type":["number","null"],"minimum":0},"window_s":{"type":["number","null"],"exclusiveMinimum":0},"monthly_projection":{"type":["number","null"],"minimum":0},"free_allowance":{"type":["number","null"],"minimum":0},"reason":{"type":"string","minLength":1}}},
+    "engine_operation": {"type":"object","additionalProperties":false,"required":["operation_id","kind","phase","fingerprint","effects","reason"],"properties":{"operation_id":{"type":"string","pattern":"^[0-9a-f]{32}$"},"kind":{"const":"activate_engine"},"phase":{"enum":["proposed","applied","refused","uncertain"]},"fingerprint":{"type":"string","pattern":"^[0-9a-f]{64}$"},"effects":{"type":"array","minItems":1,"maxItems":8,"items":{"type":"string","minLength":1}},"reason":{"type":"string","minLength":1}}}
+  }
+}

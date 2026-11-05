@@ -1,0 +1,16 @@
+# label	target	text (synthetic; sheet L-7, decided 2026-10-30: "reply ok" prompts by label and hash)
+N1	P-A	- OpenWiz acceptance 0.0.4 N-1, claude-code from the CLI, a prompt that starts with a dash: reply with the word ok, then stop.
+N2	P-A	OpenWiz acceptance 0.0.4 N-2, codex from the CLI: /tmp/openwiz-acceptance/not-a-file.txt is only text, do not open it; reply with the word ok, then stop.
+N3	P-A	OpenWiz acceptance 0.0.4 N-3, from the web with one image attached: reply with the attached image's file name and SHA-256 in hex, then stop.
+N4	P-A	OpenWiz acceptance 0.0.4 N-4, the CLI killed mid-create: reply with the word ok, then stop.
+N5	P-A	OpenWiz acceptance 0.0.4 N-5, the server killed before the call: this prompt must never arrive.
+N6	P-A	OpenWiz acceptance 0.0.4 N-6, N-2's op id reused with another text: this prompt must never arrive.
+R1	P-A	OpenWiz acceptance 0.0.4 R-1, a combination CloudRoom does not offer: this prompt must never arrive.
+R2	P-N	OpenWiz acceptance 0.0.4 R-2, a project without a GitHub remote: this prompt must never arrive.
+R3	P-A	OpenWiz acceptance 0.0.4 R-3, an image 1 byte over 10 MiB: this prompt must never arrive.
+R4	T-B	OpenWiz acceptance 0.0.4 R-4, a HEIC image: this message must never arrive.
+R5	T-B	OpenWiz acceptance 0.0.4 R-5, Steer with an attachment: this message must never arrive.
+R6	P-A	OpenWiz acceptance 0.0.4 R-6, the owner-only probes: this prompt must never arrive.
+A1	T-B	OpenWiz acceptance 0.0.4 A-1, two files attached from the CLI: reply with each attached file's name and SHA-256 in hex, then stop.
+A2	T-A	OpenWiz acceptance 0.0.4 A-2, one image attached from the web: reply with the attached image's file name and SHA-256 in hex, then stop.
+U1	T-B	OpenWiz acceptance 0.0.4 U-1, the network cut mid-upload: this draft must never be sent.

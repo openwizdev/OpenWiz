@@ -1,0 +1,433 @@
+{
+  "schema": "openwiz.war-room.v1",
+  "sample_id": "2030-01-02T12:00:00Z",
+  "sample_at": "2030-01-02T12:00:00Z",
+  "assembled_at": "2030-01-02T12:00:00Z",
+  "groups": [
+    "throughput",
+    "stage_waits",
+    "board",
+    "ci",
+    "usage",
+    "decisions"
+  ],
+  "providers": [
+    {
+      "slot": "activity",
+      "state": "unavailable",
+      "prerequisites": [
+        "WR8 #2352: complete existing PR/closing-ticket direction metadata and exact current CI job/pool observations; no inferred queued pool."
+      ],
+      "metrics": []
+    },
+    {
+      "slot": "stage_waits",
+      "state": "unavailable",
+      "prerequisites": [
+        "WR3 #2347: verified merges of TL1 #2336 and TL2 #2337, then their actual settings and measured stage contracts; native fields unavailable here."
+      ],
+      "metrics": []
+    },
+    {
+      "slot": "board",
+      "state": "partial",
+      "metrics": [
+        {
+          "id": "graph-readiness",
+          "group": "board",
+          "label": "Validated board graph; point counts remain Unknown",
+          "state": "partial",
+          "value": null,
+          "unit": "count",
+          "native_unit": "count",
+          "statistic": "observation",
+          "window": null,
+          "observed_at": "2030-01-02T12:00:00Z",
+          "fresh_until": null,
+          "freshness": "unknown",
+          "source": {
+            "path": "tools/war-room/fixtures/page-history/board-graph.json",
+            "schema": "openwiz.plan-links.v1",
+            "sha256": "df1fe7987882ca57b2faa6ff84870000af952c925f3ce0f859084280249189d1"
+          },
+          "evidence": [
+            "https://github.com/synthetic-owner/synthetic-repo/issues/9000"
+          ],
+          "sample": {
+            "observed": 0,
+            "expected": null,
+            "identities": [],
+            "numerator": null,
+            "denominator": null
+          },
+          "dimensions": {
+            "direction": null,
+            "pool": null,
+            "stage": null,
+            "ticket": null,
+            "cohort": "graph-readiness"
+          },
+          "interval": null,
+          "prerequisites": [
+            "Native point observation has no nonempty native window; numeric projection requires an admitted suite point-window representation. Approved partial/null observation only."
+          ]
+        },
+        {
+          "id": "ticket-9001",
+          "group": "board",
+          "label": "Board ticket state: ready",
+          "state": "partial",
+          "value": null,
+          "unit": "count",
+          "native_unit": "count",
+          "statistic": "observation",
+          "window": null,
+          "observed_at": "2030-01-02T12:00:00Z",
+          "fresh_until": null,
+          "freshness": "unknown",
+          "source": {
+            "path": "tools/war-room/fixtures/page-history/board-graph.json",
+            "schema": "openwiz.plan-links.v1",
+            "sha256": "df1fe7987882ca57b2faa6ff84870000af952c925f3ce0f859084280249189d1"
+          },
+          "evidence": [
+            "https://github.com/synthetic-owner/synthetic-repo/issues/9001"
+          ],
+          "sample": {
+            "observed": 0,
+            "expected": null,
+            "identities": [],
+            "numerator": null,
+            "denominator": null
+          },
+          "dimensions": {
+            "direction": null,
+            "pool": null,
+            "stage": null,
+            "ticket": 9001,
+            "cohort": "ticket-9001"
+          },
+          "interval": null,
+          "prerequisites": [
+            "Native point observation has no nonempty native window; numeric projection requires an admitted suite point-window representation. Approved partial/null observation only."
+          ]
+        },
+        {
+          "id": "ticket-9002",
+          "group": "board",
+          "label": "Board ticket state: blocked",
+          "state": "partial",
+          "value": null,
+          "unit": "count",
+          "native_unit": "count",
+          "statistic": "observation",
+          "window": null,
+          "observed_at": "2030-01-02T12:00:00Z",
+          "fresh_until": null,
+          "freshness": "unknown",
+          "source": {
+            "path": "tools/war-room/fixtures/page-history/board-graph.json",
+            "schema": "openwiz.plan-links.v1",
+            "sha256": "df1fe7987882ca57b2faa6ff84870000af952c925f3ce0f859084280249189d1"
+          },
+          "evidence": [
+            "https://github.com/synthetic-owner/synthetic-repo/issues/9002"
+          ],
+          "sample": {
+            "observed": 0,
+            "expected": null,
+            "identities": [],
+            "numerator": null,
+            "denominator": null
+          },
+          "dimensions": {
+            "direction": null,
+            "pool": null,
+            "stage": null,
+            "ticket": 9002,
+            "cohort": "ticket-9002"
+          },
+          "interval": null,
+          "prerequisites": [
+            "Native point observation has no nonempty native window; numeric projection requires an admitted suite point-window representation. Approved partial/null observation only."
+          ]
+        },
+        {
+          "id": "ticket-9003",
+          "group": "board",
+          "label": "Board ticket state: blocked",
+          "state": "partial",
+          "value": null,
+          "unit": "count",
+          "native_unit": "count",
+          "statistic": "observation",
+          "window": null,
+          "observed_at": "2030-01-02T12:00:00Z",
+          "fresh_until": null,
+          "freshness": "unknown",
+          "source": {
+            "path": "tools/war-room/fixtures/page-history/board-graph.json",
+            "schema": "openwiz.plan-links.v1",
+            "sha256": "df1fe7987882ca57b2faa6ff84870000af952c925f3ce0f859084280249189d1"
+          },
+          "evidence": [
+            "https://github.com/synthetic-owner/synthetic-repo/issues/9003"
+          ],
+          "sample": {
+            "observed": 0,
+            "expected": null,
+            "identities": [],
+            "numerator": null,
+            "denominator": null
+          },
+          "dimensions": {
+            "direction": null,
+            "pool": null,
+            "stage": null,
+            "ticket": 9003,
+            "cohort": "ticket-9003"
+          },
+          "interval": null,
+          "prerequisites": [
+            "Native point observation has no nonempty native window; numeric projection requires an admitted suite point-window representation. Approved partial/null observation only."
+          ]
+        },
+        {
+          "id": "ticket-9004",
+          "group": "board",
+          "label": "Board ticket state: blocked",
+          "state": "partial",
+          "value": null,
+          "unit": "count",
+          "native_unit": "count",
+          "statistic": "observation",
+          "window": null,
+          "observed_at": "2030-01-02T12:00:00Z",
+          "fresh_until": null,
+          "freshness": "unknown",
+          "source": {
+            "path": "tools/war-room/fixtures/page-history/board-graph.json",
+            "schema": "openwiz.plan-links.v1",
+            "sha256": "df1fe7987882ca57b2faa6ff84870000af952c925f3ce0f859084280249189d1"
+          },
+          "evidence": [
+            "https://github.com/synthetic-owner/synthetic-repo/issues/9004"
+          ],
+          "sample": {
+            "observed": 0,
+            "expected": null,
+            "identities": [],
+            "numerator": null,
+            "denominator": null
+          },
+          "dimensions": {
+            "direction": null,
+            "pool": null,
+            "stage": null,
+            "ticket": 9004,
+            "cohort": "ticket-9004"
+          },
+          "interval": null,
+          "prerequisites": [
+            "Native point observation has no nonempty native window; numeric projection requires an admitted suite point-window representation. Approved partial/null observation only."
+          ]
+        },
+        {
+          "id": "ticket-9005",
+          "group": "board",
+          "label": "Board ticket state: ready",
+          "state": "partial",
+          "value": null,
+          "unit": "count",
+          "native_unit": "count",
+          "statistic": "observation",
+          "window": null,
+          "observed_at": "2030-01-02T12:00:00Z",
+          "fresh_until": null,
+          "freshness": "unknown",
+          "source": {
+            "path": "tools/war-room/fixtures/page-history/board-graph.json",
+            "schema": "openwiz.plan-links.v1",
+            "sha256": "df1fe7987882ca57b2faa6ff84870000af952c925f3ce0f859084280249189d1"
+          },
+          "evidence": [
+            "https://github.com/synthetic-owner/synthetic-repo/issues/9005"
+          ],
+          "sample": {
+            "observed": 0,
+            "expected": null,
+            "identities": [],
+            "numerator": null,
+            "denominator": null
+          },
+          "dimensions": {
+            "direction": null,
+            "pool": null,
+            "stage": null,
+            "ticket": 9005,
+            "cohort": "ticket-9005"
+          },
+          "interval": null,
+          "prerequisites": [
+            "Native point observation has no nonempty native window; numeric projection requires an admitted suite point-window representation. Approved partial/null observation only."
+          ]
+        },
+        {
+          "id": "ticket-9006",
+          "group": "board",
+          "label": "Board ticket state: blocked",
+          "state": "partial",
+          "value": null,
+          "unit": "count",
+          "native_unit": "count",
+          "statistic": "observation",
+          "window": null,
+          "observed_at": "2030-01-02T12:00:00Z",
+          "fresh_until": null,
+          "freshness": "unknown",
+          "source": {
+            "path": "tools/war-room/fixtures/page-history/board-graph.json",
+            "schema": "openwiz.plan-links.v1",
+            "sha256": "df1fe7987882ca57b2faa6ff84870000af952c925f3ce0f859084280249189d1"
+          },
+          "evidence": [
+            "https://github.com/synthetic-owner/synthetic-repo/issues/9006"
+          ],
+          "sample": {
+            "observed": 0,
+            "expected": null,
+            "identities": [],
+            "numerator": null,
+            "denominator": null
+          },
+          "dimensions": {
+            "direction": null,
+            "pool": null,
+            "stage": null,
+            "ticket": 9006,
+            "cohort": "ticket-9006"
+          },
+          "interval": null,
+          "prerequisites": [
+            "Native point observation has no nonempty native window; numeric projection requires an admitted suite point-window representation. Approved partial/null observation only."
+          ]
+        }
+      ],
+      "prerequisites": [
+        "Native point observation has no nonempty native window; numeric projection requires an admitted suite point-window representation. Approved partial/null observation only."
+      ]
+    },
+    {
+      "slot": "ci_bench",
+      "state": "unavailable",
+      "prerequisites": [
+        "WR2 #2346: selected existing CI points/trends with native completed-window, capacity, timing and estimate labels."
+      ],
+      "metrics": []
+    },
+    {
+      "slot": "factory_metrics",
+      "state": "unavailable",
+      "prerequisites": [
+        "WR2 #2346: selected existing daily factory artifacts; preserve UTC days, all-base merge scope and usage day-ratio labels."
+      ],
+      "metrics": []
+    },
+    {
+      "slot": "journey",
+      "state": "unavailable",
+      "prerequisites": [
+        "WR2 #2346: selected validated journey/bench artifacts; historical completeness remains unknown."
+      ],
+      "metrics": []
+    },
+    {
+      "slot": "skills_eval",
+      "state": "unavailable",
+      "prerequisites": [
+        "WR2 #2346: selected existing skills-eval manifest/score/coverage records; fixture proof is not a paid or live result."
+      ],
+      "metrics": []
+    },
+    {
+      "slot": "cost",
+      "state": "unavailable",
+      "prerequisites": [
+        "WR4 #2348: complete nonoverlapping USD allocation for one merged-PR cohort including shared-parent/helpers, sandbox and CI; lower bounds and daily ratios alone are insufficient."
+      ],
+      "metrics": []
+    },
+    {
+      "slot": "credits",
+      "state": "unavailable",
+      "prerequisites": [
+        "WR2 #2346: selected existing credit samples/history with provider, unit, window and coverage; no daily billing endpoint is assumed."
+      ],
+      "metrics": []
+    },
+    {
+      "slot": "claude_usage",
+      "state": "unavailable",
+      "prerequisites": [
+        "WR2 #2346: validated complete day-specific owner-supplied usage export or existing recorded usage; no inferred total or endpoint."
+      ],
+      "metrics": []
+    },
+    {
+      "slot": "decisions",
+      "state": "unavailable",
+      "prerequisites": [
+        "WR2 #2346: sanitized structured pending-decision records with discovery coverage/currentness; no answer control or raw wording."
+      ],
+      "metrics": []
+    },
+    {
+      "slot": "answer_time",
+      "state": "unavailable",
+      "prerequisites": [
+        "WR5 #2349: source-linked request and substantive orchestrator disposition with independent provenance; accepted notifications or resolved status alone are insufficient."
+      ],
+      "metrics": []
+    },
+    {
+      "slot": "rework",
+      "state": "unavailable",
+      "prerequisites": [
+        "WR6 #2350: validated journey independent nonduplicate CHANGES/fix-round facts for a named unique-PR cohort with review coverage; unreviewed is not success."
+      ],
+      "metrics": []
+    },
+    {
+      "slot": "eb6",
+      "state": "unavailable",
+      "prerequisites": [
+        "EB6 #2177: sourced first-push-to-merge/defect artifacts and verified coverage; contract preparation does not prove a measured result."
+      ],
+      "metrics": []
+    },
+    {
+      "slot": "eb7",
+      "state": "unavailable",
+      "prerequisites": [
+        "EB7 #2178: actual frozen-cohort paired replay result under its separate gates; no replay run is claimed."
+      ],
+      "metrics": []
+    },
+    {
+      "slot": "eb8",
+      "state": "unavailable",
+      "prerequisites": [
+        "EB8 #2179: independently authorized bounded live experiment and retained result; no live go-ahead or result is supplied here."
+      ],
+      "metrics": []
+    },
+    {
+      "slot": "eb9",
+      "state": "unavailable",
+      "prerequisites": [
+        "EB9 #2192: retained hold released by its owner and actual huntr/settings A/B artifacts under separate gates; hold is unchanged."
+      ],
+      "metrics": []
+    }
+  ]
+}

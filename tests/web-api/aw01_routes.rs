@@ -1,4 +1,4 @@
-//! AW1: exactly the planned routes. The route table is A2's plus
+//! AW1 (#16, B3): exactly the planned routes. The route table is A2's plus
 //! the three attachment routes: the list (`GET`), the upload (`POST`) and
 //! the removal (`DELETE`). Every other method and path is refused, and
 //! stages nothing. **No route returns an attachment's bytes**, whatever is
@@ -30,16 +30,34 @@ pub const ATTACHMENT_ROUTES: &[Route] = &[
 
 #[test]
 fn the_route_table_adds_exactly_the_attachment_routes() {
+    let legacy = crate::a4_no_mutation::legacy_routes(ROUTES);
+    // #127 appends two read-only fleet routes after the attachments.
+    let end = legacy.len()
+        - crate::c3_routes::FLEET_ROUTES.len()
+        - crate::e11_plan_routes::PLAN_ROUTES.len()
+        - crate::e11_decisions_routes::DECISIONS_ROUTES.len()
+        - 2 // L6 appends exactly two local loop-switch routes.
+        - 1 // #1100 appends exactly one setup GET.
+        - 1 // #535 cockpit GET.
+        - 1; // #549 loops GET.
     assert_eq!(
-        &ROUTES[ROUTES.len() - ATTACHMENT_ROUTES.len()..],
+        &legacy[end - ATTACHMENT_ROUTES.len()..end],
         ATTACHMENT_ROUTES
     );
     let new = crate::u01_new_routes::NEW_ROUTES;
-    let before = ROUTES.len() - ATTACHMENT_ROUTES.len();
-    assert_eq!(&ROUTES[before - new.len()..before], new);
+    let before = end - ATTACHMENT_ROUTES.len();
+    assert_eq!(&legacy[before - new.len()..before], new);
     assert_eq!(
-        ROUTES.len(),
-        6 + new.len() + ATTACHMENT_ROUTES.len(),
+        legacy.len(),
+        6 + new.len()
+            + ATTACHMENT_ROUTES.len()
+            + crate::c3_routes::FLEET_ROUTES.len()
+            + crate::e11_plan_routes::PLAN_ROUTES.len()
+            + crate::e11_decisions_routes::DECISIONS_ROUTES.len()
+            + 2
+            + 1 // #1100 setup GET.
+            + 1 // #535 cockpit GET.
+            + 1, // #549 loops GET.
         "{ROUTES:?}"
     );
     for route in ROUTES {

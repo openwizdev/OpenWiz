@@ -1,6 +1,20 @@
-
+import { OutcomeGlyph } from './StatusMark.tsx';
+import { Button } from './Ui.tsx';
+// The launcher (#12): one new Cloud thread in one existing project, opened
+// from the project's heading, inside #6's panel (desktop) and sheet (phone):
+// never a page, panel or sheet of its own (U14; `npm run check`). The project
+// and "Cloud" are fixed facts, shown once. Harness, model and effort are three
+// large controls, in that order, each showing its choice in words; only the
+// core's offered options can be chosen, and nothing is preselected (U7, A-10).
+// The prompt is the one prompt body. The core's effect lines come before the
+// press, from its preview (U9), and Start thread sends exactly the shown
+// settings and prompt, once (U12). Created opens the new thread's details,
+// with creation and the start stage on separate lines (U10); a refusal or an
+// uncertain create keeps everything (U11). Nothing here creates on a refresh,
+// a timer or a status read (U13; there is no retry, A-3).
 
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import type { RefObject } from 'react';
 
 import type { FactString } from '../envelope.ts';
 import { busy, effortsOf, locked, modelsOf, offeredHarness } from '../launcher.ts';
@@ -18,7 +32,6 @@ export type LaunchProject = { id: string; name: FactString; suffix: string | nul
 
 type Shape = 'sent' | 'failed' | 'uncertain' | 'not-sent' | 'moving';
 
-const GLYPHS: Record<Shape, string> = { sent: '[✓]', failed: '[x]', uncertain: '[?]', 'not-sent': '[-]', moving: '[~]' };
 
 type Shown = { shape: Shape; word: string; lines: string[] };
 
@@ -79,7 +92,7 @@ function attemptShown(s: LaunchState): Shown | null {
     : p
       ? { shape: p.state === 'in-progress' ? 'moving' : 'uncertain', word: p.state === 'in-progress' ? 'in progress' : 'uncertain', lines: ['not settled when this page loaded; Refresh status reads its record', 'it may or may not have been created; the prompt, settings and op id stay'] }
       : null;
-  // A refused Try again: the earlier answer stays as it was, and the refusal is a line of its own.
+  // A refused Try again: the earlier answer stays as it was, and the refusal is a line of its own (WS-8).
   if (shown && s.retry) return { ...shown, lines: [...shown.lines, `this Try again was refused (${s.retry}); the earlier create is still uncertain`] };
   return shown;
 }
@@ -92,7 +105,7 @@ function stageLine(start: StartView | null, now: Date): string {
 }
 
 /** The new thread's details: created and its start, apart; requested beside reported (U10, U8). */
-function CreatedDetails({ project, launchers, listed, onShowThread }: { project: LaunchProject; launchers: Launchers; listed: (id: string) => boolean; onShowThread: (id: string) => void }) {
+function CreatedDetails({ project, launchers, listed, onShowThread, headingRef, lastFocus }: { project: LaunchProject; launchers: Launchers; listed: (id: string) => boolean; onShowThread: (id: string) => void; headingRef: RefObject<HTMLHeadingElement | null>; lastFocus: RefObject<HTMLElement | null> }) {
   const s = useSyncExternalStore(
     (onChange) => launchers.subscribe(onChange),
     () => launchers.get(project.id),
@@ -105,14 +118,22 @@ function CreatedDetails({ project, launchers, listed, onShowThread }: { project:
   const req = c.report.requested;
   const reported = c.start?.reported ?? null;
   return (
-    <section className="launcher" data-part="created" data-thread-id={outcome.thread_id} aria-labelledby="created-title">
-      <h2 id="created-title" className="disp s">
+    <section
+      className="launcher"
+      data-part="created"
+      data-thread-id={outcome.thread_id}
+      aria-labelledby="created-title"
+      onFocus={(e) => {
+        if (e.target instanceof HTMLElement) lastFocus.current = e.target;
+      }}
+    >
+      <h2 ref={headingRef} id="created-title" className="disp s" tabIndex={-1}>
         New thread
       </h2>
       <div role="status" data-part="launch-outcome" data-outcome="created">
         <span className="oc sent" data-part="outcome-marker">
           <span className="glyph" aria-hidden="true">
-            {GLYPHS.sent}
+            <OutcomeGlyph shape="sent" />
           </span>{' '}
           <span className="word">created</span>
         </span>
@@ -210,7 +231,7 @@ function Pick({
 }) {
   const id = `launch-${field}`;
   const placeholder = disabledWhy ?? `choose ${field === 'effort' ? 'an' : 'a'} ${field}`;
-  // A chosen value stays visible in its control even when the current options don't list it:
+  // A chosen value stays visible in its control even when the current options don't list it (Sol #157 R2):
   // an unresolved attempt's settings are fixed, and what is sent is always what is shown.
   const extra = value !== '' && !values.includes(value) ? value : null;
   return (
@@ -275,8 +296,10 @@ export function Launcher({
   const [preview, setPreview] = useState<{ body: ThreadBody; said: PreviewSaid; at: number } | null>(null);
   const [optionsRead, setOptionsRead] = useState(0);
   const [, setTick] = useState(0);
+  const lastPreviewKey = useRef<string | null>(null);
   const stop = useRef(new AbortController());
   const field = useRef<HTMLTextAreaElement>(null);
+  const createdTitle = useRef<HTMLHeadingElement>(null);
   const lastFocus = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -286,15 +309,19 @@ export function Launcher({
 
   // The options: on opening, and when the owner (or a "not offered" refusal) asks again. A read, never a create.
   useEffect(() => {
+    let current = true;
     const signal = stop.current.signal;
     void (async () => {
       const said = await launchers.options(signal);
-      if (said && !signal.aborted) {
+      if (current && said && !signal.aborted) {
         setOptions({ said, at: performance.now() });
         // Only options read say what is offered: a failed read empties nothing (it is shown on its own).
         if (said.kind === 'ok') launchers.reconcile(project.id, said.options);
       }
     })();
+    return () => {
+      current = false;
+    };
   }, [launchers, project.id, optionsRead]);
 
   // A refusal for a choice the options don't offer reads them again, visibly.
@@ -307,29 +334,35 @@ export function Launcher({
   const complete = s.choice.harness !== '' && s.choice.model !== '' && s.choice.effort !== '';
   const hasText = s.draft.trim() !== '';
   const isLocked = locked(s);
-
+  // #16: the attachments are the preview's too: a change in the ready ones reads it again.
   const ids = launchers.attachments(project.id);
   const trayOff = launchers.attachmentsOff(project.id);
   const previewKey =
     complete && hasText && !isLocked && s.root !== null && trayOff === null ? `${s.choice.harness}|${s.choice.model}|${s.choice.effort}|${s.root}|${s.n}|${optionsRead}|${ids.join(',')}` : null;
-  const previewFailed = preview?.said.kind === 'failed';
-
   // What a create would do: the core's preview, once the settings are chosen and there is a prompt, again when
-  // they change, and again after a failed read when the prompt changes. A read, never a create.
+  // they or the prompt change. A read, never a create.
   useEffect(() => {
+    const textOnly = previewKey !== null && lastPreviewKey.current === previewKey;
+    lastPreviewKey.current = previewKey;
     if (previewKey === null) return;
-    const signal = stop.current.signal;
+    const ctl = new AbortController();
+    const signal = ctl.signal;
+    // Aborting the HTTP read does not stop its server core run. Coalesce short
+    // prompt pauses for a full second; initial/settings/attachment reads stay prompt.
     const t = window.setTimeout(() => {
       void (async () => {
         const read = await launchers.preview(project.id, signal);
         if (read && !signal.aborted) setPreview({ ...read, at: performance.now() });
       })();
-    }, 400);
-    return () => window.clearTimeout(t);
-  }, [launchers, project.id, previewKey, previewFailed ? s.draft : null]);
+    }, textOnly ? 1_000 : 400);
+    return () => {
+      window.clearTimeout(t);
+      ctl.abort('preview changed');
+    };
+  }, [launchers, project.id, previewKey, s.draft]);
 
   // 0.0.2's refresh: each list snapshot may read the record of an unresolved attempt, or the created thread's
-  // start, at most ten times. Reads only: never a create.
+  // start, at most A-9's ten times. Reads only: never a create.
   const first = useRef(true);
   useEffect(() => {
     if (first.current) {
@@ -347,16 +380,17 @@ export function Launcher({
   }, []);
 
   // A focused control that goes away (Start thread giving way to Refresh status) leaves focus in a fixed,
-  // named place: the prompt. Never on the page's body (as the composer's rule 25).
+  // named place: the prompt or, after creation, its heading. Never on the page's body (rule 25).
   useEffect(() => {
     const was = lastFocus.current;
     if (was && !was.isConnected && (document.activeElement === null || document.activeElement === document.body)) {
-      field.current?.focus();
-      lastFocus.current = field.current;
+      const target = field.current ?? createdTitle.current;
+      target?.focus();
+      lastFocus.current = target;
     }
   });
 
-  if (s.created) return <CreatedDetails project={project} launchers={launchers} listed={listed} onShowThread={onShowThread} />;
+  if (s.created) return <CreatedDetails project={project} launchers={launchers} listed={listed} onShowThread={onShowThread} headingRef={createdTitle} lastFocus={lastFocus} />;
 
   const out = busy(s);
   const blocked = launchers.blocked(project.id);
@@ -366,6 +400,7 @@ export function Launcher({
     preview.body.harness === s.choice.harness &&
     preview.body.model === s.choice.model &&
     preview.body.effort === s.choice.effort &&
+    preview.body.text === s.draft &&
     preview.body.attachments.join(',') === ids.join(',');
   const shownPreview = forThis ? preview : null;
   const verdict = shownPreview?.said.kind === 'ok' ? shownPreview.said.preview.verdict : null;
@@ -412,80 +447,84 @@ export function Launcher({
         if (e.target instanceof HTMLElement) lastFocus.current = e.target;
       }}
     >
-      <h2 id="launch-title" className="disp s">
-        New thread
-      </h2>
-      <dl className="kv">
-        <dt>project</dt>
-        <dd data-field="project">
-          <bdi>{factText(project.name)}</bdi>
-          {project.suffix === null ? null : <span className="gid">{` · ${project.suffix}`}</span>}
-        </dd>
-        <dt>where</dt>
-        <dd data-field="where">Cloud</dd>
-      </dl>
-      <p className="sec">requested settings</p>
-      {options?.said.kind === 'ok' ? (
-        <p className="meta" data-part="options-read">
-          {`options read ${clockText(options.said.options.read_at, new Date())} · ${options.said.options.label}`}
-        </p>
-      ) : options?.said.kind === 'failed' ? (
-        <p className="why" data-part="options-failed">
-          options couldn’t be read: <bdi>{options.said.why}</bdi>
-        </p>
-      ) : (
-        <p className="meta">reading the options…</p>
-      )}
-      {opts?.state.kind === 'no_options' ? (
-        <p className="tag dashed" data-part="no-options">
-          <bdi>{opts.state.text}</bdi>
-        </p>
-      ) : null}
-      <div className="picks">
-        <Pick
-          field="harness"
-          label="harness"
-          value={s.choice.harness}
-          values={harnesses}
-          unavailable={opts?.unavailable.map((u) => ({ value: u.harness, text: u.text })) ?? []}
-          disabledWhy={opts ? null : 'no options yet'}
-          readOnly={isLocked}
-          unlisted={unlisted}
-          onPick={pick('harness')}
-        />
-        <Pick
-          field="model"
-          label="model"
-          value={s.choice.model}
-          values={modelsOf(opts, s.choice.harness)}
-          unavailable={[]}
-          disabledWhy={harnessOffered ? null : 'choose a harness first'}
-          readOnly={isLocked}
-          unlisted={unlisted}
-          onPick={pick('model')}
-        />
-        <Pick
-          field="effort"
-          label="effort"
-          value={s.choice.effort}
-          values={effortsOf(opts, s.choice.harness, s.choice.model)}
-          unavailable={[]}
-          disabledWhy={s.choice.model !== '' ? null : 'choose a model first'}
-          readOnly={isLocked}
-          unlisted={unlisted}
-          onPick={pick('effort')}
-        />
-      </div>
-      {isLocked ? (
-        <p className="meta" data-part="picks-fixed">
-          requested for this attempt; fixed while it may have created a thread
-        </p>
-      ) : null}
-      <div className="act">
-        <button type="button" className="btn" data-part="refresh-options" aria-disabled={isLocked ? 'true' : undefined} onClick={() => !isLocked && setOptionsRead((n) => n + 1)}>
-          Refresh options
-        </button>
-        <p className="effect">reads them again from CloudRoom</p>
+      <header className="launch-heading">
+        <h2 id="launch-title" className="disp s">
+          New thread
+        </h2>
+        <dl className="kv">
+          <dt>project</dt>
+          <dd data-field="project">
+            <bdi>{factText(project.name)}</bdi>
+            {project.suffix === null ? null : <span className="gid">{` · ${project.suffix}`}</span>}
+          </dd>
+          <dt>where</dt>
+          <dd data-field="where">Cloud</dd>
+        </dl>
+      </header>
+      <div className="launch-settings">
+        <p className="sec">requested settings</p>
+        {options?.said.kind === 'ok' ? (
+          <p className="meta" data-part="options-read">
+            {`options read ${clockText(options.said.options.read_at, new Date())} · ${options.said.options.label}`}
+          </p>
+        ) : options?.said.kind === 'failed' ? (
+          <p className="why" data-part="options-failed">
+            options couldn’t be read: <bdi>{options.said.why}</bdi>
+          </p>
+        ) : (
+          <p className="meta">reading the options…</p>
+        )}
+        {opts?.state.kind === 'no_options' ? (
+          <p className="tag dashed" data-part="no-options">
+            <bdi>{opts.state.text}</bdi>
+          </p>
+        ) : null}
+        <div className="picks">
+          <Pick
+            field="harness"
+            label="harness"
+            value={s.choice.harness}
+            values={harnesses}
+            unavailable={opts?.unavailable.map((u) => ({ value: u.harness, text: u.text })) ?? []}
+            disabledWhy={opts ? null : 'no options yet'}
+            readOnly={isLocked}
+            unlisted={unlisted}
+            onPick={pick('harness')}
+          />
+          <Pick
+            field="model"
+            label="model"
+            value={s.choice.model}
+            values={modelsOf(opts, s.choice.harness)}
+            unavailable={[]}
+            disabledWhy={harnessOffered ? null : 'choose a harness first'}
+            readOnly={isLocked}
+            unlisted={unlisted}
+            onPick={pick('model')}
+          />
+          <Pick
+            field="effort"
+            label="effort"
+            value={s.choice.effort}
+            values={effortsOf(opts, s.choice.harness, s.choice.model)}
+            unavailable={[]}
+            disabledWhy={s.choice.model !== '' ? null : 'choose a model first'}
+            readOnly={isLocked}
+            unlisted={unlisted}
+            onPick={pick('effort')}
+          />
+        </div>
+        {isLocked ? (
+          <p className="meta" data-part="picks-fixed">
+            requested for this attempt; fixed while it may have created a thread
+          </p>
+        ) : null}
+        <div className="act">
+          <button type="button" className="btn" data-part="refresh-options" aria-disabled={isLocked ? 'true' : undefined} onClick={() => !isLocked && setOptionsRead((n) => n + 1)}>
+            Refresh options
+          </button>
+          <p className="effect">reads them again from CloudRoom</p>
+        </div>
       </div>
       {s.note ? (
         <p className="tag dashed" data-part="launch-note">
@@ -507,32 +546,34 @@ export function Launcher({
         onSubmit={onStart}
         onRefuse={(words) => launchers.note(project.id, words)}
       />
-      <p className="sec">what Start thread does</p>
-      {effects ? (
-        <>
-          <ul className="effects" data-part="effects">
-            {effects.effects.map((e) => (
-              <li key={e.kind} data-effect={e.kind}>
-                <bdi>{e.text}</bdi>
-              </li>
-            ))}
-          </ul>
-          <p className="meta" data-part="effects-age">
-            {`effects read ${ageText(Math.max(0, performance.now() - (shownPreview?.at ?? 0)))} ago`}
+      <div className="launch-effects">
+        <p className="sec">what Start thread does</p>
+        {effects ? (
+          <>
+            <ul className="effects" data-part="effects">
+              {effects.effects.map((e) => (
+                <li key={e.kind} data-effect={e.kind}>
+                  <bdi>{e.text}</bdi>
+                </li>
+              ))}
+            </ul>
+            <p className="meta" data-part="effects-age">
+              {`effects read ${ageText(Math.max(0, performance.now() - (shownPreview?.at ?? 0)))} ago`}
+            </p>
+          </>
+        ) : (
+          <p className="meta" data-part="effects-none">
+            {verdict?.kind === 'stopped' ? 'a create would not go ahead' : 'shown once the settings are chosen and there is a prompt'}
           </p>
-        </>
-      ) : (
-        <p className="meta" data-part="effects-none">
-          {verdict?.kind === 'stopped' ? 'a create would not go ahead' : 'shown once the settings are chosen and there is a prompt'}
-        </p>
-      )}
+        )}
+      </div>
       {/* Kept mounted (disabled) while its own request is out, so a focused Start thread keeps focus. */}
       {isLocked && !retry && !out ? null : (
         <div className="acts" data-part="launch-actions">
           <div className="act">
-            <button type="button" className="btn" data-part="start" aria-disabled={canPress ? undefined : 'true'} onClick={onStart}>
+            <Button variant="primary" data-part="start" aria-disabled={canPress ? undefined : 'true'} onClick={onStart}>
               {retry ? 'Try again' : 'Start thread'}
-            </button>
+            </Button>
             <p id="launch-off" className="effect" data-part="start-effect">
               {off ? (
                 <span className="why">
@@ -552,7 +593,7 @@ export function Launcher({
           <div className="said" data-part="launch-attempt">
             <span className={`oc ${shown.shape}`} data-part="outcome-marker">
               <span className="glyph" aria-hidden="true">
-                {GLYPHS[shown.shape]}
+                <OutcomeGlyph shape={shown.shape} />
               </span>{' '}
               <span className="word">{shown.word}</span>
             </span>

@@ -1,0 +1,20 @@
+#737 failing-first fixture test with fleet.sh unchanged from origin/main 61ad1a5f
+
+Claim: a resume claim withdraws when its spec graph cannot all be read.
+Evidence class: synthetic fixture test; no live fleet calls.
+The reported commentsTruncated fixture now recovers its full REST history;
+an oversized spec supplies incomplete graph facts that still reach claim.
+The fixture adds 101 synthetic tickets to spec #10.
+
+Command:
+TEST_ONLY='stall: incomplete spec facts withdraw a resume claim' sh skills/launch-fleet/scripts/test.sh
+Exit: 1
+
+FAIL stall: incomplete spec facts withdraw a resume claim: unexpected output:
+    --- /tmp/tmp.kgpap9BHQd/case-1/want.txt	2026-11-06 15:08:11.034620030 +0000
+    +++ /tmp/tmp.kgpap9BHQd/case-1/out	2026-11-06 15:08:11.022620030 +0000
+    @@ -1 +1 @@
+    -withdraw #12: that resume is not due or an older claim holds it
+    +go #12
+ok   every gh call was one of fleet.sh's reads
+1 cases, 1 failed

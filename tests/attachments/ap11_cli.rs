@@ -5,6 +5,7 @@
 //! message's text is never an attachment (M15 still proves it for `send`).
 
 use std::ffi::OsString;
+use std::io::{self, Write};
 use std::os::unix::ffi::OsStringExt;
 
 use openwiz_cli::attachment::*;
@@ -105,6 +106,40 @@ fn every_path_is_reported_in_order_and_one_failure_hides_no_other() {
     }
     // Both runs staged the two that can be, each under its own id.
     assert_eq!(bench.ids().len(), 4);
+}
+
+#[test]
+fn every_path_is_reported_after_a_store_error() {
+    let bench = Bench::new("ap11_every_store_error");
+    let paths = [
+        bench.source("syn-ap11-store-first.txt", CONTENT.as_bytes()),
+        bench.source("syn-ap11-store-second.txt", CONTENT.as_bytes()),
+    ];
+    let mut args = os(&["add", "--json"]);
+    args.extend(paths.iter().map(|path| path.as_os_str().to_owned()));
+    let run = bench.cli_with(&args, T0, &Unmeasurable, &ClaimsOf::default());
+    assert_eq!(run.code, 10, "{run:?}");
+    assert!(run.err.is_empty(), "{run:?}");
+    let json = run.json();
+    assert_eq!(json["schema"], ADD_SCHEMA_ID);
+    for key in ["ready", "failed", "expired"] {
+        assert!(json[key].as_array().unwrap().is_empty(), "{json:#}");
+    }
+    let entries = json["not_staged"].as_array().unwrap();
+    let indices: Vec<_> = entries
+        .iter()
+        .map(|entry| entry["index"].as_u64().unwrap())
+        .collect();
+    assert_eq!(indices, [0, 1], "every input path must be reported");
+    for (entry, path) in entries.iter().zip(&paths) {
+        assert_eq!(entry["path"], path.to_str().unwrap());
+        assert_eq!(
+            entry["error"],
+            "the free space on the attachment store's volume could not be measured \
+             (synthetic measure failure); nothing was staged"
+        );
+    }
+    assert!(bench.ids().is_empty());
 }
 
 /// Every value of a staged attachment, as its text line shows it.
@@ -287,6 +322,85 @@ fn the_json_matches_the_text() {
 }
 
 #[test]
+fn removal_json_indexes_match_id_argument_positions() {
+    let bench = Bench::new("ap11_removal_indexes");
+    let run = bench.cli(&[
+        "rm",
+        "--json",
+        "att-synthetic-one",
+        "att-synthetic-two",
+        "att-synthetic-three",
+    ]);
+    assert_eq!(run.code, EXIT_ATTACHMENT_NOT_FOUND, "{run:?}");
+    let json = run.json();
+    let entries = json["ids"].as_array().unwrap();
+    assert_eq!(entries.len(), 3);
+    for (entry, (id, index)) in entries.iter().zip([
+        ("att-synthetic-one", 0),
+        ("att-synthetic-two", 1),
+        ("att-synthetic-three", 2),
+    ]) {
+        assert_eq!(entry["id"], id);
+        assert_eq!(entry["index"], index, "{entry}");
+        assert_eq!(entry["result"], "not_found");
+    }
+}
+
+#[test]
+fn removal_reports_every_id_after_a_store_error() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    use openwiz_core::attachment::AttachmentId;
+    use openwiz_core::messaging::record::StoreError;
+    use openwiz_store::attachments::Claims;
+
+    struct FailsAfterSweep(AtomicUsize);
+
+    impl Claims for FailsAfterSweep {
+        fn claim(&self, _: &AttachmentId) -> Result<Claim, StoreError> {
+            // Let the initial sweep finish, then fail this ID's removal.
+            if self.0.fetch_add(1, Ordering::SeqCst) == 0 {
+                Ok(Claim::Unclaimed)
+            } else {
+                Err(StoreError("synthetic claim error".to_owned()))
+            }
+        }
+    }
+
+    let bench = Bench::new("ap11_rm_store_error_all_ids");
+    let path = bench.source("syn-rm-error.txt", CONTENT.as_bytes());
+    let added = bench.cli(&["add", "--json", path.to_str().unwrap()]);
+    assert_eq!(added.code, 0, "{added:?}");
+    let id = added.json()["ready"][0]["staged"]["attachment"]["id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let missing = "att-synthetic-missing";
+    let run = bench.cli_with(
+        &os(&["rm", "--json", &id, missing]),
+        T0,
+        &Free::new(PLENTY),
+        &FailsAfterSweep(AtomicUsize::new(0)),
+    );
+    assert_eq!(run.code, 10, "{run:?}");
+    assert!(run.err.is_empty(), "{run:?}");
+    let json = run.json();
+    let results = json["ids"].as_array().unwrap();
+    assert_eq!(results.len(), 2, "{json}");
+    for (entry, (index, expected_id, result)) in results
+        .iter()
+        .zip([(0, id.as_str(), "not_removed"), (1, missing, "not_found")])
+    {
+        assert_eq!(entry["index"], index, "{json}");
+        assert_eq!(entry["id"], expected_id, "{json}");
+        assert_eq!(entry["result"], result, "{json}");
+    }
+    assert_eq!(results[0]["message"], "synthetic claim error");
+    assert!(json["expired"].as_array().unwrap().is_empty());
+    assert_eq!(bench.ids(), [id]);
+}
+
+#[test]
 fn every_report_matches_the_schema() {
     let bench = Bench::new("ap11_schema");
     let claims = ClaimsOf::default();
@@ -368,6 +482,47 @@ fn every_report_matches_the_schema() {
 }
 
 #[test]
+fn list_claim_read_error_after_sweep_is_not_unclaimed() {
+    use std::cell::Cell;
+
+    use openwiz_core::attachment::AttachmentId;
+    use openwiz_core::messaging::record::StoreError;
+    use openwiz_store::attachments::Claims;
+
+    struct SecondReadFails(Cell<usize>);
+
+    impl Claims for SecondReadFails {
+        fn claim(&self, _: &AttachmentId) -> Result<Claim, StoreError> {
+            let reads = self.0.get();
+            self.0.set(reads + 1);
+            // The sweep succeeds; the subsequent list must report the error.
+            if reads == 0 {
+                Ok(Claim::Unclaimed)
+            } else {
+                Err(StoreError("synthetic claim read failure".into()))
+            }
+        }
+    }
+
+    for args in [&["ls"][..], &["ls", "--json"]] {
+        let bench = Bench::new("ap11_list_claim_error");
+        let source = bench.source("syn-list-error.txt", b"synthetic bytes");
+        let added = bench.cli(&["add", source.to_str().unwrap()]);
+        assert_eq!(added.code, 0, "{added:?}");
+
+        let claims = SecondReadFails(Cell::new(0));
+        let run = bench.cli_with(&os(args), T0, &Free::new(PLENTY), &claims);
+        assert_eq!(claims.0.get(), 2, "{args:?}: {run:?}");
+        assert_eq!(run.code, 10, "{args:?}: {run:?}");
+        assert!(run.out.is_empty(), "{args:?}: {run:?}");
+        assert!(
+            run.err.contains("synthetic claim read failure"),
+            "{args:?}: {run:?}"
+        );
+    }
+}
+
+#[test]
 fn a_usage_error_opens_nothing() {
     let bench = Bench::new("ap11_usage");
     let source = bench.source("syn-ap11-usage.txt", CONTENT.as_bytes());
@@ -441,6 +596,35 @@ fn options_paths_and_names() {
 }
 
 #[test]
+fn ap11_cli_output_contracts_preserve_original_cases() {
+    let cases: [(&str, fn()); 5] = [
+        (
+            "every_exit_code_is_documented",
+            every_exit_code_is_documented,
+        ),
+        (
+            "list_output_flush_failure_is_nonzero",
+            list_output_flush_failure_is_nonzero,
+        ),
+        (
+            "list_output_partial_write_failure_is_nonzero",
+            list_output_partial_write_failure_is_nonzero,
+        ),
+        (
+            "list_output_success_is_printed_and_flushed",
+            list_output_success_is_printed_and_flushed,
+        ),
+        (
+            "list_output_write_failure_is_nonzero",
+            list_output_write_failure_is_nonzero,
+        ),
+    ];
+    for (name, proof) in cases {
+        eprintln!("TA2 case: ap11_cli::{name}");
+        proof();
+    }
+}
+
 fn every_exit_code_is_documented() {
     let help = openwiz_cli::help();
     for usage in [
@@ -479,5 +663,108 @@ fn every_exit_code_is_documented() {
         "25 MiB",
     ] {
         assert!(help.contains(words), "{words:?} not in --help:\n{help}");
+    }
+}
+
+struct ListOutput {
+    bytes: Vec<u8>,
+    remaining: Option<usize>,
+    fail_flush: bool,
+    flushes: usize,
+}
+
+impl Write for ListOutput {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        if self.remaining == Some(0) {
+            return Err(io::Error::other("synthetic private write details\n"));
+        }
+        let count = self.remaining.map_or(bytes.len(), |n| n.min(bytes.len()));
+        self.bytes.extend_from_slice(&bytes[..count]);
+        if let Some(remaining) = &mut self.remaining {
+            *remaining -= count;
+        }
+        Ok(count)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.flushes += 1;
+        if self.fail_flush {
+            Err(io::Error::other("synthetic private flush details\n"))
+        } else {
+            Ok(())
+        }
+    }
+}
+
+fn list_output(
+    json: bool,
+    remaining: Option<usize>,
+    fail_flush: bool,
+) -> (i32, ListOutput, String) {
+    let mut out = ListOutput {
+        bytes: vec![],
+        remaining,
+        fail_flush,
+        flushes: 0,
+    };
+    let mut err = vec![];
+    let code = run_attachment(
+        &os(if json { &["ls", "--json"] } else { &["ls"] }),
+        AttachmentContext {
+            open_store: &|| panic!("an absent store must not be created"),
+            open_store_read_only: &|| Ok(None),
+            clock: &crate::bench::FixedClock(T0),
+            free_space: &Free::new(PLENTY),
+            claims: &ClaimsOf::default(),
+        },
+        &mut out,
+        &mut err,
+    );
+    (code, out, String::from_utf8(err).unwrap())
+}
+
+fn empty_list_output(json: bool) -> &'static str {
+    if json {
+        "{\n  \"schema\": \"openwiz.attachment-list.v1\",\n  \"attachments\": [],\n  \"broken\": [],\n  \"expired\": []\n}\n"
+    } else {
+        "openwiz attachment ls · 0 ready, 0 broken, 0 expired\nno attachments are staged\n"
+    }
+}
+
+fn list_output_success_is_printed_and_flushed() {
+    for json in [false, true] {
+        let (code, out, err) = list_output(json, None, false);
+        assert_eq!(code, 0);
+        assert_eq!(out.bytes, empty_list_output(json).as_bytes());
+        assert_eq!(out.flushes, 1);
+        assert_eq!(err, "");
+    }
+}
+
+fn list_output_write_failure_is_nonzero() {
+    for json in [false, true] {
+        let (code, out, err) = list_output(json, Some(0), false);
+        assert_eq!(code, 1, "json={json}: {err}");
+        assert!(out.bytes.is_empty());
+        assert_eq!(err, "openwiz: the attachment list could not be printed\n");
+    }
+}
+
+fn list_output_partial_write_failure_is_nonzero() {
+    for json in [false, true] {
+        let (code, out, err) = list_output(json, Some(7), false);
+        assert_eq!(code, 1, "json={json}: {err}");
+        assert_eq!(out.bytes, &empty_list_output(json).as_bytes()[..7]);
+        assert_eq!(err, "openwiz: the attachment list could not be printed\n");
+    }
+}
+
+fn list_output_flush_failure_is_nonzero() {
+    for json in [false, true] {
+        let (code, out, err) = list_output(json, None, true);
+        assert_eq!(code, 1, "json={json}: {err}");
+        assert_eq!(out.bytes, empty_list_output(json).as_bytes());
+        assert_eq!(out.flushes, 1);
+        assert_eq!(err, "openwiz: the attachment list could not be printed\n");
     }
 }

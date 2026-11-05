@@ -1,0 +1,675 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:openwiz:war-room:v1",
+  "title": "War room complete snapshot v1",
+  "description": "Structural shape. suite.validate also enforces the cross-record invariants in contract.md; no observation or authority is certified by schema conformance.",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "openwiz.war-room.v1"
+    },
+    "sample_id": {
+      "$ref": "#/$defs/time"
+    },
+    "sample_at": {
+      "$ref": "#/$defs/time"
+    },
+    "assembled_at": {
+      "$ref": "#/$defs/time"
+    },
+    "groups": {
+      "const": [
+        "throughput",
+        "stage_waits",
+        "board",
+        "ci",
+        "usage",
+        "decisions"
+      ]
+    },
+    "providers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/provider"
+      },
+      "minItems": 17,
+      "maxItems": 17
+    }
+  },
+  "required": [
+    "schema",
+    "sample_id",
+    "sample_at",
+    "assembled_at",
+    "groups",
+    "providers"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "time": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z(?![\\s\\S])"
+    },
+    "window": {
+      "type": "object",
+      "properties": {
+        "since": {
+          "$ref": "#/$defs/time"
+        },
+        "until": {
+          "$ref": "#/$defs/time"
+        },
+        "timezone": {
+          "enum": [
+            "UTC",
+            "PST-fixed-UTC-08:00"
+          ]
+        }
+      },
+      "required": [
+        "since",
+        "until",
+        "timezone"
+      ],
+      "additionalProperties": false
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*(?![\\s\\S])"
+        },
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}(?![\\s\\S])"
+        }
+      },
+      "required": [
+        "path",
+        "schema",
+        "sha256"
+      ],
+      "additionalProperties": false
+    },
+    "sample": {
+      "type": "object",
+      "properties": {
+        "observed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expected": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "identities": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9._:-]*(?![\\s\\S])"
+          },
+          "uniqueItems": true
+        },
+        "numerator": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "denominator": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "observed",
+        "expected",
+        "identities",
+        "numerator",
+        "denominator"
+      ],
+      "additionalProperties": false
+    },
+    "dimensions": {
+      "type": "object",
+      "properties": {
+        "direction": {
+          "anyOf": [
+            {
+              "enum": [
+                "forward",
+                "sideways",
+                "backwards",
+                "unknown"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pool": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9._:-]*(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stage": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9._:-]*(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ticket": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cohort": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9._:-]*(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "direction",
+        "pool",
+        "stage",
+        "ticket",
+        "cohort"
+      ],
+      "additionalProperties": false
+    },
+    "interval": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._:-]*(?![\\s\\S])"
+        },
+        "started_at": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ended_at": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "started_at",
+        "ended_at"
+      ],
+      "additionalProperties": false
+    },
+    "metric": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._:-]*(?![\\s\\S])"
+        },
+        "group": {
+          "enum": [
+            "throughput",
+            "stage_waits",
+            "board",
+            "ci",
+            "usage",
+            "decisions"
+          ]
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "state": {
+          "enum": [
+            "known",
+            "partial",
+            "unavailable"
+          ]
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unit": {
+          "enum": [
+            "count",
+            "hours",
+            "minutes",
+            "seconds",
+            "usd",
+            "credits",
+            "tokens",
+            "sandbox_hours",
+            "ratio",
+            "percent",
+            "prs_per_hour",
+            "robot_minutes_per_code_run",
+            "usd_per_merged_pr"
+          ]
+        },
+        "native_unit": {
+          "enum": [
+            "count",
+            "hours",
+            "minutes",
+            "seconds",
+            "usd",
+            "credits",
+            "tokens",
+            "sandbox_hours",
+            "ratio",
+            "percent",
+            "prs_per_hour",
+            "robot_minutes_per_code_run",
+            "usd_per_merged_pr"
+          ]
+        },
+        "statistic": {
+          "enum": [
+            "count",
+            "total",
+            "ratio",
+            "median",
+            "p90",
+            "observation",
+            "rate",
+            "limit",
+            "proportion"
+          ]
+        },
+        "window": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/window"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "observed_at": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fresh_until": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "freshness": {
+          "enum": [
+            "fresh",
+            "stale",
+            "unknown"
+          ]
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/source"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/(?:issues/[1-9][0-9]*|pull/[1-9][0-9]*|actions/runs/[1-9][0-9]*|commit/[0-9a-f]{40})(?:#(?:issuecomment-[1-9][0-9]*|pullrequestreview-[1-9][0-9]*))?(?![\\s\\S])"
+          },
+          "uniqueItems": true
+        },
+        "sample": {
+          "$ref": "#/$defs/sample"
+        },
+        "dimensions": {
+          "$ref": "#/$defs/dimensions"
+        },
+        "interval": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/interval"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "prerequisites": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "uniqueItems": true
+        },
+        "rounding": {
+          "enum": [
+            "exact",
+            "half_up_0",
+            "half_up_1"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "group",
+        "label",
+        "state",
+        "value",
+        "unit",
+        "native_unit",
+        "statistic",
+        "window",
+        "observed_at",
+        "fresh_until",
+        "freshness",
+        "source",
+        "evidence",
+        "sample",
+        "dimensions",
+        "interval",
+        "prerequisites"
+      ],
+      "additionalProperties": false
+    },
+    "provider": {
+      "type": "object",
+      "properties": {
+        "slot": {
+          "enum": [
+            "activity",
+            "stage_waits",
+            "board",
+            "ci_bench",
+            "factory_metrics",
+            "journey",
+            "skills_eval",
+            "cost",
+            "credits",
+            "claude_usage",
+            "decisions",
+            "answer_time",
+            "rework",
+            "eb6",
+            "eb7",
+            "eb8",
+            "eb9"
+          ]
+        },
+        "state": {
+          "enum": [
+            "known",
+            "partial",
+            "unavailable"
+          ]
+        },
+        "prerequisites": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "uniqueItems": true
+        },
+        "metrics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/metric"
+          }
+        }
+      },
+      "required": [
+        "slot",
+        "state",
+        "prerequisites",
+        "metrics"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "x-providers": [
+    {
+      "slot": "activity",
+      "groups": [
+        "throughput",
+        "ci"
+      ],
+      "prerequisites": [
+        "WR8 #2352: complete existing PR/closing-ticket direction metadata and exact current CI job/pool observations; no inferred queued pool."
+      ]
+    },
+    {
+      "slot": "stage_waits",
+      "groups": [
+        "stage_waits"
+      ],
+      "prerequisites": [
+        "WR3 #2347: verified merges of TL1 #2336 and TL2 #2337, then their actual settings and measured stage contracts; native fields unavailable here."
+      ]
+    },
+    {
+      "slot": "board",
+      "groups": [
+        "board"
+      ],
+      "prerequisites": [
+        "WR2 #2346: selected validated board graph/measures/history with source observation bounds."
+      ]
+    },
+    {
+      "slot": "ci_bench",
+      "groups": [
+        "ci"
+      ],
+      "prerequisites": [
+        "WR2 #2346: selected existing CI points/trends with native completed-window, capacity, timing and estimate labels."
+      ]
+    },
+    {
+      "slot": "factory_metrics",
+      "groups": [
+        "throughput",
+        "usage"
+      ],
+      "prerequisites": [
+        "WR2 #2346: selected existing daily factory artifacts; preserve UTC days, all-base merge scope and usage day-ratio labels."
+      ]
+    },
+    {
+      "slot": "journey",
+      "groups": [
+        "stage_waits"
+      ],
+      "prerequisites": [
+        "WR2 #2346: selected validated journey/bench artifacts; historical completeness remains unknown."
+      ]
+    },
+    {
+      "slot": "skills_eval",
+      "groups": [
+        "board"
+      ],
+      "prerequisites": [
+        "WR2 #2346: selected existing skills-eval manifest/score/coverage records; fixture proof is not a paid or live result."
+      ]
+    },
+    {
+      "slot": "cost",
+      "groups": [
+        "ci"
+      ],
+      "prerequisites": [
+        "WR4 #2348: complete nonoverlapping USD allocation for one merged-PR cohort including shared-parent/helpers, sandbox and CI; lower bounds and daily ratios alone are insufficient."
+      ]
+    },
+    {
+      "slot": "credits",
+      "groups": [
+        "usage"
+      ],
+      "prerequisites": [
+        "WR2 #2346: selected existing credit samples/history with provider, unit, window and coverage; no daily billing endpoint is assumed."
+      ]
+    },
+    {
+      "slot": "claude_usage",
+      "groups": [
+        "usage"
+      ],
+      "prerequisites": [
+        "WR2 #2346: validated complete day-specific owner-supplied usage export or existing recorded usage; no inferred total or endpoint."
+      ]
+    },
+    {
+      "slot": "decisions",
+      "groups": [
+        "decisions"
+      ],
+      "prerequisites": [
+        "WR2 #2346: sanitized structured pending-decision records with discovery coverage/currentness; no answer control or raw wording."
+      ]
+    },
+    {
+      "slot": "answer_time",
+      "groups": [
+        "decisions"
+      ],
+      "prerequisites": [
+        "WR5 #2349: source-linked request and substantive orchestrator disposition with independent provenance; accepted notifications or resolved status alone are insufficient."
+      ]
+    },
+    {
+      "slot": "rework",
+      "groups": [
+        "board"
+      ],
+      "prerequisites": [
+        "WR6 #2350: validated journey independent nonduplicate CHANGES/fix-round facts for a named unique-PR cohort with review coverage; unreviewed is not success."
+      ]
+    },
+    {
+      "slot": "eb6",
+      "groups": [
+        "stage_waits"
+      ],
+      "prerequisites": [
+        "EB6 #2177: sourced first-push-to-merge/defect artifacts and verified coverage; contract preparation does not prove a measured result."
+      ]
+    },
+    {
+      "slot": "eb7",
+      "groups": [
+        "board"
+      ],
+      "prerequisites": [
+        "EB7 #2178: actual frozen-cohort paired replay result under its separate gates; no replay run is claimed."
+      ]
+    },
+    {
+      "slot": "eb8",
+      "groups": [
+        "board"
+      ],
+      "prerequisites": [
+        "EB8 #2179: independently authorized bounded live experiment and retained result; no live go-ahead or result is supplied here."
+      ]
+    },
+    {
+      "slot": "eb9",
+      "groups": [
+        "board"
+      ],
+      "prerequisites": [
+        "EB9 #2192: retained hold released by its owner and actual huntr/settings A/B artifacts under separate gates; hold is unchanged."
+      ]
+    }
+  ]
+}

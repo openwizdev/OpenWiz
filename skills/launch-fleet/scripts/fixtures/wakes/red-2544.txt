@@ -1,0 +1,41 @@
+FAIL GI2: a wake on a spec with a fleet thread runs its loop, and prints none of its lines: unexpected output:
+    --- /tmp/tmp.NutiGz2JfF/case-1/want.txt	2026-11-13 08:20:33.677824451 +0000
+    +++ /tmp/tmp.NutiGz2JfF/case-1/out	2026-11-13 08:20:29.505934566 +0000
+    @@ -1 +0,0 @@
+    -wake fleet #10: room-cli loop run 00000000-0000-4000-8000-000000000010
+FAIL GI2: a burst naming a spec, its tickets and its pull request runs its loop once: unexpected output:
+    --- /tmp/tmp.NutiGz2JfF/case-2/want.txt	2026-11-13 08:20:39.188679037 +0000
+    +++ /tmp/tmp.NutiGz2JfF/case-2/out	2026-11-13 08:20:33.827820493 +0000
+    @@ -1 +0,0 @@
+    -wake fleet #10: room-cli loop run 00000000-0000-4000-8000-000000000010
+FAIL GI2: in a public repository too: unexpected output:
+    --- /tmp/tmp.NutiGz2JfF/case-3/want.txt	2026-11-13 08:20:43.491565497 +0000
+    +++ /tmp/tmp.NutiGz2JfF/case-3/out	2026-11-13 08:20:39.337675105 +0000
+    @@ -1 +0,0 @@
+    -wake fleet #10: room-cli loop run 00000000-0000-4000-8000-000000000010
+FAIL GI2: numbers in other specs in the same batch behave as today: unexpected output:
+    --- /tmp/tmp.NutiGz2JfF/case-4/want.txt	2026-11-13 08:20:49.400409812 +0000
+    +++ /tmp/tmp.NutiGz2JfF/case-4/out	2026-11-13 08:20:49.385410204 +0000
+    @@ -1,3 +1,2 @@
+    -wake fleet #10: room-cli loop run 00000000-0000-4000-8000-000000000010
+     start #41: G1: gadget model (spec #40)
+     start #70: Fix the broken link in the widget docs (approved on its own)
+FAIL GI2: two specs with fleet threads each run their own loop: unexpected output:
+    --- /tmp/tmp.NutiGz2JfF/case-5/want.txt	2026-11-13 08:20:54.724270532 +0000
+    +++ /tmp/tmp.NutiGz2JfF/case-5/out	2026-11-13 08:20:49.604404475 +0000
+    @@ -1,2 +0,0 @@
+    -wake fleet #10: room-cli loop run 00000000-0000-4000-8000-000000000010
+    -wake fleet #40: room-cli loop run 00000000-0000-4000-8000-000000000040
+FAIL GI2: the latest fleet record names the loop: unexpected output:
+    --- /tmp/tmp.NutiGz2JfF/case-6/want.txt	2026-11-13 08:20:59.073156759 +0000
+    +++ /tmp/tmp.NutiGz2JfF/case-6/out	2026-11-13 08:20:54.876266555 +0000
+    @@ -1 +0,0 @@
+    -wake fleet #10: room-cli loop run 00000000-0000-4000-8000-000000000010
+ok   GI2: a spec with no fleet record gets its tick lines, as today
+ok   GI2: a fleet record that names no loop is left to the fleet thread, as today
+ok   GI2: an unreadable fleet record is no fleet record, as today
+ok   GI2: a loop two specs claim runs for neither, and each is left as today
+ok   GI2: an unreadable comment history runs no loop and is looked at, as today
+ok   GI2: the project check and the fleet thread's own check are unchanged
+ok   every gh call was one of fleet.sh's reads
+12 cases, 6 failed

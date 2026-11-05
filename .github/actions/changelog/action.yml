@@ -1,0 +1,13 @@
+name: changelog
+description: Require a numbered changelog line for product pull requests
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        EVENT: ${{ github.event_name }}
+        REPO: ${{ github.repository }}
+        PR: ${{ github.event.pull_request.number }}
+        EVENT_HEAD: ${{ github.event.pull_request.head.sha }}
+        GH_TOKEN: ${{ github.token }}
+      run: python3 -I "$GITHUB_ACTION_PATH/check.py"

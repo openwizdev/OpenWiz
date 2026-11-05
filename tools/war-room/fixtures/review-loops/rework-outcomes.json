@@ -1,0 +1,109 @@
+{
+ "defect_policy": {
+  "deduplication": "root-cause-per-merge",
+  "followup_hours": 72,
+  "rule": "explicit-causal-fix-link-v1",
+  "unknown_attribution": "retain-unknown"
+ },
+ "journey": {
+  "journey_hash": "c0e0e72b152e0e2df6afa12e62e729900c7495f612a1a5c48d56e70c39d8286d",
+  "measurements": [
+   {
+    "defects": {
+     "events": [
+      {
+       "at": "2030-01-03T10:00:00Z",
+       "attribution": "attributable",
+       "key": "issue-4901",
+       "kind": "later-defect-fix",
+       "source": "s2"
+      }
+     ],
+     "observed_until": "2030-01-05T10:00:00Z",
+     "resolutions": [],
+     "status": "mature"
+    },
+    "first_push": {
+     "at": null,
+     "coverage": "unknown",
+     "kind": null,
+     "source": null,
+     "status": "unknown"
+    },
+    "helpers": [
+     "e6"
+    ],
+    "merge": {
+     "at": "2030-01-02T10:00:00Z",
+     "commit": "cccccccccccccccccccccccccccccccccccccccc",
+     "read_at": "2030-01-06T00:00:00Z",
+     "source": "s1",
+     "status": "verified"
+    },
+    "pr": 4201,
+    "rounds": [
+     "e4",
+     "e8",
+     "e10"
+    ]
+   },
+   {
+    "defects": {
+     "events": [],
+     "observed_until": "2030-01-05T10:00:00Z",
+     "resolutions": [],
+     "status": "mature"
+    },
+    "first_push": {
+     "at": null,
+     "coverage": "unknown",
+     "kind": null,
+     "source": null,
+     "status": "unknown"
+    },
+    "helpers": [],
+    "merge": {
+     "at": "2030-01-02T10:00:00Z",
+     "commit": "cccccccccccccccccccccccccccccccccccccccc",
+     "read_at": "2030-01-06T00:00:00Z",
+     "source": "s1",
+     "status": "verified"
+    },
+    "pr": 4202,
+    "rounds": [
+     "e13"
+    ]
+   },
+   {
+    "defects": {
+     "events": [],
+     "observed_until": "2030-01-05T10:00:00Z",
+     "resolutions": [],
+     "status": "mature"
+    },
+    "first_push": {
+     "at": null,
+     "coverage": "unknown",
+     "kind": null,
+     "source": null,
+     "status": "unknown"
+    },
+    "helpers": [],
+    "merge": {
+     "at": "2030-01-02T10:00:00Z",
+     "commit": "cccccccccccccccccccccccccccccccccccccccc",
+     "read_at": "2030-01-06T00:00:00Z",
+     "source": "s1",
+     "status": "verified"
+    },
+    "pr": 4203,
+    "rounds": []
+   }
+  ],
+  "schema": "closedwiz.journey.outcomes.v1"
+ },
+ "sources": {
+  "s1": "https://github.com/synthetic-owner/work/pull/4201#issuecomment-9001",
+  "s2": "https://github.com/synthetic-owner/work/issues/4901"
+ }
+}

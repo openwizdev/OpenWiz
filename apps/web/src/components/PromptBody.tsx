@@ -1,4 +1,12 @@
-
+// The one prompt body (#12, decided in #12's planning): the labelled text
+// field, its keyboard press (Ctrl+Enter or ⌘+Enter; Enter alone is a new
+// line), the one attachment tray (#16) in its attachments region, and its
+// note. The composer (#9) and the launcher (#12) both render it; there is
+// never a second one (U14, W12, AW8: `npm run check` allows a <textarea> and an
+// <AttachmentTray> only here). Since #16 a dropped file is attached (desktop
+// drag and drop onto the prompt body only), and a dropped folder refused with
+// words; a pasted file is still refused, with words (no clipboard paste in
+// 0.0.4). A pasted file path is text.
 
 import type { ClipboardEvent, DragEvent, KeyboardEvent, Ref } from 'react';
 
@@ -14,6 +22,7 @@ export const LOCKED_DROP = 'attachments are fixed while this attempt may have be
 export type TrayOf = { uploads: Uploads; target: string; locked: boolean };
 
 export function PromptBody({
+  compact = false,
   fieldId,
   labelId,
   label,
@@ -28,6 +37,7 @@ export function PromptBody({
   onSubmit,
   onRefuse,
 }: {
+  compact?: boolean;
   fieldId: string;
   labelId: string;
   label: string;
@@ -91,7 +101,8 @@ export function PromptBody({
         id={fieldId}
         className="compose"
         data-part="draft"
-        rows={3}
+        rows={compact ? 1 : 3}
+        placeholder={compact ? 'Message this thread…' : undefined}
         value={value}
         readOnly={readOnly}
         aria-describedby={describedBy}
@@ -105,7 +116,7 @@ export function PromptBody({
           {note}
         </p>
       ) : null}
-      { }
+      {/* The attachments region: the one tray (#16). */}
       <AttachmentTray uploads={tray.uploads} target={tray.target} locked={tray.locked} onAdd={(files) => onFiles(files)} />
     </div>
   );

@@ -1,0 +1,23 @@
+Failure-propagation mutation: current test_install.py and contract tests; original accept-all checker from fe05e1366.
+Command: python3 -I tools/install/test_install.py FirstHourContract
+Excerpt (final 19 lines; temporary path normalized):
+-  ('merge', 'merge_read_back')]
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.044s
+
+FAILED (failures=98)
+F
+======================================================================
+FAIL: test_first_hour_contract (__main__.FirstHourContract.test_first_hour_contract)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<wiring-checkout>/tools/install/test_install.py", line 212, in test_first_hour_contract
+    self.assertEqual(result.returncode, 0, 'first-hour contract checks failed')
+AssertionError: 1 != 0 : first-hour contract checks failed
+
+----------------------------------------------------------------------
+Ran 1 test in 0.082s
+
+FAILED (failures=1)
+Exit: 1 (expected)

@@ -1,0 +1,32 @@
+
+running 3 tests
+
+thread 'skills::adr0019_live_smoke_and_hands_on_timing' (5728) panicked at tests/checks/skills.rs:3276:5:
+assertion `left == right` failed: live-quick-check: one operative **Publish gate:** rule
+  left: 0
+ right: 1
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+thread 'skills::adr0019_combined_release_gate' (5727) panicked at tests/checks/skills.rs:3276:5:
+assertion `left == right` failed: export-review: one operative 1. **Gate the combined release.** rule
+  left: 0
+ right: 1
+skills::adr0019_live_smoke_and_hands_on_timing --- FAILED
+skills::adr0019_combined_release_gate --- FAILED
+
+thread 'skills::adr0019_automatic_export_and_one_final_approval' (5726) panicked at tests/checks/skills.rs:3276:5:
+assertion `left == right` failed: export-review: one operative 2. **Build and check the export automatically.** rule
+  left: 0
+ right: 1
+skills::adr0019_automatic_export_and_one_final_approval --- FAILED
+
+failures:
+
+failures:
+    skills::adr0019_automatic_export_and_one_final_approval
+    skills::adr0019_combined_release_gate
+    skills::adr0019_live_smoke_and_hands_on_timing
+
+test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 122 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p openwiz-tests --test checks`

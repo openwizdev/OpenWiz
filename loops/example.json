@@ -1,0 +1,42 @@
+{
+  "schema": "openwiz.loops.v1",
+  "kind": "definition",
+  "id": "loop-syn-reminder",
+  "name": "Synthetic reminder (example only)",
+  "owner": "synthetic-owner",
+  "wake": {
+    "kind": "interval",
+    "every_ms": 60000,
+    "anchor_ms": 0
+  },
+  "check": {
+    "argv": [
+      "sh",
+      "-c",
+      "printf \"\""
+    ],
+    "timeout_ms": 5000
+  },
+  "action": {
+    "project": {
+      "kind": "id",
+      "value": "prj_syn_example"
+    },
+    "harness": "codex",
+    "model": "synthetic-model",
+    "effort": "high",
+    "brief": "Notify the synthetic owner about the synthetic finding only."
+  },
+  "authority": {
+    "approved_by": "synthetic-owner",
+    "approval_ref": "synthetic-example-not-an-approval",
+    "scope": "Notify the synthetic owner only; no other effect."
+  },
+  "budget": {
+    "window_ms": 3600000,
+    "max_agent_starts": 4
+  },
+  "enabled": false,
+  "mode": "shadow",
+  "priority": "normal"
+}

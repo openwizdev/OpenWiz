@@ -1,0 +1,7 @@
+test_r4_contract_pointers_and_crosslinks_pass (test_review.ReviewFixes.test_r4_contract_pointers_and_crosslinks_pass) ... ok
+test_r4_malformed_or_unrelated_private_links_refuse (test_review.ReviewFixes.test_r4_malformed_or_unrelated_private_links_refuse) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 8.842s
+
+OK

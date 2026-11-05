@@ -1,0 +1,191 @@
+Scoped fixture checks; tested implementation: 44f58eb2a1ce5e933b1546f3cdd82fbd43265978
+
+python3 -I tools/install/tests/first-hour-contract/test_contract.py
+.......
+----------------------------------------------------------------------
+Ran 7 tests in 0.127s
+
+OK
+
+Exit: 0
+
+cargo test -p openwiz-tests --test web-api contract
+running 8 tests
+test contract::general_protocol_accounts_for_the_two_loop_switch_posts ... ok
+test contract::general_routes_loop_switch_wiring_is_current ... ok
+test contract::general_outcomes_documents_the_fleet_detail_cleaning_exception ... ok
+test contract::general_methods_document_both_loop_switches_as_post_only ... ok
+test contract::general_write_scope_documents_local_loop_switches ... ok
+test contract::general_routes_table_documents_both_fleet_reads ... ok
+test contract::the_contract_has_no_untested_version_outcome ... ok
+test contract::the_contract_documents_what_the_tests_check ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 341 filtered out; finished in 0.01s
+
+
+Exit: 0
+
+cargo test -p openwiz-tests --test checks
+running 132 tests
+test ci_selection::ci_selection_folder_holds_its_readme_and_fixtures_only ... ok
+test ci_selection::ci_selection_contract_tables_match_the_schema ... ok
+test ci_selection::ci_selection_schema_is_checkable_and_refuses_malformed_roots ... ok
+test cockpit_schema_conformance::cockpit_complete_partial_stale_and_empty_responses_validate ... ok
+test cockpit_schema_conformance::cockpit_every_schema_field_has_a_source_row ... ok
+test cockpit_schema_conformance::cockpit_gap_project_cannot_be_empty ... ok
+test ci_selection::ci_selection_reads_find_each_merged_pull_requests_plan ... ok
+test cockpit_schema_conformance::cockpit_preserves_unknown_project_associations ... ok
+test cockpit_schema_conformance::cockpit_schema_uses_only_checked_keywords ... ok
+test dependencies::dependencies_md_records_every_locked_crate_with_its_checksum ... ok
+test ci_selection::ci_selection_every_valid_fixture_passes ... ok
+test dependencies::dependencies_point_inward ... ok
+test dependencies::serde_and_serde_json_are_the_only_direct_dependencies ... ok
+test ci_selection::ci_selection_every_invalid_fixture_is_refused_for_its_reason ... ok
+test dependencies::the_core_depends_on_neither_the_adapter_nor_the_cli ... ok
+test dir_modes::the_check_catches_every_planted_form ... ok
+test evidence_outside_crates::no_product_crate_keeps_an_evidence_folder ... ok
+test evidence_outside_crates::no_product_evidence_is_tracked_for_export ... ok
+test fixture_scan::a_github_scenario_answers_only_calls_the_allowlist_allows ... ok
+test fixture_scan::a_github_scenario_records_its_name_and_synthetic_assumptions ... ok
+test fixture_scan::a_github_scenarios_argv_is_only_text ... ok
+test fixture_scan::every_scenario_records_its_synthetic_assumptions ... ok
+test dependencies::the_visual_pair_stays_on_the_visual_side ... ok
+test fixture_scan::no_checks_diagnostic_accepts_only_the_existing_synthetic_branch_form ... ok
+test fixture_scan::observed_queued_identifiers_and_keys_are_scoped ... ok
+test fixture_scan::the_documented_send_shapes_pass_only_in_send_fixtures ... ok
+test fixture_scan::the_fake_gh_is_scanned_for_private_data ... ok
+test fixture_scan::the_github_shapes_pass_only_in_github_fixtures ... ok
+test fixture_scan::the_new_thread_shapes_pass_only_in_new_thread_fixtures ... ok
+test fixture_scan::the_observed_sent_keys_pass_only_in_send_fixtures ... ok
+test fixture_scan::the_scan_catches_planted_private_data ... ok
+test limits::the_approved_limits_are_in_the_core ... ok
+test fixture_scan::fixtures_contain_only_synthetic_values ... ok
+test loops_schema::loops_schema_example_is_synthetic_and_valid ... ok
+test cockpit_schema_conformance::cockpit_malformed_responses_fail ... ok
+test loops_schema::loops_schema_reuses_new_thread_rules ... ok
+test pattern::the_pattern_form_is_checked_and_matched ... ok
+test loops_schema::loops_schema_numbers_follow_mathematical_integer_semantics ... ok
+test pending::the_pending_list_matches_the_future_behaviour_tests_exactly ... ok
+test loops_schema::loops_schema_definitions_and_records ... ok
+test plan_decisions_schema_conformance::decisions_every_schema_field_has_a_source_row ... ok
+test plan_decisions_schema_conformance::decisions_schema_uses_only_checked_keywords ... ok
+test plan_decisions_schema_conformance::decisions_three_questions_and_ten_summary_lines_are_schema_bounds ... ok
+test plan_decisions_schema_conformance::escaped_decision_markers_validate_and_have_a_discovery_rule ... ok
+test pending::nothing_else_is_ignored ... ok
+test plan_decisions_schema_conformance::plan_and_decisions_have_only_their_two_new_route_rows ... ok
+test dir_modes::no_test_leaves_a_directorys_mode_to_the_umask ... ok
+test plan_decisions_schema_conformance::plan_approval_command_runs_the_revision_v2_fixture_proof ... ok
+test plan_decisions_schema_conformance::plan_approval_fingerprint_names_the_existing_revision_script ... ok
+test plan_decisions_schema_conformance::plan_approval_summary_names_its_saved_source ... ok
+test plan_decisions_schema_conformance::plan_every_schema_field_has_a_source_row ... ok
+test plan_decisions_schema_conformance::plan_schema_uses_only_checked_keywords ... ok
+test plan_decisions_schema_conformance::every_fixture_object_refuses_missing_extra_and_positional_keys ... ok
+test plan_decisions_schema_conformance::skill_plan_record_accepts_matching_rows_and_derives_sorted_graph ... ok
+test plan_decisions_schema_conformance::skill_plan_record_rejects_rehashed_revision_drift ... ok
+test plan_decisions_schema_conformance::skills_decision_record_outputs_validate_and_bind_the_proposal ... ok
+test plan_links::plan_links_board_numbers_follow_the_definitions ... ok
+test plan_decisions_schema_conformance::decisions_all_variants_lifecycle_risks_and_empty_responses ... ok
+test plan_decisions_schema_conformance::plan_valid_partial_stale_and_empty_fixtures ... ok
+test plan_decisions_schema_conformance::plan_and_decisions_malformed_literals_fail ... ok
+test plan_links::plan_links_checker_reads_a_spec_through_gh ... ok
+test plan_links::plan_links_checker_refuses_a_failed_or_partial_gh_read ... ok
+test plan_links::plan_links_contract_carries_this_specs_lines_and_the_baseline ... ok
+test plan_links::plan_links_every_fixture_has_its_expectations_and_validates ... ok
+test plan_links::plan_links_history_days_and_daily_rows ... ok
+test plan_links::plan_links_planted_invalid_fixtures_are_refused ... ok
+test plan_links::plan_links_reports_agree_with_their_graph_reads ... ok
+test plan_links::plan_links_schema_is_checkable_and_refuses_malformed_roots ... ok
+test public_tree::ci_needs_no_private_files ... ok
+test public_tree::public_files_use_the_final_openwiz_address ... ok
+test schema::tests::shared_text_keywords_are_linted_and_enforced ... ok
+test schema_conformance::every_envelope_fixture_matches_the_schema ... ok
+test schema_conformance::the_checker_rejects_missing_and_mistyped_fields ... ok
+test schema_conformance::the_core_types_serialize_to_schema_valid_json ... ok
+test schema_conformance::the_lint_finds_rules_the_checker_would_ignore ... ok
+test schema_conformance::the_schema_limits_match_the_core_limits ... ok
+test schema_conformance::the_whole_schema_uses_only_checked_keywords ... ok
+test skills::a_broken_manifest_fails ... ok
+test skills::a_dangling_or_wrong_link_fails ... ok
+test plan_links::plan_links_checker_gives_every_fixtures_reports_exactly ... ok
+test skills::a_missing_mit_notice_fails ... ok
+test skills::a_skill_not_adapted_from_matts_with_his_notice_fails ... ok
+test skills::a_missing_or_broken_frontmatter_fails ... ok
+test skills::a_skill_not_adapted_from_matts_without_its_exact_source_line_fails ... ok
+test skills::a_stub_not_adapted_from_matts_passes_with_its_source_line ... ok
+test skills::adr0019_automatic_export_and_one_final_approval ... ok
+test skills::adr0019_combined_release_gate ... ok
+test skills::adr0019_live_smoke_and_hands_on_timing ... ok
+test skills::a_user_only_flag_fails ... ok
+test skills::adr0019_release_skills_are_kept_for_rust_checks ... ok
+test skills::ask_wiz_install_rule_refuses_ungated_or_hidden_instructions ... ok
+test skills::ask_wiz_phase_boundaries ... ok
+test skills::ask_wiz_contract ... ok
+test skills::builder_checkout_isolation_is_portable ... ok
+test skills::builder_follows_the_fleet_test_command_rule ... ok
+test skills::checkout_isolation_check_refuses_hidden_or_shared_output_rules ... ok
+test skills::checkout_isolation_ignores_unrelated_fenced_examples ... ok
+test skills::checkout_isolation_respects_comment_spans ... ok
+test skills::checkout_isolation_respects_fence_boundaries ... ok
+test skills::ask_wiz_user_started_policy ... ok
+test skills::codex_default_tier_setting_discloses_rust_dispatch_limitation ... ok
+test skills::codex_helpers_use_sol_high_default_tier_and_claude_helpers_keep_their_family ... ok
+test skills::diagnose_bisect_wrapper_skips_inconclusive_input ... ok
+test skills::diagnose_orchestrator_is_listed_in_the_skills_table ... ok
+test skills::diagnose_orchestrator_is_routed_from_review_findings ... ok
+test skills::fresh_nightly_claim_continues_the_ticks_other_lines ... ok
+test skills::huntr_checklist_separates_stale_docs_from_product_text ... ok
+test skills::ci_runs_where_are_we_collector_tests_after_triage ... ok
+test skills::huntr_holds_one_controller_by_lease_and_waits_by_waking ... ok
+test skills::huntr_kind_approval_has_a_durable_record ... ok
+test skills::huntr_kind_record_preserves_standing_tier_approval ... ok
+test skills::launch_fleet_nightly_only_tick_reaches_step_six ... ok
+test skills::only_a_skill_that_adapts_matts_needs_his_notice ... ok
+test skills::overnight_day_review_preserves_redacted_technical_facts ... ok
+test skills::overnight_preserves_huntr_risk_tiers_and_open_cap ... ok
+test skills::overnight_reuses_huntr_thirty_minute_loop ... ok
+test plan_links::plan_links_checker_reads_each_reason_line_by_the_contract ... ok
+test skills::plan_graph_relies_on_rule_and_template ... ok
+test skills::plan_graph_relies_on_rule_is_visible_and_template_is_unique ... ok
+test skills::research_raw_output_instruction_survives_filling_measurements ... ok
+test skills::research_snapshot_path_survives_fresh_shells ... ok
+test skills::plan_graph_relies_on_form ... ok
+test skills::research_workflow_checks_github_around_dispatch ... ok
+test skills::reviewer_builder_family_has_a_recorded_source ... ok
+test skills::reviewer_checkout_isolation_is_portable ... ok
+test skills::setup_checkout_isolation_slot_is_optional ... ok
+test skills::the_skill_set_is_exactly_the_list ... ok
+test skills::the_skills_folder_passes_the_static_check ... ok
+test skills::the_stubs_and_a_written_skill_pass ... ok
+test plan_links::plan_links_checker_refuses_bad_arguments_and_graph_reads ... ok
+test skills::huntr_controller_dry_run_passes ... ok
+test skills::research_worker_github_check ... ok
+
+test result: ok. 132 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 17.96s
+
+
+Exit: 0
+
+cargo fmt --check
+
+Exit: 0
+
+python3 -I tools/install/test_install.py
+test_a_complete_live_record_is_the_only_pass (__main__.FirstHourContract.test_a_complete_live_record_is_the_only_pass) ... ok
+test_a_strict_reader_refuses_duplicate_keys_and_fractions (__main__.FirstHourContract.test_a_strict_reader_refuses_duplicate_keys_and_fractions) ... ok
+test_each_example_gives_exactly_its_codes (__main__.FirstHourContract.test_each_example_gives_exactly_its_codes) ... ok
+test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) ... ok
+test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) ... ok
+test_the_contract_lists_every_code_the_checks_give (__main__.FirstHourContract.test_the_contract_lists_every_code_the_checks_give) ... ok
+test_the_contract_stage_table_is_the_checks_order_and_evidence (__main__.FirstHourContract.test_the_contract_stage_table_is_the_checks_order_and_evidence) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.126s
+
+OK
+.........
+----------------------------------------------------------------------
+Ran 9 tests in 3.331s
+
+OK
+
+Exit: 0

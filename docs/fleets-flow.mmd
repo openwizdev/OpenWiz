@@ -1,0 +1,15 @@
+flowchart TD
+  you1(["You + orchestrator: grill"]) --> plan["plan-graph: spec issue + ticket sub-issues<br/>(owned paths, blocked-by links)"]
+  plan --> approve(["You approve the graph<br/>(recorded on the spec issue)"])
+  approve --> launch["launch-fleet: every ready ticket starts at once<br/>one builder each, no cap"]
+  launch --> build["build-ticket: proof first, one pull request"]
+  build --> ci{{"CI"}}
+  ci -->|red| build
+  ci -->|green| review["review-ticket: reviewer on the exact head"]
+  review -->|findings: 2 rounds, diagnosis, 1 more, then you| build
+  review -->|approved| merge["merge by your standing rules,<br/>read the merge back"]
+  merge --> unlock["unlock the tickets<br/>that were waiting on it"]
+  unlock --> done{"every ticket<br/>closed?"}
+  done -->|no| launch
+  done -->|yes| spec[/"spec closes"/]
+  spec --> version[/"version closes after its live check"/]

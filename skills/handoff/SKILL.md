@@ -1,11 +1,11 @@
 ---
 name: handoff
-description: Keep the orchestrator's one-page handoff file in the repository current, so a new orchestrator can take over without the old chat. Use after the user approves a plan graph, before an orchestrator retires, and first thing when taking over as orchestrator. Orchestrator only.
+description: Keep the orchestrator's one-page handoff file in the private repository current, so a new orchestrator can take over without the old chat. Use after the user approves a plan graph, before an orchestrator retires, and first thing when taking over as orchestrator. Orchestrator only.
 ---
 
 # Handoff
 
-An orchestrator is one long chat. When it grows too long, or a new orchestrator takes over, everything it knew has to survive. It survives in the project's **handoff file**: one short page in the repository. Matt's version writes to a temporary folder, which a cloud sandbox throws away; in the repository, every new orchestrator can read it.
+An orchestrator is one long chat. When it grows too long, or a new orchestrator takes over, everything it knew has to survive. It survives in the project's **handoff file**: one short page in the configured private repository. Matt's version writes to a temporary folder, which a cloud sandbox throws away; in the private repository, every authorized new orchestrator can read it.
 
 **Only the orchestrator hands off.** A builder's state is its branch, pull request and ticket, and it stays with its ticket to the end. A reviewer's state is its report on the pull request. The five-minute loop starts a fresh thread each time it runs and reads everything from GitHub. If any of them stops, its replacement reads those and carries on.
 
@@ -19,7 +19,7 @@ An orchestrator is one long chat. When it grows too long, or a new orchestrator 
 
 ## Find the page
 
-The handoff file is the one the project's `AGENTS.md` (or `CLAUDE.md`) names. If the project has none yet, create `docs/agents/handoff.md` from the template below, and add a line to `AGENTS.md` that names it.
+Read `docs/agents/issue-tracker.md` for the private repository and `docs/agents/domain.md` for its checkout and state paths, then the handoff path the project's instructions name. For OpenWiz this is `private/orchestration/HANDOFF.md` in ClosedWiz; all orchestrator state stays under `private/orchestration/` there. Verify the remote and private visibility before writing. If no handoff exists, create it at that private path from the template below. Missing private settings or unknown visibility stops the write; never fall back to a public `docs/agents/handoff.md`. A public instruction may name the private location, but must not copy its content.
 
 ## Take over
 
@@ -32,11 +32,11 @@ Done when you know, for every line on the page, whether it still holds.
 
 1. **Read the facts fresh** from GitHub and CloudRoom: each open spec with an approved plan graph, and its tickets; the open pull requests; every agent and loop still running for the project; the standing approvals on record.
 2. **Rewrite the page whole** from the template. Replace it rather than adding to it; git keeps the history. Under a heading with nothing in it, write "None."
-3. **Give every line its source:** the issue, pull request, commit or file it comes from, or the user's exact words with the date and where they are recorded. Point to specs, plans, decisions and reports by link or path, and keep their content where it already lives. Mark anything you could not check **unverified**: the next orchestrator trusts this page, so a guess written as a fact sends it the wrong way. A branch or pull request shows the work, not that its agent is still running: unless CloudRoom shows the thread, its state is unverified.
-4. **Keep it safe to commit:** no keys, tokens, passwords, email addresses or personal details, and nothing quoted from a chat but the user's decisions. Name each agent by its work (role, ticket, branch, pull request), which is how a fleet finds its agents anyway.
-5. **Land it on the default branch** (usually `main`) by the project's standing merge rules (`docs/agents/fleet.md`), and read it back from there. A page left on a branch hands nothing off.
+3. **Give every line its source:** the issue, pull request, commit or file it comes from, or a decision with its date and private-comment pointer. Exact decision words may be kept on this private page only. Point to specs, plans, decisions and reports by link or path, and keep their content where it already lives. Mark anything you could not check **unverified**: the next orchestrator trusts this page, so a guess written as a fact sends it the wrong way. A branch or pull request shows the work, not that its agent is still running: unless CloudRoom shows the thread, its state is unverified.
+4. **Keep it safe to commit:** no keys, tokens, passwords, email addresses or personal details, and nothing quoted from a chat but the user's decisions, confined to this private page. No handoff, state, exact replies or thread ids go into a public file, PR description or comment; public decision sources use the decision, date and private-comment pointer. Name each agent by its work (role, ticket, branch, pull request), which is how a fleet finds its agents anyway.
+5. **Land it on the private repository's default branch** (usually `main`), with Git/PR operations in its verified private checkout and comments explicitly targeting that repository, by the project's standing merge rules (`docs/agents/fleet.md`), and read it back from there. A page left on a branch hands nothing off.
 
-Done when the default branch holds the new page, every line on it has a source or says unverified, and it is still one short page: one row per fleet, with each full list one link away, however many agents are at work.
+Done when the private default branch holds the new page, every line on it has a source or says unverified, and it is still one short page: one row per fleet, with each full list one link away, however many agents are at work.
 
 ## The page
 
@@ -71,7 +71,7 @@ Each loop running for the project: what it checks, how often, and when to stop i
 
 ## Standing approvals
 
-Each permission the user gave that still holds: their exact words, the date, where it is recorded, and what it does not cover.
+Each permission the user gave that still holds: the decision, date, private-comment pointer and what it does not cover. Exact words may be retained here because this page is private. Any public use of the standing approval uses the public approval-on-its-own form and points to that private comment.
 ```
 
 ## Credit

@@ -1,0 +1,175 @@
+{
+  "schema": "openwiz.notifications.v1",
+  "record": {
+    "status": {
+      "state": "unsupported",
+      "reason": "Synthetic: Web Push delivery is not observed yet.",
+      "next": "Synthetic: phone delivery waits for the observed binding.",
+      "preferences": {
+        "generation": 3,
+        "enabled": false,
+        "categories": {
+          "decision": true,
+          "recovery_escalation": true,
+          "ci_failed": false,
+          "review_findings": false,
+          "re_check": false,
+          "merge": false,
+          "agent_complete": false,
+          "ready_stock_changed": false,
+          "loop_missed": false,
+          "loop_stuck": false,
+          "loop_disabled": false,
+          "loop_run_changed": false,
+          "recovery_changed": false,
+          "service_update": false,
+          "contract_changed": false,
+          "fleet_wait_changed": false
+        }
+      },
+      "capability": {
+        "state": "unsupported",
+        "permission": "unknown",
+        "reason": "Synthetic capability reason.",
+        "next": "Synthetic next step."
+      },
+      "subscription": {
+        "generation": 0,
+        "state": "absent",
+        "binding_id": null,
+        "reason": "Synthetic: no subscription.",
+        "next": "Synthetic next step."
+      },
+      "sources": [
+        {
+          "category": "decision",
+          "available": {
+            "unknown": "Synthetic source not verified"
+          },
+          "reason": "Synthetic source unavailable"
+        },
+        {
+          "category": "recovery_escalation",
+          "available": {
+            "unknown": "Synthetic source not verified"
+          },
+          "reason": "Synthetic source unavailable"
+        },
+        {
+          "category": "ci_failed",
+          "available": {
+            "unknown": "Synthetic source not verified"
+          },
+          "reason": "Synthetic source unavailable"
+        },
+        {
+          "category": "review_findings",
+          "available": {
+            "unknown": "Synthetic source not verified"
+          },
+          "reason": "Synthetic source unavailable"
+        },
+        {
+          "category": "re_check",
+          "available": {
+            "unknown": "Synthetic source not verified"
+          },
+          "reason": "Synthetic source unavailable"
+        },
+        {
+          "category": "merge",
+          "available": {
+            "unknown": "Synthetic source not verified"
+          },
+          "reason": "Synthetic source unavailable"
+        },
+        {
+          "category": "agent_complete",
+          "available": {
+            "unknown": "Synthetic source not verified"
+          },
+          "reason": "Synthetic source unavailable"
+        },
+        {
+          "category": "ready_stock_changed",
+          "available": {
+            "unknown": "Synthetic source not verified"
+          },
+          "reason": "Synthetic source unavailable"
+        },
+        {
+          "category": "loop_missed",
+          "available": {
+            "unknown": "Synthetic source not verified"
+          },
+          "reason": "Synthetic source unavailable"
+        },
+        {
+          "category": "loop_stuck",
+          "available": {
+            "unknown": "Synthetic source not verified"
+          },
+          "reason": "Synthetic source unavailable"
+        },
+        {
+          "category": "loop_disabled",
+          "available": {
+            "unknown": "Synthetic source not verified"
+          },
+          "reason": "Synthetic source unavailable"
+        },
+        {
+          "category": "loop_run_changed",
+          "available": {
+            "unknown": "Synthetic source not verified"
+          },
+          "reason": "Synthetic source unavailable"
+        },
+        {
+          "category": "recovery_changed",
+          "available": {
+            "unknown": "Synthetic source not verified"
+          },
+          "reason": "Synthetic source unavailable"
+        },
+        {
+          "category": "service_update",
+          "available": {
+            "unknown": "Synthetic source not verified"
+          },
+          "reason": "Synthetic source unavailable"
+        },
+        {
+          "category": "contract_changed",
+          "available": {
+            "unknown": "Synthetic source not verified"
+          },
+          "reason": "Synthetic source unavailable"
+        },
+        {
+          "category": "fleet_wait_changed",
+          "available": {
+            "unknown": "Synthetic source not verified"
+          },
+          "reason": "Synthetic source unavailable"
+        }
+      ],
+      "latest": null,
+      "coverage": {
+        "state": "partial",
+        "gaps": [
+          {
+            "source": "decisions",
+            "reason": "Synthetic decisions unread"
+          }
+        ]
+      },
+      "freshness": {
+        "state": "unknown",
+        "snapshot_at": {
+          "unknown": "Synthetic source time unread"
+        }
+      }
+    }
+  }
+}

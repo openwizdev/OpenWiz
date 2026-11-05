@@ -1,4 +1,4 @@
-//! `pattern` for the attachment schema.
+//! `pattern` for the attachment schema (Sol round 1, finding 3).
 //!
 //! The shared checker (`tests/support/schema.rs`) has no `pattern`, and is
 //! outside B1's owned paths, so this module adds it for the attachment

@@ -30,9 +30,11 @@ after(async () => {
   await browser.close();
 });
 
-
+// #9 (contracts/web-api.v1.md revision 0.0.3): an open detail's composer also
+// reads the send preview. It is a GET like the others; sends are W5 to W13's.
+// #1029: and the installable app's one registration script.
 const SAME_ORIGIN_PATHS =
-  /^\/($|_next\/static\/[A-Za-z0-9._/-]+$|fonts\/[A-Za-z0-9._-]+\.woff2$|api\/v1\/inventory$|api\/v1\/sessions\/[A-Za-z0-9_-]+$|api\/v1\/sessions\/[A-Za-z0-9_-]+\/preview$)/;
+  /^\/($|sw-register\.js$|_next\/static\/[A-Za-z0-9._/-]+$|fonts\/[A-Za-z0-9._-]+\.woff2$|api\/v1\/inventory$|api\/v1\/sessions\/[A-Za-z0-9_-]+$|api\/v1\/sessions\/[A-Za-z0-9_-]+\/preview$)/;
 
 test('every request the page makes is same-origin, to the API or its own files', async () => {
   const p = await openPage(browser, fx.site.origin, { viewport: DESKTOP });
@@ -63,7 +65,7 @@ function files(dir) {
 /**
  * Absolute URLs that appear as inert text inside React's and Next's own
  * bundles (error-message links, XML namespaces). None is ever requested: the
- * request test above checks it.
+ * request test above proves it. Each is recorded in the evidence.
  */
 export const INERT_URLS = [
   /^https:\/\/react\.dev\/errors\/$/,
@@ -72,6 +74,8 @@ export const INERT_URLS = [
   /^https:\/\/nextjs\.org\/docs\/app\/api-reference\/functions\/[a-z0-9-]+$/,
   // core-js's licence banner, inside Next's polyfills chunk (loaded only by browsers without modules).
   /^https:\/\/github\.com\/zloirock\/core-js(\/blob\/v[0-9.]+\/LICENSE)?$/,
+  // #2292 (J28): the one allowlisted share URL, copied to the clipboard on Copy, never requested.
+  /^https:\/\/github\.com\/openwizdev\/openwiz$/,
   /^https?:\/\/www\.w3\.org\/(2000\/svg|1999\/xhtml|1998\/Math\/MathML|1999\/xlink|XML\/1998\/namespace)$/,
 ];
 
@@ -79,20 +83,26 @@ test('the build has no manifest, no service worker and no third-party asset', ()
   const all = files(OUT_DIR);
   assert.ok(all.some((f) => f.endsWith('index.html')), 'the static export exists (npm run build)');
   const names = all.map((f) => relative(OUT_DIR, f));
-  for (const name of names) {
+  // #1029: exactly the approved installable app's files, and nothing like them elsewhere.
+  // Jake's approval, preserved 2026-11-07: https://github.com/jparker2006/ClosedWiz/issues/1277#issuecomment-6704800036
+  const PWA = /^(manifest\.webmanifest|sw\.js|sw-register\.js|icons\/[a-z0-9-]+\.png)$/;
+  for (const name of names.filter((n) => !PWA.test(n))) {
     assert.match(extname(name), /^\.(html|js|css|woff2|txt)$/, `an unexpected file type: ${name}`);
     assert.doesNotMatch(name, /manifest\.json$|\.webmanifest$|(^|\/)sw\.js$|service-?worker/i, name);
   }
   const found = new Set();
   for (const f of all.filter((x) => /\.(html|js|css)$/.test(x))) {
-    const text = readFileSync(f, 'utf8');
-    assert.doesNotMatch(text, /serviceWorker\.register|rel="manifest"|importScripts\(/, relative(OUT_DIR, f));
+    const name = relative(OUT_DIR, f);
+    // #1029: the one registration, in its own file, and the one manifest link.
+    let text = readFileSync(f, 'utf8').replace(/<link rel="manifest" href="\/manifest\.webmanifest"\/>/, '');
+    if (name === 'sw-register.js') text = text.replace("navigator.serviceWorker.register('/sw.js'", '');
+    assert.doesNotMatch(text, /serviceWorker\.register|rel="manifest"|importScripts\(/, name);
     for (const m of text.matchAll(/(https?:)?\/\/[A-Za-z0-9.-]+\.[A-Za-z]{2,}(\/[A-Za-z0-9._~%/-]*)?/g)) {
       found.add(m[0]);
     }
     if (f.endsWith('.html')) {
       for (const m of text.matchAll(/\s(?:src|href)="([^"]*)"/g)) {
-        assert.match(m[1], /^\/($|(_next\/static|fonts)\/)/, `${relative(OUT_DIR, f)}: a non-local reference ${m[1]}`);
+        assert.match(m[1], /^\/($|(_next\/static|fonts)\/|manifest\.webmanifest$|sw-register\.js$|icons\/[a-z0-9-]+\.png$)/, `${relative(OUT_DIR, f)}: a non-local reference ${m[1]}`);
       }
     }
   }

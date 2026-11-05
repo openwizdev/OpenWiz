@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openwiz.dev/schemas/installed-handover.v1.schema.json",
+  "title": "OpenWiz installed handover v1",
+  "$defs": {
+    "timestamp": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+    "credits": {"anyOf": [{"type": "null"}, {"type": "number", "minimum": 0}]},
+    "candidate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["version", "source"],
+      "properties": {
+        "version": {"type": "string", "pattern": "^0\\.[0-9]{1,10}\\.[0-9]{1,10}$(?![\\s\\S])"},
+        "source": {"type": "string", "pattern": "^[0-9a-f]{40}$(?![\\s\\S])"}
+      }
+    },
+    "credit_evidence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "candidate", "interval", "usage", "allowance"],
+      "properties": {
+        "schema": {"type": "string", "const": "openwiz.credit-evidence.v1"},
+        "candidate": {"$ref": "#/$defs/candidate"},
+        "interval": {
+          "type": "object", "additionalProperties": false,
+          "required": ["started_at", "ended_at"],
+          "properties": {"started_at": {"$ref": "#/$defs/timestamp"}, "ended_at": {"$ref": "#/$defs/timestamp"}}
+        },
+        "usage": {
+          "type": "object", "additionalProperties": false,
+          "required": ["source", "provenance", "credits", "observed_at"],
+          "properties": {
+            "source": {"type": "string", "enum": ["cloudroom_usage"]},
+            "provenance": {"type": "string", "enum": ["measured", "estimated", "unknown"]},
+            "credits": {"$ref": "#/$defs/credits"},
+            "observed_at": {"$ref": "#/$defs/timestamp"}
+          }
+        },
+        "allowance": {
+          "type": "object", "additionalProperties": false,
+          "required": ["source", "credits", "observed_at"],
+          "properties": {
+            "source": {"type": "string", "enum": ["cloudroom_plan"]},
+            "credits": {"$ref": "#/$defs/credits"},
+            "observed_at": {"$ref": "#/$defs/timestamp"}
+          }
+        }
+      }
+    },
+    "credit_handoff": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "candidate", "provenance", "credits", "window_s", "free_allowance",
+                   "monthly_projection", "policy_branch", "provider_charges", "reason"],
+      "properties": {
+        "schema": {"type": "string", "const": "openwiz.credit-handoff.v1"},
+        "candidate": {"$ref": "#/$defs/candidate"},
+        "provenance": {"type": "string", "enum": ["measured", "estimated", "unknown"]},
+        "credits": {"$ref": "#/$defs/credits"},
+        "window_s": {"$ref": "#/$defs/credits"},
+        "free_allowance": {"$ref": "#/$defs/credits"},
+        "monthly_projection": {"anyOf": [{"type": "null"}, {
+          "type": "object", "additionalProperties": false, "required": ["credits", "label"],
+          "properties": {"credits": {"type": "number", "minimum": 0},
+                         "label": {"type": "string", "const": "estimate: 30 days at the observed rate"}}}]},
+        "policy_branch": {"type": "string", "enum": ["cloud", "local", "explicit_choice"]},
+        "provider_charges": {"type": "string", "const": "separate_unavailable"},
+        "reason": {"type": "string", "minLength": 1}
+      }
+    },
+    "installed_handover": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "runtime", "activation", "login", "completion", "cloud",
+                   "handover_allowed", "next_steps"],
+      "properties": {
+        "schema": {"type": "string", "const": "openwiz.installed-handover.v1"},
+        "runtime": {"anyOf": [{"type": "null"}, {
+          "type": "object", "additionalProperties": false, "required": ["version", "source", "target"],
+          "properties": {"version": {"type": "string", "pattern": "^0\\.[0-9]{1,10}\\.[0-9]{1,10}$(?![\\s\\S])"},
+                         "source": {"type": "string", "pattern": "^[0-9a-f]{40}$(?![\\s\\S])"},
+                         "target": {"type": "string", "enum": ["aarch64-apple-darwin", "x86_64-apple-darwin",
+                                                                "x86_64-unknown-linux-gnu"]}}}]},
+        "activation": {"type": "string", "enum": ["absent", "unreadable", "held", "verified"]},
+        "login": {"type": "string", "const": "unknown"},
+        "completion": {"type": "string", "const": "held"},
+        "cloud": {"type": "string", "const": "unresolved"},
+        "handover_allowed": {"type": "boolean"},
+        "next_steps": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      }
+    }
+  }
+}

@@ -1,0 +1,83 @@
+Fixture evidence only; synthetic loopback GitHub and temporary credentials.
+Unfixed implementation: 45b22c9c45368cbde05a525b923542b18e48c91f
+Command: python3 -I tools/github-reads/test_read.py ReviewRegressions.test_r3_reset_changes_cannot_refund_uncertain_spend
+
+FFFF
+======================================================================
+FAIL: test_r3_reset_changes_cannot_refund_uncertain_spend (__main__.ReviewRegressions.test_r3_reset_changes_cannot_refund_uncertain_spend) (api='rest', cross_reset=True, response='headerless')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-reads/test_read.py", line 730, in test_r3_reset_changes_cannot_refund_uncertain_spend
+    self.reset_ordering_case(api, cross, response)
+  File "tools/github-reads/test_read.py", line 810, in reset_ordering_case
+    self.assertEqual((code, out, err.split(' until=')[0]),
+AssertionError: Tuples differ: (0, '{"number": 3}\n', 'fresh: current') != (1, '', 'deferred: primary-budget')
+
+First differing element 0:
+0
+1
+
+- (0, '{"number": 3}\n', 'fresh: current')
++ (1, '', 'deferred: primary-budget')
+
+======================================================================
+FAIL: test_r3_reset_changes_cannot_refund_uncertain_spend (__main__.ReviewRegressions.test_r3_reset_changes_cannot_refund_uncertain_spend) (api='rest', cross_reset=True, response='disconnect')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-reads/test_read.py", line 730, in test_r3_reset_changes_cannot_refund_uncertain_spend
+    self.reset_ordering_case(api, cross, response)
+  File "tools/github-reads/test_read.py", line 810, in reset_ordering_case
+    self.assertEqual((code, out, err.split(' until=')[0]),
+AssertionError: Tuples differ: (0, '{"number": 3}\n', 'fresh: current') != (1, '', 'deferred: primary-budget')
+
+First differing element 0:
+0
+1
+
+- (0, '{"number": 3}\n', 'fresh: current')
++ (1, '', 'deferred: primary-budget')
+
+======================================================================
+FAIL: test_r3_reset_changes_cannot_refund_uncertain_spend (__main__.ReviewRegressions.test_r3_reset_changes_cannot_refund_uncertain_spend) (api='graphql', cross_reset=True, response='headerless')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-reads/test_read.py", line 730, in test_r3_reset_changes_cannot_refund_uncertain_spend
+    self.reset_ordering_case(api, cross, response)
+  File "tools/github-reads/test_read.py", line 810, in reset_ordering_case
+    self.assertEqual((code, out, err.split(' until=')[0]),
+AssertionError: Tuples differ: (0, '{"data": {"repository": {"issues": {"[93 chars]ent') != (1, '', 'deferred: primary-budget')
+
+First differing element 0:
+0
+1
+
++ (1, '', 'deferred: primary-budget')
+- (0,
+-  '{"data": {"repository": {"issues": {"nodes": [], "pageInfo": {"hasNextPage": '
+-  'false, "hasPreviousPage": false}}}}}\n',
+-  'fresh: current')
+
+======================================================================
+FAIL: test_r3_reset_changes_cannot_refund_uncertain_spend (__main__.ReviewRegressions.test_r3_reset_changes_cannot_refund_uncertain_spend) (api='graphql', cross_reset=True, response='disconnect')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-reads/test_read.py", line 730, in test_r3_reset_changes_cannot_refund_uncertain_spend
+    self.reset_ordering_case(api, cross, response)
+  File "tools/github-reads/test_read.py", line 810, in reset_ordering_case
+    self.assertEqual((code, out, err.split(' until=')[0]),
+AssertionError: Tuples differ: (0, '{"data": {"repository": {"issues": {"[93 chars]ent') != (1, '', 'deferred: primary-budget')
+
+First differing element 0:
+0
+1
+
++ (1, '', 'deferred: primary-budget')
+- (0,
+-  '{"data": {"repository": {"issues": {"nodes": [], "pageInfo": {"hasNextPage": '
+-  'false, "hasPreviousPage": false}}}}}\n',
+-  'fresh: current')
+
+----------------------------------------------------------------------
+Ran 1 test in 28.415s
+
+FAILED (failures=4)

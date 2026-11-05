@@ -1,3 +1,58 @@
+//! The staged attachments on disk (OpenWiz 0.0.4, B1 phase 2,
+//! ClosedWiz#14): the controller's private copy of each file the owner
+//! chose, verified before it is called ready. The core's model
+//! (`openwiz_core::attachment`) decides the kind, the safe name, the limits,
+//! the free-disk floor and retention; this module copies, hashes and
+//! deletes. Nothing here talks to CloudRoom or sends anything.
+//!
+//! Layout, under the state directory (0700), opened through the store's own
+//! checks ([`Store::open`]: absolute, outside every repository, owner-only):
+//!
+//! - `attachments/` (0700);
+//! - `attachments/.staging.lock` (0600): every staging holds a shared lock
+//!   on it; unfinished copies are deleted only under an exclusive one, so a
+//!   copy still being written is never taken for a crashed one;
+//! - `attachments/<id>/` (0700): one directory per attachment, so two files
+//!   with the same name can't collide;
+//! - `attachments/<id>/<safe name>.partial` (0600): the copy being written;
+//! - `attachments/<id>/<safe name>` (0400): the verified copy, under the
+//!   name CloudRoom will be given;
+//! - `attachments/<id>/.meta.json` (0600): written last, atomically. **Only
+//!   then is the attachment ready.** A safe name never starts with `.`, so no
+//!   file can collide with it.
+//!
+//! - `attachments/<id>/.reserve` (0600): the room a staging reserved, in
+//!   bytes, locked by that staging until it ends (a stopped one's lock is
+//!   gone, so it reserves nothing); deleted once the attachment is ready.
+//!   Each staging measures the free space and reserves its room under the
+//!   claims lock (below), so stagings at once never spend the same room
+//!   twice (#16, Sol on #167, R3);
+//! - `attachments/.claims.lock` (0600): every claim, release, settle,
+//!   removal and sweep of a ready attachment, and every staging's measure
+//!   and reservation, holds an exclusive lock on it,
+//!   so an attachment is never deleted while an operation claims it, and
+//!   never claimed by two (B2, ClosedWiz#15);
+//! - `attachments/<id>/.claim.json` (0600): the operation that claims the
+//!   attachment, `{"kind": "messaging" | "new_thread", "op_id": …}`, written
+//!   atomically once that operation owns its op id, before its dispatching
+//!   mark. Where the claim stands is never stored here: it is read from
+//!   that operation's own record ([`RecordedClaims`]), so the two can't
+//!   disagree.
+//!
+//! Staging streams: the source is looked at, opened read-only without
+//! waiting (`O_NONBLOCK`), looked at again through the open file (it must
+//! be the file looked at), then copied in [`COPY_CHUNK_BYTES`] pieces,
+//! hashed as it goes, never held whole. After the copy the source is
+//! checked unchanged: its file, size and times, and its bytes read again.
+//! Messages name an attachment by its id, never by its file name.
+//!
+//! Since #16 (B3) an upload stages the same way from its body
+//! ([`Store::stage_stream`]): the same name, kind, limits, floor, lock,
+//! copy, sync, rename, seal and metadata, read once from the stream, never
+//! past its declared length. And the three reports of `openwiz attachment
+//! add, ls, rm` live here ([`report`]), so the CLI and the web server print
+//! one implementation.
+
 use std::fs::{self, DirBuilder, File, OpenOptions, TryLockError};
 use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::os::unix::fs::{DirBuilderExt, MetadataExt, OpenOptionsExt, PermissionsExt};
@@ -82,13 +137,111 @@ compile_error!(
     "O_NONBLOCK's value isn't recorded for this target (crates/store/src/attachments.rs)"
 );
 
-/// The free space on the volume that holds `dir`, in bytes.
+/// Derive the owner from a file this process exclusively creates in private
+/// state (Jake, #1102 comment 6672035698). No subprocess or identity environment.
+pub fn owner_uid_from_private_state(root: &Path) -> Result<u32, String> {
+    use std::path::Component;
+    if !root.is_absolute()
+        || !root
+            .components()
+            .all(|part| matches!(part, Component::RootDir | Component::Normal(_)))
+    {
+        return Err("owner probe requires an absolute private state directory".to_owned());
+    }
+    for ancestor in root.ancestors() {
+        let meta =
+            fs::symlink_metadata(ancestor).map_err(|_| "cannot inspect owner probe ancestors")?;
+        if !meta.is_dir() || meta.file_type().is_symlink() {
+            return Err("owner probe refuses symlinked state ancestors".to_owned());
+        }
+        match fs::symlink_metadata(ancestor.join(".git")) {
+            Ok(_) => return Err("owner probe must be outside repositories".to_owned()),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(_) => return Err("cannot inspect owner probe repository boundary".to_owned()),
+        }
+    }
+    let directory =
+        fs::symlink_metadata(root).map_err(|_| "cannot inspect owner probe directory")?;
+    if directory.mode() & 0o077 != 0 {
+        return Err("owner probe directory must be private".to_owned());
+    }
+    let id = new_id().map_err(|_| "cannot allocate private owner probe")?;
+    let path = root.join(format!(".owner-{}.tmp", id.as_str()));
+    let file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .open(&path)
+        .map_err(|_| "cannot create private owner probe")?;
+    let result = (|| {
+        let meta = file
+            .metadata()
+            .map_err(|_| "cannot inspect created owner probe")?;
+        let current =
+            fs::symlink_metadata(root).map_err(|_| "cannot recheck owner probe directory")?;
+        if !meta.is_file()
+            || meta.nlink() != 1
+            || meta.mode() & 0o077 != 0
+            || current.dev() != directory.dev()
+            || current.ino() != directory.ino()
+            || current.uid() != meta.uid()
+            || current.mode() & 0o077 != 0
+        {
+            return Err("owner probe requires process-owned private state".to_owned());
+        }
+        Ok(meta.uid())
+    })();
+    // Remove exactly the exclusively created empty file on success or failure.
+    let cleanup =
+        fs::remove_file(&path).map_err(|_| "cannot remove private owner probe".to_owned());
+    let uid = result.and_then(|uid| cleanup.map(|()| uid))?;
+    #[cfg(target_os = "macos")]
+    {
+        if PROCESS_OWNER.get().is_some_and(|previous| *previous != uid) {
+            return Err("process owner identity changed".to_owned());
+        }
+        let _ = PROCESS_OWNER.set(uid);
+    }
+    Ok(uid)
+}
+
+#[cfg(target_os = "macos")]
+static PROCESS_OWNER: std::sync::OnceLock<u32> = std::sync::OnceLock::new();
+
+/// Retain the existing Linux kernel owner query without starting a program.
+#[cfg(target_os = "linux")]
+pub fn effective_uid() -> Result<u32, String> {
+    fs::metadata("/proc/self")
+        .map(|meta| meta.uid())
+        .map_err(|_| "cannot determine state owner".to_owned())
+}
+
+#[cfg(target_os = "macos")]
+pub fn effective_uid() -> Result<u32, String> {
+    if let Some(uid) = PROCESS_OWNER.get() {
+        return Ok(*uid);
+    }
+    let root = crate::default_state_dir(&|name| std::env::var_os(name))
+        .map_err(|_| "cannot locate private owner state")?;
+    owner_uid_from_private_state(&root)
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
+pub fn effective_uid() -> Result<u32, String> {
+    Err("state ownership is unsupported on this platform".to_owned())
+}
+
+/// The free space on the volume that holds `dir`, in bytes (sheet B-3).
 pub trait FreeSpace {
     /// The bytes free, or why they couldn't be measured. Staging never goes
     /// ahead without a measure.
     fn free_bytes(&self, dir: &Path) -> Result<u64, String>;
 }
 
+/// The fixed free-space tool: `df`, by its absolute path, for the
+/// free space on the state volume. Jake approved option (a) of B-3 on #14,
+/// 2026-10-31 ([private record](https://github.com/jparker2006/ClosedWiz/issues/1277#issuecomment-6704800036)).
+/// This is P8(a)'s one exception, checked word for word.
 pub const DF_PROGRAM: &str = "/bin/df";
 
 /// `df`'s arguments before the directory: POSIX output (`-P`), one line
@@ -137,7 +290,7 @@ const DF_HEADER: [&str; 7] = [
 /// fields: its name, size, used and available (whole numbers), capacity (a
 /// whole percentage) and mount point (absolute), last. A name or a mount
 /// point with spaces makes the fields ambiguous, so it is refused, as is
-/// anything else: nothing is guessed.
+/// anything else (Sol, round 1, R3): nothing is guessed.
 pub fn parse_df(out: &[u8]) -> Result<u64, String> {
     let refused = || "df's output isn't the POSIX form".to_owned();
     let text = std::str::from_utf8(out).map_err(|_| refused())?;
@@ -165,7 +318,7 @@ pub fn parse_df(out: &[u8]) -> Result<u64, String> {
     blocks.checked_mul(1024).ok_or_else(refused)
 }
 
-/// Which operation, if any, has claimed each attachment. B2
+/// Which operation, if any, has claimed each attachment (sheet B-6). B2
 /// records the claims; until then nothing can claim one ([`NoClaims`]).
 pub trait Claims {
     fn claim(&self, id: &AttachmentId) -> Result<Claim, StoreError>;
@@ -255,10 +408,11 @@ pub enum Staged {
 pub struct Swept {
     /// Unfinished copies, left by a staging that stopped.
     pub unfinished: usize,
-    /// Ready attachments past their time-to-live.
+    /// Attachments that became ready and passed their time-to-live (sheet B-2),
+    /// including copies damaged afterward.
     pub expired: Vec<ReadyAttachment>,
     /// Ready attachments whose operation's accepted outcome is recorded
-    /// (none before B2).
+    /// (sheet B-6; none before B2).
     pub released: usize,
 }
 
@@ -368,7 +522,7 @@ impl Store<Attachments> {
         staged
     }
 
-    /// Stages an upload: `len` bytes read from `source`, under the
+    /// Stages an upload (#16): `len` bytes read from `source`, under the
     /// owner's `display_name` (untrusted; the core makes the staged name),
     /// verified as [`stage`](Self::stage) verifies a file. The kind, the
     /// limits and the free-disk floor are checked on the first bytes and
@@ -433,9 +587,9 @@ impl Store<Attachments> {
     /// Measures the free space and reserves `len` bytes of it for a new
     /// attachment, as one step under the claims lock, so stagings at once,
     /// in this process or another, file or stream, never spend the same
-    /// room twice: the room every other staging in
+    /// room twice (Sol on #167, R3): the room every other staging in
     /// progress still needs is counted as used, and the free-disk floor
-    /// is checked against what is left. The new attachment's
+    /// (B-3) is checked against what is left. The new attachment's
     /// directory comes with its reservation held; or the reason it can't
     /// fit, with nothing made.
     fn reserve(
@@ -448,8 +602,8 @@ impl Store<Attachments> {
         // a copy is written, and a sweep takes it only after letting go of
         // the staging lock, so the two never wait on each other.
         let _claims = self.claims_lock()?;
-        // What the other stagings still need, first; the free space after.
-        // Copies run without this lock, so one
+        // What the other stagings still need, first; the free space after
+        // (Sol's re-check on #167, R3). Copies run without this lock, so one
         // can move on, or finish, between the two looks: then its bytes are
         // counted twice (still needed, and already used), never not at all.
         // Measured the other way round, a copy moving on in between would be
@@ -536,7 +690,8 @@ impl Store<Attachments> {
     }
 
     /// Deletes unfinished copies (unless a staging is in progress), and the
-    /// ready attachments the core's retention rule says go.
+    /// formerly ready attachments the core's retention rule says go, even
+    /// if their bytes were damaged after staging.
     pub fn sweep(&self, now: Timestamp, claims: &dyn Claims) -> Result<Swept, StoreError> {
         self.refuse_if_read_only()?;
         let mut swept = Swept::default();
@@ -562,10 +717,20 @@ impl Store<Attachments> {
         // No claim can be made or settled while the retention rule is
         // applied (B2).
         let _claims = self.claims_lock()?;
-        for listed in self.list(claims)? {
-            let Listed::Ready { attachment, claim } = listed else {
+        let mut ready = Vec::new();
+        for (id, dir) in self.entries()? {
+            // Intact metadata proves when staging finished. Damage to the
+            // copy does not reset its age or release a claim.
+            let Meta::Ready(attachment) = read_meta(&dir, &id) else {
                 continue;
             };
+            let claim = claims.claim(&id)?;
+            ready.push((attachment, claim));
+        }
+        // Read every claim before deleting any ready copy, oldest first.
+        ready
+            .sort_by_key(|(attachment, _)| (attachment.ready_at, attachment.attachment.id.clone()));
+        for (attachment, claim) in ready {
             let age = age(now, attachment.ready_at);
             match retention(Stored::Ready { claim, age }) {
                 Retention::Keep | Retention::Delete(DeleteReason::Partial) => {}
@@ -635,7 +800,7 @@ impl Store<Attachments> {
             Meta::Unreadable => None,
             Meta::Ready(attachment) => Some(attachment),
         };
-        // No claim can be made between final validation and deletion (B2).
+        // No claim can be made between the check and the deletion (B2).
         let _claims = self.claims_lock()?;
         if let Err(RemoveRefused(claim)) = can_remove(claims.claim(id)?) {
             return Ok(Removal::Refused(claim));
@@ -819,12 +984,12 @@ impl Store<Attachments> {
 /// the operation's own record, never written here:
 ///
 /// - no record (the operation was withdrawn: nothing was read or sent for
-/// it), or no claim file: unclaimed;
+///   it), or no claim file: unclaimed;
 /// - claimed or dispatching by a live process: dispatching;
 /// - a record whose process stopped: as recovery would finish it (claimed
-/// becomes failed, dispatching uncertain), read only;
+///   becomes failed, dispatching uncertain), read only;
 /// - finished: queued or sent, or created, is accepted; failed or refused
-/// is failed; uncertain is uncertain.
+///   is failed; uncertain is uncertain.
 ///
 /// The send and new-thread records are opened for reading only, at each
 /// look, so a record kind made after this was built is still seen.
@@ -1099,10 +1264,10 @@ struct Copy<'a> {
 /// What a staging copies from.
 enum Source<'s> {
     /// A file, as it was opened: after its copy it is checked unchanged
-    /// against `opened`. A read error is `unreadable`; a
+    /// against `opened` (Sol, round 1, R2). A read error is `unreadable`; a
     /// size that changes, `size_mismatch`.
     File { file: File, opened: Fingerprint },
-    /// An upload's body, read once and never past its length: a read
+    /// An upload's body (#16), read once and never past its length: a read
     /// error, or an end before its length, is the connection lost.
     Stream(&'s mut dyn Read),
 }
@@ -1179,7 +1344,9 @@ impl Copy<'_> {
             return Ok(Staged::Failed(source.lost(true)));
         }
         let sha256 = hasher.finish();
-
+        // Sol, round 1, R2: a file must not have changed while it was
+        // copied, or the copy may be part old and part new. An upload is
+        // read once: what arrived is what was hashed.
         if let Source::File { file, opened } = &mut source {
             match unchanged(file, opened, &sha256) {
                 Ok(true) => {}
@@ -1282,7 +1449,7 @@ fn regular(meta: &fs::Metadata) -> Result<(), FailReason> {
 
 /// What is known of the source: the file it is (device and inode) and,
 /// from its open handle, its size and times. Staging refuses the source if
-/// any of them changes.
+/// any of them changes (Sol, round 1, R1 and R2).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct Fingerprint {
     dev: u64,
@@ -1317,6 +1484,12 @@ fn look_at_source(source: &Path) -> Result<Fingerprint, FailReason> {
     Ok(Fingerprint::of(&meta))
 }
 
+/// The source, opened for reading only and without waiting, and what it is.
+/// What was opened is looked at again (`fstat` on the open file) before a
+/// byte is read: anything but a regular file is refused, and so is any file
+/// other than the one `looked` found (Sol, round 1, R1: a file or a link
+/// swapped in since). A link chosen as the source opens its target, the
+/// file looked at, so it stages.
 fn open_source(source: &Path, looked: Fingerprint) -> Result<(File, Fingerprint), FailReason> {
     let file = open_nonblocking(source).map_err(|_| FailReason::Unreadable)?;
     let meta = file.metadata().map_err(|_| FailReason::Unreadable)?;
@@ -1329,7 +1502,7 @@ fn open_source(source: &Path, looked: Fingerprint) -> Result<(File, Fingerprint)
 }
 
 /// Whether the open source is still as it was opened, after its copy
-/// hashed to `copied`: the same file, size and times,
+/// hashed to `copied` (Sol, round 1, R2): the same file, size and times,
 /// then the same bytes, read again from the start through the same handle,
 /// then the same file, size and times again. The bytes are read again
 /// because a file's times can miss a rewrite within one tick of the clock.
@@ -1395,11 +1568,23 @@ enum Meta {
 /// each once, every value checked) and the time it became ready, in Unix
 /// milliseconds. The record's id must be its directory's.
 fn read_meta(dir: &Path, id: &AttachmentId) -> Meta {
-    let text = match fs::read_to_string(dir.join(META)) {
-        Ok(text) => text,
+    let path = dir.join(META);
+    match fs::symlink_metadata(&path) {
+        Ok(meta) if meta.is_file() => {}
+        Ok(_) => return Meta::Unreadable,
         Err(e) if e.kind() == io::ErrorKind::NotFound => return Meta::Missing,
         Err(_) => return Meta::Unreadable,
-    };
+    }
+    let mut text = String::new();
+    let read = open_metadata(&path).and_then(|mut file| {
+        if !file.metadata()?.is_file() {
+            return Err(io::ErrorKind::InvalidData.into());
+        }
+        file.read_to_string(&mut text)
+    });
+    if read.is_err() {
+        return Meta::Unreadable;
+    }
     match serde_json::from_str::<(AttachmentRef, Timestamp)>(&text) {
         Ok((attachment, ready_at)) if attachment.id == *id => Meta::Ready(ReadyAttachment {
             attachment,
@@ -1407,6 +1592,48 @@ fn read_meta(dir: &Path, id: &AttachmentId) -> Meta {
         }),
         _ => Meta::Unreadable,
     }
+}
+
+fn open_metadata(path: &Path) -> io::Result<File> {
+    // O_NOFOLLOW: XNU bsd/sys/fcntl.h (Darwin); Linux UAPI
+    // arch/{arm,arm64}/include/uapi/asm/fcntl.h (ARM), otherwise
+    // include/uapi/asm-generic/fcntl.h (x86, x86_64, riscv64).
+    let no_follow = if cfg!(target_vendor = "apple") {
+        0x0100
+    } else if cfg!(any(target_arch = "arm", target_arch = "aarch64")) {
+        0o100000
+    } else {
+        0o400000
+    };
+    OpenOptions::new()
+        .read(true)
+        .custom_flags(O_NONBLOCK | no_follow)
+        .open(path)
+}
+
+#[cfg(test)]
+#[test]
+fn metadata_open_refuses_symlink_target() {
+    let dir = std::env::temp_dir().join(format!("openwiz-syn-meta-{}", new_id().unwrap().as_str()));
+    DirBuilder::new().mode(0o700).create(&dir).unwrap();
+    let target = dir.join("syn-record.json");
+    let link = dir.join(META);
+    let text = r#"[{"id":"att-synthetic-guard","kind":"file","display_name":"syn-guard.txt","name":"syn-guard.txt","size_bytes":1,"sha256":"0000000000000000000000000000000000000000000000000000000000000000"},1800000000000]"#;
+    serde_json::from_str::<(AttachmentRef, Timestamp)>(text).unwrap();
+    fs::write(&target, text).unwrap();
+    std::os::unix::fs::symlink(&target, &link).unwrap();
+    let result = open_metadata(&link);
+    fs::remove_dir_all(&dir).unwrap();
+    let error = result.expect_err("metadata open followed a symlink");
+    // ELOOP: XNU bsd/sys/errno.h = 62; Linux asm-generic/errno.h = 40.
+    assert_eq!(
+        error.raw_os_error(),
+        Some(if cfg!(target_vendor = "apple") {
+            62
+        } else {
+            40
+        })
+    );
 }
 
 /// A new attachment id: `att-` and 32 random hex digits.
@@ -1425,7 +1652,7 @@ fn age(now: Timestamp, at: Timestamp) -> Duration {
 }
 
 /// The reports of `openwiz attachment add, ls, rm` (B1 phase 2), and of the
-/// web server's attachment routes, which answer with the same JSON:
+/// web server's attachment routes, which answer with the same JSON (#16):
 /// **one implementation for both clients**, in the shapes of
 /// `contracts/attachment.v1.schema.json`. The rules a report applies are
 /// here once: when an attachment expires, the words for a broken copy, and
@@ -1482,7 +1709,7 @@ pub mod report {
     }
 
     /// Sweeps the store as each command opens it (unfinished copies go;
-    /// attachments past their time-to-live, go too) and reports what
+    /// attachments past their time-to-live, B-2, go too) and reports what
     /// expired.
     pub fn sweep(
         store: &AttachmentStore,

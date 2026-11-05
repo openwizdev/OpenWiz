@@ -1,0 +1,37 @@
+# #2565 R1 red run: python3 -I tools/war-room/test_gather.py Gather.test_each_picture_card_shows_what_tells_it_apart
+# at 63a6dfc154aba275d322c8e7efac6c455384aadb plus this test and page.py's detail-row classes (no visual change), before the fix; synthetic fixtures only
+# failing subtests: 138
+FAIL: test_each_picture_card_shows_what_tells_it_apart (__main__.Gather.test_each_picture_card_shows_what_tells_it_apart) (phone=False, metric='merged-hour-forward')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_gather.py", line 335, in test_each_picture_card_shows_what_tells_it_apart
+    self.assertIn(m['window']['since'], card)
+AssertionError: '2030-01-02T12:00:00Z' not found in 'Merged this UTC hour forward (current ticket metadata; all base branches)\n1 count known'
+
+--
+FAIL: test_each_picture_card_shows_what_tells_it_apart (__main__.Gather.test_each_picture_card_shows_what_tells_it_apart) (phone=False, metric='merged-hour-sideways')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_gather.py", line 335, in test_each_picture_card_shows_what_tells_it_apart
+    self.assertIn(m['window']['since'], card)
+AssertionError: '2030-01-02T12:00:00Z' not found in 'Merged this UTC hour sideways (current ticket metadata; all base branches)\n0 count known'
+
+--
+FAIL: test_each_picture_card_shows_what_tells_it_apart (__main__.Gather.test_each_picture_card_shows_what_tells_it_apart) (phone=False, metric='merged-hour-backwards')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_gather.py", line 335, in test_each_picture_card_shows_what_tells_it_apart
+    self.assertIn(m['window']['since'], card)
+AssertionError: '2030-01-02T12:00:00Z' not found in 'Merged this UTC hour backwards (current ticket metadata; all base branches)\n1 count known'
+
+--
+FAIL: test_each_picture_card_shows_what_tells_it_apart (__main__.Gather.test_each_picture_card_shows_what_tells_it_apart) (phone=False, metric='merged-day-forward')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_gather.py", line 335, in test_each_picture_card_shows_what_tells_it_apart
+    self.assertIn(m['window']['since'], card)
+AssertionError: '2030-01-02T00:00:00Z' not found in 'Merged this UTC day forward (current ticket metadata; all base branches)\n1 count known'
+
+Ran 1 test in 1.921s
+
+FAILED (failures=138)

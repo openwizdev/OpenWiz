@@ -1,17 +1,45 @@
+//! W1 (#9): exactly one mutation route. The route table is the read routes
+//! plus one `POST`; every other method on the send route is `405` with
+//! `Allow: POST`, `POST` anywhere else is `405` with `Allow: GET`, and none
+//! of them reads, claims or sends anything.
+//!
+//! Updated for #12 (OpenWiz 0.0.4, A2), with its reason at the change: the
+//! table now ends with A2's four new-thread routes (U1's `NEW_ROUTES`), so
+//! the send is one of two writes. Everything else here still holds for the
+//! send: no new-thread route sends.
+
 use openwiz_server::{ROUTES, Route};
 
 use crate::msg::SendFake;
 use crate::send_support::{HOST, body, good_headers, messages, raw, send_json, serve_send, with};
 
+/// Updated for #12 with this reason: 0.0.3's six routes are unchanged and
+/// first; A2 appends exactly U1's four (sheet A-13), and the only new write
+/// among them is the create (U1, U6, U11, U12).
+///
+/// Updated for #16 (B3) with this reason: B3 appends AW1's three
+/// attachment routes after A2's (sheet B-9). None of them sends: they
+/// change only the attachment store (AW1 to AW5). 0.0.3's six are still
+/// first and unchanged, and the send is still the one route that sends.
 #[test]
 fn the_route_table_is_the_read_routes_and_one_post() {
+    let legacy = crate::a4_no_mutation::legacy_routes(ROUTES);
     let new = crate::u01_new_routes::NEW_ROUTES;
     let attachments = crate::aw01_routes::ATTACHMENT_ROUTES;
-    let first = ROUTES.len() - new.len() - attachments.len();
-    assert_eq!(&ROUTES[first..first + new.len()], new);
-    assert_eq!(&ROUTES[first + new.len()..], attachments);
+    // #127 appends two read-only fleet routes after the attachments.
+    let end = legacy.len()
+        - crate::c3_routes::FLEET_ROUTES.len()
+        - crate::e11_plan_routes::PLAN_ROUTES.len()
+        - crate::e11_decisions_routes::DECISIONS_ROUTES.len()
+        - 2 // L6 appends exactly two local loop-switch routes.
+        - 1 // #1100 appends exactly one setup GET.
+        - 1 // #535 cockpit GET.
+        - 1; // #549 loops GET.
+    let first = end - new.len() - attachments.len();
+    assert_eq!(&legacy[first..first + new.len()], new);
+    assert_eq!(&legacy[first + new.len()..end], attachments);
     assert_eq!(
-        &ROUTES[..first],
+        &legacy[..first],
         &[
             Route {
                 method: "GET",
@@ -130,6 +158,9 @@ fn get_never_sends() {
     assert_eq!(fake.tell_count(), 1);
 }
 
+/// Sol #91 round 1, finding 3: without a send configuration, the send,
+/// preview and lookup routes are absent for every method: `404`, no
+/// `Allow`, nothing read.
 #[test]
 fn without_sending_the_send_routes_are_absent_for_every_method() {
     let fake = SendFake::new("web_w1_disabled", "send");

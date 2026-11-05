@@ -1,0 +1,22 @@
+#!/bin/sh
+# Test-only installed `openwiz` for the #1109 install journey. Synthetic only.
+# `engine` runs the installed runtime/engine/engine.py beside this program, as
+# the real CLI does (crates/cli/src/engine.rs); `fleet` forms go to T6's
+# recording fake, and the reads setup makes go to T3's recording fake.
+# JOURNEY_HOST=<system>/<machine> (fixture only) makes the engine see that host,
+# so each host's outcome is proved on any test machine.
+here=$(cd "$(dirname "$0")" && pwd)
+case "$1" in
+  engine)
+    shift
+    if [ -n "$JOURNEY_HOST" ]; then
+      exec /usr/bin/python3 -I -c 'import platform, runpy, sys
+system, machine = sys.argv[1].split("/")
+platform.system, platform.machine = (lambda: system), (lambda: machine)
+sys.argv = sys.argv[2:]
+runpy.run_path(sys.argv[0], run_name="__main__")' "$JOURNEY_HOST" "$here/runtime/engine/engine.py" "$@"
+    fi
+    exec /usr/bin/python3 -I "$here/runtime/engine/engine.py" "$@" ;;
+  fleet) exec /usr/bin/python3 -I "$JOURNEY_FAKES/onboard/fake_openwiz.py" "$@" ;;
+  *) exec /usr/bin/python3 -I "$JOURNEY_FAKES/connections/fake-openwiz" "$@" ;;
+esac

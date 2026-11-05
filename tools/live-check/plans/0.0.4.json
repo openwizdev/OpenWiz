@@ -1,0 +1,195 @@
+{
+ "plan": "openwiz-0.0.4-live-check",
+ "sheet": "private/openwiz-0.0.4-approvals.md, L-1 to L-12 (decided 2026-10-30; L-11 superseded by ADR 0009)",
+ "note": "Every expect key is checked against what X1 saw; land is how often the step's text lands on its target (P-A: as the first prompt of one new thread); calls and attempts are X2's counts for the step. A step without calls lets X2 allow no write at all.",
+ "budget": {"creates": 4, "sends": 2},
+ "groups": [
+  {
+   "id": "C0",
+   "claims": ["S4 (the catalogue OpenWiz reads)", "S15 (the effects it states)"],
+   "steps": [
+    {"id": "C0-models", "seq": 1, "do": "models",
+     "expect": {"exit": 0, "schema": "openwiz.cloud-options.v1", "state": "offered", "contract": "valid", "attempts": 0, "calls": 0}},
+    {"id": "C0-preview", "seq": 1, "do": "preview", "msg": "N1", "harness": "claude-code",
+     "expect": {"exit": 12, "schema": "openwiz.new-thread-preview.v1", "verdict": "ready", "contract": "valid", "text_sha_matches": true, "attempts": 0, "calls": 0}},
+    {"id": "C0-status-none", "seq": 1, "do": "status",
+     "expect": {"exit": 11, "schema": "openwiz.new-thread-status.v1", "kind": "no_record", "contract": "valid", "attempts": 0, "calls": 0}}
+   ]
+  },
+  {
+   "id": "C1",
+   "claims": ["S3", "L-4 (zero-call refusals)", "AL2", "AL8"],
+   "steps": [
+    {"id": "C1-R1", "seq": 1, "do": "refuse-new", "msg": "R1", "unoffered": true,
+     "expect": {"exit": 5, "status": "refused", "kind": "outcome", "reason": ["model_not_offered", "effort_not_offered", "harness_not_offered"], "contract": "valid", "attempts": 0, "calls": 0}},
+    {"id": "C1-R2", "seq": 1, "do": "refuse-new", "msg": "R2", "harness": "codex", "project": "P-N",
+     "expect": {"exit": 5, "status": "refused", "reason": "project_no_github_remote", "contract": "valid", "attempts": 0, "calls": 0}},
+    {"id": "C1-R3", "seq": 1, "do": "refuse-new", "msg": "R3", "harness": "codex", "attach": ["F3"],
+     "expect": {"exit": 5, "schema": "openwiz.attachment-add.v1", "failed_reasons": ["image_too_large"], "ready": 0, "contract": "valid", "staged_left": 0, "attempts": 0, "calls": 0}},
+    {"id": "C1-R4", "seq": 1, "do": "refuse-send", "msg": "R4", "target": "T-B", "attach": ["F6"],
+     "expect": {"exit": 5, "schema": "openwiz.attachment-add.v1", "failed_reasons": ["unsupported_heif"], "ready": 0, "contract": "valid", "staged_left": 0, "attempts": 0, "calls": 0}},
+    {"id": "C1-R5", "seq": 1, "do": "refuse-send", "msg": "R5", "target": "T-B", "mode": "steer", "attach": ["F1"],
+     "expect": {"exit": 2, "report": "none", "stderr_line": true, "staged_left": 0, "attempts": 0, "calls": 0}}
+   ]
+  },
+  {
+   "id": "C2",
+   "claims": ["S1", "S2", "S5", "S8", "S11 (the dash prompt)"],
+   "steps": [
+    {"id": "C2-N1", "seq": 1, "do": "create", "msg": "N1", "harness": "claude-code",
+     "expect": {"exit": 0, "status": "created", "replayed": false, "contract": "valid", "text_sha_matches": true, "attempts": 1, "calls": 1, "land": 1, "exact": true}},
+    {"id": "C2-N1-rerun", "seq": 2, "do": "create", "msg": "N1", "harness": "claude-code", "op": "same:C2-N1",
+     "expect": {"exit": 0, "status": "created", "replayed": true, "contract": "valid", "attempts": 0, "calls": 0}},
+    {"id": "C2-N1-status", "seq": 2, "do": "status", "of": "C2-N1",
+     "expect": {"exit": 0, "schema": "openwiz.new-thread-status.v1", "kind": "recorded", "status": "created", "contract": "valid", "attempts": 0, "calls": 0}}
+   ]
+  },
+  {
+   "id": "C3",
+   "claims": ["S1", "S2", "S8 (a double submit, conflicting reuse)", "S11 (the file-path prompt)"],
+   "steps": [
+    {"id": "C3-N2", "seq": 1, "do": "create", "msg": "N2", "harness": "codex", "procs": 2,
+     "expect": {"exits": {"0": [1, 2], "7": [0, 1]}, "status": "created", "contracts": "valid", "attempts": 1, "calls": 1, "land": 1, "exact": true}},
+    {"id": "C3-N6", "seq": 2, "do": "create", "msg": "N6", "harness": "codex", "op": "same:C3-N2",
+     "expect": {"exit": 8, "status": "conflicting_reuse", "differs": ["text"], "contract": "valid", "attempts": 0, "calls": 0}},
+    {"id": "C3-N2-effort", "seq": 2, "do": "create", "msg": "N2", "harness": "codex", "other_effort": true, "op": "same:C3-N2",
+     "expect": {"exit": 8, "status": "conflicting_reuse", "differs": ["effort"], "contract": "valid", "attempts": 0, "calls": 0}}
+   ]
+  },
+  {
+   "id": "C4",
+   "claims": ["S6 (the CLI killed mid-create)", "S7 (no redispatch)"],
+   "steps": [
+    {"id": "C4-N4", "seq": 1, "do": "create", "msg": "N4", "harness": "codex", "fault": "hold-after", "hold_s": 20, "kill": "after-call",
+     "expect": {"exit": -9, "report": "none", "attempts": 1, "calls": 1, "p_a_new": [0, 1], "land": 1, "exact": true}},
+    {"id": "C4-N4-status", "seq": 2, "do": "status", "of": "C4-N4",
+     "expect": {"exit": 6, "schema": "openwiz.new-thread-status.v1", "kind": "recorded", "status": "uncertain", "observed_threads": [0, 1], "contract": "valid", "attempts": 0, "calls": 0}},
+    {"id": "C4-N4-rerun", "seq": 2, "do": "create", "msg": "N4", "harness": "codex", "op": "same:C4-N4",
+     "expect": {"exit": 6, "status": "uncertain", "contract": "valid", "attempts": 0, "calls": 0}},
+    {"id": "C4-quiet", "seq": 2, "do": "quiet", "wait": "settle+late",
+     "expect": {"attempts": 0}}
+   ]
+  },
+  {
+   "id": "C5",
+   "claims": ["AL1 (T-B, Cloud: right target, intact bytes)", "AL7 (the staged copies go)"],
+   "steps": [
+    {"id": "C5-A1", "seq": 1, "do": "send", "msg": "A1", "target": "T-B", "attach": ["F4", "F1"],
+     "expect": {"exit": 0, "status": ["accepted", "queued"], "contract": "valid", "text_sha_matches": true, "staged_left": 0, "attempts": 1, "calls": 1, "land": 1, "exact": true, "agent": true}}
+   ]
+  },
+  {
+   "id": "W1",
+   "claims": ["S14 (fixture-only; the read routes answer by contract, with zero writes)", "S4"],
+   "steps": [
+    {"id": "W1-routes", "seq": 1, "do": "routes",
+     "expect": {"attempts": 0, "calls": 0}}
+   ]
+  },
+  {
+   "id": "W2",
+   "claims": ["S3", "S9", "L-10 (owner only)", "AL2", "AL8", "AL10"],
+   "steps": [
+    {"id": "W2-R1", "seq": 1, "do": "web-create", "msg": "R1", "unoffered": true,
+     "expect": {"http": 200, "status": "refused", "reason": ["model_not_offered", "effort_not_offered", "harness_not_offered"], "contract": "valid", "attempts": 0, "calls": 0}},
+    {"id": "W2-R5", "seq": 1, "do": "web-send", "msg": "R5", "target": "T-B", "mode": "steer", "attach": ["F1"], "remove_after": true,
+     "expect": {"http": 400, "attempts": 0, "calls": 0}},
+    {"id": "W2-tray", "seq": 1, "do": "tray", "tray": ["F3", "F6", "F5"],
+     "expect": {"tray": {"F3": "failed:image_too_large", "F6": "failed:unsupported_heif", "F5": "ready"}, "staged_unchanged": true, "attempts": 0, "calls": 0}},
+    {"id": "W2-probes", "seq": 1, "do": "probe", "msg": "R6",
+     "expect": {"staged_unchanged": true, "attempts": 0, "calls": 0}}
+   ]
+  },
+  {
+   "id": "W3",
+   "claims": ["AL3 (the server's half: a cut upload stages nothing)"],
+   "steps": [
+    {"id": "W3-cut", "seq": 1, "do": "cut-upload",
+     "expect": {"http": 200, "list_contract": "valid", "staged_unchanged": true, "left_over": 0, "attempts": 0, "calls": 0}}
+   ]
+  },
+  {
+   "id": "W4",
+   "claims": ["S6 (the server killed mid-create)", "S7 (a restart dispatches nothing)"],
+   "steps": [
+    {"id": "W4-N5", "seq": 1, "do": "web-create", "msg": "N5", "harness": "codex", "fault": "hold-before", "hold_s": 10, "kill": "server",
+     "expect": {"http": null, "shown": ["uncertain"], "attempts": 1, "calls": 0, "aborted": 1}},
+    {"id": "W4-restart", "seq": 2, "do": "quiet", "wait": "settle", "server": "start",
+     "expect": {"attempts": 0}},
+    {"id": "W4-status", "seq": 2, "do": "web-status", "of": "W4-N5",
+     "expect": {"http": 200, "contract": "valid", "status": "uncertain", "attempts": 0, "calls": 0}},
+    {"id": "W4-repeat", "seq": 2, "do": "web-create", "msg": "N5", "harness": "codex", "op": "same:W4-N5",
+     "expect": {"http": 200, "status": "uncertain", "contract": "valid", "attempts": 0, "calls": 0}}
+   ]
+  },
+  {
+   "id": "J1",
+   "claims": ["S1", "S2", "S5", "S8 (a reload and a double press)", "S10", "S12", "S13 (phone, Safari, cellular)", "AL1 (a create with an image)"],
+   "steps": [
+    {"id": "J1-N3", "seq": 1, "by": "jake", "do": "web-create", "msg": "N3", "harness": "images", "attach": ["F1"],
+     "say": "On your iPhone, in Safari with Wi-Fi off (cellular): open OpenWiz, press New thread on P-A's heading. Attach syn-small.png from Files (the picker). Paste the text below. Press Start thread.",
+     "ask": [{"key": "shown", "q": "What did the launcher show?", "choices": ["created", "refused", "failed", "uncertain"]},
+             {"key": "details", "q": "Did the new thread's details open?", "choices": ["opened", "not"]}],
+     "expect": {"attempts": 1, "calls": 1, "record": "finished", "outcome": "created", "said_shown": "created", "said_details": "opened", "land": 1, "exact": true, "agent": true}},
+    {"id": "J1-replay", "seq": 2, "do": "replay", "of": "J1-N3", "msg": "N3", "times": 2,
+     "expect": {"attempts": 0, "calls": 0}},
+    {"id": "J1-cli", "seq": 2, "do": "status", "of": "J1-N3",
+     "expect": {"exit": 0, "schema": "openwiz.new-thread-status.v1", "kind": "recorded", "status": "created", "contract": "valid", "attempts": 0, "calls": 0}}
+   ]
+  },
+  {
+   "id": "J2",
+   "claims": ["AL1 (T-A, Local)", "AL2 (exactly 10 MiB goes through)", "AL7", "S13 (desktop, Chrome, drag and drop)"],
+   "steps": [
+    {"id": "J2-A2", "seq": 1, "by": "jake", "do": "web-send", "msg": "A2", "target": "T-A", "attach": ["F2"],
+     "say": "On the Mac, in Chrome: open OpenWiz, open T-A. Drag syn-10mib.jpg from the files folder into the composer's tray and wait until it shows ready. Paste the text below. Press Send.",
+     "ask": [{"key": "shown", "q": "What did the composer show?", "choices": ["sent", "queued", "failed", "uncertain"]}],
+     "expect": {"attempts": 1, "calls": 1, "record": "finished", "delivery": ["accepted", "queued"], "said_shown": ["sent", "queued"], "staged_left": 0, "land": 1, "exact": true, "agent": true}}
+   ]
+  },
+  {
+   "id": "J3",
+   "claims": ["AL2 (over 10 MiB and HEIC refused before any call)", "AL10 and AL11 (safe previews)"],
+   "steps": [
+    {"id": "J3-tray", "seq": 1, "by": "jake", "do": "hand", "tray": ["F3", "F6", "F5"],
+     "say": "On the Mac, in Safari: open OpenWiz, open T-B. Drag syn-over.png, syn-photo.heic and syn-script.svg into the tray, one at a time. Look at each. Then remove all three and close the draft. Send nothing.",
+     "ask": [{"key": "over", "q": "syn-over.png: what did the tray show?", "choices": ["refused", "ready"]},
+             {"key": "heic", "q": "syn-photo.heic: what did the tray show?", "choices": ["refused", "ready"]},
+             {"key": "svg", "q": "syn-script.svg: shown as a plain file glyph, or rendered as a picture?", "choices": ["glyph", "rendered"]}],
+     "expect": {"attempts": 0, "calls": 0, "staged_left": 0, "said_over": "refused", "said_heic": "refused", "said_svg": "glyph"}}
+   ]
+  },
+  {
+   "id": "J4",
+   "claims": ["AL3 (all ready or nothing)", "AL5 (a failed upload keeps the draft)"],
+   "steps": [
+    {"id": "J4-cut", "seq": 1, "by": "jake", "do": "hand", "cut": true, "msg": "U1",
+     "say": "On your iPhone, in Safari: open T-B. Paste the text below. Attach syn-10mib.jpg from Files, and while it uploads, turn on Airplane Mode. Wait until the tray says what happened. Turn Airplane Mode off. Remove the attachment and close the draft. Send nothing.",
+     "ask": [{"key": "tray", "q": "With the upload cut: did the tray show it failed, with Send disabled and your text kept?", "choices": ["failed-kept", "other"]}],
+     "expect": {"attempts": 0, "calls": 0, "staged_left": 0, "said_tray": "failed-kept"}}
+   ]
+  },
+  {
+   "id": "J5",
+   "claims": ["S13 (phone, Chrome)"],
+   "steps": [
+    {"id": "J5-chrome", "seq": 1, "by": "jake", "do": "hand", "reads": true,
+     "say": "On your iPhone, in Chrome: open OpenWiz, press New thread on P-A's heading, switch the harness, model and effort a few times. Press nothing else, and close it. Optional: in the tray, pick a HEIC photo from your library, note what happens, and remove it.",
+     "ask": [{"key": "launcher", "q": "Did the launcher open and switch as in Safari?", "choices": ["works", "broken"]},
+             {"key": "heic_photo", "q": "A HEIC photo from your library:", "choices": ["refused", "converted", "skip"]}],
+     "expect": {"attempts": 0, "calls": 0, "staged_left": 0, "said_launcher": "works", "said_heic_photo": ["refused", "converted", "skip"]}}
+   ]
+  },
+  {
+   "id": "J6",
+   "claims": ["S12, AL10, AL11: Jake's hands-on acceptance, the UI gate: either 'changes' fails it (exit 10)"],
+   "steps": [
+    {"id": "J6-accept", "seq": 1, "by": "jake", "do": "hand",
+     "say": "Your acceptance, in your own words to the runner: the launcher (New thread, the settings, Start thread, the created view) and the tray (picker, drag and drop, previews, refusals).",
+     "ask": [{"key": "launcher", "q": "The launcher:", "choices": ["accept", "changes"]},
+             {"key": "tray", "q": "The tray:", "choices": ["accept", "changes"]}],
+     "expect": {"attempts": 0, "calls": 0, "said_launcher": "accept", "said_tray": "accept"}}
+   ]
+  }
+ ]
+}

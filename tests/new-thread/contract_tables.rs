@@ -1,4 +1,4 @@
-//! One table of good and bad JSON per contract.
+//! One table of good and bad JSON per contract (Sol re-check, round 2).
 //!
 //! **Readers:** no new-thread or prompt type has a serde reader, so
 //! `serde_json::from_str` and `from_value` can't be called on them at all:
@@ -15,12 +15,14 @@
 //! `Value` keeps one of them, so no schema can see them, and the tree
 //! refuses them at every depth.
 
+use std::path::Path;
+
 use openwiz_core::messaging::send::UncertainReason;
 use openwiz_core::model::Fact;
 use openwiz_core::new_thread::outcome::{Outcome, RefusalReason};
 use openwiz_core::new_thread::record::NewThreadRecord;
 use openwiz_core::new_thread::{Binding, ProjectView};
-use openwiz_core::prompt::empty_attachments_digest;
+use openwiz_core::prompt::{AttachmentId, PromptPayload, empty_attachments_digest};
 use serde_json::{Value, json};
 
 use crate::pattern;
@@ -71,6 +73,33 @@ fn positional(value: &Value) -> Value {
 }
 
 #[test]
+fn contract_tables_contracts_preserve_all_original_cases() {
+    let cases: [(&str, fn()); 6] = [
+        (
+            "erased_created_records_require_both_digest_length_and_lowercase_hex",
+            erased_created_records_require_both_digest_length_and_lowercase_hex,
+        ),
+        ("the_prompt_contract", the_prompt_contract),
+        (
+            "the_record_contract_with_nested_forms",
+            the_record_contract_with_nested_forms,
+        ),
+        (
+            "the_records_reader_follows_the_table",
+            the_records_reader_follows_the_table,
+        ),
+        (
+            "the_settings_and_project_reference_contracts",
+            the_settings_and_project_reference_contracts,
+        ),
+        ("the_string_enum_contracts", the_string_enum_contracts),
+    ];
+    for (name, proof) in cases {
+        eprintln!("TA2 case: contract_tables::{name}");
+        proof();
+    }
+}
+
 fn the_prompt_contract() {
     let good = json!({"text": "Synthetic", "attachments": []});
     let rows = [
@@ -83,26 +112,6 @@ fn the_prompt_contract() {
         (false, json!({"prompt": good})),
         (false, with(&good, "/text", json!(["Synthetic"]))),
         (false, with(&good, "/attachments", json!({}))),
-        // B2, with this recorded reason: B2 relaxes A1's
-        // empty list. Ids are taken, each at most once,
-        // each by its own rule.
-        (true, with(&good, "/attachments", json!(["att-syn-0001"]))),
-        (
-            true,
-            with(
-                &good,
-                "/attachments",
-                json!(["att-syn-0001", "att-syn-0002"]),
-            ),
-        ),
-        (
-            false,
-            with(
-                &good,
-                "/attachments",
-                json!(["att-syn-0001", "att-syn-0001"]),
-            ),
-        ),
         (false, with(&good, "/attachments", json!(["-att"]))),
         (false, with(&good, "/attachments", json!([""]))),
         (false, json!("Synthetic")),
@@ -110,9 +119,53 @@ fn the_prompt_contract() {
     ];
     table("prompt.v1", &prompt_schema(), &rows);
     table("new-thread prompt", &at(schema(), "prompt"), &rows);
+
+    // B2: ids are taken each at most once. One literal uniqueness table
+    // owns the prompt, new-thread and messaging schemas and core parity.
+    let messaging = at(
+        serde_json::from_str(
+            &std::fs::read_to_string(Path::new(ROOT).join("contracts/messaging.v1.schema.json"))
+                .unwrap(),
+        )
+        .unwrap(),
+        "request",
+    );
+    for (accepted, ids) in [
+        (true, json!([])),
+        (true, json!(["att-syn-0001"])),
+        (true, json!(["att-syn-0001", "att-syn-0002"])),
+        (false, json!(["att-syn-0001", "att-syn-0001"])),
+    ] {
+        let payload = with(&good, "/attachments", ids.clone());
+        table(
+            "prompt.v1",
+            &prompt_schema(),
+            &[(accepted, payload.clone())],
+        );
+        table(
+            "new-thread prompt",
+            &at(schema(), "prompt"),
+            &[(accepted, payload)],
+        );
+        let request = json!({
+            "target": "thr_syn_0001", "mode": "queue", "text": "Synthetic",
+            "op_id": "op-synthetic", "attachments": ids,
+        });
+        let errors = crate::schema::validate(&messaging, &request);
+        assert_eq!(errors.is_empty(), accepted, "messaging: {ids}: {errors:?}");
+        let core = PromptPayload {
+            text: "Synthetic".into(),
+            attachments: ids
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|id| AttachmentId::parse(id.as_str().unwrap()).unwrap())
+                .collect(),
+        };
+        assert_eq!(core.validate().is_ok(), accepted, "core: {ids}");
+    }
 }
 
-#[test]
 fn the_settings_and_project_reference_contracts() {
     let settings = json!({"harness": "codex", "model": "syn-model", "effort": "high"});
     table(
@@ -153,7 +206,6 @@ fn the_settings_and_project_reference_contracts() {
     );
 }
 
-#[test]
 fn the_string_enum_contracts() {
     for (def, label) in [
         ("record_state", "claimed"),
@@ -194,7 +246,6 @@ fn record() -> Value {
     serde_json::to_value(record).unwrap()
 }
 
-#[test]
 fn the_record_contract_with_nested_forms() {
     let claimed = record();
     let finished = with(
@@ -275,7 +326,6 @@ fn the_record_contract_with_nested_forms() {
 
 /// The store's reader on the same table: it accepts exactly what the
 /// schema accepts, and refuses a key given twice at any depth.
-#[test]
 fn the_records_reader_follows_the_table() {
     let schema = at(schema(), "record");
     let claimed = record();
@@ -356,5 +406,38 @@ fn the_records_reader_follows_the_table() {
         let tree: Result<openwiz_core::new_thread::read::StrictJson, _> =
             serde_json::from_str(&twice);
         assert!(tree.is_err(), "a key given twice: {twice}");
+    }
+}
+
+fn erased_created_records_require_both_digest_length_and_lowercase_hex() {
+    let claimed = read(&record()).unwrap();
+    let created = claimed
+        .dispatching(T0)
+        .finished(Outcome::created("thr_syn_0021".to_owned()), T0);
+    assert_eq!(
+        created.text, None,
+        "no text-hash consistency check can mask the shape rule"
+    );
+    let created = serde_json::to_value(created).unwrap();
+    let schema = at(schema(), "record");
+    for (valid, digest) in [
+        (
+            true,
+            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".to_owned(),
+        ),
+        (false, "a".repeat(63)),
+        (false, "a".repeat(65)),
+        (false, "g".repeat(64)),
+        (false, "A".repeat(64)),
+    ] {
+        let row = with(&created, "/binding/text_sha256", json!(digest));
+        let errors = pattern::validate(&schema, &row);
+        assert_eq!(errors.is_empty(), valid, "schema: {digest}: {errors:?}");
+        let result = read(&row);
+        assert_eq!(
+            result.is_ok(),
+            valid,
+            "strict record reader: {digest}: {result:?}"
+        );
     }
 }

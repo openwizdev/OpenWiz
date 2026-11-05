@@ -1,4 +1,6 @@
-
+// U14 and U15 (#12): the launcher reuses #6's panel and sheet and the one
+// prompt body (`npm run check` proves the source side; this the rendered
+// side), and it is text only, accessible and inert. Synthetic values only.
 
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
@@ -6,7 +8,7 @@ import { after, before, test } from 'node:test';
 import { DESKTOP, launchBrowser, PHONE, readDetail, waitFor } from '../support/browser.mjs';
 import { json } from '../support/fake-api.mjs';
 import { axe } from '../support/harness.mjs';
-import { chooseAll, launcherSite, openLauncher, PROJECT, PROMPT, readLauncher, ready, settled, typePrompt } from '../support/launcher.mjs';
+import { chooseAll, createPosts, launcherSite, openLauncher, PROJECT, PROMPT, readLauncher, ready, settled, typePrompt } from '../support/launcher.mjs';
 import * as nt from '../support/newthread-synthetic.ts';
 
 let browser;
@@ -14,6 +16,101 @@ before(async () => {
   browser = await launchBrowser();
 });
 after(() => browser.close());
+
+for (const viewport of [PHONE, DESKTOP]) {
+  for (const key of ['Enter', 'Space']) {
+    test(`U15 (#785): ${key} on New thread in reopened created details focuses the prompt at ${viewport.width}px`, async () => {
+      const { fx } = await launcherSite();
+      const p = await openLauncher(browser, fx, { viewport });
+      try {
+        await chooseAll(p.page);
+        await typePrompt(p.page, PROMPT);
+        await ready(p.page);
+        await p.page.locator('[data-part=start]').focus();
+        await p.page.keyboard.press('Enter');
+        await settled(p.page, 'created');
+        await p.page.keyboard.press('Escape');
+        await waitFor(async () => (await readDetail(p.page)) === null, { what: 'closed created details' });
+        await waitFor(async () => (await p.page.locator('[data-part=created]').count()) === 0, { what: 'created details to unmount' });
+        assert.equal(await p.page.evaluate(() => document.activeElement?.getAttribute('data-new-thread')), PROJECT);
+        await p.page.keyboard.press('Enter');
+        await settled(p.page, 'created');
+        await p.page.locator('[data-part=another]').focus();
+        await p.page.keyboard.press(key);
+        await waitFor(async () => (await readLauncher(p.page))?.kind === 'launcher', { what: 'the new prompt' });
+        assert.deepEqual(await p.page.evaluate(() => ({ tag: document.activeElement?.tagName, part: document.activeElement?.getAttribute('data-part') })), { tag: 'TEXTAREA', part: 'draft' }, 'the prompt receives focus when the created control disappears');
+        assert.equal((await readLauncher(p.page)).draft, '', 'the next prompt is empty');
+        assert.equal(createPosts(fx).length, 1, 'opening another prompt makes no create POST');
+        assert.equal(fx.api.creates.length, 1, 'only the original keyboard create reached the fake provider');
+      } finally {
+        await p.close();
+        await fx.close();
+      }
+    });
+  }
+
+  for (const [key, control] of [['Enter', '[data-part=start]'], ['Space', '[data-part=start]'], ['Control+Enter', 'textarea'], ['Meta+Enter', 'textarea']]) {
+    test(`U15 (#749): ${key} keeps focus through creation and close at ${viewport.width}px`, async () => {
+      const { fx } = await launcherSite();
+      fx.api.hold('create');
+      const p = await openLauncher(browser, fx, { viewport });
+      try {
+        await chooseAll(p.page);
+        await typePrompt(p.page, PROMPT);
+        await ready(p.page);
+        await p.page.locator(`[data-part=launcher] ${control}`).focus();
+        await p.page.keyboard.press(key);
+        await waitFor(() => fx.api.held('create') === 1, { what: 'one held create' });
+        assert.equal(await p.page.locator(`[data-part=launcher] ${control}`).evaluate((el) => el === document.activeElement), true, 'focus stays while creating');
+        fx.api.hold('create', false);
+        fx.api.release('create');
+        await settled(p.page, 'created');
+        assert.deepEqual(await p.page.evaluate(() => {
+          const focused = document.activeElement;
+          return { tag: focused?.tagName, text: focused?.tagName === 'H2' ? focused.textContent : null, inside: !!document.querySelector('dialog[open] [data-part=created]')?.contains(focused), tabIndex: focused?.tabIndex };
+        }), { tag: 'H2', text: 'New thread', inside: true, tabIndex: -1 }, 'the created heading receives focus');
+        assert.equal(createPosts(fx).length, 1, 'one create POST');
+        assert.equal(fx.api.creates.length, 1, 'one fake provider call');
+        assert.equal(await p.page.locator('dialog').count(), 1, 'the same panel or sheet');
+        await p.page.keyboard.press('Tab');
+        assert.equal(await p.page.locator('[data-part=refresh-start]').evaluate((el) => el === document.activeElement), true, 'keyboard navigation continues in created details');
+        if (key === 'Space') await p.page.getByRole('button', { name: 'Sessions — close panel', exact: true }).click();
+        else await p.page.keyboard.press('Escape');
+        await waitFor(async () => (await readDetail(p.page)) === null, { what: 'closed created details' });
+        assert.equal(await p.page.evaluate(() => document.activeElement?.getAttribute('data-new-thread')), PROJECT, 'focus returns to the project opener');
+      } finally {
+        await p.close();
+        await fx.close();
+      }
+    });
+  }
+
+  for (const target of ['[data-part=detail] .sheet-x', ...(viewport === DESKTOP ? ['nav button:first-child'] : [])]) {
+    test(`U15 (#749): creation preserves focus moved to ${target} at ${viewport.width}px`, async () => {
+      const { fx } = await launcherSite();
+      fx.api.hold('create');
+      const p = await openLauncher(browser, fx, { viewport });
+      try {
+        await chooseAll(p.page);
+        await typePrompt(p.page, PROMPT);
+        await ready(p.page);
+        await p.page.locator('[data-part=start]').focus();
+        await p.page.keyboard.press('Enter');
+        await waitFor(() => fx.api.held('create') === 1, { what: 'one held create' });
+        await p.page.locator(target).focus();
+        fx.api.hold('create', false);
+        fx.api.release('create');
+        await settled(p.page, 'created');
+        assert.equal(await p.page.locator(target).evaluate((el) => el === document.activeElement), true, 'creation never steals existing focus');
+        assert.equal(createPosts(fx).length, 1);
+        assert.equal(fx.api.creates.length, 1);
+      } finally {
+        await p.close();
+        await fx.close();
+      }
+    });
+  }
+}
 
 const placement = (page) =>
   page.evaluate(() => ({
@@ -28,7 +125,7 @@ for (const [name, viewport, modal] of [
   ['phone: in the bottom sheet', PHONE, true],
   ['desktop: in the side panel', DESKTOP, false],
 ]) {
-  test(`U14 (${name}): one dialog, one prompt body; the composer is unchanged under a session`, async () => {
+  test(`U14 (${name}): one dialog, one prompt body; the session restores its message dock`, async () => {
     const { fx } = await launcherSite();
     const p = await openLauncher(browser, fx, { viewport });
     try {
@@ -40,7 +137,7 @@ for (const [name, viewport, modal] of [
         return { cls: t.className, part: t.dataset.part, label: document.querySelector(`label[for="${t.id}"]`)?.textContent };
       });
       assert.deepEqual(field, { cls: 'compose', part: 'draft', label: 'prompt' });
-      // A session's details take the same dialog back, with its composer under the final output.
+      // T2 keeps the final output in the composer's scroll area, above its dock, in this same dialog.
       if (modal) await p.page.click('[data-part=detail] .sheet-x');
       await p.page.click('main [data-session-id="thr_web_0001"]');
       await waitFor(async () => (await readDetail(p.page))?.id === 'thr_web_0001', { what: 'the session' });
@@ -49,9 +146,12 @@ for (const [name, viewport, modal] of [
         dialogs: document.querySelectorAll('dialog').length,
         launchers: document.querySelectorAll('[data-part=launcher]').length,
         composers: document.querySelectorAll('[data-part=composer]').length,
-        before: document.querySelector('[data-part=composer]')?.previousElementSibling?.getAttribute('data-field') ?? null,
+        inDetail: !!document.querySelector('dialog[data-part=detail] [data-part=composer]'),
+        textareas: document.querySelectorAll('textarea').length,
+        finalInScroll: !!document.querySelector('[data-part=composer] .thread-scroll [data-field="final-output"]'),
+        dockAfterScroll: document.querySelector('[data-part=composer] .composer-dock')?.previousElementSibling?.className === 'thread-scroll',
       }));
-      assert.deepEqual(after, { dialogs: 1, launchers: 0, composers: 1, before: 'final-output' });
+      assert.deepEqual(after, { dialogs: 1, launchers: 0, composers: 1, inDetail: true, textareas: 1, finalInScroll: true, dockAfterScroll: true });
     } finally {
       await p.close();
       await fx.close();
@@ -59,7 +159,8 @@ for (const [name, viewport, modal] of [
   });
 }
 
-
+// Updated for #16 (B3) with this reason: the prompt body gains the one attachment tray, so a dropped file is
+// attached (AW10), never text; a pasted path is still text.
 test('U15: a dropped file is attached, never text; a pasted path is text', async () => {
   const { fx } = await launcherSite();
   const p = await openLauncher(browser, fx);
@@ -141,9 +242,9 @@ test('U15: provider strings render as plain text; outcomes are a word and a shap
     const marker = await p.page.evaluate(() => {
       const m = document.querySelector('[data-part=launch-outcome] [data-part=outcome-marker]');
       const before = getComputedStyle(m, '::before');
-      return { word: m.querySelector('.word').textContent, glyph: m.querySelector('.glyph').textContent, hidden: m.querySelector('.glyph').getAttribute('aria-hidden'), border: before.borderTopStyle, italic: getComputedStyle(m).fontStyle };
+      return { word: m.querySelector('.word').textContent, glyph: m.querySelector('.glyph svg circle').getAttribute('stroke-dasharray'), hidden: m.querySelector('.glyph').getAttribute('aria-hidden'), border: m.querySelector('.glyph svg circle').getAttribute('stroke-dasharray') ? 'dashed' : 'solid', italic: getComputedStyle(m).fontStyle };
     });
-    assert.deepEqual(marker, { word: 'uncertain', glyph: '[?]', hidden: 'true', border: 'dashed', italic: 'italic' }, 'a word, a glyph and a dashed, italic shape');
+    assert.deepEqual(marker, { word: 'uncertain', glyph: '3 3', hidden: 'true', border: 'dashed', italic: 'italic' }, 'a word, a glyph and a dashed, italic shape');
     assert.deepEqual(await axe(p.page), [], 'the uncertain launcher');
   } finally {
     await p.close();

@@ -77,3 +77,30 @@ fn hidden_or_archived_rows_are_excluded_even_if_the_source_returns_them() {
         (3, 1, 1, 1)
     );
 }
+
+#[test]
+fn a_row_both_hidden_and_archived_requires_both_flags() {
+    let mut row = scripted_record(1);
+    row.hidden = Fact::Known(true);
+    row.archived = Fact::Known(true);
+    let source = ScriptedSource::with_records(vec![row]);
+
+    for args in [
+        &["ls", "--hidden", "--json"][..],
+        &["ls", "-a", "--json"][..],
+    ] {
+        let result = cli_json_with(&source, args);
+        assert_eq!(
+            result["data"]["sessions"],
+            serde_json::json!([]),
+            "{args:?}"
+        );
+    }
+
+    let result = cli_json_with(&source, &["ls", "--hidden", "-a", "--json"]);
+    let sessions = result["data"]["sessions"]
+        .as_array()
+        .expect("sessions array");
+    assert_eq!(sessions.len(), 1);
+    assert_eq!(sessions[0]["id"], "thr_syn_0001");
+}

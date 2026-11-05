@@ -112,31 +112,37 @@ fn assert_recovered(fake: &NewFake, op_id: &str, status: &str, reason: &str, spa
 
 #[test]
 fn stopped_after_the_claim_recovers_as_failed_before_dispatch() {
-    let fake = NewFake::with(
-        "n13_after_claim_cli",
-        vec![json!({"argv": ["--version"], "stdout": "v127", "kill_parent": true})],
-    );
-    killed(&create(&fake, "op-n13-claim"));
-    assert_eq!(fake.record("op-n13-claim")["state"], "claimed");
-    fake.respond(vec![]);
-    assert_recovered(
-        &fake,
-        "op-n13-claim",
-        "failed",
-        "interrupted_before_dispatch",
-        0,
-    );
-
-    let fake = NewFake::new("n13_after_claim_harness");
-    let (mut harness, _) = fake.harness("op-n13-claim-h", "after-claim", TEXT);
-    killed(&harness.output().unwrap());
-    assert_recovered(
-        &fake,
-        "op-n13-claim-h",
-        "failed",
-        "interrupted_before_dispatch",
-        0,
-    );
+    // The two halves share nothing, so they run at once (#1260).
+    std::thread::scope(|scope| {
+        scope.spawn(|| {
+            let fake = NewFake::with(
+                "n13_after_claim_cli",
+                vec![json!({"argv": ["--version"], "stdout": "v127", "kill_parent": true})],
+            );
+            killed(&create(&fake, "op-n13-claim"));
+            assert_eq!(fake.record("op-n13-claim")["state"], "claimed");
+            fake.respond(vec![]);
+            assert_recovered(
+                &fake,
+                "op-n13-claim",
+                "failed",
+                "interrupted_before_dispatch",
+                0,
+            );
+        });
+        scope.spawn(|| {
+            let fake = NewFake::new("n13_after_claim_harness");
+            let (mut harness, _) = fake.harness("op-n13-claim-h", "after-claim", TEXT);
+            killed(&harness.output().unwrap());
+            assert_recovered(
+                &fake,
+                "op-n13-claim-h",
+                "failed",
+                "interrupted_before_dispatch",
+                0,
+            );
+        });
+    });
 }
 
 #[test]
@@ -190,28 +196,33 @@ fn stopped_after_the_call_recovers_as_uncertain() {
             "kill_parent_after_answer": true,
         })],
     );
-    killed(&create(&fake, "op-n13-answer"));
-    assert_eq!(fake.record("op-n13-answer")["state"], "dispatching");
-    fake.respond(vec![]);
-    assert_recovered(
-        &fake,
-        "op-n13-answer",
-        "uncertain",
-        "interrupted_after_dispatch_mark",
-        1,
-    );
-
-    let fake = NewFake::new("n13_after_call_harness");
-    let (mut harness, _) = fake.harness("op-n13-call-h", "after-call", TEXT);
-    killed(&harness.output().unwrap());
-    assert_eq!(fake.spawn_count(), 1);
-    assert_recovered(
-        &fake,
-        "op-n13-call-h",
-        "uncertain",
-        "interrupted_after_dispatch_mark",
-        1,
-    );
+    // The harness half shares nothing with this one, so it runs at once
+    // (#1260).
+    std::thread::scope(|scope| {
+        scope.spawn(|| {
+            let fake = NewFake::new("n13_after_call_harness");
+            let (mut harness, _) = fake.harness("op-n13-call-h", "after-call", TEXT);
+            killed(&harness.output().unwrap());
+            assert_eq!(fake.spawn_count(), 1);
+            assert_recovered(
+                &fake,
+                "op-n13-call-h",
+                "uncertain",
+                "interrupted_after_dispatch_mark",
+                1,
+            );
+        });
+        killed(&create(&fake, "op-n13-answer"));
+        assert_eq!(fake.record("op-n13-answer")["state"], "dispatching");
+        fake.respond(vec![]);
+        assert_recovered(
+            &fake,
+            "op-n13-answer",
+            "uncertain",
+            "interrupted_after_dispatch_mark",
+            1,
+        );
+    });
 }
 
 /// The dispatching mark is synced before the one call: what was on disk at
@@ -227,4 +238,84 @@ fn the_dispatching_mark_is_on_disk_before_the_call() {
     assert_eq!(records[0]["op_id"], "op-n13-disk");
     assert_eq!(records[0]["text"], TEXT);
     assert!(records[0]["effects"].is_object(), "effects before the call");
+}
+
+// #741 mutation proof, fixtures only, base d1bffa77c81b516fb4b863c1e232950dd9641368:
+// In a disposable worktree, bypass the dispatching update-error guard with
+// `.update(&record).or(Ok::<(), StoreError>(()))`.
+// cargo test --locked -p openwiz-tests --test new-thread -- --test-threads=2
+// Before adding this regression: 158 passed; 0 failed (exit 0).
+// cargo test --locked -p openwiz-tests --test new-thread \
+//   dispatching_write_failure_must_prevent_spawn -- --nocapture
+// assertion `left == right` failed: failed dispatching write must prevent spawn
+//   left: 1
+//  right: 0
+// test result: FAILED. 0 passed; 1 failed; 158 filtered out (exit 101).
+// After restoring unmodified production source, the same focused command:
+// test result: ok. 1 passed; 0 failed; 158 filtered out (exit 0).
+/// A failed durable dispatching mark must stop the create before its one call.
+#[test]
+fn dispatching_write_failure_must_prevent_spawn() {
+    use crate::support::{FakeClient, MemoryStore, offered, request};
+    use openwiz_core::messaging::{OpId, record::StoreError};
+    use openwiz_core::model::Timestamp;
+    use openwiz_core::new_thread::operation::{NewThreadError, new_thread};
+    use openwiz_core::new_thread::record::{Claim, NewThreadRecord, NewThreadStore, RecordState};
+
+    struct FailingStore(MemoryStore);
+
+    impl NewThreadStore for FailingStore {
+        fn load(&self, id: &OpId) -> Result<Option<NewThreadRecord>, StoreError> {
+            self.0.load(id)
+        }
+
+        fn claim(&self, record: &NewThreadRecord, now: Timestamp) -> Result<Claim, StoreError> {
+            self.0.claim(record, now)
+        }
+
+        fn update(&self, record: &NewThreadRecord) -> Result<(), StoreError> {
+            if record.state == RecordState::Dispatching {
+                return Err(StoreError("synthetic disk failure".into()));
+            }
+            self.0.update(record)
+        }
+
+        fn release(&self, id: &OpId) {
+            self.0.release(id);
+        }
+
+        fn inspect(
+            &self,
+            id: &OpId,
+            now: Timestamp,
+        ) -> Result<Option<NewThreadRecord>, StoreError> {
+            self.0.inspect(id, now)
+        }
+
+        fn withdraw(&self, id: &OpId) -> Result<(), StoreError> {
+            self.0.withdraw(id)
+        }
+    }
+
+    let client = FakeClient::new();
+    let store = FailingStore(MemoryStore::new());
+    let result = new_thread(
+        &client,
+        &store,
+        &clock(),
+        &request(offered(), TEXT, "op-n13-disk-failure"),
+    );
+
+    assert_eq!(
+        client.spawns(),
+        0,
+        "failed dispatching write must prevent spawn"
+    );
+    assert_eq!(
+        result,
+        Err(NewThreadError::Store(StoreError(
+            "synthetic disk failure; the dispatching mark could not be written, so nothing was sent"
+                .into()
+        )))
+    );
 }

@@ -12,19 +12,43 @@ One per ticket. It builds its ticket on its own branch, and never reviews or mer
 | Model | <model, for example Opus 5.5> | `--model <id>` |
 | Effort | <effort, for example XHigh> | `--reasoning-level <level>` |
 
-Source: <the user's words and the date, or the file that records the choice>.
+Source: <a linked source file, or decider, date and plain decision with a Markdown private-record comment link>.
 
-## Reviewer
+## Builder for small tickets
 
-One per pull request, from a different model family than the builder. It reviews the exact head and never edits. If it can't be started, the review waits: it is never swapped for another model.
+Tickets with an exact `polish`, `huntr` or `proposal` label use this table; every other ticket uses `## Builder`.
 
 | Setting | Value | `room-cli thread spawn` flag |
 | --- | --- | --- |
 | Harness | <harness, for example Codex> | `--provider <id>` |
 | Model | <model, for example Sol 6.1> | `--model <id>` |
-| Effort | <effort, for example Medium> | `--reasoning-level <level>` |
+| Effort | <effort, for example High> | `--reasoning-level <level>` |
 
-Source: <the user's words and the date, or the file that records the choice>.
+Source: <a linked source file, or decider, date and plain decision with a Markdown private-record comment link>.
+
+## Reviewer for Claude-built
+
+One per pull request, from a different model family than the builder. It reviews the exact head and never edits. If it can't be started, the review waits: it is never swapped for another model.
+
+| Setting | Value | `room-cli thread spawn` flag |
+| --- | --- | --- |
+| Harness | Codex | `--provider codex` |
+| Model | <model, for example Sol 6.1> | `--model <id>` |
+| Effort | <effort, for example High> | `--reasoning-level <level>` |
+
+Source: <a linked source file, or decider, date and plain decision with a Markdown private-record comment link>.
+
+## Reviewer for GPT-built
+
+Use the verified builder's provider, from its branch-matching `start checked` record and that exact thread's provider read. Unknown or conflicting family waits; existing reviewers retain their thread.
+
+| Setting | Value | `room-cli thread spawn` flag |
+| --- | --- | --- |
+| Harness | Claude Code | `--provider claude-code` |
+| Model | <model, for example Opus 5.5> | `--model <id>` |
+| Effort | <effort, for example High> | `--reasoning-level <level>` |
+
+Source: <a linked source file, or decider, date and plain decision with a Markdown private-record comment link>.
 
 ## Labels
 
@@ -41,6 +65,8 @@ Source: the fleet skills, `plan-graph` and `launch-fleet`, which put it on and t
 ## Test commands
 
 The full set, in this order. A builder runs all of it locally, and opens its pull request only when every command passes. <Toolchain versions, as the instructions file gives them.>
+
+<isolation rule, optional: project-specific restrictions on concurrent commands and shared build output, with their source; omit if none>
 
 | # | Folder | Command | CI check |
 | --- | --- | --- | --- |
@@ -66,4 +92,4 @@ Source: <the CI workflow, linked>, and the branch rules (`gh api 'repos/{owner}/
 
 <With no rule recorded: "None yet: every merge waits for the user.">
 
-Source: <the user's words and the date, or the files that record each rule>.
+Source: <linked source files, or decider, date and plain decision with a Markdown private-record comment link>.

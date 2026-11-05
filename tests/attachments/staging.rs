@@ -1,4 +1,4 @@
-//! Staged attachments for the B2 proofs (the implementation), shared by the
+//! Staged attachments for the B2 proofs (ClosedWiz#15), shared by the
 //! messaging and new-thread targets (`#[path]`): synthetic files, written at
 //! test time beside a test's private state directory (never committed),
 //! staged through B1's store, and read back from it.

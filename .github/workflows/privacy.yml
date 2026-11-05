@@ -1,0 +1,40 @@
+name: Privacy
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, edited]
+  push:
+  merge_group:
+    types: [checks_requested]
+permissions:
+  contents: read
+jobs:
+  privacy:
+    # Fixed ruleset status name: privacy. Never a variable.
+    # Trusted ClosedWiz events follow CI's small-runner route; fork PRs and other copies stay hosted.
+    name: privacy
+    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-24.04' || github.repository == 'jparker2006/ClosedWiz' && (vars.CI_SMALL_RUNS_ON || vars.CI_WEB_RUNS_ON || 'namespace-profile-closedwiz-rust') || 'ubuntu-24.04' }}
+    timeout-minutes: 5
+    steps:
+      - name: Private repository fixture sources only
+        if: ${{ github.repository == 'jparker2006/ClosedWiz' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.githooks/
+            /tools/privacy-check/
+            /.github/workflows/
+      - name: Public repository complete history
+        if: ${{ github.repository != 'jparker2006/ClosedWiz' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Synthetic privacy proofs
+        run: python3 -I tools/privacy-check/test_check.py
+      - name: Synthetic hook proofs
+        run: sh .githooks/test.sh --fixtures-only
+      - name: Public event privacy gate
+        run: python3 -I tools/privacy-check/ci.py

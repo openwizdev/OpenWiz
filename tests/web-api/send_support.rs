@@ -1,10 +1,16 @@
-//! Helpers for the send routes: an in-process server with the send
+//! Helpers for the send routes (#9): an in-process server with the send
 //! record and the fake `room-cli` of a messaging test (`SendFake`), the
 //! fixed clock `openwiz send`'s proofs use, and a raw `POST` client.
 
 #![allow(dead_code)]
 
+use openwiz_core::messaging::effects::TargetRecord;
+use openwiz_core::messaging::send::{Messenger, TellReply};
+use openwiz_core::messaging::{InvalidRequest, Mode};
+use openwiz_core::model::SessionId;
+use openwiz_core::source::SourceError;
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 
 use openwiz_core::messaging::record::{SendStore, StoreError};
 use openwiz_server::{Config, Limits, Log, OpenStore, OpenStoreReadOnly, SendHost, Sending};
@@ -196,4 +202,82 @@ pub fn cli_args(id: &str, value: &Value) -> Vec<String> {
 pub fn cli(fake: &SendFake, args: &[String]) -> (i32, String, String) {
     let args: Vec<&str> = args.iter().map(String::as_str).collect();
     fake.cli(&args, "")
+}
+
+/// Holds a real fake-provider tell until the test has checked the occupied slot.
+/// Delegates the eventual call unchanged; the test chooses when it may finish.
+pub struct HeldTell {
+    source: openwiz_adapter_cloudroom::source::CloudRoomSource,
+    state: Mutex<(usize, bool)>,
+    changed: std::sync::Condvar,
+}
+impl HeldTell {
+    pub fn wait_held(&self) {
+        self.wait_held_calls(1);
+    }
+    pub fn wait_held_calls(&self, calls: usize) {
+        let (state, _) = self
+            .changed
+            .wait_timeout_while(
+                self.state.lock().unwrap(),
+                std::time::Duration::from_secs(10),
+                |s| s.0 < calls,
+            )
+            .unwrap();
+        assert_eq!(
+            state.0, calls,
+            "the expected tells never reached their gate"
+        );
+    }
+    pub fn open(&self) {
+        self.state.lock().unwrap_or_else(|p| p.into_inner()).1 = true;
+        self.changed.notify_all();
+    }
+}
+impl Messenger for HeldTell {
+    fn name(&self) -> &str {
+        Messenger::name(&self.source)
+    }
+    fn tested_version(&self) -> &str {
+        Messenger::tested_version(&self.source)
+    }
+    fn check_target_id(&self, id: &SessionId) -> Result<(), InvalidRequest> {
+        Messenger::check_target_id(&self.source, id)
+    }
+    fn version(&self, deadline: Instant) -> Result<String, SourceError> {
+        Messenger::version(&self.source, deadline)
+    }
+    fn read_target(&self, id: &SessionId, deadline: Instant) -> Result<TargetRecord, SourceError> {
+        Messenger::read_target(&self.source, id, deadline)
+    }
+    fn tell(&self, id: &SessionId, mode: Mode, text: &str, deadline: Instant) -> TellReply {
+        let mut state = self.state.lock().unwrap();
+        state.0 += 1;
+        self.changed.notify_all();
+        let (state, _) = self
+            .changed
+            .wait_timeout_while(state, std::time::Duration::from_secs(10), |s| !s.1)
+            .unwrap();
+        assert!(state.1, "the test did not release its tell");
+        drop(state);
+        Messenger::tell(&self.source, id, mode, text, deadline)
+    }
+}
+
+pub struct ReleaseTell(pub Arc<HeldTell>);
+impl Drop for ReleaseTell {
+    fn drop(&mut self) {
+        self.0.open();
+    }
+}
+
+pub fn serve_held_tell(fake: &SendFake, limits: Limits) -> (TestServer, Arc<HeldTell>) {
+    let gate = Arc::new(HeldTell {
+        source: fake.source(),
+        state: Mutex::new((0, false)),
+        changed: std::sync::Condvar::new(),
+    });
+    let mut config = send_config(fake, limits);
+    config.sending.as_mut().unwrap().messenger = gate.clone();
+    (serve_config(fake, config), gate)
 }

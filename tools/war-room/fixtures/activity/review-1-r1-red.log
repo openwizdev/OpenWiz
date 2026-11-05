@@ -1,0 +1,35 @@
+FF
+======================================================================
+FAIL: test_selected_pools_preserve_recognized_source_coverage (__main__.ActivityTests.test_selected_pools_preserve_recognized_source_coverage) (selected='ubuntu-24.04', source_labels=['ubuntu-slim'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-2352/tools/war-room/test_activity.py", line 136, in test_selected_pools_preserve_recognized_source_coverage
+    self.assertEqual((metric['state'], metric['value']), (state, value))
+AssertionError: Tuples differ: ('partial', None) != ('known', 1)
+
+First differing element 0:
+'partial'
+'known'
+
+- ('partial', None)
++ ('known', 1)
+
+======================================================================
+FAIL: test_selected_pools_preserve_recognized_source_coverage (__main__.ActivityTests.test_selected_pools_preserve_recognized_source_coverage) (selected='ubuntu-slim', source_labels=['ubuntu-slim'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-2352/tools/war-room/test_activity.py", line 136, in test_selected_pools_preserve_recognized_source_coverage
+    self.assertEqual((metric['state'], metric['value']), (state, value))
+AssertionError: Tuples differ: ('partial', None) != ('known', 0)
+
+First differing element 0:
+'partial'
+'known'
+
+- ('partial', None)
++ ('known', 0)
+
+----------------------------------------------------------------------
+Ran 1 test in 0.931s
+
+FAILED (failures=2)

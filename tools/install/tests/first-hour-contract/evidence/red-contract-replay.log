@@ -1,0 +1,1244 @@
+.FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+======================================================================
+FAIL: test_a_strict_reader_refuses_duplicate_keys_and_fractions (__main__.FirstHourContract.test_a_strict_reader_refuses_duplicate_keys_and_fractions) [ate": "unmeasured", "elapsed_ms": null}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 117, in test_a_strict_reader_refuses_duplicate_keys_and_fractions
+    self.assertEqual(check.check_text(bad).problems, ['not_strict_json'])
+AssertionError: Lists differ: [] != ['not_strict_json']
+
+Second list contains 1 additional elements.
+First extra element 0:
+'not_strict_json'
+
+- []
++ ['not_strict_json']
+
+======================================================================
+FAIL: test_a_strict_reader_refuses_duplicate_keys_and_fractions (__main__.FirstHourContract.test_a_strict_reader_refuses_duplicate_keys_and_fractions) [ate": "unmeasured", "elapsed_ms": null}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 117, in test_a_strict_reader_refuses_duplicate_keys_and_fractions
+    self.assertEqual(check.check_text(bad).problems, ['not_strict_json'])
+AssertionError: Lists differ: [] != ['not_strict_json']
+
+Second list contains 1 additional elements.
+First extra element 0:
+'not_strict_json'
+
+- []
++ ['not_strict_json']
+
+======================================================================
+FAIL: test_a_strict_reader_refuses_duplicate_keys_and_fractions (__main__.FirstHourContract.test_a_strict_reader_refuses_duplicate_keys_and_fractions) [tate": "unmeasured", "elapsed_ms": null}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 117, in test_a_strict_reader_refuses_duplicate_keys_and_fractions
+    self.assertEqual(check.check_text(bad).problems, ['not_strict_json'])
+AssertionError: Lists differ: [] != ['not_strict_json']
+
+Second list contains 1 additional elements.
+First extra element 0:
+'not_strict_json'
+
+- []
++ ['not_strict_json']
+
+======================================================================
+FAIL: test_a_strict_reader_refuses_duplicate_keys_and_fractions (__main__.FirstHourContract.test_a_strict_reader_refuses_duplicate_keys_and_fractions) [NaN]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 117, in test_a_strict_reader_refuses_duplicate_keys_and_fractions
+    self.assertEqual(check.check_text(bad).problems, ['not_strict_json'])
+AssertionError: Lists differ: [] != ['not_strict_json']
+
+Second list contains 1 additional elements.
+First extra element 0:
+'not_strict_json'
+
+- []
++ ['not_strict_json']
+
+======================================================================
+FAIL: test_a_strict_reader_refuses_duplicate_keys_and_fractions (__main__.FirstHourContract.test_a_strict_reader_refuses_duplicate_keys_and_fractions)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 118, in test_a_strict_reader_refuses_duplicate_keys_and_fractions
+    self.assertEqual(check.check_text('[]').problems, ['schema'])
+AssertionError: Lists differ: [] != ['schema']
+
+Second list contains 1 additional elements.
+First extra element 0:
+'schema'
+
+- []
++ ['schema']
+
+======================================================================
+FAIL: test_each_example_gives_exactly_its_codes (__main__.FirstHourContract.test_each_example_gives_exactly_its_codes) [recording-complete]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 80, in test_each_example_gives_exactly_its_codes
+    self.assertEqual(report(example['document']), example['expect'])
+AssertionError: {'pro[36 chars]n': []} != {'pro[36 chars]n': ['gate_unresolved:cloudroom_setup', 'gate_[59 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': [],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_example_gives_exactly_its_codes (__main__.FirstHourContract.test_each_example_gives_exactly_its_codes) [recovery-lost-reply]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 80, in test_each_example_gives_exactly_its_codes
+    self.assertEqual(report(example['document']), example['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': [], 'failures': [], 'unproven': ['candidate_unknown', 'not_live']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [], 'problems': [], 'unproven': ['candidate_unknown', 'not_live']}
+?                                               +++++++++++++++++++++++++++++++
+
+
+======================================================================
+FAIL: test_each_example_gives_exactly_its_codes (__main__.FirstHourContract.test_each_example_gives_exactly_its_codes) [recovery-uncertain-held]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 80, in test_each_example_gives_exactly_its_codes
+    self.assertEqual(report(example['document']), example['expect'])
+AssertionError: {'pro[36 chars]n': []} != {'pro[36 chars]n': ['candidate_unknown', 'not_live', 'operati[43 chars]a1']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': [],
++  'unproven': ['candidate_unknown',
++               'not_live',
++               'operation_uncertain:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [fixture-claims-pass]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['non_live_pass', 'unproven_pass'], 'failu[123 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': ['non_live_pass', 'unproven_pass'],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [synthetic-labelled-live]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['live_without_private_record', 'synthetic[126 chars]er']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': ['live_without_private_record', 'synthetic_live'],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [unlabelled-recording]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['synthetic_unlabelled'], 'failures': [], [113 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': ['synthetic_unlabelled'],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [missed-hour-failed]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'pro[20 chars]s': [], 'unproven': []} != {'pro[20 chars]s': ['hour_missed'], 'unproven': ['gate_unreso[88 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': ['hour_missed'],
++  'problems': [],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [missed-hour-not-failed]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['failure_not_reported'], 'failures': ['ho[126 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': ['hour_missed'],
++  'problems': ['failure_not_reported'],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [clock-unknown]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'pro[36 chars]n': []} != {'pro[36 chars]n': ['clock_unknown', 'gate_unresolved:cloudro[76 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': [],
++  'unproven': ['clock_unknown',
++               'gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [clock-ends-before-start]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['clock_order'], 'failures': [], 'unproven[104 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': ['clock_order'],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [closed-pr-as-merge]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['stage_weak_evidence:merge'], 'failures':[118 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': ['stage_weak_evidence:merge'],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [reachable-cloudroom-as-connected]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['stage_weak_evidence:connections'], 'fail[124 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': ['stage_weak_evidence:connections'],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [accepted-answer-as-approval]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['stage_weak_evidence:plan_approval'], 'fa[126 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': ['stage_weak_evidence:plan_approval'],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [running-grid-as-review]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['stage_weak_evidence:review'], 'failures'[119 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': ['stage_weak_evidence:review'],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [listed-harness-as-usable]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['seat_weak_evidence:reviewer'], 'failures[120 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': ['seat_weak_evidence:reviewer'],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [stale-merge-evidence]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['stale_evidence:merge'], 'failures': [], [113 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': ['stale_evidence:merge'],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [stale-builder-evidence]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['stale_evidence:builder'], 'failures': [][115 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': ['stale_evidence:builder'],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [missing-review]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'pro[36 chars]n': []} != {'pro[36 chars]n': ['gate_unresolved:cloudroom_setup', 'gate_[86 chars]ew']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': [],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live',
++               'stage_unverified:review']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [failed-ci]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'pro[20 chars]s': [], 'unproven': []} != {'pro[20 chars]s': ['stage_failed:ci'], 'unproven': ['gate_un[92 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': ['stage_failed:ci'],
++  'problems': [],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [stages-out-of-order]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['stage_order'], 'failures': [], 'unproven[104 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': ['stage_order'],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [unusable-reviewer]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'pro[36 chars]n': []} != {'pro[36 chars]n': ['gate_unresolved:cloudroom_setup', 'gate_[85 chars]er']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': [],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live',
++               'seat_unusable:reviewer']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [same-family-review]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'pro[36 chars]n': []} != {'pro[36 chars]n': ['gate_unresolved:cloudroom_setup', 'gate_[87 chars]nt']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': [],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live',
++               'reviewer_not_independent']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [prepared-plan-help]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'pro[36 chars]n': []} != {'pro[36 chars]n': ['gate_unresolved:cloudroom_setup', 'gate_[76 chars]lp']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': [],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live',
++               'prepared_help']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [wait-outside-clock]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['outside_clock:wait:2'], 'failures': [], [113 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': ['outside_clock:wait:2'],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [help-outside-clock]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['outside_clock:help:0'], 'failures': [], [113 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': ['outside_clock:help:0'],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [unknown-candidate]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'pro[36 chars]n': []} != {'pro[36 chars]n': ['candidate_unknown', 'gate_unresolved:clo[80 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': [],
++  'unproven': ['candidate_unknown',
++               'gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [unknown-repository]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'pro[36 chars]n': []} != {'pro[36 chars]n': ['gate_unresolved:cloudroom_setup', 'gate_[81 chars]wn']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': [],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live',
++               'repository_unknown']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [duplicate-effect]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['failure_not_reported'], 'failures': ['du[164 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': ['duplicate_effect:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3'],
++  'problems': ['failure_not_reported'],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [blind-retry]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['failure_not_reported'], 'failures': ['bl[159 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': ['blind_retry:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2'],
++  'problems': ['failure_not_reported'],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [reconciled-retry]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'pro[36 chars]n': []} != {'pro[36 chars]n': ['gate_unresolved:cloudroom_setup', 'gate_[59 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': [],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [applied-without-effect]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['phase_effect_mismatch:d4d4d4d4d4d4d4d4d4[147 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': ['phase_effect_mismatch:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4'],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [operation-left-uncertain]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'pro[36 chars]n': []} != {'pro[36 chars]n': ['gate_unresolved:cloudroom_setup', 'gate_[115 chars]a1']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': [],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live',
++               'operation_uncertain:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [uncertainty-erased-by-refusal]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['failure_not_reported'], 'failures': ['un[166 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': ['uncertainty_erased:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1'],
++  'problems': ['failure_not_reported'],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [effect-hidden-in-explanation]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['explanation_inconsistent:0'], 'failures'[119 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': ['explanation_inconsistent:0'],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [draft-lost-in-browser-restart]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['failure_not_reported'], 'failures': ['wo[145 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': ['work_lost:draft:syn-draft-idea'],
++  'problems': ['failure_not_reported'],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [tab-storage-claimed-across-browser-restart]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'pro[36 chars]n': []} != {'pro[36 chars]n': ['gate_unresolved:cloudroom_setup', 'gate_[102 chars]ea']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': [],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live',
++               'retention_unproven:draft:syn-draft-idea']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [branch-changed-after-rejected-update]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['failure_not_reported'], 'failures': ['wo[153 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': ['work_lost:branch:room/syn-first-hour-1'],
++  'problems': ['failure_not_reported'],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [work-loss-finding-accepted]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['failure_not_reported'], 'failures': ['op[139 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': ['open_blocking_finding:F2'],
++  'problems': ['failure_not_reported'],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [fixed-blocker]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'pro[36 chars]n': []} != {'pro[36 chars]n': ['gate_unresolved:cloudroom_setup', 'gate_[59 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': [],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [pr4-gap]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'pro[36 chars]n': []} != {'pro[36 chars]n': ['gap:PR4', 'gate_unresolved:cloudroom_set[70 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': [],
++  'unproven': ['gap:PR4',
++               'gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [gate-settled-without-producers]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['gate_producers:feedback'], 'failures': [[116 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': ['gate_producers:feedback'],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [gate-producers-while-unresolved]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['gate_producers:paid_offer'], 'failures':[118 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': ['gate_producers:paid_offer'],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [ten-minute-met-too-slow]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['ten_minute_inconsistent'], 'failures': [[116 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': ['ten_minute_inconsistent'],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [ten-minute-missed-is-not-a-first-hour-failure]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'pro[36 chars]n': []} != {'pro[36 chars]n': ['gate_unresolved:cloudroom_setup', 'gate_[59 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': [],
++  'unproven': ['gate_unresolved:cloudroom_setup',
++               'gate_unresolved:feedback',
++               'gate_unresolved:paid_offer',
++               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [missing-retained-work]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['schema'], 'failures': [], 'unproven': []}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [], 'problems': ['schema'], 'unproven': []}
+?                               ++++++++
+
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [extra-key]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['schema'], 'failures': [], 'unproven': []}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [], 'problems': ['schema'], 'unproven': []}
+?                               ++++++++
+
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [wrong-gate-ticket]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['schema'], 'failures': [], 'unproven': []}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [], 'problems': ['schema'], 'unproven': []}
+?                               ++++++++
+
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [hour-limit-changed]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['schema'], 'failures': [], 'unproven': []}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [], 'problems': ['schema'], 'unproven': []}
+?                               ++++++++
+
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [recovery-blind-retry]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['failure_not_reported'], 'failures': ['bl[195 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': ['blind_retry:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1',
++               'duplicate_effect:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1',
++               'uncertainty_erased:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1'],
++  'problems': ['failure_not_reported'],
++  'unproven': ['candidate_unknown', 'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [recovery-pending-record-lost]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'pro[20 chars]s': [], 'unproven': []} != {'pro[20 chars]s': ['work_lost:pending_operation:a1a1a1a1a1a1[65 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': ['work_lost:pending_operation:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1'],
++  'problems': [],
++  'unproven': ['candidate_unknown', 'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [recovery-unknown-called-no]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['explanation_inconsistent:case'], 'failur[106 chars]a1']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': ['explanation_inconsistent:case'],
++  'unproven': ['candidate_unknown',
++               'not_live',
++               'operation_uncertain:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [recovery-claims-pass]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 89, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': []} != {'problems': ['non_live_pass', 'unproven_pass'], 'failu[51 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': []}
++ {'failures': [],
++  'problems': ['non_live_pass', 'unproven_pass'],
++  'unproven': ['candidate_unknown', 'not_live']}
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [missed-hour-failed]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [missed-hour-not-failed]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [clock-unknown]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [clock-ends-before-start]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [closed-pr-as-merge]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [reachable-cloudroom-as-connected]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [accepted-answer-as-approval]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [running-grid-as-review]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [listed-harness-as-usable]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [stale-merge-evidence]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [stale-builder-evidence]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [missing-review]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [failed-ci]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [stages-out-of-order]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [unusable-reviewer]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [same-family-review]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [prepared-plan-help]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [wait-outside-clock]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [help-outside-clock]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [unknown-candidate]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [unknown-repository]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [duplicate-effect]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [blind-retry]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [applied-without-effect]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [operation-left-uncertain]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [uncertainty-erased-by-refusal]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [effect-hidden-in-explanation]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [draft-lost-in-browser-restart]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [tab-storage-claimed-across-browser-restart]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [branch-changed-after-rejected-update]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [work-loss-finding-accepted]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [pr4-gap]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [ten-minute-met-too-slow]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [missing-retained-work]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [extra-key]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [wrong-gate-ticket]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [hour-limit-changed]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 107, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_the_contract_lists_every_code_the_checks_give (__main__.FirstHourContract.test_the_contract_lists_every_code_the_checks_give)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 130, in test_the_contract_lists_every_code_the_checks_give
+    self.assertEqual(table - given, set(), 'listed codes no example exercises')
+AssertionError: Items in the first set but not the second:
+'stale_evidence'
+'synthetic_assumptions'
+'harness_listed'
+'removal_default'
+'update_rejected'
+'cloudroom_setup'
+'stage_unverified'
+'repeat_approval'
+'private_record'
+'retention_unproven'
+'duplicate_effect'
+'setup_interrupted'
+'live_without_private_record'
+'stage_failed'
+'gate_producers'
+'clock'
+'stages'
+'repository'
+'candidate_unknown'
+'paid_offer'
+'operations'
+'gates'
+'seat_weak_evidence'
+'help'
+'phase_effect_mismatch'
+'verdict'
+'draft'
+'gap'
+'non_live_pass'
+'feedback'
+'explanation_inconsistent'
+'operation_uncertain'
+'retained_work'
+'gate_unresolved'
+'candidate'
+'cloudroom_reachable'
+'commit'
+'branch'
+'blind_retry'
+'failure_not_reported'
+'clock_order'
+'repository_unknown'
+'reviewer_not_independent'
+'lost_reply'
+'work_lost'
+'setup_state'
+'hour_missed'
+'gaps'
+'pr_closed'
+'clock_unknown'
+'prepared_help'
+'stage_weak_evidence'
+'uncertainty_erased'
+'agents_running'
+'stage_order'
+'unproven_pass'
+'seat_unusable'
+'ten_minute_inconsistent'
+'pending_operation'
+'proof_class'
+'open_blocking_finding'
+'waits'
+'schema'
+'synthetic_unlabelled'
+'synthetic_live'
+'answer_accepted'
+'outside_clock'
+'findings'
+'interruptions'
+'ten_minute_fleet'
+'not_live' : listed codes no example exercises
+
+======================================================================
+FAIL: test_the_contract_stage_table_is_the_checks_order_and_evidence (__main__.FirstHourContract.test_the_contract_stage_table_is_the_checks_order_and_evidence)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<red-checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 135, in test_the_contract_stage_table_is_the_checks_order_and_evidence
+    self.assertEqual([(s, b) for _, s, b in rows], list(check.ESTABLISH.items()))
+AssertionError: Lists differ: [('public_instruction', 'instruction_opene[308 chars]ck')] != []
+
+First list contains 10 additional elements.
+First extra element 0:
+('public_instruction', 'instruction_opened')
+
++ []
+- [('public_instruction', 'instruction_opened'),
+-  ('install', 'install_result'),
+-  ('connections', 'setup_component_verified'),
+-  ('idea', 'idea_saved'),
+-  ('spec_confirmation', 'decision_saved'),
+-  ('plan_approval', 'decision_saved'),
+-  ('fleet', 'agents_running'),
+-  ('review', 'review_approve_exact_head'),
+-  ('ci', 'ci_green_exact_head'),
+-  ('merge', 'merge_read_back')]
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.041s
+
+FAILED (failures=96)

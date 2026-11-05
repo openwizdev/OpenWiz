@@ -1,0 +1,13 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.95s
+     Running terminal/main.rs (target/debug/deps/terminal-edeef3c6df3340bd)
+
+running 6 tests
+test pty::dispatch_runs_only_the_fixed_sibling_with_parsed_settings_and_keeps_its_exit ... ok
+test pty::placing_an_executable_leaves_no_writer_a_concurrent_fork_could_inherit ... ok
+test pty::explicit_and_json_requests_never_launch_in_a_terminal ... ok
+test pty::ctrl_c_and_a_handled_failure_restore_the_terminal ... ok
+test pty::ui_and_interactive_no_argument_launch_reach_the_same_home ... ok
+test pty::driver_fixture_regressions ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 98 filtered out; finished in 19.54s
+

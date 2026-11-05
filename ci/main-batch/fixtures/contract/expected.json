@@ -1,0 +1,64 @@
+{
+  "batch": {
+    "repository": "synthetic/ci-example",
+    "base": "1111111111111111111111111111111111111111",
+    "head": "3333333333333333333333333333333333333333",
+    "members": [
+      {
+        "pull_request": 9001,
+        "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "merge": "2222222222222222222222222222222222222222",
+        "parent": "1111111111111111111111111111111111111111"
+      },
+      {
+        "pull_request": 9002,
+        "head": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "merge": "3333333333333333333333333333333333333333",
+        "parent": "2222222222222222222222222222222222222222"
+      }
+    ]
+  },
+  "execution": {
+    "id": 9000100,
+    "attempt": 1,
+    "event": "push",
+    "workflow": ".github/workflows/ci.yml",
+    "event_base": "1111111111111111111111111111111111111111"
+  },
+  "previous_head": "1111111111111111111111111111111111111111",
+  "inventory": [
+    "always:fmt",
+    "always:classifier",
+    "always:selector",
+    "always:checks",
+    "rust:lib:openwiz-core",
+    "rust:lib:openwiz-server",
+    "rust:test:checks",
+    "rust:test:messaging",
+    "rust:test:web-api",
+    "web:unit:api",
+    "web:unit:poller",
+    "web:browser:v1-faithful",
+    "web:browser:v7-soak",
+    "site:build",
+    "site:test",
+    "release:package",
+    "release:ci2-batch-contract",
+    "skill:launch-fleet",
+    "skill:plan-graph:revision",
+    "skill:plan-graph:approval",
+    "skill:triage"
+  ],
+  "required_checks": [
+    {
+      "name": "ci",
+      "id": 9000100,
+      "attempt": 1
+    },
+    {
+      "name": "privacy",
+      "id": 9000101,
+      "attempt": 1
+    }
+  ]
+}

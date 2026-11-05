@@ -21,7 +21,7 @@ export type ListState = {
   /**
    * The `matched` count of the page this one was reached from, so a change
    * between the two reads can be shown: offset paging over a live list can
-   * miss or repeat a session.
+   * miss or repeat a session (Sol 2).
    */
   previousMatched: number | null;
 };
@@ -137,6 +137,11 @@ export class Viewer {
     const previousMatched = list.last?.envelope.coverage.counts?.matched ?? list.previousMatched;
     this.set({ ...this.state, list: { offset, last: null, failure: null, previousMatched } });
     if (this.running) this.startList();
+  }
+
+  /** The owner's Retry uses the existing read lane and keeps the last snapshot. */
+  refresh(): void {
+    this.list?.refresh();
   }
 
   /** Opens a session's detail (null closes it). Its first read waits for the detail read in flight to end. */

@@ -1,4 +1,4 @@
-//! M16 Preview: what a send to one target in one mode would
+//! M16 Preview (#79, sheet U5): what a send to one target in one mode would
 //! do, before any text is written. It reads the target and returns `send`'s
 //! effects and the read's time, with **no claim and no `tell`**. Its effects
 //! equal `send`'s for every target in the send fixtures, because `send`
@@ -127,11 +127,16 @@ fn failed(result: &SendResult) -> Option<FailReason> {
 
 #[test]
 fn a_previews_effects_equal_sends_for_every_send_fixture() {
-    let fake = SendFake::new("m16_equal", "send");
-    let mut i = 0;
-    for target in TARGETS {
-        for mode in [Mode::Queue, Mode::Steer] {
-            i += 1;
+    // Each row in its own fake, so the rows run at once (#1260).
+    let rows: Vec<(usize, &str, Mode)> = TARGETS
+        .iter()
+        .flat_map(|target| [Mode::Queue, Mode::Steer].map(|mode| (*target, mode)))
+        .enumerate()
+        .map(|(i, (target, mode))| (i + 1, target, mode))
+        .collect();
+    at_once(rows, |(i, target, mode)| {
+        let fake = SendFake::new(&format!("m16_equal_{i}"), "send");
+        {
             let shown = preview(&fake.source(), &clock(), &sid(target), mode).unwrap();
             // Every call is logged, even one the fake has no answer for.
             let tells = fake.tells().len();
@@ -177,8 +182,9 @@ fn a_previews_effects_equal_sends_for_every_send_fixture() {
                 }
             }
         }
-    }
+    });
     // Every status is covered by the fixtures.
+    let fake = SendFake::new("m16_equal", "send");
     let status = |t: &str| {
         preview(&fake.source(), &clock(), &sid(t), Mode::Queue)
             .unwrap()
@@ -222,41 +228,100 @@ fn an_invalid_target_id_is_refused_with_no_read() {
 
 #[test]
 fn the_cli_preview_matches_the_schema_and_the_text() {
-    let fake = SendFake::new("m16_cli", "send");
-    for target in TARGETS {
-        for steer in [false, true] {
-            let mut args = vec![*target, "--preview"];
-            if steer {
-                args.push("--steer");
-            }
-            let (code, json) = fake.cli_json(&args, "");
-            let errors = validate_def("preview", &json);
-            assert!(errors.is_empty(), "{target}: {errors:#?}\n{json:#}");
-            assert_eq!(json["schema"], PREVIEW_SCHEMA_ID);
-            assert_eq!(
-                json["requested_mode"],
-                if steer { "steer" } else { "queue" }
-            );
-            let expected = match json["status"].as_str().unwrap() {
-                "ready" => EXIT_DELIVERED,
-                _ if json["refusal"]["reason"] == "not_found" => EXIT_NOT_FOUND,
-                _ => EXIT_SEND_FAILED,
-            };
-            assert_eq!(code, expected, "{target}: {json:#}");
-
-            let (text_code, text, err) = fake.cli(&args, "");
-            assert_eq!(text_code, code, "{target}: {err}");
-            for wanted in wanted_preview(&json) {
-                assert!(
-                    text.contains(&wanted),
-                    "{target}: {wanted:?} not in\n{text}"
-                );
-            }
+    // Each row in its own fake, so the rows run at once and share nothing
+    // (#1260).
+    let rows: Vec<(usize, &str, bool)> = TARGETS
+        .iter()
+        .flat_map(|target| [false, true].map(|steer| (*target, steer)))
+        .enumerate()
+        .map(|(i, (target, steer))| (i, target, steer))
+        .collect();
+    at_once(rows, |(i, target, steer)| {
+        let fake = SendFake::new(&format!("m16_cli_{i}"), "send");
+        let mut args = vec![target, "--preview"];
+        if steer {
+            args.push("--steer");
         }
-    }
+        let (code, json) = fake.cli_json(&args, "");
+        let errors = validate_def("preview", &json);
+        assert!(errors.is_empty(), "{target}: {errors:#?}\n{json:#}");
+        assert_eq!(json["schema"], PREVIEW_SCHEMA_ID);
+        assert_eq!(
+            json["requested_mode"],
+            if steer { "steer" } else { "queue" }
+        );
+        let expected = match json["status"].as_str().unwrap() {
+            "ready" => EXIT_DELIVERED,
+            _ if json["refusal"]["reason"] == "not_found" => EXIT_NOT_FOUND,
+            _ => EXIT_SEND_FAILED,
+        };
+        assert_eq!(code, expected, "{target}: {json:#}");
+
+        let (text_code, text, err) = fake.cli(&args, "");
+        assert_eq!(text_code, code, "{target}: {err}");
+        for wanted in wanted_preview(&json) {
+            assert!(
+                text.contains(&wanted),
+                "{target}: {wanted:?} not in\n{text}"
+            );
+        }
+        assert_eq!(fake.tell_count(), 0, "{target}");
+    });
+    let fake = SendFake::new("m16_cli", "send");
     let (_, text, _) = fake.cli(&["thr_syn_0011", "--preview"], "");
     assert!(text.contains("--resume-paused-queue"), "{text}");
     assert_eq!(fake.tell_count(), 0);
+}
+
+/// The human summary and machine-readable mode must agree with the request.
+#[test]
+fn the_cli_preview_summary_names_the_requested_mode() {
+    let fake = SendFake::new("m16_summary_mode", "send");
+    for (args, mode, prefix) in [
+        (
+            vec!["thr_syn_0006", "--preview"],
+            "queue",
+            "Queue requested · preview:",
+        ),
+        (
+            vec!["thr_syn_0006", "--preview", "--steer"],
+            "steer",
+            "Steer requested · preview:",
+        ),
+    ] {
+        let (code, json) = fake.cli_json(&args, "");
+        assert_eq!(code, 0, "{mode}: {json:#}");
+        assert_eq!(json["requested_mode"], mode);
+        assert!(
+            json["summary"].as_str().unwrap().starts_with(prefix),
+            "{mode}: {}",
+            json["summary"]
+        );
+        assert_eq!(fake.tell_count(), 0);
+        assert!(fake.tells().is_empty());
+        assert!(!fake.state.exists(), "{mode}: preview created write state");
+    }
+}
+
+#[test]
+fn the_cli_preview_summary_describes_a_pending_interaction() {
+    let fake = SendFake::new("m16_pending_summary", "send");
+    let (code, json) = fake.cli_json(&["thr_syn_0012", "--preview"], "");
+    assert_eq!(code, EXIT_DELIVERED, "{json:#}");
+    assert_eq!(
+        json["effects"]["effect"]["known"]["kind"],
+        "waits_for_interaction"
+    );
+    assert!(
+        json["summary"]
+            .as_str()
+            .unwrap()
+            .contains("waits for the pending interaction to be answered"),
+        "{json:#}"
+    );
+    assert_eq!(fake.tell_count(), 0);
+    assert!(fake.tells().is_empty());
+    assert!(!fake.state.exists(), "the preview opened the send record");
 }
 
 /// What the text must contain for a JSON preview.
@@ -436,6 +501,9 @@ impl Messenger for LastReadTimesOut<'_> {
     }
 }
 
+/// Sol round 1, finding 3: a preview whose read ran out the budget says a
+/// send would be refused (`budget_exhausted`, exit 5), as the send does,
+/// and keeps the effects it worked out.
 #[test]
 fn a_preview_after_the_budget_ran_out_is_refused_like_the_send() {
     let fake = SendFake::new("m16_budget", "send");

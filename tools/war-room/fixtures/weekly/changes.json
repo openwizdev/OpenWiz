@@ -1,0 +1,4 @@
+[
+  {"at": "2030-03-08T15:00:00Z", "label": "Synthetic: reviewer briefing shortened", "evidence": ["https://github.com/example/factory/pull/5301"]},
+  {"at": "2030-02-20T12:00:00Z", "label": "Synthetic: older change outside both weeks", "evidence": ["https://github.com/example/factory/issues/5300"]}
+]

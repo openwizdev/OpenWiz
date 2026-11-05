@@ -1,0 +1,17 @@
+R1 correction attempt 1, following review 6782428869 of 26ec9d158
+python3 -I tools/war-room/test_rework.py
+PASS, 8 tests including six focused R1 subcases.
+Two excluded attempts per PR cover edited, post-merge and mixed evidence.
+Each subcase passes journey validation and suite compose/load admission.
+Literal eligible rerun counts 0 and 1 are retained with eligible source links.
+The excluded source links stay outside the metric evidence.
+The CI evidence prerequisite appears exactly once per PR.
+python3 -I tools/war-room/test_contract.py
+PASS, 18 existing suite admission and denominator tests.
+cargo fmt --check
+PASS.
+git diff --check
+PASS.
+Only rework.py, its owning test and R1 evidence changed in this correction.
+Original proof records and shared workflow/STATUS content are retained.
+R1 has zero completed correction/re-check rounds pending independent review.

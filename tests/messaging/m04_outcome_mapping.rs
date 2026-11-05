@@ -24,6 +24,91 @@ use serde_json::{Value, json};
 
 use crate::support::*;
 
+/// #1630: a started write whose wait fails remains uncertain. The preload
+/// affects only this test's subprocess, never the test runner's environment.
+#[cfg(target_os = "linux")]
+#[test]
+fn a_started_tell_with_a_wait_error_is_not_reported_as_not_started() {
+    use openwiz_adapter_cloudroom::source::CloudRoomSource;
+    use openwiz_core::messaging::send::{Messenger, TellReply};
+    use openwiz_core::prompt::ReadyPrompt;
+    use std::fs;
+    use std::os::unix::fs::PermissionsExt;
+    use std::process::Command;
+
+    const CHILD_ROOT: &str = "OPENWIZ_SYNTHETIC_TELL_WAIT_ERROR_ROOT";
+    if let Some(root) = std::env::var_os(CHILD_ROOT) {
+        let root = std::path::PathBuf::from(root);
+        let prompt = ReadyPrompt::text("Synthetic wait failure");
+        let missing = CloudRoomSource::new(root.join("missing"));
+        assert_eq!(
+            missing.tell_prompt(
+                &sid("thr_syn_0001"),
+                Mode::Queue,
+                &prompt,
+                Instant::now() + Duration::from_secs(3),
+            ),
+            TellReply::NotStarted,
+        );
+        let started = CloudRoomSource::new(root.join("synthetic-room-cli"));
+        let reply = started.tell_prompt(
+            &sid("thr_syn_0001"),
+            Mode::Queue,
+            &prompt,
+            Instant::now() + Duration::from_secs(3),
+        );
+        assert_eq!(
+            fs::read_to_string(root.join("starts")).unwrap(),
+            "started\n"
+        );
+        assert!(
+            matches!(
+                reply,
+                TellReply::Unclear {
+                    reason: UncertainReason::CallNotConfirmed,
+                    ..
+                }
+            ),
+            "a started tell must retain uncertainty after a wait error: {reply:?}"
+        );
+        return;
+    }
+
+    let root = run_root().join("m04-wait-error");
+    crate::dirs::private_dir(&root).unwrap();
+    let shim = root.join("wait-error.so");
+    let compiled = Command::new("cc")
+        .args(["-shared", "-fPIC", "-Wall", "-Wextra", "-Werror"])
+        .arg(std::path::Path::new(ROOT).join("tests/fixtures/wait-error.c"))
+        .args(["-o"])
+        .arg(&shim)
+        .arg("-ldl")
+        .output()
+        .expect("compile the synthetic wait shim");
+    assert!(compiled.status.success(), "{compiled:?}");
+    let program = root.join("synthetic-room-cli");
+    // Synthetic assumption: this executable records one completed start;
+    // it is not a provider response and makes no external request.
+    fs::write(&program, "#!/bin/sh\nprintf 'started\\n' >> starts\n").unwrap();
+    fs::set_permissions(&program, fs::Permissions::from_mode(0o700)).unwrap();
+    let child = Command::new(std::env::current_exe().unwrap())
+        .args([
+            "--exact",
+            "m04_outcome_mapping::a_started_tell_with_a_wait_error_is_not_reported_as_not_started",
+            "--nocapture",
+        ])
+        .current_dir(&root)
+        .env(CHILD_ROOT, &root)
+        .env("LD_PRELOAD", &shim)
+        .output()
+        .expect("run only this proof in an isolated process");
+    assert!(child.status.success(), "{child:?}");
+    assert_eq!(
+        fs::read_to_string(root.join("starts")).unwrap(),
+        "started\n"
+    );
+}
+
 pub fn delivery(report: &SendReport) -> &Delivery {
     match &report.result {
         SendResult::Outcome { delivery, .. } => delivery,
@@ -218,18 +303,18 @@ fn everything_else_is_uncertain() {
             UncertainReason::UndocumentedError,
         ),
     ];
-    for (name, response, reason) in cases {
+    // Each row has its own fake, so the rows run at once (#1260).
+    at_once(cases, |(name, response, reason)| {
         let fake = SendFake::with(
             &format!("m04_uncertain_{name}"),
             vec![tell_response("thr_syn_0001", "queue", response)],
         );
         let started = Instant::now();
-        let report = fake.report(&request(
-            "thr_syn_0001",
-            Mode::Queue,
-            "Synthetic",
-            "op-m04-u",
-        ));
+        let mut r = request("thr_syn_0001", Mode::Queue, "Synthetic", "op-m04-u");
+        if name == "hang" {
+            r.budget = HANG_BUDGET;
+        }
+        let report = fake.report(&r);
         assert_eq!(report.status, Status::Uncertain, "{name}: {report:#?}");
         assert_eq!(uncertain_reason(&report), reason, "{name}");
         assert!(
@@ -244,7 +329,7 @@ fn everything_else_is_uncertain() {
                 "bounded by the budget"
             );
         }
-    }
+    });
 }
 
 #[test]
@@ -325,7 +410,8 @@ fn no_raw_room_cli_text_reaches_any_output() {
             vec![json!({"argv": ["--version"], "exit": 1, "stderr": stderr})],
         ),
     ];
-    for (name, responses) in cases {
+    // Each row has its own fake, so the rows run at once (#1260).
+    at_once(cases, |(name, responses)| {
         let fake = SendFake::with(&format!("m04_markers_{name}"), responses);
         for (i, json_flag) in [false, true].into_iter().enumerate() {
             let op_id = format!("op-m04-marker-{i}");
@@ -344,9 +430,11 @@ fn no_raw_room_cli_text_reaches_any_output() {
                 assert_no_marker(&format!("{name} record"), &record);
             }
         }
-    }
+    });
 }
 
+/// Haiku A4: a `thread tell` that could not even be started sent nothing,
+/// so it is failed, not uncertain.
 #[test]
 fn a_call_that_never_started_is_failed_not_uncertain() {
     use openwiz_adapter_cloudroom::source::CloudRoomSource;
@@ -400,6 +488,8 @@ fn a_call_that_never_started_is_failed_not_uncertain() {
     assert_eq!(fake.tell_count(), 0);
 }
 
+/// Haiku A6: the target read's not-found is the exact observed line, as for
+/// `thread tell`; any other line mentioning it is not a not-found.
 #[test]
 fn the_target_reads_not_found_is_an_exact_line() {
     let fake = SendFake::with(
@@ -423,6 +513,8 @@ fn the_target_reads_not_found_is_an_exact_line() {
     assert_eq!(fake.tell_count(), 0);
 }
 
+/// #571: the PC live test observed this shape at 4379586. Identifiers and
+/// text remain synthetic; this is a fixture regression, never a live send.
 #[test]
 fn observed_sent_receipt_is_accepted_once() {
     let fake = SendFake::with(
@@ -524,7 +616,8 @@ fn observed_receipt_guards_fail_closed() {
     let mut extra = good;
     extra["syntheticExtra"] = json!(true);
     cases.push(("extra".to_owned(), extra.to_string()));
-    for (name, stdout) in cases {
+    // Each row has its own fake, so the rows run at once (#1260).
+    at_once(cases, |(name, stdout)| {
         let fake = SendFake::with(
             &format!("m04_guard_{name}"),
             vec![tell_response(
@@ -558,7 +651,7 @@ fn observed_receipt_guards_fail_closed() {
         ));
         assert_eq!(again.status, Status::Uncertain, "{name}: replay");
         assert_eq!(fake.tell_count(), 1, "{name}: never retry");
-    }
+    });
 }
 
 #[test]
@@ -700,6 +793,8 @@ fn pc_probe_claude_queued_steer() {
     );
 }
 
+/// #1007: the v141 PC observation W1-M08 has the same Cloud shape as
+/// queued Steer, with Queue requested. Values are synthetic, not live IDs.
 #[test]
 fn pc_probe_cloud_queued_queue() {
     check_pc_probe(
@@ -716,6 +811,9 @@ fn pc_probe_cloud_queued_queue() {
 #[test]
 fn pc_probe_shapes_reject_drift_at_every_depth() {
     use openwiz_core::messaging::send::{Messenger, TellReply};
+    // Every file's cases, then all of them a few at a time (#1260): each has
+    // its own fake.
+    let mut all = Vec::<(&str, Mode, usize, String, String)>::new();
     for (file, mode) in [
         ("tell-queued-observed.json", Mode::Queue),
         ("tell-steer-queued-observed.json", Mode::Steer),
@@ -904,35 +1002,53 @@ fn pc_probe_shapes_reject_drift_at_every_depth() {
                 cases.push((format!("unobserved Cloud queued {key}"), bad.to_string()));
             }
         }
-        for (index, (why, stdout)) in cases.into_iter().enumerate() {
-            let fake = SendFake::with(
-                &format!("m04_pc_drift_{file}_{index}"),
-                vec![tell_response(
-                    "thr_syn_0001",
-                    mode.as_str(),
-                    json!({"stdout":stdout}),
-                )],
-            );
-            let reply = fake.source().tell(
-                &sid("thr_syn_0001"),
-                mode,
-                "Synthetic",
-                Instant::now() + Duration::from_secs(3),
-            );
-            assert!(
-                matches!(
-                    reply,
-                    TellReply::Unclear {
-                        reason: UncertainReason::UnexpectedReceipt,
-                        ..
-                    }
-                ),
-                "{file} {why}: {reply:?}"
-            );
-            assert!(!format!("{reply:?}").contains("Synthetic queued prompt"));
-            assert_eq!(fake.tell_count(), 1, "{file} {why}");
+        let mut cases: Vec<_> = cases
+            .into_iter()
+            .map(|(why, stdout)| (why, stdout, mode))
+            .collect();
+        if file == "tell-queued-observed.json" {
+            // Keep the entire Local busy row and match the outer mode to the
+            // request: only the Queue-only guard can reject this Steer receipt.
+            let mut steer = good.clone();
+            steer["mode"] = json!("steer");
+            cases.push((
+                "Local busy receipt for Steer".into(),
+                steer.to_string(),
+                Mode::Steer,
+            ));
+        }
+        for (index, (why, stdout, mode)) in cases.into_iter().enumerate() {
+            all.push((file, mode, index, why, stdout));
         }
     }
+    at_once(all, |(file, mode, index, why, stdout)| {
+        let fake = SendFake::with(
+            &format!("m04_pc_drift_{file}_{index}"),
+            vec![tell_response(
+                "thr_syn_0001",
+                mode.as_str(),
+                json!({"stdout":stdout}),
+            )],
+        );
+        let reply = fake.source().tell(
+            &sid("thr_syn_0001"),
+            mode,
+            "Synthetic",
+            Instant::now() + Duration::from_secs(3),
+        );
+        assert!(
+            matches!(
+                reply,
+                TellReply::Unclear {
+                    reason: UncertainReason::UnexpectedReceipt,
+                    ..
+                }
+            ),
+            "{file} {why}: {reply:?}"
+        );
+        assert!(!format!("{reply:?}").contains("Synthetic queued prompt"));
+        assert_eq!(fake.tell_count(), 1, "{file} {why}");
+    });
 }
 
 #[test]

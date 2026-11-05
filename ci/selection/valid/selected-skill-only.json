@@ -1,0 +1,78 @@
+{
+  "schema": "openwiz.ci-selection.v1",
+  "run": {
+    "id": 9000012,
+    "attempt": 1,
+    "event": "pull_request",
+    "action": "reopened",
+    "base_branch": "main",
+    "base": "1111111111111111111111111111111111111111",
+    "head": "2222222222222222222222222222222222222222",
+    "pull_request": 909
+  },
+  "diff": {
+    "state": "read",
+    "paths": [
+      "skills/launch-fleet/scripts/fleet.sh",
+      "skills/launch-fleet/SKILL.md"
+    ]
+  },
+  "selection": {
+    "mode": "selected"
+  },
+  "builds": {
+    "web_export": {
+      "decision": "skip",
+      "reason": "no selected test reads apps/web/out"
+    }
+  },
+  "lanes": {
+    "always": {
+      "decision": "run",
+      "tests": [
+        "always:fmt",
+        "always:classifier",
+        "always:selector",
+        "always:architecture",
+        "always:privacy"
+      ],
+      "skipped": []
+    },
+    "rust": {
+      "decision": "skip",
+      "reason": "no changed path reaches it"
+    },
+    "web": {
+      "decision": "skip",
+      "reason": "no changed path reaches it"
+    },
+    "site": {
+      "decision": "skip",
+      "reason": "no changed path reaches it"
+    },
+    "skills": [
+      {
+        "skill": "launch-fleet",
+        "decision": "run",
+        "tests": [
+          "skill:launch-fleet"
+        ],
+        "skipped": []
+      },
+      {
+        "skill": "plan-graph",
+        "decision": "skip",
+        "reason": "no changed path is in skills/plan-graph/"
+      },
+      {
+        "skill": "triage",
+        "decision": "skip",
+        "reason": "no changed path is in skills/triage/"
+      }
+    ]
+  },
+  "store": {
+    "artifact": "ci-selection-1",
+    "file": "ci-selection.json"
+  }
+}

@@ -137,6 +137,9 @@ pub struct Session {
     pub updated_at: Fact<Timestamp>,
     /// Snapshot time minus `updated_at`.
     pub age_ms: Fact<i64>,
+    /// When the session started, as `room-cli` reports it; never creation
+    /// or update time. Unknown when unreported, or after the snapshot.
+    pub started_at: Fact<Timestamp>,
 }
 
 /// The final output of a session, never a recent-log tail.

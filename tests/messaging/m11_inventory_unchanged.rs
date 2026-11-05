@@ -13,7 +13,7 @@ use openwiz_core::source::SessionSource;
 
 use crate::support::*;
 
-/// The inventory operations' signatures, as the implementation's server calls them.
+/// The inventory operations' signatures, as ClosedWiz#5's server calls them.
 type ListOp<T> = fn(&dyn SessionSource, &dyn Clock, &ListRequest) -> Result<T, OpError>;
 type ShowOp<T> = fn(&dyn SessionSource, &dyn Clock, &ShowRequest) -> Result<T, OpError>;
 

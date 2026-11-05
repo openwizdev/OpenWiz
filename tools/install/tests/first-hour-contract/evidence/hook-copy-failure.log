@@ -1,0 +1,18 @@
+Required hook attempt at febcc05a48f7196f5c4d60947166fbe24a407613.
+Normalized technical excerpt; local paths and process ids omitted.
+
+pre-push: ok cargo fmt --check
+pre-push: ok cargo clippy --workspace --all-targets -- -D warnings
+pre-push: FAIL cargo test -p openwiz-tests --test checks
+  evidence_outside_crates::no_product_evidence_is_tracked_for_export:
+    git ls-files failed
+  public_tree::public_files_use_the_final_openwiz_address:
+    git grep failed
+  test result: FAILED. 130 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out.
+pre-push: ok sh .github/actions/docs-only/test.sh
+pre-push: 1 of 4 checks failed
+pre-push: push stopped
+
+Both failed readers pass in the real Git checkout; see final-scoped-checks.log.
+The hook's copied tree has no Git metadata. No hook edit was made.
+The scoped-push exception is recorded in ticket comment 6760189740.

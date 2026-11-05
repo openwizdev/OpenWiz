@@ -1,4 +1,4 @@
-//! W5: the same operation. For every case of the `send` fixtures, the
+//! W5 (#9): the same operation. For every case of the `send` fixtures, the
 //! route's answer is byte for byte what `openwiz send … --json` prints for
 //! the same input, op id and clock, and the preview and lookup routes'
 //! answers are `--preview --json` and `--check --json`. A static check
@@ -7,6 +7,7 @@
 
 use serde_json::{Value, json};
 
+use crate::at_once::at_once;
 use crate::msg::{self, SendFake};
 use crate::send_support::{body, cli, cli_args, get_public, send_json, serve_send};
 
@@ -57,25 +58,68 @@ fn same(web: &SendFake, cli_fake: &SendFake, id: &str, value: &Value) {
 
 #[test]
 fn every_send_fixture_case_equals_the_cli() {
+    let mut cases = Vec::new();
     for (n, id) in TARGETS.iter().enumerate() {
         for mode in ["queue", "steer"] {
             for resume in [false, true] {
-                let name = format!("web_w5_{n}_{mode}_{resume}");
-                let web = SendFake::new(&format!("{name}_web"), "send");
-                let cli_fake = SendFake::new(&format!("{name}_cli"), "send");
-                let mut value = body("w5-op-1", mode, "Synthetic W5 text");
-                if resume {
-                    value["resume_paused_queue"] = json!(true);
-                }
-                same(&web, &cli_fake, id, &value);
-                // A replay of the same op id, and a conflicting reuse.
-                same(&web, &cli_fake, id, &value);
-                let mut other = value.clone();
-                other["text"] = json!("Synthetic W5 other text");
-                same(&web, &cli_fake, id, &other);
+                cases.push((n, *id, mode, resume));
             }
         }
     }
+    // Each case has its own two fakes, so they run at once (#1259).
+    at_once(&cases, 8, |&(n, id, mode, resume)| {
+        let name = format!("web_w5_{n}_{mode}_{resume}");
+        let web = SendFake::new(&format!("{name}_web"), "send");
+        let cli_fake = SendFake::new(&format!("{name}_cli"), "send");
+        let mut value = body("w5-op-1", mode, "Synthetic W5 text");
+        if resume {
+            value["resume_paused_queue"] = json!(true);
+        }
+        same(&web, &cli_fake, id, &value);
+        // A replay of the same op id, and a conflicting reuse.
+        same(&web, &cli_fake, id, &value);
+        let mut other = value.clone();
+        other["text"] = json!("Synthetic W5 other text");
+        same(&web, &cli_fake, id, &other);
+    });
+}
+
+#[test]
+fn cloud_queue_receipt_survives_send_replay_and_lookup() {
+    let fake = SendFake::with(
+        "web_w5_cloud_queue",
+        vec![msg::tell_response(
+            "thr_syn_0001",
+            "queue",
+            msg::receipt("tell-cloud-queue-observed.json"),
+        )],
+    );
+    let s = serve_send(&fake);
+    let value = body("w5-cloud-queue", "queue", "Synthetic Cloud Queue text");
+    let delivery = json!({
+        "kind": "queued",
+        "waiting_on": "not_reported",
+        "queued_message_id": "00000000-0000-4000-8000-000000000001",
+        "text": "queued: waiting reason not reported",
+    });
+    for replayed in [false, true] {
+        let r = send_json(&s, "thr_syn_0001", &value);
+        assert_eq!(r.status, 200, "{}", r.text());
+        let report = r.json();
+        assert_eq!(report["requested_mode"], "queue");
+        assert_eq!(report["status"], "queued");
+        assert_eq!(report["result"]["delivery"], delivery);
+        assert_eq!(report["result"]["replayed"], replayed);
+    }
+    let r = get_public(&s, "/api/v1/sessions/thr_syn_0001/messages/w5-cloud-queue");
+    assert_eq!(r.status, 200, "{}", r.text());
+    let found = r.json();
+    assert_eq!(found["result"]["kind"], "recorded");
+    let report = &found["result"]["report"];
+    assert_eq!(report["requested_mode"], "queue");
+    assert_eq!(report["status"], "queued");
+    assert_eq!(report["result"]["delivery"], delivery);
+    assert_eq!(fake.tell_count(), 1);
 }
 
 #[test]
@@ -116,7 +160,11 @@ fn every_preview_equals_the_cli() {
     let web = SendFake::new("web_w5_preview_web", "send");
     let cli_fake = SendFake::new("web_w5_preview_cli", "send");
     let s = serve_send(&web);
-    for id in TARGETS.iter().copied().chain(["bad-"]) {
+    let ids: Vec<_> = TARGETS.iter().copied().chain(["bad-"]).collect();
+    at_once(&ids, 3, |&id| {
+        let web = SendFake::new(&format!("web_w5_preview_web_{id}"), "send");
+        let cli_fake = SendFake::new(&format!("web_w5_preview_cli_{id}"), "send");
+        let s = serve_send(&web);
         for mode in ["queue", "steer"] {
             let mut args = vec!["--preview", "--json"];
             let query = if mode == "steer" {
@@ -148,7 +196,9 @@ fn every_preview_equals_the_cli() {
         let a = get_public(&s, &format!("/api/v1/sessions/{id}/preview"));
         let b = get_public(&s, &format!("/api/v1/sessions/{id}/preview?mode=queue"));
         assert_eq!(a.body, b.body, "{id}");
-    }
+        assert_eq!(web.tell_count(), 0);
+        assert_eq!(cli_fake.tell_count(), 0);
+    });
     for query in [
         "?mode=auto",
         "?mode=",
@@ -229,7 +279,9 @@ fn the_server_has_no_send_logic() {
         let path = entry.expect("entry").path();
         let text = std::fs::read_to_string(&path).expect("source");
         calls.push_str(&text);
-
+        // Updated for #16 (B3) with this reason: `attachments.rs` holds the
+        // attachment routes, which call the attachment store, not `send`;
+        // its `FailReason` is the attachment model's (AW4 checks it).
         if path.ends_with("attachments.rs") {
             assert!(
                 !text.contains("messaging::"),
@@ -258,7 +310,9 @@ fn the_server_has_no_send_logic() {
             );
         }
     }
-
+    // Updated for #16 (B3) with this reason: a send with attachments needs the
+    // attachment store, so the server calls the core's `send_with` (the same
+    // operation, with its staged attachments: `openwiz send --attachment`).
     for call in ["send::send_with(", "preview::preview(", "lookup::lookup("] {
         assert!(
             calls.contains(call),

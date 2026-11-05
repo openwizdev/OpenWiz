@@ -1,0 +1,50 @@
+# #694 R1 (review of #1442 at 57cdd168) red run: the scope-blocker cases, one at a time, against fleet.sh at 48c43d846a743af4788b9cea3490de963bf54af4.
+# The key carried no edit time, and needs-info compared creation times only, so an edited question or answer stayed silent.
+FAIL scope blocker: a builder waiting on its question raises one look, keyed: unexpected output:
+    --- /tmp/tmp.qFs8faK7eJ/case-1/want.txt	2026-11-06 10:50:33.135742378 +0000
+    +++ /tmp/tmp.qFs8faK7eJ/case-1/out	2026-11-06 10:50:33.119742773 +0000
+    @@ -1 +1 @@
+    -look #13: blocked on scope 1301/1302@2026-11-01T11:25:00Z: thread thr_syn13 has no branch
+    +look #13: blocked on scope 1301/1302: thread thr_syn13 has no branch
+FAIL scope blocker: once recorded, the check is quiet: unexpected output:
+    --- /tmp/tmp.kAXY43Al20/case-1/want.txt	2026-11-06 10:50:51.511288529 +0000
+    +++ /tmp/tmp.kAXY43Al20/case-1/out	2026-11-06 10:50:51.497144704 +0000
+    @@ -0,0 +1 @@
+    +look #13: blocked on scope 1301/1302: thread thr_syn13 has no branch
+FAIL scope blocker: a wake on its own record prints nothing: unexpected output:
+    --- /tmp/tmp.bDsfFuVhYa/case-1/want.txt	2026-11-06 10:51:08.197876398 +0000
+    +++ /tmp/tmp.bDsfFuVhYa/case-1/out	2026-11-06 10:51:08.187876645 +0000
+    @@ -0,0 +1 @@
+    +look #13: blocked on scope 1301/1302: thread thr_syn13 has no branch
+FAIL scope blocker: a new builder is a changed input: unexpected output:
+    --- /tmp/tmp.0M0QNzM42M/case-1/want.txt	2026-11-06 10:51:26.396427581 +0000
+    +++ /tmp/tmp.0M0QNzM42M/case-1/out	2026-11-06 10:51:26.378428025 +0000
+    @@ -1 +1 @@
+    -look #13: blocked on scope 1306/1302@2026-11-01T11:25:00Z: thread thr_syn13b has no branch
+    +look #13: blocked on scope 1306/1302: thread thr_syn13b has no branch
+FAIL scope blocker: an edited question raises it again: unexpected output:
+    --- /tmp/tmp.h5D3ExStex/case-1/want.txt	2026-11-06 10:51:44.634977922 +0000
+    +++ /tmp/tmp.h5D3ExStex/case-1/out	2026-11-06 10:51:44.618978318 +0000
+    @@ -1,2 +1 @@
+    -needs-info #13: a question for the orchestrator
+    -look #13: blocked on scope 1301/1302@2026-11-01T11:45:00Z: thread thr_syn13 has no branch
+    +look #13: blocked on scope 1301/1302: thread thr_syn13 has no branch
+FAIL scope blocker: an edited question raises it again through a wake: unexpected output:
+    --- /tmp/tmp.mITS5QfzN5/case-1/want.txt	2026-11-06 10:52:01.600559079 +0000
+    +++ /tmp/tmp.mITS5QfzN5/case-1/out	2026-11-06 10:52:01.588559374 +0000
+    @@ -1,2 +1 @@
+    -needs-info #13: a question for the orchestrator
+    -look #13: blocked on scope 1301/1302@2026-11-01T11:45:00Z: thread thr_syn13 has no branch
+    +look #13: blocked on scope 1301/1302: thread thr_syn13 has no branch
+FAIL scope blocker: an edited answer raises it again: unexpected output:
+    --- /tmp/tmp.bOaCishzd5/case-1/want.txt	2026-11-06 10:52:20.154102530 +0000
+    +++ /tmp/tmp.bOaCishzd5/case-1/out	2026-11-06 10:52:20.130103122 +0000
+    @@ -1,2 +1 @@
+    -needs-info #13: a question for the orchestrator
+    -look #13: blocked on scope 1301/1305@2026-11-01T11:50:00Z: thread thr_syn13 has no branch
+    +look #13: blocked on scope 1301/1305: thread thr_syn13 has no branch
+FAIL scope blocker: an edit to its own records stays quiet: unexpected output:
+    --- /tmp/tmp.7AgRQFs9I5/case-1/want.txt	2026-11-06 10:52:38.679646324 +0000
+    +++ /tmp/tmp.7AgRQFs9I5/case-1/out	2026-11-06 10:52:38.665646667 +0000
+    @@ -0,0 +1 @@
+    +look #13: blocked on scope 1301/1302: thread thr_syn13 has no branch

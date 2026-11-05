@@ -43,7 +43,7 @@ fn the_binary_listens_on_loopback_only_and_reads_nothing_at_start() {
     let fake = Fake::new("web_a3_binary", "normal");
     let mut child = Command::new(&program)
         .args(["--port", "0"])
-        .env("PATH", &fake.dir)
+        .env("OPENWIZ_FIXTURE_PROGRAM", fake.program())
         .env_remove(ALLOWED_HOST_ENV)
         .current_dir(&fake.dir)
         .stdin(Stdio::null())
@@ -241,6 +241,8 @@ fn only_dns_names_can_be_configured() {
 
 #[test]
 fn the_help_says_health_is_the_servers_own_metadata() {
+    // #69: only the inventory and session routes answer with the CLI's
+    // `--json`; health is the server's own metadata, with no room-cli read.
     let text = openwiz_server::help()
         .split_whitespace()
         .collect::<Vec<_>>()

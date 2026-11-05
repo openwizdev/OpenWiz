@@ -1,0 +1,8 @@
+FAIL: apps/web/public/manifest.webmanifest
+FAIL: apps/web/public/sw.js
+FAIL: apps/web/public/sw-register.js
+FAIL: apps/web/public/icons/icon-192.png
+FAIL: apps/web/public/icons/icon-512.png
+Traceback (most recent call last):
+  File "<stdin>", line 4, in <module>
+AssertionError: R1: installable app shell is missing before D3 integration

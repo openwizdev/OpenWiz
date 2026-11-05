@@ -1,3 +1,31 @@
+//! Two keywords for the new-thread and prompt schemas (Sol round 1,
+//! finding 2), on top of the shared checker (`tests/support/schema.rs`,
+//! outside A1's paths, which has neither):
+//!
+//! - **`pattern`**, in one small form only, so no pattern can mean more here
+//!   than in a JSON Schema validator (ECMA-262, with or without the `u`
+//!   flag): `^`, then atoms, then `$`. An atom is a literal character, a
+//!   `\uXXXX` escape, or a class `[...]` or negated class `[^...]` of
+//!   literals, escapes and ranges (a `-` only last), optionally followed by
+//!   `*`. No `.`, no `\s`: each set is spelled out, so its meaning can't
+//!   differ between engines.
+//! - **`maxUtf8Bytes`**: OpenWiz's companion rule for the text cap, which
+//!   JSON Schema can't express (`maxLength` counts characters). A standard
+//!   validator ignores it; this checker and the Rust core enforce it.
+//!
+//! B2 (ClosedWiz#15) adds two array keywords, for the attachments lists:
+//!
+//! - **`uniqueItems`**, `true` only: no two items are equal JSON;
+//! - **`minItems`**, a count: at least that many items.
+//!
+//! Both only on a `"type": "array"` node.
+//!
+//! [`lint`] and [`validate`] run the shared checker on the schema with
+//! these keywords taken out, then check them here, walking the same `$ref`s,
+//! properties, items and the one `oneOf` branch the shared checker matched.
+//! A value that matches no branch, or several, already fails there, so
+//! this is never looser than full JSON Schema.
+
 use serde_json::Value;
 
 const KEYWORDS: &[&str] = &["pattern", "maxUtf8Bytes", "uniqueItems", "minItems"];

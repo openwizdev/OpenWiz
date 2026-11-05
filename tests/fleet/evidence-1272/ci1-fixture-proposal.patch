@@ -1,0 +1,32 @@
+--- a/tests/service/t4b_executor.rs
++++ b/tests/service/t4b_executor.rs
+@@ -89,8 +89,9 @@
+     ))
+     .unwrap();
+     thread["thread"]["archivedAt"] = json!(1_700_000_700_000_u64);
++    thread["thread"]["title"] = json!("#10: Synthetic");
+     fs::write(f.0.join("thread.json"), thread.to_string()).unwrap();
+-    fs::write(f.0.join("comments.json"), json!([{"id":100,"body":"launch-fleet: started, thread thr_syn_0021","created":1_700_000_000_000_u64,"updated":1_700_000_000_000_u64}]).to_string()).unwrap();
++    fs::write(f.0.join("comments.json"), json!([{"id":100,"body":"launch-fleet: started","created":1_700_000_000_000_u64,"updated":1_700_000_000_000_u64}]).to_string()).unwrap();
+     DirBuilder::new()
+         .mode(0o700)
+         .create(f.0.join("service/app"))
+--- a/tests/service/t4b_fake.rs
++++ b/tests/service/t4b_fake.rs
+@@ -60,7 +60,15 @@
+     if tool == "room-cli" {
+         return match args {
+             ["--version"] => Some(json!("v127")),
+-            ["project", "list", ..] => Some(json!([])),
++            ["project", "list", ..] => Some(json!([{
++                "id":"prj_syn_0001", "kind":"standard", "name":"Synthetic project",
++                "gitRemoteUrl":"https://github.com/synthetic-owner/synthetic-repo.git",
++                "createdAt":1_700_000_000_000_u64, "updatedAt":1_700_000_000_000_u64, "sources":[]
++            }])),
++            ["thread", "list", ..] => {
++                let thread: Value = serde_json::from_slice(&fs::read(root.join("thread.json")).unwrap()).unwrap();
++                Some(json!([thread["thread"]]))
++            }
+             ["thread", "show", "thr_syn_0021", "--json"] => {
+                 Some(serde_json::from_slice(&fs::read(root.join("thread.json")).unwrap()).unwrap())
+             }

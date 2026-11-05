@@ -1,3 +1,17 @@
+//! AP3 Safe names. Whatever the owner's file is called, the **staged name**
+//! OpenWiz hands to CloudRoom is a valid one: its basename reduced to
+//! `[A-Za-z0-9._-]`, never `.` or `..`, never empty, never starting with
+//! `-` or `.`, and short enough that CloudRoom's stored name still fits.
+//! The display name keeps the original, as text.
+//!
+//! **The name the agent sees is not the staged name** (Sol round 1, finding
+//! 1). CloudRoom stores each upload as `<stem>-<Date.now()>-<random><ext>`
+//! and that stored name is the Cloud attachment's name, which the Cloud
+//! core caps at 200 bytes. Source-read at upstream `eb20d1c`
+//! (`apps/server/src/services/projects/attachments.ts`,
+//! `buildStoredFilename`; `services/cloudroom/commands.ts`), **not
+//! observed**: the live check rechecks it (AL1).
+
 use openwiz_core::attachment::{SAFE_NAME_MAX_BYTES, SafeName};
 
 use crate::support::*;
@@ -114,6 +128,48 @@ fn originals() -> Vec<String> {
 }
 
 #[test]
+fn ap3_name_contracts_preserve_all_original_cases() {
+    let cases: [(&str, fn()); 9] = [
+        (
+            "a_long_name_keeps_its_extension",
+            a_long_name_keeps_its_extension,
+        ),
+        (
+            "an_invalid_name_from_a_record_is_refused",
+            an_invalid_name_from_a_record_is_refused,
+        ),
+        (
+            "cloudrooms_stored_name_fits_the_cloud_cores_limit",
+            cloudrooms_stored_name_fits_the_cloud_cores_limit,
+        ),
+        (
+            "every_original_gives_a_valid_safe_name",
+            every_original_gives_a_valid_safe_name,
+        ),
+        ("only_the_basename_is_kept", only_the_basename_is_kept),
+        (
+            "short_stems_with_near_limit_extensions_stay_safe",
+            short_stems_with_near_limit_extensions_stay_safe,
+        ),
+        (
+            "the_display_name_keeps_the_original_as_text",
+            the_display_name_keeps_the_original_as_text,
+        ),
+        (
+            "the_extension_is_the_safe_names_last_suffix_in_lowercase",
+            the_extension_is_the_safe_names_last_suffix_in_lowercase,
+        ),
+        (
+            "the_safe_name_is_a_fixed_point_of_cloudrooms_reduction",
+            the_safe_name_is_a_fixed_point_of_cloudrooms_reduction,
+        ),
+    ];
+    for (name, proof) in cases {
+        eprintln!("TA2 case: ap03_safe_names::{name}");
+        proof();
+    }
+}
+
 fn every_original_gives_a_valid_safe_name() {
     for original in originals() {
         let safe = SafeName::from_original(&original);
@@ -131,7 +187,6 @@ fn every_original_gives_a_valid_safe_name() {
     }
 }
 
-#[test]
 fn the_safe_name_is_a_fixed_point_of_cloudrooms_reduction() {
     // CloudRoom's sanitizing changes nothing in a staged name, so the
     // stored name is the staged stem and extension, plus CloudRoom's
@@ -147,7 +202,9 @@ fn the_safe_name_is_a_fixed_point_of_cloudrooms_reduction() {
     }
 }
 
-#[test]
+/// Sol round 1, finding 1: a 200-byte staged name plus CloudRoom's suffix
+/// is about 221 bytes, over the Cloud core's 200. The staged limit leaves
+/// room for the longest suffix: `-`, 13 digits, `-`, 6 characters.
 fn cloudrooms_stored_name_fits_the_cloud_cores_limit() {
     let longest_suffix = "-9999999999999-zzzzzz".len();
     assert_eq!(longest_suffix, 21);
@@ -184,7 +241,6 @@ fn cloudrooms_stored_name_fits_the_cloud_cores_limit() {
     );
 }
 
-#[test]
 fn only_the_basename_is_kept() {
     for (original, safe) in [
         ("synthetic.png", "synthetic.png"),
@@ -217,7 +273,6 @@ fn only_the_basename_is_kept() {
     }
 }
 
-#[test]
 fn a_long_name_keeps_its_extension() {
     let safe = SafeName::from_original(&("a".repeat(500) + ".png"));
     assert_eq!(safe.as_str().len(), SAFE_NAME_MAX_BYTES);
@@ -232,7 +287,26 @@ fn a_long_name_keeps_its_extension() {
     assert_eq!(safe.as_str().len(), SAFE_NAME_MAX_BYTES);
 }
 
-#[test]
+fn short_stems_with_near_limit_extensions_stay_safe() {
+    for stem in ["x", "xx", "synthetic-longer-stem"] {
+        for extension_len in [
+            SAFE_NAME_MAX_BYTES - 2,
+            SAFE_NAME_MAX_BYTES - 1,
+            SAFE_NAME_MAX_BYTES,
+            SAFE_NAME_MAX_BYTES + 1,
+        ] {
+            let original = format!("{stem}.{}", "y".repeat(extension_len));
+            let safe = SafeName::from_original(&original);
+            assert!(is_valid(safe.as_str()), "{original:?} -> {safe:?}");
+            assert_eq!(
+                SafeName::parse(safe.as_str()).expect("generated names must parse"),
+                safe,
+                "{original:?}"
+            );
+        }
+    }
+}
+
 fn the_extension_is_the_safe_names_last_suffix_in_lowercase() {
     for (original, extension) in [
         ("synthetic.PNG", Some("png")),
@@ -250,7 +324,6 @@ fn the_extension_is_the_safe_names_last_suffix_in_lowercase() {
     }
 }
 
-#[test]
 fn an_invalid_name_from_a_record_is_refused() {
     for bad in [
         "", ".", "..", "-rf", ".env", "a/b", "a\\b", "a b", "é.txt", "a\u{0}b",
@@ -263,7 +336,6 @@ fn an_invalid_name_from_a_record_is_refused() {
     assert!(invalid.is_err(), "deserializing goes through the check");
 }
 
-#[test]
 fn the_display_name_keeps_the_original_as_text() {
     use openwiz_core::attachment::{AttachmentId, AttachmentRef, Kind, Sha256};
     for original in originals() {

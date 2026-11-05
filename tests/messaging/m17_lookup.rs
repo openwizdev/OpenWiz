@@ -1,4 +1,4 @@
-//! M17 Lookup: one op id's send record, for "Check again".
+//! M17 Lookup (#79, sheet U6): one op id's send record, for "Check again".
 //! A known op id gives its recorded report, an in-progress one says so, an
 //! unknown one says "no record", and one bound to another target says that.
 //! **No `tell`, ever, and no claim.**
@@ -14,7 +14,9 @@ use openwiz_cli::send::{
 use openwiz_core::messaging::Mode;
 use openwiz_core::messaging::lookup::{LOOKUP_SCHEMA_ID, LookupReport, LookupResult, lookup};
 use openwiz_core::messaging::record::{RecordState, SendStore};
-use openwiz_core::messaging::send::{Delivery, FailReason, SendResult, Status, UncertainReason};
+use openwiz_core::messaging::send::{
+    Delivery, FailReason, Messenger, SendResult, Status, UncertainReason,
+};
 use openwiz_store::FileStore;
 use serde_json::{Value, json};
 
@@ -26,7 +28,9 @@ const TEXT: &str = "Synthetic lookup";
 fn look(fake: &SendFake, target: &str, op_id: &str) -> LookupReport {
     let store = FileStore::open_read_only(&fake.state).expect("open read-only");
     let store = store.as_ref().map(|s| s as &dyn SendStore);
-    let report = lookup(store, &clock(), &sid(target), &op(op_id))
+    let source = fake.source();
+    let tested = Messenger::tested_version(&source);
+    let report = lookup(store, &clock(), &sid(target), &op(op_id), tested)
         .unwrap_or_else(|e| panic!("lookup failed: {e}"));
     assert_eq!(report.schema, LOOKUP_SCHEMA_ID);
     assert_eq!(report.op_id.as_str(), op_id);
@@ -72,6 +76,27 @@ fn a_known_op_id_gives_its_recorded_report_with_no_call() {
         files,
         "a lookup changed the send record"
     );
+}
+
+#[test]
+fn check_refuses_a_send_record_whose_attachments_disagree_with_its_binding() {
+    let fake = SendFake::new("m17_bad_attachment_binding", "send");
+    let op_id = "op-m17-bad-attachment-binding";
+    let sent = fake.report(&request("thr_syn_0001", Mode::Queue, TEXT, op_id));
+    assert_eq!(sent.status, Status::Accepted);
+    assert_eq!(fake.tell_count(), 1);
+    let calls = fake.invocations();
+    let path = fake.record_path(op_id);
+    let mut record: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+    record["binding"]["attachments_digest"] = json!("b".repeat(64));
+    std::fs::write(&path, serde_json::to_vec(&record).unwrap()).unwrap();
+    let before = std::fs::read(&path).unwrap();
+
+    let (code, out, err) = fake.cli(&["thr_syn_0001", "--op-id", op_id, "--check", "--json"], "");
+    assert_eq!(code, 10, "{out} {err}");
+    assert!(out.is_empty(), "{out}");
+    assert_eq!(fake.invocations(), calls, "--check ran room-cli");
+    assert_eq!(std::fs::read(&path).unwrap(), before);
 }
 
 #[test]
@@ -334,6 +359,8 @@ fn the_release_build_checks_with_no_call() {
     assert_eq!(fake.tell_count(), 1);
 }
 
+/// Sol round 1, finding 1: with no send record yet, a lookup answers "no
+/// record" and creates nothing, not even the state directory.
 #[test]
 fn a_check_with_no_send_record_creates_nothing() {
     let fake = SendFake::new("m17_no_store", "send");
@@ -363,6 +390,9 @@ fn a_check_with_no_send_record_creates_nothing() {
     assert!(fake.invocations().is_empty());
 }
 
+/// Sol round 1, finding 1: no lookup path changes a byte of the send
+/// record. A stopped sender's record is shown as recovery would finish it,
+/// in memory only; recovery itself waits for the next send of that op id.
 #[test]
 fn no_lookup_path_changes_the_send_record() {
     let fake = SendFake::new("m17_read_only", "send");

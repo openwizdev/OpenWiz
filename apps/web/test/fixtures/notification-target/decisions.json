@@ -1,0 +1,60 @@
+{
+  "schema": "openwiz.decisions.v1",
+  "kind": "response",
+  "snapshot_at": 10000,
+  "coverage": {
+    "state": "complete",
+    "gaps": []
+  },
+  "freshness": {
+    "state": "fresh",
+    "snapshot_at": {
+      "known": 9000
+    }
+  },
+  "orchestrator": {
+    "coverage": {
+      "state": "complete",
+      "gaps": []
+    },
+    "freshness": {
+      "state": "fresh",
+      "snapshot_at": {
+        "known": 9000
+      }
+    },
+    "target": {
+      "known": "thr_syn_target"
+    }
+  },
+  "items": [
+    {
+      "comment_id": 902,
+      "subject": {
+        "repository": "synthetic-owner/synthetic-repo",
+        "kind": "issue",
+        "number": 901
+      },
+      "created_at": 1000,
+      "updated_at": 2000,
+      "current": {
+        "known": true
+      },
+      "request": {
+        "schema": "openwiz.decisions.v1",
+        "kind": "spec_confirmation",
+        "id": "synthetic-request",
+        "status": "open",
+        "fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "risk": "ordinary",
+        "spec": 901,
+        "summary": [
+          "Keep the synthetic sample narrow."
+        ],
+        "headline": "The synthetic sample stays narrow.",
+        "tickets": [],
+        "graph": []
+      }
+    }
+  ]
+}

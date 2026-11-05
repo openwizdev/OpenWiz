@@ -1,0 +1,42 @@
+   Compiling openwiz-tests v0.0.1-dev (/code/ClosedWiz-1272/tests)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.16s
+     Running fleet/main.rs (target/debug/deps/fleet-e2d7203fe5d12f9f)
+
+running 3 tests
+test b5_tick::public::p4_appended_giveup_retires_every_recheck_alias ... FAILED
+test b5_tick::public::p4_conflicting_checked_branches_cannot_receive_ci_messages ... FAILED
+test b5_tick::public::p4_public_approval_refuses_quoted_words_below_the_heading ... FAILED
+
+failures:
+
+---- b5_tick::public::p4_appended_giveup_retires_every_recheck_alias stdout ----
+
+thread 'b5_tick::public::p4_appended_giveup_retires_every_recheck_alias' (176475) panicked at tests/fleet/b5_public.rs:405:9:
+assertion `left == right` failed: {"actions":[],"default_branch":"main","mode":"run","planned_at":1794042332889,"rules":{"builder":{"effort":"xhigh","harness":"claude-code","model":"claude-opus-5-5"},"builder_small":{"effort":"high","harness":"codex","model":"gpt-6.1-sol"},"ci_checks":[{"name":"rust","required_on":["main"]}],"merge":"adr_0008","reviewer_claude":{"effort":"high","harness":"codex","model":"gpt-6.1-sol"},"reviewer_gpt":{"effort":"high","harness":"claude-code","model":"claude-opus-5-5"}},"schema":"openwiz.fleet-tick.v1"}
+  left: Null
+ right: "fresh_review"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- b5_tick::public::p4_conflicting_checked_branches_cannot_receive_ci_messages stdout ----
+
+thread 'b5_tick::public::p4_conflicting_checked_branches_cannot_receive_ci_messages' (176476) panicked at tests/fleet/b5_public.rs:421:5:
+assertion `left == right` failed: {"actions":[{"facts":{"builder":"thr_syn_b5_1","checks":[{"name":"rust","result":"fail"}],"pr":{"base_branch":"main","head_commit":"1010101010101010101010101010101010101010","number":110},"subject":"Synthetic green"},"kind":"send_findings","outcome":{"state":"done"},"rule":"ci_failed","spec":9,"ticket":10}],"default_branch":"main","mode":"run","planned_at":1794042332827,"rules":{"builder":{"effort":"xhigh","harness":"claude-code","model":"claude-opus-5-5"},"builder_small":{"effort":"high","harness":"codex","model":"gpt-6.1-sol"},"ci_checks":[{"name":"rust","required_on":["main"]}],"merge":"adr_0008","reviewer_claude":{"effort":"high","harness":"codex","model":"gpt-6.1-sol"},"reviewer_gpt":{"effort":"high","harness":"claude-code","model":"claude-opus-5-5"}},"schema":"openwiz.fleet-tick.v1"}
+  left: String("ci_failed")
+ right: "look"
+
+---- b5_tick::public::p4_public_approval_refuses_quoted_words_below_the_heading stdout ----
+
+thread 'b5_tick::public::p4_public_approval_refuses_quoted_words_below_the_heading' (178160) panicked at tests/fleet/b5_public.rs:432:5:
+assertion `left == right` failed
+  left: String("frontier")
+ right: "look"
+
+
+failures:
+    b5_tick::public::p4_appended_giveup_retires_every_recheck_alias
+    b5_tick::public::p4_conflicting_checked_branches_cannot_receive_ci_messages
+    b5_tick::public::p4_public_approval_refuses_quoted_words_below_the_heading
+
+test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 340 filtered out; finished in 2.42s
+
+error: test failed, to rerun pass `-p openwiz-tests --test fleet`

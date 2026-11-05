@@ -1,3 +1,27 @@
+//! #170: no test leaves a directory's mode to the umask.
+//!
+//! The store refuses a state directory that group or others can use, so a
+//! test that made one with `fs::create_dir_all` passed only where the umask
+//! was 077 (the cloud sandboxes) and failed under 022 (the PC runners, and
+//! GitHub's). A scanner can't tell a state directory from any other, so the
+//! rule covers every directory a test makes. Read from every file under
+//! `tests/`:
+//!
+//! 1. **No `create_dir` or `create_dir_all` in Rust code:** no call, import,
+//!    alias or function value. Comments and string literals don't count.
+//! 2. **Every `DirBuilder::new()` starts one method chain that calls
+//!    `.mode(..)` before `.create(..)`.** Only the chain's own calls count,
+//!    never a call inside an argument or on another value, so a builder kept
+//!    in a variable is refused (Sol R1 on #183). `DirBuilder` appears only as
+//!    `DirBuilder::new()` or in a `use` list, so no alias escapes the rule.
+//! 3. **No shell command that makes a directory, in any file,** comments and
+//!    strings included: a script a test writes would make it with the
+//!    umask's mode. (The word is built by [`SHELL_MAKE_DIR`], so this file
+//!    passes its own rule.)
+//!
+//! Tests make directories with `tests/support/dirs.rs` (`private_dir` and
+//! `private_dir_all`, 0700), or a `DirBuilder` chain with its own mode.
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -284,6 +308,7 @@ fn the_check_catches_every_planted_form() {
             2,
         ),
         (
+            // Sol R1 on #183: a file's mode credited to a stored builder.
             "an unrelated mode before a stored builder's create",
             "let b = DirBuilder::new();\nlet mut f = OpenOptions::new();\nf.mode(0o600);\n\
              b.create(&state).unwrap();",

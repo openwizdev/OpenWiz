@@ -1,4 +1,4 @@
-//! AW4: the same operations. For every B1 and B2 fixture case,
+//! AW4 (#16, B3): the same operations. For every B1 and B2 fixture case,
 //! each attachment route's answer is what `openwiz attachment add`, `ls` or
 //! `rm --json` prints for the same bytes, name, store and clock, and a send
 //! or a create with attachments answers what `openwiz send` or `openwiz new`
@@ -24,7 +24,7 @@ use crate::staging::{png, text};
 const MIB: usize = 1024 * 1024;
 
 /// Every B1 kind and refusal, as `(name, bytes)`: B1's AP1, AP2, AP3 and
-/// the related cases cases, made here (synthetic).
+/// B-4, B-5 cases, made here (synthetic).
 fn cases() -> Vec<(String, Vec<u8>)> {
     vec![
         ("aw4.png".into(), png(2000)),
@@ -41,7 +41,7 @@ fn cases() -> Vec<(String, Vec<u8>)> {
         ("no-extension".into(), text("Synthetic AW4\n")),
         // HEIC is refused, never converted.
         ("aw4.heic".into(), heic(2000)),
-        // The name and the bytes disagree.
+        // The name and the bytes disagree (B-5).
         ("png-as.jpg".into(), png(2000)),
         ("text-as.png".into(), text("Synthetic AW4 not an image\n")),
         ("svg-as.png".into(), SVG_WITH_SCRIPT.as_bytes().to_vec()),
@@ -472,6 +472,39 @@ fn no_attachment_rule_is_worked_out_in_the_server_or_the_web() {
         server.len() >= 8 && web.len() >= 10,
         "the sources were read"
     );
+    // Only this fully qualified core notification-document delegation is
+    // distinct from attachment policy. Every module and every other token stays scanned.
+    let attachment_check_view = |path: &str, text: &str| {
+        if path.ends_with("/crates/server/src/notifications.rs") {
+            text.replace(
+                "openwiz_core::notifications::model::Document::check(",
+                "notification_document_validation(",
+            )
+        } else {
+            text.to_owned()
+        }
+    };
+    let notification_path = "/synthetic/crates/server/src/notifications.rs";
+    let delegation = "openwiz_core::notifications::model::Document::check(&document)";
+    assert!(!attachment_check_view(notification_path, delegation).contains("check("));
+    for forbidden_text in [
+        "check(input)",
+        "attachments::check(input)",
+        "Document::check(input)",
+    ] {
+        assert!(attachment_check_view(notification_path, forbidden_text).contains("check("));
+        assert!(
+            attachment_check_view(
+                notification_path,
+                &format!("{delegation}; {forbidden_text}")
+            )
+            .contains("check(")
+        );
+    }
+    assert!(
+        attachment_check_view("/synthetic/crates/server/src/other.rs", delegation)
+            .contains("check(")
+    );
     let mut found = vec![];
     for (path, text) in server.iter().chain(&web) {
         let rules = if path.ends_with(".rs") {
@@ -480,12 +513,17 @@ fn no_attachment_rule_is_worked_out_in_the_server_or_the_web() {
             &[]
         };
         for rule in rules.iter().chain(VALUES) {
-            if text.to_lowercase().contains(&rule.to_lowercase()) {
+            let inspected = if *rule == "check(" {
+                attachment_check_view(path, text)
+            } else {
+                text.to_owned()
+            };
+            if inspected.to_lowercase().contains(&rule.to_lowercase()) {
                 found.push(format!("{path}: {rule}"));
             }
         }
         // The server's one use of a limit: its upload cap is the core's
-        // per-file limit, named once in lib.rs, never a number of its
+        // per-file limit (B-9), named once in lib.rs, never a number of its
         // own.
         let caps = text.matches("FILE_MAX_BYTES").count();
         let allowed = usize::from(path.ends_with("server/src/lib.rs"));
@@ -499,6 +537,11 @@ fn no_attachment_rule_is_worked_out_in_the_server_or_the_web() {
     );
 }
 
+/// The web's one byte check is the safe-preview rule (#16: "only for PNG,
+/// JPEG, GIF and WebP, detected from the file's first bytes in the
+/// browser"): whether a thumbnail may be drawn, never the attachment's
+/// kind, which is the core's. It is in one function, and the tray draws a
+/// thumbnail only for an attachment the server reported as an image.
 #[test]
 fn the_web_checks_bytes_only_for_a_safe_preview() {
     let mut all = vec![];

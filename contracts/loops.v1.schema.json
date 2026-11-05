@@ -1,0 +1,682 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:openwiz:schema:loops:v1",
+  "title": "openwiz.loops.v1",
+  "description": "Loop definitions and run records (ClosedWiz#543, LP1 contract half). See loops.v1.md for execution, approval and state-transition rules beyond structural validation. The op_id, setting and project reference rules and brief text are copied exactly from new-thread.v1; conformance tests enforce parity. maxUtf8Bytes is the existing companion byte-cap keyword, ignored by standard validators and enforced by OpenWiz.",
+  "$defs": {
+    "op_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+      "description": "1 to 64 ASCII letters, digits, _ or -, starting with a letter or digit."
+    },
+    "setting": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[!-,.-~][!-~]*$",
+      "description": "Printable ASCII, no space, not starting with -. Never defaulted."
+    },
+    "project_ref": {
+      "description": "The project as the owner named it: its id, or the inventory's display name (name, or name~<last 6 of the id>).",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "value"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "id"
+            },
+            "value": {
+              "$ref": "#/$defs/project_ref_value"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "value"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "name"
+            },
+            "value": {
+              "$ref": "#/$defs/project_ref_value"
+            }
+          }
+        }
+      ]
+    },
+    "project_ref_value": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\u0000]*[^\\u0000\\u0009-\\u000d\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000][^\\u0000]*$",
+      "description": "Not only whitespace, no NUL."
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\u0000]*[^\\u0000\\u0009-\\u000d\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000][^\\u0000]*$"
+    },
+    "brief": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 16384,
+      "maxUtf8Bytes": 16384,
+      "pattern": "^[^\\u0000]*[^\\u0000\\u0009-\\u000d\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000][^\\u0000]*$",
+      "description": "Not empty, not only whitespace (Unicode White_Space), no NUL, at most 16 KiB of UTF-8. maxUtf8Bytes is OpenWiz's companion keyword for the byte cap: a standard validator ignores it, and OpenWiz enforces it."
+    },
+    "time_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "event": {
+      "type": "string",
+      "enum": [
+        "github.pull_request_review",
+        "github.workflow_run",
+        "github.issue_comment",
+        "github.check_suite"
+      ]
+    },
+    "wake": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "every_ms",
+            "anchor_ms"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "interval"
+            },
+            "every_ms": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "anchor_ms": {
+              "$ref": "#/$defs/time_ms"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "at_ms"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "once"
+            },
+            "at_ms": {
+              "$ref": "#/$defs/time_ms"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "event"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "event"
+            },
+            "event": {
+              "$ref": "#/$defs/event"
+            }
+          }
+        }
+      ]
+    },
+    "check": {
+      "type": "object",
+      "required": [
+        "argv",
+        "timeout_ms"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "argv": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[^\\u0000]*$"
+          }
+        },
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "action": {
+      "type": "object",
+      "required": [
+        "project",
+        "harness",
+        "model",
+        "effort",
+        "brief"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "project": {
+          "$ref": "#/$defs/project_ref"
+        },
+        "harness": {
+          "$ref": "#/$defs/setting"
+        },
+        "model": {
+          "$ref": "#/$defs/setting"
+        },
+        "effort": {
+          "$ref": "#/$defs/setting"
+        },
+        "brief": {
+          "$ref": "#/$defs/brief"
+        }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "required": [
+        "approved_by",
+        "approval_ref",
+        "scope"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "approved_by": {
+          "$ref": "#/$defs/text"
+        },
+        "approval_ref": {
+          "$ref": "#/$defs/text"
+        },
+        "scope": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "required": [
+        "window_ms",
+        "max_agent_starts"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "window_ms": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_agent_starts": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "definition": {
+      "type": "object",
+      "required": [
+        "schema",
+        "kind",
+        "id",
+        "name",
+        "owner",
+        "wake",
+        "check",
+        "action",
+        "authority",
+        "budget",
+        "enabled",
+        "mode",
+        "priority"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "const": "openwiz.loops.v1"
+        },
+        "kind": {
+          "const": "definition"
+        },
+        "id": {
+          "$ref": "#/$defs/op_id"
+        },
+        "name": {
+          "$ref": "#/$defs/text"
+        },
+        "owner": {
+          "$ref": "#/$defs/text"
+        },
+        "wake": {
+          "$ref": "#/$defs/wake"
+        },
+        "check": {
+          "$ref": "#/$defs/check"
+        },
+        "action": {
+          "$ref": "#/$defs/action"
+        },
+        "authority": {
+          "$ref": "#/$defs/authority"
+        },
+        "budget": {
+          "$ref": "#/$defs/budget"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "active",
+            "shadow"
+          ]
+        },
+        "priority": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "urgent"
+          ]
+        }
+      }
+    },
+    "run_wake": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "due_at_ms"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "interval"
+            },
+            "due_at_ms": {
+              "$ref": "#/$defs/time_ms"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "due_at_ms"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "once"
+            },
+            "due_at_ms": {
+              "$ref": "#/$defs/time_ms"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "event",
+            "event_id"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "event"
+            },
+            "event": {
+              "$ref": "#/$defs/event"
+            },
+            "event_id": {
+              "$ref": "#/$defs/text"
+            }
+          }
+        }
+      ]
+    },
+    "cost": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "usd_micros"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "known"
+            },
+            "usd_micros": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "reason"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "unknown"
+            },
+            "reason": {
+              "$ref": "#/$defs/text"
+            }
+          }
+        }
+      ]
+    },
+    "finding": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\u0000]*$"
+    },
+    "result": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "checking"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "quiet"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "reason"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "check_failed"
+            },
+            "reason": {
+              "$ref": "#/$defs/text"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "check_timed_out"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "finding"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "shadow"
+            },
+            "finding": {
+              "$ref": "#/$defs/finding"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "finding",
+            "reason"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "deferred"
+            },
+            "finding": {
+              "$ref": "#/$defs/finding"
+            },
+            "reason": {
+              "$ref": "#/$defs/text"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "finding",
+            "op_id",
+            "dispatch_at_ms"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "dispatching"
+            },
+            "finding": {
+              "$ref": "#/$defs/finding"
+            },
+            "op_id": {
+              "$ref": "#/$defs/op_id"
+            },
+            "dispatch_at_ms": {
+              "$ref": "#/$defs/time_ms"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "finding",
+            "op_id",
+            "thread_id",
+            "dispatch_at_ms"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "created"
+            },
+            "finding": {
+              "$ref": "#/$defs/finding"
+            },
+            "op_id": {
+              "$ref": "#/$defs/op_id"
+            },
+            "thread_id": {
+              "$ref": "#/$defs/text"
+            },
+            "dispatch_at_ms": {
+              "$ref": "#/$defs/time_ms"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "finding",
+            "reason"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "refused"
+            },
+            "finding": {
+              "$ref": "#/$defs/finding"
+            },
+            "reason": {
+              "$ref": "#/$defs/text"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "finding",
+            "op_id",
+            "reason",
+            "dispatch_at_ms"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "uncertain"
+            },
+            "finding": {
+              "$ref": "#/$defs/finding"
+            },
+            "op_id": {
+              "$ref": "#/$defs/op_id"
+            },
+            "reason": {
+              "$ref": "#/$defs/text"
+            },
+            "dispatch_at_ms": {
+              "$ref": "#/$defs/time_ms"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "finding",
+            "op_id",
+            "dispatch_at_ms",
+            "reason"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "not_created"
+            },
+            "finding": {
+              "$ref": "#/$defs/finding"
+            },
+            "op_id": {
+              "$ref": "#/$defs/op_id"
+            },
+            "dispatch_at_ms": {
+              "$ref": "#/$defs/time_ms"
+            },
+            "reason": {
+              "$ref": "#/$defs/text"
+            }
+          }
+        }
+      ]
+    },
+    "run": {
+      "type": "object",
+      "required": [
+        "schema",
+        "kind",
+        "id",
+        "loop_id",
+        "definition_revision",
+        "wake",
+        "started_at_ms",
+        "updated_at_ms",
+        "cost",
+        "result"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "const": "openwiz.loops.v1"
+        },
+        "kind": {
+          "const": "run"
+        },
+        "id": {
+          "$ref": "#/$defs/op_id"
+        },
+        "loop_id": {
+          "$ref": "#/$defs/op_id"
+        },
+        "definition_revision": {
+          "$ref": "#/$defs/text"
+        },
+        "wake": {
+          "$ref": "#/$defs/run_wake"
+        },
+        "started_at_ms": {
+          "$ref": "#/$defs/time_ms"
+        },
+        "updated_at_ms": {
+          "$ref": "#/$defs/time_ms"
+        },
+        "cost": {
+          "$ref": "#/$defs/cost"
+        },
+        "result": {
+          "$ref": "#/$defs/result"
+        }
+      }
+    },
+    "document": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/definition"
+        },
+        {
+          "$ref": "#/$defs/run"
+        }
+      ]
+    }
+  },
+  "$ref": "#/$defs/document"
+}

@@ -1,0 +1,144 @@
+$ cargo test -p openwiz-service --test l5b-watchdog placing_a_fake_executable_leaves_no_writer   (exit 101)
+     Running ../../tests/service/l5b_watchdog.rs (target/debug/deps/l5b_watchdog-7c9a4d07a9f7abe5)
+
+running 1 test
+test placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit ... FAILED
+
+failures:
+
+---- placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit stdout ----
+
+thread 'placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit' panicked at crates/service/../../tests/service/l5b_watchdog.rs:408:5:
+assertion `left == right` failed: mid-copy, this process held a writable descriptor for the placed executable: a child forked then keeps it busy (ETXTBSY)
+  left: 1
+ right: 0
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p openwiz-service --test l5b-watchdog`
+
+$ cargo test -p openwiz-service --test t4b-tick placing_a_fake_executable_leaves_no_writer   (exit 101)
+     Running ../../tests/service/t4b_tick.rs (target/debug/deps/t4b_tick-5577c47cdb3ca54a)
+
+running 1 test
+test executor::placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit ... FAILED
+
+failures:
+
+---- executor::placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit stdout ----
+
+thread 'executor::placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit' panicked at crates/service/../../tests/service/t4b_executor.rs:734:5:
+assertion `left == right` failed: mid-copy, this process held a writable descriptor for the placed executable: a child forked then keeps it busy (ETXTBSY)
+  left: 1
+ right: 0
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    executor::placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 22 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p openwiz-service --test t4b-tick`
+
+$ cargo test -p openwiz-service --test t4-service placing_a_fake_executable_leaves_no_writer   (exit 101)
+     Running ../../tests/service/t4_service.rs (target/debug/deps/t4_service-c858d44a30bbfbe0)
+
+running 1 test
+test install_engine_reads::placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit ... FAILED
+
+failures:
+
+---- install_engine_reads::placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit stdout ----
+
+thread 'install_engine_reads::placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit' panicked at crates/service/../../tests/service/install_engine_reads.rs:574:5:
+assertion `left == right` failed: mid-copy, this process held a writable descriptor for the placed executable: a child forked then keeps it busy (ETXTBSY)
+  left: 1
+ right: 0
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    install_engine_reads::placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 17 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p openwiz-service --test t4-service`
+
+$ cargo test -p openwiz-service --test l3-runner placing_a_fake_executable_leaves_no_writer   (exit 101)
+     Running ../../tests/service/l3_runner.rs (target/debug/deps/l3_runner-7a28373202fc8624)
+
+running 1 test
+test placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit ... FAILED
+
+failures:
+
+---- placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit stdout ----
+
+thread 'placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit' panicked at crates/service/../../tests/service/l3_runner.rs:1248:5:
+assertion `left == right` failed: mid-copy, this process held a writable descriptor for the placed executable: a child forked then keeps it busy (ETXTBSY)
+  left: 1
+ right: 0
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 54 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p openwiz-service --test l3-runner`
+
+$ cargo test -p openwiz-tests --test service placing_a_fake_executable_leaves_no_writer   (exit 101)
+     Running service/main.rs (target/debug/deps/service-2615a0a76b85afd7)
+
+running 1 test
+test t2_locate::process::placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit ... FAILED
+
+failures:
+
+---- t2_locate::process::placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit stdout ----
+
+thread 't2_locate::process::placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit' panicked at tests/service/t2_process.rs:849:5:
+assertion `left == right` failed: mid-copy, this process held a writable descriptor for the placed executable: a child forked then keeps it busy (ETXTBSY)
+  left: 1
+ right: 0
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    t2_locate::process::placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 57 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p openwiz-tests --test service`
+
+$ cargo test -p openwiz-service --test t4-unit placing_a_fake_executable_leaves_no_writer   (exit 101)
+     Running ../../tests/service/t4_unit.rs (target/debug/deps/t4_unit-2b3972d18332bed5)
+
+running 1 test
+test setup::placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit ... FAILED
+
+failures:
+
+---- setup::placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit stdout ----
+
+thread 'setup::placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit' panicked at crates/service/../../tests/service/t4_setup.rs:321:5:
+assertion `left == right` failed: mid-copy, this process held a writable descriptor for the placed executable: a child forked then keeps it busy (ETXTBSY)
+  left: 1
+ right: 0
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    setup::placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p openwiz-service --test t4-unit`
+

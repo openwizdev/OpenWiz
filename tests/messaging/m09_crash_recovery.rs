@@ -13,7 +13,7 @@
 //! after printing the receipt. No `room-cli` call sits between the
 //! dispatching mark and the call, so that step uses the harness's test-only
 //! crash point. Recovery runs when the op id is next used. **No server
-//! exists (the implementation is not on `main`), so "server start" is not tested.**
+//! exists (ClosedWiz#5 is not on `main`), so "server start" is not tested.**
 
 use std::fs;
 use std::process::Output;

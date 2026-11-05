@@ -216,7 +216,7 @@ fn stopped_after_any_step_nothing_usable_is_left_or_a_verified_attachment() {
             assert_eq!(store.verify(&id).unwrap(), Verified::NotFound);
             let swept = store.sweep(T0, &NoClaims).unwrap();
             assert_eq!(swept.unfinished, 1, "{step_name}");
-            // B2 (the implementation): a sweep holds the claims lock while it
+            // B2 (ClosedWiz#15): a sweep holds the claims lock while it
             // applies the retention rule, so the lock file is there too.
             assert_eq!(
                 bench.entries(),
@@ -341,6 +341,12 @@ impl Durability for RewriteWhileCopying {
     }
 }
 
+/// Sol, round 1, R2: a source rewritten in place while it is copied, to the
+/// same length, would leave a copy that is part old and part new. The
+/// source's size, times and bytes are checked again after the copy, so it
+/// is refused, and nothing of it is kept. Each case leaves a copy unlike
+/// the source as it now is, so the bytes alone refuse it, however coarse
+/// the file system's times are (negative check N24).
 #[test]
 fn a_source_rewritten_while_it_is_copied_is_never_ready() {
     let bench = Bench::new("ap04_rewritten");
