@@ -1,0 +1,36 @@
+FF
+======================================================================
+FAIL: test_changed_protection_and_inconsistent_latest_attempt_refuse (__main__.Shadow.test_changed_protection_and_inconsistent_latest_attempt_refuse)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_shadow.py", line 199, in test_changed_protection_and_inconsistent_latest_attempt_refuse
+    self.assertFalse(report['complete'], report)
+AssertionError: True is not false : {'complete': True, 'switch_authorized': False, 'outcome': 'success', 'refusals': [], 'measurement': {'batch': {'id': '3333333333333333333333333333333333333333', 'base': '1111111111111111111111111111111111111111', 'head': '3333333333333333333333333333333333333333', 'members': ['2222222222222222222222222222222222222222', '3333333333333333333333333333333333333333'], 'source': 'combined-shadow'}, 'jobs': 13, 'job_queue_seconds': {'n': 13, 'median': 30.0, 'p90': 30.0}, 'required_result_at': '2030-01-01T00:05:00Z', 'push_to_required_seconds': None, 'whole_bill_usd': None, 'gaps': ['actual push timestamp and whole-bill cost require independent C4 evidence']}}
+
+======================================================================
+FAIL: test_transport_is_explicit_host_get_and_empty_ids_never_reach_api (__main__.Shadow.test_transport_is_explicit_host_get_and_empty_ids_never_reach_api)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_shadow.py", line 211, in test_transport_is_explicit_host_get_and_empty_ids_never_reach_api
+    self.assertEqual(args[:6], ['gh','api','--hostname','github.com','--method','GET'])
+AssertionError: Lists differ: ['gh', 'api', '--method', 'GET', 'repos/synthetic/ci-examp[20 chars]100'] != ['gh', 'api', '--hostname', 'github.com', '--method', 'GET']
+
+First differing element 2:
+'--method'
+'--hostname'
+
+Second list contains 1 additional elements.
+First extra element 5:
+'GET'
+
++ ['gh', 'api', '--hostname', 'github.com', '--method', 'GET']
+- ['gh',
+-  'api',
+-  '--method',
+-  'GET',
+-  'repos/synthetic/ci-example/actions/runs/9000100']
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.055s
+
+FAILED (failures=2)

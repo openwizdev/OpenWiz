@@ -1,0 +1,15 @@
+Fixture evidence only; recording-loopback GitHub and separate caller processes.
+Final post-diagnosis R3 correction; no live installation or quota claim.
+Command: python3 -I tools/github-reads/test_read.py Budget ReviewRegressions.test_r3_reset_changes_cannot_refund_uncertain_spend ReviewRegressions.test_r3_unknown_observation_and_new_window_probe_keep_uncertain_spend ReviewRegressions.test_r3_delayed_headers_never_absorb_another_requests_uncertain_spend ReviewRegressions.test_r3_crash_and_transport_failure_do_not_replenish_budget ReviewRegressions.test_r8_graphql_cost_is_reserved_across_processes_without_headers ReviewRegressions.test_r8_actual_headers_reconcile_a_conservative_query_bound ReviewRegressions.test_r5_stale_budget_must_be_observed_before_admission ReviewRegressions.test_r10_failed_budget_probes_have_a_persisted_retry_deadline
+
+.............
+----------------------------------------------------------------------
+Ran 13 tests in 42.450s
+
+OK
+
+The reset-ordering method covers 12 REST/GraphQL same-window/cross-reset cases,
+with headerless, lost and fully accounted second responses. The probe method
+covers both APIs with uncertain spend followed by invalid response evidence.
+Uncertain debits persist indefinitely because no independent spending-window
+reconciliation is available; this can underuse quota across future resets.

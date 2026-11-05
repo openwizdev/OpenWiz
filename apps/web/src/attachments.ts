@@ -1,24 +1,24 @@
-// The attachment tray's presentation state: one list per target (a
+// The attachment tray's presentation state (#16, B3): one list per target (a
 // thread's composer, or a project's launcher), and the one place a file is
-// uploaded or a staged copy removed. Using the shared upload and removal guards:
+// uploaded or a staged copy removed. From the approval sheet's B-9 and B-10:
 //
 // - **Readiness in the server's words.** A file is `selected` (on this device:
-// never "uploaded"), `uploading` (to the owner's controller), `ready` (only
-// after the server's ready answer) or `failed`, with the core's reason, or
-// the connection's ("connection lost", "signed out"). After a reload a ready
-// one comes back from the server's list, without a preview; anything else is
-// `gone`: the browser no longer has the file. Nothing here claims a file
-// still exists in the browser.
+//   never "uploaded"), `uploading` (to the owner's controller), `ready` (only
+//   after the server's ready answer) or `failed`, with the core's reason, or
+//   the connection's ("connection lost", "signed out"). After a reload a ready
+//   one comes back from the server's list, without a preview; anything else is
+//   `gone`: the browser no longer has the file. Nothing here claims a file
+//   still exists in the browser.
 // - **Uploads start when a file is added, two at a time** (the server's upload
-// slots), and never again on their own: Retry is the owner's, only while
-// the browser still has the file, and it never sends anything.
+//   slots, B-9), and never again on their own: Retry is the owner's, only while
+//   the browser still has the file, and it never sends anything.
 // - **Safe previews.** A thumbnail is the browser's own copy of the chosen file
-// (an object URL), drawn only when its first bytes are PNG, JPEG, GIF or WebP
-// and the server reported it as an image (so within the core's image limit).
-// SVG, HTML and everything else get a glyph. Object URLs are revoked on
-// removal, on hand-over and on unload.
+//   (an object URL), drawn only when its first bytes are PNG, JPEG, GIF or WebP
+//   and the server reported it as an image (so within the core's image limit).
+//   SVG, HTML and everything else get a glyph. Object URLs are revoked on
+//   removal, on hand-over and on unload.
 // - **Store the minimum:** each item's name, size, state, id, kind and why, in
-// this tab's sessionStorage (from src/composer.ts). Never a file's bytes.
+//   this tab's sessionStorage (from src/composer.ts). Never a file's bytes.
 //
 // It works out no kind, limit, floor, gate or retention: the core decides,
 // through the server's answers. The page's gate only mirrors the server's.
@@ -30,7 +30,7 @@ import { exact, is, isNull, list, oneOf, parseApiError, str } from './envelope.t
 import type { Check } from './envelope.ts';
 import type { Timers } from './poller.ts';
 
-/** The server's upload slots: the page never asks for more at once, so it never gets its own `503`. */
+/** The server's upload slots (B-9): the page never asks for more at once, so it never gets its own `503`. */
 export const UPLOADS_AT_ONCE = 2;
 
 /** The page gives up on an upload's answer after this, beyond the server's 110-second upload deadline. */
@@ -74,7 +74,7 @@ export const ORDER_NOTE = 'the agent gets files first, then images';
 export const AFTER_RELOAD = 'preview not available after reload';
 
 /**
- * The safe-preview rule: whether the first bytes of a file are a PNG,
+ * The safe-preview rule (#16): whether the first bytes of a file are a PNG,
  * JPEG, GIF or WebP, the only types a thumbnail is drawn for. Never the
  * attachment's kind, which is the core's: a thumbnail also needs the server to
  * have reported an image.
@@ -120,6 +120,7 @@ export function sizeText(bytes: number): string {
 const kindCheck = is('image', 'file');
 const record = exact({ id: str, sha256: str, size_bytes: (v) => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0, kind: kindCheck, name: str, display_name: str });
 const readiness: Check = (v) => typeof v === 'object' && v !== null && !Array.isArray(v);
+const readyReadiness = exact({ state: is('ready') });
 const staged = exact({ attachment: record, readiness, ready_at: (v) => typeof v === 'number', age_ms: (v) => typeof v === 'number', expires_at: oneOf(isNull, (v) => typeof v === 'number') });
 const addReport = exact({
   schema: is('openwiz.attachment-add.v1'),
@@ -141,9 +142,9 @@ const removeReport = exact({
 });
 
 type Record_ = { id: string; size_bytes: number; kind: Kind; display_name: string };
-type AddReport = { ready: { staged: { attachment: Record_ } }[]; failed: { message: string }[] };
-type ListReport = { attachments: { attachment: Record_ }[] };
-type RemoveReport = { ids: { result: string; message: string }[] };
+type AddReport = { ready: { staged: { attachment: Record_; readiness: unknown } }[]; failed: { message: string }[] };
+type ListReport = { attachments: { attachment: Record_; readiness: unknown }[] };
+type RemoveReport = { ids: { index: number; id: string; result: string; message: string }[] };
 const isAdd = (v: unknown): v is AddReport => addReport(v);
 const isList = (v: unknown): v is ListReport => listReport(v);
 const isRemove = (v: unknown): v is RemoveReport => removeReport(v);
@@ -179,7 +180,7 @@ export function uploadAnswer(a: Answer): Uploaded {
       if (a.status === 401) return { kind: 'failed', why: SIGNED_OUT };
       if (a.status === 200 && isAdd(a.json)) {
         const ready = a.json.ready[0];
-        if (ready) return { kind: 'ready', id: ready.staged.attachment.id, size: ready.staged.attachment.size_bytes, type: ready.staged.attachment.kind };
+        if (ready && readyReadiness(ready.staged.readiness)) return { kind: 'ready', id: ready.staged.attachment.id, size: ready.staged.attachment.size_bytes, type: ready.staged.attachment.kind };
         const failed = a.json.failed[0];
         if (failed) return { kind: 'failed', why: failed.message };
       }
@@ -256,8 +257,8 @@ export class Uploads {
 
   /**
    * The owner's files, added at the end, in their order, shown at once as
-   * selected (on this device), so the gate holds before a byte is read.
-   * Each one's first bytes are read (for the preview
+   * selected (on this device), so the gate holds before a byte is read
+   * (Sol on #167, R2). Each one's first bytes are read (for the preview
    * rule) before anything else: once the selection is read, only the files
    * the browser read, and still in the tray, are queued to upload, in the
    * owner's order, two at a time. So no answer can make a file ready while
@@ -339,9 +340,10 @@ export class Uploads {
     if (w >= 0) this.waiting.splice(w, 1);
     if (item.state === 'ready' && item.id !== null) {
       const a = await deleteAttachment(this.deps.fetch, item.id, new AbortController().signal);
-      const result = a.kind === 'response' && a.status === 200 && isRemove(a.json) ? a.json.ids[0] : undefined;
+      const report = a.kind === 'response' && a.status === 200 && isRemove(a.json) ? a.json : null;
+      const result = report?.ids.length === 1 && report.ids[0]?.index === 0 && report.ids[0]?.id === item.id ? report.ids[0] : undefined;
       if (result?.result !== 'removed' && result?.result !== 'not_found' && result?.result !== 'expired') {
-        const why = result ? result.message : removalFailure(a);
+        const why = result ? result.message : report ? 'unexpected removal receipt' : removalFailure(a);
         this.update(target, key, { why: `can’t remove: ${why}` });
         return;
       }
@@ -364,7 +366,7 @@ export class Uploads {
 
   /**
    * After a reload: a ready attachment comes back only if the server still
-   * lists it (with its name, size and kind, and no preview); anything else is
+   * lists it as ready (with its name, size and kind, and no preview); anything else is
    * gone. A read: it never uploads, removes or sends.
    */
   async verify(target: string, signal: AbortSignal): Promise<void> {
@@ -372,7 +374,7 @@ export class Uploads {
     if (restored.length === 0) return;
     const a = await getAnswer(this.deps.fetch, attachmentsUrl(), signal);
     if (a.kind === 'stopped') return;
-    const listed = a.kind === 'response' && a.status === 200 && isList(a.json) ? a.json.attachments.map((s) => s.attachment) : null;
+    const listed = a.kind === 'response' && a.status === 200 && isList(a.json) ? a.json.attachments.filter((s) => readyReadiness(s.readiness)).map((s) => s.attachment) : null;
     for (const item of restored) {
       if (listed === null) {
         this.update(target, item.key, { why: `couldn’t check it is still on your controller (${removalFailure(a)})` });
@@ -485,7 +487,8 @@ function removalFailure(a: Answer): string {
 }
 
 /**
- * A drop anywhere but a prompt body never opens the file in the browser. A
+ * A drop anywhere but a prompt body never opens the file in the browser
+ * (#16: "a drop elsewhere never makes the browser navigate to the file"). A
  * prompt body takes its own drops first.
  */
 export function guardDrops(target: { addEventListener(type: string, fn: (e: DragEvent) => void): void; removeEventListener(type: string, fn: (e: DragEvent) => void): void }): () => void {

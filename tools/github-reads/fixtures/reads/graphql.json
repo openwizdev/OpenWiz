@@ -1,0 +1,5 @@
+{
+  "body": {"data": {"repository": {"id": "synthetic-node"}}},
+  "headers": {"x-ratelimit-limit": "5000", "x-ratelimit-remaining": "3999",
+              "x-ratelimit-reset": "4102444800", "x-ratelimit-resource": "graphql"}
+}

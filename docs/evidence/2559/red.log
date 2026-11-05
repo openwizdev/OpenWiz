@@ -1,0 +1,32 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.35s
+     Running ../../tests/service/t5_health.rs (target/debug/deps/t5_health-a7111fdc56b789fa)
+
+running 1 test
+[TA2 service-ci-diagnostics health] synthetic fixture failure
+service/state.json: missing or refused
+gh-calls: missing or refused
+calls: missing or refused
+comments.json: missing or refused
+service/config.json: missing or refused
+service/health: missing or refused
+loops.json: truncated=false "[{\"id\":\"loop_syn_1\",\"name\":\"launch-fleet synthetic-owner/synthetic-repo\",\"paused\":true},{\"id\":\"loop_other\",\"name\":\"launch-fleet other-owner/other-repo\",\"paused\":true}]"
+[TA2 service-ci-diagnostics end] output_truncated=false
+test placing_the_fake_room_cli_leaves_no_writer_a_concurrent_fork_could_inherit ... FAILED
+
+failures:
+
+---- placing_the_fake_room_cli_leaves_no_writer_a_concurrent_fork_could_inherit stdout ----
+
+thread 'placing_the_fake_room_cli_leaves_no_writer_a_concurrent_fork_could_inherit' (39665) panicked at crates/service/../../tests/service/t5_health.rs:355:5:
+assertion `left == right` failed: mid-copy, this process held a writable descriptor for the placed executable: a child forked then keeps it busy (ETXTBSY)
+  left: 1
+ right: 0
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    placing_the_fake_room_cli_leaves_no_writer_a_concurrent_fork_could_inherit
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 57 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p openwiz-service --test t5-health`

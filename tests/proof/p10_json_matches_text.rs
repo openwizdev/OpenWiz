@@ -2,11 +2,123 @@
 //! say the same thing.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::io::{self, Write};
 
 use serde_json::Value;
 
 use crate::schema;
 use crate::support::*;
+
+const OUTPUT_COMMANDS: &[&[&str]] = &[
+    &["ls"],
+    &["ls", "--json"],
+    &["show", "thr_syn_0001"],
+    &["show", "thr_syn_0001", "--json"],
+    &["--help"],
+];
+
+#[derive(Default)]
+struct OutputWriter {
+    bytes: Vec<u8>,
+    fail_after: Option<usize>,
+    fail_flush: bool,
+}
+
+impl Write for OutputWriter {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        let available = self
+            .fail_after
+            .map_or(bytes.len(), |limit| limit.saturating_sub(self.bytes.len()));
+        if available == 0 {
+            return Err(io::Error::other(
+                "synthetic private writer detail\ninjected",
+            ));
+        }
+        let count = bytes.len().min(available);
+        self.bytes.extend_from_slice(&bytes[..count]);
+        Ok(count)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        if self.fail_flush {
+            Err(io::Error::other(
+                "synthetic private writer detail\ninjected",
+            ))
+        } else {
+            Ok(())
+        }
+    }
+}
+
+fn check_output_failure(fail_after: Option<usize>, fail_flush: bool) {
+    let mut outcomes = Vec::new();
+    for args in OUTPUT_COMMANDS {
+        let mut writer = OutputWriter {
+            fail_after,
+            fail_flush,
+            ..OutputWriter::default()
+        };
+        let mut stderr = Vec::new();
+        let code = openwiz_cli::run(
+            &args.iter().map(|arg| (*arg).to_owned()).collect::<Vec<_>>(),
+            &ScriptedSource::new(1),
+            &clock(),
+            &mut writer,
+            &mut stderr,
+        );
+        outcomes.push((args, code, String::from_utf8(stderr).expect("UTF-8 stderr")));
+    }
+    // Check every command before asserting, so a red run records the whole matrix.
+    assert!(
+        outcomes.iter().all(|(_, code, stderr)| {
+            *code == 1 && stderr == "openwiz: could not write output\n"
+        }),
+        "failed stdout must not report success or expose writer details: {outcomes:#?}"
+    );
+}
+
+#[test]
+fn inventory_output_write_failure_is_not_success() {
+    check_output_failure(Some(0), false);
+}
+
+#[test]
+fn inventory_output_partial_write_failure_is_not_success() {
+    check_output_failure(Some(16), false);
+}
+
+#[test]
+fn inventory_output_flush_failure_is_not_success() {
+    check_output_failure(None, true);
+}
+
+#[test]
+fn inventory_output_normal_writer_prints_results() {
+    for args in OUTPUT_COMMANDS {
+        let mut writer = OutputWriter::default();
+        let mut stderr = Vec::new();
+        let code = openwiz_cli::run(
+            &args.iter().map(|arg| (*arg).to_owned()).collect::<Vec<_>>(),
+            &ScriptedSource::new(1),
+            &clock(),
+            &mut writer,
+            &mut stderr,
+        );
+        assert_eq!(code, 0, "{args:?}");
+        assert!(stderr.is_empty(), "{args:?}: {stderr:?}");
+        let text = String::from_utf8(writer.bytes).expect("UTF-8 stdout");
+        let expected = if args[0] == "--help" {
+            "Usage:"
+        } else {
+            "thr_syn_0001"
+        };
+        assert!(text.contains(expected), "{args:?}: {text}");
+        if args.contains(&"--json") {
+            let json: Value = serde_json::from_str(&text).expect("inventory JSON");
+            assert_eq!(json["schema"], "openwiz.inventory.v1", "{args:?}");
+        }
+    }
+}
 
 #[test]
 fn ls_json_and_text_list_the_same_sessions() {
@@ -119,7 +231,8 @@ fn json_output_matches_the_schema() {
 }
 
 /// The header, counts, gaps, freshness, location, grouping and parent in the
-/// text say what the JSON says (text contract in `support.rs`).
+/// text say what the JSON says (text contract in `support.rs`). New in
+/// ticket 1's correction round 1 (Sol S3).
 fn assert_envelope_text_matches(label: &str, json: &Value, text: &str) {
     let header = text.lines().next().unwrap_or_default();
     let source = format!(
@@ -265,7 +378,7 @@ fn show_text_matches_the_json_envelope() {
     }
 }
 
-/// `cargo build --release` produces `openwiz`,
+/// New in ticket 2. Issue #3: `cargo build --release` produces `openwiz`,
 /// and its `--json` output passes the schema check. The test builds the
 /// release binary into this workspace's target directory, runs it with the
 /// fake `room-cli` first on `PATH`, and checks every envelope against the
@@ -284,8 +397,8 @@ fn the_release_build_prints_schema_valid_json() {
         .to_path_buf();
     let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned());
     let build = Command::new(cargo)
-        .args(["build", "--release", "--locked", "-p", "openwiz-cli"])
-        .args(["--bin", "openwiz", "--target-dir"])
+        .args(["build", "--release", "--locked", "-p", "openwiz-tests"])
+        .args(["--example", "openwiz", "--target-dir"])
         .arg(&target)
         .current_dir(&root)
         .output()
@@ -295,21 +408,16 @@ fn the_release_build_prints_schema_valid_json() {
         "cargo build --release failed:\n{}",
         String::from_utf8_lossy(&build.stderr)
     );
-    let program = target.join("release").join("openwiz");
+    let program = target.join("release").join("examples").join("openwiz");
     assert!(program.is_file(), "no {program:?}");
 
     let fake = Fake::new("p10_release_build", "normal");
-    let path = format!(
-        "{}:{}",
-        fake.dir.display(),
-        std::env::var("PATH").unwrap_or_default()
-    );
     let run = |args: &[&str]| {
-        // Found through PATH, the fake sees a bare `room-cli` as its argv[0]
-        // and looks for its scenario in the working directory.
+        // The verified fixture launcher executes the absolute fake path,
+        // preserving its scenario and log directory.
         let out = Command::new(&program)
             .args(args)
-            .env("PATH", &path)
+            .env("OPENWIZ_FIXTURE_PROGRAM", fake.program())
             .current_dir(&fake.dir)
             .output()
             .expect("run the release openwiz");
@@ -358,6 +466,8 @@ fn the_release_build_prints_schema_valid_json() {
         "{text}"
     );
 
+    // #37: an untested version is never a gate; the release binary lists and
+    // marks it untested.
     fake.set_scenario("version-0.43.1");
     let (code, out, err) = run(&["ls", "--json"]);
     assert_eq!(code, Some(0), "{err}");

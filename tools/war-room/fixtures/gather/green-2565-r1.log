@@ -1,0 +1,169 @@
+# #2565 R1 green runs at 28ed7a45174e111d6ca82a916dfa8003f78854db; synthetic fixtures only
+$ python3 -I tools/war-room/test_gather.py Gather.test_each_picture_card_shows_what_tells_it_apart
+Ran 1 test in 1.972s
+
+OK
+$ python3 -I tools/war-room/test_gather.py Gather.test_a_real_scale_gathered_page_draws_with_real_chromium
+Ran 1 test in 16.597s
+
+OK
+$ python3 -I tools/war-room/test_gather.py
+Ran 11 tests in 33.921s
+
+OK
+$ python3 -I tools/war-room/test_publish.py
+Ran 14 tests in 8.498s
+
+OK
+$ python3 -I tools/war-room/test_page_history.py
+Ran 18 tests in 0.764s
+
+OK
+$ python3 -I tools/war-room/test_stage_waits.py
+Ran 11 tests in 2.092s
+
+OK
+
+# merge of origin/main at 25c6cb269f78c187db37cf53ef8effeab95af6db (POLICY_SHA256 re-pinned to the merged paths.json); affected checks
+$ python3 -I tools/open-import/test_guard.py
+Ran 11 tests in 1.272s
+
+OK
+$ python3 -I tools/open-import/test_import.py
+Ran 24 tests in 26.427s
+
+OK
+$ python3 -I tools/open-tickets/test_carriage.py
+Ran 9 tests in 263.289s
+
+OK
+$ python3 -I tools/war-room/test_publish.py
+Ran 14 tests in 8.809s
+
+OK
+$ python3 -I tools/war-room/test_gather.py
+Ran 11 tests in 34.013s
+
+OK
+$ python3 -I tools/open-import/guard.py --base origin/main --head HEAD
+carriage guard: all 4 added paths are classified
+$ sha256sum tools/open-import/paths.json
+6c2d8604ddf37e6427829a7ebad2ac70b5a4090bb4dbc1fdeaa6460c94902a52  tools/open-import/paths.json
+
+# merge of origin/main at a94eb559e7e8ac88f960218f09c0ff13516026f6 (POLICY_SHA256 re-pinned to the merged paths.json); affected checks
+$ python3 -I tools/war-room/test_activity.py
+Ran 14 tests in 4.585s
+
+OK
+$ python3 -I tools/war-room/test_answer_time.py
+Ran 10 tests in 0.167s
+
+OK
+$ python3 -I tools/war-room/test_contract.py
+Ran 18 tests in 0.084s
+
+OK
+$ python3 -I tools/war-room/test_cost.py
+Ran 16 tests in 0.948s
+
+OK
+$ python3 -I tools/war-room/test_gather.py
+Ran 11 tests in 34.353s
+
+OK
+$ python3 -I tools/war-room/test_page_history.py
+Ran 18 tests in 0.894s
+
+OK
+$ python3 -I tools/war-room/test_publish.py
+Ran 14 tests in 9.380s
+
+OK
+$ python3 -I tools/war-room/test_rework.py
+Ran 8 tests in 0.196s
+
+OK
+$ python3 -I tools/war-room/test_stage_waits.py
+Ran 11 tests in 2.137s
+
+OK
+$ python3 -I tools/war-room/test_weekly.py
+Ran 20 tests in 73.880s
+
+OK
+$ python3 -I tools/open-import/test_guard.py
+Ran 11 tests in 1.457s
+
+OK
+$ python3 -I tools/open-import/test_import.py
+Ran 24 tests in 30.789s
+
+OK
+$ python3 -I tools/open-tickets/test_carriage.py
+Ran 9 tests in 274.244s
+
+OK
+$ sh tools/open-tickets/test.sh </dev/null
+exit 0
+$ python3 -I tools/open-import/guard.py --base origin/main --head HEAD
+carriage guard: all 4 added paths are classified
+$ sha256sum tools/open-import/paths.json
+2b186d92172f11201b7000e19767661e617e92efb7fc28cd81f4e6dc1057812b  tools/open-import/paths.json
+
+# merge of origin/main at 008075e9e04f1b685a4153f50ad2d8b2f770d44c (PS1 #2614: POLICY_SHA256 removed upstream; this branch's re-pin dropped, carriage.py as main has it); affected checks
+$ python3 -I tools/war-room/test_activity.py
+Ran 14 tests in 4.508s
+
+OK
+$ python3 -I tools/war-room/test_answer_time.py
+Ran 10 tests in 0.167s
+
+OK
+$ python3 -I tools/war-room/test_contract.py
+Ran 18 tests in 0.087s
+
+OK
+$ python3 -I tools/war-room/test_cost.py
+Ran 16 tests in 0.929s
+
+OK
+$ python3 -I tools/war-room/test_gather.py
+Ran 11 tests in 33.389s
+
+OK
+$ python3 -I tools/war-room/test_page_history.py
+Ran 18 tests in 0.825s
+
+OK
+$ python3 -I tools/war-room/test_publish.py
+Ran 14 tests in 8.432s
+
+OK
+$ python3 -I tools/war-room/test_rework.py
+Ran 8 tests in 0.187s
+
+OK
+$ python3 -I tools/war-room/test_stage_waits.py
+Ran 11 tests in 2.104s
+
+OK
+$ python3 -I tools/war-room/test_weekly.py
+Ran 20 tests in 73.941s
+
+OK
+$ python3 -I tools/open-import/test_guard.py
+Ran 11 tests in 1.326s
+
+OK
+$ python3 -I tools/open-import/test_import.py
+Ran 24 tests in 26.568s
+
+OK
+$ python3 -I tools/open-tickets/test_carriage.py </dev/null
+Ran 10 tests in 269.932s
+
+OK
+$ sh tools/open-tickets/test.sh </dev/null
+exit 0
+$ python3 -I tools/open-import/guard.py --base origin/main --head HEAD
+carriage guard: all 4 added paths are classified

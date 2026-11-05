@@ -1,0 +1,29 @@
+FFF
+======================================================================
+FAIL: test_ci2_batch_shadow_is_registered_for_full_push_and_nightly (__main__.Plans.test_ci2_batch_shadow_is_registered_for_full_push_and_nightly) (event='push')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File ".github/actions/docs-only/test_plan.py", line 160, in test_ci2_batch_shadow_is_registered_for_full_push_and_nightly
+    self.assertEqual(record['lanes']['site']['tests'].count('release:ci2-batch-shadow'), 1)
+AssertionError: 0 != 1
+
+======================================================================
+FAIL: test_ci2_batch_shadow_is_registered_for_full_push_and_nightly (__main__.Plans.test_ci2_batch_shadow_is_registered_for_full_push_and_nightly) (event='schedule')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File ".github/actions/docs-only/test_plan.py", line 160, in test_ci2_batch_shadow_is_registered_for_full_push_and_nightly
+    self.assertEqual(record['lanes']['site']['tests'].count('release:ci2-batch-shadow'), 1)
+AssertionError: 0 != 1
+
+======================================================================
+FAIL: test_ci2_batch_shadow_is_registered_for_full_push_and_nightly (__main__.Plans.test_ci2_batch_shadow_is_registered_for_full_push_and_nightly) (event='merge_group')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File ".github/actions/docs-only/test_plan.py", line 160, in test_ci2_batch_shadow_is_registered_for_full_push_and_nightly
+    self.assertEqual(record['lanes']['site']['tests'].count('release:ci2-batch-shadow'), 1)
+AssertionError: 0 != 1
+
+----------------------------------------------------------------------
+Ran 1 test in 0.099s
+
+FAILED (failures=3)

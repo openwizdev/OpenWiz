@@ -1,0 +1,35 @@
+test_release_branch_is_the_checked_tree_without_closedwiz_input (__main__.OpenRelease.test_release_branch_is_the_checked_tree_without_closedwiz_input) ... FAIL
+test_private_file_unlisted_by_plan_fails_before_staging (__main__.OpenRelease.test_private_file_unlisted_by_plan_fails_before_staging) ... FAIL
+test_record_form_unlisted_by_plan_is_refused (__main__.OpenRelease.test_record_form_unlisted_by_plan_is_refused) ... FAIL
+
+======================================================================
+FAIL: test_release_branch_is_the_checked_tree_without_closedwiz_input (__main__.OpenRelease.test_release_branch_is_the_checked_tree_without_closedwiz_input)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-1281/tools/release/test_open.py", line 57, in test_release_branch_is_the_checked_tree_without_closedwiz_input
+    self.assertEqual(report['export_head'], head)
+AssertionError: '0fb5e985634c1d2f201bf2e5bf153a42c77044d2' != 'c97b70710e1c646840a8d38d176b43b93d786af5'
+- 0fb5e985634c1d2f201bf2e5bf153a42c77044d2
++ c97b70710e1c646840a8d38d176b43b93d786af5
+
+
+======================================================================
+FAIL: test_private_file_unlisted_by_plan_fails_before_staging (__main__.OpenRelease.test_private_file_unlisted_by_plan_fails_before_staging)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-1281/tools/release/test_open.py", line 67, in test_private_file_unlisted_by_plan_fails_before_staging
+    self.assertEqual(result.returncode, 1, result.stderr)
+AssertionError: 0 != 1 :
+
+======================================================================
+FAIL: test_record_form_unlisted_by_plan_is_refused (__main__.OpenRelease.test_record_form_unlisted_by_plan_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-1281/tools/release/test_open.py", line 75, in test_record_form_unlisted_by_plan_is_refused
+    self.assertEqual(result.returncode, 1, result.stderr)
+AssertionError: 0 != 1 :
+
+----------------------------------------------------------------------
+Ran 3 tests in 1.072s
+
+FAILED (failures=3)

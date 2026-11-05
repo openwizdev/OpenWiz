@@ -1,0 +1,114 @@
+# WR9 red, 67c7e6e68 + test only: python3 -I tools/war-room/test_publish.py (exit 1). publish.py, publish.sh and war-room.yml do not exist yet.
+test_a_broken_branch_publishes_nothing (__main__.Publish.test_a_broken_branch_publishes_nothing) ... FAIL
+test_a_failed_read_or_render_publishes_nothing (__main__.Publish.test_a_failed_read_or_render_publishes_nothing) ... FAIL
+test_consecutive_ticks_carry_history_forward (__main__.Publish.test_consecutive_ticks_carry_history_forward) ... FAIL
+test_preview_draws_and_publishes_nothing (__main__.Publish.test_preview_draws_and_publishes_nothing) ... FAIL
+test_privacy_scan_refuses_a_planted_secret (__main__.Publish.test_privacy_scan_refuses_a_planted_secret) ... ERROR
+test_publish_sh_runs_its_tests_first (__main__.Publish.test_publish_sh_runs_its_tests_first) ... ERROR
+test_publish_writes_only_the_war_room_branch (__main__.Publish.test_publish_writes_only_the_war_room_branch) ... FAIL
+test_hosted_runners_and_pull_request_only_proof (__main__.Workflow.test_hosted_runners_and_pull_request_only_proof) ... ERROR
+test_only_publish_writes_and_publication_is_serialised (__main__.Workflow.test_only_publish_writes_and_publication_is_serialised) ... ERROR
+
+======================================================================
+ERROR: test_privacy_scan_refuses_a_planted_secret (__main__.Publish.test_privacy_scan_refuses_a_planted_secret)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_publish.py", line 189, in test_privacy_scan_refuses_a_planted_secret
+    publish = load(HERE / 'publish.py', 'wr9_publish')
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/code/ClosedWiz/tools/war-room/test_publish.py", line 32, in load
+    spec.loader.exec_module(module)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '/code/ClosedWiz/tools/war-room/publish.py'
+
+======================================================================
+ERROR: test_publish_sh_runs_its_tests_first (__main__.Publish.test_publish_sh_runs_its_tests_first)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_publish.py", line 228, in test_publish_sh_runs_its_tests_first
+    shutil.copy(HERE / 'publish.sh', folder)
+  File "/usr/lib/python3.11/shutil.py", line 419, in copy
+    copyfile(src, dst, follow_symlinks=follow_symlinks)
+  File "/usr/lib/python3.11/shutil.py", line 256, in copyfile
+    with open(src, 'rb') as fsrc:
+         ^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/code/ClosedWiz/tools/war-room/publish.sh'
+
+======================================================================
+ERROR: test_hosted_runners_and_pull_request_only_proof (__main__.Workflow.test_hosted_runners_and_pull_request_only_proof)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_publish.py", line 266, in setUp
+    self.flow = reader.parse((ROOT / '.github/workflows/war-room.yml').read_text())
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/pathlib.py", line 1059, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/pathlib.py", line 1045, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/code/ClosedWiz/.github/workflows/war-room.yml'
+
+======================================================================
+ERROR: test_only_publish_writes_and_publication_is_serialised (__main__.Workflow.test_only_publish_writes_and_publication_is_serialised)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_publish.py", line 266, in setUp
+    self.flow = reader.parse((ROOT / '.github/workflows/war-room.yml').read_text())
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/pathlib.py", line 1059, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/pathlib.py", line 1045, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/code/ClosedWiz/.github/workflows/war-room.yml'
+
+======================================================================
+FAIL: test_a_broken_branch_publishes_nothing (__main__.Publish.test_a_broken_branch_publishes_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_publish.py", line 171, in test_a_broken_branch_publishes_nothing
+    self.assertEqual(self.publish().returncode, 0)
+AssertionError: 2 != 0
+
+======================================================================
+FAIL: test_a_failed_read_or_render_publishes_nothing (__main__.Publish.test_a_failed_read_or_render_publishes_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_publish.py", line 143, in test_a_failed_read_or_render_publishes_nothing
+    self.assertEqual(self.publish().returncode, 0)
+AssertionError: 2 != 0
+
+======================================================================
+FAIL: test_consecutive_ticks_carry_history_forward (__main__.Publish.test_consecutive_ticks_carry_history_forward)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_publish.py", line 125, in test_consecutive_ticks_carry_history_forward
+    self.assertEqual(self.publish().returncode, 0)
+AssertionError: 2 != 0
+
+======================================================================
+FAIL: test_preview_draws_and_publishes_nothing (__main__.Publish.test_preview_draws_and_publishes_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_publish.py", line 256, in test_preview_draws_and_publishes_nothing
+    self.assertEqual(result.returncode, 0, result.stderr)
+AssertionError: 2 != 0 : /usr/bin/python3: can't open file '/code/ClosedWiz/tools/war-room/publish.py': [Errno 2] No such file or directory
+
+
+======================================================================
+FAIL: test_publish_writes_only_the_war_room_branch (__main__.Publish.test_publish_writes_only_the_war_room_branch)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_publish.py", line 103, in test_publish_writes_only_the_war_room_branch
+    self.assertEqual(result.returncode, 0, result.stderr)
+AssertionError: 2 != 0 : /usr/bin/python3: can't open file '/code/ClosedWiz/tools/war-room/publish.py': [Errno 2] No such file or directory
+
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.384s
+
+FAILED (failures=5, errors=4)

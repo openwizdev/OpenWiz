@@ -23,6 +23,28 @@ fn outcome_of(answer: SpawnAnswer, op_id: &str) -> (Outcome, MemoryStore, FakeCl
 }
 
 #[test]
+fn n06_outcome_mapping_affected_contracts_preserve_original_cases() {
+    let cases: [(&str, fn()); 4] = [
+        (
+            "a_call_that_never_started_failed_and_sent_nothing",
+            a_call_that_never_started_failed_and_sent_nothing,
+        ),
+        (
+            "a_receipt_is_created_and_never_started",
+            a_receipt_is_created_and_never_started,
+        ),
+        ("anything_else_is_uncertain", anything_else_is_uncertain),
+        (
+            "every_documented_refusal_is_refused_and_nothing_is_created",
+            every_documented_refusal_is_refused_and_nothing_is_created,
+        ),
+    ];
+    for (name, proof) in cases {
+        eprintln!("TA2 case: n06_outcome_mapping::{name}");
+        proof();
+    }
+}
+
 fn a_receipt_is_created_and_never_started() {
     assert_eq!(
         spawn_receipt(&fixture("spawn-receipt-created.json"), "prj_syn_0001"),
@@ -47,7 +69,6 @@ fn a_receipt_is_created_and_never_started() {
     assert!(!json.contains("\"started\""), "no start stage in a create");
 }
 
-#[test]
 fn every_documented_refusal_is_refused_and_nothing_is_created() {
     assert_eq!(DOCUMENTED_REFUSALS.len(), 8);
     for (status, message, refusal) in DOCUMENTED_REFUSALS {
@@ -80,7 +101,6 @@ fn every_documented_refusal_is_refused_and_nothing_is_created() {
     );
 }
 
-#[test]
 fn anything_else_is_uncertain() {
     let documented = "Error: Failed to create thread: HTTP 400: Message is empty";
     for (code, line) in [
@@ -138,7 +158,6 @@ fn anything_else_is_uncertain() {
     }
 }
 
-#[test]
 fn a_call_that_never_started_failed_and_sent_nothing() {
     let (outcome, _, _) = outcome_of(SpawnAnswer::Reply(SpawnReply::NotStarted), "op-n06-ns");
     assert_eq!(
@@ -146,4 +165,81 @@ fn a_call_that_never_started_failed_and_sent_nothing() {
         Outcome::failed(FailReason::CallNotStarted),
         "{outcome:?}"
     );
+}
+
+fn adapter_spawn(program: std::path::PathBuf) -> SpawnReply {
+    use openwiz_adapter_cloudroom::source::CloudRoomSource;
+    use openwiz_core::new_thread::operation::{NewThreadClient, SpawnRequest};
+    use openwiz_core::new_thread::request_id;
+    use openwiz_core::prompt::ReadyPrompt;
+    use std::time::{Duration, Instant};
+
+    let spawn = SpawnRequest {
+        project_id: "prj_syn_0001".to_owned(),
+        provider: "codex".to_owned(),
+        model: "syn-codex-model-01".to_owned(),
+        effort: "high".to_owned(),
+        request_id: request_id(&op("op-n06-adapter")),
+        prompt: ReadyPrompt::text("Synthetic prompt"),
+    };
+    CloudRoomSource::new(program).spawn(&spawn, Instant::now() + Duration::from_secs(5))
+}
+
+#[test]
+fn an_absent_spawn_program_is_not_started() {
+    let dir = private_dir("n06-absent-spawn");
+    let reply = adapter_spawn(dir.join("absent-room-cli"));
+    std::fs::remove_dir_all(dir).unwrap();
+    assert_eq!(reply, SpawnReply::NotStarted);
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn a_spawn_wait_failure_stays_uncertain() {
+    use std::process::Command;
+
+    const CHILD: &str = "OPENWIZ_SYNTHETIC_SPAWN_WAIT_FAILURE";
+    if std::env::var_os(CHILD).is_some() {
+        // A real process starts and exits; the shim reaps it, then reports
+        // ECHILD to the adapter's try_wait. This is not a spawn failure.
+        let reply = adapter_spawn(std::path::PathBuf::from("/bin/true"));
+        assert!(
+            matches!(
+                reply,
+                SpawnReply::Unclear {
+                    reason: UncertainReason::CallNotConfirmed,
+                    ..
+                }
+            ),
+            "a child that ran must remain uncertain: {reply:?}"
+        );
+        return;
+    }
+
+    let dir = private_dir("n06-wait-failure");
+    let shim = dir.join("wait-error.so");
+    let built = Command::new("cc")
+        .args(["-shared", "-fPIC", "-Wall", "-Wextra", "-Werror"])
+        .arg(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/fixtures/wait-error.c"
+        ))
+        .args(["-o"])
+        .arg(&shim)
+        .arg("-ldl")
+        .output()
+        .unwrap();
+    assert!(built.status.success(), "{built:?}");
+    let child = Command::new(std::env::current_exe().unwrap())
+        .args([
+            "--exact",
+            "n06_outcome_mapping::a_spawn_wait_failure_stays_uncertain",
+            "--nocapture",
+        ])
+        .env(CHILD, "1")
+        .env("LD_PRELOAD", &shim)
+        .output()
+        .unwrap();
+    std::fs::remove_dir_all(dir).unwrap();
+    assert!(child.status.success(), "{child:?}");
 }

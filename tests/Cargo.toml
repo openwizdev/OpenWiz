@@ -16,11 +16,30 @@ name = "fake-room-cli"
 path = "fake-room-cli/main.rs"
 test = false
 
+# The fake gh the fleet tests run in place of the real one (OpenWiz 0.0.6,
+# A3, ClosedWiz#111).
+[[bin]]
+name = "fake-gh"
+path = "fake-gh/main.rs"
+test = false
+
 # The store-level send harness (OpenWiz 0.0.3): the core's send, called the
 # way a server would, with test-only crash points. Never shipped.
 [[bin]]
 name = "send-harness"
 path = "send-harness/main.rs"
+test = false
+
+# Fixture executables use existing dev-dependencies, never shipped.
+# Examples are executable targets whose dev-dependencies include the server.
+[[example]]
+name = "openwiz"
+path = "fixture-entrypoints/cli.rs"
+test = false
+
+[[example]]
+name = "openwiz-server"
+path = "fixture-entrypoints/server.rs"
 test = false
 
 # The 0.0.1 proof cases P1 to P12.
@@ -45,21 +64,56 @@ path = "web-api/main.rs"
 name = "messaging"
 path = "messaging/main.rs"
 
-# OpenWiz 0.0.4: new threads (A1, the implementation). Empty until A1 fills it.
+# OpenWiz 0.0.4: new threads (A1, ClosedWiz#11). Empty until A1 fills it.
 [[test]]
 name = "new-thread"
 path = "new-thread/main.rs"
 
-# OpenWiz 0.0.4: attachments (B1, the implementation). Empty until B1 fills it.
+# OpenWiz 0.0.4: attachments (B1, ClosedWiz#14). Empty until B1 fills it.
 [[test]]
 name = "attachments"
 path = "attachments/main.rs"
+
+# OpenWiz 0.0.6 spec 1, seeing fleets (ClosedWiz#107): A3's seams (#111),
+# then one file each for A4, A5, A6 and spec 2's B3.
+[[test]]
+name = "fleet"
+path = "fleet/main.rs"
+
+# OpenWiz 0.0.8, the always-on service (spec #262): one file per ticket,
+# from T3 (#268), the health planner, on.
+[[test]]
+name = "service"
+path = "service/main.rs"
+
+# OpenWiz 0.0.9 L2 (#544): pure loop planner tables (LP1, LP2).
+[[test]]
+name = "loops"
+path = "loops/main.rs"
+
+# 0.0.12 T1 (#1096): the real fixture CLI's agent discovery seam.
+[[test]]
+name = "cli-agent"
+path = "cli-agent/main.rs"
+
+# 0.0.12 T3 (#1098): the visual terminal app, its action seam and PTY
+# launch; T4-T6 each fill their own action module file here.
+[[test]]
+name = "terminal"
+path = "terminal/main.rs"
+
+# 0.0.15 T1: notification contract fixtures; later owners add proof modules.
+[[test]]
+name = "notifications"
+path = "notifications/main.rs"
 
 [dependencies]
 serde_json.workspace = true
 # For the send harness binary, which needs them as normal dependencies.
 openwiz-core = { path = "../crates/core" }
 openwiz-adapter-cloudroom = { path = "../crates/adapters/cloudroom" }
+# The GitHub adapter, for the fleet tests (OpenWiz 0.0.6, A3, ClosedWiz#111).
+openwiz-adapter-github = { path = "../crates/adapters/github" }
 openwiz-cli = { path = "../crates/cli" }
 openwiz-store = { path = "../crates/store" }
 
@@ -67,6 +121,9 @@ openwiz-store = { path = "../crates/store" }
 # so no normal dependency points at the server.
 [dev-dependencies]
 openwiz-server = { path = "../crates/server" }
+# The visual terminal app (0.0.12 T3): a dev-dependency only, so the visual
+# pair never enters a normal dependency graph but its own crate's.
+openwiz-terminal = { path = "../crates/terminal" }
 
 [lints]
 workspace = true

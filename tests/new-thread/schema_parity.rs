@@ -1,10 +1,11 @@
-//! Schema parity: `contracts/prompt.v1.schema.json`
+//! Schema parity (Sol round 1, finding 2): `contracts/prompt.v1.schema.json`
 //! and `contracts/new-thread.v1.schema.json` accept exactly what the Rust
 //! core accepts, for the prompt text, the op id, the attachment id, the
 //! three settings and the project reference. The schemas use `pattern` and
 //! the companion `maxUtf8Bytes`, enforced by [`crate::pattern`].
+//! The text table also checks messaging request text through the shared checker (#1889).
 
-use openwiz_core::messaging::{MAX_TEXT_BYTES, OpId};
+use openwiz_core::messaging::{MAX_TEXT_BYTES, OpId, validate_text};
 use openwiz_core::new_thread::ProjectRef;
 use openwiz_core::prompt::{AttachmentId, PromptPayload};
 use serde_json::{Value, json};
@@ -16,6 +17,16 @@ fn prompt_schema() -> Value {
     serde_json::from_str(&std::fs::read_to_string(PROMPT_SCHEMA).unwrap()).unwrap()
 }
 
+fn messaging_request_schema() -> Value {
+    at(
+        serde_json::from_str(
+            &std::fs::read_to_string(format!("{ROOT}/contracts/messaging.v1.schema.json")).unwrap(),
+        )
+        .unwrap(),
+        "request",
+    )
+}
+
 fn at(mut schema: Value, def: &str) -> Value {
     schema["$ref"] = json!(format!("#/$defs/{def}"));
     schema
@@ -25,35 +36,35 @@ fn schema_accepts(schema: &Value, value: &Value) -> bool {
     pattern::validate(schema, value).is_empty()
 }
 
-fn texts() -> Vec<String> {
-    let mut t: Vec<String> = [
-        "Synthetic",
-        " Synthetic padded ",
-        "-leading dash",
-        "Line one\nLine two",
-        "\u{FEFF}",
-        "\u{200B}",
-        "Synthétique 合成 🧪",
-        "",
-        " ",
-        "\t\n\r\u{B}\u{C}",
-        "\u{85}",
-        "\u{A0}",
-        "\u{3000}",
-        "\u{2028}\u{2029}",
-        "a\u{0}b",
-        "\u{0}",
+fn texts() -> Vec<(String, bool)> {
+    let mut t: Vec<(String, bool)> = [
+        ("Synthetic", true),
+        (" Synthetic padded ", true),
+        ("-leading dash", true),
+        ("Line one\nLine two", true),
+        ("\u{FEFF}", true),
+        ("\u{200B}", true),
+        ("Synthétique 合成 🧪", true),
+        ("", false),
+        (" ", false),
+        ("\t\n\r\u{B}\u{C}", false),
+        ("\u{85}", false),
+        ("\u{A0}", false),
+        ("\u{3000}", false),
+        ("\u{2028}\u{2029}", false),
+        ("a\u{0}b", false),
+        ("\u{0}", false),
     ]
     .iter()
-    .map(|s| s.to_string())
+    .map(|(s, expected)| (s.to_string(), *expected))
     .collect();
-    t.push("a".repeat(MAX_TEXT_BYTES));
-    t.push("a".repeat(MAX_TEXT_BYTES + 1));
-    t.push("é".repeat(MAX_TEXT_BYTES / 2));
-    t.push("é".repeat(MAX_TEXT_BYTES / 2 + 1));
-    t.push("🧪".repeat(MAX_TEXT_BYTES / 4));
-    t.push("🧪".repeat(MAX_TEXT_BYTES / 4 + 1));
-    t.push(format!("{} x", " ".repeat(MAX_TEXT_BYTES - 2)));
+    t.push(("a".repeat(MAX_TEXT_BYTES), true));
+    t.push(("a".repeat(MAX_TEXT_BYTES + 1), false));
+    t.push(("é".repeat(MAX_TEXT_BYTES / 2), true));
+    t.push(("é".repeat(MAX_TEXT_BYTES / 2 + 1), false));
+    t.push(("🧪".repeat(MAX_TEXT_BYTES / 4), true));
+    t.push(("🧪".repeat(MAX_TEXT_BYTES / 4 + 1), false));
+    t.push((format!("{} x", " ".repeat(MAX_TEXT_BYTES - 2)), true));
     t
 }
 
@@ -66,20 +77,73 @@ fn label(s: &str) -> String {
 }
 
 #[test]
+fn schema_parity_contracts_preserve_all_original_cases() {
+    let cases: [(&str, fn()); 8] = [
+        ("attachment_ids_match_rust", attachment_ids_match_rust),
+        ("both_contracts_lint_clean", both_contracts_lint_clean),
+        ("op_ids_match_rust", op_ids_match_rust),
+        (
+            "patterns_under_one_of_are_enforced",
+            patterns_under_one_of_are_enforced,
+        ),
+        (
+            "project_references_match_rust",
+            project_references_match_rust,
+        ),
+        ("settings_match_rust", settings_match_rust),
+        (
+            "the_prompt_text_matches_rust_in_both_contracts",
+            the_prompt_text_matches_rust_in_both_contracts,
+        ),
+        (
+            "the_round_1_counterexamples_are_refused",
+            the_round_1_counterexamples_are_refused,
+        ),
+    ];
+    for (name, proof) in cases {
+        eprintln!("TA2 case: schema_parity::{name}");
+        proof();
+    }
+}
+
 fn both_contracts_lint_clean() {
     assert_eq!(pattern::lint(&prompt_schema()), Vec::<String>::new());
     assert_eq!(pattern::lint(&schema()), Vec::<String>::new());
+    assert_eq!(
+        crate::schema::lint(&messaging_request_schema()),
+        Vec::<String>::new()
+    );
 }
 
-#[test]
+// The same literal controls must agree across send and new-thread requests.
+// Previously this table never exercised messaging, so its length-only text
+// rule accepted whitespace and NULs despite the runtime refusing both.
 fn the_prompt_text_matches_rust_in_both_contracts() {
-    for text in texts() {
+    let messaging = messaging_request_schema();
+    for (text, expected) in texts() {
         let rust = PromptPayload::text(text.clone()).validate().is_ok();
+        assert_eq!(rust, expected, "prompt runtime: {}", label(&text));
+        assert_eq!(
+            validate_text(&text).is_ok(),
+            expected,
+            "messaging runtime: {}",
+            label(&text)
+        );
         let value = json!({"text": text, "attachments": []});
         assert_eq!(
             schema_accepts(&prompt_schema(), &value),
             rust,
             "prompt.v1: {}",
+            label(&text)
+        );
+        let request = json!({
+            "target": "thr_syn_0001", "mode": "queue",
+            "text": text, "op_id": "op-synthetic"
+        });
+        assert_eq!(
+            crate::schema::validate(&messaging, &request).is_empty(),
+            expected,
+            "messaging request: {}",
             label(&text)
         );
         assert_eq!(
@@ -101,14 +165,22 @@ fn every_single_character_prompt_matches_rust() {
         .and_then(Value::as_str)
         .expect("a text pattern");
     let p = pattern::Pattern::new(p);
-    for c in (0..=0x10FFFF).filter_map(char::from_u32) {
-        let text = c.to_string();
-        let rust = PromptPayload::text(text.clone()).validate().is_ok();
-        assert_eq!(p.is_match(&text), rust, "U+{:04X}", c as u32);
-    }
+    // Every code point, in four ranges at once (#1260).
+    std::thread::scope(|scope| {
+        for part in 0..4u32 {
+            let p = &p;
+            scope.spawn(move || {
+                let range = (part * 0x11_0000 / 4)..((part + 1) * 0x11_0000 / 4);
+                for c in range.filter_map(char::from_u32) {
+                    let text = c.to_string();
+                    let rust = PromptPayload::text(text.clone()).validate().is_ok();
+                    assert_eq!(p.is_match(&text), rust, "U+{:04X}", c as u32);
+                }
+            });
+        }
+    });
 }
 
-#[test]
 fn op_ids_match_rust() {
     let long = "a".repeat(64);
     let longer = "a".repeat(65);
@@ -134,7 +206,6 @@ fn op_ids_match_rust() {
     }
 }
 
-#[test]
 fn attachment_ids_match_rust() {
     let longer = "a".repeat(65);
     for id in [
@@ -155,7 +226,6 @@ fn attachment_ids_match_rust() {
     }
 }
 
-#[test]
 fn settings_match_rust() {
     let long = "x".repeat(128);
     let longer = "x".repeat(129);
@@ -185,7 +255,6 @@ fn settings_match_rust() {
     }
 }
 
-#[test]
 fn project_references_match_rust() {
     for value in [
         "prj_syn_0001",
@@ -214,7 +283,7 @@ fn project_references_match_rust() {
     }
 }
 
-#[test]
+/// Sol's counterexamples, each refused by the schema as by Rust.
 fn the_round_1_counterexamples_are_refused() {
     let valid = json!({
         "project": {"kind": "id", "value": "prj_syn_0001"},
@@ -246,7 +315,6 @@ fn the_round_1_counterexamples_are_refused() {
 
 /// A pattern under a `oneOf` branch is enforced: a status read whose report
 /// carries an unsafe op id is refused.
-#[test]
 fn patterns_under_one_of_are_enforced() {
     let client = FakeClient::new();
     let store = MemoryStore::new();

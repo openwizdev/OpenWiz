@@ -18,6 +18,39 @@ fn valid(def: &str, value: &Value) {
 }
 
 #[test]
+fn n18_report_contracts_preserve_all_original_cases() {
+    let cases: [(&str, fn()); 6] = [
+        (
+            "a_preview_shows_the_effects_and_claims_and_calls_nothing",
+            a_preview_shows_the_effects_and_claims_and_calls_nothing,
+        ),
+        (
+            "create_effects_keep_the_project_read_time",
+            create_effects_keep_the_project_read_time,
+        ),
+        (
+            "every_outcome_matches_the_schema",
+            every_outcome_matches_the_schema,
+        ),
+        (
+            "preview_effects_keep_the_project_read_time",
+            preview_effects_keep_the_project_read_time,
+        ),
+        (
+            "the_effects_are_recorded_before_the_call",
+            the_effects_are_recorded_before_the_call,
+        ),
+        (
+            "the_schema_uses_only_checked_keywords",
+            the_schema_uses_only_checked_keywords,
+        ),
+    ];
+    for (name, proof) in cases {
+        eprintln!("TA2 case: n18_report::{name}");
+        proof();
+    }
+}
+
 fn every_outcome_matches_the_schema() {
     let answers = [
         SpawnAnswer::Receipt("spawn-receipt-created.json"),
@@ -60,7 +93,6 @@ fn every_outcome_matches_the_schema() {
     );
 }
 
-#[test]
 fn the_schema_uses_only_checked_keywords() {
     let schema = schema();
     assert_eq!(schema["title"], "openwiz.new-thread.v1");
@@ -87,8 +119,8 @@ fn the_schema_uses_only_checked_keywords() {
         "op_id": "op-1",
     });
     valid("request", &request);
-    // B2, with this recorded reason: the request may carry
-    // staged attachment ids, each at most once.
+    // B2 (ClosedWiz#15), with this recorded reason: the request may carry
+    // staged attachment ids (B-1 to B-10), each at most once.
     let mut attached = request.clone();
     attached["prompt"]["attachments"] = serde_json::json!(["att-syn-0001"]);
     valid("request", &attached);
@@ -102,7 +134,6 @@ fn the_schema_uses_only_checked_keywords() {
     );
 }
 
-#[test]
 fn the_effects_are_recorded_before_the_call() {
     let store = MemoryStore::leaked();
     let mut client = FakeClient::new();
@@ -149,7 +180,6 @@ fn the_effects_are_recorded_before_the_call() {
     }
 }
 
-#[test]
 fn a_preview_shows_the_effects_and_claims_and_calls_nothing() {
     let client = FakeClient::new();
     let preview = preview_new_thread(
@@ -184,4 +214,18 @@ fn a_preview_shows_the_effects_and_claims_and_calls_nothing() {
     assert!(stopped.effects.is_none());
     assert_eq!(client.spawns(), 0);
     valid("preview", &serde_json::to_value(&stopped).unwrap());
+}
+
+fn preview_effects_keep_the_project_read_time() {
+    let client = FakeClient::new();
+    let r = request(offered(), "Synthetic", "op-n18-preview-time");
+    let preview = preview_new_thread(&client, &clock(), &r).unwrap();
+    assert_eq!(preview.effects.unwrap().read_at, T0);
+}
+
+fn create_effects_keep_the_project_read_time() {
+    let client = FakeClient::new();
+    let r = request(offered(), "Synthetic", "op-n18-create-time");
+    let report = create(&client, &MemoryStore::new(), &r);
+    assert_eq!(report.effects.unwrap().read_at, T0);
 }

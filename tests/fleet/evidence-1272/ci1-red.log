@@ -1,0 +1,44 @@
+   Compiling serde v1.0.229
+   Compiling openwiz-service v0.0.1-dev (/code/ClosedWiz-1272/crates/service)
+   Compiling openwiz-core v0.0.1-dev (/code/ClosedWiz-1272/crates/core)
+   Compiling openwiz-adapter-github v0.0.1-dev (/code/ClosedWiz-1272/crates/adapters/github)
+   Compiling openwiz-store v0.0.1-dev (/code/ClosedWiz-1272/crates/store)
+   Compiling openwiz-adapter-cloudroom v0.0.1-dev (/code/ClosedWiz-1272/crates/adapters/cloudroom)
+   Compiling openwiz-cli v0.0.1-dev (/code/ClosedWiz-1272/crates/cli)
+   Compiling openwiz-server v0.0.1-dev (/code/ClosedWiz-1272/crates/server)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 31.65s
+     Running ../../tests/service/t4b_tick.rs (target/debug/deps/t4b_tick-b9136173e6db6946)
+
+running 1 test
+
+thread 'executor::manual_and_scheduled_ticks_have_identical_records_and_dry_run_gates' (216948) panicked at crates/service/../../tests/service/t4b_executor.rs:172:5:
+
+running 1 test
+test executor::executor_process ... FAILED
+
+failures:
+
+failures:
+    executor::executor_process
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.08s
+
+
+
+thread 'executor::executor_process' (216951) panicked at crates/service/../../tests/service/t4b_executor.rs:334:5:
+assertion `left == right` failed: repeat never duplicates record
+  left: 1
+ right: 2
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test executor::manual_and_scheduled_ticks_have_identical_records_and_dry_run_gates ... FAILED
+
+failures:
+
+failures:
+    executor::manual_and_scheduled_ticks_have_identical_records_and_dry_run_gates
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.44s
+
+error: test failed, to rerun pass `-p openwiz-service --test t4b-tick`

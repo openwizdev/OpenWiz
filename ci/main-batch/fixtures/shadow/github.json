@@ -1,0 +1,577 @@
+{
+  "": {
+    "full_name": "synthetic/ci-example"
+  },
+  "actions/runs/9000100": {
+    "id": 9000100,
+    "run_attempt": 1,
+    "head_sha": "3333333333333333333333333333333333333333",
+    "head_branch": "main",
+    "event": "push",
+    "path": ".github/workflows/ci.yml",
+    "workflow_id": 900,
+    "status": "completed",
+    "conclusion": "success",
+    "repository": {
+      "full_name": "synthetic/ci-example"
+    },
+    "check_suite_id": 9000300
+  },
+  "actions/runs/9000101": {
+    "id": 9000101,
+    "run_attempt": 1,
+    "head_sha": "3333333333333333333333333333333333333333",
+    "head_branch": "main",
+    "event": "push",
+    "path": ".github/workflows/privacy.yml",
+    "workflow_id": 901,
+    "status": "completed",
+    "conclusion": "success",
+    "repository": {
+      "full_name": "synthetic/ci-example"
+    },
+    "check_suite_id": 9000301
+  },
+  "actions/workflows/900/runs?head_sha=3333333333333333333333333333333333333333&per_page=100&page=1": {
+    "total_count": 1,
+    "workflow_runs": [
+      {
+        "id": 9000100,
+        "run_attempt": 1,
+        "head_sha": "3333333333333333333333333333333333333333",
+        "head_branch": "main",
+        "event": "push",
+        "path": ".github/workflows/ci.yml",
+        "workflow_id": 900,
+        "status": "completed",
+        "conclusion": "success",
+        "repository": {
+          "full_name": "synthetic/ci-example"
+        },
+        "check_suite_id": 9000300
+      }
+    ]
+  },
+  "actions/workflows/901/runs?head_sha=3333333333333333333333333333333333333333&per_page=100&page=1": {
+    "total_count": 1,
+    "workflow_runs": [
+      {
+        "id": 9000101,
+        "run_attempt": 1,
+        "head_sha": "3333333333333333333333333333333333333333",
+        "head_branch": "main",
+        "event": "push",
+        "path": ".github/workflows/privacy.yml",
+        "workflow_id": 901,
+        "status": "completed",
+        "conclusion": "success",
+        "repository": {
+          "full_name": "synthetic/ci-example"
+        },
+        "check_suite_id": 9000301
+      }
+    ]
+  },
+  "actions/runs/9000100/attempts/1/jobs?per_page=100&page=1": {
+    "total_count": 12,
+    "jobs": [
+      {
+        "id": 9000200,
+        "run_id": 9000100,
+        "run_attempt": 1,
+        "head_sha": "3333333333333333333333333333333333333333",
+        "name": "changes",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2030-01-01T00:00:00Z",
+        "started_at": "2030-01-01T00:00:30Z",
+        "completed_at": "2030-01-01T00:05:00Z",
+        "runner_name": "synthetic-owned",
+        "steps": []
+      },
+      {
+        "id": 9000201,
+        "run_id": 9000100,
+        "run_attempt": 1,
+        "head_sha": "3333333333333333333333333333333333333333",
+        "name": "always",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2030-01-01T00:00:00Z",
+        "started_at": "2030-01-01T00:00:30Z",
+        "completed_at": "2030-01-01T00:05:00Z",
+        "runner_name": "synthetic-owned",
+        "steps": []
+      },
+      {
+        "id": 9000202,
+        "run_id": 9000100,
+        "run_attempt": 1,
+        "head_sha": "3333333333333333333333333333333333333333",
+        "name": "rust (1)",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2030-01-01T00:00:00Z",
+        "started_at": "2030-01-01T00:00:30Z",
+        "completed_at": "2030-01-01T00:05:00Z",
+        "runner_name": "synthetic-owned",
+        "steps": [
+          {
+            "name": "The live-check toolkit (fixtures only)",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 9000203,
+        "run_id": 9000100,
+        "run_attempt": 1,
+        "head_sha": "3333333333333333333333333333333333333333",
+        "name": "rust (2)",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2030-01-01T00:00:00Z",
+        "started_at": "2030-01-01T00:00:30Z",
+        "completed_at": "2030-01-01T00:05:00Z",
+        "runner_name": "synthetic-owned",
+        "steps": [
+          {
+            "name": "The live-check toolkit (fixtures only)",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 9000204,
+        "run_id": 9000100,
+        "run_attempt": 1,
+        "head_sha": "3333333333333333333333333333333333333333",
+        "name": "web",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2030-01-01T00:00:00Z",
+        "started_at": "2030-01-01T00:00:30Z",
+        "completed_at": "2030-01-01T00:05:00Z",
+        "runner_name": "synthetic-owned",
+        "steps": []
+      },
+      {
+        "id": 9000205,
+        "run_id": 9000100,
+        "run_attempt": 1,
+        "head_sha": "3333333333333333333333333333333333333333",
+        "name": "site",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2030-01-01T00:00:00Z",
+        "started_at": "2030-01-01T00:00:30Z",
+        "completed_at": "2030-01-01T00:05:00Z",
+        "runner_name": "synthetic-owned",
+        "steps": []
+      },
+      {
+        "id": 9000206,
+        "run_id": 9000100,
+        "run_attempt": 1,
+        "head_sha": "3333333333333333333333333333333333333333",
+        "name": "release",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2030-01-01T00:00:00Z",
+        "started_at": "2030-01-01T00:00:30Z",
+        "completed_at": "2030-01-01T00:05:00Z",
+        "runner_name": "synthetic-owned",
+        "steps": []
+      },
+      {
+        "id": 9000207,
+        "run_id": 9000100,
+        "run_attempt": 1,
+        "head_sha": "3333333333333333333333333333333333333333",
+        "name": "skills (launch-fleet)",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2030-01-01T00:00:00Z",
+        "started_at": "2030-01-01T00:00:30Z",
+        "completed_at": "2030-01-01T00:05:00Z",
+        "runner_name": "synthetic-owned",
+        "steps": []
+      },
+      {
+        "id": 9000208,
+        "run_id": 9000100,
+        "run_attempt": 1,
+        "head_sha": "3333333333333333333333333333333333333333",
+        "name": "skills (plan-graph)",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2030-01-01T00:00:00Z",
+        "started_at": "2030-01-01T00:00:30Z",
+        "completed_at": "2030-01-01T00:05:00Z",
+        "runner_name": "synthetic-owned",
+        "steps": []
+      },
+      {
+        "id": 9000209,
+        "run_id": 9000100,
+        "run_attempt": 1,
+        "head_sha": "3333333333333333333333333333333333333333",
+        "name": "skills (triage)",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2030-01-01T00:00:00Z",
+        "started_at": "2030-01-01T00:00:30Z",
+        "completed_at": "2030-01-01T00:05:00Z",
+        "runner_name": "synthetic-owned",
+        "steps": []
+      },
+      {
+        "id": 9000210,
+        "run_id": 9000100,
+        "run_attempt": 1,
+        "head_sha": "3333333333333333333333333333333333333333",
+        "name": "web-build",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2030-01-01T00:00:00Z",
+        "started_at": "2030-01-01T00:00:30Z",
+        "completed_at": "2030-01-01T00:05:00Z",
+        "runner_name": "synthetic-owned",
+        "steps": []
+      },
+      {
+        "id": 9000211,
+        "run_id": 9000100,
+        "run_attempt": 1,
+        "head_sha": "3333333333333333333333333333333333333333",
+        "name": "ci",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2030-01-01T00:00:00Z",
+        "started_at": "2030-01-01T00:00:30Z",
+        "completed_at": "2030-01-01T00:05:00Z",
+        "runner_name": "synthetic-owned",
+        "steps": []
+      }
+    ]
+  },
+  "actions/runs/9000101/attempts/1/jobs?per_page=100&page=1": {
+    "total_count": 1,
+    "jobs": [
+      {
+        "id": 9000250,
+        "run_id": 9000101,
+        "run_attempt": 1,
+        "head_sha": "3333333333333333333333333333333333333333",
+        "name": "privacy",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2030-01-01T00:00:00Z",
+        "started_at": "2030-01-01T00:00:30Z",
+        "completed_at": "2030-01-01T00:05:00Z",
+        "runner_name": "synthetic-owned",
+        "steps": []
+      }
+    ]
+  },
+  "branches/main/protection/required_status_checks": {
+    "contexts": [
+      "ci",
+      "privacy"
+    ],
+    "checks": [
+      {
+        "context": "ci",
+        "app_id": 9000600
+      },
+      {
+        "context": "privacy",
+        "app_id": 9000600
+      }
+    ]
+  },
+  "commits/2222222222222222222222222222222222222222": {
+    "sha": "2222222222222222222222222222222222222222",
+    "parents": [
+      {
+        "sha": "1111111111111111111111111111111111111111"
+      },
+      {
+        "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    ]
+  },
+  "pulls/9001": {
+    "number": 9001,
+    "merged": true,
+    "merge_commit_sha": "2222222222222222222222222222222222222222",
+    "head": {
+      "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "base": {
+      "ref": "main",
+      "repo": {
+        "full_name": "synthetic/ci-example"
+      }
+    }
+  },
+  "commits/3333333333333333333333333333333333333333": {
+    "sha": "3333333333333333333333333333333333333333",
+    "parents": [
+      {
+        "sha": "2222222222222222222222222222222222222222"
+      },
+      {
+        "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    ]
+  },
+  "pulls/9002": {
+    "number": 9002,
+    "merged": true,
+    "merge_commit_sha": "3333333333333333333333333333333333333333",
+    "head": {
+      "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "base": {
+      "ref": "main",
+      "repo": {
+        "full_name": "synthetic/ci-example"
+      }
+    }
+  },
+  "rules/branches/main?per_page=100&page=1": [],
+  "check-suites/9000300": {
+    "head_sha": "3333333333333333333333333333333333333333",
+    "app": {
+      "id": 9000600
+    }
+  },
+  "check-suites/9000301": {
+    "head_sha": "3333333333333333333333333333333333333333",
+    "app": {
+      "id": 9000600
+    }
+  },
+  "_packet": {
+    "plan": "{\n  \"schema\": \"openwiz.ci-selection.v1\",\n  \"run\": {\n    \"id\": 9000100,\n    \"attempt\": 1,\n    \"event\": \"push\",\n    \"action\": null,\n    \"base_branch\": \"main\",\n    \"base\": \"2222222222222222222222222222222222222222\",\n    \"head\": \"3333333333333333333333333333333333333333\",\n    \"pull_request\": null\n  },\n  \"diff\": {\n    \"state\": \"not_read\"\n  },\n  \"selection\": {\n    \"mode\": \"full\",\n    \"reasons\": [\n      {\n        \"code\": \"push_main\"\n      }\n    ]\n  },\n  \"builds\": {\n    \"web_export\": {\n      \"decision\": \"run\"\n    }\n  },\n  \"lanes\": {\n    \"always\": {\n      \"decision\": \"run\",\n      \"tests\": [\n        \"always:fmt\",\n        \"always:classifier\",\n        \"always:selector\",\n        \"always:checks\"\n      ],\n      \"skipped\": []\n    },\n    \"rust\": {\n      \"decision\": \"run\",\n      \"tests\": [\n        \"rust:lib:openwiz-core\",\n        \"rust:lib:openwiz-server\",\n        \"rust:test:checks\",\n        \"rust:test:messaging\",\n        \"rust:test:web-api\"\n      ],\n      \"skipped\": []\n    },\n    \"web\": {\n      \"decision\": \"run\",\n      \"tests\": [\n        \"web:unit:api\",\n        \"web:unit:poller\",\n        \"web:browser:v1-faithful\",\n        \"web:browser:v7-soak\"\n      ],\n      \"skipped\": []\n    },\n    \"site\": {\n      \"decision\": \"run\",\n      \"tests\": [\n        \"site:build\",\n        \"site:test\",\n        \"release:package\",\n        \"release:ci2-batch-contract\"\n      ],\n      \"skipped\": []\n    },\n    \"skills\": [\n      {\n        \"skill\": \"launch-fleet\",\n        \"decision\": \"run\",\n        \"tests\": [\n          \"skill:launch-fleet\"\n        ],\n        \"skipped\": []\n      },\n      {\n        \"skill\": \"plan-graph\",\n        \"decision\": \"run\",\n        \"tests\": [\n          \"skill:plan-graph:revision\",\n          \"skill:plan-graph:approval\"\n        ],\n        \"skipped\": []\n      },\n      {\n        \"skill\": \"triage\",\n        \"decision\": \"run\",\n        \"tests\": [\n          \"skill:triage\"\n        ],\n        \"skipped\": []\n      }\n    ]\n  },\n  \"store\": {\n    \"artifact\": \"ci-selection-1\",\n    \"file\": \"ci-selection.json\"\n  }\n}\n",
+    "receipts": [
+      {
+        "lane": "always",
+        "tests": [
+          "always:fmt",
+          "always:classifier",
+          "always:selector",
+          "always:checks"
+        ],
+        "plan_sha256": "8346be77d6a20371d060007d61a139e1ac32c04816577b369c4e008781a9196b",
+        "run": {
+          "id": 9000100,
+          "attempt": 1,
+          "event": "push",
+          "action": null,
+          "base_branch": "main",
+          "base": "2222222222222222222222222222222222222222",
+          "head": "3333333333333333333333333333333333333333",
+          "pull_request": null
+        }
+      },
+      {
+        "lane": "rust",
+        "tests": [
+          "rust:lib:openwiz-core",
+          "rust:lib:openwiz-server",
+          "rust:test:checks",
+          "rust:test:messaging",
+          "rust:test:web-api"
+        ],
+        "plan_sha256": "8346be77d6a20371d060007d61a139e1ac32c04816577b369c4e008781a9196b",
+        "run": {
+          "id": 9000100,
+          "attempt": 1,
+          "event": "push",
+          "action": null,
+          "base_branch": "main",
+          "base": "2222222222222222222222222222222222222222",
+          "head": "3333333333333333333333333333333333333333",
+          "pull_request": null
+        }
+      },
+      {
+        "lane": "web",
+        "tests": [
+          "web:unit:api",
+          "web:unit:poller",
+          "web:browser:v1-faithful",
+          "web:browser:v7-soak"
+        ],
+        "plan_sha256": "8346be77d6a20371d060007d61a139e1ac32c04816577b369c4e008781a9196b",
+        "run": {
+          "id": 9000100,
+          "attempt": 1,
+          "event": "push",
+          "action": null,
+          "base_branch": "main",
+          "base": "2222222222222222222222222222222222222222",
+          "head": "3333333333333333333333333333333333333333",
+          "pull_request": null
+        }
+      },
+      {
+        "lane": "site",
+        "tests": [
+          "site:build",
+          "site:test"
+        ],
+        "plan_sha256": "8346be77d6a20371d060007d61a139e1ac32c04816577b369c4e008781a9196b",
+        "run": {
+          "id": 9000100,
+          "attempt": 1,
+          "event": "push",
+          "action": null,
+          "base_branch": "main",
+          "base": "2222222222222222222222222222222222222222",
+          "head": "3333333333333333333333333333333333333333",
+          "pull_request": null
+        }
+      },
+      {
+        "lane": "release",
+        "tests": [
+          "release:package",
+          "release:ci2-batch-contract"
+        ],
+        "plan_sha256": "8346be77d6a20371d060007d61a139e1ac32c04816577b369c4e008781a9196b",
+        "run": {
+          "id": 9000100,
+          "attempt": 1,
+          "event": "push",
+          "action": null,
+          "base_branch": "main",
+          "base": "2222222222222222222222222222222222222222",
+          "head": "3333333333333333333333333333333333333333",
+          "pull_request": null
+        }
+      },
+      {
+        "lane": "skill:launch-fleet",
+        "tests": [
+          "skill:launch-fleet"
+        ],
+        "plan_sha256": "8346be77d6a20371d060007d61a139e1ac32c04816577b369c4e008781a9196b",
+        "run": {
+          "id": 9000100,
+          "attempt": 1,
+          "event": "push",
+          "action": null,
+          "base_branch": "main",
+          "base": "2222222222222222222222222222222222222222",
+          "head": "3333333333333333333333333333333333333333",
+          "pull_request": null
+        }
+      },
+      {
+        "lane": "skill:plan-graph",
+        "tests": [
+          "skill:plan-graph:revision",
+          "skill:plan-graph:approval"
+        ],
+        "plan_sha256": "8346be77d6a20371d060007d61a139e1ac32c04816577b369c4e008781a9196b",
+        "run": {
+          "id": 9000100,
+          "attempt": 1,
+          "event": "push",
+          "action": null,
+          "base_branch": "main",
+          "base": "2222222222222222222222222222222222222222",
+          "head": "3333333333333333333333333333333333333333",
+          "pull_request": null
+        }
+      },
+      {
+        "lane": "skill:triage",
+        "tests": [
+          "skill:triage"
+        ],
+        "plan_sha256": "8346be77d6a20371d060007d61a139e1ac32c04816577b369c4e008781a9196b",
+        "run": {
+          "id": 9000100,
+          "attempt": 1,
+          "event": "push",
+          "action": null,
+          "base_branch": "main",
+          "base": "2222222222222222222222222222222222222222",
+          "head": "3333333333333333333333333333333333333333",
+          "pull_request": null
+        }
+      },
+      {
+        "lane": "build:web_export",
+        "tests": [],
+        "plan_sha256": "8346be77d6a20371d060007d61a139e1ac32c04816577b369c4e008781a9196b",
+        "run": {
+          "id": 9000100,
+          "attempt": 1,
+          "event": "push",
+          "action": null,
+          "base_branch": "main",
+          "base": "2222222222222222222222222222222222222222",
+          "head": "3333333333333333333333333333333333333333",
+          "pull_request": null
+        }
+      },
+      {
+        "lane": "prerequisite:toolkit",
+        "tests": [],
+        "plan_sha256": "8346be77d6a20371d060007d61a139e1ac32c04816577b369c4e008781a9196b",
+        "run": {
+          "id": 9000100,
+          "attempt": 1,
+          "event": "push",
+          "action": null,
+          "base_branch": "main",
+          "base": "2222222222222222222222222222222222222222",
+          "head": "3333333333333333333333333333333333333333",
+          "pull_request": null
+        }
+      }
+    ],
+    "event": {
+      "repository": "synthetic/ci-example",
+      "run": {
+        "id": 9000100,
+        "attempt": 1,
+        "event": "push",
+        "action": null,
+        "base_branch": "main",
+        "base": "2222222222222222222222222222222222222222",
+        "head": "3333333333333333333333333333333333333333",
+        "pull_request": null
+      }
+    },
+    "complete": false,
+    "reason": "terminal checks pending",
+    "rust": {
+      "job": "rust",
+      "shares": [
+        {
+          "shard": 1,
+          "tests": [
+            "rust:lib:openwiz-core",
+            "rust:lib:openwiz-server",
+            "rust:test:checks"
+          ]
+        },
+        {
+          "shard": 2,
+          "tests": [
+            "rust:test:messaging",
+            "rust:test:web-api"
+          ]
+        }
+      ]
+    }
+  }
+}

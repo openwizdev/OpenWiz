@@ -1,0 +1,6 @@
+{
+  "permissions": {"metadata": "read", "contents": "read", "issues": "read",
+                  "pull_requests": "read", "checks": "read", "actions": "read"},
+  "repository_selection": "selected",
+  "repositories": [{"full_name": "synthetic-owner/other"}, {"full_name": "synthetic-owner/work"}]
+}

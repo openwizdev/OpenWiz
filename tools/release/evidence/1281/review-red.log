@@ -1,0 +1,51 @@
+test_r1_complete_public_development_tree (__main__.ReviewFixes.test_r1_complete_public_development_tree) ... FAIL
+test_r1_private_classes_still_refuse (__main__.ReviewFixes.test_r1_private_classes_still_refuse) ... ok
+test_r3_deleted_private_ancestor_is_refused (__main__.ReviewFixes.test_r3_deleted_private_ancestor_is_refused) ... FAIL
+test_r3_new_commit_identity_is_checked (__main__.ReviewFixes.test_r3_new_commit_identity_is_checked) ... FAIL
+test_r4_contract_pointers_and_crosslinks_pass (__main__.ReviewFixes.test_r4_contract_pointers_and_crosslinks_pass) ... FAIL
+test_r4_malformed_or_unrelated_private_links_refuse (__main__.ReviewFixes.test_r4_malformed_or_unrelated_private_links_refuse) ... ok
+
+======================================================================
+FAIL: test_r1_complete_public_development_tree (__main__.ReviewFixes.test_r1_complete_public_development_tree)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-1281/tools/release/test_review.py", line 43, in test_r1_complete_public_development_tree
+    self.assertEqual(result.returncode,0,result.stderr)
+AssertionError: 1 != 0 : release check refused: plan: forbidden public path
+
+
+======================================================================
+FAIL: test_r3_deleted_private_ancestor_is_refused (__main__.ReviewFixes.test_r3_deleted_private_ancestor_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-1281/tools/release/test_review.py", line 68, in test_r3_deleted_private_ancestor_is_refused
+    self.assertEqual(result.returncode,1,result.stderr)
+AssertionError: 0 != 1 :
+
+======================================================================
+FAIL: test_r3_new_commit_identity_is_checked (__main__.ReviewFixes.test_r3_new_commit_identity_is_checked)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-1281/tools/release/test_review.py", line 76, in test_r3_new_commit_identity_is_checked
+    self.assertEqual(result.returncode,1,result.stderr)
+AssertionError: 0 != 1 :
+
+======================================================================
+FAIL: test_r4_contract_pointers_and_crosslinks_pass (__main__.ReviewFixes.test_r4_contract_pointers_and_crosslinks_pass)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-1281/tools/release/test_review.py", line 87, in test_r4_contract_pointers_and_crosslinks_pass
+    self.assertEqual(result.returncode,0,result.stderr)
+AssertionError: 1 != 0 : release check refused: privacy: private-link: private URL: docs/decision.md
+
+
+----------------------------------------------------------------------
+Ran 6 tests in 6.166s
+
+FAILED (failures=4)
+test_git_attributes_cannot_change_reported_export_bytes (__main__.ReleaseCheck.test_git_attributes_cannot_change_reported_export_bytes) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.395s
+
+OK

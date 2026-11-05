@@ -8,7 +8,7 @@ export type PageGroup = { key: string; group: Grouping; sessions: Session[]; suf
 
 /**
  * One page's rows under their group headings: groups in the order their first
- * row appears, rows in the page's order (the same as `openwiz ls`).
+ * row appears, rows in the page's order (G1: the same as `openwiz ls`).
  */
 export function groupPage(sessions: readonly Session[]): PageGroup[] {
   const groups = new Map<string, PageGroup>();

@@ -11,12 +11,93 @@ use std::fs;
 use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 
+use openwiz_cli::send::EXIT_RECORD_UNAVAILABLE;
 use openwiz_core::messaging::Mode;
 use openwiz_core::messaging::send::Status;
 use openwiz_store::{FileStore, default_state_dir};
 use serde_json::json;
 
 use crate::support::*;
+
+#[test]
+fn unknown_send_record_schemas_are_unavailable_without_side_effects() {
+    let fake = SendFake::new("m10_unknown_schema", "send");
+    let id = "op-m10-unknown-schema";
+    let sent = fake.report(&request("thr_syn_0001", Mode::Queue, "Synthetic", id));
+    assert_eq!(sent.status, Status::Accepted);
+    let mut record = fake.record(id);
+    for schema in [
+        "openwiz.send-record.v999",
+        "openwiz.send-record.v0",
+        "",
+        "OPENWIZ.SEND-RECORD.V1",
+        "openwiz.send-record.v1 ",
+        "openwiz.send-record.v１",
+    ] {
+        record["schema"] = json!(schema);
+        fs::write(fake.record_path(id), serde_json::to_vec(&record).unwrap()).unwrap();
+        let calls = fake.invocations();
+        let files = sends_listing(&fake);
+        for json in [false, true] {
+            let mut args = vec!["thr_syn_0001", "--op-id", id, "--check"];
+            if json {
+                args.push("--json");
+            }
+            let (code, out, err) = fake.cli(&args, "");
+            assert_eq!(
+                code, EXIT_RECORD_UNAVAILABLE,
+                "schema {schema:?}: {out}{err}"
+            );
+            assert!(out.is_empty(), "{out}");
+            assert!(
+                err.starts_with("openwiz: the send record could not be used:"),
+                "{err}"
+            );
+            assert!(err.contains("nothing was sent"), "{err}");
+            assert_eq!(fake.invocations(), calls, "lookup called the provider");
+            assert_eq!(sends_listing(&fake), files, "lookup changed the store");
+        }
+    }
+}
+
+#[test]
+fn v1_send_records_still_load_and_replay() {
+    let fake = SendFake::new("m10_v1_schema", "send");
+    let id = "op-m10-v1-schema";
+    let sent = fake.report(&request("thr_syn_0001", Mode::Queue, "Synthetic", id));
+    assert_eq!(sent.status, Status::Accepted);
+    let mut record = fake.record(id);
+    assert_eq!(record["schema"], "openwiz.send-record.v1");
+    assert!(record.get("attachments").is_none());
+    for legacy in [false, true] {
+        if legacy {
+            record.as_object_mut().unwrap().remove("source");
+            fs::write(fake.record_path(id), serde_json::to_vec(&record).unwrap()).unwrap();
+        }
+        let calls = fake.invocations();
+        let files = sends_listing(&fake);
+        for check in [true, false] {
+            let mut args = vec!["thr_syn_0001", "--op-id", id];
+            if check {
+                args.push("--check");
+            } else {
+                args.extend(["--", "Synthetic"]);
+            }
+            let (code, value) = fake.cli_json(&args, "");
+            assert_eq!(code, 0, "legacy {legacy}, check {check}: {value:#}");
+            let report = if check {
+                assert_eq!(value["result"]["kind"], "recorded");
+                &value["result"]["report"]
+            } else {
+                &value
+            };
+            assert_eq!(report["status"], "accepted");
+            assert_eq!(report["result"]["replayed"], true);
+            assert_eq!(fake.invocations(), calls, "v1 replay called the provider");
+            assert_eq!(sends_listing(&fake), files, "v1 replay changed the store");
+        }
+    }
+}
 
 #[test]
 fn the_record_is_readable_by_the_owner_only() {
@@ -230,6 +311,8 @@ fn every_write_syncs_the_file_and_its_directory() {
     );
 }
 
+/// Haiku A7: a relative `OPENWIZ_STATE_DIR` is refused, not silently
+/// replaced by the default.
 #[test]
 fn a_relative_state_directory_override_is_refused() {
     let home = "/synthetic-home/owner";
@@ -242,6 +325,8 @@ fn a_relative_state_directory_override_is_refused() {
     );
 }
 
+/// Haiku A8: a claimer that finds the lock held by an owner with no record
+/// yet takes the claim if that owner lets go while it waits.
 #[test]
 fn a_claimer_takes_a_lock_released_while_it_waits() {
     use openwiz_core::messaging::record::{Claim, SendRecord, SendStore};
@@ -271,6 +356,9 @@ fn a_claimer_takes_a_lock_released_while_it_waits() {
     assert_eq!(claim, Claim::Owned);
 }
 
+/// Sol S1: an op id is valid however it arrives. An invalid one cannot be
+/// deserialized, and a record on disk with one never reaches the file
+/// system as a path.
 #[test]
 fn an_invalid_op_id_never_becomes_a_path() {
     use openwiz_core::messaging::OpId;
@@ -308,6 +396,7 @@ fn an_invalid_op_id_never_becomes_a_path() {
     assert!(!escaped.exists() && !escaped_up.exists(), "a path escaped");
 }
 
+/// Sol S2: every directory the store creates is synced in its parent.
 #[test]
 fn every_created_directory_is_synced_in_its_parent() {
     let source = fs::read_to_string(Path::new(ROOT).join("crates/store/src/lib.rs")).unwrap();
@@ -328,7 +417,8 @@ fn every_created_directory_is_synced_in_its_parent() {
         .nth(1)
         .expect("open_with_sync");
     let open = &open[..open.find("\n    }\n").expect("end of open")];
-
+    // #79 (Sol round 1): the checks moved into `checked_sends`, shared with
+    // the read-only opener, which is given no sync and so makes nothing.
     assert!(
         open.contains("Self::checked_sends(state_dir, Some(sync))"),
         "{open}"
@@ -357,6 +447,8 @@ fn every_created_directory_is_synced_in_its_parent() {
     );
 }
 
+/// Sol S4: a state directory inside a repository is refused, however it is
+/// named.
 #[test]
 fn a_state_directory_inside_a_repository_is_refused() {
     let repo = run_root().join("m10_repo");
@@ -374,6 +466,8 @@ fn a_state_directory_inside_a_repository_is_refused() {
     let _ = fs::remove_dir_all(&repo);
 }
 
+/// Sol S2, round 2: an opener syncs the whole directory chain every time,
+/// also when another opener created it and may not have synced it yet.
 #[test]
 fn every_opener_syncs_the_whole_directory_chain() {
     use std::sync::Mutex;
@@ -406,6 +500,9 @@ fn every_opener_syncs_the_whole_directory_chain() {
     let _ = fs::remove_dir_all(&base);
 }
 
+/// Sol S4, round 2: a `sends` that leads into a repository, and a path
+/// that only reaches one through `..`, are both refused; nothing is written
+/// in the repository.
 #[test]
 fn no_path_trick_puts_the_record_inside_a_repository() {
     let base = run_root().join("m10_repo_tricks");

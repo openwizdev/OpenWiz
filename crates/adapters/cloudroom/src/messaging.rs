@@ -1,7 +1,7 @@
 //! The CloudRoom side of `send`: the target read and the one write, `thread
 //! tell`, translated for the core's [`Messenger`].
 //!
-//! The PC probe c687079 observed sent (Queue or Steer), busy
+//! The PC probe c687079 (#10, #571) observed sent (Queue or Steer), busy
 //! Queue, and Claude Code queued Steer receipts. Other forms are uncertain.
 //!
 //! Nothing `room-cli` prints reaches a reason, gap or message from here:
@@ -19,7 +19,8 @@ use openwiz_core::messaging::{InvalidRequest, Mode};
 use openwiz_core::model::{Fact, SessionId};
 use openwiz_core::prompt::ReadyPrompt;
 use openwiz_core::source::{Placement, SessionSource, SourceError};
-use serde_json::Value;
+use serde::de::{self, Deserialize, Deserializer, MapAccess, SeqAccess, Visitor};
+use serde_json::{Map, Value};
 
 use crate::allowlist::{Invocation, ThreadId};
 use crate::process;
@@ -30,13 +31,13 @@ use crate::source::CloudRoomSource;
 /// uncertain, the safe direction.
 ///
 /// - The not-found line was observed for `thread show` and `thread output`
-/// in capture C. That `thread tell` prints the same line is **documented,
-/// not observed**.
+///   in capture C. That `thread tell` prints the same line is **documented,
+///   not observed**.
 /// - The guide documents that invalid input and unsupported modes are
-/// rejected ("Explicit unsupported modes fail; no fallback"), **not their
-/// wording**. These two lines are placeholders, labelled synthetic in the
-/// fixtures. At the pre-live recheck they are replaced by the real
-/// wording; until then a real rejection of either kind reports uncertain.
+///   rejected ("Explicit unsupported modes fail; no fallback"), **not their
+///   wording**. These two lines are placeholders, labelled synthetic in the
+///   fixtures. At the pre-live recheck they are replaced by the real
+///   wording; until then a real rejection of either kind reports uncertain.
 pub const DOCUMENTED_REJECTIONS: &[(&str, &str)] = &[
     ("Error: HTTP 404: Thread not found", "not_found"),
     ("Error: HTTP 400: Invalid input", "invalid_input"),
@@ -46,7 +47,7 @@ pub const DOCUMENTED_REJECTIONS: &[(&str, &str)] = &[
 /// How the runner describes a program that could not be started.
 const NOT_STARTED: &str = "could not be started";
 
-/// The exact keys observed for sent in either requested mode.
+/// The exact keys observed for sent in either requested mode (#571).
 pub const RECEIPT_KEYS: &[&str] = &["threadId", "ok", "delivery", "mode"];
 
 impl Messenger for CloudRoomSource {
@@ -54,8 +55,10 @@ impl Messenger for CloudRoomSource {
         crate::PROGRAM
     }
 
+    /// Send's own, never the reads' (#200): `""` while no live send has
+    /// passed, which no version read equals.
     fn tested_version(&self) -> &str {
-        crate::TESTED_VERSION
+        crate::SEND_TESTED_VERSION.unwrap_or("")
     }
 
     fn check_target_id(&self, id: &SessionId) -> Result<(), InvalidRequest> {
@@ -70,7 +73,7 @@ impl Messenger for CloudRoomSource {
     fn version(&self, deadline: Instant) -> Result<String, SourceError> {
         SessionSource::version(self, deadline).map_err(|e| match e {
             // The version read's own malformed details are OpenWiz's fixed
-            // words, such as "printed a version that is not N.N.N
+            // words (#21, #37), such as "printed a version that is not N.N.N
             // or v<N> (detail withheld)": kept, as the reads show them.
             SourceError::Malformed { .. } => e,
             other => withhold(other),
@@ -104,6 +107,12 @@ impl Messenger for CloudRoomSource {
         self.tell_prompt(id, mode, &ReadyPrompt::text(text), deadline)
     }
 
+    /// The one write with its attachments (B2): every staged attachment, in
+    /// the core's dispatch order, through the allowlist's one
+    /// `attachment_args`. A failure during `room-cli`'s own upload, before
+    /// or after the message, is matched like any other error: only a
+    /// documented rejection is a failure, anything else uncertain (some
+    /// copies may already be in CloudRoom, #15's F15).
     fn tell_prompt(
         &self,
         id: &SessionId,
@@ -117,7 +126,7 @@ impl Messenger for CloudRoomSource {
         };
         if mode == Mode::Steer && !prompt.attachments.is_empty() {
             // Never reached: `send` refuses Steer with attachments first
-            // (a Cloud steer drops them, F16). Nothing is run.
+            // (B-11; a Cloud steer drops them, F16). Nothing is run.
             return TellReply::NotStarted;
         }
         let invocation = Invocation::ThreadTell {
@@ -177,9 +186,18 @@ impl CloudRoomSource {
             include_archived: false,
         };
         let row = match read_json(self, &invocation, deadline) {
-            Ok(Value::Array(rows)) => rows
-                .into_iter()
-                .find(|row| row.get("id").and_then(Value::as_str) == Some(target.id.0.as_str())),
+            Ok(Value::Array(rows)) => {
+                let mut matching = rows.into_iter().filter(|row| {
+                    row.get("id").and_then(Value::as_str) == Some(target.id.0.as_str())
+                });
+                let row = matching.next();
+                if matching.next().is_some() {
+                    let why = "thread list has multiple rows for the session";
+                    target.problems.push(read_gap("thread list", why));
+                    return not_listed(target, why);
+                }
+                row
+            }
             Ok(_) => {
                 let why = "thread list is not the documented shape".to_owned();
                 target.problems.push(read_gap("thread list", &why));
@@ -215,12 +233,17 @@ impl CloudRoomSource {
         let host = host.clone();
         let connected = match read_json(self, &Invocation::MachineList, deadline) {
             Ok(Value::Array(rows)) => {
-                match rows
+                let mut matching = rows
                     .iter()
-                    .find(|row| row.get("id").and_then(Value::as_str) == Some(host.as_str()))
-                {
-                    None => Fact::Unknown("its host is not in machine list".to_owned()),
-                    Some(row) => {
+                    .filter(|row| row.get("id").and_then(Value::as_str) == Some(host.as_str()));
+                match (matching.next(), matching.next()) {
+                    (_, Some(_)) => {
+                        let why = "machine list has multiple rows for the host";
+                        target.problems.push(read_gap("machine list", why));
+                        Fact::Unknown(why.to_owned())
+                    }
+                    (None, None) => Fact::Unknown("its host is not in machine list".to_owned()),
+                    (Some(row), None) => {
                         let mut fields = Fields::new(row, "machine list", &mut target.problems);
                         match fields.string("status") {
                             Fact::Known(status) if status == "connected" => Fact::Known(true),
@@ -257,9 +280,11 @@ fn read_json(
     deadline: Instant,
 ) -> Result<Value, SourceError> {
     let out = process::run(source.program(), invocation, deadline).map_err(withhold)?;
-    serde_json::from_slice(&out).map_err(|_| SourceError::Malformed {
-        detail: "not JSON".to_owned(),
-    })
+    serde_json::from_slice::<ReadDocument>(&out)
+        .map(|ReadDocument(value)| value)
+        .map_err(|_| SourceError::Malformed {
+            detail: "not JSON".to_owned(),
+        })
 }
 
 /// Drops `room-cli`'s own text from an error, keeping only its category.
@@ -300,13 +325,83 @@ fn read_gap(subject: &str, detail: &str) -> SendGap {
     }
 }
 
+/// Read send-target JSON without letting Value silently replace repeated keys.
+struct ReadDocument(Value);
+
+impl<'de> Deserialize<'de> for ReadDocument {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        d.deserialize_any(ReadVisitor).map(ReadDocument)
+    }
+}
+
+struct ReadVisitor;
+
+impl<'de> Visitor<'de> for ReadVisitor {
+    type Value = Value;
+
+    fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("JSON with no repeated object keys")
+    }
+
+    fn visit_bool<E: de::Error>(self, b: bool) -> Result<Value, E> {
+        Ok(Value::Bool(b))
+    }
+
+    fn visit_i64<E: de::Error>(self, n: i64) -> Result<Value, E> {
+        Ok(Value::Number(n.into()))
+    }
+
+    fn visit_u64<E: de::Error>(self, n: u64) -> Result<Value, E> {
+        Ok(Value::Number(n.into()))
+    }
+
+    fn visit_f64<E: de::Error>(self, n: f64) -> Result<Value, E> {
+        serde_json::Number::from_f64(n)
+            .map(Value::Number)
+            .ok_or_else(|| E::custom("not a JSON number"))
+    }
+
+    fn visit_str<E: de::Error>(self, s: &str) -> Result<Value, E> {
+        Ok(Value::String(s.to_owned()))
+    }
+
+    fn visit_string<E: de::Error>(self, s: String) -> Result<Value, E> {
+        Ok(Value::String(s))
+    }
+
+    fn visit_unit<E: de::Error>(self) -> Result<Value, E> {
+        Ok(Value::Null)
+    }
+
+    fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Value, A::Error> {
+        let mut items = Vec::new();
+        while let Some(ReadDocument(item)) = seq.next_element()? {
+            items.push(item);
+        }
+        Ok(Value::Array(items))
+    }
+
+    fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Value, A::Error> {
+        let mut fields = Map::new();
+        while let Some(key) = map.next_key::<String>()? {
+            if fields.contains_key(&key) {
+                return Err(de::Error::custom("a repeated object key"));
+            }
+            let ReadDocument(value) = map.next_value()?;
+            fields.insert(key, value);
+        }
+        Ok(Value::Object(fields))
+    }
+}
+
 /// The target as `thread show` reports it. Fields the effects need from
 /// other reads start unknown.
 fn parse_show(id: &SessionId, out: &[u8]) -> Result<TargetRecord, SourceError> {
     let malformed = |detail: &str| SourceError::Malformed {
         detail: detail.to_owned(),
     };
-    let doc: Value = serde_json::from_slice(out).map_err(|_| malformed("not JSON"))?;
+    let ReadDocument(doc) =
+        serde_json::from_slice(out).map_err(|_| malformed("not JSON with unique object keys"))?;
     let Some(thread) = doc.get("thread").filter(|t| t.is_object()) else {
         return Err(malformed("no thread object"));
     };

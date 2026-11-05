@@ -1,0 +1,46 @@
+name: Skills copy
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'skills/**'
+      - 'wizdev/skills/**'
+      - '.claude/skills/export-review/**'
+      - '.claude/skills/live-quick-check/**'
+      - '.claude/skills/live-spike/**'
+permissions:
+  contents: read
+concurrency:
+  group: skills-copy-main
+  cancel-in-progress: false
+jobs:
+  copy:
+    if: ${{ github.repository == 'openwizdev/openwiz' && github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Source commit and history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify the skill-changing push
+        id: gate
+        run: python3 -I tools/skills-copy/workflow.py
+      - name: Synthetic fixture proofs
+        run: |
+          python3 -I tools/skills-copy/test_copy.py
+          python3 -I tools/skills-copy/test_workflow.py
+      - name: Dedicated destination credential
+        if: steps.gate.outputs.enabled == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: openwizdev/skills
+          ref: main
+          path: .skills-copy-destination
+          fetch-depth: 0
+          ssh-key: ${{ secrets.SKILLS_COPY_DEPLOY_KEY }}
+          persist-credentials: true
+      - name: Check and publish one ordinary commit
+        if: steps.gate.outputs.enabled == 'true'
+        run: python3 -I tools/skills-copy/copy.py --commit "$GITHUB_SHA" --destination .skills-copy-destination --publish

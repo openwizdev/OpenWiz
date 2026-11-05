@@ -4,23 +4,36 @@
 //!
 //! Text and `--json` print the same envelope. The text follows the
 //! provisional text contract at the end of `tests/proof/support.rs`. Errors go
-//! to stderr as one `openwiz: ` line, with stdout left empty; the exit codes
-//! are the `EXIT_*` constants, documented in [`help`].
+//! to stderr as one `openwiz: ` line, with stdout left empty, except that
+//! output write or flush failures from `ls`, `show` and `--help` exit 1 and
+//! may leave some output on stdout. The exit codes are the `EXIT_*` constants,
+//! documented in [`help`].
 //!
 //! `send`, OpenWiz's first write, is in [`send`]; `new` (its second) and
 //! `models` are in [`new_thread`]; `attachment add`, `ls` and `rm`, which
-//! stage files on this machine only, are in [`attachment`].
+//! stage files on this machine only, are in [`attachment`]. `fleets` and
+//! `fleet <spec>` (OpenWiz 0.0.6) are in [`fleets`] and [`fleet`].
+//! `fleets` reads GitHub through `gh`, with no CloudRoom read;
+//! `fleet <spec>` makes only its allowlisted `gh` and `room-cli` reads.
+//! Both are read-only.
 
+pub mod agent_help;
 pub mod attach;
 pub mod attachment;
+pub mod engine;
+pub mod fleet;
+pub mod fleets;
+pub mod github_token;
+pub mod loops;
 pub mod new_thread;
+pub mod response;
 pub mod send;
 
 use std::collections::HashSet;
 use std::io::Write;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
-use openwiz_adapter_cloudroom::TESTED_VERSION;
+use openwiz_adapter_cloudroom::{NEW_TESTED_VERSION, SEND_TESTED_VERSION, TESTED_VERSION};
 use openwiz_core::attachment::{
     FILE_MAX_BYTES, FREE_DISK_FLOOR_BYTES, IMAGE_MAX_BYTES, UNSENT_TTL,
 };
@@ -39,6 +52,8 @@ use serde::Serialize;
 /// A result was printed, complete or partial.
 pub const EXIT_OK: i32 = 0;
 /// A read failed: the session list, or the session `show` asked for.
+/// Also used when `ls`, `show` or `--help` could not write or flush stdout;
+/// some output may already be on stdout in that case.
 pub const EXIT_READ_FAILED: i32 = 1;
 /// A usage error, or a request out of bounds. Nothing is read.
 pub const EXIT_USAGE: i32 = 2;
@@ -54,6 +69,8 @@ pub enum Command {
     Show(ShowArgs),
     /// `openwiz --help`
     Help,
+    /// `openwiz help --agent`: machine discovery, without sources or state.
+    AgentHelp,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -96,10 +113,27 @@ impl Clock for SystemClock {
     }
 }
 
+/// `openwiz ui`'s usage line and help (the command itself is the `openwiz`
+/// binary's `ui` module).
+pub const UI_USAGE: &str = "  openwiz ui [--port N] [--allowed-host NAME] [--json]\n";
+
+pub const UI_HELP: &str = "ui
+  Opens the visual terminal app on Home (Needs you, fleets, sessions; then Sessions and
+  Fleets), as openwiz with no arguments does in a terminal. It runs only openwiz-terminal
+  from the same directory as openwiz, and reads the already running local openwiz-server
+  on 127.0.0.1: it never starts a server or runs room-cli or gh. Needs a terminal on stdin
+  and stdout.
+  --port N    the server's port, 1 to 65535 (default 7370)
+  --allowed-host NAME
+              the server's configured public host name, for guarded requests; otherwise
+              OPENWIZ_SERVER_ALLOWED_HOST. Without one, only reads work
+  --json      print the openwiz.terminal-capability.v1 document; opens nothing
+";
+
 /// `openwiz --help`.
 pub fn help() -> String {
     format!(
-        "openwiz: an inventory of CloudRoom sessions, read through room-cli, and two writes: send and new.
+        "openwiz: CloudRoom inventory, send and new, and approved fleet actions.
 It also keeps files you choose ready on this machine (attachment); send and new attach them.
 
 Usage:
@@ -119,7 +153,12 @@ Usage:
   openwiz attachment add [--json] [--] <path>...
   openwiz attachment ls [--json]
   openwiz attachment rm [--json] <id>...
+{fleets_usage}{fleet_usage}{tick_usage}{loops_usage}{engine_usage}{github_usage}{ui_usage}  openwiz help --agent
+  openwiz help
   openwiz --help
+
+  help --agent  compact JSON catalogue of shipped commands, flags, effects,
+                success schemas and exits; no source calls or state changes
 
   ls          sessions, grouped under /factories/<project>/
   -l          also read each session on the page with thread show, for its
@@ -133,7 +172,10 @@ Usage:
 
 Order: most recently updated first, then by session id; sessions whose update time is unknown come last.
 
-Every run reads room-cli --version and shows it. Any version runs; one other than the live-tested {TESTED_VERSION} is marked untested.
+ls, show, send and new can read and show room-cli --version.
+send --preview, models and new --status do not read the version. send --check and attachment never run room-cli.
+Any version runs; one other than the run's own live-tested version is marked untested, or not live-tested while it has none.
+Live-tested: the reads with {TESTED_VERSION}; send {send_tested}; new {new_tested}.
 Each read stops after {read} seconds and is not retried; a run stops after {budget} seconds.
 A result is complete or partial: its gaps say what is missing.
 
@@ -149,6 +191,7 @@ send <id> <text>
               makes at most one call, ever, for one target, mode and text. Without it a
               new one is made and shown on stderr before anything is sent
   --json      print the openwiz.messaging.v1 report instead of text
+              (openwiz.attachment-add.v1 if an --attach path fails)
   --resume-paused-queue
               send even though the target's queue appears paused (or that cannot be
               ruled out); sending resumes it, and the queued messages may run after this one
@@ -204,6 +247,7 @@ new <project> --harness <h> --model <m> --effort <e> <text>
               it, so a text a shell or a paste changed is refused and nothing is created
   --json      print the openwiz.new-thread.v1 report (openwiz.new-thread-preview.v1
               without --yes) instead of text
+              (openwiz.attachment-add.v1 if an --attach path fails)
   --status    show the new-thread record of an op id: its outcome and, once created, its
               start stage from one read. Takes nothing else; makes no claim and never
               creates. --json prints openwiz.new-thread-status.v1
@@ -242,11 +286,13 @@ attachment rm <id>...
   send's text is sent as text, never attached; send and new attach with --attach and
   --attachment. --json prints openwiz.attachment-add.v1,
   openwiz.attachment-list.v1 or openwiz.attachment-remove.v1.
-
+{loops_help}{fleets_help}{fleet_help}{tick_help}{ui_help}{github_help}
 Exit codes:
   0  a result was printed, complete or partial
   0  send: queued, or sent (the provider accepted the message, not that the work completed)
   1  a read failed
+  1  ls, show, --help: the output could not be written or flushed;
+     some of it may already be on stdout
   2  usage error, or a request out of bounds
   3  show: the session was not found
   3  send: the target was not found; nothing was sent
@@ -256,7 +302,7 @@ Exit codes:
   7  send: in progress in another process with this op id; no call was made
   8  send: the op id is bound to a different target, mode or text; no call was made
   9  send: possible duplicate of an uncertain or in-progress send; nothing was sent
-  10 send: the send record could not be used; nothing was sent
+  10 send: the send record or attachment store could not be used; nothing was sent
   11 send --check: no record of this op id for this target; nothing was sent with it
   0  send --preview: a send would go ahead to its one call
   3  send --preview: the target was not found
@@ -268,7 +314,7 @@ Exit codes:
   6  new: uncertain; the thread may or may not have been created
   7  new: in progress in another process with this op id; no call was made
   8  new: the op id is bound to a different project, settings or text; no call was made
-  10 new: the new-thread record could not be used; nothing was created
+  10 new: the new-thread record or attachment store could not be used; nothing was created
   11 new --status: no record of this op id; nothing was created with it
   12 new without --yes: the effects and the command were printed; nothing was created
   new --status exits as the record's outcome does (0, 5, 6, 7)
@@ -279,11 +325,18 @@ Exit codes:
   5  attachment add: a path failed; every path is reported, and the others are ready
   10 attachment: the attachment store could not be used; a path or id it failed on is reported
   14 attachment rm: refused while its operation is dispatching or uncertain; it is kept
-On an error, stdout is empty and stderr has one line starting with \"openwiz: \".
-For send, an error is a usage error (2) or an unusable send record (10); otherwise
-send prints its report on stdout for every outcome (0, 3 to 9, 11), and a new op id's
-line on stderr before sending. new and models do the same: a usage error (2) or an
-unusable record (10) on stderr, and their report on stdout for every other exit code.
+{fleets_exit_codes}{fleet_exit_codes}On an error, stdout is empty unless ls, show or --help fails to write or flush output;
+some output may already be on stdout in that case.
+In either case, stderr has one line starting with \"openwiz: \".
+For send and new, an error is a usage error (2), an unusable operation record (10),
+or an attachment store that can't be opened (10), reported on stderr.
+With --json, these errors also print openwiz.cli-error.v1 on stdout.
+If the attachment store fails on an --attach path, exit 10 prints the
+attachment-add report on stdout (openwiz.attachment-add.v1 with --json), with empty stderr.
+Otherwise send prints its report on stdout for every outcome (0, 3 to 9, 11), and
+a new op id's line on stderr before sending. new prints its report on stdout for
+every other exit code. models does the same: a usage error (2) on stderr, and its
+report on stdout for every other exit code.
 attachment does the same: a usage error (2), or a store that can't be opened (10), on stderr.
 ",
         default = ops::ListRequest::default().limit,
@@ -298,11 +351,44 @@ attachment does the same: a usage error (2), or a store that can't be opened (10
         file_mib = FILE_MAX_BYTES / (1024 * 1024),
         floor_gib = FREE_DISK_FLOOR_BYTES / (1024 * 1024 * 1024),
         ttl_hours = UNSENT_TTL.as_secs() / 3600,
+        send_tested = live_tested_with(SEND_TESTED_VERSION),
+        new_tested = live_tested_with(NEW_TESTED_VERSION),
+        loops_usage = loops::USAGE,
+        engine_usage = engine::USAGE,
+        ui_usage = UI_USAGE,
+        ui_help = UI_HELP,
+        github_usage = github_token::USAGE,
+        github_help = github_token::HELP,
+        fleets_usage = fleets::USAGE,
+        fleet_usage = fleet::USAGE,
+        tick_usage = fleet::tick::USAGE,
+        loops_help = loops::HELP,
+        fleets_help = fleets::HELP,
+        fleet_help = fleet::HELP,
+        tick_help = fleet::tick::HELP,
+        fleets_exit_codes = fleets::EXIT_CODES,
+        fleet_exit_codes = fleet::EXIT_CODES,
     )
+}
+
+/// `with <version>`, or `with no version yet`: the help's words for a kind
+/// of run's own live-tested version (#200).
+fn live_tested_with(version: Option<&str>) -> String {
+    version.map_or_else(|| "with no version yet".to_owned(), |v| format!("with {v}"))
 }
 
 /// Parses the arguments after the program name.
 pub fn parse(args: &[String]) -> Result<Command, UsageError> {
+    if args == ["help", "--agent"] {
+        return Ok(Command::AgentHelp);
+    }
+    if args.first().is_some_and(|a| a == "help") {
+        return if args.len() == 1 || args == ["help", "--json"] {
+            Ok(Command::Help)
+        } else {
+            Err(UsageError("help takes only --agent or --json".to_owned()))
+        };
+    }
     let (command, rest) = match args.split_first() {
         Some((first, rest)) => (first.as_str(), rest),
         None => return Err(UsageError("no command given".to_owned())),
@@ -392,6 +478,10 @@ pub fn run(
     stdout: &mut dyn Write,
     stderr: &mut dyn Write,
 ) -> i32 {
+    // `github token` (GI5) reads neither CloudRoom source nor the clock above.
+    if args.first().is_some_and(|a| a == "github") {
+        return github_token::run(&args[1..], github_token::Context::system(), stdout, stderr);
+    }
     let command = match parse(args) {
         Ok(command) => command,
         Err(UsageError(message)) => {
@@ -400,7 +490,8 @@ pub fn run(
         }
     };
     let printed = match command {
-        Command::Help => Ok(help()),
+        Command::Help => Ok(response::help(response::Request::new(args).json, help())),
+        Command::AgentHelp => Ok(agent_help::render()),
         Command::Ls(ls) => {
             let request = ListRequest {
                 detail: if ls.long { Detail::Long } else { Detail::Short },
@@ -434,8 +525,14 @@ pub fn run(
     };
     match printed {
         Ok(text) => {
-            let _ = stdout.write_all(text.as_bytes());
-            let _ = stdout.flush();
+            if stdout
+                .write_all(text.as_bytes())
+                .and_then(|()| stdout.flush())
+                .is_err()
+            {
+                let _ = writeln!(stderr, "openwiz: could not write output");
+                return EXIT_READ_FAILED;
+            }
             EXIT_OK
         }
         Err(error) => {
@@ -581,15 +678,20 @@ fn header<T>(command: &str, envelope: &Envelope<T>) -> String {
     };
     format!(
         "openwiz {command} · {} · snapshot {} · {state}\n",
-        source_text(&envelope.source),
+        source_text(&envelope.source, "reads"),
         utc(envelope.freshness.snapshot_at)
     )
 }
 
-/// `<source> <version> (tested)`, or `(untested; live-tested: <version>)`:
-/// how `ls`, `show` and `send` report the version.
-pub(crate) fn source_text(source: &SourceInfo) -> String {
-    let tested = if source.version_tested {
+/// `<source> <version> (tested)`, `(untested; live-tested: <version>)`, or,
+/// while nothing is live-tested for this kind of run, `(not live-tested for
+/// <what>)`: how `ls`, `show`, `send` and `new` report the version (#37).
+/// Each kind of run has its own tested version (#200), and `what` names the
+/// kind, such as `sending`.
+pub(crate) fn source_text(source: &SourceInfo, what: &str) -> String {
+    let tested = if source.tested_version.is_empty() {
+        format!("not live-tested for {what}")
+    } else if source.version_tested {
         "tested".to_owned()
     } else {
         format!("untested; live-tested: {}", clean(&source.tested_version))
@@ -822,7 +924,7 @@ fn replacement(c: char) -> char {
 }
 
 /// One-line text: every character unsafe for the terminal is replaced.
-fn clean(text: &str) -> String {
+pub fn clean(text: &str) -> String {
     text.chars()
         .map(|c| {
             if unsafe_for_terminal(c) {

@@ -1,0 +1,8 @@
+49b7e4ab41c6f9ccbb4f8a04ec3cc79211ddefbe
+100644 06121f72bdb83f6d782071278561a88a6f1c6106 1	apps/web/src/components/App.tsx
+100644 c35a8f6f2cf288c3df57989d34f735f291238662 2	apps/web/src/components/App.tsx
+100644 ffd8bf466c7f44a9a3e9ce6961d5f33535a0eadc 3	apps/web/src/components/App.tsx
+
+Auto-merging apps/web/src/components/App.tsx
+CONFLICT (content): Merge conflict in apps/web/src/components/App.tsx
+Auto-merging apps/web/test/browser/command-navigation.test.mjs

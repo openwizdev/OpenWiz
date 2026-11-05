@@ -1,0 +1,9 @@
+# Red run, #2839: new proof against unfixed bench.py (main bd5b588c8)
+# Command: python3 -I tools/ci-bench/test_dashboard.py Dashboard.test_fractional_jog_billed_minutes_display_rounded_stored_exact
+# Synthetic fixture: jog-8vcpu jobs of 1 min, 2 min and 37 s (3 min 37 s billed per second).
+# Stored billed_minutes == 1 + 2 + 37/60 and window_usd == 0.015913 passed; the README cell failed.
+FAIL: test_fractional_jog_billed_minutes_display_rounded_stored_exact
+AssertionError: '| synthetic Jog day | jog-8vcpu | 3.6167 | 3.6167 | $0.0159 |' not found
+(actual README row: | synthetic Jog day | jog-8vcpu | 3.6167 | 3.6166666666666667 | $0.0159 |)
+Ran 1 test
+FAILED (failures=1)

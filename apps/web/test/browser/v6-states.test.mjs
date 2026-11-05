@@ -58,7 +58,7 @@ test('stale: the last good snapshot is older than the threshold on the device cl
       return v.connection === 'stale' ? v : null;
     });
     assert.equal(view.stale, true);
-    assert.ok(view.snapshot.includes(LAST_GOOD), 'the last good snapshot time is shown');
+    assert.ok(view.snapshot.includes(LAST_GOOD), 'the full last good snapshot time is shown');
     assert.equal(view.groups.length > 0, true, 'the old rows stay, marked stale');
   } finally {
     await p.close();
@@ -206,6 +206,12 @@ test('each connection state has its own word and its own shape, also in greyscal
       if (word === 'stale') await p.page.clock.runFor(TIMING.staleAfterMs + 1_000);
       else if (failure) await nextFailure(p, fx);
       await waitFor(async () => (await readView(p.page)).connection === word, { what: word });
+      const clearance = await p.page.evaluate(() => {
+        const chip = document.querySelector('.connection-footer .conn').getBoundingClientRect();
+        const search = document.querySelector('.mobile-top .command-trigger').getBoundingClientRect();
+        return chip.left - search.right;
+      });
+      assert.ok(clearance >= 4, `${word} stays clear of search on the phone (${clearance}px)`);
       await p.page.evaluate(() => (document.documentElement.style.filter = 'grayscale(1)'));
       const pill = p.page.locator('[data-connection] .shape');
       const box = await pill.boundingBox();
@@ -255,7 +261,7 @@ test('stale data is never shown as live: a hidden page that returns is stale unt
   }
 });
 
-test('the detail\'s coverage is its envelope\'s own state; its gaps are shown apart from it ', async () => {
+test('the detail\'s coverage is its envelope\'s own state; its gaps are shown apart from it (Sol 4)', async () => {
   const gap = { kind: 'timed_out', subject: 'thr_web_0002', detail: 'thread output timed out after 15 s' };
   const cases = [
     ['partial, no gaps', { state: 'partial', gaps: [] }, 'partial', []],
@@ -280,5 +286,22 @@ test('the detail\'s coverage is its envelope\'s own state; its gaps are shown ap
       await p.close();
       await fx.close();
     }
+  }
+});
+
+test('Retry reads through the inventory lane after the owner presses it, without a write', async () => {
+  const { fx, p } = await inState(apiError(502, 'read_failed', 'Synthetic failed read'), { first: false });
+  try {
+    await waitFor(async () => (await readView(p.page)).connection === 'error', { what: 'initial failure' });
+    assert.equal(fx.api.reads('list').length, 1);
+    fx.api.setList(() => json(200, GOOD));
+    await p.page.getByRole('button', { name: 'Retry', exact: true }).click();
+    await waitFor(async () => (await readView(p.page)).groups.length === 3, { what: 'retried snapshot' });
+    assert.equal(fx.api.reads('list').length, 2);
+    assert.equal((await readView(p.page)).notice, null);
+    assert.equal(p.requests.filter((r) => r.method !== 'GET').length, 0, 'Retry never writes');
+  } finally {
+    await p.close();
+    await fx.close();
   }
 });

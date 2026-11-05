@@ -1,0 +1,231 @@
+#!/bin/sh
+# OpenWiz's pre-push hook (#174, spec #172): format and the fast checks, on
+# the commit being pushed, in seconds. Any failure stops the push.
+#
+# Install it once per clone, from the repository's root:
+#   git config core.hooksPath .githooks
+#
+# Privacy: every network destination except the private repository is checked
+# before any fast-check shortcut (including empty commits and new refs).
+# Local file remotes do not publish and keep the fixture-only checks below.
+# What it runs, for each branch or tag the push sends (a deletion sends nothing):
+# - when the push changes any file: cargo fmt --check, cargo clippy (as CI
+#   runs it), the static checks (cargo test -p openwiz-tests --test checks)
+#   and the CI classifier's test (sh .github/actions/docs-only/test.sh);
+# - when it changes a file under apps/web/ or contracts/, also
+#   npm run typecheck and npm run check, in apps/web.
+# "Changes" is the pushed commit against the remote's old value of that ref,
+# or, for a new ref, against where it leaves the remote's default branch
+# (<remote>/HEAD). With neither, it runs every check.
+#
+# It checks the pushed commit, not the working tree: a file left uncommitted
+# can't make a push pass or fail. It keeps a copy of that commit, and its own
+# build cache, in ${XDG_CACHE_HOME:-~/.cache}/closedwiz-pre-push/<clone>/,
+# outside the working tree, so no tool finds the working tree's settings
+# above it. That folder is safe to delete; the next push rebuilds it, which
+# takes longer once. It never changes the repository itself. It uses the
+# cargo and npm on PATH, and apps/web/node_modules from this clone
+# (npm ci --ignore-scripts in apps/web).
+#
+# Test: sh .githooks/test.sh
+set -u
+remote="$1"
+privacy_url="${2:-}"
+privacy_tool="$(cd "$(dirname "$0")/.." && pwd -P)/tools/privacy-check/hook.py"
+say() { printf 'pre-push: %s\n' "$*" >&2; }
+top="$(git rev-parse --show-toplevel)" || exit 1
+common="$(git rev-parse --git-common-dir)" || exit 1
+common="$(cd "$common" && pwd -P)" || exit 1
+cache="${XDG_CACHE_HOME:-}"
+case "$cache" in /*) ;; *) cache="$HOME/.cache" ;; esac
+[ ! -d "$cache" ] || cache="$(cd "$cache" && pwd -P)" || exit 1
+dir="$cache/closedwiz-pre-push/$(printf '%s' "$common" | cksum | cut -d ' ' -f 1)"
+case "$dir/" in
+  "$top"/*) say "the cache folder $dir is inside the working tree: set XDG_CACHE_HOME elsewhere"; exit 1 ;;
+esac
+tree="$dir/tree"
+index="$dir/index"
+tracked="$dir/tracked-files"
+public_receipt="$dir/public-tree-receipt"
+public_matches="$dir/public-tree-matches"
+
+# What to check: one line per pushed commit, "<commit> <groups>".
+plan="$(mktemp)" || exit 1
+trap 'rm -f "$plan"' EXIT
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$local_sha" in *[!0]*) ;; *) continue ;; esac # a deletion
+  commit="$(git rev-parse --verify --quiet "$local_sha^{commit}")" || {
+    say "$local_ref is not a commit: push stopped"
+    exit 1
+  }
+  # Privacy includes ancestry and messages even when no file changed.
+  # It reads Git objects for the pushed commit, never uncommitted files.
+  if ! python3 -I "$privacy_tool" --url "$privacy_url" --repo "$top" --head "$commit" --base "$remote_sha"; then
+    say "privacy check refused $remote_ref: push stopped"
+    exit 1
+  fi
+  base=""
+  case "$remote_sha" in
+    *[!0]*) git cat-file -e "$remote_sha^{commit}" 2> /dev/null && base="$remote_sha" ;;
+  esac
+  if [ -z "$base" ] && def="$(git rev-parse --verify --quiet "refs/remotes/$remote/HEAD^{commit}")"; then
+    base="$(git merge-base "$commit" "$def")" || base=""
+  fi
+  if [ -z "$base" ]; then
+    say "$remote_ref: nothing to compare against, so every check runs"
+    echo "$commit rust web" >> "$plan"
+    continue
+  fi
+  git diff-tree --quiet -r "$base" "$commit"
+  case $? in
+    0) say "$remote_ref: no file changed, nothing to check"; continue ;;
+    1) ;;
+    *) say "can't compare $remote_ref with $base: push stopped"; exit 1 ;;
+  esac
+  git diff-tree --quiet -r "$base" "$commit" -- apps/web contracts
+  case $? in
+    0) echo "$commit rust" >> "$plan" ;;
+    1) echo "$commit rust web" >> "$plan" ;;
+    *) say "can't compare $remote_ref with $base: push stopped"; exit 1 ;;
+  esac
+done
+[ -s "$plan" ] || exit 0
+if grep -q ' web$' "$plan" && [ ! -d "$top/apps/web/node_modules" ]; then
+  say "apps/web/node_modules is missing: run npm ci --ignore-scripts in apps/web, then push again"
+  exit 1
+fi
+
+# One push at a time per clone: they share the copy. The lock is a symlink
+# whose target is its holder's PID, made in one step (ln -s), so it never
+# exists without one. A lock whose PID can't be read is never taken over.
+# A stale lock (its holder is gone) is taken over by one push at a time,
+# under a second such link, the takeover mark, and only while it still
+# names that holder. A push removes only its own lock.
+lock="$dir/lock"
+reclaim="$dir/reclaim"
+alive() { kill -0 "$1" 2> /dev/null || ps -p "$1" > /dev/null 2>&1; }
+holder() { # LINK: the PID it names, or fails
+  h="$(readlink "$1" 2> /dev/null)" || return 1
+  case "$h" in '' | *[!0-9]*) return 1 ;; esac
+  echo "$h"
+}
+take() { [ ! -d "$lock" ] && ln -s "$$" "$lock" 2> /dev/null; }
+trap 'rm -f "$plan"; for l in "$reclaim" "$lock"; do if [ "$(holder "$l")" = "$$" ]; then rm -f "$l"; fi; done' EXIT
+trap 'exit 130' HUP INT TERM
+mkdir -p "$dir" || exit 1
+if ! take; then
+  if ! pid="$(holder "$lock")"; then
+    say "the lock $lock has no PID it can read: if no push is running in this clone, delete it and push again"
+    exit 1
+  fi
+  if alive "$pid"; then
+    say "another push is being checked in this clone (pid $pid): push again when it ends"
+    exit 1
+  fi
+  if [ -d "$reclaim" ] || ! ln -s "$$" "$reclaim" 2> /dev/null; then
+    if r="$(holder "$reclaim")" && alive "$r"; then
+      say "another push (pid $r) is taking over a stale lock in this clone: push again in a moment"
+    else
+      say "a stale $reclaim is in the way: if no push is running in this clone, delete it and push again"
+    fi
+    exit 1
+  fi
+  if [ "$(holder "$lock")" = "$pid" ]; then rm -f "$lock"; fi
+  take
+  took=$?
+  rm -f "$reclaim"
+  if [ "$took" != 0 ]; then
+    say "another push took the lock in this clone: push again when it ends"
+    exit 1
+  fi
+fi
+
+# copy COMMIT: make $tree exactly COMMIT's files, rewriting only the files
+# that differ, so cargo's cache stays warm. Anything else in it is wiped.
+copy() {
+  rm -f "$tree/apps/web/node_modules"
+  if GIT_INDEX_FILE="$index" git --work-tree="$tree" read-tree --reset -u "$1" 2> /dev/null &&
+    [ -z "$(GIT_INDEX_FILE="$index" git --work-tree="$tree" ls-files --others)" ]; then
+    :
+  else
+    rm -rf "$tree" "$index"
+    mkdir -p "$tree" && GIT_INDEX_FILE="$index" git --work-tree="$tree" read-tree --reset -u "$1" || return 1
+  fi
+  [ ! -d "$tree/apps/web" ] || ln -s "$top/apps/web/node_modules" "$tree/apps/web/node_modules"
+}
+
+# run DIR COMMAND...: one check, in DIR of the copy, cut off from the
+# repository (no git variables, no repository above the copy).
+run() {
+  sub="$1"
+  shift
+  count=$((count + 1))
+  start="$(date +%s)"
+  if (
+    unset $(git rev-parse --local-env-vars)
+    export GIT_CEILING_DIRECTORIES="$dir" CARGO_TARGET_DIR="$dir/target" OPENWIZ_TRACKED_FILES="$tracked"
+    export OPENWIZ_CHECKED_COMMIT="$commit" OPENWIZ_PUBLIC_TREE_RECEIPT="$public_receipt"
+    cd "$tree/$sub" && "$@"
+  ) < /dev/null > "$dir/out" 2>&1; then
+    say "ok    $*  ($(($(date +%s) - start)) s)"
+  else
+    say "FAIL  $*  ($(($(date +%s) - start)) s)"
+    sed 's/^/    /' "$dir/out" >&2
+    failed=$((failed + 1))
+  fi
+}
+
+stopped=0
+while read -r commit groups; do
+  short="$(git rev-parse --short "$commit")"
+  began="$(date +%s)"
+  count=0
+  failed=0
+  copy "$commit" || { say "can't copy $short to $tree: push stopped"; exit 1; }
+  # The checks cannot reach Git from the isolated copy. Give them the exact
+  # commit's paths, never this checkout's HEAD or index. Keep the NUL-delimited
+  # manifest outside the copy and refresh it for every commit under the lock.
+  git ls-tree -rz --name-only --full-tree "$commit" > "$tracked" || {
+    say "can't list tracked files at $short: push stopped"
+    exit 1
+  }
+  # Preserve the public guard's cached binary scan using this commit's own
+  # index before isolation. Its receipt carries the exact policy and commit;
+  # neither a scan error nor a failed write may reuse an earlier clear result.
+  public_status=0
+  GIT_INDEX_FILE="$index" git -C "$top" grep --cached -a -l -z -F \
+    -e 'jparker2006/OpenWiz' -- contracts crates apps tests > "$public_matches" || public_status=$?
+  case "$public_status" in
+    0 | 1) ;;
+    *) say "public-tree scan failed at $short: push stopped"; exit 1 ;;
+  esac
+  if ! {
+    printf '%s\0' openwiz-public-tree-v1 "$commit" \
+      'git grep --cached -a -l -z -F -e' 'jparker2006/OpenWiz' \
+      contracts crates apps tests "$public_status" && cat "$public_matches"
+  } > "$public_receipt"; then
+    say "can't write public-tree receipt at $short: push stopped"
+    exit 1
+  fi
+  say "checking $short"
+  run . cargo fmt --check
+  run . cargo clippy --workspace --all-targets -- -D warnings
+  run . cargo test -p openwiz-tests --test checks
+  run . sh .github/actions/docs-only/test.sh
+  case "$groups" in
+    *web*)
+      run apps/web npm run typecheck
+      run apps/web npm run check
+      ;;
+  esac
+  if [ "$failed" = 0 ]; then
+    say "all $count checks passed at $short in $(($(date +%s) - began)) s"
+  else
+    say "$failed of $count checks failed at $short in $(($(date +%s) - began)) s"
+    stopped=1
+  fi
+done < "$plan"
+if [ "$stopped" = 1 ]; then
+  say "push stopped: fix the mistakes above, commit, and push again"
+  exit 1
+fi

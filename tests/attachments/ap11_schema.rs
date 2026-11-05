@@ -80,6 +80,40 @@ fn sample(kind: Kind, original: &str) -> AttachmentRef {
 }
 
 #[test]
+fn ap11_schema_contracts_preserve_all_original_cases() {
+    let cases: [(&str, fn()); 7] = [
+        (
+            "every_reference_the_core_serializes_matches",
+            every_reference_the_core_serializes_matches,
+        ),
+        (
+            "every_state_and_reason_the_core_serializes_is_in_the_schema",
+            every_state_and_reason_the_core_serializes_is_in_the_schema,
+        ),
+        (
+            "ids_and_hashes_are_checked_however_they_arrive",
+            ids_and_hashes_are_checked_however_they_arrive,
+        ),
+        (
+            "the_checker_rejects_what_the_core_never_writes",
+            the_checker_rejects_what_the_core_never_writes,
+        ),
+        ("the_pattern_check_is_strict", the_pattern_check_is_strict),
+        (
+            "the_schema_uses_only_checked_keywords",
+            the_schema_uses_only_checked_keywords,
+        ),
+        (
+            "the_schemas_bounds_match_the_core",
+            the_schemas_bounds_match_the_core,
+        ),
+    ];
+    for (name, proof) in cases {
+        eprintln!("TA2 case: ap11_schema::{name}");
+        proof();
+    }
+}
+
 fn the_schema_uses_only_checked_keywords() {
     let schema = attachment_schema();
     assert_eq!(schema["title"], ATTACHMENT_SCHEMA_ID);
@@ -104,7 +138,6 @@ fn the_schema_uses_only_checked_keywords() {
     }
 }
 
-#[test]
 fn every_reference_the_core_serializes_matches() {
     let schema = attachment_schema();
     for (kind, original) in [
@@ -125,7 +158,6 @@ fn every_reference_the_core_serializes_matches() {
     assert!(validate_def("attachment", &serde_json::to_value(longest).unwrap()).is_empty());
 }
 
-#[test]
 fn every_state_and_reason_the_core_serializes_is_in_the_schema() {
     for state in every_readiness() {
         let value = serde_json::to_value(state).unwrap();
@@ -153,7 +185,6 @@ fn every_state_and_reason_the_core_serializes_is_in_the_schema() {
     }
 }
 
-#[test]
 fn the_schemas_bounds_match_the_core() {
     let schema = attachment_schema();
     let defs = &schema["$defs"];
@@ -168,7 +199,6 @@ fn the_schemas_bounds_match_the_core() {
     assert_eq!(defs["kind"]["enum"], json!(["image", "file"]));
 }
 
-#[test]
 fn the_checker_rejects_what_the_core_never_writes() {
     let good = serde_json::to_value(sample(Kind::Image, "synthetic.png")).unwrap();
     type Mutation = (&'static str, fn(&mut Value));
@@ -207,7 +237,6 @@ fn the_checker_rejects_what_the_core_never_writes() {
     }
 }
 
-#[test]
 fn ids_and_hashes_are_checked_however_they_arrive() {
     for good in ["att_syn_0001", "a", &"a".repeat(ATTACHMENT_ID_MAX_LEN)] {
         assert!(AttachmentId::parse(good).is_ok(), "{good}");
@@ -244,7 +273,6 @@ fn ids_and_hashes_are_checked_however_they_arrive() {
 }
 
 /// The pattern check takes only its one form, and means what it says.
-#[test]
 fn the_pattern_check_is_strict() {
     use crate::pattern::{is_match, lint};
     let id = "^[A-Za-z0-9][A-Za-z0-9_-]*$";

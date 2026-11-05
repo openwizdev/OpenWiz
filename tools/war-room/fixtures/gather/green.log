@@ -1,0 +1,74 @@
+# At 87e756f93 (review R1-R3 fixed, origin/main merged)
+$ python3 -I tools/war-room/test_gather.py -v
+test_a_long_run_history_keeps_the_current_ci_counts (__main__.Gather.test_a_long_run_history_keeps_the_current_ci_counts) ... ok
+test_a_planted_secret_turns_the_privacy_scan_red (__main__.Gather.test_a_planted_secret_turns_the_privacy_scan_red) ... ok
+test_a_removed_or_unreadable_source_greys_only_its_own_card (__main__.Gather.test_a_removed_or_unreadable_source_greys_only_its_own_card) ... ok
+test_an_escaped_secret_in_a_valid_journey_refuses_the_gather (__main__.Gather.test_an_escaped_secret_in_a_valid_journey_refuses_the_gather) ... ok
+test_an_inconsistent_status_listing_gives_no_ci_counts (__main__.Gather.test_an_inconsistent_status_listing_gives_no_ci_counts) ... ok
+test_gather_writes_a_selection_sources_select_accepts (__main__.Gather.test_gather_writes_a_selection_sources_select_accepts) ... ok
+test_publish_shows_measured_values_with_provenance (__main__.Gather.test_publish_shows_measured_values_with_provenance) ... ok
+test_the_full_gathered_selection_publishes_with_real_chromium (__main__.Gather.test_the_full_gathered_selection_publishes_with_real_chromium) ... ok
+test_without_journeys_or_answer_records_each_card_names_its_prerequisite (__main__.Gather.test_without_journeys_or_answer_records_each_card_names_its_prerequisite) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 22.740s
+
+OK
+
+$ python3 -I tools/war-room/test_publish.py
+Ran 14 tests in 8.632s
+
+OK
+
+$ python3 -I tools/war-room/test_contract.py
+Ran 18 tests in 0.085s
+
+OK
+
+$ python3 -I tools/war-room/test_page_history.py
+Ran 18 tests in 0.734s
+
+OK
+
+$ python3 -I tools/war-room/test_activity.py
+Ran 14 tests in 4.396s
+
+OK
+
+$ python3 -I tools/war-room/test_answer_time.py
+Ran 10 tests in 0.167s
+
+OK
+
+$ python3 -I tools/war-room/test_cost.py
+Ran 16 tests in 0.921s
+
+OK
+
+$ python3 -I tools/war-room/test_rework.py
+Ran 8 tests in 0.190s
+
+OK
+
+$ python3 -I tools/war-room/test_stage_waits.py
+Ran 11 tests in 2.086s
+
+OK
+
+$ sh tools/open-tickets/test.sh   # POLICY_SHA256 re-pinned to the merged paths.json
+Ran 5 tests in 1.940s
+OK
+Ran 5 tests in 1.015s
+OK
+Ran 7 tests in 1.501s
+OK
+Ran 26 tests in 170.940s
+OK
+Ran 9 tests in 261.865s
+OK
+Ran 9 tests in 27.349s
+OK
+
+$ python3 -I tools/open-import/test_import.py
+Ran 24 tests
+OK

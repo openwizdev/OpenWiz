@@ -74,13 +74,16 @@ test('P5: JavaScript, CSS and font payload, compressed', async () => {
 
 test('P1: time to first rows, cold, local and throttled (synthetic)', async () => {
   results.firstRows = {};
-  for (const [label, rows, net] of [
-    ['local, 6 rows', 6, null],
-    ['local, 100 rows', 100, null],
-    ['throttled (150 ms RTT, 1.6 Mbit/s), 100 rows', 100, { latency: 150, downloadThroughput: 200_000, uploadThroughput: 90_000 }],
+  // The throttled case is bound by the emulated link, not the page: its cold
+  // loads of about 4.2 s agree within about 10 ms, so it runs 3 times (#425);
+  // the local ones 10.
+  for (const [label, rows, net, runs] of [
+    ['local, 6 rows', 6, null, 10],
+    ['local, 100 rows', 100, null, 10],
+    ['throttled (150 ms RTT, 1.6 Mbit/s), 100 rows', 100, { latency: 150, downloadThroughput: 200_000, uploadThroughput: 90_000 }, 3],
   ]) {
     const times = [];
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < runs; i++) {
       const { fx } = await siteWith(rows);
       const context = await browser.newContext({ viewport: PHONE, timezoneId: 'UTC' });
       try {
@@ -135,7 +138,7 @@ test('P3: tap to the sheet opening, and to its details', async () => {
 test('P4, P6, P7, P8: bytes, main-thread work and layout shift per refresh', async () => {
   results.refresh = {};
   for (const rows of [6, 100, 200]) {
-    const { fx, body } = await siteWith(rows);
+    const { fx } = await siteWith(rows);
     let n = 0;
     // Every refresh changes the statuses, so each one renders.
     fx.api.setList(() => {
@@ -155,15 +158,30 @@ test('P4, P6, P7, P8: bytes, main-thread work and layout shift per refresh', asy
       await p.page.click('[data-session-id="thr_web_0001"]');
       await waitFor(async () => (await readDetail(p.page))?.title === 'Synthetic web session 1', { what: 'detail' });
       await p.page.evaluate(() => {
+        // No input occurs during this measurement. Count late preview updates
+        // even inside the opening click's recent-input window: a faster runner
+        // must not hide a real movement that a slower runner reports.
         window.__shifts = 0;
+        window.__shiftEntries = [];
         new PerformanceObserver((list) => {
-          for (const e of list.getEntries()) if (!e.hadRecentInput) window.__shifts += e.value;
+          for (const e of list.getEntries()) {
+            const entry = {
+              value: e.value, hadRecentInput: e.hadRecentInput, startTime: e.startTime,
+              sources: e.sources.map((s) => ({
+                element: s.node?.outerHTML?.slice(0, 1000),
+                previousRect: s.previousRect.toJSON(), currentRect: s.currentRect.toJSON(),
+              })),
+            };
+            window.__shiftEntries.push(entry);
+            window.__shifts += e.value;
+          }
         }).observe({ type: 'layout-shift' });
       });
       await cdp.send('Performance.enable');
       const metric = async () => Object.fromEntries((await cdp.send('Performance.getMetrics')).metrics.map((m) => [m.name, m.value]));
       const before = await metric();
       const refreshes = 20;
+      const refreshBytes = [];
       for (let i = 0; i < refreshes; i++) {
         const k = fx.api.reads('list').length;
         await p.page.clock.runFor(TIMING.listIntervalMs);
@@ -171,16 +189,25 @@ test('P4, P6, P7, P8: bytes, main-thread work and layout shift per refresh', asy
         await waitFor(async () => (await p.page.evaluate(() => document.querySelector('[data-snapshot-seq]')?.dataset.snapshotSeq)) === String(k + 1), {
           what: 'render',
         });
+        // The response listener reads the body asynchronously; wait for this
+        // refresh's bytes, excluding the initial load and detail responses.
+        const reply = await waitFor(() => {
+          const replies = p.responses.filter((r) => r.path === '/api/v1/inventory');
+          return replies.length === k + 1 && replies[k].body !== null && replies[k];
+        }, { what: 'refresh response body' });
+        refreshBytes.push(Buffer.byteLength(reply.body));
       }
       const after = await metric();
       const per = (key) => ((after[key] - before[key]) * 1000) / refreshes;
       const shifts = await p.page.evaluate(() => window.__shifts);
       results.refresh[`${rows} rows`] = {
-        bytesPerRefresh: Buffer.byteLength(body.body),
+        bytesPerRefresh: refreshBytes.reduce((sum, bytes) => sum + bytes, 0) / refreshes,
         mainThreadMsPerRefresh: { task: per('TaskDuration'), script: per('ScriptDuration'), layout: per('LayoutDuration'), style: per('RecalcStyleDuration') },
         layoutShift: shifts,
+        layoutShiftEntries: await p.page.evaluate(() => window.__shiftEntries),
         maxInFlight: fx.api.maxInFlight,
       };
+      if (shifts) console.log(JSON.stringify({ rows, layoutShiftEntries: results.refresh[`${rows} rows`].layoutShiftEntries }));
       assert.equal(shifts, 0, `layout shift on refresh with ${rows} rows`);
       assert.ok(fx.api.maxInFlight.list <= 1 && fx.api.maxInFlight.detail <= 1);
     } finally {

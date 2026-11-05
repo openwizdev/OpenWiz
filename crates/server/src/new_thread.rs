@@ -1,17 +1,17 @@
-//! The new-thread routes: the create (`POST
+//! The new-thread routes (#12, A2): the create (`POST
 //! /api/v1/projects/{id}/threads`), the new-thread preview (`POST
 //! /api/v1/projects/{id}/threads/preview`), the Cloud options and the
 //! status. See `contracts/web-api.v1.md`, "Creating".
 //!
 //! The server checks only the request's shape: the create `Host`, the
-//! send's cross-site checks, the body's
-//! framing, size and JSON, and a cap of one create at a time. Then
+//! send's cross-site checks (A-13 keeps them unchanged), the body's
+//! framing, size and JSON, and a cap of one create at a time (A-14). Then
 //! it calls the core's `new_thread`, `preview_new_thread`,
 //! `new_thread_status` or `cloud_options`, exactly as `openwiz new` and
 //! `openwiz models` do, and answers with what the CLI prints. It works out
 //! no option, effect, outcome, stage or retry. Creates are never
 //! coalesced: each accepted request is its own call of `new_thread`, and
-//! only the op id joins two of them. There is no retry, and
+//! only the op id joins two of them. There is no retry (sheet A-3), and
 //! nothing of a request is logged.
 
 use std::net::TcpStream;
@@ -45,10 +45,10 @@ use crate::{Attaching, Creating, Limits};
 
 /// A create's body, and the new-thread preview's: `openwiz new`'s options,
 /// without the project, which is the path's. Read as exactly one shape,
-/// and nothing else: a JSON
+/// and nothing else (the send body's rule, Sol #91 finding 1): a JSON
 /// object whose keys are exactly these six, each once, each of its own JSON
 /// type: `attachments` an array of strings, the staged ids in the owner's
-/// order.
+/// order (since #16; `[]` is text only).
 struct Body {
     op_id: String,
     harness: String,
@@ -201,7 +201,7 @@ pub(crate) fn read_asked(
 /// Everything a create needs from the server.
 pub(crate) struct Context<'a> {
     pub creating: &'a Creating,
-    /// The attachment store, for a create with attachments.
+    /// The attachment store, for a create with attachments (#16).
     pub attaching: Option<&'a Attaching>,
     pub slots: &'a Arc<Slots>,
     pub clock: &'a Arc<dyn Clock>,
@@ -211,7 +211,7 @@ pub(crate) struct Context<'a> {
 
 /// `POST /api/v1/projects/{id}/threads`, after the create `Host`, the
 /// method and the query were checked: `openwiz new --project-id <id> …
-/// --yes --json`, with a created thread's start read once (the web
+/// --yes --json`, with a created thread's start read once (A-9: the web
 /// follows it through the status route).
 pub(crate) fn create(
     head: &Head,

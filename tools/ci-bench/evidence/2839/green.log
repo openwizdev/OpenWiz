@@ -1,0 +1,8 @@
+# Green run, #2839: Billed minutes cell formatted to 4 places (display only)
+# Proof: python3 -I tools/ci-bench/test_dashboard.py Dashboard.test_fractional_jog_billed_minutes_display_rounded_stored_exact
+Ran 1 test
+OK
+# README row now: | synthetic Jog day | jog-8vcpu | 3.6167 | 3.6167 | $0.0159 |
+# Stored billed_minutes stays 1 + 2 + 37/60; window_usd stays 0.015913.
+# Scoped checks (all OK): bench.py check-steps; test.py; test_backfill.py;
+# test_dashboard.py (15 tests); test_publish.py; test_factory.py; test_trends.py; test_required.py

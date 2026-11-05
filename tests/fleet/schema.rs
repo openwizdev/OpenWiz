@@ -1,0 +1,427 @@
+//! A JSON Schema checker for `contracts/fleet.v1.schema.json` (A3,
+//! ClosedWiz#111), for every ticket's fleet tests.
+//!
+//! No JSON Schema crate is approved, and the shared checker
+//! (`tests/support/schema.rs`) has no `pattern`, so this checks the subset
+//! the fleet schema uses: `type` (one or a list), `required`, `properties`,
+//! `additionalProperties: false`, `items`, `enum`, `const`, `oneOf`
+//! (exactly one), local `$ref`, `minimum`, `minLength`, `maxLength` and
+//! `pattern`. A pattern is only `^`, then literal characters or `[...]`
+//! classes (single characters and ranges), each optionally followed by
+//! `*`, then `$`. [`lint`] refuses any other keyword or form, so the schema
+//! can't rely on a rule this checker ignores.
+//!
+//! [`Coverage`] records which branches a value took: every `oneOf`
+//! alternative, `enum` value, `type` of a list, and property. With
+//! [`branches`], a test can show a set of values reaches all of them.
+
+#![allow(dead_code)]
+
+use std::collections::BTreeSet;
+
+use serde_json::Value;
+
+pub const SCHEMA_PATH: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../contracts/fleet.v1.schema.json"
+);
+
+const KNOWN_KEYWORDS: &[&str] = &[
+    "$schema",
+    "$id",
+    "$defs",
+    "$ref",
+    "title",
+    "description",
+    "type",
+    "required",
+    "properties",
+    "additionalProperties",
+    "items",
+    "enum",
+    "const",
+    "oneOf",
+    "minimum",
+    "minLength",
+    "maxLength",
+    "pattern",
+];
+
+pub fn load_schema() -> Value {
+    let text = std::fs::read_to_string(SCHEMA_PATH).expect("the fleet schema is readable");
+    serde_json::from_str(&text).expect("the fleet schema is JSON")
+}
+
+/// Every keyword or form in `schema` this checker does not enforce,
+/// wherever it appears, `$defs` included.
+pub fn lint(schema: &Value) -> Vec<String> {
+    let mut errors = Vec::new();
+    lint_node(schema, schema, "#", &mut errors);
+    errors
+}
+
+fn lint_node(root: &Value, node: &Value, at: &str, errors: &mut Vec<String>) {
+    let Some(rules) = node.as_object() else {
+        errors.push(format!("{at}: schema node is not an object"));
+        return;
+    };
+    for (key, child) in rules {
+        let here = format!("{at}/{key}");
+        match key.as_str() {
+            k if !KNOWN_KEYWORDS.contains(&k) => {
+                errors.push(format!("{at}: unsupported schema keyword {k}"))
+            }
+            "additionalProperties" if child != &Value::Bool(false) => {
+                errors.push(format!("{here}: only `false` is checked"))
+            }
+            "pattern" => {
+                if let Err(why) = child
+                    .as_str()
+                    .ok_or("not a string".to_owned())
+                    .and_then(parse)
+                {
+                    errors.push(format!("{here}: {why}"));
+                }
+            }
+            "$ref" => match child.as_str() {
+                Some(reference) if resolve(root, reference).is_some() => {}
+                _ => errors.push(format!("{here}: unresolvable $ref {child}")),
+            },
+            "$defs" | "properties" => {
+                for (name, sub) in child.as_object().into_iter().flatten() {
+                    lint_node(root, sub, &format!("{here}/{name}"), errors);
+                }
+            }
+            "items" => lint_node(root, child, &here, errors),
+            "oneOf" => {
+                for (i, sub) in child.as_array().into_iter().flatten().enumerate() {
+                    lint_node(root, sub, &format!("{here}/{i}"), errors);
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+/// The branches values took: each is a schema node's pointer and what was
+/// taken there (`oneOf 2`, `enum "open"`, `type null`, `property name`).
+#[derive(Default, Debug)]
+pub struct Coverage(pub BTreeSet<(String, String)>);
+
+/// Every violation of the schema by `value`, with its JSON path.
+pub fn validate(schema: &Value, value: &Value) -> Vec<String> {
+    validate_with(schema, value, &mut Coverage::default())
+}
+
+/// [`validate`], adding the branches `value` took to `coverage` (only when
+/// it is valid).
+pub fn validate_with(schema: &Value, value: &Value, coverage: &mut Coverage) -> Vec<String> {
+    let mut errors = Vec::new();
+    let mut hits = Coverage::default();
+    check(schema, "#", value, "$", &mut errors, &mut hits);
+    if errors.is_empty() {
+        coverage.0.extend(hits.0);
+    }
+    errors
+}
+
+fn node<'a>(root: &'a Value, at: &str) -> &'a Value {
+    resolve(root, at).unwrap_or(&Value::Null)
+}
+
+fn check(
+    root: &Value,
+    at: &str,
+    value: &Value,
+    path: &str,
+    errors: &mut Vec<String>,
+    hits: &mut Coverage,
+) {
+    let Some(rules) = node(root, at).as_object() else {
+        errors.push(format!("{path}: schema node {at} is not an object"));
+        return;
+    };
+    for key in rules.keys() {
+        if !KNOWN_KEYWORDS.contains(&key.as_str()) {
+            errors.push(format!("{path}: unsupported schema keyword {key}"));
+        }
+    }
+    if let Some(reference) = rules.get("$ref").and_then(Value::as_str) {
+        match resolve(root, reference) {
+            Some(_) => check(root, reference, value, path, errors, hits),
+            None => errors.push(format!("{path}: unresolvable $ref {reference}")),
+        }
+    }
+    if let Some(types) = rules.get("type") {
+        let allowed: Vec<&str> = match types {
+            Value::String(t) => vec![t.as_str()],
+            Value::Array(ts) => ts.iter().filter_map(Value::as_str).collect(),
+            _ => vec![],
+        };
+        match allowed.iter().find(|t| type_matches(t, value)) {
+            None => {
+                errors.push(format!("{path}: expected type {allowed:?}, got {value}"));
+                return;
+            }
+            Some(t) if types.is_array() => {
+                hits.0.insert((at.to_owned(), format!("type {t}")));
+            }
+            Some(_) => {}
+        }
+    }
+    if let Some(expected) = rules.get("const")
+        && value != expected
+    {
+        errors.push(format!("{path}: expected {expected}, got {value}"));
+    }
+    if let Some(options) = rules.get("enum").and_then(Value::as_array) {
+        if options.contains(value) {
+            hits.0.insert((at.to_owned(), format!("enum {value}")));
+        } else {
+            errors.push(format!("{path}: {value} is not one of {options:?}"));
+        }
+    }
+    if let (Some(min), Some(n)) = (rules.get("minimum").and_then(Value::as_f64), value.as_f64())
+        && n < min
+    {
+        errors.push(format!("{path}: {n} is below the minimum {min}"));
+    }
+    if let Some(s) = value.as_str() {
+        let chars = s.chars().count() as u64;
+        if let Some(min) = rules.get("minLength").and_then(Value::as_u64)
+            && chars < min
+        {
+            errors.push(format!("{path}: shorter than {min} characters"));
+        }
+        if let Some(max) = rules.get("maxLength").and_then(Value::as_u64)
+            && chars > max
+        {
+            errors.push(format!("{path}: longer than {max} characters"));
+        }
+        if let Some(pattern) = rules.get("pattern").and_then(Value::as_str) {
+            match parse(pattern) {
+                Ok(atoms) if matches(&atoms, s) => {}
+                Ok(_) => errors.push(format!("{path}: {s:?} does not match {pattern}")),
+                Err(why) => errors.push(format!("{path}: pattern {pattern}: {why}")),
+            }
+        }
+    }
+    if let Some(options) = rules.get("oneOf").and_then(Value::as_array) {
+        let mut passing = Vec::new();
+        for i in 0..options.len() {
+            let mut e = Vec::new();
+            let mut h = Coverage::default();
+            check(
+                root,
+                &format!("{at}/oneOf/{i}"),
+                value,
+                path,
+                &mut e,
+                &mut h,
+            );
+            if e.is_empty() {
+                passing.push((i, h));
+            }
+        }
+        if passing.len() == 1 {
+            let (i, h) = passing.pop().expect("one");
+            hits.0.insert((at.to_owned(), format!("oneOf {i}")));
+            hits.0.extend(h.0);
+        } else {
+            errors.push(format!(
+                "{path}: matches {} of the oneOf options, not exactly one",
+                passing.len()
+            ));
+        }
+    }
+    if let Some(object) = value.as_object() {
+        let properties = rules.get("properties").and_then(Value::as_object);
+        for key in rules
+            .get("required")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+        {
+            if !object.contains_key(key) {
+                errors.push(format!("{path}: missing required field {key}"));
+            }
+        }
+        for (key, child) in object {
+            let child_path = format!("{path}.{key}");
+            if properties.is_some_and(|p| p.contains_key(key)) {
+                hits.0.insert((at.to_owned(), format!("property {key}")));
+                let child_at = format!("{at}/properties/{}", escape(key));
+                check(root, &child_at, child, &child_path, errors, hits);
+            } else if rules.get("additionalProperties") == Some(&Value::Bool(false)) {
+                errors.push(format!("{path}: unexpected field {key}"));
+            }
+        }
+    }
+    if let (Some(_), Some(array)) = (rules.get("items"), value.as_array()) {
+        for (i, item) in array.iter().enumerate() {
+            check(
+                root,
+                &format!("{at}/items"),
+                item,
+                &format!("{path}[{i}]"),
+                errors,
+                hits,
+            );
+        }
+    }
+}
+
+/// Every branch reachable from the schema's root: what [`Coverage`] can
+/// record.
+pub fn branches(schema: &Value) -> BTreeSet<(String, String)> {
+    let mut out = BTreeSet::new();
+    let mut seen = BTreeSet::new();
+    walk(schema, "#", &mut out, &mut seen);
+    out
+}
+
+fn walk(root: &Value, at: &str, out: &mut BTreeSet<(String, String)>, seen: &mut BTreeSet<String>) {
+    if !seen.insert(at.to_owned()) {
+        return;
+    }
+    let Some(rules) = node(root, at).as_object() else {
+        return;
+    };
+    if let Some(reference) = rules.get("$ref").and_then(Value::as_str) {
+        walk(root, reference, out, seen);
+    }
+    if let Some(Value::Array(types)) = rules.get("type") {
+        for t in types.iter().filter_map(Value::as_str) {
+            out.insert((at.to_owned(), format!("type {t}")));
+        }
+    }
+    for option in rules
+        .get("enum")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        out.insert((at.to_owned(), format!("enum {option}")));
+    }
+    if let Some(options) = rules.get("oneOf").and_then(Value::as_array) {
+        for i in 0..options.len() {
+            out.insert((at.to_owned(), format!("oneOf {i}")));
+            walk(root, &format!("{at}/oneOf/{i}"), out, seen);
+        }
+    }
+    for key in rules
+        .get("properties")
+        .and_then(Value::as_object)
+        .into_iter()
+        .flatten()
+        .map(|(k, _)| k)
+    {
+        out.insert((at.to_owned(), format!("property {key}")));
+        walk(root, &format!("{at}/properties/{}", escape(key)), out, seen);
+    }
+    if rules.contains_key("items") {
+        walk(root, &format!("{at}/items"), out, seen);
+    }
+}
+
+/// A JSON Pointer token for `key`.
+fn escape(key: &str) -> String {
+    key.replace('~', "~0").replace('/', "~1")
+}
+
+fn type_matches(t: &str, value: &Value) -> bool {
+    match t {
+        "object" => value.is_object(),
+        "array" => value.is_array(),
+        "string" => value.is_string(),
+        "boolean" => value.is_boolean(),
+        "null" => value.is_null(),
+        "integer" => value.is_i64() || value.is_u64(),
+        "number" => value.is_number(),
+        _ => false,
+    }
+}
+
+fn resolve<'a>(root: &'a Value, reference: &str) -> Option<&'a Value> {
+    root.pointer(reference.strip_prefix('#')?)
+}
+
+/// One literal or class, and whether `*` follows it.
+#[derive(Debug)]
+struct Atom {
+    class: Vec<(char, char)>,
+    repeat: bool,
+}
+
+/// Parses a pattern of the supported form, or says why it isn't one.
+fn parse(pattern: &str) -> Result<Vec<Atom>, String> {
+    let body = pattern
+        .strip_prefix('^')
+        .and_then(|p| p.strip_suffix('$'))
+        .ok_or("not anchored with ^ and $")?;
+    let mut chars = body.chars().peekable();
+    let mut atoms = Vec::new();
+    while let Some(c) = chars.next() {
+        let class = match c {
+            '[' => {
+                let mut class = Vec::new();
+                loop {
+                    let first = chars.next().ok_or("an unclosed [")?;
+                    if first == ']' {
+                        break;
+                    }
+                    if "\\^[".contains(first) {
+                        return Err(format!("{first:?} in a class is not supported"));
+                    }
+                    if chars.peek() == Some(&'-') {
+                        chars.next();
+                        let last = chars.next().ok_or("an unclosed range")?;
+                        if last == ']' || last < first {
+                            return Err("a range that is not supported".to_owned());
+                        }
+                        class.push((first, last));
+                    } else {
+                        class.push((first, first));
+                    }
+                }
+                if class.is_empty() {
+                    return Err("an empty class".to_owned());
+                }
+                class
+            }
+            c if c.is_ascii_alphanumeric() || c == '_' || c == '-' => vec![(c, c)],
+            other => return Err(format!("{other:?} is not supported")),
+        };
+        let repeat = chars.peek() == Some(&'*');
+        if repeat {
+            chars.next();
+        }
+        atoms.push(Atom { class, repeat });
+    }
+    Ok(atoms)
+}
+
+/// Whether all of `s` matches the atoms.
+fn matches(atoms: &[Atom], s: &str) -> bool {
+    let in_class = |atom: &Atom, c: char| atom.class.iter().any(|(a, b)| (*a..=*b).contains(&c));
+    match atoms.split_first() {
+        None => s.is_empty(),
+        Some((atom, rest)) if atom.repeat => {
+            let mut tail = s;
+            loop {
+                if matches(rest, tail) {
+                    return true;
+                }
+                match tail.chars().next() {
+                    Some(c) if in_class(atom, c) => tail = &tail[c.len_utf8()..],
+                    _ => return false,
+                }
+            }
+        }
+        Some((atom, rest)) => match s.chars().next() {
+            Some(c) if in_class(atom, c) => matches(rest, &s[c.len_utf8()..]),
+            _ => false,
+        },
+    }
+}

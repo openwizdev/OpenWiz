@@ -5,7 +5,8 @@
 //! mistyped field becomes `unknown (schema: <field>)`, with the gap
 //! `schema drift: <read> <field>`. A row without a readable id is unreadable.
 //! Output that is not JSON, or not the expected top-level shape, fails that
-//! read. Nothing is invented.
+//! read, as does any repeated object key (even identical or nested).
+//! Nothing is invented.
 //!
 //! Text `room-cli` prints is shown only where it is session data. A version
 //! other than `N.N.N`, a mismatched id and an unrecognised value that is not
@@ -23,16 +24,36 @@ use openwiz_core::source::{
     MachineRecord, OutputRecord, Placement, ProjectRecord, Read, Rows, SessionDetailRecord,
     SessionRecord, SessionScope, SessionSource, SourceError,
 };
+use serde::de::{self, MapAccess, SeqAccess, Visitor};
+use serde::{Deserialize, Deserializer};
 use serde_json::error::Category;
 use serde_json::{Map, Value};
 
 use crate::allowlist::{Invocation, ThreadId};
 use crate::{PROGRAM, TESTED_VERSION, process};
 
+/// **Test-only fixture programs only** (#1259): lowers every `room-cli`
+/// read timeout in this process to `timeout`, if that is lower than
+/// `READ_TIMEOUT`; it is never raised. The production binaries never call
+/// it and read no setting for it, so their reads keep `READ_TIMEOUT`. A
+/// fixture's real-time proofs use it for their short form.
+pub fn lower_read_timeout_for_fixtures(timeout: std::time::Duration) {
+    process::lower_read_timeout(timeout);
+}
+
+/// **Synthetic fixture processes only** (#1259): check child completion
+/// every fixed 1 ms in this process. Repeated selection has no further effect.
+/// Ordinary production callers never select this and retain 5 ms polling.
+/// This changes no timeout, deadline, attachment allowance or cancellation.
+pub fn use_fast_polling_for_fixtures() {
+    process::use_fast_polling_for_fixtures();
+}
+
 /// Reads sessions by running `room-cli`.
 #[derive(Clone, Debug)]
 pub struct CloudRoomSource {
     program: PathBuf,
+    read_timeout: std::time::Duration,
 }
 
 impl CloudRoomSource {
@@ -40,6 +61,7 @@ impl CloudRoomSource {
     pub fn new(program: impl Into<PathBuf>) -> Self {
         Self {
             program: program.into(),
+            read_timeout: openwiz_core::limits::READ_TIMEOUT,
         }
     }
 
@@ -48,15 +70,24 @@ impl CloudRoomSource {
         Self::new(PROGRAM)
     }
 
+    /// A lower per-read cap for this synthetic source only.
+    pub fn with_read_timeout_for_fixtures(mut self, timeout: std::time::Duration) -> Self {
+        self.read_timeout = self.read_timeout.min(timeout);
+        self
+    }
+
     pub fn program(&self) -> &PathBuf {
         &self.program
     }
 
     fn json(&self, invocation: &Invocation, deadline: Instant) -> Result<Value, SourceError> {
-        let out = process::run(&self.program, invocation, deadline)?;
-        serde_json::from_slice(&out).map_err(|e| SourceError::Malformed {
-            detail: not_json(&e),
-        })
+        let out =
+            process::run_with_read_timeout(&self.program, invocation, deadline, self.read_timeout)?;
+        serde_json::from_slice::<UniqueKeys>(&out)
+            .map(|UniqueKeys(value)| value)
+            .map_err(|e| SourceError::Malformed {
+                detail: not_json(&e),
+            })
     }
 
     fn array(&self, invocation: &Invocation, deadline: Instant) -> Result<Vec<Value>, SourceError> {
@@ -149,7 +180,12 @@ impl SessionSource for CloudRoomSource {
     }
 
     fn version(&self, deadline: Instant) -> Result<String, SourceError> {
-        let out = process::run(&self.program, &Invocation::Version, deadline)?;
+        let out = process::run_with_read_timeout(
+            &self.program,
+            &Invocation::Version,
+            deadline,
+            self.read_timeout,
+        )?;
         let version = String::from_utf8_lossy(&out).trim().to_owned();
         if version.is_empty() {
             return Err(SourceError::Malformed {
@@ -302,6 +338,76 @@ impl SessionSource for CloudRoomSource {
             error,
             problems: fields.problems,
         })
+    }
+}
+
+/// Retain ordinary JSON values, refusing repeated decoded keys before a
+/// `Value` can silently replace them. Unique extra fields stay tolerated.
+struct UniqueKeys(Value);
+
+impl<'de> Deserialize<'de> for UniqueKeys {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        d.deserialize_any(UniqueKeysVisitor).map(UniqueKeys)
+    }
+}
+
+struct UniqueKeysVisitor;
+
+impl<'de> Visitor<'de> for UniqueKeysVisitor {
+    type Value = Value;
+
+    fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("JSON with unique object keys")
+    }
+
+    fn visit_unit<E: de::Error>(self) -> Result<Value, E> {
+        Ok(Value::Null)
+    }
+
+    fn visit_bool<E: de::Error>(self, value: bool) -> Result<Value, E> {
+        Ok(Value::Bool(value))
+    }
+
+    fn visit_i64<E: de::Error>(self, value: i64) -> Result<Value, E> {
+        Ok(Value::Number(value.into()))
+    }
+
+    fn visit_u64<E: de::Error>(self, value: u64) -> Result<Value, E> {
+        Ok(Value::Number(value.into()))
+    }
+
+    fn visit_f64<E: de::Error>(self, value: f64) -> Result<Value, E> {
+        serde_json::Number::from_f64(value)
+            .map(Value::Number)
+            .ok_or_else(|| E::custom("not a JSON number"))
+    }
+
+    fn visit_str<E: de::Error>(self, value: &str) -> Result<Value, E> {
+        Ok(Value::String(value.to_owned()))
+    }
+
+    fn visit_string<E: de::Error>(self, value: String) -> Result<Value, E> {
+        Ok(Value::String(value))
+    }
+
+    fn visit_seq<A: SeqAccess<'de>>(self, mut sequence: A) -> Result<Value, A::Error> {
+        let mut values = Vec::new();
+        while let Some(UniqueKeys(value)) = sequence.next_element()? {
+            values.push(value);
+        }
+        Ok(Value::Array(values))
+    }
+
+    fn visit_map<A: MapAccess<'de>>(self, mut object: A) -> Result<Value, A::Error> {
+        let mut fields = Map::new();
+        while let Some(key) = object.next_key::<String>()? {
+            if fields.contains_key(&key) {
+                return Err(de::Error::custom("a repeated object key"));
+            }
+            let UniqueKeys(value) = object.next_value()?;
+            fields.insert(key, value);
+        }
+        Ok(Value::Object(fields))
     }
 }
 
@@ -497,9 +603,25 @@ impl<'a> Fields<'a> {
                 .map(|p| p.map(SessionId)),
             purpose_text: self.purpose(),
             updated_at: self.int("updatedAt").map(Timestamp),
+            started_at: self.started_at(),
             placement,
             id,
             problems: self.problems,
+        }
+    }
+
+    /// `startedAt`, a running-start time in Unix milliseconds, is optional:
+    /// room-cli 0.43.1 was not seen to report it. Only a nonnegative integer
+    /// is a start; anything else stays unknown without a drift gap.
+    fn started_at(&self) -> Fact<Timestamp> {
+        match self.get("startedAt") {
+            None => Fact::Unknown("room-cli did not report a start time".to_owned()),
+            Some(v) => match v.as_i64() {
+                Some(at) if at >= 0 => Fact::Known(Timestamp(at)),
+                _ => Fact::Unknown(
+                    "room-cli reported startedAt, but not as a nonnegative integer".to_owned(),
+                ),
+            },
         }
     }
 

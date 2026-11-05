@@ -1,30 +1,34 @@
 # OpenWiz web API, version 1
 
-*Updated for 0.0.5.* This document specifies fixture-tested behaviour; it does not certify live acceptance.
-
 The HTTP API of `openwiz-server` (`crates/server`), for OpenWiz 0.0.2, 0.0.3 and 0.0.4. It is a thin client of the core, like the `openwiz` CLI: its inventory and session routes call the same core operation with the same options, and each of their success bodies is the `openwiz.inventory.v1` envelope that `openwiz … --json` prints. `/api/v1/health` is the exception: the server's own metadata, with no CLI equivalent and no `room-cli` read. The envelope's schema is [`contracts/inventory.v1.schema.json`](inventory.v1.schema.json), reused unchanged. Nothing here adds a field, an operation or a rule.
 
-**Revision 0.0.3: from read-only to one mutation.** 0.0.2's API had no mutation surface (A4). This revision adds exactly one: `POST /api/v1/sessions/{id}/messages`, the core's `send`, as `openwiz send … --json`; and two reads that never send: the send preview and the send lookup (the core's `preview` and `lookup`, as `openwiz send … --preview --json` and `… --check --json`). Their bodies are the CLI's `openwiz.messaging.v1`, `openwiz.send-preview.v1` and `openwiz.send-lookup.v1` JSON ([`contracts/messaging.v1.schema.json`](messaging.v1.schema.json)), reused unchanged. See [Sending](#sending-the-one-write).
+**Revision 0.0.3 (#9): from read-only to one mutation.** 0.0.2's API had no mutation surface (A4). This revision adds exactly one: `POST /api/v1/sessions/{id}/messages`, the core's `send`, as `openwiz send … --json`; and two reads that never send: the send preview and the send lookup (the core's `preview` and `lookup`, as `openwiz send … --preview --json` and `… --check --json`). Their bodies are the CLI's `openwiz.messaging.v1`, `openwiz.send-preview.v1` and `openwiz.send-lookup.v1` JSON ([`contracts/messaging.v1.schema.json`](messaging.v1.schema.json)), reused unchanged. See [Sending](#sending-the-one-write).
 
-**Revision 0.0.4: a second mutation, new threads.** This revision adds exactly one more write: `POST /api/v1/projects/{id}/threads`, the core's `new_thread`, as `openwiz new --project-id <id> … --yes --json`; one read that never creates but carries the prompt, so it is a `POST`: the new-thread preview, the core's `preview_new_thread`, as the same command without `--yes`; and two reads: the Cloud options (`openwiz models --json`) and the new-thread status (`openwiz new --status <op_id> --json`). Their bodies are the CLI's `openwiz.new-thread.v1`, `openwiz.new-thread-preview.v1`, `openwiz.cloud-options.v1` and `openwiz.new-thread-status.v1` JSON ([`contracts/new-thread.v1.schema.json`](new-thread.v1.schema.json)), reused unchanged. **There is no retry route** (the request contract). See [Creating](#creating-the-second-write).
+**Revision 0.0.4 (#12): a second mutation, new threads.** This revision adds exactly one more write: `POST /api/v1/projects/{id}/threads`, the core's `new_thread`, as `openwiz new --project-id <id> … --yes --json`; one read that never creates but carries the prompt, so it is a `POST`: the new-thread preview, the core's `preview_new_thread`, as the same command without `--yes`; and two reads: the Cloud options (`openwiz models --json`) and the new-thread status (`openwiz new --status <op_id> --json`). Their bodies are the CLI's `openwiz.new-thread.v1`, `openwiz.new-thread-preview.v1`, `openwiz.cloud-options.v1` and `openwiz.new-thread-status.v1` JSON ([`contracts/new-thread.v1.schema.json`](new-thread.v1.schema.json)), reused unchanged. **There is no retry route** (sheet A-3). See [Creating](#creating-the-second-write).
 
-**Revision 0.0.4: attachments.** This revision adds the attachment routes: `POST /api/v1/attachments`, which stages one file the owner chose in the browser, as `openwiz attachment add <file> --json` stages one file; `GET /api/v1/attachments`, as `openwiz attachment ls --json`; and `DELETE /api/v1/attachments/{id}`, as `openwiz attachment rm <id> --json`. Their bodies are the CLI's `openwiz.attachment-add.v1`, `openwiz.attachment-list.v1` and `openwiz.attachment-remove.v1` JSON ([`contracts/attachment.v1.schema.json`](attachment.v1.schema.json)), reused unchanged. The send body gains the optional `attachments` (absent means none), and the create's and the new-thread preview's `attachments` now carry staged ids: the CLI's `--attachment <id>`, in order. **No route returns an attachment's bytes.** The upload and the removal change only the controller's attachment store, never CloudRoom. See [Attachments](#attachments-revision-004), and the [attachment limits](../docs/attachment-types.md).
+**Revision 0.0.4 (#16): attachments.** This revision adds the attachment routes: `POST /api/v1/attachments`, which stages one file the owner chose in the browser, as `openwiz attachment add <file> --json` stages one file; `GET /api/v1/attachments`, as `openwiz attachment ls --json`; and `DELETE /api/v1/attachments/{id}`, as `openwiz attachment rm <id> --json`. Their bodies are the CLI's `openwiz.attachment-add.v1`, `openwiz.attachment-list.v1` and `openwiz.attachment-remove.v1` JSON ([`contracts/attachment.v1.schema.json`](attachment.v1.schema.json)), reused unchanged. The send body gains the optional `attachments` (absent means none), and the create's and the new-thread preview's `attachments` now carry staged ids: the CLI's `--attachment <id>`, in order. **No route returns an attachment's bytes.** The upload and the removal change only the controller's attachment store, never CloudRoom. See [Attachments](#attachments-revision-004-16), and the upload addendum in `docs/web-access.md` (B-9).
 
-**Status: Current interface; fixture test.** The current send, create and attachment routes are covered by synthetic tests. The 0.0.3 PC test held its release-blocking claims with gaps; the 0.0.4 run recorded held claims and gaps, including missing observed spawn-receipt fixture coverage; see [testing and gaps](../docs/testing.md).
+**Status:** implemented and proven on fixtures only (`tests/web-api`), the web page (A8, #46), the send routes (W1 to W6, W15; #9), the new-thread routes (U1 to U6, U9, U11, U12; #12) and the attachment routes (AW1 to AW5; #16) included. Live behaviour, the access path (Cloudflare Tunnel and Access) and the owner's decisions are pending; fixture results do not settle those live checks.
 
 ## Transport
 
 - **Loopback only.** The server listens on `127.0.0.1:<port>` and nothing else; no option chooses another address. The port is `--port N`, default `7370` (provisional); `--port 0` picks a free one. Nothing opens an inbound port.
 - **HTTP/1.1 and HTTP/1.0 over plain TCP.** One request per connection: every response carries `Connection: close`. No keep-alive, no pipelining, no `Upgrade` (a WebSocket request gets an ordinary response), no server-sent events, no compression.
-- **`GET` only** on the API, except four **`POST`** routes: the send ([Sending](#sending-the-one-write)), the create and the new-thread preview ([Creating](#creating-the-second-write)), and the upload ([Attachments](#attachments-revision-004)); one **`DELETE`**, the removal of a staged attachment; and **`GET` and `HEAD`** on the web page's paths when `--web-root` is given ([below](#the-web-page---web-root)). No request body is accepted, except a `POST`'s: JSON, or an upload's raw bytes.
+- **`GET` only** on the API, except six **`POST`** routes: the send ([Sending](#sending-the-one-write)), the create and the new-thread preview ([Creating](#creating-the-second-write)), the upload ([Attachments](#attachments-revision-004-16)), and the two local loop switches ([Routes](#routes)); one **`DELETE`**, the removal of a staged attachment; and **`GET` and `HEAD`** on the web page's paths when `--web-root` is given ([below](#the-web-page---web-root)). No request body is accepted, except a `POST`'s: JSON, or an upload's raw bytes.
 - **Same origin.** No CORS header is ever sent, so a browser page on another origin cannot read a response.
 
 ## Routes
 
 | Route | Same as | Success body |
 | --- | --- | --- |
+| `GET /api/v1/setup` | Read-only installation prerequisites; no account or provider calls | `openwiz.setup.v1`: independent missing/unknown readiness, engine/cost provenance and setup effect records; [setup.v1.md](setup.v1.md). No query/body or effect route |
+| `GET /api/v1/plan` | Read-only GitHub milestones, specs, tickets and dependency/PR facts in this repository | `openwiz.plan.v1`: lanes, ticket states/ownership, blockers/dependents and critical chain with coverage/freshness; [plan.v1.md](plan.v1.md). Contract first (#651); route is U2. No query/body; existing read guards and budgets apply |
+| `GET /api/v1/decisions` | Read-only GitHub fenced decision requests and current wording, plus the existing configured target verification | `openwiz.decisions.v1` response: valid open records, coverage/freshness and verified orchestrator target; malformed records are gaps; [decisions.v1.md](decisions.v1.md). Contract first (#651); route is U5. No query/body; existing read guards and budgets apply |
+| `GET /api/v1/cockpit` | One read across projects: inventory, fleets and the server-configured orchestrator targets | `openwiz.cockpit.v1`: Needs you, running agents and per-part coverage/freshness; [cockpit.v1.md](cockpit.v1.md). Contract first (#534); route implementation is #535 |
 | `GET /api/v1/inventory` | `openwiz ls` or `ls -l`, with the query below | The envelope, as `ls --json` or `ls -l --json` prints it |
 | `GET /api/v1/sessions/{id}` | `openwiz show <id> --json` | The envelope, as `show --json` prints it |
+| `GET /api/v1/fleets` | `openwiz fleets --json` | The `openwiz.fleet.v1` fleets view; see [Fleets](#fleets-revision-006-127) |
+| `GET /api/v1/fleets/{spec}` | `openwiz fleet <spec> --json` | The `openwiz.fleet.v1` fleet view; see [Fleets](#fleets-revision-006-127) |
 | `POST /api/v1/sessions/{id}/messages` | `openwiz send <id> --op-id <op> [--steer] [--resume-paused-queue] [--accept-possible-duplicate] --json -- <text>` | The send report (`openwiz.messaging.v1`), as `send --json` prints it. **The one write.** Only on the configured host name; see [Sending](#sending-the-one-write) |
 | `GET /api/v1/sessions/{id}/preview` | `openwiz send <id> --preview [--steer] --json` | The preview (`openwiz.send-preview.v1`). Reads the target; never claims or sends |
 | `GET /api/v1/sessions/{id}/messages/{op_id}` | `openwiz send <id> --op-id <op_id> --check --json` | The lookup (`openwiz.send-lookup.v1`). Reads the send record only; no `room-cli` call; never claims or sends |
@@ -32,16 +36,19 @@ The HTTP API of `openwiz-server` (`crates/server`), for OpenWiz 0.0.2, 0.0.3 and
 | `POST /api/v1/projects/{id}/threads/preview` | `openwiz new --project-id <id> --harness <h> --model <m> --effort <e> --op-id <op> --json -- <text>` (without `--yes`) | The new-thread preview (`openwiz.new-thread-preview.v1`): the effects before pressing. Reads only; **never claims, records or creates**. A `POST` only because it carries the prompt; see [Creating](#creating-the-second-write) |
 | `POST /api/v1/projects/{id}/threads` | `openwiz new --project-id <id> --harness <h> --model <m> --effort <e> --op-id <op> --yes --json -- <text>` | The new-thread report (`openwiz.new-thread.v1`), as `new --yes --json` prints it, with the start read once. **The second write.** Only on the configured host name |
 | `GET /api/v1/new-threads/{op_id}` | `openwiz new --status <op_id> --json` | The status (`openwiz.new-thread-status.v1`). Reads the record and what it names; **never claims, writes or creates** |
-| `POST /api/v1/attachments` | `openwiz attachment add <file> --json`, for one file | The add report (`openwiz.attachment-add.v1`) of that one file: ready or failed, with the core's reason. **Raw body** (`application/octet-stream`), never multipart. Only on the configured host name; see [Attachments](#attachments-revision-004) |
+| `POST /api/v1/attachments` | `openwiz attachment add <file> --json`, for one file | The add report (`openwiz.attachment-add.v1`) of that one file: ready or failed, with the core's reason. **Raw body** (`application/octet-stream`), never multipart. Only on the configured host name; see [Attachments](#attachments-revision-004-16) |
 | `GET /api/v1/attachments` | `openwiz attachment ls --json` | The list report (`openwiz.attachment-list.v1`): the staged attachments' records and states. **Never their bytes**; no `room-cli` call |
-| `DELETE /api/v1/attachments/{id}` | `openwiz attachment rm <id> --json` | The remove report (`openwiz.attachment-remove.v1`). Refused while an operation may still use it. Only on the configured host name |
+| `DELETE /api/v1/attachments/{id}` | `openwiz attachment rm <id> --json` | The remove report (`openwiz.attachment-remove.v1`). Refused while an operation may still use it (B-6). Only on the configured host name |
+| `GET /api/v1/loops` | Nothing: no CLI command (#549) | `openwiz.loops-view.v1`: every OpenWiz loop in the trusted checkout's default branch, with its effective switch, next run, last run, 24-hour cost and problem, problems first; see [Loops view](#loops-view-549). No query/body; the usual `GET` rules; no `room-cli` call. Missing or unverified trusted context: `503 loops_unavailable`, never an empty list |
+| `POST /api/v1/loops/{name}/off` | `openwiz loop off <name> --json` | Saved local switch event: `loop_id`, `definition_revision`, `repository`, `project`, `enabled: false`, `actor`, `at_ms`. Exact OpenWiz name or ID in one segment, no decoding/query; exactly `{}` JSON body (1 024-byte cap). Same configured-public-host, origin, custom-header, JSON type and framing guards as send. Trusted checkout/repository/project and operator come only from local embedding; missing context refuses (`503 switch_unavailable`), invalid/foreign/ambiguous targets or failed saves refuse (`409 switch_refused`). Effective state and audit save together under the scheduler lock; wait up to 30 seconds for a running pass, then refuse with retryable `503 switch_busy` and `Retry-After: 5`, with no switch or audit event saved. No CloudRoom call, kill, activation or approval |
+| `POST /api/v1/loops/{name}/on` | `openwiz loop on <name> --json` | Same saved event and guards as off, with `enabled: true`; the same bounded lock wait and retryable `503 switch_busy` with `Retry-After: 5` apply; restores admission only under existing approval, budget and capacity gates. Local state only; no new live authority |
 | `GET /api/v1/health` | Nothing: no `room-cli` read | `{"server": {"name": "openwiz-server", "version": "<crate version>"}, "source": {"name": "room-cli", "tested_version": "<the version last live-tested: evidence, not a gate>"}}` |
 
-Paths match exactly, case-sensitive, with no trailing slash and no percent-decoding. `{id}` and `{op_id}` are each one path segment. Any other path is `404` (`no_route`), except the web page's files when `--web-root` is given; so is `/api/v1/new-threads/{op_id}/retry`, for every method (there is no retry, the request contract). On `/api/v1/sessions/{id}/messages`, `/api/v1/projects/{id}/threads` and `/api/v1/projects/{id}/threads/preview`, any method other than `POST` is `405` with `Allow: POST`. On `/api/v1/attachments`, any method other than `GET` and `POST` is `405` with `Allow: GET, POST`; on `/api/v1/attachments/{id}`, any method other than `DELETE` is `405` with `Allow: DELETE`. Any method other than `GET`, on any other path, is `405` with `Allow: GET`. That includes `HEAD`; only the web page's paths take it. As HTTP requires, a response to a request that is, or may be, a `HEAD` request has the usual headers but **no body and no `Content-Length`** (which would have to describe a `GET`'s body: RFC 9110, 8.6 and 9.3.2), whatever its status: a web file's `200`, a `404` or `405`, an earlier refusal (`400`, `408`, `414`, `421`, `431`, `505`), or the connection cap's `503`. "May be" means its first bytes, as far as they arrived, are `HEAD ` or a non-empty beginning of it (`H`, `HE`, `HEA`, `HEAD`): over the connection cap the server peeks at them for up to 200 ms; otherwise they are the bytes read before the refusal. A response to a request none of whose bytes arrived, or whose first bytes cannot begin `HEAD `, has its body and `Content-Length` as usual. The send and the create are the only writes to CloudRoom; the upload and the removal change only the controller's attachment store. There are no retry, launch, approval or other write routes, and no route that returns an attachment's bytes.
+Paths match exactly, case-sensitive, with no trailing slash and no percent-decoding. `{id}` and `{op_id}` are each one path segment. Any other path, including `/api/v1/new-threads/{op_id}/retry`, is `404` (`no_route`) for `GET` and `405` with `Allow: GET` for other methods, except the web page's paths (`/`, `/setup`, `/setup/`, `/_next/static/…`, `/fonts/…`, `/manifest.webmanifest`, `/sw.js`, `/sw-register.js` and `/icons/…`) when `--web-root` is given (there is no retry, sheet A-3). On `/api/v1/sessions/{id}/messages`, `/api/v1/projects/{id}/threads`, `/api/v1/projects/{id}/threads/preview`, `/api/v1/loops/{name}/off` and `/api/v1/loops/{name}/on`, any method other than `POST` is `405` with `Allow: POST`. On `/api/v1/attachments`, any method other than `GET` and `POST` is `405` with `Allow: GET, POST`; on `/api/v1/attachments/{id}`, any method other than `DELETE` is `405` with `Allow: DELETE`. Any method other than `GET`, on any other path, is `405` with `Allow: GET`. That includes `HEAD`; only the web page's paths take it. As HTTP requires, a response to a request that is, or may be, a `HEAD` request has the usual headers but **no body and no `Content-Length`** (which would have to describe a `GET`'s body: RFC 9110, 8.6 and 9.3.2), whatever its status: a web file's `200`, a `404` or `405`, an earlier refusal (`400`, `408`, `414`, `421`, `431`, `505`), or the connection cap's `503`. "May be" means its first bytes, as far as they arrived, are `HEAD ` or a non-empty beginning of it (`H`, `HE`, `HEA`, `HEAD`): over the connection cap the server peeks at them for up to 200 ms; otherwise they are the bytes read before the refusal. A response to a request none of whose bytes arrived, or whose first bytes cannot begin `HEAD `, has its body and `Content-Length` as usual. The send and the create are the only writes to CloudRoom; the upload and the removal change only the controller's attachment store; the two loop switches change only local loop state. There are no retry, launch, approval or other write routes, and no route that returns an attachment's bytes.
 
 ## The web page (`--web-root`)
 
-`openwiz-server --web-root DIR` also serves `apps/web`'s static export (`npm run build` makes `apps/web/out`) on the same origin as the API: a same-origin static export. **Without `--web-root`, every non-API path is `404`**, as before.
+`openwiz-server --web-root DIR` also serves `apps/web`'s static export (`npm run build` makes `apps/web/out`) on the same origin as the API: approval sheet A-8, option (a), built in #46. **Without `--web-root`, every non-API path is `404`**, as before.
 
 - **One directory, loaded once, at start.** `DIR` is given at most once and must be a directory holding a regular `index.html` (a symlink in `DIR` itself is resolved once, at start). Before listening, the server walks all of `DIR` and reads its files into memory. It refuses the whole directory, and does not start (exit 1, with a message that names the rule, never the path), if any entry anywhere under it:
   - is a symlink, even one pointing inside `DIR`;
@@ -51,16 +58,24 @@ Paths match exactly, case-sensitive, with no trailing slash and no percent-decod
   - is a file over 1 MiB; or if there are more than 512 files, more than 8 MiB in all, or directories nested more than 16 deep.
 
   **No request touches the filesystem.** Every answer comes from the files loaded at start, so replacing, changing or deleting `DIR`, an ancestor or a file afterwards changes nothing that is served. **To serve a new export, restart the server.** The one open of each file happens at start, just after its type is checked; a file swapped for a FIFO at that moment could delay the start, never a request.
-- **An allowlist that matches the export.** Only three web paths, with these log routes:
+- **An allowlist that matches the export.** Only the following web paths, with these log routes:
 
   | Request path | Served file | Log route | `Cache-Control` |
   | --- | --- | --- | --- |
   | `/` | `DIR/index.html` | `/` | `no-store` |
+  | `/setup` | `DIR/setup.html` | `/setup` | `no-store` |
+  | `/setup/` | `DIR/setup.html` | `/setup` | `no-store` |
   | `/_next/static/<path>` | `DIR/_next/static/<path>` | `/_next/static/*` | `private, max-age=31536000, immutable` |
   | `/fonts/<path>` | `DIR/fonts/<path>` | `/fonts/*` | `private, max-age=31536000, immutable` |
+  | `/manifest.webmanifest` | `DIR/manifest.webmanifest` | `/manifest.webmanifest` | `no-store` |
+  | `/sw.js` | `DIR/sw.js` | `/sw.js` | `no-store` |
+  | `/sw-register.js` | `DIR/sw-register.js` | `/sw-register.js` | `private, max-age=31536000, immutable` |
+  | `/icons/<path>` | `DIR/icons/<path>` | `/icons/*` | `private, max-age=31536000, immutable` |
+
+  The last four (#1029; Jake's approval is preserved in the [private record](https://github.com/jparker2006/ClosedWiz/issues/1277#issuecomment-6704800036), recorded 2026-11-07) make the app installable: its manifest, its app-shell service worker, the one script that registers it, and its icons. The worker caches only the static shell in the owner's browser; it never stores an API answer, and never queues, retries or replays a write.
 
   Nothing else under `DIR` is served: not `/index.html`, `/404.html`, `/_next/<build id>/…`, nor any other top-level file. Any other path is the API's `404` (`no_route`).
-- **Containment.** A request is matched exactly against the loaded paths: nothing is percent-decoded, resolved or normalised, so `..`, `.`, `//`, a trailing `/`, `\`, `%2e%2e` and every other path not loaded are `404` (`no_route`). There is no directory listing and no index other than `/`.
+- **Containment.** A request is matched exactly against the loaded paths: nothing is percent-decoded, resolved or normalised, so `..`, `.`, `//`, a trailing `/` except the exact `/setup/` route, `\`, `%2e%2e` and every other path not loaded are `404` (`no_route`). There is no directory listing and no index other than `/`.
 - **A fixed table of content types.** A file with any other extension anywhere under `DIR` stops the start:
 
   | Extension | `Content-Type` |
@@ -70,16 +85,18 @@ Paths match exactly, case-sensitive, with no trailing slash and no percent-decod
   | `.css` | `text/css; charset=utf-8` |
   | `.woff2` | `font/woff2` |
   | `.txt` | `text/plain; charset=utf-8` |
+  | `.webmanifest` | `application/manifest+json` |
+  | `.png` | `image/png` |
 
 - **Methods.** `GET` and `HEAD` only; any other method on a web path is `405` with `Allow: GET, HEAD`. A response to `HEAD` has `GET`'s status and headers, without a body or `Content-Length`, as above. A web path takes no query (`400`, `invalid_request`) and no body (`400`, `bad_request`). The `Host` check comes first, as for the API.
 - **Headers on a web file** (`200`), separate from the API's:
   - `Content-Type` from the table, and `Cache-Control` from the route table;
-  - `Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' blob:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'` . **`img-src blob:`**: the tray's thumbnails are object URLs of the owner's own chosen file, made in the browser; nothing else changes, and no server answer is ever an image;
+  - `Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' blob:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'` (#6's page policy: no inline script or style, no `unsafe-*`, nonce or hash). **`img-src blob:`** (#16, recorded against #6's V3): the tray's thumbnails are object URLs of the owner's own chosen file, made in the browser. **`manifest-src 'self'` and `worker-src 'self'`** (#1029): the installable app's manifest and worker, from this origin only. The app's own icons (`/icons/…`) are the only images this server answers;
   - `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY`, `Connection: close` and `Content-Length`;
   - no CORS header, `Set-Cookie`, `Server`, `ETag` or `Last-Modified`.
 
   Every refusal on a web path (`400`, `404`, `405`, `421`, …) is the API's JSON error with the API's headers.
-- **Caching** is the builder's default, for the owner to confirm: the hashed assets and fonts are cached by the owner's browser for a year (`private`: never by a shared cache such as Cloudflare's edge), and the page is never stored, so a new build is picked up on the next load. The fonts are not content-hashed: a changed font needs a new file name.
+- **Caching** is the builder's default, for the owner to confirm: the hashed assets and fonts are cached by the owner's browser for a year (`private`: never by a shared cache such as Cloudflare's edge), and the page, the manifest and the worker are never stored, so a new build is picked up on the next load. The fonts, the icons and `/sw-register.js` are not content-hashed: a changed one needs a new file name.
 
 ### `GET /api/v1/inventory` query
 
@@ -101,7 +118,7 @@ The server defines no inventory limit of its own. The cap on `limit` (the core's
 
 ## Sending (the one write)
 
-Added in revision 0.0.3. Owner identity is checked by the tunnel's Access check before a request reaches the server; the server never reads a `Cf-Access-*` header or the `CF_Authorization` cookie. Sends are **never coalesced**: the read routes' single-flight never applies to them, and two sends share nothing except through their op id.
+Added in revision 0.0.3 (#9), under the write-security decisions WS-1 to WS-14 and U5 to U9. Owner identity is checked by the tunnel's Access check before a request reaches the server (WS-1 (a)); the server never reads a `Cf-Access-*` header or the `CF_Authorization` cookie. Sends are **never coalesced**: the read routes' single-flight never applies to them, and two sends share nothing except through their op id.
 
 ### `POST /api/v1/sessions/{id}/messages`
 
@@ -132,12 +149,12 @@ Browsers set `Origin` and `Sec-Fetch-Site` themselves; a page sends the request 
 
 | Key | Required | Value | CLI |
 | --- | --- | --- | --- |
-| `op_id` | yes | A string, the core's op-id rule: 1 to 64 ASCII letters, digits, `_` or `-`, starting with a letter or digit. The web makes `web-`, 32 lowercase hex digits, `-`, then `q` or `s` and a number , once per draft and mode, and reuses it on every retry and reload. The server applies only the core's rule, never this form | `--op-id` |
+| `op_id` | yes | A string, the core's op-id rule: 1 to 64 ASCII letters, digits, `_` or `-`, starting with a letter or digit. The web makes `web-`, 32 lowercase hex digits, `-`, then `q` or `s` and a number (`web-<32 hex>-<q|s><n>`, such as `web-0123456789abcdef0123456789abcdef-q1`: 39 characters; the composer's decision D11, PR #92), once per draft and mode, and reuses it on every retry and reload (WS-7). The server applies only the core's rule, never this form | `--op-id` |
 | `mode` | yes | `"queue"` or `"steer"`: the mode of the button pressed | `--steer` for `"steer"` |
 | `text` | yes | A string: the message, sent as it is. The core's text rule (not empty, not only whitespace, no NUL, at most 16 384 bytes of UTF-8) | the text after `--` |
 | `resume_paused_queue` | no (absent is `false`) | `true` only from the owner's explicit choice to resume a paused queue | `--resume-paused-queue` |
 | `accept_possible_duplicate` | no (absent is `false`) | `true` only from the owner's explicit choice to send knowing it may duplicate an earlier send | `--accept-possible-duplicate` |
-| `attachments` | no  | A JSON array of strings: staged attachment ids, in the owner's order, through the core's one gate ([Attachments in a send and a create](#attachments-in-a-send-and-a-create)). Never with `"mode": "steer"` (the core refuses it) | `--attachment <id>`, once per id |
+| `attachments` | no (absent is none; #16) | A JSON array of strings: staged attachment ids, in the owner's order, through the core's one gate ([Attachments in a send and a create](#attachments-in-a-send-and-a-create)). Never with `"mode": "steer"` (the core refuses it) | `--attachment <id>`, once per id |
 
 Any other key (including `target`), a repeated key, a value of the wrong JSON type, a root that is not an object, invalid JSON or UTF-8, or anything after the object but whitespace is `400` (`invalid_request`), and nothing is read, claimed or sent. The message names the rule, never the value. **Only this one shape is a body:** an array (even one that lists the five values in order), `null` or any other JSON form is refused; `op_id` and `text` are JSON strings, the two flags JSON `true` or `false`, `mode` only the JSON string `"queue"` or `"steer"` (never an object such as `{"queue": null}`), and `attachments` only an array of JSON strings. Keys may come in any order.
 
@@ -182,13 +199,13 @@ The server opens the same send record as `openwiz send`: `$OPENWIZ_STATE_DIR`, e
 
 ## Creating (the second write)
 
-Added in revision 0.0.4. Owner identity is the tunnel's. Creates are **never coalesced**: the read routes' single-flight never applies to them, and two creates share nothing except through their op id. **There is no retry**: an uncertain create stays uncertain, and nothing here, in the core or in the web, ever creates a second time by itself.
+Added in revision 0.0.4 (#12), from the creation addendum in `docs/web-access.md` ("Creating a thread"), under the creation decisions A-3 and A-9 to A-14: 0.0.3's WS-1 to WS-14 apply unchanged. Owner identity is the tunnel's (WS-1 (a)). Creates are **never coalesced**: the read routes' single-flight never applies to them, and two creates share nothing except through their op id. **There is no retry** (A-3): an uncertain create stays uncertain, and nothing here, in the core or in the web, ever creates a second time by itself.
 
 The four routes call only the core, as `openwiz new` and `openwiz models` do, and answer with what the CLI prints with `--json`. The server checks only the request's shape (the headers, the body's framing, size and JSON, below) and works out no option, effect, outcome, stage or retry. **Without a new-thread configuration** (an in-process server in a test), all four are `404` for every method.
 
 ### `POST /api/v1/projects/{id}/threads`
 
-**The project is `{id}`, and only `{id}`:** one existing project, by its id, passed to the core as `--project-id` would be. The request carries the send's headers, all exactly once, with the same values and rules ([the send's table](#post-apiv1sessionsidmessages)): `Host` (the configured host name, never loopback: `421`), `Origin: https://<allowed-host>`, `Sec-Fetch-Site: same-origin`, `X-OpenWiz-Send: 1` (the send header, kept for every `POST`), `Content-Type: application/json` (optionally `; charset=utf-8`) and `Content-Length`; `Transfer-Encoding` is refused. No query: any `?` is `400` (`invalid_request`). `Expect` is ignored.
+**The project is `{id}`, and only `{id}`:** one existing project, by its id, passed to the core as `--project-id` would be. The request carries the send's headers, all exactly once, with the same values and rules ([the send's table](#post-apiv1sessionsidmessages)): `Host` (the configured host name, never loopback: `421`), `Origin: https://<allowed-host>`, `Sec-Fetch-Site: same-origin`, `X-OpenWiz-Send: 1` (WS-4's header, kept for every `POST`), `Content-Type: application/json` (optionally `; charset=utf-8`) and `Content-Length`; `Transfer-Encoding` is refused. No query: any `?` is `400` (`invalid_request`). `Expect` is ignored.
 
 **The body** is one JSON object, UTF-8, at most **99 328 bytes** (the send's cap: the core's text cap fully JSON-escaped, plus 1 KiB for the other keys):
 
@@ -205,16 +222,16 @@ The four routes call only the core, as `openwiz new` and `openwiz models` do, an
 
 | Key | Value | CLI |
 | --- | --- | --- |
-| `op_id` | A string, the core's op-id rule (1 to 64 ASCII letters, digits, `_` or `-`, starting with a letter or digit). The web makes `web-`, 32 lowercase hex digits, `-c`, then a number (`web-<32 hex>-c<n>`, 39 characters for attempt 1), once per draft attempt, stores it first, and reuses it on every repeat and reload. The server applies only the core's rule, never this form | `--op-id` |
+| `op_id` | A string, the core's op-id rule (1 to 64 ASCII letters, digits, `_` or `-`, starting with a letter or digit). The web makes `web-`, 32 lowercase hex digits, `-c`, then a number (`web-<32 hex>-c<n>`, 39 characters for attempt 1), once per draft attempt, stores it first, and reuses it on every repeat and reload (WS-7). The server applies only the core's rule, never this form | `--op-id` |
 | `harness` | A string: the catalogue's harness id, as offered by `GET /api/v1/cloud-options`. The core's setting rule (1 to 128 printable ASCII characters, no space, not starting with `-`); nothing is defaulted | `--harness` |
 | `model` | A string, the same rule | `--model` |
 | `effort` | A string, the same rule | `--effort` |
 | `text` | A string: the prompt, passed as it is. The core's text rule (not empty, not only whitespace, no NUL, at most 16 384 bytes of UTF-8) | the text after `--` |
-| `attachments` | A JSON array of strings: staged attachment ids, in the owner's order, through the core's one gate ([Attachments in a send and a create](#attachments-in-a-send-and-a-create)). `[]` is a text-only prompt | `--attachment <id>`, once per id |
+| `attachments` | A JSON array of strings: staged attachment ids, in the owner's order, through the core's one gate (#16; [Attachments in a send and a create](#attachments-in-a-send-and-a-create)). `[]` is a text-only prompt | `--attachment <id>`, once per id |
 
 All six keys are required, each exactly once, each of its own JSON type; keys may come in any order. Any other key, a missing or repeated key, a value of the wrong JSON type (an `attachments` element included), a root that is not an object, invalid JSON or UTF-8, or anything after the object but whitespace is `400` (`invalid_request`), and nothing is read, claimed or created. The message names the rule, never the value.
 
-**Then the core, in `openwiz new`'s order:** the op id, then the request (the text, the project and the three settings): a refusal is `400` (`invalid_request`) with the core's message (it never repeats the text); then a create slot (`503`, `busy`); then the core's `new_thread`: the claim, the reads, the options check, the effects, the one `spawn` and the outcome. For a **created** thread (recorded now, or replayed), the server then reads its start **once** (`thread show`), as the CLI's first follow read (the CLI follows it for up to 60 s; the web follows it with its own refresh, through the status route).
+**Then the core, in `openwiz new`'s order:** the op id, then the request (the text, the project and the three settings): a refusal is `400` (`invalid_request`) with the core's message (it never repeats the text); then a create slot (`503`, `busy`); then the core's `new_thread`: the claim, the reads, the options check, the effects, the one `spawn` and the outcome. For a **created** thread (recorded now, or replayed), the server then reads its start **once** (`thread show`), as the CLI's first follow read (A-9: the CLI follows it for up to 60 s; the web follows it with its own refresh, through the status route).
 
 **The answer** is the CLI's, by its exit code:
 
@@ -239,7 +256,7 @@ What the create would do now, from the reads it makes (the version, the project 
 
 ### `GET /api/v1/cloud-options`
 
-The harnesses, models and efforts CloudRoom offers now, from one `cloud status` read with only the catalogue keys (the request contract): `openwiz models --json`. Nothing is marked default or preselected. No query (`400`). The usual `GET` rules apply (loopback or the configured host name). It is a core run: a read slot, shared by identical requests in progress.
+The harnesses, models and efforts CloudRoom offers now, from one `cloud status` read with only the catalogue keys (sheet A-2): `openwiz models --json`. Nothing is marked default or preselected. No query (`400`). The usual `GET` rules apply (loopback or the configured host name). It is a core run: a read slot, shared by identical requests in progress.
 
 | CLI exit | Status | Body |
 | --- | --- | --- |
@@ -261,15 +278,15 @@ The record of `{op_id}` and, for a created thread, its start stage from one `thr
 
 The server opens the same new-thread record as `openwiz new`: `new-threads/` in `$OPENWIZ_STATE_DIR`, else the owner's default state directory, read when each request needs it, so the CLI and the web share op-id claims. The server never sets its own.
 
-## Attachments (revision 0.0.4)
+## Attachments (revision 0.0.4, #16)
 
-Added in revision 0.0.4. Owner identity is the tunnel's. The three routes call only the attachment store (`openwiz-store`) and the core's rules, as `openwiz attachment add`, `ls` and `rm` do, and answer with what the CLI prints with `--json`; **none calls `room-cli`.** The server checks only the request's shape and bounds, and works out no kind, name, limit, floor, gate or retention rule. **Without an attachment configuration** (an in-process server in a test), all three are `404` for every method, and a send or create with attachments is refused by the core's gate (no attachment is found).
+Added in revision 0.0.4 (#16), from the upload addendum in `docs/web-access.md` ("Uploading attachments"), under the attachment decisions B-1 to B-10: 0.0.3's WS-1 to WS-14 apply unchanged. Owner identity is the tunnel's (WS-1 (a)). The three routes call only the attachment store (`openwiz-store`) and the core's rules, as `openwiz attachment add`, `ls` and `rm` do, and answer with what the CLI prints with `--json`; **none calls `room-cli`.** The server checks only the request's shape and bounds, and works out no kind, name, limit, floor, gate or retention rule. **Without an attachment configuration** (an in-process server in a test), all three are `404` for every method, and a send or create with attachments is refused by the core's gate (no attachment is found).
 
 **No route returns an attachment's bytes**, ever: not the upload, the list, the removal, an error, or any other path. The web's thumbnails come from the browser's own copy of the chosen file.
 
 ### `POST /api/v1/attachments`
 
-One file's bytes, staged as `openwiz attachment add <file> --json` stages one file: streamed straight into the attachment store's staging in 64 KiB pieces (no file is written anywhere else), hashed as it arrives, then verified. Its kind (from the bytes), safe name, provider limits (10 MiB per image, 25 MiB per file, the image-typed extensions), the free-disk floor and the extension rule are the core's, checked before the copy is written. **Ready means only that the controller holds a verified copy**: nothing is sent to CloudRoom.
+One file's bytes, staged as `openwiz attachment add <file> --json` stages one file: streamed straight into the attachment store's staging in 64 KiB pieces (no file is written anywhere else), hashed as it arrives, then verified. Its kind (from the bytes), safe name, provider limits (10 MiB per image, 25 MiB per file, F26's image-typed extensions), the free-disk floor (B-3) and the extension rule (B-5) are the core's, checked before the copy is written. **Ready means only that the controller holds a verified copy**: nothing is sent to CloudRoom.
 
 The request carries, all exactly once:
 
@@ -278,9 +295,9 @@ The request carries, all exactly once:
 | `Host` | The configured public host name, exactly; never loopback (`421`), as for the send |
 | `Origin` | `https://<allowed-host>` |
 | `Sec-Fetch-Site` | `same-origin` |
-| `X-OpenWiz-Send` | `1` (the send header, kept for every write) |
+| `X-OpenWiz-Send` | `1` (WS-4's header, kept for every write) |
 | `Content-Type` | `application/octet-stream`, exactly (case-insensitive), with no parameter. **Never `multipart/form-data`** or any other type |
-| `Content-Length` | The body's length in decimal digits: at most **26 214 400** (25 MiB, the core's per-file limit `FILE_MAX_BYTES`, the largest provider limit; the request rules). `Transfer-Encoding` is refused |
+| `Content-Length` | The body's length in decimal digits: at most **26 214 400** (25 MiB, the core's per-file limit `FILE_MAX_BYTES`, the largest provider limit; B-9). `Transfer-Encoding` is refused |
 | `X-OpenWiz-Name` | The file's name, as the browser reports it, percent-encoded UTF-8 (what `encodeURIComponent` makes: only ASCII letters, digits, `-_.!~*'()` and `%XX`). Decoded, one file name: 1 to 1 024 bytes of UTF-8, with no `/` or NUL, and not `.` or `..` (as a name `openwiz attachment add` reads from a path always is). Untrusted text: the core makes the staged name from it, and it is never a path |
 
 No query (`400`). `Expect` is ignored. A page sends it with `XMLHttpRequest` (for upload progress): `open("POST", "/api/v1/attachments")`, the headers above plus `X-Requested-With: XMLHttpRequest` (for Access's `401`), and the `File` as the body.
@@ -298,7 +315,7 @@ No query (`400`). `Expect` is ignored. A page sends it with `XMLHttpRequest` (fo
 
 ### `GET /api/v1/attachments`
 
-`openwiz attachment ls --json`: every staged attachment's record and state, oldest first, then the broken ones, and what this read's open swept (unfinished copies, and attachments past their 24-hour time-to-live, the request rules), as `ls` does. **Never the bytes, and never a path.** No query (`400`). The usual `GET` rules apply (loopback or the configured host name; no `Origin` check: another origin can't read the answer). No `room-cli` call.
+`openwiz attachment ls --json`: every staged attachment's record and state, oldest first, then the broken ones, and what this read's open swept (unfinished copies, and attachments past their 24-hour time-to-live, B-2), as `ls` does. **Never the bytes, and never a path.** No query (`400`). The usual `GET` rules apply (loopback or the configured host name; no `Origin` check: another origin can't read the answer). No `room-cli` call.
 
 | CLI | Status | Body |
 | --- | --- | --- |
@@ -307,7 +324,7 @@ No query (`400`). `Expect` is ignored. A page sends it with `XMLHttpRequest` (fo
 
 ### `DELETE /api/v1/attachments/{id}`
 
-`openwiz attachment rm <id> --json`: deletes one staged copy and its record, unless an operation is sending it or may have sent it (the request rules: refused, and kept). `{id}` is one path segment, the CLI's rule (an attachment id: 1 to 64 ASCII letters, digits, `_` or `-`, starting with a letter or digit). The request carries the upload's `Host`, `Origin`, `Sec-Fetch-Site` and `X-OpenWiz-Send`, exactly once each, and **no body** (no `Content-Length` but `0`, no `Transfer-Encoding`: `400`, `bad_request`). No `Content-Type` is needed. No query (`400`).
+`openwiz attachment rm <id> --json`: deletes one staged copy and its record, unless an operation is sending it or may have sent it (B-6: refused, and kept). `{id}` is one path segment, the CLI's rule (an attachment id: 1 to 64 ASCII letters, digits, `_` or `-`, starting with a letter or digit). The request carries the upload's `Host`, `Origin`, `Sec-Fetch-Site` and `X-OpenWiz-Send`, exactly once each, and **no body** (no `Content-Length` but `0`, no `Transfer-Encoding`: `400`, `bad_request`). No `Content-Type` is needed. No query (`400`).
 
 | CLI | Status | Body |
 | --- | --- | --- |
@@ -328,14 +345,14 @@ No query (`400`). `Expect` is ignored. A page sends it with `XMLHttpRequest` (fo
 
 | Bound | Value |
 | --- | --- |
-| Upload body | 26 214 400 bytes (25 MiB, the request rules), with `Content-Length`; streamed in 64 KiB pieces, never held whole |
-| Uploads at once | **2**, apart from the sends, creates and core runs; an upload waits up to 5 s for a slot, then `503`. Taken after the head's checks, before the body is read |
-| Upload deadline | **110 seconds** from the end of the request head, for the whole body and its verification (the request rules: under Cloudflare's 125 s proxy read timeout, documented, not observed); then `408`, and nothing is staged |
+| Upload body | 26 214 400 bytes (25 MiB, B-9), with `Content-Length`; streamed in 64 KiB pieces, never held whole |
+| Uploads at once | **2** (B-9), apart from the sends, creates and core runs; an upload waits up to 5 s for a slot, then `503`. Taken after the head's checks, before the body is read |
+| Upload deadline | **110 seconds** from the end of the request head, for the whole body and its verification (B-9: under Cloudflare's 125 s proxy read timeout, documented, not observed); then `408`, and nothing is staged |
 | List and removal | No body; no slot of their own (local disk only) |
 
 ## Outcomes
 
-Every core outcome maps to one status. The message is the CLI's own text, the one it prints after `openwiz: `, without the CLI's terminal cleaning: JSON escapes control characters instead, and clients must render it as plain text.
+Every core outcome maps to one status. Except for the fleet detail's `502`, the message is the CLI's own text, the one it prints after `openwiz: `, without the CLI's terminal cleaning: JSON escapes control characters instead, and clients must render it as plain text. The fleet detail's `502` message keeps the CLI's terminal cleaning, as described in [Fleets](#fleets-revision-006-127).
 
 | CLI exit | Status | `error.kind` | Core outcome |
 | --- | --- | --- | --- |
@@ -357,7 +374,7 @@ Every error, from the core or from the server, is JSON (except the two bodyless 
 }
 ```
 
-The server's own errors (every error that is not a core outcome, including a bad query's `invalid_request`) never repeat the request's values and carry no file path, environment, stack trace or credential. A core outcome's message is the CLI's: `not_found`, and the core's `invalid_request` for a refused id, can name the id asked for, and a failed read's message carries `room-cli`'s first non-empty stderr line only if that line is in OpenWiz 0.0.1's safe grammar (`Error: HTTP <code>`, optionally `: ` and a reason phrase of ASCII letters and single spaces, at most 60 characters). Otherwise a line containing `HTTP 404: Thread not found` becomes `Error: HTTP 404: Thread not found (detail withheld)` (and a detail read reports that session as not found); any other line keeps only its status, as `Error: HTTP <code> (detail withheld)`, or nothing of it, as `room-cli error (detail withheld)`; an empty stderr is `no error output`. Text `room-cli` prints where a version, JSON or a recorded value is expected is withheld the same way. The same rule holds for a success body's envelope, in `gaps` and in `unknown (…)` reasons, as in `openwiz … --json`. The rule is the adapter's , not the server's; the server adds to the core's text only what the CLI adds: the source's fixed read name (`thread list`, `thread show`) before a failed read. The `room-cli` version is never an error: any version is read, shown in the envelope's `source`, and the run goes on. A letters-only word in a safe line (a name, say) can still be shown, and session content (titles, purposes, final output, a recorded error) is data, shown by design.
+The server's own errors (every error that is not a core outcome, including a bad query's `invalid_request`) never repeat the request's values and carry no file path, environment, stack trace or credential. A core outcome's message is the CLI's: `not_found`, and the core's `invalid_request` for a refused id, can name the id asked for, and a failed read's message carries `room-cli`'s first non-empty stderr line only if that line is in OpenWiz 0.0.1's safe grammar (`Error: HTTP <code>`, optionally `: ` and a reason phrase of ASCII letters and single spaces, at most 60 characters). Otherwise a line containing `HTTP 404: Thread not found` becomes `Error: HTTP 404: Thread not found (detail withheld)` (and a detail read reports that session as not found); any other line keeps only its status, as `Error: HTTP <code> (detail withheld)`, or nothing of it, as `room-cli error (detail withheld)`; an empty stderr is `no error output`. Text `room-cli` prints where a version, JSON or a recorded value is expected is withheld the same way. The same rule holds for a success body's envelope, in `gaps` and in `unknown (…)` reasons, as in `openwiz … --json`. The rule is the adapter's (`crates/adapters/cloudroom`, merged from #21), not the server's; the server adds to the core's text only what the CLI adds: the source's fixed read name (`thread list`, `thread show`) before a failed read. The `room-cli` version is never an error (#37): any version is read, shown in the envelope's `source`, and the run goes on. A letters-only word in a safe line (a name, say) can still be shown, and session content (titles, purposes, final output, a recorded error) is data, shown by design.
 
 ### Every status
 
@@ -370,7 +387,7 @@ The server's own errors (every error that is not a core outcome, including a bad
 | `403` | `missing_custom_header` | A `POST` or the `DELETE` without exactly one `X-OpenWiz-Send: 1` |
 | `404` | `no_route` | Any path other than the routes above (`/api/v1/new-threads/{op_id}/retry` included), or, with `--web-root`, a web path that is not served |
 | `404` | `not_found` | `show` of a session the source does not know |
-| `405` | `method_not_allowed` | Any method other than `GET`; with `Allow: GET`. On `/api/v1/sessions/{id}/messages`, `/api/v1/projects/{id}/threads` and `/api/v1/projects/{id}/threads/preview`, any method other than `POST`; with `Allow: POST`. On `/api/v1/attachments`, any method other than `GET` and `POST`; with `Allow: GET, POST`. On `/api/v1/attachments/{id}`, any method other than `DELETE`; with `Allow: DELETE`. On a web path, any method other than `GET` and `HEAD`; with `Allow: GET, HEAD` |
+| `405` | `method_not_allowed` | Any method other than `GET`; with `Allow: GET`. On `/api/v1/sessions/{id}/messages`, `/api/v1/projects/{id}/threads`, `/api/v1/projects/{id}/threads/preview`, `/api/v1/loops/{name}/off` and `/api/v1/loops/{name}/on`, any method other than `POST`; with `Allow: POST`. On `/api/v1/attachments`, any method other than `GET` and `POST`; with `Allow: GET, POST`. On `/api/v1/attachments/{id}`, any method other than `DELETE`; with `Allow: DELETE`. On a web path, any method other than `GET` and `HEAD`; with `Allow: GET, HEAD` |
 | `408` | `request_timeout` | The request head, or a `POST`'s body, did not arrive within its time (an upload's: the upload deadline) |
 | `411` | `length_required` | A `POST` without `Content-Length` |
 | `413` | `body_too_large` | A `POST` whose `Content-Length` is over 99 328 bytes, or an upload's over 26 214 400 (the body is not read) |
@@ -410,7 +427,7 @@ A request must carry exactly one `Host`, and it must be one of (case-insensitive
 - `127.0.0.1:<port>`, `localhost:<port>` or `[::1]:<port>`, with this server's port;
 - the one configured public host name, exactly, without a port.
 
-The public host name comes only from local configuration: `--allowed-host NAME`, or the environment variable `OPENWIZ_SERVER_ALLOWED_HOST`. It is never committed. It must be a DNS name (letters, digits, `-` and `.`), and, since it is also the send's host name, **a public one**: not a loopback name (`localhost`, any `*.localhost`, `localhost.localdomain`, `ip6-localhost`, `ip6-loopback`, in any case) and not an IP address (a last label of digits only, as in `127.0.0.1`, `127.1` or `2130706433`, or starting `0x`). Otherwise `openwiz-server` does not start (exit 2), and nothing is read. Any other `Host` is `421`, before the method or route is looked at, and nothing is read. **A send, a create and a new-thread preview accept only the configured host name**: with a loopback `Host` each is `421`, after the route is matched, so a page served from loopback can never send or create. This adds a restriction and grants nothing: it is not authentication. Access control is the tunnel's and Access's (see `docs/web-access.md`).
+The public host name comes only from local configuration: `--allowed-host NAME`, or the environment variable `OPENWIZ_SERVER_ALLOWED_HOST`. It is never committed. It must be a DNS name (letters, digits, `-` and `.`), and, since it is also the send's host name, **a public one** (Sol #91, finding 2): not a loopback name (`localhost`, any `*.localhost`, `localhost.localdomain`, `ip6-localhost`, `ip6-loopback`, in any case) and not an IP address (a last label of digits only, as in `127.0.0.1`, `127.1` or `2130706433`, or starting `0x`). Otherwise `openwiz-server` does not start (exit 2), and nothing is read. Any other `Host` is `421`, before the method or route is looked at, and nothing is read. **A send, a create and a new-thread preview accept only the configured host name** (WS-6): with a loopback `Host` each is `421`, after the route is matched, so a page served from loopback can never send or create. This adds a restriction and grants nothing: it is not authentication. Access control is the tunnel's and Access's (see `docs/web-access.md`).
 
 ## Bounds
 
@@ -421,7 +438,7 @@ The public host name comes only from local configuration: `--allowed-host NAME`,
 | Wait for a run | 5 seconds for a core run slot, then `503` with `Retry-After: 5`. Waiting requests are bounded by the connection cap: no queue grows |
 | Identical requests | Requests for the same call (the same route and the same parsed options) while a run for it is in progress share that run and its result (single-flight). A request after the run ends starts a new run: there is no result cache, so every body has its own snapshot time and row ages |
 | Sends at once | 2 sends (the core's `send`), apart from the core runs; a send waits up to 5 seconds for a slot, then `503`. **Never single-flighted:** every accepted send is its own call of `send`; only the op id joins two requests |
-| Creates at once | **1 create** (the core's `new_thread`, the request contract), apart from the sends and the core runs; a create waits up to 5 seconds for the slot, then `503`. **Never single-flighted:** every accepted create is its own call of `new_thread`; only the op id joins two requests |
+| Creates at once | **1 create** (the core's `new_thread`, sheet A-14), apart from the sends and the core runs; a create waits up to 5 seconds for the slot, then `503`. **Never single-flighted:** every accepted create is its own call of `new_thread`; only the op id joins two requests |
 | Send and create body | 99 328 bytes (`6 × 16 384 + 1 024`: the core's text cap fully JSON-escaped, plus the other keys), with `Content-Length`, for each `POST` (the send, the create, the new-thread preview); it must arrive within 10 seconds of the end of the head |
 | Request deadline | 40 seconds from the end of the request head, above the core's 30-second run budget plus the slot wait. A run past it keeps its slot until the core returns; a send or a create past it still finishes and records its outcome |
 | Request head | 10 seconds for the whole request head (not per read), then `408` |
@@ -433,11 +450,208 @@ The public host name comes only from local configuration: `--allowed-host NAME`,
 
 ## Log
 
-One line per request, on stderr: `openwiz-server: <method> <route> <status> <n>ms`. The method is a standard method name or `-`; the route is a route template (such as `/api/v1/sessions/{id}`, `/api/v1/sessions/{id}/messages`, `/api/v1/sessions/{id}/preview`, `/api/v1/sessions/{id}/messages/{op_id}`, `/api/v1/cloud-options`, `/api/v1/projects/{id}/threads`, `/api/v1/projects/{id}/threads/preview` `/api/v1/new-threads/{op_id}`, `/api/v1/attachments` or `/api/v1/attachments/{id}`, or a web route: `/`, `/_next/static/*`, `/fonts/*`) or `-`. Never the query, the id, the project id, the op id, an attachment id, a header value, a body, a message or prompt text or its hash, a setting, a file's name, bytes, size, kind or hash, or any session content.
+One line per request, on stderr: `openwiz-server: <method> <route> <status> <n>ms`. The method is a standard method name or `-`; the route is a route template (such as `/api/v1/sessions/{id}`, `/api/v1/sessions/{id}/messages`, `/api/v1/sessions/{id}/preview`, `/api/v1/sessions/{id}/messages/{op_id}`, `/api/v1/cloud-options`, `/api/v1/projects/{id}/threads`, `/api/v1/projects/{id}/threads/preview` `/api/v1/new-threads/{op_id}`, `/api/v1/attachments` or `/api/v1/attachments/{id}`, or a web route: `/`, `/_next/static/*`, `/fonts/*`, `/setup`, `/manifest.webmanifest`, `/sw.js`, `/sw-register.js`, `/icons/*`) or `-`. Never the query, the id, the project id, the op id, an attachment id, a header value, a body, a message or prompt text or its hash, a setting, a file's name, bytes, size, kind or hash, or any session content.
 
 ## Not in version 1
 
 - Server-side validation of the Cloudflare Access token. See the access evaluation.
 - Any cache, compression, keep-alive, CORS or cookie; any write other than the send and the create, and the upload and removal of a staged attachment.
-- More than one target per send, more than one project or thread per create, a retry of a create (the request contract), a Local thread, a new project, or a title or branch for a new thread.
+- More than one target per send, more than one project or thread per create, a retry of a create (sheet A-3), a Local thread, a new project, or a title or branch for a new thread.
 - Any route that returns an attachment's bytes; multipart uploads; chunked or resumable uploads; folders; Steer with attachments.
+
+## Fleets (revision 0.0.6, #127)
+
+Two read-only routes, in the repository of the server's working directory:
+
+| Route | CLI equivalent | Body |
+| --- | --- | --- |
+| `GET /api/v1/fleets` | `openwiz fleets --json` | The `openwiz.fleet.v1` fleets view |
+| `GET /api/v1/fleets/{spec}` | `openwiz fleet <spec> --json` | The `openwiz.fleet.v1` fleet view |
+
+Each successful body is byte for byte the CLI's JSON for the same sources and
+clock, including its trailing newline. See `contracts/fleet.v1.md` and
+`contracts/fleet.v1.schema.json`. The server calls the same core operations as
+the CLI; it never runs the CLI or constructs a GitHub invocation itself.
+
+- `{spec}` is one path segment: 1 to 10 ASCII decimal digits, no leading zero,
+  sign, spaces or percent-decoding, exactly as the CLI accepts. A noncanonical
+  number is `400` (`invalid_request`), without a source read. A trailing slash,
+  an empty segment or extra segments are `404` (`no_route`).
+- Neither route takes a query (even an empty `?`) or a request body. The existing
+  Host, method, framing, target and head limits apply before any source read.
+  Other methods are `405`, `Allow: GET`; `HEAD` has no response body or
+  `Content-Length`, as on the existing API reads.
+- A complete or partial envelope is `200`: gaps, unknowns and unread values
+  remain in the envelope, as the CLI prints them. When the detail command cannot
+  read its spec's ticket list, its exit 1 becomes `502` (`read_failed`), with
+  the CLI's sanitized message after removing `openwiz: ` and its newline.
+  A missing spec therefore follows the CLI's read failure, rather than inventing
+  a successful empty fleet. The detail view reads CloudRoom projects, threads and
+  Cloud workspaces, and places builders through the same verified chain as the CLI.
+  Failed agent reads remain explicit gaps; the list route reads GitHub only.
+- The existing **2 core runs**, **5 seconds for a core run slot**, **40 seconds
+  from the end of the request head**, connection caps and source budgets apply
+  to fleet and inventory reads together. Identical fleet reads in progress
+  share one run and result; different specs and the list are distinct calls.
+  A later request starts a new run: there is no result cache. Slot overflow is
+  `503` with `Retry-After: 5`; the request deadline is `504` and the unfinished
+  run keeps its slot until it finishes.
+- Every response has the API's security headers and `Cache-Control: no-store`,
+  with no CORS. Logs contain only the method, `/api/v1/fleets` or
+  `/api/v1/fleets/{spec}`, status and duration. Neither the spec value, query,
+  GitHub diagnostic text nor environment values enter the log.
+
+The `openwiz-server` program configures the GitHub and CloudRoom sources, reading
+the `gh` on `PATH` and the verified bundled `room-cli` (never one on `PATH`),
+through their existing adapters' allowlists. Library callers can
+supply sources through `start_with_fleets`; the existing `start` entry point
+has no fleet sources and returns `404` for a valid fleet read.
+
+## Loops view (#549)
+
+`GET /api/v1/loops`, the loops page's one read (LP6). Read only: no `room-cli` call, no Git write, no switch, check or agent, and no loop state created: with none yet it refuses (below). It opens the state as a pass does, through the store's private-state inspection and its existing lock file (the same opening the loop switches use); that opening is not a record change. It reads the same trusted embedded context as the loop switches: the verified checkout, repository, project and private service state (`crates/store/src/loops`). The operator is not needed to read. No query (`400 invalid_request`); the usual `GET` rules (loopback or the configured host name). The page sends no switch from this read.
+
+**What is read, under the scheduler's lock:** the definitions in the checkout's clean default branch (`loops.v1`, `loops/*.json`, exactly as a pass reads them), the run records and the effective switch states. The read waits for a running pass for at most **5 seconds**, then answers `503 loops_busy` with `Retry-After: 5`; nothing was read. Every other failure answers `503 loops_unavailable` with the reason (no trusted context; repository or project identity not verified; no loop state yet, because the scheduler has not run a pass (the read never creates state); the checkout is not its clean default branch; a definition, run record or switch state is invalid or unreadable, or a run was updated before it started or admitted before its occurrence was due). A partial list is never served.
+
+```json
+{
+  "schema": "openwiz.loops-view.v1",
+  "read_at_ms": 1893456300000,
+  "cost_window_ms": 86400000,
+  "loops": [
+    {
+      "id": "ci-watch-atlas",
+      "name": "CI watch: Atlas",
+      "owner": "orchestrator",
+      "mode": "active",
+      "enabled": true,
+      "wake": { "kind": "interval", "every_ms": 600000, "anchor_ms": 1893455400000 },
+      "next_run": { "kind": "at", "at_ms": 1893456600000 },
+      "last_run": { "started_at_ms": 1893456060000, "updated_at_ms": 1893456063000, "result": "check_failed", "reason": "Check could not complete successfully with valid UTF-8 output." },
+      "cost": { "kind": "known", "usd_micros": 0 },
+      "problem": "check_failed"
+    }
+  ]
+}
+```
+
+Every object has exactly these keys. Per loop:
+
+| Key | Value |
+| --- | --- |
+| `id`, `name`, `owner`, `mode`, `wake` | The definition's own values (`loops.v1`), unchanged |
+| `enabled` | The effective switch: the saved runtime state (L6), else the definition's `enabled` for a loop never switched |
+| `next_run` | When the scheduler next checks it, by L2's rule (`crates/core/src/loops/planner.rs`). Off: `{"kind": "none", "why": "off"}`. Event wake: `{"kind": "event", "event": <the wake's event>}`. Interval: the earliest occurrence `anchor_ms + n * every_ms` not covered by a recorded run, where a run covers its occurrence's due time through its `started_at_ms` (a late admission covers the occurrences it skipped). Once: `at_ms`, unless a run records that occurrence: `{"kind": "none", "why": "done"}`. A time after `read_at_ms` is `{"kind": "at", "at_ms"}`; at or before it, `{"kind": "due", "at_ms"}` (due now or overdue: the watchdog, #547, says when that is a problem) |
+| `last_run` | `null` when the loop has no run record; else the record with the greatest `started_at_ms` (then `updated_at_ms`, then `id`): its `started_at_ms`, `updated_at_ms`, `result` (its `result.kind`) and `reason` (the result's `reason`, or `null` for a kind without one). **Never** the finding, op id or thread id |
+| `cost` | The sum of the loop's run costs over the `cost_window_ms` (24 hours) ending at `read_at_ms`, counting runs whose `started_at_ms` is in `(read_at_ms - 86400000, read_at_ms]`: `{"kind": "known", "usd_micros": <sum>}` when every such run's cost is known (no run: `0`); otherwise `{"kind": "unknown", "reason": "<n> of <m> runs in the window did not report cost."}`. Never an estimate |
+| `problem` | `last_run.result` when it is `check_failed`, `check_timed_out`, `not_created`, `refused` or `uncertain`; otherwise `null`. Missed times, stuck runs and approval refusals are the watchdog's (#547), not this read's |
+
+**Order:** loops with a `problem` first, then the rest; within each group by `name` (Unicode code points), then `id`. The page shows this order and never re-sorts. Runs whose `loop_id` names no current definition are not shown. There is no cap on the number of loops.
+
+## Setup (0.0.13 T1)
+
+`GET /api/v1/setup` returns `openwiz.setup.v1`, defined by
+[setup.v1.md](setup.v1.md) and [its schema](setup.v1.schema.json). It takes no
+query or body, performs no external read/write, and creates no state. The
+unconfigured slice reports independent missing/unknown prerequisites and useful
+next steps. It never marks a connection ready from installation alone. This
+route uses existing API no-store/security headers and host/request validation.
+No setup POST or remote-access bypass is introduced. `/setup` and `/setup/`
+serve the matching exported setup.html under the existing page CSP and no-store.
+
+## Notifications (0.0.15 T1, contract only)
+
+These route additions are owned by #2032 and implemented by T3/T4, not this
+contract ticket. [notifications.v1](notifications.v1.md) and its strict schema
+supply the document wrappers below. Existing routes and guards remain unchanged.
+The notification routes are explicit exceptions to the earlier default GET-only
+method table; they grant no CloudRoom work/send, approval or recovery route.
+
+| Exact path | Methods / Allow | Successful request and response | Effects |
+| --- | --- | --- | --- |
+| `/api/v1/notifications/status` | GET | No body/query; 200 `record.status`, including off/unavailable/partial/stale | Read protected state/current prerequisites only; no permission prompt, subscription or submission |
+| `/api/v1/notifications/preferences` | GET, PUT | GET: no body/query, 200 `record.preferences`. PUT: exact `record.preference_write`, 200 resulting `record.preferences` | PUT durably changes only owner enable/toggles/generation; cancels untouched reservations under the admission lock |
+| `/api/v1/notifications/subscription` | GET, PUT, DELETE | GET: no body/query, 200 `record.subscription`. PUT/DELETE: exact `record.subscription_write`, 200 resulting `record.subscription` | PUT registers one already-provisioned protected binding by id; DELETE removes only that matching local binding from future admission and marks revoked; neither creates/revokes a provider resource |
+
+Every response body uses `schema: openwiz.notifications.v1`. Only the declared
+record variant is accepted on a write. All fields, including every category toggle
+and operation/generation/binding id, are strict; extra/missing/duplicate keys,
+positional records, wrong schema/variant, unknown enum or decimal integer spelling
+are 400 `invalid_request`. No route takes any query, including `?` (400). A GET
+body is 400 `bad_request`. Unsupported method is 405 with the table's exact Allow
+list; HEAD has no body or Content-Length.
+
+PUT/DELETE use the existing write guard order: parsed head, Host syntax (400),
+Host allowlist (421), method/route, configured public write Host (421), query,
+Origin/Sec-Fetch-Site (403 `forbidden_origin`), X-OpenWiz-Send (403
+`missing_custom_header`), JSON media type (415), framing (400/411/413), body arrival
+(408), strict body (400), protected store/admission. Required headers exactly once:
+Host = configured public host (never loopback), Origin = `https://<allowed-host>`,
+Sec-Fetch-Site = same-origin, X-OpenWiz-Send = 1, Content-Type = application/json
+(optionally charset=utf-8 as existing writes), Content-Length = exact decimal
+UTF-8 byte count. Transfer-Encoding is refused. Reuse the existing JSON write-body
+cap of 99,328 bytes, request deadlines, connection limits and serialized write
+admission. Clients use credentials same-origin, redirect manual, cache no-store
+and X-Requested-With XMLHttpRequest for Access's expired-session 401 behaviour.
+
+An operation id is generated once for an explicit owner action and retained across
+reload/retry. T3 binds it to the canonical exact write body and saves its result
+atomically with state. Same id/body returns that saved result without effects;
+same id/different body is 409 `operation_conflict`. Only a matching current
+expected_generation may change state; otherwise 409 `generation_conflict`, no
+effect. Accepted mutations increment their generation exactly once (overflow
+refuses with 503 `state_unavailable`), persist before 200 and retain uncertain
+in-flight dispatches. A failed read/lock/sync is 503 `state_unavailable`, never a
+success. PUT subscription requires a current verified binding provisioned only
+under T2's observed interface and explicit owner action; unsupported/unavailable
+binding is 409 `subscription_unavailable`, with no registration or provider call.
+T1 specifies no endpoint/key payload, provider call or automatic permission flow.
+If T2 needs a different interface, return for a contract decision before T4 builds.
+DELETE's body carries the binding id and generation so an old request cannot
+remove a replacement subscription. Native permission revocation/provider cleanup
+has its separate observed T4 flow; local removal alone never claims that effect.
+
+All reads retain existing shared read-slot/deadline behaviour (busy 503 with
+Retry-After, deadline 504). Owner-only authenticated access is the existing access
+layer, never the Host check or possession of a notification token. Denied/expired
+access is 401/403 before protected detail/effects; never follow a foreign login
+redirect or replay a write on reconnect. All route errors use the existing error
+envelope, with the additional codes above only on these routes. Every success and
+refusal uses the API's existing security headers, application/json and no-store,
+no CORS, no Set-Cookie, no API cache. Log only sanitized preference/subscription/
+status route names, never a binding, raw body or key.
+
+Preference/subscription writes are local declared effects only. They cannot return
+work approval, start a builder, merge or answer. Their success does not claim
+permission granted, ready delivery, phone receipt or retraction of a submission
+already admitted. Status retains that boundary and the last unresolved attempt.
+
+## First-hour retention and recovery (#2200, contract only)
+
+What the first hour ([first-hour.v1](first-hour.v1.md)) may rely on from this API
+when a reply is lost or the browser, server, update or removal interrupts it. It
+restates existing guarantees and adds **no route, method, header, bound, write
+authorization or storage**.
+
+- **Tab drafts.** The composer's and launcher's drafts, root ids and attempts
+  live only in that tab's sessionStorage (WS-10). They survive a reload of that
+  tab and a server restart while it stays open. Nothing here claims they survive
+  closing the tab or the browser. That retention is unproven until shown through
+  an existing owner interface; otherwise it needs a scoped contract revision.
+- **Pending operations.** Once a send or a create is claimed, its record in the
+  owner's state directory (One send record, One new-thread record) is the
+  pending operation. It survives a server restart, a rejected update and the
+  removal default, as [install.v1](install.v1.md) keeps owner work, and so do
+  staged attachments.
+- **Reconcile first.** After any interruption, a client reads
+  `GET /api/v1/sessions/{id}/messages/{op_id}` or `GET /api/v1/new-threads/{op_id}`
+  before anything else. A lost reply stays uncertain until that record or the
+  provider's exact resource settles it. Repeating with the **same** op id is the
+  only safe repeat; a new attempt before reconciling is a blind retry in the
+  first-hour evidence. The existing owner-acknowledged controls keep their
+  wording and behaviour.
+- **Setup operations** keep [setup.v1](setup.v1.md)'s rules: the id, fingerprint
+  and proposal persist before any effect, a retry or reload reuses the id, and
+  a later refusal never erases uncertainty. This contract adds no setup write.
+- **Refused or expired access** reaches no effect and leaves drafts and pending
+  records in place. Reconnecting never replays a write.

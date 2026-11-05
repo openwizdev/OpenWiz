@@ -1,0 +1,18 @@
+test_ci_native_units_and_cost_gap (__main__.PageHistory.test_ci_native_units_and_cost_gap) ... ok
+test_differing_concurrent_samples_refuse (__main__.PageHistory.test_differing_concurrent_samples_refuse) ... ok
+test_existing_daily_usage_credits_and_journey (__main__.PageHistory.test_existing_daily_usage_credits_and_journey) ... ok
+test_factory_artifact_refuses_undeclared_fields (__main__.PageHistory.test_factory_artifact_refuses_undeclared_fields) ... ok
+test_factory_daily_usage_is_separate_from_pr_attribution (__main__.PageHistory.test_factory_daily_usage_is_separate_from_pr_attribution) ... ok
+test_finite_invocation (__main__.PageHistory.test_finite_invocation) ... ok
+test_generic_page_and_missing_slots (__main__.PageHistory.test_generic_page_and_missing_slots) ... ok
+test_immutable_atomic_history (__main__.PageHistory.test_immutable_atomic_history) ... ok
+test_page_failure_restart_and_readback (__main__.PageHistory.test_page_failure_restart_and_readback) ... ok
+test_privacy_and_escaping (__main__.PageHistory.test_privacy_and_escaping) ... ok
+test_selection_and_history_fail_closed (__main__.PageHistory.test_selection_and_history_fail_closed) ... ok
+test_source_omission_keeps_last_evidence (__main__.PageHistory.test_source_omission_keeps_last_evidence) ... ok
+test_ticks_restart_and_partial_source (__main__.PageHistory.test_ticks_restart_and_partial_source) ... ok
+
+----------------------------------------------------------------------
+Ran 13 tests in 0.424s
+
+OK

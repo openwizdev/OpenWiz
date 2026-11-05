@@ -1,9 +1,16 @@
-
+// W7 to W13 through ticket 1's real openwiz-server (#91's send, preview and
+// lookup routes), with the repository's fake room-cli over the `send`
+// fixture scenario, and a private send record. The test proxy plays the
+// tunnel: `Host` is the allowed host, and the page's origin arrives as
+// `https://<allowed-host>`. The provider's answers here are the fixtures'
+// (sent, queued, unsupported, invalid input, paused); the scripted faults
+// (lost answers, timeouts, refusals mid-race) need the fake API and are
+// proven there. A provider call is a `thread tell` in the fake room-cli's log.
 
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 
-import { DESKTOP, launchBrowser, openPage, PHONE, readDetail, readView, waitFor } from '../support/browser.mjs';
+import { DESKTOP, launchBrowser, openPage, pageIdle, PHONE, readDetail, readView, waitFor } from '../support/browser.mjs';
 import { button, readComposer, select as selectThread, TEXT, type } from '../support/composer.mjs';
 import { axe } from '../support/harness.mjs';
 import { startFixtureServer } from '../support/rust.mjs';
@@ -33,8 +40,8 @@ async function realSite(responses = null) {
 }
 
 /** Opens the real site and thread `id` (a `thr_syn_` fixture id), and waits for its composer's preview. */
-async function open(fx, id, viewport = DESKTOP) {
-  const p = await openPage(browser, fx.site.origin, { viewport });
+async function open(fx, id, viewport = DESKTOP, clock = null) {
+  const p = await openPage(browser, fx.site.origin, { viewport, clock, stampReads: clock !== null });
   await waitFor(async () => (await readView(p.page)).groups.length > 0, { what: 'rows' });
   await choose(p.page, id);
   return p;
@@ -145,21 +152,39 @@ test('real server: W10: a double click, and a tab duplicated before the send, ma
   }
 });
 
-test('real server: W11, W12, W13: refreshes, placement, keyboard and axe, phone and desktop', async () => {
-  for (const viewport of [PHONE, DESKTOP]) {
+test('real server: W11, W12, W13: refreshes, placement, keyboard and axe, phone and desktop', async (t) => {
+  // One subtest per width, so a break shows at each width, not only the first.
+  for (const [width, viewport] of [['phone', PHONE], ['desktop', DESKTOP]]) await t.test(width, async () => {
+    // A flowing fake clock (#426): the test moves it 1 s per poll, only while the page has
+    // read every answer, so the real server's refreshes come in seconds, not 30 s of real waiting.
     const fx = await realSite();
-    const p = await open(fx, 'thr_syn_0012', viewport);
+    const p = await open(fx, 'thr_syn_0012', viewport, new Date());
     try {
       const where = await p.page.evaluate(() => {
         const c = document.querySelector('[data-part=composer]');
-        return { dialogs: document.querySelectorAll('dialog').length, inDetail: !!c?.closest('dialog[data-part=detail]'), after: c?.previousElementSibling?.getAttribute('data-field') };
+        const detail = c?.closest('dialog[data-part=detail]');
+        const output = detail?.querySelector('[data-field=final-output]');
+        const draft = c?.querySelector('textarea');
+        return {
+          dialogs: document.querySelectorAll('dialog').length,
+          composers: document.querySelectorAll('[data-part=composer]').length,
+          textareas: document.querySelectorAll('textarea').length,
+          inDetail: !!detail,
+          finalBeforeDraft: !!(output && draft && (output.compareDocumentPosition(draft) & Node.DOCUMENT_POSITION_FOLLOWING)),
+        };
       });
-      assert.deepEqual(where, { dialogs: 1, inDetail: true, after: 'final-output' });
+      assert.deepEqual(where, { dialogs: 1, composers: 1, textareas: 1, inDetail: true, finalBeforeDraft: true });
       const box = p.page.locator('[data-part=composer] textarea');
       await box.click();
       await p.page.keyboard.type(TEXT);
       const reads = fx.site.log.filter((e) => e.path.startsWith('/api/')).length;
-      await waitFor(() => fx.site.log.filter((e) => e.path.startsWith('/api/')).length > reads + 2, { what: 'refreshes', timeout: 40_000 });
+      await waitFor(async () => {
+        // The proxy logs a request before it forwards it: done once the page has read every answer.
+        const idle = await pageIdle(p.page);
+        if (idle && fx.site.log.filter((e) => e.path.startsWith('/api/')).length > reads + 2) return true;
+        if (idle) await p.page.clock.runFor(1_000);
+        return false;
+      }, { what: 'refreshes', timeout: 40_000 });
       let c = await readComposer(p.page);
       assert.equal(c.draft, TEXT);
       assert.equal(c.focused, true);
@@ -177,7 +202,7 @@ test('real server: W11, W12, W13: refreshes, placement, keyboard and axe, phone 
       await p.close();
       await fx.close();
     }
-  }
+  });
 });
 
 test('real server: lost acknowledgements: Try again replays, Check again reads the record, Forget it sends the next attempt', async () => {
@@ -219,7 +244,7 @@ test('real server: lost acknowledgements: Try again replays, Check again reads t
   }
 });
 
-test('real server: Check again by keyboard keeps focus while it reads; when its row settles, focus goes to the message field', async () => {
+test('real server: Sol F-1: Check again by keyboard keeps focus while it reads; when its row settles, focus goes to the message field', async () => {
   const fx = await realSite();
   const p = await open(fx, 'thr_syn_0001');
   try {
@@ -239,7 +264,7 @@ test('real server: Check again by keyboard keeps focus while it reads; when its 
   }
 });
 
-test('real server: holding Enter on Send again across the answer makes one more call, not two', async () => {
+test('real server: Sol H-1: holding Enter on Send again across the answer makes one more call, not two', async () => {
   // Synthetic fault: every queue tell to thr_syn_0001 answers non-JSON, which the core reports as uncertain.
   const fx = await realSite([{ argv: ['thread', 'tell', 'thr_syn_0001', '--mode', 'queue', '--json', '--'], any_text: true, stdout: 'synthetic: not json' }]);
   const p = await open(fx, 'thr_syn_0001');

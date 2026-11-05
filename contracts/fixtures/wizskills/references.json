@@ -1,0 +1,22 @@
+[
+  {"name": "local script", "kind": "script", "file": "skills/alpha/SKILL.md", "line": 7, "base": "skills/alpha", "target": "scripts/run.sh", "expected": null},
+  {"name": "carried link", "kind": "link", "file": "skills/alpha/SKILL.md", "line": 7, "base": "skills/alpha", "target": "../../contracts/decisions.v1.md", "expected": null},
+  {"name": "outside link", "kind": "link", "file": "skills/alpha/SKILL.md", "line": 7, "base": "skills/alpha", "target": "../../../elsewhere.md", "expected": {"rule": "standalone.link", "file": "skills/alpha/SKILL.md", "line": 7}},
+  {"name": "outside command", "kind": "script", "file": "skills/alpha/SKILL.md", "line": 7, "base": "skills/alpha", "target": "../../../tools/runner.sh", "expected": {"rule": "standalone.script", "file": "skills/alpha/SKILL.md", "line": 7}},
+  {"name": "outside import", "kind": "import", "file": "skills/alpha/SKILL.md", "line": 7, "base": "skills/alpha", "target": "../../../helpers/decoder.py", "expected": {"rule": "standalone.import", "file": "skills/alpha/SKILL.md", "line": 7}},
+  {"name": "outside read", "kind": "read", "file": "skills/alpha/SKILL.md", "line": 7, "base": "skills/alpha", "target": "../../../data/input.json", "expected": {"rule": "standalone.read", "file": "skills/alpha/SKILL.md", "line": 7}},
+  {"name": "missing inside file", "kind": "read", "file": "skills/alpha/SKILL.md", "line": 7, "base": "skills/alpha", "target": "missing.json", "expected": {"rule": "standalone.read", "file": "skills/alpha/SKILL.md", "line": 7}},
+  {"name": "unresolved reference", "kind": "read", "file": "skills/alpha/SKILL.md", "line": 7, "base": "skills/alpha", "target": "", "expected": {"rule": "standalone.read", "file": "skills/alpha/SKILL.md", "line": 7}},
+  {"name": "encoded escape", "kind": "link", "file": "skills/alpha/SKILL.md", "line": 7, "base": "skills/alpha", "target": "%2E%2E/%2E%2E/%2E%2E/elsewhere.md", "expected": {"rule": "standalone.link", "file": "skills/alpha/SKILL.md", "line": 7}},
+  {"name": "symlink inside skill", "kind": "symlink", "file": "skills/alpha/linked.txt", "line": 1, "base": "skills/alpha", "target": "scripts/run.sh", "expected": {"rule": "standalone.symlink", "file": "skills/alpha/linked.txt", "line": 1}},
+  {"name": "absolute source read", "kind": "read", "file": "skills/alpha/SKILL.md", "line": 7, "base": "skills/alpha", "target": "/synthetic/source/input.json", "expected": {"rule": "standalone.read", "file": "skills/alpha/SKILL.md", "line": 7}},
+  {"name": "setting in words", "kind": "words", "file": "skills/alpha/SKILL.md", "line": 7, "base": "skills/alpha", "target": "docs/agents/fleet.md", "expected": null},
+  {"name": "setting runtime read", "kind": "read", "file": "skills/alpha/SKILL.md", "line": 7, "base": "skills/alpha", "target": "docs/agents/domain.md", "project": true, "expected": null},
+  {"name": "changes runtime read", "kind": "read", "file": "skills/alpha/SKILL.md", "line": 7, "base": "skills/alpha", "target": "changes/README.md", "project": true, "expected": null},
+  {"name": "glossary runtime read", "kind": "read", "file": "skills/alpha/SKILL.md", "line": 7, "base": "skills/alpha", "target": "GLOSSARY.md", "project": true, "expected": null},
+  {"name": "setting hyperlink", "kind": "link", "file": "skills/alpha/SKILL.md", "line": 7, "base": "skills/alpha", "target": "../../docs/agents/fleet.md", "expected": {"rule": "standalone.link", "file": "skills/alpha/SKILL.md", "line": 7}},
+  {"name": "setting script", "kind": "script", "file": "skills/alpha/SKILL.md", "line": 7, "base": "skills/alpha", "target": "docs/agents/fleet.md", "expected": {"rule": "standalone.script", "file": "skills/alpha/SKILL.md", "line": 7}},
+  {"name": "unapproved setting", "kind": "read", "file": "skills/alpha/SKILL.md", "line": 7, "base": "skills/alpha", "target": "docs/other/config.md", "project": true, "expected": {"rule": "standalone.read", "file": "skills/alpha/SKILL.md", "line": 7}},
+  {"name": "nested setting forbidden", "kind": "read", "file": "skills/alpha/SKILL.md", "line": 7, "base": "skills/alpha", "target": "docs/agents/nested/setting.md", "project": true, "expected": {"rule": "standalone.read", "file": "skills/alpha/SKILL.md", "line": 7}},
+  {"name": "synthetic path as data", "kind": "data", "file": "skills/alpha/SKILL.md", "line": 7, "base": "skills/alpha", "target": "/synthetic/source/input.json", "expected": null}
+]

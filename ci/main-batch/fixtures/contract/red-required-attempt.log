@@ -1,0 +1,15 @@
+F
+======================================================================
+FAIL: test_separate_required_workflow_cannot_reuse_a_noncurrent_green (__main__.Contract.test_separate_required_workflow_cannot_reuse_a_noncurrent_green)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_contract.py", line 208, in test_separate_required_workflow_cannot_reuse_a_noncurrent_green
+    self.refused(d, 'privacy must bind its own independently observed current attempt')
+  File "ci/main-batch/test_contract.py", line 116, in refused
+    self.assertTrue(self.refusals(document), clue)
+AssertionError: [] is not true : privacy must bind its own independently observed current attempt
+
+----------------------------------------------------------------------
+Ran 1 test in 0.004s
+
+FAILED (failures=1)

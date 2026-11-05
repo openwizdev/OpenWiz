@@ -1,0 +1,2843 @@
+{
+ "schema": "openwiz.plan.v1",
+ "snapshot_at": 1800003615000,
+ "coverage": {
+  "state": "complete",
+  "gaps": []
+ },
+ "freshness": {
+  "state": "fresh",
+  "snapshot_at": {
+   "known": 1800003614000
+  }
+ },
+ "lanes": [
+  {
+   "kind": "version",
+   "number": 6,
+   "title": {
+    "known": "0.0.6 Fleets"
+   }
+  },
+  {
+   "kind": "version",
+   "number": 8,
+   "title": {
+    "known": "0.0.8 PC hub"
+   }
+  },
+  {
+   "kind": "version",
+   "number": 9,
+   "title": {
+    "known": "0.0.9 Loops"
+   }
+  },
+  {
+   "kind": "version",
+   "number": 10,
+   "title": {
+    "known": "0.0.10 Cockpit"
+   }
+  },
+  {
+   "kind": "side_spec",
+   "number": 2500,
+   "title": {
+    "known": "CI speed"
+   }
+  },
+  {
+   "kind": "side_spec",
+   "number": 2600,
+   "title": {
+    "known": "Access"
+   }
+  }
+ ],
+ "tickets": [
+  {
+   "number": 2101,
+   "title": {
+    "known": "Inventory contract"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2101"
+   },
+   "spec": {
+    "known": 2100
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 6
+    }
+   },
+   "state": {
+    "known": "merged"
+   },
+   "column": {
+    "known": "done"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": []
+   },
+   "dependents": {
+    "known": [
+     2102,
+     2103
+    ]
+   },
+   "pr": {
+    "known": {
+     "number": 3101,
+     "url": "https://github.com/example-owner/example-plan/pull/3101"
+    }
+   }
+  },
+  {
+   "number": 2102,
+   "title": {
+    "known": "Fleet session map"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2102"
+   },
+   "spec": {
+    "known": 2100
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 6
+    }
+   },
+   "state": {
+    "known": "merged"
+   },
+   "column": {
+    "known": "done"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2101
+    ]
+   },
+   "dependents": {
+    "known": [
+     2104
+    ]
+   },
+   "pr": {
+    "known": {
+     "number": 3102,
+     "url": "https://github.com/example-owner/example-plan/pull/3102"
+    }
+   }
+  },
+  {
+   "number": 2103,
+   "title": {
+    "known": "Run evidence"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2103"
+   },
+   "spec": {
+    "known": 2100
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 6
+    }
+   },
+   "state": {
+    "known": "merged"
+   },
+   "column": {
+    "known": "done"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2101
+    ]
+   },
+   "dependents": {
+    "known": [
+     2104,
+     2106
+    ]
+   },
+   "pr": {
+    "known": {
+     "number": 3103,
+     "url": "https://github.com/example-owner/example-plan/pull/3103"
+    }
+   }
+  },
+  {
+   "number": 2104,
+   "title": {
+    "known": "Live answer test"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2104"
+   },
+   "spec": {
+    "known": 2100
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 6
+    }
+   },
+   "state": {
+    "unknown": "ready-for-human with no pull request: no fleet state"
+   },
+   "column": {
+    "known": "needs_you"
+   },
+   "labels": {
+    "known": [
+     "ready-for-human"
+    ]
+   },
+   "yours": {
+    "known": true
+   },
+   "blockers": {
+    "known": [
+     2102,
+     2103
+    ]
+   },
+   "dependents": {
+    "known": [
+     2105
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2105,
+   "title": {
+    "known": "Decision delivery"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2105"
+   },
+   "spec": {
+    "known": 2100
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 6
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2104
+    ]
+   },
+   "dependents": {
+    "known": [
+     2107,
+     2305,
+     2402
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2106,
+   "title": {
+    "known": "Control vocabulary"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2106"
+   },
+   "spec": {
+    "known": 2100
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 6
+    }
+   },
+   "state": {
+    "known": "merged"
+   },
+   "column": {
+    "known": "done"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2103
+    ]
+   },
+   "dependents": {
+    "known": [
+     2107
+    ]
+   },
+   "pr": {
+    "known": {
+     "number": 3106,
+     "url": "https://github.com/example-owner/example-plan/pull/3106"
+    }
+   }
+  },
+  {
+   "number": 2107,
+   "title": {
+    "known": "Fleet controls"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2107"
+   },
+   "spec": {
+    "known": 2100
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 6
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2105,
+     2106
+    ]
+   },
+   "dependents": {
+    "known": [
+     2108,
+     2109,
+     2307,
+     2405,
+     2606
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2108,
+   "title": {
+    "known": "Retry safety"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2108"
+   },
+   "spec": {
+    "known": 2100
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 6
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2107
+    ]
+   },
+   "dependents": {
+    "known": [
+     2110
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2109,
+   "title": {
+    "known": "Fleet smoke test"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2109"
+   },
+   "spec": {
+    "known": 2100
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 6
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-human"
+    ]
+   },
+   "yours": {
+    "known": true
+   },
+   "blockers": {
+    "known": [
+     2107
+    ]
+   },
+   "dependents": {
+    "known": [
+     2110
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2110,
+   "title": {
+    "known": "Fleet acceptance"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2110"
+   },
+   "spec": {
+    "known": 2100
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 6
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-human"
+    ]
+   },
+   "yours": {
+    "known": true
+   },
+   "blockers": {
+    "known": [
+     2108,
+     2109
+    ]
+   },
+   "dependents": {
+    "known": []
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2201,
+   "title": {
+    "known": "Service environment"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2201"
+   },
+   "spec": {
+    "known": 2200
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 8
+    }
+   },
+   "state": {
+    "known": "merged"
+   },
+   "column": {
+    "known": "done"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": []
+   },
+   "dependents": {
+    "known": [
+     2202,
+     2203
+    ]
+   },
+   "pr": {
+    "known": {
+     "number": 3201,
+     "url": "https://github.com/example-owner/example-plan/pull/3201"
+    }
+   }
+  },
+  {
+   "number": 2202,
+   "title": {
+    "known": "PC inventory"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2202"
+   },
+   "spec": {
+    "known": 2200
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 8
+    }
+   },
+   "state": {
+    "known": "building"
+   },
+   "column": {
+    "known": "building"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2201
+    ]
+   },
+   "dependents": {
+    "known": [
+     2204,
+     2403
+    ]
+   },
+   "pr": {
+    "known": {
+     "number": 3202,
+     "url": "https://github.com/example-owner/example-plan/pull/3202"
+    }
+   }
+  },
+  {
+   "number": 2203,
+   "title": {
+    "known": "Restart policy"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2203"
+   },
+   "spec": {
+    "known": 2200
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 8
+    }
+   },
+   "state": {
+    "known": "merged"
+   },
+   "column": {
+    "known": "done"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2201
+    ]
+   },
+   "dependents": {
+    "known": [
+     2206
+    ]
+   },
+   "pr": {
+    "known": {
+     "number": 3203,
+     "url": "https://github.com/example-owner/example-plan/pull/3203"
+    }
+   }
+  },
+  {
+   "number": 2204,
+   "title": {
+    "known": "Tunnel handoff"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2204"
+   },
+   "spec": {
+    "known": 2200
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 8
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2202
+    ]
+   },
+   "dependents": {
+    "known": [
+     2205,
+     2608
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2205,
+   "title": {
+    "known": "Access smoke test"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2205"
+   },
+   "spec": {
+    "known": 2200
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 8
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-human"
+    ]
+   },
+   "yours": {
+    "known": true
+   },
+   "blockers": {
+    "known": [
+     2204
+    ]
+   },
+   "dependents": {
+    "known": [
+     2206
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2206,
+   "title": {
+    "known": "Persistent service"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2206"
+   },
+   "spec": {
+    "known": 2200
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 8
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2203,
+     2205
+    ]
+   },
+   "dependents": {
+    "known": [
+     2207
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2207,
+   "title": {
+    "known": "Health reporting"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2207"
+   },
+   "spec": {
+    "known": 2200
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 8
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2206
+    ]
+   },
+   "dependents": {
+    "known": [
+     2208,
+     2209
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2208,
+   "title": {
+    "known": "Recovery guide"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2208"
+   },
+   "spec": {
+    "known": 2200
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 8
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2207
+    ]
+   },
+   "dependents": {
+    "known": [
+     2210
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2209,
+   "title": {
+    "known": "Overnight soak"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2209"
+   },
+   "spec": {
+    "known": 2200
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 8
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-human"
+    ]
+   },
+   "yours": {
+    "known": true
+   },
+   "blockers": {
+    "known": [
+     2207
+    ]
+   },
+   "dependents": {
+    "known": [
+     2210
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2210,
+   "title": {
+    "known": "PC acceptance"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2210"
+   },
+   "spec": {
+    "known": 2200
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 8
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-human"
+    ]
+   },
+   "yours": {
+    "known": true
+   },
+   "blockers": {
+    "known": [
+     2208,
+     2209
+    ]
+   },
+   "dependents": {
+    "known": [
+     2409
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2301,
+   "title": {
+    "known": "Schedule contract"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2301"
+   },
+   "spec": {
+    "known": 2300
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 9
+    }
+   },
+   "state": {
+    "known": "merged"
+   },
+   "column": {
+    "known": "done"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": []
+   },
+   "dependents": {
+    "known": [
+     2302,
+     2303
+    ]
+   },
+   "pr": {
+    "known": {
+     "number": 3301,
+     "url": "https://github.com/example-owner/example-plan/pull/3301"
+    }
+   }
+  },
+  {
+   "number": 2302,
+   "title": {
+    "known": "Tick runner"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2302"
+   },
+   "spec": {
+    "known": 2300
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 9
+    }
+   },
+   "state": {
+    "known": "building"
+   },
+   "column": {
+    "known": "building"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2301
+    ]
+   },
+   "dependents": {
+    "known": [
+     2304
+    ]
+   },
+   "pr": {
+    "known": {
+     "number": 3302,
+     "url": "https://github.com/example-owner/example-plan/pull/3302"
+    }
+   }
+  },
+  {
+   "number": 2303,
+   "title": {
+    "known": "Rule adapter"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2303"
+   },
+   "spec": {
+    "known": 2300
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 9
+    }
+   },
+   "state": {
+    "known": "merged"
+   },
+   "column": {
+    "known": "done"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2301
+    ]
+   },
+   "dependents": {
+    "known": [
+     2304
+    ]
+   },
+   "pr": {
+    "known": {
+     "number": 3303,
+     "url": "https://github.com/example-owner/example-plan/pull/3303"
+    }
+   }
+  },
+  {
+   "number": 2304,
+   "title": {
+    "known": "Event triggers"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2304"
+   },
+   "spec": {
+    "known": 2300
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 9
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2302,
+     2303
+    ]
+   },
+   "dependents": {
+    "known": [
+     2306
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2305,
+   "title": {
+    "known": "Question delivery"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2305"
+   },
+   "spec": {
+    "known": 2300
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 9
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2105
+    ]
+   },
+   "dependents": {
+    "known": [
+     2308
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2306,
+   "title": {
+    "known": "Run records"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2306"
+   },
+   "spec": {
+    "known": 2300
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 9
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2304
+    ]
+   },
+   "dependents": {
+    "known": [
+     2307
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2307,
+   "title": {
+    "known": "Concurrency limits"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2307"
+   },
+   "spec": {
+    "known": 2300
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 9
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2107,
+     2306
+    ]
+   },
+   "dependents": {
+    "known": [
+     2308
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2308,
+   "title": {
+    "known": "Loop inspection"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2308"
+   },
+   "spec": {
+    "known": 2300
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 9
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2305,
+     2307
+    ]
+   },
+   "dependents": {
+    "known": [
+     2309
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2309,
+   "title": {
+    "known": "Live loop test"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2309"
+   },
+   "spec": {
+    "known": 2300
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 9
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-human"
+    ]
+   },
+   "yours": {
+    "known": true
+   },
+   "blockers": {
+    "known": [
+     2308
+    ]
+   },
+   "dependents": {
+    "known": [
+     2310
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2310,
+   "title": {
+    "known": "Loops acceptance"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2310"
+   },
+   "spec": {
+    "known": 2300
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 9
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-human"
+    ]
+   },
+   "yours": {
+    "known": true
+   },
+   "blockers": {
+    "known": [
+     2309
+    ]
+   },
+   "dependents": {
+    "known": []
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2401,
+   "title": {
+    "known": "Cockpit contract"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2401"
+   },
+   "spec": {
+    "known": 2400
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 10
+    }
+   },
+   "state": {
+    "known": "merged"
+   },
+   "column": {
+    "known": "done"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": []
+   },
+   "dependents": {
+    "known": [
+     2402,
+     2404
+    ]
+   },
+   "pr": {
+    "known": {
+     "number": 3401,
+     "url": "https://github.com/example-owner/example-plan/pull/3401"
+    }
+   }
+  },
+  {
+   "number": 2402,
+   "title": {
+    "known": "Needs-you feed"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2402"
+   },
+   "spec": {
+    "known": 2400
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 10
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2105,
+     2401
+    ]
+   },
+   "dependents": {
+    "known": [
+     2406
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2403,
+   "title": {
+    "known": "Machine filter"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2403"
+   },
+   "spec": {
+    "known": 2400
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 10
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2202
+    ]
+   },
+   "dependents": {
+    "known": []
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2404,
+   "title": {
+    "known": "Graph shell"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2404"
+   },
+   "spec": {
+    "known": 2400
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 10
+    }
+   },
+   "state": {
+    "known": "building"
+   },
+   "column": {
+    "known": "building"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2401
+    ]
+   },
+   "dependents": {
+    "known": [
+     2407
+    ]
+   },
+   "pr": {
+    "known": {
+     "number": 3404,
+     "url": "https://github.com/example-owner/example-plan/pull/3404"
+    }
+   }
+  },
+  {
+   "number": 2405,
+   "title": {
+    "known": "Plan projection"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2405"
+   },
+   "spec": {
+    "known": 2400
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 10
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2107
+    ]
+   },
+   "dependents": {
+    "known": [
+     2407
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2406,
+   "title": {
+    "known": "Decision controls"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2406"
+   },
+   "spec": {
+    "known": 2400
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 10
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2402
+    ]
+   },
+   "dependents": {
+    "known": [
+     2408
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2407,
+   "title": {
+    "known": "Dependency arrows"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2407"
+   },
+   "spec": {
+    "known": 2400
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 10
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2404,
+     2405
+    ]
+   },
+   "dependents": {
+    "known": [
+     2408
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2408,
+   "title": {
+    "known": "Phone layout"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2408"
+   },
+   "spec": {
+    "known": 2400
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 10
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2406,
+     2407
+    ]
+   },
+   "dependents": {
+    "known": [
+     2409
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2409,
+   "title": {
+    "known": "Live cockpit test"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2409"
+   },
+   "spec": {
+    "known": 2400
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 10
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-human"
+    ]
+   },
+   "yours": {
+    "known": true
+   },
+   "blockers": {
+    "known": [
+     2210,
+     2408
+    ]
+   },
+   "dependents": {
+    "known": [
+     2410
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2410,
+   "title": {
+    "known": "Cockpit acceptance"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2410"
+   },
+   "spec": {
+    "known": 2400
+   },
+   "lane": {
+    "known": {
+     "kind": "version",
+     "number": 10
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-human"
+    ]
+   },
+   "yours": {
+    "known": true
+   },
+   "blockers": {
+    "known": [
+     2409
+    ]
+   },
+   "dependents": {
+    "known": []
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2501,
+   "title": {
+    "known": "Bench baseline"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2501"
+   },
+   "spec": {
+    "known": 2500
+   },
+   "lane": {
+    "known": {
+     "kind": "side_spec",
+     "number": 2500
+    }
+   },
+   "state": {
+    "known": "merged"
+   },
+   "column": {
+    "known": "done"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": []
+   },
+   "dependents": {
+    "known": [
+     2502,
+     2503,
+     2504
+    ]
+   },
+   "pr": {
+    "known": {
+     "number": 3501,
+     "url": "https://github.com/example-owner/example-plan/pull/3501"
+    }
+   }
+  },
+  {
+   "number": 2502,
+   "title": {
+    "known": "Dependency cache"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2502"
+   },
+   "spec": {
+    "known": 2500
+   },
+   "lane": {
+    "known": {
+     "kind": "side_spec",
+     "number": 2500
+    }
+   },
+   "state": {
+    "known": "merged"
+   },
+   "column": {
+    "known": "done"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2501
+    ]
+   },
+   "dependents": {
+    "known": [
+     2508
+    ]
+   },
+   "pr": {
+    "known": {
+     "number": 3502,
+     "url": "https://github.com/example-owner/example-plan/pull/3502"
+    }
+   }
+  },
+  {
+   "number": 2503,
+   "title": {
+    "known": "Shard runner"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2503"
+   },
+   "spec": {
+    "known": 2500
+   },
+   "lane": {
+    "known": {
+     "kind": "side_spec",
+     "number": 2500
+    }
+   },
+   "state": {
+    "known": "building"
+   },
+   "column": {
+    "known": "building"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2501
+    ]
+   },
+   "dependents": {
+    "known": [
+     2505
+    ]
+   },
+   "pr": {
+    "known": {
+     "number": 3503,
+     "url": "https://github.com/example-owner/example-plan/pull/3503"
+    }
+   }
+  },
+  {
+   "number": 2504,
+   "title": {
+    "known": "Proof inventory"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2504"
+   },
+   "spec": {
+    "known": 2500
+   },
+   "lane": {
+    "known": {
+     "kind": "side_spec",
+     "number": 2500
+    }
+   },
+   "state": {
+    "known": "merged"
+   },
+   "column": {
+    "known": "done"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2501
+    ]
+   },
+   "dependents": {
+    "known": [
+     2506,
+     2508
+    ]
+   },
+   "pr": {
+    "known": {
+     "number": 3504,
+     "url": "https://github.com/example-owner/example-plan/pull/3504"
+    }
+   }
+  },
+  {
+   "number": 2505,
+   "title": {
+    "known": "Worker limits"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2505"
+   },
+   "spec": {
+    "known": 2500
+   },
+   "lane": {
+    "known": {
+     "kind": "side_spec",
+     "number": 2500
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2503
+    ]
+   },
+   "dependents": {
+    "known": [
+     2506
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2506,
+   "title": {
+    "known": "Browser proofs"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2506"
+   },
+   "spec": {
+    "known": 2500
+   },
+   "lane": {
+    "known": {
+     "kind": "side_spec",
+     "number": 2500
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2504,
+     2505
+    ]
+   },
+   "dependents": {
+    "known": [
+     2507
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2507,
+   "title": {
+    "known": "Coverage report"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2507"
+   },
+   "spec": {
+    "known": 2500
+   },
+   "lane": {
+    "known": {
+     "kind": "side_spec",
+     "number": 2500
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2506
+    ]
+   },
+   "dependents": {
+    "known": [
+     2509
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2508,
+   "title": {
+    "known": "Runner live test"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2508"
+   },
+   "spec": {
+    "known": 2500
+   },
+   "lane": {
+    "known": {
+     "kind": "side_spec",
+     "number": 2500
+    }
+   },
+   "state": {
+    "unknown": "ready-for-human with no pull request: no fleet state"
+   },
+   "column": {
+    "known": "needs_you"
+   },
+   "labels": {
+    "known": [
+     "ready-for-human"
+    ]
+   },
+   "yours": {
+    "known": true
+   },
+   "blockers": {
+    "known": [
+     2502,
+     2504
+    ]
+   },
+   "dependents": {
+    "known": [
+     2509
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2509,
+   "title": {
+    "known": "Soak report"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2509"
+   },
+   "spec": {
+    "known": 2500
+   },
+   "lane": {
+    "known": {
+     "kind": "side_spec",
+     "number": 2500
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2507,
+     2508
+    ]
+   },
+   "dependents": {
+    "known": [
+     2510
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2510,
+   "title": {
+    "known": "CI acceptance"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2510"
+   },
+   "spec": {
+    "known": 2500
+   },
+   "lane": {
+    "known": {
+     "kind": "side_spec",
+     "number": 2500
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-human"
+    ]
+   },
+   "yours": {
+    "known": true
+   },
+   "blockers": {
+    "known": [
+     2509
+    ]
+   },
+   "dependents": {
+    "known": []
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2601,
+   "title": {
+    "known": "Access scope"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2601"
+   },
+   "spec": {
+    "known": 2600
+   },
+   "lane": {
+    "known": {
+     "kind": "side_spec",
+     "number": 2600
+    }
+   },
+   "state": {
+    "known": "merged"
+   },
+   "column": {
+    "known": "done"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": []
+   },
+   "dependents": {
+    "known": [
+     2602
+    ]
+   },
+   "pr": {
+    "known": {
+     "number": 3601,
+     "url": "https://github.com/example-owner/example-plan/pull/3601"
+    }
+   }
+  },
+  {
+   "number": 2602,
+   "title": {
+    "known": "Trust boundary"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2602"
+   },
+   "spec": {
+    "known": 2600
+   },
+   "lane": {
+    "known": {
+     "kind": "side_spec",
+     "number": 2600
+    }
+   },
+   "state": {
+    "known": "merged"
+   },
+   "column": {
+    "known": "done"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2601
+    ]
+   },
+   "dependents": {
+    "known": [
+     2603
+    ]
+   },
+   "pr": {
+    "known": {
+     "number": 3602,
+     "url": "https://github.com/example-owner/example-plan/pull/3602"
+    }
+   }
+  },
+  {
+   "number": 2603,
+   "title": {
+    "known": "Policy adapter"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2603"
+   },
+   "spec": {
+    "known": 2600
+   },
+   "lane": {
+    "known": {
+     "kind": "side_spec",
+     "number": 2600
+    }
+   },
+   "state": {
+    "known": "building"
+   },
+   "column": {
+    "known": "building"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2602
+    ]
+   },
+   "dependents": {
+    "known": [
+     2604
+    ]
+   },
+   "pr": {
+    "known": {
+     "number": 3603,
+     "url": "https://github.com/example-owner/example-plan/pull/3603"
+    }
+   }
+  },
+  {
+   "number": 2604,
+   "title": {
+    "known": "Grant resolver"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2604"
+   },
+   "spec": {
+    "known": 2600
+   },
+   "lane": {
+    "known": {
+     "kind": "side_spec",
+     "number": 2600
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2603
+    ]
+   },
+   "dependents": {
+    "known": [
+     2605
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2605,
+   "title": {
+    "known": "Request guards"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2605"
+   },
+   "spec": {
+    "known": 2600
+   },
+   "lane": {
+    "known": {
+     "kind": "side_spec",
+     "number": 2600
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2604
+    ]
+   },
+   "dependents": {
+    "known": [
+     2606
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2606,
+   "title": {
+    "known": "Read-only graph"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2606"
+   },
+   "spec": {
+    "known": 2600
+   },
+   "lane": {
+    "known": {
+     "kind": "side_spec",
+     "number": 2600
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2107,
+     2605
+    ]
+   },
+   "dependents": {
+    "known": [
+     2607
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2607,
+   "title": {
+    "known": "Ticket links"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2607"
+   },
+   "spec": {
+    "known": 2600
+   },
+   "lane": {
+    "known": {
+     "kind": "side_spec",
+     "number": 2600
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2606
+    ]
+   },
+   "dependents": {
+    "known": [
+     2608
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2608,
+   "title": {
+    "known": "Device handoff"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2608"
+   },
+   "spec": {
+    "known": 2600
+   },
+   "lane": {
+    "known": {
+     "kind": "side_spec",
+     "number": 2600
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-agent"
+    ]
+   },
+   "yours": {
+    "known": false
+   },
+   "blockers": {
+    "known": [
+     2204,
+     2607
+    ]
+   },
+   "dependents": {
+    "known": [
+     2609
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2609,
+   "title": {
+    "known": "Live access test"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2609"
+   },
+   "spec": {
+    "known": 2600
+   },
+   "lane": {
+    "known": {
+     "kind": "side_spec",
+     "number": 2600
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-human"
+    ]
+   },
+   "yours": {
+    "known": true
+   },
+   "blockers": {
+    "known": [
+     2608
+    ]
+   },
+   "dependents": {
+    "known": [
+     2610
+    ]
+   },
+   "pr": {
+    "known": null
+   }
+  },
+  {
+   "number": 2610,
+   "title": {
+    "known": "Access acceptance"
+   },
+   "url": {
+    "known": "https://github.com/example-owner/example-plan/issues/2610"
+   },
+   "spec": {
+    "known": 2600
+   },
+   "lane": {
+    "known": {
+     "kind": "side_spec",
+     "number": 2600
+    }
+   },
+   "state": {
+    "known": "blocked"
+   },
+   "column": {
+    "known": "waiting"
+   },
+   "labels": {
+    "known": [
+     "ready-for-human"
+    ]
+   },
+   "yours": {
+    "known": true
+   },
+   "blockers": {
+    "known": [
+     2609
+    ]
+   },
+   "dependents": {
+    "known": []
+   },
+   "pr": {
+    "known": null
+   }
+  }
+ ],
+ "critical_chain": {
+  "known": {
+   "root": 2104,
+   "blocked_count": 22,
+   "path": [
+    2104,
+    2105,
+    2107,
+    2405,
+    2407,
+    2408,
+    2409,
+    2410
+   ]
+  }
+ }
+}

@@ -1,5 +1,6 @@
-// The real openwiz-server, run over one of the fixture scenarios with the
-// repository's fake room-cli first on PATH. Synthetic data only.
+// Ticket 1's openwiz-server, run over one of 0.0.1's fixture scenarios with
+// a verified isolated bundle around the repository's fake room-cli, using
+// the exact production dispatch. Synthetic data only.
 
 import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
@@ -8,7 +9,7 @@ import { join } from 'node:path';
 
 import { REPO_DIR, SCENARIOS_DIR } from './paths.mjs';
 
-const SERVER = `${REPO_DIR}/target/debug/openwiz-server`;
+const SERVER = `${REPO_DIR}/target/debug/examples/openwiz-server`;
 const FAKE = `${REPO_DIR}/target/debug/fake-room-cli`;
 
 let built = false;
@@ -16,7 +17,7 @@ let built = false;
 /** Builds the server and the fake once per test process (a no-op when current). */
 export function buildBinaries() {
   if (built) return;
-  execFileSync('cargo', ['build', '-q', '-p', 'openwiz-server', '-p', 'openwiz-tests', '--bin', 'openwiz-server', '--bin', 'fake-room-cli'], {
+  execFileSync('cargo', ['build', '-q', '-p', 'openwiz-tests', '--example', 'openwiz-server', '--bin', 'fake-room-cli'], {
     cwd: REPO_DIR,
     stdio: 'inherit',
   });
@@ -32,7 +33,7 @@ export function scenarios() {
 
 /**
  * Starts openwiz-server on a free loopback port over `scenario`. With
- * `allowedHost`, it also takes that host name, which is what lets
+ * `allowedHost` (#9 step 3), it also takes that host name, which is what lets
  * it send; its send record is a private directory.
  */
 export async function startFixtureServer(scenario, { allowedHost = null, responses = null } = {}) {
@@ -51,9 +52,15 @@ export async function startFixtureServer(scenario, { allowedHost = null, respons
   const args = ['--port', '0', ...(allowedHost ? ['--allowed-host', allowedHost] : [])];
   const child = spawn(SERVER, args, {
     cwd: dir,
-    env: { PATH: `${dir}:/usr/bin:/bin`, HOME: dir, OPENWIZ_STATE_DIR: join(dir, 'state') },
+    env: { PATH: '/usr/bin:/bin', OPENWIZ_FIXTURE_PROGRAM: join(dir, 'room-cli'), HOME: dir, OPENWIZ_STATE_DIR: join(dir, 'state') },
     stdio: ['ignore', 'ignore', 'pipe'],
+    // Its own process group, with every fake room-cli it starts, so stop()
+    // can end them all (#1308).
+    detached: true,
   });
+  // Out of the test's group, Ctrl+C no longer reaches it: end it if this
+  // process ends first, from now on, startup included (R2 on #1369).
+  if (child.pid !== undefined) track(child.pid);
   let stderr = '';
   const port = await new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`openwiz-server did not start: ${stderr}`)), 15_000);
@@ -76,18 +83,82 @@ export async function startFixtureServer(scenario, { allowedHost = null, respons
     },
     log: () => stderr,
     stop: async () => {
-      child.kill('SIGTERM');
-      await new Promise((resolve) => (child.exitCode !== null ? resolve() : child.on('exit', resolve)));
-      // A fake that hangs ("hang": true) outlives a stopped server: stop it by its own pid.
-      const hang = join(dir, 'hang.pid');
-      if (existsSync(hang)) {
-        try {
-          process.kill(Number(readFileSync(hang, 'utf8')), 'SIGKILL');
-        } catch {
-          // Already reaped by the core's read timeout.
-        }
-      }
+      // The server and everything it started, a hanging fake too. Each fake
+      // writes beside its argv[0], in dir: one still answering a read made
+      // the removal below fail with ENOTEMPTY (#1308).
+      signalGroup(child.pid, 'SIGTERM');
+      await new Promise((resolve) => (child.exitCode !== null || child.signalCode !== null ? resolve() : child.on('exit', resolve)));
+      signalGroup(child.pid, 'SIGKILL');
+      await groupGone(child.pid);
+      active.delete(child.pid);
       rmSync(dir, { recursive: true, force: true });
+      rmSync(`${dir}.fixture-bundles`, { recursive: true, force: true });
     },
   };
+}
+
+/** The process groups of the fixture servers started and not yet stopped. */
+const active = new Set();
+const SIGNALS = ['SIGINT', 'SIGTERM', 'SIGHUP'];
+
+/** Adds `pgid` to `active`, and ends every active group if this process ends first. */
+function track(pgid) {
+  if (!process.listeners('exit').includes(endActive)) {
+    process.on('exit', endActive);
+    for (const signal of SIGNALS) process.on(signal, onSignal);
+  }
+  active.add(pgid);
+}
+
+/** Kills every active group, at once (an exit listener can't wait). */
+function endActive() {
+  for (const pgid of active) signalGroup(pgid, 'SIGKILL');
+  active.clear();
+}
+
+/**
+ * A signal that would have ended this process: end the active groups, then,
+ * when no other listener handles it, end by it as before (its exit status).
+ */
+function onSignal(signal) {
+  endActive();
+  if (process.listenerCount(signal) > 1) return;
+  process.removeListener('exit', endActive);
+  for (const s of SIGNALS) process.removeListener(s, onSignal);
+  process.kill(process.pid, signal);
+}
+
+/** Sends `signal` to process group `pgid`, unless no member is left. */
+function signalGroup(pgid, signal) {
+  try {
+    process.kill(-pgid, signal);
+  } catch (e) {
+    if (e.code !== 'ESRCH') throw e;
+  }
+}
+
+/**
+ * Resolves once process group `pgid` has no running member, from /proc. A
+ * member that has exited but is not yet reaped (state Z) writes nothing, so
+ * it counts as gone. Fails after 10 s.
+ */
+async function groupGone(pgid) {
+  const until = Date.now() + 10_000;
+  for (;;) {
+    const left = readdirSync('/proc').filter((pid) => {
+      if (!/^\d+$/.test(pid)) return false;
+      let stat;
+      try {
+        stat = readFileSync(`/proc/${pid}/stat`, 'utf8');
+      } catch {
+        return false;
+      }
+      // "pid (comm) state ppid pgrp ...": comm may hold spaces or parentheses.
+      const [state, , pgrp] = stat.slice(stat.lastIndexOf(')') + 2).split(' ');
+      return Number(pgrp) === pgid && state !== 'Z';
+    });
+    if (left.length === 0) return;
+    if (Date.now() > until) throw new Error(`fixture server: process group ${pgid} still running: ${left.join(', ')}`);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
 }

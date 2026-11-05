@@ -1,0 +1,27 @@
+#1845 scoped validation
+
+Implementation commit: fd7e30de4
+
+cargo test -q --locked -j 2 -p openwiz-tests --test checks adr0019_ -- --nocapture
+PASS: 4 passed; 0 failed; 0 ignored; 122 filtered out.
+Includes the unchanged, committed CI-retention regression that failed before
+adding the one exact granted rust row. Both release-skill paths are checked.
+
+sh .github/actions/docs-only/test.sh
+PASS: exit 0, all ok (synthetic classifier/decision/prune and CI runner checks).
+
+cargo fmt --check
+PASS: exit 0.
+
+cargo clippy --locked -j 2 -p openwiz-tests --all-targets -- -D warnings
+PASS: exit 0.
+
+Earlier scoped installation regression, with the same two skill directories:
+cargo test -q --locked -j 2 -p openwiz-tests --test checks skills::the_skills_folder_passes_the_static_check -- --exact
+PASS: 1 passed; 0 failed; 124 filtered out.
+
+The retention implementation changes only one classifier row. No dependency,
+workflow, empty-list handling or other ticket's assertions were changed.
+The hand-back commit adds only this validation record to the checked tree.
+Full workspace/browser suites are left to CI. Live behaviour is unverified.
+No publishing, tag, release-branch push, server or watcher.

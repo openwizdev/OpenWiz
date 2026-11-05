@@ -1,0 +1,117 @@
+EEEEEEEE
+======================================================================
+ERROR: test_duplicate_requests_and_receipts_do_not_change_the_cohort (__main__.AnswerTime.test_duplicate_requests_and_receipts_do_not_change_the_cohort)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_answer_time.py", line 33, in setUp
+    self.adapter = module('answer_time')
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "/code/ClosedWiz/tools/war-room/test_answer_time.py", line 24, in module
+    spec.loader.exec_module(result)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '/code/ClosedWiz/tools/war-room/answer_time.py'
+
+======================================================================
+ERROR: test_empty_cohort_and_absent_native_capability_remain_visible (__main__.AnswerTime.test_empty_cohort_and_absent_native_capability_remain_visible)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_answer_time.py", line 33, in setUp
+    self.adapter = module('answer_time')
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "/code/ClosedWiz/tools/war-room/test_answer_time.py", line 24, in module
+    spec.loader.exec_module(result)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '/code/ClosedWiz/tools/war-room/answer_time.py'
+
+======================================================================
+ERROR: test_identity_conflicts_bad_shapes_and_out_of_cohort_requests_refuse (__main__.AnswerTime.test_identity_conflicts_bad_shapes_and_out_of_cohort_requests_refuse)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_answer_time.py", line 33, in setUp
+    self.adapter = module('answer_time')
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "/code/ClosedWiz/tools/war-room/test_answer_time.py", line 24, in module
+    spec.loader.exec_module(result)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '/code/ClosedWiz/tools/war-room/answer_time.py'
+
+======================================================================
+ERROR: test_incomplete_edited_deleted_or_unlinked_endpoints_stay_censored (__main__.AnswerTime.test_incomplete_edited_deleted_or_unlinked_endpoints_stay_censored)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_answer_time.py", line 33, in setUp
+    self.adapter = module('answer_time')
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "/code/ClosedWiz/tools/war-room/test_answer_time.py", line 24, in module
+    spec.loader.exec_module(result)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '/code/ClosedWiz/tools/war-room/answer_time.py'
+
+======================================================================
+ERROR: test_known_open_unknown_keep_latency_denominator_and_references (__main__.AnswerTime.test_known_open_unknown_keep_latency_denominator_and_references)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_answer_time.py", line 33, in setUp
+    self.adapter = module('answer_time')
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "/code/ClosedWiz/tools/war-room/test_answer_time.py", line 24, in module
+    spec.loader.exec_module(result)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '/code/ClosedWiz/tools/war-room/answer_time.py'
+
+======================================================================
+ERROR: test_missing_expected_history_and_source_do_not_become_complete (__main__.AnswerTime.test_missing_expected_history_and_source_do_not_become_complete)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_answer_time.py", line 33, in setUp
+    self.adapter = module('answer_time')
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "/code/ClosedWiz/tools/war-room/test_answer_time.py", line 24, in module
+    spec.loader.exec_module(result)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '/code/ClosedWiz/tools/war-room/answer_time.py'
+
+======================================================================
+ERROR: test_receipts_status_and_label_removal_cannot_close_a_request (__main__.AnswerTime.test_receipts_status_and_label_removal_cannot_close_a_request)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_answer_time.py", line 33, in setUp
+    self.adapter = module('answer_time')
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "/code/ClosedWiz/tools/war-room/test_answer_time.py", line 24, in module
+    spec.loader.exec_module(result)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '/code/ClosedWiz/tools/war-room/answer_time.py'
+
+======================================================================
+ERROR: test_reversed_or_unobserved_times_cannot_fabricate_a_known_answer (__main__.AnswerTime.test_reversed_or_unobserved_times_cannot_fabricate_a_known_answer)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_answer_time.py", line 33, in setUp
+    self.adapter = module('answer_time')
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "/code/ClosedWiz/tools/war-room/test_answer_time.py", line 24, in module
+    spec.loader.exec_module(result)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '/code/ClosedWiz/tools/war-room/answer_time.py'
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.002s
+
+FAILED (errors=8)

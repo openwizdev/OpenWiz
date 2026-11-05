@@ -1,0 +1,37 @@
+# Scoped checks (#2222) at 39fbcec2094f5915605e716c9323bdda67e7ddd1
+
+$ cd apps/web && node --test --test-reporter=spec test/unit/first-hour-recovery.test.ts
+✔ #2222: browser-state fault cases keep drafts, identities and work, with no duplicate effect or blind retry (45.519651ms)
+ℹ #2222: revoked access: Access signs the owner out; nothing is sent, the draft and its id stay, and reconnecting sends it once
+ℹ #2222: refused access: OpenWiz refuses a create before the core; the prompt, settings and id stay, and the next create is the same op id, once
+ℹ #2222: builder unavailable: the builder harness is no longer offered; its setting is emptied with why, nothing starts, and the prompt stays
+ℹ #2222: reviewer unavailable: only the builder’s family is offered; the reviewer seat cannot be chosen, nothing starts, and the prompt stays
+ℹ #2222: lost reply, then a same-tab reload: the send stays uncertain until its own record is read, and is never sent twice
+ℹ #2222: lost reply on a create, then a same-tab reload: Refresh status reads its record; no second create
+ℹ #2222: server restart: records in owner state and the open tab’s drafts stay; each pending intent is reconciled by its op id before anything else
+ℹ #2222: browser restart: the owner’s records are read back and reconciled first; tab-only drafts are reported as retention_unproven, not retained
+ℹ #2222: repeat approval: a double press, a lost reply, a reload and Try again reuse one op id; one answer reaches the orchestrator
+✔ #2222: owner-state fault cases keep setup state, operation identities and the last good build (474.358234ms)
+✔ #2222: the checks refuse the fault cases’ known ways to fail (31.527486ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 692.321806
+exit 0
+
+$ python3 -I tools/install/tests/first-hour-contract/test_contract.py
+Ran 9 tests in 0.224s
+
+OK
+
+$ cd apps/web && npm run typecheck && npm run check
+check: 53 source files and the stylesheet pass (V1, messaging and new-thread schema parity, V3, V10, W5, W12, U5, U12 to U14, AW7, AW8, the #549 loop switch, types, spacing)
+exit 0
+
+$ cargo test -p openwiz-tests --test checks
+test result: ok. 136 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.41s
+exit 0

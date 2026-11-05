@@ -1,10 +1,10 @@
-//! The `openwiz-server` program: the CloudRoom adapter (`room-cli` from
-//! `PATH`, as the `openwiz` CLI builds it) and the system clock, served on
+//! The `openwiz-server` program: the CloudRoom adapter (the verified app
+//! bundle, as the `openwiz` CLI builds it) and the system clock, served on
 //! 127.0.0.1; and for the send routes, the same send record as `openwiz
 //! send`: `$OPENWIZ_STATE_DIR`, else the owner's default state directory,
-//! opened when each request needs it (U9); and for the new-thread routes,
-//! the same new-thread record as `openwiz new`, beside it; and for
-//! the attachment routes, the same attachment store and free-space
+//! opened when each request needs it (U9); and for the new-thread routes
+//! (#12), the same new-thread record as `openwiz new`, beside it; and for
+//! the attachment routes (#16), the same attachment store and free-space
 //! measure as `openwiz attachment`, beside them.
 
 use std::path::PathBuf;
@@ -12,12 +12,14 @@ use std::process::ExitCode;
 use std::sync::Arc;
 
 use openwiz_adapter_cloudroom::source::CloudRoomSource;
+use openwiz_adapter_github::{decisions::GitHubDecisions, fleets::GitHubFleets, tickets::Tickets};
 use openwiz_core::messaging::record::SendStore;
 use openwiz_core::new_thread::record::NewThreadStore;
 use openwiz_server::{
-    ALLOWED_HOST_ENV, Attaching, Config, Creating, DEFAULT_PORT, NAME, OpenAttachmentStore,
-    OpenAttachmentStoreReadOnly, OpenNewThreadStore, OpenNewThreadStoreReadOnly, OpenStore,
-    OpenStoreReadOnly, SendHost, Sending, SystemClock, WebRoot,
+    ALLOWED_HOST_ENV, Attaching, Config, Creating, DEFAULT_PORT, Decisions, FleetAgents, Fleets,
+    NAME, OpenAttachmentStore, OpenAttachmentStoreReadOnly, OpenNewThreadStore,
+    OpenNewThreadStoreReadOnly, OpenStore, OpenStoreReadOnly, ReadSources, SendHost, Sending,
+    SystemClock, WebRoot,
 };
 use openwiz_store::attachments::Df;
 use openwiz_store::{AttachmentStore, FileStore, NewThreadFileStore, default_state_dir};
@@ -87,6 +89,51 @@ fn parse(args: &[String], env_host: Option<String>) -> Result<Parsed, String> {
 }
 
 fn main() -> ExitCode {
+    dispatch(openwiz_adapter_cloudroom::locate::Discovery::system())
+}
+
+/// RL4 (#1148): this program's compiled product identity, one record (prefix,
+/// canonical JSON, LF) in its read-only data; the build script writes the JSON
+/// (contracts/release-candidate.v1.md, "Minimum product identity").
+static PRODUCT: [u8; IDENTITY.len() + 20] = product_record(IDENTITY);
+const IDENTITY: &str = match option_env!("OPENWIZ_PRODUCT_IDENTITY") {
+    Some(json) => json,
+    None => "",
+};
+
+const fn product_record<const N: usize>(json: &str) -> [u8; N] {
+    let (prefix, json) = (b"OPENWIZ_PRODUCT_V1:", json.as_bytes());
+    let mut record = [b'\n'; N];
+    let mut at = 0;
+    while at < N - 1 {
+        record[at] = if at < 19 { prefix[at] } else { json[at - 19] };
+        at += 1;
+    }
+    record
+}
+
+/// `--build-identity`: print the compiled identity and nothing else. It reads
+/// no state or account, calls no `room-cli` and binds nothing. An unknown
+/// identity refuses.
+fn build_identity() -> std::process::ExitCode {
+    use std::io::Write;
+    // Past the 19-byte prefix: naming the prefix again would add a second record.
+    if !IDENTITY.is_empty() && std::io::stdout().write_all(&PRODUCT[19..]).is_ok() {
+        return std::process::ExitCode::SUCCESS;
+    }
+    eprintln!("build identity is unavailable");
+    std::process::ExitCode::FAILURE
+}
+
+/// The real server and test-only fixture entrypoint share every dispatch path.
+pub fn dispatch(discovery: openwiz_adapter_cloudroom::locate::Discovery) -> ExitCode {
+    if std::env::args_os().skip(1).eq(["--build-identity"]) {
+        return build_identity();
+    }
+    if openwiz_adapter_cloudroom::locate::install(discovery).is_err() {
+        eprintln!("{NAME}: discovery already configured");
+        return ExitCode::FAILURE;
+    }
     // A panic would print its message and source location; stderr carries
     // only the start line and the request log, so say only that it happened.
     std::panic::set_hook(Box::new(|_| eprintln!("{NAME}: internal error")));
@@ -156,7 +203,7 @@ fn main() -> ExitCode {
         Ok(store.map(|s| Box::new(s) as Box<dyn NewThreadStore>))
     });
     // `openwiz attachment`'s own openers and free-space measure
-    // (`crates/cli/src/main.rs`), the same way.
+    // (`crates/cli/src/main.rs`), the same way (#16).
     let open_attachments: OpenAttachmentStore = Arc::new(|| {
         let dir = default_state_dir(&|name| std::env::var_os(name))?;
         AttachmentStore::open(&dir)
@@ -166,7 +213,7 @@ fn main() -> ExitCode {
         AttachmentStore::open_read_only(&dir)
     });
     // Sends and creates are served only on the allowed host, and only if it
-    // can be a send host; otherwise the server
+    // can be a send host (WS-6, unchanged by A-13); otherwise the server
     // does not start.
     let send_host = match args.allowed_host.as_deref().map(SendHost::new).transpose() {
         Ok(host) => host,
@@ -198,12 +245,37 @@ fn main() -> ExitCode {
         }),
         ..Config::default()
     };
-    let server = match openwiz_server::start(
+    let switching = default_state_dir(&|name| std::env::var_os(name))
+        .ok()
+        .and_then(|state| openwiz_server::loop_switches::installed(&state));
+    let server = match openwiz_server::start_with_loop_switches(
         listener,
         config,
         Arc::new(CloudRoomSource::from_path()),
         Arc::new(SystemClock),
         Arc::new(|line: &str| eprintln!("{NAME}: {line}")),
+        ReadSources {
+            plan: Some(openwiz_server::Plan::with_program(
+                openwiz_adapter_github::PROGRAM,
+            )),
+            fleets: Some(Fleets {
+                list: Arc::new(GitHubFleets::from_path()),
+                detail: Arc::new(Tickets::from_path()),
+                agents: Arc::new(FleetAgents(CloudRoomSource::from_path())),
+            }),
+            decisions: default_state_dir(&|name| std::env::var_os(name))
+                .ok()
+                .map(|root| Decisions {
+                    github: GitHubDecisions::from_path()
+                        .with_settings(&root.join("service/config.json")),
+                    target: match std::env::var("OPENWIZ_ORCHESTRATOR_THREAD_ID") {
+                        Ok(id) => Ok(Some(id)),
+                        Err(std::env::VarError::NotPresent) => Ok(None),
+                        Err(_) => Err(()),
+                    },
+                }),
+        },
+        switching,
     ) {
         Ok(server) => server,
         Err(e) => {
@@ -217,4 +289,27 @@ fn main() -> ExitCode {
     );
     server.join();
     ExitCode::from(EXIT_FAILED)
+}
+
+#[cfg(test)]
+mod product_identity {
+    #[test]
+    fn the_compiled_record_is_this_programs_canonical_identity() {
+        let json = std::str::from_utf8(&super::PRODUCT)
+            .unwrap()
+            .strip_prefix("OPENWIZ_PRODUCT_V1:")
+            .and_then(|r| r.strip_suffix('\n'))
+            .unwrap();
+        let value: std::collections::BTreeMap<String, String> = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            serde_json::to_string(&value).unwrap(),
+            json,
+            "canonical JSON"
+        );
+        let keys: Vec<_> = value.keys().map(String::as_str).collect();
+        assert_eq!(keys, ["product", "schema", "source", "target", "version"]);
+        assert_eq!(value["product"], "server");
+        assert_eq!(value["schema"], "openwiz.product.v1");
+        assert_eq!(value["version"], env!("CARGO_PKG_VERSION"));
+    }
 }

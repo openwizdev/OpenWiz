@@ -1,4 +1,4 @@
-//! N2: no rewrite. Every `room-cli` call runs without
+//! N2 (sheet A-15): no rewrite. Every `room-cli` call runs without
 //! `ROOM_THREAD_ID`, `ROOM_PROJECT_ID` or any `BB_*` variable, and always
 //! keeps `ROOM_SERVER_URL`; `send`'s calls included. The model passed is the
 //! model chosen.
@@ -17,6 +17,20 @@ use serde_json::Value;
 use crate::support::*;
 
 #[test]
+fn n02_no_rewrite_affected_contracts_preserve_original_cases() {
+    let cases: [(&str, fn()); 2] = [
+        (
+            "the_model_passed_is_the_model_chosen",
+            the_model_passed_is_the_model_chosen,
+        ),
+        ("the_scrub_list_is_the_sheets", the_scrub_list_is_the_sheets),
+    ];
+    for (name, proof) in cases {
+        eprintln!("TA2 case: n02_no_rewrite::{name}");
+        proof();
+    }
+}
+
 fn the_scrub_list_is_the_sheets() {
     for name in [
         "ROOM_THREAD_ID",
@@ -100,7 +114,7 @@ fn every_call_runs_without_the_thread_context() {
         .collect();
     assert_eq!(envs.len(), calls.len(), "one environment line per call");
     // What this test's own environment passes through (a CloudRoom sandbox
-    // sets `CLOUDROOM_*` names, which the environment allowlist keeps), plus
+    // sets `CLOUDROOM_*` names, which the sheet's list keeps), plus
     // `ROOM_SERVER_URL`; never a scrubbed name.
     let mut kept: Vec<String> = std::env::vars_os()
         .filter_map(|(name, _)| name.into_string().ok())
@@ -134,7 +148,64 @@ fn every_call_runs_without_the_thread_context() {
     let _ = fs::remove_dir_all(&state);
 }
 
+/// Exercise the shared runner through a fixture `new --yes` subprocess.
 #[test]
+fn new_yes_scrubs_thread_context_on_every_call_including_spawn() {
+    use crate::fake::{NewFake, new_args, starts};
+
+    let fake = NewFake::new("n02_spawn_context");
+    let args = new_args(
+        "Synthetic project one",
+        "op-n02-spawn-context",
+        &[],
+        "Synthetic scrub check",
+    );
+    let output = fake
+        .process(&args)
+        .env("ROOM_THREAD_ID", "thr_syn_context")
+        .env("ROOM_PROJECT_ID", "prj_syn_context")
+        .env("BB_AUTOMATION_RUN_ID", "syn-run")
+        .env("BB_SYNTHETIC", "syn")
+        .env("BB_", "syn-prefix")
+        .env("ROOM_SERVER_URL", "http://127.0.0.1:9")
+        .stdin(Stdio::null())
+        .output()
+        .expect("run new --yes with synthetic thread context");
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let calls = fake.invocations();
+    assert_eq!(
+        calls
+            .iter()
+            .filter(|call| starts(call, &["thread", "spawn"]))
+            .count(),
+        1,
+        "new --yes must make exactly one spawn: {calls:?}"
+    );
+    let envs: Vec<Vec<String>> = fs::read_to_string(fake.dir.join("environment.log"))
+        .unwrap()
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+    assert_eq!(envs.len(), calls.len(), "one environment line per call");
+    // A-15 literals keep this oracle independent of the production predicate.
+    for names in envs {
+        for name in &names {
+            assert!(
+                name != "ROOM_THREAD_ID" && name != "ROOM_PROJECT_ID" && !name.starts_with("BB_"),
+                "{name} reached room-cli during new --yes: {calls:?}"
+            );
+        }
+        assert!(
+            names.iter().any(|name| name == "ROOM_SERVER_URL"),
+            "ROOM_SERVER_URL must reach every call during new --yes: {calls:?}"
+        );
+    }
+}
+
 fn the_model_passed_is_the_model_chosen() {
     for model in ["syn-claude-model-01", "syn-claude-model-01[1m]"] {
         let spawn = SpawnRequest {

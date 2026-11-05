@@ -1,5 +1,5 @@
 //! `openwiz new`, `openwiz new --status` and `openwiz models` (OpenWiz
-//! 0.0.4): parse the command line, call the core's
+//! 0.0.4, ClosedWiz#11): parse the command line, call the core's
 //! `new_thread`, `preview_new_thread`, `new_thread_status` and
 //! `cloud_options`, and print the result as text or as the
 //! `contracts/new-thread.v1.schema.json` JSON.
@@ -9,10 +9,10 @@
 //! codes are the `EXIT_*` constants here, documented in
 //! [`help`](crate::help).
 //!
-//! **`new` creates only with `--yes`**. Without it, it reads
+//! **`new` creates only with `--yes`** (sheet A-7). Without it, it reads
 //! what a create would read, prints the effects and the exact command, and
 //! exits [`EXIT_NEEDS_YES`]: nothing is claimed or created. There is no
-//! retry: an uncertain create stays uncertain, and the owner
+//! retry (sheet A-3): an uncertain create stays uncertain, and the owner
 //! resolves it in CloudRoom.
 
 use std::io::{Read, Write};
@@ -74,7 +74,7 @@ pub const EXIT_NO_OPTIONS: i32 = 13;
 pub const YES: &str = "--yes";
 /// Shows the record of an op id; no claim, no call.
 pub const STATUS: &str = "--status";
-/// Refuses a text whose SHA-256 is not this one.
+/// Refuses a text whose SHA-256 is not this one (Sol, round 2, R3).
 pub const TEXT_SHA256: &str = "--text-sha256";
 
 /// What `openwiz new` needs from the program around it.
@@ -128,6 +128,23 @@ pub enum NewCommand {
     Help,
 }
 
+/// `new`'s value-option syntax, shared with the process JSON selector.
+/// Keep command-specific option names here, including when parsing later fails.
+pub(crate) fn is_value_option(flag: &[u8]) -> bool {
+    matches!(
+        flag,
+        b"--project-id"
+            | b"--harness"
+            | b"--model"
+            | b"--effort"
+            | b"--op-id"
+            | b"--text-sha256"
+            | b"--status"
+            | b"--attach"
+            | b"--attachment"
+    )
+}
+
 /// Parses the arguments after `new`. Every option comes before `--`;
 /// everything after it is the project name (unless `--project-id` is given)
 /// and the text.
@@ -165,6 +182,9 @@ pub fn parse_new(args: &[String]) -> Result<NewCommand, UsageError> {
             continue;
         }
         let slot = match flag {
+            "--help" if inline.is_some() => {
+                return Err(UsageError(format!("{flag} takes no value")));
+            }
             "--help" | "-h" => return Ok(NewCommand::Help),
             "--project-id" => &mut project_id,
             "--harness" => &mut parsed.harness,
@@ -301,7 +321,13 @@ pub fn run_new_with(
 ) -> i32 {
     let args = match parse_new(args) {
         Ok(NewCommand::Help) => {
-            let _ = stdout.write_all(help().as_bytes());
+            let _ = stdout.write_all(
+                crate::response::help(
+                    crate::response::Request::for_command("new", args).json,
+                    help(),
+                )
+                .as_bytes(),
+            );
             return EXIT_OK;
         }
         Ok(NewCommand::New(args)) => args,
@@ -588,7 +614,13 @@ pub fn run_models(
     for arg in args {
         match arg.as_str() {
             "--help" | "-h" => {
-                let _ = stdout.write_all(help().as_bytes());
+                let _ = stdout.write_all(
+                    crate::response::help(
+                        crate::response::Request::for_command("models", args).json,
+                        help(),
+                    )
+                    .as_bytes(),
+                );
                 return EXIT_OK;
             }
             "--json" => json = true,
@@ -629,6 +661,22 @@ pub fn exit_code(report: &NewThreadReport) -> i32 {
     }
 }
 
+/// `value`, which the owner gave (a prompt, a project, a setting, an op
+/// id), as one shell word that `sh`, bash and zsh all read back byte for
+/// byte, and none expands: **always quoted, never a bare word** (Sol, round
+/// 2, R3), so no `~`, `~user`, zsh's `=cmd`, braces, globs, `$`, backticks,
+/// `!`, `#` or separators can act.
+///
+/// - When every character is safe to show on a terminal (a line break
+///   included, kept as it is): single quotes, which every POSIX shell and
+///   zsh read exactly, with each `'` in the value written `\'` between
+///   quoted runs, and no empty `''` run (so nothing rests on how zsh's
+///   `RC_QUOTES` reads `''`).
+/// - Otherwise one `$'…'` word (bash, zsh, ksh and POSIX.1-2024 `sh`), with
+///   `\\`, `\'`, `\n`, `\t` and `\r`, `!` as `\x21`, and every other
+///   character unsafe for a terminal as its UTF-8 bytes in `\xHH`: nothing
+///   unsafe is printed raw. A shell without `$'…'` reads another text, which
+///   the command's `--text-sha256` refuses: nothing is created.
 fn quoted(value: &str) -> String {
     if value.is_empty() {
         return "''".to_owned();
@@ -756,7 +804,10 @@ pub fn render_preview(preview: &NewThreadPreview, text: &str) -> String {
         preview.op_id,
         project_line(&preview.project_ref, preview.project.as_ref())
     );
-    out.push_str(&format!("source: {}\n", source_text(&preview.source)));
+    out.push_str(&format!(
+        "source: {}\n",
+        source_text(&preview.source, "new threads")
+    ));
     out.push_str(&requested_line(&preview.requested));
     out.push_str(&format!(
         "text: {} bytes, SHA-256 {}\n",
@@ -818,7 +869,7 @@ pub fn render_report(report: &NewThreadReport) -> String {
         project_line(&report.project_ref, report.project.as_ref())
     );
     if let Some(source) = &report.source {
-        out.push_str(&format!("source: {}\n", source_text(source)));
+        out.push_str(&format!("source: {}\n", source_text(source, "new threads")));
     }
     out.push_str(&requested_line(&report.requested));
     out.push_str(&format!("{}\n", clean(&report.summary)));

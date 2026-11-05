@@ -1,0 +1,558 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openwiz.dev/contracts/completion-checkpoint.v1.schema.json",
+  "title": "CP1 private completion checkpoint",
+  "$ref": "#/$defs/checkpoint",
+  "$defs": {
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "comment_id",
+        "body_sha256"
+      ],
+      "properties": {
+        "comment_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "body_sha256": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[0-9a-f]{64}$(?![\\s\\S])"
+        }
+      }
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "head",
+        "tree",
+        "build_sha256"
+      ],
+      "properties": {
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^0\\.[0-9]+\\.[0-9]+$(?![\\s\\S])"
+        },
+        "head": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[0-9a-f]{40}$(?![\\s\\S])"
+        },
+        "tree": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[0-9a-f]{40}$(?![\\s\\S])"
+        },
+        "build_sha256": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[0-9a-f]{64}$(?![\\s\\S])"
+        }
+      }
+    },
+    "plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "revision",
+        "fingerprint",
+        "revision_text",
+        "approval"
+      ],
+      "properties": {
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "fingerprint": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[0-9a-f]{64}$(?![\\s\\S])"
+        },
+        "revision_text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "approval": {
+          "$ref": "#/$defs/reference"
+        }
+      }
+    },
+    "live_reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ticket",
+        "comment_id",
+        "body_sha256"
+      ],
+      "properties": {
+        "ticket": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "comment_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "body_sha256": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[0-9a-f]{64}$(?![\\s\\S])"
+        }
+      }
+    },
+    "follow_up": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ticket",
+        "classification",
+        "labels",
+        "state",
+        "subissue",
+        "archived"
+      ],
+      "properties": {
+        "ticket": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "classification": {
+          "type": "string",
+          "minLength": 1
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0
+        },
+        "state": {
+          "type": "string",
+          "minLength": 1,
+          "enum": [
+            "open",
+            "closed"
+          ]
+        },
+        "subissue": {
+          "type": "boolean"
+        },
+        "archived": {
+          "type": "boolean"
+        }
+      }
+    },
+    "requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ticket",
+          "claims"
+        ],
+        "properties": {
+          "ticket": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "claims": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          }
+        }
+      },
+      "minItems": 0
+    },
+    "checkpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "repository",
+        "spec",
+        "plan",
+        "candidate",
+        "live",
+        "follow_ups"
+      ],
+      "properties": {
+        "schema": {
+          "type": "string",
+          "const": "openwiz.completion-checkpoint.v1"
+        },
+        "repository": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9_][A-Za-z0-9_.-]*$(?![\\s\\S])"
+        },
+        "spec": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "plan": {
+          "$ref": "#/$defs/plan"
+        },
+        "candidate": {
+          "$ref": "#/$defs/candidate"
+        },
+        "live": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/live_reference"
+          },
+          "minItems": 0
+        },
+        "follow_ups": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/follow_up"
+          },
+          "minItems": 0
+        }
+      }
+    },
+    "pin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "spec",
+        "checkpoint",
+        "orchestrator",
+        "candidate",
+        "required_live"
+      ],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9_][A-Za-z0-9_.-]*$(?![\\s\\S])"
+        },
+        "spec": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "checkpoint": {
+          "$ref": "#/$defs/reference"
+        },
+        "orchestrator": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*$(?![\\s\\S])"
+        },
+        "candidate": {
+          "$ref": "#/$defs/candidate"
+        },
+        "required_live": {
+          "$ref": "#/$defs/requirements"
+        }
+      }
+    },
+    "comment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "repository",
+        "subject",
+        "author",
+        "writer_role",
+        "body"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "repository": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9_][A-Za-z0-9_.-]*$(?![\\s\\S])"
+        },
+        "subject": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "author": {
+          "type": "string",
+          "minLength": 1
+        },
+        "writer_role": {
+          "type": "string",
+          "minLength": 1,
+          "enum": [
+            "orchestrator",
+            "live_runner",
+            "engine",
+            "unknown"
+          ]
+        },
+        "body": {
+          "type": "string"
+        }
+      }
+    },
+    "live_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "repository",
+        "spec",
+        "candidate",
+        "ticket",
+        "evidence_class",
+        "result",
+        "checks",
+        "gaps"
+      ],
+      "properties": {
+        "schema": {
+          "type": "string",
+          "const": "openwiz.completion-live.v1"
+        },
+        "repository": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9_][A-Za-z0-9_.-]*$(?![\\s\\S])"
+        },
+        "spec": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "candidate": {
+          "$ref": "#/$defs/candidate"
+        },
+        "ticket": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "evidence_class": {
+          "type": "string",
+          "minLength": 1,
+          "enum": [
+            "live_observation",
+            "fixture_test",
+            "unknown"
+          ]
+        },
+        "result": {
+          "type": "string",
+          "minLength": 1,
+          "enum": [
+            "passed",
+            "failed",
+            "unknown"
+          ]
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "claim",
+              "result"
+            ],
+            "properties": {
+              "claim": {
+                "type": "string",
+                "minLength": 1
+              },
+              "result": {
+                "type": "string",
+                "minLength": 1,
+                "enum": [
+                  "passed",
+                  "failed",
+                  "unknown"
+                ]
+              }
+            }
+          },
+          "minItems": 1
+        },
+        "gaps": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0
+        }
+      }
+    },
+    "feed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "total",
+        "pages"
+      ],
+      "properties": {
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "cursor",
+              "next_cursor",
+              "items"
+            ],
+            "properties": {
+              "cursor": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                ]
+              },
+              "next_cursor": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                ]
+              },
+              "items": {
+                "type": "array",
+                "items": {},
+                "minItems": 0
+              }
+            }
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "planned": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ticket",
+          "kind",
+          "state",
+          "verified_merge",
+          "human_complete",
+          "archived"
+        ],
+        "properties": {
+          "ticket": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "kind": {
+            "type": "string",
+            "minLength": 1,
+            "enum": [
+              "builder",
+              "human"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "minLength": 1,
+            "enum": [
+              "open",
+              "closed"
+            ]
+          },
+          "verified_merge": {
+            "type": "boolean"
+          },
+          "human_complete": {
+            "type": "boolean"
+          },
+          "archived": {
+            "type": "boolean"
+          }
+        }
+      },
+      "minItems": 0
+    },
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "repository",
+        "spec",
+        "plan",
+        "candidate",
+        "required_live",
+        "comments",
+        "live",
+        "planned",
+        "follow_ups",
+        "summary_recorded"
+      ],
+      "properties": {
+        "schema": {
+          "type": "string",
+          "const": "openwiz.completion-read.v1"
+        },
+        "repository": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "private"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9_][A-Za-z0-9_.-]*$(?![\\s\\S])"
+            },
+            "private": {
+              "type": "boolean"
+            }
+          }
+        },
+        "spec": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "plan": {},
+        "candidate": {},
+        "required_live": {},
+        "comments": {},
+        "live": {},
+        "planned": {},
+        "follow_ups": {},
+        "summary_recorded": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

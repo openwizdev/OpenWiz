@@ -1,0 +1,20 @@
+{
+  "scenario": "malformed-checks",
+  "description": "As complete, but gh pr checks 952 answers a row with a key it shouldn't have.",
+  "synthetic_assumptions": [
+    "Every value is synthetic; the shapes are gh 2.100.0's as A1's spike observed them (A1, #109)."
+  ],
+  "extends": "complete",
+  "responses": [
+    {
+      "argv": [
+        "pr",
+        "checks",
+        "952",
+        "--json",
+        "bucket,name"
+      ],
+      "stdout": "[{\"bucket\": \"pass\", \"name\": \"syn-build\", \"state\": \"SUCCESS\"}]"
+    }
+  ]
+}

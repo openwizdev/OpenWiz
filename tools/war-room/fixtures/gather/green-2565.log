@@ -1,0 +1,16 @@
+# #2565 green runs at bf68fe6a64ea328c61031a438963d5b85aa9301e; synthetic fixtures only
+$ python3 -I tools/war-room/test_gather.py Gather.test_a_real_scale_gathered_page_draws_with_real_chromium
+----------------------------------------------------------------------
+Ran 1 test in 7.677s
+
+OK
+$ python3 -I tools/war-room/test_gather.py
+----------------------------------------------------------------------
+Ran 10 tests in 20.768s
+
+OK
+$ python3 -I tools/war-room/test_publish.py
+----------------------------------------------------------------------
+Ran 14 tests in 7.867s
+
+OK

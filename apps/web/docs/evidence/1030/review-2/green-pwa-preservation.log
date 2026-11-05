@@ -1,0 +1,6 @@
+PASS: apps/web/public/manifest.webmanifest exists and matches merged D3
+PASS: apps/web/public/sw.js exists and matches merged D3
+PASS: apps/web/public/sw-register.js exists and matches merged D3
+PASS: apps/web/public/icons/icon-192.png exists and matches merged D3
+PASS: apps/web/public/icons/icon-512.png exists and matches merged D3
+PASS: D2 and D3 verified merges are ancestors; R3 Home rules retained

@@ -1,7 +1,7 @@
-//! U1: exactly the new routes. The route table is 0.0.3's plus
+//! U1 (#12, A2): exactly the new routes. The route table is 0.0.3's plus
 //! the Cloud options and the status (`GET`), and the create and the
 //! new-thread preview (`POST`): the create is the only new write. There is
-//! no retry route. Every other method on a new route is `405`,
+//! no retry route (sheet A-3). Every other method on a new route is `405`,
 //! and none of them reads, claims or creates anything.
 
 use openwiz_server::{ROUTES, Route};
@@ -33,12 +33,25 @@ pub const NEW_ROUTES: &[Route] = &[
     },
 ];
 
+/// Updated for #16 (OpenWiz 0.0.4, B3) with this reason: B3 appends
+/// exactly AW1's three attachment routes (sheet B-9) after A2's four, so
+/// A2's are no longer last. They are still exactly these, in this order,
+/// right after 0.0.3's six, and there is still no retry route.
 #[test]
 fn the_route_table_adds_exactly_the_new_thread_routes() {
-    let after = crate::aw01_routes::ATTACHMENT_ROUTES.len();
-    let end = ROUTES.len() - after;
-    assert_eq!(&ROUTES[end - NEW_ROUTES.len()..end], NEW_ROUTES);
-    assert_eq!(ROUTES.len(), 6 + NEW_ROUTES.len() + after, "{ROUTES:?}");
+    let legacy = crate::a4_no_mutation::legacy_routes(ROUTES);
+    // #127 appends two read-only fleet routes after the attachments.
+    let after = crate::aw01_routes::ATTACHMENT_ROUTES.len()
+        + crate::c3_routes::FLEET_ROUTES.len()
+        + crate::e11_plan_routes::PLAN_ROUTES.len()
+        + crate::e11_decisions_routes::DECISIONS_ROUTES.len()
+        + 2 // L6 appends exactly two local loop-switch routes.
+        + 1 // #1100 appends exactly one setup GET.
+        + 1 // #535 cockpit GET.
+        + 1; // #549 loops GET.
+    let end = legacy.len() - after;
+    assert_eq!(&legacy[end - NEW_ROUTES.len()..end], NEW_ROUTES);
+    assert_eq!(legacy.len(), 6 + NEW_ROUTES.len() + after, "{ROUTES:?}");
     for route in ROUTES {
         assert!(
             !route.path.contains("retry"),

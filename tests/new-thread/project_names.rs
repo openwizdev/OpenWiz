@@ -1,4 +1,4 @@
-//! Project names: a name resolves to one project
+//! Project names (Sol round 1, finding 1): a name resolves to one project
 //! only when no other project answers to it, whether by its literal name or
 //! by the inventory's qualified `name~<last 6 of the id>`. Otherwise it is
 //! refused as ambiguous, so a create can never land in another project.
@@ -17,6 +17,8 @@ fn project(id: &str, name: &str) -> ProjectCandidate {
     }
 }
 
+/// Sol's scenario: two projects named `Synthetic` (ids ending `111111` and
+/// `222222`) and a third literally named `Synthetic~111111`.
 fn collision() -> Vec<ProjectCandidate> {
     vec![
         project("prj_syn_111111", "Synthetic"),
@@ -30,6 +32,27 @@ fn by_name(name: &str, projects: &[ProjectCandidate]) -> Result<String, RefusalR
 }
 
 #[test]
+fn project_names_contracts_preserve_all_original_cases() {
+    let cases: [(&str, fn()); 3] = [
+        (
+            "a_literal_name_that_equals_another_projects_qualified_name_is_ambiguous",
+            a_literal_name_that_equals_another_projects_qualified_name_is_ambiguous,
+        ),
+        (
+            "a_unique_name_resolves_by_either_form",
+            a_unique_name_resolves_by_either_form,
+        ),
+        (
+            "every_project_is_reachable_by_its_id",
+            every_project_is_reachable_by_its_id,
+        ),
+    ];
+    for (name, proof) in cases {
+        eprintln!("TA2 case: project_names::{name}");
+        proof();
+    }
+}
+
 fn a_literal_name_that_equals_another_projects_qualified_name_is_ambiguous() {
     let projects = collision();
     assert_eq!(
@@ -46,7 +69,6 @@ fn a_literal_name_that_equals_another_projects_qualified_name_is_ambiguous() {
     );
 }
 
-#[test]
 fn every_project_is_reachable_by_its_id() {
     let projects = collision();
     for p in &projects {
@@ -57,7 +79,6 @@ fn every_project_is_reachable_by_its_id() {
     }
 }
 
-#[test]
 fn a_unique_name_resolves_by_either_form() {
     let projects = vec![
         project("prj_syn_aaaaaa", "Synthetic alpha"),

@@ -3,35 +3,35 @@
 //!
 //! In order:
 //! 1. **validate** the prompt (text rules; any attachment is refused), the
-//! project reference and the three settings; nothing is defaulted;
+//!    project reference and the three settings; nothing is defaulted;
 //! 2. **claim** the op id durably and atomically. The same op id with the
-//! same binding returns the recorded outcome, or "in progress"; with a
-//! different binding it is refused as conflicting reuse. Neither calls
-//! the provider;
-//! 3. read and report the provider's **version**;
+//!    same binding returns the recorded outcome, or "in progress"; with a
+//!    different binding it is refused as conflicting reuse. Neither calls
+//!    the provider;
+//! 3. read and report the provider's **version** (never a gate, #37);
 //! 4. **resolve the project** from the project list, in the same operation;
 //! 5. **read the options** in the same operation. A harness, model or
-//! effort they don't offer is refused, with what is offered; nothing is
-//! substituted;
+//!    effort they don't offer is refused, with what is offered; nothing is
+//!    substituted;
 //! 6. work out the **effects**, and derive the **request id** from the op
-//! id;
+//!    id;
 //! 7. mark the record **dispatching**, durably;
 //! 8. make **one call**. No retry;
 //! 9. map the reply to an **outcome** and record it. The prompt text is kept
-//! until the outcome is Created.
+//!    until the outcome is Created.
 //!
 //! [`preview_new_thread`] runs steps 1 and 3 to 6 with the same reads and
 //! rules, and claims nothing and calls nothing: the effects shown before
 //! anything is created.
 //!
-//! **Attachments (B2).** Before the op id is claimed, the one
+//! **Attachments (B2, ClosedWiz#15).** Before the op id is claimed, the one
 //! [`gate`] (shared with `send`) reads every attachment's copy again and
 //! refuses unless every one can go; the op id, and so the request id
 //! derived from it, binds them too, so one request id never carries two
 //! payloads (CloudRoom's own dedup compares the text only, F17). Once the
 //! op id is owned, the attachments are claimed for it, all or none, before
 //! any read; the one call carries every one; and once the outcome is
-//! recorded, a created thread's copies are deleted.
+//! recorded, a created thread's copies are deleted (B-6).
 
 use std::time::Instant;
 
@@ -166,7 +166,7 @@ pub struct NewThreadReport {
     pub dispatching_at: Option<Timestamp>,
     pub finished_at: Option<Timestamp>,
     /// The start of a created thread, once followed (`openwiz new` follows
-    /// it after the create). `new_thread` itself never reads it:
+    /// it after the create, sheet A-9). `new_thread` itself never reads it:
     /// always `None` from here.
     pub start: Option<StartView>,
 }
@@ -271,12 +271,13 @@ pub fn new_thread_with(
     // The binding: the attachments' content, in the owner's order, so one
     // request id never carries two payloads. For an op id already
     // recorded, each attachment as its record holds it when it has that id
-    // (a created thread's copies are gone), else its copy now. For a
+    // (a created thread's copies are gone, B-6), else its copy now. For a
     // new op id, every attachment passes the gate first, so a refusal
     // claims nothing.
-    let known = store
-        .inspect(&request.op_id, clock.now())
-        .map_err(NewThreadError::Store)?;
+    // A lock taken just to inspect could be copied by another thread's
+    // fork and outlive that inspection. Read without a lock here; claim
+    // below alone decides whether an existing owner stopped (#244).
+    let known = store.load(&request.op_id).map_err(NewThreadError::Store)?;
     let (binding, bound, mut ready) = match &known {
         Some(record) => {
             let ids = &request.prompt.attachments;
@@ -455,7 +456,7 @@ impl Dispatch<'_> {
     /// the report says so, and the record recovers as failed (before the
     /// dispatching mark) or uncertain (after it). Only once the outcome is
     /// recorded are the attachments settled: a created thread's copies are
-    /// deleted then, never before.
+    /// deleted then, never before (B-6).
     fn finish(
         &self,
         record: NewThreadRecord,
@@ -491,7 +492,7 @@ impl Dispatch<'_> {
     }
 }
 
-/// The provider and its version, reported and never a gate.
+/// The provider and its version, reported and never a gate (#37).
 fn read_source(client: &dyn NewThreadClient, deadline: Instant) -> (SourceInfo, Option<Gap>) {
     let name = client.name();
     let tested = client.tested_version();

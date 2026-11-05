@@ -1,0 +1,8 @@
+FAIL batch approval: the documented records admit only the approved subset: unexpected output:
+    --- /tmp/tmp.nF4rtCNAjy/case-1/want.txt	2026-11-06 10:52:16.188144789 +0000
+    +++ /tmp/tmp.nF4rtCNAjy/case-1/out	2026-11-06 10:52:14.600144735 +0000
+    @@ -1,2 +0,0 @@
+    -#16 A low finding 16
+    -#17 A low finding 17
+ok   every gh call was one of fleet.sh's reads
+1 cases, 1 failed

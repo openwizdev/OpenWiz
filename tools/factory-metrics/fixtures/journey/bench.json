@@ -1,0 +1,99 @@
+{
+  "schema": "closedwiz.journey.bench.v1",
+  "tickets": [
+    {
+      "ticket": 4101,
+      "state": "merged",
+      "pull_requests": [
+        4201
+      ],
+      "rounds": 3,
+      "first_time_approval": false,
+      "fix_rounds": 2,
+      "ci_attempts": 4,
+      "reruns": 1,
+      "ready_to_merged_hours": 19.0,
+      "findings": {
+        "missing-proof": 0,
+        "stale-docs": 1,
+        "spec-mismatch": 0,
+        "fail-open": 1,
+        "unknown": 2
+      },
+      "usage": {
+        "claude/tokens": "known",
+        "claude/credits": "known",
+        "claude/usd": "unknown",
+        "gpt/tokens": "unattributed",
+        "gpt/credits": "unattributed",
+        "gpt/usd": "unattributed"
+      },
+      "gaps": []
+    },
+    {
+      "ticket": 4102,
+      "state": "open",
+      "pull_requests": [],
+      "rounds": 0,
+      "first_time_approval": null,
+      "fix_rounds": 0,
+      "ci_attempts": 0,
+      "reruns": 0,
+      "ready_to_merged_hours": null,
+      "findings": {
+        "missing-proof": 0,
+        "stale-docs": 0,
+        "spec-mismatch": 0,
+        "fail-open": 0,
+        "unknown": 0
+      },
+      "usage": {
+        "claude/tokens": "unattributed",
+        "claude/credits": "unattributed",
+        "claude/usd": "unattributed",
+        "gpt/tokens": "known",
+        "gpt/credits": "known",
+        "gpt/usd": "known"
+      },
+      "gaps": [
+        "no pull request",
+        "no merge"
+      ]
+    },
+    {
+      "ticket": 4103,
+      "state": "merged",
+      "pull_requests": [
+        4202
+      ],
+      "rounds": 0,
+      "first_time_approval": null,
+      "fix_rounds": 0,
+      "ci_attempts": 0,
+      "reruns": 0,
+      "ready_to_merged_hours": null,
+      "findings": {
+        "missing-proof": 0,
+        "stale-docs": 0,
+        "spec-mismatch": 0,
+        "fail-open": 0,
+        "unknown": 0
+      },
+      "usage": {
+        "claude/tokens": "unattributed",
+        "claude/credits": "unattributed",
+        "claude/usd": "unattributed",
+        "gpt/tokens": "unattributed",
+        "gpt/credits": "unattributed",
+        "gpt/usd": "unattributed"
+      },
+      "gaps": [
+        "no ready label",
+        "no builder start record",
+        "no spec",
+        "no grill path",
+        "no plan graph approval"
+      ]
+    }
+  ]
+}

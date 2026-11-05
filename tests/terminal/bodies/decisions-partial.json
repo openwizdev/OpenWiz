@@ -1,0 +1,36 @@
+{
+ "schema": "openwiz.decisions.v1",
+ "kind": "response",
+ "snapshot_at": 1700000600000,
+ "coverage": {
+  "state": "partial",
+  "gaps": [
+   {
+    "kind": "timed_out",
+    "detail": "decision source read timed out"
+   }
+  ]
+ },
+ "freshness": {
+  "state": "unknown",
+  "snapshot_at": {
+   "unknown": "independent saved proposal verification is unavailable"
+  }
+ },
+ "orchestrator": {
+  "coverage": {
+   "state": "complete",
+   "gaps": []
+  },
+  "freshness": {
+   "state": "fresh",
+   "snapshot_at": {
+    "known": 1700000599000
+   }
+  },
+  "target": {
+   "known": "thr_syn_0399"
+  }
+ },
+ "items": []
+}

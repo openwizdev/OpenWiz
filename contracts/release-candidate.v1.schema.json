@@ -1,0 +1,852 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OpenWiz release candidate v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "candidate_sha256",
+    "candidate",
+    "decisions",
+    "gates",
+    "publication",
+    "install",
+    "timing"
+  ],
+  "properties": {
+    "schema": {
+      "const": "openwiz.release-candidate.v1"
+    },
+    "candidate_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "candidate": {
+      "$ref": "#/$defs/candidate"
+    },
+    "decisions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ship",
+        "changelog"
+      ],
+      "properties": {
+        "ship": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/decision"
+            }
+          ]
+        },
+        "changelog": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/decision"
+            }
+          ]
+        }
+      }
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cutover",
+        "ci",
+        "privacy",
+        "claims",
+        "products",
+        "smoke",
+        "send",
+        "new",
+        "app_permissions",
+        "spending"
+      ],
+      "properties": {
+        "cutover": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/receipt"
+            }
+          ]
+        },
+        "ci": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/receipt"
+            }
+          ]
+        },
+        "privacy": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/receipt"
+            }
+          ]
+        },
+        "claims": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/receipt"
+            }
+          ]
+        },
+        "products": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/receipt"
+            }
+          ]
+        },
+        "smoke": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/receipt"
+            }
+          ]
+        },
+        "send": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/receipt"
+            }
+          ]
+        },
+        "new": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/receipt"
+            }
+          ]
+        },
+        "app_permissions": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/receipt"
+            }
+          ]
+        },
+        "spending": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/receipt"
+            }
+          ]
+        }
+      }
+    },
+    "publication": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/publication"
+        }
+      ]
+    },
+    "install": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/install"
+        }
+      ]
+    },
+    "timing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "original_ship_at",
+        "preparation_started_at",
+        "phases",
+        "finished_at"
+      ],
+      "properties": {
+        "original_ship_at": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "integer",
+              "minimum": 0
+            }
+          ]
+        },
+        "preparation_started_at": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "phases": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/phase"
+          }
+        },
+        "finished_at": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "integer",
+              "minimum": 0
+            }
+          ]
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^0\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "target": {
+      "enum": [
+        "aarch64-apple-darwin",
+        "x86_64-apple-darwin",
+        "x86_64-unknown-linux-gnu"
+      ]
+    },
+    "pointer": {
+      "type": "string",
+      "pattern": "^https://github\\.com/jparker2006/ClosedWiz/(issues|pull)/[1-9][0-9]*#issuecomment-[1-9][0-9]*$"
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record",
+        "sha256"
+      ],
+      "properties": {
+        "record": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "product_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "product",
+        "version",
+        "source",
+        "target"
+      ],
+      "properties": {
+        "schema": {
+          "const": "openwiz.product.v1"
+        },
+        "product": {
+          "enum": [
+            "cli",
+            "server",
+            "service",
+            "web",
+            "runtime"
+          ]
+        },
+        "version": {
+          "$ref": "#/$defs/version"
+        },
+        "source": {
+          "$ref": "#/$defs/commit"
+        },
+        "target": {
+          "$ref": "#/$defs/target"
+        }
+      }
+    },
+    "product": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "identity",
+        "payload_sha256",
+        "verification",
+        "build_receipt"
+      ],
+      "properties": {
+        "identity": {
+          "$ref": "#/$defs/product_identity"
+        },
+        "payload_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "verification": {
+          "enum": [
+            "native-query",
+            "embedded-record",
+            "web-build",
+            "tracked-tree"
+          ]
+        },
+        "build_receipt": {
+          "$ref": "#/$defs/evidence"
+        }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "role",
+        "target",
+        "sha256",
+        "bytes"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$"
+        },
+        "role": {
+          "enum": [
+            "archive",
+            "manifest",
+            "manifest_alias",
+            "manifest_checksum",
+            "checksums"
+          ]
+        },
+        "target": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/target"
+            }
+          ]
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "version_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "section_sha256",
+        "promises"
+      ],
+      "properties": {
+        "version": {
+          "$ref": "#/$defs/version"
+        },
+        "section_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "promises": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "classification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required",
+        "reason"
+      ],
+      "properties": {
+        "required": {
+          "enum": [
+            "yes",
+            "no",
+            "unknown"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "build_id",
+        "release_version",
+        "included_versions",
+        "changelog",
+        "products",
+        "artifacts",
+        "kit",
+        "risk"
+      ],
+      "properties": {
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "repository",
+            "commit",
+            "tree",
+            "anchor"
+          ],
+          "properties": {
+            "repository": {
+              "const": "openwizdev/openwiz"
+            },
+            "commit": {
+              "$ref": "#/$defs/commit"
+            },
+            "tree": {
+              "$ref": "#/$defs/commit"
+            },
+            "anchor": {
+              "const": "5d069b025c6eacb4123ca8241ba21345f1eae9dd"
+            }
+          }
+        },
+        "build_id": {
+          "$ref": "#/$defs/sha256"
+        },
+        "release_version": {
+          "$ref": "#/$defs/version"
+        },
+        "included_versions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/version_entry"
+          }
+        },
+        "changelog": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "utf8",
+            "sha256",
+            "bytes"
+          ],
+          "properties": {
+            "utf8": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "bytes": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "products": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/product"
+          }
+        },
+        "artifacts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/artifact"
+          }
+        },
+        "kit": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sha256",
+            "scope_sha256",
+            "authority"
+          ],
+          "properties": {
+            "sha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "scope_sha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "authority": {
+              "$ref": "#/$defs/pointer"
+            }
+          }
+        },
+        "risk": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "send",
+            "new",
+            "app_permissions",
+            "spending"
+          ],
+          "properties": {
+            "send": {
+              "$ref": "#/$defs/classification"
+            },
+            "new": {
+              "$ref": "#/$defs/classification"
+            },
+            "app_permissions": {
+              "$ref": "#/$defs/classification"
+            },
+            "spending": {
+              "$ref": "#/$defs/classification"
+            }
+          }
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pointer",
+        "record_sha256",
+        "decided_at",
+        "binding_sha256"
+      ],
+      "properties": {
+        "pointer": {
+          "$ref": "#/$defs/pointer"
+        },
+        "record_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "decided_at": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "binding_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "promise",
+        "outcome"
+      ],
+      "properties": {
+        "version": {
+          "$ref": "#/$defs/version"
+        },
+        "promise": {
+          "type": "string",
+          "minLength": 1
+        },
+        "outcome": {
+          "enum": [
+            "pass",
+            "fail",
+            "incomplete",
+            "uncertain"
+          ]
+        }
+      }
+    },
+    "receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_sha256",
+        "inputs_sha256",
+        "artifacts_sha256",
+        "kit_sha256",
+        "evidence_class",
+        "status",
+        "started_at",
+        "finished_at",
+        "evidence",
+        "coverage",
+        "gaps"
+      ],
+      "properties": {
+        "candidate_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "inputs_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "artifacts_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "kit_sha256": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/sha256"
+            }
+          ]
+        },
+        "evidence_class": {
+          "enum": [
+            "live",
+            "fixture",
+            "dry-run",
+            "ci",
+            "source-inspection"
+          ]
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "fail",
+            "incomplete",
+            "uncertain"
+          ]
+        },
+        "started_at": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "finished_at": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "integer",
+              "minimum": 0
+            }
+          ]
+        },
+        "evidence": {
+          "$ref": "#/$defs/evidence"
+        },
+        "coverage": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/coverage"
+          }
+        },
+        "gaps": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "phase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "started_at",
+        "finished_at"
+      ],
+      "properties": {
+        "name": {
+          "enum": [
+            "changelog_wait",
+            "queue",
+            "build",
+            "checks",
+            "publish",
+            "install",
+            "other"
+          ]
+        },
+        "started_at": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "finished_at": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "integer",
+              "minimum": 0
+            }
+          ]
+        }
+      }
+    },
+    "publication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "attempt_id",
+        "tag",
+        "tag_object",
+        "commit",
+        "notes_sha256",
+        "artifacts_sha256",
+        "immutable",
+        "prerelease",
+        "verified_at",
+        "evidence"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "complete",
+            "incomplete",
+            "uncertain",
+            "failed"
+          ]
+        },
+        "attempt_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tag": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tag_object": {
+          "$ref": "#/$defs/commit"
+        },
+        "commit": {
+          "$ref": "#/$defs/commit"
+        },
+        "notes_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "artifacts_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "immutable": {
+          "type": "boolean"
+        },
+        "prerelease": {
+          "type": "boolean"
+        },
+        "verified_at": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "integer",
+              "minimum": 0
+            }
+          ]
+        },
+        "evidence": {
+          "$ref": "#/$defs/evidence"
+        }
+      }
+    },
+    "install": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "route",
+        "version",
+        "source",
+        "target",
+        "manifest_sha256",
+        "archive_sha256",
+        "verified_at",
+        "evidence"
+      ],
+      "properties": {
+        "route": {
+          "enum": [
+            "install",
+            "update"
+          ]
+        },
+        "version": {
+          "$ref": "#/$defs/version"
+        },
+        "source": {
+          "$ref": "#/$defs/commit"
+        },
+        "target": {
+          "$ref": "#/$defs/target"
+        },
+        "manifest_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "archive_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "verified_at": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "evidence": {
+          "$ref": "#/$defs/evidence"
+        }
+      }
+    }
+  }
+}

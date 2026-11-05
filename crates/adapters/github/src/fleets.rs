@@ -1,0 +1,1406 @@
+//! `openwiz fleets`' reads from GitHub (A4, ClosedWiz#112): its part of the
+//! allowlist, and the [`FleetsSource`] that runs them through `gh` and
+//! reads each answer strictly. What the answers mean is the core's
+//! (`openwiz_core::fleet::fleets`).
+//!
+//! **Pinned read forms, nothing else** ([`ALLOWLIST`]), each an exact
+//! argument list: `gh --version`; `gh repo view` (the name with its owner,
+//! of which only the name is kept); one `gh issue list` and one `gh pr
+//! list` of the whole repository; and for one pull request, `gh pr checks`,
+//! its comment bodies (`gh pr view`), and its merge commit compared with
+//! its base (`gh api`, a GET of REST `compare`), or the bounded batch
+//! ancestry query (`gh api graphql`). A number is decimal digits
+//! only, a commit 40 lowercase hex digits, and a branch a plain git branch
+//! name ([`is_branch`]). No form writes: no arbitrary `gh api` method, field or query,
+//! only the bounded ancestry GraphQL query below, no other subcommand.
+//!
+//! **Every answer is read strictly** (B1's pattern, PR #88): a JSON tree
+//! that refuses a key given twice, then an object only with exactly its
+//! keys, each of its own type, an enum only as one of its strings, a list
+//! only as an array. Anything else fails the read, named by its path in
+//! OpenWiz's words, never by `gh`'s text. Shapes are those A1's spike
+//! observed in A1's structure-only spike (#109), except
+//! the documented batch Comparison fields: raw SHA acceptance by headRef
+//! remains a fixture assumption until an approved live discovery.
+//!
+//! **A list of [`LIST_LIMIT`] rows may be cut short:** `gh` stops there,
+//! so the core treats what it can't settle as partial or failed.
+
+use std::fmt;
+use std::num::NonZeroU64;
+use std::path::PathBuf;
+use std::time::Instant;
+
+use openwiz_core::envelope::GapKind;
+use openwiz_core::fleet::fleets::{
+    FleetsSource, IssueRow, Link, Links, Listed, MERGE_BATCH_SIZE, PrFacts, PrRow, StockPr,
+};
+use openwiz_core::fleet::model::{
+    Check, CheckResult, Commit, Failed, IssueState, MergedPr, Milestone, NonEmpty, Number,
+    Repository,
+};
+use openwiz_core::model::Timestamp;
+use openwiz_core::ops::is_version_text;
+use openwiz_core::source::SourceError;
+use serde::de::{self, Deserialize, Deserializer, MapAccess, SeqAccess, Visitor};
+
+use crate::allowlist::{Invocation, Module};
+use crate::{PROGRAM, process};
+
+/// The `gh` version A1's spike read GitHub with (#109, 2026-10-31): the
+/// shapes these readers take. Reported, never a gate. No `openwiz fleets`
+/// run has been live-tested yet (A7, #115).
+pub const TESTED_VERSION: &str = "2.100.0";
+
+/// The most rows one list read asks for.
+pub const LIST_LIMIT: usize = 1000;
+
+/// [`LIST_LIMIT`] as `gh`'s `--limit` argument.
+const LIMIT: &str = "1000";
+
+/// The issue list's fields.
+const ISSUE_FIELDS: &str = "blockedBy,body,id,labels,milestone,number,state,subIssues,title";
+
+/// The pull request list's fields.
+pub const PR_FIELDS: &str = "baseRefName,closingIssuesReferences,headRefName,headRefOid,isDraft,mergeCommit,mergedAt,number,state,title";
+
+/// `gh pr checks`' fields.
+const CHECK_FIELDS: &str = "bucket,name";
+
+/// Keeps only the comment bodies, so no author or other field is read.
+const COMMENTS_JQ: &str = "[.comments[].body]";
+
+/// Keeps only the two fields of REST `compare` the merge read back uses.
+const COMPARE_JQ: &str = "{status: .status, behind_by: .behind_by}";
+
+/// The REST path before a compare's `<commit>...<branch>`; `gh` fills in
+/// `{owner}` and `{repo}` from the repository it runs in.
+const COMPARE_PATH: &str = "repos/{owner}/{repo}/compare/";
+
+/// This module's part of the allowlist.
+pub const ALLOWLIST: Module = Module {
+    name: "fleets",
+    allows,
+};
+
+/// Whether `argv` is exactly one of this module's pinned read forms.
+fn allows(argv: &[&str]) -> bool {
+    match argv {
+        ["--version"] | ["repo", "view", "--json", "nameWithOwner"] => true,
+        [
+            "issue",
+            "list",
+            "--state",
+            "all",
+            "--limit",
+            LIMIT,
+            "--json",
+            ISSUE_FIELDS,
+        ] => true,
+        [
+            "pr",
+            "list",
+            "--state",
+            "all",
+            "--limit",
+            LIMIT,
+            "--json",
+            PR_FIELDS,
+        ] => true,
+        ["pr", "checks", n, "--json", CHECK_FIELDS] => is_number(n),
+        ["pr", "view", n, "--json", "comments", "--jq", COMMENTS_JQ] => is_number(n),
+        ["api", path, "--jq", COMPARE_JQ] => is_compare_path(path),
+        ["api", "graphql", ..] => allows_batch(argv),
+        _ => false,
+    }
+}
+
+/// Only one generated query shape, 1..=20 pairs. User values are fields,
+/// never query text. Rebuilding the complete argv rejects flags, duplicate
+/// fields, arbitrary GraphQL, mutations and even query near misses.
+fn allows_batch(argv: &[&str]) -> bool {
+    if argv.len() < 12 || !(argv.len() - 8).is_multiple_of(4) {
+        return false;
+    }
+    let n = (argv.len() - 8) / 4;
+    if n > MERGE_BATCH_SIZE {
+        return false;
+    }
+    let mut pairs = Vec::new();
+    for i in 0..n {
+        let Some(base) = argv[9 + 4 * i].strip_prefix(&format!("base{i}=refs/heads/")) else {
+            return false;
+        };
+        let Some(head) = argv[11 + 4 * i].strip_prefix(&format!("head{i}=")) else {
+            return false;
+        };
+        if !is_branch(base) || Commit::parse(head).is_none() {
+            return false;
+        }
+        pairs.push((base, head));
+    }
+    batch_args(&pairs)
+        .iter()
+        .map(String::as_str)
+        .eq(argv.iter().copied())
+}
+
+fn batch_args(pairs: &[(&str, &str)]) -> Vec<String> {
+    let mut vars = String::new();
+    let mut body = String::new();
+    for i in 0..pairs.len() {
+        vars.push_str(&format!(",$base{i}:String!,$head{i}:String!"));
+        body.push_str(&format!("r{i}:ref(qualifiedName:$base{i}){{target{{oid}} comparison:compare(headRef:$head{i}){{status aheadBy behindBy baseTarget{{oid}} headTarget{{oid}}}}}}"));
+    }
+    let mut args: Vec<String> = [
+        "api",
+        "graphql",
+        "-F",
+        "owner={owner}",
+        "-F",
+        "name={repo}",
+        "-f",
+    ]
+    .into_iter()
+    .map(str::to_owned)
+    .collect();
+    args.push(format!("query=query($owner:String!,$name:String!{vars}){{repository(owner:$owner,name:$name){{{body}}}}}"));
+    for (i, (base, head)) in pairs.iter().enumerate() {
+        args.extend([
+            "-f".into(),
+            format!("base{i}=refs/heads/{base}"),
+            "-f".into(),
+            format!("head{i}={head}"),
+        ]);
+    }
+    args
+}
+
+/// An issue or pull request number: decimal digits, no leading zero, and
+/// at most a `u64`.
+fn is_number(s: &str) -> bool {
+    s.bytes().all(|b| b.is_ascii_digit()) && !s.starts_with('0') && s.parse::<NonZeroU64>().is_ok()
+}
+
+/// `repos/{owner}/{repo}/compare/<commit>...<branch>`.
+fn is_compare_path(path: &str) -> bool {
+    path.strip_prefix(COMPARE_PATH)
+        .and_then(|rest| rest.split_once("..."))
+        .is_some_and(|(commit, branch)| Commit::parse(commit).is_some() && is_branch(branch))
+}
+
+/// A plain branch name: segments of ASCII letters, digits, `.`, `_` and
+/// `-`, joined by `/`; no segment empty or starting with `.` or `-`, and
+/// no `..`. So it can't change the compare's path or query. No length
+/// limit: none was decided.
+pub fn is_branch(name: &str) -> bool {
+    !name.contains("..")
+        && name.split('/').all(|seg| {
+            !seg.is_empty()
+                && !seg.starts_with(['.', '-'])
+                && seg
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'-'))
+        })
+}
+
+/// `openwiz fleets`' reads, through the `gh` it is given.
+pub struct GitHubFleets {
+    executor: process::Executor,
+}
+
+impl GitHubFleets {
+    /// The `gh` on `PATH`.
+    pub fn from_path() -> Self {
+        Self::with_program(PROGRAM)
+    }
+
+    /// Another `gh`, such as a test's fake.
+    pub fn with_program(program: impl Into<PathBuf>) -> Self {
+        Self::with_executor(process::Executor::program(program))
+    }
+
+    pub fn with_executor(executor: process::Executor) -> Self {
+        Self { executor }
+    }
+
+    /// Runs one of this module's forms; its stdout, or why not.
+    fn call(&self, read: &str, argv: &[&str], deadline: Instant) -> Result<Vec<u8>, Failed> {
+        let Some(invocation) = Invocation::new(argv) else {
+            return Err(failed(
+                GapKind::CommandFailed,
+                format!("{read} was not run: it isn't on the allowlist"),
+            ));
+        };
+        self.executor
+            .run(&invocation, deadline)
+            .map_err(|e| failure(read, &e))
+    }
+
+    /// Runs one form and reads its JSON answer with `read_answer`.
+    fn json<T>(
+        &self,
+        read: &str,
+        argv: &[&str],
+        deadline: Instant,
+        read_answer: impl FnOnce(&Json) -> Got<T>,
+    ) -> Result<T, Failed> {
+        let out = self.call(read, argv, deadline)?;
+        let tree = serde_json::from_slice::<StrictJson>(&out).map_err(|_| {
+            failed(
+                GapKind::Malformed,
+                format!("{read} printed something that isn't one JSON value with each key once"),
+            )
+        })?;
+        read_answer(&tree.0).map_err(|bad| bad.failed(read))
+    }
+}
+
+impl FleetsSource for GitHubFleets {
+    fn tested_version(&self) -> &str {
+        TESTED_VERSION
+    }
+
+    /// Any failure is `untested_version`, as the inventory's version read
+    /// is: the version "could not be read, or is not a recognised version
+    /// text".
+    fn version(&self, deadline: Instant) -> Result<NonEmpty, Failed> {
+        let read = "gh --version";
+        let out = self
+            .call(read, &["--version"], deadline)
+            .map_err(|f| Failed {
+                gap: GapKind::UntestedVersion,
+                reason: f.reason,
+            })?;
+        version_of(&out).ok_or_else(|| {
+            failed(
+                GapKind::UntestedVersion,
+                format!("{read} printed no recognised version (withheld)"),
+            )
+        })
+    }
+
+    fn repository(&self, deadline: Instant) -> Result<Repository, Failed> {
+        let argv = ["repo", "view", "--json", "nameWithOwner"];
+        self.json("gh repo view", &argv, deadline, repository_of)
+    }
+
+    fn issues(&self, deadline: Instant) -> Result<Listed<IssueRow>, Failed> {
+        let argv = [
+            "issue",
+            "list",
+            "--state",
+            "all",
+            "--limit",
+            LIMIT,
+            "--json",
+            ISSUE_FIELDS,
+        ];
+        let rows = self.json("gh issue list", &argv, deadline, |v| list(v, "", issue_row))?;
+        Ok(listed(rows))
+    }
+
+    fn pull_requests(&self, deadline: Instant) -> Result<Listed<PrRow>, Failed> {
+        self.stock_pull_requests(deadline).map(|listed| Listed {
+            cut_short: listed.cut_short,
+            rows: listed.rows.into_iter().map(|row| row.pr).collect(),
+        })
+    }
+
+    fn stock_pull_requests(&self, deadline: Instant) -> Result<Listed<StockPr>, Failed> {
+        let argv = [
+            "pr", "list", "--state", "all", "--limit", LIMIT, "--json", PR_FIELDS,
+        ];
+        let rows = self.json("gh pr list", &argv, deadline, |v| list(v, "", stock_pr_row))?;
+        Ok(listed(rows))
+    }
+
+    fn checks(&self, pr: Number, deadline: Instant) -> Result<Vec<Check>, Failed> {
+        let n = pr.to_string();
+        let argv = ["pr", "checks", n.as_str(), "--json", CHECK_FIELDS];
+        let read = format!("gh pr checks {n}");
+        let invocation = Invocation::new(&argv).ok_or_else(|| {
+            failed(
+                GapKind::CommandFailed,
+                format!("{read} was not run: it isn't on the allowlist"),
+            )
+        })?;
+        let out = self
+            .executor
+            .checks(&invocation, deadline)
+            .map_err(|e| failure(&read, &e))?;
+        let tree = serde_json::from_slice::<StrictJson>(&out).map_err(|_| {
+            failed(
+                GapKind::Malformed,
+                format!("{read} printed something that isn't one JSON value with each key once"),
+            )
+        })?;
+        list(&tree.0, "", check).map_err(|bad| bad.failed(&read))
+    }
+
+    fn comments(&self, pr: Number, deadline: Instant) -> Result<Vec<String>, Failed> {
+        let n = pr.to_string();
+        let argv = [
+            "pr",
+            "view",
+            n.as_str(),
+            "--json",
+            "comments",
+            "--jq",
+            COMMENTS_JQ,
+        ];
+        self.json(
+            &format!("gh pr view {n}'s comments"),
+            &argv,
+            deadline,
+            |v| list(v, "", |v, at| string(v, at).map(str::to_owned)),
+        )
+    }
+
+    fn on_base(&self, pr: &MergedPr, deadline: Instant) -> Result<bool, Failed> {
+        let path = format!(
+            "{COMPARE_PATH}{}...{}",
+            pr.merge_commit.as_str(),
+            pr.fields.base_branch.as_str()
+        );
+        let read = format!("the merge read back of pull request #{}", pr.fields.number);
+        if !is_branch(pr.fields.base_branch.as_str()) {
+            return Err(non_plain_base(pr.fields.number));
+        }
+        self.json(
+            &read,
+            &["api", path.as_str(), "--jq", COMPARE_JQ],
+            deadline,
+            on_base_of,
+        )
+    }
+
+    fn on_bases(&self, prs: &[MergedPr], deadline: Instant) -> Vec<Result<bool, Failed>> {
+        // Refuse non-plain bases per PR before checking the batch argv, so
+        // one unsupported base cannot prevent its plain-base peers' reads.
+        let plain: Vec<_> = prs
+            .iter()
+            .filter(|pr| is_branch(pr.fields.base_branch.as_str()))
+            .cloned()
+            .collect();
+        let answers = if plain.is_empty() {
+            Vec::new()
+        } else {
+            let read = "the merge ancestry batch";
+            let pairs: Vec<_> = plain
+                .iter()
+                .map(|pr| (pr.fields.base_branch.as_str(), pr.merge_commit.as_str()))
+                .collect();
+            let argv = batch_args(&pairs);
+            let argv: Vec<_> = argv.iter().map(String::as_str).collect();
+            match self.json(read, &argv, deadline, |v| batch_of(v, &plain)) {
+                Ok(answers) => answers
+                    .into_iter()
+                    .map(|a| a.map_err(|b| b.failed(read)))
+                    .collect(),
+                Err(f) => vec![Err(f); plain.len()],
+            }
+        };
+        let mut answers = answers.into_iter();
+        prs.iter()
+            .map(|pr| {
+                if is_branch(pr.fields.base_branch.as_str()) {
+                    answers.next().expect("one answer per plain-base input")
+                } else {
+                    Err(non_plain_base(pr.fields.number))
+                }
+            })
+            .collect()
+    }
+}
+
+/// The existing per-PR refusal, shared by single and batched reads.
+fn non_plain_base(pr: Number) -> Failed {
+    failed(
+        GapKind::Malformed,
+        format!(
+            "the merge read back of pull request #{pr} was not run: its base isn't a plain branch name"
+        ),
+    )
+}
+
+fn failed(gap: GapKind, reason: String) -> Failed {
+    Failed {
+        gap,
+        reason: NonEmpty::new(reason).expect("a reason is never empty"),
+    }
+}
+
+/// A failed call in OpenWiz's words: the runner's diagnostic is already
+/// safe (an exit code and at most an HTTP status); a start failure's
+/// detail, which names the program's path, is withheld.
+fn failure(read: &str, e: &SourceError) -> Failed {
+    match e {
+        SourceError::CommandFailed {
+            exit_code: Some(code),
+            detail,
+        } => failed(
+            GapKind::CommandFailed,
+            format!("{read} exited {code}: {detail}"),
+        ),
+        SourceError::CommandFailed {
+            exit_code: None, ..
+        } => failed(
+            GapKind::CommandFailed,
+            format!("{read} ended without an exit code (detail withheld)"),
+        ),
+        SourceError::TimedOut { after_ms } => failed(
+            GapKind::TimedOut,
+            format!("{read} timed out after {after_ms} ms"),
+        ),
+        SourceError::Malformed { detail } => failed(GapKind::Malformed, format!("{read} {detail}")),
+        SourceError::Unavailable { .. }
+        | SourceError::NotFound { .. }
+        | SourceError::InvalidId { .. } => failed(
+            GapKind::CommandFailed,
+            format!("{read} could not be run (detail withheld)"),
+        ),
+    }
+}
+
+fn listed<T>(rows: Vec<T>) -> Listed<T> {
+    Listed {
+        cut_short: rows.len() >= LIST_LIMIT,
+        rows,
+    }
+}
+
+/// `gh --version`'s first line, `gh version <N.N.N> (<date>)`, or `gh
+/// version <N.N.N>` from a build without a date (gh's
+/// `pkg/cmd/version/version.go`): the version, only when it is a
+/// recognised version text.
+fn version_of(out: &[u8]) -> Option<NonEmpty> {
+    let text = std::str::from_utf8(out).ok()?;
+    let line = text.lines().next()?.strip_prefix("gh version ")?;
+    let version = match line.split_once(" (") {
+        None => line,
+        Some((version, date)) => {
+            let date = date.strip_suffix(')')?;
+            let dated = date.len() == 10
+                && date.bytes().enumerate().all(|(i, b)| match i {
+                    4 | 7 => b == b'-',
+                    _ => b.is_ascii_digit(),
+                });
+            dated.then_some(version)?
+        }
+    };
+    (is_version_text(version) && !version.starts_with('v'))
+        .then(|| NonEmpty::new(version))
+        .flatten()
+}
+
+// ---------------------------------------------------------------------
+// The strict JSON tree: every key at most once per object.
+
+/// One JSON value, with no key given twice.
+#[derive(Clone, Debug, PartialEq)]
+enum Json {
+    Null,
+    Bool(bool),
+    Int(i128),
+    /// A fraction or a number too large: never a value any reader takes.
+    Fraction,
+    String(String),
+    Array(Vec<Json>),
+    /// In document order.
+    Object(Vec<(String, Json)>),
+}
+
+struct StrictJson(Json);
+
+struct JsonVisitor;
+
+impl<'de> Visitor<'de> for JsonVisitor {
+    type Value = Json;
+
+    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("a JSON value with no key given twice")
+    }
+
+    fn visit_unit<E: de::Error>(self) -> Result<Json, E> {
+        Ok(Json::Null)
+    }
+
+    fn visit_bool<E: de::Error>(self, b: bool) -> Result<Json, E> {
+        Ok(Json::Bool(b))
+    }
+
+    fn visit_i64<E: de::Error>(self, n: i64) -> Result<Json, E> {
+        Ok(Json::Int(n.into()))
+    }
+
+    fn visit_u64<E: de::Error>(self, n: u64) -> Result<Json, E> {
+        Ok(Json::Int(n.into()))
+    }
+
+    fn visit_f64<E: de::Error>(self, _: f64) -> Result<Json, E> {
+        Ok(Json::Fraction)
+    }
+
+    fn visit_str<E: de::Error>(self, s: &str) -> Result<Json, E> {
+        Ok(Json::String(s.to_owned()))
+    }
+
+    fn visit_string<E: de::Error>(self, s: String) -> Result<Json, E> {
+        Ok(Json::String(s))
+    }
+
+    fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Json, A::Error> {
+        let mut items = Vec::new();
+        while let Some(StrictJson(item)) = seq.next_element()? {
+            items.push(item);
+        }
+        Ok(Json::Array(items))
+    }
+
+    fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Json, A::Error> {
+        let mut entries: Vec<(String, Json)> = Vec::new();
+        while let Some(key) = map.next_key::<String>()? {
+            if entries.iter().any(|(k, _)| *k == key) {
+                return Err(de::Error::custom("a key given twice"));
+            }
+            let StrictJson(value) = map.next_value()?;
+            entries.push((key, value));
+        }
+        Ok(Json::Object(entries))
+    }
+}
+
+impl<'de> Deserialize<'de> for StrictJson {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        d.deserialize_any(JsonVisitor).map(StrictJson)
+    }
+}
+
+// ---------------------------------------------------------------------
+// The readers: exactly the observed shapes.
+
+/// Why an answer can't be read: the gap, where, and what, in OpenWiz's
+/// words. Never a value from the answer.
+#[derive(Debug, PartialEq, Eq)]
+struct Bad {
+    gap: GapKind,
+    at: String,
+    what: &'static str,
+}
+
+impl Bad {
+    fn failed(self, read: &str) -> Failed {
+        let at = if self.at.is_empty() { "." } else { &self.at };
+        failed(
+            self.gap,
+            format!(
+                "{read} printed an answer OpenWiz can't read: {at}: {}",
+                self.what
+            ),
+        )
+    }
+}
+
+type Got<T> = Result<T, Bad>;
+
+fn bad<T>(gap: GapKind, at: &str, what: &'static str) -> Got<T> {
+    Err(Bad {
+        gap,
+        at: at.to_owned(),
+        what,
+    })
+}
+
+/// An object with exactly `keys`, each once: their values, in `keys`'
+/// order.
+fn object<'j>(v: &'j Json, at: &str, keys: &[&str]) -> Got<Vec<&'j Json>> {
+    let Json::Object(entries) = v else {
+        return bad(GapKind::WrongType, at, "not an object");
+    };
+    if entries.iter().any(|(k, _)| !keys.contains(&k.as_str())) {
+        return bad(GapKind::Malformed, at, "a key it shouldn't have");
+    }
+    keys.iter()
+        .map(|key| match entries.iter().find(|(k, _)| k == key) {
+            Some((_, value)) => Ok(value),
+            None => bad(GapKind::MissingField, &format!("{at}.{key}"), "missing"),
+        })
+        .collect()
+}
+
+fn list<T>(v: &Json, at: &str, item: impl Fn(&Json, &str) -> Got<T>) -> Got<Vec<T>> {
+    let Json::Array(items) = v else {
+        return bad(GapKind::WrongType, at, "not a list");
+    };
+    items
+        .iter()
+        .enumerate()
+        .map(|(i, v)| item(v, &format!("{at}[{i}]")))
+        .collect()
+}
+
+fn string<'j>(v: &'j Json, at: &str) -> Got<&'j str> {
+    match v {
+        Json::String(s) => Ok(s),
+        _ => bad(GapKind::WrongType, at, "not text"),
+    }
+}
+
+fn non_empty(v: &Json, at: &str) -> Got<NonEmpty> {
+    match NonEmpty::new(string(v, at)?) {
+        Some(s) => Ok(s),
+        None => bad(GapKind::Malformed, at, "empty"),
+    }
+}
+
+fn boolean(v: &Json, at: &str) -> Got<bool> {
+    match v {
+        Json::Bool(b) => Ok(*b),
+        _ => bad(GapKind::WrongType, at, "not true or false"),
+    }
+}
+
+fn count(v: &Json, at: &str) -> Got<u64> {
+    match v {
+        Json::Int(n) => u64::try_from(*n).or_else(|_| bad(GapKind::Malformed, at, "below zero")),
+        _ => bad(GapKind::WrongType, at, "not a whole number"),
+    }
+}
+
+fn number(v: &Json, at: &str) -> Got<Number> {
+    match Number::new(count(v, at)?) {
+        Some(n) => Ok(n),
+        None => bad(GapKind::Malformed, at, "not 1 or more"),
+    }
+}
+
+fn commit(v: &Json, at: &str) -> Got<Commit> {
+    match Commit::parse(string(v, at)?) {
+        Some(c) => Ok(c),
+        None => bad(GapKind::Malformed, at, "not a full commit"),
+    }
+}
+
+fn null_or<'j, T>(
+    v: &'j Json,
+    at: &str,
+    read: impl FnOnce(&'j Json, &str) -> Got<T>,
+) -> Got<Option<T>> {
+    match v {
+        Json::Null => Ok(None),
+        v => read(v, at).map(Some),
+    }
+}
+
+/// `{"nameWithOwner": "<owner>/<name>"}`: the name only.
+fn repository_of(v: &Json) -> Got<Repository> {
+    let f = object(v, "", &["nameWithOwner"])?;
+    let full = string(f[0], ".nameWithOwner")?;
+    match full.split_once('/') {
+        Some((owner, name)) if !owner.is_empty() && !name.is_empty() && !name.contains('/') => {
+            Ok(Repository {
+                name: NonEmpty::new(name).expect("not empty"),
+            })
+        }
+        _ => bad(GapKind::Malformed, ".nameWithOwner", "not <owner>/<name>"),
+    }
+}
+
+/// One row of `gh issue list --json` with [`ISSUE_FIELDS`].
+fn issue_row(v: &Json, at: &str) -> Got<IssueRow> {
+    let keys = [
+        "blockedBy",
+        "body",
+        "id",
+        "labels",
+        "milestone",
+        "number",
+        "state",
+        "subIssues",
+        "title",
+    ];
+    let f = object(v, at, &keys)?;
+    let state = match string(f[6], &format!("{at}.state"))? {
+        "OPEN" => IssueState::Open,
+        "CLOSED" => IssueState::Closed,
+        _ => {
+            return bad(
+                GapKind::Malformed,
+                &format!("{at}.state"),
+                "not OPEN or CLOSED",
+            );
+        }
+    };
+    Ok(IssueRow {
+        number: number(f[5], &format!("{at}.number"))?,
+        id: non_empty(f[2], &format!("{at}.id"))?,
+        title: string(f[8], &format!("{at}.title"))?.to_owned(),
+        state,
+        milestone: null_or(f[4], &format!("{at}.milestone"), milestone)?,
+        labels: list(f[3], &format!("{at}.labels"), label)?,
+        body: string(f[1], &format!("{at}.body"))?.to_owned(),
+        sub_issues: links(f[7], &format!("{at}.subIssues"))?,
+        blocked_by: links(f[0], &format!("{at}.blockedBy"))?,
+    })
+}
+
+/// `{description, dueOn, number, title}`: the number and title.
+fn milestone(v: &Json, at: &str) -> Got<Milestone> {
+    let f = object(v, at, &["description", "dueOn", "number", "title"])?;
+    string(f[0], &format!("{at}.description"))?;
+    null_or(f[1], &format!("{at}.dueOn"), string)?;
+    Ok(Milestone {
+        number: number(f[2], &format!("{at}.number"))?,
+        title: string(f[3], &format!("{at}.title"))?.to_owned(),
+    })
+}
+
+/// `{color, description, id, name}`: the name.
+fn label(v: &Json, at: &str) -> Got<NonEmpty> {
+    let f = object(v, at, &["color", "description", "id", "name"])?;
+    for (i, key) in [(0, "color"), (1, "description"), (2, "id")] {
+        string(f[i], &format!("{at}.{key}"))?;
+    }
+    non_empty(f[3], &format!("{at}.name"))
+}
+
+/// `{nodes: [{id, number, state, title, url}], totalCount}`.
+fn links(v: &Json, at: &str) -> Got<Links> {
+    let f = object(v, at, &["nodes", "totalCount"])?;
+    let nodes = list(f[0], &format!("{at}.nodes"), |v, at| {
+        let n = object(v, at, &["id", "number", "state", "title", "url"])?;
+        for (i, key) in [(2, "state"), (3, "title"), (4, "url")] {
+            string(n[i], &format!("{at}.{key}"))?;
+        }
+        Ok(Link {
+            number: number(n[1], &format!("{at}.number"))?,
+            id: non_empty(n[0], &format!("{at}.id"))?,
+        })
+    })?;
+    Ok(Links {
+        nodes,
+        total: count(f[1], &format!("{at}.totalCount"))?,
+    })
+}
+
+/// One row of `gh pr list --json` with [`PR_FIELDS`].
+#[cfg(test)]
+fn pr_row(v: &Json, at: &str) -> Got<PrRow> {
+    stock_pr_row(v, at).map(|row| row.pr)
+}
+fn stock_pr_row(v: &Json, at: &str) -> Got<StockPr> {
+    let keys = [
+        "baseRefName",
+        "closingIssuesReferences",
+        "headRefName",
+        "headRefOid",
+        "isDraft",
+        "mergeCommit",
+        "mergedAt",
+        "number",
+        "state",
+        "title",
+    ];
+    let f = object(v, at, &keys)?;
+    let p = |key: &str| format!("{at}.{key}");
+    let title = openwiz_core::model::Fact::Known(non_empty(f[9], &p("title"))?);
+    let number = number(f[7], &p("number"))?;
+    let draft = boolean(f[4], &p("isDraft"))?;
+    let closes = list(f[1], &p("closingIssuesReferences"), closing_reference)?;
+    let merge = null_or(f[5], &p("mergeCommit"), |v, at| {
+        let m = object(v, at, &["oid"])?;
+        Ok(m[0])
+    })?;
+    let merged_at = null_or(f[6], &p("mergedAt"), string)?;
+    let state = string(f[8], &p("state"))?;
+    if state == "CLOSED" {
+        if merge.is_some() || merged_at.is_some() {
+            return bad(GapKind::Malformed, at, "closed, with a merge");
+        }
+        for (i, key) in [(0, "baseRefName"), (2, "headRefName"), (3, "headRefOid")] {
+            string(f[i], &p(key))?;
+        }
+        return Ok(StockPr {
+            pr: PrRow::Closed { number },
+            title,
+        });
+    }
+    let facts = PrFacts {
+        number,
+        draft,
+        head_branch: non_empty(f[2], &p("headRefName"))?,
+        head_commit: commit(f[3], &p("headRefOid"))?,
+        base_branch: non_empty(f[0], &p("baseRefName"))?,
+        closes,
+    };
+    match (state, merge, merged_at) {
+        ("OPEN", None, None) => Ok(StockPr {
+            pr: PrRow::Open(facts),
+            title,
+        }),
+        ("OPEN", ..) => bad(GapKind::Malformed, at, "open, with a merge"),
+        ("MERGED", Some(oid), Some(at_text)) => Ok(StockPr {
+            pr: PrRow::Merged {
+                facts,
+                merge_commit: commit(oid, &p("mergeCommit.oid"))?,
+                merged_at: match time(at_text) {
+                    Some(t) => t,
+                    None => return bad(GapKind::Malformed, &p("mergedAt"), "not a UTC time"),
+                },
+            },
+            title,
+        }),
+        ("MERGED", ..) => bad(GapKind::MissingField, at, "merged, without its merge"),
+        _ => bad(
+            GapKind::Malformed,
+            &p("state"),
+            "not OPEN, MERGED or CLOSED",
+        ),
+    }
+}
+
+/// `{id, number, repository: {id, name, owner: {id, login}}, url}`: the
+/// number and id. The owner is read only for its shape, and never kept.
+fn closing_reference(v: &Json, at: &str) -> Got<Link> {
+    let f = object(v, at, &["id", "number", "repository", "url"])?;
+    let r = object(f[2], &format!("{at}.repository"), &["id", "name", "owner"])?;
+    string(r[0], &format!("{at}.repository.id"))?;
+    string(r[1], &format!("{at}.repository.name"))?;
+    let o = object(r[2], &format!("{at}.repository.owner"), &["id", "login"])?;
+    string(o[0], &format!("{at}.repository.owner.id"))?;
+    string(o[1], &format!("{at}.repository.owner.login"))?;
+    string(f[3], &format!("{at}.url"))?;
+    Ok(Link {
+        number: number(f[1], &format!("{at}.number"))?,
+        id: non_empty(f[0], &format!("{at}.id"))?,
+    })
+}
+
+/// `{bucket, name}`, `bucket` one of `gh`'s five.
+fn check(v: &Json, at: &str) -> Got<Check> {
+    let f = object(v, at, &["bucket", "name"])?;
+    let result = match string(f[0], &format!("{at}.bucket"))? {
+        "pass" => CheckResult::Pass,
+        "fail" => CheckResult::Fail,
+        "pending" => CheckResult::Pending,
+        "skipping" => CheckResult::Skipping,
+        "cancel" => CheckResult::Cancel,
+        _ => {
+            return bad(
+                GapKind::Malformed,
+                &format!("{at}.bucket"),
+                "not one of gh's buckets",
+            );
+        }
+    };
+    Ok(Check {
+        name: non_empty(f[1], &format!("{at}.name"))?,
+        result,
+    })
+}
+
+/// `{status, behind_by}`: on its base when `ahead` or `identical` with
+/// nothing behind; not when `behind` or `diverged`.
+fn on_base_of(v: &Json) -> Got<bool> {
+    let f = object(v, "", &["status", "behind_by"])?;
+    let behind = count(f[1], ".behind_by")?;
+    match (string(f[0], ".status")?, behind) {
+        ("ahead" | "identical", 0) => Ok(true),
+        ("ahead" | "identical", _) => bad(GapKind::Malformed, "", "on its base, yet behind it"),
+        ("behind" | "diverged", _) => Ok(false),
+        _ => bad(
+            GapKind::Malformed,
+            ".status",
+            "not one of GitHub's compare states",
+        ),
+    }
+}
+
+/// The whole JSON tree is strict (including duplicate keys). Any GraphQL
+/// error fails the batch conservatively; no untrusted error text is kept.
+/// Missing/null/bad aliases otherwise fail only their own required records.
+fn batch_of(v: &Json, prs: &[MergedPr]) -> Got<Vec<Got<bool>>> {
+    let Json::Object(root) = v else {
+        return bad(GapKind::WrongType, "", "not an object");
+    };
+    let has_errors = root.iter().any(|(k, _)| k == "errors");
+    let top = object(
+        v,
+        "",
+        if has_errors {
+            &["data", "errors"]
+        } else {
+            &["data"]
+        },
+    )?;
+    if has_errors && !matches!(top[1], Json::Array(errors) if errors.is_empty()) {
+        return bad(GapKind::Malformed, ".errors", "GraphQL reported errors");
+    }
+    let data = object(top[0], ".data", &["repository"])?;
+    let Json::Object(repo) = data[0] else {
+        return bad(GapKind::WrongType, ".data.repository", "not an object");
+    };
+    let aliases: Vec<_> = (0..prs.len()).map(|i| format!("r{i}")).collect();
+    if repo.iter().any(|(k, _)| !aliases.contains(k)) {
+        return bad(
+            GapKind::Malformed,
+            ".data.repository",
+            "an unexpected alias",
+        );
+    }
+    Ok(prs
+        .iter()
+        .zip(aliases)
+        .map(|(pr, alias)| {
+            let at = format!(".data.repository.{alias}");
+            match repo.iter().find(|(k, _)| k == &alias) {
+                Some((_, value)) => ancestry_of(value, &at, &pr.merge_commit),
+                None => bad(GapKind::MissingField, &at, "missing"),
+            }
+        })
+        .collect())
+}
+
+fn ancestry_of(v: &Json, at: &str, merge: &Commit) -> Got<bool> {
+    let f = object(v, at, &["target", "comparison"])?;
+    let oid = |v, at: &str| -> Got<Commit> {
+        let f = object(v, at, &["oid"])?;
+        Commit::parse(string(f[0], at)?).ok_or(Bad {
+            gap: GapKind::Malformed,
+            at: at.to_owned(),
+            what: "not a full commit OID",
+        })
+    };
+    let target = oid(f[0], &format!("{at}.target"))?;
+    let c = object(
+        f[1],
+        &format!("{at}.comparison"),
+        &["status", "aheadBy", "behindBy", "baseTarget", "headTarget"],
+    )?;
+    let base = oid(c[3], &format!("{at}.comparison.baseTarget"))?;
+    let head = oid(c[4], &format!("{at}.comparison.headTarget"))?;
+    if base != target || &head != merge {
+        return bad(
+            GapKind::Malformed,
+            at,
+            "comparison targets do not match the requested ancestry",
+        );
+    }
+    let ahead = count(c[1], &format!("{at}.comparison.aheadBy"))?;
+    let behind = count(c[2], &format!("{at}.comparison.behindBy"))?;
+    if ahead > i32::MAX as u64 || behind > i32::MAX as u64 {
+        return bad(
+            GapKind::Malformed,
+            at,
+            "comparison count exceeds a GraphQL Int",
+        );
+    }
+    match (
+        string(c[0], &format!("{at}.comparison.status"))?,
+        ahead,
+        behind,
+        base == head,
+    ) {
+        ("IDENTICAL", 0, 0, true) | ("BEHIND", 0, 1.., false) => Ok(true),
+        ("AHEAD", 1.., 0, false) | ("DIVERGED", 1.., 1.., false) => Ok(false),
+        _ => bad(
+            GapKind::Malformed,
+            at,
+            "inconsistent comparison status, counts or targets",
+        ),
+    }
+}
+
+/// `YYYY-MM-DDTHH:MM:SSZ`, as milliseconds since the Unix epoch.
+fn time(s: &str) -> Option<Timestamp> {
+    let b = s.as_bytes();
+    let shape = b.len() == 20
+        && b.iter().enumerate().all(|(i, c)| match i {
+            4 | 7 => *c == b'-',
+            10 => *c == b'T',
+            13 | 16 => *c == b':',
+            19 => *c == b'Z',
+            _ => c.is_ascii_digit(),
+        });
+    if !shape {
+        return None;
+    }
+    let n = |r: std::ops::Range<usize>| s[r].parse::<i64>().ok();
+    let (y, m, d) = (n(0..4)?, n(5..7)?, n(8..10)?);
+    let (h, min, sec) = (n(11..13)?, n(14..16)?, n(17..19)?);
+    let leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
+    let days_in = [
+        31,
+        if leap { 29 } else { 28 },
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
+    ];
+    if !(1..=12).contains(&m) || d < 1 || d > days_in[usize::try_from(m - 1).ok()?] {
+        return None;
+    }
+    if h > 23 || min > 59 || sec > 59 {
+        return None;
+    }
+    // Days from the civil date (Howard Hinnant's algorithm).
+    let (y, m) = if m <= 2 { (y - 1, m + 9) } else { (y, m - 3) };
+    let era = y.div_euclid(400);
+    let yoe = y - era * 400;
+    let doy = (153 * m + 2) / 5 + d - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    let days = era * 146_097 + doe - 719_468;
+    Some(Timestamp(
+        ((days * 24 + h) * 60 + min) * 60_000 + sec * 1000,
+    ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn tree(text: &str) -> Json {
+        serde_json::from_str::<StrictJson>(text).expect("JSON").0
+    }
+
+    #[test]
+    fn a_branch_is_a_plain_name() {
+        let long = "a".repeat(300);
+        for good in [
+            "main",
+            "release-0.0.3",
+            "room/syn-a1-0001",
+            "a_b.c",
+            "x/y/z",
+            long.as_str(),
+        ] {
+            assert!(is_branch(good), "{good}");
+        }
+        for name in [
+            "", "/main", "main/", "a//b", ".hidden", "-x", "a/.b", "a..b", "a b", "a?b", "a#b",
+            "a%2e", "a~1", "a^", "a:b", "ü",
+        ] {
+            assert!(!is_branch(name), "{name:?}");
+        }
+    }
+
+    #[test]
+    fn the_version_is_only_a_recognised_one() {
+        for (out, want) in [
+            (
+                "gh version 2.100.0 (2026-09-03)\nhttps://example.invalid/x\n",
+                Some("2.100.0"),
+            ),
+            ("gh version 2.101.3 (2026-12-01)", Some("2.101.3")),
+            ("gh version 2.100 (2026-09-03)", None),
+            ("gh version v2.100.0 (2026-09-03)", None),
+            ("gh version 2.100.0", Some("2.100.0")),
+            (
+                "gh version 2.100.0\nhttps://example.invalid/x\n",
+                Some("2.100.0"),
+            ),
+            ("gh version 2.100.0 ", None),
+            ("gh version 2.100.0 (", None),
+            ("gh version 2.100.0 (2026-9-3)", None),
+            ("gh version 2.100.0-rc1 (2026-09-03)", None),
+            ("synthetic", None),
+            ("", None),
+        ] {
+            assert_eq!(
+                version_of(out.as_bytes()).as_ref().map(NonEmpty::as_str),
+                want,
+                "{out:?}"
+            );
+        }
+        assert_eq!(version_of(&[0xff, 0xfe]), None);
+    }
+
+    #[test]
+    fn a_time_is_gh_s_utc_form() {
+        assert_eq!(time("1970-01-01T00:00:00Z"), Some(Timestamp(0)));
+        assert_eq!(
+            time("2026-10-30T18:30:00Z"),
+            Some(Timestamp(1_793_385_000_000))
+        );
+        assert_eq!(
+            time("2026-10-31T09:00:00Z"),
+            Some(Timestamp(1_793_437_200_000))
+        );
+        assert_eq!(
+            time("2024-02-29T23:59:59Z"),
+            Some(Timestamp(1_709_251_199_000))
+        );
+        for t in [
+            "2026-10-30T18:30:00.000Z",
+            "2026-10-30T18:30:00+00:00",
+            "2026-10-30 18:30:00Z",
+            "2026-13-01T00:00:00Z",
+            "2025-02-29T00:00:00Z",
+            "2026-10-30T24:00:00Z",
+            "2026-10-32T00:00:00Z",
+            "",
+        ] {
+            assert_eq!(time(t), None, "{t}");
+        }
+    }
+
+    /// The JSON tree refuses a key given twice; a reader takes only the
+    /// exact shape: an object with exactly its keys, each of its own type,
+    /// never a positional array or a tagged object.
+    #[test]
+    fn a_reader_takes_only_the_exact_shape() {
+        assert!(serde_json::from_str::<StrictJson>(r#"{"a": 1, "a": 1}"#).is_err());
+        assert!(
+            serde_json::from_str::<StrictJson>(
+                r#"[{"bucket": "pass", "bucket": "pass", "name": "x"}]"#
+            )
+            .is_err()
+        );
+        let good = r#"[{"bucket": "pass", "name": "syn-build"}, {"bucket": "cancel", "name": "syn-test"}]"#;
+        assert_eq!(list(&tree(good), "", check).map(|c| c.len()), Ok(2));
+        for (text, gap) in [
+            (r#"{"bucket": "pass", "name": "x"}"#, GapKind::WrongType),
+            (r#"[["pass", "x"]]"#, GapKind::WrongType),
+            (r#"[{"bucket": "pass"}]"#, GapKind::MissingField),
+            (
+                r#"[{"bucket": "pass", "name": "x", "state": "SUCCESS"}]"#,
+                GapKind::Malformed,
+            ),
+            (r#"[{"bucket": "PASS", "name": "x"}]"#, GapKind::Malformed),
+            (
+                r#"[{"bucket": {"pass": null}, "name": "x"}]"#,
+                GapKind::WrongType,
+            ),
+            (r#"[{"bucket": "pass", "name": ""}]"#, GapKind::Malformed),
+            (r#"[{"bucket": "pass", "name": 1}]"#, GapKind::WrongType),
+        ] {
+            assert_eq!(
+                list(&tree(text), "", check).map_err(|b| b.gap),
+                Err(gap),
+                "{text}"
+            );
+        }
+        for (text, gap) in [
+            (
+                r#"{"status": "identical", "behind_by": 1.0}"#,
+                GapKind::WrongType,
+            ),
+            (
+                r#"{"status": "identical", "behind_by": "0"}"#,
+                GapKind::WrongType,
+            ),
+            (
+                r#"{"status": "identical", "behind_by": true}"#,
+                GapKind::WrongType,
+            ),
+            (
+                r#"{"status": "identical", "behind_by": -1}"#,
+                GapKind::Malformed,
+            ),
+            (
+                r#"{"status": "identical", "behind_by": 1}"#,
+                GapKind::Malformed,
+            ),
+            (
+                r#"{"status": "IDENTICAL", "behind_by": 0}"#,
+                GapKind::Malformed,
+            ),
+            (r#"{"status": "identical"}"#, GapKind::MissingField),
+            (r#"{"status": null, "behind_by": 0}"#, GapKind::WrongType),
+            (r#"["identical", 0]"#, GapKind::WrongType),
+        ] {
+            assert_eq!(
+                on_base_of(&tree(text)).map_err(|b| b.gap),
+                Err(gap),
+                "{text}"
+            );
+        }
+        for (text, want) in [
+            (r#"{"status": "identical", "behind_by": 0}"#, true),
+            (r#"{"behind_by": 0, "status": "ahead"}"#, true),
+            (r#"{"status": "behind", "behind_by": 3}"#, false),
+            (r#"{"status": "diverged", "behind_by": 2}"#, false),
+        ] {
+            assert_eq!(on_base_of(&tree(text)), Ok(want), "{text}");
+        }
+        for (text, ok) in [
+            (r#"{"nameWithOwner": "syn-owner/syn-repo"}"#, true),
+            (r#"{"nameWithOwner": "syn-repo"}"#, false),
+            (r#"{"nameWithOwner": "/syn-repo"}"#, false),
+            (r#"{"nameWithOwner": "syn-owner/"}"#, false),
+            (r#"{"nameWithOwner": "a/b/c"}"#, false),
+            (
+                r#"{"nameWithOwner": "syn-owner/syn-repo", "name": "syn-repo"}"#,
+                false,
+            ),
+            (r#"{"name": "syn-repo"}"#, false),
+        ] {
+            assert_eq!(repository_of(&tree(text)).is_ok(), ok, "{text}");
+        }
+        assert_eq!(
+            repository_of(&tree(r#"{"nameWithOwner": "syn-owner/syn-repo"}"#))
+                .map(|r| r.name.as_str().to_owned()),
+            Ok("syn-repo".to_owned())
+        );
+    }
+
+    fn pr(fields: &str) -> String {
+        format!(
+            r#"[{{"title":"Synthetic stock work", "baseRefName": "main", "closingIssuesReferences": [], "headRefName": "room/syn-a",
+            "headRefOid": "{}", "isDraft": false, "number": 5{fields}}}]"#,
+            "1".repeat(40)
+        )
+    }
+
+    #[test]
+    fn a_pull_request_row_is_open_merged_or_closed_exactly() {
+        let ok = |t: &str| list(&tree(t), "", pr_row);
+        let merge = format!(r#"{{"oid": "{}"}}"#, "2".repeat(40));
+        assert!(matches!(
+            ok(&pr(
+                r#", "mergeCommit": null, "mergedAt": null, "state": "OPEN""#
+            ))
+            .as_deref(),
+            Ok([PrRow::Open(_)])
+        ));
+        assert!(matches!(
+            ok(&pr(&format!(
+                r#", "mergeCommit": {merge}, "mergedAt": "2026-10-30T18:30:00Z", "state": "MERGED""#
+            )))
+            .as_deref(),
+            Ok([PrRow::Merged {
+                merged_at: Timestamp(1_793_385_000_000),
+                ..
+            }])
+        ));
+        assert!(matches!(
+            ok(&pr(
+                r#", "mergeCommit": null, "mergedAt": null, "state": "CLOSED""#
+            ))
+            .as_deref(),
+            Ok([PrRow::Closed { .. }])
+        ));
+        for (fields, gap) in [
+            (
+                format!(r#", "mergeCommit": {merge}, "mergedAt": null, "state": "OPEN""#),
+                GapKind::Malformed,
+            ),
+            (
+                r#", "mergeCommit": null, "mergedAt": null, "state": "MERGED""#.to_owned(),
+                GapKind::MissingField,
+            ),
+            (
+                format!(r#", "mergeCommit": {merge}, "mergedAt": "2026-10-30", "state": "MERGED""#),
+                GapKind::Malformed,
+            ),
+            (
+                r#", "mergeCommit": null, "mergedAt": null, "state": "open""#.to_owned(),
+                GapKind::Malformed,
+            ),
+            (
+                r#", "mergeCommit": null, "mergedAt": null, "state": "DRAFT""#.to_owned(),
+                GapKind::Malformed,
+            ),
+            (
+                r#", "mergeCommit": null, "mergedAt": null"#.to_owned(),
+                GapKind::MissingField,
+            ),
+            (
+                r#", "mergeCommit": null, "mergedAt": null, "state": "OPEN", "unexpected": "x""#
+                    .to_owned(),
+                GapKind::Malformed,
+            ),
+        ] {
+            assert_eq!(
+                ok(&pr(&fields)).map(|_| ()).map_err(|b| b.gap),
+                Err(gap),
+                "{fields}"
+            );
+        }
+    }
+    // AL1: exact bounded read authority and strict title-bearing wire records.
+    // Existing fixtures predate title and cannot catch a missing/ignored title.
+    #[test]
+    fn al1_pr_title_read_is_exactly_the_approved_field_expansion() {
+        const FIELDS: &str = "baseRefName,closingIssuesReferences,headRefName,headRefOid,isDraft,mergeCommit,mergedAt,number,state,title";
+        let argv = [
+            "pr", "list", "--state", "all", "--limit", "1000", "--json", FIELDS,
+        ];
+        assert!(allows(&argv), "AL1 title-bearing list must be allowlisted");
+        for fields in [
+            "baseRefName,closingIssuesReferences,headRefName,headRefOid,isDraft,mergeCommit,mergedAt,number,state",
+            "baseRefName,closingIssuesReferences,headRefName,headRefOid,isDraft,mergeCommit,mergedAt,number,state,title,author",
+            "title",
+            "title,title",
+        ] {
+            assert!(!allows(&[
+                "pr", "list", "--state", "all", "--limit", "1000", "--json", fields
+            ]));
+        }
+        for suffix in ["--web", "--method", "POST"] {
+            let mut wrong = argv.to_vec();
+            wrong.push(suffix);
+            assert!(!allows(&wrong));
+        }
+    }
+    fn al1_pr_wire(extra: &str) -> String {
+        pr(&format!(
+            r#", "mergeCommit":null, "mergedAt":null, "state":"OPEN"{extra}"#
+        ))
+        .replacen(r#""title":"Synthetic stock work", "#, "", 1)
+    }
+    #[test]
+    fn al1_pr_title_is_required_for_every_listed_row() {
+        for state in ["OPEN", "MERGED", "CLOSED"] {
+            let mut missing =
+                al1_pr_wire("").replace("\"state\":\"OPEN\"", &format!("\"state\":\"{state}\""));
+            if state == "MERGED" {
+                missing = missing
+                    .replace(
+                        "\"mergeCommit\":null",
+                        &format!("\"mergeCommit\":{{\"oid\":\"{}\"}}", "2".repeat(40)),
+                    )
+                    .replace("\"mergedAt\":null", "\"mergedAt\":\"2030-01-15T09:00:00Z\"");
+            }
+            // Each state is otherwise a valid row; only title is missing.
+            let valid = missing.replacen('{', r#"{"title":"Synthetic stock work","#, 1);
+            assert!(list(&tree(&valid), "", pr_row).is_ok());
+            assert_eq!(
+                list(&tree(&missing), "", pr_row).unwrap_err().gap,
+                GapKind::MissingField,
+                "missing title in {state}"
+            );
+        }
+    }
+    #[test]
+    fn al1_pr_title_shape_is_strict_and_not_a_tagged_value() {
+        let valid = al1_pr_wire(r#", "title":"Synthetic stock work""#);
+        assert!(
+            list(&tree(&valid), "", pr_row).is_ok(),
+            "approved title-bearing shape must be accepted"
+        );
+        for title in [
+            "null",
+            "false",
+            "12",
+            "[]",
+            r#"{}"#,
+            r#"{"known":"synthetic-a"}"#,
+            r#""""#,
+        ] {
+            let bad = al1_pr_wire(&format!(r#", "title":{title}"#));
+            assert!(list(&tree(&bad), "", pr_row).is_err(), "accepted {bad}");
+        }
+        let extra = al1_pr_wire(r#", "title":"synthetic-a", "unexpected":"synthetic""#);
+        assert!(list(&tree(&extra), "", pr_row).is_err());
+        let duplicate = al1_pr_wire(r#", "title":"synthetic-a", "title":"synthetic-b""#);
+        assert!(serde_json::from_str::<StrictJson>(&duplicate).is_err());
+    }
+}

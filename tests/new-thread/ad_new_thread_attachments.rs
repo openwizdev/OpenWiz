@@ -1,3 +1,9 @@
+//! B2 (ClosedWiz#15): attachments in `new_thread`. AD1's `spawn` half, AD4,
+//! AD6, AD7, AD9, AD10 and AD13's `new` half, on the fake `room-cli`, B1's
+//! store and a private state directory. **Fixtures only:** `thread spawn`
+//! with attachments is the help's shape (spike run 3), never observed;
+//! nothing is created live.
+
 use std::collections::BTreeMap;
 use std::fs;
 use std::process::Output;
@@ -116,6 +122,27 @@ fn ad01_one_spawn_carries_every_staged_copy_before_the_prompt() {
 }
 
 #[test]
+fn newthread_attachment_contracts_preserve_original_cases() {
+    let cases: [(&str, fn()); 3] = [
+        (
+            "ad01_no_relative_token_file_url_or_unplain_path_can_become_a_staged_path",
+            ad01_no_relative_token_file_url_or_unplain_path_can_become_a_staged_path,
+        ),
+        (
+            "ad01_tell_and_spawn_get_the_same_tail_from_attachment_args",
+            ad01_tell_and_spawn_get_the_same_tail_from_attachment_args,
+        ),
+        (
+            "ad04_the_record_reader_takes_attachments_only_exactly_and_agreeing",
+            ad04_the_record_reader_takes_attachments_only_exactly_and_agreeing,
+        ),
+    ];
+    for (name, proof) in cases {
+        eprintln!("TA2 case: ad_new_thread_attachments::{name}");
+        proof();
+    }
+}
+
 fn ad01_tell_and_spawn_get_the_same_tail_from_attachment_args() {
     let area = std::path::Path::new("/synthetic/state/attachments");
     let staged = |id: &str, name: &str, kind| {
@@ -176,7 +203,6 @@ fn ad01_tell_and_spawn_get_the_same_tail_from_attachment_args() {
     assert_eq!(&spawn[19..], ["--prompt", "Synthetic"]);
 }
 
-#[test]
 fn ad01_no_relative_token_file_url_or_unplain_path_can_become_a_staged_path() {
     let id = staging::attachment_id("att-syn-1");
     let name = openwiz_core::attachment::SafeName::parse("syn.txt").unwrap();
@@ -261,7 +287,6 @@ fn ad04_an_a1_record_without_attachments_still_reads_and_matches() {
     assert_eq!(fake.spawn_count(), 1);
 }
 
-#[test]
 fn ad04_the_record_reader_takes_attachments_only_exactly_and_agreeing() {
     let r = with_ids(request(offered(), "Synthetic", "op-ad04-read"), &[]);
     let a = PromptAttachment {
@@ -386,7 +411,7 @@ fn ad06_across_processes_and_restarts_no_request_id_carries_two_payloads() {
         let known = seen.entry(rid).or_insert_with(|| hashes.clone());
         assert_eq!(*known, hashes, "one request id, two payloads");
     }
-    // There is no retry: no form of `new` re-sends.
+    // There is no retry (sheet A-3): no form of `new` re-sends.
     let (code, _, err) = fake.cli(&["new", "--retry", "op-ad06"], "");
     assert_eq!(code, 2, "{err}");
 }
@@ -395,7 +420,7 @@ fn ad06_across_processes_and_restarts_no_request_id_carries_two_payloads() {
 
 #[test]
 fn ad07_every_row_of_the_outcome_table_for_spawn() {
-    for (case, response, status) in [
+    [
         ("created", created(), "created"),
         (
             "documented refusal",
@@ -417,18 +442,28 @@ fn ad07_every_row_of_the_outcome_table_for_spawn() {
             json!({"any_spawn": true, "exit": 1, "stderr": "Error: Failed to create thread: HTTP 400: Cloud attachments are not enabled"}),
             "uncertain",
         ),
-    ] {
-        let fake = NewFake::with(&format!("ad07_{}", case.replace(' ', "_")), vec![response]);
-        let a = stage(&fake.state, "syn-ad07-a.txt", &text("a\n"), T0);
-        let b = stage(&fake.state, "syn-ad07-b.png", &png(1024), T0);
-        let r = with_ids(request(offered(), "Synthetic", "op-ad07"), &[&a, &b]);
-        let report = created_with(&fake, &r);
-        let json = serde_json::to_value(&report).unwrap();
-        assert_eq!(json["status"], status, "{case}: {json}");
-        let handed = outcome_of(&report).text().contains("handed to CloudRoom");
-        assert_eq!(handed, status == "created", "{case}");
-        assert_eq!(fake.spawn_count(), 1, "{case}");
-    }
+    ]
+    .map(|(case, response, status)| {
+        // The rows share nothing (each has its own fake and state), so they
+        // run at once (#1260); the hang row waits for its budget.
+        std::thread::spawn(move || {
+            let fake = NewFake::with(&format!("ad07_{}", case.replace(' ', "_")), vec![response]);
+            let a = stage(&fake.state, "syn-ad07-a.txt", &text("a\n"), T0);
+            let b = stage(&fake.state, "syn-ad07-b.png", &png(1024), T0);
+            let mut r = with_ids(request(offered(), "Synthetic", "op-ad07"), &[&a, &b]);
+            // Short (#1260): the hang row waits for it, plus the attachments'
+            // allowance.
+            r.budget = Duration::from_millis(1_500);
+            let report = created_with(&fake, &r);
+            let json = serde_json::to_value(&report).unwrap();
+            assert_eq!(json["status"], status, "{case}: {json}");
+            let handed = outcome_of(&report).text().contains("handed to CloudRoom");
+            assert_eq!(handed, status == "created", "{case}");
+            assert_eq!(fake.spawn_count(), 1, "{case}");
+        })
+    })
+    .into_iter()
+    .for_each(|row| row.join().expect("an ad07 row failed"));
 }
 
 // AD9: retention, for a new thread.
@@ -515,20 +550,31 @@ fn ad10_a_crash_at_each_step_keeps_the_attachments_and_creates_nothing_more() {
         let output = command.output().expect("run the harness");
         assert!(!output.status.success(), "{crash}: the harness stopped");
         let spawns = fake.spawn_count();
+        // Each step below finds the stopped owner by taking its lock to look,
+        // and a child another test forked meanwhile keeps a copy of a lock
+        // until it runs its program (#176): before each, wait until the lock
+        // is free.
+        let lock = fake.state.join("new-threads").join(format!("{op}.lock"));
+        crate::forks::wait_until_unlocked(&lock);
         // `new --status`, then the same create: nothing more is created.
         let (_, status) = fake.cli_json(&["new", "--status", &op], "");
         assert_eq!(
             status["result"]["report"]["status"], recovered,
             "{crash}: {status}"
         );
-        // The harness's own create: its project, settings and text.
-        let args = new_args(
+        // The harness's own create: its project, settings and text, run as
+        // the release `openwiz` after the stopped process. #244 separately
+        // proves that in-process recovery also avoids the inspect/claim
+        // window that originally required this process boundary.
+        let mut args = new_args(
             "Synthetic project one",
             &op,
             &["--attachment", &id],
             "Synthetic",
         );
-        let (_, report) = fake.cli_json(&args, "");
+        args.insert(args.len() - 2, "--json");
+        crate::forks::wait_until_unlocked(&lock);
+        let (_, report) = json_of(&fake.run_process(&args, ""));
         assert_eq!(report["status"], recovered, "{crash}: {report}");
         assert_eq!(
             fake.spawn_count(),
@@ -655,6 +701,10 @@ fn ad13_attach_that_fails_on_any_path_creates_nothing() {
     assert!(fake.invocations().is_empty(), "nothing was read");
 }
 
+/// The checklist's "a printed command recreates the exact request" (#132
+/// R1, R3), with attachments: the preview stages the file, and its printed
+/// command, run exactly as printed in sh, bash and zsh, creates one thread
+/// carrying exactly the previewed copy, then replays.
 #[test]
 fn ad13_the_printed_command_attaches_exactly_the_previewed_copy() {
     use crate::n18_cli::{printed_command, run_printed, shells};

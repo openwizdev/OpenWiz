@@ -302,7 +302,14 @@ pub fn mode(path: &Path) -> u32 {
     fs::symlink_metadata(path).unwrap().permissions().mode() & 0o777
 }
 
-/// Builds the release `openwiz` once per test run, as P10, M14 and N18 do.
+/// Builds the fixture release `openwiz` once per test run, sharing the real
+/// dispatch with an isolated bundle, as P10, M14 and N18 do.
+///
+/// R1 red run (2026-11-01, review of 81c4e51): a planted default-source
+/// version read in attachment dispatch was NOT caught by `cargo test -p
+/// openwiz-tests --test attachments the_release_program` (exit 0, 1 passed).
+/// The mutation checker expected exit 101 with the room-cli tripwire mark,
+/// so it exited 1. The helper must select the verified fixture executable.
 pub fn openwiz_release() -> PathBuf {
     static BUILT: OnceLock<PathBuf> = OnceLock::new();
     static LOCK: Mutex<()> = Mutex::new(());
@@ -315,8 +322,8 @@ pub fn openwiz_release() -> PathBuf {
                 .to_path_buf();
             let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned());
             let build = Command::new(cargo)
-                .args(["build", "--release", "--locked", "-p", "openwiz-cli"])
-                .args(["--bin", "openwiz", "--target-dir"])
+                .args(["build", "--release", "--locked", "-p", "openwiz-tests"])
+                .args(["--example", "openwiz", "--target-dir"])
                 .arg(&target)
                 .current_dir(crate::support::ROOT)
                 .output()
@@ -326,7 +333,7 @@ pub fn openwiz_release() -> PathBuf {
                 "cargo build --release failed:\n{}",
                 String::from_utf8_lossy(&build.stderr)
             );
-            target.join("release").join("openwiz")
+            target.join("release").join("examples").join("openwiz")
         })
         .clone()
 }
@@ -351,8 +358,9 @@ pub fn tripwires(bench: &Bench) -> PathBuf {
     dir
 }
 
-/// The release `openwiz attachment <args>`, as a process: this bench's
-/// state directory, `tripwires` first on `PATH`, stdin closed.
+/// The fixture release `openwiz attachment <args>`: this bench's state,
+/// the room-cli tripwire inside a verified bundle, df first on PATH,
+/// and stdin closed.
 pub fn release_run(bench: &Bench, tripwires: &Path, args: &[&str]) -> Output {
     let path = format!(
         "{}:{}",
@@ -363,6 +371,7 @@ pub fn release_run(bench: &Bench, tripwires: &Path, args: &[&str]) -> Output {
         .arg("attachment")
         .args(args)
         .env("PATH", path)
+        .env("OPENWIZ_FIXTURE_PROGRAM", tripwires.join("room-cli"))
         .env("OPENWIZ_STATE_DIR", &bench.state)
         .current_dir(&bench.root)
         .stdin(Stdio::null())

@@ -1,4 +1,4 @@
-//! Structure: no reachable behaviour yet, every label the core
+//! Structure: no reachable behaviour yet (sheet G-1), every label the core
 //! can serialize is in the schema, and the runner scrubs every call.
 
 use std::fs;
@@ -28,7 +28,7 @@ fn rust_text(dir: &str) -> String {
 }
 
 /// A1 phase 2 reaches new threads from the CLI, the store and the
-/// allowlist; since A2 also from the server's routes, through the
+/// allowlist; since A2 (#12) also from the server's routes, through the
 /// core's operations only, never an allowlist invocation of its own. The
 /// fake allows `spawn` only in its one shape (N16). A tripwire, not a proof.
 /// Updated for A2, with that reason.
@@ -37,8 +37,13 @@ fn only_the_cli_and_the_store_reach_new_threads() {
     let allowlist =
         fs::read_to_string(Path::new(ROOT).join("crates/adapters/cloudroom/src/allowlist.rs"))
             .unwrap();
-    // `cloud` twice: `cloud status`, and `spawn --machine cloud`.
-    for (word, times) in [("\"spawn\"", 1), ("\"status\"", 1), ("\"cloud\"", 2)] {
+    // `cloud` three times: `cloud status`, `spawn --machine cloud`, and
+    // `cloud thread-workspace` (OpenWiz 0.0.6, A6, #114): a read Jake
+    // approved on #107, 2026-10-31. Private record: https://github.com/jparker2006/ClosedWiz/issues/1277#issuecomment-6704800036
+    // Updated for #2201 with this reason: Jake's J30 adds exactly two
+    // `SETUP_CALLS` entries for setup's CloudRoom tool, `cloud status --json`
+    // and `cloud sign-in --json`: one more `status` and two more `cloud`.
+    for (word, times) in [("\"spawn\"", 1), ("\"status\"", 2), ("\"cloud\"", 5)] {
         assert_eq!(
             allowlist.matches(word).count(),
             times,
@@ -57,6 +62,11 @@ fn only_the_cli_and_the_store_reach_new_threads() {
     }
 }
 
+/// No new-thread or prompt type has a serde reader (Sol re-check, round
+/// 2): the one hand-written reader is the record's, in `new_thread/read.rs`,
+/// over the duplicate-refusing `StrictJson` tree, whose `Deserialize` is the
+/// only one. Nothing converts from a string. A tripwire beside the core's
+/// compile-time guard (`new_thread::no_readers`).
 #[test]
 fn no_new_thread_or_prompt_type_has_a_reader() {
     let read =

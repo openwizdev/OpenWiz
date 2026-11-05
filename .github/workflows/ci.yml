@@ -1,0 +1,1393 @@
+# X5: changes writes one plan; independent lanes read it; ci checks every expected result.
+# X7 fork routing, pinned setup and trusted caches apply to every executing lane.
+name: CI
+
+on:
+  pull_request:
+    branches: [main, 'release-*']
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
+  push:
+    branches: [main]
+  # Full safety run on main, regardless of changed paths.
+  schedule:
+    - cron: '23 9 * * *' # 09:23 UTC every day
+  # The merge queue (#190): GitHub re-tests each pull request on top of the
+  # latest main just before it lands, in a merge group, and merges it only
+  # if the required ci check passes there too. A merge group always runs
+  # every job (decide.sh).
+  merge_group:
+    types: [checks_requested]
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read # decide.sh reads the PR live
+  id-token: write # cache.sh save: the token GitHub signs, which the PC's runner checks before it keeps a cache (#180)
+
+# Scheduled safety runs have their own admission slot (#1462). Main pushes
+# deliberately keep one running and only the latest pending push; false below
+# prevents cancelling the running push, not replacement of pending pushes.
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  RUST_VERSION: 1.99.1
+  NODE_VERSION: 24.22.1
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  NEXT_TELEMETRY_DISABLED: 1
+  CIRCLE_NODE_TOTAL: 2
+
+jobs:
+
+  changes:
+    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-24.04' || github.repository == 'jparker2006/ClosedWiz' && (vars.CI_SMALL_RUNS_ON || vars.CI_WEB_RUNS_ON || 'namespace-profile-closedwiz-rust') || 'ubuntu-24.04' }}
+    timeout-minutes: 10
+    outputs:
+      rust: ${{ steps.plan.outputs.rust }}
+      toolkit: ${{ steps.plan.outputs.toolkit }}
+      web: ${{ steps.plan.outputs.web }}
+      site: ${{ steps.plan.outputs.site }}
+      site-in-release: ${{ steps.plan.outputs.site-in-release }}
+      release: ${{ steps.plan.outputs.release }}
+      skills: ${{ steps.plan.outputs.skills }}
+      build-web: ${{ steps.plan.outputs.build-web }}
+      export-rust: ${{ steps.plan.outputs.export-rust }}
+      export-web: ${{ steps.plan.outputs.export-web }}
+      trace: ${{ steps.plan.outputs.trace }}
+      planted: ${{ steps.plan.outputs.planted }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/private/
+      - name: The runner guard
+        id: guard
+        env:
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        run: sh ci/hosted/guard.sh
+      - name: Python for the offline installer and release proofs
+        run: sh .github/actions/docs-only/python.sh
+      # #2412: every path a change adds must be classified by the importer's
+      # own rules (carriage list or private/retiring class); errors fail closed.
+      - name: The carriage guard
+        if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: |
+          python3 -I tools/open-import/test_guard.py
+          python3 -I tools/open-import/guard.py "--base=$BASE_SHA" --head=HEAD
+      # #2531: check every PR before selection, without private literals.
+      # #2819: always scans after the proofs; for a local proofs-only run,
+      # set BASE_SHA=HEAD (an empty diff).
+      # #2817: every refusal has its own proof, run through guard().
+      # #2818: a pull_request scans from HEAD^1 (the merge ref's first parent);
+      # BASE_SHA is the merge group's base.
+      - name: The changed-file privacy guard
+        if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
+        env:
+          BASE_SHA: ${{ github.event.merge_group.base_sha }}
+        run: |
+          python3 -I - <<'PY'
+          import contextlib
+          import importlib.util
+          import io
+          import os
+          from pathlib import Path
+          import sys
+          import tempfile
+          import time
+
+          sys.dont_write_bytecode = True
+          sys.path.insert(0, str(Path('tools/privacy-check').resolve()))
+          import check as privacy
+
+          spec = importlib.util.spec_from_file_location('public_import', 'tools/open-import/import.py')
+          importer = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(importer)
+
+
+          def scan(repo, base, head, private):
+              checker = privacy.Checker()
+              base, head = privacy.commit(repo, base), privacy.commit(repo, head)
+              fork = privacy.git(repo, 'merge-base', base, head).decode().strip()
+              records = privacy.git(repo, 'diff', '--raw', '--no-abbrev', '-z',
+                                    '--no-renames', '--no-ext-diff', '--no-textconv', fork, head).split(b'\0')
+              if records.pop() != b'' or len(records) % 2:
+                  raise privacy.Unreadable()
+              scanned = 0
+              for metadata, raw_name in zip(records[::2], records[1::2]):
+                  old_mode, mode, old_oid, oid, status = metadata.decode().split()
+                  name = raw_name.decode('utf-8')
+                  if status == 'D':
+                      continue
+                  if status not in {'A', 'M', 'T'} or mode not in {'100644', '100755', '120000'}:
+                      raise privacy.Unreadable()
+                  # Reuse the importer's classes; never read private/retired blobs here.
+                  if private and importer.private_or_retired(name):
+                      continue
+                  place = 'changed:' + privacy.safe_place(name, ())
+                  checker.file(name, privacy.git(repo, 'cat-file', 'blob', oid), place)
+                  scanned += 1
+              for target, place in checker.references:
+                  privacy.git(repo, 'cat-file', '-e', head + ':' + target)
+              print(f'changed-file privacy: scanned {scanned} files')
+              return checker.findings
+
+
+          def private_repository(name):
+              return name.lower() == 'jparker2006/closedwiz'
+
+
+          def guard(repo, head, environ):
+              try:
+                  # #2818: a PR's merge ref scans from its first parent, so files that
+                  # reached main after base.sha stay out; a merge group keeps its base.
+                  pull = environ.get('GITHUB_EVENT_NAME') == 'pull_request'
+                  base = head + '^1' if pull else environ['BASE_SHA']
+                  findings = scan(repo, base, head,
+                                  private_repository(environ['GITHUB_REPOSITORY']))
+                  print('literals: not used')
+                  print(f'changed-file privacy: {time.monotonic() - started:.2f}s')
+                  return int(bool(findings))
+              except REFUSED:
+                  print('READ changed-files:1')
+                  return 1
+
+
+          def proofs():
+              planted = 'thr_' + 'planted2531'
+              closed, public = 'jparker2006/ClosedWiz', 'openwizdev/openwiz'
+              with tempfile.TemporaryDirectory() as folder:
+                  repo = Path(folder)
+                  def git(*args):
+                      return privacy.git(repo, '-c', 'core.hooksPath=/dev/null',
+                                         '-c', 'user.name=Synthetic',
+                                         '-c', 'user.email=synthetic@example.invalid', *args)
+                  def write(name, data):
+                      path = repo / name
+                      path.parent.mkdir(parents=True, exist_ok=True)
+                      if isinstance(data, tuple):
+                          operation, source = data
+                          if operation == 'symlink':
+                              path.symlink_to(source)
+                          elif operation == 'rename':
+                              (repo / source).rename(path)
+                          elif operation == 'delete':
+                              path.unlink()
+                          elif operation == 'executable':
+                              path.write_bytes(source)
+                              path.chmod(0o755)
+                          else:  # A gitlink naming a readable clean blob.
+                              oid = git('rev-parse', 'HEAD:' + source).decode().strip()
+                              git('update-index', '--add', '--cacheinfo', '160000,' + oid + ',' + name)
+                              return False
+                      else:
+                          path.write_bytes(data)
+                      return True
+                  def commit(stage=True):
+                      if stage:
+                          git('add', '-A')
+                      git('commit', '-qm', 'synthetic change')
+                      return git('rev-parse', 'HEAD').decode().strip()
+                  def check(label, head, repository, expected, seen, base, event='merge_group'):
+                      out = io.StringIO()
+                      with contextlib.redirect_stdout(out):
+                          status = guard(repo, head, {'BASE_SHA': base, 'GITHUB_REPOSITORY': repository,
+                                                      'GITHUB_EVENT_NAME': event})
+                      scanned = [line for line in out.getvalue().splitlines() if ': scanned ' in line]
+                      assert status == expected, label + ': wrong exit status ' + str(scanned)
+                      assert seen in out.getvalue(), label + ': missing refusal ' + str(scanned)
+                      assert planted not in out.getvalue(), label + ': source literal leaked'
+                  git('init', '-q')
+                  write('src/existing.txt', b'clean\n')
+                  write('src/legacy.txt', planted.encode())
+                  base = commit()
+                  dangling = b'on: push\njobs:\n  call:\n    uses: ./.github/workflows/missing.yml\n'
+                  cases = [
+                      ('clean addition', closed, 'src/space and\nnewline.txt', b'clean\n', 0, 'scanned 1 files'),
+                      ('executable addition', closed, 'src/run.sh', ('executable', b'clean\n'), 0, 'scanned 1 files'),
+                      ('planted addition', closed, 'src/new.txt', planted.encode(), 1, 'T1 '),
+                      ('planted modification', closed, 'src/existing.txt', planted.encode(), 1, 'T1 '),
+                      ('planted filename', closed, 'src/' + planted, b'clean', 1, 'T1 '),
+                      ('planted symlink', closed, 'src/link', ('symlink', planted), 1, 'T1 '),
+                      ('deleted file', closed, 'src/legacy.txt', ('delete', None), 0, 'scanned 0 files'),
+                      ('renamed planted content', closed, 'src/renamed.txt', ('rename', 'src/legacy.txt'), 1, 'T1 '),
+                      ('private evidence', closed, 'private/notes.txt', planted.encode(), 0, 'scanned 0 files'),
+                      ('public private/ file', public, 'private/notes.txt', b'clean\n', 1, 'F1 '),
+                      ('binary addition', closed, 'src/image.png', b'\x89PNG\0synthetic', 0, 'scanned 1 files'),
+                      ('unreadable encoding', closed, 'src/encoding.txt', b'\xffunknown', 1, 'READ changed:'),
+                      ('dangling workflow reference', closed, '.github/workflows/call.yml', dangling, 1,
+                       'READ changed-files:1'),
+                      ('gitlink', closed, 'src/module', ('gitlink', 'src/existing.txt'), 1, 'READ changed-files:1'),
+                  ]
+                  for label, repository, name, data, expected, seen in cases:
+                      git('checkout', '-q', '-B', 'candidate', base)
+                      staged = write(name, data)
+                      head = commit(staged)
+                      # The Git blob must win over unstaged working-copy contents.
+                      if staged and (repo / name).exists() and not (repo / name).is_symlink():
+                          write(name, b'clean\n')
+                      check(label, head, repository, expected, seen, base)
+                      git('reset', '-q', '--hard')
+                  # Git never reports an unknown status between commits, so plant one.
+                  git('checkout', '-q', '-B', 'candidate', base)
+                  write('src/new.txt', b'clean\n')
+                  head = commit()
+                  real = privacy.git
+                  privacy.git = lambda where, *args: real(where, *args).replace(b' A\0', b' X\0')
+                  try:
+                      check('unknown status', head, closed, 1, 'READ changed-files:1', base)
+                  finally:
+                      privacy.git = real
+                  check('missing base', 'HEAD', closed, 1, 'READ changed-files:1', '0' * 40)
+                  # #2818: main moved after base.sha; GitHub's merge ref has main's tip as
+                  # its first parent. Like #2808: 2 PR files, 3 main-only files.
+                  git('checkout', '-q', '-B', 'pull', base)
+                  for name in ('src/pr-one.txt', 'src/pr-two.txt'):
+                      write(name, b'clean\n')
+                  pull = commit()
+                  git('checkout', '-q', '-B', 'main', base)
+                  for name in ('src/main-one.txt', 'src/main-two.txt'):
+                      write(name, b'clean\n')
+                  write('src/main-planted.txt', planted.encode())
+                  commit()
+                  git('merge', '-q', '--no-ff', '-m', 'synthetic merge ref', pull)
+                  merge = git('rev-parse', 'HEAD').decode().strip()
+                  check('main moved, pull request', merge, closed, 0, 'scanned 2 files', base, 'pull_request')
+                  check('main moved, merge group', merge, closed, 1, 'T1 ', base)
+                  git('checkout', '-q', '--orphan', 'unrelated')
+                  unrelated = commit()
+                  check('no common ancestor, merge group', merge, closed, 1, 'READ changed-files:1', unrelated)
+                  check('no first parent, pull request', unrelated, closed, 1, 'READ changed-files:1', base,
+                        'pull_request')
+              print('changed-file privacy proofs: passed')
+
+
+          REFUSED = (KeyError, OSError, ValueError, UnicodeError, privacy.Unreadable, importer.Refused)
+          started = time.monotonic()
+          try:
+              proofs()
+          except REFUSED:
+              print('READ changed-files:1')
+              sys.exit(1)
+          sys.exit(guard(Path('.'), 'HEAD', os.environ))
+          PY
+      - name: Restore the select-map cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/closedwiz-ci-select
+          key: ci-select-map-none
+          restore-keys: ci-select-map-
+      - name: Write the CI plan
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -I .github/actions/docs-only/plan.py "$RUNNER_TEMP/ci-plan"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ci-selection-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ci-plan/*.json
+          if-no-files-found: error
+          retention-days: 30
+
+  always:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.result == 'success' }}
+    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-24.04' || github.repository == 'jparker2006/ClosedWiz' && (vars.CI_RUST_RUNS_ON || 'namespace-profile-closedwiz-rust') || 'ubuntu-24.04' }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/private/
+      - name: The runner guard
+        id: guard
+        env:
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        run: sh ci/hosted/guard.sh
+      - name: Prune unused inputs
+        run: sh .github/actions/docs-only/prune.sh .github/actions/docs-only/ci-reads.txt rust
+      - name: Prepare lane
+        uses: ./.github/actions/docs-only/setup
+        with:
+          hosted: ${{ steps.guard.outputs.hosted }}
+          save: ${{ steps.guard.outputs.save }}
+          rust-version: ${{ env.RUST_VERSION }}
+          node-version: ${{ env.NODE_VERSION }}
+          cargo: 'true'
+          npm: 'false'
+          browser: 'false'
+      - name: Python for the offline installer and release proofs
+        run: sh .github/actions/docs-only/python.sh
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ci-selection-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ci-plan
+      - name: Build and lint Rust
+        run: python3 -I .github/actions/docs-only/run.py lint-always "$RUNNER_TEMP/ci-plan"
+      - name: The always-run checks
+        run: python3 -I .github/actions/docs-only/run.py execute "$RUNNER_TEMP/ci-plan" always
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: needs.changes.outputs.trace == 'true' || needs.changes.outputs.planted == 'true'
+        with:
+          name: select-records-always-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/select-records/*.json*
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Save the cargo-rust cache
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
+        run: sh ci/runner/cache.sh save cargo-rust "$HOME/.cargo/registry" "$GITHUB_WORKSPACE/target"
+      - name: Save the GitHub cargo-rust cache
+        if: steps.guard.outputs.save == 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path:  |
+            ~/.cargo/registry
+            target
+          key: cargo-rust-${{ runner.os }}-${{ env.RUST_VERSION }}-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}
+      - name: Record passed lane
+        run: python3 -I .github/actions/docs-only/run.py stamp "$RUNNER_TEMP/ci-plan" always "$RUNNER_TEMP/receipts"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lane-always-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/receipts/*.json
+          if-no-files-found: error
+          retention-days: 30
+
+  web-build:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.result == 'success' && needs.changes.outputs.build-web == 'true' }}
+    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-24.04' || github.repository == 'jparker2006/ClosedWiz' && (vars.CI_WEB_RUNS_ON || 'namespace-profile-closedwiz-rust') || 'ubuntu-24.04' }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/private/
+      - name: The runner guard
+        id: guard
+        env:
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        run: sh ci/hosted/guard.sh
+      - name: Prune unused inputs
+        run: sh .github/actions/docs-only/prune.sh .github/actions/docs-only/ci-reads.txt web-build
+      - name: Prepare lane
+        uses: ./.github/actions/docs-only/setup
+        with:
+          hosted: ${{ steps.guard.outputs.hosted }}
+          save: ${{ steps.guard.outputs.save }}
+          rust-version: ${{ env.RUST_VERSION }}
+          node-version: ${{ env.NODE_VERSION }}
+          cargo: 'false'
+          npm: 'true'
+          browser: 'false'
+      - name: Python for the offline installer and release proofs
+        run: sh .github/actions/docs-only/python.sh
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ci-selection-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ci-plan
+      - name: Run npm run build
+        run: python3 -I .github/actions/docs-only/run.py execute "$RUNNER_TEMP/ci-plan" build:web_export
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: web-out
+          path: apps/web/out
+          if-no-files-found: error
+          retention-days: 1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: needs.changes.outputs.trace == 'true' || needs.changes.outputs.planted == 'true'
+        with:
+          name: select-records-web-build-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/select-records/*.json*
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Save the npm cache
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
+        run: sh ci/runner/cache.sh save npm "$HOME/.npm"
+      - name: Save the GitHub npm cache
+        if: steps.guard.outputs.save == 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('apps/web/package-lock.json') }}
+      - name: Record passed lane
+        run: python3 -I .github/actions/docs-only/run.py stamp "$RUNNER_TEMP/ci-plan" build:web_export "$RUNNER_TEMP/receipts"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lane-web-build-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/receipts/*.json
+          if-no-files-found: error
+          retention-days: 30
+
+  rust:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.result == 'success' && (needs.changes.outputs.rust == 'true' || needs.changes.outputs.toolkit == 'true') && needs.changes.outputs.export-rust == 'false' }}
+    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-24.04' || github.repository == 'jparker2006/ClosedWiz' && (vars.CI_RUST_RUNS_ON || 'namespace-profile-closedwiz-rust') || 'ubuntu-24.04' }}
+    timeout-minutes: 60
+    # #1266: the Rust tests split across this many members, a setting per
+    # runner kind (its runs-on label); a kind not named runs one, so a paid
+    # runner never fans out. Traced and planted runs keep one: they run the
+    # whole lane through run.py.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON((needs.changes.outputs.trace == 'true' || needs.changes.outputs.planted == 'true') && '[1]' || fromJSON('{"closedwiz-pc":"[1]","ubuntu-24.04":"[1,2,3,4]"}')[github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-24.04' || github.repository == 'jparker2006/ClosedWiz' && (vars.CI_RUST_RUNS_ON || 'namespace-profile-closedwiz-rust') || 'ubuntu-24.04'] || '[1]') }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/private/
+      - name: The runner guard
+        id: guard
+        env:
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        run: sh ci/hosted/guard.sh
+      - name: Prune unused inputs
+        run: sh .github/actions/docs-only/prune.sh .github/actions/docs-only/ci-reads.txt rust
+      - name: Prepare lane
+        uses: ./.github/actions/docs-only/setup
+        with:
+          hosted: ${{ steps.guard.outputs.hosted }}
+          save: ${{ steps.guard.outputs.save }}
+          rust-version: ${{ env.RUST_VERSION }}
+          node-version: ${{ env.NODE_VERSION }}
+          cargo: 'true'
+          npm: ${{ needs.changes.outputs.planted == 'true' }}
+          browser: 'false'
+      - name: Python for the offline installer and release proofs
+        run: sh .github/actions/docs-only/python.sh
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ci-selection-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ci-plan
+      - name: Build and lint Rust
+        if: strategy.job-index == 0
+        run: python3 -I .github/actions/docs-only/run.py lint "$RUNNER_TEMP/ci-plan"
+      # #1266: the shard balancer's, its check's and this wiring's own proofs.
+      - name: The shard balancer's tests
+        if: strategy.job-index == 0
+        run: python3 -I ci/shard/test.py
+      # #2081: the persisted plan selects only the fast core/plan proofs.
+      # Historical preparation, inherited suites, dry runs and mutants are nightly.
+      - name: The live-check toolkit (fixtures only)
+        id: toolkit
+        if: needs.changes.outputs.toolkit == 'true'
+        shell: bash
+        run: |
+          export PYTHONDONTWRITEBYTECODE=1
+          python3 tools/live-check/test_core.py
+          python3 tools/live-check/plans/test_plans.py
+      - name: Record passed toolkit
+        env:
+          TOOLKIT_RESULT: ${{ steps.toolkit.outcome }}
+        run: python3 -I .github/actions/docs-only/run.py toolkit "$RUNNER_TEMP/ci-plan" "$TOOLKIT_RESULT" "$RUNNER_TEMP/receipts"
+      # #1266: this member's share of the selected Rust tests, balanced by
+      # ci/shard/times.tsv. One member runs the whole lane through run.py, as
+      # before; the ci job checks that every share passed and together they
+      # hold every selected Rust test exactly once.
+      - name: The Rust shard
+        env:
+          SHARDS: ${{ strategy.job-total }}
+          SHARD: ${{ matrix.shard }}
+        run: |
+          python3 -I ci/shard/shard.py share "$RUNNER_TEMP/ci-plan/ci-selection.json" --shards "$SHARDS" --shard "$SHARD" --times ci/shard/times.tsv > "$RUNNER_TEMP/rust-share.txt"
+          echo "rust shard $SHARD of $SHARDS: $(paste -sd ' ' "$RUNNER_TEMP/rust-share.txt")"
+      - name: Run cargo test --workspace
+        env:
+          SHARDS: ${{ strategy.job-total }}
+          SHARD: ${{ matrix.shard }}
+        run: |
+          if [ "$SHARDS" = 1 ]; then
+            python3 -I .github/actions/docs-only/run.py execute "$RUNNER_TEMP/ci-plan" rust
+          elif [ -s "$RUNNER_TEMP/rust-share.txt" ]; then
+            # Only the first member builds the workspace (Build and lint
+            # Rust), yet tests run its binaries (tests/loops' target/debug/
+            # openwiz): each member builds them first (R2 on #2113).
+            cargo build --workspace --bins --locked
+            sh ci/rust-tests.sh --only "$(paste -sd ' ' "$RUNNER_TEMP/rust-share.txt")"
+          else
+            echo "rust shard $SHARD of $SHARDS: no test for this member"
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: needs.changes.outputs.trace == 'true' || needs.changes.outputs.planted == 'true'
+        with:
+          name: select-records-rust-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/select-records/*.json*
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Save the cargo-rust cache
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule') && strategy.job-index == 0
+        run: sh ci/runner/cache.sh save cargo-rust "$HOME/.cargo/registry" "$GITHUB_WORKSPACE/target"
+      - name: Save the GitHub cargo-rust cache
+        if: steps.guard.outputs.save == 'true' && strategy.job-index == 0
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path:  |
+            ~/.cargo/registry
+            target
+          key: cargo-rust-${{ runner.os }}-${{ env.RUST_VERSION }}-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}
+      # Only once its tests passed: the ci job counts these records.
+      - name: Record passed lane
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: mkdir -p "$RUNNER_TEMP/rust-ran" && cp "$RUNNER_TEMP/rust-share.txt" "$RUNNER_TEMP/rust-ran/ran-$SHARD.txt"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rust-ran-${{ github.run_attempt }}-${{ matrix.shard }}
+          path: ${{ runner.temp }}/rust-ran/ran-${{ matrix.shard }}.txt
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: strategy.job-index == 0
+        with:
+          name: lane-rust-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/receipts/*.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+  rust-export:
+    needs: [changes, web-build]
+    if: ${{ !cancelled() && needs.changes.result == 'success' && (needs.changes.outputs.rust == 'true' || needs.changes.outputs.toolkit == 'true') && needs.changes.outputs.export-rust == 'true' && needs.web-build.result == 'success' }}
+    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-24.04' || github.repository == 'jparker2006/ClosedWiz' && (vars.CI_RUST_RUNS_ON || 'namespace-profile-closedwiz-rust') || 'ubuntu-24.04' }}
+    timeout-minutes: 60
+    # #1266: the Rust tests split across this many members, a setting per
+    # runner kind (its runs-on label); a kind not named runs one, so a paid
+    # runner never fans out. Traced and planted runs keep one: they run the
+    # whole lane through run.py.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON((needs.changes.outputs.trace == 'true' || needs.changes.outputs.planted == 'true') && '[1]' || fromJSON('{"closedwiz-pc":"[1]","ubuntu-24.04":"[1,2,3,4]"}')[github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-24.04' || github.repository == 'jparker2006/ClosedWiz' && (vars.CI_RUST_RUNS_ON || 'namespace-profile-closedwiz-rust') || 'ubuntu-24.04'] || '[1]') }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/private/
+      - name: The runner guard
+        id: guard
+        env:
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        run: sh ci/hosted/guard.sh
+      - name: Prune unused inputs
+        run: sh .github/actions/docs-only/prune.sh .github/actions/docs-only/ci-reads.txt rust
+      - name: Prepare lane
+        uses: ./.github/actions/docs-only/setup
+        with:
+          hosted: ${{ steps.guard.outputs.hosted }}
+          save: ${{ steps.guard.outputs.save }}
+          rust-version: ${{ env.RUST_VERSION }}
+          node-version: ${{ env.NODE_VERSION }}
+          cargo: 'true'
+          npm: ${{ needs.changes.outputs.planted == 'true' }}
+          browser: 'false'
+      - name: Python for the offline installer and release proofs
+        run: sh .github/actions/docs-only/python.sh
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ci-selection-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ci-plan
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: web-out
+          path: apps/web/out
+      - name: Build and lint Rust
+        if: strategy.job-index == 0
+        run: python3 -I .github/actions/docs-only/run.py lint "$RUNNER_TEMP/ci-plan"
+      # #1266: the shard balancer's, its check's and this wiring's own proofs.
+      - name: The shard balancer's tests
+        if: strategy.job-index == 0
+        run: python3 -I ci/shard/test.py
+      # #2081: the persisted plan selects only the fast core/plan proofs.
+      # Historical preparation, inherited suites, dry runs and mutants are nightly.
+      - name: The live-check toolkit (fixtures only)
+        id: toolkit
+        if: needs.changes.outputs.toolkit == 'true'
+        shell: bash
+        run: |
+          export PYTHONDONTWRITEBYTECODE=1
+          python3 tools/live-check/test_core.py
+          python3 tools/live-check/plans/test_plans.py
+      - name: Record passed toolkit
+        env:
+          TOOLKIT_RESULT: ${{ steps.toolkit.outcome }}
+        run: python3 -I .github/actions/docs-only/run.py toolkit "$RUNNER_TEMP/ci-plan" "$TOOLKIT_RESULT" "$RUNNER_TEMP/receipts"
+      # #1266: this member's share of the selected Rust tests, balanced by
+      # ci/shard/times.tsv. One member runs the whole lane through run.py, as
+      # before; the ci job checks that every share passed and together they
+      # hold every selected Rust test exactly once.
+      - name: The Rust shard
+        env:
+          SHARDS: ${{ strategy.job-total }}
+          SHARD: ${{ matrix.shard }}
+        run: |
+          python3 -I ci/shard/shard.py share "$RUNNER_TEMP/ci-plan/ci-selection.json" --shards "$SHARDS" --shard "$SHARD" --times ci/shard/times.tsv > "$RUNNER_TEMP/rust-share.txt"
+          echo "rust shard $SHARD of $SHARDS: $(paste -sd ' ' "$RUNNER_TEMP/rust-share.txt")"
+      - name: Run cargo test --workspace
+        env:
+          SHARDS: ${{ strategy.job-total }}
+          SHARD: ${{ matrix.shard }}
+        run: |
+          if [ "$SHARDS" = 1 ]; then
+            python3 -I .github/actions/docs-only/run.py execute "$RUNNER_TEMP/ci-plan" rust
+          elif [ -s "$RUNNER_TEMP/rust-share.txt" ]; then
+            # Only the first member builds the workspace (Build and lint
+            # Rust), yet tests run its binaries (tests/loops' target/debug/
+            # openwiz): each member builds them first (R2 on #2113).
+            cargo build --workspace --bins --locked
+            sh ci/rust-tests.sh --only "$(paste -sd ' ' "$RUNNER_TEMP/rust-share.txt")"
+          else
+            echo "rust shard $SHARD of $SHARDS: no test for this member"
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: needs.changes.outputs.trace == 'true' || needs.changes.outputs.planted == 'true'
+        with:
+          name: select-records-rust-export-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/select-records/*.json*
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Save the cargo-rust cache
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule') && strategy.job-index == 0
+        run: sh ci/runner/cache.sh save cargo-rust "$HOME/.cargo/registry" "$GITHUB_WORKSPACE/target"
+      - name: Save the GitHub cargo-rust cache
+        if: steps.guard.outputs.save == 'true' && strategy.job-index == 0
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path:  |
+            ~/.cargo/registry
+            target
+          key: cargo-rust-${{ runner.os }}-${{ env.RUST_VERSION }}-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}
+      # Only once its tests passed: the ci job counts these records.
+      - name: Record passed lane
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: mkdir -p "$RUNNER_TEMP/rust-ran" && cp "$RUNNER_TEMP/rust-share.txt" "$RUNNER_TEMP/rust-ran/ran-$SHARD.txt"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rust-ran-${{ github.run_attempt }}-${{ matrix.shard }}
+          path: ${{ runner.temp }}/rust-ran/ran-${{ matrix.shard }}.txt
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: strategy.job-index == 0
+        with:
+          name: lane-rust-export-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/receipts/*.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+  web:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.result == 'success' && needs.changes.outputs.web == 'true' && needs.changes.outputs.export-web == 'false' }}
+    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-24.04' || github.repository == 'jparker2006/ClosedWiz' && (vars.CI_WEB_RUNS_ON || 'namespace-profile-closedwiz-rust') || 'ubuntu-24.04' }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/private/
+      - name: The runner guard
+        id: guard
+        env:
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        run: sh ci/hosted/guard.sh
+      - name: Prune unused inputs
+        run: sh .github/actions/docs-only/prune.sh .github/actions/docs-only/ci-reads.txt web-test
+      - name: Prepare lane
+        uses: ./.github/actions/docs-only/setup
+        with:
+          hosted: ${{ steps.guard.outputs.hosted }}
+          save: ${{ steps.guard.outputs.save }}
+          rust-version: ${{ env.RUST_VERSION }}
+          node-version: ${{ env.NODE_VERSION }}
+          cargo: 'true'
+          cache: cargo-web-test
+          npm: 'true'
+          browser: 'true'
+      - name: Python for the offline installer and release proofs
+        run: sh .github/actions/docs-only/python.sh
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ci-selection-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ci-plan
+      - name: Run npm test
+        run: python3 -I .github/actions/docs-only/run.py execute "$RUNNER_TEMP/ci-plan" web
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: needs.changes.outputs.trace == 'true' || needs.changes.outputs.planted == 'true'
+        with:
+          name: select-records-web-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/select-records/*.json*
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Save the cargo-web-test cache
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
+        run: sh ci/runner/cache.sh save cargo-web-test "$HOME/.cargo/registry" "$GITHUB_WORKSPACE/target"
+      - name: Save the GitHub cargo-web-test cache
+        if: steps.guard.outputs.save == 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path:  |
+            ~/.cargo/registry
+            target
+          key: cargo-web-test-${{ runner.os }}-${{ env.RUST_VERSION }}-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}
+      - name: Save the npm cache
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
+        run: sh ci/runner/cache.sh save npm "$HOME/.npm"
+      - name: Save the GitHub npm cache
+        if: steps.guard.outputs.save == 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('apps/web/package-lock.json') }}
+      - name: Record passed lane
+        run: python3 -I .github/actions/docs-only/run.py stamp "$RUNNER_TEMP/ci-plan" web "$RUNNER_TEMP/receipts"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lane-web-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/receipts/*.json
+          if-no-files-found: error
+          retention-days: 30
+
+  web-export:
+    needs: [changes, web-build]
+    if: ${{ !cancelled() && needs.changes.result == 'success' && needs.changes.outputs.web == 'true' && needs.changes.outputs.export-web == 'true' && needs.web-build.result == 'success' }}
+    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-24.04' || github.repository == 'jparker2006/ClosedWiz' && (vars.CI_WEB_RUNS_ON || 'namespace-profile-closedwiz-rust') || 'ubuntu-24.04' }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/private/
+      - name: The runner guard
+        id: guard
+        env:
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        run: sh ci/hosted/guard.sh
+      - name: Prune unused inputs
+        run: sh .github/actions/docs-only/prune.sh .github/actions/docs-only/ci-reads.txt web-test
+      - name: Prepare lane
+        uses: ./.github/actions/docs-only/setup
+        with:
+          hosted: ${{ steps.guard.outputs.hosted }}
+          save: ${{ steps.guard.outputs.save }}
+          rust-version: ${{ env.RUST_VERSION }}
+          node-version: ${{ env.NODE_VERSION }}
+          cargo: 'true'
+          cache: cargo-web-test
+          npm: 'true'
+          browser: 'true'
+      - name: Python for the offline installer and release proofs
+        run: sh .github/actions/docs-only/python.sh
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ci-selection-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ci-plan
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: web-out
+          path: apps/web/out
+      - name: Run npm test
+        run: python3 -I .github/actions/docs-only/run.py execute "$RUNNER_TEMP/ci-plan" web
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: needs.changes.outputs.trace == 'true' || needs.changes.outputs.planted == 'true'
+        with:
+          name: select-records-web-export-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/select-records/*.json*
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Save the cargo-web-test cache
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
+        run: sh ci/runner/cache.sh save cargo-web-test "$HOME/.cargo/registry" "$GITHUB_WORKSPACE/target"
+      - name: Save the GitHub cargo-web-test cache
+        if: steps.guard.outputs.save == 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path:  |
+            ~/.cargo/registry
+            target
+          key: cargo-web-test-${{ runner.os }}-${{ env.RUST_VERSION }}-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}
+      - name: Save the npm cache
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
+        run: sh ci/runner/cache.sh save npm "$HOME/.npm"
+      - name: Save the GitHub npm cache
+        if: steps.guard.outputs.save == 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('apps/web/package-lock.json') }}
+      - name: Record passed lane
+        run: python3 -I .github/actions/docs-only/run.py stamp "$RUNNER_TEMP/ci-plan" web "$RUNNER_TEMP/receipts"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lane-web-export-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/receipts/*.json
+          if-no-files-found: error
+          retention-days: 30
+
+  site:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.result == 'success' && needs.changes.outputs.site == 'true' && needs.changes.outputs.site-in-release != 'true' }}
+    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-24.04' || github.repository == 'jparker2006/ClosedWiz' && (vars.CI_WEB_RUNS_ON || 'namespace-profile-closedwiz-rust') || 'ubuntu-24.04' }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/private/
+      - name: The runner guard
+        id: guard
+        env:
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        run: sh ci/hosted/guard.sh
+      - name: Prune unused inputs
+        run: sh .github/actions/docs-only/prune.sh .github/actions/docs-only/ci-reads.txt web-build
+      - name: Prepare lane
+        uses: ./.github/actions/docs-only/setup
+        with:
+          hosted: ${{ steps.guard.outputs.hosted }}
+          save: ${{ steps.guard.outputs.save }}
+          rust-version: ${{ env.RUST_VERSION }}
+          node-version: ${{ env.NODE_VERSION }}
+          cargo: 'false'
+          npm: 'true'
+          browser: 'true'
+      - name: Python for the offline installer and release proofs
+        run: sh .github/actions/docs-only/python.sh
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ci-selection-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ci-plan
+      - name: Build and test the public static site
+        run: python3 -I .github/actions/docs-only/run.py execute "$RUNNER_TEMP/ci-plan" site
+      - name: Save the npm cache
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
+        run: sh ci/runner/cache.sh save npm "$HOME/.npm"
+      - name: Save the GitHub npm cache
+        if: steps.guard.outputs.save == 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('apps/web/package-lock.json') }}
+      - name: Record passed lane
+        run: python3 -I .github/actions/docs-only/run.py stamp "$RUNNER_TEMP/ci-plan" site "$RUNNER_TEMP/receipts"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lane-site-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/receipts/*.json
+          if-no-files-found: error
+          retention-days: 30
+
+  release:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.result == 'success' && needs.changes.outputs.release == 'true' }}
+    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-24.04' || github.repository == 'jparker2006/ClosedWiz' && (vars.CI_WEB_RUNS_ON || 'namespace-profile-closedwiz-rust') || 'ubuntu-24.04' }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/private/
+      - name: The runner guard
+        id: guard
+        env:
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        run: sh ci/hosted/guard.sh
+      - name: Prune unused inputs
+        run: sh .github/actions/docs-only/prune.sh .github/actions/docs-only/ci-reads.txt release
+      - name: Prepare lane
+        uses: ./.github/actions/docs-only/setup
+        with:
+          hosted: ${{ steps.guard.outputs.hosted }}
+          save: ${{ steps.guard.outputs.save }}
+          rust-version: ${{ env.RUST_VERSION }}
+          node-version: ${{ env.NODE_VERSION }}
+          cargo: 'true'
+          cache: cargo-web-test
+          npm: 'true'
+          browser: 'true'
+      - name: Python for the offline installer and release proofs
+        run: sh .github/actions/docs-only/python.sh
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ci-selection-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ci-plan
+      - name: The release proofs
+        run: python3 -I .github/actions/docs-only/run.py execute "$RUNNER_TEMP/ci-plan" release
+      - name: Save the npm cache
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
+        run: sh ci/runner/cache.sh save npm "$HOME/.npm"
+      - name: Save the GitHub npm cache
+        if: steps.guard.outputs.save == 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('apps/web/package-lock.json') }}
+      - name: Record passed lane
+        run: python3 -I .github/actions/docs-only/run.py stamp "$RUNNER_TEMP/ci-plan" release "$RUNNER_TEMP/receipts"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lane-release-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/receipts/*.json
+          if-no-files-found: error
+          retention-days: 30
+
+  skills:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.result == 'success' && needs.changes.outputs.skills != '[]' && needs.changes.outputs.skills != '' }}
+    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-24.04' || github.repository == 'jparker2006/ClosedWiz' && (vars.CI_WEB_RUNS_ON || 'namespace-profile-closedwiz-rust') || 'ubuntu-24.04' }}
+    timeout-minutes: ${{ matrix.skill == 'launch-fleet' && 60 || 30 }}
+    strategy:
+      fail-fast: false
+      matrix:
+        skill: ${{ fromJSON(needs.changes.outputs.skills) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/private/
+      - name: The runner guard
+        id: guard
+        env:
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        run: sh ci/hosted/guard.sh
+      - name: Prune unused inputs
+        run: sh .github/actions/docs-only/prune.sh .github/actions/docs-only/ci-reads.txt rust
+      - name: Prepare lane
+        uses: ./.github/actions/docs-only/setup
+        with:
+          hosted: ${{ steps.guard.outputs.hosted }}
+          save: ${{ steps.guard.outputs.save }}
+          rust-version: ${{ env.RUST_VERSION }}
+          node-version: ${{ env.NODE_VERSION }}
+          cargo: 'false'
+          npm: ${{ matrix.skill == 'image' }}
+          browser: ${{ matrix.skill == 'image' }}
+      - name: Python for the offline installer and release proofs
+        run: sh .github/actions/docs-only/python.sh
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ci-selection-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ci-plan
+      - name: The skills' tests
+        run: python3 -I .github/actions/docs-only/run.py execute "$RUNNER_TEMP/ci-plan" skill:${{ matrix.skill }}
+      - name: Record passed lane
+        run: python3 -I .github/actions/docs-only/run.py stamp "$RUNNER_TEMP/ci-plan" skill:${{ matrix.skill }} "$RUNNER_TEMP/receipts"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lane-skill-${{ matrix.skill }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/receipts/*.json
+          if-no-files-found: error
+          retention-days: 30
+
+  toolkit-nightly:
+    if: github.event_name == 'schedule' && github.ref == 'refs/heads/main'
+    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-24.04' || github.repository == 'jparker2006/ClosedWiz' && (vars.CI_RUST_RUNS_ON || 'namespace-profile-closedwiz-rust') || 'ubuntu-24.04' }}
+    timeout-minutes: 360
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/private/
+      # The runner guard (#1265), before anything the change ships runs: a
+      # fork's pull request fails off GitHub's runners, and whether this job
+      # may save GitHub's cache (ci/hosted/guard.sh).
+      - name: The runner guard
+        id: guard
+        env:
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        run: sh ci/hosted/guard.sh
+      # LT3 (#242): the same reviewed checkout action fetches only the pinned
+      # fixture inputs during initial preparation and removes its credentials
+      # before returning. The main checkout/private exclusion stays unchanged.
+      - name: Private live-check fixture destination
+        shell: bash
+        run: |
+          git_version="$(git --version)"
+          if [[ ! "$git_version" =~ ^git\ version\ ([0-9]+)\.([0-9]+)\.[0-9]+[^[:cntrl:]]*$ ]] ||
+             (( 10#${BASH_REMATCH[1]} < 2 || (10#${BASH_REMATCH[1]} == 2 && 10#${BASH_REMATCH[2]} < 28) )); then
+            echo "sparse-capable Git 2.28 or newer is required" >&2
+            exit 1
+          fi
+          install -d -m 0700 "$GITHUB_WORKSPACE/.lt3-fixture-source"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        name: The reviewed live-check fixture source
+        with:
+          ref: 660c1692f3343cec36883abd57b5c88237ac5f44
+          persist-credentials: false
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          path: .lt3-fixture-source
+          sparse-checkout: |
+            /Cargo.toml
+            /Cargo.lock
+            /crates/
+            /tests/
+            /contracts/
+            /apps/web/
+      - name: Seal the live-check fixture source
+        shell: bash
+        run: |
+          source="$GITHUB_WORKSPACE/.lt3-fixture-source"
+          # The action warns rather than failing on some auth-cleanup errors.
+          # Verify its credential files are gone and only known non-auth Git
+          # metadata remains; never read includes or print configuration values.
+          test -d "$RUNNER_TEMP" && test -r "$RUNNER_TEMP" && test -x "$RUNNER_TEMP"
+          shopt -s nullglob
+          checkout_credentials=("$RUNNER_TEMP"/git-credentials-*.config)
+          if [ "${#checkout_credentials[@]}" -ne 0 ]; then
+            echo "checkout credential cleanup is incomplete; no tests started" >&2
+            exit 1
+          fi
+          for repository in "$GITHUB_WORKSPACE" "$source"; do
+            for configuration in "$repository/.git/config" "$repository/.git/config.worktree"; do
+              if [[ "$configuration" == */config.worktree && ! -e "$configuration" && ! -L "$configuration" ]]; then
+                continue
+              fi
+              if ! config_names="$(git config --file "$configuration" --no-includes --name-only --list 2>/dev/null)"; then
+                echo "cannot verify checkout credential cleanup; no tests started" >&2
+                exit 1
+              fi
+              while IFS= read -r key; do
+                case "${key,,}" in
+                  core.repositoryformatversion|core.filemode|core.bare|core.logallrefupdates|core.sparsecheckout|core.sparsecheckoutcone|extensions.worktreeconfig|extensions.partialclone|extensions.objectformat|remote.origin.url|remote.origin.fetch|remote.origin.promisor|remote.origin.partialclonefilter|gc.auto|branch.*.remote|branch.*.merge|'') ;;
+                  *)
+                    echo "checkout credential cleanup is incomplete; no tests started" >&2
+                    exit 1 ;;
+                esac
+              done <<< "$config_names"
+            done
+          done
+          if [ "$(git -C "$source" rev-parse HEAD)" != 660c1692f3343cec36883abd57b5c88237ac5f44 ]; then
+            echo "live-check fixture source revision mismatch" >&2
+            exit 1
+          fi
+          for path in Cargo.toml Cargo.lock; do
+            if [ ! -f "$source/$path" ]; then
+              echo "missing live-check fixture prerequisite: $path" >&2
+              exit 1
+            fi
+          done
+          for path in crates tests contracts apps/web; do
+            if [ ! -d "$source/$path" ]; then
+              echo "missing live-check fixture prerequisite: $path" >&2
+              exit 1
+            fi
+          done
+          test ! -e "$source/private"
+          test ! -e "$RUNNER_TEMP/live-check-source"
+          git -C "$source" remote remove origin
+          mv "$source" "$RUNNER_TEMP/live-check-source"
+          chmod 0700 "$RUNNER_TEMP/live-check-source"
+      - name: Python for the offline installer and release proofs
+        run: |
+          if ! command -v python3 > /dev/null; then
+            case "$(uname -m)" in
+              x86_64) sum=df15fe60d3ff55bf9dcf25824b5572756bb8816ff93865a273d3301d7066a8b7 ;;
+              aarch64) sum=578d9da1983463ffb0c8c98ab0da2f18177f44069328eb0af847860c1eb05c3e ;;
+              *) echo "no pinned Python for $(uname -m)" >&2; exit 1 ;;
+            esac
+            curl -fsSL --retry 5 --retry-delay 10 -o "$RUNNER_TEMP/python.tar.gz" \
+              "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.13.18+20261026-$(uname -m)-unknown-linux-gnu-install_only_stripped.tar.gz"
+            echo "$sum  $RUNNER_TEMP/python.tar.gz" | sha256sum -c -
+            python="$(mktemp -d "$RUNNER_TEMP/python.XXXXXX")"
+            tar -xzf "$RUNNER_TEMP/python.tar.gz" -C "$python" --strip-components=1
+            export PATH="$python/bin:$PATH"
+            echo "$python/bin" >> "$GITHUB_PATH"
+          fi
+      - name: Rust ${{ env.RUST_VERSION }}
+        run: |
+          rustup toolchain install "$RUST_VERSION" --profile minimal --no-self-update
+          rustup default "$RUST_VERSION"
+          rustc --version && cargo --version
+      - name: zsh
+        run: |
+          command -v zsh > /dev/null || { sudo apt-get update -q && sudo apt-get install -y zsh; }
+          zsh --version
+      - name: The live-check toolkit (nightly fixtures and mutants)
+        shell: bash
+        run: |
+          export PYTHONDONTWRITEBYTECODE=1
+          fixture="$(mktemp -d "$RUNNER_TEMP/live-check.XXXXXX")"
+          evidence="$RUNNER_TEMP/live-check-evidence"
+          mkdir -m 0700 "$evidence"
+          export KIT_SOURCE_ROOT="$RUNNER_TEMP/live-check-source"
+          export KIT_TARGET="$fixture/target"
+          export CARGO_BUILD_JOBS=2
+          finish_live_check() {
+            toolkit_status=$?
+            set +e
+            trap - EXIT
+            if [ "$toolkit_status" -ne 0 ]; then
+              for log in "$evidence"/plan-*.log "$evidence"/mutants/*.log; do
+                [ -f "$log" ] || continue
+                case "$log" in
+                  "$evidence"/mutants/*)
+                    record="${log%.log}.json"
+                    if [ -f "$record" ] && jq -e '.ok == true' "$record" >/dev/null 2>&1; then
+                      continue
+                    fi ;;
+                esac
+                printf '\nLive-check failure details: %s\n' "${log##*/}"
+                cat "$log" || echo "could not read live-check failure log" >&2
+              done
+            fi
+            if ! rm -rf "$fixture" "$KIT_SOURCE_ROOT"; then
+              [ "$toolkit_status" -ne 0 ] || toolkit_status=1
+            fi
+            printf '{"exit": %s}\n' "$toolkit_status" > "$evidence/result.json" || toolkit_status=1
+            exit "$toolkit_status"
+          }
+          trap finish_live_check EXIT
+          # tee finishes before the step ends; pipefail preserves any failing
+          # command. Keep the full stream and all plan/mutant records, even red.
+          {
+          command -v lsof > /dev/null
+          command -v jq > /dev/null
+          test -f "$KIT_SOURCE_ROOT/Cargo.lock"
+          fixture_remotes="$(git -C "$KIT_SOURCE_ROOT" remote)"
+          test -z "$fixture_remotes"
+          git -C "$KIT_SOURCE_ROOT" rev-parse HEAD > "$evidence/source-head.txt"
+          git rev-parse HEAD > "$evidence/toolkit-head.txt"
+          CARGO_TARGET_DIR="$KIT_TARGET" cargo build --manifest-path "$KIT_SOURCE_ROOT/Cargo.toml" --release --locked \
+            -p openwiz-cli -p openwiz-server -p openwiz-tests
+          export KIT_NO_BUILD=1
+          python3 tools/live-check/test_mutants.py
+          sh tools/live-check/send/scripts/test/c8-tests.sh
+          sh tools/live-check/send/scripts/test/kit-tests.sh
+          sh tools/live-check/send/scripts/test/sol-tests.sh
+          sh tools/live-check/new/scripts/test/kit-tests.sh
+          python3 tools/live-check/plans/dry-run.py --profile send --log "$evidence/plan-send.log"
+          python3 tools/live-check/plans/dry-run.py --profile new --log "$evidence/plan-new.log"
+          python3 tools/live-check/mutants.py --logs "$evidence/mutants" --jobs 2
+          } 2>&1 | tee "$evidence/full.log"
+      - name: Keep the nightly toolkit evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: live-check-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/live-check-evidence
+          if-no-files-found: error
+          retention-days: 7
+
+  # The next map (#432): after a traced run whose three jobs all passed, the
+  # records each traced job kept become one map (map.py, which refuses a map
+  # missing any test). A push or the nightly run on main signs it (GitHub's
+  # OIDC token, bound to the map's bytes) and keeps both in GitHub's cache,
+  # where web-build's selector finds the newest; any run keeps them as an
+  # artifact too (a PR that changes the tracer: its proof map). Not a
+  # required check: without it, pull requests run every test.
+  select-map:
+    needs: [changes, ci]
+    # Its failure never fails the run: main's and the nightly's results are
+    # the three required jobs'. A failed select-map only means no new map.
+    continue-on-error: true
+    if: ${{ !cancelled() && needs.changes.outputs.trace == 'true' && needs.ci.result == 'success' }}
+    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-24.04' || github.repository == 'jparker2006/ClosedWiz' && (vars.CI_SMALL_RUNS_ON || vars.CI_WEB_RUNS_ON || 'namespace-profile-closedwiz-rust') || 'ubuntu-24.04' }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/private/
+      # The runner guard (#1265), before anything the change ships runs: a
+      # fork's pull request fails off GitHub's runners, and whether this job
+      # may save GitHub's cache (ci/hosted/guard.sh).
+      - name: The runner guard
+        id: guard
+        working-directory: .
+        env:
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        run: sh ci/hosted/guard.sh
+      - name: Python for the offline installer and release proofs
+        run: sh .github/actions/docs-only/python.sh
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: select-records-*-${{ github.run_attempt }}
+          merge-multiple: true
+          path: ${{ runner.temp }}/select-records
+      - name: Save the select-map cache
+        id: map
+        env:
+          MAIN: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule') }}
+        run: |
+          dir="$HOME/.cache/closedwiz-ci-select"
+          mkdir -p "$dir"
+          python3 -I ci/select/map.py "$dir/map.json" --commit "$GITHUB_SHA" --root . "$RUNNER_TEMP/select-records"
+          if [ "$MAIN" = true ]; then
+            python3 -I ci/select/job.py sign "$dir/map.json" "$dir/map.jwt"
+            echo "save=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ci-select-map
+          path: ~/.cache/closedwiz-ci-select
+          if-no-files-found: error
+          retention-days: 30
+      - name: Save the select-map GitHub cache
+        if: steps.map.outputs.save == 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/closedwiz-ci-select
+          key: ci-select-map-${{ github.run_id }}-${{ github.run_attempt }}
+
+  ci:
+    needs: [changes, always, web-build, rust, rust-export, web, web-export, site, release, skills]
+    if: ${{ always() }}
+    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-24.04' || github.repository == 'jparker2006/ClosedWiz' && (vars.CI_SMALL_RUNS_ON || vars.CI_WEB_RUNS_ON || 'namespace-profile-closedwiz-rust') || 'ubuntu-24.04' }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/private/
+      - name: The runner guard
+        id: guard
+        env:
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        run: sh ci/hosted/guard.sh
+      - name: Python for the offline installer and release proofs
+        run: sh .github/actions/docs-only/python.sh
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ci-selection-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ci-plan
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: lane-*-${{ github.run_attempt }}
+          merge-multiple: true
+          path: ${{ runner.temp }}/receipts
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: needs.rust.result == 'success' || needs.rust-export.result == 'success'
+        with:
+          pattern: rust-ran-${{ github.run_attempt }}-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/rust-ran
+      # #1266: the Rust lane's shards, counted. Each member that passed left
+      # its share; together they must hold every selected Rust test exactly
+      # once, and only then is the Rust lane's receipt written.
+      - name: Every Rust test ran exactly once
+        if: needs.rust.result == 'success' || needs.rust-export.result == 'success'
+        run: |
+          python3 -I ci/shard/shard.py check "$RUNNER_TEMP/ci-plan/ci-selection.json" "$RUNNER_TEMP"/rust-ran/ran-*.txt
+          python3 -I .github/actions/docs-only/run.py stamp "$RUNNER_TEMP/ci-plan" rust "$RUNNER_TEMP/receipts"
+      - name: Every planned lane passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          printf '%s' "$NEEDS" > "$RUNNER_TEMP/needs.json"
+          python3 -I .github/actions/docs-only/run.py finish "$RUNNER_TEMP/ci-plan" "$RUNNER_TEMP/needs.json" "$RUNNER_TEMP/receipts"
+      # C7 shadow evidence: finish is not terminal ci or complete coverage.
+      - name: Preserve incomplete combined-main evidence
+        id: main_shadow
+        continue-on-error: true
+        if: success() && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'merge_group' && github.event.merge_group.base_ref == 'refs/heads/main'))
+        run: |
+          mkdir -p "$RUNNER_TEMP/main-shadow"
+          python3 -I ci/main-batch/shadow.py capture "$RUNNER_TEMP/ci-plan" "$RUNNER_TEMP/needs.json" "$RUNNER_TEMP/receipts" "$RUNNER_TEMP/main-shadow/observation.json"
+      - name: Keep the incomplete combined-main evidence
+        continue-on-error: true
+        if: success() && steps.main_shadow.outcome == 'success' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'merge_group' && github.event.merge_group.base_ref == 'refs/heads/main'))
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: main-shadow-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/main-shadow/observation.json
+          if-no-files-found: error
+          retention-days: 30
+
+  # Transition bridge: the ruleset still names web-test until the orchestrator
+  # switches it at merge. It follows ci so that this PR can satisfy that old
+  # name without letting any new lane failure through the old ruleset.
+  web-test:
+    needs: ci
+    if: ${{ always() }}
+    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-24.04' || github.repository == 'jparker2006/ClosedWiz' && (vars.CI_SMALL_RUNS_ON || vars.CI_WEB_RUNS_ON || 'namespace-profile-closedwiz-rust') || 'ubuntu-24.04' }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/private/
+      - name: The runner guard
+        id: guard
+        env:
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        run: sh ci/hosted/guard.sh
+      - name: Legacy checks follow ci
+        env:
+          CI_RESULT: ${{ needs.ci.result }}
+        run: test "$CI_RESULT" = success

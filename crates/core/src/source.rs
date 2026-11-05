@@ -51,6 +51,9 @@ pub struct SessionRecord {
     /// `Known(None)` when the source has no purpose for the session.
     pub purpose_text: Fact<Option<String>>,
     pub updated_at: Fact<Timestamp>,
+    /// When the session started, only as `room-cli` reports it. Never
+    /// creation or update time. An unreported start is no drift gap.
+    pub started_at: Fact<Timestamp>,
     /// Missing or mistyped fields in this record.
     pub problems: Vec<Gap>,
 }

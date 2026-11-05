@@ -1,10 +1,10 @@
 //! AP1 Kind from bytes. PNG, JPEG, GIF and WebP are images; HEIC and HEIF
 //! are refused with the stated reason; everything else is a file. A wrong
 //! extension never changes the kind: when the name and the bytes disagree
-//! the file is refused, and a declared MIME type can't reach the
+//! the file is refused (B-5), and a declared MIME type can't reach the
 //! decision at all.
 
-use openwiz_core::attachment::{FailReason, Kind, SafeName, classify};
+use openwiz_core::attachment::{FailReason, Kind, SNIFF_BYTES, SafeName, classify};
 
 use crate::support::*;
 
@@ -14,6 +14,54 @@ use crate::support::*;
 const _SIGNATURE: fn(&SafeName, &[u8]) -> Result<Kind, FailReason> = classify;
 
 #[test]
+fn ap1_kind_contracts_preserve_all_original_cases() {
+    let cases: [(&str, fn()); 12] = [
+        ("a_partial_brand_is_unclear", a_partial_brand_is_unclear),
+        (
+            "a_wrong_extension_never_changes_the_kind",
+            a_wrong_extension_never_changes_the_kind,
+        ),
+        (
+            "an_inconclusive_ftyp_is_refused",
+            an_inconclusive_ftyp_is_refused,
+        ),
+        ("avif_stays_a_file", avif_stays_a_file),
+        ("everything_else_is_a_file", everything_else_is_a_file),
+        (
+            "heic_and_heif_are_refused_with_the_stated_reason",
+            heic_and_heif_are_refused_with_the_stated_reason,
+        ),
+        (
+            "heif_is_found_in_any_brand_position_and_header_form",
+            heif_is_found_in_any_brand_position_and_header_form,
+        ),
+        (
+            "iso_box_sizes_include_the_high_order_bytes",
+            iso_box_sizes_include_the_high_order_bytes,
+        ),
+        (
+            "iso_minor_versions_are_not_compatible_brands",
+            iso_minor_versions_are_not_compatible_brands,
+        ),
+        (
+            "png_jpeg_gif_and_webp_are_images_by_their_bytes",
+            png_jpeg_gif_and_webp_are_images_by_their_bytes,
+        ),
+        (
+            "the_kind_comes_from_the_first_bytes_only",
+            the_kind_comes_from_the_first_bytes_only,
+        ),
+        (
+            "zero_size_iso_boxes_require_eof_below_the_sniff_bound",
+            zero_size_iso_boxes_require_eof_below_the_sniff_bound,
+        ),
+    ];
+    for (name, proof) in cases {
+        eprintln!("TA2 case: ap01_kind::{name}");
+        proof();
+    }
+}
+
 fn png_jpeg_gif_and_webp_are_images_by_their_bytes() {
     for (file, bytes) in [
         ("synthetic.png", PNG),
@@ -29,7 +77,6 @@ fn png_jpeg_gif_and_webp_are_images_by_their_bytes() {
     }
 }
 
-#[test]
 fn heic_and_heif_are_refused_with_the_stated_reason() {
     for (file, bytes) in [
         ("synthetic.heic", heic()),
@@ -52,7 +99,6 @@ fn heic_and_heif_are_refused_with_the_stated_reason() {
     );
 }
 
-#[test]
 fn everything_else_is_a_file() {
     for (file, bytes) in [
         ("synthetic.svg", SVG.to_vec()),
@@ -60,7 +106,7 @@ fn everything_else_is_a_file() {
         ("synthetic.bmp", BMP.to_vec()),
         ("synthetic.tiff", TIFF.to_vec()),
         ("synthetic.pdf", PDF.to_vec()),
-        // a ZIP is attached unchanged, as a file, never unpacked.
+        // B-4: a ZIP is attached unchanged, as a file, never unpacked.
         ("synthetic.zip", ZIP.to_vec()),
         ("synthetic.txt", TEXT.to_vec()),
         ("synthetic", TEXT.to_vec()),
@@ -72,7 +118,6 @@ fn everything_else_is_a_file() {
     }
 }
 
-#[test]
 fn a_wrong_extension_never_changes_the_kind() {
     // An image under another name is refused, never sent as a file
     // (CloudRoom types by the extension, F4).
@@ -111,7 +156,6 @@ fn a_wrong_extension_never_changes_the_kind() {
     assert!(!FailReason::ExtensionMismatch.message().is_empty());
 }
 
-#[test]
 fn the_kind_comes_from_the_first_bytes_only() {
     // The magic must be at the start: the same bytes later in the file
     // don't make an image.
@@ -153,7 +197,8 @@ fn ftyp_extended(major: &[u8; 4], compatible: &[&[u8; 4]]) -> Vec<u8> {
     bytes
 }
 
-#[test]
+/// Sol round 1, finding 2: HEIF brands only in the compatible list, and a
+/// 64-bit box header, were both taken as files.
 fn heif_is_found_in_any_brand_position_and_header_form() {
     for (what, bytes) in [
         (
@@ -186,7 +231,6 @@ fn heif_is_found_in_any_brand_position_and_header_form() {
 
 /// AVIF is HEIF's container with AV1 inside: a file, not a refused HEIC,
 /// whichever position its brand is in.
-#[test]
 fn avif_stays_a_file() {
     for (what, bytes) in [
         ("major avif", ftyp(b"avif", &[b"avif", b"mif1", b"miaf"])),
@@ -215,7 +259,6 @@ fn avif_stays_a_file() {
 }
 
 /// What can't be decided is refused, never let through as a file.
-#[test]
 fn an_inconclusive_ftyp_is_refused() {
     assert!(FailReason::TypeUnclear.message().contains("HEIC/HEIF"));
     let mut huge = ftyp(b"isom", &[b"isom"]);
@@ -248,7 +291,71 @@ fn an_inconclusive_ftyp_is_refused() {
     }
 }
 
-#[test]
+fn iso_box_sizes_include_the_high_order_bytes() {
+    // Each declared size ends in the length of the supplied prefix. Dropping
+    // the higher bytes would make these truncated boxes look complete.
+    let mut short = b"\x01\0\0\x10ftypisom\0\0\0\0".to_vec();
+    let mut extended = b"\0\0\0\x01ftyp\0\0\0\x01\0\0\0\x18isom\0\0\0\0".to_vec();
+    for bytes in [&short, &extended] {
+        assert_eq!(
+            classify(&name("synthetic.mp4"), bytes),
+            Err(FailReason::TypeUnclear),
+            "truncated box: {bytes:?}"
+        );
+    }
+
+    // Complete boxes with multi-byte lengths are still ordinary files.
+    short[..4].copy_from_slice(&272u32.to_be_bytes());
+    short.resize(272, 0);
+    extended[8..16].copy_from_slice(&280u64.to_be_bytes());
+    extended.resize(280, 0);
+    for bytes in [&short, &extended] {
+        assert_eq!(classify(&name("synthetic.mp4"), bytes), Ok(Kind::File));
+    }
+}
+
+fn zero_size_iso_boxes_require_eof_below_the_sniff_bound() {
+    for (len, expected) in [
+        (16, Ok(Kind::File)),
+        (SNIFF_BYTES - 4, Ok(Kind::File)),
+        (SNIFF_BYTES, Err(FailReason::TypeUnclear)),
+    ] {
+        // Size zero extends to EOF. Whole four-byte padding keeps every
+        // compatible-brand slot complete, so only EOF certainty differs.
+        let mut bytes = b"\0\0\0\0ftypisom\0\0\0\0".to_vec();
+        bytes.resize(len, 0);
+        assert_eq!(
+            classify(&name("synthetic.mp4"), &bytes),
+            expected,
+            "zero-size box, {len} bytes"
+        );
+    }
+}
+
+fn iso_minor_versions_are_not_compatible_brands() {
+    for (major, minor, expected) in [
+        (b"isom", b"heic", Ok(Kind::File)),
+        (b"isom", b"avif", Ok(Kind::File)),
+        (b"heic", b"avif", Err(FailReason::UnsupportedHeif)),
+    ] {
+        for (form, mut bytes, minor_at) in [
+            ("32-bit", ftyp(major, &[]), 12..16),
+            ("64-bit", ftyp_extended(major, &[]), 20..24),
+        ] {
+            // Synthetic version words deliberately spell known brands.
+            bytes[minor_at].copy_from_slice(minor);
+            assert_eq!(
+                classify(&name("synthetic.bin"), &bytes),
+                expected,
+                "{form}, major {major:?}, minor {minor:?}"
+            );
+        }
+    }
+}
+
+/// Sol round 2, finding 2: bytes after the last whole brand were dropped,
+/// so a cut-off `hei` brand didn't count. A box whose brands aren't whole
+/// 4-byte brands is unclear, in both header forms, for every remainder.
 fn a_partial_brand_is_unclear() {
     let mut accepted = Vec::new();
     for tail in [&b"h"[..], b"he", b"hei"] {
@@ -283,13 +390,13 @@ fn a_partial_brand_is_unclear() {
             }
         }
     }
-
+    // The case Sol probed: 19 bytes, major isom, minor 0, then `hei`.
     let mut sol = 19u32.to_be_bytes().to_vec();
     sol.extend_from_slice(b"ftypisom\0\0\0\0hei");
     assert_eq!(sol.len(), 19);
     let result = classify(&name("synthetic.bin"), &sol);
     if result != Err(FailReason::TypeUnclear) {
-        accepted.push(format!("Synthetic 19-byte box: {result:?}"));
+        accepted.push(format!("Sol's 19-byte box: {result:?}"));
     }
     assert!(
         accepted.is_empty(),

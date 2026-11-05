@@ -1,0 +1,47 @@
+R2 red at cd8d8df5d6561b452299f1a99aee41ce13ad7c42 plus this commit's gate extraction (behaviour unchanged):
+$ python3 -I tools/fleet-load/test_seams.py BackOffGate
+FFFFF
+======================================================================
+FAIL: test_cold_cache_allows_the_one_graphql_read_only (__main__.BackOffGate.test_cold_cache_allows_the_one_graphql_read_only)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/fleet-load/test_seams.py", line 145, in test_cold_cache_allows_the_one_graphql_read_only
+    self.assertFalse(self.gate([rest(REPO), GRAPHQL], None))
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_warm_cache_allows_exactly_the_saved_probes_once (__main__.BackOffGate.test_warm_cache_allows_exactly_the_saved_probes_once) [unrelated read]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/fleet-load/test_seams.py", line 163, in test_warm_cache_allows_exactly_the_saved_probes_once
+    self.assertFalse(self.gate(calls, saved))
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_warm_cache_allows_exactly_the_saved_probes_once (__main__.BackOffGate.test_warm_cache_allows_exactly_the_saved_probes_once) [repeated probe]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/fleet-load/test_seams.py", line 163, in test_warm_cache_allows_exactly_the_saved_probes_once
+    self.assertFalse(self.gate(calls, saved))
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_warm_cache_allows_exactly_the_saved_probes_once (__main__.BackOffGate.test_warm_cache_allows_exactly_the_saved_probes_once) [missing probe]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/fleet-load/test_seams.py", line 163, in test_warm_cache_allows_exactly_the_saved_probes_once
+    self.assertFalse(self.gate(calls, saved))
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_warm_cache_allows_exactly_the_saved_probes_once (__main__.BackOffGate.test_warm_cache_allows_exactly_the_saved_probes_once) [stray later page]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/fleet-load/test_seams.py", line 163, in test_warm_cache_allows_exactly_the_saved_probes_once
+    self.assertFalse(self.gate(calls, saved))
+AssertionError: True is not false
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.009s
+
+FAILED (failures=5)

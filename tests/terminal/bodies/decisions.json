@@ -1,0 +1,61 @@
+{
+ "schema": "openwiz.decisions.v1",
+ "kind": "response",
+ "snapshot_at": 1700000600000,
+ "coverage": {
+  "state": "complete",
+  "gaps": []
+ },
+ "freshness": {
+  "state": "fresh",
+  "snapshot_at": {
+   "known": 1700000599000
+  }
+ },
+ "orchestrator": {
+  "coverage": {
+   "state": "complete",
+   "gaps": []
+  },
+  "freshness": {
+   "state": "fresh",
+   "snapshot_at": {
+    "known": 1700000599000
+   }
+  },
+  "target": {
+   "known": "thr_syn_0399"
+  }
+ },
+ "items": [
+  {
+   "comment_id": 7001,
+   "subject": {
+    "repository": "synthetic-owner/synthetic-repo",
+    "kind": "issue",
+    "number": 9001
+   },
+   "created_at": 1700000480000,
+   "updated_at": 1700000540000,
+   "current": {
+    "known": true
+   },
+   "request": {
+    "schema": "openwiz.decisions.v1",
+    "id": "synthetic-spec-9001-r1",
+    "status": "open",
+    "fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "risk": "ordinary",
+    "kind": "spec_confirmation",
+    "spec": 9001,
+    "summary": [
+     "Synthetic summary line one.",
+     "Synthetic summary line two."
+    ],
+    "headline": "Synthetic headline for spec 9001",
+    "tickets": [],
+    "graph": []
+   }
+  }
+ ]
+}

@@ -50,7 +50,7 @@ fn the_whole_schema_uses_only_checked_keywords() {
 #[test]
 fn the_lint_finds_rules_the_checker_would_ignore() {
     let mut unreferenced = load_schema();
-    unreferenced["$defs"]["bogus"] = json!({ "type": "string", "pattern": "^x$" });
+    unreferenced["$defs"]["bogus"] = json!({ "type": "string", "pattern": "^.$" });
     assert!(
         !lint(&unreferenced).is_empty(),
         "a keyword in an unreferenced $defs entry"
@@ -160,6 +160,7 @@ fn sample_session(n: u32) -> Session {
         },
         updated_at: Fact::Known(Timestamp(1_700_000_000_000)),
         age_ms: Fact::Known(60_000),
+        started_at: Fact::Known(Timestamp(1_699_999_000_000)),
     }
 }
 

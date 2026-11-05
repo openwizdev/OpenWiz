@@ -1,0 +1,444 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "ready",
+    "components",
+    "engine",
+    "cost",
+    "operations"
+  ],
+  "properties": {
+    "schema": {
+      "const": "openwiz.setup.v1"
+    },
+    "ready": {
+      "type": "boolean"
+    },
+    "components": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "state",
+          "reason",
+          "next"
+        ],
+        "properties": {
+          "id": {
+            "enum": [
+              "cloudroom",
+              "harness",
+              "personal_github",
+              "github_app",
+              "project",
+              "engine",
+              "remote_access"
+            ]
+          },
+          "state": {
+            "enum": [
+              "verified",
+              "missing",
+              "refused",
+              "unknown"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "next": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "allOf": [
+        {
+          "contains": {
+            "properties": {
+              "id": {
+                "const": "cloudroom"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        {
+          "contains": {
+            "properties": {
+              "id": {
+                "const": "harness"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        {
+          "contains": {
+            "properties": {
+              "id": {
+                "const": "personal_github"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        {
+          "contains": {
+            "properties": {
+              "id": {
+                "const": "github_app"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        {
+          "contains": {
+            "properties": {
+              "id": {
+                "const": "project"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        {
+          "contains": {
+            "properties": {
+              "id": {
+                "const": "engine"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        {
+          "contains": {
+            "properties": {
+              "id": {
+                "const": "remote_access"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        }
+      ]
+    },
+    "engine": {
+      "enum": [
+        "unselected",
+        "cloud",
+        "local"
+      ]
+    },
+    "cost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provenance",
+        "credits",
+        "window_s",
+        "monthly_projection",
+        "free_allowance",
+        "reason"
+      ],
+      "properties": {
+        "provenance": {
+          "enum": [
+            "measured",
+            "estimated",
+            "unknown"
+          ]
+        },
+        "credits": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "window_s": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        },
+        "monthly_projection": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "free_allowance": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "operations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operation_id",
+          "kind",
+          "phase",
+          "fingerprint",
+          "effects",
+          "reason"
+        ],
+        "properties": {
+          "operation_id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{32}$"
+          },
+          "kind": {
+            "enum": [
+              "connect_app",
+              "prepare_project",
+              "activate_engine",
+              "configure_access"
+            ]
+          },
+          "phase": {
+            "enum": [
+              "proposed",
+              "applied",
+              "refused",
+              "uncertain"
+            ]
+          },
+          "fingerprint": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "effects": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OpenWiz resumable setup v1",
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "ready": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "engine": {
+            "enum": [
+              "cloud",
+              "local"
+            ]
+          },
+          "components": {
+            "allOf": [
+              {
+                "contains": {
+                  "properties": {
+                    "id": {
+                      "const": "cloudroom"
+                    },
+                    "state": {
+                      "const": "verified"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "state"
+                  ]
+                }
+              },
+              {
+                "contains": {
+                  "properties": {
+                    "id": {
+                      "const": "harness"
+                    },
+                    "state": {
+                      "const": "verified"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "state"
+                  ]
+                }
+              },
+              {
+                "contains": {
+                  "properties": {
+                    "id": {
+                      "const": "personal_github"
+                    },
+                    "state": {
+                      "const": "verified"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "state"
+                  ]
+                }
+              },
+              {
+                "contains": {
+                  "properties": {
+                    "id": {
+                      "const": "github_app"
+                    },
+                    "state": {
+                      "const": "verified"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "state"
+                  ]
+                }
+              },
+              {
+                "contains": {
+                  "properties": {
+                    "id": {
+                      "const": "project"
+                    },
+                    "state": {
+                      "const": "verified"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "state"
+                  ]
+                }
+              },
+              {
+                "contains": {
+                  "properties": {
+                    "id": {
+                      "const": "engine"
+                    },
+                    "state": {
+                      "const": "verified"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "state"
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cost": {
+            "properties": {
+              "provenance": {
+                "const": "unknown"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "cost": {
+            "properties": {
+              "credits": {
+                "const": null
+              },
+              "window_s": {
+                "const": null
+              },
+              "monthly_projection": {
+                "const": null
+              },
+              "free_allowance": {
+                "const": null
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cost": {
+            "properties": {
+              "provenance": {
+                "const": "measured"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "cost": {
+            "properties": {
+              "window_s": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

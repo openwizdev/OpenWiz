@@ -1,0 +1,94 @@
+{
+  "journey": {
+    "schema": "closedwiz.journey.outcomes.v1",
+    "journey_hash": "764d3065544deb9a9359c7576d405a2a8848c9e4db3e609001dd12d7dfedba08",
+    "measurements": [
+      {
+        "pr": 4201,
+        "first_push": {
+          "status": "observed",
+          "at": "2030-01-01T12:00:00Z",
+          "kind": "builder-push-receipt",
+          "source": "s1",
+          "coverage": "partial"
+        },
+        "merge": {
+          "status": "verified",
+          "at": "2030-01-02T06:00:00Z",
+          "commit": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "source": "s2",
+          "read_at": "2030-01-05T00:00:00Z"
+        },
+        "rounds": [
+          "e13",
+          "e17",
+          "e22"
+        ],
+        "helpers": [
+          "e19"
+        ],
+        "defects": {
+          "status": "mature",
+          "observed_until": "2030-01-04T06:00:00Z",
+          "events": [
+            {
+              "key": "issue-4901",
+              "kind": "main-red",
+              "at": "2030-01-02T10:00:00Z",
+              "attribution": "attributable",
+              "source": "s3"
+            }
+          ],
+          "resolutions": []
+        }
+      },
+      {
+        "pr": 4202,
+        "first_push": {
+          "status": "observed",
+          "at": "2030-01-01T20:00:00Z",
+          "kind": "builder-push-receipt",
+          "source": "s4",
+          "coverage": "partial"
+        },
+        "merge": {
+          "status": "verified",
+          "at": "2030-01-02T02:00:00Z",
+          "commit": "1111111111111111111111111111111111111111",
+          "source": "s5",
+          "read_at": "2030-01-02T12:00:00Z"
+        },
+        "rounds": [],
+        "helpers": [],
+        "defects": {
+          "status": "unmatured",
+          "observed_until": "2030-01-02T12:00:00Z",
+          "events": [
+            {
+              "key": "issue-4902",
+              "kind": "later-defect-fix",
+              "at": "2030-01-02T11:00:00Z",
+              "attribution": "unknown",
+              "source": "s6"
+            }
+          ],
+          "resolutions": []
+        }
+      }
+    ]
+  },
+  "sources": {
+    "s1": "https://github.com/example/factory/pull/4201#issuecomment-8901",
+    "s2": "https://github.com/example/factory/pull/4201#issuecomment-8902",
+    "s3": "https://github.com/example/factory/pull/4201#issuecomment-8903",
+    "s4": "https://github.com/example/factory/pull/4202#issuecomment-8904",
+    "s5": "https://github.com/example/factory/pull/4202#issuecomment-8905",
+    "s6": "https://github.com/example/factory/pull/4202#issuecomment-8906"
+  },
+  "defect_policy": {
+    "rule": "explicit-causal-fix-link-v1",
+    "followup_hours": 48,
+    "deduplication": "root-cause-per-merge",
+    "unknown_attribution": "retain-unknown"
+  }
+}

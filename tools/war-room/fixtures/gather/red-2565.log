@@ -1,0 +1,19 @@
+# #2565 red run: python3 -I tools/war-room/test_gather.py Gather.test_a_real_scale_gathered_page_draws_with_real_chromium
+# at 0773121c349caba3aae3a5deb5517842b291ed34 plus the test's journey-free scale, before the fix; synthetic fixtures only
+E
+======================================================================
+ERROR: test_a_real_scale_gathered_page_draws_with_real_chromium (__main__.Gather.test_a_real_scale_gathered_page_draws_with_real_chromium)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_gather.py", line 295, in test_a_real_scale_gathered_page_draws_with_real_chromium
+    publish_module().render(out, self.tmp / 'private' / 'history', PUBLISH_AT,
+  File "tools/war-room/publish.py", line 206, in render
+    draw(drawable(html, True), os.path.join(out, PICTURES[1]), PHONE_WIDTH, scale=2)
+  File "tools/war-room/publish.py", line 103, in draw
+    raise Fail('chromium measured no picture')
+publish.Fail: chromium measured no picture
+
+----------------------------------------------------------------------
+Ran 1 test in 31.686s
+
+FAILED (errors=1)

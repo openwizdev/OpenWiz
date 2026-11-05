@@ -1,0 +1,9 @@
+{
+  "schema": "openwiz.send-lookup.v1",
+  "op_id": "op-absent",
+  "target": "thr_syn_0001",
+  "summary": "no record: no send with op op-absent was claimed in this send record, so none was sent with it from here; no call was made",
+  "result": {
+    "kind": "no_record"
+  }
+}

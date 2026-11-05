@@ -1,0 +1,206 @@
+{
+  "schema": "openwiz.decisions.v1",
+  "kind": "response",
+  "snapshot_at": 1800000000000,
+  "coverage": {
+    "state": "complete",
+    "gaps": []
+  },
+  "freshness": {
+    "state": "fresh",
+    "snapshot_at": {
+      "known": 1799999998000
+    }
+  },
+  "orchestrator": {
+    "coverage": {
+      "state": "complete",
+      "gaps": []
+    },
+    "freshness": {
+      "state": "fresh",
+      "snapshot_at": {
+        "known": 1799999999000
+      }
+    },
+    "target": {
+      "known": "thr_syn_7c2e9a"
+    }
+  },
+  "items": [
+    {
+      "comment_id": 9100001,
+      "subject": {
+        "kind": "pull_request",
+        "number": 2731,
+        "repository": "synthetic-owner/synthetic-repo"
+      },
+      "created_at": 1799992800000,
+      "updated_at": 1799992800000,
+      "current": {
+        "known": true
+      },
+      "request": {
+        "schema": "openwiz.decisions.v1",
+        "id": "dr_loops_r2",
+        "status": "open",
+        "fingerprint": "1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f",
+        "risk": "ordinary",
+        "kind": "grill_round",
+        "grill_file": "docs/grills/2030-01-15-loops.md",
+        "round": 2,
+        "questions": [
+          {
+            "id": "L3",
+            "decides": "Should a failing loop post its error once per hour?",
+            "context": "Each failed run posts its error to the loop's thread today.",
+            "recommendation": "No: post the first error and a count after that."
+          },
+          {
+            "id": "L4",
+            "decides": "Should a loop pause itself after three failed runs in a row?",
+            "context": "Today a failing loop keeps running every hour and posts the same error each time.",
+            "recommendation": "Yes: pause after three failures in a row and tell you once."
+          },
+          {
+            "id": "L5",
+            "decides": "Where should a paused loop's notice appear?",
+            "context": "A notice can go to the loop's own thread or to Decisions.",
+            "recommendation": "In Decisions, as a card with a Resume button."
+          }
+        ],
+        "answered": [
+          "L3"
+        ]
+      }
+    },
+    {
+      "comment_id": 9100002,
+      "subject": {
+        "kind": "issue",
+        "number": 2800,
+        "repository": "synthetic-owner/synthetic-repo"
+      },
+      "created_at": 1799996400000,
+      "updated_at": 1799996400000,
+      "current": {
+        "known": true
+      },
+      "request": {
+        "schema": "openwiz.decisions.v1",
+        "id": "dr_spec_2800",
+        "status": "open",
+        "fingerprint": "2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e",
+        "risk": "ordinary",
+        "kind": "spec_confirmation",
+        "spec": 2800,
+        "summary": [
+          "A loop that fails three runs in a row pauses itself.",
+          "You get one notice, not one per failure.",
+          "Resume is one press from the notice.",
+          "Paused loops show in the plan as waiting on you."
+        ],
+        "headline": "Loops pause themselves when they keep failing, and tell you once.",
+        "tickets": [],
+        "graph": []
+      }
+    },
+    {
+      "comment_id": 9100003,
+      "subject": {
+        "kind": "issue",
+        "number": 2900,
+        "repository": "synthetic-owner/synthetic-repo"
+      },
+      "created_at": 1799998200000,
+      "updated_at": 1799998200000,
+      "current": {
+        "known": true
+      },
+      "request": {
+        "schema": "openwiz.decisions.v1",
+        "id": "dr_plan_2900",
+        "status": "open",
+        "fingerprint": "3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d",
+        "risk": "release",
+        "kind": "plan_approval",
+        "spec": 2900,
+        "summary": [
+          "Write the release notes.",
+          "Build and sign the artifacts.",
+          "Publish the release."
+        ],
+        "headline": "OpenWiz 0.0.13 is out.",
+        "tickets": [
+          {
+            "number": 2901,
+            "title": "Release notes",
+            "blockers": []
+          },
+          {
+            "number": 2902,
+            "title": "Build artifacts",
+            "blockers": []
+          },
+          {
+            "number": 2903,
+            "title": "Sign and verify",
+            "blockers": [
+              2902
+            ]
+          },
+          {
+            "number": 2904,
+            "title": "Publish release",
+            "blockers": [
+              2901,
+              2903
+            ]
+          }
+        ],
+        "graph": [
+          {
+            "blocker": 2901,
+            "ticket": 2904
+          },
+          {
+            "blocker": 2902,
+            "ticket": 2903
+          },
+          {
+            "blocker": 2903,
+            "ticket": 2904
+          }
+        ]
+      }
+    },
+    {
+      "comment_id": 9100004,
+      "subject": {
+        "kind": "issue",
+        "number": 2790,
+        "repository": "synthetic-owner/synthetic-repo"
+      },
+      "created_at": 1799999400000,
+      "updated_at": 1799999400000,
+      "current": {
+        "known": true
+      },
+      "request": {
+        "schema": "openwiz.decisions.v1",
+        "id": "dr_spec_2790",
+        "status": "open",
+        "fingerprint": "4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c",
+        "risk": "ordinary",
+        "kind": "spec_confirmation",
+        "spec": 2790,
+        "summary": [
+          "Plan rows show who each ticket waits on."
+        ],
+        "headline": "See what every ticket waits on.",
+        "tickets": [],
+        "graph": []
+      }
+    }
+  ]
+}

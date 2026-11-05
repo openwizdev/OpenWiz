@@ -1,0 +1,29 @@
+E
+======================================================================
+ERROR: test_cost_projection_can_express_usd_per_pr_without_unit_conversion (__main__.Contract.test_cost_projection_can_express_usd_per_pr_without_unit_conversion)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_contract.py", line 72, in test_cost_projection_can_express_usd_per_pr_without_unit_conversion
+    result = suite.compose('2030-01-02T12:00:00Z', [provider])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 204, in compose
+    _shape(provider, SCHEMA['$defs']['provider'])
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 82, in _shape
+    _shape(item, rule['properties'][key])
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 89, in _shape
+    _shape(item, rule['items'])
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 60, in _shape
+    return _shape(value, SCHEMA['$defs'][rule['$ref'].removeprefix('#/$defs/')])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 82, in _shape
+    _shape(item, rule['properties'][key])
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 72, in _shape
+    require(type(value) is str and value in rule['enum'], 'invalid enum')
+  File "/code/ClosedWiz/tools/war-room/suite.py", line 18, in require
+    raise ValueError(reason)
+ValueError: invalid enum
+
+----------------------------------------------------------------------
+Ran 1 test in 0.003s
+
+FAILED (errors=1)

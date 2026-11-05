@@ -1,0 +1,109 @@
+{
+  "schema": "openwiz.ci-selection.v1",
+  "run": {
+    "id": 9000004,
+    "attempt": 1,
+    "event": "pull_request",
+    "action": "synchronize",
+    "base_branch": "release-0.0.14",
+    "base": "1111111111111111111111111111111111111111",
+    "head": "2222222222222222222222222222222222222222",
+    "pull_request": 902
+  },
+  "diff": {
+    "state": "read",
+    "paths": [
+      "crates/cli/src/main.rs"
+    ]
+  },
+  "selection": {
+    "mode": "full",
+    "reasons": [
+      {
+        "code": "unknown_path",
+        "paths": [
+          "crates/cli/src/main.rs"
+        ]
+      }
+    ]
+  },
+  "builds": {
+    "web_export": {
+      "decision": "run"
+    }
+  },
+  "lanes": {
+    "always": {
+      "decision": "run",
+      "tests": [
+        "always:fmt",
+        "always:classifier",
+        "always:selector",
+        "always:architecture",
+        "always:privacy"
+      ],
+      "skipped": []
+    },
+    "rust": {
+      "decision": "run",
+      "tests": [
+        "rust:lib:openwiz-core",
+        "rust:lib:openwiz-server",
+        "rust:test:checks",
+        "rust:test:messaging",
+        "rust:test:web-api"
+      ],
+      "skipped": []
+    },
+    "web": {
+      "decision": "run",
+      "tests": [
+        "web:unit:api",
+        "web:unit:poller",
+        "web:browser:v1-faithful",
+        "web:browser:v7-soak"
+      ],
+      "skipped": []
+    },
+    "site": {
+      "decision": "run",
+      "tests": [
+        "site:build",
+        "site:test",
+        "release:package"
+      ],
+      "skipped": []
+    },
+    "skills": [
+      {
+        "skill": "launch-fleet",
+        "decision": "run",
+        "tests": [
+          "skill:launch-fleet"
+        ],
+        "skipped": []
+      },
+      {
+        "skill": "plan-graph",
+        "decision": "run",
+        "tests": [
+          "skill:plan-graph:revision",
+          "skill:plan-graph:approval"
+        ],
+        "skipped": []
+      },
+      {
+        "skill": "triage",
+        "decision": "run",
+        "tests": [
+          "skill:triage"
+        ],
+        "skipped": []
+      }
+    ]
+  },
+  "store": {
+    "artifact": "ci-selection-1",
+    "file": "ci-selection.json"
+  }
+}

@@ -1,3 +1,9 @@
+//! N16 Allowlist (sheet A-2): `thread spawn` and `cloud status` are the only
+//! additions, each in exactly the shape spike run 3 recorded. Every other
+//! mutating subcommand, and every other `spawn` shape, is still refused, by
+//! the adapter (a [`SpawnArgs`] can't be built unsafe) and by the fake's own
+//! copy of the allowlist. P8(a) and M12 are updated with this reason.
+
 use std::process::Command;
 
 use openwiz_adapter_cloudroom::allowlist::{Invocation, SpawnArgs};
@@ -20,6 +26,23 @@ fn args(
 }
 
 #[test]
+fn n16_allowlist_affected_contracts_preserve_original_cases() {
+    let cases: [(&str, fn()); 2] = [
+        (
+            "a_spawn_can_only_be_built_with_safe_arguments",
+            a_spawn_can_only_be_built_with_safe_arguments,
+        ),
+        (
+            "the_two_additions_in_exactly_their_shapes",
+            the_two_additions_in_exactly_their_shapes,
+        ),
+    ];
+    for (name, proof) in cases {
+        eprintln!("TA2 case: n16_allowlist::{name}");
+        proof();
+    }
+}
+
 fn the_two_additions_in_exactly_their_shapes() {
     assert_eq!(
         Invocation::CloudStatus.argv(),
@@ -58,7 +81,6 @@ fn the_two_additions_in_exactly_their_shapes() {
     );
 }
 
-#[test]
 fn a_spawn_can_only_be_built_with_safe_arguments() {
     let ok = (
         "prj_syn_0001",

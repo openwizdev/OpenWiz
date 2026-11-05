@@ -1,0 +1,79 @@
+Tested implementation: e2c6d1f6ee91b610edbd219c77b0968cca6af0fe
+python3 -I tools/install/test_install.py
+test_a_complete_live_record_is_the_only_pass (__main__.FirstHourContract.test_a_complete_live_record_is_the_only_pass) ... ok
+test_a_strict_reader_refuses_duplicate_keys_and_fractions (__main__.FirstHourContract.test_a_strict_reader_refuses_duplicate_keys_and_fractions) ... ok
+test_each_example_gives_exactly_its_codes (__main__.FirstHourContract.test_each_example_gives_exactly_its_codes) ... ok
+test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) ... ok
+test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) ... ok
+test_the_contract_lists_every_code_the_checks_give (__main__.FirstHourContract.test_the_contract_lists_every_code_the_checks_give) ... ok
+test_the_contract_stage_table_is_the_checks_order_and_evidence (__main__.FirstHourContract.test_the_contract_stage_table_is_the_checks_order_and_evidence) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.150s
+
+OK
+.........
+----------------------------------------------------------------------
+Ran 9 tests in 3.415s
+
+OK
+
+
+cargo test -p openwiz-tests --test checks fixture_scan
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.04s
+     Running checks/main.rs (target/debug/deps/checks-bda594ae6353479a)
+
+running 13 tests
+test fixture_scan::a_github_scenarios_argv_is_only_text ... ok
+test fixture_scan::a_github_scenario_records_its_name_and_synthetic_assumptions ... ok
+test fixture_scan::no_checks_diagnostic_accepts_only_the_existing_synthetic_branch_form ... ok
+test fixture_scan::every_scenario_records_its_synthetic_assumptions ... ok
+test fixture_scan::the_documented_send_shapes_pass_only_in_send_fixtures ... ok
+test fixture_scan::a_github_scenario_answers_only_calls_the_allowlist_allows ... ok
+test fixture_scan::observed_queued_identifiers_and_keys_are_scoped ... ok
+test fixture_scan::the_new_thread_shapes_pass_only_in_new_thread_fixtures ... ok
+test fixture_scan::the_github_shapes_pass_only_in_github_fixtures ... ok
+test fixture_scan::the_observed_sent_keys_pass_only_in_send_fixtures ... ok
+test fixture_scan::the_scan_catches_planted_private_data ... ok
+test fixture_scan::the_fake_gh_is_scanned_for_private_data ... ok
+test fixture_scan::fixtures_contain_only_synthetic_values ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 119 filtered out; finished in 0.13s
+
+
+
+cargo test -p openwiz-tests --test checks evidence_outside_crates::no_product_evidence_is_tracked_for_export
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.03s
+     Running checks/main.rs (target/debug/deps/checks-bda594ae6353479a)
+
+running 1 test
+test evidence_outside_crates::no_product_evidence_is_tracked_for_export ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 131 filtered out; finished in 0.02s
+
+
+
+cargo test -p openwiz-tests --test checks public_tree::public_files_use_the_final_openwiz_address
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.03s
+     Running checks/main.rs (target/debug/deps/checks-bda594ae6353479a)
+
+running 1 test
+test public_tree::public_files_use_the_final_openwiz_address ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 131 filtered out; finished in 0.04s
+
+
+
+npm run typecheck (apps/web)
+
+> openwiz-web@0.0.2-dev typecheck
+> tsc --noEmit
+
+
+
+npm run check (apps/web)
+
+> openwiz-web@0.0.2-dev check
+> node scripts/check.mjs
+
+check: 51 source files and the stylesheet pass (V1, messaging and new-thread schema parity, V3, V10, W5, W12, U5, U12 to U14, AW7, AW8, the #549 loop switch, types, spacing)

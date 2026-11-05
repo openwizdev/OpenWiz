@@ -1,3 +1,10 @@
+//! W3 (#9): cross-site requests are refused before anything is read,
+//! claimed or sent (write-security §4, C1 to C6; WS-4, WS-6): a cross-site
+//! form post, a cross-origin fetch, a missing or foreign `Origin`,
+//! `Sec-Fetch-Site` other than `same-origin`, the wrong content type, no
+//! custom header, a rebinding or loopback `Host`. No answer carries a CORS
+//! header. The live half is #10's L9.
+
 use openwiz_server::{Limits, SendHost};
 
 use crate::http::Response;
@@ -267,6 +274,9 @@ fn a_preflight_gets_no_cors_grant() {
     assert_no_cors("the send", &r);
 }
 
+/// Sol #91 round 1, finding 2: WS-6 holds by type, not by convention. A
+/// send host can never be a loopback name or an IP literal, so no
+/// configuration can serve a send to a loopback `Host`.
 #[test]
 fn a_send_host_can_never_be_loopback_or_an_ip_address() {
     for bad in [
@@ -313,7 +323,7 @@ fn the_binary_refuses_a_loopback_or_ip_send_host_before_any_access() {
     for host in ["localhost", "127.0.0.1", "a.localhost", "203.0.113.7"] {
         let mut child = std::process::Command::new(crate::http::server_binary())
             .args(["--port", "0", "--allowed-host", host])
-            .env("PATH", fake.path())
+            .env("OPENWIZ_FIXTURE_PROGRAM", fake.program())
             .env("OPENWIZ_STATE_DIR", &fake.state)
             .current_dir(&fake.dir)
             .stdin(std::process::Stdio::null())

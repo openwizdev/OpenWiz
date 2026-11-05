@@ -1,0 +1,23 @@
+{
+  "scenario": "truncated",
+  "description": "As complete, but GitHub lists 1 of #932's 2 blockers (nodes shorter than totalCount).",
+  "synthetic_assumptions": [
+    "Every value is synthetic; the shapes are gh 2.100.0's as A1's spike observed them (A1, #109)."
+  ],
+  "extends": "complete",
+  "responses": [
+    {
+      "argv": [
+        "issue",
+        "list",
+        "--state",
+        "all",
+        "--limit",
+        "1000",
+        "--json",
+        "blockedBy,body,id,labels,milestone,number,state,subIssues,title"
+      ],
+      "stdout_file": "issues.json"
+    }
+  ]
+}

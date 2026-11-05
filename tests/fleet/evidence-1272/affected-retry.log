@@ -1,0 +1,23 @@
+   Compiling openwiz-cli v0.0.1-dev (/code/ClosedWiz-1272/crates/cli)
+   Compiling openwiz-tests v0.0.1-dev (/code/ClosedWiz-1272/tests)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.22s
+     Running fleet/main.rs (target/debug/deps/fleet-e2d7203fe5d12f9f)
+
+running 14 tests
+test b5_tick::b5_due_running_builder_is_idle_without_cloudroom_or_state ... ok
+test b5_tick::b5_1196_recorded_fallback_replacement_waits_for_a_reviewer ... ok
+test b5_tick::b5_r13_due_ignores_a_superseded_approval_at_the_same_head ... ok
+test b5_tick::edges::b5_r19_unlinked_closed_review_comments_only_block_their_own_ticket_cleanup ... ok
+test b5_tick::edges::b5_recording_fake_runs_with_the_required_node_runtime ... ok
+test b5_tick::edges::b5_r19_unlinked_closed_review_starts_only_block_their_own_ticket_cleanup ... ok
+test b5_tick::edges::b5_review_r18_exhausted_page_budget_exposes_no_partial_snapshot ... ok
+test b5_tick::edges::b5_review_r18_first_short_page_stops_and_cross_page_duplicates_stay_unread ... ok
+test b5_tick::edges::b5_review_r18_missing_or_failed_page_withholds_the_whole_snapshot ... ok
+test b5_tick::edges::b5_review_r2_archive_record_recovers_after_agents_are_already_archived ... ok
+test b5_tick::edges::b5_review_r3b_bulk_comments_keep_page_identity_and_comment_order ... ok
+test b5_tick::edges::b5_review_r3b_bulk_comments_refuse_ambiguous_or_partial_facts ... ok
+test b5_tick::public::p4_github_only_due_defers_thread_free_identity_to_tick ... ok
+test b5_tick::edges::b5_review_r18_comment_pages_outlive_one_read_and_keep_execution_budget ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 325 filtered out; finished in 53.61s
+

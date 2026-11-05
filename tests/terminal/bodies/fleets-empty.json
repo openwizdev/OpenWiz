@@ -1,0 +1,58 @@
+{
+ "schema": "openwiz.fleet.v1",
+ "sources": {
+  "github": {
+   "name": "gh",
+   "version": "r1",
+   "tested_version": "2.81.0",
+   "version_tested": true
+  },
+  "cloudroom": null
+ },
+ "reads": [
+  {
+   "id": "r1",
+   "kind": "version",
+   "source": "github",
+   "outcome": {
+    "state": "complete",
+    "value": "2.81.0"
+   }
+  },
+  {
+   "id": "r2",
+   "kind": "repository",
+   "outcome": {
+    "state": "complete",
+    "value": {
+     "name": "synthetic-repo"
+    }
+   }
+  },
+  {
+   "id": "r3",
+   "kind": "spec_list",
+   "outcome": {
+    "state": "complete",
+    "value": []
+   }
+  }
+ ],
+ "coverage": {
+  "state": "complete"
+ },
+ "freshness": {
+  "snapshot_at": 1700000600000
+ },
+ "data": {
+  "view": "fleets",
+  "repository": "r2",
+  "specs": "r3",
+  "fleets": [],
+  "tickets": [],
+  "blockers": [],
+  "needs_you": {
+   "known": []
+  }
+ }
+}

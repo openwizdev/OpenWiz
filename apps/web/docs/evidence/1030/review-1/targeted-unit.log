@@ -1,0 +1,18 @@
+✔ text: every text colour on every surface it is used on is at least 4.5:1 (0.966423ms)
+✔ shapes: every colour that draws a status or state shape is at least 3:1 (0.204151ms)
+✔ shapes: every colour a status or state shape rule draws with is at least 3:1 (1.582807ms)
+✔ Home Live retains active rows, page scope, gap and freshness (8.108707ms)
+✔ Home Live distinguishes unread, fresh zero, partial zero and stale zero (2.11524ms)
+✔ Home numbers existing decisions before fleets and retains status shapes (9.112555ms)
+✔ Home never calls a partial zero-decision snapshot Nothing needs you (1.912469ms)
+✔ every fleet marker has a distinct drawn glyph without colour or its word (8.423683ms)
+✔ a novel reported word is preserved as text with an unknown icon (0.339244ms)
+✔ list and detail coverage visibly distinguish snapshots within the same minute (2.437482ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 670.192633

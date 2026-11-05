@@ -1,0 +1,35 @@
+test_ci_native_units_and_cost_gap (__main__.PageHistory.test_ci_native_units_and_cost_gap) ... FAIL
+test_differing_concurrent_samples_refuse (__main__.PageHistory.test_differing_concurrent_samples_refuse) ... ok
+test_existing_daily_usage_credits_and_journey (__main__.PageHistory.test_existing_daily_usage_credits_and_journey) ... ok
+test_finite_invocation (__main__.PageHistory.test_finite_invocation) ... ok
+test_generic_page_and_missing_slots (__main__.PageHistory.test_generic_page_and_missing_slots) ... ok
+test_immutable_atomic_history (__main__.PageHistory.test_immutable_atomic_history) ... ok
+test_page_failure_restart_and_readback (__main__.PageHistory.test_page_failure_restart_and_readback) ... ok
+test_privacy_and_escaping (__main__.PageHistory.test_privacy_and_escaping) ... ok
+test_source_omission_keeps_last_evidence (__main__.PageHistory.test_source_omission_keeps_last_evidence) ... ERROR
+test_ticks_restart_and_partial_source (__main__.PageHistory.test_ticks_restart_and_partial_source) ... ok
+
+======================================================================
+ERROR: test_source_omission_keeps_last_evidence (__main__.PageHistory.test_source_omission_keeps_last_evidence)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-wr2/tools/war-room/test_page_history.py", line 229, in test_source_omission_keeps_last_evidence
+    activity = next(p for p in result if p['slot'] == 'activity')
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+StopIteration
+
+======================================================================
+FAIL: test_ci_native_units_and_cost_gap (__main__.PageHistory.test_ci_native_units_and_cost_gap)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-wr2/tools/war-room/test_page_history.py", line 193, in test_ci_native_units_and_cost_gap
+    self.assertEqual(metrics['queued-to-done-median']['unit'], 'minutes')
+AssertionError: 'seconds' != 'minutes'
+- seconds
++ minutes
+
+
+----------------------------------------------------------------------
+Ran 10 tests in 0.443s
+
+FAILED (failures=1, errors=1)

@@ -1,4 +1,4 @@
-// The new-thread shapes the launcher reads, as
+// The new-thread shapes the launcher reads (#12), as
 // `contracts/new-thread.v1.schema.json` defines them: the Cloud options
 // (`openwiz models --json`), the preview (`openwiz new … --json`), the report
 // (`openwiz new … --yes --json`) and the status (`openwiz new --status`). One
@@ -116,7 +116,7 @@ export type ReportedConfiguration = { label: string; provider: ReportedSetting; 
 
 export type StartView = { thread_id: string; read_at: number; stage: StartStage; reported: ReportedConfiguration | null; gaps: Gap[] };
 
-
+/** One attachment of a first prompt (B2, ClosedWiz#15): never its bytes. Read since #16 (B3). */
 export type PromptAttachment = { id: string; sha256: string; size_bytes: number; kind: 'image' | 'file'; name: string };
 
 export type Report = {
@@ -183,14 +183,23 @@ const promptAttachmentCheck = exact({
   sha256,
   size_bytes: (v) => int(v) && (v as number) >= 0,
   kind: is('image', 'file'),
-  name: (v) => str(v) && (v as string).length >= 1 && (v as string).length <= 179,
+  name: (v) => str(v) && (v as string).length >= 1 && (v as string).length <= 179 && /^[A-Za-z0-9_][A-Za-z0-9._-]*$/.test(v as string),
 });
+const promptAttachmentsCheck: Check = (v) => {
+  if (!Array.isArray(v) || v.length < 1 || !v.every(promptAttachmentCheck)) return false;
+  // Fixed field order makes whole-object equality independent of JSON key order.
+  const items = v.map(({ id, sha256, size_bytes, kind, name }: PromptAttachment) => JSON.stringify([id, sha256, size_bytes, kind, name]));
+  return new Set(items).size === v.length;
+};
 const requestId: Check = (v) => str(v) && /^ow1-[0-9a-f]{40}$/.test(v as string);
 const setting: Check = (v) => str(v) && /^[!-,.-~][!-~]{0,127}$/.test(v as string);
 const nullable = (check: Check): Check => oneOf(isNull, check);
 const gapCheck = exact({ subject: text, detail: text });
 const sourceCheck = exact({ name: str, version: fact(str), tested_version: str, version_tested: bool });
-const projectRefCheck = exact({ kind: is('id', 'name'), value: text });
+// The schema's project_ref_value: no NUL, and one character outside its explicit whitespace set (not JavaScript's \s).
+const projectRefValue: Check = (v) =>
+  str(v) && /^[^\0]*[^\0\t-\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000][^\0]*$/.test(v as string);
+const projectRefCheck = exact({ kind: is('id', 'name'), value: projectRefValue });
 const projectViewCheck = exact({ id: text, name: fact(str) });
 const settingsCheck = exact({ harness: setting, model: setting, effort: setting });
 const attachmentCheck = exact({ files: bool, images: bool });
@@ -200,7 +209,7 @@ const unavailableCheck = exact({ harness: text, reason: is('catalogue_not_report
 const optionsCheck = exact({
   schema: is(OPTIONS_SCHEMA_ID),
   read_at: int,
-  label: text,
+  label: is('as reported by CloudRoom; it may answer from a saved copy'),
   state: oneOf(exact({ kind: is('offered') }), exact({ kind: is('no_options'), reason: is('not_ready', 'harnesses_not_reported', 'read_failed', 'unexpected_shape'), text })),
   harnesses: list(harnessCheck),
   unavailable: list(unavailableCheck),
@@ -226,7 +235,7 @@ const stageCheck = oneOf(
   exact({ kind: is('unknown'), reason: text, text }),
 );
 const reportedSettingCheck = exact({ requested: text, reported: fact(str), differs_from_requested: fact(bool), text });
-const reportedCheck = exact({ label: text, provider: reportedSettingCheck, model: reportedSettingCheck, effort: reportedSettingCheck });
+const reportedCheck = exact({ label: is('reported configuration: what CloudRoom reports, never the serving model'), provider: reportedSettingCheck, model: reportedSettingCheck, effort: reportedSettingCheck });
 const startCheck = exact({ thread_id: text, read_at: int, stage: stageCheck, reported: nullable(reportedCheck), gaps: list(gapCheck) });
 const reportCheck = exactWith({
   schema: is(REPORT_SCHEMA_ID),
@@ -236,7 +245,7 @@ const reportCheck = exactWith({
   project: nullable(projectViewCheck),
   source: nullable(sourceCheck),
   requested: settingsCheck,
-  provider: nullable(text),
+  provider: nullable(str), // #723: the schema allows any string here, the empty one included
   status: is('created', 'refused', 'failed', 'uncertain', 'in_progress', 'conflicting_reuse'),
   summary: text,
   result: resultCheck,
@@ -249,7 +258,7 @@ const reportCheck = exactWith({
   dispatching_at: nullable(int),
   finished_at: nullable(int),
   start: nullable(startCheck),
-}, { attachments: list(promptAttachmentCheck) });
+}, { attachments: promptAttachmentsCheck });
 const previewCheck = exactWith({
   schema: is(PREVIEW_SCHEMA_ID),
   op_id: opId,
@@ -264,9 +273,9 @@ const previewCheck = exactWith({
   attachments_digest: sha256,
   text_bytes: count,
   gaps: list(gapCheck),
-}, { attachments: list(promptAttachmentCheck) });
+}, { attachments: promptAttachmentsCheck });
 const observedCheck = exact({ id: text, created_at: fact(int) });
-const observationsCheck = exact({ read_at: int, threads: list(observedCheck), text, gaps: list(gapCheck) });
+const observationsCheck = exact({ read_at: int, threads: list(observedCheck), text: is('observations only: no documented field ties a listed thread to this request, so the outcome stays uncertain'), gaps: list(gapCheck) });
 const statusCheck = exact({
   schema: is(STATUS_SCHEMA_ID),
   op_id: opId,

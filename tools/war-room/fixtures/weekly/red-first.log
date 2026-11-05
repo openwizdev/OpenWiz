@@ -1,0 +1,19 @@
+E
+======================================================================
+ERROR: setUpClass (__main__.Weekly)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_weekly.py", line 152, in setUpClass
+    cls.weekly = module('weekly')
+                 ^^^^^^^^^^^^^^^^
+  File "tools/war-room/test_weekly.py", line 40, in module
+    spec.loader.exec_module(result)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: 'tools/war-room/weekly.py'
+
+----------------------------------------------------------------------
+Ran 0 tests in 0.001s
+
+FAILED (errors=1)

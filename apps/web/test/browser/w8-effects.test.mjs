@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 
 import { TIMING } from '../../src/timing.ts';
-import { launchBrowser, waitFor } from '../support/browser.mjs';
+import { DESKTOP, PHONE, launchBrowser, pageIdle, waitFor } from '../support/browser.mjs';
 import { apiError, json } from '../support/fake-api.mjs';
 import { button, composerSite, id, openThread, outcome, posts, readComposer, select, TEXT, type } from '../support/composer.mjs';
 import { preview } from '../support/synthetic.ts';
@@ -109,7 +109,8 @@ test('a state change while composing changes the label and effect visibly; the d
       ['Queue', 'queue', 'queues behind the current turn'],
       ['Steer', 'steer', 'asks to steer the current turn'],
     ]);
-
+    // #137: the mark is set by an effect after the redraw commits, so the busy buttons can be read a
+    // moment before it. Wait for the mark itself; a change only redrawn, never marked, times out here.
     c = await waitFor(async () => {
       const r = await readComposer(p.page);
       return r.changed ? r : null;
@@ -139,7 +140,7 @@ test('a state change while composing changes the label and effect visibly; the d
   }
 });
 
-test('no preview, no send: a failed preview disables sending with a reason; an unknown effect does not', async () => {
+test('Sol 4: no preview, no send: a failed preview disables sending with a reason; an unknown effect does not', async () => {
   const { fx } = await composerSite({ kinds: { [id(2)]: 'unknown' } });
   fx.api.setPreview((tid, mode) => (tid === id(1) ? apiError(503, 'busy', 'no core run slot within its wait', { 'Retry-After': '5' }) : json(200, preview(tid, 'unknown', mode))));
   const p = await openThread(browser, fx, 1);
@@ -163,7 +164,7 @@ test('no preview, no send: a failed preview disables sending with a reason; an u
   }
 });
 
-test('5: the composer is not ready until its preview has answered; the helper waits for it', async () => {
+test('Sol R3-5: the composer is not ready until its preview has answered; the helper waits for it', async () => {
   const { fx } = await composerSite({ kinds: { [id(2)]: 'busy' } });
   const p = await openThread(browser, fx, 1);
   try {
@@ -187,3 +188,49 @@ test('5: the composer is not ready until its preview has answered; the helper wa
     await fx.close();
   }
 });
+
+for (const [size, viewport] of [['phone', PHONE], ['desktop', DESKTOP]]) {
+  test(`a slow preview retains a newer thread refresh at ${size} width`, async () => {
+    const { fx, state } = await composerSite({ kinds: { [id(1)]: 'idle' } });
+    const p = await openThread(browser, fx, 1, { paused: true, stampReads: true, viewport });
+    try {
+      await waitFor(() => pageIdle(p.page), { what: 'initial reads answered' });
+      await type(p.page, TEXT);
+      await p.page.locator('[data-part=composer] textarea').evaluate((el) => el.setSelectionRange(3, 8));
+      const start = fx.api.reads('preview').length;
+      fx.api.hold('preview');
+      await p.page.clock.runFor(TIMING.detailIntervalMs);
+      await waitFor(() => fx.api.held('preview') === 1, { what: 'the old idle preview held' });
+      state.kinds[id(1)] = 'busy';
+      state.sessions = state.sessions.map((s) => s.id === id(1) ? { ...s, status: { known: 'active' } } : s);
+      const details = fx.api.reads('detail').length;
+      await p.page.clock.runFor(TIMING.detailIntervalMs);
+      await waitFor(() => fx.api.reads('detail').length === details + 1, { what: 'the newer detail refresh' });
+      await waitFor(() => p.page.locator('[data-part=detail] [data-field=status] .word').textContent().then((s) => s === 'active'), { what: 'the active snapshot displayed' });
+      fx.api.hold('detail');
+      fx.api.hold('list');
+      assert.deepEqual(fx.api.reads('preview').slice(start).map((e) => e.search), ['?mode=queue'], 'the newer refresh waits behind the old preview');
+      fx.api.hold('preview', false);
+      fx.api.release('preview');
+      const c = await waitFor(async () => {
+        const next = await readComposer(p.page);
+        return next?.changed && next.actions.length === 2 ? next : null;
+      }, { what: 'Queue/Steer from the newer snapshot without another clock tick' });
+      assert.deepEqual(c.actions.map((a) => [a.label, a.mode, a.effect]), [
+        ['Queue', 'queue', 'queues behind the current turn'],
+        ['Steer', 'steer', 'asks to steer the current turn'],
+      ]);
+      await waitFor(() => pageIdle(p.page), { what: 'all read replies consumed' });
+      assert.deepEqual(fx.api.reads('preview').slice(start).map((e) => e.search), ['?mode=queue', '?mode=queue', '?mode=steer'], 'one pending refresh produces one current preview cycle');
+      assert.equal(fx.api.maxInFlight.preview, 1, 'one preview request at a time');
+      assert.equal(c.draft, TEXT);
+      assert.equal(c.focused, true);
+      assert.deepEqual(c.selection, [3, 8]);
+      assert.equal(posts(fx).length, 0, 'refreshing sends nothing');
+      assert.equal(fx.api.calls.length, 0);
+    } finally {
+      await p.close();
+      await fx.close();
+    }
+  });
+}

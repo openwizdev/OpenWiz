@@ -1,0 +1,51 @@
+...FFFF..
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [setup-state-sha256-too-short]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 90, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': ['gate_unr[91 chars]ve']} != {'problems': ['schema'], 'failures': [], 'unproven': []}
++ {'failures': [], 'problems': ['schema'], 'unproven': []}
+- {'failures': [],
+-  'problems': [],
+-  'unproven': ['gate_unresolved:cloudroom_setup',
+-               'gate_unresolved:feedback',
+-               'gate_unresolved:paid_offer',
+-               'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [branch-commit-hash-too-long]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 90, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': ['gate_unr[91 chars]ve']} != {'problems': ['schema'], 'failures': [], 'unproven': []}
++ {'failures': [], 'problems': ['schema'], 'unproven': []}
+- {'failures': [],
+-  'problems': [],
+-  'unproven': ['gate_unresolved:cloudroom_setup',
+-               'gate_unresolved:feedback',
+-               'gate_unresolved:paid_offer',
+-               'not_live']}
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [setup-state-sha256-too-short]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 108, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [branch-commit-hash-too-long]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/tests/first-hour-contract/test_contract.py", line 108, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.135s
+
+FAILED (failures=4)

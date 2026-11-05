@@ -1,17 +1,56 @@
+//! `openwiz-server`: the OpenWiz HTTP API, a thin client of the core like
+//! the `openwiz` CLI. See `contracts/web-api.v1.md`.
+//!
+//! For inventory and session requests, the server calls the core's
+//! `list_report` and `show_report` with the CLI's options and prints the
+//! CLI's `--json`; health is the server's own metadata, with no `room-cli`
+//! read. Since #9 it has one write, the owner's send, and two reads for it,
+//! the preview and the lookup: each calls the core's `send`, `preview` or
+//! `lookup` as `openwiz send` does and prints its `--json` (`send.rs`).
+//! Since #12 it has a second write, the owner's create, and three reads for
+//! it, the Cloud options, the new-thread preview and the status: each calls
+//! the core's `new_thread`, `cloud_options`, `preview_new_thread` or
+//! `new_thread_status` as `openwiz new` and `openwiz models` do and prints
+//! their `--json` (`new_thread.rs`); there is no retry. Since #16 it
+//! stages, lists and removes attachments in the attachment store, as
+//! `openwiz attachment add`, `ls` and `rm` do (`attachments.rs`), and the
+//! send and the create carry staged ids through the core's one gate; no
+//! route returns an attachment's bytes. It listens on loopback only,
+//! answers `GET` on the read routes, `POST` on the send, create,
+//! new-thread preview and upload routes and `DELETE` on the removal only,
+//! and bounds everything else: heads, bodies, connections, core runs,
+//! sends, creates, uploads and time. With `--web-root`, it also
+//! serves the web page's static export on the same origin (`web.rs`). HTTP
+//! is the standard library's `TcpListener` and threads: no HTTP crate is
+//! approved.
+
 mod api;
 mod attachments;
+mod cockpit;
+mod ready_stock;
+pub use ready_stock::StockSource;
+mod decisions;
+mod fleets;
 mod http;
+pub mod loops;
+pub mod notifications;
+pub use self::loops as loop_switches;
 mod new_thread;
+mod notification_target;
+mod plan;
 mod send;
+mod setup;
 mod web;
 
 use std::io;
 use std::net::{Ipv4Addr, SocketAddr, TcpListener, TcpStream};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+pub(crate) use loop_state::config as loop_configuration;
+pub use loop_state::{Context as LoopContext, SwitchError as LoopSwitchError};
 use openwiz_core::messaging::record::{SendStore, StoreError};
 use openwiz_core::messaging::send::Messenger;
 use openwiz_core::model::Timestamp;
@@ -21,9 +60,16 @@ use openwiz_core::ops::Clock;
 use openwiz_core::source::SessionSource;
 use openwiz_store::AttachmentStore;
 use openwiz_store::attachments::FreeSpace;
+use openwiz_store::loops as loop_state;
+use openwiz_store::setup::SetupState;
 
 use crate::api::{Route as Matched, Runs};
 use crate::http::{Head, HeadError, Refusal, Reply};
+
+pub use crate::decisions::Decisions;
+pub use crate::fleets::{FleetAgents, Fleets};
+pub use crate::notification_target::{NotificationTargets, ReadTargetMapping, TargetReadError};
+pub use crate::plan::Plan;
 
 pub use crate::web::{
     MAX_FILE_BYTES, MAX_WEB_BYTES, MAX_WEB_FILES, PAGE_CSP, STATIC_CACHE, WEB_ROUTES, WebRoot,
@@ -54,7 +100,7 @@ pub const RETRY_AFTER_SECS: u64 = 5;
 pub const MAX_SENDS: usize = 2;
 
 /// Creates (the core's `new_thread`) at once, apart from the sends and the
-/// core runs: one.
+/// core runs: one (sheet A-14).
 pub const MAX_CREATES: usize = 1;
 
 /// The largest send body: the core's text cap fully JSON-escaped (6 bytes
@@ -62,16 +108,16 @@ pub const MAX_CREATES: usize = 1;
 pub const MAX_SEND_BODY_BYTES: usize = 6 * openwiz_core::messaging::MAX_TEXT_BYTES + 1024;
 
 /// Uploads (staging one file) at once, apart from the sends, creates and
-/// core runs.
+/// core runs (sheet B-9).
 pub const MAX_UPLOADS: usize = 2;
 
 /// The largest upload body: the core's per-file limit, the largest
-/// provider limit. The store still checks the core's rules.
+/// provider limit (sheet B-9). The store still checks the core's rules.
 pub const MAX_UPLOAD_BYTES: u64 = openwiz_core::attachment::FILE_MAX_BYTES;
 
 /// From the end of an upload's head to its answer, for the whole body and
 /// its verification: under Cloudflare's 125-second proxy read timeout
-/// (documented, not observed).
+/// (sheet B-9; documented, not observed).
 pub const UPLOAD_DEADLINE: Duration = Duration::from_secs(110);
 
 /// The header that carries an upload's file name, percent-encoded UTF-8.
@@ -112,7 +158,8 @@ pub struct Route {
 /// Every route the server answers. Anything else is `404` or `405`. Of the
 /// four `POST`s, the send and the create are the only writes to CloudRoom;
 /// the new-thread preview only reads; the upload, like the `DELETE`,
-/// changes only the attachment store. There is no retry route, and no route returns an attachment's bytes.
+/// changes only the attachment store (#16). There is no retry route (sheet
+/// A-3), and no route returns an attachment's bytes.
 pub const ROUTES: &[Route] = &[
     Route {
         method: "GET",
@@ -165,6 +212,70 @@ pub const ROUTES: &[Route] = &[
     Route {
         method: "DELETE",
         path: api::ATTACHMENT_ROUTE,
+    },
+    Route {
+        method: "GET",
+        path: fleets::LIST,
+    },
+    Route {
+        method: "GET",
+        path: fleets::DETAIL,
+    },
+    Route {
+        method: "GET",
+        path: plan::ROUTE,
+    },
+    Route {
+        method: "GET",
+        path: decisions::ROUTE,
+    },
+    Route {
+        method: "GET",
+        path: cockpit::ROUTE,
+    },
+    Route {
+        method: "GET",
+        path: loop_switches::LIST_ROUTE,
+    },
+    Route {
+        method: "GET",
+        path: setup::ROUTE,
+    },
+    Route {
+        method: "POST",
+        path: loop_switches::OFF_ROUTE,
+    },
+    Route {
+        method: "POST",
+        path: loop_switches::ON_ROUTE,
+    },
+    Route {
+        method: "GET",
+        path: notifications::STATUS,
+    },
+    Route {
+        method: "GET",
+        path: notifications::PREFERENCES,
+    },
+    Route {
+        method: "PUT",
+        path: notifications::PREFERENCES,
+    },
+    Route {
+        method: "GET",
+        path: notifications::SUBSCRIPTION,
+    },
+    Route {
+        method: "PUT",
+        path: notifications::SUBSCRIPTION,
+    },
+    Route {
+        method: "DELETE",
+        path: notifications::SUBSCRIPTION,
+    },
+    Route {
+        method: "GET",
+        path: notification_target::ROUTE,
     },
 ];
 
@@ -231,8 +342,8 @@ pub type OpenStore = Arc<dyn Fn() -> Result<Box<dyn SendStore>, StoreError> + Se
 pub type OpenStoreReadOnly =
     Arc<dyn Fn() -> Result<Option<Box<dyn SendStore>>, StoreError> + Send + Sync>;
 
-/// The one public host name a send may come to. It can never be a
-/// loopback name or an IP address: [`SendHost::new`]
+/// The one public host name a send may come to (WS-6). It can never be a
+/// loopback name or an IP address (Sol #91, finding 2): [`SendHost::new`]
 /// is the only way to make one, so no configuration can serve a send to a
 /// loopback `Host`, whatever the allowed host is.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -299,7 +410,7 @@ pub type OpenNewThreadStore =
 pub type OpenNewThreadStoreReadOnly =
     Arc<dyn Fn() -> Result<Option<Box<dyn NewThreadStore>>, StoreError> + Send + Sync>;
 
-/// What the new-thread routes need: the provider's reads and its one
+/// What the new-thread routes need (#12): the provider's reads and its one
 /// create, and the new-thread record, opened as `openwiz new` opens it,
 /// when each request needs it.
 #[derive(Clone)]
@@ -327,9 +438,9 @@ pub type OpenAttachmentStore = Arc<dyn Fn() -> Result<AttachmentStore, StoreErro
 pub type OpenAttachmentStoreReadOnly =
     Arc<dyn Fn() -> Result<Option<AttachmentStore>, StoreError> + Send + Sync>;
 
-/// What the attachment routes need: the attachment store, opened as
+/// What the attachment routes need (#16): the attachment store, opened as
 /// `openwiz attachment` opens it, when each request needs it, and the
-/// free-space measure staging checks the floor with.
+/// free-space measure staging checks the floor with (sheet B-3).
 #[derive(Clone)]
 pub struct Attaching {
     pub open_store: OpenAttachmentStore,
@@ -363,10 +474,21 @@ pub struct Config {
     /// The new-thread routes' provider and record. `openwiz-server` always
     /// sets it; without it, the four new-thread routes are `404`.
     pub creating: Option<Creating>,
-    /// The attachment routes' store. `openwiz-server` always sets it;
+    /// The attachment routes' store (#16). `openwiz-server` always sets it;
     /// without it, the three attachment routes are `404`, and a send or a
     /// create with attachments is refused by the core's gate.
     pub attaching: Option<Attaching>,
+}
+
+/// The setup route's one read (#1105): the setup tools' owner-only state,
+/// through the store, from the state directory every store here uses. Without
+/// a state directory nothing was ever checked; an unsafe or malformed state is
+/// `Err`, reported as unknown.
+fn setup_state() -> Result<Option<SetupState>, ()> {
+    match openwiz_store::default_state_dir(&|name| std::env::var_os(name)) {
+        Ok(dir) => openwiz_store::setup::read(&dir).map_err(|_| ()),
+        Err(_) => Ok(None),
+    }
 }
 
 /// Receives one request log line at a time, without a newline: the method,
@@ -382,7 +504,7 @@ pub struct Stats {
     pub core_runs: usize,
     /// Requests waiting for a core run's result, their own or a shared one.
     pub attached: usize,
-    /// Uploads holding an upload slot.
+    /// Uploads holding an upload slot (#16).
     pub uploads: usize,
 }
 
@@ -424,11 +546,20 @@ pub fn bind(port: u16) -> io::Result<TcpListener> {
 }
 
 struct Shared {
+    notification_targets: Option<NotificationTargets>,
+    notifications: Option<notifications::Context>,
+    stock_history: Arc<ready_stock::History>,
+    stock: Option<Arc<dyn StockSource>>,
+    plan: Option<Plan>,
+    loop_switches: Option<loop_switches::Switching>,
     config: Config,
+    fleets: Option<Fleets>,
+    decisions: Option<Decisions>,
     source: Arc<dyn SessionSource>,
     clock: Arc<dyn Clock>,
     log: Log,
     port: u16,
+    stopping: AtomicBool,
     connections: AtomicUsize,
     refusing: AtomicUsize,
     runs: Arc<Runs>,
@@ -437,14 +568,75 @@ struct Shared {
     uploads: Arc<send::Slots>,
 }
 
+/// Read-only lifecycle observation shared with the service's status publisher.
+#[derive(Clone)]
+pub struct ServerStatus(Arc<AtomicBool>);
+impl ServerStatus {
+    pub fn running(&self) -> bool {
+        self.0.load(Ordering::SeqCst)
+    }
+}
+struct Stopped(ServerStatus);
+impl Drop for Stopped {
+    fn drop(&mut self) {
+        self.0.0.store(false, Ordering::SeqCst);
+    }
+}
+
 /// A running server.
 pub struct Server {
     addr: SocketAddr,
     shared: Arc<Shared>,
     accept: JoinHandle<()>,
+    status: ServerStatus,
 }
 
 impl Server {
+    pub fn status_handle(&self) -> ServerStatus {
+        self.status.clone()
+    }
+    /// Stop acceptance and drain existing operations within the supplied bound.
+    pub fn shutdown(&self, deadline: Instant) -> io::Result<()> {
+        self.shared.stopping.store(true, Ordering::SeqCst);
+        self.status.0.store(false, Ordering::SeqCst);
+        // Wake only this listener. The accept loop checks the flag before
+        // dispatch, so the wake connection cannot reach an HTTP operation.
+        let left = deadline.saturating_duration_since(Instant::now());
+        if !self.accept.is_finished() && !left.is_zero() {
+            let _ = TcpStream::connect_timeout(&self.addr, left);
+        }
+        loop {
+            if self.accept.is_finished() && self.drained() {
+                return Ok(());
+            }
+            let left = deadline.saturating_duration_since(Instant::now());
+            if left.is_zero() {
+                return Err(io::Error::new(
+                    io::ErrorKind::TimedOut,
+                    "server stop is not confirmed",
+                ));
+            }
+            thread::park_timeout(left.min(Duration::from_millis(5)));
+        }
+    }
+
+    /// A finished accept thread alone does not establish stopped writes:
+    /// timed-out HTTP requests can still own core runs and write slots.
+    fn drained(&self) -> bool {
+        self.shared.connections.load(Ordering::SeqCst) == 0
+            && self.shared.refusing.load(Ordering::SeqCst) == 0
+            && self.shared.runs.counts() == (0, 0)
+            && self.shared.sends.used() == 0
+            && self.shared.creates.used() == 0
+            && self.shared.uploads.used() == 0
+    }
+
+    /// Unexpected accept failure still belongs to the unit's restart policy.
+    /// A requested shutdown can be draining writes and must retain its owner.
+    pub fn unexpectedly_stopped(&self) -> bool {
+        self.accept.is_finished() && !self.shared.stopping.load(Ordering::SeqCst)
+    }
+
     pub fn local_addr(&self) -> SocketAddr {
         self.addr
     }
@@ -473,13 +665,124 @@ pub fn start(
     clock: Arc<dyn Clock>,
     log: Log,
 ) -> io::Result<Server> {
-    let addr = listener.local_addr()?;
-    let shared = Arc::new(Shared {
+    start_with_fleets(listener, config, source, clock, log, None)
+}
+
+/// Starts the server with fleet read sources (#127). Keeping the original
+/// entry point and configuration lets existing clients keep their read setup.
+/// Without fleet sources, a valid fleet read is 404.
+pub fn start_with_fleets(
+    listener: TcpListener,
+    config: Config,
+    source: Arc<dyn SessionSource>,
+    clock: Arc<dyn Clock>,
+    log: Log,
+    fleets: Option<Fleets>,
+) -> io::Result<Server> {
+    start_with_plan(listener, config, source, clock, log, fleets, None)
+}
+
+/// Adds the repository plan source without changing existing callers' setup.
+pub fn start_with_plan(
+    listener: TcpListener,
+    config: Config,
+    source: Arc<dyn SessionSource>,
+    clock: Arc<dyn Clock>,
+    log: Log,
+    fleets: Option<Fleets>,
+    plan: Option<Plan>,
+) -> io::Result<Server> {
+    start_with_read_sources(
+        listener,
         config,
         source,
         clock,
         log,
+        ReadSources {
+            fleets,
+            plan,
+            decisions: None,
+        },
+    )
+}
+
+/// Optional read sources, supplied by the server rather than HTTP input.
+#[derive(Clone, Debug, Default)]
+pub struct ReadSources {
+    pub fleets: Option<Fleets>,
+    pub plan: Option<Plan>,
+    pub decisions: Option<Decisions>,
+}
+
+/// Starts the server with separately configured GitHub read sources.
+pub fn start_with_read_sources(
+    listener: TcpListener,
+    config: Config,
+    source: Arc<dyn SessionSource>,
+    clock: Arc<dyn Clock>,
+    log: Log,
+    reads: ReadSources,
+) -> io::Result<Server> {
+    start_configured(
+        listener, config, source, clock, log, reads, None, None, None, None,
+    )
+}
+
+/// Start with an independently configured stock-fact provider. It grants no
+/// additional reads, source authority, scheduler behavior or work effects.
+#[allow(clippy::too_many_arguments)]
+pub fn start_with_stock_source(
+    listener: TcpListener,
+    config: Config,
+    source: Arc<dyn SessionSource>,
+    clock: Arc<dyn Clock>,
+    log: Log,
+    reads: ReadSources,
+    stock: Arc<dyn StockSource>,
+) -> io::Result<Server> {
+    start_configured(
+        listener,
+        config,
+        source,
+        clock,
+        log,
+        reads,
+        None,
+        Some(stock),
+        None,
+        None,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn start_configured(
+    listener: TcpListener,
+    config: Config,
+    source: Arc<dyn SessionSource>,
+    clock: Arc<dyn Clock>,
+    log: Log,
+    reads: ReadSources,
+    loop_switches: Option<loop_switches::Switching>,
+    stock: Option<Arc<dyn StockSource>>,
+    notifications: Option<notifications::Context>,
+    notification_targets: Option<NotificationTargets>,
+) -> io::Result<Server> {
+    let addr = listener.local_addr()?;
+    let shared = Arc::new(Shared {
+        notifications,
+        notification_targets,
+        stock_history: Arc::new(ready_stock::History::default()),
+        stock,
+        plan: reads.plan,
+        loop_switches,
+        config,
+        fleets: reads.fleets,
+        decisions: reads.decisions,
+        source,
+        clock,
+        log,
         port: addr.port(),
+        stopping: AtomicBool::new(false),
         connections: AtomicUsize::new(0),
         refusing: AtomicUsize::new(0),
         runs: Arc::new(Runs::default()),
@@ -488,14 +791,63 @@ pub fn start(
         uploads: Arc::new(send::Slots::default()),
     });
     let serving = shared.clone();
+    let status = ServerStatus(Arc::new(AtomicBool::new(true)));
+    let activity = status.clone();
     let accept = thread::Builder::new()
         .name("openwiz-server accept".to_owned())
-        .spawn(move || accept_loop(&listener, &serving))?;
+        .spawn(move || {
+            let _stopped = Stopped(activity);
+            accept_loop(&listener, &serving)
+        })?;
     Ok(Server {
         addr,
         shared,
         accept,
+        status,
     })
+}
+
+/// Embed the protected notification context; no source, job or transport is
+/// inferred from HTTP input. Existing Config/start callers keep their shape.
+#[allow(clippy::too_many_arguments)]
+pub fn start_with_notifications(
+    listener: TcpListener,
+    config: Config,
+    source: Arc<dyn SessionSource>,
+    clock: Arc<dyn Clock>,
+    log: Log,
+    reads: ReadSources,
+    switching: Option<loop_switches::Switching>,
+    context: notifications::Context,
+) -> io::Result<Server> {
+    start_configured(
+        listener,
+        config,
+        source,
+        clock,
+        log,
+        reads,
+        switching,
+        None,
+        Some(context),
+        None,
+    )
+}
+
+/// Explicit trusted loop-switch context. Production attribution wiring is
+/// available through explicit local install wiring; tests inject their context.
+pub fn start_with_loop_switches(
+    listener: TcpListener,
+    config: Config,
+    source: Arc<dyn SessionSource>,
+    clock: Arc<dyn Clock>,
+    log: Log,
+    reads: ReadSources,
+    switching: Option<loop_switches::Switching>,
+) -> io::Result<Server> {
+    start_configured(
+        listener, config, source, clock, log, reads, switching, None, None, None,
+    )
 }
 
 /// Decrements a counter when dropped.
@@ -510,6 +862,9 @@ impl Drop for Count<'_> {
 fn accept_loop(listener: &TcpListener, shared: &Arc<Shared>) {
     let max = shared.config.limits.max_connections;
     for stream in listener.incoming() {
+        if shared.stopping.load(Ordering::SeqCst) {
+            break;
+        }
         let Ok(stream) = stream else {
             // Such as too many open files: wait instead of spinning.
             thread::sleep(Duration::from_millis(50));
@@ -680,7 +1035,8 @@ fn respond(head: &Head, stream: &mut TcpStream, shared: &Shared) -> Reply {
     let host_syntax = !host.is_empty()
         && host
             .bytes()
-            .all(|b| b.is_ascii_alphanumeric() || b".-:[]".contains(&b));
+            .all(|b| b.is_ascii_alphanumeric() || b".-:[]".contains(&b))
+        && valid_host_brackets(host);
     if !host_syntax {
         return api::error(400, "bad_request", "the Host is malformed");
     }
@@ -693,9 +1049,23 @@ fn respond(head: &Head, stream: &mut TcpStream, shared: &Shared) -> Reply {
     };
     let web = web_route(path, &shared.config);
     let matched = Matched::of(path);
+    if let Some(Matched::Notification(route)) = &matched {
+        return notifications::respond(head, stream, shared, *route, host, query, deadline);
+    }
+    if let Some(Matched::LoopSwitch(target, enabled)) = &matched {
+        return loop_switches::respond(
+            head,
+            stream,
+            shared,
+            (target, *enabled),
+            host,
+            query,
+            deadline,
+        );
+    }
     let sending = shared.config.sending.as_ref();
     // Without a send configuration these routes do not exist, for every
-    // method.
+    // method (Sol #91, finding 3).
     if sending.is_none()
         && matches!(
             matched,
@@ -719,7 +1089,8 @@ fn respond(head: &Head, stream: &mut TcpStream, shared: &Shared) -> Reply {
     {
         return api::error(404, "no_route", "no such route");
     }
-    // The same for the attachment routes without an attachment configuration.
+    // The same for the attachment routes without an attachment configuration
+    // (#16).
     let attaching = shared.config.attaching.as_ref();
     if attaching.is_none() && matches!(matched, Some(Matched::Attachments | Matched::Attachment(_)))
     {
@@ -782,11 +1153,13 @@ fn respond(head: &Head, stream: &mut TcpStream, shared: &Shared) -> Reply {
         return api::error(400, "bad_request", "request bodies are not accepted");
     }
     if let Some((root, template)) = web {
+        let Some(file) = web::serve(root, template, path) else {
+            return api::error(404, "no_route", "no such route");
+        };
         if query.is_some() {
             return api::error(400, "invalid_request", "this route takes no query");
         }
-        return web::serve(root, template, path)
-            .unwrap_or_else(|| api::error(404, "no_route", "no such route"));
+        return file;
     }
     let call = match matched {
         None => return api::error(404, "no_route", "no such route"),
@@ -794,10 +1167,32 @@ fn respond(head: &Head, stream: &mut TcpStream, shared: &Shared) -> Reply {
             Ok(call) => call,
             Err(why) => return api::error(400, "invalid_request", why),
         },
+        Some(Matched::Fleets(spec)) => match fleets::call(spec.as_deref(), query) {
+            Ok(call) => api::Call::Fleets(call),
+            Err(why) => return api::error(400, "invalid_request", why),
+        },
         Some(_) if query.is_some() && path != api::INVENTORY => {
             return api::error(400, "invalid_request", "this route takes no query");
         }
+        Some(Matched::Setup) => return setup::run(setup_state()),
         Some(Matched::Health) => return api::health(shared.source.as_ref()),
+        Some(Matched::NotificationTarget(token)) => {
+            if !notification_target::valid_token(&token) {
+                return api::error(400, "invalid_request", "invalid notification reference");
+            }
+            // #2039 R1/R2: the protected mapping is read before a core-run slot.
+            match notification_target::resolve(
+                shared.notification_targets.as_ref(),
+                &token,
+                shared.clock.as_ref(),
+            ) {
+                Ok(reference) => api::Call::NotificationTarget(reference),
+                Err(reply) => return reply,
+            }
+        }
+        Some(Matched::Decisions) => api::Call::Decisions,
+        Some(Matched::Cockpit) => api::Call::Cockpit,
+        Some(Matched::Loops) => return loop_switches::read_route(shared),
         Some(Matched::Lookup(id, op_id)) => {
             let Some(sending) = sending else {
                 return api::error(404, "no_route", "no such route");
@@ -810,6 +1205,7 @@ fn respond(head: &Head, stream: &mut TcpStream, shared: &Shared) -> Reply {
             Err(why) => return api::error(400, "invalid_request", why),
         },
         Some(Matched::CloudOptions) => api::Call::CloudOptions,
+        Some(Matched::Plan) => api::Call::Plan,
         Some(Matched::Attachments) => {
             let Some(attaching) = attaching else {
                 return api::error(404, "no_route", "no such route");
@@ -823,7 +1219,9 @@ fn respond(head: &Head, stream: &mut TcpStream, shared: &Shared) -> Reply {
             api::Call::NewThreadStatus(op_id)
         }
         Some(
-            Matched::Send(_)
+            Matched::Notification(_)
+            | Matched::LoopSwitch(..)
+            | Matched::Send(_)
             | Matched::Threads(_)
             | Matched::ThreadsPreview(_)
             | Matched::Attachment(_),
@@ -837,17 +1235,23 @@ fn respond(head: &Head, stream: &mut TcpStream, shared: &Shared) -> Reply {
 /// What a core run calls, from the server's configuration.
 fn core(shared: &Shared) -> api::Core {
     api::Core {
+        notifications: shared.notifications.clone(),
+        stock_history: shared.stock_history.clone(),
+        stock: shared.stock.clone(),
         source: shared.source.clone(),
         messenger: shared.config.sending.as_ref().map(|s| s.messenger.clone()),
         creating: shared.config.creating.clone(),
         attaching: shared.config.attaching.clone(),
+        fleets: shared.fleets.clone(),
+        decisions: shared.decisions.clone(),
+        plan: shared.plan.clone(),
         clock: shared.clock.clone(),
     }
 }
 
 /// `POST /api/v1/attachments` and `DELETE /api/v1/attachments/{id}`, after
 /// the `Host` and the method: the route, the write `Host` (only the
-/// configured host name, never loopback, shared with send), the
+/// configured host name, never loopback: WS-6, unchanged by B-9), the
 /// query, then `attachments.rs`.
 fn attachment_write(
     head: &Head,
@@ -887,7 +1291,7 @@ fn attachment_write(
 
 /// `POST /api/v1/projects/{id}/threads` and `…/threads/preview`, after the
 /// `Host` and the method: the route, the create `Host` (only the configured
-/// host name, never loopback, shared with send), the query, then
+/// host name, never loopback: WS-6, unchanged by A-13), the query, then
 /// `new_thread.rs`. The preview, which only reads, is a shared core run.
 fn create_route(
     head: &Head,
@@ -947,7 +1351,7 @@ fn create_route(
 
 /// `POST /api/v1/sessions/{id}/messages`, after the `Host` and the method:
 /// the route, the send `Host` (only the configured host name, never
-/// loopback: ), the query, then `send.rs`.
+/// loopback: WS-6), the query, then `send.rs`.
 fn send_route(
     head: &Head,
     stream: &mut TcpStream,
@@ -984,6 +1388,33 @@ fn send_route(
         deadline,
     };
     send::post(head, stream, site, id, &context)
+}
+
+/// RFC 3986 IP-literal and optional port, within the existing character policy.
+/// Unbracketed hosts retain their existing syntax and allowance checks.
+fn valid_host_brackets(host: &str) -> bool {
+    if !host.contains(['[', ']']) {
+        return true;
+    }
+    let Some((literal, suffix)) = host.strip_prefix('[').and_then(|h| h.split_once(']')) else {
+        return false;
+    };
+    let future = literal
+        .strip_prefix(['v', 'V'])
+        .and_then(|v| v.split_once('.'))
+        .is_some_and(|(version, address)| {
+            !version.is_empty()
+                && version.bytes().all(|b| b.is_ascii_hexdigit())
+                && !address.is_empty()
+                && address
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || b".-:".contains(&b))
+        });
+    (literal.parse::<std::net::Ipv6Addr>().is_ok() || future)
+        && (suffix.is_empty()
+            || suffix
+                .strip_prefix(':')
+                .is_some_and(|port| port.bytes().all(|b| b.is_ascii_digit())))
 }
 
 /// Loopback with this server's port, or the configured public host name.
@@ -1025,6 +1456,12 @@ It always listens on 127.0.0.1 only. Routes (GET):
   /api/v1/cloud-options
   /api/v1/new-threads/<op id>
   /api/v1/attachments                (the staged attachments; never their bytes)
+  /api/v1/plan
+  /api/v1/fleets
+  /api/v1/fleets/<spec>
+  /api/v1/decisions
+  /api/v1/cockpit                    (Needs you, running agents and targets, read only)
+  /api/v1/loops                      (every OpenWiz loop, its switch, runs and cost, read only)
 and, only with --allowed-host and only on that host, four POSTs: the two
 writes, the new-thread preview, which only reads, and an upload (a raw body,
 at most 25 MiB, staged as openwiz attachment add stages a file), and one
@@ -1047,5 +1484,63 @@ with --json; health is the server's own metadata, with no CLI equivalent and
 no room-cli read. See contracts/web-api.v1.md. One line per request goes to
 stderr: the method, route, status and time only.
 "
+    )
+}
+
+/// #2039 (Q1): the installed service's notification context together with its
+/// protected bound-target reader, so a recorded alert's token opens its item.
+#[allow(clippy::too_many_arguments)]
+pub fn start_with_notifications_and_targets(
+    listener: TcpListener,
+    config: Config,
+    source: Arc<dyn SessionSource>,
+    clock: Arc<dyn Clock>,
+    log: Log,
+    reads: NotificationReadSources,
+    switching: Option<loop_switches::Switching>,
+    context: notifications::Context,
+) -> io::Result<Server> {
+    start_configured(
+        listener,
+        config,
+        source,
+        clock,
+        log,
+        reads.reads,
+        switching,
+        None,
+        Some(context),
+        Some(reads.targets),
+    )
+}
+
+/// Additional bound-navigation sources without changing existing server callers.
+pub struct NotificationReadSources {
+    pub reads: ReadSources,
+    pub targets: NotificationTargets,
+}
+
+/// The installed service supplies its existing loop context and protected reader.
+/// No mapping store or independent proposal authority is created by this entry.
+pub fn start_with_notification_targets(
+    listener: TcpListener,
+    config: Config,
+    source: Arc<dyn SessionSource>,
+    clock: Arc<dyn Clock>,
+    log: Log,
+    reads: NotificationReadSources,
+    switching: Option<loop_switches::Switching>,
+) -> io::Result<Server> {
+    start_configured(
+        listener,
+        config,
+        source,
+        clock,
+        log,
+        reads.reads,
+        switching,
+        None,
+        None,
+        Some(reads.targets),
     )
 }

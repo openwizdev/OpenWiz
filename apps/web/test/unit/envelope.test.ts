@@ -11,35 +11,54 @@ import { hostileInventory, hostileSessions, hostileView, inventory, manyRows, se
 const EXAMPLES = new URL('../../../../tests/fixtures/envelopes/', import.meta.url);
 const clone = <T>(v: T): T => structuredClone(v);
 
-test('every 0.0.1 example envelope parses as what it is, and only that', () => {
-  const files = readdirSync(EXAMPLES).filter((f) => f.endsWith('.json'));
-  assert.ok(files.length >= 5, 'the example envelopes are present');
-  for (const f of files) {
-    const json: unknown = JSON.parse(readFileSync(new URL(f, EXAMPLES), 'utf8'));
-    if (f.startsWith('ls-')) {
-      assert.deepEqual(parseInventory(json), json, f);
-      assert.equal(parseSessionView(json), null, `${f} is not a session view`);
-    } else {
-      assert.deepEqual(parseSessionView(json), json, f);
-      assert.equal(parseInventory(json), null, `${f} is not an inventory`);
-    }
+test("V1 envelope acceptance preserves example and synthetic shapes", async (t) => {
+  for (const [name, proof] of [
+    ['every 0.0.1 example envelope parses as what it is, and only that', () => {
+      const files = readdirSync(EXAMPLES).filter((f) => f.endsWith('.json'));
+      assert.ok(files.length >= 5, 'the example envelopes are present');
+      for (const f of files) {
+        const json: unknown = JSON.parse(readFileSync(new URL(f, EXAMPLES), 'utf8'));
+        if (f.startsWith('ls-')) {
+          assert.deepEqual(parseInventory(json), json, f);
+          assert.equal(parseSessionView(json), null, `${f} is not a session view`);
+        } else {
+          assert.deepEqual(parseSessionView(json), json, f);
+          assert.equal(parseInventory(json), null, `${f} is not an inventory`);
+        }
+      }
+    }],
+    ['the synthetic web envelopes parse', () => {
+      for (const e of [inventory(manyRows(30)), hostileInventory(), inventory([], { countsNull: true, state: 'partial' })]) {
+        assert.deepEqual(parseInventory(clone(e)), e);
+      }
+      for (const s of hostileSessions()) assert.deepEqual(parseSessionView(clone(hostileView(s))), hostileView(s));
+      const s = session(1);
+      for (const v of [
+        sessionView(s, { finalOutput: { known: { kind: 'no_final_output_yet' } } }),
+        sessionView(s, { finalOutput: { unknown: 'thread output timed out' }, reportedError: { unknown: 'thread output timed out' } }),
+        sessionView(s, { reportedError: { known: { text: 'Synthetic error', truncated: true } } }),
+      ]) {
+        assert.deepEqual(parseSessionView(clone(v)), v);
+      }
+    }],
+  ] as const) {
+    t.diagnostic(name);
+    await proof();
   }
 });
 
-test('the synthetic web envelopes parse', () => {
-  for (const e of [inventory(manyRows(30)), hostileInventory(), inventory([], { countsNull: true, state: 'partial' })]) {
-    assert.deepEqual(parseInventory(clone(e)), e);
+for (const length of [120, 121]) {
+  for (const seam of ['inventory', 'session view']) {
+    test(`${seam} ${length === 120 ? 'accepts' : 'refuses'} a recap of ${length} non-BMP characters`, () => {
+      const s = session(1, {
+        recap: { known: { kind: 'purpose_as_reported', text: '\u{1F600}'.repeat(length), truncated: false } },
+      });
+      const envelope = seam === 'inventory' ? inventory([s]) : sessionView(s);
+      const parse = seam === 'inventory' ? parseInventory : parseSessionView;
+      assert.deepEqual(parse(envelope), length === 120 ? envelope : null);
+    });
   }
-  for (const s of hostileSessions()) assert.deepEqual(parseSessionView(clone(hostileView(s))), hostileView(s));
-  const s = session(1);
-  for (const v of [
-    sessionView(s, { finalOutput: { known: { kind: 'no_final_output_yet' } } }),
-    sessionView(s, { finalOutput: { unknown: 'thread output timed out' }, reportedError: { unknown: 'thread output timed out' } }),
-    sessionView(s, { reportedError: { known: { text: 'Synthetic error', truncated: true } } }),
-  ]) {
-    assert.deepEqual(parseSessionView(clone(v)), v);
-  }
-});
+}
 
 type Mutation = [string, (e: any) => void];
 
@@ -71,30 +90,36 @@ const listMutations: Mutation[] = [
   ['a source without version_tested', (e) => delete e.source.version_tested],
 ];
 
-test('an inventory with anything outside the schema is refused', () => {
-  for (const [what, mutate] of listMutations) {
-    const e: any = clone(inventory([session(1)]));
-    mutate(e);
-    assert.equal(parseInventory(e), null, what);
-  }
-  assert.equal(parseInventory(null), null);
-  assert.equal(parseInventory([]), null);
-  assert.equal(parseInventory('openwiz.inventory.v1'), null);
-});
-
-test('a session view with anything outside the schema is refused', () => {
-  const viewMutations: Mutation[] = [
-    ['an extra data key', (e) => (e.data.messages = [])],
-    ['a final output without truncated', (e) => (e.data.final_output = { known: { kind: 'reported', text: 'x' } })],
-    ['a final output kind outside the schema', (e) => (e.data.final_output = { known: { kind: 'log' } })],
-    ['a reported error that is text', (e) => (e.data.reported_error = { known: 'boom' })],
-    ['a missing session', (e) => delete e.data.session],
-    ['a session with an extra key', (e) => (e.data.session.pr = 12)],
-  ];
-  for (const [what, mutate] of viewMutations) {
-    const e: any = clone(sessionView(session(1)));
-    mutate(e);
-    assert.equal(parseSessionView(e), null, what);
+test("V1 envelope rejection preserves inventory and view boundaries", async (t) => {
+  for (const [name, proof] of [
+    ['an inventory with anything outside the schema is refused', () => {
+      for (const [what, mutate] of listMutations) {
+        const e: any = clone(inventory([session(1)]));
+        mutate(e);
+        assert.equal(parseInventory(e), null, what);
+      }
+      assert.equal(parseInventory(null), null);
+      assert.equal(parseInventory([]), null);
+      assert.equal(parseInventory('openwiz.inventory.v1'), null);
+    }],
+    ['a session view with anything outside the schema is refused', () => {
+      const viewMutations: Mutation[] = [
+        ['an extra data key', (e) => (e.data.messages = [])],
+        ['a final output without truncated', (e) => (e.data.final_output = { known: { kind: 'reported', text: 'x' } })],
+        ['a final output kind outside the schema', (e) => (e.data.final_output = { known: { kind: 'log' } })],
+        ['a reported error that is text', (e) => (e.data.reported_error = { known: 'boom' })],
+        ['a missing session', (e) => delete e.data.session],
+        ['a session with an extra key', (e) => (e.data.session.pr = 12)],
+      ];
+      for (const [what, mutate] of viewMutations) {
+        const e: any = clone(sessionView(session(1)));
+        mutate(e);
+        assert.equal(parseSessionView(e), null, what);
+      }
+    }],
+  ] as const) {
+    t.diagnostic(name);
+    await proof();
   }
 });
 

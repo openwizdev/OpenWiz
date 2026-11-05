@@ -1,0 +1,33 @@
+{
+  "pull_request": 901,
+  "head": "2222222222222222222222222222222222222222",
+  "runs": [
+    {
+      "id": 9000003,
+      "workflow": ".github/workflows/ci.yml",
+      "event": "pull_request",
+      "head_sha": "2222222222222222222222222222222222222222",
+      "pull_requests": [
+        901
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "artifacts": {
+            "ci-selection-1": "valid/selected-before-rerun.json"
+          }
+        },
+        {
+          "attempt": 2,
+          "artifacts": {
+            "ci-selection-2": "valid/full-rerun.json"
+          }
+        }
+      ]
+    }
+  ],
+  "expected": {
+    "run": 9000003,
+    "attempt": 2
+  }
+}

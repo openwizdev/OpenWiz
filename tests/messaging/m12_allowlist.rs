@@ -1,3 +1,26 @@
+//! Approval provenance: [private record](https://github.com/jparker2006/ClosedWiz/issues/1277#issuecomment-6704800036).
+//! M12 Allowlist: `thread tell` is `send`'s only write, and every other
+//! mutating subcommand is still refused. P8(a) is updated for it (see the
+//! evidence README for the recorded reason).
+//!
+//! **Updated for OpenWiz 0.0.4 (ClosedWiz#11, A1 phase 2, N16)**, with this
+//! recorded reason: sheet item A-2 (approved by Jake, 2026-10-30) adds
+//! `cloud status --json` and the second write, `thread spawn`, in the shapes
+//! spike run 3 recorded. `spawn`, `--model` and `--reasoning-level` may now
+//! be spelled only in the allowlist, inside `ThreadSpawn`'s argv, never in
+//! `tell`'s; `--model` is also `openwiz new`'s own option in the CLI. The
+//! catalogue key `steer` stays only in the adapter's `cloud status` reader.
+//! `tell`'s shape and every other refusal are unchanged; N16
+//! (`tests/new-thread/n16_allowlist.rs`) proves `spawn`'s shape.
+//!
+//! **Updated for B2 (ClosedWiz#15)**, with this recorded reason: sheet B-7
+//! (approved by Jake, 2026-10-30) adds `--file` and `--image` to `tell`
+//! and `spawn`, only with staged paths. A path in the text remains text
+//! (#15, AD12). So each flag may be spelled only in the allowlist,
+//! once, inside its one `attachment_args`, and the fake (its own copy of the
+//! allowlist) takes them only in OpenWiz's position, with a staged copy's
+//! absolute path, and never with steer. Every other refusal is unchanged.
+
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -158,7 +181,7 @@ fn the_fake_refuses_every_other_write_and_every_other_tell_shape() {
     assert_eq!(fake.tell_count(), 0, "a refused call is not counted");
 }
 
-/// B2: the fake takes `--file` and `--image` only after
+/// B2 (sheet B-7): the fake takes `--file` and `--image` only after
 /// `--json` and before `--`, in queue mode, each with a staged copy's
 /// absolute path; every other form is refused before anything is counted.
 #[test]
@@ -241,7 +264,7 @@ fn no_product_source_spells_an_excluded_flag_or_another_write() {
         .join("crates/adapters/cloudroom/src/allowlist.rs")
         .canonicalize()
         .unwrap();
-    // OpenWiz 0.0.4 (A1 phase 2): the catalogue key `steer`,
+    // OpenWiz 0.0.4 (ClosedWiz#11, A1 phase 2): the catalogue key `steer`,
     // only in the adapter's `cloud status` reader; and `openwiz new`'s own
     // `--model` option, only in the CLI's `new` (not a room-cli argument
     // there).
@@ -253,9 +276,26 @@ fn no_product_source_spells_an_excluded_flag_or_another_write() {
         .join("crates/cli/src/new_thread.rs")
         .canonicalize()
         .unwrap();
+    let service_reader = Path::new(ROOT)
+        .join("crates/service/src/document.rs")
+        .canonicalize()
+        .unwrap();
+    let terminal_actions = Path::new(ROOT)
+        .join(TERMINAL_ACTIONS)
+        .canonicalize()
+        .unwrap();
     // `spawn`'s own flags, only inside `ThreadSpawn`'s argv in the allowlist.
     let spawn_arm = |text: &str| {
         text.split("Self::ThreadSpawn(")
+            .nth(1)
+            .and_then(|rest| rest.split("],").next())
+            .unwrap_or_default()
+            .to_owned()
+    };
+    // OpenWiz 0.0.6 (ClosedWiz#120, B4): `archive`, only inside
+    // `ThreadArchive`'s argv in the allowlist.
+    let archive_arm = |text: &str| {
+        text.split("Self::ThreadArchive(")
             .nth(1)
             .and_then(|rest| rest.split("],").next())
             .unwrap_or_default()
@@ -294,6 +334,27 @@ fn no_product_source_spells_an_excluded_flag_or_another_write() {
         }
         for word in MUTATING {
             let literal = format!("\"{word}\"");
+            if *word == "update" {
+                assert!(
+                    service_update_fields_only(&canonical, &service_reader, &text),
+                    "{path:?}: update is not the service JSON field"
+                );
+                continue;
+            }
+            if *word == "resume" && canonical == allowlist {
+                assert!(
+                    loop_resume_arm_only(&canonical, &allowlist, &text),
+                    "resume outside its exact argv arm"
+                );
+                continue;
+            }
+            if *word == "pause" && canonical == allowlist {
+                assert!(
+                    loop_pause_arm_only(&canonical, &allowlist, &text),
+                    "pause outside its exact argv arm"
+                );
+                continue;
+            }
             let is_allowlist = canonical == allowlist;
             if *word == "tell" && is_allowlist {
                 continue;
@@ -308,8 +369,21 @@ fn no_product_source_spells_an_excluded_flag_or_another_write() {
             if *word == "send" && path.starts_with(Path::new(ROOT).join("crates/cli")) {
                 continue;
             }
+            // #1098 (orchestrator ruling): the Send action's capability id,
+            // once, in the terminal's action seam, and nowhere else there.
+            if *word == "send" && canonical == terminal_actions && send_capability_id_only(&text) {
+                continue;
+            }
             if *word == "spawn" && canonical == allowlist {
                 assert!(spawn_arm(&text).contains(&literal), "spawn outside its arm");
+                continue;
+            }
+            if *word == "archive" && canonical == allowlist {
+                assert_eq!(text.matches(&literal).count(), 1, "{literal} once");
+                assert!(
+                    archive_arm(&text).contains(&literal),
+                    "archive outside its arm"
+                );
                 continue;
             }
             if *word == "steer" && canonical == catalogue {
@@ -317,5 +391,173 @@ fn no_product_source_spells_an_excluded_flag_or_another_write() {
             }
             assert!(!text.contains(&literal), "{path:?} contains {literal}");
         }
+    }
+}
+
+// #269: only the service contract reader may quote this JSON field. This
+// helper is shared by the source scan and its planted command-like breaks.
+fn service_update_fields_only(path: &Path, reader: &Path, text: &str) -> bool {
+    text.match_indices("\"update\"").all(|(at, literal)| {
+        if path == reader.with_file_name("update.rs") {
+            let start = text[..at].rfind('\n').map_or(0, |n| n + 1);
+            let end = text[at..].find('\n').map_or(text.len(), |n| at + n);
+            return text[start..end].trim() == "const UPDATE: &str = \"update\";";
+        }
+        if path != reader {
+            return false;
+        }
+        let before = &text[..at];
+        let Some(prefix) = before.strip_suffix("value[") else {
+            return false;
+        };
+        let boundary = prefix
+            .chars()
+            .next_back()
+            .is_none_or(|c| !c.is_alphanumeric() && c != '_');
+        boundary && text[at + literal.len()..].starts_with(']')
+    })
+}
+
+#[test]
+fn service_update_exception_never_allows_a_command_or_another_file() {
+    let reader = Path::new(ROOT)
+        .join("crates/service/src/document.rs")
+        .canonicalize()
+        .unwrap();
+    let other = Path::new(ROOT)
+        .join("crates/service/src/runtime.rs")
+        .canonicalize()
+        .unwrap();
+    let fields =
+        r#"!value["update"].is_null(); value["update"]["outcome"]; value["update"][field];"#;
+    assert!(service_update_fields_only(&reader, &reader, fields));
+    for bad in [
+        r#"let argv = ["thread", "update", "thr_syn_0001"];"#,
+        r#"value["update"]; let argv = ["update"];"#,
+        r#"other_value["update"];"#,
+        r#"value["update", "argument"];"#,
+    ] {
+        assert!(
+            !service_update_fields_only(&reader, &reader, bad),
+            "command-like occurrence escaped: {bad}"
+        );
+    }
+    assert!(!service_update_fields_only(&other, &reader, fields));
+    let updater = reader.with_file_name("update.rs").canonicalize().unwrap();
+    let key = "const UPDATE: &str = \"update\";";
+    assert!(service_update_fields_only(&updater, &reader, key));
+    assert!(!service_update_fields_only(&other, &reader, key));
+    assert!(!service_update_fields_only(
+        &updater,
+        &reader,
+        &format!("{key}\nlet argv = [\"update\"];")
+    ));
+}
+
+/// #1098's one terminal exception (as in p08a): the action seam may spell
+/// `"send"` exactly once, as `ActionId::Send`'s capability id.
+const TERMINAL_ACTIONS: &str = "crates/terminal/src/actions/mod.rs";
+
+fn send_capability_id_only(text: &str) -> bool {
+    text.matches("\"send\"").count() == 1 && text.contains("ActionId::Send => \"send\",")
+}
+
+#[test]
+fn m12_the_terminal_send_exception_refuses_any_widening() {
+    let actions = fs::read_to_string(Path::new(ROOT).join(TERMINAL_ACTIONS)).unwrap();
+    assert!(send_capability_id_only(&actions));
+    // A second literal anywhere, or the literal outside the capability arm.
+    for widened in [
+        format!("{actions}\nconst X: &str = \"send\";\n"),
+        actions.replace(
+            "ActionId::Send => \"send\",",
+            "ActionId::Send => \"send\",\n            ActionId::Answer => \"send\",",
+        ),
+        actions.replace(
+            "ActionId::Send => \"send\",",
+            "ActionId::Send => \"message\",",
+        ) + "\nconst X: &str = \"send\";\n",
+    ] {
+        assert_ne!(widened, actions);
+        assert!(!send_capability_id_only(&widened), "{widened}");
+    }
+    // The exception is that file and that word only: every other terminal
+    // source spells no mutating word, and the seam spells no other one.
+    let mut files = Vec::new();
+    rust_files(&Path::new(ROOT).join("crates/terminal"), &mut files);
+    assert!(!files.is_empty());
+    for path in files {
+        let text = fs::read_to_string(&path).unwrap();
+        for word in MUTATING {
+            let literal = format!("\"{word}\"");
+            if *word == "send" && path.ends_with("actions/mod.rs") {
+                continue;
+            }
+            assert!(!text.contains(&literal), "{path:?} contains {literal}");
+        }
+    }
+}
+
+// T5 owns only the canonical LoopResume argv arm, never another write.
+fn loop_resume_arm_only(path: &Path, allowlist: &Path, text: &str) -> bool {
+    path == allowlist
+        && text.matches("\"resume\"").count() == 1
+        && text.contains(
+            "Self::LoopResume(id) => vec![\"loop\", \"resume\", id.as_str(), \"--json\"],",
+        )
+}
+fn loop_pause_arm_only(path: &Path, allowlist: &Path, text: &str) -> bool {
+    path == allowlist
+        && text.matches("\"pause\"").count() == 1
+        && text
+            .contains("Self::LoopPause(id) => vec![\"loop\", \"pause\", id.as_str(), \"--json\"],")
+}
+#[test]
+fn t5_loop_pause_exception_rejects_other_paths_and_command_like_occurrences() {
+    let canonical = Path::new(ROOT)
+        .join("crates/adapters/cloudroom/src/allowlist.rs")
+        .canonicalize()
+        .unwrap();
+    let text = fs::read_to_string(&canonical).unwrap();
+    assert!(loop_pause_arm_only(&canonical, &canonical, &text));
+    assert!(!loop_pause_arm_only(
+        &canonical.with_file_name("loops.rs"),
+        &canonical,
+        &text
+    ));
+    for planted in [
+        format!("{text}\nlet argv = [\"loop\", \"pause\"];"),
+        text.replace("Self::LoopPause(id) =>", "Self::ThreadArchive(id) =>"),
+        text.replace("Self::LoopPause(id) =>", "Self::LoopPause(id) if true =>"),
+        text.replace(
+            "vec![\"loop\", \"pause\", id.as_str(), \"--json\"]",
+            "vec![\"thread\", \"pause\", id.as_str(), \"--json\"]",
+        ),
+    ] {
+        assert_ne!(planted, text);
+        assert!(!loop_pause_arm_only(&canonical, &canonical, &planted));
+    }
+}
+#[test]
+fn t5_loop_resume_exception_rejects_other_paths_and_command_like_occurrences() {
+    let canonical = Path::new(ROOT)
+        .join("crates/adapters/cloudroom/src/allowlist.rs")
+        .canonicalize()
+        .unwrap();
+    let text = fs::read_to_string(&canonical).unwrap();
+    assert!(loop_resume_arm_only(&canonical, &canonical, &text));
+    let other = canonical.with_file_name("loops.rs");
+    assert!(!loop_resume_arm_only(&other, &canonical, &text));
+    for planted in [
+        format!("{text}\nlet argv = [\"loop\", \"resume\"];"),
+        text.replace("Self::LoopResume(id) =>", "Self::ThreadArchive(id) =>"),
+        text.replace("Self::LoopResume(id) =>", "Self::LoopResume(id) if true =>"),
+        text.replace(
+            "vec![\"loop\", \"resume\", id.as_str(), \"--json\"]",
+            "vec![\"thread\", \"resume\", id.as_str(), \"--json\"]",
+        ),
+    ] {
+        assert_ne!(planted, text);
+        assert!(!loop_resume_arm_only(&canonical, &canonical, &planted));
     }
 }

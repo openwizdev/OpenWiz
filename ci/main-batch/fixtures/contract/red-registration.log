@@ -1,0 +1,48 @@
+F
+======================================================================
+FAIL: test_ci2_batch_contract_is_registered_in_full_plans (__main__.Plans.test_ci2_batch_contract_is_registered_in_full_plans)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File ".github/actions/docs-only/test_plan.py", line 152, in test_ci2_batch_contract_is_registered_in_full_plans
+    self.assertEqual(record['lanes']['site']['tests'].count('release:ci2-batch-contract'), 1)
+AssertionError: 0 != 1
+
+----------------------------------------------------------------------
+Ran 1 test in 0.094s
+
+FAILED (failures=1)
+FF
+======================================================================
+FAIL: test_ci2_batch_contract_executes_and_propagates_failure (__main__.Execution.test_ci2_batch_contract_executes_and_propagates_failure) (fail=False)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File ".github/actions/docs-only/test_execution.py", line 210, in test_ci2_batch_contract_executes_and_propagates_failure
+    self.assertEqual(calls, [command])
+AssertionError: Lists differ: [] != ['python3 -I ci/main-batch/test_contract.py']
+
+Second list contains 1 additional elements.
+First extra element 0:
+'python3 -I ci/main-batch/test_contract.py'
+
+- []
++ ['python3 -I ci/main-batch/test_contract.py']
+
+======================================================================
+FAIL: test_ci2_batch_contract_executes_and_propagates_failure (__main__.Execution.test_ci2_batch_contract_executes_and_propagates_failure) (fail=True)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File ".github/actions/docs-only/test_execution.py", line 210, in test_ci2_batch_contract_executes_and_propagates_failure
+    self.assertEqual(calls, [command])
+AssertionError: Lists differ: [] != ['python3 -I ci/main-batch/test_contract.py']
+
+Second list contains 1 additional elements.
+First extra element 0:
+'python3 -I ci/main-batch/test_contract.py'
+
+- []
++ ['python3 -I ci/main-batch/test_contract.py']
+
+----------------------------------------------------------------------
+Ran 1 test in 0.167s
+
+FAILED (failures=2)

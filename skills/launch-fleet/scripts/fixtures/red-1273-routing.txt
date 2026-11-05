@@ -1,0 +1,74 @@
+FFFFFFF
+======================================================================
+FAIL: test_ambiguous_builder_becomes_thread_free_look (__main__.Fleet.test_ambiguous_builder_becomes_thread_free_look)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-1273/skills/launch-fleet/scripts/test-records.py", line 111, in test_ambiguous_builder_becomes_thread_free_look
+    self.assertIn('look #12:', out)
+AssertionError: 'look #12:' not found in 'CI failed #31 for #12 at 3131313131313131313131313131313131313131: tell its builder\n'
+
+======================================================================
+FAIL: test_builder_found_by_title_and_checked_branch (__main__.Fleet.test_builder_found_by_title_and_checked_branch)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-1273/skills/launch-fleet/scripts/test-records.py", line 77, in test_builder_found_by_title_and_checked_branch
+    self.assertEqual(self.run_fleet('wake', '12'), f'CI failed #31 for #12 at {SHA}: tell its builder, thread thr_synbuilder\n')
+AssertionError: 'CI f[42 chars]1313131313131313131: tell its builder\n' != 'CI f[42 chars]1313131313131313131: tell its builder, thread thr_synbuilder\n'
+- CI failed #31 for #12 at 3131313131313131313131313131313131313131: tell its builder
++ CI failed #31 for #12 at 3131313131313131313131313131313131313131: tell its builder, thread thr_synbuilder
+?                                                                             +++++++++++++++++++++++
+
+
+======================================================================
+FAIL: test_given_up_at_later_commit_closes_whole_span (__main__.Fleet.test_given_up_at_later_commit_closes_whole_span) (private=False)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-1273/skills/launch-fleet/scripts/test-records.py", line 104, in test_given_up_at_later_commit_closes_whole_span
+    self.assertIn('a fresh reviewer', out)
+AssertionError: 'a fresh reviewer' not found in 're-check #31 for #12 at 31f31f31f31f31f31f31f31f31f31f31f31f31f3: tell its reviewer, thread null\n'
+
+======================================================================
+FAIL: test_given_up_at_later_commit_closes_whole_span (__main__.Fleet.test_given_up_at_later_commit_closes_whole_span) (private=True)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-1273/skills/launch-fleet/scripts/test-records.py", line 104, in test_given_up_at_later_commit_closes_whole_span
+    self.assertIn('a fresh reviewer', out)
+AssertionError: 'a fresh reviewer' not found in 're-check #31 for #12 at 31f31f31f31f31f31f31f31f31f31f31f31f31f3: tell its reviewer, thread null\n'
+
+======================================================================
+FAIL: test_public_resume_claim_wins_once (__main__.Fleet.test_public_resume_claim_wins_once)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-1273/skills/launch-fleet/scripts/test-records.py", line 118, in test_public_resume_claim_wins_once
+    self.assertEqual(self.run_fleet('claim', '12', '1203'), 'go #12\n')
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/code/ClosedWiz-1273/skills/launch-fleet/scripts/test-records.py", line 72, in run_fleet
+    self.assertEqual(r.returncode, 0, r.stderr)
+AssertionError: 2 != 0 : fleet.sh: comment 1203 on #12 is not a "launch-fleet: starting" claim
+
+
+======================================================================
+FAIL: test_quiet_reviewer_then_told_again (__main__.Fleet.test_quiet_reviewer_then_told_again)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-1273/skills/launch-fleet/scripts/test-records.py", line 87, in test_quiet_reviewer_then_told_again
+    self.assertIn('read thread ' + THREAD + ' and tell it again', out)
+AssertionError: 'read thread thr_synreviewer and tell it again' not found in 'look #31: "review started 3131313131313131313131313131313131313131" names no thread, so its reviewer can\'t be checked\n'
+
+======================================================================
+FAIL: test_recheck_finds_original_reviewer (__main__.Fleet.test_recheck_finds_original_reviewer)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-1273/skills/launch-fleet/scripts/test-records.py", line 82, in test_recheck_finds_original_reviewer
+    self.assertEqual(self.run_fleet('wake', '12'), f're-check #31 for #12 at {NEW}: tell its reviewer, thread {THREAD}\n')
+AssertionError: 're-c[43 chars]f31f31f31f31f31f3: tell its reviewer, thread null\n' != 're-c[43 chars]f31f31f31f31f31f3: tell its reviewer, thread thr_synreviewer\n'
+- re-check #31 for #12 at 31f31f31f31f31f31f31f31f31f31f31f31f31f3: tell its reviewer, thread null
+?                                                                                              ^^^
++ re-check #31 for #12 at 31f31f31f31f31f31f31f31f31f31f31f31f31f3: tell its reviewer, thread thr_synreviewer
+?                                                                                             ++++++ ^^^^^^^^
+
+
+----------------------------------------------------------------------
+Ran 6 tests in 15.320s
+
+FAILED (failures=7)

@@ -1,0 +1,27 @@
+# Red run, before FirstHour.tsx existed: node --test test/browser/first-hour-pages.test.mjs (apps/web), at the commit adding this file.
+# Local absolute paths shortened to the checkout-relative path; stack frames removed.
+node:internal/modules/esm/resolve:272
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '<checkout>/apps/web/src/components/FirstHour.tsx' imported from <checkout>/apps/web/test/browser/first-hour-pages.test.mjs
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file://<checkout>/apps/web/src/components/FirstHour.tsx'
+}
+
+Node.js v24.22.1
+✖ test/browser/first-hour-pages.test.mjs (511.955522ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 518.06633
+
+✖ failing tests:
+
+test at test/browser/first-hour-pages.test.mjs:1:1
+✖ test/browser/first-hour-pages.test.mjs (511.955522ms)
+  'test failed'

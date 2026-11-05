@@ -1,0 +1,6 @@
+#1754 stress reproduction, original code (not committed as a test).
+A temporary test copied the debug openwiz with fs::copy 40 times, each into a
+fresh temporary path, and launched each copy with `--help` at once, while 4
+threads kept spawning `true` from the same test process.
+
+fs::copy then exec, 4 concurrent spawners: 26 launched, 14 ETXTBSY (errno 26), 0 other

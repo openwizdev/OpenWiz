@@ -1,0 +1,3 @@
+# Versions, specs and tickets live on GitHub as milestones, parent issues and sub-issues
+
+A version is a milestone, a spec is a parent issue whose body is the spec, and a ticket is a sub-issue with blocking edges, reviewed as its pull request (Jake, 2026-10-30). We considered labels for specs, but a label can't hold the spec's text or be closed; and a file in the repository, as SF1 did, but GitHub's own links can be read back and verified. Closing is verified, never assumed: a ticket on a verified merge, a spec when every sub-issue is closed, a version when its milestone is done and its live check has passed.

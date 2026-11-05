@@ -166,7 +166,8 @@ test('the built pages have no inline script, handler or style attribute', () => 
     const text = readFileSync(f, 'utf8');
     const scripts = [...text.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)];
     for (const [, attrs, body] of scripts) {
-      const external = /\ssrc="\/_next\/static\/[^"]+"/.test(attrs);
+      // #1029: and the installable app's one registration script.
+      const external = /\ssrc="(\/_next\/static\/[^"]+|\/sw-register\.js)"/.test(attrs);
       const data = /\stype="application\/json"/.test(attrs);
       assert.ok(external || data, `${f}: an inline script: <script${attrs}>${body.slice(0, 60)}`);
       if (external) assert.equal(body.trim(), '', `${f}: an external script with a body`);
@@ -178,7 +179,9 @@ test('the built pages have no inline script, handler or style attribute', () => 
   }
 });
 
-
+// Updated for #16 with this reason: the attachment tray's thumbnails are object URLs of the owner's own
+// chosen file (AW7), so `img-src` takes `blob:`. No other directive does: never a script, style,
+// font, frame or connection from a blob, and still nothing unsafe or from data: or anywhere else.
 test('the page CSP has no unsafe source, and the site serves it', async () => {
   assert.doesNotMatch(PAGE_CSP, /unsafe|data:|\*/);
   const blobs = PAGE_CSP.split('; ').filter((d) => d.includes('blob:'));
@@ -188,7 +191,7 @@ test('the page CSP has no unsafe source, and the site serves it', async () => {
   assert.equal(res.headers.get('content-security-policy'), PAGE_CSP);
 });
 
-test('the emitted JavaScript has no eval or Function(...), except the recorded noModule polyfills exception ', () => {
+test('the emitted JavaScript has no eval or Function(...), except the recorded noModule polyfills exception (Sol 5)', () => {
   const html = readFileSync(join(OUT_DIR, 'index.html'), 'utf8');
   const noModule = [...html.matchAll(/<script\b[^>]*\snoModule=""[^>]*\ssrc="([^"]+)"/g)].map((m) => m[1]);
   const js = files(join(OUT_DIR, '_next')).filter((f) => f.endsWith('.js'));
@@ -199,6 +202,6 @@ test('the emitted JavaScript has no eval or Function(...), except the recorded n
     if (/\beval\s*\(|\bFunction\s*\(/.test(text)) found.push(f.slice(OUT_DIR.length));
   }
   // The only allowed file is the polyfills chunk that pages load with `noModule`:
-  // no browser that runs ES modules (every supported one) loads it.
+  // no browser that runs ES modules (every supported one) loads it (README, Sol 5).
   assert.deepEqual(found.filter((f) => !noModule.includes(f)), [], 'eval or Function(...) in a chunk the page runs');
 });

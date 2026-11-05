@@ -84,6 +84,51 @@ fn archived_and_hidden_targets_are_refused_with_no_tell() {
     assert_eq!(fake.tell_count(), 0);
 }
 
+fn assert_visibility_refused(case: &str, visibility: Option<&str>) {
+    let mut show: serde_json::Value = serde_json::from_slice(
+        &std::fs::read(send_fixtures().join("thread-show-0015.json")).unwrap(),
+    )
+    .unwrap();
+    // Synthetic missing/future visibility, never an observed provider shape.
+    show["thread"].as_object_mut().unwrap().remove("visibility");
+    if let Some(visibility) = visibility {
+        show["thread"]["visibility"] = serde_json::json!(visibility);
+    }
+    let fake = SendFake::with(
+        &format!("m02_visibility_{case}"),
+        vec![serde_json::json!({
+            "argv": ["thread", "show", "thr_syn_0015", "--json"],
+            "stdout": show.to_string()
+        })],
+    );
+    let mut req = request(
+        "thr_syn_0015",
+        Mode::Queue,
+        "Synthetic",
+        &format!("op-m02-visibility-{case}"),
+    );
+    // The paused-queue acknowledgement must not mask a visibility bypass.
+    req.resume_paused_queue = true;
+    let report = fake.report(&req);
+    assert_eq!(
+        failed_reason(&report.result),
+        FailReason::TargetVisibilityUnknown
+    );
+    assert_eq!(report.status, Status::Failed);
+    assert_eq!(fake.tell_count(), 0);
+    assert!(fake.tells().is_empty());
+}
+
+#[test]
+fn missing_visibility_is_refused_without_a_tell() {
+    assert_visibility_refused("missing", None);
+}
+
+#[test]
+fn unknown_visibility_is_refused_without_a_tell() {
+    assert_visibility_refused("unknown", Some("synthetic_future_value"));
+}
+
 #[test]
 fn the_cli_takes_exactly_one_target() {
     let fake = SendFake::new("m02_cli_one_target", "send");

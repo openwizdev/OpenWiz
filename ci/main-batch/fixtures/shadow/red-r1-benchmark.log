@@ -1,0 +1,27 @@
+R1 first correction; red at 4488537060d4661b44de32d7ac7637fc4c0693b9. Existing proofs, no new test file.
+
++ -B -I tools/ci-bench/bench.py check-steps
+exit 1
+bench: step 'Preserve incomplete combined-main evidence' (job .github/workflows/ci.yml) matches no row of tools/ci-bench/steps.tsv
+
++ -B -I tools/ci-bench/test.py Measure.test_x5_current_job_and_step_names_are_covered
+exit 1
+test_x5_current_job_and_step_names_are_covered (__main__.Measure.test_x5_current_job_and_step_names_are_covered) ... FAIL
+
+======================================================================
+FAIL: test_x5_current_job_and_step_names_are_covered (__main__.Measure.test_x5_current_job_and_step_names_are_covered)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/ci-bench/test.py", line 137, in test_x5_current_job_and_step_names_are_covered
+    self.assertEqual(result.returncode, 0, result.stderr)
+AssertionError: 1 != 0 : bench: step 'Preserve incomplete combined-main evidence' (job .github/workflows/ci.yml) matches no row of tools/ci-bench/steps.tsv
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.065s
+
+FAILED (failures=1)
+
+step 'Preserve incomplete combined-main evidence' (job ci) matches no row of tools/ci-bench/steps.tsv
+
+step 'Keep the incomplete combined-main evidence' (job ci) matches no row of tools/ci-bench/steps.tsv

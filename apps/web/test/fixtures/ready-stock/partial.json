@@ -1,0 +1,180 @@
+{
+  "schema": "openwiz.cockpit.v1",
+  "snapshot_at": 1894698000000,
+  "projects": {
+    "coverage": {
+      "state": "complete",
+      "gaps": []
+    },
+    "freshness": {
+      "state": "fresh",
+      "snapshot_at": {
+        "known": 1894698000000
+      }
+    },
+    "items": [
+      {
+        "id": "prj_syn_atl1",
+        "name": {
+          "known": "Alder"
+        },
+        "orchestrator": {
+          "coverage": {
+            "state": "complete",
+            "gaps": []
+          },
+          "freshness": {
+            "state": "fresh",
+            "snapshot_at": {
+              "known": 1894698000000
+            }
+          },
+          "target": {
+            "known": "thr_syn_0001"
+          }
+        }
+      },
+      {
+        "id": "prj_syn_lan2",
+        "name": {
+          "known": "Birch"
+        },
+        "orchestrator": {
+          "coverage": {
+            "state": "complete",
+            "gaps": []
+          },
+          "freshness": {
+            "state": "fresh",
+            "snapshot_at": {
+              "known": 1894698000000
+            }
+          },
+          "target": {
+            "known": "thr_syn_0002"
+          }
+        }
+      }
+    ]
+  },
+  "needs_you": {
+    "coverage": {
+      "state": "complete",
+      "gaps": []
+    },
+    "freshness": {
+      "state": "fresh",
+      "snapshot_at": {
+        "known": 1894698000000
+      }
+    },
+    "items": []
+  },
+  "agents": {
+    "coverage": {
+      "state": "complete",
+      "gaps": []
+    },
+    "freshness": {
+      "state": "fresh",
+      "snapshot_at": {
+        "known": 1894698000000
+      }
+    },
+    "items": []
+  },
+  "ready_stock": {
+    "coverage": {
+      "state": "partial",
+      "gaps": [
+        {
+          "source": "fleet",
+          "reason": "PR-title evidence unavailable"
+        }
+      ]
+    },
+    "freshness": {
+      "state": "fresh",
+      "snapshot_at": {
+        "known": 1894698000000
+      }
+    },
+    "projects": [
+      {
+        "project": "prj_syn_atl1",
+        "coverage": {
+          "state": "complete",
+          "gaps": []
+        },
+        "freshness": {
+          "state": "fresh",
+          "snapshot_at": {
+            "known": 1894698000000
+          }
+        },
+        "counts": {
+          "known": {
+            "ready": 3,
+            "running": 2,
+            "blocked": 1,
+            "held": 1,
+            "unapproved": 1,
+            "owner_wait": 1,
+            "capacity_wait": 0,
+            "unknown": 0,
+            "state": "low_stock"
+          }
+        },
+        "last_good": null
+      },
+      {
+        "project": "prj_syn_lan2",
+        "coverage": {
+          "state": "partial",
+          "gaps": [
+            {
+              "source": "fleet",
+              "reason": "PR-title evidence unavailable"
+            }
+          ]
+        },
+        "freshness": {
+          "state": "fresh",
+          "snapshot_at": {
+            "known": 1894698000000
+          }
+        },
+        "counts": {
+          "known": {
+            "ready": 0,
+            "running": 1,
+            "blocked": 0,
+            "held": 0,
+            "unapproved": 0,
+            "owner_wait": 0,
+            "capacity_wait": 0,
+            "unknown": 2,
+            "state": "indeterminate"
+          }
+        },
+        "last_good": {
+          "snapshot_at": 1894697880000,
+          "counts": {
+            "ready": 2,
+            "running": 1,
+            "blocked": 0,
+            "held": 0,
+            "unapproved": 0,
+            "owner_wait": 0,
+            "capacity_wait": 0,
+            "unknown": 0,
+            "state": "fed"
+          }
+        }
+      }
+    ],
+    "totals": {
+      "unknown": "Required project facts are incomplete"
+    }
+  }
+}

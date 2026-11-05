@@ -1,0 +1,245 @@
+{
+  "schema": "openwiz.war-room.v1",
+  "sample_id": "2030-01-02T12:00:00Z",
+  "sample_at": "2030-01-02T12:00:00Z",
+  "assembled_at": "2030-01-02T12:00:00Z",
+  "groups": [
+    "throughput",
+    "stage_waits",
+    "board",
+    "ci",
+    "usage",
+    "decisions"
+  ],
+  "providers": [
+    {
+      "slot": "activity",
+      "state": "known",
+      "prerequisites": [],
+      "metrics": [
+        {
+          "id": "merged-hour-forward",
+          "group": "throughput",
+          "label": "Merged this UTC hour forward",
+          "state": "known",
+          "value": 3,
+          "unit": "count",
+          "native_unit": "count",
+          "statistic": "count",
+          "window": {
+            "since": "2030-01-02T11:00:00Z",
+            "until": "2030-01-02T12:00:00Z",
+            "timezone": "UTC"
+          },
+          "observed_at": "2030-01-02T12:00:00Z",
+          "fresh_until": "2030-01-02T12:05:00Z",
+          "freshness": "fresh",
+          "source": {
+            "path": "fixtures/activity/merged.json",
+            "schema": "synthetic.activity.v1",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "evidence": [
+            "https://github.com/synthetic-owner/work/pull/4001"
+          ],
+          "sample": {
+            "observed": 3,
+            "expected": 3,
+            "identities": [
+              "pr-4001",
+              "pr-4002",
+              "pr-4003"
+            ],
+            "numerator": null,
+            "denominator": null
+          },
+          "dimensions": {
+            "direction": "forward",
+            "pool": null,
+            "stage": null,
+            "ticket": null,
+            "cohort": "merged-utc-hour"
+          },
+          "interval": null,
+          "prerequisites": []
+        }
+      ]
+    },
+    {
+      "slot": "stage_waits",
+      "state": "unavailable",
+      "prerequisites": [
+        "WR3 #2347: verified merges of TL1 #2336 and TL2 #2337, then their actual settings and measured stage contracts; native fields unavailable here."
+      ],
+      "metrics": []
+    },
+    {
+      "slot": "board",
+      "state": "unavailable",
+      "prerequisites": [
+        "WR2 #2346: selected validated board graph/measures/history with source observation bounds."
+      ],
+      "metrics": []
+    },
+    {
+      "slot": "ci_bench",
+      "state": "unavailable",
+      "prerequisites": [
+        "WR2 #2346: selected existing CI points/trends with native completed-window, capacity, timing and estimate labels."
+      ],
+      "metrics": []
+    },
+    {
+      "slot": "factory_metrics",
+      "state": "unavailable",
+      "prerequisites": [
+        "WR2 #2346: selected existing daily factory artifacts; preserve UTC days, all-base merge scope and usage day-ratio labels."
+      ],
+      "metrics": []
+    },
+    {
+      "slot": "journey",
+      "state": "unavailable",
+      "prerequisites": [
+        "WR2 #2346: selected validated journey/bench artifacts; historical completeness remains unknown."
+      ],
+      "metrics": []
+    },
+    {
+      "slot": "skills_eval",
+      "state": "unavailable",
+      "prerequisites": [
+        "WR2 #2346: selected existing skills-eval manifest/score/coverage records; fixture proof is not a paid or live result."
+      ],
+      "metrics": []
+    },
+    {
+      "slot": "cost",
+      "state": "unavailable",
+      "prerequisites": [
+        "WR4 #2348: complete nonoverlapping USD allocation for one merged-PR cohort including shared-parent/helpers, sandbox and CI; lower bounds and daily ratios alone are insufficient."
+      ],
+      "metrics": []
+    },
+    {
+      "slot": "credits",
+      "state": "unavailable",
+      "prerequisites": [
+        "WR2 #2346: selected existing credit samples/history with provider, unit, window and coverage; no daily billing endpoint is assumed."
+      ],
+      "metrics": []
+    },
+    {
+      "slot": "claude_usage",
+      "state": "unavailable",
+      "prerequisites": [
+        "WR2 #2346: validated complete day-specific owner-supplied usage export or existing recorded usage; no inferred total or endpoint."
+      ],
+      "metrics": []
+    },
+    {
+      "slot": "decisions",
+      "state": "unavailable",
+      "prerequisites": [
+        "WR2 #2346: sanitized structured pending-decision records with discovery coverage/currentness; no answer control or raw wording."
+      ],
+      "metrics": []
+    },
+    {
+      "slot": "answer_time",
+      "state": "unavailable",
+      "prerequisites": [
+        "WR5 #2349: source-linked request and substantive orchestrator disposition with independent provenance; accepted notifications or resolved status alone are insufficient."
+      ],
+      "metrics": []
+    },
+    {
+      "slot": "rework",
+      "state": "partial",
+      "prerequisites": [
+        "Review/history coverage missing for two of four merged PRs."
+      ],
+      "metrics": [
+        {
+          "id": "review-changes-share",
+          "group": "board",
+          "label": "Share of reviewed PRs with CHANGES; incomplete cohort",
+          "state": "partial",
+          "value": null,
+          "unit": "ratio",
+          "native_unit": "ratio",
+          "statistic": "proportion",
+          "window": {
+            "since": "2030-01-02T11:00:00Z",
+            "until": "2030-01-02T12:00:00Z",
+            "timezone": "UTC"
+          },
+          "observed_at": "2030-01-02T12:00:00Z",
+          "fresh_until": "2030-01-02T12:05:00Z",
+          "freshness": "fresh",
+          "source": {
+            "path": "fixtures/rework/journeys.json",
+            "schema": "closedwiz.journey.v1",
+            "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          },
+          "evidence": [
+            "https://github.com/synthetic-owner/work/pull/4001"
+          ],
+          "sample": {
+            "observed": 2,
+            "expected": 4,
+            "identities": [
+              "pr-4001",
+              "pr-4002"
+            ],
+            "numerator": 1,
+            "denominator": 2
+          },
+          "dimensions": {
+            "direction": null,
+            "pool": null,
+            "stage": null,
+            "ticket": null,
+            "cohort": "merged-prs-week"
+          },
+          "interval": null,
+          "prerequisites": [
+            "Review/history coverage missing for two of four merged PRs."
+          ]
+        }
+      ]
+    },
+    {
+      "slot": "eb6",
+      "state": "unavailable",
+      "prerequisites": [
+        "EB6 #2177: sourced first-push-to-merge/defect artifacts and verified coverage; contract preparation does not prove a measured result."
+      ],
+      "metrics": []
+    },
+    {
+      "slot": "eb7",
+      "state": "unavailable",
+      "prerequisites": [
+        "EB7 #2178: actual frozen-cohort paired replay result under its separate gates; no replay run is claimed."
+      ],
+      "metrics": []
+    },
+    {
+      "slot": "eb8",
+      "state": "unavailable",
+      "prerequisites": [
+        "EB8 #2179: independently authorized bounded live experiment and retained result; no live go-ahead or result is supplied here."
+      ],
+      "metrics": []
+    },
+    {
+      "slot": "eb9",
+      "state": "unavailable",
+      "prerequisites": [
+        "EB9 #2192: retained hold released by its owner and actual huntr/settings A/B artifacts under separate gates; hold is unchanged."
+      ],
+      "metrics": []
+    }
+  ]
+}

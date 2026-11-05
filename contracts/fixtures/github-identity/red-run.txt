@@ -1,0 +1,196 @@
+GI-P4 red run (#2545), before the contract and fixtures existed.
+Command: python3 -I tools/github-app/test_identity_contract.py (exit 1)
+
+test_app_profile_is_the_registered_manifest (__main__.ContractPin.test_app_profile_is_the_registered_manifest) ... ERROR
+test_installations_select_repositories_only (__main__.ContractPin.test_installations_select_repositories_only) ... ERROR
+test_read_profile_is_the_reads_contract (__main__.ContractPin.test_read_profile_is_the_reads_contract) ... ERROR
+test_schema_and_no_authority (__main__.ContractPin.test_schema_and_no_authority) ... ERROR
+test_token_command_guards (__main__.ContractPin.test_token_command_guards) ... ERROR
+test_commit_identity_uses_the_noreply_email (__main__.Fixtures.test_commit_identity_uses_the_noreply_email) ... ERROR
+test_fixtures_exist_and_parse (__main__.Fixtures.test_fixtures_exist_and_parse) ... ERROR
+test_secret_fixture_names_the_secret (__main__.Fixtures.test_secret_fixture_names_the_secret) ... ERROR
+test_token_exchange_requests_exact_profiles (__main__.Fixtures.test_token_exchange_requests_exact_profiles) ... ERROR
+test_contract_and_fixtures_hold_no_credential_or_real_id (__main__.NoSecretsOrRealIds.test_contract_and_fixtures_hold_no_credential_or_real_id) ... ERROR
+test_the_scan_catches_what_it_claims (__main__.NoSecretsOrRealIds.test_the_scan_catches_what_it_claims) ... ok
+
+======================================================================
+ERROR: test_app_profile_is_the_registered_manifest (__main__.ContractPin.test_app_profile_is_the_registered_manifest)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_identity_contract.py", line 68, in setUp
+    self.pin = pin()
+               ^^^^^
+  File "tools/github-app/test_identity_contract.py", line 33, in pin
+    blocks = re.findall(r"^```json\n(.*?)^```$", CONTRACT.read_text(), re.M | re.S)
+                                                 ^^^^^^^^^^^^^^^^^^^^
+  File "<python>/pathlib.py", line 1059, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<python>/pathlib.py", line 1045, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'contracts/github-identity.v1.md'
+
+======================================================================
+ERROR: test_installations_select_repositories_only (__main__.ContractPin.test_installations_select_repositories_only)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_identity_contract.py", line 68, in setUp
+    self.pin = pin()
+               ^^^^^
+  File "tools/github-app/test_identity_contract.py", line 33, in pin
+    blocks = re.findall(r"^```json\n(.*?)^```$", CONTRACT.read_text(), re.M | re.S)
+                                                 ^^^^^^^^^^^^^^^^^^^^
+  File "<python>/pathlib.py", line 1059, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<python>/pathlib.py", line 1045, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'contracts/github-identity.v1.md'
+
+======================================================================
+ERROR: test_read_profile_is_the_reads_contract (__main__.ContractPin.test_read_profile_is_the_reads_contract)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_identity_contract.py", line 68, in setUp
+    self.pin = pin()
+               ^^^^^
+  File "tools/github-app/test_identity_contract.py", line 33, in pin
+    blocks = re.findall(r"^```json\n(.*?)^```$", CONTRACT.read_text(), re.M | re.S)
+                                                 ^^^^^^^^^^^^^^^^^^^^
+  File "<python>/pathlib.py", line 1059, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<python>/pathlib.py", line 1045, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'contracts/github-identity.v1.md'
+
+======================================================================
+ERROR: test_schema_and_no_authority (__main__.ContractPin.test_schema_and_no_authority)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_identity_contract.py", line 68, in setUp
+    self.pin = pin()
+               ^^^^^
+  File "tools/github-app/test_identity_contract.py", line 33, in pin
+    blocks = re.findall(r"^```json\n(.*?)^```$", CONTRACT.read_text(), re.M | re.S)
+                                                 ^^^^^^^^^^^^^^^^^^^^
+  File "<python>/pathlib.py", line 1059, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<python>/pathlib.py", line 1045, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'contracts/github-identity.v1.md'
+
+======================================================================
+ERROR: test_token_command_guards (__main__.ContractPin.test_token_command_guards)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_identity_contract.py", line 68, in setUp
+    self.pin = pin()
+               ^^^^^
+  File "tools/github-app/test_identity_contract.py", line 33, in pin
+    blocks = re.findall(r"^```json\n(.*?)^```$", CONTRACT.read_text(), re.M | re.S)
+                                                 ^^^^^^^^^^^^^^^^^^^^
+  File "<python>/pathlib.py", line 1059, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<python>/pathlib.py", line 1045, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'contracts/github-identity.v1.md'
+
+======================================================================
+ERROR: test_commit_identity_uses_the_noreply_email (__main__.Fixtures.test_commit_identity_uses_the_noreply_email)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_identity_contract.py", line 119, in setUp
+    self.pin = pin()
+               ^^^^^
+  File "tools/github-app/test_identity_contract.py", line 33, in pin
+    blocks = re.findall(r"^```json\n(.*?)^```$", CONTRACT.read_text(), re.M | re.S)
+                                                 ^^^^^^^^^^^^^^^^^^^^
+  File "<python>/pathlib.py", line 1059, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<python>/pathlib.py", line 1045, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'contracts/github-identity.v1.md'
+
+======================================================================
+ERROR: test_fixtures_exist_and_parse (__main__.Fixtures.test_fixtures_exist_and_parse)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_identity_contract.py", line 119, in setUp
+    self.pin = pin()
+               ^^^^^
+  File "tools/github-app/test_identity_contract.py", line 33, in pin
+    blocks = re.findall(r"^```json\n(.*?)^```$", CONTRACT.read_text(), re.M | re.S)
+                                                 ^^^^^^^^^^^^^^^^^^^^
+  File "<python>/pathlib.py", line 1059, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<python>/pathlib.py", line 1045, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'contracts/github-identity.v1.md'
+
+======================================================================
+ERROR: test_secret_fixture_names_the_secret (__main__.Fixtures.test_secret_fixture_names_the_secret)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_identity_contract.py", line 119, in setUp
+    self.pin = pin()
+               ^^^^^
+  File "tools/github-app/test_identity_contract.py", line 33, in pin
+    blocks = re.findall(r"^```json\n(.*?)^```$", CONTRACT.read_text(), re.M | re.S)
+                                                 ^^^^^^^^^^^^^^^^^^^^
+  File "<python>/pathlib.py", line 1059, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<python>/pathlib.py", line 1045, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'contracts/github-identity.v1.md'
+
+======================================================================
+ERROR: test_token_exchange_requests_exact_profiles (__main__.Fixtures.test_token_exchange_requests_exact_profiles)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_identity_contract.py", line 119, in setUp
+    self.pin = pin()
+               ^^^^^
+  File "tools/github-app/test_identity_contract.py", line 33, in pin
+    blocks = re.findall(r"^```json\n(.*?)^```$", CONTRACT.read_text(), re.M | re.S)
+                                                 ^^^^^^^^^^^^^^^^^^^^
+  File "<python>/pathlib.py", line 1059, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<python>/pathlib.py", line 1045, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'contracts/github-identity.v1.md'
+
+======================================================================
+ERROR: test_contract_and_fixtures_hold_no_credential_or_real_id (__main__.NoSecretsOrRealIds.test_contract_and_fixtures_hold_no_credential_or_real_id)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_identity_contract.py", line 155, in test_contract_and_fixtures_hold_no_credential_or_real_id
+    text = path.read_text()
+           ^^^^^^^^^^^^^^^^
+  File "<python>/pathlib.py", line 1059, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<python>/pathlib.py", line 1045, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'contracts/github-identity.v1.md'
+
+----------------------------------------------------------------------
+Ran 11 tests in 0.002s
+
+FAILED (errors=10)

@@ -1,5 +1,5 @@
 //! AP7 Low disk. Staging is refused, with "low disk", when it would leave
-//! less than 1 GiB free on the state volume, before anything is
+//! less than 1 GiB free on the state volume (sheet B-3), before anything is
 //! written: no `.partial` and no directory are left. Free space that can't
 //! be measured stages nothing either (fail closed).
 
@@ -106,20 +106,22 @@ const DF_OUTPUTS: &[(&str, &str, Option<u64>)] = &[
         Some(8 * 1024),
     ),
     ("nothing", "", None),
+    // Sol, round 1, R3: only the six fields POSIX prints, the mount point
+    // last; a name or a mount point with spaces is ambiguous, so refused.
     (
-        "counters only ",
+        "counters only (Sol)",
         "Filesystem 1024-blocks Used Available Capacity Mounted on\n\
          1 2 999999999 100%\n",
         None,
     ),
     (
-        "no mount point ",
+        "no mount point (Sol)",
         "Filesystem 1024-blocks Used Available Capacity Mounted on\n\
          /dev/syn 1 2 999999999 100%\n",
         None,
     ),
     (
-        "counters inside the name, the real ones 0 ",
+        "counters inside the name, the real ones 0 (Sol)",
         "Filesystem 1024-blocks Used Available Capacity Mounted on\n\
          map 1 2 999999999 100% home 100 100 0 100% /home\n",
         None,

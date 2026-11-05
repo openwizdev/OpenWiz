@@ -1,0 +1,19 @@
+[
+  {"name": "missing installer", "at": ["files", "install.sh"], "delete": true, "errors": ["layout"]},
+  {"name": "missing carried contract", "at": ["files", "contracts/plan-links.v1.md"], "delete": true, "errors": ["layout"]},
+  {"name": "missing Codex entry", "at": ["files", "skills/alpha/agents/openai.yaml"], "delete": true, "errors": ["layout"]},
+  {"name": "wrong marketplace", "at": ["files", ".claude-plugin/marketplace.json"], "value": "{\"name\":\"other\",\"plugins\":[{\"name\":\"openwiz\",\"source\":\"./\"}]}", "errors": ["plugin"]},
+  {"name": "outside plugin source", "at": ["files", ".claude-plugin/marketplace.json"], "value": "{\"name\":\"wizskills\",\"plugins\":[{\"name\":\"openwiz\",\"source\":\"../other\"}]}", "errors": ["plugin"]},
+  {"name": "missing skill manifest entry", "at": ["files", ".claude-plugin/plugin.json"], "value": "{\"name\":\"openwiz\",\"version\":\"0.1.0\",\"skills\":[]}", "errors": ["plugin"]},
+  {"name": "manifest version disagrees", "at": ["files", ".claude-plugin/plugin.json"], "value": "{\"name\":\"openwiz\",\"version\":\"0.2.0\",\"skills\":[\"./skills/alpha\"]}", "errors": ["version"]},
+  {"name": "lock tag prefix forbidden", "at": ["lock", "version"], "value": "v0.1.0", "errors": ["lock", "version"]},
+  {"name": "short commit forbidden", "at": ["lock", "commit"], "value": "aaaaaaa", "errors": ["lock"]},
+  {"name": "non-string tree forbidden", "at": ["lock", "tree"], "value": 42, "errors": ["lock"]},
+  {"name": "extra lock field forbidden", "at": ["lock", "extra"], "value": true, "errors": ["lock"]},
+  {"name": "release record missing", "at": ["release", "tree"], "delete": true, "errors": ["release"]},
+  {"name": "different release commit", "at": ["release", "commit"], "value": "cccccccccccccccccccccccccccccccccccccccc", "errors": ["binding"]},
+  {"name": "different release tree", "at": ["release", "tree"], "value": "dddddddddddddddddddddddddddddddddddddddd", "errors": ["binding"]},
+  {"name": "different tag", "at": ["tag"], "value": "v0.2.0", "errors": ["binding"]},
+  {"name": "invalid date", "at": ["files", "CHANGELOG.md"], "value": "# Changelog\n\n## 0.1.0 - 2030-02-30\n\n- Synthetic change.\n", "errors": ["changelog"]},
+  {"name": "unlisted changes forbidden", "at": ["files", "CHANGELOG.md"], "value": "# Changelog\n\n## 0.1.0 - 2030-01-02\n\nSynthetic change.\n", "errors": ["changelog"]}
+]

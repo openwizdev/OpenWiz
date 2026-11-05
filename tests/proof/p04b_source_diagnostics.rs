@@ -1,6 +1,26 @@
+//! P4 (continued) Source diagnostics: text `room-cli` prints when a read
+//! fails, or prints where JSON or a version was expected, never reaches
+//! OpenWiz's output, except a line in the safe grammar.
+//!
+//! New in the separate fix that #5's independent review (S1) asked for. #5
+//! A7: errors and logs never include paths, the environment, stack traces
+//! or credentials. The safe grammar remains provisional; it is:
+//!
+//! - `Error: HTTP <3 digits>`, optionally `: ` and a reason phrase of ASCII
+//!   letters and single spaces (at most 60 characters), is kept as it is;
+//! - otherwise, if the line has `HTTP <3 digits>`, it becomes
+//!   `Error: HTTP <code> (detail withheld)`;
+//! - otherwise `room-cli error (detail withheld)`.
+//!
+//! Each failing read is checked through the core, the in-process `openwiz`
+//! and the release `openwiz` binary, in text and `--json`. The committed
+//! fixtures (`tests/fixtures/room-cli-0.43.1/diagnostics-*`) hold what the
+//! fixture scan allows; the variants it forbids in committed files are
+//! written here, at run time, into each test's own directory.
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 
 use openwiz_core::ops::{ListRequest, OpError};
 use serde_json::{Value, json};
@@ -182,6 +202,7 @@ fn stderr_variants() -> Vec<Planted> {
             &["SyntheticLongToken"],
             WITHHELD,
         ),
+        // The limits, added after the internal Haiku review (B F3).
         planted(
             "reason phrase of 60 characters",
             &format!("Error: HTTP 500: {PHRASE_60}"),
@@ -338,7 +359,7 @@ fn fake_with(test: &str, scenario: &str, edit: impl FnOnce(&mut Value)) -> Fake 
 }
 
 /// What the failing response prints on stdout; a failed read's stdout is
-/// never used.
+/// never used (added after the internal Haiku review, B F5).
 const FAILED_STDOUT: &str =
     "Synthetic stdout of a failed read at /Users/synthetic-owner/failed-read-stdout";
 const FAILED_STDOUT_MARKER: &str = "failed-read-stdout";
@@ -369,8 +390,8 @@ fn release_openwiz() -> &'static Path {
             .to_path_buf();
         let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned());
         let build = Command::new(cargo)
-            .args(["build", "--release", "--locked", "-p", "openwiz-cli"])
-            .args(["--bin", "openwiz", "--target-dir"])
+            .args(["build", "--release", "--locked", "-p", "openwiz-tests"])
+            .args(["--example", "openwiz", "--target-dir"])
             .arg(&target)
             .current_dir(&root)
             .output()
@@ -380,20 +401,15 @@ fn release_openwiz() -> &'static Path {
             "cargo build --release failed:\n{}",
             String::from_utf8_lossy(&build.stderr)
         );
-        target.join("release").join("openwiz")
+        target.join("release").join("examples").join("openwiz")
     })
 }
 
 /// Runs the release `openwiz` with this fake first on `PATH`.
 fn binary(fake: &Fake, args: &[&str]) -> (i32, String, String) {
-    let path = format!(
-        "{}:{}",
-        fake.dir.display(),
-        std::env::var("PATH").unwrap_or_default()
-    );
     let out = Command::new(release_openwiz())
         .args(args)
-        .env("PATH", path)
+        .env("OPENWIZ_FIXTURE_PROGRAM", fake.program())
         .current_dir(&fake.dir)
         .output()
         .expect("run the release openwiz");
@@ -449,29 +465,76 @@ fn problems(
     found
 }
 
-/// Runs every stderr variant against one failing read.
-fn check_failing_read(read: FailingRead) {
+/// The problems one stderr variant shows on every surface of one failing
+/// read, in a fake of its own.
+fn check_variant(read: &FailingRead, i: usize, variant: Planted) -> Vec<String> {
+    let label = format!("{} / {}", read.read, variant.name);
+    let fake = fake_with(
+        &format!("p04b_{}_{i}", read.scenario),
+        read.scenario,
+        set_stderr(&variant.text),
+    );
+    let mut markers = variant.markers;
+    markers.push(FAILED_STDOUT_MARKER.to_owned());
+    // #37, Sol's PR #40 finding 1: a failed version read keeps safe facts
+    // only, so even #21's safe line is never shown for it.
+    let kept = if read.read == "room-cli --version" {
+        markers.push(variant.kept.clone());
+        "exited 1 (detail withheld)".to_owned()
+    } else {
+        format!("exited 1: {}", variant.kept)
+    };
     let mut found = Vec::new();
-    for (i, variant) in stderr_variants().into_iter().enumerate() {
-        let label = format!("{} / {}", read.read, variant.name);
-        let fake = fake_with(
-            &format!("p04b_{}_{i}", read.scenario),
-            read.scenario,
-            set_stderr(&variant.text),
-        );
-        let mut markers = variant.markers;
-        markers.push(FAILED_STDOUT_MARKER.to_owned());
-
-        let kept = if read.read == "room-cli --version" {
-            markers.push(variant.kept.clone());
-            "exited 1 (detail withheld)".to_owned()
-        } else {
-            format!("exited 1: {}", variant.kept)
-        };
-        for (surface, texts) in surfaces(&fake, &read) {
-            found.extend(problems(&label, &surface, &texts, &markers, &kept));
-        }
+    for (surface, texts) in surfaces(&fake, read) {
+        found.extend(problems(&label, &surface, &texts, &markers, &kept));
     }
+    found
+}
+
+/// How many rows of one case run at once (#1260). Eight, not four: on a
+/// runner shared with every other test target, proof's six failing-read cases
+/// were 10.5-10.7 s against 11.5-11.9 s with four (three runs each, beside
+/// five other targets), and the process tree's peak stayed at 151-251 MiB
+/// (X3's fixture-worker measurement).
+const ROWS_AT_ONCE: usize = 8;
+
+/// Runs `check` on every item, [`ROWS_AT_ONCE`] at a time, and returns the
+/// results in the items' order (#1260): for rows that share nothing and
+/// mostly wait on child processes. A row's panic fails the test.
+fn in_pool<T: Send, R: Send>(items: Vec<T>, check: impl Fn(usize, T) -> R + Sync) -> Vec<R> {
+    let items = Mutex::new(items.into_iter().enumerate());
+    let mut results: Vec<(usize, R)> = std::thread::scope(|scope| {
+        let workers: Vec<_> = (0..ROWS_AT_ONCE)
+            .map(|_| {
+                scope.spawn(|| {
+                    let mut done = Vec::new();
+                    loop {
+                        let next = items.lock().unwrap_or_else(|p| p.into_inner()).next();
+                        let Some((i, item)) = next else { break };
+                        done.push((i, check(i, item)));
+                    }
+                    done
+                })
+            })
+            .collect();
+        workers
+            .into_iter()
+            .flat_map(|worker| worker.join().expect("a row's check panicked"))
+            .collect()
+    });
+    results.sort_by_key(|(i, _)| *i);
+    results.into_iter().map(|(_, result)| result).collect()
+}
+
+/// Runs every stderr variant against one failing read. The variants share
+/// nothing (each has its own fake and directory), so they run in a pool
+/// (#1260): the case mostly waits on child processes.
+fn check_failing_read(read: FailingRead) {
+    let read = &read;
+    let found: Vec<String> = in_pool(stderr_variants(), |i, variant| {
+        check_variant(read, i, variant)
+    })
+    .concat();
     assert!(
         found.is_empty(),
         "{} problem(s):\n{}",
@@ -560,6 +623,9 @@ fn thread_output_diagnostics_never_reach_the_output() {
     });
 }
 
+/// The version read goes through the same runner. Since #37 (Sol's PR #40
+/// finding 1) its failure shows safe facts only: `exited 1 (detail
+/// withheld)`, never even #21's safe line.
 #[test]
 fn version_read_diagnostics_never_reach_the_output() {
     check_failing_read(FailingRead {
@@ -672,8 +738,10 @@ fn unexpected_stdout_never_reaches_the_output() {
     let planted_dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("p04b_planted_stdout");
     let _ = std::fs::remove_dir_all(&planted_dir);
     crate::dirs::private_dir_all(&planted_dir).expect("planted dir");
-    let mut found = Vec::new();
-    for (i, (name, argv, stdout, read, kept)) in cases.into_iter().enumerate() {
+    // Each case has its own fake and file, so the cases run in a pool
+    // (#1260).
+    let (planted_dir, markers) = (&planted_dir, &markers);
+    let found: Vec<String> = in_pool(cases, |i, (name, argv, stdout, read, kept)| {
         let file = planted_dir.join(format!("stdout-{i}"));
         std::fs::write(&file, stdout).expect("planted stdout");
         let response = json!({"argv": argv, "stdout_file": file.to_str().expect("utf-8")});
@@ -683,10 +751,13 @@ fn unexpected_stdout_never_reaches_the_output() {
                 .expect("responses")
                 .insert(0, response);
         });
+        let mut found = Vec::new();
         for (surface, texts) in surfaces(&fake, &read) {
-            found.extend(problems(name, &surface, &texts, &markers, kept));
+            found.extend(problems(name, &surface, &texts, markers, kept));
         }
-    }
+        found
+    })
+    .concat();
     assert!(
         found.is_empty(),
         "{} problem(s):\n{}",
@@ -695,6 +766,10 @@ fn unexpected_stdout_never_reaches_the_output() {
     );
 }
 
+/// New after the internal Haiku review (A1): not-found is still recognised
+/// from the raw line, as before the fix (it contains `HTTP 404: Thread not
+/// found`), so `show` of a missing session still exits 3, while only the
+/// safe line is shown.
 #[test]
 fn a_not_found_line_with_an_unsafe_suffix_is_still_not_found() {
     let planted = "Error: HTTP 404: Thread not found at /Users/synthetic-owner/.syn-room (token=synthetic-secret-value)";
@@ -761,6 +836,10 @@ fn a_not_found_line_with_an_unsafe_suffix_is_still_not_found() {
     );
 }
 
+/// New after merging #8's `send` (builder finding M1): the sanitizer keeps
+/// #8's rule that only an exact documented stderr line is a rejection of
+/// `thread tell`. A documented line with an unsafe suffix is uncertain, the
+/// safe direction, and nothing of it is shown.
 #[test]
 fn tell_keeps_its_exact_documented_rejections() {
     use openwiz_core::messaging::Mode;
@@ -835,6 +914,9 @@ fn tell_keeps_its_exact_documented_rejections() {
     );
 }
 
+/// #37: #21's version grammar is `N.N.N` (1 to 4 digits each) or `v<N>` (1 to
+/// 6 digits), the same as the core's. A version in it is shown as it is;
+/// anything else is withheld, and the run goes on.
 #[test]
 fn the_version_grammar_is_n_n_n_or_v_n() {
     let cases: &[(&str, bool)] = &[
@@ -854,7 +936,14 @@ fn the_version_grammar_is_n_n_n_or_v_n() {
         ("v127 (synthetic update notice)", false),
         ("vv127", false),
     ];
-    for (i, (version, shown)) in cases.iter().enumerate() {
+    // Each row has its own fake, so the rows run in a pool (#1260).
+    in_pool(cases.to_vec(), |i, (version, shown)| {
+        version_grammar_row(i, version, shown)
+    });
+}
+
+fn version_grammar_row(i: usize, version: &str, shown: bool) {
+    {
         let response = json!({"argv": ["--version"], "stdout": format!("{version}\n")});
         let fake = fake_with(&format!("p04b_version_grammar_{i}"), "normal", |doc| {
             doc["responses"]
@@ -866,8 +955,8 @@ fn the_version_grammar_is_n_n_n_or_v_n() {
             .list(&ListRequest::default())
             .unwrap_or_else(|e| panic!("{version:?}: the run goes on, got {e:?}"));
         let json = serde_json::to_value(&env).expect("envelope");
-        if *shown {
-            assert_eq!(json["source"]["version"]["known"], *version, "{version:?}");
+        if shown {
+            assert_eq!(json["source"]["version"]["known"], version, "{version:?}");
         } else {
             let why = json["source"]["version"]["unknown"]
                 .as_str()
@@ -882,5 +971,56 @@ fn the_version_grammar_is_n_n_n_or_v_n() {
             !env.data.sessions.is_empty(),
             "{version:?}: sessions listed"
         );
+    }
+}
+
+// #1672: unsafe diagnostics use whole HTTP words, including at byte zero.
+#[test]
+fn ta3_http_word_boundaries_return_typed_private_read_failures() {
+    use openwiz_core::source::{SessionScope, SessionSource, SourceError};
+    use std::time::{Duration, Instant};
+    for (i, (stderr, expected)) in [
+        (
+            "HTTP 503: synthetic_marker",
+            "Error: HTTP 503 (detail withheld)",
+        ),
+        (
+            "prefixHTTP 503: synthetic_marker",
+            "room-cli error (detail withheld)",
+        ),
+        (
+            "prefix HTTP 503: synthetic_marker",
+            "Error: HTTP 503 (detail withheld)",
+        ),
+        ("Error: HTTP 503: Busy", "Error: HTTP 503: Busy"),
+        (
+            "HTTP 5039: synthetic_marker",
+            "room-cli error (detail withheld)",
+        ),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let fake = fake_with(
+            &format!("ta3_http_words_{i}"),
+            "diagnostics-thread-list",
+            set_stderr(stderr),
+        );
+        let error = fake
+            .source()
+            .list_sessions(
+                SessionScope::default(),
+                Instant::now() + Duration::from_secs(5),
+            )
+            .unwrap_err();
+        assert_eq!(
+            error,
+            SourceError::CommandFailed {
+                exit_code: Some(1),
+                detail: expected.to_owned(),
+            },
+            "{stderr}"
+        );
+        assert!(!error.to_string().contains("synthetic_marker"));
     }
 }

@@ -1,4 +1,49 @@
-
+// Static checks for apps/web, on the TypeScript compiler API (no ESLint:
+// approval W-7). Exits 1 with one line per problem.
+//
+// - V1: the envelope types in src/envelope.ts have exactly the schema's
+//   properties and enums (contracts/inventory.v1.schema.json).
+// - V3: no raw HTML injection, no eval, no `javascript:` URLs.
+// - V10: imports stay inside apps/web; only src/api.ts touches fetch; no
+//   storage, worker, push or socket APIs; no absolute URLs (except #2292's
+//   one share URL literal, once, in src/feedback.ts); no sorting; a
+//   session's status is read only to show it (statusMarker or <Marker>).
+// - Types: no `any`; type assertions only where JSON is checked (src/envelope.ts,
+//   src/messaging.ts).
+// - W5 (#9): one POST, in src/api.ts; the request body is built only in
+//   src/composer.ts; a send starts only from a <SendControl onPress> (the one
+//   way a send button is rendered) or the keyboard handler, and a check only
+//   from an owner's `on…` handler; never from an effect, a timer or a
+//   refresh. The messaging types match contracts/messaging.v1.schema.json.
+// - W12 (#9): one panel and sheet (one <dialog>, in Detail.tsx), the composer
+//   rendered only there, and no new page.
+// - #12 (the launcher): U14, the launcher rendered only in Detail.tsx's
+//   dialog, and one prompt body (a <textarea> only in PromptBody.tsx, and
+//   #656's one card-bound Own words field in Decisions.tsx, and #2292's one
+//   chosen-public-feedback field in FeedbackShare.tsx; PromptBody used by
+//   the composer and the launcher, once each); U12 and U13, the create
+//   (`postThread`) and its preview called once each, only in
+//   src/launcher.ts, and a create (`.create`) started only from an owner's
+//   `on…` handler, never an effect, a timer or a refresh; the create body's
+//   `attachments` built only in src/launcher.ts; U5, the new-thread types
+//   match contracts/new-thread.v1.schema.json, with its enums.
+// - Storage: sessionStorage only in src/composer.ts (WS-7, WS-10); the
+//   launcher and the attachment tray get it from there (`browserStorage`).
+// - #16 (the attachment tray): AW8, one <AttachmentTray>, only in
+//   PromptBody.tsx, one file input, only in AttachmentTray.tsx, one tray hook
+//   (`useTray`), and the upload (`postAttachment`) and removal
+//   (`deleteAttachment`) called once each, only in src/attachments.ts; in the
+//   components, an upload, a retry or a removal starts only inside an owner's
+//   `on…` handler. XMLHttpRequest (for upload progress) only in src/api.ts.
+//   AW7, an <img> only in AttachmentTray.tsx, object URLs made only in
+//   App.tsx, and no <object>, <embed> or <iframe>. The send body's
+//   `attachments` set only in src/composer.ts, the create body's only in
+//   src/launcher.ts.
+// - #549 (the loops page): the loop switch (`postLoopSwitch`) called once,
+//   only in src/loops.ts; in the components, a switch (`loops.turn`) starts
+//   only inside an owner's `on…` handler, never an effect, a timer or a
+//   refresh.
+// - Design rules: the spacing scale and line heights in multiples of 4.
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
@@ -26,7 +71,7 @@ const walk = (dir) =>
   });
 
 // The checked sources: every file under pages/ and src/, which is what ships.
-// Fail closed: a file the checks cannot read (not `.ts` or `.tsx`) is a problem.
+// Fail closed: a file the checks cannot read (not .ts or .tsx) is a problem.
 const sources = ['pages', 'src'].flatMap((d) => walk(join(WEB, d)));
 for (const f of sources) {
   if (!/\.tsx?$/.test(f)) problems.push(`${relative(WEB, f)}: a source file the checks cannot read (only .ts and .tsx are allowed)`);
@@ -89,7 +134,11 @@ const dialogs = [];
 const composerUses = [];
 const launcherUses = [];
 const promptBodyUses = [];
+const loopSwitchCalls = [];
 const textareas = [];
+const shareUrls = [];
+const SHARE_URL = 'https://github.com/openwizdev/openwiz';
+const SHARE_URL_FILE = 'src/feedback.ts';
 const trays = [];
 const fileInputs = [];
 const images = [];
@@ -100,7 +149,7 @@ const objectUrls = [];
 
 /**
  * Whether `node` runs only inside the owner's own event. A check: a JSX
- * `on…` attribute, or a `const on… =` handler. A send: only a
+ * `on…` attribute, or a `const on… =` handler. A send (#9 round 3): only a
  * `<SendControl onPress>` (the one way a send button is rendered), the
  * keyboard's `const onKeyDown`, or the `const send` helper they call.
  */
@@ -181,7 +230,7 @@ for (const file of files) {
       problem(file, node, 'document.write');
     }
     if (ts.isNewExpression(node) && node.expression.getText() === 'Function') problem(file, node, 'new Function');
-    // Function(...) without new, globalThis.Function, and the constructor route to it.
+    // Function(...) without new, globalThis.Function, and the constructor route to it (Sol 5).
     if (ts.isIdentifier(node) && node.text === 'Function' && !ts.isTypeReferenceNode(node.parent) && !ts.isNewExpression(node.parent)) {
       problem(file, node, 'Function');
     }
@@ -203,9 +252,9 @@ for (const file of files) {
       if (!member) problem(file, node, 'fetch outside src/api.ts');
     }
     if (ts.isIdentifier(node) && BANNED_NAMES.has(node.text) && !ts.isPropertySignature(node.parent)) {
-      // the composer keeps an unconfirmed send in this tab's sessionStorage, read in one place.
+      // WS-7: the composer keeps an unconfirmed send in this tab's sessionStorage, read in one place.
       const storage = node.text === 'sessionStorage' && rel === 'src/composer.ts' && node.parent.getText() === 'window.sessionStorage';
-
+      // #16: the one upload, for its progress, made in src/api.ts only (`browserXhr`).
       const xhr = node.text === 'XMLHttpRequest' && rel === 'src/api.ts' && ts.isNewExpression(node.parent) && node.parent.expression === node;
       if (!storage && !xhr) problem(file, node, `a banned browser API: ${node.text}`);
     }
@@ -218,11 +267,11 @@ for (const file of files) {
     if (ts.isPropertyAssignment(node) && ['resume_paused_queue', 'accept_possible_duplicate'].includes(node.name.getText()) && rel !== 'src/composer.ts') {
       problem(file, node, `the send body built outside src/composer.ts: ${node.name.getText()}`);
     }
-
+    // #12: the create body is built only in src/launcher.ts (and src/attachments.ts reads the reports' `attachments`).
     if (ts.isPropertyAssignment(node) && node.name.getText() === 'attachments' && rel !== 'src/launcher.ts' && rel !== 'src/attachments.ts' && !VALIDATORS.has(rel)) {
       problem(file, node, 'the create body built outside src/launcher.ts: attachments');
     }
-
+    // #16: the send body's attachments are set only in src/composer.ts.
     if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken && ts.isPropertyAccessExpression(node.left) && node.left.name.text === 'attachments' && rel !== 'src/composer.ts') {
       problem(file, node, 'the send body built outside src/composer.ts: attachments');
     }
@@ -233,15 +282,24 @@ for (const file of files) {
         if (rel !== 'src/composer.ts' || !ts.isIdentifier(callee)) problem(file, node, 'postMessage called outside src/composer.ts');
         else postCalls.push(node);
       }
-
+      // #12: the create and its preview, only in src/launcher.ts.
       if (name === 'postThread' || name === 'postThreadPreview') {
         if (rel !== 'src/launcher.ts' || !ts.isIdentifier(callee)) problem(file, node, `${name} called outside src/launcher.ts`);
         else (name === 'postThread' ? threadCalls : threadPreviewCalls).push(node);
       }
-
+      // #16: the upload and the removal, called once each, only in src/attachments.ts.
       if (name === 'postAttachment' || name === 'deleteAttachment') {
         if (rel !== 'src/attachments.ts' || !ts.isIdentifier(callee)) problem(file, node, `${name} called outside src/attachments.ts`);
         else (name === 'postAttachment' ? uploadCalls : removeCalls).push(node);
+      }
+      // #549: the loop switch, called once, only in src/loops.ts.
+      if (name === 'postLoopSwitch') {
+        if (rel !== 'src/loops.ts' || !ts.isIdentifier(callee)) problem(file, node, 'postLoopSwitch called outside src/loops.ts');
+        else loopSwitchCalls.push(node);
+      }
+      // #549: in the components, a loop switch starts only inside the owner's own event handler.
+      if (ts.isPropertyAccessExpression(callee) && callee.name.text === 'turn' && /loops$/i.test(callee.expression.getText()) && rel.startsWith('src/components/') && !fromOwnerEvent(node, false)) {
+        problem(file, node, `a loop switch outside an owner's event handler: ${callee.getText()}`);
       }
       // AW7: object URLs (the owner's own file, for a thumbnail) are made in one place.
       if (name === 'createObjectURL') objectUrls.push(rel);
@@ -287,7 +345,9 @@ for (const file of files) {
     }
     if (ts.isPropertyAccessExpression(node) && ORDERING.has(node.name.text)) problem(file, node, `re-ordering: .${node.name.text}`);
     // No absolute or script URLs in the code.
-    if ((ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) && URL_LIKE.test(node.text)) {
+    // #2292 (J28): the one allowlisted share URL, as a plain literal, only in src/feedback.ts.
+    if (ts.isStringLiteral(node) && rel === SHARE_URL_FILE && node.text === SHARE_URL) shareUrls.push(rel);
+    else if ((ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) && URL_LIKE.test(node.text)) {
       problem(file, node, `an absolute or script URL: ${node.text}`);
     }
     if (ts.isTemplateExpression(node) && URL_LIKE.test(node.head.text)) problem(file, node, `an absolute or script URL: ${node.head.text}…`);
@@ -379,16 +439,19 @@ if (postCalls.length !== 1) problems.push(`src/composer.ts: postMessage is calle
 // W12: one panel and sheet, the composer only inside it, and no new page.
 if (dialogs.join() !== 'src/components/Detail.tsx') problems.push(`W12: <dialog> in ${dialogs.join(', ') || 'no file'}; exactly one, in src/components/Detail.tsx`);
 if (composerUses.join() !== 'src/components/Detail.tsx') problems.push(`W12: <Composer> in ${composerUses.join(', ') || 'no file'}; exactly once, in src/components/Detail.tsx`);
-// U14: the launcher only in the one dialog, and one prompt body.
+// U14 (#12): the launcher only in the one dialog, and one prompt body.
 if (launcherUses.join() !== 'src/components/Detail.tsx') problems.push(`U14: <Launcher> in ${launcherUses.join(', ') || 'no file'}; exactly once, in src/components/Detail.tsx`);
 if ([...promptBodyUses].sort().join() !== 'src/components/Composer.tsx,src/components/Launcher.tsx') {
   problems.push(`U14: <PromptBody> in ${promptBodyUses.join(', ') || 'no file'}; exactly once each in src/components/Composer.tsx and src/components/Launcher.tsx`);
 }
-if (textareas.join() !== 'src/components/PromptBody.tsx') problems.push(`U14: <textarea> in ${textareas.join(', ') || 'no file'}; exactly once, in src/components/PromptBody.tsx (the one prompt body)`);
-// U12: one create and one preview call, each in one place.
+// #656: one more, the decision cards' own-words field: plain text only, no tray, sent through the same Composers.press.
+if ([...textareas].sort().join() !== 'src/components/Decisions.tsx,src/components/FeedbackShare.tsx,src/components/PromptBody.tsx') problems.push(`U14: <textarea> in ${textareas.join(', ') || 'no file'}; exactly once each in src/components/PromptBody.tsx (the one prompt body), src/components/Decisions.tsx (#656's own words) and src/components/FeedbackShare.tsx (#2292's chosen public feedback)`);
+if (shareUrls.length !== 1) problems.push(`${SHARE_URL_FILE}: the share URL ${SHARE_URL} appears ${shareUrls.length} times; exactly once (#2292) is allowed`);
+// U12 (#12): one create and one preview call, each in one place.
+if (loopSwitchCalls.length !== 1) problems.push(`src/loops.ts: postLoopSwitch is called ${loopSwitchCalls.length} times; exactly once (LoopSwitches.turn) is allowed`);
 if (threadCalls.length !== 1) problems.push(`src/launcher.ts: postThread is called ${threadCalls.length} times; exactly once (Launchers.create) is allowed`);
 if (threadPreviewCalls.length !== 1) problems.push(`src/launcher.ts: postThreadPreview is called ${threadPreviewCalls.length} times; exactly once (Launchers.preview) is allowed`);
-// AW7, AW8: one tray, one file input, one hook, one upload and one removal call; images and object URLs in one place each.
+// AW7, AW8 (#16): one tray, one file input, one hook, one upload and one removal call; images and object URLs in one place each.
 if (trays.join() !== 'src/components/PromptBody.tsx') problems.push(`AW8: <AttachmentTray> in ${trays.join(', ') || 'no file'}; exactly once, in src/components/PromptBody.tsx`);
 if (fileInputs.join() !== 'src/components/AttachmentTray.tsx') problems.push(`AW8: a file input in ${fileInputs.join(', ') || 'no file'}; exactly once, in src/components/AttachmentTray.tsx`);
 if (trayHooks.join() !== 'src/components/AttachmentTray.tsx') problems.push(`AW8: useTray in ${trayHooks.join(', ') || 'no file'}; exactly once, in src/components/AttachmentTray.tsx`);
@@ -396,7 +459,7 @@ if (uploadCalls.length !== 1) problems.push(`src/attachments.ts: postAttachment 
 if (removeCalls.length !== 1) problems.push(`src/attachments.ts: deleteAttachment is called ${removeCalls.length} times; exactly once (Uploads.remove) is allowed`);
 if (images.join() !== 'src/components/AttachmentTray.tsx') problems.push(`AW7: <img> in ${images.join(', ') || 'no file'}; exactly once, in src/components/AttachmentTray.tsx (a thumbnail of the owner's own file)`);
 if (objectUrls.join() !== 'src/components/App.tsx') problems.push(`AW7: createObjectURL in ${objectUrls.join(', ') || 'no file'}; exactly once, in src/components/App.tsx`);
-const PAGES = ['404.tsx', '_app.tsx', '_document.tsx', 'index.tsx'];
+const PAGES = ['404.tsx', '_app.tsx', '_document.tsx', 'index.tsx', 'setup.tsx'];
 const pages = walk(join(WEB, 'pages')).map((f) => relative(join(WEB, 'pages'), f)).sort();
 if (pages.join() !== PAGES.join()) problems.push(`W12: pages/ has ${pages.join(', ')}; only ${PAGES.join(', ')}`);
 
@@ -455,7 +518,7 @@ for (const [id, def] of [['REPORT_SCHEMA_ID', mdefs.report], ['PREVIEW_SCHEMA_ID
   if (!msf?.text.includes(`${id} = '${def.properties.schema.const}'`)) problems.push(`src/messaging.ts: ${id} differs from the schema`);
 }
 
-// U5: the new-thread types against contracts/new-thread.v1.schema.json, for every definition the launcher reads.
+// U5 (#12): the new-thread types against contracts/new-thread.v1.schema.json, for every definition the launcher reads.
 const nschema = JSON.parse(readFileSync(NEW_THREAD_SCHEMA, 'utf8'));
 const ndefs = nschema.$defs;
 const nsf = program.getSourceFile(join(WEB, 'src/newthread.ts'));
@@ -571,4 +634,4 @@ if (problems.length) {
   console.log(`check: ${problems.length} problem(s)`);
   process.exit(1);
 }
-console.log(`check: ${files.length} source files and the stylesheet pass (V1, messaging and new-thread schema parity, V3, V10, W5, W12, U5, U12 to U14, AW7, AW8, types, spacing)`);
+console.log(`check: ${files.length} source files and the stylesheet pass (V1, messaging and new-thread schema parity, V3, V10, W5, W12, U5, U12 to U14, AW7, AW8, the #549 loop switch, types, spacing)`);

@@ -1,0 +1,1408 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:openwiz:schema:notifications:v1",
+  "title": "openwiz.notifications.v1",
+  "description": "Transport-independent interface only. Synthetic fixtures establish no live phone delivery. notifications.v1.md defines required semantic, source and crash checks.",
+  "$ref": "#/$defs/document",
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_][A-Za-z0-9_-]*$"
+    },
+    "repository": {
+      "type": "string",
+      "minLength": 3,
+      "pattern": "^[a-z0-9][a-z0-9-]*/[a-z0-9_.-][a-z0-9_.-]*$"
+    },
+    "fingerprint": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64,
+      "pattern": "^[0-9a-f]*$"
+    },
+    "operation_id": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 32,
+      "pattern": "^[0-9a-f]*$"
+    },
+    "schema": {
+      "const": "openwiz.notifications.v1"
+    },
+    "source_owner": {
+      "type": "string",
+      "enum": [
+        "decisions",
+        "service_health",
+        "loop_watchdog",
+        "event_router",
+        "fleet",
+        "inventory",
+        "plan",
+        "loops",
+        "service_update"
+      ]
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "decision",
+        "recovery_escalation",
+        "ci_failed",
+        "review_findings",
+        "re_check",
+        "merge",
+        "agent_complete",
+        "ready_stock_changed",
+        "loop_missed",
+        "loop_stuck",
+        "loop_disabled",
+        "loop_run_changed",
+        "recovery_changed",
+        "service_update",
+        "contract_changed",
+        "fleet_wait_changed"
+      ]
+    },
+    "optional_category": {
+      "type": "string",
+      "enum": [
+        "ci_failed",
+        "review_findings",
+        "re_check",
+        "merge",
+        "agent_complete",
+        "ready_stock_changed",
+        "loop_missed",
+        "loop_stuck",
+        "loop_disabled",
+        "loop_run_changed",
+        "recovery_changed",
+        "service_update",
+        "contract_changed",
+        "fleet_wait_changed"
+      ]
+    },
+    "toggles": {
+      "type": "object",
+      "required": [
+        "decision",
+        "recovery_escalation",
+        "ci_failed",
+        "review_findings",
+        "re_check",
+        "merge",
+        "agent_complete",
+        "ready_stock_changed",
+        "loop_missed",
+        "loop_stuck",
+        "loop_disabled",
+        "loop_run_changed",
+        "recovery_changed",
+        "service_update",
+        "contract_changed",
+        "fleet_wait_changed"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "decision": {
+          "type": "boolean"
+        },
+        "recovery_escalation": {
+          "type": "boolean"
+        },
+        "ci_failed": {
+          "type": "boolean"
+        },
+        "review_findings": {
+          "type": "boolean"
+        },
+        "re_check": {
+          "type": "boolean"
+        },
+        "merge": {
+          "type": "boolean"
+        },
+        "agent_complete": {
+          "type": "boolean"
+        },
+        "ready_stock_changed": {
+          "type": "boolean"
+        },
+        "loop_missed": {
+          "type": "boolean"
+        },
+        "loop_stuck": {
+          "type": "boolean"
+        },
+        "loop_disabled": {
+          "type": "boolean"
+        },
+        "loop_run_changed": {
+          "type": "boolean"
+        },
+        "recovery_changed": {
+          "type": "boolean"
+        },
+        "service_update": {
+          "type": "boolean"
+        },
+        "contract_changed": {
+          "type": "boolean"
+        },
+        "fleet_wait_changed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "gap": {
+      "type": "object",
+      "required": [
+        "source",
+        "reason"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "$ref": "#/$defs/source_owner"
+        },
+        "reason": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "required": [
+        "state",
+        "gaps"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "complete",
+            "partial"
+          ]
+        },
+        "gaps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/gap"
+          }
+        }
+      }
+    },
+    "freshness": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "state",
+            "snapshot_at"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "state": {
+              "type": "string",
+              "enum": [
+                "fresh",
+                "stale"
+              ]
+            },
+            "snapshot_at": {
+              "type": "object",
+              "required": [
+                "known"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "known": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "state",
+            "snapshot_at"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "state": {
+              "const": "unknown"
+            },
+            "snapshot_at": {
+              "type": "object",
+              "required": [
+                "unknown"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "unknown": {
+                  "$ref": "#/$defs/text"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "subject": {
+      "type": "object",
+      "required": [
+        "kind",
+        "number"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "issue",
+            "pull_request"
+          ]
+        },
+        "number": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "decision_ref": {
+      "type": "object",
+      "required": [
+        "repository",
+        "subject",
+        "comment_id",
+        "request_id",
+        "fingerprint"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "repository": {
+          "$ref": "#/$defs/repository"
+        },
+        "subject": {
+          "$ref": "#/$defs/subject"
+        },
+        "comment_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "request_id": {
+          "$ref": "#/$defs/request_id"
+        },
+        "fingerprint": {
+          "$ref": "#/$defs/fingerprint"
+        }
+      }
+    },
+    "incident_ref": {
+      "type": "object",
+      "required": [
+        "repository",
+        "owner",
+        "source",
+        "subject",
+        "incident"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "repository": {
+          "$ref": "#/$defs/repository"
+        },
+        "owner": {
+          "$ref": "#/$defs/id"
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "service_health",
+            "loop_watchdog"
+          ]
+        },
+        "subject": {
+          "$ref": "#/$defs/id"
+        },
+        "incident": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "event_ref": {
+      "type": "object",
+      "required": [
+        "repository",
+        "source",
+        "subject",
+        "event_id",
+        "revision"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "repository": {
+          "$ref": "#/$defs/repository"
+        },
+        "source": {
+          "$ref": "#/$defs/source_owner"
+        },
+        "subject": {
+          "$ref": "#/$defs/id"
+        },
+        "event_id": {
+          "$ref": "#/$defs/id"
+        },
+        "revision": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "reference": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "decision"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "decision": {
+              "$ref": "#/$defs/decision_ref"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "incident"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "incident": {
+              "$ref": "#/$defs/incident_ref"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "event"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "event": {
+              "$ref": "#/$defs/event_ref"
+            }
+          }
+        }
+      ]
+    },
+    "decision_fact": {
+      "type": "object",
+      "required": [
+        "binding",
+        "state",
+        "current",
+        "risk",
+        "coverage",
+        "freshness"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "binding": {
+          "$ref": "#/$defs/decision_ref"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "open",
+            "resolved",
+            "superseded"
+          ]
+        },
+        "current": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "known"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "known": {
+                  "type": "boolean"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "unknown"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "unknown": {
+                  "$ref": "#/$defs/text"
+                }
+              }
+            }
+          ]
+        },
+        "risk": {
+          "type": "string",
+          "enum": [
+            "ordinary",
+            "live",
+            "release",
+            "publish",
+            "unknown"
+          ]
+        },
+        "coverage": {
+          "$ref": "#/$defs/coverage"
+        },
+        "freshness": {
+          "$ref": "#/$defs/freshness"
+        }
+      }
+    },
+    "incident_fact": {
+      "type": "object",
+      "required": [
+        "binding",
+        "state",
+        "owner_escalated",
+        "coverage",
+        "freshness"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "binding": {
+          "$ref": "#/$defs/incident_ref"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "repairing",
+            "escalated",
+            "recovered"
+          ]
+        },
+        "owner_escalated": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "known"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "known": {
+                  "type": "boolean"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "unknown"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "unknown": {
+                  "$ref": "#/$defs/text"
+                }
+              }
+            }
+          ]
+        },
+        "coverage": {
+          "$ref": "#/$defs/coverage"
+        },
+        "freshness": {
+          "$ref": "#/$defs/freshness"
+        }
+      }
+    },
+    "event_fact": {
+      "type": "object",
+      "required": [
+        "binding",
+        "category",
+        "current",
+        "coverage",
+        "freshness"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "binding": {
+          "$ref": "#/$defs/event_ref"
+        },
+        "category": {
+          "$ref": "#/$defs/optional_category"
+        },
+        "current": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "known"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "known": {
+                  "type": "boolean"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "unknown"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "unknown": {
+                  "$ref": "#/$defs/text"
+                }
+              }
+            }
+          ]
+        },
+        "coverage": {
+          "$ref": "#/$defs/coverage"
+        },
+        "freshness": {
+          "$ref": "#/$defs/freshness"
+        }
+      }
+    },
+    "source_fact": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "decision"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "decision": {
+              "$ref": "#/$defs/decision_fact"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "incident"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "incident": {
+              "$ref": "#/$defs/incident_fact"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "event"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "event": {
+              "$ref": "#/$defs/event_fact"
+            }
+          }
+        }
+      ]
+    },
+    "preferences": {
+      "type": "object",
+      "required": [
+        "generation",
+        "enabled",
+        "categories"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "generation": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "categories": {
+          "$ref": "#/$defs/toggles"
+        }
+      }
+    },
+    "preference_write": {
+      "type": "object",
+      "required": [
+        "operation_id",
+        "expected_generation",
+        "enabled",
+        "categories"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "operation_id": {
+          "$ref": "#/$defs/operation_id"
+        },
+        "expected_generation": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "categories": {
+          "$ref": "#/$defs/toggles"
+        }
+      }
+    },
+    "subscription": {
+      "type": "object",
+      "required": [
+        "generation",
+        "state",
+        "binding_id",
+        "reason",
+        "next"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "generation": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "absent",
+            "ready",
+            "revoked",
+            "failed",
+            "unsupported"
+          ]
+        },
+        "binding_id": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/id"
+            }
+          ]
+        },
+        "reason": {
+          "$ref": "#/$defs/text"
+        },
+        "next": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "subscription_write": {
+      "type": "object",
+      "required": [
+        "operation_id",
+        "expected_generation",
+        "binding_id"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "operation_id": {
+          "$ref": "#/$defs/operation_id"
+        },
+        "expected_generation": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "binding_id": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "capability": {
+      "type": "object",
+      "required": [
+        "state",
+        "permission",
+        "reason",
+        "next"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "unavailable",
+            "unsupported",
+            "setup_required",
+            "ready"
+          ]
+        },
+        "permission": {
+          "type": "string",
+          "enum": [
+            "unknown",
+            "prompt",
+            "granted",
+            "denied",
+            "revoked",
+            "unsupported"
+          ]
+        },
+        "reason": {
+          "$ref": "#/$defs/text"
+        },
+        "next": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "delivery_outcome": {
+      "type": "object",
+      "required": [
+        "state",
+        "reason"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "accepted",
+            "failed",
+            "uncertain"
+          ]
+        },
+        "reason": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "external_payload": {
+      "type": "object",
+      "required": [
+        "title",
+        "target_token"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "const": "OpenWiz needs your attention"
+        },
+        "target_token": {
+          "$ref": "#/$defs/fingerprint"
+        }
+      }
+    },
+    "submission": {
+      "type": "object",
+      "required": [
+        "dispatch_id",
+        "group",
+        "preference_generation",
+        "subscription_generation",
+        "payload"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "dispatch_id": {
+          "$ref": "#/$defs/operation_id"
+        },
+        "group": {
+          "$ref": "#/$defs/reference"
+        },
+        "preference_generation": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "subscription_generation": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "payload": {
+          "$ref": "#/$defs/external_payload"
+        }
+      }
+    },
+    "dispatch": {
+      "type": "object",
+      "required": [
+        "submission",
+        "state",
+        "group_state",
+        "reserved_at",
+        "updated_at",
+        "outcome"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "submission": {
+          "$ref": "#/$defs/submission"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "reserved",
+            "submitting",
+            "pending",
+            "accepted",
+            "failed",
+            "uncertain",
+            "cancelled"
+          ]
+        },
+        "group_state": {
+          "type": "string",
+          "enum": [
+            "open",
+            "closed"
+          ]
+        },
+        "reserved_at": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "updated_at": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "outcome": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/delivery_outcome"
+            }
+          ]
+        }
+      }
+    },
+    "category_status": {
+      "type": "object",
+      "required": [
+        "category",
+        "available",
+        "reason"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/category"
+        },
+        "available": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "known"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "known": {
+                  "type": "boolean"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "unknown"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "unknown": {
+                  "$ref": "#/$defs/text"
+                }
+              }
+            }
+          ]
+        },
+        "reason": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "status": {
+      "type": "object",
+      "required": [
+        "state",
+        "reason",
+        "next",
+        "preferences",
+        "capability",
+        "subscription",
+        "sources",
+        "latest",
+        "coverage",
+        "freshness"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "off",
+            "unavailable",
+            "unsupported",
+            "setup_required",
+            "permission_denied",
+            "permission_revoked",
+            "ready",
+            "pending",
+            "accepted",
+            "failed",
+            "uncertain"
+          ]
+        },
+        "reason": {
+          "$ref": "#/$defs/text"
+        },
+        "next": {
+          "$ref": "#/$defs/text"
+        },
+        "preferences": {
+          "$ref": "#/$defs/preferences"
+        },
+        "capability": {
+          "$ref": "#/$defs/capability"
+        },
+        "subscription": {
+          "$ref": "#/$defs/subscription"
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/category_status"
+          }
+        },
+        "latest": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/dispatch"
+            }
+          ]
+        },
+        "coverage": {
+          "$ref": "#/$defs/coverage"
+        },
+        "freshness": {
+          "$ref": "#/$defs/freshness"
+        }
+      }
+    },
+    "stock_counts": {
+      "type": "object",
+      "required": [
+        "ready",
+        "running",
+        "blocked",
+        "held",
+        "unapproved",
+        "owner_wait",
+        "capacity_wait",
+        "unknown",
+        "state"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "ready": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "running": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocked": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "held": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unapproved": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "owner_wait": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "capacity_wait": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unknown": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "fed",
+            "low_stock",
+            "running_dry",
+            "no_builders",
+            "indeterminate"
+          ]
+        }
+      }
+    },
+    "stock_sample": {
+      "type": "object",
+      "required": [
+        "snapshot_at",
+        "counts"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "snapshot_at": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "counts": {
+          "$ref": "#/$defs/stock_counts"
+        }
+      }
+    },
+    "project_stock": {
+      "type": "object",
+      "required": [
+        "project",
+        "coverage",
+        "freshness",
+        "counts",
+        "last_good"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "project": {
+          "$ref": "#/$defs/id"
+        },
+        "coverage": {
+          "$ref": "#/$defs/coverage"
+        },
+        "freshness": {
+          "$ref": "#/$defs/freshness"
+        },
+        "counts": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "known"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "known": {
+                  "$ref": "#/$defs/stock_counts"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "unknown"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "unknown": {
+                  "$ref": "#/$defs/text"
+                }
+              }
+            }
+          ]
+        },
+        "last_good": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/stock_sample"
+            }
+          ]
+        }
+      }
+    },
+    "stock": {
+      "type": "object",
+      "required": [
+        "coverage",
+        "freshness",
+        "projects",
+        "totals"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "coverage": {
+          "$ref": "#/$defs/coverage"
+        },
+        "freshness": {
+          "$ref": "#/$defs/freshness"
+        },
+        "projects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/project_stock"
+          }
+        },
+        "totals": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "known"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "known": {
+                  "$ref": "#/$defs/stock_counts"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "unknown"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "unknown": {
+                  "$ref": "#/$defs/text"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "target_result": {
+      "type": "object",
+      "required": [
+        "reference",
+        "state",
+        "coverage",
+        "freshness"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "reference": {
+          "$ref": "#/$defs/reference"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "current",
+            "changed",
+            "resolved",
+            "missing",
+            "ambiguous",
+            "unread"
+          ]
+        },
+        "coverage": {
+          "$ref": "#/$defs/coverage"
+        },
+        "freshness": {
+          "$ref": "#/$defs/freshness"
+        }
+      }
+    },
+    "record": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "source_fact"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "source_fact": {
+              "$ref": "#/$defs/source_fact"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "preferences"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "preferences": {
+              "$ref": "#/$defs/preferences"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "preference_write"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "preference_write": {
+              "$ref": "#/$defs/preference_write"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "subscription"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "subscription": {
+              "$ref": "#/$defs/subscription"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "subscription_write"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "subscription_write": {
+              "$ref": "#/$defs/subscription_write"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "capability"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "capability": {
+              "$ref": "#/$defs/capability"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "dispatch"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "dispatch": {
+              "$ref": "#/$defs/dispatch"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "status"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "status": {
+              "$ref": "#/$defs/status"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "stock"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "stock": {
+              "$ref": "#/$defs/stock"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "target_result"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "target_result": {
+              "$ref": "#/$defs/target_result"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "submission"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "submission": {
+              "$ref": "#/$defs/submission"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "delivery_outcome"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "delivery_outcome": {
+              "$ref": "#/$defs/delivery_outcome"
+            }
+          }
+        }
+      ]
+    },
+    "document": {
+      "type": "object",
+      "required": [
+        "schema",
+        "record"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "$ref": "#/$defs/schema"
+        },
+        "record": {
+          "$ref": "#/$defs/record"
+        }
+      }
+    },
+    "request_id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
+    }
+  }
+}

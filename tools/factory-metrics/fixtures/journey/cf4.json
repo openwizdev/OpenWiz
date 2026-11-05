@@ -1,0 +1,46 @@
+{
+  "schema": "closedwiz.journey.findings.v1",
+  "findings": [
+    {
+      "key": "F1",
+      "kind": "fail-open",
+      "severity": "high",
+      "check": "Spec",
+      "at": "2030-01-01T16:00:00Z"
+    },
+    {
+      "key": "F2",
+      "kind": "unknown",
+      "severity": "medium",
+      "check": "Standards",
+      "at": "2030-01-01T16:00:00Z"
+    },
+    {
+      "key": "F3",
+      "kind": "unknown",
+      "severity": "low",
+      "check": "Sweep",
+      "at": "2030-01-01T16:00:00Z"
+    },
+    {
+      "key": "F4",
+      "kind": "stale-docs",
+      "severity": "medium",
+      "check": "Sweep",
+      "at": "2030-01-01T20:00:00Z"
+    }
+  ],
+  "by_kind": {
+    "missing-proof": 0,
+    "stale-docs": 1,
+    "spec-mismatch": 0,
+    "fail-open": 1,
+    "unknown": 2
+  },
+  "provenance": {
+    "F1": "https://github.com/example/factory/pull/4201#issuecomment-5201",
+    "F2": "https://github.com/example/factory/pull/4201#issuecomment-5201",
+    "F3": "https://github.com/example/factory/pull/4201#issuecomment-5201",
+    "F4": "https://github.com/example/factory/pull/4201#issuecomment-5204"
+  }
+}

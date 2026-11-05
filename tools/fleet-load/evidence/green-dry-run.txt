@@ -1,0 +1,5 @@
+$ python3 -I tools/fleet-load/standalone/dry_run_report.py --commit eaa5a399cbd5f5a047574837d73eceea326e58b2
+commit eaa5a399cbd5f5a047574837d73eceea326e58b2
+launch-fleet standalone: pass
+launch-fleet privacy: pass
+exit 0

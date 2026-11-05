@@ -1,0 +1,26 @@
+Scoped local checks at 2de9062b910448e0ebff35823ca59ea5264fcfce (#2634), all on synthetic fixtures:
+
+python3 -I tools/fleet-load/standalone/dry_run_report.py   -> launch-fleet standalone: pass; privacy: pass (green-dry-run.txt)
+sh skills/launch-fleet/scripts/test.sh                       -> 749 cases, 0 failed
+python3 -I skills/launch-fleet/test/ops-protocol/test_protocol.py   -> OK
+python3 -I skills/launch-fleet/scripts/test-effects.py       -> OK
+python3 -I skills/launch-fleet/scripts/test-grants.py        -> OK
+python3 -I skills/launch-fleet/scripts/test-inbox.py         -> OK
+python3 -I skills/launch-fleet/scripts/test-ops-starts.py    -> OK
+python3 -I skills/launch-fleet/scripts/test-limit-replacement.py -> OK
+python3 -I skills/launch-fleet/scripts/test-limit-recovery.py    -> OK
+python3 -I skills/launch-fleet/scripts/test-on1.py           -> OK
+python3 -I tools/review-relay/test_inbox.py                  -> OK
+python3 -I tools/review-relay/test_router.py                 -> OK
+python3 -I tools/fleet-load/test_carried.py                  -> OK (2 tests)
+python3 -I tools/fleet-load/test_seams.py                    -> OK (2 tests)
+python3 -I tools/github-reads/test_consumers.py              -> OK (12 tests)
+python3 -I tools/ci-overload/test.py                         -> OK
+python3 -I tools/open-import/test_import.py                  -> OK (24 tests)
+python3 -I tools/skills-copy/test_standalone.py, test_copy.py -> OK
+pre-push hook (format, checks binary, docs-only test)        -> all 4 checks passed
+
+python3 -I tools/fleet-load/test.py: with load.py's 600 s workload deadline it times out
+alone on a 4-CPU sandbox (reaches spec 500 at 640 s). With the deadline raised only for a
+diagnostic run (not committed), all 14 tests pass. The deadline stays 600 s (ruling on #2634);
+WZ12 settles it against the CI runner.

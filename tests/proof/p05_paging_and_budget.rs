@@ -114,8 +114,10 @@ fn at_most_four_detail_reads_run_at_once() {
 
 #[test]
 fn the_budget_bounds_the_whole_run() {
-    let source = ScriptedSource::new(20).with_delay(Duration::from_secs(1));
-    let budget = Duration::from_millis(1500);
+    // Five rounds of four reads at 200 ms each against a 300 ms budget
+    // (#1260: one fifth of the earlier 1 s and 1.5 s, the same overrun).
+    let source = ScriptedSource::new(20).with_delay(Duration::from_millis(200));
+    let budget = Duration::from_millis(300);
     let started = Instant::now();
     let env = list_scripted(
         &source,
@@ -210,7 +212,7 @@ fn the_cli_passes_limit_and_offset() {
     }
 }
 
-/// `--limit`
+/// New in ticket 1's correction round 1 (Sol S2). Issue #3: `--limit`
 /// defaults to 100. With more than 100 sessions and no limit given, exactly
 /// the first 100 in the stable order are shown, whatever the source order.
 #[test]
@@ -258,7 +260,7 @@ fn the_default_page_is_the_first_100_in_stable_order() {
     );
 }
 
-/// The sort key, documented in `openwiz --help`: most
+/// New in ticket 2. The sort key, documented in `openwiz --help`: most
 /// recently updated first; ties by session id; sessions whose update time is
 /// unknown last, by session id. The same through `openwiz ls --json` and in
 /// the text rows.

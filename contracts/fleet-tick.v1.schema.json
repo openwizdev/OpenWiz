@@ -1,0 +1,1973 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:openwiz:schema:fleet-tick:v1",
+  "title": "openwiz.fleet-tick.v1",
+  "description": "Private local execution data, never a public GitHub record. Public comments follow contracts/open-development.v1.md. What openwiz fleet tick --json (and --dry-run --json) prints (OpenWiz 0.0.6): every action due, each citing its rule and carrying the facts that justify it, with what happened to it. contracts/fleet-tick.v1.md has the rules this schema can't express. OB1's separate ops-dispatch.v1 schema defines agent record/claim and disabled-effect refusals, not new fields or implemented Rust parity in this envelope.",
+  "$ref": "#/$defs/envelope",
+  "$defs": {
+    "envelope": {
+      "type": "object",
+      "required": [
+        "schema",
+        "mode",
+        "planned_at",
+        "default_branch",
+        "rules",
+        "actions"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "const": "openwiz.fleet-tick.v1"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "dry_run",
+            "run"
+          ]
+        },
+        "planned_at": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Milliseconds since 1970."
+        },
+        "default_branch": {
+          "$ref": "#/$defs/branch"
+        },
+        "rules": {
+          "$ref": "#/$defs/rules"
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/action"
+          }
+        }
+      }
+    },
+    "rules": {
+      "description": "The machine-readable part of docs/agents/fleet.md, read as contracts/fleet-tick.v1.md says.",
+      "type": "object",
+      "required": [
+        "builder",
+        "builder_small",
+        "reviewer_claude",
+        "reviewer_gpt",
+        "ci_checks",
+        "merge"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "builder": {
+          "$ref": "#/$defs/agent"
+        },
+        "ci_checks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ci_check"
+          }
+        },
+        "merge": {
+          "type": "string",
+          "enum": [
+            "adr_0008",
+            "none"
+          ]
+        },
+        "builder_small": {
+          "$ref": "#/$defs/agent"
+        },
+        "reviewer_claude": {
+          "$ref": "#/$defs/agent"
+        },
+        "reviewer_gpt": {
+          "$ref": "#/$defs/agent"
+        }
+      }
+    },
+    "agent": {
+      "description": "A `room-cli thread spawn` row's three flags: new-thread.v1's harness, model and effort.",
+      "type": "object",
+      "required": [
+        "harness",
+        "model",
+        "effort"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "harness": {
+          "$ref": "#/$defs/setting"
+        },
+        "model": {
+          "$ref": "#/$defs/setting"
+        },
+        "effort": {
+          "$ref": "#/$defs/setting"
+        }
+      }
+    },
+    "setting": {
+      "description": "A narrower form of new-thread.v1's setting: lowercase letters, digits, ., _ and -, starting with a letter or digit.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-z0-9][-._a-z0-9]*$"
+    },
+    "ci_check": {
+      "type": "object",
+      "required": [
+        "name",
+        "required_on"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][-._A-Za-z0-9]*$"
+        },
+        "required_on": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/branch_pattern"
+          }
+        }
+      }
+    },
+    "branch_pattern": {
+      "description": "A Required on branch: letters, digits, ., _, - and /, starting with a letter or digit; a final * matches any rest.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "pattern": "^[A-Za-z0-9][-*./_A-Za-z0-9]*$"
+    },
+    "branch": {
+      "description": "A branch name, as GitHub gives it.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "pattern": "^[!-,.-~][!-~]*$"
+    },
+    "action": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/action_frontier"
+        },
+        {
+          "$ref": "#/$defs/action_first_review"
+        },
+        {
+          "$ref": "#/$defs/action_fresh_review"
+        },
+        {
+          "$ref": "#/$defs/action_re_check"
+        },
+        {
+          "$ref": "#/$defs/action_review_findings"
+        },
+        {
+          "$ref": "#/$defs/action_ci_failed"
+        },
+        {
+          "$ref": "#/$defs/action_contract_changed"
+        },
+        {
+          "$ref": "#/$defs/action_adr_0008"
+        },
+        {
+          "$ref": "#/$defs/action_merged"
+        },
+        {
+          "$ref": "#/$defs/action_all_closed"
+        },
+        {
+          "$ref": "#/$defs/action_contract_hold"
+        },
+        {
+          "$ref": "#/$defs/action_release"
+        },
+        {
+          "$ref": "#/$defs/action_finished"
+        },
+        {
+          "$ref": "#/$defs/action_builder_refused"
+        },
+        {
+          "$ref": "#/$defs/action_reviewer_refused"
+        },
+        {
+          "$ref": "#/$defs/action_needs_info"
+        },
+        {
+          "$ref": "#/$defs/action_disputed"
+        },
+        {
+          "$ref": "#/$defs/action_diagnosis"
+        },
+        {
+          "$ref": "#/$defs/action_look"
+        },
+        {
+          "$ref": "#/$defs/action_held"
+        },
+        {
+          "$ref": "#/$defs/action_re_approve"
+        },
+        {
+          "$ref": "#/$defs/action_person_ready"
+        },
+        {
+          "$ref": "#/$defs/action_spec_summary"
+        },
+        {
+          "$ref": "#/$defs/action_restart"
+        }
+      ]
+    },
+    "outcome": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/outcome_planned"
+        },
+        {
+          "$ref": "#/$defs/outcome_done"
+        },
+        {
+          "$ref": "#/$defs/outcome_refused"
+        },
+        {
+          "$ref": "#/$defs/outcome_failed"
+        },
+        {
+          "$ref": "#/$defs/outcome_uncertain"
+        }
+      ]
+    },
+    "outcome_planned": {
+      "type": "object",
+      "required": [
+        "state"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "state": {
+          "const": "planned"
+        }
+      }
+    },
+    "outcome_done": {
+      "type": "object",
+      "required": [
+        "state"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "state": {
+          "const": "done"
+        }
+      }
+    },
+    "outcome_refused": {
+      "type": "object",
+      "required": [
+        "state",
+        "reason"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "state": {
+          "const": "refused"
+        },
+        "reason": {
+          "$ref": "#/$defs/reason"
+        }
+      }
+    },
+    "outcome_failed": {
+      "type": "object",
+      "required": [
+        "state",
+        "reason"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "state": {
+          "const": "failed"
+        },
+        "reason": {
+          "$ref": "#/$defs/reason"
+        }
+      }
+    },
+    "outcome_uncertain": {
+      "type": "object",
+      "required": [
+        "state",
+        "reason"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "state": {
+          "const": "uncertain"
+        },
+        "reason": {
+          "$ref": "#/$defs/reason"
+        }
+      }
+    },
+    "approval": {
+      "description": "A plan graph approval: plan-graph's comment, its revision and its Fingerprint line.",
+      "type": "object",
+      "required": [
+        "comment",
+        "revision",
+        "fingerprint"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "comment": {
+          "$ref": "#/$defs/comment"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "fingerprint": {
+          "$ref": "#/$defs/fingerprint"
+        }
+      }
+    },
+    "pr": {
+      "description": "An open pull request that closes the ticket, at its head.",
+      "type": "object",
+      "required": [
+        "number",
+        "head_commit",
+        "base_branch"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "number": {
+          "$ref": "#/$defs/number"
+        },
+        "head_commit": {
+          "$ref": "#/$defs/commit"
+        },
+        "base_branch": {
+          "$ref": "#/$defs/branch"
+        }
+      }
+    },
+    "merge": {
+      "description": "A merged pull request, its merge commit read back on the default branch.",
+      "type": "object",
+      "required": [
+        "number",
+        "merge_commit"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "number": {
+          "$ref": "#/$defs/number"
+        },
+        "merge_commit": {
+          "$ref": "#/$defs/commit"
+        }
+      }
+    },
+    "blocker": {
+      "description": "A blocking issue with a verified merge.",
+      "type": "object",
+      "required": [
+        "number",
+        "pr",
+        "merge_commit"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "number": {
+          "$ref": "#/$defs/number"
+        },
+        "pr": {
+          "$ref": "#/$defs/number"
+        },
+        "merge_commit": {
+          "$ref": "#/$defs/commit"
+        }
+      }
+    },
+    "check": {
+      "type": "object",
+      "required": [
+        "name",
+        "result"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "pending",
+            "skipping",
+            "cancel"
+          ]
+        }
+      }
+    },
+    "verdict": {
+      "description": "The latest VERDICT comment: its verdict, the commit it names, its comment id.",
+      "type": "object",
+      "required": [
+        "verdict",
+        "commit",
+        "comment"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "verdict": {
+          "type": "string",
+          "enum": [
+            "approve",
+            "changes"
+          ]
+        },
+        "commit": {
+          "$ref": "#/$defs/commit"
+        },
+        "comment": {
+          "$ref": "#/$defs/comment"
+        }
+      }
+    },
+    "verdict_changes": {
+      "type": "object",
+      "required": [
+        "verdict",
+        "commit",
+        "comment"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "verdict": {
+          "const": "changes"
+        },
+        "commit": {
+          "$ref": "#/$defs/commit"
+        },
+        "comment": {
+          "$ref": "#/$defs/comment"
+        }
+      }
+    },
+    "verdict_approve": {
+      "type": "object",
+      "required": [
+        "verdict",
+        "commit",
+        "comment"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "verdict": {
+          "const": "approve"
+        },
+        "commit": {
+          "$ref": "#/$defs/commit"
+        },
+        "comment": {
+          "$ref": "#/$defs/comment"
+        }
+      }
+    },
+    "retry_after": {
+      "description": "The ticket's last start, settled with no thread made.",
+      "type": "object",
+      "required": [
+        "start",
+        "state"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "start": {
+          "$ref": "#/$defs/start"
+        },
+        "state": {
+          "$ref": "#/$defs/start_state"
+        }
+      }
+    },
+    "start_state": {
+      "type": "string",
+      "enum": [
+        "refused",
+        "failed"
+      ]
+    },
+    "agent_thread": {
+      "type": "object",
+      "required": [
+        "thread",
+        "role"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "thread": {
+          "$ref": "#/$defs/thread"
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "builder",
+            "reviewer"
+          ]
+        }
+      }
+    },
+    "finding": {
+      "type": "string",
+      "minLength": 2,
+      "pattern": "^R[1-9][0-9]*$"
+    },
+    "open_finding": {
+      "type": "object",
+      "required": [
+        "id",
+        "rounds"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/finding"
+        },
+        "rounds": {
+          "type": "integer",
+          "minimum": 2
+        }
+      }
+    },
+    "merged_ticket": {
+      "type": "object",
+      "required": [
+        "ticket",
+        "pr"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "ticket": {
+          "$ref": "#/$defs/number"
+        },
+        "pr": {
+          "$ref": "#/$defs/number"
+        }
+      }
+    },
+    "number": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "An issue or pull request number."
+    },
+    "comment": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "A GitHub comment id."
+    },
+    "commit": {
+      "type": "string",
+      "minLength": 40,
+      "maxLength": 40,
+      "pattern": "^[0-9a-f]*$",
+      "description": "A full commit id: 40 lowercase hex digits."
+    },
+    "fingerprint": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64,
+      "pattern": "^[0-9a-f]*$",
+      "description": "A SHA-256: 64 lowercase hex digits."
+    },
+    "thread": {
+      "type": "string",
+      "minLength": 1,
+      "description": "A CloudRoom thread id."
+    },
+    "start": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9][-_A-Za-z0-9]*$",
+      "description": "The op id of OpenWiz's start record (B4): new-thread.v1's op_id."
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1
+    },
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "A file path, or a Relies on path as written."
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "description": "OpenWiz's own words."
+    },
+    "action_frontier": {
+      "type": "object",
+      "required": [
+        "kind",
+        "rule",
+        "spec",
+        "ticket",
+        "facts",
+        "outcome"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "start_builder"
+        },
+        "rule": {
+          "const": "frontier"
+        },
+        "spec": {
+          "$ref": "#/$defs/number"
+        },
+        "ticket": {
+          "$ref": "#/$defs/number"
+        },
+        "facts": {
+          "$ref": "#/$defs/facts_frontier"
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        }
+      }
+    },
+    "facts_frontier": {
+      "type": "object",
+      "required": [
+        "title",
+        "approval",
+        "labels",
+        "blockers",
+        "retry_after",
+        "settings"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "approval": {
+          "$ref": "#/$defs/approval"
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/label"
+          }
+        },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/blocker"
+          }
+        },
+        "retry_after": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/retry_after"
+            }
+          ]
+        },
+        "settings": {
+          "$ref": "#/$defs/agent"
+        }
+      }
+    },
+    "action_first_review": {
+      "type": "object",
+      "required": [
+        "kind",
+        "rule",
+        "spec",
+        "ticket",
+        "facts",
+        "outcome"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "start_reviewer"
+        },
+        "rule": {
+          "const": "first_review"
+        },
+        "spec": {
+          "$ref": "#/$defs/number"
+        },
+        "ticket": {
+          "$ref": "#/$defs/number"
+        },
+        "facts": {
+          "$ref": "#/$defs/facts_first_review"
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        }
+      }
+    },
+    "facts_first_review": {
+      "type": "object",
+      "required": [
+        "pr",
+        "subject",
+        "checks",
+        "settings"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pr": {
+          "$ref": "#/$defs/pr"
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/check"
+          }
+        },
+        "settings": {
+          "$ref": "#/$defs/agent"
+        }
+      }
+    },
+    "action_fresh_review": {
+      "type": "object",
+      "required": [
+        "kind",
+        "rule",
+        "spec",
+        "ticket",
+        "facts",
+        "outcome"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "start_reviewer"
+        },
+        "rule": {
+          "const": "fresh_review"
+        },
+        "spec": {
+          "$ref": "#/$defs/number"
+        },
+        "ticket": {
+          "$ref": "#/$defs/number"
+        },
+        "facts": {
+          "$ref": "#/$defs/facts_fresh_review"
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        }
+      }
+    },
+    "facts_fresh_review": {
+      "type": "object",
+      "required": [
+        "pr",
+        "subject",
+        "checks",
+        "given_up",
+        "settings"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pr": {
+          "$ref": "#/$defs/pr"
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/check"
+          }
+        },
+        "given_up": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/thread"
+          }
+        },
+        "settings": {
+          "$ref": "#/$defs/agent"
+        }
+      }
+    },
+    "action_re_check": {
+      "type": "object",
+      "required": [
+        "kind",
+        "rule",
+        "spec",
+        "ticket",
+        "facts",
+        "outcome"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "start_reviewer"
+        },
+        "rule": {
+          "const": "re_check"
+        },
+        "spec": {
+          "$ref": "#/$defs/number"
+        },
+        "ticket": {
+          "$ref": "#/$defs/number"
+        },
+        "facts": {
+          "$ref": "#/$defs/facts_re_check"
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        }
+      }
+    },
+    "facts_re_check": {
+      "type": "object",
+      "required": [
+        "pr",
+        "subject",
+        "checks",
+        "reviewer",
+        "last_verdict"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pr": {
+          "$ref": "#/$defs/pr"
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/check"
+          }
+        },
+        "reviewer": {
+          "$ref": "#/$defs/thread"
+        },
+        "last_verdict": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/verdict"
+            }
+          ]
+        }
+      }
+    },
+    "action_review_findings": {
+      "type": "object",
+      "required": [
+        "kind",
+        "rule",
+        "spec",
+        "ticket",
+        "facts",
+        "outcome"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "send_findings"
+        },
+        "rule": {
+          "const": "review_findings"
+        },
+        "spec": {
+          "$ref": "#/$defs/number"
+        },
+        "ticket": {
+          "$ref": "#/$defs/number"
+        },
+        "facts": {
+          "$ref": "#/$defs/facts_review_findings"
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        }
+      }
+    },
+    "facts_review_findings": {
+      "type": "object",
+      "required": [
+        "pr",
+        "checks",
+        "verdict",
+        "builder"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pr": {
+          "$ref": "#/$defs/pr"
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/check"
+          }
+        },
+        "verdict": {
+          "$ref": "#/$defs/verdict_changes"
+        },
+        "builder": {
+          "$ref": "#/$defs/thread"
+        }
+      }
+    },
+    "action_ci_failed": {
+      "type": "object",
+      "required": [
+        "kind",
+        "rule",
+        "spec",
+        "ticket",
+        "facts",
+        "outcome"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "send_findings"
+        },
+        "rule": {
+          "const": "ci_failed"
+        },
+        "spec": {
+          "$ref": "#/$defs/number"
+        },
+        "ticket": {
+          "$ref": "#/$defs/number"
+        },
+        "facts": {
+          "$ref": "#/$defs/facts_ci_failed"
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        }
+      }
+    },
+    "facts_ci_failed": {
+      "type": "object",
+      "required": [
+        "pr",
+        "subject",
+        "checks",
+        "builder"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pr": {
+          "$ref": "#/$defs/pr"
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/check"
+          }
+        },
+        "builder": {
+          "$ref": "#/$defs/thread"
+        }
+      }
+    },
+    "action_contract_changed": {
+      "type": "object",
+      "required": [
+        "kind",
+        "rule",
+        "spec",
+        "ticket",
+        "facts",
+        "outcome"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "send_findings"
+        },
+        "rule": {
+          "const": "contract_changed"
+        },
+        "spec": {
+          "$ref": "#/$defs/number"
+        },
+        "ticket": {
+          "$ref": "#/$defs/number"
+        },
+        "facts": {
+          "$ref": "#/$defs/facts_contract_changed"
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        }
+      }
+    },
+    "facts_contract_changed": {
+      "type": "object",
+      "required": [
+        "merged",
+        "files",
+        "relies_on",
+        "builder"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "merged": {
+          "$ref": "#/$defs/merge"
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path"
+          }
+        },
+        "relies_on": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path"
+          }
+        },
+        "builder": {
+          "$ref": "#/$defs/thread"
+        }
+      }
+    },
+    "action_adr_0008": {
+      "type": "object",
+      "required": [
+        "kind",
+        "rule",
+        "spec",
+        "ticket",
+        "facts",
+        "outcome"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "merge"
+        },
+        "rule": {
+          "const": "adr_0008"
+        },
+        "spec": {
+          "$ref": "#/$defs/number"
+        },
+        "ticket": {
+          "$ref": "#/$defs/number"
+        },
+        "facts": {
+          "$ref": "#/$defs/facts_adr_0008"
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        }
+      }
+    },
+    "facts_adr_0008": {
+      "type": "object",
+      "required": [
+        "approval",
+        "pr",
+        "base_commit",
+        "verdict",
+        "reviewer",
+        "checks"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "approval": {
+          "$ref": "#/$defs/approval"
+        },
+        "pr": {
+          "$ref": "#/$defs/pr"
+        },
+        "base_commit": {
+          "$ref": "#/$defs/commit"
+        },
+        "verdict": {
+          "$ref": "#/$defs/verdict_approve"
+        },
+        "reviewer": {
+          "$ref": "#/$defs/thread"
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/check"
+          }
+        }
+      }
+    },
+    "action_merged": {
+      "type": "object",
+      "required": [
+        "kind",
+        "rule",
+        "spec",
+        "ticket",
+        "facts",
+        "outcome"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "close"
+        },
+        "rule": {
+          "const": "merged"
+        },
+        "spec": {
+          "$ref": "#/$defs/number"
+        },
+        "ticket": {
+          "$ref": "#/$defs/number"
+        },
+        "facts": {
+          "$ref": "#/$defs/facts_merged"
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        }
+      }
+    },
+    "facts_merged": {
+      "type": "object",
+      "required": [
+        "merged"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "merged": {
+          "$ref": "#/$defs/merge"
+        }
+      }
+    },
+    "action_all_closed": {
+      "type": "object",
+      "required": [
+        "kind",
+        "rule",
+        "spec",
+        "ticket",
+        "facts",
+        "outcome"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "close"
+        },
+        "rule": {
+          "const": "all_closed"
+        },
+        "spec": {
+          "$ref": "#/$defs/number"
+        },
+        "ticket": {
+          "type": "null"
+        },
+        "facts": {
+          "$ref": "#/$defs/facts_all_closed"
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        }
+      }
+    },
+    "facts_all_closed": {
+      "type": "object",
+      "required": [
+        "tickets"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "tickets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/number"
+          }
+        }
+      }
+    },
+    "action_contract_hold": {
+      "type": "object",
+      "required": [
+        "kind",
+        "rule",
+        "spec",
+        "ticket",
+        "facts",
+        "outcome"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "hold"
+        },
+        "rule": {
+          "const": "contract_hold"
+        },
+        "spec": {
+          "$ref": "#/$defs/number"
+        },
+        "ticket": {
+          "$ref": "#/$defs/number"
+        },
+        "facts": {
+          "$ref": "#/$defs/facts_contract_hold"
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        }
+      }
+    },
+    "facts_contract_hold": {
+      "type": "object",
+      "required": [
+        "merged",
+        "files",
+        "relies_on",
+        "ready_label"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "merged": {
+          "$ref": "#/$defs/merge"
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path"
+          }
+        },
+        "relies_on": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path"
+          }
+        },
+        "ready_label": {
+          "type": "string",
+          "enum": [
+            "ready-for-agent",
+            "ready-for-human"
+          ]
+        }
+      }
+    },
+    "action_release": {
+      "type": "object",
+      "required": [
+        "kind",
+        "rule",
+        "spec",
+        "ticket",
+        "facts",
+        "outcome"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "hold"
+        },
+        "rule": {
+          "const": "release"
+        },
+        "spec": {
+          "$ref": "#/$defs/number"
+        },
+        "ticket": {
+          "$ref": "#/$defs/number"
+        },
+        "facts": {
+          "$ref": "#/$defs/facts_release"
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        }
+      }
+    },
+    "facts_release": {
+      "type": "object",
+      "required": [
+        "hold",
+        "approval"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "hold": {
+          "$ref": "#/$defs/comment"
+        },
+        "approval": {
+          "$ref": "#/$defs/approval"
+        }
+      }
+    },
+    "action_finished": {
+      "type": "object",
+      "required": [
+        "kind",
+        "rule",
+        "spec",
+        "ticket",
+        "facts",
+        "outcome"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "archive"
+        },
+        "rule": {
+          "const": "finished"
+        },
+        "spec": {
+          "$ref": "#/$defs/number"
+        },
+        "ticket": {
+          "$ref": "#/$defs/number"
+        },
+        "facts": {
+          "$ref": "#/$defs/facts_finished"
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        }
+      }
+    },
+    "facts_finished": {
+      "type": "object",
+      "required": [
+        "threads"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "threads": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/agent_thread"
+          }
+        }
+      }
+    },
+    "action_builder_refused": {
+      "type": "object",
+      "required": [
+        "kind",
+        "rule",
+        "spec",
+        "ticket",
+        "facts",
+        "outcome"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "log_refused_start"
+        },
+        "rule": {
+          "const": "builder_refused"
+        },
+        "spec": {
+          "$ref": "#/$defs/number"
+        },
+        "ticket": {
+          "$ref": "#/$defs/number"
+        },
+        "facts": {
+          "$ref": "#/$defs/facts_builder_refused"
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        }
+      }
+    },
+    "facts_builder_refused": {
+      "type": "object",
+      "required": [
+        "start",
+        "state",
+        "reason"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "start": {
+          "$ref": "#/$defs/start"
+        },
+        "state": {
+          "$ref": "#/$defs/start_state"
+        },
+        "reason": {
+          "$ref": "#/$defs/reason"
+        }
+      }
+    },
+    "action_reviewer_refused": {
+      "type": "object",
+      "required": [
+        "kind",
+        "rule",
+        "spec",
+        "ticket",
+        "facts",
+        "outcome"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "log_refused_start"
+        },
+        "rule": {
+          "const": "reviewer_refused"
+        },
+        "spec": {
+          "$ref": "#/$defs/number"
+        },
+        "ticket": {
+          "$ref": "#/$defs/number"
+        },
+        "facts": {
+          "$ref": "#/$defs/facts_reviewer_refused"
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        }
+      }
+    },
+    "facts_reviewer_refused": {
+      "type": "object",
+      "required": [
+        "pr",
+        "start",
+        "state",
+        "reason"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pr": {
+          "$ref": "#/$defs/pr"
+        },
+        "start": {
+          "$ref": "#/$defs/start"
+        },
+        "state": {
+          "$ref": "#/$defs/start_state"
+        },
+        "reason": {
+          "$ref": "#/$defs/reason"
+        }
+      }
+    },
+    "action_needs_info": {
+      "type": "object",
+      "required": [
+        "kind",
+        "rule",
+        "spec",
+        "ticket",
+        "facts",
+        "outcome"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "wake"
+        },
+        "rule": {
+          "const": "needs_info"
+        },
+        "spec": {
+          "$ref": "#/$defs/number"
+        },
+        "ticket": {
+          "$ref": "#/$defs/number"
+        },
+        "facts": {
+          "$ref": "#/$defs/facts_needs_info"
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        }
+      }
+    },
+    "facts_needs_info": {
+      "type": "object",
+      "required": [
+        "question"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "question": {
+          "$ref": "#/$defs/comment"
+        }
+      }
+    },
+    "action_disputed": {
+      "type": "object",
+      "required": [
+        "kind",
+        "rule",
+        "spec",
+        "ticket",
+        "facts",
+        "outcome"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "wake"
+        },
+        "rule": {
+          "const": "disputed"
+        },
+        "spec": {
+          "$ref": "#/$defs/number"
+        },
+        "ticket": {
+          "$ref": "#/$defs/number"
+        },
+        "facts": {
+          "$ref": "#/$defs/facts_disputed"
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        }
+      }
+    },
+    "facts_disputed": {
+      "type": "object",
+      "required": [
+        "pr",
+        "verdict",
+        "findings"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pr": {
+          "$ref": "#/$defs/pr"
+        },
+        "verdict": {
+          "$ref": "#/$defs/verdict_changes"
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/finding"
+          }
+        }
+      }
+    },
+    "action_diagnosis": {
+      "type": "object",
+      "required": [
+        "kind",
+        "rule",
+        "spec",
+        "ticket",
+        "facts",
+        "outcome"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "wake"
+        },
+        "rule": {
+          "const": "diagnosis"
+        },
+        "spec": {
+          "$ref": "#/$defs/number"
+        },
+        "ticket": {
+          "$ref": "#/$defs/number"
+        },
+        "facts": {
+          "$ref": "#/$defs/facts_diagnosis"
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        }
+      }
+    },
+    "facts_diagnosis": {
+      "type": "object",
+      "required": [
+        "pr",
+        "verdict",
+        "findings"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pr": {
+          "$ref": "#/$defs/pr"
+        },
+        "verdict": {
+          "$ref": "#/$defs/verdict_changes"
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/open_finding"
+          }
+        }
+      }
+    },
+    "action_look": {
+      "type": "object",
+      "required": [
+        "kind",
+        "rule",
+        "spec",
+        "ticket",
+        "facts",
+        "outcome"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "wake"
+        },
+        "rule": {
+          "const": "look"
+        },
+        "spec": {
+          "$ref": "#/$defs/number"
+        },
+        "ticket": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "facts": {
+          "$ref": "#/$defs/facts_look"
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        }
+      }
+    },
+    "facts_look": {
+      "type": "object",
+      "required": [
+        "reason"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "$ref": "#/$defs/reason"
+        }
+      }
+    },
+    "action_held": {
+      "type": "object",
+      "required": [
+        "kind",
+        "rule",
+        "spec",
+        "ticket",
+        "facts",
+        "outcome"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "needs_you"
+        },
+        "rule": {
+          "const": "held"
+        },
+        "spec": {
+          "$ref": "#/$defs/number"
+        },
+        "ticket": {
+          "$ref": "#/$defs/number"
+        },
+        "facts": {
+          "$ref": "#/$defs/facts_held"
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        }
+      }
+    },
+    "facts_held": {
+      "type": "object",
+      "required": [
+        "hold",
+        "merged",
+        "files"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "hold": {
+          "$ref": "#/$defs/comment"
+        },
+        "merged": {
+          "$ref": "#/$defs/merge"
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path"
+          }
+        }
+      }
+    },
+    "action_re_approve": {
+      "type": "object",
+      "required": [
+        "kind",
+        "rule",
+        "spec",
+        "ticket",
+        "facts",
+        "outcome"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "needs_you"
+        },
+        "rule": {
+          "const": "re_approve"
+        },
+        "spec": {
+          "$ref": "#/$defs/number"
+        },
+        "ticket": {
+          "type": "null"
+        },
+        "facts": {
+          "$ref": "#/$defs/facts_re_approve"
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        }
+      }
+    },
+    "facts_re_approve": {
+      "type": "object",
+      "required": [
+        "approval",
+        "fingerprint_now"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "approval": {
+          "$ref": "#/$defs/approval"
+        },
+        "fingerprint_now": {
+          "$ref": "#/$defs/fingerprint"
+        }
+      }
+    },
+    "action_person_ready": {
+      "type": "object",
+      "required": [
+        "kind",
+        "rule",
+        "spec",
+        "ticket",
+        "facts",
+        "outcome"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "needs_you"
+        },
+        "rule": {
+          "const": "person_ready"
+        },
+        "spec": {
+          "$ref": "#/$defs/number"
+        },
+        "ticket": {
+          "$ref": "#/$defs/number"
+        },
+        "facts": {
+          "$ref": "#/$defs/facts_person_ready"
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        }
+      }
+    },
+    "facts_person_ready": {
+      "type": "object",
+      "required": [
+        "title",
+        "approval",
+        "blockers"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "approval": {
+          "$ref": "#/$defs/approval"
+        },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/blocker"
+          }
+        }
+      }
+    },
+    "action_spec_summary": {
+      "type": "object",
+      "required": [
+        "kind",
+        "rule",
+        "spec",
+        "ticket",
+        "facts",
+        "outcome"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "needs_you"
+        },
+        "rule": {
+          "const": "spec_summary"
+        },
+        "spec": {
+          "$ref": "#/$defs/number"
+        },
+        "ticket": {
+          "type": "null"
+        },
+        "facts": {
+          "$ref": "#/$defs/facts_spec_summary"
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        }
+      }
+    },
+    "facts_spec_summary": {
+      "type": "object",
+      "required": [
+        "merged",
+        "follow_ups"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "merged": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/merged_ticket"
+          }
+        },
+        "follow_ups": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/number"
+          }
+        }
+      }
+    },
+    "action_restart": {
+      "type": "object",
+      "required": [
+        "kind",
+        "rule",
+        "spec",
+        "ticket",
+        "facts",
+        "outcome"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "wake"
+        },
+        "rule": {
+          "const": "restart"
+        },
+        "spec": {
+          "$ref": "#/$defs/number"
+        },
+        "ticket": {
+          "$ref": "#/$defs/number"
+        },
+        "facts": {
+          "$ref": "#/$defs/facts_restart"
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        }
+      }
+    },
+    "facts_restart": {
+      "type": "object",
+      "required": [
+        "builder",
+        "branch",
+        "settings"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "builder": {
+          "$ref": "#/$defs/thread"
+        },
+        "branch": {
+          "$ref": "#/$defs/branch"
+        },
+        "settings": {
+          "$ref": "#/$defs/agent"
+        }
+      }
+    }
+  }
+}

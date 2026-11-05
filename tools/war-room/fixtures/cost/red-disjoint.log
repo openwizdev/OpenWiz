@@ -1,0 +1,22 @@
+Command: python3 -I tools/war-room/test_cost.py
+Exit: 1; disjoint model rows display only the first subset. Checkout path normalized.
+...F........
+======================================================================
+FAIL: test_disjoint_allocations_sum_once_in_one_component_series (__main__.Cost.test_disjoint_allocations_sum_once_in_one_component_series)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/war-room/test_cost.py", line 89, in test_disjoint_allocations_sum_once_in_one_component_series
+    self.assertEqual((4, 2, 2), (m['allocation-models']['value'],
+AssertionError: Tuples differ: (4, 2, 2) != (1, 1, 1)
+
+First differing element 0:
+4
+1
+
+- (4, 2, 2)
++ (1, 1, 1)
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.537s
+
+FAILED (failures=1)

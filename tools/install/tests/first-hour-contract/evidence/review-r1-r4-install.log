@@ -1,0 +1,18 @@
+test_a_complete_live_record_is_the_only_pass (__main__.FirstHourContract.test_a_complete_live_record_is_the_only_pass) ... ok
+test_a_strict_reader_refuses_duplicate_keys_and_fractions (__main__.FirstHourContract.test_a_strict_reader_refuses_duplicate_keys_and_fractions) ... ok
+test_each_example_gives_exactly_its_codes (__main__.FirstHourContract.test_each_example_gives_exactly_its_codes) ... ok
+test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) ... ok
+test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) ... ok
+test_recovery_missing_evidence_never_becomes_a_live_pass (__main__.FirstHourContract.test_recovery_missing_evidence_never_becomes_a_live_pass) ... ok
+test_the_contract_lists_every_code_the_checks_give (__main__.FirstHourContract.test_the_contract_lists_every_code_the_checks_give) ... ok
+test_the_contract_stage_table_is_the_checks_order_and_evidence (__main__.FirstHourContract.test_the_contract_stage_table_is_the_checks_order_and_evidence) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.214s
+
+OK
+.........
+----------------------------------------------------------------------
+Ran 9 tests in 3.503s
+
+OK

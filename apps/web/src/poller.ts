@@ -124,6 +124,11 @@ export class Poller<R> {
     this.queued = false;
   }
 
+  /** One owner-requested read now; an in-flight or hidden read is never duplicated or queued again. */
+  refresh(): void {
+    this.run();
+  }
+
   private visibilityChanged(): void {
     if (!this.running) return;
     const hidden = this.o.visibility.hidden();

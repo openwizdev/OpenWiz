@@ -1,0 +1,13 @@
+WR6 authorized CI registration continuation, ruling 6781810765
+python3 -I tools/war-room/test_rework.py
+PASS: 7 synthetic source-to-suite cases.
+python3 -B -I tools/ci-bench/bench.py check-steps
+PASS: covered 157 CI steps.
+python3 -B -I tools/ci-bench/test.py Measure.test_x5_current_job_and_step_names_are_covered
+PASS: 1 existing workflow coverage test.
+Exact-line registration check: one War room PR path and one rework proof command.
+PASS: only the two approved workflow lines added; no other setting changed.
+Existing source/evidence and the original WR6 STATUS entry are unchanged.
+PR #2381 remains open at this check; its separately owned contract/activity
+commands are not duplicated here and must survive any subsequent main merge.
+No Rust crate touched. No workspace/browser suite run by hand.

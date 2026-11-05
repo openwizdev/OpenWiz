@@ -1,10 +1,10 @@
 //! N18, the CLI half (A1 phase 2), and N5's: `openwiz new` prints the
 //! effects and the exact command before anything is created, and creates
-//! only with `--yes`; the JSON matches the text; every exit code
+//! only with `--yes` (sheet A-7); the JSON matches the text; every exit code
 //! is documented; the text comes from the argument or stdin, never a
 //! terminal; `openwiz models` shows the read time, the saved-copy label and
 //! every unavailable harness with its reason, and no default. The start is
-//! followed within its bound.
+//! followed within its bound (sheet A-9).
 
 use std::time::Duration;
 
@@ -90,7 +90,7 @@ fn without_yes_the_effects_and_the_exact_command_are_printed_and_nothing_is_crea
     );
 
     // The printed command, run as printed, creates exactly what was
-    // previewed, under that op id.
+    // previewed, under that op id (Sol, round 1, R1).
     let out = run_printed(&["sh"], &fake, &command);
     assert_eq!(
         out.status.code(),
@@ -147,10 +147,17 @@ pub fn zsh_problem(zsh: &std::path::Path) -> Option<String> {
     None
 }
 
+/// The shells the printed command is run in, as `[program, options…]`:
+/// `sh`, `bash`, and `zsh` (Jake's Mac's shell) with no startup files, as
+/// is and with `RC_QUOTES`, which changes what `''` means inside quotes.
+///
+/// **zsh is required for acceptance, like Rust and Node** (Sol, round 3,
+/// R4; `AGENTS.md`): when the `zsh` on `PATH` is missing or broken, this
+/// fails the test that asked, with the reason. It never skips.
 pub fn shells() -> Vec<Vec<&'static str>> {
     if let Some(problem) = zsh_problem(std::path::Path::new("zsh")) {
         panic!(
-            "zsh is required for acceptance, like Rust and Node (see README.md): {problem}. \
+            "zsh is required for acceptance, like Rust and Node (AGENTS.md): {problem}. \
              Install it (sudo apt-get install -y zsh) and run the tests again"
         );
     }
@@ -172,7 +179,15 @@ pub fn run_printed(shell: &[&str], fake: &NewFake, command: &str) -> std::proces
         .args(&shell[1..])
         .arg("-c")
         .arg(command)
-        .env("PATH", format!("{}:{}", bin.display(), fake.path()))
+        .env(
+            "PATH",
+            format!(
+                "{}:{}",
+                bin.display(),
+                std::env::var("PATH").unwrap_or_default()
+            ),
+        )
+        .env("OPENWIZ_FIXTURE_PROGRAM", fake.program())
         .env("OPENWIZ_STATE_DIR", &fake.state)
         .current_dir(&fake.dir)
         .stdin(std::process::Stdio::null())
@@ -470,6 +485,164 @@ fn models_shows_the_options_as_reported_and_no_default() {
 }
 
 #[test]
+fn models_json_keeps_unavailable_harness_with_its_reason_and_explanation() {
+    let fake = NewFake::new("n18_models_json_unavailable");
+    let (code, report) = fake.cli_json(&["models"], "");
+    assert_eq!(code, EXIT_CREATED, "{report}");
+    let cursor: Vec<&Value> = report["unavailable"]
+        .as_array()
+        .expect("models JSON reports unavailable harnesses")
+        .iter()
+        .filter(|row| row["harness"] == "cursor")
+        .collect();
+    assert_eq!(cursor.len(), 1, "one unavailable cursor harness: {report}");
+    assert_eq!(cursor[0]["reason"], "catalogue_not_reported", "{report}");
+    assert_eq!(
+        cursor[0]["text"], "unavailable (catalogue not reported)",
+        "{report}"
+    );
+}
+
+#[test]
+fn models_json_preserves_each_harness_reported_steer_capability() {
+    for (case, reported, expected) in [
+        (
+            "true_false",
+            [Some(json!(true)), Some(json!(false))],
+            [json!(true), json!(false)],
+        ),
+        (
+            "false_true",
+            [Some(json!(false)), Some(json!(true))],
+            [json!(false), json!(true)],
+        ),
+        (
+            "null_missing",
+            [Some(Value::Null), None],
+            [Value::Null, Value::Null],
+        ),
+        (
+            "missing_null",
+            [None, Some(Value::Null)],
+            [Value::Null, Value::Null],
+        ),
+    ] {
+        let mut status: Value =
+            serde_json::from_slice(&std::fs::read(file("cloud-status.json")).unwrap()).unwrap();
+        for (harness, steer) in ["codex", "claude-code"].into_iter().zip(reported) {
+            let row = status["harnesses"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|row| row["id"] == harness)
+                .expect("synthetic catalogue harness")
+                .as_object_mut()
+                .unwrap();
+            match steer {
+                Some(value) => row.insert("steer".into(), value),
+                None => row.remove("steer"),
+            };
+        }
+        let fake = NewFake::with(
+            &format!("n18_models_steer_{case}"),
+            vec![json!({"argv": ["cloud", "status", "--json"], "stdout": status.to_string()})],
+        );
+        let (code, doc) = fake.cli_json(&["models"], "");
+        assert_eq!(code, EXIT_CREATED, "{case}: {doc}");
+        let rows = doc["harnesses"].as_array().expect("offered harnesses");
+        assert_eq!(rows.len(), 2, "{case}: {doc}");
+        for (harness, steer) in ["codex", "claude-code"].into_iter().zip(expected) {
+            let row = rows
+                .iter()
+                .find(|row| row["harness"] == harness)
+                .expect("offered synthetic harness");
+            assert_eq!(row.get("steer"), Some(&steer), "{case}: {harness}");
+        }
+        assert_eq!(fake.invocations(), [vec!["cloud", "status", "--json"]]);
+    }
+}
+
+#[test]
+fn models_json_preserves_each_harness_reported_attachment_capabilities() {
+    // Variants are synthetic; the reported case leaves the fixture unchanged.
+    for (case, codex, claude) in [
+        (
+            "reported",
+            Some(json!({"files": true, "images": true})),
+            Some(json!({"files": true, "images": true})),
+        ),
+        (
+            "files_images",
+            Some(json!({"files": true, "images": false})),
+            Some(json!({"files": false, "images": true})),
+        ),
+        (
+            "images_files",
+            Some(json!({"files": false, "images": true})),
+            Some(json!({"files": true, "images": false})),
+        ),
+        (
+            "neither",
+            Some(json!({"files": false, "images": false})),
+            Some(json!({"files": false, "images": false})),
+        ),
+        ("null_missing", Some(Value::Null), None),
+        ("missing_null", None, Some(Value::Null)),
+        (
+            "known_unknown",
+            Some(json!({"files": true, "images": true})),
+            None,
+        ),
+        (
+            "unknown_known",
+            None,
+            Some(json!({"files": false, "images": false})),
+        ),
+    ] {
+        let mut status: Value =
+            serde_json::from_slice(&std::fs::read(file("cloud-status.json")).unwrap()).unwrap();
+        for row in status["harnesses"].as_array_mut().unwrap() {
+            let support = match row["id"].as_str() {
+                Some("codex") => &codex,
+                Some("claude-code") => &claude,
+                _ => continue,
+            };
+            if case != "reported" {
+                match support {
+                    Some(value) => row["attachments"] = value.clone(),
+                    None => {
+                        row.as_object_mut().unwrap().remove("attachments");
+                    }
+                }
+            }
+        }
+        let fake = NewFake::with(
+            &format!("n18_models_attachments_{case}"),
+            vec![json!({"argv": ["cloud", "status", "--json"], "stdout": status.to_string()})],
+        );
+        let (code, doc) = fake.cli_json(&["models"], "");
+        assert_eq!(code, EXIT_CREATED, "{case}: {doc}");
+        let offered = doc["harnesses"].as_array().unwrap();
+        assert_eq!(offered.len(), 2, "{case}: {doc}");
+        for (harness, expected) in [
+            ("codex", codex.unwrap_or(Value::Null)),
+            ("claude-code", claude.unwrap_or(Value::Null)),
+        ] {
+            let row = offered
+                .iter()
+                .find(|row| row["harness"] == harness)
+                .unwrap();
+            assert_eq!(row.get("attachments"), Some(&expected), "{case}: {harness}");
+        }
+        assert_eq!(
+            fake.invocations(),
+            [vec!["cloud", "status", "--json"]],
+            "{case}: one catalogue read"
+        );
+    }
+}
+
+#[test]
 fn the_account_never_reaches_any_output() {
     let mut status: Value =
         serde_json::from_slice(&std::fs::read(file("cloud-status.json")).unwrap()).unwrap();
@@ -593,6 +766,17 @@ fn status_is_read_only_and_exits_as_the_record() {
     );
 }
 
+/// Sol, round 1, R1, and round 2, R3: the printed command is exact for any
+/// text, given as the argument or on stdin, in every shell it may be pasted
+/// into. Every value in it that the owner gave is quoted, never a bare
+/// word, so no shell expands it: not `~` or `~user`, zsh's `=cmd`, braces,
+/// globs, `$`, backticks, `!`, comments or separators. It is run as printed,
+/// stdin closed, in bash (which creates), then zsh as is and with
+/// `RC_QUOTES` and `sh` (each replays it: its `--text-sha256` and the op
+/// id's binding accept nothing but the same text). Where `sh` has no
+/// `$'…'` (dash), it is refused, exit 2, and nothing is created: fail
+/// closed. No character unsafe on a terminal is printed raw. Each text runs
+/// on its own fake, in parallel.
 #[test]
 fn the_printed_command_creates_exactly_what_was_previewed() {
     let texts = [
@@ -807,6 +991,10 @@ fn a_project_name_with_shell_syntax_is_quoted_too() {
     }
 }
 
+/// Sol, round 3, R4: zsh is required for acceptance, like Rust and Node. The
+/// round-trip test, run again as its own process with a broken `zsh` (one
+/// that exits 127, Sol's reproduction) first on `PATH`, must fail and say
+/// why: the cross-shell proof can never pass without zsh.
 #[test]
 fn the_round_trips_fail_without_a_working_zsh() {
     use std::os::unix::fs::PermissionsExt;
@@ -839,6 +1027,48 @@ fn the_round_trips_fail_without_a_working_zsh() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+#[test]
+fn models_fixture_process_returns_the_offered_catalogue() {
+    let fake = NewFake::new("n18_models_process_success");
+    let output = fake.run_process(&["models", "--json"], "");
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let catalogue: Value = serde_json::from_slice(&output.stdout).expect("models JSON");
+    assert_eq!(catalogue["schema"], "openwiz.cloud-options.v1");
+    assert_eq!(catalogue["state"]["kind"], "offered");
+    let codex = catalogue["harnesses"]
+        .as_array()
+        .expect("offered harnesses")
+        .iter()
+        .find(|row| row["harness"] == "codex")
+        .expect("offered codex harness");
+    assert_eq!(
+        codex["models"][0],
+        json!({
+            "model": "syn-codex-model-01",
+            "efforts": ["low", "medium", "high", "xhigh", "max"]
+        })
+    );
+
+    let output = fake.run_process(&["models"], "");
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let text = String::from_utf8(output.stdout).expect("models text");
+    assert!(
+        text.lines()
+            .any(|line| line.trim() == "syn-codex-model-01: low, medium, high, xhigh, max"),
+        "offered model missing from models text: {text}"
+    );
+}
+
 /// R4: the probe itself. A `zsh` that can't be started, fails, or isn't
 /// zsh is a problem; the one installed here is not.
 #[test]
@@ -856,7 +1086,18 @@ fn the_zsh_probe_finds_a_missing_or_broken_zsh() {
         ("zsh-silent", "#!/bin/sh\nexit 0\n", "did not answer as zsh"),
     ] {
         let fake = dir.join(name);
-        std::fs::write(&fake, body).unwrap();
+        // Written by a child `sh`, so this process never has the script open
+        // for writing. A child another test forks keeps a copy of every file
+        // this process has open until it runs its program, and running the
+        // script while a copy is open for writing fails with ETXTBSY (#146).
+        // `status` returns once the writer has exited: nothing has it open.
+        let written = std::process::Command::new("sh")
+            .args(["-c", "printf '%s' \"$1\" >\"$2\"", "sh", body])
+            .arg(&fake)
+            .stdin(std::process::Stdio::null())
+            .status()
+            .expect("run sh");
+        assert!(written.success(), "{name}: not written");
         std::fs::set_permissions(&fake, std::fs::Permissions::from_mode(0o755)).unwrap();
         let problem = zsh_problem(&fake);
         assert!(

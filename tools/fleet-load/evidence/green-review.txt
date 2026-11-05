@@ -1,0 +1,28 @@
+Review round (#2801, R3 blocking, R2 required) at 3253f3e42e64d6020517dbd256c0495b088c8a03:
+
+R3: skills/launch-fleet/SKILL.md links [overload.md](overload.md), carried in the skill: the
+observer's input, completeness, unknown states and durable pause (from tools/ci-overload/README.md).
+  python3 -I tools/fleet-load/standalone/dry_run_report.py   -> launch-fleet standalone: pass; privacy: pass
+  (the link is checked by the standalone rule; red: red-r3.txt)
+R2: tools/fleet-load/load.py backoff_gate: one GraphQL read, last; before it only GI1's saved
+probes, each once, plus their own later pages; nothing without a saved entry.
+  python3 -I tools/fleet-load/test_seams.py                  -> OK (4 tests; BackOffGate red first: red-r2.txt)
+  python3 -I tools/fleet-load/test.py                         -> the real back-off tick passes the exact gate;
+                                                               the run then stops on the known 600 s deadline (Gaps)
+Also: test_carried.py OK; tools/ci-overload/test.py OK.
+
+Merge of origin/main at 28a511143abbfdb958994e83d2f6e4c6c0745b9e (conflicts in skills/launch-fleet/scripts/test.sh and
+scripts/fixtures/proof-1273.md: main's own wording of the same two privacy fixes kept; this
+branch's carried-fixture paths and removed outside calls kept). Scoped checks there:
+  dry_run_report.py -> launch-fleet standalone: pass; privacy: pass (main's updated privacy check)
+  test_carried.py, test_seams.py, privacy-check test_check.py, skills-copy test_copy.py and
+  test_standalone.py, test-ops-starts.py, test-inbox.py, ci-overload test.py,
+  github-reads test_consumers.py, open-import test_import.py -> all OK
+
+R2 pagination (final narrow round) at 01e5a2ec5794d50af120ffd5cf88f15abcd7097a plus this fix: fake.py records each REST response's
+next link; backoff_gate accepts a later page only when an earlier response's next link named it,
+once. Red: red-r2-pages.txt (the re-check's unlinked page=50 candidate, accepted before).
+  python3 -I tools/fleet-load/test_seams.py -> OK (BackOffGate: unlinked page, page before its link
+  and a repeated linked page refused)
+  python3 -I tools/fleet-load/test.py -> the real back-off tick passes; the run then stops on the
+  recorded 600 s deadline gap (spec 500)

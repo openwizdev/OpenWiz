@@ -1,0 +1,417 @@
+FEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+======================================================================
+ERROR: test_default_fixture_counts_waits_and_ticket_linked_misses (__main__.StageWaits.test_default_fixture_counts_waits_and_ticket_linked_misses)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 197, in test_default_fixture_counts_waits_and_ticket_linked_misses
+    m = self.metrics()
+        ^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 102, in metrics
+    return {m['id']: m for m in N self.provider(**selection)['metrics']}
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 93, in provider
+    result = self.adapter.project(AT, root=self.root, journey='journeys.json',
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: project() got an unexpected keyword argument 'cohort_since'
+
+======================================================================
+ERROR: test_each_stage_at_below_and_above_its_loaded_limit (__main__.StageWaits.test_each_stage_at_below_and_above_its_loaded_limit) (stage='builder_start', limit=10)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 178, in test_each_stage_at_below_and_above_its_loaded_limit
+    m = self.metrics()
+        ^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 102, in metrics
+    return {m['id']: m for m in N self.provider(**selection)['metrics']}
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 93, in provider
+    result = self.adapter.project(AT, root=self.root, journey='journeys.json',
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: project() got an unexpected keyword argument 'cohort_since'
+
+======================================================================
+ERROR: test_each_stage_at_below_and_above_its_loaded_limit (__main__.StageWaits.test_each_stage_at_below_and_above_its_loaded_limit) (stage='builder_start', limit=11)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 178, in test_each_stage_at_below_and_above_its_loaded_limit
+    m = self.metrics()
+        ^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 102, in metrics
+    return {m['id']: m for m in N self.provider(**selection)['metrics']}
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 93, in provider
+    result = self.adapter.project(AT, root=self.root, journey='journeys.json',
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: project() got an unexpected keyword argument 'cohort_since'
+
+======================================================================
+ERROR: test_each_stage_at_below_and_above_its_loaded_limit (__main__.StageWaits.test_each_stage_at_below_and_above_its_loaded_limit) (stage='builder_start', limit=9)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 178, in test_each_stage_at_below_and_above_its_loaded_limit
+    m = self.metrics()
+        ^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 102, in metrics
+    return {m['id']: m for m in N self.provider(**selection)['metrics']}
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 93, in provider
+    result = self.adapter.project(AT, root=self.root, journey='journeys.json',
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: project() got an unexpected keyword argument 'cohort_since'
+
+======================================================================
+ERROR: test_each_stage_at_below_and_above_its_loaded_limit (__main__.StageWaits.test_each_stage_at_below_and_above_its_loaded_limit) (stage='reviewer_start', limit=6)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 178, in test_each_stage_at_below_and_above_its_loaded_limit
+    m = self.metrics()
+        ^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 102, in metrics
+    return {m['id']: m for m in N self.provider(**selection)['metrics']}
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 93, in provider
+    result = self.adapter.project(AT, root=self.root, journey='journeys.json',
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: project() got an unexpected keyword argument 'cohort_since'
+
+======================================================================
+ERROR: test_each_stage_at_below_and_above_its_loaded_limit (__main__.StageWaits.test_each_stage_at_below_and_above_its_loaded_limit) (stage='reviewer_start', limit=7)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 178, in test_each_stage_at_below_and_above_its_loaded_limit
+    m = self.metrics()
+        ^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 102, in metrics
+    return {m['id']: m for m in N self.provider(**selection)['metrics']}
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 93, in provider
+    result = self.adapter.project(AT, root=self.root, journey='journeys.json',
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: project() got an unexpected keyword argument 'cohort_since'
+
+======================================================================
+ERROR: test_each_stage_at_below_and_above_its_loaded_limit (__main__.StageWaits.test_each_stage_at_below_and_above_its_loaded_limit) (stage='reviewer_start', limit=5)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 178, in test_each_stage_at_below_and_above_its_loaded_limit
+    m = self.metrics()
+        ^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 102, in metrics
+    return {m['id']: m for m in N self.provider(**selection)['metrics']}
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 93, in provider
+    result = self.adapter.project(AT, root=self.root, journey='journeys.json',
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: project() got an unexpected keyword argument 'cohort_since'
+
+======================================================================
+ERROR: test_each_stage_at_below_and_above_its_loaded_limit (__main__.StageWaits.test_each_stage_at_below_and_above_its_loaded_limit) (stage='merge', limit=5)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 178, in test_each_stage_at_below_and_above_its_loaded_limit
+    m = self.metrics()
+        ^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 102, in metrics
+    return {m['id']: m for m in N self.provider(**selection)['metrics']}
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 93, in provider
+    result = self.adapter.project(AT, root=self.root, journey='journeys.json',
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: project() got an unexpected keyword argument 'cohort_since'
+
+======================================================================
+ERROR: test_each_stage_at_below_and_above_its_loaded_limit (__main__.StageWaits.test_each_stage_at_below_and_above_its_loaded_limit) (stage='merge', limit=6)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 178, in test_each_stage_at_below_and_above_its_loaded_limit
+    m = self.metrics()
+        ^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 102, in metrics
+    return {m['id']: m for m in N self.provider(**selection)['metrics']}
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 93, in provider
+    result = self.adapter.project(AT, root=self.root, journey='journeys.json',
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: project() got an unexpected keyword argument 'cohort_since'
+
+======================================================================
+ERROR: test_each_stage_at_below_and_above_its_loaded_limit (__main__.StageWaits.test_each_stage_at_below_and_above_its_loaded_limit) (stage='merge', limit=4)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 178, in test_each_stage_at_below_and_above_its_loaded_limit
+    m = self.metrics()
+        ^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 102, in metrics
+    return {m['id']: m for m in N self.provider(**selection)['metrics']}
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 93, in provider
+    result = self.adapter.project(AT, root=self.root, journey='journeys.json',
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: project() got an unexpected keyword argument 'cohort_since'
+
+======================================================================
+ERROR: test_each_stage_at_below_and_above_its_loaded_limit (__main__.StageWaits.test_each_stage_at_below_and_above_its_loaded_limit) (stage='fix_after_changes', limit=31)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 178, in test_each_stage_at_below_and_above_its_loaded_limit
+    m = self.metrics()
+        ^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 102, in metrics
+    return {m['id']: m for m in N self.provider(**selection)['metrics']}
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 93, in provider
+    result = self.adapter.project(AT, root=self.root, journey='journeys.json',
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: project() got an unexpected keyword argument 'cohort_since'
+
+======================================================================
+ERROR: test_each_stage_at_below_and_above_its_loaded_limit (__main__.StageWaits.test_each_stage_at_below_and_above_its_loaded_limit) (stage='fix_after_changes', limit=32)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 178, in test_each_stage_at_below_and_above_its_loaded_limit
+    m = self.metrics()
+        ^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 102, in metrics
+    return {m['id']: m for m in N self.provider(**selection)['metrics']}
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 93, in provider
+    result = self.adapter.project(AT, root=self.root, journey='journeys.json',
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: project() got an unexpected keyword argument 'cohort_since'
+
+======================================================================
+ERROR: test_each_stage_at_below_and_above_its_loaded_limit (__main__.StageWaits.test_each_stage_at_below_and_above_its_loaded_limit) (stage='fix_after_changes', limit=30)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 178, in test_each_stage_at_below_and_above_its_loaded_limit
+    m = self.metrics()
+        ^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 102, in metrics
+    return {m['id']: m for m in N self.provider(**selection)['metrics']}
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 93, in provider
+    result = self.adapter.project(AT, root=self.root, journey='journeys.json',
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: project() got an unexpected keyword argument 'cohort_since'
+
+======================================================================
+ERROR: test_each_stage_at_below_and_above_its_loaded_limit (__main__.StageWaits.test_each_stage_at_below_and_above_its_loaded_limit) (stage='builder_question_answer', limit=16)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 178, in test_each_stage_at_below_and_above_its_loaded_limit
+    m = self.metrics()
+        ^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 102, in metrics
+    return {m['id']: m for m in N self.provider(**selection)['metrics']}
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 93, in provider
+    result = self.adapter.project(AT, root=self.root, journey='journeys.json',
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: project() got an unexpected keyword argument 'cohort_since'
+
+======================================================================
+ERROR: test_each_stage_at_below_and_above_its_loaded_limit (__main__.StageWaits.test_each_stage_at_below_and_above_its_loaded_limit) (stage='builder_question_answer', limit=17)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 178, in test_each_stage_at_below_and_above_its_loaded_limit
+    m = self.metrics()
+        ^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 102, in metrics
+    return {m['id']: m for m in N self.provider(**selection)['metrics']}
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 93, in provider
+    result = self.adapter.project(AT, root=self.root, journey='journeys.json',
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: project() got an unexpected keyword argument 'cohort_since'
+
+======================================================================
+ERROR: test_each_stage_at_below_and_above_its_loaded_limit (__main__.StageWaits.test_each_stage_at_below_and_above_its_loaded_limit) (stage='builder_question_answer', limit=15)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 178, in test_each_stage_at_below_and_above_its_loaded_limit
+    m = self.metrics()
+        ^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 102, in metrics
+    return {m['id']: m for m in N self.provider(**selection)['metrics']}
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 93, in provider
+    result = self.adapter.project(AT, root=self.root, journey='journeys.json',
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: project() got an unexpected keyword argument 'cohort_since'
+
+======================================================================
+ERROR: test_projection_starts_nothing_and_has_no_authority (__main__.StageWaits.test_projection_starts_nothing_and_has_no_authority)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 275, in test_projection_starts_nothing_and_has_no_authority
+    self.provider()
+  File "tools/war-room/test_stage_waits.py", line 93, in provider
+    result = self.adapter.project(AT, root=self.root, journey='journeys.json',
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: project() got an unexpected keyword argument 'cohort_since'
+
+======================================================================
+ERROR: test_r1_unanswered_changes_round_keeps_every_other_wait (__main__.StageWaits.test_r1_unanswered_changes_round_keeps_every_other_wait)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 112, in test_r1_unanswered_changes_round_keeps_every_other_wait
+    p = self.provider()
+        ^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 93, in provider
+    result = self.adapter.project(AT, root=self.root, journey='journeys.json',
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: project() got an unexpected keyword argument 'cohort_since'
+
+======================================================================
+ERROR: test_r2_limits_carry_the_settings_read_not_the_tl2_read (__main__.StageWaits.test_r2_limits_carry_the_settings_read_not_the_tl2_read)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 122, in test_r2_limits_carry_the_settings_read_not_the_tl2_read
+    m = self.metrics()
+        ^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 102, in metrics
+    return {m['id']: m for m in N self.provider(**selection)['metrics']}
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 93, in provider
+    result = self.adapter.project(AT, root=self.root, journey='journeys.json',
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: project() got an unexpected keyword argument 'cohort_since'
+
+======================================================================
+ERROR: test_r3_no_invented_cohort_window (__main__.StageWaits.test_r3_no_invented_cohort_window)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 133, in test_r3_no_invented_cohort_window
+    m = self.metrics()
+        ^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 102, in metrics
+    return {m['id']: m for m in N self.provider(**selection)['metrics']}
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 93, in provider
+    result = self.adapter.project(AT, root=self.root, journey='journeys.json',
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: project() got an unexpected keyword argument 'cohort_since'
+
+======================================================================
+ERROR: test_r4_shared_pr_miss_counts_once_with_each_ticket_referenced (__main__.StageWaits.test_r4_shared_pr_miss_counts_once_with_each_ticket_referenced)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 159, in test_r4_shared_pr_miss_counts_once_with_each_ticket_referenced
+    m = self.metrics()
+        ^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 102, in metrics
+    return {m['id']: m for m in N self.provider(**selection)['metrics']}
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 93, in provider
+    result = self.adapter.project(AT, root=self.root, journey='journeys.json',
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: project() got an unexpected keyword argument 'cohort_since'
+
+======================================================================
+ERROR: test_refused_or_missing_producer_evidence_is_grey_never_a_miss (__main__.StageWaits.test_refused_or_missing_producer_evidence_is_grey_never_a_miss) [missing sidecar]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 260, in test_refused_or_missing_producer_evidence_is_grey_never_a_miss
+    p = self.provider()
+        ^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 93, in provider
+    result = self.adapter.project(AT, root=self.root, journey='journeys.json',
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: project() got an unexpected keyword argument 'cohort_since'
+
+======================================================================
+ERROR: test_refused_or_missing_producer_evidence_is_grey_never_a_miss (__main__.StageWaits.test_refused_or_missing_producer_evidence_is_grey_never_a_miss) [sidecar of another journey]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 260, in test_refused_or_missing_producer_evidence_is_grey_never_a_miss
+    p = self.provider()
+        ^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 93, in provider
+    result = self.adapter.project(AT, root=self.root, journey='journeys.json',
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: project() got an unexpected keyword argument 'cohort_since'
+
+======================================================================
+ERROR: test_refused_or_missing_producer_evidence_is_grey_never_a_miss (__main__.StageWaits.test_refused_or_missing_producer_evidence_is_grey_never_a_miss) [unknown interval claims an end]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 260, in test_refused_or_missing_producer_evidence_is_grey_never_a_miss
+    p = self.provider()
+        ^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 93, in provider
+    result = self.adapter.project(AT, root=self.root, journey='journeys.json',
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: project() got an unexpected keyword argument 'cohort_since'
+
+======================================================================
+ERROR: test_refused_or_missing_producer_evidence_is_grey_never_a_miss (__main__.StageWaits.test_refused_or_missing_producer_evidence_is_grey_never_a_miss) [duplicate setting]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 260, in test_refused_or_missing_producer_evidence_is_grey_never_a_miss
+    p = self.provider()
+        ^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 93, in provider
+    result = self.adapter.project(AT, root=self.root, journey='journeys.json',
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: project() got an unexpected keyword argument 'cohort_since'
+
+======================================================================
+ERROR: test_refused_or_missing_producer_evidence_is_grey_never_a_miss (__main__.StageWaits.test_refused_or_missing_producer_evidence_is_grey_never_a_miss) [missing setting]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 260, in test_refused_or_missing_producer_evidence_is_grey_never_a_miss
+    p = self.provider()
+        ^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 93, in provider
+    result = self.adapter.project(AT, root=self.root, journey='journeys.json',
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: project() got an unexpected keyword argument 'cohort_since'
+
+======================================================================
+ERROR: test_saved_sample_and_page_carry_the_stage_group (__main__.StageWaits.test_saved_sample_and_page_carry_the_stage_group)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 282, in test_saved_sample_and_page_carry_the_stage_group
+    provider = self.adapter.project(AT, root=self.root, journey='journeys.json',
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: project() got an unexpected keyword argument 'cohort_since'
+
+======================================================================
+ERROR: test_unknown_gated_and_stale_stay_unknown_even_under_tiny_limits (__main__.StageWaits.test_unknown_gated_and_stale_stay_unknown_even_under_tiny_limits)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 231, in test_unknown_gated_and_stale_stay_unknown_even_under_tiny_limits
+    m = self.metrics()
+        ^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 102, in metrics
+    return {m['id']: m for m in N self.provider(**selection)['metrics']}
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 93, in provider
+    result = self.adapter.project(AT, root=self.root, journey='journeys.json',
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: project() got an unexpected keyword argument 'cohort_since'
+
+======================================================================
+FAIL: test_cli_prints_a_projected_provider_for_source_selection (__main__.StageWaits.test_cli_prints_a_projected_provider_for_source_selection)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 305, in test_cli_prints_a_projected_provider_for_source_selection
+    self.assertEqual((0, ''), (done.returncode, done.stderr))
+AssertionError: Tuples differ: (0, '') != (2, 'usage: stage_waits.py [-h] --at AT --[272 chars]Z\n')
+
+First differing element 0:
+0
+2
+
+- (0, '')
++ (2,
++  'usage: stage_waits.py [-h] --at AT --root ROOT --journey JOURNEY --sidecar\n'
++  '                      SIDECAR --settings SETTINGS --settings-evidence\n'
++  '                      SETTINGS_EVIDENCE\n'
++  'stage_waits.py: error: unrecognized arguments: --cohort-since '
++  '2030-03-01T00:00:00Z --settings-read-at 2030-03-01T12:04:00Z\n')
+
+----------------------------------------------------------------------
+Ran 11 tests in N s
+
+FAILED (failures=1, errors=28)

@@ -1,0 +1,91 @@
+...FFFFFFFF...
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [zero-call-recovery-prior-applied]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/closedwiz-pr2255-fix/tools/install/tests/first-hour-contract/test_contract.py", line 91, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': ['candidat[19 chars]ve']} != {'problems': ['phase_attempt_mismatch:a1a1a1a1a1a1a1a1a[76 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': ['candidate_unknown', 'not_live']}
++ {'failures': [],
++  'problems': ['phase_attempt_mismatch:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1'],
++  'unproven': ['candidate_unknown', 'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [zero-call-recovery-prior-uncertain]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/closedwiz-pr2255-fix/tools/install/tests/first-hour-contract/test_contract.py", line 91, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': ['candidat[19 chars]ve']} != {'problems': ['phase_attempt_mismatch:a1a1a1a1a1a1a1a1a[76 chars]ve']}
+- {'failures': [], 'problems': [], 'unproven': ['candidate_unknown', 'not_live']}
++ {'failures': [],
++  'problems': ['phase_attempt_mismatch:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1'],
++  'unproven': ['candidate_unknown', 'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [zero-call-embedded-prior-applied]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/closedwiz-pr2255-fix/tools/install/tests/first-hour-contract/test_contract.py", line 91, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': ['gate_unr[91 chars]ve']} != {'problems': ['phase_attempt_mismatch:a1a1a1a1a1a1a1a1a[148 chars]ve']}
+  {'failures': [],
+-  'problems': [],
++  'problems': ['phase_attempt_mismatch:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1'],
+   'unproven': ['gate_unresolved:cloudroom_setup',
+                'gate_unresolved:feedback',
+                'gate_unresolved:paid_offer',
+                'not_live']}
+
+======================================================================
+FAIL: test_each_variant_gives_exactly_its_codes (__main__.FirstHourContract.test_each_variant_gives_exactly_its_codes) [zero-call-embedded-prior-uncertain]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/closedwiz-pr2255-fix/tools/install/tests/first-hour-contract/test_contract.py", line 91, in test_each_variant_gives_exactly_its_codes
+    self.assertEqual(report(changed), variant['expect'])
+AssertionError: {'problems': [], 'failures': [], 'unproven': ['gate_unr[91 chars]ve']} != {'problems': ['phase_attempt_mismatch:a1a1a1a1a1a1a1a1a[148 chars]ve']}
+  {'failures': [],
+-  'problems': [],
++  'problems': ['phase_attempt_mismatch:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1'],
+   'unproven': ['gate_unresolved:cloudroom_setup',
+                'gate_unresolved:feedback',
+                'gate_unresolved:paid_offer',
+                'not_live']}
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [zero-call-embedded-prior-applied]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/closedwiz-pr2255-fix/tools/install/tests/first-hour-contract/test_contract.py", line 109, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_no_failure_or_unproven_evidence_passes_even_when_live (__main__.FirstHourContract.test_no_failure_or_unproven_evidence_passes_even_when_live) [zero-call-embedded-prior-uncertain]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/closedwiz-pr2255-fix/tools/install/tests/first-hour-contract/test_contract.py", line 109, in test_no_failure_or_unproven_evidence_passes_even_when_live
+    self.assertNotEqual(problems, [], 'a live pass was accepted')
+AssertionError: [] == [] : a live pass was accepted
+
+======================================================================
+FAIL: test_recovery_missing_evidence_never_becomes_a_live_pass (__main__.FirstHourContract.test_recovery_missing_evidence_never_becomes_a_live_pass) [zero-call-recovery-prior-applied]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/closedwiz-pr2255-fix/tools/install/tests/first-hour-contract/test_contract.py", line 136, in test_recovery_missing_evidence_never_becomes_a_live_pass
+    self.assertNotEqual(check.check(doc).problems, [], 'incomplete recovery passed')
+AssertionError: [] == [] : incomplete recovery passed
+
+======================================================================
+FAIL: test_recovery_missing_evidence_never_becomes_a_live_pass (__main__.FirstHourContract.test_recovery_missing_evidence_never_becomes_a_live_pass) [zero-call-recovery-prior-uncertain]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/closedwiz-pr2255-fix/tools/install/tests/first-hour-contract/test_contract.py", line 136, in test_recovery_missing_evidence_never_becomes_a_live_pass
+    self.assertNotEqual(check.check(doc).problems, [], 'incomplete recovery passed')
+AssertionError: [] == [] : incomplete recovery passed
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.231s
+
+FAILED (failures=8)

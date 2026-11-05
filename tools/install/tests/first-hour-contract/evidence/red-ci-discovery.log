@@ -1,0 +1,12 @@
+CI discovery proof before wiring at 330d2a7e3b541071f2735db4c15e344c6dc6101e
+Command: python3 -I tools/install/test_install.py
+........
+----------------------------------------------------------------------
+Ran 8 tests in 3.175s
+
+OK
+
+Installer exit: 0
+First-hour test marker observed: False
+Proof assertion exit: 1
+AssertionError: release:install did not discover the first-hour contract tests

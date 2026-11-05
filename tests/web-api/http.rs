@@ -8,7 +8,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream, UdpSocket};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Condvar, Mutex};
+use std::sync::{Arc, Condvar, Mutex, OnceLock};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -59,7 +59,7 @@ impl TestServer {
     /// The log once every request so far has finished: a connection's line
     /// is written after its response is sent, and the connection counts as
     /// open until then, so receiving a response does not prove its line is
-    /// there yet. Waits up to 10 s.
+    /// there yet (Sol #91 re-check). Waits up to 10 s.
     pub fn settled_log(&self) -> String {
         self.wait_for("every request and its log line", |s| s.connections == 0);
         self.log_text()
@@ -172,13 +172,16 @@ pub fn send(addr: SocketAddr, raw: &[u8]) -> Response {
 }
 
 /// Reads a response until the server closes the connection.
-pub fn read_response(stream: &mut TcpStream) -> Response {
+pub fn read_response(stream: &mut impl Read) -> Response {
     let mut bytes = Vec::new();
     let mut chunk = [0u8; 8192];
     loop {
         match stream.read(&mut chunk) {
             Ok(0) => break,
             Ok(n) => bytes.extend_from_slice(&chunk[..n]),
+            // A signal (EINTR): the kernel never restarts a read on a socket
+            // with a read timeout, so it is tried again here (#429).
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => {}
             Err(e) if bytes.is_empty() => panic!("no response: {e}"),
             Err(_) => break,
         }
@@ -223,30 +226,60 @@ pub fn non_loopback_address() -> Option<IpAddr> {
     (!ip.is_loopback() && !ip.is_unspecified()).then_some(ip)
 }
 
-/// Builds the `openwiz-server` binary into the test's target directory and
-/// returns its path.
+/// Builds the `openwiz-server` binary into the test's target directory once
+/// per test run, as `openwiz_release` does, and returns its path. (#1259:
+/// a build per call queued every caller on cargo's build lock.)
 pub fn server_binary() -> PathBuf {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
-    let target = Path::new(env!("CARGO_TARGET_TMPDIR"))
-        .parent()
-        .expect("the target directory")
-        .to_path_buf();
-    let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned());
-    let build = Command::new(cargo)
-        .args(["build", "--locked", "-p", "openwiz-server"])
-        .args(["--bin", "openwiz-server", "--target-dir"])
-        .arg(&target)
-        .current_dir(&root)
-        .output()
-        .expect("run cargo build");
-    assert!(
-        build.status.success(),
-        "cargo build failed:\n{}",
-        String::from_utf8_lossy(&build.stderr)
-    );
-    let program = target.join("debug").join("openwiz-server");
-    assert!(program.is_file(), "no {program:?}");
-    program
+    static BUILT: OnceLock<PathBuf> = OnceLock::new();
+    static LOCK: Mutex<()> = Mutex::new(());
+    let _guard = LOCK.lock().unwrap_or_else(|p| p.into_inner());
+    BUILT
+        .get_or_init(|| {
+            let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+            let target = Path::new(env!("CARGO_TARGET_TMPDIR"))
+                .parent()
+                .expect("the target directory")
+                .to_path_buf();
+            let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned());
+            let build = Command::new(&cargo)
+                .args(["build", "--locked", "-p", "openwiz-tests"])
+                .args(["--example", "openwiz-server", "--target-dir"])
+                .arg(&target)
+                .current_dir(&root)
+                .output()
+                .expect("run cargo build");
+            assert!(
+                build.status.success(),
+                "cargo build failed:\n{}",
+                String::from_utf8_lossy(&build.stderr)
+            );
+            // A7 starts this fake thousands of times. Build the same source
+            // once with its release profile, under the same fixture-build lock.
+            let build = Command::new(&cargo)
+                .args([
+                    "build",
+                    "--release",
+                    "--locked",
+                    "-p",
+                    "openwiz-tests",
+                    "--bin",
+                    "fake-room-cli",
+                    "--target-dir",
+                ])
+                .arg(&target)
+                .current_dir(&root)
+                .output()
+                .expect("build the diagnostic fake");
+            assert!(
+                build.status.success(),
+                "build the diagnostic fake: {}",
+                String::from_utf8_lossy(&build.stderr)
+            );
+            let program = target.join("debug").join("examples").join("openwiz-server");
+            assert!(program.is_file(), "no {program:?}");
+            program
+        })
+        .clone()
 }
 
 /// The CLI's exit code for each kind of error, and the HTTP status the
@@ -384,4 +417,49 @@ impl SessionSource for Gated {
     ) -> Result<OutputRecord, SourceError> {
         self.inner.session_output(id, deadline)
     }
+}
+
+/// A reader that plays a script, one read per step, then the end.
+struct Scripted(Vec<std::io::Result<&'static [u8]>>);
+
+impl Read for Scripted {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        if self.0.is_empty() {
+            return Ok(0);
+        }
+        let bytes = self.0.remove(0)?;
+        buf[..bytes.len()].copy_from_slice(bytes);
+        Ok(bytes.len())
+    }
+}
+
+fn interrupted() -> std::io::Result<&'static [u8]> {
+    Err(std::io::ErrorKind::Interrupted.into())
+}
+
+/// #429: a signal can interrupt a read (EINTR) on a socket with a read
+/// timeout, which the kernel never restarts. The read is tried again.
+#[test]
+fn a_read_interrupted_before_the_first_byte_is_tried_again() {
+    let mut reader = Scripted(vec![
+        interrupted(),
+        Ok(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok"),
+    ]);
+    let r = read_response(&mut reader);
+    assert_eq!(r.status, 200);
+    assert_eq!(r.body, b"ok");
+}
+
+/// #429: an interrupted read after the first bytes never cuts the response
+/// short.
+#[test]
+fn a_read_interrupted_after_the_first_bytes_keeps_the_whole_response() {
+    let mut reader = Scripted(vec![
+        Ok(b"HTTP/1.1 200 OK\r\nContent-Length: 4\r\n\r\nab"),
+        interrupted(),
+        Ok(b"cd"),
+    ]);
+    let r = read_response(&mut reader);
+    assert_eq!(r.status, 200);
+    assert_eq!(r.body, b"abcd");
 }

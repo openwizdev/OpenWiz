@@ -1,3 +1,16 @@
+//! Sol, round 1, R2: the two JSON documents `room-cli` hands a create, the
+//! `spawn` receipt and the `cloud status` catalogue, are read with strict,
+//! hand-written readers that see every key as the text gives it (B1's
+//! pattern), never through `serde_json::Value`, which keeps only the last of
+//! a key given twice.
+//!
+//! - **The receipt:** exactly the documented thread row's keys, each typed,
+//!   each once; `id` and `projectId` required. Anything else is uncertain,
+//!   with the prompt kept.
+//! - **The catalogue:** only sheet A-2's keys are read, each typed, each
+//!   once; every other key is still dropped unread (A-2). Anything else
+//!   offers nothing and dispatches nothing.
+
 use openwiz_adapter_cloudroom::new_thread::{parse_catalogue, spawn_receipt};
 use openwiz_core::messaging::send::UncertainReason;
 use openwiz_core::new_thread::outcome::SpawnReply;
@@ -27,9 +40,21 @@ fn without(value: &Value, key: &str) -> String {
     v.to_string()
 }
 
-const SOLS_RECEIPT: &str = r#"{"id":"thr_wrong","id":"thr_syn_0021","projectId":"prj_wrong","projectId":"prj_syn_0001","unexpected":true}"#;
+/// Sol's counterexample, as he ran it.
+const SOLS_RECEIPT: &str = r#"{"id":"thr_syn_wrong","id":"thr_syn_0021","projectId":"prj_syn_wrong","projectId":"prj_syn_0001","unexpected":true}"#;
 
 #[test]
+fn boundary_readers_affected_contracts_preserve_original_cases() {
+    let cases: [(&str, fn()); 2] = [
+        ("the_catalogue_table", the_catalogue_table),
+        ("the_receipt_table", the_receipt_table),
+    ];
+    for (name, proof) in cases {
+        eprintln!("TA2 case: boundary_readers::{name}");
+        proof();
+    }
+}
+
 fn the_receipt_table() {
     let receipt = fixture_json("spawn-receipt-created.json");
     let text = receipt.to_string();
@@ -103,7 +128,12 @@ fn the_receipt_table() {
         };
         assert_eq!(*reason, UncertainReason::UnexpectedReceipt, "{row}");
         let shown = format!("{gaps:?}");
-        for echoed in ["thr_wrong", "prj_wrong", "thr_syn_0099", "unexpected"] {
+        for echoed in [
+            "thr_syn_wrong",
+            "prj_syn_wrong",
+            "thr_syn_0099",
+            "unexpected",
+        ] {
             assert!(!shown.contains(echoed), "{echoed} echoed: {shown}");
         }
     }
@@ -129,15 +159,59 @@ fn sols_duplicate_receipt_is_uncertain_and_keeps_the_prompt() {
     assert_eq!(fake.spawn_count(), 1, "nothing was sent again");
 }
 
+// #606 evidence: synthetic fixtures/mutation only; no live behaviour claim.
+// Base: 84da996d2fbbfa383735d4cc9d41e6daa53c440e, Rust 1.99.1, two build jobs.
+// Disposable-copy plant: clone KeysOnceVisitor as ReceiptKeysOnceVisitor,
+// replace its map.next_value::<KeysOnce>() with serde_json::Value, and use
+// that visitor only in ObjectKeysOnce. Shared KeysOnce and shallow receipt
+// duplicate checks stay intact. No production mutation lands on this branch.
+// Before adding this test, under that plant:
+// cargo test --locked -p openwiz-tests --test new-thread
+// test result: ok. 152 passed; 0 failed; 0 ignored; 0 filtered out.
+// After adding this test, under the same plant:
+// cargo test --locked -p openwiz-tests --test new-thread \
+//   boundary_readers::nested_duplicate_receipt_is_uncertain_through_cli -- --exact
+// exit 101; left: Some(0), right: Some(6); 0 passed; 1 failed; 152 filtered out.
+// Restoring pristine production, the same exact command exits 0:
+// test result: ok. 1 passed; 0 failed; 0 ignored; 152 filtered out.
+// Helper: Scout, boundary-reader/CLI seam, at the base above; PASS (read only).
+// Used 5 pointers, ignored 2, wrong 0; builder checked the used pointers.
+// No-push: clean #606: nothing changed but the writes you named (branches 0,
+// comments 5). Helper archived before the check.
+#[test]
+fn nested_duplicate_receipt_is_uncertain_through_cli() {
+    // Keep this as JSON text: Value would silently discard the first x.
+    let receipt =
+        r#"{"id":"thr_syn_0021","projectId":"prj_syn_0001","purpose":{"detail":{"x":1,"x":2}}}"#;
+    let fake = NewFake::with(
+        "nested_receipt",
+        vec![json!({"any_spawn": true, "stdout": receipt, "creates": true})],
+    );
+    let args = new_args(
+        "Synthetic project one",
+        "op-nested-receipt",
+        &["--json"],
+        "Synthetic prompt retained after receipt drift.",
+    );
+    let (code, report) = json_of(&fake.run_process(&args, ""));
+    assert_eq!(code, Some(6), "{report}");
+    assert_eq!(report["status"], "uncertain");
+    assert_eq!(report["result"]["outcome"]["reason"], "unexpected_receipt");
+    assert_eq!(
+        fake.record("op-nested-receipt")["text"],
+        "Synthetic prompt retained after receipt drift."
+    );
+    assert_eq!(fake.spawn_count(), 1, "nothing was sent again");
+}
+
 fn catalogue_text() -> String {
     String::from_utf8(fixture("cloud-status.json")).unwrap()
 }
 
-#[test]
 fn the_catalogue_table() {
     let catalogue = fixture_json("cloud-status.json");
     let compact = catalogue.to_string();
-    // everything outside the catalogue keys is dropped unread, at
+    // A-2: everything outside the catalogue keys is dropped unread, at
     // every level, whatever its type.
     let mut planted = catalogue.clone();
     planted["account"] = json!({"email": "synthetic-account-marker"});
@@ -182,6 +256,7 @@ fn the_catalogue_table() {
         v.to_string()
     };
     let bad = [
+        // Sol's counterexample, in the file as it is written.
         twice(
             &catalogue_text(),
             "\"ready\": true",
@@ -338,4 +413,41 @@ fn the_other_reads_refuse_a_key_given_twice() {
     assert_eq!(code, Some(5), "{json}");
     assert_eq!(json["result"]["outcome"]["reason"], "projects_not_read");
     assert_eq!(fake.spawn_count(), 0);
+}
+
+#[test]
+fn thread_show_distinguishes_not_found_from_other_command_failures() {
+    use openwiz_core::new_thread::operation::NewThreadClient;
+    use std::time::{Duration, Instant};
+
+    for (name, stderr, not_found) in [
+        ("show_404", "Error: HTTP 404: Thread not found", true),
+        ("show_500", "Error: HTTP 500: Temporary failure", false),
+    ] {
+        let fake = NewFake::with(
+            name,
+            vec![json!({
+                "argv": ["thread", "show", THREAD, "--json"],
+                "stderr": stderr,
+                "exit": 1,
+            })],
+        );
+        let result = fake
+            .source()
+            .show_thread(THREAD, Instant::now() + Duration::from_secs(5));
+        if not_found {
+            assert!(
+                matches!(result, Err(SourceError::NotFound { ref subject })
+                if subject == THREAD),
+                "{stderr}: {result:?}"
+            );
+        } else {
+            assert!(
+                matches!(result, Err(SourceError::CommandFailed {
+                exit_code: Some(1), ref detail,
+            }) if detail == "output withheld"),
+                "{stderr}: {result:?}"
+            );
+        }
+    }
 }

@@ -1,0 +1,146 @@
+{
+  "evidence_class": "synthetic",
+  "cohort": "synthetic-merged",
+  "prs": [
+    4001,
+    4002
+  ],
+  "window": {
+    "since": "2030-01-01T00:00:00Z",
+    "until": "2030-01-02T00:00:00Z",
+    "timezone": "UTC"
+  },
+  "observed_at": "2030-01-03T00:00:00Z",
+  "components": [
+    {
+      "component": "models",
+      "prs": [
+        4001,
+        4002
+      ],
+      "value": 4,
+      "unit": "usd",
+      "complete": true,
+      "charges": [
+        "synthetic-models"
+      ],
+      "window": {
+        "since": "2030-01-01T00:00:00Z",
+        "until": "2030-01-02T00:00:00Z",
+        "timezone": "UTC"
+      },
+      "source": {
+        "path": "fixtures/synthetic/allocation.json",
+        "schema": "synthetic.cost-allocation.v1",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "evidence": [
+        "https://github.com/example/synthetic/pull/4001"
+      ]
+    },
+    {
+      "component": "shared_parent",
+      "prs": [
+        4001,
+        4002
+      ],
+      "value": 2,
+      "unit": "usd",
+      "complete": true,
+      "charges": [
+        "synthetic-shared_parent"
+      ],
+      "window": {
+        "since": "2030-01-01T00:00:00Z",
+        "until": "2030-01-02T00:00:00Z",
+        "timezone": "UTC"
+      },
+      "source": {
+        "path": "fixtures/synthetic/allocation.json",
+        "schema": "synthetic.cost-allocation.v1",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "evidence": [
+        "https://github.com/example/synthetic/pull/4001"
+      ]
+    },
+    {
+      "component": "helpers",
+      "prs": [
+        4001,
+        4002
+      ],
+      "value": 1,
+      "unit": "usd",
+      "complete": true,
+      "charges": [
+        "synthetic-helpers"
+      ],
+      "window": {
+        "since": "2030-01-01T00:00:00Z",
+        "until": "2030-01-02T00:00:00Z",
+        "timezone": "UTC"
+      },
+      "source": {
+        "path": "fixtures/synthetic/allocation.json",
+        "schema": "synthetic.cost-allocation.v1",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "evidence": [
+        "https://github.com/example/synthetic/pull/4001"
+      ]
+    },
+    {
+      "component": "sandbox",
+      "prs": [
+        4001,
+        4002
+      ],
+      "value": 3,
+      "unit": "usd",
+      "complete": true,
+      "charges": [
+        "synthetic-sandbox"
+      ],
+      "window": {
+        "since": "2030-01-01T00:00:00Z",
+        "until": "2030-01-02T00:00:00Z",
+        "timezone": "UTC"
+      },
+      "source": {
+        "path": "fixtures/synthetic/allocation.json",
+        "schema": "synthetic.cost-allocation.v1",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "evidence": [
+        "https://github.com/example/synthetic/pull/4001"
+      ]
+    },
+    {
+      "component": "ci",
+      "prs": [
+        4001,
+        4002
+      ],
+      "value": 2,
+      "unit": "usd",
+      "complete": true,
+      "charges": [
+        "synthetic-ci"
+      ],
+      "window": {
+        "since": "2030-01-01T00:00:00Z",
+        "until": "2030-01-02T00:00:00Z",
+        "timezone": "UTC"
+      },
+      "source": {
+        "path": "fixtures/synthetic/allocation.json",
+        "schema": "synthetic.cost-allocation.v1",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "evidence": [
+        "https://github.com/example/synthetic/pull/4001"
+      ]
+    }
+  ]
+}

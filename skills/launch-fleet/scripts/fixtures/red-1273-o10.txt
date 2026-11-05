@@ -1,0 +1,5 @@
+O10 source: 7f8b75e65652c16ac37324ba90e5bf3398431b43
+ok   batch approval: the spec decision alone admits no follow-ups
+jq: error (at /tmp/1273-o10-b34_ghri/skills/launch-fleet/scripts/fixtures/check.json:160): unfilled triage approval placeholder
+FAIL batch approval: the documented records admit only the approved subset: the filter failed
+2 fleet batch cases, 1 failed

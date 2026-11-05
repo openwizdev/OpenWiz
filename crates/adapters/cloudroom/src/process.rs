@@ -4,7 +4,7 @@
 //! A read is stopped at the earlier of the run's deadline and
 //! [`READ_TIMEOUT`]; a stopped child is killed and reaped. Nothing is retried.
 //!
-//! **The environment scrub**: every call runs without the
+//! **The environment scrub** (sheet A-15): every call runs without the
 //! CloudRoom thread-context variables, [`is_scrubbed`], so a `room-cli`
 //! started from inside a CloudRoom thread can't act for that thread or
 //! rewrite the model asked for. `ROOM_SERVER_URL` is always kept. Everything
@@ -12,11 +12,12 @@
 //!
 //! Only the child itself is killed. A process it started that keeps the
 //! pipes open is not; the read then times out without waiting longer.
-//! Whether `room-cli` starts such processes is unobserved.
+//! Whether `room-cli` starts such processes is unobserved (#4).
 
 use std::io::Read as _;
 use std::path::Path;
 use std::process::{Child, Command, Stdio};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -41,6 +42,24 @@ const DRAIN_GRACE: Duration = Duration::from_millis(100);
 /// How often a running read is checked.
 const POLL: Duration = Duration::from_millis(5);
 
+/// Only synthetic fixture processes opt in; ordinary callers keep `POLL`.
+static FIXTURE_FAST_POLL: AtomicBool = AtomicBool::new(false);
+
+pub(crate) fn use_fast_polling_for_fixtures() {
+    FIXTURE_FAST_POLL.store(true, Ordering::SeqCst);
+}
+
+fn poll_interval() -> Duration {
+    if FIXTURE_FAST_POLL.load(Ordering::SeqCst) {
+        Duration::from_millis(1)
+    } else {
+        POLL
+    }
+}
+
+/// The thread-context variables `room-cli` reads (spike run 3: its "Current
+/// context" names `ROOM_PROJECT_ID` and `ROOM_THREAD_ID`, and `spawn
+/// --parent-self` uses `ROOM_THREAD_ID`). Every `BB_*` name is removed too.
 pub const SCRUBBED_ENV: &[&str] = &["ROOM_THREAD_ID", "ROOM_PROJECT_ID"];
 
 /// The prefix of every other removed name.
@@ -90,13 +109,26 @@ pub fn run(
     invocation: &Invocation,
     deadline: Instant,
 ) -> Result<Vec<u8>, SourceError> {
-    execute(program, invocation, deadline).map_err(|failure| match failure {
-        Failure::Source(e) => e,
-        Failure::Exited { exit_code, stderr } => SourceError::CommandFailed {
-            exit_code,
-            detail: diagnostic(&stderr),
+    run_with_read_timeout(program, invocation, deadline, read_timeout())
+}
+
+/// Per-source fixture injection: the cap is local and can only lower the
+/// ordinary timeout. The invocation's attachment allowance still applies.
+pub(crate) fn run_with_read_timeout(
+    program: &Path,
+    invocation: &Invocation,
+    deadline: Instant,
+    timeout: Duration,
+) -> Result<Vec<u8>, SourceError> {
+    execute_with_read_timeout(program, invocation, deadline, timeout.min(read_timeout())).map_err(
+        |failure| match failure {
+            Failure::Source(e) => e,
+            Failure::Exited { exit_code, stderr } => SourceError::CommandFailed {
+                exit_code,
+                detail: diagnostic(&stderr),
+            },
         },
-    })
+    )
 }
 
 /// A failed `thread spawn`: its exit code and the first non-empty line of
@@ -133,12 +165,54 @@ pub(crate) fn run_spawn(
     })
 }
 
+/// A lower read timeout for this whole process, in milliseconds; 0 for
+/// none. Only the test-only fixture programs set it (#1259), through
+/// [`crate::source::lower_read_timeout_for_fixtures`]: the production
+/// binaries never do, so their reads keep [`READ_TIMEOUT`].
+static FIXTURE_READ_TIMEOUT_MS: AtomicU64 = AtomicU64::new(0);
+
+pub(crate) fn lower_read_timeout(timeout: Duration) {
+    let ms = u64::try_from(timeout.as_millis())
+        .unwrap_or(u64::MAX)
+        .max(1);
+    FIXTURE_READ_TIMEOUT_MS.store(ms, Ordering::SeqCst);
+}
+
+/// This process's read timeout: [`READ_TIMEOUT`], or a fixture's lower one.
+fn read_timeout() -> Duration {
+    read_timeout_with(FIXTURE_READ_TIMEOUT_MS.load(Ordering::SeqCst))
+}
+
+/// A fixture value can only lower [`READ_TIMEOUT`], never raise it.
+fn read_timeout_with(fixture_ms: u64) -> Duration {
+    match fixture_ms {
+        0 => READ_TIMEOUT,
+        ms => Duration::from_millis(ms).min(READ_TIMEOUT),
+    }
+}
+
 fn execute(program: &Path, invocation: &Invocation, deadline: Instant) -> Result<Vec<u8>, Failure> {
+    execute_with_read_timeout(program, invocation, deadline, read_timeout())
+}
+
+fn execute_with_read_timeout(
+    program: &Path,
+    invocation: &Invocation,
+    deadline: Instant,
+    timeout: Duration,
+) -> Result<Vec<u8>, Failure> {
     let started = Instant::now();
     // A call carrying attachments gets their allowance on top (B2).
-    let stop_at = deadline.min(started + READ_TIMEOUT + invocation.allowance());
+    let stop_at = deadline.min(started + timeout + invocation.allowance());
     if started >= stop_at {
         return Err(Failure::Source(SourceError::TimedOut { after_ms: 0 }));
+    }
+    let resolved = crate::locate::program(program).map_err(Failure::Source)?;
+    let program = resolved.as_path();
+    if Instant::now() >= stop_at {
+        return Err(Failure::Source(SourceError::TimedOut {
+            after_ms: u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX),
+        }));
     }
     let mut child = scrub(&mut Command::new(program))
         .args(invocation.argv())
@@ -146,9 +220,9 @@ fn execute(program: &Path, invocation: &Invocation, deadline: Instant) -> Result
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(|e| {
+        .map_err(|_| {
             Failure::Source(SourceError::Unavailable {
-                detail: format!("{} could not be started: {e}", program.display()),
+                detail: "room-cli could not be started".to_owned(),
             })
         })?;
     let stdout = collect(child.stdout.take(), MAX_STDOUT_BYTES);
@@ -159,7 +233,36 @@ fn execute(program: &Path, invocation: &Invocation, deadline: Instant) -> Result
         })
     };
 
+    // Only known reads may be stopped as soon as their output is oversized.
+    // Writes keep waiting for exit/deadline: their effects may already have
+    // happened. Future invocations retain that behaviour until explicitly
+    // admitted to this read-only set.
+    let refuse_oversized_early = matches!(
+        invocation,
+        Invocation::Version
+            | Invocation::ThreadList { .. }
+            | Invocation::ProjectList { .. }
+            | Invocation::MachineList
+            | Invocation::ThreadShow(_)
+            | Invocation::ThreadOutput(_)
+            | Invocation::CloudStatus
+            | Invocation::CloudThreadWorkspace(_)
+            | Invocation::LoopList
+    );
+    let mut collected_stdout = None;
     let status = loop {
+        if refuse_oversized_early
+            && collected_stdout.is_none()
+            && let Ok(out) = stdout.try_recv()
+        {
+            if out.len() > MAX_STDOUT_BYTES {
+                stop(&mut child);
+                return Err(Failure::Source(SourceError::Malformed {
+                    detail: format!("printed more than {MAX_STDOUT_BYTES} bytes"),
+                }));
+            }
+            collected_stdout = Some(out);
+        }
         match child.try_wait() {
             Ok(Some(status)) => break status,
             Ok(None) => {
@@ -168,12 +271,12 @@ fn execute(program: &Path, invocation: &Invocation, deadline: Instant) -> Result
                     stop(&mut child);
                     return Err(timed_out());
                 }
-                thread::sleep(POLL.min(left));
+                thread::sleep(poll_interval().min(left));
             }
             Err(e) => {
                 stop(&mut child);
                 return Err(Failure::Source(SourceError::Unavailable {
-                    detail: format!("waiting for {} failed: {e}", program.display()),
+                    detail: format!("waiting for room-cli failed ({:?})", e.kind()),
                 }));
             }
         }
@@ -184,7 +287,10 @@ fn execute(program: &Path, invocation: &Invocation, deadline: Instant) -> Result
     // exited just before it, bounds that wait too.
     let drain_until = stop_at.max(Instant::now() + DRAIN_GRACE);
     let left = drain_until.saturating_duration_since(Instant::now());
-    let out = stdout.recv_timeout(left).map_err(|_| timed_out())?;
+    let out = match collected_stdout {
+        Some(out) => out,
+        None => stdout.recv_timeout(left).map_err(|_| timed_out())?,
+    };
     let left = drain_until.saturating_duration_since(Instant::now());
     let err = stderr.recv_timeout(left).unwrap_or_default();
 
@@ -220,7 +326,7 @@ pub const NOT_FOUND_LINE: &str = "Error: HTTP 404: Thread not found";
 /// withheld)`, or nothing of it. No digit beyond the status, punctuation,
 /// control or non-ASCII character from `room-cli` is shown, so no path,
 /// address, `KEY=value` or terminal control; a word of letters still can
-/// be.
+/// be. Provisional; see the source-diagnostics fix's evidence README.
 fn diagnostic(stderr: &[u8]) -> String {
     let text = String::from_utf8_lossy(stderr);
     let Some(line) = text.lines().map(str::trim).find(|l| !l.is_empty()) else {
@@ -290,3 +396,7 @@ fn stop(child: &mut Child) {
     let _ = child.kill();
     let _ = child.wait();
 }
+
+#[cfg(test)]
+#[path = "../../../../tests/support/cloudroom_process_tests.rs"]
+mod tests;

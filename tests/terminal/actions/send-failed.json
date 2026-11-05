@@ -1,0 +1,57 @@
+{
+  "schema": "openwiz.messaging.v1",
+  "op_id": "op-send",
+  "target": {
+    "id": "thr_syn_0011",
+    "title": {
+      "known": "Synthetic session 11"
+    }
+  },
+  "source": {
+    "name": "room-cli",
+    "version": {
+      "known": "v127"
+    },
+    "tested_version": "",
+    "version_tested": false
+  },
+  "requested_mode": "queue",
+  "status": "failed",
+  "summary": "Queue requested · failed: the target's queue appears paused, or that cannot be ruled out, and sending would resume it; nothing was sent without the owner's acknowledgement",
+  "result": {
+    "kind": "outcome",
+    "delivery": {
+      "kind": "failed",
+      "reason": "paused_queue_not_acknowledged",
+      "text": "failed: the target's queue appears paused, or that cannot be ruled out, and sending would resume it; nothing was sent without the owner's acknowledgement"
+    },
+    "replayed": false,
+    "recovered": false
+  },
+  "effects": {
+    "read_at": 1793978204201,
+    "read_age_ms": 12,
+    "effect": {
+      "known": {
+        "kind": "starts_turn",
+        "text": "starts a turn; may wake it"
+      }
+    },
+    "paused_queue": {
+      "known": {
+        "appears_paused": true,
+        "queued_messages": {
+          "known": 2
+        },
+        "text": "resumes the paused queue; 2 queued messages may run after this one"
+      }
+    },
+    "needs_acknowledgement": true
+  },
+  "text_sha256": "4a85827ad80e8635fb4a2b41a3fce1d0f23ba1eb27db0aa84113a7b0ca415d42",
+  "text_bytes": 9,
+  "gaps": [],
+  "claimed_at": 1793978204194,
+  "dispatching_at": null,
+  "finished_at": 1793978204213
+}

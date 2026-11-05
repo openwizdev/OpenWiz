@@ -1,0 +1,1176 @@
+{
+ "plan": "openwiz-0.0.3-live-test",
+ "about": "The run sheet's steps for send-kit.py (X1), in order. Jake keeps using CloudRoom and his Mac throughout (Jake, 2026-10-31). C groups: the CLI, run by the runner. W groups: the web route, X1 making the composer's requests to its own 0.0.3 server, after the swap. P1: Jake's phone, about 10 minutes. Each group is one bracket (the list compare on cold sessions, plus samples, L-9). Steps with the same seq run back to back; the settle follows each seq. deliver = user-message events carrying this text expected on the step's thread. calls = thread tell calls X2 lets through for this step; attempts = every tell X2 saw (called, held or refused).",
+ "budget": {"sends": 23},
+ "groups": [
+  {
+   "id": "C1",
+   "claims": [
+    "L-3",
+    "L11",
+    "L1",
+    "L4"
+   ],
+   "title": "The dash text first, alone (L-3)",
+   "steps": [
+    {
+     "id": "C1-M13",
+     "seq": 1,
+     "do": "send",
+     "msg": "M13",
+     "thread": "T-A",
+     "mode": "queue",
+     "need": "idle",
+     "expect": {
+      "exit": [
+       0
+      ],
+      "status": [
+       "accepted"
+      ],
+      "effect": [
+       "starts_turn"
+      ],
+      "calls": 1,
+      "deliver": 1,
+      "exact": true
+     }
+    }
+   ],
+   "part": "cli"
+  },
+  {
+   "id": "C2",
+   "claims": [
+    "L2a",
+    "L2b",
+    "L4",
+    "L1"
+   ],
+   "title": "Send on idle, Queue on busy (T-A)",
+   "steps": [
+    {
+     "id": "C2-M01",
+     "seq": 1,
+     "do": "send",
+     "msg": "M01",
+     "thread": "T-A",
+     "mode": "queue",
+     "need": "idle",
+     "expect": {
+      "exit": [
+       0
+      ],
+      "status": [
+       "accepted"
+      ],
+      "effect": [
+       "starts_turn"
+      ],
+      "calls": 1,
+      "deliver": 1
+     }
+    },
+    {
+     "id": "C2-M02",
+     "seq": 2,
+     "do": "send",
+     "msg": "M02",
+     "thread": "T-A",
+     "mode": "queue",
+     "need": "idle",
+     "expect": {
+      "exit": [
+       0
+      ],
+      "status": [
+       "accepted"
+      ],
+      "effect": [
+       "starts_turn"
+      ],
+      "calls": 1,
+      "deliver": 1
+     }
+    },
+    {
+     "id": "C2-M03",
+     "seq": 2,
+     "do": "send",
+     "msg": "M03",
+     "thread": "T-A",
+     "mode": "queue",
+     "need": "busy",
+     "expect": {
+      "exit": [
+       0
+      ],
+      "status": [
+       "queued"
+      ],
+      "waiting_on": [
+       "thread_busy"
+      ],
+      "effect": [
+       "queues_behind_turn"
+      ],
+      "calls": 1,
+      "deliver": 1,
+      "queue_rows_after": 1
+     }
+    }
+   ],
+   "part": "cli"
+  },
+  {
+   "id": "C3",
+   "claims": [
+    "L2c",
+    "L1"
+   ],
+   "title": "Steer on busy (T-A)",
+   "steps": [
+    {
+     "id": "C3-M04",
+     "seq": 1,
+     "do": "send",
+     "msg": "M04",
+     "thread": "T-A",
+     "mode": "queue",
+     "need": "idle",
+     "expect": {
+      "exit": [
+       0
+      ],
+      "status": [
+       "accepted"
+      ],
+      "effect": [
+       "starts_turn"
+      ],
+      "calls": 1,
+      "deliver": 1
+     }
+    },
+    {
+     "id": "C3-M05",
+     "seq": 1,
+     "do": "send",
+     "msg": "M05",
+     "thread": "T-A",
+     "mode": "steer",
+     "need": "busy",
+     "expect": {
+      "exit": [
+       0
+      ],
+      "status": [
+       "accepted",
+       "queued"
+      ],
+      "effect": [
+       "asks_to_steer"
+      ],
+      "calls": 1,
+      "deliver": 1
+     }
+    }
+   ],
+   "part": "cli"
+  },
+  {
+   "id": "C4",
+   "claims": [
+    "L11",
+    "L1"
+   ],
+   "title": "The file-path text (T-A)",
+   "steps": [
+    {
+     "id": "C4-M14",
+     "seq": 1,
+     "do": "send",
+     "msg": "M14",
+     "thread": "T-A",
+     "mode": "queue",
+     "need": "idle",
+     "expect": {
+      "exit": [
+       0
+      ],
+      "status": [
+       "accepted"
+      ],
+      "effect": [
+       "starts_turn"
+      ],
+      "calls": 1,
+      "deliver": 1,
+      "exact": true
+     }
+    }
+   ],
+   "part": "cli"
+  },
+  {
+   "id": "C5",
+   "claims": [
+    "L6",
+    "L1"
+   ],
+   "title": "F2: the acknowledgement withheld (T-B)",
+   "steps": [
+    {
+     "id": "C5-M16",
+     "seq": 1,
+     "do": "send",
+     "msg": "M16",
+     "thread": "T-B",
+     "mode": "queue",
+     "need": "idle",
+     "fault": "hold-after",
+     "hold_s": 20,
+     "expect": {
+      "exit": [
+       6
+      ],
+      "status": [
+       "uncertain"
+      ],
+      "reason": [
+       "timed_out"
+      ],
+      "calls": 1,
+      "deliver": 1
+     }
+    },
+    {
+     "id": "C5-record",
+     "seq": 1,
+     "do": "record",
+     "of": "C5-M16",
+     "expect": {
+      "state": [
+       "finished"
+      ],
+      "delivery": [
+       "uncertain"
+      ],
+      "text_kept": true
+     }
+    },
+    {
+     "id": "C5-rerun",
+     "seq": 1,
+     "do": "send",
+     "msg": "M16",
+     "thread": "T-B",
+     "mode": "queue",
+     "op": "same:C5-M16",
+     "need": "any",
+     "expect": {
+      "exit": [
+       6
+      ],
+      "status": [
+       "uncertain"
+      ],
+      "replayed": true,
+      "calls": 0,
+      "deliver": 0
+     }
+    },
+    {
+     "id": "C5-newop",
+     "seq": 1,
+     "do": "send",
+     "msg": "M16",
+     "thread": "T-B",
+     "mode": "queue",
+     "need": "any",
+     "expect": {
+      "exit": [
+       9
+      ],
+      "status": [
+       "possible_duplicate_refused"
+      ],
+      "calls": 0,
+      "deliver": 0
+     }
+    }
+   ],
+   "part": "cli"
+  },
+  {
+   "id": "C6",
+   "claims": [
+    "L6",
+    "L7",
+    "L1"
+   ],
+   "title": "F3a and F3b: the CLI killed after and before the call (T-A)",
+   "steps": [
+    {
+     "id": "C6-M17",
+     "seq": 1,
+     "do": "send",
+     "msg": "M17",
+     "thread": "T-A",
+     "mode": "queue",
+     "need": "idle",
+     "fault": "hold-after",
+     "hold_s": 20,
+     "kill": "after-answer",
+     "expect": {
+      "exit": [
+       -9
+      ],
+      "calls": 1,
+      "deliver": 1
+     }
+    },
+    {
+     "id": "C6-quiet-a",
+     "seq": 1,
+     "do": "quiet",
+     "wait": "settle+late",
+     "expect": {
+      "attempts": 0
+     }
+    },
+    {
+     "id": "C6-record-a",
+     "seq": 1,
+     "do": "record",
+     "of": "C6-M17",
+     "expect": {
+      "state": [
+       "dispatching"
+      ],
+      "text_kept": true
+     }
+    },
+    {
+     "id": "C6-rerun-a",
+     "seq": 1,
+     "do": "send",
+     "msg": "M17",
+     "thread": "T-A",
+     "mode": "queue",
+     "op": "same:C6-M17",
+     "need": "any",
+     "expect": {
+      "exit": [
+       6
+      ],
+      "status": [
+       "uncertain"
+      ],
+      "reason": [
+       "interrupted_after_dispatch_mark"
+      ],
+      "recovered": true,
+      "calls": 0,
+      "deliver": 0
+     }
+    },
+    {
+     "id": "C6-newop-a",
+     "seq": 1,
+     "do": "send",
+     "msg": "M17",
+     "thread": "T-A",
+     "mode": "queue",
+     "need": "any",
+     "expect": {
+      "exit": [
+       9
+      ],
+      "status": [
+       "possible_duplicate_refused"
+      ],
+      "calls": 0,
+      "deliver": 0
+     }
+    },
+    {
+     "id": "C6-M18",
+     "seq": 2,
+     "do": "send",
+     "msg": "M18",
+     "thread": "T-A",
+     "mode": "queue",
+     "need": "idle",
+     "fault": "hold-before",
+     "hold_s": 10,
+     "kill": "during-hold",
+     "expect": {
+      "exit": [
+       -9
+      ],
+      "calls": 0,
+      "attempts": 1,
+      "aborted": 1,
+      "deliver": 0
+     }
+    },
+    {
+     "id": "C6-quiet-b",
+     "seq": 2,
+     "do": "quiet",
+     "wait": "settle+late",
+     "expect": {
+      "attempts": 0
+     }
+    },
+    {
+     "id": "C6-record-b",
+     "seq": 2,
+     "do": "record",
+     "of": "C6-M18",
+     "expect": {
+      "state": [
+       "dispatching"
+      ],
+      "text_kept": true
+     }
+    },
+    {
+     "id": "C6-rerun-b",
+     "seq": 2,
+     "do": "send",
+     "msg": "M18",
+     "thread": "T-A",
+     "mode": "queue",
+     "op": "same:C6-M18",
+     "need": "any",
+     "expect": {
+      "exit": [
+       6
+      ],
+      "status": [
+       "uncertain"
+      ],
+      "reason": [
+       "interrupted_after_dispatch_mark"
+      ],
+      "recovered": true,
+      "calls": 0,
+      "deliver": 0
+     }
+    }
+   ],
+   "part": "cli"
+  },
+  {
+   "id": "C7",
+   "claims": [
+    "L8",
+    "L7",
+    "L1"
+   ],
+   "title": "Op ids: rerun, three conflicting reuses, a race of four (T-A)",
+   "steps": [
+    {
+     "id": "C7-M19",
+     "seq": 1,
+     "do": "send",
+     "msg": "M19",
+     "thread": "T-A",
+     "mode": "queue",
+     "need": "idle",
+     "expect": {
+      "exit": [
+       0
+      ],
+      "status": [
+       "accepted"
+      ],
+      "effect": [
+       "starts_turn"
+      ],
+      "calls": 1,
+      "deliver": 1
+     }
+    },
+    {
+     "id": "C7-rerun",
+     "seq": 1,
+     "do": "send",
+     "msg": "M19",
+     "thread": "T-A",
+     "mode": "queue",
+     "op": "same:C7-M19",
+     "need": "any",
+     "expect": {
+      "exit": [
+       0
+      ],
+      "status": [
+       "accepted"
+      ],
+      "replayed": true,
+      "calls": 0,
+      "deliver": 0
+     }
+    },
+    {
+     "id": "C7-text",
+     "seq": 1,
+     "do": "send",
+     "msg": "M20",
+     "thread": "T-A",
+     "mode": "queue",
+     "op": "same:C7-M19",
+     "need": "any",
+     "expect": {
+      "exit": [
+       8
+      ],
+      "status": [
+       "conflicting_reuse"
+      ],
+      "differs": [
+       "text"
+      ],
+      "calls": 0,
+      "deliver": 0
+     }
+    },
+    {
+     "id": "C7-target",
+     "seq": 1,
+     "do": "send",
+     "msg": "M19",
+     "thread": "T-B",
+     "mode": "queue",
+     "op": "same:C7-M19",
+     "need": "any",
+     "expect": {
+      "exit": [
+       8
+      ],
+      "status": [
+       "conflicting_reuse"
+      ],
+      "differs": [
+       "target"
+      ],
+      "calls": 0,
+      "deliver": 0
+     }
+    },
+    {
+     "id": "C7-mode",
+     "seq": 1,
+     "do": "send",
+     "msg": "M19",
+     "thread": "T-A",
+     "mode": "steer",
+     "op": "same:C7-M19",
+     "need": "any",
+     "expect": {
+      "exit": [
+       8
+      ],
+      "status": [
+       "conflicting_reuse"
+      ],
+      "differs": [
+       "mode"
+      ],
+      "calls": 0,
+      "deliver": 0
+     }
+    },
+    {
+     "id": "C7-race",
+     "seq": 2,
+     "do": "send",
+     "msg": "M21",
+     "thread": "T-A",
+     "mode": "queue",
+     "need": "idle",
+     "procs": 4,
+     "expect": {
+      "exits": {
+       "0": [
+        1,
+        4
+       ],
+       "7": [
+        0,
+        3
+       ]
+      },
+      "calls": 1,
+      "attempts": 1,
+      "deliver": 1
+     }
+    },
+    {
+     "id": "C7-replay",
+     "seq": 2,
+     "do": "send",
+     "msg": "M21",
+     "thread": "T-A",
+     "mode": "queue",
+     "op": "same:C7-race",
+     "need": "any",
+     "expect": {
+      "exit": [
+       0
+      ],
+      "status": [
+       "accepted"
+      ],
+      "replayed": true,
+      "calls": 0,
+      "deliver": 0
+     }
+    }
+   ],
+   "part": "cli"
+  },
+  {
+   "id": "C8",
+   "claims": [
+    "L3",
+    "L4",
+    "L1"
+   ],
+   "title": "Steer on Claude Code (T-C): sent (room-cli v141, #10 sitting 2, 2026-11-04) or queued (0.43.1, #10 probe, 2026-11-02), with mode steer, shown exactly as reported",
+   "steps": [
+    {
+     "id": "C8-M11",
+     "seq": 1,
+     "do": "send",
+     "msg": "M11",
+     "thread": "T-C",
+     "mode": "queue",
+     "need": "idle",
+     "expect": {
+      "exit": [
+       0
+      ],
+      "status": [
+       "accepted"
+      ],
+      "effect": [
+       "starts_turn"
+      ],
+      "calls": 1,
+      "deliver": 1
+     }
+    },
+    {
+     "id": "C8-M12",
+     "seq": 1,
+     "do": "send",
+     "msg": "M12",
+     "thread": "T-C",
+     "mode": "steer",
+     "need": "busy",
+     "expect": {
+      "exit": [
+       0
+      ],
+      "outcomes": [
+       ["accepted", "accepted"],
+       ["queued", "queued"]
+      ],
+      "effect": [
+       "asks_to_steer"
+      ],
+      "calls": 1,
+      "deliver": 1
+     }
+    }
+   ],
+   "part": "cli"
+  },
+  {
+   "id": "W1",
+   "part": "web",
+   "claims": [
+    "L2b",
+    "L10",
+    "L1"
+   ],
+   "title": "Queue on busy through the route (T-B)",
+   "steps": [
+    {
+     "id": "W1-M07",
+     "seq": 1,
+     "do": "post",
+     "msg": "M07",
+     "thread": "T-B",
+     "mode": "queue",
+     "need": "idle",
+     "expect": {
+      "record": [
+       "finished"
+      ],
+      "delivery": [
+       "accepted"
+      ],
+      "calls": 1,
+      "deliver": 1,
+      "shown": [
+       "sent"
+      ]
+     }
+    },
+    {
+     "id": "W1-M08",
+     "seq": 1,
+     "do": "post",
+     "msg": "M08",
+     "thread": "T-B",
+     "mode": "queue",
+     "need": "busy",
+     "expect": {
+      "record": [
+       "finished"
+      ],
+      "delivery": [
+       "queued"
+      ],
+      "calls": 1,
+      "deliver": 1,
+      "shown": [
+       "queued"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "W2",
+   "part": "web",
+   "claims": [
+    "L2c",
+    "L10",
+    "L1"
+   ],
+   "title": "Steer on busy through the route (T-B)",
+   "steps": [
+    {
+     "id": "W2-M09",
+     "seq": 1,
+     "do": "post",
+     "msg": "M09",
+     "thread": "T-B",
+     "mode": "queue",
+     "need": "idle",
+     "expect": {
+      "record": [
+       "finished"
+      ],
+      "delivery": [
+       "accepted"
+      ],
+      "calls": 1,
+      "deliver": 1,
+      "shown": [
+       "sent"
+      ]
+     }
+    },
+    {
+     "id": "W2-M10",
+     "seq": 1,
+     "do": "post",
+     "msg": "M10",
+     "thread": "T-B",
+     "mode": "steer",
+     "need": "busy",
+     "expect": {
+      "record": [
+       "finished"
+      ],
+      "delivery": [
+       "accepted",
+       "queued"
+      ],
+      "calls": 1,
+      "deliver": 1,
+      "shown": [
+       "sent",
+       "queued"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "W3",
+   "part": "web",
+   "claims": [
+    "L11",
+    "L1"
+   ],
+   "title": "The file-path text through the route (T-A)",
+   "steps": [
+    {
+     "id": "W3-M14",
+     "seq": 1,
+     "do": "post",
+     "msg": "M14",
+     "thread": "T-A",
+     "mode": "queue",
+     "need": "idle",
+     "expect": {
+      "record": [
+       "finished"
+      ],
+      "delivery": [
+       "accepted"
+      ],
+      "calls": 1,
+      "deliver": 1,
+      "exact": true,
+      "shown": [
+       "sent"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "W4",
+   "part": "web",
+   "claims": [
+    "L6",
+    "L7",
+    "L1"
+   ],
+   "title": "F4: X1's server stopped after the call (T-A)",
+   "steps": [
+    {
+     "id": "W4-M01",
+     "seq": 1,
+     "do": "post",
+     "msg": "M01",
+     "thread": "T-A",
+     "mode": "queue",
+     "need": "idle",
+     "fault": "hold-after",
+     "hold_s": 12,
+     "kill": "server-term-after-answer",
+     "expect": {
+      "record": [
+       "dispatching"
+      ],
+      "calls": 1,
+      "deliver": 1,
+      "shown": [
+       "uncertain"
+      ]
+     }
+    },
+    {
+     "id": "W4-quiet",
+     "seq": 1,
+     "do": "quiet",
+     "wait": "settle",
+     "server": "start",
+     "expect": {
+      "attempts": 0
+     }
+    },
+    {
+     "id": "W4-try",
+     "seq": 1,
+     "do": "hand",
+     "of": "W4-M01",
+     "by": "x1",
+     "button": "Try again",
+     "expect": {
+      "attempts": 0,
+      "record": [
+       "finished"
+      ],
+      "delivery": [
+       "uncertain"
+      ],
+      "recovered": true,
+      "shown": [
+       "uncertain"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "W5",
+   "part": "web",
+   "claims": [
+    "L7",
+    "L1"
+   ],
+   "title": "F6: X1's server killed before the call, then started again (T-A)",
+   "steps": [
+    {
+     "id": "W5-M20",
+     "seq": 1,
+     "do": "post",
+     "msg": "M20",
+     "thread": "T-A",
+     "mode": "queue",
+     "need": "idle",
+     "fault": "hold-before",
+     "hold_s": 10,
+     "kill": "server-kill-during-hold",
+     "expect": {
+      "record": [
+       "dispatching"
+      ],
+      "calls": 0,
+      "attempts": 1,
+      "aborted": 1,
+      "deliver": 0,
+      "shown": [
+       "uncertain"
+      ]
+     }
+    },
+    {
+     "id": "W5-quiet",
+     "seq": 1,
+     "do": "quiet",
+     "wait": "settle",
+     "server": "start",
+     "expect": {
+      "attempts": 0
+     }
+    },
+    {
+     "id": "W5-try",
+     "seq": 1,
+     "do": "hand",
+     "of": "W5-M20",
+     "by": "x1",
+     "button": "Try again",
+     "expect": {
+      "attempts": 0,
+      "record": [
+       "finished"
+      ],
+      "delivery": [
+       "uncertain"
+      ],
+      "recovered": true,
+      "shown": [
+       "uncertain"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "W6",
+   "part": "web",
+   "claims": [
+    "L8",
+    "L1"
+   ],
+   "title": "Op ids on the route: a double request racing the CLI on one op id, then a replay (T-A)",
+   "steps": [
+    {
+     "id": "W6-M21",
+     "seq": 1,
+     "do": "post",
+     "msg": "M21",
+     "thread": "T-A",
+     "mode": "queue",
+     "need": "idle",
+     "double": true,
+     "fault": "hold-before",
+     "hold_s": 6,
+     "race_cli": true,
+     "expect": {
+      "record": [
+       "finished"
+      ],
+      "delivery": [
+       "accepted"
+      ],
+      "calls": 1,
+      "attempts": 1,
+      "deliver": 1,
+      "race_exit": [
+       7
+      ],
+      "shown": [
+       "sent"
+      ]
+     }
+    },
+    {
+     "id": "W6-replay",
+     "seq": 1,
+     "do": "replay",
+     "of": "W6-M21",
+     "expect": {
+      "http": [
+       200
+      ],
+      "status": [
+       "accepted"
+      ],
+      "replayed": true,
+      "attempts": 0
+     }
+    }
+   ]
+  },
+  {
+   "id": "W7",
+   "part": "web",
+   "claims": [
+    "L9"
+   ],
+   "title": "Owner only: requests that must send nothing (M25, T-A)",
+   "steps": [
+    {
+     "id": "W7-probes",
+     "seq": 1,
+     "do": "probe",
+     "msg": "M25",
+     "thread": "T-A",
+     "expect": {
+      "attempts": 0,
+      "deliver": 0
+     }
+    }
+   ]
+  },
+  {
+   "id": "P1",
+   "part": "phone",
+   "claims": [
+    "L2a",
+    "L5",
+    "L6",
+    "L10",
+    "L11",
+    "L12",
+    "L1"
+   ],
+   "title": "Jake's phone, about 10 minutes",
+   "steps": [
+    {
+     "id": "P1-M06",
+     "seq": 1,
+     "do": "press",
+     "msg": "M06",
+     "thread": "T-B",
+     "mode": "queue",
+     "need": "idle",
+     "button": "Send",
+     "device": "iPhone, Safari, Wi-Fi off (cellular)",
+     "note": "Before pressing, read the line under the button: it should say the send starts a turn and may wake the thread.",
+     "expect": {
+      "record": [
+       "finished"
+      ],
+      "delivery": [
+       "accepted"
+      ],
+      "calls": 1,
+      "deliver": 1,
+      "shown": [
+       "sent"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "P1b",
+   "part": "phone",
+   "claims": [
+    "L5",
+    "L6",
+    "L11",
+    "L12",
+    "L1"
+   ],
+   "title": "Jake's phone, the rest: the network cut, Check again and the dash text (split from P1 so it can run in a later sitting, #10)",
+   "steps": [
+    {
+     "id": "P1-M15",
+     "seq": 2,
+     "do": "press",
+     "msg": "M15",
+     "thread": "T-B",
+     "mode": "queue",
+     "need": "idle",
+     "button": "Send",
+     "device": "iPhone, Safari, on Wi-Fi",
+     "fault": "hold-after",
+     "hold_s": 14,
+     "kill": "phone-offline-after-answer",
+     "note": "Right after pressing, turn on Airplane Mode (within 10 seconds). Leave it on until the composer shows an outcome, then turn it off.",
+     "expect": {
+      "record": [
+       "finished"
+      ],
+      "delivery": [
+       "accepted"
+      ],
+      "calls": 1,
+      "deliver": 1,
+      "shown": [
+       "uncertain",
+       "sent"
+      ],
+      "produced_if_shown": "uncertain"
+     }
+    },
+    {
+     "id": "P1-check",
+     "seq": 2,
+     "do": "hand",
+     "of": "P1-M15",
+     "by": "jake",
+     "button": "Check again",
+     "device": "iPhone, Safari, back online",
+     "expect": {
+      "attempts": 0,
+      "shown": [
+       "sent"
+      ]
+     }
+    },
+    {
+     "id": "P1-M13",
+     "seq": 3,
+     "do": "press",
+     "msg": "M13",
+     "thread": "T-A",
+     "mode": "queue",
+     "need": "idle",
+     "button": "Send",
+     "device": "iPhone, Chrome",
+     "expect": {
+      "record": [
+       "finished"
+      ],
+      "delivery": [
+       "accepted"
+      ],
+      "calls": 1,
+      "deliver": 1,
+      "exact": true,
+      "shown": [
+       "sent"
+      ]
+     }
+    }
+   ]
+  }
+ ]
+}

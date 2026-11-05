@@ -1,0 +1,10 @@
+{
+  "name": "openwiz-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test test/build.test.mjs && node --test test/site.test.mjs",
+    "test:ci": "node --test test/ci.test.mjs"
+  }
+}

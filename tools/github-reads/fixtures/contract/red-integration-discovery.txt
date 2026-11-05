@@ -1,0 +1,19 @@
+Integration discovery proof: adding the validator to a synthetic base that does not contain it must retain the unknown-path full-coverage fallback. The existing affected-plan case incorrectly demanded selected coverage. Preserve this failure before correcting only C1's test cases; no selector, classifier, map or allowlist change.
+
+....F...........
+======================================================================
+FAIL: test_ci2_read_contract_is_in_full_and_affected_plans (__main__.Plans.test_ci2_read_contract_is_in_full_and_affected_plans) (mode='affected')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File ".github/actions/docs-only/test_plan.py", line 159, in test_ci2_read_contract_is_in_full_and_affected_plans
+    self.assertEqual(record['selection'], {'mode': 'selected'})
+AssertionError: {'mode': 'full', 'reasons': [{'code': 'unknown_path[49 chars]']}]} != {'mode': 'selected'}
++ {'mode': 'selected'}
+- {'mode': 'full',
+-  'reasons': [{'code': 'unknown_path',
+-               'paths': ['tools/github-reads/test_contract.py']}]}
+
+----------------------------------------------------------------------
+Ran 16 tests in 2.142s
+
+FAILED (failures=1)

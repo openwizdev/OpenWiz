@@ -1,0 +1,11 @@
+# Red run, #2840: updated headline assertions against unfixed bench.py (main fede0916c)
+# Command: python3 -I tools/ci-bench/test_dashboard.py Dashboard.test_cost_headlines_and_daily_deltas Dashboard.test_empty_day_is_a_gap_with_cost_never_zero_latency
+# Synthetic fixtures: two Jog days (stored window_usd $0.0154 then $0.0308) and one empty day ($0.0240).
+FAIL: test_cost_headlines_and_daily_deltas
+AssertionError: '| Window | Minutes per PR (median) | PRs/hour capacity | Window cost | USD/merged PR | USD/code run |' not found
+(actual header: | Window | Minutes per PR (median) | PRs/hour capacity | USD/merged PR | USD/code run |)
+FAIL: test_empty_day_is_a_gap_with_cost_never_zero_latency
+AssertionError: '| empty day | unknown | unknown | $0.0240 | unknown | unknown |' not found
+(actual row: | empty day | unknown | unknown | unknown | unknown |)
+Ran 2 tests
+FAILED (failures=2)

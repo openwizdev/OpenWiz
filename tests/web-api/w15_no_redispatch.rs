@@ -1,4 +1,4 @@
-//! W15: the built `openwiz-server` dispatches nothing when it starts,
+//! W15 (#9): the built `openwiz-server` dispatches nothing when it starts,
 //! and a server killed during a send's call leaves that op id uncertain:
 //! a replay after the restart is recovered as uncertain, never sent again.
 //! And U9: the server and `openwiz send` share one send record, so an op id
@@ -29,16 +29,25 @@ struct Binary {
 
 impl Binary {
     fn start(fake: &SendFake) -> Self {
-        let mut child = Command::new(http::server_binary())
+        let program = http::server_binary();
+        let mut child = Command::new(&program)
             .args(["--port", "0", "--allowed-host", HOST])
-            .env("PATH", fake.path())
+            .env("OPENWIZ_FIXTURE_PROGRAM", fake.program())
             .env("OPENWIZ_STATE_DIR", &fake.state)
             .current_dir(&fake.dir)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::piped())
             .spawn()
-            .expect("start openwiz-server");
+            .unwrap_or_else(|error| {
+                panic!(
+                    "start openwiz-server: {error}; program={} (file={}), cwd={} (directory={})",
+                    program.display(),
+                    program.is_file(),
+                    fake.dir.display(),
+                    fake.dir.is_dir()
+                )
+            });
         let mut stderr = BufReader::new(child.stderr.take().unwrap());
         let mut first = String::new();
         stderr.read_line(&mut first).unwrap();
@@ -80,7 +89,7 @@ impl Binary {
 
     /// Waits, up to 10 s, until stderr holds `n` lines starting with each
     /// `prefix`: a line is written after its response is sent, so a response
-    /// does not prove its line is there yet.
+    /// does not prove its line is there yet (Sol #91 re-check 2).
     fn wait_for_lines(&self, expected: &[(&str, usize)]) {
         let until = Instant::now() + Duration::from_secs(10);
         loop {

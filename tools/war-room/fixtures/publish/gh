@@ -1,0 +1,5 @@
+#!/bin/sh
+# A fake gh for the War room publish tests: the publish reads nothing from GitHub,
+# so every call is logged to FAKE_GH_LOG and fails.
+[ -n "${FAKE_GH_LOG:-}" ] && printf '%s\n' "$*" >> "$FAKE_GH_LOG"
+exit 1

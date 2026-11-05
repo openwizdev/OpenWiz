@@ -1,0 +1,14 @@
+{
+ "ready": true,
+ "account": {
+  "id": "acct_synthetic",
+  "email": "owner@example.invalid"
+ },
+ "signedOut": false,
+ "projectId": null,
+ "repository": null,
+ "model": null,
+ "error": null,
+ "signingIn": false,
+ "signInError": null
+}

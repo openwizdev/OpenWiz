@@ -212,6 +212,10 @@ impl Durability for SwapAfterLook {
     }
 }
 
+/// Sol, round 1, R1: whatever is at the path when it is opened must be the
+/// file that was looked at (the same device and inode). A file or a link
+/// swapped in between is refused, never staged; a link chosen as the source
+/// still stages its target.
 #[test]
 fn a_file_swapped_in_after_the_look_is_refused() {
     let bench = Bench::new("ap05_swapped_file");

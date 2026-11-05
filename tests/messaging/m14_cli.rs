@@ -5,11 +5,11 @@
 //! The text contract for `openwiz send` (provisional, like 0.0.1's):
 //! 1. line 1: `openwiz send · op <op id> · <target id> · <title>`;
 //! 2. `effects (read <age> before sending): <effect>` and `paused queue:
-//! <words>`, when the target was read;
+//!    <words>`, when the target was read;
 //! 3. the summary line: `<Mode> requested · <reported delivery>`;
 //! 4. one `gap: <subject> · <detail>` line per gap;
 //! 5. a refusal names what to do next (the acknowledgement flag), and a
-//! replay says `replayed`.
+//!    replay says `replayed`.
 //!
 //! Unknowns print as `unknown (<reason>)`.
 
@@ -18,6 +18,7 @@ use openwiz_cli::send::{
     EXIT_RECORD_UNAVAILABLE, EXIT_SEND_FAILED, EXIT_UNCERTAIN,
 };
 use openwiz_cli::{EXIT_NOT_FOUND, EXIT_USAGE};
+use openwiz_core::ops::Clock;
 use serde_json::{Value, json};
 
 use crate::support::*;
@@ -71,6 +72,18 @@ fn both(
     setup: &[&[&str]],
     args: &[&str],
 ) -> (i32, Value, i32, String) {
+    both_with_clock(test, responses, setup, args, &clock())
+}
+
+/// Like [`both`], but every run uses `clock`, so a test can make the read
+/// and the dispatch fall at different times (#932, R1).
+fn both_with_clock(
+    test: &str,
+    responses: Vec<Value>,
+    setup: &[&[&str]],
+    args: &[&str],
+    clock: &dyn Clock,
+) -> (i32, Value, i32, String) {
     let mut runs = Vec::new();
     for json_flag in [true, false] {
         let fake = SendFake::with(&format!("{test}_{json_flag}"), responses.clone());
@@ -81,7 +94,7 @@ fn both(
         if json_flag {
             all.insert(1, "--json");
         }
-        let (code, out, err) = fake.cli(&all, "");
+        let (code, out, err) = fake.cli_with_clock(&all, "", clock);
         runs.push((code, out, err));
     }
     let (json_code, json_out, json_err) = runs.remove(0);
@@ -100,6 +113,36 @@ type Case<'a> = (
     i32,
     &'a str,
 );
+
+#[test]
+fn send_text_reports_the_effects_read_age() {
+    // #932, R1: the clock advances by 4_500 ms between the read and the work
+    // worked out just after it, so the read age is 4_500 ms, never a constant
+    // 0 that a formatter printing `age(0)` would also satisfy.
+    let (json_code, json, text_code, text) = both_with_clock(
+        "m14_read_age",
+        vec![],
+        &[],
+        &["thr_syn_0001", "--op-id", "op-m14-age", "--", "Synthetic"],
+        &AdvancingClock::new(4_500),
+    );
+    assert_eq!((json_code, text_code), (0, 0), "{json}\n{text}");
+    // The clock advances between the read and the dispatch, so the age is
+    // nonzero and equal to the clock's step.
+    assert_eq!(json["effects"]["read_age_ms"], 4_500, "{json}");
+    let effect = json["effects"]["effect"]["known"]["text"]
+        .as_str()
+        .expect("the idle synthetic target has a known effect");
+    assert_eq!(effect, "starts a turn; may wake it");
+    let expected = format!("effects (read 4s before sending): {effect}");
+    assert_eq!(
+        text.lines()
+            .filter(|line| line.starts_with("effects "))
+            .collect::<Vec<_>>(),
+        [expected.as_str()],
+        "{text}"
+    );
+}
 
 #[test]
 fn the_json_matches_the_text_and_the_schema() {
@@ -224,7 +267,8 @@ fn the_json_matches_the_text_and_the_schema() {
         ),
     ];
     let schema_errors_of = |json: &Value| validate_report(json);
-    for (test, responses, setup, args, code, status) in cases {
+    // Each case has its own fakes (`both`), so the cases run at once (#1260).
+    at_once(cases, |(test, responses, setup, args, code, status)| {
         let (json_code, json, text_code, text) = both(test, responses, &setup, &args);
         assert_eq!(json_code, code, "{test}: {json}");
         assert_eq!(text_code, code, "{test}: {text}");
@@ -244,10 +288,100 @@ fn the_json_matches_the_text_and_the_schema() {
             json["gaps"].as_array().unwrap().len(),
             "{test}"
         );
-    }
+    });
+}
+
+/// #877: queued receipt IDs remain visible in both public CLI formats.
+#[test]
+fn queued_receipt_id_matches_json_and_text() {
+    let (json_code, json, text_code, text) = both(
+        "m14_queued_receipt_id",
+        vec![],
+        &[],
+        &[
+            "thr_syn_0006",
+            "--op-id",
+            "op-m14-queued-id",
+            "--",
+            "Synthetic",
+        ],
+    );
+    assert_eq!((json_code, text_code), (0, 0), "{json}\n{text}");
+    assert_eq!(json["result"]["delivery"]["kind"], "queued");
+    assert_eq!(
+        json["result"]["delivery"]["queued_message_id"],
+        "qmsg_syn_0001"
+    );
+    assert_eq!(
+        text.lines()
+            .filter(|line| *line == "queued message: qmsg_syn_0001")
+            .count(),
+        1,
+        "{text}"
+    );
+}
+
+/// #862: compare full gap lines so a lost subject cannot hide behind its detail.
+#[test]
+fn send_text_preserves_each_reported_gap_subject_and_detail() {
+    let responses = vec![tell_response(
+        "thr_syn_0001",
+        "queue",
+        json!({"abort": true}),
+    )];
+    let (json_code, json, text_code, text) = both(
+        "m14_gap_subject_and_detail",
+        responses,
+        &[],
+        &["thr_syn_0001", "--op-id", "op-m14-gap", "--", "Synthetic"],
+    );
+    assert_eq!(json_code, EXIT_UNCERTAIN, "{json}");
+    assert_eq!(text_code, EXIT_UNCERTAIN, "{text}");
+    let gaps = json["gaps"].as_array().unwrap();
+    assert!(!gaps.is_empty(), "the fixture must exercise gap rendering");
+    let expected: Vec<String> = gaps
+        .iter()
+        .map(|gap| {
+            format!(
+                "gap: {} · {}",
+                gap["subject"].as_str().unwrap(),
+                gap["detail"].as_str().unwrap()
+            )
+        })
+        .collect();
+    let actual: Vec<&str> = text
+        .lines()
+        .filter(|line| line.starts_with("gap: "))
+        .collect();
+    assert_eq!(actual, expected, "each complete gap line must match JSON");
 }
 
 #[test]
+fn m14_cli_parser_contracts_preserve_original_cases() {
+    let cases: [(&str, fn()); 4] = [
+        (
+            "every_exit_code_is_documented",
+            every_exit_code_is_documented,
+        ),
+        (
+            "explicit_attachment_paths_preserve_flag_names_and_literal_message_text",
+            explicit_attachment_paths_preserve_flag_names_and_literal_message_text,
+        ),
+        (
+            "help_documents_preview_and_check",
+            help_documents_preview_and_check,
+        ),
+        (
+            "op_id_operands_are_validated_as_they_are_parsed",
+            op_id_operands_are_validated_as_they_are_parsed,
+        ),
+    ];
+    for (name, proof) in cases {
+        eprintln!("TA2 case: m14_cli::{name}");
+        proof();
+    }
+}
+
 fn every_exit_code_is_documented() {
     assert_eq!(EXIT_DELIVERED, 0);
     let help = openwiz_cli::help();
@@ -273,7 +407,8 @@ fn every_exit_code_is_documented() {
             "exit {code} ({words}) is not documented:\n{help}"
         );
     }
-
+    // #37: Jake approved policy (b), 2026-10-28; no untested-version exit.
+    // Private record: https://github.com/jparker2006/ClosedWiz/issues/1277#issuecomment-6704800036
     assert!(
         !help.lines().any(|l| l.trim_start().starts_with("4 ")),
         "exit 4 is still documented:\n{help}"
@@ -294,7 +429,9 @@ fn help_documents_send_its_flags_and_its_limits() {
         "never auto",
         "the provider accepted the message, not that the work completed",
         "can change between the read and the dispatch",
-        // Send attaches staged files in Queue mode only, all ready or nothing.
+        // B2 (ClosedWiz#15), recorded reason: send attaches staged files
+        // (sheet B-7), queue only, all ready or nothing; the help said "no
+        // attachments" before.
         "--attach <path>",
         "--attachment <id>",
         "Steer can't carry attachments",
@@ -304,7 +441,7 @@ fn help_documents_send_its_flags_and_its_limits() {
     ] {
         assert!(help.contains(words), "{words:?} not in --help:\n{help}");
     }
-
+    // Haiku B-07: the error-stream rule says which outcomes print a report.
     assert!(
         help.contains("send prints its report on stdout for every outcome"),
         "{help}"
@@ -333,6 +470,106 @@ fn errors_go_to_stderr_with_stdout_empty() {
     }
 }
 
+/// #828: omitted text must never cause a terminal read, even in JSON mode.
+#[test]
+fn terminal_stdin_is_refused_before_reading_text_or_opening_state() {
+    use openwiz_cli::send::{SendContext, run_send_with};
+    use std::io::{Read, Result};
+
+    struct TerminalStdin;
+    impl Read for TerminalStdin {
+        fn read(&mut self, _: &mut [u8]) -> Result<usize> {
+            panic!("terminal stdin was read");
+        }
+    }
+
+    for json in [false, true] {
+        let fake = SendFake::new(&format!("m14_terminal_stdin_{json}"), "send");
+        let source = fake.source();
+        let mut args = vec!["thr_syn_0001".to_owned()];
+        if json {
+            args.push("--json".to_owned());
+        }
+        let (mut out, mut err) = (Vec::new(), Vec::new());
+        let code = run_send_with(
+            &args,
+            SendContext {
+                messenger: &source,
+                open_store: &|| panic!("opened the send record"),
+                open_store_read_only: &|| panic!("opened the read-only send record"),
+                clock: &clock(),
+                stdin: &mut TerminalStdin,
+                stdin_is_terminal: true,
+                new_op_id: &|| panic!("generated an op id"),
+            },
+            &|| panic!("opened the attachment store"),
+            &mut out,
+            &mut err,
+        );
+        assert_eq!(code, 2);
+        assert!(out.is_empty(), "{out:?}");
+        assert_eq!(
+            String::from_utf8(err).expect("UTF-8 diagnostic"),
+            "openwiz: give the text after the id, or pipe it on stdin (a terminal is never read); nothing was sent (see openwiz --help)\n"
+        );
+        assert!(!fake.state.exists(), "created send state");
+        assert!(fake.invocations().is_empty(), "called the provider");
+    }
+}
+
+#[test]
+fn generated_id_guidance_checks_the_record_without_sending_again() {
+    for (name, responses, expected_exit, status) in [
+        ("accepted", vec![], EXIT_DELIVERED, "accepted"),
+        (
+            "uncertain",
+            vec![tell_response(
+                "thr_syn_0001",
+                "queue",
+                json!({"abort": true}),
+            )],
+            EXIT_UNCERTAIN,
+            "uncertain",
+        ),
+    ] {
+        let fake = SendFake::with(&format!("m14_guidance_{name}"), responses);
+        let (code, out, err) = fake.cli(&["thr_syn_0001", "--json", "Synthetic guidance"], "");
+        assert_eq!(code, expected_exit, "{out}{err}");
+        let sent: Value = serde_json::from_str(&out).unwrap();
+        assert_eq!(sent["status"], status);
+        let op_id = sent["op_id"].as_str().unwrap();
+        let flags = err
+            .split_once(" (use ")
+            .and_then(|(_, rest)| rest.strip_suffix(" to check this send again)\n"))
+            .expect("generated-ID guidance includes recovery flags");
+        let mut args = vec!["thr_syn_0001"];
+        args.extend(flags.split_whitespace());
+        let calls = fake.invocations();
+        assert_eq!(fake.tells().len(), 1);
+        let record = std::fs::read(fake.record_path(op_id)).unwrap();
+
+        let (lookup_exit, lookup, lookup_err) = fake.cli(&args, "");
+        assert_eq!(lookup_exit, expected_exit, "{lookup}{lookup_err}");
+        assert!(lookup.starts_with("openwiz send --check · "), "{lookup}");
+        assert!(lookup_err.is_empty(), "{lookup_err}");
+        let (json_exit, checked) = fake.cli_json(&args, "");
+        assert_eq!(json_exit, expected_exit);
+        assert_eq!(checked["schema"], "openwiz.send-lookup.v1");
+        assert_eq!(checked["op_id"], op_id);
+        assert_eq!(checked["result"]["kind"], "recorded");
+        assert_eq!(checked["result"]["report"]["status"], status);
+        assert_eq!(fake.invocations(), calls, "lookup called room-cli");
+        assert_eq!(fake.tells().len(), 1);
+        assert_eq!(std::fs::read(fake.record_path(op_id)).unwrap(), record);
+        assert_eq!(
+            err,
+            format!(
+                "openwiz: op id {op_id} (use --op-id {op_id} --check to check this send again)\n"
+            )
+        );
+    }
+}
+
 #[test]
 fn the_release_build_sends_through_the_fake() {
     let fake = SendFake::new("m14_release", "send");
@@ -352,7 +589,7 @@ fn the_release_build_sends_through_the_fake() {
     assert_eq!(tells[0][7], "Synthetic from stdin");
 }
 
-#[test]
+/// #79: `--preview` and `--check` are documented, with their exit codes.
 fn help_documents_preview_and_check() {
     use openwiz_cli::send::EXIT_NO_RECORD;
     let help = openwiz_cli::help();
@@ -383,5 +620,186 @@ fn help_documents_preview_and_check() {
             line.is_some(),
             "exit {code} ({words}) is not documented:\n{help}"
         );
+    }
+}
+
+/// #610: synthetic malformed input must not turn a read-only flag into a send.
+#[test]
+fn missing_op_id_value_must_not_swallow_check_and_dispatch() {
+    let fake = SendFake::new("m14_missing_op_id_check", "send");
+    let (code, out, err) = fake.cli(
+        &[
+            "--json",
+            "--op-id",
+            "--check",
+            "--op-id",
+            "op-syn-check",
+            "thr_syn_0001",
+            "--",
+            "Synthetic",
+        ],
+        "",
+    );
+    println!("fixture exit={code}; fake tell calls={}", fake.tell_count());
+    assert_eq!(fake.tell_count(), 0, "malformed arguments dispatched");
+    assert!(
+        fake.invocations().is_empty(),
+        "malformed arguments read room-cli"
+    );
+    assert!(
+        !fake.state.exists(),
+        "malformed arguments created send state"
+    );
+    assert_eq!(code, EXIT_USAGE, "{out}{err}");
+    assert!(out.is_empty(), "{out}");
+    assert_eq!(err.lines().count(), 1, "{err}");
+    assert!(err.starts_with("openwiz: "), "{err}");
+}
+
+/// Invalid operands are refused at the public parser boundary, before stdin or stores.
+fn op_id_operands_are_validated_as_they_are_parsed() {
+    use openwiz_cli::send::parse_send;
+
+    let long = "a".repeat(65);
+    for bad in ["", "--check", "--preview", "--", "_x", "a/b", "ünï", &long] {
+        for option in [
+            vec!["--op-id".to_owned(), bad.to_owned()],
+            vec![format!("--op-id={bad}")],
+        ] {
+            let mut args = vec!["thr_syn_0001".to_owned()];
+            args.extend(option);
+            assert!(parse_send(&args).is_err(), "accepted {args:?}");
+        }
+    }
+    assert!(parse_send(&["thr_syn_0001".to_owned(), "--op-id".to_owned()]).is_err());
+}
+
+#[test]
+fn repeated_op_id_options_are_refused_without_reads_or_state() {
+    let options = [
+        vec!["--op-id", "op-first", "--op-id", "op-first"],
+        vec!["--op-id", "op-first", "--op-id", "op-second"],
+        vec!["--op-id=op-first", "--op-id=op-second"],
+        vec!["--op-id=op-first", "--op-id", "op-second"],
+        vec!["--op-id", "op-first", "--op-id=op-second"],
+    ];
+    for (i, options) in options.iter().enumerate() {
+        for stdin in [false, true] {
+            let fake = SendFake::new(&format!("m14_repeated_op_{i}_{stdin}"), "send");
+            let mut args = vec!["thr_syn_0001", "--json"];
+            args.extend(options);
+            if !stdin {
+                args.extend(["--", "Synthetic"]);
+            }
+            let (code, out, err) = fake.cli(&args, "Synthetic from stdin");
+            assert_eq!(fake.tell_count(), 0, "{args:?} dispatched");
+            assert!(fake.invocations().is_empty(), "{args:?} read room-cli");
+            assert!(!fake.state.exists(), "{args:?} created state");
+            assert_eq!(code, EXIT_USAGE, "{args:?}: {out}{err}");
+            assert!(out.is_empty(), "{out}");
+            assert_eq!(err.lines().count(), 1, "{err}");
+            assert!(err.starts_with("openwiz: "), "{err}");
+        }
+    }
+}
+
+#[test]
+fn valid_op_id_forms_preserve_check_and_literal_message_text() {
+    use openwiz_cli::send::EXIT_NO_RECORD;
+
+    let long = "a".repeat(64);
+    let text = "--check --op-id=op-literal --preview Synthetic";
+    for (i, op_id) in ["a", "A_b-9", &long].into_iter().enumerate() {
+        for inline in [false, true] {
+            let fake = SendFake::new(&format!("m14_valid_op_{i}_{inline}"), "send");
+            let option = format!("--op-id={op_id}");
+            let mut args = vec!["thr_syn_0001", "--json"];
+            args.extend(if inline {
+                vec![option.as_str()]
+            } else {
+                vec!["--op-id", op_id]
+            });
+            let mut check = args.clone();
+            check.push("--check");
+            let (code, json) = fake.cli_json(&check, "unused stdin");
+            assert_eq!(code, EXIT_NO_RECORD, "{json}");
+            assert!(fake.invocations().is_empty());
+            assert!(!fake.state.exists());
+
+            args.extend(["--", text]);
+            let (code, json) = fake.cli_json(&args, "unused stdin");
+            assert_eq!(code, EXIT_DELIVERED, "{json}");
+            assert_eq!(json["op_id"], op_id);
+            assert_eq!(fake.tell_count(), 1);
+            assert_eq!(fake.tells().len(), 1);
+            assert_eq!(fake.tells()[0][7], text);
+            let before = sends_listing(&fake);
+            let calls = fake.invocations();
+            let (code, json) = fake.cli_json(&check, "unused stdin");
+            assert_eq!(code, EXIT_DELIVERED, "{json}");
+            assert_eq!(json["op_id"], op_id);
+            assert_eq!(fake.invocations(), calls);
+            assert_eq!(sends_listing(&fake), before);
+        }
+    }
+}
+
+/// #789: an attachment operand must not swallow a read-only switch or delimiter.
+#[test]
+fn missing_attachment_value_must_not_swallow_read_only_switches_and_dispatch() {
+    let mut results = Vec::new();
+    for (i, operand) in ["--check", "--preview", "--"].into_iter().enumerate() {
+        for (j, flag) in ["--attach", "--attachment"].into_iter().enumerate() {
+            let fake = SendFake::new(&format!("m14_missing_attachment_{i}_{j}"), "send");
+            std::fs::write(fake.dir.join(operand), "Synthetic attachment.\n").unwrap();
+            let output = fake.run_process(
+                &["send", "thr_syn_0001", flag, operand, "--", "Synthetic"],
+                "",
+            );
+            let code = output.status.code();
+            let calls = fake.invocations().len();
+            let tells = fake.tell_count();
+            let state = fake.state.exists();
+            println!(
+                "{flag} {operand}: exit={code:?} room_calls={calls} tell_calls={tells} state={state}"
+            );
+            results.push((code, calls, tells, state, output));
+        }
+    }
+    for (code, calls, tells, state, output) in results {
+        assert_eq!(calls, 0, "malformed arguments read room-cli");
+        assert_eq!(tells, 0, "malformed arguments dispatched");
+        assert!(!state, "malformed arguments created state or staged a file");
+        assert_eq!(code, Some(EXIT_USAGE), "{output:?}");
+        assert!(output.stdout.is_empty(), "{output:?}");
+        let err = String::from_utf8(output.stderr).unwrap();
+        assert_eq!(err.lines().count(), 1, "{err}");
+        assert!(err.starts_with("openwiz: "), "{err}");
+    }
+}
+
+fn explicit_attachment_paths_preserve_flag_names_and_literal_message_text() {
+    use openwiz_cli::attach::AttachArg;
+    use openwiz_cli::send::{SendCommand, parse_send};
+
+    let text = "--check --preview --attach Synthetic";
+    for name in ["--check", "--preview", "--"] {
+        for (options, expected_path) in [
+            (vec![format!("--attach={name}")], name.to_owned()),
+            (
+                vec!["--attach".to_owned(), format!("./{name}")],
+                format!("./{name}"),
+            ),
+        ] {
+            let mut args = vec!["thr_syn_0001".to_owned()];
+            args.extend(options);
+            args.extend(["--".to_owned(), text.to_owned()]);
+            let SendCommand::Send(parsed) = parse_send(&args).expect("explicit path") else {
+                panic!("explicit path requested help");
+            };
+            assert_eq!(parsed.attachments, vec![AttachArg::Path(expected_path)]);
+            assert_eq!(parsed.text.as_deref(), Some(text));
+            assert!(!parsed.check && !parsed.preview);
+        }
     }
 }

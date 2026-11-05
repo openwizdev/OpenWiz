@@ -12,7 +12,7 @@
 //!
 //! - [`send`]: the operation, its outcomes and its report;
 //! - [`preview`]: what a send would do, read before any text is written,
-//! with no claim and no call;
+//!   with no claim and no call;
 //! - [`lookup`]: one op id's record, for "Check again", with no call;
 //! - [`effects`]: what a send is expected to do, worked out before sending;
 //! - [`record`]: the send record, the store interface and the recovery rule;
@@ -41,7 +41,8 @@ pub const MESSAGING_SCHEMA_ID: &str = "openwiz.messaging.v1";
 /// The schema id of a send record.
 pub const RECORD_SCHEMA_ID: &str = "openwiz.send-record.v1";
 
-/// The largest message, in bytes of UTF-8. The text is
+/// The largest message, in bytes of UTF-8. Provisional (Jake decides); see
+/// "Provisional choices for Jake" in ticket 0.0.3-1's evidence. The text is
 /// one command-line argument, so the cap stays far below every Linux and
 /// macOS argument limit: Linux allows 128 KiB for one argument
 /// (`MAX_ARG_STRLEN`, 32 pages) and macOS 1 MiB for all of them (`ARG_MAX`).

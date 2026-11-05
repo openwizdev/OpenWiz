@@ -1,0 +1,20 @@
+{
+  "scenario": "hang",
+  "description": "As complete, but gh pr checks 953 (#904's pull request) never answers.",
+  "synthetic_assumptions": [
+    "Every value is synthetic; the shapes are gh 2.100.0's as A1's spike observed them (A1, #109)."
+  ],
+  "extends": "complete",
+  "responses": [
+    {
+      "argv": [
+        "pr",
+        "checks",
+        "953",
+        "--json",
+        "bucket,name"
+      ],
+      "hang": true
+    }
+  ]
+}

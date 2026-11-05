@@ -1,0 +1,33 @@
+Offline synthetic fixture evidence for R1–R10; no live installation claims.
+
+python3 -I tools/github-reads/test_read.py ReviewRegressions
+..............
+----------------------------------------------------------------------
+Ran 14 tests in 16.145s
+
+OK
+
+After the initial affected-reader suite exposed three legacy methods using zero age
+to force refresh, those methods use purpose=authority and the numeric-ID case
+expects refusal. Only those failed scopes were rerun:
+python3 -I tools/github-reads/test_read.py Budget.test_primary_reset_and_secondary_backoff_persist_across_processes Freshness.test_graphql_errors_and_open_page_chains_are_incomplete Freshness.test_pagination_must_be_complete_same_host_and_repository
+...
+----------------------------------------------------------------------
+Ran 3 tests in 4.610s
+
+OK
+
+python3 -I tools/github-reads/test_contract.py: 3 tests OK
+python3 -I tools/github-app/test.py ReadProfileTests: 2 tests OK
+No new dependency, Rust change, CI registration change, live call or helper.
+The complete reader suite was attempted once: its other 27 methods passed.
+The final regression run includes the two additional admission/accounting methods.
+
+Final R5 admission boundary: the delayed-probe red run is red-review-probe.txt.
+Authorization is now checked by each admission, including after a budget probe.
+python3 -I tools/github-reads/test_read.py ReviewRegressions.test_r5_slow_probe_rechecks_authorization_before_data_admission ReviewRegressions.test_r5_slow_read_cannot_publish_expired_authorization_evidence ReviewRegressions.test_r5_stale_budget_must_be_observed_before_admission ReviewRegressions.test_r5_zero_age_refuses_before_admitting_a_stale_read
+....
+----------------------------------------------------------------------
+Ran 4 tests in 5.251s
+
+OK

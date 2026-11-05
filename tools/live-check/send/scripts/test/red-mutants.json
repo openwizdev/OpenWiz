@@ -1,0 +1,996 @@
+[
+ {
+  "name": "00-kit-absent",
+  "why": "send-kit.py and x2-shim.py do not exist (main before this kit)",
+  "delete": [
+   "send/scripts/send-kit.py",
+   "send/scripts/x2-shim.py"
+  ],
+  "suite": "kit",
+  "must_fail": [],
+  "may_fail": [
+   ""
+  ],
+  "only": "x2"
+ },
+ {
+  "name": "01-x2-no-parent-check",
+  "why": "X2 calls after a hold-before even when its parent is gone",
+  "suite": "kit",
+  "sol_only": "",
+  "must_fail": [
+   "X2-6"
+  ],
+  "may_fail": [
+   "X2-7",
+   "C1 to C8",
+   "W1 to W7",
+   "L10 parity",
+   "L4 receipts",
+   "L13",
+   "live path",
+   "prompts",
+   "the swap"
+  ],
+  "changes": [
+   {
+    "file": "send/scripts/x2-shim.py",
+    "old": "        if os.getppid() != parent or not alive:",
+    "new": "        if False:"
+   }
+  ],
+  "only": "x2"
+ },
+ {
+  "name": "02-x2-no-call-count",
+  "why": "X2 lets any number of approved tells through in one step (the sitting's count and the allowance's)",
+  "suite": "kit",
+  "sol_only": "",
+  "must_fail": [
+   "X2-3",
+   "a resend after the call"
+  ],
+  "may_fail": [
+   "resend reached the fake"
+  ],
+  "changes": [
+   {
+    "file": "send/scripts/x2-shim.py",
+    "old": "            if used >= int(allow.get(\"max_calls\", 1)):",
+    "new": "            if False:"
+   },
+   {
+    "file": "send/scripts/x2-shim.py",
+    "old": "                if by.get(step[\"step\"], 0) >= int((step.get(\"allowed_tell\") or {}).get(\"max_calls\", 1)):",
+    "new": "                if False:"
+   }
+  ],
+  "only": "x2,faults"
+ },
+ {
+  "name": "03-x2-no-gate",
+  "why": "X2 lets every tell through: any thread, mode or text",
+  "suite": "kit",
+  "sol_only": "",
+  "must_fail": [
+   "X2-4"
+  ],
+  "may_fail": [
+   "probe-leak reached the fake",
+   "stray reached the fake",
+   "X2-9"
+  ],
+  "changes": [
+   {
+    "file": "send/scripts/x2-shim.py",
+    "old": "        if why is None:\n            used = 0",
+    "new": "        why = None\n        allow = allow if isinstance(allow, dict) else {\"max_calls\": 99}\n        if why is None:\n            used = 0"
+   }
+  ],
+  "only": "x2"
+ },
+ {
+  "name": "04-x2-no-expiry",
+  "why": "X2 lets an armed step's tell through after its expiry (Sol R2)",
+  "suite": "sol",
+  "sol_only": "R2",
+  "must_fail": [
+   "R2 expiry"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/x2-shim.py",
+    "old": "    elif not isinstance(step.get(\"expires_ms\"), int) or now_ms() > step[\"expires_ms\"]:",
+    "new": "    elif False:"
+   }
+  ]
+ },
+ {
+  "name": "05-x1-no-landing",
+  "why": "X1 does not check where each text landed",
+  "suite": "kit",
+  "sol_only": "",
+  "must_fail": [
+   "a message landing in another test thread",
+   "the dash text arriving"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "    if bad:\n        out[\"verdict\"] = \"not_as_expected: \" + \"; \".join(bad)\n    return out",
+    "new": "    return out"
+   }
+  ],
+  "only": "faults"
+ },
+ {
+  "name": "06-x1-no-bracket",
+  "why": "X1 ignores a change in a judged session",
+  "suite": "kit",
+  "sol_only": "",
+  "must_fail": [
+   "a change outside the test threads during a group"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "        if failures or sample_fail:",
+    "new": "        if False:"
+   }
+  ],
+  "only": "faults"
+ },
+ {
+  "name": "07-x1-no-x2-check",
+  "why": "X1 runs without checking that X2 is there and is the reviewed shim",
+  "suite": "kit",
+  "sol_only": "",
+  "must_fail": [
+   "X2 missing"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "    if not os.path.exists(x2) or observe.file_sha256(x2) != observe.file_sha256(os.path.join(HERE, \"x2-shim.py\")):",
+    "new": "    if False:"
+   }
+  ],
+  "only": "faults"
+ },
+ {
+  "name": "08-x1-judges-recent",
+  "why": "X1 judges sessions Jake used recently (no 48 h rule)",
+  "suite": "kit",
+  "sol_only": "",
+  "must_fail": [
+   "Jake working in a recent session",
+   "the judged set is explicit"
+  ],
+  "may_fail": [
+   "L13"
+  ],
+  "changes": [
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "                and isinstance(up, int) and not isinstance(up, bool) and up < cut):",
+    "new": "                ):"
+   }
+  ],
+  "only": "quiet"
+ },
+ {
+  "name": "09-x1-no-between-check",
+  "why": "X1 ignores a tell between steps (its own count, apart from X2's gate and the ledger)",
+  "suite": "kit",
+  "sol_only": "",
+  "must_fail": [
+   "a send between steps"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "        if between:\n            grep[\"outside\"][\"tells_between_steps\"] = between",
+    "new": "        if False:\n            grep[\"outside\"][\"tells_between_steps\"] = between"
+   }
+  ],
+  "only": "quiet"
+ },
+ {
+  "name": "10-x1-no-judged-floor",
+  "why": "X1 runs with too few cold sessions to judge",
+  "suite": "kit",
+  "sol_only": "",
+  "must_fail": [
+   "fewer cold sessions"
+  ],
+  "may_fail": [
+   "floor reached the fake"
+  ],
+  "changes": [
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "    if len(judged) < a.min_judged:",
+    "new": "    if False:"
+   }
+  ],
+  "only": "quiet"
+ },
+ {
+  "name": "11-x1-no-identity-check",
+  "why": "X1 signals a PID without checking it is still its process (Sol R1)",
+  "suite": "sol",
+  "sol_only": "R1",
+  "must_fail": [
+   "R1"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "core.py",
+    "old": "    if cur is None or cur[\"lstart\"] != ident[\"lstart\"] or not (\n            cur[\"args\"] == ident[\"args\"] or (after and (cur[\"args\"] == after or cur[\"args\"].endswith(\" \" + after)))):",
+    "new": "    if cur is None:"
+   }
+  ]
+ },
+ {
+  "name": "12-x1-no-step-disarm",
+  "why": "a step that ends early leaves its send armed (Sol R2)",
+  "suite": "sol",
+  "sol_only": "R2",
+  "must_fail": [
+   "R2 timeout"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "        kit.disarm()  # Sol R2: no step ever ends with a send armed",
+    "new": "        pass"
+   }
+  ]
+ },
+ {
+  "name": "13-x1-swap-no-restore",
+  "why": "the guard ends without restoring 0.0.2 (Sol R2)",
+  "suite": "sol",
+  "sol_only": "R2",
+  "must_fail": [
+   "R2 swap end"
+  ],
+  "may_fail": [
+   "R2"
+  ],
+  "changes": [
+   {
+    "file": "core.py",
+    "old": "        ok = (not port_answers(c[\"port\"]) and restore_old(kit)) if old_stopped else health(c[\"port\"])",
+    "new": "        ok = True"
+   }
+  ]
+ },
+ {
+  "name": "14-x1-no-guard",
+  "why": "the guard does nothing when the supervisor is gone (Sol R2)",
+  "suite": "sol",
+  "sol_only": "R2",
+  "must_fail": [
+   "R2 supervisor crash"
+  ],
+  "may_fail": [
+   "R2"
+  ],
+  "changes": [
+   {
+    "file": "core.py",
+    "old": "    except (Gone, SystemExit):\n        finish(\"restored-by-guard\")",
+    "new": "    except (Gone, SystemExit):\n        pass"
+   }
+  ]
+ },
+ {
+  "name": "15-x1-swap-any-occupant",
+  "why": "the swap stops whatever answers on the port (Sol R2, R1)",
+  "suite": "sol",
+  "sol_only": "R2",
+  "must_fail": [
+   "R2 swap other"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "core.py",
+    "old": "    if len(idents) != 1 or idents[0] is None or idents[0][\"args\"] != \" \".join(cmd) \\\n            or observe.file_sha256(cmd[0]) != c.get(\"restore_sha256\"):",
+    "new": "    if False:"
+   }
+  ]
+ },
+ {
+  "name": "16-x1-judge-fewer-fields",
+  "why": "a judged session is compared only on the quick check's five fields (Sol R3)",
+  "suite": "sol",
+  "sol_only": "R3",
+  "must_fail": [
+   "R3"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "core.py",
+    "old": "JUDGED_FIELDS = tuple(qc.COMPARED) + (\"queuedWork\", \"pending\", \"activity\")",
+    "new": "JUDGED_FIELDS = tuple(qc.COMPARED)"
+   }
+  ]
+ },
+ {
+  "name": "17-x1-scan-serialised",
+  "why": "the leak scan reads serialised JSON instead of decoded strings (Sol R4)",
+  "suite": "sol",
+  "sol_only": "R4",
+  "must_fail": [
+   "R4 round 2: the title [Synthetic \"private\" title]",
+   "R4 round 2: the title [Synthetic\\private]"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "    hits = len(leaked(forbid, rep))",
+    "new": "    hits = sum(1 for v in forbid if v and (observe.leaks(v, text) or observe.leaks(v, decoded)))"
+   }
+  ]
+ },
+ {
+  "name": "18-x1-no-titles",
+  "why": "the leak scan knows no title: neither the list's titles nor the test threads' (Sol R4)",
+  "suite": "sol",
+  "sol_only": "R4",
+  "must_fail": [
+   "R4 ascii",
+   "R4 nonascii"
+  ],
+  "may_fail": [
+   "R4 round 2"
+  ],
+  "changes": [
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "TITLE_KEYS = (\"id\", \"title\", \"titleFallback\", \"projectId\", \"parentThreadId\", \"environmentId\", \"environmentHostId\")",
+    "new": "TITLE_KEYS = (\"id\", \"projectId\", \"parentThreadId\", \"environmentId\", \"environmentHostId\")"
+   },
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "            add((show.get(\"thread\") or {}).get(\"title\"))",
+    "new": "            pass"
+   }
+  ]
+ },
+ {
+  "name": "19-x1-no-later-landing",
+  "why": "landing is not checked again after the late wait, nor at the run's end (Sol R5)",
+  "suite": "sol",
+  "sol_only": "R5",
+  "must_fail": [
+   "R5"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "            elif land[\"verdict\"] != \"as_expected\":\n                stop = \"%s, after the late wait: %s\" % (name, land[\"verdict\"])",
+    "new": ""
+   },
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "        if land[\"verdict\"] != \"as_expected\":\n            stop = \"at the end: \" + land[\"verdict\"]",
+    "new": ""
+   }
+  ]
+ },
+ {
+  "name": "20-x1-l13-routes-unchecked",
+  "why": "L13 ignores the page routes' answers (Sol R6)",
+  "suite": "sol",
+  "sol_only": "R6",
+  "must_fail": [
+   "R6"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "    failed = sorted(k for k, v in answers.items() if v[\"failed\"])\n    silent = sorted(k for k, v in answers.items() if not v[\"valid\"])",
+    "new": "    failed = []\n    silent = []"
+   }
+  ]
+ },
+ {
+  "name": "21-x1-parity-exit0",
+  "why": "parity's outcome is always as expected (Sol R8)",
+  "suite": "sol",
+  "sol_only": "R8",
+  "must_fail": [
+   "R8"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "    outcome = (\"as_expected\" if all(v == \"as_expected\" for v in verdicts) else",
+    "new": "    outcome = (\"as_expected\" if True else"
+   }
+  ]
+ },
+ {
+  "name": "22-x1-receipts-first-only",
+  "why": "only the first receipt of a kind counts (Sol R9)",
+  "suite": "sol",
+  "sol_only": "R9",
+  "must_fail": [
+   "R9 a documented and an undocumented rejection (good-bad)"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "                k[key] = k.get(key, True) and entry[key]",
+    "new": "                k.setdefault(key, entry[key])"
+   }
+  ]
+ },
+ {
+  "name": "23-x1-receipts-no-coverage",
+  "why": "missing receipt kinds are not drift (Sol R9)",
+  "suite": "sol",
+  "sol_only": "R9",
+  "must_fail": [
+   "R9 receipts missing a required kind"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "    drift += [\"missing: %s\" % r for r in a.require.split(\",\") if r and r not in kinds]",
+    "new": ""
+   }
+  ]
+ },
+ {
+  "name": "24-x1-second-press-unchecked",
+  "why": "the double press's second answer is not checked (Sol R10)",
+  "suite": "sol",
+  "sol_only": "R10",
+  "must_fail": [
+   "R10"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "    if \"second\" in got and got[\"second\"] not in (\"replayed\", \"in_progress\"):",
+    "new": "    if False:"
+   }
+  ]
+ },
+ {
+  "name": "27-x1-child-not-stopped",
+  "why": "the guard restores without stopping X1's server first (Sol R2)",
+  "suite": "sol",
+  "sol_only": "R2",
+  "must_fail": [
+   "R2 swap end"
+  ],
+  "may_fail": [
+   "R2"
+  ],
+  "changes": [
+   {
+    "file": "core.py",
+    "old": "        close_gate(kit)\n        stop_server(sweep=True)",
+    "new": "        close_gate(kit)"
+   }
+  ]
+ },
+ {
+  "name": "28-x1-short-titles-dropped",
+  "why": "titles under three characters are not forbidden (Sol R4, round 2)",
+  "suite": "sol",
+  "sol_only": "R4",
+  "must_fail": [
+   "R4 round 2: the title [HR]",
+   "R4 round 2: the title [\u79c1\u4e8b]"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "        if isinstance(v, str) and v.strip() and v != observe.MISSING:",
+    "new": "        if isinstance(v, str) and len(v.strip()) >= 3 and v != observe.MISSING:"
+   }
+  ]
+ },
+ {
+  "name": "29-x1-page-schema-only",
+  "why": "a page route's answer counts as valid on HTTP 200 and its schema alone (Sol R6, round 2)",
+  "suite": "sol",
+  "sol_only": "R6",
+  "must_fail": [
+   "schema-only",
+   "no-session",
+   "wrong-target",
+   "no-target",
+   "type-title",
+   "type-final_output",
+   "type-effects"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "                    why = page_answer_problem(route, r.status, json.loads(body), ta)",
+    "new": "                    why = None if r.status == 200 and json.loads(body).get(\"schema\") == schema else \"status\""
+   }
+  ]
+ },
+ {
+  "name": "30-x1-page-no-target",
+  "why": "a page route's answer for another session (or without T-A) is valid (Sol R6)",
+  "suite": "sol",
+  "sol_only": "R6",
+  "must_fail": [
+   "session route's 200 answer with wrong-target",
+   "preview route's 200 answer with wrong-target",
+   "inventory route's 200 answer with no-target"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "        return None if ta in ids else (\"T-A not in the inventory\" if route == \"inventory\" else \"another session\")",
+    "new": "        return None"
+   },
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "    return None if doc[\"target\"][\"id\"] == ta else \"another session\"",
+    "new": "    return None"
+   }
+  ]
+ },
+ {
+  "name": "25-x1-wrapper-ignores-pipe",
+  "why": "the wrapper ignores the guard's pipe: the server outlives the guard (Sol R2, round 3)",
+  "suite": "sol",
+  "sol_only": "R2",
+  "must_fail": [
+   "R2 round 3: guard killed"
+  ],
+  "may_fail": [
+   "R2"
+  ],
+  "changes": [
+   {
+    "file": "core.py",
+    "old": "    \"    if r:\\n\"",
+    "new": "    \"    if r and False:\\n\""
+   }
+  ]
+ },
+ {
+  "name": "26-x1-sweep-on-fault",
+  "why": "the guard kills the whole group on F4 and F6, so an in-flight call cannot end by itself (round 3)",
+  "suite": "kit",
+  "sol_only": "",
+  "must_fail": [
+   "W1 to W7"
+  ],
+  "may_fail": [
+   "L10 parity",
+   "L4 receipts",
+   "L13",
+   "live path",
+   "prompts",
+   "the swap"
+  ],
+  "changes": [
+   {
+    "file": "core.py",
+    "old": "        if sweep or not exited:",
+    "new": "        if True:"
+   }
+  ],
+  "only": "whole"
+ },
+ {
+  "name": "31-x1-validator-no-types",
+  "why": "the contract validator ignores types (Sol R6, round 3)",
+  "suite": "sol",
+  "sol_only": "R6",
+  "must_fail": [
+   "R6 round 3"
+  ],
+  "may_fail": [
+   "R6"
+  ],
+  "changes": [
+   {
+    "file": "core.py",
+    "old": "        if jt not in types and not (jt == \"integer\" and \"number\" in types):\n            return \"%s: type %s\" % (path, jt)",
+    "new": "        pass"
+   }
+  ]
+ },
+ {
+  "name": "32-lib-cleanup-by-range",
+  "why": "the suites' cleanup kills matching servers on a port range (Sol R11)",
+  "suite": "sol",
+  "sol_only": "R11",
+  "must_fail": [
+   "R11"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/test/lib.sh",
+    "old": "  [ -n \"${KIT_KEEP_WORK:-}\" ] || rm -rf \"$WORK\"   # KIT_KEEP_WORK=1 keeps it for a post-mortem",
+    "new": "  base=${KIT_PORT:-17370}\n  for p in $(lsof -nP -iTCP:$base-$((base + 210)) -sTCP:LISTEN -t 2>/dev/null); do\n    ps -o args= -p \"$p\" 2>/dev/null | grep -qE \"openwiz-server|stub-server\" && kill \"$p\" 2>/dev/null || true\n  done\n  [ -n \"${KIT_KEEP_WORK:-}\" ] || rm -rf \"$WORK\"   # KIT_KEEP_WORK=1 keeps it for a post-mortem"
+   }
+  ]
+ },
+ {
+  "name": "33-x2-admits-stale-step",
+  "why": "X2 admits a tell on the step it read before waiting on the lock (0.0.4 finding 2)",
+  "suite": "sol",
+  "sol_only": "P168",
+  "must_fail": [
+   "P168 (2)"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/x2-shim.py",
+    "old": "        step = load_step() or {\"step\": None, \"threads\": {}, \"allowed_tell\": None}",
+    "new": "        step = step"
+   }
+  ]
+ },
+ {
+  "name": "34-x1-sitting-not-kept",
+  "why": "each run command makes its own judged set and baseline (0.0.4 finding 3)",
+  "suite": "sol",
+  "sol_only": "P168",
+  "must_fail": [
+   "P168 (3)"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "    if os.path.exists(sitting_path):\n        sitting = json.load(open(sitting_path))",
+    "new": "    if False:\n        sitting = json.load(open(sitting_path))"
+   }
+  ]
+ },
+ {
+  "name": "35-x2-refusal-not-in-ledger",
+  "why": "X2 refuses a call that is not a tell but leaves the sitting untainted (0.0.4 finding 4, now through the ledger)",
+  "suite": "sol",
+  "sol_only": "P168",
+  "must_fail": [
+   "P168 (4)"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/x2-shim.py",
+    "old": "    taint(step, \"refused\", why + \": \" + shape, tell)\n",
+    "new": ""
+   }
+  ]
+ },
+ {
+  "name": "36-x2-no-reauth-after-hold",
+  "why": "after a hold-before, X2 calls on the admission it had, though the step was disarmed or expired (Sol R12)",
+  "suite": "sol",
+  "sol_only": "R12",
+  "must_fail": [
+   "R12 held disarm",
+   "R12 held expiry"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/x2-shim.py",
+    "old": "            if why is not None:\n                append(\"tell.log\", dict(entry, t_ms=now_ms(), outcome=\"aborted_revoked\", why=why))",
+    "new": "            if False:\n                append(\"tell.log\", dict(entry, t_ms=now_ms(), outcome=\"aborted_revoked\", why=why))"
+   }
+  ]
+ },
+ {
+  "name": "37-x1-revoked-not-ended",
+  "why": "X1 does not count X2's revoked abort as the end of a hold, so it waits it out and stops (Sol R12)",
+  "suite": "sol",
+  "sol_only": "R12",
+  "must_fail": [
+   "R12 held disarm",
+   "R12 held expiry"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "\"aborted_parent_gone\", \"aborted_revoked\",",
+    "new": "\"aborted_parent_gone\","
+   }
+  ]
+ },
+ {
+  "name": "38-x1-revoked-not-counted",
+  "why": "X1's counter ignores X2's revoked abort (Sol R12)",
+  "suite": "sol",
+  "sol_only": "R12",
+  "must_fail": [
+   "R12 held disarm",
+   "R12 held expiry"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "                c[\"revoked\"] += o == \"aborted_revoked\"\n",
+    "new": ""
+   }
+  ]
+ },
+ {
+  "name": "39-x1-ledger-watermark",
+  "why": "each command marks the ledger on entry and counts only what follows: Sol's carry, a watermark the rule forbids (R13)",
+  "suite": "sol",
+  "sol_only": "R13",
+  "must_fail": [
+   "R13 a refusal before the first run",
+   "R13 a refusal between two phases",
+   "R13 a refusal, then a preparation command",
+   "R13 a send refused between phases",
+   "R13 swap end in a tainted sitting"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "        self.forbidden = set()  # live strings no report may hold (memory only)\n",
+    "new": "        self.forbidden = set()  # live strings no report may hold (memory only)\n        self._mark = None\n"
+   },
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "            with open(os.path.join(self.x2, \"sitting.log\")) as f:\n                return [json.loads(line) for line in f]",
+    "new": "            with open(os.path.join(self.x2, \"sitting.log\")) as f:\n                out = [json.loads(line) for line in f]\n            if self._mark is None:\n                self._mark = len(out)\n            return out[self._mark:]"
+   }
+  ]
+ },
+ {
+  "name": "40-x1-publish-undecided",
+  "why": "publish writes the report without reading the ledger (R13: the end-of-run boundary)",
+  "suite": "sol",
+  "sol_only": "R13",
+  "must_fail": [
+   "R13 a refusal during the run's final snapshot",
+   "R13 swap end in a tainted sitting"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "    found = kit.ledger()\n    rep[\"x2_ledger\"] = ledger_counts(found)",
+    "new": "    found = []\n    rep[\"x2_ledger\"] = ledger_counts(found)"
+   }
+  ]
+ },
+ {
+  "name": "41-x1-no-entry-check",
+  "why": "run and the preparation commands start in a tainted sitting (X2 still refuses their tells, so this guard is shown by its own stop) (R13)",
+  "suite": "sol",
+  "sol_only": "R13",
+  "must_fail": [
+   "R13 a refusal before the first run",
+   "R13 a refusal between two phases",
+   "R13 a refusal, then a preparation command",
+   "R13 a send refused between phases"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "        found = self.ledger()\n        if found:\n            raise Stop(taint_text(found)",
+    "new": "        found = []\n        if found:\n            raise Stop(taint_text(found)"
+   }
+  ]
+ },
+ {
+  "name": "42-x2-ledger-unlocked",
+  "why": "X2 writes a refusal to the ledger without the lock that publish holds (R13)",
+  "suite": "sol",
+  "sol_only": "R13",
+  "must_fail": [
+   "R13 ledger lock"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/x2-shim.py",
+    "old": "    with open(os.path.join(HERE, \"tell.lock\"), \"a\") as lock:\n        fcntl.flock(lock, fcntl.LOCK_EX)\n        append(\"sitting.log\", entry)",
+    "new": "    append(\"sitting.log\", entry)"
+   }
+  ]
+ },
+ {
+  "name": "43-x2-refused-tell-not-in-ledger",
+  "why": "X2 refuses a tell (a send outside the plan) but leaves the sitting untainted (R13)",
+  "suite": "sol",
+  "sol_only": "R13",
+  "must_fail": [
+   "R13 a send refused between phases"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/x2-shim.py",
+    "old": "            taint(name, \"refused\", why, tell=True, locked=True)\n",
+    "new": ""
+   }
+  ]
+ },
+ {
+  "name": "44-x2-hold-ignores-taint",
+  "why": "after a hold, X2 calls although the sitting was tainted or its ledger made unreadable (Sol on #168, R6)",
+  "suite": "sol",
+  "sol_only": "R12",
+  "must_fail": [
+   "R12 held tell after refusal",
+   "R12 held tell after unreadable"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/x2-shim.py",
+    "old": "            if state != \"clean\":  # Sol on #168: the sitting was tainted during the hold",
+    "new": "            if False:  # Sol on #168: the sitting was tainted during the hold"
+   }
+  ]
+ },
+ {
+  "name": "45-x2-no-allowance",
+  "why": "X2 admits a tell without charging L-8's allowance (Sol's R8 on #168)",
+  "suite": "sol",
+  "sol_only": "ALLOW",
+  "must_fail": [
+   "ALLOW X2 let a tell through with nothing left",
+   "ALLOW reservation",
+   "ALLOW the first sitting's C1",
+   "ALLOW a fresh setup inherits",
+   "ALLOW the fresh sitting may not repeat",
+   "ALLOW the fresh sitting runs the groups"
+  ],
+  "may_fail": [
+   "ALLOW a repeated step reached the fake"
+  ],
+  "changes": [
+   {
+    "file": "send/scripts/x2-shim.py",
+    "old": "            why = allowance(step, \"reserve\")  # the last check: a reservation once it passes",
+    "new": "            why = None"
+   }
+  ]
+ },
+ {
+  "name": "46-x1-fresh-allowance",
+  "why": "each setup makes its own allowance, a fresh 23, forgetting earlier sittings (Sol's R8 on #168)",
+  "suite": "sol",
+  "sol_only": "ALLOW",
+  "must_fail": [
+   "ALLOW a fresh setup inherits",
+   "ALLOW the fresh sitting may not repeat",
+   "ALLOW the fresh sitting runs the groups",
+   "ALLOW a setup with nothing left",
+   "ALLOW nothing left: the run stops",
+   "ALLOW X2 let a tell through with nothing left",
+   "ALLOW an allowance with another total"
+  ],
+  "may_fail": [
+   "ALLOW a repeated step reached the fake"
+  ],
+  "changes": [
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "    adir = os.path.abspath(os.path.expanduser(a.allowance))",
+    "new": "    adir = os.path.join(os.path.abspath(os.path.expanduser(a.allowance)), secrets.token_hex(4))"
+   }
+  ]
+ },
+ {
+  "name": "47-x1-no-allowance-check",
+  "why": "X1 runs groups whose steps were already called, or that do not fit what is left, leaving it to X2 (Sol's R8 on #168)",
+  "suite": "sol",
+  "sol_only": "ALLOW",
+  "must_fail": [
+   "ALLOW the fresh sitting may not repeat",
+   "ALLOW nothing left: the run stops"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "    if any(by.get(s[\"id\"], 0) > 0 for s in steps):",
+    "new": "    if False:"
+   },
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "    if need > al[\"remaining\"]:",
+    "new": "    if False:"
+   }
+  ]
+ },
+ {
+  "name": "48-x2-no-release",
+  "why": "a zero-call abort keeps its charge, so an uncalled send is lost from the allowance",
+  "suite": "sol",
+  "sol_only": "ALLOW",
+  "must_fail": [
+   "ALLOW reservation"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/x2-shim.py",
+    "old": "            allowance(step, \"release\")  # zero calls: the send goes back to the allowance\n",
+    "new": ""
+   }
+  ]
+ },
+ {
+  "name": "49-x1-lost-journal-zero",
+  "why": "X1 reads a missing charge journal as zero usage, so a fresh setup on the same manifest gives consumed sends back (Sol R14, X1's half)",
+  "suite": "sol",
+  "sol_only": "R14",
+  "must_fail": [
+   "R14 recovery after the journal is lost",
+   "R14 setup after the loss made a sitting",
+   "R14 a run in the earlier sitting after the loss",
+   "R14 report after the loss"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/send-kit.py",
+    "old": "    except (OSError, ValueError, KeyError, TypeError):\n        raise Stop(RECONCILE)\n",
+    "new": "    except FileNotFoundError:\n        return {}\n    except (OSError, ValueError, KeyError, TypeError):\n        raise Stop(RECONCILE)\n"
+   }
+  ]
+ },
+ {
+  "name": "50-x2-lost-journal-zero",
+  "why": "X2 reads a missing charge journal as zero usage and recreates it on its next write (Sol R14, X2's half)",
+  "suite": "sol",
+  "sol_only": "R14",
+  "must_fail": [
+   "R14 X2 admitted a tell with the journal missing",
+   "R14 a release recreated the journal"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "send/scripts/x2-shim.py",
+    "old": "            except (OSError, ValueError, KeyError, TypeError):\n                return RECONCILE\n",
+    "new": "            except FileNotFoundError:\n                pass\n            except (OSError, ValueError, KeyError, TypeError):\n                return RECONCILE\n"
+   },
+   {
+    "file": "send/scripts/x2-shim.py",
+    "old": "            fd = os.open(path, os.O_WRONLY | os.O_APPEND)  # never O_CREAT: no history is recreated",
+    "new": "            fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)"
+   }
+  ]
+ }
+]

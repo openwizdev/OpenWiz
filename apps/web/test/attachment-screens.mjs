@@ -1,6 +1,6 @@
-// Renders DEMO-labelled screenshots of the attachment tray's states  at
+// Renders DEMO-labelled screenshots of the attachment tray's states (#16) at
 // 390 and 1440 px, in the composer and the launcher, on the fake API:
-// `node test/attachment-screens.mjs [out-dir]`. Not a proof, and not the maintainer
+// `node test/attachment-screens.mjs [out-dir]`. Not a proof, and not Jake's
 // acceptance: his design loop is on the working site. Synthetic files only.
 
 import { mkdirSync } from 'node:fs';

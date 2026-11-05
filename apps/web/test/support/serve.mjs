@@ -1,7 +1,7 @@
 // A test-only server for `out/`, with the headers the page needs from
-// openwiz-server when it serves static files (A8). It mirrors A8; it does not
-// prove it. `/api/v1/...` goes to the real server over a fixture scenario, or
-// to a fake API.
+// openwiz-server once it serves static files (ticket 1's A8, S1-S9 in the
+// evidence README). It mirrors A8; it does not prove it. `/api/v1/...` goes to
+// ticket 1's real server over a fixture scenario, or to a fake API.
 
 import { createReadStream, existsSync, lstatSync } from 'node:fs';
 import { createServer, request as httpRequest } from 'node:http';
@@ -9,7 +9,9 @@ import { extname, join, normalize, sep } from 'node:path';
 
 import { OUT_DIR } from './paths.mjs';
 
-
+// #16: `img-src` takes `blob:` for the tray's thumbnails, object URLs of the
+// owner's own file (recorded against #6's V3). #1029: `manifest-src` and
+// `worker-src` take this origin, for the installable app's manifest and worker.
 export const PAGE_CSP = [
   "default-src 'none'",
   "script-src 'self'",
@@ -17,6 +19,8 @@ export const PAGE_CSP = [
   "font-src 'self'",
   "img-src 'self' blob:",
   "connect-src 'self'",
+  "manifest-src 'self'",
+  "worker-src 'self'",
   "base-uri 'none'",
   "form-action 'none'",
   "frame-ancestors 'none'",
@@ -28,7 +32,12 @@ const TYPES = {
   '.css': 'text/css; charset=utf-8',
   '.woff2': 'font/woff2',
   '.txt': 'text/plain; charset=utf-8',
+  '.webmanifest': 'application/manifest+json',
+  '.png': 'image/png',
 };
+
+// #1029: the installable app's exact top-level files, as openwiz-server serves them.
+const PWA_FILES = new Set(['/manifest.webmanifest', '/sw.js', '/sw-register.js']);
 
 const COMMON = {
   'X-Content-Type-Options': 'nosniff',
@@ -40,7 +49,7 @@ const COMMON = {
 /** The file for a request path, or null (S2, S3). */
 function fileFor(path) {
   if (path === '/') return join(OUT_DIR, 'index.html');
-  if (!/^\/(_next\/static|fonts)\/[A-Za-z0-9._/-]+$/.test(path)) return null;
+  if (!PWA_FILES.has(path) && !/^\/(_next\/static|fonts|icons)\/[A-Za-z0-9._/-]+$/.test(path)) return null;
   if (path.split('/').some((seg, i) => i > 0 && (seg === '' || seg === '.' || seg === '..'))) return null;
   const file = normalize(join(OUT_DIR, path));
   if (!file.startsWith(OUT_DIR + sep)) return null;
@@ -52,11 +61,11 @@ function fileFor(path) {
 }
 
 /**
- * Starts the site. `api` is `{ port, allowedHost? }` (the real server) or a
+ * Starts the site. `api` is `{ port, allowedHost? }` (ticket 1's server) or a
  * function `(req, res, url) => void` (a fake). Every request is logged.
  *
  * With `allowedHost`, the proxy does what the tunnel does in front of the
- * real server: it forwards `Host: <allowedHost>`, and the page's
+ * real server (#9 step 3): it forwards `Host: <allowedHost>`, and the page's
  * own `Origin` as `https://<allowedHost>` (the page's origin through the
  * tunnel). Any other `Origin` passes unchanged, so a foreign one is still
  * refused.
@@ -86,7 +95,10 @@ export async function startSite(api) {
       'Content-Type': TYPES[extname(file)],
       'Content-Length': String(st.size),
       'Content-Security-Policy': PAGE_CSP,
-      'Cache-Control': url.pathname.startsWith('/_next/static/') ? 'private, max-age=31536000, immutable' : 'no-store',
+      'Cache-Control':
+        url.pathname.startsWith('/_next/static/') || url.pathname.startsWith('/icons/') || url.pathname === '/sw-register.js'
+          ? 'private, max-age=31536000, immutable'
+          : 'no-store',
     });
     createReadStream(file).pipe(res);
   });

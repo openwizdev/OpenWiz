@@ -3,17 +3,22 @@
 //!
 //! The adapter reads `cloud status --json` once and hands the core a
 //! [`Catalogue`]: only the catalogue keys, with the account and every other
-//! field discarded at its boundary. [`cloud_options`] then
+//! field discarded at its boundary (sheet A-2). [`cloud_options`] then
 //! offers:
 //! - a harness only if the adapter's verified id table maps it to a `spawn`
-//! provider, and the catalogue lists its models;
+//!   provider, and the catalogue lists its models;
 //! - for each model, only the efforts in both its catalogue list and the
-//! CLI's verified levels;
+//!   CLI's verified levels;
 //! - **no default**: nothing is marked default or preselected.
+//!
+//! Identical repeated rows collapse; conflicting facts make only that
+//! harness unavailable, before any effort filtering.
 //!
 //! When `ready` is false, `harnesses` is null, the read fails or its shape
 //! is unexpected, there are **no options**, with the reason. Nothing is
 //! guessed.
+
+use std::collections::{BTreeMap, BTreeSet};
 
 use serde::Serialize;
 
@@ -89,7 +94,7 @@ pub struct HarnessOption {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum UnavailableReason {
-    /// The catalogue lists no models for it.
+    /// No usable model catalogue is reported (missing or conflicting rows).
     CatalogueNotReported,
     /// Its `spawn` provider id isn't in the verified table.
     IdMappingNotVerified,
@@ -285,12 +290,37 @@ pub fn cloud_options(
     };
     let mut harnesses = Vec::new();
     let mut unavailable = Vec::new();
-    for row in rows {
+    let mut by_id = BTreeMap::new();
+    for row in &rows {
+        let entry = by_id.entry(row.id.as_str()).or_insert((row, false));
+        entry.1 |= entry.0 != row;
+    }
+    for row in &rows {
+        let Some((_, conflicting_harness)) = by_id.remove(row.id.as_str()) else {
+            continue; // This harness identity has already been handled.
+        };
         let refuse = |reason: UnavailableReason| UnavailableHarness {
             harness: row.id.clone(),
             reason,
             text: reason.words().to_owned(),
         };
+        let mut models_by_id = BTreeMap::new();
+        let conflicting_models = row.models.as_ref().is_some_and(|models| {
+            models.iter().any(|model| {
+                models_by_id
+                    .insert(model.model.as_str(), model)
+                    .is_some_and(|previous| previous != model)
+            })
+        });
+        if conflicting_harness || conflicting_models {
+            unavailable.push(UnavailableHarness {
+                // Keep the existing wire reason; text explains why no usable
+                // catalogue is available, without widening the JSON contract.
+                text: "unavailable (conflicting catalogue rows)".to_owned(),
+                ..refuse(UnavailableReason::CatalogueNotReported)
+            });
+            continue;
+        }
         let Some(models) = &row.models else {
             unavailable.push(refuse(UnavailableReason::CatalogueNotReported));
             continue;
@@ -299,8 +329,10 @@ pub fn cloud_options(
             unavailable.push(refuse(UnavailableReason::IdMappingNotVerified));
             continue;
         };
+        let mut seen_models = BTreeSet::new();
         let models: Vec<ModelOption> = models
             .iter()
+            .filter(|m| seen_models.insert(m.model.as_str()))
             .filter_map(|m| {
                 let efforts: Vec<String> = m
                     .reasoning_levels

@@ -1,0 +1,242 @@
+FFFFFFFFFFFFFFFF
+======================================================================
+FAIL: test_r10_failed_budget_probes_have_a_persisted_retry_deadline (__main__.ReviewRegressions.test_r10_failed_budget_probes_have_a_persisted_retry_deadline) (response={'rate_status': 500})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-findings-2386/tools/github-reads/test_read.py", line 773, in test_r10_failed_budget_probes_have_a_persisted_retry_deadline
+    self.assertIn(' until=', err)
+AssertionError: ' until=' not found in 'deferred: budget-unknown'
+
+======================================================================
+FAIL: test_r10_failed_budget_probes_have_a_persisted_retry_deadline (__main__.ReviewRegressions.test_r10_failed_budget_probes_have_a_persisted_retry_deadline) (response={'rate_status': 200, 'rate': {'resources': {}}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-findings-2386/tools/github-reads/test_read.py", line 773, in test_r10_failed_budget_probes_have_a_persisted_retry_deadline
+    self.assertIn(' until=', err)
+AssertionError: ' until=' not found in 'deferred: budget-unknown'
+
+======================================================================
+FAIL: test_r1_connection_completeness_follows_query_selections (__main__.ReviewRegressions.test_r1_connection_completeness_follows_query_selections) (selection='nodes { number }')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-findings-2386/tools/github-reads/test_read.py", line 606, in test_r1_connection_completeness_follows_query_selections
+    self.assertEqual(self.graphql(query, purpose='authority'),
+AssertionError: Tuples differ: (0, '{"data": {"repository": {"issues": {"[44 chars]ent') != (1, '', 'refused: incomplete')
+
+First differing element 0:
+0
+1
+
++ (1, '', 'refused: incomplete')
+- (0,
+-  '{"data": {"repository": {"issues": {"nodes": [{"number": 1}]}}}}\n',
+-  'fresh: current')
+
+======================================================================
+FAIL: test_r1_connection_completeness_follows_query_selections (__main__.ReviewRegressions.test_r1_connection_completeness_follows_query_selections) (selection='nodes { number } info: pageInfo { more: hasNextPage }')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-findings-2386/tools/github-reads/test_read.py", line 606, in test_r1_connection_completeness_follows_query_selections
+    self.assertEqual(self.graphql(query, purpose='authority'),
+AssertionError: Tuples differ: (0, '{"data": {"repository": {"issues": {"[55 chars]ent') != (1, '', 'refused: incomplete')
+
+First differing element 0:
+0
+1
+
++ (1, '', 'refused: incomplete')
+- (0,
+-  '{"data": {"repository": {"issues": {"nodes": [], "info": {"more": '
+-  'true}}}}}\n',
+-  'fresh: current')
+
+======================================================================
+FAIL: test_r1_connection_completeness_follows_query_selections (__main__.ReviewRegressions.test_r1_connection_completeness_follows_query_selections) (selection='nodes { number } pageInfo { hasNextPage hasPreviousPage }')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-findings-2386/tools/github-reads/test_read.py", line 606, in test_r1_connection_completeness_follows_query_selections
+    self.assertEqual(self.graphql(query, purpose='authority'),
+AssertionError: Tuples differ: (0, '{"data": {"repository": {"issues": {"[67 chars]ent') != (1, '', 'refused: incomplete')
+
+First differing element 0:
+0
+1
+
++ (1, '', 'refused: incomplete')
+- (0,
+-  '{"data": {"repository": {"issues": {"nodes": [], "pageInfo": {"hasNextPage": '
+-  'false}}}}}\n',
+-  'fresh: current')
+
+======================================================================
+FAIL: test_r2_denied_read_invalidates_warm_cache (__main__.ReviewRegressions.test_r2_denied_read_invalidates_warm_cache)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-findings-2386/tools/github-reads/test_read.py", line 635, in test_r2_denied_read_invalidates_warm_cache
+    self.assertEqual((result[0], result[2], json.loads(result[1])),
+AssertionError: Tuples differ: (0, 'display: cache', {'number': 1}) != (0, 'fresh: current', {'number': 2})
+
+First differing element 1:
+'display: cache'
+'fresh: current'
+
+- (0, 'display: cache', {'number': 1})
++ (0, 'fresh: current', {'number': 2})
+
+======================================================================
+FAIL: test_r2_warm_cache_rechecks_missing_and_revoked_credentials (__main__.ReviewRegressions.test_r2_warm_cache_rechecks_missing_and_revoked_credentials)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-findings-2386/tools/github-reads/test_read.py", line 619, in test_r2_warm_cache_rechecks_missing_and_revoked_credentials
+    self.assertEqual(self.read('rest', REPO, self.endpoint), (1, '', 'refused: credential'))
+AssertionError: Tuples differ: (0, '{"number": 1}\n', 'display: cache') != (1, '', 'refused: credential')
+
+First differing element 0:
+0
+1
+
+- (0, '{"number": 1}\n', 'display: cache')
++ (1, '', 'refused: credential')
+
+======================================================================
+FAIL: test_r3_crash_and_transport_failure_do_not_replenish_budget (__main__.ReviewRegressions.test_r3_crash_and_transport_failure_do_not_replenish_budget) (failure='crash')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-findings-2386/tools/github-reads/test_read.py", line 662, in test_r3_crash_and_transport_failure_do_not_replenish_budget
+    self.assertEqual((code, out, err.split(' until=')[0]),
+AssertionError: Tuples differ: (0, '{"number": 2}\n', 'fresh: current') != (1, '', 'deferred: primary-budget')
+
+First differing element 0:
+0
+1
+
+- (0, '{"number": 2}\n', 'fresh: current')
++ (1, '', 'deferred: primary-budget')
+
+======================================================================
+FAIL: test_r3_crash_and_transport_failure_do_not_replenish_budget (__main__.ReviewRegressions.test_r3_crash_and_transport_failure_do_not_replenish_budget) (failure='disconnect')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-findings-2386/tools/github-reads/test_read.py", line 662, in test_r3_crash_and_transport_failure_do_not_replenish_budget
+    self.assertEqual((code, out, err.split(' until=')[0]),
+AssertionError: Tuples differ: (0, '{"number": 2}\n', 'fresh: current') != (1, '', 'deferred: primary-budget')
+
+First differing element 0:
+0
+1
+
+- (0, '{"number": 2}\n', 'fresh: current')
++ (1, '', 'deferred: primary-budget')
+
+======================================================================
+FAIL: test_r4_conditional_metadata_extends_or_refuses_the_page_chain (__main__.ReviewRegressions.test_r4_conditional_metadata_extends_or_refuses_the_page_chain)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-findings-2386/tools/github-reads/test_read.py", line 675, in test_r4_conditional_metadata_extends_or_refuses_the_page_chain
+    self.assertEqual((code, err, [json.loads(line) for line in out.splitlines()]),
+AssertionError: Tuples differ: (0, 'fresh: current', [[{'id': 1}]]) != (0, 'fresh: current', [[{'id': 1}], [{'id': 2}]])
+
+First differing element 2:
+[[{'id': 1}]]
+[[{'id': 1}], [{'id': 2}]]
+
+- (0, 'fresh: current', [[{'id': 1}]])
++ (0, 'fresh: current', [[{'id': 1}], [{'id': 2}]])
+?                                 +++++++++++++
+
+
+======================================================================
+FAIL: test_r5_slow_read_cannot_publish_expired_authorization_evidence (__main__.ReviewRegressions.test_r5_slow_read_cannot_publish_expired_authorization_evidence)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-findings-2386/tools/github-reads/test_read.py", line 687, in test_r5_slow_read_cannot_publish_expired_authorization_evidence
+    self.assertEqual(self.read('rest', REPO, self.endpoint, purpose='authority', max_age='1'),
+AssertionError: Tuples differ: (0, '{"number": 1}\n', 'fresh: current') != (1, '', 'refused: freshness')
+
+First differing element 0:
+0
+1
+
+- (0, '{"number": 1}\n', 'fresh: current')
++ (1, '', 'refused: freshness')
+
+======================================================================
+FAIL: test_r5_stale_budget_must_be_observed_before_admission (__main__.ReviewRegressions.test_r5_stale_budget_must_be_observed_before_admission)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-findings-2386/tools/github-reads/test_read.py", line 701, in test_r5_stale_budget_must_be_observed_before_admission
+    self.assertEqual((code, out, err.split(' until=')[0]), (1, '', 'deferred: budget-unknown'))
+AssertionError: Tuples differ: (0, '{"number": 2}\n', 'fresh: current') != (1, '', 'deferred: budget-unknown')
+
+First differing element 0:
+0
+1
+
+- (0, '{"number": 2}\n', 'fresh: current')
++ (1, '', 'deferred: budget-unknown')
+
+======================================================================
+FAIL: test_r6_sequential_authority_calls_never_reuse_a_completed_entry (__main__.ReviewRegressions.test_r6_sequential_authority_calls_never_reuse_a_completed_entry)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-findings-2386/tools/github-reads/test_read.py", line 710, in test_r6_sequential_authority_calls_never_reuse_a_completed_entry
+    self.assertEqual(len(self.upstream()), 2)
+AssertionError: 1 != 2
+
+======================================================================
+FAIL: test_r7_numeric_repository_links_refuse_before_fetch (__main__.ReviewRegressions.test_r7_numeric_repository_links_refuse_before_fetch)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-findings-2386/tools/github-reads/test_read.py", line 717, in test_r7_numeric_repository_links_refuse_before_fetch
+    self.assertEqual(self.read('rest', REPO, self.endpoint), (1, '', 'refused: incomplete'))
+AssertionError: Tuples differ: (0, '{"number": 1}\n{"number": 2}\n', 'fresh: current') != (1, '', 'refused: incomplete')
+
+First differing element 0:
+0
+1
+
+- (0, '{"number": 1}\n{"number": 2}\n', 'fresh: current')
++ (1, '', 'refused: incomplete')
+
+======================================================================
+FAIL: test_r8_graphql_cost_is_reserved_across_processes_without_headers (__main__.ReviewRegressions.test_r8_graphql_cost_is_reserved_across_processes_without_headers)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-findings-2386/tools/github-reads/test_read.py", line 742, in test_r8_graphql_cost_is_reserved_across_processes_without_headers
+    self.assertEqual(sorted(code for _, code in results), [0, 1], results)
+AssertionError: Lists differ: [0, 0] != [0, 1]
+
+First differing element 1:
+0
+1
+
+- [0, 0]
+?     ^
+
++ [0, 1]
+?     ^
+ : [((b'{"data": {"repository": {"issues": {"nodes": [], "pageInfo": {"hasNextPage": false, "hasPreviousPage": false}}}}}\n', b'fresh: current\n'), 0), ((b'{"data": {"repository": {"issues": {"nodes": [], "pageInfo": {"hasNextPage": false, "hasPreviousPage": false}}}}}\n', b'fresh: current\n'), 0)]
+
+======================================================================
+FAIL: test_r9_later_challenge_never_overwrites_an_active_leader (__main__.ReviewRegressions.test_r9_later_challenge_never_overwrites_an_active_leader)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-findings-2386/tools/github-reads/test_read.py", line 757, in test_r9_later_challenge_never_overwrites_an_active_leader
+    self.assertEqual([code for _, code in results], [0, 0], results)
+AssertionError: Lists differ: [1, 0] != [0, 0]
+
+First differing element 0:
+1
+0
+
+- [1, 0]
+?  ^
+
++ [0, 0]
+?  ^
+ : [((b'', b'refused: credential\n'), 1), ((b'{"number": 1}\n', b'fresh: current\n'), 0)]
+
+----------------------------------------------------------------------
+Ran 12 tests in 13.020s
+
+FAILED (failures=16)

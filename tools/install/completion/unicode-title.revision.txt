@@ -1,0 +1,4 @@
+plan-graph revision v2
+spec #900 body sha256 a3fc69622ff0898a67e6ed62ef329ef7f322df6e2a17bcd13f5f6669469f9c62
+ticket #901 blocked-by none body sha256 6565a8e56b2d82beea153c29a528eb1ac456a5db341def8f85e1cde2c447614d title Syntheticbuilder separator title
+ticket #902 blocked-by #901 body sha256 81947f5ddc1faf64336a3421761c3f20f43e5b6aa5f620bffc291d840c3f1473 title Synthetic live check

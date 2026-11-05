@@ -1,0 +1,42 @@
+test_approved_board_point_projection (__main__.PageHistory.test_approved_board_point_projection) ... ERROR
+test_approved_pending_decision_projection (__main__.PageHistory.test_approved_pending_decision_projection) ... FAIL
+test_recorded_eval_readiness_retains_source (__main__.PageHistory.test_recorded_eval_readiness_retains_source) ... FAIL
+
+======================================================================
+ERROR: test_approved_board_point_projection (__main__.PageHistory.test_approved_board_point_projection)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-wr2/tools/war-room/test_page_history.py", line 309, in test_approved_board_point_projection
+    p = self.select_native('board_graph', graph)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/code/ClosedWiz-wr2/tools/war-room/test_page_history.py", line 169, in select_native
+    selection = {'kind': kind, 'slot': sources.SLOTS[kind], 'path': filename,
+                                       ~~~~~~~~~~~~~^^^^^^
+KeyError: 'board_graph'
+
+======================================================================
+FAIL: test_approved_pending_decision_projection (__main__.PageHistory.test_approved_pending_decision_projection)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-wr2/tools/war-room/test_page_history.py", line 336, in test_approved_pending_decision_projection
+    self.assertEqual(p['state'], 'partial')
+AssertionError: 'unavailable' != 'partial'
+- unavailable
++ partial
+
+
+======================================================================
+FAIL: test_recorded_eval_readiness_retains_source (__main__.PageHistory.test_recorded_eval_readiness_retains_source)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-wr2/tools/war-room/test_page_history.py", line 357, in test_recorded_eval_readiness_retains_source
+    self.assertEqual(p['state'], 'partial')
+AssertionError: 'unavailable' != 'partial'
+- unavailable
++ partial
+
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.058s
+
+FAILED (failures=2, errors=1)

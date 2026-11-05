@@ -1,0 +1,109 @@
+{
+  "record": {
+    "schema": "openwiz.agent-github-reads.v1",
+    "request": {
+      "host": "api.github.com",
+      "repository": "synthetic-owner/work",
+      "api": "rest",
+      "operation": "rest-read",
+      "request_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "purpose": "authority"
+    },
+    "auth": {
+      "kind": "installation",
+      "host": "api.github.com",
+      "installation_id": 2002,
+      "repositories": [
+        "synthetic-owner/work"
+      ],
+      "permissions": {
+        "metadata": "read",
+        "contents": "read",
+        "issues": "read",
+        "pull_requests": "read",
+        "checks": "read",
+        "actions": "read"
+      },
+      "generation": 1,
+      "state": "active",
+      "verified_at": 995,
+      "expires_at": 1400,
+      "storage": "owner-only"
+    },
+    "budget": {
+      "host": "api.github.com",
+      "installation_id": 2002,
+      "scope": "installation",
+      "rest": {
+        "limit": 5000,
+        "remaining": 4000,
+        "reserved": 1,
+        "reset_at": 1500,
+        "observed_at": 995
+      },
+      "graphql": {
+        "limit": 5000,
+        "remaining": 4000,
+        "reserved": 1,
+        "reset_at": 1500,
+        "observed_at": 995
+      },
+      "secondary_not_before": 0,
+      "pace_not_before": 0
+    },
+    "result": {
+      "state": "ok",
+      "source": "network",
+      "status": 200,
+      "read_started_at": 990,
+      "fetched_at": 995,
+      "validated_at": 995,
+      "complete": true,
+      "pages": 1,
+      "authenticated": true,
+      "etag_matched": false
+    },
+    "sharing": {
+      "seam": "owner-filesystem",
+      "callers": 1,
+      "upstream_reads": 1,
+      "lock": "exclusive",
+      "publish": "atomic"
+    }
+  },
+  "current": {
+    "schema": "openwiz.agent-github-reads.current.v1",
+    "now": 1000,
+    "read_started_at": 990,
+    "max_age_s": 60,
+    "request": {
+      "host": "api.github.com",
+      "repository": "synthetic-owner/work",
+      "api": "rest",
+      "operation": "rest-read",
+      "request_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "purpose": "authority"
+    },
+    "auth": {
+      "kind": "installation",
+      "host": "api.github.com",
+      "installation_id": 2002,
+      "repositories": [
+        "synthetic-owner/work"
+      ],
+      "permissions": {
+        "metadata": "read",
+        "contents": "read",
+        "issues": "read",
+        "pull_requests": "read",
+        "checks": "read",
+        "actions": "read"
+      },
+      "generation": 1,
+      "state": "active",
+      "verified_at": 995,
+      "expires_at": 1400,
+      "storage": "owner-only"
+    }
+  }
+}
