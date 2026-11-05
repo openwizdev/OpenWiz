@@ -1,0 +1,98 @@
+# The bench's step table (#332): which category each CI step's time goes to.
+# One row a line: <category><TAB><step name>. The name is a glob (* matches
+# any text) on the step's name as GitHub shows it, with an action's @<ref>
+# taken off ("Run actions/checkout@<sha>" is "Run actions/checkout"). Every
+# step must match exactly one row, or `measure` fails and names it: a new CI
+# step needs its row here first.
+#
+# Categories: web (Web tests), rust (Rust tests), build (Build, lint,
+# typecheck), skills (Skill tests): the running time. setup (Setup and
+# teardown): every other step on the runner, and a job's time no step covers.
+# The rows below cover the baseline's 2026-11-01 data and main's ci.yml then.
+setup	Set up job
+setup	Complete job
+setup	Run actions/checkout
+setup	Run ./.github/actions/docs-only
+setup	web-build passed
+setup	Run actions/setup-node
+setup	Rust *
+setup	zsh
+setup	The image's Chromium
+setup	Run actions/cache
+setup	Restore the * cache
+setup	Save the * cache
+setup	Run actions/download-artifact
+setup	Run actions/upload-artifact
+setup	Run npm ci --ignore-scripts
+setup	Post Run *
+build	Run npm run build
+build	Run npm run typecheck
+build	Run npm run check
+build	Run cargo fmt --check
+build	Run cargo clippy --workspace --all-targets -- -D warnings
+build	Run cargo build --workspace
+build	Run cargo build --release
+# #429 (R1 on #957): main's web-build step. Exact name, no wildcard.
+build	Build the public static site
+rust	Run cargo test --workspace
+rust	The pending list
+skills	The triage helper's test
+skills	The skills' tests
+skills	The docs-only classifier
+web	Run npm test
+web	The browser proofs
+web	The unit proofs
+web	Every shard passed
+# #429 (R1 on #957): main's web-test step, which builds and tests the site in
+# one step; all of it counts as web.
+web	Build and test the public static site
+# #1252: installing a runtime/browser is setup; a contract proof is a test.
+setup	Python for the offline installer and release proofs
+setup	Image skill browser dependencies
+skills	The setup contract reader
+# Nov 2 historical workflow's isolated Rust static-page proof (backfill #1252).
+rust	Run cargo test -p openwiz-tests --test web-api a8_web_page::
+# #1251 / PR #1291: selecting the public site's checks is setup, not a test.
+setup	Whether the site can be affected
+# #1289 / review R3: preparing web-root filesystem devices is setup.
+setup	One device for the web roots
+setup	The cache volume
+setup	Mount the cargo-rust cache volume
+# #1371 (R1 on PR #1374): the web jobs' cache volumes, every mount's post
+# step, which the action adds after the job's steps, and the step every
+# Namespace runner adds before the job's.
+setup	Mount the npm cache volume
+setup	Mount the web-test cache volume
+setup	Post Mount the * cache volume
+setup	Set up runner
+setup	The runner guard
+build	The carriage guard
+build	The changed-file privacy guard
+setup	The hosted setup
+# X5: one plan, independent lanes, receipts, and the required-check transition.
+setup	Write the CI plan
+setup	Prepare lane
+setup	Prune unused inputs
+setup	Record passed lane
+setup	Every planned lane passed
+setup	Legacy checks follow ci
+# #1266 (X8): the Rust shards; each member's share, the ci job's count, and the balancer's own tests.
+setup	The Rust shard
+setup	Every Rust test ran exactly once
+skills	The shard balancer's tests
+build	Build and lint Rust
+skills	The always-run checks
+web	The release proofs
+# #242: initial fixture preparation is setup; toolkit proofs are helper tests.
+setup	Private live-check fixture destination
+setup	The reviewed live-check fixture source
+setup	Post The reviewed live-check fixture source
+setup	Seal the live-check fixture source
+skills	The live-check toolkit (fixtures only)
+setup	Record passed toolkit
+# #2081: retain historical names above; selection is setup, nightly proofs are skills.
+setup	Whether the toolkit can be affected
+skills	The live-check toolkit (nightly fixtures and mutants)
+setup	Keep the nightly toolkit evidence
+setup	Preserve incomplete combined-main evidence
+setup	Keep the incomplete combined-main evidence

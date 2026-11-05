@@ -1,3 +1,34 @@
+//! The `send` operation: one text message to one existing session, one
+//! provider call per op id, and an honest report.
+//!
+//! In order:
+//! 1. **validate** the text, the op id and the target id (nothing is
+//!    claimed, read or sent for an invalid request);
+//! 2. for a new op id, refuse a **possible duplicate**: an earlier send of
+//!    the same text to the same target whose outcome is uncertain, unless
+//!    the owner acknowledges it;
+//! 3. **claim** the op id durably and atomically. The same op id with the
+//!    same binding returns the recorded outcome, or "in progress"; with a
+//!    different binding it is refused as conflicting reuse. Neither calls
+//!    the provider;
+//! 4. read and report the provider's **version** (never a gate, #37: an
+//!    unknown one is a gap), then **read the target**: not found fails, and
+//!    archived or hidden targets are refused;
+//! 5. work out the **effects** from that read. A queue that appears paused
+//!    is not resumed without the owner's acknowledgement;
+//! 6. mark the record **dispatching**, durably;
+//! 7. make **one call** in the requested mode. No retry, no other mode;
+//! 8. map the reply to a **reported delivery** and record it.
+//!
+//! **Attachments (B2, ClosedWiz#15).** The payload is a [`PromptPayload`]:
+//! the text and its attachments. Steer with attachments is refused before
+//! anything (a Cloud steer drops them, F16). Before the op id is claimed,
+//! the one [`gate`] reads every attachment's copy again and refuses unless
+//! every one can go; the op id then binds them too. Once the op id is
+//! owned, the attachments are claimed for it, all or none, before the
+//! dispatching mark; the one call carries every one of them; and once the
+//! outcome is recorded, an accepted send's copies are deleted (B-6).
+
 use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
@@ -19,8 +50,8 @@ use super::record::{Claim, RecordState, SendRecord, SendStore, StoreError};
 use super::{Binding, BindingField, InvalidRequest, MESSAGING_SCHEMA_ID, Mode, OpId, SEND_BUDGET};
 
 /// Why Steer with attachments is refused, before anything is claimed, read
-/// or sent: a Cloud steer drops them in source, and Local is unverified.
-/// Steer is never turned into Queue.
+/// or sent (B-11, decided in planning): a Cloud steer drops them in source
+/// (#15's F16), and Local is unverified. Steer is never turned into Queue.
 pub const STEER_WITH_ATTACHMENTS: &str = "Steer can't carry attachments. Use Queue, or remove them";
 
 /// The adapter side of `send`: the version, the target read and the one
@@ -144,8 +175,9 @@ pub enum FailReason {
     UnsupportedMode,
     /// The process stopped after the claim and before the dispatching mark.
     InterruptedBeforeDispatch,
-    /// Not produced the version is never a gate ("send policy b": the version is never a
-    /// gate). Kept so that a record written before can still be read; its
+    /// Not produced since #37: Jake approved reporting versions without
+    /// gating sends, 2026-10-28 ([private record](https://github.com/jparker2006/ClosedWiz/issues/1277#issuecomment-6704800036)).
+    /// Kept so that a record written before can still be read; its
     /// replay is a failed send.
     UntestedVersion,
     /// The target could not be read, so nothing was sent.
@@ -316,7 +348,7 @@ impl Delivery {
 
     /// The same delivery, saying that `count` attachments went with it when
     /// it was queued or accepted, and that their delivery to the agent's
-    /// machine is not reported. Unchanged for no attachment, or for a
+    /// machine is not reported (#15's outcome table). Unchanged for no attachment, or for a
     /// failed or uncertain delivery.
     pub fn with_attachments(self, count: usize) -> Self {
         if count == 0 {
@@ -486,7 +518,9 @@ pub struct SendReport {
     pub schema: String,
     pub op_id: OpId,
     pub target: TargetView,
-
+    /// The provider and the version this send read (#37), as the reads
+    /// report it; `None` when no version was read for this op id (a refusal
+    /// before the read, or a record written before #37).
     pub source: Option<SourceInfo>,
     pub requested_mode: Mode,
     pub status: Status,
@@ -560,7 +594,7 @@ pub fn send_with(
     // The binding: the attachments' content, in the owner's order (other
     // copies of the same bytes, kinds and names are the same payload). For
     // an op id already recorded, each attachment as its record holds it
-    // when it has that id (an accepted send's copies are gone), else
+    // when it has that id (an accepted send's copies are gone, B-6), else
     // its copy now. For a new op id, every attachment passes the gate
     // first, so a refusal claims nothing.
     let known = store.load(&request.op_id).map_err(SendError::Store)?;
@@ -655,7 +689,14 @@ pub fn send_with(
             let differs = record.binding.differences(&binding);
             return Ok(conflicting_reuse(request, &binding, &bound, differs));
         }
-        Claim::Existing(record) => return Ok(from_record(&record, true, vec![])),
+        Claim::Existing(record) => {
+            return Ok(from_record(
+                &record,
+                true,
+                vec![],
+                messenger.tested_version(),
+            ));
+        }
         Claim::InProgress(record) => {
             return Ok(in_progress(request, &binding, &bound, Some(&record)));
         }
@@ -776,7 +817,8 @@ struct Dispatch<'a> {
 impl Dispatch<'_> {
     fn run(&self, mut record: SendRecord) -> Result<SendReport, SendError> {
         // The version is reported as the reads report it, and never stops
-        // the send. Every other safeguard follows.
+        // the send (#37, approved by Jake, 2026-10-28). Every other safeguard follows.
+        // Private record: https://github.com/jparker2006/ClosedWiz/issues/1277#issuecomment-6704800036
         let name = self.messenger.name();
         let tested = self.messenger.tested_version();
         let read = format!("{name} --version");
@@ -871,7 +913,7 @@ impl Dispatch<'_> {
     /// the report says so: the record stays as it was, and recovers as
     /// failed (before the dispatching mark) or uncertain (after it). Only
     /// once the outcome is recorded are the attachments settled: an
-    /// accepted send's copies are deleted then, never before.
+    /// accepted send's copies are deleted then, never before (B-6).
     fn finish(&self, record: SendRecord, delivery: Delivery) -> Result<SendReport, SendError> {
         let finished = record.finished(delivery, self.clock.now());
         let mut gaps = vec![];
@@ -899,7 +941,12 @@ impl Dispatch<'_> {
                 ),
             });
         }
-        Ok(from_record(&finished, false, gaps))
+        Ok(from_record(
+            &finished,
+            false,
+            gaps,
+            self.messenger.tested_version(),
+        ))
     }
 }
 
@@ -923,11 +970,13 @@ pub(crate) fn read_failure(read: &str, error: &SourceError) -> String {
     }
 }
 
-/// The report of a finished record.
+/// The report of a finished record. `tested` is this build's own tested
+/// version for sending ([`Messenger::tested_version`]).
 pub(crate) fn from_record(
     record: &SendRecord,
     replayed: bool,
     extra_gaps: Vec<SendGap>,
+    tested: &str,
 ) -> SendReport {
     let delivery = record.delivery.clone().unwrap_or_else(|| {
         // A record is only reported once finished; recovery finishes it.
@@ -945,7 +994,7 @@ pub(crate) fn from_record(
                 .clone()
                 .unwrap_or_else(|| Fact::Unknown("not read".to_owned())),
         },
-        source: record.source.clone(),
+        source: source_now(record, tested),
         requested_mode: record.binding.mode,
         status: delivery.status(),
         summary: format!("{} · {}", record.binding.mode.requested(), delivery.text()),
@@ -964,6 +1013,20 @@ pub(crate) fn from_record(
         dispatching_at: record.dispatching_at,
         finished_at: record.finished_at,
     }
+}
+
+/// A record's source as this build reports it (#200): the version the
+/// record read, judged against this build's own tested version for sending,
+/// `tested`, never against the claim stored with it. A record written
+/// before #250 says its v127 was tested, though no send was ever
+/// live-tested.
+fn source_now(record: &SendRecord, tested: &str) -> Option<SourceInfo> {
+    record.source.as_ref().map(|source| SourceInfo {
+        tested_version: tested.to_owned(),
+        version_tested: !tested.is_empty()
+            && matches!(&source.version, Fact::Known(version) if version == tested),
+        ..source.clone()
+    })
 }
 
 /// The attachments digest a report shows: only when there are attachments.
@@ -1108,8 +1171,8 @@ fn in_progress(
 }
 
 /// The report of a record still in flight, for a lookup: claimed or
-/// dispatching, no outcome yet.
-pub(crate) fn in_flight_report(record: &SendRecord) -> SendReport {
+/// dispatching, no outcome yet. `tested` is as for [`from_record`].
+pub(crate) fn in_flight_report(record: &SendRecord, tested: &str) -> SendReport {
     let state = match record.state {
         RecordState::Claimed => "claimed",
         RecordState::Dispatching => "dispatching",
@@ -1125,7 +1188,7 @@ pub(crate) fn in_flight_report(record: &SendRecord) -> SendReport {
                 .clone()
                 .unwrap_or_else(|| Fact::Unknown("not read yet".to_owned())),
         },
-        source: record.source.clone(),
+        source: source_now(record, tested),
         requested_mode: record.binding.mode,
         status: Status::InProgress,
         summary: format!(

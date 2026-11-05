@@ -1,0 +1,3 @@
+Command: cargo fmt --check
+Toolchain: Rust 1.99.1, sandbox-local installation
+Exit: 0

@@ -1,0 +1,4 @@
+{
+  "about": "#1109, reconciled by #2293: the setup page's cost panel, as the install journey expects it. Independent literals. OpenWiz is free now and paid plans come later; CloudRoom and model charges are separate. The app makes no outbound links, so CloudRoom's page is text; no referral is verified, so it carries none and says so.",
+  "upgrade": "Cost OpenWiz is free now. Paid plans come later. CloudRoom and model charges are separate and not included. CloudRoom sells its own plans at cloudroom.dev/pricing. Referral verification is unavailable. No referral is applied."
+}

@@ -62,7 +62,7 @@ pub struct NewThreadRecord {
     pub state: RecordState,
     /// The project as resolved for this create.
     pub project: Option<ProjectView>,
-    /// The provider and the version read for this create.
+    /// The provider and the version read for this create (#37).
     pub source: Option<SourceInfo>,
     /// The effects worked out before the call.
     pub effects: Option<Effects>,
@@ -177,10 +177,15 @@ pub enum Claim {
 /// - [`claim`](Self::claim) is atomic across processes: for a new op id
 ///   exactly one caller gets [`Claim::Owned`];
 /// - every write is synced before the call returns;
-/// - a record whose owner stopped is recovered with [`recover`] before it is
-///   returned, never redispatched;
+/// - [`claim`](Self::claim) recovers a record whose owner stopped with
+///   [`recover`] before returning it, never redispatching;
 /// - records are readable by the owner only.
 pub trait NewThreadStore: Send + Sync {
+    /// The record of `op_id` as stored, without taking its claim lock,
+    /// recovering it, or writing. Used to bind a request before the atomic
+    /// [`claim`](Self::claim); that claim decides whether its owner stopped.
+    fn load(&self, op_id: &OpId) -> Result<Option<NewThreadRecord>, StoreError>;
+
     /// Claims `record.op_id` with `record` (in the claimed state). `now` is
     /// the time of any recovery.
     fn claim(&self, record: &NewThreadRecord, now: Timestamp) -> Result<Claim, StoreError>;

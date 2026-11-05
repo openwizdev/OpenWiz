@@ -1,0 +1,35 @@
+FF
+======================================================================
+FAIL: test_ci2_batch_shadow_executes_and_propagates_failure (__main__.Execution.test_ci2_batch_shadow_executes_and_propagates_failure) (fail=False)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File ".github/actions/docs-only/test_execution.py", line 221, in test_ci2_batch_shadow_executes_and_propagates_failure
+    self.assertEqual(calls, [command])
+AssertionError: Lists differ: [] != ['python3 -I ci/main-batch/test_shadow.py']
+
+Second list contains 1 additional elements.
+First extra element 0:
+'python3 -I ci/main-batch/test_shadow.py'
+
+- []
++ ['python3 -I ci/main-batch/test_shadow.py']
+
+======================================================================
+FAIL: test_ci2_batch_shadow_executes_and_propagates_failure (__main__.Execution.test_ci2_batch_shadow_executes_and_propagates_failure) (fail=True)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File ".github/actions/docs-only/test_execution.py", line 221, in test_ci2_batch_shadow_executes_and_propagates_failure
+    self.assertEqual(calls, [command])
+AssertionError: Lists differ: [] != ['python3 -I ci/main-batch/test_shadow.py']
+
+Second list contains 1 additional elements.
+First extra element 0:
+'python3 -I ci/main-batch/test_shadow.py'
+
+- []
++ ['python3 -I ci/main-batch/test_shadow.py']
+
+----------------------------------------------------------------------
+Ran 1 test in 0.150s
+
+FAILED (failures=2)

@@ -1,4 +1,22 @@
-
+// The composer's presentation state, one per thread id, and the one place a
+// send is made. From WS-7, WS-8 and Sol's rounds 1 and 2 on #92:
+//
+// - **Op ids are derived, never minted on events.** A draft gets one random
+//   root id with its first text, stored at once. Attempt n in a mode has the
+//   op id `<root>-q<n>` or `<root>-s<n>`; its successor is n + 1. A reload, a
+//   retry, a lookup, a repeated report or a duplicated tab all derive the same
+//   ids, so the core replays instead of sending twice.
+// - **Every attempt is kept, and shown.** The draft's attempts are a list, in
+//   order; each changes only on its own answers. A refusal or failure of one
+//   attempt never touches another. The list is cleared only when the draft is
+//   sent, or the owner forgets the attempts, which retires their numbers.
+// - **Store, then send.** No request leaves unless its attempt is stored in
+//   this tab's sessionStorage first. When storage fails, sending is off.
+// - **Store the minimum:** the draft, its root id, the next attempt numbers
+//   and its attempts (state and a one-word result). The reports stay in memory.
+//
+// It computes no outcome, effect, label rule or retry: the core's report
+// says what happened, and nothing here sends without a press.
 
 import { getAnswer, lookupUrl, postMessage, previewUrl } from './api.ts';
 import { gate as trayGate, readyIds, threadTarget } from './attachments.ts';
@@ -115,7 +133,7 @@ export function newOpId(random: (bytes: Uint8Array) => void = (b) => crypto.getR
 }
 
 /**
- * "not sent" only when the answer proves the request never reached the
+ * WS-8: "not sent" only when the answer proves the request never reached the
  * core: Access's 401 or redirect, or OpenWiz's own refusal before the core
  * (its JSON error, or its bodyless 503). A `200` is the core's report.
  * Everything else is unknown: the send may have happened. A report for
@@ -249,12 +267,12 @@ export function edit(s: ThreadState, text: string, mint: () => string): ThreadSt
  * A press of a send button. It sends the mode's next attempt, whose op id
  * every tab derives the same way:
  * - with nothing unresolved: the draft (Send, Queue, Steer; Send anyway
- * after a possible-duplicate refusal). An attempt refused before any claim
- * is sent again under its own, unused, number;
+ *   after a possible-duplicate refusal). An attempt refused before any claim
+ *   is sent again under its own, unused, number;
  * - when that attempt is in the list with no answer: the same attempt again
- * ("Try again"), so the core replays;
+ *   ("Try again"), so the core replays;
  * - otherwise only as the owner's explicit duplicate ("Send again"), with
- * the earlier attempts kept as they are.
+ *   the earlier attempts kept as they are.
  * Null while a send or check is out, or without text and a root id.
  */
 export function press(s: ThreadState, pressed: Press, attachments: readonly string[] = []): { state: ThreadState; opId: string; body: SendBody } | null {
@@ -275,7 +293,7 @@ export function press(s: ThreadState, pressed: Press, attachments: readonly stri
     attempts = existing ? replace(s, existing, attempt) : [...s.attempts, attempt];
   }
   const body: SendBody = { op_id: opId, mode: pressed.mode, text: s.draft, resume_paused_queue: flags.resumePausedQueue, accept_possible_duplicate: flags.acceptPossibleDuplicate };
-
+  // #16: the ready ids, in the owner's order; absent when there are none, as 0.0.3 sent it.
   if (attachments.length > 0) body.attachments = [...attachments];
   return { state: { ...s, attempts, checked: null }, opId, body };
 }
@@ -339,7 +357,7 @@ export function previewAnswer(a: Answer, id: string, mode: Mode): PreviewSaid {
   return { kind: 'failed', why: preview ? 'the answer was not this preview' : readFailure(a) };
 }
 
-// Storage: this tab's sessionStorage only, never localStorage, cookies, the URL or the title.
+// Storage: this tab's sessionStorage only, never localStorage, cookies, the URL or the title (WS-10).
 
 export interface StorageLike {
   getItem(key: string): string | null;
@@ -393,7 +411,7 @@ export type ComposerDeps = {
   storage: StorageLike | null;
   timers: Timers;
   newOpId(): string;
-  /** Each thread's attachment tray: its ready ids go with a send, and it is emptied once they are handed over. */
+  /** Each thread's attachment tray (#16): its ready ids go with a send, and it is emptied once they are handed over. */
   uploads?: Uploads;
 };
 
@@ -471,7 +489,13 @@ export class Composers {
     this.handOver(id);
   }
 
-
+  /**
+   * Queued or sent, with nothing else unresolved, by whichever answer
+   * settled it (the send's own, or a lookup's, after a reload too): the
+   * draft is done, and its attachments are CloudRoom's (#16; Sol on #167,
+   * R1). The tray was fixed while the draft was unresolved, so it holds
+   * exactly what was sent. While anything is unresolved it is kept.
+   */
   private handOver(id: string): void {
     const uploads = this.deps.uploads;
     if (!uploads || this.get(id).root !== null) return;
@@ -515,7 +539,7 @@ export class Composers {
     }
   }
 
-  /** Stores the minimum: true when it is stored. */
+  /** Stores the minimum (Sol 5): true when it is stored. */
   private save(id: string, s: ThreadState): boolean {
     const storage = this.deps.storage;
     if (!storage) return false;

@@ -1,0 +1,65 @@
+{
+  "registered_at": "2030-01-04T01:00:00Z",
+  "eligibility": "All eligible synthetic infra tickets; exclusions recorded before assignment.",
+  "primary": {
+    "statistic": "mean restricted first-push-to-merge hours at fixed horizon",
+    "test": "two-sided independent mean comparison; parity sensitivity analysis",
+    "unfinished": "All assigned tickets; right censor at horizon; closed-unmerged retained as failures.",
+    "missing": "Report missing first pushes and sensitivity bounds; do not impute PR dates."
+  },
+  "power": {
+    "method": "normal-mean-planning-v1",
+    "alpha": 0.05,
+    "power": 0.8,
+    "effect_hours": 2,
+    "baseline_sd_hours": 3,
+    "baseline_n": 40,
+    "baseline_unknown": 2,
+    "baseline_source": "s4",
+    "z_alpha": 1.959963984540054,
+    "z_power": 0.8416212335729143,
+    "time_n_per_arm": 36,
+    "min_n_per_arm": 72,
+    "assumptions": "Equal-variance normal planning approximation; deterministic parity can confound."
+  },
+  "guards": {
+    "rounds": {
+      "test": "independent-round mean difference",
+      "margin": 0,
+      "max_interval_width": 0.5,
+      "min_n_per_arm": 36
+    },
+    "defects": {
+      "test": "attributable defect risk difference",
+      "margin": 0,
+      "max_interval_width": 0.05,
+      "min_n_per_arm": 72
+    }
+  },
+  "horizon": "2030-02-01T00:00:00Z",
+  "confidence": 0.95,
+  "stopping": {
+    "main_red": "any-attributable-event",
+    "rounds_multiplier": 2,
+    "rounds_reference": 1.5,
+    "reference_source": "s4",
+    "window_hours": 168,
+    "minimum_exposed": 2,
+    "efficacy_peeking": false
+  },
+  "method_review": {
+    "at": "2030-01-04T02:00:00Z",
+    "source": "s5"
+  },
+  "live_approval": {
+    "status": "not_granted",
+    "at": null,
+    "source": null
+  },
+  "experiment_hash": "ef3d5d8fb903d34c132d2123a5ffaeaed3f124dd7f3612de0e6fbfc02a85da61",
+  "cf4_refs": {
+    "old": "old-cf4-1",
+    "candidate": "candidate-cf4-1"
+  },
+  "replay_hash": "85df9fd2570e24124fe160ab13aa39ab8d95533fe5ea98981f7bd104e3e2f98a"
+}

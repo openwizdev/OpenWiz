@@ -1,0 +1,449 @@
+[
+  {
+    "slot": "rework",
+    "state": "partial",
+    "prerequisites": [
+      "Journey v1 historical completeness is unknown; retained records cannot prove absent or deleted reviews, fixes or CI attempts.",
+      "PR 4201 fix round 2: unanswered or edited/unprovable answer; resolution is unknown.",
+      "PR 4202: no retained CI attempts; complete CI rework needs source history.",
+      "PR 4203: no evidenced independent review; unreviewed is not first-pass success.",
+      "PR 4203: no retained CI attempts; complete CI rework needs source history.",
+      "PR 4204: need one unedited, commit-bound merge in the selected source window."
+    ],
+    "metrics": [
+      {
+        "id": "merged-prs",
+        "group": "board",
+        "label": "Evidenced merged PRs in the named cohort",
+        "state": "partial",
+        "value": 3,
+        "unit": "count",
+        "native_unit": "count",
+        "statistic": "count",
+        "window": {
+          "since": "2030-01-02T00:00:00Z",
+          "until": "2030-01-03T00:00:00Z",
+          "timezone": "UTC"
+        },
+        "observed_at": "2030-01-03T00:00:00Z",
+        "fresh_until": null,
+        "freshness": "unknown",
+        "source": {
+          "path": "tools/war-room/fixtures/rework/journeys.json",
+          "schema": "closedwiz.journey.v1",
+          "sha256": "a98f35c20ef2d1df3e6bb3e27c7392b7807223fc5ec6b4465b0e8251fe9acd51"
+        },
+        "evidence": [
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5002",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5003",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5004",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5007",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5008",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5010",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5011",
+          "https://github.com/synthetic-owner/work/pull/4202#issuecomment-5013",
+          "https://github.com/synthetic-owner/work/pull/4202#issuecomment-5014",
+          "https://github.com/synthetic-owner/work/pull/4203#issuecomment-5016"
+        ],
+        "sample": {
+          "observed": 3,
+          "expected": 4,
+          "identities": [
+            "pr-4201",
+            "pr-4202",
+            "pr-4203"
+          ],
+          "numerator": null,
+          "denominator": null
+        },
+        "dimensions": {
+          "direction": null,
+          "pool": null,
+          "stage": null,
+          "ticket": null,
+          "cohort": "merged-synthetic-day"
+        },
+        "interval": null,
+        "prerequisites": [
+          "Journey v1 historical completeness is unknown; retained records cannot prove absent or deleted reviews, fixes or CI attempts.",
+          "PR 4201 fix round 2: unanswered or edited/unprovable answer; resolution is unknown.",
+          "PR 4202: no retained CI attempts; complete CI rework needs source history.",
+          "PR 4203: no evidenced independent review; unreviewed is not first-pass success.",
+          "PR 4203: no retained CI attempts; complete CI rework needs source history.",
+          "PR 4204: need one unedited, commit-bound merge in the selected source window."
+        ]
+      },
+      {
+        "id": "reviewed-coverage",
+        "group": "board",
+        "label": "Observed merged PRs with evidenced independent review; history unknown",
+        "state": "partial",
+        "value": 0.6666666666666666,
+        "unit": "ratio",
+        "native_unit": "ratio",
+        "statistic": "proportion",
+        "window": {
+          "since": "2030-01-02T00:00:00Z",
+          "until": "2030-01-03T00:00:00Z",
+          "timezone": "UTC"
+        },
+        "observed_at": "2030-01-03T00:00:00Z",
+        "fresh_until": null,
+        "freshness": "unknown",
+        "source": {
+          "path": "tools/war-room/fixtures/rework/journeys.json",
+          "schema": "closedwiz.journey.v1",
+          "sha256": "a98f35c20ef2d1df3e6bb3e27c7392b7807223fc5ec6b4465b0e8251fe9acd51"
+        },
+        "evidence": [
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5002",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5003",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5004",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5007",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5008",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5010",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5011",
+          "https://github.com/synthetic-owner/work/pull/4202#issuecomment-5013",
+          "https://github.com/synthetic-owner/work/pull/4202#issuecomment-5014",
+          "https://github.com/synthetic-owner/work/pull/4203#issuecomment-5016"
+        ],
+        "sample": {
+          "observed": 3,
+          "expected": 4,
+          "identities": [
+            "pr-4201",
+            "pr-4202",
+            "pr-4203"
+          ],
+          "numerator": 2,
+          "denominator": 3
+        },
+        "dimensions": {
+          "direction": null,
+          "pool": null,
+          "stage": null,
+          "ticket": null,
+          "cohort": "merged-synthetic-day"
+        },
+        "interval": null,
+        "prerequisites": [
+          "Journey v1 historical completeness is unknown; retained records cannot prove absent or deleted reviews, fixes or CI attempts.",
+          "PR 4201 fix round 2: unanswered or edited/unprovable answer; resolution is unknown.",
+          "PR 4202: no retained CI attempts; complete CI rework needs source history.",
+          "PR 4203: no evidenced independent review; unreviewed is not first-pass success.",
+          "PR 4203: no retained CI attempts; complete CI rework needs source history.",
+          "PR 4204: need one unedited, commit-bound merge in the selected source window."
+        ]
+      },
+      {
+        "id": "review-changes-share",
+        "group": "board",
+        "label": "Evidenced CHANGES share among observed reviewed PRs; history unknown",
+        "state": "partial",
+        "value": 0.5,
+        "unit": "ratio",
+        "native_unit": "ratio",
+        "statistic": "proportion",
+        "window": {
+          "since": "2030-01-02T00:00:00Z",
+          "until": "2030-01-03T00:00:00Z",
+          "timezone": "UTC"
+        },
+        "observed_at": "2030-01-03T00:00:00Z",
+        "fresh_until": null,
+        "freshness": "unknown",
+        "source": {
+          "path": "tools/war-room/fixtures/rework/journeys.json",
+          "schema": "closedwiz.journey.v1",
+          "sha256": "a98f35c20ef2d1df3e6bb3e27c7392b7807223fc5ec6b4465b0e8251fe9acd51"
+        },
+        "evidence": [
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5002",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5003",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5004",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5007",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5008",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5010",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5011",
+          "https://github.com/synthetic-owner/work/pull/4202#issuecomment-5013",
+          "https://github.com/synthetic-owner/work/pull/4202#issuecomment-5014",
+          "https://github.com/synthetic-owner/work/pull/4203#issuecomment-5016"
+        ],
+        "sample": {
+          "observed": 2,
+          "expected": 4,
+          "identities": [
+            "pr-4201",
+            "pr-4202"
+          ],
+          "numerator": 1,
+          "denominator": 2
+        },
+        "dimensions": {
+          "direction": null,
+          "pool": null,
+          "stage": null,
+          "ticket": null,
+          "cohort": "merged-synthetic-day"
+        },
+        "interval": null,
+        "prerequisites": [
+          "Journey v1 historical completeness is unknown; retained records cannot prove absent or deleted reviews, fixes or CI attempts.",
+          "PR 4201 fix round 2: unanswered or edited/unprovable answer; resolution is unknown.",
+          "PR 4202: no retained CI attempts; complete CI rework needs source history.",
+          "PR 4203: no evidenced independent review; unreviewed is not first-pass success.",
+          "PR 4203: no retained CI attempts; complete CI rework needs source history.",
+          "PR 4204: need one unedited, commit-bound merge in the selected source window."
+        ]
+      },
+      {
+        "id": "review-rounds",
+        "group": "board",
+        "label": "Evidenced independent nonduplicate review rounds; lower bound",
+        "state": "partial",
+        "value": 4,
+        "unit": "count",
+        "native_unit": "count",
+        "statistic": "count",
+        "window": {
+          "since": "2030-01-02T00:00:00Z",
+          "until": "2030-01-03T00:00:00Z",
+          "timezone": "UTC"
+        },
+        "observed_at": "2030-01-03T00:00:00Z",
+        "fresh_until": null,
+        "freshness": "unknown",
+        "source": {
+          "path": "tools/war-room/fixtures/rework/journeys.json",
+          "schema": "closedwiz.journey.v1",
+          "sha256": "a98f35c20ef2d1df3e6bb3e27c7392b7807223fc5ec6b4465b0e8251fe9acd51"
+        },
+        "evidence": [
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5002",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5003",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5004",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5007",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5008",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5010",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5011",
+          "https://github.com/synthetic-owner/work/pull/4202#issuecomment-5013",
+          "https://github.com/synthetic-owner/work/pull/4202#issuecomment-5014",
+          "https://github.com/synthetic-owner/work/pull/4203#issuecomment-5016"
+        ],
+        "sample": {
+          "observed": 3,
+          "expected": 4,
+          "identities": [
+            "pr-4201",
+            "pr-4202",
+            "pr-4203"
+          ],
+          "numerator": null,
+          "denominator": null
+        },
+        "dimensions": {
+          "direction": null,
+          "pool": null,
+          "stage": null,
+          "ticket": null,
+          "cohort": "merged-synthetic-day"
+        },
+        "interval": null,
+        "prerequisites": [
+          "Journey v1 historical completeness is unknown; retained records cannot prove absent or deleted reviews, fixes or CI attempts.",
+          "PR 4201 fix round 2: unanswered or edited/unprovable answer; resolution is unknown.",
+          "PR 4202: no retained CI attempts; complete CI rework needs source history.",
+          "PR 4203: no evidenced independent review; unreviewed is not first-pass success.",
+          "PR 4203: no retained CI attempts; complete CI rework needs source history.",
+          "PR 4204: need one unedited, commit-bound merge in the selected source window."
+        ]
+      },
+      {
+        "id": "fix-rounds",
+        "group": "board",
+        "label": "Recorded fix rounds, including unanswered rounds; lower bound",
+        "state": "partial",
+        "value": 2,
+        "unit": "count",
+        "native_unit": "count",
+        "statistic": "count",
+        "window": {
+          "since": "2030-01-02T00:00:00Z",
+          "until": "2030-01-03T00:00:00Z",
+          "timezone": "UTC"
+        },
+        "observed_at": "2030-01-03T00:00:00Z",
+        "fresh_until": null,
+        "freshness": "unknown",
+        "source": {
+          "path": "tools/war-room/fixtures/rework/journeys.json",
+          "schema": "closedwiz.journey.v1",
+          "sha256": "a98f35c20ef2d1df3e6bb3e27c7392b7807223fc5ec6b4465b0e8251fe9acd51"
+        },
+        "evidence": [
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5002",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5003",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5004",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5007",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5008",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5010",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5011",
+          "https://github.com/synthetic-owner/work/pull/4202#issuecomment-5013",
+          "https://github.com/synthetic-owner/work/pull/4202#issuecomment-5014",
+          "https://github.com/synthetic-owner/work/pull/4203#issuecomment-5016"
+        ],
+        "sample": {
+          "observed": 3,
+          "expected": 4,
+          "identities": [
+            "pr-4201",
+            "pr-4202",
+            "pr-4203"
+          ],
+          "numerator": null,
+          "denominator": null
+        },
+        "dimensions": {
+          "direction": null,
+          "pool": null,
+          "stage": null,
+          "ticket": null,
+          "cohort": "merged-synthetic-day"
+        },
+        "interval": null,
+        "prerequisites": [
+          "Journey v1 historical completeness is unknown; retained records cannot prove absent or deleted reviews, fixes or CI attempts.",
+          "PR 4201 fix round 2: unanswered or edited/unprovable answer; resolution is unknown.",
+          "PR 4202: no retained CI attempts; complete CI rework needs source history.",
+          "PR 4203: no evidenced independent review; unreviewed is not first-pass success.",
+          "PR 4203: no retained CI attempts; complete CI rework needs source history.",
+          "PR 4204: need one unedited, commit-bound merge in the selected source window."
+        ]
+      },
+      {
+        "id": "answered-fix-rounds",
+        "group": "board",
+        "label": "Fix rounds with recorded unedited answers, not resolutions; lower bound",
+        "state": "partial",
+        "value": 1,
+        "unit": "count",
+        "native_unit": "count",
+        "statistic": "count",
+        "window": {
+          "since": "2030-01-02T00:00:00Z",
+          "until": "2030-01-03T00:00:00Z",
+          "timezone": "UTC"
+        },
+        "observed_at": "2030-01-03T00:00:00Z",
+        "fresh_until": null,
+        "freshness": "unknown",
+        "source": {
+          "path": "tools/war-room/fixtures/rework/journeys.json",
+          "schema": "closedwiz.journey.v1",
+          "sha256": "a98f35c20ef2d1df3e6bb3e27c7392b7807223fc5ec6b4465b0e8251fe9acd51"
+        },
+        "evidence": [
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5002",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5003",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5004",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5007",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5008",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5010",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5011",
+          "https://github.com/synthetic-owner/work/pull/4202#issuecomment-5013",
+          "https://github.com/synthetic-owner/work/pull/4202#issuecomment-5014",
+          "https://github.com/synthetic-owner/work/pull/4203#issuecomment-5016"
+        ],
+        "sample": {
+          "observed": 3,
+          "expected": 4,
+          "identities": [
+            "pr-4201",
+            "pr-4202",
+            "pr-4203"
+          ],
+          "numerator": null,
+          "denominator": null
+        },
+        "dimensions": {
+          "direction": null,
+          "pool": null,
+          "stage": null,
+          "ticket": null,
+          "cohort": "merged-synthetic-day"
+        },
+        "interval": null,
+        "prerequisites": [
+          "Journey v1 historical completeness is unknown; retained records cannot prove absent or deleted reviews, fixes or CI attempts.",
+          "PR 4201 fix round 2: unanswered or edited/unprovable answer; resolution is unknown.",
+          "PR 4202: no retained CI attempts; complete CI rework needs source history.",
+          "PR 4203: no evidenced independent review; unreviewed is not first-pass success.",
+          "PR 4203: no retained CI attempts; complete CI rework needs source history.",
+          "PR 4204: need one unedited, commit-bound merge in the selected source window."
+        ]
+      },
+      {
+        "id": "ci-reruns",
+        "group": "board",
+        "label": "Recorded CI rework: rerun attempts, separate from review corrections; lower bound",
+        "state": "partial",
+        "value": 1,
+        "unit": "count",
+        "native_unit": "count",
+        "statistic": "count",
+        "window": {
+          "since": "2030-01-02T00:00:00Z",
+          "until": "2030-01-03T00:00:00Z",
+          "timezone": "UTC"
+        },
+        "observed_at": "2030-01-03T00:00:00Z",
+        "fresh_until": null,
+        "freshness": "unknown",
+        "source": {
+          "path": "tools/war-room/fixtures/rework/journeys.json",
+          "schema": "closedwiz.journey.v1",
+          "sha256": "a98f35c20ef2d1df3e6bb3e27c7392b7807223fc5ec6b4465b0e8251fe9acd51"
+        },
+        "evidence": [
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5002",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5003",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5004",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5007",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5008",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5010",
+          "https://github.com/synthetic-owner/work/pull/4201#issuecomment-5011",
+          "https://github.com/synthetic-owner/work/pull/4202#issuecomment-5013",
+          "https://github.com/synthetic-owner/work/pull/4202#issuecomment-5014",
+          "https://github.com/synthetic-owner/work/pull/4203#issuecomment-5016"
+        ],
+        "sample": {
+          "observed": 3,
+          "expected": 4,
+          "identities": [
+            "pr-4201",
+            "pr-4202",
+            "pr-4203"
+          ],
+          "numerator": null,
+          "denominator": null
+        },
+        "dimensions": {
+          "direction": null,
+          "pool": null,
+          "stage": null,
+          "ticket": null,
+          "cohort": "merged-synthetic-day"
+        },
+        "interval": null,
+        "prerequisites": [
+          "Journey v1 historical completeness is unknown; retained records cannot prove absent or deleted reviews, fixes or CI attempts.",
+          "PR 4201 fix round 2: unanswered or edited/unprovable answer; resolution is unknown.",
+          "PR 4202: no retained CI attempts; complete CI rework needs source history.",
+          "PR 4203: no evidenced independent review; unreviewed is not first-pass success.",
+          "PR 4203: no retained CI attempts; complete CI rework needs source history.",
+          "PR 4204: need one unedited, commit-bound merge in the selected source window."
+        ]
+      }
+    ]
+  }
+]

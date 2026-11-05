@@ -1,4 +1,4 @@
-// AW5, the page's half: the action button is disabled while any
+// AW5 (#16), the page's half: the action button is disabled while any
 // attachment is selected, uploading or failed, and says why ("2 attachments
 // not ready"); Steer is not offered with attachments. The server's gate is the
 // real one (tests/web-api, AW5). AW6: honest states. Selected never says
@@ -8,7 +8,7 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 
-import { launchBrowser, waitFor } from '../support/browser.mjs';
+import { DESKTOP, launchBrowser, PHONE, waitFor } from '../support/browser.mjs';
 import { button, composerSite, id, openThread, outcome, posts, readComposer, type } from '../support/composer.mjs';
 import { chooseAll, createPosts, launcherSite, openLauncher, readLauncher, settled, typePrompt } from '../support/launcher.mjs';
 import { addFiles, COMPOSER, LAUNCHER, png, readTray, text, trayIs } from '../support/tray.mjs';
@@ -20,6 +20,54 @@ before(async () => {
 after(() => browser.close());
 
 const sendButton = async (page) => (await readComposer(page)).actions.find((a) => a.key === 'send') ?? null;
+
+for (const viewport of [PHONE, DESKTOP]) {
+  for (const surface of ['composer', 'launcher']) {
+    test(`#602: ${surface} filename spans preserve Unicode and middle clipping at ${viewport.width}px`, async () => {
+      const { fx } = await (surface === 'composer' ? composerSite() : launcherSite());
+      const p = await (surface === 'composer' ? openThread(browser, fx, 1, { viewport }) : openLauncher(browser, fx, { viewport }));
+      try {
+        const scope = surface === 'composer' ? COMPOSER : LAUNCHER;
+        const names = ['😀12345.txt', `Synthetic-${'W'.repeat(100)}-😀12345.txt`];
+        fx.api.hold('attachments');
+        await addFiles(p.page, scope, names.map((name) => ({ name, buffer: text() })));
+        await trayIs(p.page, scope, 2, 'uploading');
+        await p.page.evaluate(() => document.fonts.ready.then(() => undefined));
+        const shown = await p.page.locator(`${scope} [data-part=attachment-name]`).evaluateAll((els) => els.map((el) => {
+          const head = el.querySelector('.att-head');
+          const tail = el.querySelector('.att-tail');
+          const box = el.getBoundingClientRect();
+          const end = tail.getBoundingClientRect();
+          return {
+            spans: [...el.querySelectorAll('span')].map((s) => s.textContent),
+            title: el.title,
+            isolated: getComputedStyle(el).unicodeBidi,
+            ellipsis: getComputedStyle(head).textOverflow,
+            overflow: getComputedStyle(head).overflow,
+            clipped: head.scrollWidth > head.clientWidth,
+            tailVisible: end.left >= box.left && end.right <= box.right,
+          };
+        }));
+        assert.equal(shown.length, 2);
+        for (const [i, row] of shown.entries()) {
+          assert.equal(row.spans.length, 2);
+          assert.ok(row.spans.every((s) => s.isWellFormed()), `whole Unicode code points: ${JSON.stringify(row.spans)}`);
+          assert.equal(row.spans.join(''), names[i]);
+          assert.equal(row.title, names[i]);
+          assert.ok(row.spans[1].endsWith('.txt'));
+          assert.equal(row.isolated, 'isolate');
+          assert.equal(row.ellipsis, 'ellipsis');
+          assert.equal(row.overflow, 'hidden');
+          assert.equal(row.clipped, i === 1);
+          assert.equal(row.tailVisible, true);
+        }
+      } finally {
+        await p.close();
+        await fx.close();
+      }
+    });
+  }
+}
 
 test('AW5, AW6: in the composer, Send waits for every attachment, says why, and the tray never claims more than the server said', async () => {
   const { fx } = await composerSite();
@@ -55,7 +103,7 @@ test('AW5, AW6: in the composer, Send waits for every attachment, says why, and 
     await waitFor(async () => (await sendButton(p.page))?.disabled === false, { what: 'Send enabled' });
     await button(p.page, 'Send').click();
     await outcome(p.page, 'sent');
-    const ids = [...fx.api.staged.keys()];
+    const ids = ['notes.txt', 'photo.png'].map((name) => [...fx.api.staged.values()].find((r) => r.display_name === name).id);
     assert.deepEqual(posts(fx)[0].attachments, ids, 'the ready ids, in the owner’s order');
     assert.deepEqual(fx.api.calls[0].attachments, ids);
     const after = await waitFor(async () => {
@@ -72,19 +120,18 @@ test('AW5, AW6: in the composer, Send waits for every attachment, says why, and 
 
 test('AW5: a failed attachment keeps Send off until Retry or Remove; Remove of the failed one lets the rest go', async () => {
   const { fx } = await composerSite();
-  let n = 0;
   const p = await openThread(browser, fx, 1);
   try {
-    // The first upload fails with the core's reason; the second is ready.
+    // The HEIC upload fails with the core's reason; the other is ready. By name,
+    // not by arrival: two uploads run at once, in either order (#431).
     fx.api.setUpload((name, bytes) => {
-      if (n++ === 0) {
+      if (name === 'photo.heic') {
         return { status: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ schema: 'openwiz.attachment-add.v1', ready: [], failed: [{ index: 0, path: name, readiness: { state: 'failed', reason: 'unsupported_heif' }, message: 'HEIC and HEIF images aren’t supported' }], not_staged: [], expired: [] }) };
       }
       const r = { id: `att-${'b'.repeat(32)}`, sha256: '0'.repeat(64), size_bytes: bytes.length, kind: 'file', name, display_name: name };
       fx.api.staged.set(r.id, r);
       return { status: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ schema: 'openwiz.attachment-add.v1', ready: [{ index: 0, path: name, staged: { attachment: r, readiness: { state: 'ready' }, ready_at: 1, age_ms: 0, expires_at: 2 } }], failed: [], not_staged: [], expired: [] }) };
     });
-    n = 0;
     await type(p.page, 'Synthetic message');
     await addFiles(p.page, COMPOSER, [{ name: 'photo.heic', buffer: text('synthetic heic') }]);
     await addFiles(p.page, COMPOSER, [{ name: 'notes.txt', buffer: text() }]);

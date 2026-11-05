@@ -1,0 +1,131 @@
+/* The plan graph page (#653), drawn to the approved design target in
+   Observatory: the blocking chain on top, versions by state, rails on the PC
+   and lists on the phone. Gold only for what needs the owner; purple for
+   building, selection and focus; neutral rails; ids in Geist Mono. */
+
+.plan { max-width: 1200px; margin: 0 auto; }
+.plan .pl-num { font: 400 12px/16px var(--mono); color: var(--ink-2); }
+.pl-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 16px 24px; margin-bottom: 24px; }
+.pl-page-title { margin: 0; font: var(--ow-type-page); }
+.pl-controls { display: flex; align-items: center; gap: 12px; }
+.pl-filter { display: flex; align-items: center; gap: 12px; }
+.pl-filter-label { color: var(--ink-2); font: var(--ow-type-body); }
+.pl-filter select { min-height: 44px; min-width: 240px; padding: 0 12px; border: 1px solid var(--line-2); border-radius: var(--ow-radius-8); background: var(--s2); color: var(--ink); font: var(--ow-type-body); }
+.pl-prov { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.pl-prov .status-chip { gap: 8px; min-height: 32px; padding: 4px 12px; margin: 0; border: 1px solid var(--line-2); border-radius: var(--ow-radius-8); color: var(--ink-2); }
+.pl-prov .status-chip.is-partial { border-style: dashed; }
+.pl-prov .status-chip .chip-state { overflow-wrap: anywhere; }
+.pl-summary { margin: 0; }
+.pl-gap-summary { flex-basis: 100%; margin: 0; color: var(--ink-2); font: var(--ow-type-caption); }
+.pl-prov .gaps { flex-basis: 100%; }
+.pl-loading { display: grid; gap: 16px; }
+.pl-loading .meta { margin: 0; }
+.pl-skeleton { display: grid; gap: 12px; }
+.pl-skeleton span { display: block; height: 96px; border-radius: var(--ow-radius-12); background: var(--s2); }
+.pl-skeleton span:first-child { width: 50%; height: 32px; }
+.pl-empty, .pl-chain-note { margin: 0; padding: 16px 24px; border-radius: var(--ow-radius-8); background: var(--s2); color: var(--ink-2); font: var(--ow-type-body); }
+.plan .notice { margin-bottom: 24px; }
+
+/* The pinned trace: both counts, both directions, the links and Clear trace. */
+.pl-trace { margin: 0 0 24px; padding: 16px 24px; border-radius: var(--ow-radius-12); background: var(--s2); box-shadow: inset 3px 0 var(--wiz); }
+.pl-trace-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.pl-trace-title { margin: 0; font: var(--ow-type-title); }
+.pl-trace-title .pl-num { font-size: 14px; color: var(--ink); }
+.pl-trace-counts { color: var(--ink-2); }
+.pl-trace-detail { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) auto; gap: 16px 24px; margin-top: 12px; }
+.pl-trace-label { margin: 0 0 4px; color: var(--ink-3); font: var(--ow-type-caption); }
+.pl-trace-detail ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; font: var(--ow-type-body); }
+.pl-trace-detail .meta { margin: 0; }
+.pl-links { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; margin: 0; }
+
+/* The blocking chain: one row on the PC, scrolling inside its panel when long. */
+.pl-chain { margin-bottom: 24px; }
+.pl-section-title { margin: 0 0 12px; font: var(--ow-type-title); font-weight: 600; }
+.pl-holds { margin-left: 8px; color: var(--ink-2); font: var(--ow-type-body); }
+.pl-chain-list { display: flex; margin: 0; padding: 0 0 8px; list-style: none; overflow-x: auto; }
+.pl-link { display: flex; flex: 1 0 136px; min-width: 136px; }
+.pl-link .pl-card { flex: 1; }
+/* Chain cards are narrow: their words wrap inside a height reserved for them, so a relation tag never moves a card. */
+.pl-link .pl-card { min-height: 148px; }
+.pl-link .pl-meta { flex-wrap: wrap; white-space: normal; row-gap: 4px; }
+.pl-arrow { display: flex; flex: none; align-items: center; justify-content: center; width: 24px; color: var(--ink-3); }
+.pl-arrow-phone { display: none; }
+.pl-more { display: none; }
+
+/* A ticket: number, title (two lines at most), its state word and mark, ownership, relation. */
+.pl-card { position: relative; display: grid; align-content: start; gap: 4px; width: 100%; min-height: 76px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--ow-radius-8); background: var(--s2); color: var(--ink); font: var(--ow-type-body); text-align: start; cursor: pointer; }
+.pl-card:hover { background: var(--s3); }
+.pl-card.t1 { box-shadow: inset 3px 0 var(--gold); }
+.pl-card[data-relation='prerequisite'], .pl-card[data-relation='dependent'] { border-style: dashed; border-color: var(--line-2); }
+.pl-card[aria-pressed='true'], .pl-card[data-relation='selected'] { border-color: var(--wiz); background: var(--ow-color-selected); }
+.pl-card[aria-pressed='true'] { box-shadow: inset 0 0 0 1px var(--wiz); }
+.pl-card-title { display: -webkit-box; overflow: hidden; font: 500 14px/20px var(--sans); -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.pl-meta { display: flex; align-items: center; gap: 8px; min-height: 24px; overflow: hidden; color: var(--ink-2); font: var(--ow-type-caption); white-space: nowrap; }
+.pl-mark { display: inline-flex; align-items: center; color: var(--ink-2); }
+.pl-mark .glyph { display: inline-flex; margin-right: 4px; }
+.pl-mark .status-icon { width: 16px; height: 16px; }
+.pl-mark.t1 { color: var(--gold); }
+.pl-mark.t3 { color: var(--wiz); }
+.pl-rel { padding: 0 4px; border: 1px solid var(--line-2); border-radius: var(--ow-radius-6); color: var(--ink-2); }
+.pl-hold { color: var(--ink-2); font: var(--ow-type-caption); }
+
+/* Versions: a sheet each, folding to one line that keeps every count. */
+.pl-versions-title { display: none; }
+.pl-sheets { position: relative; display: grid; gap: 12px; }
+.pl-sheet { border: 1px solid var(--line); border-radius: var(--ow-radius-12); }
+.pl-sheet-head { margin: 0; font: inherit; }
+.pl-fold { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 8px 16px; border: 0; border-radius: var(--ow-radius-12); background: none; color: var(--ink); font: var(--ow-type-body); text-align: start; cursor: pointer; }
+.pl-fold:hover { background: var(--s2); }
+.pl-fold .chevron { flex: none; width: 20px; height: 20px; transform: rotate(-90deg); }
+.pl-fold .chevron.open { transform: none; }
+.pl-sheet-name { font: var(--ow-type-title); font-weight: 600; }
+.pl-near { padding: 0 8px; border: 1px solid var(--line-2); border-radius: var(--ow-radius-8); color: var(--ink-2); font: var(--ow-type-caption); }
+.pl-counts { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 12px; margin-left: auto; color: var(--ink-2); font: var(--ow-type-caption); font-variant-numeric: tabular-nums; }
+.pl-count.needs { color: var(--gold); }
+.pl-count-yours { padding-left: 12px; box-shadow: inset 1px 0 var(--line-2); }
+.pl-why { margin: 0 16px 8px; }
+.pl-columns { display: grid; grid-auto-columns: minmax(0, 1fr); grid-auto-flow: column; gap: 16px; padding: 8px 16px 16px; }
+.pl-columns[hidden] { display: none; }
+.pl-column-title { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font: var(--ow-type-body); font-weight: 600; }
+.pl-column-title .pl-mark .status-icon { width: 20px; height: 20px; }
+.pl-column-count { color: var(--ink-2); font-weight: 400; }
+.pl-cards { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.pl-none { margin: 0; color: var(--ink-3); font: var(--ow-type-body); }
+.pl-rails { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; color: var(--ink-3); pointer-events: none; }
+.pl-rail, .pl-arrowhead { color: var(--line-2); opacity: .45; }
+.pl-rail.traced, .pl-arrowhead.traced { color: var(--ink-2); opacity: 1; }
+
+@media (max-width: 899px) {
+  .pl-head { grid-template-columns: minmax(0, 1fr); }
+  .pl-controls { align-items: flex-end; }
+  .pl-filter { flex: 1 1 auto; display: grid; gap: 4px; }
+  .pl-filter select { width: 100%; min-width: 0; }
+  .pl-trace { padding: 16px; }
+  .pl-trace-head { flex-direction: column; align-items: stretch; }
+  .pl-trace-detail { grid-template-columns: minmax(0, 1fr); }
+  .pl-chain-list { flex-direction: column; padding: 0; overflow: visible; }
+  .pl-link { flex: none; flex-direction: column; min-width: 0; }
+  .pl-arrow { width: auto; height: 24px; color: var(--ink-2); font: var(--ow-type-caption); }
+  .pl-arrow-pc { display: none; }
+  .pl-arrow-phone { display: inline; }
+  .pl-chain:not(.is-open) .pl-link.is-more { display: none; }
+  .pl-more { display: flex; width: 100%; margin-top: 12px; }
+  .pl-versions-title { display: block; }
+  .pl-fold { flex-wrap: wrap; gap: 4px 12px; }
+  .pl-counts { flex-basis: 100%; justify-content: flex-start; margin-left: 0; }
+  .pl-count-yours { padding-left: 0; box-shadow: none; }
+  .pl-columns { grid-auto-flow: row; grid-template-columns: minmax(0, 1fr); }
+  .pl-column.col-needs_you { order: -3; }
+  .pl-column.col-building { order: -2; }
+  .pl-column.col-waiting { order: -1; }
+  .pl-card, .pl-link .pl-card { min-height: 0; }
+}
+
+/* The phone bar (Jake, MD9, 2026-11-06): Sessions, Fleets, Plan, Decisions, New.
+   Cockpit and Home leave only the phone bar; the PC sidebar and the command
+   dialog keep both. The bar sizes itself to the tabs it has, so Decisions (#656)
+   joins before New without another column rule. */
+@media (max-width: 899px) {
+  .app-nav .nav-cockpit, .app-nav .nav-home { display: none; }
+  .app-nav { grid-template-columns: none; grid-auto-columns: minmax(0, 1fr); grid-auto-flow: column; }
+}

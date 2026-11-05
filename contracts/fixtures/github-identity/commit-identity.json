@@ -1,0 +1,7 @@
+{
+  "synthetic": true,
+  "note": "For GI7. The user as GET /users/<login> answers it (only the fields used), and the author and committer it gives.",
+  "github_user": {"login": "synthetic-user", "id": 3003},
+  "author": {"name": "synthetic-user", "email": "3003+synthetic-user@users.noreply.github.com"},
+  "committer": {"name": "synthetic-user", "email": "3003+synthetic-user@users.noreply.github.com"}
+}

@@ -1,0 +1,14 @@
+F
+======================================================================
+FAIL: test_capture_never_claims_terminal_coverage_and_preserves_exact_bytes (__main__.Shadow.test_capture_never_claims_terminal_coverage_and_preserves_exact_bytes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_shadow.py", line 312, in test_capture_never_claims_terminal_coverage_and_preserves_exact_bytes
+    self.assertEqual(packet['plan'],self.document['plan'])
+AssertionError: '{\n  "schema": "openwiz.ci-selection.v1",\n[2059 chars]n}\n' != '{\r\n  "schema": "openwiz.ci-selection.v1",[2265 chars]\r\n'
+Diff is 6834 characters long. Set self.maxDiff to None to see it.
+
+----------------------------------------------------------------------
+Ran 1 test in 0.386s
+
+FAILED (failures=1)

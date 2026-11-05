@@ -1,0 +1,7 @@
+#2559 stress reproduction, original code (not committed as a test).
+A temporary test in tests/service/t5_health.rs built the original Fixture
+(fs::write of the fake room-cli script, then chmod 0700) 200 times and
+launched each fixture's room-cli with `loop list --json` at once, while 4
+threads kept spawning `true` from the same test process.
+
+Fixture::new then exec, 4 concurrent spawners: 191 launched, 9 ETXTBSY (errno 26), 0 other

@@ -1,0 +1,328 @@
+{
+  "schema": "closedwiz.ci-required.v1",
+  "evidence": "synthetic",
+  "frozen_at": "2030-01-03T00:00:00Z",
+  "cohorts": [
+    {
+      "id": "before",
+      "since": "2030-01-01T00:00:00Z",
+      "until": "2030-01-02T00:00:00Z",
+      "criteria": {
+        "event": "pull_request",
+        "workload": "small-code",
+        "selection_policy": "ordinary-first-attempt",
+        "runner_policy": "all",
+        "required_checks": [
+          {
+            "workflow": "ci.yml",
+            "name": "ci"
+          },
+          {
+            "workflow": "privacy.yml",
+            "name": "privacy"
+          }
+        ],
+        "repository": "synthetic-owner/synthetic-repo"
+      },
+      "membership": {
+        "source": "synthetic-complete-api-export",
+        "total_count": 1,
+        "pages": [
+          {
+            "number": 1,
+            "next": false,
+            "items": [
+              "push-a"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "after",
+      "since": "2030-01-02T00:00:00Z",
+      "until": "2030-01-03T00:00:00Z",
+      "criteria": {
+        "event": "pull_request",
+        "workload": "small-code",
+        "selection_policy": "ordinary-first-attempt",
+        "runner_policy": "all",
+        "required_checks": [
+          {
+            "workflow": "ci.yml",
+            "name": "ci"
+          },
+          {
+            "workflow": "privacy.yml",
+            "name": "privacy"
+          }
+        ],
+        "repository": "synthetic-owner/synthetic-repo"
+      },
+      "membership": {
+        "source": "synthetic-complete-api-export",
+        "total_count": 1,
+        "pages": [
+          {
+            "number": 1,
+            "next": false,
+            "items": [
+              "push-b"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "observations": [
+    {
+      "id": "push-a",
+      "push_event_id": "synthetic-event-a",
+      "repository": "synthetic-owner/synthetic-repo",
+      "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "push": {
+        "at": "2030-01-01T00:00:00Z",
+        "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "kind": "push-log",
+        "source": "synthetic-push-receipt"
+      },
+      "superseded": false,
+      "batch": null,
+      "runs": {
+        "source": "synthetic-complete-api-export",
+        "total_count": 2,
+        "pages": [
+          {
+            "number": 1,
+            "next": false,
+            "items": [
+              {
+                "run": 1,
+                "attempt": 1,
+                "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "workflow": "ci.yml",
+                "current": true,
+                "created_at": "2030-01-01T00:02:00Z",
+                "status": "completed",
+                "conclusion": "success",
+                "source": "synthetic-run-receipt",
+                "jobs": {
+                  "source": "synthetic-complete-api-export",
+                  "total_count": 1,
+                  "pages": [
+                    {
+                      "number": 1,
+                      "next": false,
+                      "items": [
+                        {
+                          "id": 101,
+                          "run": 1,
+                          "attempt": 1,
+                          "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                          "name": "ci",
+                          "status": "completed",
+                          "conclusion": "success",
+                          "created_at": "2030-01-01T00:02:00Z",
+                          "started_at": "2030-01-01T00:02:30Z",
+                          "completed_at": "2030-01-01T00:09:00Z",
+                          "runner": "synthetic-owned"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "run": 2,
+                "attempt": 1,
+                "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "workflow": "privacy.yml",
+                "current": true,
+                "created_at": "2030-01-01T00:02:00Z",
+                "status": "completed",
+                "conclusion": "success",
+                "source": "synthetic-run-receipt",
+                "jobs": {
+                  "source": "synthetic-complete-api-export",
+                  "total_count": 1,
+                  "pages": [
+                    {
+                      "number": 1,
+                      "next": false,
+                      "items": [
+                        {
+                          "id": 102,
+                          "run": 2,
+                          "attempt": 1,
+                          "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                          "name": "privacy",
+                          "status": "completed",
+                          "conclusion": "success",
+                          "created_at": "2030-01-01T00:02:00Z",
+                          "started_at": "2030-01-01T00:03:00Z",
+                          "completed_at": "2030-01-01T00:10:00Z",
+                          "runner": "synthetic-hosted"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "push-b",
+      "push_event_id": "synthetic-event-b",
+      "repository": "synthetic-owner/synthetic-repo",
+      "head": "cccccccccccccccccccccccccccccccccccccccc",
+      "push": {
+        "at": "2030-01-02T00:00:00Z",
+        "head": "cccccccccccccccccccccccccccccccccccccccc",
+        "kind": "push-log",
+        "source": "synthetic-push-receipt"
+      },
+      "superseded": false,
+      "batch": null,
+      "runs": {
+        "source": "synthetic-complete-api-export",
+        "total_count": 2,
+        "pages": [
+          {
+            "number": 1,
+            "next": false,
+            "items": [
+              {
+                "run": 11,
+                "attempt": 1,
+                "head": "cccccccccccccccccccccccccccccccccccccccc",
+                "workflow": "ci.yml",
+                "current": true,
+                "created_at": "2030-01-02T00:02:00Z",
+                "status": "completed",
+                "conclusion": "success",
+                "source": "synthetic-run-receipt",
+                "jobs": {
+                  "source": "synthetic-complete-api-export",
+                  "total_count": 1,
+                  "pages": [
+                    {
+                      "number": 1,
+                      "next": false,
+                      "items": [
+                        {
+                          "id": 111,
+                          "run": 11,
+                          "attempt": 1,
+                          "head": "cccccccccccccccccccccccccccccccccccccccc",
+                          "name": "ci",
+                          "status": "completed",
+                          "conclusion": "success",
+                          "created_at": "2030-01-02T00:02:00Z",
+                          "started_at": "2030-01-02T00:02:30Z",
+                          "completed_at": "2030-01-02T00:04:00Z",
+                          "runner": "synthetic-owned"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "run": 12,
+                "attempt": 1,
+                "head": "cccccccccccccccccccccccccccccccccccccccc",
+                "workflow": "privacy.yml",
+                "current": true,
+                "created_at": "2030-01-02T00:02:00Z",
+                "status": "completed",
+                "conclusion": "success",
+                "source": "synthetic-run-receipt",
+                "jobs": {
+                  "source": "synthetic-complete-api-export",
+                  "total_count": 1,
+                  "pages": [
+                    {
+                      "number": 1,
+                      "next": false,
+                      "items": [
+                        {
+                          "id": 112,
+                          "run": 12,
+                          "attempt": 1,
+                          "head": "cccccccccccccccccccccccccccccccccccccccc",
+                          "name": "privacy",
+                          "status": "completed",
+                          "conclusion": "success",
+                          "created_at": "2030-01-02T00:02:00Z",
+                          "started_at": "2030-01-02T00:03:00Z",
+                          "completed_at": "2030-01-02T00:05:00Z",
+                          "runner": "synthetic-hosted"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "comparisons": [
+    {
+      "id": "cut-1",
+      "before": "before",
+      "after": "after",
+      "change": "synthetic-build-reuse"
+    }
+  ],
+  "cost": {
+    "id": "synthetic-bill",
+    "kind": "whole-bill",
+    "evidence": "synthetic",
+    "complete": true,
+    "since": "2030-01-01T00:00:00Z",
+    "until": "2030-02-01T00:00:00Z",
+    "source": "synthetic-all-provider-billing-export",
+    "components": [
+      {
+        "category": "plan",
+        "microusd": 0,
+        "source": "synthetic-billing-component"
+      },
+      {
+        "category": "seats",
+        "microusd": 0,
+        "source": "synthetic-billing-component"
+      },
+      {
+        "category": "compute",
+        "microusd": 12000000,
+        "source": "synthetic-billing-component"
+      },
+      {
+        "category": "storage",
+        "microusd": 0,
+        "source": "synthetic-billing-component"
+      },
+      {
+        "category": "app",
+        "microusd": 0,
+        "source": "synthetic-billing-component"
+      },
+      {
+        "category": "other",
+        "microusd": 0,
+        "source": "synthetic-billing-component"
+      }
+    ]
+  },
+  "synthetic_assumptions": [
+    "All identities, timestamps, runners and charges are invented.",
+    "Normalized complete-page, push and required-check receipt shapes are synthetic, not observed API captures."
+  ]
+}

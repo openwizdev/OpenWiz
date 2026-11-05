@@ -1,4 +1,4 @@
-//! N3 Existing projects only: the project is read with `project
+//! N3 Existing projects only (sheet A-5): the project is read with `project
 //! list` in the same run, and only a `standard` project with a GitHub remote
 //! is accepted. Unknown, hidden, personal, no-remote, other-host and
 //! ambiguous projects are refused with zero `spawn` calls, through the
@@ -68,6 +68,80 @@ fn only_a_standard_project_with_a_github_remote_is_accepted() {
 }
 
 #[test]
+fn conflicting_duplicate_project_is_refused_through_cli() {
+    // The eligible name selects the ID, but the differently named personal
+    // row must still reach the eligibility guard through the adapter.
+    let rows = json!([
+        {"id": "prj_syn_0001", "name": "Synthetic project one", "kind": "standard",
+         "gitRemoteUrl": "https://github.com/synthetic-owner/synthetic-repo.git"},
+        {"id": "prj_syn_0001", "name": "Synthetic personal other", "kind": "personal",
+         "gitRemoteUrl": null}
+    ]);
+    let fake = NewFake::with(
+        "n03_conflicting_duplicate",
+        vec![json!({
+            "argv": ["project", "list", "--json", "--include-personal"],
+            "stdout": rows.to_string(),
+        })],
+    );
+    refused(
+        &fake,
+        &new_args(
+            "Synthetic project one",
+            "op-n03-duplicate",
+            &[],
+            "Synthetic",
+        ),
+        "project_personal",
+    );
+    assert_eq!(fake.spawn_count(), 0);
+    assert!(fake.spawns().is_empty());
+}
+
+#[test]
+fn unusable_project_ids_are_refused_with_readable_status() {
+    // Synthetic drift: a selectable name must not put an unusable ID in
+    // the operation record, even when kind and remote confirm eligibility.
+    for (case, id) in [
+        ("missing", None),
+        ("null", Some(json!(null))),
+        ("number", Some(json!(7))),
+        ("empty", Some(json!(""))),
+    ] {
+        let mut row = json!({
+            "name": "Synthetic project", "kind": "standard",
+            "gitRemoteUrl": "https://github.com/synthetic-owner/synthetic-repo.git",
+        });
+        if let Some(id) = id {
+            row["id"] = id;
+        }
+        let fake = NewFake::with(
+            &format!("n03_unusable_id_{case}"),
+            vec![json!({
+                "argv": ["project", "list", "--json", "--include-personal"],
+                "stdout": json!([row]).to_string(),
+            })],
+        );
+        let op = format!("op-n03-unusable-id-{case}");
+        let (code, report) =
+            fake.cli_json(&new_args("Synthetic project", &op, &[], "Synthetic"), "");
+        assert_eq!(code, 5, "{case}: {report}");
+        let (status_code, out, err) = fake.cli(&["new", "--status", &op, "--json"], "");
+        assert_eq!(status_code, 5, "{case}: record must remain readable: {err}");
+        let status: serde_json::Value = serde_json::from_str(&out).expect("status JSON");
+        assert_eq!(status["result"]["kind"], "recorded", "{status}");
+        for report in [&report, &status["result"]["report"]] {
+            assert_eq!(report["status"], "refused", "{case}: {report}");
+            assert_eq!(report["result"]["outcome"]["kind"], "refused");
+            assert_eq!(report["result"]["outcome"]["reason"], "project_not_found");
+            assert_eq!(report["project"], json!(null));
+        }
+        assert_eq!(fake.spawn_count(), 0, "{case}");
+        assert!(fake.spawns().is_empty(), "{case}");
+    }
+}
+
+#[test]
 fn a_shared_name_is_resolved_only_by_its_qualified_form_or_its_id() {
     let fake = NewFake::with(
         "n03_shared",
@@ -108,6 +182,20 @@ fn a_project_list_that_cannot_be_read_creates_nothing() {
 }
 
 #[test]
+fn n03_existing_projects_contracts_preserve_all_original_cases() {
+    let cases: [(&str, fn()); 2] = [
+        (
+            "projects_are_read_with_their_kind_and_remote",
+            projects_are_read_with_their_kind_and_remote,
+        ),
+        ("the_github_rule", the_github_rule),
+    ];
+    for (name, proof) in cases {
+        eprintln!("TA2 case: n03_existing_projects::{name}");
+        proof();
+    }
+}
+
 fn the_github_rule() {
     for url in [
         github("0001"),
@@ -136,7 +224,6 @@ fn the_github_rule() {
     }
 }
 
-#[test]
 fn projects_are_read_with_their_kind_and_remote() {
     let rows = parse_projects(project_list().to_string().as_bytes()).expect("parsed");
     let find = |id: &str| rows.iter().find(|p| p.id == id).unwrap().clone();

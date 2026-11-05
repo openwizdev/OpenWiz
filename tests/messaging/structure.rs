@@ -13,6 +13,18 @@ use crate::support::*;
 fn graph() -> BTreeMap<String, BTreeSet<String>> {
     let output = Command::new(env!("CARGO"))
         .args(["metadata", "--format-version", "1", "--locked", "--offline"])
+        .args([
+            "--filter-platform",
+            String::from_utf8(
+                Command::new("rustc")
+                    .args(["--print", "host-tuple"])
+                    .output()
+                    .expect("rustc")
+                    .stdout,
+            )
+            .expect("host")
+            .trim(),
+        ])
         .current_dir(ROOT)
         .output()
         .expect("run cargo metadata");
@@ -77,7 +89,8 @@ fn the_store_depends_only_inward() {
     let cli = reaches(&g, "openwiz-cli");
     assert!(cli.contains("openwiz-store") && cli.contains("openwiz-core"));
     // Every crate outside the workspace is one 0.0.1 recorded and approved.
-    let recorded = fs::read_to_string(Path::new(ROOT).join("docs/dependencies.md")).unwrap();
+    let recorded =
+        fs::read_to_string(Path::new(ROOT).join("contracts/dependencies.v1.md")).unwrap();
     let approved: BTreeSet<String> = recorded
         .lines()
         .filter_map(|l| l.strip_prefix("| `"))
@@ -126,6 +139,36 @@ fn the_core_does_no_io() {
 }
 
 #[test]
+fn the_schema_checker_enforces_unique_items() {
+    let schema = serde_json::json!({"type": "array", "uniqueItems": true});
+    assert!(crate::schema::lint(&schema).is_empty());
+    for (value, accepted) in [
+        (serde_json::json!([]), true),
+        (serde_json::json!(["Synthetic one"]), true),
+        (serde_json::json!(["Synthetic one", "Synthetic two"]), true),
+        (serde_json::json!(["Synthetic one", "Synthetic one"]), false),
+        (serde_json::json!(["one", "two", "one"]), false),
+        (serde_json::json!([["one"], ["one"]]), false),
+        (serde_json::json!([{"id": "one"}, {"id": "one"}]), false),
+    ] {
+        let errors = crate::schema::validate(&schema, &value);
+        assert_eq!(errors.is_empty(), accepted, "{value}: {errors:?}");
+    }
+    // Like the existing prompt checker, support only true on array nodes.
+    for invalid in [
+        serde_json::json!({"type": "array", "uniqueItems": false}),
+        serde_json::json!({"type": "array", "uniqueItems": "true"}),
+        serde_json::json!({"type": "string", "uniqueItems": true}),
+    ] {
+        assert!(!crate::schema::lint(&invalid).is_empty(), "{invalid}");
+        assert!(
+            !crate::schema::validate(&invalid, &serde_json::json!([])).is_empty(),
+            "{invalid}"
+        );
+    }
+}
+
+#[test]
 fn the_messaging_schema_uses_only_checked_keywords() {
     let schema = messaging_schema();
     assert_eq!(schema["title"], "openwiz.messaging.v1");
@@ -155,6 +198,7 @@ fn the_messaging_schema_uses_only_checked_keywords() {
     );
 }
 
+/// Haiku A1: every label the core can serialize is in the schema's enums.
 #[test]
 fn every_serialized_label_is_in_the_schema() {
     use openwiz_core::messaging::send::{FailReason, Status, UncertainReason, WaitingOn};
@@ -299,6 +343,8 @@ fn no_temp_path_is_shared_between_test_runs() {
     assert!(found.is_empty(), "{}", found.join("\n"));
 }
 
+/// #79: the preview and lookup shapes are in the schema, with every label
+/// the core can serialize, and an earlier send says whether it is in flight.
 #[test]
 fn the_preview_and_lookup_shapes_are_in_the_schema() {
     use openwiz_core::messaging::lookup::{LOOKUP_SCHEMA_ID, LookupResult};
@@ -387,7 +433,7 @@ fn the_request_no_longer_says_the_route_body_carries_the_target() {
     }
 }
 
-/// Fail closed: the store methods the in-flight guard, the
+/// Fail closed (Sol round 1): the store methods the in-flight guard, the
 /// lookup and the withdrawal depend on have no default body, so every store
 /// must implement them; none can fall back to "nothing in flight".
 #[test]

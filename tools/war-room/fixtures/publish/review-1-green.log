@@ -1,0 +1,19 @@
+# WR9 review round 1 green at 5467ea941: python3 -I tools/war-room/test_publish.py (exit 0, 13 tests); test_page_history.py OK.
+test_a_broken_branch_publishes_nothing (__main__.Publish.test_a_broken_branch_publishes_nothing) ... ok
+test_a_failed_read_or_render_publishes_nothing (__main__.Publish.test_a_failed_read_or_render_publishes_nothing) ... ok
+test_a_failed_selected_artifact_publishes_nothing (__main__.Publish.test_a_failed_selected_artifact_publishes_nothing) ... ok
+test_a_link_or_odd_mode_on_the_branch_publishes_nothing (__main__.Publish.test_a_link_or_odd_mode_on_the_branch_publishes_nothing) ... ok
+test_a_sample_rewritten_in_a_merge_publishes_nothing (__main__.Publish.test_a_sample_rewritten_in_a_merge_publishes_nothing) ... ok
+test_consecutive_ticks_carry_history_forward (__main__.Publish.test_consecutive_ticks_carry_history_forward) ... ok
+test_five_minute_collection_survives_hourly_publication (__main__.Publish.test_five_minute_collection_survives_hourly_publication) ... ok
+test_preview_draws_and_publishes_nothing (__main__.Publish.test_preview_draws_and_publishes_nothing) ... ok
+test_privacy_scan_refuses_a_planted_secret (__main__.Publish.test_privacy_scan_refuses_a_planted_secret) ... ok
+test_publish_sh_runs_its_tests_first (__main__.Publish.test_publish_sh_runs_its_tests_first) ... ok
+test_publish_writes_only_the_war_room_branch (__main__.Publish.test_publish_writes_only_the_war_room_branch) ... ok
+test_hosted_runners_and_pull_request_only_proof (__main__.Workflow.test_hosted_runners_and_pull_request_only_proof) ... ok
+test_only_publish_writes_and_publication_is_serialised (__main__.Workflow.test_only_publish_writes_and_publication_is_serialised) ... ok
+
+----------------------------------------------------------------------
+Ran 13 tests in 9.894s
+
+OK

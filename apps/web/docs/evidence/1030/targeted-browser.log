@@ -1,0 +1,15 @@
+✔ command navigation opens, filters, selects and closes at 1440px (1638.49328ms)
+✔ command navigation opens, filters, selects and closes at 390px (1437.269523ms)
+✔ Home navigation, active subset, fleet detail and single composer at 1440px (2112.826169ms)
+✔ Home navigation, active subset, fleet detail and single composer at 390px (1903.92564ms)
+✔ Home and Fleets retain the same snapshot and lane through a held read, polling and visibility (916.70593ms)
+✔ Home keeps partial, paginated, unread and failed source qualifications, then fresh zero (906.772215ms)
+✔ Home wraps long and missing fields and does not truncate active rows; absent orchestrator cannot write (1413.913505ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 11492.179241

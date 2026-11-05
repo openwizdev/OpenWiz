@@ -1,6 +1,6 @@
-//! The OpenWiz 0.0.4 attachment proof cases (AP), the implementation. Each case
+//! The OpenWiz 0.0.4 attachment proof cases (AP), ClosedWiz#14. Each case
 //! was written before the behaviour, and its first failing run is kept
-//! under the release checks (phase 1) and `b1-phase-2/`.
+//! in B1's phase 1 and phase 2 evidence records.
 //!
 //! **Phase 1** (the model in the core, no I/O): AP1 to AP3, AP10 and AP11's
 //! schema half; `rules` holds the readiness, retention and free-disk rules.
@@ -11,12 +11,13 @@
 //! **Fixtures only.** The synthetic files are written at test time into a
 //! private directory outside the repository (never committed); nothing
 //! calls `room-cli`, and fixture tests never prove CloudRoom's behaviour:
-//! its limits and typing rules are source-read,
+//! its limits and typing rules are source-read (#15's F4 to F7 and F26),
 //! rechecked at the live check (AL2). `bench` runs the store and the CLI on
 //! a private state directory, with a faked free-space measure and claim
 //! source; `child` is this test binary run again as its own process (AP4
 //! stops it at each staging step, AP6 measures its memory). `program` runs
-//! the release `openwiz attachment` with the real free-space measure.
+//! the release `openwiz attachment` with the real free-space measure
+//! (`/bin/df`, the one program the store may run: Jake, 2026-10-31, #14).
 
 mod bench;
 mod child;
@@ -30,7 +31,12 @@ mod schema;
 #[path = "../support/dirs.rs"]
 mod dirs;
 
-// `pattern`, for the attachment schema only.
+// Waiting out a forked child's copy of a file (#176).
+#[allow(dead_code)]
+#[path = "../support/forks.rs"]
+mod forks;
+
+// `pattern`, for the attachment schema only (Sol round 1, finding 3).
 mod pattern;
 
 mod ap01_kind;
@@ -51,7 +57,7 @@ mod program;
 mod rules;
 mod sha256_stream;
 
-// B2 (the implementation): the rules and static checks of attachments in send
+// B2 (ClosedWiz#15): the rules and static checks of attachments in send
 // and new_thread; their end-to-end proofs are in the messaging and
 // new-thread targets, which share `staging`.
 mod ad_static;

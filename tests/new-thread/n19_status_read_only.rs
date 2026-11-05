@@ -49,6 +49,31 @@ fn status(client: &FakeClient, store: &MemoryStore, op_id: &str) -> NewThreadSta
 }
 
 #[test]
+fn n19_status_read_only_contracts_preserve_all_original_cases() {
+    let cases: [(&str, fn()); 4] = [
+        (
+            "a_created_thread_shows_its_start_apart_from_its_creation",
+            a_created_thread_shows_its_start_apart_from_its_creation,
+        ),
+        (
+            "every_record_state_reads_with_no_spawn_and_no_write",
+            every_record_state_reads_with_no_spawn_and_no_write,
+        ),
+        (
+            "failed_observation_read_is_an_explicit_gap",
+            failed_observation_read_is_an_explicit_gap,
+        ),
+        (
+            "observations_never_settle_an_uncertain_create",
+            observations_never_settle_an_uncertain_create,
+        ),
+    ];
+    for (name, proof) in cases {
+        eprintln!("TA2 case: n19_status_read_only::{name}");
+        proof();
+    }
+}
+
 fn every_record_state_reads_with_no_spawn_and_no_write() {
     let created = Outcome::created("thr_syn_0021".to_owned());
     let cases = [
@@ -126,7 +151,6 @@ fn every_record_state_reads_with_no_spawn_and_no_write() {
     assert_eq!(client.calls(), 0);
 }
 
-#[test]
 fn a_created_thread_shows_its_start_apart_from_its_creation() {
     let mut client = FakeClient::new();
     client.shown.insert(
@@ -157,7 +181,6 @@ fn a_created_thread_shows_its_start_apart_from_its_creation() {
     assert_eq!(client.spawns(), 0);
 }
 
-#[test]
 fn observations_never_settle_an_uncertain_create() {
     let mut client = FakeClient::new();
     client.threads = Ok(vec![ObservedThread {
@@ -198,4 +221,39 @@ fn observations_never_settle_an_uncertain_create() {
         Some("Synthetic kept"),
         "the prompt is still kept"
     );
+}
+
+fn failed_observation_read_is_an_explicit_gap() {
+    let mut client = FakeClient::new();
+    client.threads = Err(openwiz_core::source::SourceError::TimedOut { after_ms: 5_000 });
+    let store = MemoryStore::new();
+    let seeded = record(
+        "op-n19-observation-timeout",
+        RecordState::Finished,
+        Some(Outcome::uncertain(UncertainReason::TimedOut)),
+    );
+    store.seed(seeded.clone(), false);
+
+    let result = status(&client, &store, "op-n19-observation-timeout");
+    let StatusResult::Recorded(recorded) = result.result else {
+        panic!("expected recorded status")
+    };
+    assert_eq!(recorded.report.status, Status::Uncertain);
+    let NewThreadResult::Outcome { outcome, .. } = &recorded.report.result else {
+        panic!("expected recorded outcome")
+    };
+    assert!(matches!(outcome, Outcome::Uncertain { .. }));
+    assert!(recorded.start.is_none());
+    let observations = recorded.observations.expect("observation report");
+    assert!(observations.threads.is_empty());
+    assert_eq!(client.spawns(), 0);
+    assert_eq!(store.writes(), 0);
+    assert_eq!(store.get(&op("op-n19-observation-timeout")), Some(seeded));
+    assert_eq!(
+        observations.gaps.len(),
+        1,
+        "failed read must remain visible"
+    );
+    assert_eq!(observations.gaps[0].subject, "thread list");
+    assert!(observations.gaps[0].detail.contains("timed out"));
 }

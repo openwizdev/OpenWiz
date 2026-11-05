@@ -1,0 +1,72 @@
+# Red run before read.py and mint-token --repository existed (base 8ef4faf53).
+$ python3 -I tools/github-reads/test_read.py
+FAIL: test_changed_authorization_invalidates_cached_entries
+FAIL: test_expired_credentials_refuse_before_cached_data_is_returned
+FAIL: test_installation_token_downscoped_to_selected_repositories
+FAIL: test_missing_revoked_foreign_or_unsafe_credentials_refuse_without_fallback (case='revoked')
+FAIL: test_missing_revoked_foreign_or_unsafe_credentials_refuse_without_fallback (case='suspended')
+FAIL: test_missing_revoked_foreign_or_unsafe_credentials_refuse_without_fallback (case='foreign')
+FAIL: test_missing_revoked_foreign_or_unsafe_credentials_refuse_without_fallback (case='wider')
+FAIL: test_missing_revoked_foreign_or_unsafe_credentials_refuse_without_fallback (case='missing-key')
+FAIL: test_graphql_and_rest_spend_their_own_installation_pools
+FAIL: test_low_budget_paces_reads
+FAIL: test_more_processes_tokens_and_entries_add_no_allowance
+FAIL: test_primary_reset_and_secondary_backoff_persist_across_processes
+FAIL: test_unknown_budget_admits_no_read (change=['rate_status'])
+FAIL: test_unknown_budget_admits_no_read (change=['rate'])
+FAIL: test_authority_needs_a_current_read_and_304_revalidates_each_page
+FAIL: test_graphql_errors_and_open_page_chains_are_incomplete
+FAIL: test_pagination_must_be_complete_same_host_and_repository (case='foreign-repo')
+FAIL: test_pagination_must_be_complete_same_host_and_repository (case='foreign-host')
+FAIL: test_pagination_must_be_complete_same_host_and_repository (case='repeated')
+FAIL: test_unrequested_304_or_errors_never_publish (number=4)
+FAIL: test_unrequested_304_or_errors_never_publish (number=5)
+FAIL: test_unrequested_304_or_errors_never_publish (number=6)
+FAIL: test_writes_and_unallowlisted_requests_refuse_before_any_call (args=('graphql', 'synthetic-owner/work'))
+FAIL: test_writes_and_unallowlisted_requests_refuse_before_any_call (args=('graphql', 'synthetic-owner/work'))
+FAIL: test_writes_and_unallowlisted_requests_refuse_before_any_call (args=('graphql', 'synthetic-owner/work'))
+FAIL: test_writes_and_unallowlisted_requests_refuse_before_any_call (args=('graphql', 'synthetic-owner/work'))
+FAIL: test_writes_and_unallowlisted_requests_refuse_before_any_call (args=('graphql', 'synthetic-owner/work'))
+FAIL: test_writes_and_unallowlisted_requests_refuse_before_any_call (args=('graphql', 'synthetic-owner/work', '--variables', '{"owner":"synthetic-owner","name":"other"}'))
+FAIL: test_writes_and_unallowlisted_requests_refuse_before_any_call (args=('rest', 'synthetic-owner/work', 'app/installations/2002/access_tokens'))
+FAIL: test_writes_and_unallowlisted_requests_refuse_before_any_call (args=('rest', 'synthetic-owner/work', 'https://api.github.com/repos/synthetic-owner/work/issues'))
+FAIL: test_writes_and_unallowlisted_requests_refuse_before_any_call (args=('rest', 'synthetic-owner/work', 'repos/synthetic-owner/work/../other/issues'))
+FAIL: test_writes_and_unallowlisted_requests_refuse_before_any_call (args=('rest', 'synthetic-owner/work', 'repos/synthetic-owner/other/issues'))
+FAIL: test_writes_and_unallowlisted_requests_refuse_before_any_call (args=('rest', 'synthetic-owner/unselected', 'repos/synthetic-owner/unselected/issues'))
+FAIL: test_writes_and_unallowlisted_requests_refuse_before_any_call (args=('rest', 'synthetic-owner/work', 'repos/synthetic-owner/work/issues', '--accept', 'text/html'))
+FAIL: test_crashed_leader_never_leaves_a_complete_entry
+FAIL: test_identical_concurrent_reads_coalesce_across_processes (purpose='display')
+FAIL: test_identical_concurrent_reads_coalesce_across_processes (purpose='authority')
+FAIL: test_partitions_by_repository_and_request
+FAIL: test_unshared_or_unsafe_state_refuses
+AssertionError: Tuples differ: (2, "/usr/bin/python3: can't open file '/c[68 chars]ory") != (0, 'fresh: current')
+Ran 18 tests in 32.892s
+
+FAILED (failures=39)
+$ python3 -I tools/github-app/test.py ReadProfileTests
+AssertionError: 2 != 0 : b'usage: mint-token.py [-h] [--state-dir STATE_DIR] [--api-base API_BASE]\n                     --installation-id INSTALLATION_ID\nmint-token.py: error: unrecognized arguments: --repository synthetic-owner/work --repository synthetic-owner/other\n'
+FAIL: test_read_token_names_exact_selection_and_its_expiry
+FAIL: test_read_token_refuses_foreign_unselected_expired_or_mixed_owner
+FAIL: test_read_token_refuses_foreign_unselected_expired_or_mixed_owner (change={'read_profile': {'repository_selection': 'all'}}, repositories=('synthetic-owner/work',))
+FAIL: test_read_token_refuses_foreign_unselected_expired_or_mixed_owner (change={'read_profile': {'repository_selection': 'selected', 'repositories': [{'full_name': 'synthetic-elsewhere/work'}, {'full_name': 'synthetic-owner/other'}]}}, repositories=('synthetic-owner/work', 'synthetic-owner/other'))
+FAIL: test_read_token_refuses_foreign_unselected_expired_or_mixed_owner (change={'read_profile': {'repository_selection': 'selected', 'repositories': [{'full_name': 'synthetic-owner/other'}, {'full_name': 'Synthetic-Owner/Work'}]}, 'expires_at': '2000-01-01T00:00:00Z'}, repositories=('synthetic-owner/work', 'synthetic-owner/other'))
+FAIL: test_read_token_refuses_foreign_unselected_expired_or_mixed_owner (change={'read_profile': {'repository_selection': 'selected', 'repositories': [{'full_name': 'synthetic-owner/other'}, {'full_name': 'Synthetic-Owner/Work'}]}, 'status': 422}, repositories=('synthetic-owner/work', 'synthetic-owner/other'))
+FAIL: test_read_token_refuses_foreign_unselected_expired_or_mixed_owner (change={'read_profile': {'repository_selection': 'selected', 'repositories': [{'full_name': 'synthetic-owner/other'}, {'full_name': 'Synthetic-Owner/Work'}]}}, repositories=('synthetic-owner/work', 'synthetic-elsewhere/other'))
+FAIL: test_read_token_refuses_foreign_unselected_expired_or_mixed_owner (change={'read_profile': {'repository_selection': 'selected', 'repositories': [{'full_name': 'synthetic-owner/other'}, {'full_name': 'Synthetic-Owner/Work'}]}}, repositories=('synthetic-owner/work', 'synthetic-owner/work'))
+FAIL: test_read_token_refuses_foreign_unselected_expired_or_mixed_owner (change={'read_profile': {'repository_selection': 'selected', 'repositories': [{'full_name': 'synthetic-owner/other'}, {'full_name': 'Synthetic-Owner/Work'}]}}, repositories=('synthetic-owner/work',))
+FAILED (failures=9)
+Ran 2 tests in 1.770s
+
+# Red run of the CI registration expectations before the release:ci2-shared-reads rows existed.
+$ python3 -I .github/actions/docs-only/test_plan.py -k shared_reads; python3 -I .github/actions/docs-only/test_execution.py -k shared_reads
+----------------------------------------------------------------------
+Ran 1 test in 0.187s
+
+FAILED (failures=3)
+----------------------------------------------------------------------
+Ran 1 test in 0.142s
+
+FAILED (failures=2)
+
+# CI flake at bcf12f036 (release lane): authority coalescing subtest got 0 upstream reads, because the test's whole-second challenge could fall before the display read in the same second.
+# Reproduced with the fake response delay at 0: old test FAILED 4 of 5 runs (AssertionError: 0 != 1); fixed test OK 5 of 5.

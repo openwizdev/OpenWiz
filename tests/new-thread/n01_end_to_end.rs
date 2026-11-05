@@ -9,6 +9,11 @@ use openwiz_core::messaging::MAX_TEXT_BYTES;
 
 use crate::fake::*;
 
+/// Every flag `thread spawn --help` lists (spike run 3) that OpenWiz never
+/// passes in a text-only create. **B2 (ClosedWiz#15), recorded reason:**
+/// sheet B-7 lets `--file` and `--image` carry staged attachments, and only
+/// those (AD1, `ad_new_thread_attachments.rs`); a create without
+/// attachments still passes neither, which this list keeps proving.
 pub const NEVER: &[&str] = &[
     "--file",
     "--image",

@@ -1,0 +1,228 @@
+[
+ {
+  "baseRefName": "main",
+  "closingIssuesReferences": [],
+  "headRefName": "room/syn-loose-0007",
+  "headRefOid": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "isDraft": false,
+  "mergeCommit": null,
+  "mergedAt": null,
+  "number": 957,
+  "state": "OPEN",
+  "title": "Synthetic PR 957"
+ },
+ {
+  "baseRefName": "main",
+  "closingIssuesReferences": [
+   {
+    "id": "syn-issue-0906",
+    "number": 906,
+    "repository": {
+     "id": "syn-repo-0001",
+     "name": "syn-example-repo",
+     "owner": {
+      "id": "syn-owner-0001",
+      "login": "syn-owner"
+     }
+    },
+    "url": "https://example.invalid/synthetic/issues/906"
+   }
+  ],
+  "headRefName": "room/syn-a5-0005",
+  "headRefOid": "ffffffffffffffffffffffffffffffffffffffff",
+  "isDraft": false,
+  "mergeCommit": null,
+  "mergedAt": null,
+  "number": 956,
+  "state": "CLOSED",
+  "title": "Synthetic PR 956"
+ },
+ {
+  "baseRefName": "main",
+  "closingIssuesReferences": [
+   {
+    "id": "syn-issue-0910",
+    "number": 910,
+    "repository": {
+     "id": "syn-repo-0001",
+     "name": "syn-example-repo",
+     "owner": {
+      "id": "syn-owner-0001",
+      "login": "syn-owner"
+     }
+    },
+    "url": "https://example.invalid/synthetic/issues/910"
+   }
+  ],
+  "headRefName": "room/syn-a9-0006",
+  "headRefOid": "6666666666666666666666666666666666666666",
+  "isDraft": false,
+  "mergeCommit": null,
+  "mergedAt": null,
+  "number": 955,
+  "state": "OPEN",
+  "title": "Synthetic PR 955"
+ },
+ {
+  "baseRefName": "main",
+  "closingIssuesReferences": [
+   {
+    "id": "syn-issue-0905",
+    "number": 905,
+    "repository": {
+     "id": "syn-repo-0001",
+     "name": "syn-example-repo",
+     "owner": {
+      "id": "syn-owner-0001",
+      "login": "syn-owner"
+     }
+    },
+    "url": "https://example.invalid/synthetic/issues/905"
+   }
+  ],
+  "headRefName": "room/syn-a4-0004",
+  "headRefOid": "5555555555555555555555555555555555555555",
+  "isDraft": true,
+  "mergeCommit": null,
+  "mergedAt": null,
+  "number": 954,
+  "state": "OPEN",
+  "title": "Synthetic PR 954"
+ },
+ {
+  "baseRefName": "main",
+  "closingIssuesReferences": [
+   {
+    "id": "syn-issue-0904",
+    "number": 904,
+    "repository": {
+     "id": "syn-repo-0001",
+     "name": "syn-example-repo",
+     "owner": {
+      "id": "syn-owner-0001",
+      "login": "syn-owner"
+     }
+    },
+    "url": "https://example.invalid/synthetic/issues/904"
+   }
+  ],
+  "headRefName": "room/syn-a3-0003",
+  "headRefOid": "4444444444444444444444444444444444444444",
+  "isDraft": false,
+  "mergeCommit": null,
+  "mergedAt": null,
+  "number": 953,
+  "state": "OPEN",
+  "title": "Synthetic PR 953"
+ },
+ {
+  "baseRefName": "main",
+  "closingIssuesReferences": [
+   {
+    "id": "syn-issue-0903",
+    "number": 903,
+    "repository": {
+     "id": "syn-repo-0001",
+     "name": "syn-example-repo",
+     "owner": {
+      "id": "syn-owner-0001",
+      "login": "syn-owner"
+     }
+    },
+    "url": "https://example.invalid/synthetic/issues/903"
+   }
+  ],
+  "headRefName": "room/syn-a2-0002",
+  "headRefOid": "3333333333333333333333333333333333333333",
+  "isDraft": false,
+  "mergeCommit": null,
+  "mergedAt": null,
+  "number": 952,
+  "state": "OPEN",
+  "title": "Synthetic PR 952"
+ },
+ {
+  "baseRefName": "main",
+  "closingIssuesReferences": [
+   {
+    "id": "syn-issue-0902",
+    "number": 902,
+    "repository": {
+     "id": "syn-repo-0001",
+     "name": "syn-example-repo",
+     "owner": {
+      "id": "syn-owner-0001",
+      "login": "syn-owner"
+     }
+    },
+    "url": "https://example.invalid/synthetic/issues/902"
+   }
+  ],
+  "headRefName": "room/syn-a1-0001",
+  "headRefOid": "1111111111111111111111111111111111111111",
+  "isDraft": false,
+  "mergeCommit": {
+   "oid": "2222222222222222222222222222222222222222"
+  },
+  "mergedAt": "2026-10-30T18:30:00Z",
+  "number": 951,
+  "state": "MERGED",
+  "title": "Synthetic PR 951"
+ },
+ {
+  "baseRefName": "main",
+  "closingIssuesReferences": [
+   {
+    "id": "syn-issue-0812",
+    "number": 812,
+    "repository": {
+     "id": "syn-repo-0001",
+     "name": "syn-example-repo",
+     "owner": {
+      "id": "syn-owner-0001",
+      "login": "syn-owner"
+     }
+    },
+    "url": "https://example.invalid/synthetic/issues/812"
+   }
+  ],
+  "headRefName": "room/syn-old-0802",
+  "headRefOid": "cccccccccccccccccccccccccccccccccccccccc",
+  "isDraft": false,
+  "mergeCommit": {
+   "oid": "dddddddddddddddddddddddddddddddddddddddd"
+  },
+  "mergedAt": "2026-10-30T18:30:00Z",
+  "number": 802,
+  "state": "MERGED",
+  "title": "Synthetic PR 802"
+ },
+ {
+  "baseRefName": "main",
+  "closingIssuesReferences": [
+   {
+    "id": "syn-issue-0811",
+    "number": 811,
+    "repository": {
+     "id": "syn-repo-0001",
+     "name": "syn-example-repo",
+     "owner": {
+      "id": "syn-owner-0001",
+      "login": "syn-owner"
+     }
+    },
+    "url": "https://example.invalid/synthetic/issues/811"
+   }
+  ],
+  "headRefName": "room/syn-old-0801",
+  "headRefOid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "isDraft": false,
+  "mergeCommit": {
+   "oid": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "mergedAt": "2026-10-30T18:30:00Z",
+  "number": 801,
+  "state": "MERGED",
+  "title": "Synthetic PR 801"
+ }
+]

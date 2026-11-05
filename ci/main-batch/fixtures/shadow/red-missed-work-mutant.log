@@ -1,0 +1,14 @@
+Synthetic proof breaker only: C6 complete-coverage validator removed temporarily. Original source restored immediately.
+F
+======================================================================
+FAIL: test_consistent_authenticated_undersized_plan_cannot_shrink_inventory (__main__.Shadow.test_consistent_authenticated_undersized_plan_cannot_shrink_inventory)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_shadow.py", line 146, in test_consistent_authenticated_undersized_plan_cannot_shrink_inventory
+    self.assertFalse(report['complete'],report)
+AssertionError: True is not false : {'complete': True, 'switch_authorized': False, 'outcome': 'success', 'refusals': [], 'measurement': {'batch': {'id': '3333333333333333333333333333333333333333', 'base': '1111111111111111111111111111111111111111', 'head': '3333333333333333333333333333333333333333', 'members': ['2222222222222222222222222222222222222222', '3333333333333333333333333333333333333333'], 'source': 'combined-shadow'}, 'jobs': 13, 'job_queue_seconds': {'n': 13, 'median': 30.0, 'p90': 30.0}, 'required_result_at': '2030-01-01T00:05:00Z', 'push_to_required_seconds': None, 'whole_bill_usd': None, 'gaps': ['actual push timestamp and whole-bill cost require independent C4 evidence']}, 'batch': {'repository': 'synthetic/ci-example', 'base': '1111111111111111111111111111111111111111', 'head': '3333333333333333333333333333333333333333', 'members': [{'pull_request': 9001, 'head': 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'merge': '2222222222222222222222222222222222222222', 'parent': '1111111111111111111111111111111111111111'}, {'pull_request': 9002, 'head': 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', 'merge': '3333333333333333333333333333333333333333', 'parent': '2222222222222222222222222222222222222222'}]}, 'execution': {'id': 9000100, 'attempt': 1, 'event': 'push', 'workflow': '.github/workflows/ci.yml', 'event_base': '2222222222222222222222222222222222222222'}}
+
+----------------------------------------------------------------------
+Ran 1 test in 0.049s
+
+FAILED (failures=1)

@@ -147,7 +147,7 @@ test('a duplicated tab carries the same op id: two tabs, one call', async () => 
   }
 });
 
-
+// ── Sol round 1 on #92 (560614d) ──
 
 /** Opens a second tab in `p`'s context with a copy of `p`'s sessionStorage, as a duplicated tab has. */
 async function duplicate(p, fx) {
@@ -163,7 +163,7 @@ async function duplicate(p, fx) {
   return second;
 }
 
-test('a tab duplicated before the send carries the draft’s op id: send in both, one call', async () => {
+test('Sol 1: a tab duplicated before the send carries the draft’s op id: send in both, one call', async () => {
   const { fx } = await composerSite();
   const p = await openThread(browser, fx, 1);
   try {
@@ -184,7 +184,7 @@ test('a tab duplicated before the send carries the draft’s op id: send in both
   }
 });
 
-test('a lost send, then a retry the core refuses as a possible duplicate, stays uncertain with its op id', async () => {
+test('Sol 2: a lost send, then a retry the core refuses as a possible duplicate, stays uncertain with its op id', async () => {
   const { fx } = await composerSite();
   let n = 0;
   const earlier = [{ op_id: `web-${'e'.repeat(32)}`, mode: 'queue', claimed_at: 1, in_flight: true, reconciliation: { kind: 'not_read' } }];
@@ -219,13 +219,13 @@ const quota = (always) => (flag) => {
   };
 };
 
-test('when the op id can’t be stored, nothing is sent, and the composer says why', async () => {
+test('Sol 3: when the op id can’t be stored, nothing is sent, and the composer says why', async () => {
   const { fx } = await composerSite();
   const p = await openThread(browser, fx, 1);
   try {
     await p.page.evaluate(quota(false), false);
     await type(p.page, TEXT);
-
+    // Sol's case: the draft and its op ids are saved; then the quota fills, and Send is pressed.
     await p.page.evaluate(() => {
       window.__full = true;
     });
@@ -255,7 +255,7 @@ test('when the op id can’t be stored, nothing is sent, and the composer says w
   }
 });
 
-test('with storage refused from the start, sending is disabled with a reason', async () => {
+test('Sol 3: with storage refused from the start, sending is disabled with a reason', async () => {
   const { fx } = await composerSite();
   const p = await openThread(browser, fx, 1);
   try {
@@ -275,7 +275,7 @@ test('with storage refused from the start, sending is disabled with a reason', a
   }
 });
 
-test('storage holds the draft, its root, the next numbers and the unresolved attempts only; nothing once sent', async () => {
+test('Sol 5: storage holds the draft, its root, the next numbers and the unresolved attempts only; nothing once sent', async () => {
   const { fx } = await composerSite();
   fx.api.hold('send');
   const p = await openThread(browser, fx, 1);
@@ -296,13 +296,13 @@ test('storage holds the draft, its root, the next numbers and the unresolved att
   }
 });
 
-
+// ── Sol round 2 on #92 (b392ffe), red first ──
 
 const text = (page) => page.locator('[data-part=composer]').textContent();
 const fail503 = () => apiError(503, 'busy', 'no core run slot within its wait', { 'Retry-After': '5' });
 const uncertainReport = (tid, b) => json(200, report(tid, b.op_id, b.mode, b.text, result(DELIVERIES.uncertain)));
 
-test('1: a check in one tab and Send again in its copy share one successor: two calls in all, not three', async () => {
+test('Sol R2-1: a check in one tab and Send again in its copy share one successor: two calls in all, not three', async () => {
   const { fx } = await composerSite();
   let n = 0;
   fx.api.setSend((tid, b) => (n++ === 0 ? uncertainReport(tid, b) : sent(tid, b)));
@@ -329,7 +329,7 @@ test('1: a check in one tab and Send again in its copy share one successor: two 
   }
 });
 
-test('2: a failed Send again is shown as its own outcome; the earlier send stays uncertain, with Check again', async () => {
+test('Sol R2-2: a failed Send again is shown as its own outcome; the earlier send stays uncertain, with Check again', async () => {
   const { fx } = await composerSite();
   let n = 0;
   fx.api.setSend((tid, b) =>
@@ -359,7 +359,7 @@ test('2: a failed Send again is shown as its own outcome; the earlier send stays
   }
 });
 
-test('3: Try again, Send again and Send anyway need a usable preview, like Send', async () => {
+test('Sol R2-3: Try again, Send again and Send anyway need a usable preview, like Send', async () => {
   const cases = [
     ['Try again', (tid, b) => LOST, 'uncertain'],
     ['Send again', (tid, b) => uncertainReport(tid, b), 'uncertain'],
@@ -391,7 +391,7 @@ test('3: Try again, Send again and Send anyway need a usable preview, like Send'
   }
 });
 
-test('4: when storage fails while a send is unsettled, the disabled controls say why', async () => {
+test('Sol R2-4: when storage fails while a send is unsettled, the disabled controls say why', async () => {
   const { fx } = await composerSite();
   fx.api.setSend((tid, b) => ({ after: DROP, report: report(tid, b.op_id, b.mode, b.text, result(DELIVERIES.sent)) }));
   const p = await openThread(browser, fx, 1);
@@ -414,9 +414,9 @@ test('4: when storage fails while a send is unsettled, the disabled controls say
   }
 });
 
+// ── Sol round 3 on #92 (0792c02), red first ──
 
-
-test('2: after a lost acknowledgement, Forget it in copied tabs: both send the same next attempt, never the forgotten one', async () => {
+test('Sol R3-2: after a lost acknowledgement, Forget it in copied tabs: both send the same next attempt, never the forgotten one', async () => {
   const { fx } = await composerSite();
   let n = 0;
   fx.api.setSend((tid, b) => (n++ === 0 ? { after: DROP, report: report(tid, b.op_id, b.mode, b.text, result(DELIVERIES.sent)) } : sent(tid, b)));
@@ -441,7 +441,7 @@ test('2: after a lost acknowledgement, Forget it in copied tabs: both send the s
   }
 });
 
-
+// ── Sol's re-check on #92 (3716037): holding a key on Send again, red first ──
 
 /** A uncertain, then focus on Send again; B is answered by `second`. */
 async function heldSetup(second) {
@@ -457,7 +457,7 @@ async function heldSetup(second) {
 }
 const answered = (fx, n) => waitFor(() => fx.api.log.filter((e) => e.kind === 'send' && e.endedAt !== null).length === n, { what: `${n} answered sends` });
 
-test('holding Enter on Send again across the answer sends once: repeats never activate it again', async () => {
+test('Sol H-1: holding Enter on Send again across the answer sends once: repeats never activate it again', async () => {
   const { fx, p } = await heldSetup(uncertainReport);
   try {
     await p.page.keyboard.down('Enter');
@@ -479,7 +479,7 @@ test('holding Enter on Send again across the answer sends once: repeats never ac
   }
 });
 
-test('holding Space on Send again (it activates on release) sends once', async () => {
+test('Sol H-1: holding Space on Send again (it activates on release) sends once', async () => {
   const { fx, p } = await heldSetup(uncertainReport);
   try {
     await p.page.keyboard.down(' ');
@@ -497,7 +497,7 @@ test('holding Space on Send again (it activates on release) sends once', async (
   }
 });
 
-test('a click that arrives while Enter is still held (an auto-repeat that clicks) is not a second press', async () => {
+test('Sol H-1: a click that arrives while Enter is still held (an auto-repeat that clicks) is not a second press', async () => {
   const { fx, p } = await heldSetup(uncertainReport);
   try {
     await p.page.keyboard.down('Enter');

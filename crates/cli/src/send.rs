@@ -29,7 +29,11 @@ use crate::{EXIT_NOT_FOUND, EXIT_OK, EXIT_USAGE, UsageError, age, clean, help, s
 /// `send`: the message was queued, or sent (the provider accepted it; never
 /// that the work completed).
 pub const EXIT_DELIVERED: i32 = 0;
-
+/// `send`: failed. Nothing was delivered: the provider rejected it, or
+/// OpenWiz refused before sending (archived, hidden or unreadable target,
+/// a paused queue not acknowledged, an interrupted claim). Not-found is
+/// [`EXIT_NOT_FOUND`](crate::EXIT_NOT_FOUND). The `room-cli` version is never
+/// a refusal (#37); a record from before #37 that failed on it replays here.
 pub const EXIT_SEND_FAILED: i32 = 5;
 /// `send`: uncertain. The message may or may not have been accepted; the
 /// text is kept in the send record.
@@ -142,6 +146,7 @@ pub fn parse_send(args: &[String]) -> Result<SendCommand, UsageError> {
                 Some(value) => value.to_owned(),
                 None => args
                     .next()
+                    .filter(|value| !matches!(value.as_str(), CHECK | PREVIEW | "--"))
                     .cloned()
                     .ok_or_else(|| UsageError(format!("{flag} needs a value")))?,
             };
@@ -150,8 +155,14 @@ pub fn parse_send(args: &[String]) -> Result<SendCommand, UsageError> {
             continue;
         }
         match flag {
+            "--help" if inline.is_some() => {
+                return Err(UsageError(format!("{flag} takes no value")));
+            }
             "--help" | "-h" => return Ok(SendCommand::Help),
             "--op-id" => {
+                if parsed.op_id.is_some() {
+                    return Err(UsageError("--op-id may be given only once".to_owned()));
+                }
                 let value = match inline {
                     Some(value) => value.to_owned(),
                     None => args
@@ -159,6 +170,7 @@ pub fn parse_send(args: &[String]) -> Result<SendCommand, UsageError> {
                         .cloned()
                         .ok_or_else(|| UsageError("--op-id needs a value".to_owned()))?,
                 };
+                OpId::parse(&value).map_err(|InvalidRequest(why)| UsageError(why))?;
                 parsed.op_id = Some(value);
             }
             "--steer"
@@ -317,7 +329,8 @@ fn run_check(
         Ok(store) => store,
         Err(StoreError(why)) => return unusable(stderr, &why),
     };
-    match lookup(store.as_deref(), context.clock, &target, &op_id) {
+    let tested = context.messenger.tested_version();
+    match lookup(store.as_deref(), context.clock, &target, &op_id, tested) {
         Ok(report) => {
             print(stdout, args.json, &report, render_lookup(&report));
             match &report.result {
@@ -354,7 +367,13 @@ pub fn run_send_with(
     let usage = usage_error;
     let args = match parse_send(args) {
         Ok(SendCommand::Help) => {
-            let _ = stdout.write_all(help().as_bytes());
+            let _ = stdout.write_all(
+                crate::response::help(
+                    crate::response::Request::for_command("send", args).json,
+                    help(),
+                )
+                .as_bytes(),
+            );
             return EXIT_OK;
         }
         Ok(SendCommand::Send(args)) => args,
@@ -452,10 +471,10 @@ pub fn run_send_with(
         None => match (context.new_op_id)() {
             Ok(op_id) => {
                 // Shown before anything is sent, so a send that is cut short
-                // can still be checked with --op-id.
+                // can still be checked with --op-id and --check.
                 let _ = writeln!(
                     stderr,
-                    "openwiz: op id {op_id} (use --op-id {op_id} to check this send again)"
+                    "openwiz: op id {op_id} (use --op-id {op_id} --check to check this send again)"
                 );
                 op_id
             }
@@ -526,7 +545,7 @@ pub fn render_send(report: &SendReport) -> String {
         fact_text(&report.target.title)
     );
     if let Some(source) = &report.source {
-        out.push_str(&format!("source: {}\n", source_text(source)));
+        out.push_str(&format!("source: {}\n", source_text(source, "sending")));
     }
     if let Some(effects) = &report.effects {
         let effect = match &effects.effect {

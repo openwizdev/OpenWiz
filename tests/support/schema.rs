@@ -2,13 +2,159 @@
 //!
 //! No JSON Schema crate is approved, so this checks the subset the schema
 //! uses: `type`, `required`, `properties`, `additionalProperties: false`,
-//! `items`, `enum`, `const`, `oneOf`, local `$ref`, `minimum`, `minLength`
-//! and `maxLength`. [`lint`] walks the whole schema, every `$defs` entry
-//! included. It refuses any other keyword, any other form of
+//! `items`, `enum`, `const`, `oneOf`, local `$ref`, `minimum`, `minLength`,
+//! `maxLength`, `maximum`, `exclusiveMinimum`, `minItems`, `maxItems`,
+//! `pattern` and `maxUtf8Bytes`, plus `uniqueItems: true` on array nodes.
+//! Patterns use either the prompt checker's
+//! restricted grammar or the engine's anchored ASCII character-class grammar.
+//! [`lint`] walks the whole schema, every `$defs` entry included. It refuses
+//! any other keyword, any other form of
 //! `additionalProperties` and any `$ref` that does not resolve, so the
 //! schema cannot rely on a rule this checker ignores.
 
 use serde_json::Value;
+
+// Mirror the prompt checker's restricted grammar here: this shared module is
+// also compiled under nested service-test modules and by standalone reproducers,
+// where the prompt checker's crate::schema dependency is unavailable.
+mod text_rules {
+    #[derive(Debug)]
+    enum Atom {
+        Class {
+            negated: bool,
+            ranges: Vec<(char, char)>,
+            repeat: bool,
+        },
+    }
+
+    fn escape(chars: &[char], i: &mut usize) -> Result<char, String> {
+        // At `\`: only `\uXXXX`.
+        let hex: String = chars
+            .get(*i + 2..*i + 6)
+            .ok_or("a short escape")?
+            .iter()
+            .collect();
+        if chars.get(*i + 1) != Some(&'u') || hex.len() != 4 {
+            return Err("an escape other than \\uXXXX".to_owned());
+        }
+        let code = u32::from_str_radix(&hex, 16).map_err(|_| "a bad \\u escape")?;
+        *i += 6;
+        char::from_u32(code).ok_or_else(|| "a surrogate escape".to_owned())
+    }
+
+    const SPECIAL: &[char] = &[
+        '.', '|', '?', '*', '+', '(', ')', '{', '}', '^', '$', '[', ']',
+    ];
+
+    /// Parses a pattern of the supported form, or says why it isn't one.
+    fn parse(pattern: &str) -> Result<Vec<Atom>, String> {
+        let body = pattern
+            .strip_prefix('^')
+            .and_then(|p| p.strip_suffix('$'))
+            .ok_or("not anchored with ^ and $")?;
+        let chars: Vec<char> = body.chars().collect();
+        let mut atoms = Vec::new();
+        let mut i = 0;
+        while i < chars.len() {
+            let (negated, ranges) = match chars[i] {
+                '[' => {
+                    i += 1;
+                    let negated = chars.get(i) == Some(&'^');
+                    if negated {
+                        i += 1;
+                    }
+                    let mut ranges = Vec::new();
+                    loop {
+                        let lo = match chars.get(i) {
+                            None => return Err("an unclosed class".to_owned()),
+                            Some(']') => {
+                                i += 1;
+                                break;
+                            }
+                            Some('[') | Some('^') => return Err("[ or ^ inside a class".to_owned()),
+                            Some('\\') => escape(&chars, &mut i)?,
+                            Some(&c) => {
+                                i += 1;
+                                c
+                            }
+                        };
+                        if chars.get(i) != Some(&'-') || chars.get(i + 1) == Some(&']') {
+                            ranges.push((lo, lo));
+                            continue;
+                        }
+                        i += 1;
+                        let hi = match chars.get(i) {
+                            None => return Err("an open range".to_owned()),
+                            Some('\\') => escape(&chars, &mut i)?,
+                            Some(&c) => {
+                                i += 1;
+                                c
+                            }
+                        };
+                        if lo > hi {
+                            return Err("a reversed range".to_owned());
+                        }
+                        ranges.push((lo, hi));
+                    }
+                    if ranges.is_empty() {
+                        return Err("an empty class".to_owned());
+                    }
+                    (negated, ranges)
+                }
+                '\\' => {
+                    let c = escape(&chars, &mut i)?;
+                    (false, vec![(c, c)])
+                }
+                c if SPECIAL.contains(&c) => return Err(format!("{c:?} outside a class")),
+                c => {
+                    i += 1;
+                    (false, vec![(c, c)])
+                }
+            };
+            let repeat = chars.get(i) == Some(&'*');
+            if repeat {
+                i += 1;
+            }
+            atoms.push(Atom::Class {
+                negated,
+                ranges,
+                repeat,
+            });
+        }
+        Ok(atoms)
+    }
+
+    fn fits(atom: &Atom, c: char) -> bool {
+        let Atom::Class {
+            negated, ranges, ..
+        } = atom;
+        ranges.iter().any(|&(lo, hi)| lo <= c && c <= hi) != *negated
+    }
+
+    fn matches(atoms: &[Atom], text: &[char]) -> bool {
+        match atoms.split_first() {
+            None => text.is_empty(),
+            Some((atom, rest)) => {
+                let Atom::Class { repeat, .. } = atom;
+                if *repeat {
+                    let run = text.iter().take_while(|&&c| fits(atom, c)).count();
+                    (0..=run).rev().any(|n| matches(rest, &text[n..]))
+                } else {
+                    text.first().is_some_and(|&c| fits(atom, c)) && matches(rest, &text[1..])
+                }
+            }
+        }
+    }
+
+    pub(super) fn lint_pattern(pattern: &str) -> Result<(), String> {
+        parse(pattern).map(|_| ())
+    }
+
+    pub(super) fn is_match(pattern: &str, text: &str) -> bool {
+        let atoms = parse(pattern).expect("a linted pattern");
+        matches(&atoms, &text.chars().collect::<Vec<_>>())
+    }
+}
 
 pub const SCHEMA_PATH: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -33,6 +179,13 @@ const KNOWN_KEYWORDS: &[&str] = &[
     "minimum",
     "minLength",
     "maxLength",
+    "uniqueItems",
+    "maximum",
+    "exclusiveMinimum",
+    "minItems",
+    "maxItems",
+    "pattern",
+    "maxUtf8Bytes",
 ];
 
 pub fn load_schema() -> Value {
@@ -61,6 +214,34 @@ fn lint_node(root: &Value, node: &Value, path: &str, errors: &mut Vec<String>) {
             }
             "additionalProperties" if child != &Value::Bool(false) => {
                 errors.push(format!("{at}: only `false` is checked"))
+            }
+            "uniqueItems"
+                if child != &Value::Bool(true)
+                    || rules.get("type").and_then(Value::as_str) != Some("array") =>
+            {
+                errors.push(format!("{at}: only `true` on an array node is checked"))
+            }
+            "maximum" | "exclusiveMinimum" if child.as_f64().is_none() => {
+                errors.push(format!("{at}: expected a number"))
+            }
+            "minItems" | "maxItems" if child.as_u64().is_none() => {
+                errors.push(format!("{at}: expected a nonnegative integer"))
+            }
+            "pattern" | "maxUtf8Bytes" => {
+                if rules.get("type").and_then(Value::as_str) != Some("string") {
+                    errors.push(format!("{at}: only on a \"type\": \"string\" node"));
+                }
+                if key == "pattern" {
+                    match child.as_str().map(text_rules::lint_pattern) {
+                        Some(Ok(())) => {}
+                        Some(Err(_))
+                            if child.as_str().is_some_and(|s| parse_pattern(s).is_ok()) => {}
+                        Some(Err(error)) => errors.push(format!("{at}: unsupported ({error})")),
+                        None => errors.push(format!("{at}: not a string")),
+                    }
+                } else if child.as_u64().is_none() {
+                    errors.push(format!("{at}: not a count"));
+                }
             }
             "$ref" => match child.as_str() {
                 Some(reference) if resolve(root, reference).is_some() => {}
@@ -97,6 +278,22 @@ fn check(root: &Value, schema: &Value, value: &Value, path: &str, errors: &mut V
     for key in rules.keys() {
         if !KNOWN_KEYWORDS.contains(&key.as_str()) {
             errors.push(format!("{path}: unsupported schema keyword {key}"));
+        }
+    }
+    if let Some(unique) = rules.get("uniqueItems") {
+        if unique != &Value::Bool(true)
+            || rules.get("type").and_then(Value::as_str) != Some("array")
+        {
+            errors.push(format!(
+                "{path}: uniqueItems checks only `true` on an array node"
+            ));
+        } else if let Some(array) = value.as_array()
+            && array
+                .iter()
+                .enumerate()
+                .any(|(i, item)| array[..i].contains(item))
+        {
+            errors.push(format!("{path}: array items are not unique"));
         }
     }
 
@@ -141,12 +338,55 @@ fn check(root: &Value, schema: &Value, value: &Value, path: &str, errors: &mut V
     {
         errors.push(format!("{path}: shorter than {min} characters"));
     }
+    if let (Some(max), Some(n)) = (rules.get("maximum").and_then(Value::as_f64), value.as_f64())
+        && n > max
+    {
+        errors.push(format!("{path}: {n} exceeds maximum {max}"));
+    }
+    if let (Some(min), Some(n)) = (
+        rules.get("exclusiveMinimum").and_then(Value::as_f64),
+        value.as_f64(),
+    ) && n <= min
+    {
+        errors.push(format!("{path}: {n} must exceed {min}"));
+    }
+    if let Some(a) = value.as_array() {
+        if let Some(min) = rules.get("minItems").and_then(Value::as_u64)
+            && (a.len() as u64) < min
+        {
+            errors.push(format!("{path}: too few items"));
+        }
+        if let Some(max) = rules.get("maxItems").and_then(Value::as_u64)
+            && (a.len() as u64) > max
+        {
+            errors.push(format!("{path}: too many items"));
+        }
+    }
     if let (Some(max), Some(s)) = (
         rules.get("maxLength").and_then(Value::as_u64),
         value.as_str(),
     ) && s.chars().count() as u64 > max
     {
         errors.push(format!("{path}: longer than {max} characters"));
+    }
+    if let Some(text) = value.as_str() {
+        if let Some(pattern) = rules.get("pattern").and_then(Value::as_str)
+            && !if text_rules::lint_pattern(pattern).is_ok() {
+                text_rules::is_match(pattern, text)
+            } else {
+                parse_pattern(pattern).is_ok_and(|atoms| matches_pattern(&atoms, text))
+            }
+        {
+            errors.push(format!("{path}: does not match {pattern:?}"));
+        }
+        if let Some(max) = rules.get("maxUtf8Bytes").and_then(Value::as_u64)
+            && text.len() as u64 > max
+        {
+            errors.push(format!(
+                "{path}: {} bytes of UTF-8, above {max}",
+                text.len()
+            ));
+        }
     }
 
     if let Some(options) = rules.get("oneOf").and_then(Value::as_array) {
@@ -210,4 +450,201 @@ fn type_matches(t: &str, value: &Value) -> bool {
 fn resolve<'a>(root: &'a Value, reference: &str) -> Option<&'a Value> {
     let pointer = reference.strip_prefix('#')?;
     root.pointer(pointer)
+}
+
+// Deliberately bounded regex syntax, enforced by lint: ASCII literals/escapes,
+// positive character classes/ranges, and *, +, ?, {n}, {n,m}, {n,} repetition.
+// No groups, alternation, wildcard or hidden unsupported regex semantics.
+struct Atom {
+    ranges: Vec<(char, char)>,
+    min: usize,
+    max: Option<usize>,
+}
+fn parse_pattern(pattern: &str) -> Result<Vec<Atom>, ()> {
+    let body = pattern
+        .strip_prefix('^')
+        .and_then(|s| s.strip_suffix('$'))
+        .ok_or(())?;
+    // Only the engine's anchored character-class forms are added. Keep
+    // literal-only patterns outside this subset and its existing lint guard.
+    if !body.is_ascii() || !body.contains('[') {
+        return Err(());
+    }
+    let chars: Vec<_> = body.chars().collect();
+    let mut index = 0;
+    let mut atoms = Vec::new();
+    while index < chars.len() {
+        let mut ranges = Vec::new();
+        if chars[index] == '[' {
+            index += 1;
+            while index < chars.len() && chars[index] != ']' {
+                let lo = chars[index];
+                index += 1;
+                if matches!(lo, '^' | '[' | '\\') {
+                    return Err(());
+                }
+                if chars.get(index) == Some(&'-') && chars.get(index + 1).is_some_and(|c| *c != ']')
+                {
+                    let hi = chars[index + 1];
+                    index += 2;
+                    if lo > hi {
+                        return Err(());
+                    }
+                    ranges.push((lo, hi));
+                } else {
+                    ranges.push((lo, lo));
+                }
+            }
+            if ranges.is_empty() || chars.get(index) != Some(&']') {
+                return Err(());
+            }
+            index += 1;
+        } else {
+            let mut literal = chars[index];
+            index += 1;
+            if literal == '\\' {
+                literal = *chars.get(index).ok_or(())?;
+                index += 1;
+                if !".[]{}()^$*+?|\\-".contains(literal) {
+                    return Err(());
+                }
+            } else if ".[]{}()^$*+?|".contains(literal) {
+                return Err(());
+            }
+            ranges.push((literal, literal));
+        }
+        let (mut min, mut max) = (1, Some(1));
+        match chars.get(index) {
+            Some('*') => {
+                min = 0;
+                max = None;
+                index += 1;
+            }
+            Some('+') => {
+                max = None;
+                index += 1;
+            }
+            Some('?') => {
+                min = 0;
+                index += 1;
+            }
+            Some('{') => {
+                index += 1;
+                let start = index;
+                while chars.get(index).is_some_and(char::is_ascii_digit) {
+                    index += 1;
+                }
+                min = chars[start..index]
+                    .iter()
+                    .collect::<String>()
+                    .parse()
+                    .map_err(|_| ())?;
+                max = Some(min);
+                if chars.get(index) == Some(&',') {
+                    index += 1;
+                    let start = index;
+                    while chars.get(index).is_some_and(char::is_ascii_digit) {
+                        index += 1;
+                    }
+                    max = if start == index {
+                        None
+                    } else {
+                        Some(
+                            chars[start..index]
+                                .iter()
+                                .collect::<String>()
+                                .parse()
+                                .map_err(|_| ())?,
+                        )
+                    };
+                }
+                if chars.get(index) != Some(&'}') || max.is_some_and(|m| m < min) {
+                    return Err(());
+                }
+                index += 1;
+            }
+            _ => {}
+        }
+        atoms.push(Atom { ranges, min, max });
+    }
+    Ok(atoms)
+}
+fn matches_pattern(atoms: &[Atom], text: &str) -> bool {
+    use std::collections::BTreeSet;
+    let chars: Vec<_> = text.chars().collect();
+    let mut positions = BTreeSet::from([0]);
+    for atom in atoms {
+        let mut next = BTreeSet::new();
+        for start in positions {
+            let available = chars[start..]
+                .iter()
+                .take(atom.max.unwrap_or(chars.len()))
+                .take_while(|c| atom.ranges.iter().any(|(lo, hi)| lo <= *c && *c <= hi))
+                .count();
+            if available >= atom.min {
+                for count in atom.min..=available {
+                    next.insert(start + count);
+                }
+            }
+        }
+        positions = next;
+    }
+    positions.contains(&chars.len())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{lint, validate};
+    use serde_json::json;
+
+    // Messaging's exact parity reproducer uses this checker. Accepting a
+    // keyword without enforcing it would silently accept invalid requests.
+    #[test]
+    fn shared_text_keywords_are_linted_and_enforced() {
+        let schema = json!({
+            "$ref": "#/$defs/text",
+            "$defs": {"text": {
+                "type": "string", "pattern": "^[A-Z][A-Za-zé]*$", "maxUtf8Bytes": 4
+            }}
+        });
+        assert_eq!(lint(&schema), Vec::<String>::new());
+        for (text, expected) in [
+            ("A", true),
+            ("Aé", true),
+            ("AZZZ", true),
+            ("Aéé", false),
+            ("AZZZZ", false),
+            ("abc", false),
+            ("", false),
+        ] {
+            assert_eq!(
+                validate(&schema, &json!(text)).is_empty(),
+                expected,
+                "{text:?}"
+            );
+        }
+        let branches = json!({"oneOf": [
+            {"type": "string", "pattern": "^A$"},
+            {"type": "string", "pattern": "^B$"}
+        ]});
+        for (text, expected) in [("A", true), ("B", true), ("C", false)] {
+            assert_eq!(
+                validate(&branches, &json!(text)).is_empty(),
+                expected,
+                "{text:?}"
+            );
+        }
+        for bad in [
+            json!({"type": "string", "pattern": "^.$"}),
+            json!({"type": "string", "pattern": 3}),
+            json!({"type": "integer", "pattern": "^A$"}),
+            json!({"type": "string", "maxUtf8Bytes": -1}),
+            json!({"type": "integer", "maxUtf8Bytes": 4}),
+            json!({"type": "array", "uniqueItems": false}),
+            json!({"type": "array", "minItems": -1}),
+            json!({"type": "string", "unknownRule": true}),
+        ] {
+            assert!(!lint(&bad).is_empty(), "unchecked rule: {bad}");
+        }
+    }
 }

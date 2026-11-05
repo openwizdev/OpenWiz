@@ -1,0 +1,277 @@
+{
+ "schema": "openwiz.fleet.v1",
+ "sources": {
+  "github": {
+   "name": "gh",
+   "version": "r1",
+   "tested_version": "2.81.0",
+   "version_tested": true
+  },
+  "cloudroom": null
+ },
+ "reads": [
+  {
+   "id": "r1",
+   "kind": "version",
+   "source": "github",
+   "outcome": {
+    "state": "complete",
+    "value": "2.81.0"
+   }
+  },
+  {
+   "id": "r2",
+   "kind": "repository",
+   "outcome": {
+    "state": "complete",
+    "value": {
+     "name": "synthetic-repo"
+    }
+   }
+  },
+  {
+   "id": "r3",
+   "kind": "spec_list",
+   "outcome": {
+    "state": "complete",
+    "value": [
+     9001
+    ]
+   }
+  },
+  {
+   "id": "r4",
+   "kind": "issue",
+   "issue": 9001,
+   "outcome": {
+    "state": "complete",
+    "value": {
+     "title": "Synthetic fleet spec",
+     "state": "open",
+     "milestone": {
+      "number": 1,
+      "title": "0.0.12"
+     },
+     "labels": [],
+     "owned_paths": null,
+     "relies_on": null
+    }
+   }
+  },
+  {
+   "id": "r5",
+   "kind": "sub_issues",
+   "spec": 9001,
+   "outcome": {
+    "state": "complete",
+    "value": [
+     9002,
+     9003,
+     9004
+    ]
+   }
+  },
+  {
+   "id": "r6",
+   "kind": "issue",
+   "issue": 9002,
+   "outcome": {
+    "state": "complete",
+    "value": {
+     "title": "Synthetic merged ticket",
+     "state": "open",
+     "milestone": {
+      "number": 1,
+      "title": "0.0.12"
+     },
+     "labels": [],
+     "owned_paths": null,
+     "relies_on": null
+    }
+   }
+  },
+  {
+   "id": "r7",
+   "kind": "issue",
+   "issue": 9003,
+   "outcome": {
+    "state": "complete",
+    "value": {
+     "title": "Synthetic held ticket",
+     "state": "open",
+     "milestone": {
+      "number": 1,
+      "title": "0.0.12"
+     },
+     "labels": [],
+     "owned_paths": null,
+     "relies_on": null
+    }
+   }
+  },
+  {
+   "id": "r8",
+   "kind": "issue",
+   "issue": 9004,
+   "outcome": {
+    "state": "complete",
+    "value": {
+     "title": "Synthetic building ticket",
+     "state": "open",
+     "milestone": {
+      "number": 1,
+      "title": "0.0.12"
+     },
+     "labels": [],
+     "owned_paths": null,
+     "relies_on": null
+    }
+   }
+  },
+  {
+   "id": "r9",
+   "kind": "blocked_by",
+   "ticket": 9002,
+   "outcome": {
+    "state": "complete",
+    "value": []
+   }
+  },
+  {
+   "id": "r10",
+   "kind": "blocked_by",
+   "ticket": 9003,
+   "outcome": {
+    "state": "complete",
+    "value": []
+   }
+  },
+  {
+   "id": "r11",
+   "kind": "blocked_by",
+   "ticket": 9004,
+   "outcome": {
+    "state": "complete",
+    "value": []
+   }
+  },
+  {
+   "id": "r12",
+   "kind": "pr_discovery",
+   "issue": 9002,
+   "outcome": {
+    "state": "complete",
+    "value": null
+   }
+  },
+  {
+   "id": "r13",
+   "kind": "pr_discovery",
+   "issue": 9003,
+   "outcome": {
+    "state": "complete",
+    "value": null
+   }
+  },
+  {
+   "id": "r14",
+   "kind": "pr_discovery",
+   "issue": 9004,
+   "outcome": {
+    "state": "complete",
+    "value": null
+   }
+  }
+ ],
+ "coverage": {
+  "state": "complete"
+ },
+ "freshness": {
+  "snapshot_at": 1700000600000
+ },
+ "data": {
+  "view": "fleets",
+  "repository": "r2",
+  "specs": "r3",
+  "fleets": [
+   {
+    "spec": 9001,
+    "issue": "r4",
+    "tickets": "r5",
+    "progress": {
+     "known": {
+      "tickets": 3,
+      "ready": 0,
+      "building": 1,
+      "in_review": 0,
+      "changes_requested": 0,
+      "merged": 1,
+      "held": 1,
+      "blocked": 0,
+      "unknown": 0
+     }
+    }
+   }
+  ],
+  "tickets": [
+   {
+    "number": 9002,
+    "issue": "r6",
+    "blocked_by": "r9",
+    "pr": "r12",
+    "ci": null,
+    "review": null,
+    "on_base": null,
+    "state": {
+     "known": "merged"
+    }
+   },
+   {
+    "number": 9003,
+    "issue": "r7",
+    "blocked_by": "r10",
+    "pr": "r13",
+    "ci": null,
+    "review": null,
+    "on_base": null,
+    "state": {
+     "known": "held"
+    }
+   },
+   {
+    "number": 9004,
+    "issue": "r8",
+    "blocked_by": "r11",
+    "pr": "r14",
+    "ci": null,
+    "review": null,
+    "on_base": null,
+    "state": {
+     "known": "building"
+    }
+   }
+  ],
+  "blockers": [],
+  "needs_you": {
+   "known": [
+    {
+     "kind": "held",
+     "spec": 9001,
+     "ticket": 9003,
+     "wording": {
+      "unknown": "the fleets view does not read comments; openwiz fleet <spec> reads the question"
+     },
+     "link": {
+      "unknown": "the fleets view does not read comments; openwiz fleet <spec> reads the question"
+     },
+     "asked_at": {
+      "unknown": "the fleets view does not read comments; openwiz fleet <spec> reads the question"
+     },
+     "risk": {
+      "unknown": "no explicit risk classification was reported"
+     }
+    }
+   ]
+  }
+ }
+}

@@ -1,0 +1,14 @@
+Traceback (most recent call last):
+  File "/code/ClosedWiz-1281/tools/release/test.py", line 1162, in test_git_attributes_cannot_change_reported_export_bytes
+    self.refused("committed export hash differs")
+  File "/code/ClosedWiz-1281/tools/release/test.py", line 711, in refused
+    self.assertIn(finding,r.stderr)
+AssertionError: 'committed export hash differs' not found in 'release check refused: fresh-clone: fresh clone changed tracked files\n'
+
+R2 byte binding mutant: KILLED
+Traceback (most recent call last):
+  File "/code/ClosedWiz-1281/tools/release/test_review.py", line 147, in test_r3_generated_entry_commit_identity_is_checked
+    self.assertEqual(result.returncode,1,result.stderr)
+AssertionError: 0 != 1 :
+
+R3 history mutant: KILLED

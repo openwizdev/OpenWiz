@@ -1,16 +1,15 @@
-//! W4: the send route is bounded: one target from the path,
+//! W4 (#9): the send route is bounded (WS-12): one target from the path,
 //! a capped body with `Content-Length`, strict JSON, a cap on sends at
 //! once; every answer is `no-store`; and the text, op id and target never
-//! reach the log.
+//! reach the log (WS-10).
 
 use std::thread;
 use std::time::Duration;
 
 use openwiz_server::{Limits, MAX_SEND_BODY_BYTES, MAX_SENDS};
-use serde_json::json;
 
 use crate::http::Response;
-use crate::msg::{self, SendFake};
+use crate::msg::SendFake;
 use crate::send_support::{
     body, good_headers, messages, post, raw, send_json, serve_send, serve_send_limits, with,
 };
@@ -237,15 +236,8 @@ fn framing_is_strict() {
 
 #[test]
 fn sends_over_the_cap_are_refused_before_any_claim() {
-    let fake = SendFake::with(
-        "web_w4_busy",
-        vec![msg::tell_response(
-            "thr_syn_0001",
-            "queue",
-            json!({ "delay_ms": 1500, "stdout_file": msg::send_fixtures().join("tell-sent.json").to_str().unwrap() }),
-        )],
-    );
-    let s = serve_send_limits(
+    let fake = SendFake::new("web_w4_busy", "send");
+    let (s, gate) = crate::send_support::serve_held_tell(
         &fake,
         Limits {
             max_sends: 1,
@@ -253,6 +245,7 @@ fn sends_over_the_cap_are_refused_before_any_claim() {
             ..Limits::default()
         },
     );
+    let _release = crate::send_support::ReleaseTell(gate.clone());
     let first = {
         let addr = s.addr;
         thread::spawn(move || {
@@ -270,15 +263,7 @@ fn sends_over_the_cap_are_refused_before_any_claim() {
             )
         })
     };
-    // Wait until the first send is at its call.
-    let until = std::time::Instant::now() + Duration::from_secs(10);
-    while fake.tell_count() == 0 {
-        assert!(
-            std::time::Instant::now() < until,
-            "the first send never called"
-        );
-        thread::sleep(Duration::from_millis(10));
-    }
+    gate.wait_held();
     let r = send_json(
         &s,
         "thr_syn_0001",
@@ -291,6 +276,7 @@ fn sends_over_the_cap_are_refused_before_any_claim() {
         !fake.record_path("w4-op-6").exists(),
         "the refused send was claimed"
     );
+    gate.open();
     let r = first.join().unwrap();
     assert_eq!(r.status, 200, "{}", r.text());
     assert_eq!(fake.tell_count(), 1);
@@ -369,6 +355,10 @@ fn nothing_of_a_send_reaches_the_log() {
     assert_eq!(fake.tell_count(), 1);
 }
 
+/// Sol #91 round 1, finding 1: only an object with exactly the five allowed
+/// keys and the allowed value types is a body. A derived deserializer also
+/// takes positional arrays and tagged forms; every such shape is refused
+/// before any read, claim or call.
 #[test]
 fn only_the_allowed_object_shape_is_a_body() {
     let fake = SendFake::new("web_w4_shapes", "send");

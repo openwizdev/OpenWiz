@@ -1,4 +1,4 @@
-//! The one write: `POST /api/v1/sessions/{id}/messages`, and the send
+//! The one write (#9): `POST /api/v1/sessions/{id}/messages`, and the send
 //! lookup. See `contracts/web-api.v1.md`, "Sending".
 //!
 //! The server checks only the request's shape: the send `Host`, the
@@ -35,6 +35,14 @@ use crate::{Attaching, Limits, Sending};
 /// The custom header a same-origin page sends with a send (C4).
 pub(crate) const CUSTOM_HEADER: &str = "X-OpenWiz-Send";
 
+/// The send's body: #8's request without `target`, which is the path's.
+/// Read as exactly one shape, and nothing else (Sol #91, finding 1): a JSON object
+/// whose keys are exactly these, each at most once, `op_id`, `mode` and
+/// `text` required, each value of its own JSON type. A derived
+/// deserializer would also take a positional array or a tagged enum, so
+/// this one reads only a map, and `mode` only as the string `queue` or
+/// `steer`. Since #16, `attachments`, optional: an array of strings, the
+/// staged ids, in the owner's order.
 struct Body {
     op_id: String,
     mode: Mode,
@@ -122,6 +130,10 @@ pub(crate) fn single<'h>(head: &'h Head, name: &str) -> Option<&'h str> {
     }
 }
 
+/// C1 to C4, in the contract's order, for every JSON `POST` (the send, and
+/// since #12 the create and the new-thread preview: A-13 keeps the guard
+/// unchanged). `site` is the configured host name; `what` names the
+/// request in the refusal ("a send").
 pub(crate) fn cross_site(head: &Head, site: &str, what: &str) -> Option<Reply> {
     if let Some(refusal) = same_site(head, site, what) {
         return Some(refusal);
@@ -136,6 +148,9 @@ pub(crate) fn cross_site(head: &Head, site: &str, what: &str) -> Option<Reply> {
     None
 }
 
+/// C1 to C3, for every write (since #16 the upload and the removal too,
+/// whose bodies are not JSON: B-9 keeps the guard unchanged): `Origin`,
+/// `Sec-Fetch-Site`, then the custom header.
 pub(crate) fn same_site(head: &Head, site: &str, what: &str) -> Option<Reply> {
     let origin_ok = single(head, "Origin")
         .and_then(|origin| origin.strip_prefix("https://"))
@@ -238,6 +253,8 @@ pub(crate) fn read_body(
     Ok(body)
 }
 
+/// Sends at once: at most `max_sends`, apart from the core runs. Since #12
+/// the creates have their own `Slots`, at most `max_creates`.
 #[derive(Default)]
 pub(crate) struct Slots {
     used: Mutex<usize>,
@@ -281,7 +298,7 @@ impl Slots {
 /// Everything a send needs from the server.
 pub(crate) struct Context<'a> {
     pub sending: &'a Sending,
-    /// The attachment store, for a send with attachments.
+    /// The attachment store, for a send with attachments (#16).
     pub attaching: Option<&'a Attaching>,
     pub slots: &'a Arc<Slots>,
     pub clock: &'a Arc<dyn Clock>,
@@ -446,7 +463,8 @@ pub(crate) fn lookup(sending: &Sending, clock: &dyn Clock, id: &str, op_id: &str
     let Ok(store) = (sending.open_store_read_only)() else {
         return record_unavailable();
     };
-    match lookup::lookup(store.as_deref(), clock, &target, &op_id) {
+    let tested = sending.messenger.tested_version();
+    match lookup::lookup(store.as_deref(), clock, &target, &op_id, tested) {
         Ok(report) => pretty(&report).map_or_else(
             || error(500, "internal", "the result could not be written"),
             ok,

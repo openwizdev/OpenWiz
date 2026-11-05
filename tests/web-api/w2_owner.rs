@@ -1,3 +1,7 @@
+//! W2 (#9): owner only, at the layer Jake chose (WS-1 (a), T): the tunnel's
+//! Access check. The server must never trust, or even read, an Access
+//! header or cookie: no answer depends on one. The live half is #10's L9.
+
 use crate::msg::SendFake;
 use crate::send_support::{body, good_headers, post, serve_send, with, without};
 

@@ -1,4 +1,4 @@
-//! AW3: uploads are bounded. A body over 25 MiB is
+//! AW3 (#16, B3): uploads are bounded (sheet B-9). A body over 25 MiB is
 //! refused before a byte of it is read; a missing, repeated or lying
 //! `Content-Length`, a body slower than the upload deadline, a third upload
 //! while two run, low disk and a bad name are each refused. **None of them
@@ -326,6 +326,52 @@ fn the_name_header_is_one_percent_encoded_utf8_name() {
             r.json()["ready"][0]["staged"]["attachment"]["display_name"],
             name.as_str()
         );
+    }
+}
+
+#[test]
+fn huntr_percent_escape_requires_two_hex_digits() {
+    for (i, (raw_name, decoded)) in [
+        ("x%41.txt", Some("xA.txt")),
+        ("x%2B1.txt", Some("x+1.txt")),
+        ("x%2b1.txt", Some("x+1.txt")),
+        ("x%252B.txt", Some("x%2B.txt")),
+        ("r%C3%A9.txt", Some("ré.txt")),
+        ("r%c3%a9.txt", Some("ré.txt")),
+        ("r%c3%A9.txt", Some("ré.txt")),
+        ("x%+1.txt", None),
+        ("x%+A.txt", None),
+        ("x%-1.txt", None),
+        ("x%1+.txt", None),
+        ("x%G1.txt", None),
+        ("x%1G.txt", None),
+        ("x%", None),
+        ("x%1", None),
+        ("x%C3.txt", None),
+        ("x%C3%28.txt", None),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let state = State::new(&format!("web_aw3_percent_{i}"));
+        let s = serve_attach(&state, Free::plenty(), Limits::default());
+        let headers = with(&upload_headers("synthetic.txt"), NAME_HEADER, raw_name);
+        let r = upload_with(&s, &headers, b"Synthetic AW3 percent name\n");
+        if let Some(name) = decoded {
+            ready_id(&r);
+            assert_eq!(
+                r.json()["ready"][0]["staged"]["attachment"]["display_name"],
+                name,
+                "{raw_name}"
+            );
+            assert_eq!(state.entries().len(), 1, "{raw_name}");
+            assert!(state.partials().is_empty(), "{raw_name}");
+        } else {
+            assert_eq!(r.status, 400, "{raw_name}: {}", r.text());
+            assert_eq!(r.error().0, "invalid_request", "{raw_name}");
+            assert!(state.nothing_staged(), "{raw_name}");
+            assert!(!state.dir.try_exists().unwrap(), "{raw_name}");
+        }
     }
 }
 

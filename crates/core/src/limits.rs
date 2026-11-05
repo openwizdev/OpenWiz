@@ -1,9 +1,9 @@
 //! Output and run limits.
 //!
 //! The first six values are decided for 0.0.1: four approved in the common
-//! rules, and `READ_TIMEOUT` and `DEFAULT_LIMIT`, which  sets at
+//! rules, and `READ_TIMEOUT` and `DEFAULT_LIMIT`, which issue #3 sets at
 //! 15 seconds and 100. `MAX_LIMIT` and `FIELD_MAX_CHARS` are the builder's
-//! provisional values for the "row and field caps" and still need the maintainer
+//! provisional values for the "row and field caps" and still need Jake's
 //! confirmation.
 
 use std::time::Duration;
@@ -21,10 +21,17 @@ pub const MAX_CONCURRENT_DETAIL_READS: usize = 4;
 pub const RUN_BUDGET: Duration = Duration::from_secs(30);
 
 /// Each single read gives up after this long, inside the run budget, and is
-/// never retried; the adapter applies it to every read.
+/// never retried. Decided in issue #3; the adapter applies it to every read.
 pub const READ_TIMEOUT: Duration = Duration::from_secs(15);
 
-/// Rows per page when `--limit` is not given.
+/// Opt-in additional planning time for fleet tick/due, granted once per run.
+/// Existing run/read budgets and the four-read cap remain unchanged.
+pub fn fleet_tick_planning_allowance(work_items: usize) -> Duration {
+    let batches = work_items.div_ceil(4);
+    READ_TIMEOUT.saturating_mul(u32::try_from(batches).unwrap_or(u32::MAX))
+}
+
+/// Rows per page when `--limit` is not given. Decided in issue #3.
 pub const DEFAULT_LIMIT: usize = 100;
 
 /// The largest page `--limit` may ask for. Provisional.

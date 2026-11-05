@@ -4,16 +4,17 @@
 
 ## Where the shapes come from
 
-The **keys, types, nullability, enum labels and exit codes** follow real `room-cli` output, observed by the maintainer on their own machine. Only structure was recorded: never a value, an id, a title, session content or a path. The observations are not published, because the raw output holds private session data, so treat these shapes as reported, not independently checkable.
-
-There were four observations. These fixtures keep them apart:
+The **keys, types, nullability, enum labels and exit codes** follow three
+structure-only Mac captures, C, A and B. Evidence class: live observation of
+shapes only; every fixture value is invented. A fourth, V, is #37's v127
+spike. These fixtures keep the observations apart:
 
 | Capture | What it gives these fixtures |
 | --- | --- |
-| **C** (2026-10-23, `room-cli` 0.43.1, across all rows) | The `thread list` row shape, including what is optional and what is null on cloud rows; `project list`, `--hidden` (`[]`) and `machine list`; the cloud `thread show` shape (`environment: null`); both `thread output` shapes (`error` null, and `error` a string with exit 0); not-found (exit 1, empty stdout, `Error: HTTP 404: Thread not found`) |
-| **A** (2026-10-23, 0.43.1, mostly first-row types) | `--version` as plain text; agreement on the project and machine shapes; that every `projectId` resolved and every local row's host was a listed machine |
+| **C** (2026-10-23 05:27 UTC, `room-cli` 0.43.1, across all rows) | The `thread list` row shape, including what is optional and what is null on cloud rows; `project list`, `--hidden` (`[]`) and `machine list`; the cloud `thread show` shape (`environment: null`); both `thread output` shapes (`error` null, and `error` str with exit 0); not-found (exit 1, empty stdout, `Error: HTTP 404: Thread not found`) |
+| **A** (2026-10-23 04:12 UTC, 0.43.1, mostly first-row types) | `--version` as plain text; agreement on the project and machine shapes; that every `projectId` resolved and every local row's host was a listed machine |
 | **B** (2026-10-22, version **not recorded**) | Only the local `thread show` shape: the `environment` object, and that `purpose` can be absent |
-| **V** (2026-10-28, `room-cli` v127) | The `--version` text `v127` (`v<N>`, one line). It found no incompatible change to the shapes OpenWiz reads, so `normal` prints `v127` and answers everything else with the 0.43.1 shapes |
+| **V** (2026-10-28, `room-cli` v127, #37) | Only the `--version` text `v127` (`v<N>`, one line). Capture V found no incompatible change to the shapes above, so `normal` prints `v127` and answers everything else with the 0.43.1 shapes (#53) |
 
 ## Synthetic assumptions
 
@@ -32,7 +33,7 @@ Anything the captures did not observe is a **synthetic assumption**. Each scenar
 11. **Both flags at once.** `thread list --json --include-hidden --include-archived` is assumed to return the union of the two lists. It was not observed.
 12. **A project disappearing between runs.** The `project-removed` scenario drops `prj_syn_0001` from the project list while its sessions still name it. P6 reads one source with `normal`, then `project-removed`, then `normal` again, to catch grouping kept from an earlier run. Unobserved.
 
-**Not covered by any fixture:** read-side effects. Nothing here shows that a read cannot wake a session or mark it read. 0.0.1's live check looked for such effects; see docs/evidence/0.0.1-live-check.md for what it covered.
+**Not covered by any fixture:** read-side effects. Nothing here shows that a read cannot wake a session or mark it read. That stays the ticket 3 release gate.
 
 ## Layout
 
@@ -40,7 +41,8 @@ Anything the captures did not observe is a **synthetic assumption**. Each scenar
 | --- | --- |
 | `room-cli-0.43.1/<scenario>/scenario.json` | What the fake `room-cli` answers for each allowlisted argument list. A scenario may `extends` another |
 | `room-cli-0.43.1/normal/` | The normal case: 6 default sessions, plus one hidden and one archived, 5 projects (two share a name), 1 machine |
-| `room-cli-0.43.1/<variant>/` | Command error and timeout (of `thread list`, `project list`, `thread show` or `thread output`), not JSON, truncated, wrong types, missing fields, unknown extra fields, versions 0.44.0 and 0.43.1 (both untested), and a project removed between runs (`project-removed`). The nonexistent id `thr_syn_9999` is in `normal`. *Updated for 0.0.2:* `diagnostics-*`, one per read, fail with planted, unsafe-looking stderr for the stderr sanitizer's proofs (P4b, A7) |
+| `room-cli-0.43.1/<variant>/` | Command error and timeout (of `thread list`, `project list`, `thread show` or `thread output`), not JSON, truncated, wrong types, missing fields, unknown extra fields, versions 0.44.0 and 0.43.1 (both untested since #53), and a project removed between runs (`project-removed`). The nonexistent id `thr_syn_9999` is in `normal` |
+| `room-cli-0.43.1/send/` | OpenWiz `send` (#8, #571, #1007): the PC probe at `c687079` on `room/0-0-3-live-test-on-the-pc-10-sv55` **observed** sent in Queue or Steer mode, the 17-key busy Queue row and the 16-key Claude Code queued Steer row (no `hardQueue`, null waiting reason). The v141 PC W1-M08 observation (structure at `6de18c05`, W1-M08's structure-only receipt record) adds the same 16-key Cloud queued shape for Queue, in `tell-cloud-queue-observed.json`; values remain synthetic. The initial queue/sent shape was observed at `4379586`. Fixtures use synthetic values and reserved synthetic queued ids; `scenario.json` records the field/type/value provenance and synthetic caller-state variations. Guide-only five-key queued rows and historical minimal sent receipts remain unobserved negative cases. `thread-log-one-match.json` is never served (`thread log` is not allowlisted) |
 | `envelopes/` | Example `openwiz.inventory.v1` envelopes, checked against `contracts/inventory.v1.schema.json` |
 
 ## The synthetic world
@@ -57,5 +59,3 @@ Anything the captures did not observe is a **synthetic assumption**. Each scenar
 | `thr_syn_0008` | cloud | idle | `prj_syn_0002` | Archived; no `purpose` key |
 
 Row `thr_syn_000N` was updated N minutes before the tests' fixed clock (`1700000600000`).
-
-*Updated for 0.0.5:* `room-cli-0.43.1/send/` adds synthetic message receipts, including reconstructed sent and Cloud queued shapes from individual observations. `room-cli-v127/new-thread/` includes a catalogue shape recorded with v131 and source-read create/status shapes; its folder name is historical. Every identifier, text and path is synthetic. The attachment and new-thread invocation shapes are based on help/source reads. Fixture coverage alone establishes no live acceptance: the separately recorded 0.0.3 PC test held its release-blocking claims with gaps; LIVE-0.0.4 records held claims and gaps, including missing observed spawn-receipt fixture coverage.

@@ -1,0 +1,45 @@
+   Compiling openwiz-tests v0.0.1-dev (/code/ClosedWiz-1272/tests)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.51s
+     Running fleet/main.rs (target/debug/deps/fleet-e2d7203fe5d12f9f)
+
+running 5 tests
+
+thread 'b5_tick::public::p4_helper_and_other_project_titles_do_not_match_the_builder' (9042) panicked at tests/fleet/b5_public.rs:174:5:
+assertion `left == right` failed: {"actions":[],"default_branch":"main","mode":"run","planned_at":1794041327708,"rules":{"builder":{"effort":"xhigh","harness":"claude-code","model":"claude-opus-5-5"},"builder_small":{"effort":"high","harness":"codex","model":"gpt-6.1-sol"},"ci_checks":[{"name":"rust","required_on":["main"]}],"merge":"adr_0008","reviewer_claude":{"effort":"high","harness":"codex","model":"gpt-6.1-sol"},"reviewer_gpt":{"effort":"high","harness":"claude-code","model":"claude-opus-5-5"}},"schema":"openwiz.fleet-tick.v1"}
+  left: Null
+ right: "adr_0008"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test b5_tick::public::p4_helper_and_other_project_titles_do_not_match_the_builder ... FAILED
+
+thread 'b5_tick::public::p4_ambiguous_titles_and_disagreement_never_choose_an_agent' (9041) panicked at tests/fleet/b5_public.rs:158:9:
+assertion `left == right` failed: builder-disagrees: {"actions":[],"default_branch":"main","mode":"run","planned_at":1794041329870,"rules":{"builder":{"effort":"xhigh","harness":"claude-code","model":"claude-opus-5-5"},"builder_small":{"effort":"high","harness":"codex","model":"gpt-6.1-sol"},"ci_checks":[{"name":"rust","required_on":["main"]}],"merge":"adr_0008","reviewer_claude":{"effort":"high","harness":"codex","model":"gpt-6.1-sol"},"reviewer_gpt":{"effort":"high","harness":"claude-code","model":"claude-opus-5-5"}},"schema":"openwiz.fleet-tick.v1"}
+  left: Null
+ right: "look"
+test b5_tick::public::p4_ambiguous_titles_and_disagreement_never_choose_an_agent ... FAILED
+
+thread 'b5_tick::public::p4_quiet_giveup_closes_the_whole_span_even_after_an_in_place_edit' (10537) panicked at tests/fleet/b5_public.rs:134:13:
+assertion failed: !w.calls()[calls..].iter().any(|(t, a)|
+            t == "room-cli" && ["output", "tell"].contains(&a[1].as_str()) &&
+                a.get(2).is_some_and(|a| a == "thr_syn_b5_2"))
+test b5_tick::public::p4_quiet_giveup_closes_the_whole_span_even_after_an_in_place_edit ... FAILED
+
+thread 'b5_tick::public::p4_tick_writes_thread_free_records_through_merge_and_finished' (13127) panicked at tests/fleet/b5_public.rs:16:21:
+public record leaks a thread: launch-fleet: started, thread thr_syn_b5_1
+test b5_tick::public::p4_tick_writes_thread_free_records_through_merge_and_finished ... FAILED
+
+thread 'b5_tick::public::p4_recheck_lineage_merge_and_archive_with_public_and_legacy_records' (12145) panicked at tests/fleet/b5_public.rs:16:21:
+public record leaks a thread: launch-fleet: started, thread thr_syn_b5_1
+test b5_tick::public::p4_recheck_lineage_merge_and_archive_with_public_and_legacy_records ... FAILED
+
+failures:
+
+failures:
+    b5_tick::public::p4_ambiguous_titles_and_disagreement_never_choose_an_agent
+    b5_tick::public::p4_helper_and_other_project_titles_do_not_match_the_builder
+    b5_tick::public::p4_quiet_giveup_closes_the_whole_span_even_after_an_in_place_edit
+    b5_tick::public::p4_recheck_lineage_merge_and_archive_with_public_and_legacy_records
+    b5_tick::public::p4_tick_writes_thread_free_records_through_merge_and_finished
+
+test result: FAILED. 0 passed; 5 failed; 0 ignored; 0 measured; 331 filtered out; finished in 9.97s
+
+error: test failed, to rerun pass `-p openwiz-tests --test fleet`

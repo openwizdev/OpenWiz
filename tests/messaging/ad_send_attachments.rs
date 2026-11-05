@@ -1,3 +1,9 @@
+//! B2 (ClosedWiz#15): attachments in `send`. AD1 to AD5, AD7, AD9, AD10
+//! and AD13's send half, on the fake `room-cli`, B1's store and a private
+//! state directory. **Fixtures only:** every `thread tell` shape with
+//! attachments is the help's (spike run 3), never observed; nothing is sent
+//! live.
+
 use std::fs;
 use std::time::Duration;
 
@@ -309,7 +315,7 @@ fn ad04_same_op_id_and_payload_is_one_call_any_attachment_difference_is_refused(
     assert_eq!(fake.tell_count(), 1);
 
     // The same payload again: its recorded outcome, no call (its copies
-    // are gone after the accepted outcome; the record binds them).
+    // are gone after the accepted outcome, B-6; the record binds them).
     let again = report_with(&fake, &base);
     assert!(matches!(
         again.result,
@@ -357,7 +363,7 @@ fn ad04_a_0_0_3_record_without_attachments_still_matches() {
     assert!(json["binding"].get("attachments_digest").is_none());
     assert!(json.get("attachments").is_none());
     json.as_object_mut().unwrap().remove("source");
-    // The state directory and sends/, owner only, whatever the umask.
+    // The state directory and sends/, owner only, whatever the umask (#170).
     crate::dirs::private_dir_all(fake.state.join("sends")).unwrap();
     let store = fake.store();
     fs::write(
@@ -444,7 +450,9 @@ fn ad07_every_row_of_the_outcome_table() {
         let a = stage(&fake.state, &format!("syn-{op}-a.txt"), &text("a\n"), T0);
         let b = stage(&fake.state, &format!("syn-{op}-b.png"), &png(1024), T0);
         let mut r = with_ids(request(target, Mode::Queue, "Synthetic", op), &[&a, &b]);
-        r.budget = Duration::from_secs(2);
+        // Short (#1260): the hang row waits for it, plus the attachments'
+        // allowance.
+        r.budget = Duration::from_secs(1);
         (report_with(&fake, &r), a, b)
     };
     // Sent: accepted, the attachments handed to CloudRoom, nothing more.
@@ -487,6 +495,88 @@ fn ad07_every_row_of_the_outcome_table() {
     }
     // Every call carried both attachments, uploaded first.
     assert_eq!(fake.tell_count(), 6);
+}
+
+/// A send store that refuses only the durable dispatching mark.
+struct DispatchNotRecorded(FileStore);
+
+impl SendStore for DispatchNotRecorded {
+    fn load(&self, op_id: &OpId) -> Result<Option<SendRecord>, StoreError> {
+        self.0.load(op_id)
+    }
+    fn claim(
+        &self,
+        record: &SendRecord,
+        now: Timestamp,
+    ) -> Result<openwiz_core::messaging::record::Claim, StoreError> {
+        self.0.claim(record, now)
+    }
+    fn update(&self, record: &SendRecord) -> Result<(), StoreError> {
+        if record.state == openwiz_core::messaging::record::RecordState::Dispatching {
+            return Err(StoreError(
+                "synthetic: dispatching write refused".to_owned(),
+            ));
+        }
+        self.0.update(record)
+    }
+    fn release(&self, op_id: &OpId) {
+        self.0.release(op_id);
+    }
+    fn uncertain_matching(
+        &self,
+        binding: &Binding,
+        except: &OpId,
+        now: Timestamp,
+    ) -> Result<Vec<SendRecord>, StoreError> {
+        self.0.uncertain_matching(binding, except, now)
+    }
+    fn in_flight_matching(
+        &self,
+        binding: &Binding,
+        except: &OpId,
+        now: Timestamp,
+    ) -> Result<Vec<SendRecord>, StoreError> {
+        self.0.in_flight_matching(binding, except, now)
+    }
+    fn inspect(&self, op_id: &OpId, now: Timestamp) -> Result<Option<SendRecord>, StoreError> {
+        self.0.inspect(op_id, now)
+    }
+    fn withdraw(&self, op_id: &OpId) -> Result<(), StoreError> {
+        self.0.withdraw(op_id)
+    }
+}
+
+// M10 (#680): a failed dispatching mark must stop before the provider call.
+#[test]
+fn dispatch_write_failure_stops_the_send() {
+    let fake = SendFake::new("m10_dispatch_write_failure", "send");
+    let result = send::send_with(
+        &fake.source(),
+        &DispatchNotRecorded(fake.store()),
+        &staging::store(&fake.state),
+        &clock(),
+        &request(
+            CLOUD,
+            Mode::Queue,
+            "Synthetic dispatching failure",
+            "op-dispatch-failure",
+        ),
+    );
+    assert_eq!(
+        fake.tell_count(),
+        0,
+        "must not dispatch after a failed mark"
+    );
+    assert_eq!(
+        fake.tells().len(),
+        0,
+        "no tell invocation after a failed mark"
+    );
+    assert!(
+        matches!(&result, Err(SendError::Store(e))
+            if e.0.contains("synthetic: dispatching write refused")),
+        "expected the injected dispatching write error: {result:?}"
+    );
 }
 
 // AD9: retention.
@@ -739,6 +829,176 @@ fn ad10_a_crash_at_each_step_keeps_the_attachments_and_dispatches_nothing() {
 // AD13: the CLI.
 
 #[test]
+fn ad13_json_help_describes_attach_path_failures_for_send_and_new() {
+    let mut missing_help = Vec::new();
+    for (case, command, yes) in [
+        ("send", "send", false),
+        ("new_preview", "new", false),
+        ("new_yes", "new", true),
+    ] {
+        let fake = SendFake::new(&format!("ad13_json_help_{case}"), "send");
+        let output = fake.run_process(&[command, "--help"], "");
+        assert_eq!(output.status.code(), Some(0));
+        assert!(output.stderr.is_empty());
+        let help = String::from_utf8(output.stdout).unwrap();
+        let missing = fake.dir.join("syn-missing.txt");
+        let mut args = vec![command];
+        let (heading, next, normal) = if command == "send" {
+            args.push(CLOUD);
+            ("send <id> <text>", "new <project>", "openwiz.messaging.v1")
+        } else {
+            args.extend([
+                "--project-id",
+                "prj_syn_0001",
+                "--harness",
+                "codex",
+                "--model",
+                "syn-codex-model-01",
+                "--effort",
+                "high",
+            ]);
+            ("new <project>", "models\n", "openwiz.new-thread.v1")
+        };
+        if yes {
+            args.push("--yes");
+        }
+        args.extend([
+            "--attach",
+            missing.to_str().unwrap(),
+            "--json",
+            "--",
+            "Synthetic",
+        ]);
+        let output = fake.run_process(&args, "");
+        assert_eq!(output.status.code(), Some(5), "{case}: {output:?}");
+        assert!(output.stderr.is_empty(), "{case}: {output:?}");
+        let report: Value = serde_json::from_slice(&output.stdout).unwrap();
+        assert_eq!(report["schema"], "openwiz.attachment-add.v1", "{case}");
+        assert!(fake.invocations().is_empty(), "{case}: no provider calls");
+        println!("{case}: exit=5 schema=openwiz.attachment-add.v1 stderr=empty provider_calls=0");
+        let section = help
+            .split_once(&format!("\n{heading}"))
+            .unwrap()
+            .1
+            .split_once(&format!("\n{next}"))
+            .unwrap()
+            .0;
+        let json = section
+            .split_once("  --json      ")
+            .unwrap()
+            .1
+            .split_once("\n  --")
+            .unwrap()
+            .0;
+        assert!(json.contains(normal), "{case}: {json}");
+        if command == "new" {
+            assert!(json.contains("openwiz.new-thread-preview.v1"));
+        }
+        if !json.contains("openwiz.attachment-add.v1")
+            || !json.contains("if an --attach path fails")
+        {
+            missing_help.push(case);
+        }
+    }
+    assert!(
+        missing_help.is_empty(),
+        "JSON help omits the path-failure report for {missing_help:?}"
+    );
+}
+
+// #786: distinguish a store-open error from a store error on one path.
+#[test]
+fn ad13_json_help_describes_store_failures_for_send_and_new() {
+    for (case, command, yes) in [
+        ("send", "send", false),
+        ("new_preview", "new", false),
+        ("new_yes", "new", true),
+    ] {
+        for on_path in [false, true] {
+            for json in [false, true] {
+                let fake = SendFake::new(&format!("ad13_store_{case}_{on_path}_{json}"), "send");
+                let source = fake.dir.join("syn-notes.txt");
+                fs::write(&source, b"Synthetic notes").unwrap();
+                let store = staging::store(&fake.state);
+                if on_path {
+                    // The store opens, but staging this valid file cannot take its lock.
+                    crate::dirs::private_dir(store.dir().join(".staging.lock")).unwrap();
+                } else {
+                    fs::remove_dir(store.dir()).unwrap();
+                    fs::write(store.dir(), b"Synthetic obstruction").unwrap();
+                }
+                let mut args = vec![command];
+                if command == "send" {
+                    args.push(CLOUD);
+                } else {
+                    args.extend([
+                        "--project-id",
+                        "prj_syn_0001",
+                        "--harness",
+                        "codex",
+                        "--model",
+                        "syn-codex-model-01",
+                        "--effort",
+                        "high",
+                    ]);
+                }
+                if yes {
+                    args.push("--yes");
+                }
+                if json {
+                    args.push("--json");
+                }
+                args.extend(["--attach", source.to_str().unwrap(), "--", "Synthetic"]);
+                let output = fake.run_process(&args, "");
+                assert_eq!(output.status.code(), Some(10), "{case}: {output:?}");
+                assert_eq!(fake.invocations().len(), 0, "{case}: no provider calls");
+                if on_path {
+                    assert!(output.stderr.is_empty(), "{case}: {output:?}");
+                    if json {
+                        let report: Value = serde_json::from_slice(&output.stdout).unwrap();
+                        assert_eq!(report["schema"], "openwiz.attachment-add.v1");
+                        assert_eq!(report["not_staged"].as_array().unwrap().len(), 1);
+                        assert_eq!(report["not_staged"][0]["path"], source.to_str().unwrap());
+                        assert!(report["ready"].as_array().unwrap().is_empty());
+                        assert!(report["failed"].as_array().unwrap().is_empty());
+                    } else {
+                        let out = String::from_utf8(output.stdout).unwrap();
+                        assert!(out.contains("syn-notes.txt: not staged"), "{out}");
+                    }
+                } else {
+                    let err = String::from_utf8(output.stderr).unwrap();
+                    assert!(err.starts_with("openwiz: the attachment store could not be used:"));
+                    assert!(err.contains(if command == "send" {
+                        "nothing was sent"
+                    } else {
+                        "nothing was created"
+                    }));
+                    if json {
+                        let report: Value = serde_json::from_slice(&output.stdout).unwrap();
+                        assert_eq!(report["schema"], "openwiz.cli-error.v1");
+                        assert_eq!(report["exit_code"], 10);
+                        assert_eq!(report["error"]["kind"], "store_unavailable");
+                    } else {
+                        assert!(output.stdout.is_empty());
+                    }
+                }
+                println!("{case}: on_path={on_path} json={json} exit=10 provider_calls=0");
+            }
+        }
+    }
+    let help = openwiz_cli::help();
+    let footer = help.split_once("For send").unwrap().1;
+    for expected in [
+        "an attachment store that can't be opened (10), reported on stderr",
+        "With --json, these errors also print openwiz.cli-error.v1 on stdout",
+        "If the attachment store fails on an --attach path, exit 10 prints the",
+        "attachment-add report on stdout (openwiz.attachment-add.v1 with --json), with empty stderr",
+    ] {
+        assert!(footer.contains(expected), "missing footer text: {expected}");
+    }
+}
+
+#[test]
 fn ad13_attach_that_fails_on_any_path_sends_nothing_and_prints_every_result() {
     let fake = SendFake::new("ad13_attach_fails", "send");
     let dir = fake.dir.join("sources");
@@ -884,7 +1144,7 @@ fn ad05_the_adapter_never_starts_a_steer_with_attachments() {
     assert!(fake.invocations().is_empty(), "nothing was run");
 }
 
-/// The retention rules through the real binary: `openwiz attachment ls` and `rm` judge an
+/// B-6 through the real binary: `openwiz attachment ls` and `rm` judge an
 /// attachment by its operation's record, as `send` and `new` do. An
 /// uncertain send's attachment is listed as kept while its operation may
 /// use it (no expiry), and can't be removed.

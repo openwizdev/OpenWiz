@@ -1,0 +1,6 @@
+FAIL: desktop Home first
+FAIL: four phone tabs
+FAIL: command Home first
+Traceback (most recent call last):
+  File "<stdin>", line 5, in <module>
+AssertionError: R3: current main rules omit Home navigation

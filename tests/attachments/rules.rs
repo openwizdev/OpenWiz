@@ -1,4 +1,4 @@
-//! The readiness, retention and free-disk rules that phase
+//! The readiness, retention and free-disk rules (B-2, B-3, B-6) that phase
 //! 2's store follows. Pure functions here; AP4, AP7 and AP8 prove the store
 //! applies them.
 
@@ -27,13 +27,43 @@ fn every_state() -> Vec<Readiness> {
 }
 
 #[test]
+fn rules_contracts_preserve_all_original_cases() {
+    let cases: [(&str, fn()); 7] = [
+        (
+            "a_claimed_attachment_follows_its_operation",
+            a_claimed_attachment_follows_its_operation,
+        ),
+        (
+            "a_partial_copy_is_always_deleted",
+            a_partial_copy_is_always_deleted,
+        ),
+        (
+            "an_unsent_ready_attachment_expires_after_24_hours",
+            an_unsent_ready_attachment_expires_after_24_hours,
+        ),
+        (
+            "only_ready_claims_a_verified_copy",
+            only_ready_claims_a_verified_copy,
+        ),
+        (
+            "removal_is_refused_while_an_operation_may_still_use_it",
+            removal_is_refused_while_an_operation_may_still_use_it,
+        ),
+        ("staging_keeps_1_gib_free", staging_keeps_1_gib_free),
+        ("the_readiness_transitions", the_readiness_transitions),
+    ];
+    for (name, proof) in cases {
+        eprintln!("TA2 case: rules::{name}");
+        proof();
+    }
+}
+
 fn only_ready_claims_a_verified_copy() {
     for state in every_state() {
         assert_eq!(state.is_ready(), state == Readiness::Ready, "{state:?}");
     }
 }
 
-#[test]
 fn the_readiness_transitions() {
     use Readiness::*;
     let failed = Failed {
@@ -73,7 +103,6 @@ fn the_readiness_transitions() {
     }
 }
 
-#[test]
 fn an_unsent_ready_attachment_expires_after_24_hours() {
     assert_eq!(UNSENT_TTL, 24 * HOUR, "B-2");
     let stored = |age| Stored::Ready {
@@ -95,9 +124,8 @@ fn an_unsent_ready_attachment_expires_after_24_hours() {
     );
 }
 
-#[test]
 fn a_claimed_attachment_follows_its_operation() {
-    // deleted once an accepted outcome is recorded; kept on a failure
+    // B-6: deleted once an accepted outcome is recorded; kept on a failure
     // until the TTL; kept while dispatching or uncertain, past the TTL too.
     for age in [Duration::ZERO, UNSENT_TTL, 30 * 24 * HOUR] {
         let at = |claim| retention(Stored::Ready { claim, age });
@@ -116,7 +144,6 @@ fn a_claimed_attachment_follows_its_operation() {
     }
 }
 
-#[test]
 fn a_partial_copy_is_always_deleted() {
     assert_eq!(
         retention(Stored::Partial),
@@ -124,7 +151,6 @@ fn a_partial_copy_is_always_deleted() {
     );
 }
 
-#[test]
 fn removal_is_refused_while_an_operation_may_still_use_it() {
     assert_eq!(can_remove(Claim::Unclaimed), Ok(()));
     assert_eq!(can_remove(Claim::Failed), Ok(()));
@@ -139,7 +165,6 @@ fn removal_is_refused_while_an_operation_may_still_use_it() {
     );
 }
 
-#[test]
 fn staging_keeps_1_gib_free() {
     assert_eq!(FREE_DISK_FLOOR_BYTES, 1024 * MIB, "B-3");
     let floor = FREE_DISK_FLOOR_BYTES;

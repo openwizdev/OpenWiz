@@ -271,6 +271,7 @@ pub fn scripted_record(n: usize) -> SessionRecord {
         purpose_text: Fact::Known(Some(format!("Synthetic purpose {n}."))),
         // Distinct times, so any sensible order is total.
         updated_at: Fact::Known(Timestamp(T0.0 - 1_000 * n as i64)),
+        started_at: Fact::Unknown("room-cli did not report a start time".to_owned()),
         problems: vec![],
     }
 }
@@ -480,8 +481,9 @@ pub fn list_scripted(
 
 // The text contract.
 //
-// Text tests rely on these points only, and every value they check comes
-// from the JSON:
+// Provisional, set in ticket 1's correction round 1 (Sol S3, S4, S6, S7) so
+// the text proofs can be checked. Text tests rely on
+// these points only, and every value they check comes from the JSON:
 //
 // 1. Line 1 of `ls`, `ls -l` and `show` is the header. It contains
 //    `<source> <version>`, `snapshot <UTC time>` (RFC 3339, whole seconds,

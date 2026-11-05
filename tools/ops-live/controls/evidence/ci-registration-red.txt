@@ -1,0 +1,63 @@
+#2219 CI registration: red proof before registration
+
+$ python3 -I .github/actions/docs-only/test_plan.py Plans.test_ops_live_controls_is_in_full_and_affected_plans
+FF
+======================================================================
+FAIL: test_ops_live_controls_is_in_full_and_affected_plans (__main__.Plans.test_ops_live_controls_is_in_full_and_affected_plans) (mode='full')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/.github/actions/docs-only/test_plan.py", line 146, in test_ops_live_controls_is_in_full_and_affected_plans
+    self.assertEqual(record['lanes']['site']['tests'].count('release:ops-live-controls'), 1)
+AssertionError: 0 != 1
+
+======================================================================
+FAIL: test_ops_live_controls_is_in_full_and_affected_plans (__main__.Plans.test_ops_live_controls_is_in_full_and_affected_plans) (mode='selected')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/.github/actions/docs-only/test_plan.py", line 146, in test_ops_live_controls_is_in_full_and_affected_plans
+    self.assertEqual(record['lanes']['site']['tests'].count('release:ops-live-controls'), 1)
+AssertionError: 0 != 1
+
+----------------------------------------------------------------------
+Ran 1 test in 0.145s
+
+FAILED (failures=2)
+exit: 1
+
+$ python3 -I .github/actions/docs-only/test_execution.py Execution.test_ops_live_controls_runs_the_exact_proof_and_propagates_failure
+FF
+======================================================================
+FAIL: test_ops_live_controls_runs_the_exact_proof_and_propagates_failure (__main__.Execution.test_ops_live_controls_runs_the_exact_proof_and_propagates_failure) (fail=False)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/.github/actions/docs-only/test_execution.py", line 199, in test_ops_live_controls_runs_the_exact_proof_and_propagates_failure
+    self.assertEqual(calls,[command])
+AssertionError: Lists differ: [] != ['python3 -I tools/ops-live/controls/test_kit.py']
+
+Second list contains 1 additional elements.
+First extra element 0:
+'python3 -I tools/ops-live/controls/test_kit.py'
+
+- []
++ ['python3 -I tools/ops-live/controls/test_kit.py']
+
+======================================================================
+FAIL: test_ops_live_controls_runs_the_exact_proof_and_propagates_failure (__main__.Execution.test_ops_live_controls_runs_the_exact_proof_and_propagates_failure) (fail=True)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/.github/actions/docs-only/test_execution.py", line 199, in test_ops_live_controls_runs_the_exact_proof_and_propagates_failure
+    self.assertEqual(calls,[command])
+AssertionError: Lists differ: [] != ['python3 -I tools/ops-live/controls/test_kit.py']
+
+Second list contains 1 additional elements.
+First extra element 0:
+'python3 -I tools/ops-live/controls/test_kit.py'
+
+- []
++ ['python3 -I tools/ops-live/controls/test_kit.py']
+
+----------------------------------------------------------------------
+Ran 1 test in 0.140s
+
+FAILED (failures=2)
+exit: 1

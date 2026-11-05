@@ -1,0 +1,70 @@
+# #694 red run: the new test.sh cases, one at a time (TEST_ONLY), against fleet.sh and SKILL.md at a3f8a7fca2a8d7b0fbb7b15abd101482ab4545d0 (before the fix).
+# The two guards that already held (within the timeout; label off) and 'both starts are due' pass, as they should.
+FAIL scope blocker: a builder waiting on its question raises one look, keyed: unexpected output:
+    --- /tmp/tmp.yXFnemNtdm/case-1/want.txt	2026-11-06 08:46:55.128503040 +0000
+    +++ /tmp/tmp.yXFnemNtdm/case-1/out	2026-11-06 08:46:55.112503429 +0000
+    @@ -1 +1 @@
+    -look #13: blocked on scope 1301/1302: thread thr_syn13 has no branch
+    +check start #13: thread thr_syn13, no branch 30 minutes after the start
+ok   every gh call was one of fleet.sh's reads
+FAIL scope blocker: a wake on its own record prints nothing: unexpected output:
+    --- /tmp/tmp.U6BVAesFjo/case-1/want.txt	2026-11-06 08:47:12.196096212 +0000
+    +++ /tmp/tmp.U6BVAesFjo/case-1/out	2026-11-06 08:47:12.185096480 +0000
+    @@ -0,0 +1 @@
+    +check start #13: thread thr_syn13, no branch 30 minutes after the start
+ok   every gh call was one of fleet.sh's reads
+ok   scope blocker: within the 30-minute timeout, nothing yet
+ok   every gh call was one of fleet.sh's reads
+FAIL scope blocker: a new builder is a changed input: unexpected output:
+    --- /tmp/tmp.tJDNqM0273/case-1/want.txt	2026-11-06 08:47:49.689182815 +0000
+    +++ /tmp/tmp.tJDNqM0273/case-1/out	2026-11-06 08:47:49.672183229 +0000
+    @@ -1 +1 @@
+    -look #13: blocked on scope 1306/1302: thread thr_syn13b has no branch
+    +check start #13: thread thr_syn13b, no branch 30 minutes after the start
+ok   every gh call was one of fleet.sh's reads
+ok   scope blocker: the needs-info label off, the start is checked again
+ok   every gh call was one of fleet.sh's reads
+ok   one probe per batch: both starts are due
+ok   every gh call was one of fleet.sh's reads
+FAIL one probe per batch: the start not tried waits with the refused probe: unexpected output:
+    --- /tmp/tmp.MoMM8FjsbP/case-1/want.txt	2026-11-06 08:48:46.815798383 +0000
+    +++ /tmp/tmp.MoMM8FjsbP/case-1/out	2026-11-06 08:48:46.799214761 +0000
+    @@ -0,0 +1 @@
+    +start #70: Fix the broken link in the widget docs (approved on its own)
+ok   every gh call was one of fleet.sh's reads
+FAIL one probe per batch: 10 minutes on, the batch retries together: unexpected output:
+    --- /tmp/tmp.7ANGyUoTAf/case-1/want.txt	2026-11-06 08:49:06.289322930 +0000
+    +++ /tmp/tmp.7ANGyUoTAf/case-1/out	2026-11-06 08:49:06.273323320 +0000
+    @@ -1,2 +1,2 @@
+     start #13: W3: widget page (spec #10; retry after "start refused: model catalog unavailable")
+    -start #70: Fix the broken link in the widget docs (approved on its own; retry after "start not tried: #13 was refused: model catalog unavailable")
+    +start #70: Fix the broken link in the widget docs (approved on its own)
+ok   every gh call was one of fleet.sh's reads
+FAIL one probe per batch: a claim on a start not tried withdraws within 10 minutes: unexpected output:
+    --- /tmp/tmp.crH6hYWgpd/case-1/want.txt	2026-11-06 08:49:22.731921890 +0000
+    +++ /tmp/tmp.crH6hYWgpd/case-1/out	2026-11-06 08:49:22.721922134 +0000
+    @@ -1 +1 @@
+    -withdraw #70: its start was refused less than 10 minutes ago
+    +go #70
+ok   every gh call was one of fleet.sh's reads
+FAIL one probe per batch: the frontier leaves out a start not tried: unexpected output:
+    --- /tmp/tmp.HXliPg5DPb/case-1/want.txt	2026-11-06 08:49:42.120792532 +0000
+    +++ /tmp/tmp.HXliPg5DPb/case-1/out	2026-11-06 08:49:42.106481206 +0000
+    @@ -1 +1,2 @@
+     #13 W3: widget page
+    +#70 Fix the broken link in the widget docs
+ok   every gh call was one of fleet.sh's reads
+FAIL scope blocker: once recorded, the check is quiet: unexpected output:
+    --- /tmp/tmp.A1ovCfTfmU/case-1/want.txt	2026-11-06 08:50:17.559581980 +0000
+    +++ /tmp/tmp.A1ovCfTfmU/case-1/out	2026-11-06 08:50:17.541582419 +0000
+    @@ -0,0 +1 @@
+    +check start #13: thread thr_syn13, no branch 30 minutes after the start
+FAIL skill: no superseded base-moved merge text: SKILL.md still has: A historical `launch-fleet: merge blocked <commit>: base moved, reopened for fresh CI`
+FAIL skill: M1 alone decides a move of main: SKILL.md lacks: A move of `main` alone is never a reason to close and reopen a pull request
+FAIL skill: the brief carries no merge rule: SKILL.md lacks: The brief is only the prompt above
+FAIL skill: a tick archives itself once its records are written: SKILL.md lacks: once every record and message is written, archive your own thread
+FAIL skill: a tick never stays open for the user: SKILL.md still has: **Finish:** `room-cli loop report --outcome acted` (or `needs-you`), with one `--action` per change. Then archive your own thread (`room-cli thread archive --self`), unless something you raised needs the user: then leave it open with a one-line verdict.
+FAIL skill: a re-check names its finding ids, both heads and what changed: SKILL.md lacks: Open findings: <the ids>. Changed since <old head>: `git diff <old head> <commit>`; the builder's answer: <its comment link>.
+FAIL skill: one probe per batch, by assignment: SKILL.md lacks: start that group's first claim alone, the probe
+FAIL skill: the start not tried record: SKILL.md lacks: `start not tried: <why>`
+FAIL skill: a scope blocker is raised once per key: SKILL.md lacks: `look #N: blocked on scope <key>: ...`

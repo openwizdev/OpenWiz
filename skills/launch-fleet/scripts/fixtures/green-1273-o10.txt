@@ -1,0 +1,14 @@
+O10 source: 7f8b75e65652c16ac37324ba90e5bf3398431b43
+ok   batch approval: the spec decision alone admits no follow-ups
+ok   batch approval: the documented records admit only the approved subset
+2 fleet batch cases, 0 failed
+ok   O10 F1: rendered approval quiet; pasted/missing/malformed shapes remain work
+ok   triage consumer: rendered approval
+ok   triage consumer: pasted approval
+ok   triage consumer: missing pointer
+ok   triage consumer: malformed pointer
+ok   triage consumer: file pointer
+ok   triage consumer: leading-zero pointer
+ok   triage consumer: missing marker
+ok   triage consumer: unrelated later marker
+2 fleet batch cases, 1 existing O10 shape table, 8 rendered-record cases passed

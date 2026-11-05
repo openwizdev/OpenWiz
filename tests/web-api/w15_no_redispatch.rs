@@ -1,4 +1,4 @@
-//! W15: the built `openwiz-server` dispatches nothing when it starts,
+//! W15 (#9): the built `openwiz-server` dispatches nothing when it starts,
 //! and a server killed during a send's call leaves that op id uncertain:
 //! a replay after the restart is recovered as uncertain, never sent again.
 //! And U9: the server and `openwiz send` share one send record, so an op id
@@ -31,7 +31,7 @@ impl Binary {
     fn start(fake: &SendFake) -> Self {
         let mut child = Command::new(http::server_binary())
             .args(["--port", "0", "--allowed-host", HOST])
-            .env("PATH", fake.path())
+            .env("OPENWIZ_FIXTURE_PROGRAM", fake.program())
             .env("OPENWIZ_STATE_DIR", &fake.state)
             .current_dir(&fake.dir)
             .stdin(Stdio::null())
@@ -80,7 +80,7 @@ impl Binary {
 
     /// Waits, up to 10 s, until stderr holds `n` lines starting with each
     /// `prefix`: a line is written after its response is sent, so a response
-    /// does not prove its line is there yet.
+    /// does not prove its line is there yet (Sol #91 re-check 2).
     fn wait_for_lines(&self, expected: &[(&str, usize)]) {
         let until = Instant::now() + Duration::from_secs(10);
         loop {

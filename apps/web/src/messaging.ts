@@ -69,7 +69,7 @@ export type Result =
   | { kind: 'conflicting_reuse'; differs: ('target' | 'mode' | 'text' | 'attachments')[] }
   | { kind: 'possible_duplicate_refused'; earlier: EarlierSend[] };
 
-
+/** One attachment of a send (B2, ClosedWiz#15): never its bytes. Read since #16 (B3). */
 export type PromptAttachment = { id: string; sha256: string; size_bytes: number; kind: 'image' | 'file'; name: string };
 
 export type Report = {
@@ -148,7 +148,7 @@ const deliveryCheck = oneOf(
   exact({
     kind: is('queued'),
     waiting_on: is('not_reported', 'time', 'thread_busy', 'turn_starting', 'provisioning', 'host_offline', 'interaction', 'plugin'),
-    queued_message_id: (v) => text(v) && (v as string).length <= 128,
+    queued_message_id: (v) => text(v) && [...(v as string)].length <= 128,
     text,
   }),
   exact({ kind: is('accepted'), joined_running_turn: fact(bool), text }),

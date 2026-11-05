@@ -21,6 +21,8 @@ use serde::Serialize;
 use crate::http::{API_HEADERS, Reply};
 use crate::new_thread::{self, Asked};
 use crate::{Attaching, Creating, Limits};
+use crate::{cockpit, decisions};
+use crate::{fleets, plan};
 
 pub(crate) const INVENTORY: &str = "/api/v1/inventory";
 pub(crate) const SESSIONS: &str = "/api/v1/sessions/";
@@ -43,7 +45,18 @@ pub(crate) const ATTACHMENT_ROUTE: &str = "/api/v1/attachments/{id}";
 /// the core as it is: nothing is decoded.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Route {
+    NotificationTarget(String),
+    Notification(crate::notifications::Read),
+    Setup,
+    LoopSwitch(String, bool),
+    Decisions,
+    /// `GET`: the cockpit's one read (#535).
+    Cockpit,
+    /// `GET`: the loops page's one read (#549).
+    Loops,
     Inventory,
+    Plan,
+    Fleets(Option<String>),
     Session(String),
     /// `GET`: what a send to the session would do.
     Preview(String),
@@ -52,24 +65,61 @@ pub(crate) enum Route {
     /// `POST`: the send.
     Send(String),
     Health,
-    /// `GET`: the Cloud options.
+    /// `GET`: the Cloud options (#12).
     CloudOptions,
-    /// `POST`: the create in a project.
+    /// `POST`: the create in a project (#12).
     Threads(String),
-    /// `POST`, never a write: what a create in a project would do.
+    /// `POST`, never a write: what a create in a project would do (#12).
     ThreadsPreview(String),
-    /// `GET`: the new-thread record of an op id.
+    /// `GET`: the new-thread record of an op id (#12).
     NewThreadStatus(String),
-    /// `GET`: the staged attachments; `POST`: one upload.
+    /// `GET`: the staged attachments; `POST`: one upload (#16).
     Attachments,
-    /// `DELETE`: the removal of one staged attachment.
+    /// `DELETE`: the removal of one staged attachment (#16).
     Attachment(String),
 }
 
 impl Route {
     pub fn of(path: &str) -> Option<Self> {
         match path {
+            _ if path.starts_with(crate::notification_target::PREFIX) => {
+                Some(Self::NotificationTarget(
+                    path[crate::notification_target::PREFIX.len()..].to_owned(),
+                ))
+            }
+            crate::notifications::STATUS => {
+                Some(Self::Notification(crate::notifications::Read::Status))
+            }
+            crate::notifications::PREFERENCES => {
+                Some(Self::Notification(crate::notifications::Read::Preferences))
+            }
+            crate::notifications::SUBSCRIPTION => {
+                Some(Self::Notification(crate::notifications::Read::Subscription))
+            }
+            crate::setup::ROUTE => Some(Self::Setup),
+            _ if path.starts_with("/api/v1/loops/") => {
+                match path["/api/v1/loops/".len()..]
+                    .split('/')
+                    .collect::<Vec<_>>()
+                    .as_slice()
+                {
+                    [target, action @ ("off" | "on")] if !target.is_empty() => {
+                        Some(Self::LoopSwitch((*target).to_owned(), *action == "on"))
+                    }
+                    _ => None,
+                }
+            }
+            decisions::ROUTE => Some(Self::Decisions),
+            cockpit::ROUTE => Some(Self::Cockpit),
+            crate::loop_switches::LIST_ROUTE => Some(Self::Loops),
             INVENTORY => Some(Self::Inventory),
+            plan::ROUTE => Some(Self::Plan),
+            fleets::LIST => Some(Self::Fleets(None)),
+            _ if path.starts_with("/api/v1/fleets/") => {
+                let spec = &path["/api/v1/fleets/".len()..];
+                (!spec.is_empty() && !spec.contains('/'))
+                    .then(|| Self::Fleets(Some(spec.to_owned())))
+            }
             HEALTH => Some(Self::Health),
             CLOUD_OPTIONS => Some(Self::CloudOptions),
             ATTACHMENTS_ROUTE => Some(Self::Attachments),
@@ -113,7 +163,18 @@ impl Route {
     /// The route's template, for the log.
     pub fn template(&self) -> &'static str {
         match self {
+            Self::NotificationTarget(_) => crate::notification_target::LOG_ROUTE,
+            Self::Notification(route) => route.path(),
+            Self::Setup => crate::setup::ROUTE,
+            Self::LoopSwitch(_, true) => crate::loop_switches::ON_ROUTE,
+            Self::LoopSwitch(_, false) => crate::loop_switches::OFF_ROUTE,
+            Self::Decisions => decisions::ROUTE,
+            Self::Cockpit => cockpit::ROUTE,
+            Self::Loops => crate::loop_switches::LIST_ROUTE,
             Self::Inventory => INVENTORY,
+            Self::Plan => plan::ROUTE,
+            Self::Fleets(None) => fleets::LIST,
+            Self::Fleets(Some(_)) => fleets::DETAIL,
             Self::Session(_) => SESSION_ROUTE,
             Self::Preview(_) => PREVIEW_ROUTE,
             Self::Lookup(..) => LOOKUP_ROUTE,
@@ -132,6 +193,13 @@ impl Route {
 /// One core run. Identical calls share a run.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub(crate) enum Call {
+    NotificationTarget(String),
+    NotificationRead(crate::notifications::Read),
+    Decisions,
+    /// The cockpit's one read (#535).
+    Cockpit,
+    Plan,
+    Fleets(fleets::Call),
     /// `ls` (`long == false`) or `ls -l`, with the CLI's options.
     List {
         long: bool,
@@ -143,12 +211,15 @@ pub(crate) enum Call {
     /// `show <id>`.
     Show(String),
     /// `send <id> --preview`, with `--steer` when `steer`.
-    Preview { id: String, steer: bool },
-    /// `models`.
+    Preview {
+        id: String,
+        steer: bool,
+    },
+    /// `models` (#12).
     CloudOptions,
-    /// `new --project-id <id> …` without `--yes`: the new-thread preview.
+    /// `new --project-id <id> …` without `--yes`: the new-thread preview (#12).
     NewThreadPreview(Box<Asked>),
-    /// `new --status <op_id>`.
+    /// `new --status <op_id>` (#12).
     NewThreadStatus(String),
 }
 
@@ -272,11 +343,17 @@ pub(crate) fn health(source: &dyn SessionSource) -> Reply {
 /// new-thread provider (when configured), and the clock.
 #[derive(Clone)]
 pub(crate) struct Core {
+    pub notifications: Option<crate::notifications::Context>,
+    pub decisions: Option<decisions::Decisions>,
     pub source: Arc<dyn SessionSource>,
     pub messenger: Option<Arc<dyn Messenger>>,
     pub creating: Option<Creating>,
     pub attaching: Option<Attaching>,
     pub clock: Arc<dyn Clock>,
+    pub fleets: Option<fleets::Fleets>,
+    pub plan: Option<plan::Plan>,
+    pub stock: Option<Arc<dyn crate::ready_stock::StockSource>>,
+    pub stock_history: Arc<crate::ready_stock::History>,
 }
 
 /// Runs `call` through the core exactly as the CLI does.
@@ -285,6 +362,35 @@ fn run(call: &Call, core: &Core) -> Reply {
     let messenger = core.messenger.as_deref();
     let creating = core.creating.as_ref();
     let body = match call {
+        Call::NotificationTarget(reference) => {
+            return crate::notification_target::run(core.decisions.as_ref(), reference, clock);
+        }
+        Call::NotificationRead(route) => {
+            return crate::notifications::read(core.notifications.as_ref(), *route, clock.now().0);
+        }
+        Call::Decisions => return decisions::run(core.decisions.as_ref(), messenger, clock),
+        Call::Cockpit => {
+            let configured = core.decisions.as_ref().map(|d| &d.target);
+            return cockpit::run(
+                source,
+                core.fleets.as_ref(),
+                core.stock.as_deref(),
+                &core.stock_history,
+                configured,
+                messenger,
+                clock,
+            );
+        }
+        Call::Plan => return plan::run(core.plan.as_ref(), clock),
+        Call::Fleets(call) => {
+            return fleets::run(
+                core.fleets.as_ref(),
+                messenger,
+                clock,
+                call,
+                core.decisions.as_ref().map(|d| &d.target),
+            );
+        }
         Call::CloudOptions | Call::NewThreadPreview(_) | Call::NewThreadStatus(_) => {
             let Some(creating) = creating else {
                 return error(404, "no_route", "no such route");
@@ -349,7 +455,7 @@ fn envelope<T: Serialize>(envelope: &Envelope<T>) -> Option<String> {
 
 /// The status, kind and message for an operation error: the CLI's message,
 /// under the status for the CLI's exit code (1 → 502, 2 → 400, 3 → 404).
-/// The version is never an error.
+/// The version is never an error (#37).
 fn failure(source: &dyn SessionSource, error_: &OpError) -> Reply {
     match error_ {
         OpError::ListFailed(e) => error(

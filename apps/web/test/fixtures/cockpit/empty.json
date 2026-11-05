@@ -1,0 +1,86 @@
+{
+ "schema": "openwiz.cockpit.v1",
+ "snapshot_at": 1800000000000,
+ "projects": {
+  "coverage": {
+   "state": "complete",
+   "gaps": []
+  },
+  "freshness": {
+   "state": "fresh",
+   "snapshot_at": {
+    "known": 1800000000000
+   }
+  },
+  "items": [
+   {
+    "id": "prj_syn_atl1",
+    "name": {
+     "known": "Atlas"
+    },
+    "orchestrator": {
+     "coverage": {
+      "state": "complete",
+      "gaps": []
+     },
+     "freshness": {
+      "state": "fresh",
+      "snapshot_at": {
+       "known": 1800000000000
+      }
+     },
+     "target": {
+      "known": "thr_syn_0001"
+     }
+    }
+   },
+   {
+    "id": "prj_syn_lan2",
+    "name": {
+     "known": "Lantern"
+    },
+    "orchestrator": {
+     "coverage": {
+      "state": "complete",
+      "gaps": []
+     },
+     "freshness": {
+      "state": "fresh",
+      "snapshot_at": {
+       "known": 1800000000000
+      }
+     },
+     "target": {
+      "known": "thr_syn_0002"
+     }
+    }
+   }
+  ]
+ },
+ "needs_you": {
+  "coverage": {
+   "state": "complete",
+   "gaps": []
+  },
+  "freshness": {
+   "state": "fresh",
+   "snapshot_at": {
+    "known": 1800000000000
+   }
+  },
+  "items": []
+ },
+ "agents": {
+  "coverage": {
+   "state": "complete",
+   "gaps": []
+  },
+  "freshness": {
+   "state": "fresh",
+   "snapshot_at": {
+    "known": 1800000000000
+   }
+  },
+  "items": []
+ }
+}

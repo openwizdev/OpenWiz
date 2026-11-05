@@ -1,4 +1,4 @@
-// AW9: reloads and reconnects. Reloading mid-upload, losing the network
+// AW9 (#16): reloads and reconnects. Reloading mid-upload, losing the network
 // and signing out each keep the draft and dispatch nothing; nothing retries by
 // itself; a ready attachment comes back after a reload, without a preview.
 // AW10: drag and drop onto the prompt body adds files, a folder is refused
@@ -9,7 +9,7 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 
-import { launchBrowser, PHONE, settleReal, waitFor } from '../support/browser.mjs';
+import { launchBrowser, pageIdle, PHONE, settleReal, waitFor } from '../support/browser.mjs';
 import { composerSite, openThread, posts, readComposer, select, type } from '../support/composer.mjs';
 import { DROP, HANG, json } from '../support/fake-api.mjs';
 import { axe } from '../support/harness.mjs';
@@ -34,17 +34,20 @@ test('AW9: a reload mid-upload keeps the draft, dispatches nothing, and says the
     }
     return HANG;
   });
-  const p = await openThread(browser, fx, 1);
+  const p = await openThread(browser, fx, 1, { stampReads: true });
   try {
     await type(p.page, 'Synthetic draft kept');
     await addFiles(p.page, COMPOSER, [{ name: 'a.png', buffer: png(), mimeType: 'image/png' }]);
     await trayIs(p.page, COMPOSER, 1, 'ready');
     await addFiles(p.page, COMPOSER, [{ name: 'b.txt', buffer: text() }]);
     await waitFor(async () => (await readTray(p.page, COMPOSER)).rows[1]?.state === 'uploading', { what: 'uploading' });
+    // "uploading" is visible before the body arrives. Count only once both bodies reached the API.
+    await waitFor(() => fx.api.uploads.length === 2, { what: 'the second upload at the API' });
     const uploads = fx.api.uploads.length;
     await p.page.reload();
     await waitFor(async () => (await p.page.locator('main [data-session-id]').count()) > 0, { what: 'rows after the reload' });
     await select(p.page, 1);
+    await waitFor(() => pageIdle(p.page), { what: 'the page read the restored attachment list' });
     const t = await waitFor(async () => {
       const t = await readTray(p.page, COMPOSER);
       return t?.rows.length === 2 && t.rows[1].state === 'gone' ? t : null;
@@ -63,6 +66,11 @@ test('AW9: a reload mid-upload keeps the draft, dispatches nothing, and says the
     assert.equal((await readComposer(p.page)).off, 'can’t send: 1 attachment not ready');
     await settleReal(500);
     assert.equal(fx.api.uploads.length, uploads, 'a reload never uploads again');
+    assert.deepEqual(
+      fx.api.log.filter((e) => e.kind === 'attachments' && e.method === 'POST').map((e) => e.name),
+      ['a.png', 'b.txt'],
+      'exactly the two original upload requests, including unfinished bodies',
+    );
     assert.equal(posts(fx).length, 0, 'and never sends');
     assert.deepEqual(fx.api.log.filter((e) => e.kind === 'attachments' && e.method === 'GET').length, 1, 'one read of the list, to check the ready one');
   } finally {
@@ -168,8 +176,9 @@ test('AW11: keyboard, names for each state, 44-point targets, no axe violation, 
   let n = 0;
   fx.api.setUpload((name, bytes) => {
     n++;
-    if (n === 2) return HANG;
-    if (n === 3) return json(200, { schema: 'openwiz.attachment-add.v1', ready: [], failed: [{ index: 0, path: name, readiness: { state: 'failed', reason: 'file_too_large' }, message: 'it is over 25 MiB, CloudRoom’s limit per file' }], not_staged: [], expired: [] });
+    // By name, not by arrival: two uploads run at once, in either order (#431).
+    if (name === 'uploading.txt') return HANG;
+    if (name === 'failed.txt') return json(200, { schema: 'openwiz.attachment-add.v1', ready: [], failed: [{ index: 0, path: name, readiness: { state: 'failed', reason: 'file_too_large' }, message: 'it is over 25 MiB, CloudRoom’s limit per file' }], not_staged: [], expired: [] });
     const r = { id: `att-${String(n).padStart(32, '0')}`, sha256: '0'.repeat(64), size_bytes: bytes.length, kind: 'file', name, display_name: name };
     fx.api.staged.set(r.id, r);
     return json(200, { schema: 'openwiz.attachment-add.v1', ready: [{ index: 0, path: name, staged: { attachment: r, readiness: { state: 'ready' }, ready_at: 1, age_ms: 0, expires_at: 2 } }], failed: [], not_staged: [], expired: [] });
@@ -191,9 +200,9 @@ test('AW11: keyboard, names for each state, 44-point targets, no axe violation, 
       assert.deepEqual(
         t.rows.map((r) => [r.word, r.glyph]),
         [
-          ['ready on your controller', '[✓]'],
-          ['uploading to your controller', '[~]'],
-          ['failed', '[x]'],
+          ['ready on your controller', ''],
+          ['uploading to your controller', ''],
+          ['failed', ''],
         ],
       );
       assert.deepEqual(t.rows.map((r) => r.remove), ['Remove ready.txt', 'Remove uploading.txt', 'Remove failed.txt']);
@@ -206,8 +215,9 @@ test('AW11: keyboard, names for each state, 44-point targets, no axe violation, 
         [...document.querySelectorAll(`${scope} [data-part=attachment-state]`)].map((m) => {
           const s = getComputedStyle(m);
           const b = getComputedStyle(m, '::before');
-          return [s.fontWeight, s.fontStyle, s.backgroundColor !== 'rgba(0, 0, 0, 0)', b.boxShadow, b.borderStyle].join('|');
+          return m.querySelector('.glyph svg').innerHTML;
         }), COMPOSER);
+      assert.equal(await p.page.locator(`${COMPOSER} [data-part=attachment-state] .glyph svg`).count(), 3, 'each attachment state has an inline SVG');
       assert.equal(new Set(shapes).size, 3, `three different shapes: ${shapes.join(' / ')}`);
       // Keyboard: Add files, then each row's Retry and Remove, in order.
       await p.page.locator(`${COMPOSER} textarea`).focus();

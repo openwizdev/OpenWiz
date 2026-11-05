@@ -1,0 +1,15 @@
+# Red run, #2841: merged_cost divisor swapped in a scratch worktree only
+# Mutation (scratch copy of tools/ci-bench/bench.py, never committed):
+#   total / point["merged_prs"]  ->  total / point["code_runs"]["runs"]
+# Command: python3 -I -m unittest discover -s tools/ci-bench -p 'test*.py'
+
+## Old fixture (2 merged PRs, 2 code runs), mutant code: the bug goes unnoticed
+Ran 113 tests in 54.859s
+OK
+
+## New fixture (day 2: 3 merged PRs, 2 code runs), mutant code: red
+FAIL: test_cost_headlines_and_daily_deltas (test_dashboard.Dashboard.test_cost_headlines_and_daily_deltas)
+AssertionError: '| 2030-01-02 PST | 1.50 | 200.00 | $0.0103 | $0.0132 |' not found
+(mutant README row: | 2030-01-02 PST | 1.50 | 200.00 | $0.0154 | $0.0132 |; day-over-day +$0.0077)
+Ran 113 tests in 54.469s
+FAILED (failures=1)

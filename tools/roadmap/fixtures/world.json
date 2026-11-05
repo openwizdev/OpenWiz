@@ -1,0 +1,83 @@
+{
+  "_about": "A synthetic GitHub for test.py: what the fake gh prints for each read roadmap.py makes. Every name, number and link is made up.",
+  "milestones": [
+    {
+      "number": 1,
+      "title": "0.0.1",
+      "description": "First steps, published.\nYou can list your threads in the terminal.\nDone when the owner lists their threads on a real machine (#11).\nGrill: docs/grills/2026-01-01-first-steps.md.",
+      "html_url": "https://github.com/example-owner/example-repo/milestone/1"
+    },
+    {
+      "number": 2,
+      "title": "Infra",
+      "description": "Work that isn't a product feature. You can ignore this lane.\nDone when never.",
+      "html_url": "https://github.com/example-owner/example-repo/milestone/2"
+    },
+    {
+      "number": 7,
+      "title": "0.0.10",
+      "description": "Being grilled: its spec has no tickets yet (grill: docs/grills/2026-01-07-ten.md)\nYou can keep a fleet running with the lid shut.\nDone when the lid stays shut for a whole day.",
+      "html_url": "https://github.com/example-owner/example-repo/milestone/7"
+    },
+    {
+      "number": 3,
+      "title": "0.0.2",
+      "description": "  You can see the same list on your phone.  \r\n  Done when the list opens on a real phone (#21).",
+      "html_url": "https://github.com/example-owner/example-repo/milestone/3"
+    },
+    {
+      "number": 4,
+      "title": "0.0.3",
+      "description": "You can send a message to a thread.\nDone when one message reaches one real thread (#31), and no other.",
+      "html_url": "https://github.com/example-owner/example-repo/milestone/4"
+    },
+    {
+      "number": 5,
+      "title": "0.0.X",
+      "description": "Polish, whenever it fits.\nYou can enjoy polish.\nDone when polished.",
+      "html_url": "https://github.com/example-owner/example-repo/milestone/5"
+    },
+    {
+      "number": 6,
+      "title": "0.0.4",
+      "description": "You can start new threads | and attach files.\nDone when one new thread starts on a real account (#43).",
+      "html_url": "https://github.com/example-owner/example-repo/milestone/6"
+    }
+  ],
+  "heads": [
+    "refs/heads/release-0.0.1",
+    "refs/heads/release-0.0.2",
+    "refs/heads/release-0.0.3",
+    "refs/heads/release-0.0.4-no-send"
+  ],
+  "public_tags": [
+    "refs/tags/v0.0.1",
+    "refs/tags/v0.0.20"
+  ],
+  "issues": {
+    "1": [
+      {"number": 10, "state": "closed", "state_reason": "completed", "sub_issues": 1, "html_url": "https://github.com/example-owner/example-repo/issues/10"},
+      {"number": 11, "state": "closed", "state_reason": "completed", "sub_issues": 0, "html_url": "https://github.com/example-owner/example-repo/issues/11"}
+    ],
+    "2": [
+      {"number": 50, "state": "open", "state_reason": null, "sub_issues": 3, "html_url": "https://github.com/example-owner/example-repo/issues/50"}
+    ],
+    "3": [
+      {"number": 20, "state": "closed", "state_reason": "completed", "sub_issues": 1, "html_url": "https://github.com/example-owner/example-repo/issues/20"},
+      {"number": 21, "state": "closed", "state_reason": "completed", "sub_issues": 0, "html_url": "https://github.com/example-owner/example-repo/issues/21"}
+    ],
+    "4": [
+      {"number": 30, "state": "open", "state_reason": null, "sub_issues": 1, "html_url": "https://github.com/example-owner/example-repo/issues/30"},
+      {"number": 31, "state": "open", "state_reason": null, "sub_issues": 0, "html_url": "https://github.com/example-owner/example-repo/issues/31"}
+    ],
+    "6": [
+      {"number": 42, "state": "closed", "state_reason": "completed", "sub_issues": 0, "html_url": "https://github.com/example-owner/example-repo/issues/42"},
+      {"number": 40, "state": "open", "state_reason": null, "sub_issues": 2, "html_url": "https://github.com/example-owner/example-repo/issues/40"},
+      {"number": 41, "state": "open", "state_reason": null, "sub_issues": 0, "html_url": "https://github.com/example-owner/example-repo/issues/41"},
+      {"number": 43, "state": "open", "state_reason": null, "sub_issues": 0, "html_url": "https://github.com/example-owner/example-repo/issues/43"}
+    ],
+    "7": [
+      {"number": 70, "state": "open", "state_reason": null, "sub_issues": 0, "html_url": "https://github.com/example-owner/example-repo/issues/70"}
+    ]
+  }
+}

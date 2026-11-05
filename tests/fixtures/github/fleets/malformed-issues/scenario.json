@@ -1,0 +1,23 @@
+{
+  "scenario": "malformed-issues",
+  "description": "As complete, but gh issue list answers an object with one key given twice.",
+  "synthetic_assumptions": [
+    "Every value is synthetic; the shapes are gh 2.100.0's as A1's spike observed them (A1, #109)."
+  ],
+  "extends": "complete",
+  "responses": [
+    {
+      "argv": [
+        "issue",
+        "list",
+        "--state",
+        "all",
+        "--limit",
+        "1000",
+        "--json",
+        "blockedBy,body,id,labels,milestone,number,state,subIssues,title"
+      ],
+      "stdout": "[{\"number\": 901, \"number\": 901}]"
+    }
+  ]
+}

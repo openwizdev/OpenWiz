@@ -1,0 +1,198 @@
+Command: python3 -I tools/war-room/test_rework.py Rework.test_r1_repeated_excluded_ci_attempts_keep_partial_provider
+EEEEEE
+======================================================================
+ERROR: test_r1_repeated_excluded_ci_attempts_keep_partial_provider (__main__.Rework.test_r1_repeated_excluded_ci_attempts_keep_partial_provider) (eligible_reruns=0, exclusion='post-merge')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/synthetic/repo/tools/war-room/rework.py", line 40, in project
+    return _project(wire, source_path, cohort, merged_prs, since, until, observed_at)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/synthetic/repo/tools/war-room/rework.py", line 140, in _project
+    S.compose(sample, [provider], assembled_at=observed_at)
+  File "/synthetic/repo/tools/war-room/suite.py", line 226, in compose
+    _shape(provider, SCHEMA['$defs']['provider'])
+  File "/synthetic/repo/tools/war-room/suite.py", line 82, in _shape
+    _shape(item, rule['properties'][key])
+  File "/synthetic/repo/tools/war-room/suite.py", line 87, in _shape
+    require(len({json.dumps(v, sort_keys=True) for v in value}) == len(value), 'duplicate array entry')
+  File "/synthetic/repo/tools/war-room/suite.py", line 18, in require
+    raise ValueError(reason)
+ValueError: duplicate array entry
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/synthetic/repo/tools/war-room/test_rework.py", line 95, in test_r1_repeated_excluded_ci_attempts_keep_partial_provider
+    provider = self.project(json.dumps(doc).encode(), merged_prs=[4201])
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/synthetic/repo/tools/war-room/test_rework.py", line 37, in project
+    return R.project(wire, **args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/synthetic/repo/tools/war-room/rework.py", line 43, in project
+    raise ValueError('invalid rework input') from error
+ValueError: invalid rework input
+
+======================================================================
+ERROR: test_r1_repeated_excluded_ci_attempts_keep_partial_provider (__main__.Rework.test_r1_repeated_excluded_ci_attempts_keep_partial_provider) (eligible_reruns=0, exclusion='edited')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/synthetic/repo/tools/war-room/rework.py", line 40, in project
+    return _project(wire, source_path, cohort, merged_prs, since, until, observed_at)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/synthetic/repo/tools/war-room/rework.py", line 140, in _project
+    S.compose(sample, [provider], assembled_at=observed_at)
+  File "/synthetic/repo/tools/war-room/suite.py", line 226, in compose
+    _shape(provider, SCHEMA['$defs']['provider'])
+  File "/synthetic/repo/tools/war-room/suite.py", line 82, in _shape
+    _shape(item, rule['properties'][key])
+  File "/synthetic/repo/tools/war-room/suite.py", line 87, in _shape
+    require(len({json.dumps(v, sort_keys=True) for v in value}) == len(value), 'duplicate array entry')
+  File "/synthetic/repo/tools/war-room/suite.py", line 18, in require
+    raise ValueError(reason)
+ValueError: duplicate array entry
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/synthetic/repo/tools/war-room/test_rework.py", line 95, in test_r1_repeated_excluded_ci_attempts_keep_partial_provider
+    provider = self.project(json.dumps(doc).encode(), merged_prs=[4201])
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/synthetic/repo/tools/war-room/test_rework.py", line 37, in project
+    return R.project(wire, **args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/synthetic/repo/tools/war-room/rework.py", line 43, in project
+    raise ValueError('invalid rework input') from error
+ValueError: invalid rework input
+
+======================================================================
+ERROR: test_r1_repeated_excluded_ci_attempts_keep_partial_provider (__main__.Rework.test_r1_repeated_excluded_ci_attempts_keep_partial_provider) (eligible_reruns=0, exclusion='mixed')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/synthetic/repo/tools/war-room/rework.py", line 40, in project
+    return _project(wire, source_path, cohort, merged_prs, since, until, observed_at)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/synthetic/repo/tools/war-room/rework.py", line 140, in _project
+    S.compose(sample, [provider], assembled_at=observed_at)
+  File "/synthetic/repo/tools/war-room/suite.py", line 226, in compose
+    _shape(provider, SCHEMA['$defs']['provider'])
+  File "/synthetic/repo/tools/war-room/suite.py", line 82, in _shape
+    _shape(item, rule['properties'][key])
+  File "/synthetic/repo/tools/war-room/suite.py", line 87, in _shape
+    require(len({json.dumps(v, sort_keys=True) for v in value}) == len(value), 'duplicate array entry')
+  File "/synthetic/repo/tools/war-room/suite.py", line 18, in require
+    raise ValueError(reason)
+ValueError: duplicate array entry
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/synthetic/repo/tools/war-room/test_rework.py", line 95, in test_r1_repeated_excluded_ci_attempts_keep_partial_provider
+    provider = self.project(json.dumps(doc).encode(), merged_prs=[4201])
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/synthetic/repo/tools/war-room/test_rework.py", line 37, in project
+    return R.project(wire, **args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/synthetic/repo/tools/war-room/rework.py", line 43, in project
+    raise ValueError('invalid rework input') from error
+ValueError: invalid rework input
+
+======================================================================
+ERROR: test_r1_repeated_excluded_ci_attempts_keep_partial_provider (__main__.Rework.test_r1_repeated_excluded_ci_attempts_keep_partial_provider) (eligible_reruns=1, exclusion='post-merge')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/synthetic/repo/tools/war-room/rework.py", line 40, in project
+    return _project(wire, source_path, cohort, merged_prs, since, until, observed_at)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/synthetic/repo/tools/war-room/rework.py", line 140, in _project
+    S.compose(sample, [provider], assembled_at=observed_at)
+  File "/synthetic/repo/tools/war-room/suite.py", line 226, in compose
+    _shape(provider, SCHEMA['$defs']['provider'])
+  File "/synthetic/repo/tools/war-room/suite.py", line 82, in _shape
+    _shape(item, rule['properties'][key])
+  File "/synthetic/repo/tools/war-room/suite.py", line 87, in _shape
+    require(len({json.dumps(v, sort_keys=True) for v in value}) == len(value), 'duplicate array entry')
+  File "/synthetic/repo/tools/war-room/suite.py", line 18, in require
+    raise ValueError(reason)
+ValueError: duplicate array entry
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/synthetic/repo/tools/war-room/test_rework.py", line 95, in test_r1_repeated_excluded_ci_attempts_keep_partial_provider
+    provider = self.project(json.dumps(doc).encode(), merged_prs=[4201])
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/synthetic/repo/tools/war-room/test_rework.py", line 37, in project
+    return R.project(wire, **args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/synthetic/repo/tools/war-room/rework.py", line 43, in project
+    raise ValueError('invalid rework input') from error
+ValueError: invalid rework input
+
+======================================================================
+ERROR: test_r1_repeated_excluded_ci_attempts_keep_partial_provider (__main__.Rework.test_r1_repeated_excluded_ci_attempts_keep_partial_provider) (eligible_reruns=1, exclusion='edited')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/synthetic/repo/tools/war-room/rework.py", line 40, in project
+    return _project(wire, source_path, cohort, merged_prs, since, until, observed_at)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/synthetic/repo/tools/war-room/rework.py", line 140, in _project
+    S.compose(sample, [provider], assembled_at=observed_at)
+  File "/synthetic/repo/tools/war-room/suite.py", line 226, in compose
+    _shape(provider, SCHEMA['$defs']['provider'])
+  File "/synthetic/repo/tools/war-room/suite.py", line 82, in _shape
+    _shape(item, rule['properties'][key])
+  File "/synthetic/repo/tools/war-room/suite.py", line 87, in _shape
+    require(len({json.dumps(v, sort_keys=True) for v in value}) == len(value), 'duplicate array entry')
+  File "/synthetic/repo/tools/war-room/suite.py", line 18, in require
+    raise ValueError(reason)
+ValueError: duplicate array entry
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/synthetic/repo/tools/war-room/test_rework.py", line 95, in test_r1_repeated_excluded_ci_attempts_keep_partial_provider
+    provider = self.project(json.dumps(doc).encode(), merged_prs=[4201])
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/synthetic/repo/tools/war-room/test_rework.py", line 37, in project
+    return R.project(wire, **args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/synthetic/repo/tools/war-room/rework.py", line 43, in project
+    raise ValueError('invalid rework input') from error
+ValueError: invalid rework input
+
+======================================================================
+ERROR: test_r1_repeated_excluded_ci_attempts_keep_partial_provider (__main__.Rework.test_r1_repeated_excluded_ci_attempts_keep_partial_provider) (eligible_reruns=1, exclusion='mixed')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/synthetic/repo/tools/war-room/rework.py", line 40, in project
+    return _project(wire, source_path, cohort, merged_prs, since, until, observed_at)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/synthetic/repo/tools/war-room/rework.py", line 140, in _project
+    S.compose(sample, [provider], assembled_at=observed_at)
+  File "/synthetic/repo/tools/war-room/suite.py", line 226, in compose
+    _shape(provider, SCHEMA['$defs']['provider'])
+  File "/synthetic/repo/tools/war-room/suite.py", line 82, in _shape
+    _shape(item, rule['properties'][key])
+  File "/synthetic/repo/tools/war-room/suite.py", line 87, in _shape
+    require(len({json.dumps(v, sort_keys=True) for v in value}) == len(value), 'duplicate array entry')
+  File "/synthetic/repo/tools/war-room/suite.py", line 18, in require
+    raise ValueError(reason)
+ValueError: duplicate array entry
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/synthetic/repo/tools/war-room/test_rework.py", line 95, in test_r1_repeated_excluded_ci_attempts_keep_partial_provider
+    provider = self.project(json.dumps(doc).encode(), merged_prs=[4201])
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/synthetic/repo/tools/war-room/test_rework.py", line 37, in project
+    return R.project(wire, **args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/synthetic/repo/tools/war-room/rework.py", line 43, in project
+    raise ValueError('invalid rework input') from error
+ValueError: invalid rework input
+
+----------------------------------------------------------------------
+Ran 1 test in 0.012s
+
+FAILED (errors=6)

@@ -1,0 +1,24 @@
+{
+  "synthetic_assumptions": [
+    "Every identity, link, timestamp, cohort, source shape and completeness assertion is synthetic.",
+    "These are in-memory projection facts, not native decisions, fleet or TL2 fields or a persisted response format.",
+    "The synthetic source independently links a substantive disposition to the first request; no available native producer capability is claimed."
+  ],
+  "projection": {
+    "sample_at": "2030-01-02T12:00:00Z",
+    "observed_at": "2030-01-02T12:00:00Z",
+    "window": {"since": "2030-01-02T11:00:00Z", "until": "2030-01-02T12:00:00Z", "timezone": "UTC"},
+    "cohort": "synthetic-requests-utc-hour",
+    "expected": 3,
+    "history": "unknown",
+    "requests": [
+      {"id": "q-4001", "at": "2030-01-02T11:00:00Z", "reference": "https://github.com/synthetic-owner/work/issues/4001#issuecomment-9001", "completeness": "complete", "ticket": 4001},
+      {"id": "q-4002", "at": "2030-01-02T11:15:00Z", "reference": "https://github.com/synthetic-owner/work/issues/4002#issuecomment-9002", "completeness": "complete", "ticket": 4002},
+      {"id": "q-4003", "at": null, "reference": null, "completeness": "unknown", "ticket": 4003}
+    ],
+    "dispositions": [
+      {"request": "https://github.com/synthetic-owner/work/issues/4001#issuecomment-9001", "kind": "substantive_disposition", "at": "2030-01-02T11:07:00Z", "reference": "https://github.com/synthetic-owner/work/issues/4001#issuecomment-9011", "completeness": "complete"},
+      {"request": "https://github.com/synthetic-owner/work/issues/4002#issuecomment-9002", "kind": "notification_accepted", "at": "2030-01-02T11:16:00Z", "reference": "https://github.com/synthetic-owner/work/issues/4002#issuecomment-9012", "completeness": "complete"}
+    ]
+  }
+}

@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+"""A fake `gh` for the escape finder's tests: a synthetic GitHub.
+
+FAKE_GH_WORLD names a JSON file mapping each exact call (its arguments,
+joined by single spaces) to one answer:
+  {"stdout": <text>, "exit": <status>}  the text, as GitHub would send it;
+  {"zip": {<member>: <file>}}            a zip archive (an artifact's
+                                         download), each member the bytes of
+                                         <file>, relative to FAKE_GH_ROOT.
+Every call is appended to FAKE_GH_LOG, one line each. A call that writes
+(`api -X POST ...`) also appends what it read on stdin to FAKE_GH_POSTS, one
+JSON line each, and answers {"number": <n>}, from 1001 up. A call the world
+doesn't know exits 3: the finder made a call nobody expected.
+"""
+import io
+import json
+import os
+import sys
+import zipfile
+
+call = " ".join(sys.argv[1:])
+with open(os.environ["FAKE_GH_LOG"], "a") as log:
+    log.write(call + "\n")
+with open(os.environ["FAKE_GH_WORLD"]) as f:
+    world = json.load(f)
+if call not in world:
+    sys.stderr.write("fake gh: unknown call: " + call + "\n")
+    sys.exit(3)
+answer = world[call]
+if answer.get("post"):
+    body = json.loads(sys.stdin.read())
+    posts = os.environ["FAKE_GH_POSTS"]
+    with open(posts, "a") as f:
+        f.write(json.dumps(body, sort_keys=True) + "\n")
+    with open(posts) as f:
+        n = sum(1 for _ in f)
+    sys.stdout.write(json.dumps({"number": 1000 + n}))
+    sys.exit(0)
+if "zip" in answer:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        for member, source in answer["zip"].items():
+            with open(os.path.join(os.environ["FAKE_GH_ROOT"], source), "rb") as f:
+                z.writestr(member, f.read())
+    sys.stdout.buffer.write(buf.getvalue())
+    sys.exit(0)
+sys.stdout.write(answer["stdout"])
+sys.exit(answer["exit"])

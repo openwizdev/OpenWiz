@@ -1,0 +1,8 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.81s
+     Running ../../tests/service/t5_health.rs (target/debug/deps/t5_health-a7111fdc56b789fa)
+
+running 1 test
+test placing_the_fake_room_cli_leaves_no_writer_a_concurrent_fork_could_inherit ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 57 filtered out; finished in 0.02s
+

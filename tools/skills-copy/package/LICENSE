@@ -1,0 +1,7 @@
+# Licence notices
+
+This file collects, once each, the upstream licence notices that WizSkills'
+skills carry. Each notice stays in the `SKILL.md` of every skill that adapts
+that work, beside the line naming the source it adapts. A skill that adapts no
+upstream work carries a source line saying so instead. This file adds no other
+terms.

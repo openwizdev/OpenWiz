@@ -1,0 +1,23 @@
+R2 pagination red at d8af663cafc6586c17e9b19999e9369e8ffed530:
+$ python3 -I tools/fleet-load/test_seams.py BackOffGate
+.FF
+======================================================================
+FAIL: test_warm_cache_allows_exactly_the_saved_probes_once (__main__.BackOffGate.test_warm_cache_allows_exactly_the_saved_probes_once) [unlinked later page]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/fleet-load/test_seams.py", line 169, in test_warm_cache_allows_exactly_the_saved_probes_once
+    self.assertFalse(self.gate(calls, saved))
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_warm_cache_allows_exactly_the_saved_probes_once (__main__.BackOffGate.test_warm_cache_allows_exactly_the_saved_probes_once) [page before its link]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/fleet-load/test_seams.py", line 169, in test_warm_cache_allows_exactly_the_saved_probes_once
+    self.assertFalse(self.gate(calls, saved))
+AssertionError: True is not false
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.009s
+
+FAILED (failures=2)

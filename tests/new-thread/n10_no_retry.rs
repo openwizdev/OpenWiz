@@ -1,4 +1,4 @@
-//! N10, the refusal half only (no retry in 0.0.4). There is no
+//! N10, the refusal half only (sheet A-3: no retry in 0.0.4). There is no
 //! `--retry` and no retry operation: asking for one is a usage error that
 //! reads and calls nothing. An uncertain create stays uncertain whatever
 //! runs next, and the owner resolves it in CloudRoom. With the fake's
@@ -101,6 +101,11 @@ fn an_uncertain_create_stays_uncertain_and_one_thread_in_all() {
     assert_eq!(record["text"], TEXT);
 }
 
+/// The fake's request-ID table, as the provider's source reads (ClosedWiz
+/// #11, not observed): the same request id with different content is
+/// refused, and with the same content returns the existing thread without
+/// creating one. OpenWiz never sends a request id twice, so only the fake's
+/// own check sees it.
 #[test]
 fn the_fakes_request_id_table() {
     let fake = NewFake::new("n10_table");

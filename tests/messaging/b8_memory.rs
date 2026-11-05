@@ -1,4 +1,15 @@
-//! Measure attachment dispatch memory with the fake room-cli.
+//! B-8: Jake decided on 2026-10-30 to measure before imposing a memory cap
+//! ([private record](https://github.com/jparker2006/ClosedWiz/issues/1277#issuecomment-6704800036)).
+//! **Measure** the memory one dispatch takes, never invent a cap.
+//!
+//! `room-cli` reads every attachment whole into memory, in parallel, before
+//! its request (#15's F21, source-read). The fake does the same (all held at
+//! once) and logs its peak resident memory (`VmHWM`), so this measures the
+//! model of `room-cli` on the fake, not `room-cli`: Node.js's own overhead
+//! and any copy it makes are unmeasured until the live check. OpenWiz itself
+//! never holds an attachment whole: it streams every read in 64 KiB pieces
+//! (B1's AP6 measures staging; the gate's re-read uses the same loop). The
+//! numbers are printed for B2's evidence record.
 
 use openwiz_core::messaging::Mode;
 use openwiz_core::messaging::send::{self, Status};

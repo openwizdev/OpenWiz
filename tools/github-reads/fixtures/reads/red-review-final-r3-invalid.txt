@@ -1,0 +1,43 @@
+Fixture evidence only; synthetic loopback GitHub and temporary credentials.
+Unfixed implementation: 45b22c9c45368cbde05a525b923542b18e48c91f
+Command: python3 -I tools/github-reads/test_read.py ReviewRegressions.test_r3_unknown_observation_and_new_window_probe_keep_uncertain_spend
+Both uncertain requests must remain charged after an invalid header and new-window probe.
+
+FF
+======================================================================
+FAIL: test_r3_unknown_observation_and_new_window_probe_keep_uncertain_spend (__main__.ReviewRegressions.test_r3_unknown_observation_and_new_window_probe_keep_uncertain_spend) (api='rest')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-reads/test_read.py", line 869, in test_r3_unknown_observation_and_new_window_probe_keep_uncertain_spend
+    self.assertEqual((code, out, err.split(' until=')[0]),
+AssertionError: Tuples differ: (0, '{"number": 3}\n', 'fresh: current') != (1, '', 'deferred: primary-budget')
+
+First differing element 0:
+0
+1
+
+- (0, '{"number": 3}\n', 'fresh: current')
++ (1, '', 'deferred: primary-budget')
+
+======================================================================
+FAIL: test_r3_unknown_observation_and_new_window_probe_keep_uncertain_spend (__main__.ReviewRegressions.test_r3_unknown_observation_and_new_window_probe_keep_uncertain_spend) (api='graphql')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-reads/test_read.py", line 869, in test_r3_unknown_observation_and_new_window_probe_keep_uncertain_spend
+    self.assertEqual((code, out, err.split(' until=')[0]),
+AssertionError: Tuples differ: (0, '{"data": {"repository": {"issues": {"[93 chars]ent') != (1, '', 'deferred: primary-budget')
+
+First differing element 0:
+0
+1
+
++ (1, '', 'deferred: primary-budget')
+- (0,
+-  '{"data": {"repository": {"issues": {"nodes": [], "pageInfo": {"hasNextPage": '
+-  'false, "hasPreviousPage": false}}}}}\n',
+-  'fresh: current')
+
+----------------------------------------------------------------------
+Ran 1 test in 1.494s
+
+FAILED (failures=2)

@@ -1,0 +1,384 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:openwiz:schema:ci-main-batch:v1",
+  "title": "openwiz.ci-main-batch.v1",
+  "description": "Offline combined-main coverage evidence; conformance grants no live or switch authority. See ci-main-batch.v1.md.",
+  "$ref": "#/$defs/coverage",
+  "$defs": {
+    "count": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.:-]+$"
+    },
+    "member": {
+      "type": "object",
+      "required": [
+        "pull_request",
+        "head",
+        "merge",
+        "parent"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pull_request": {
+          "$ref": "#/$defs/count"
+        },
+        "head": {
+          "$ref": "#/$defs/sha"
+        },
+        "merge": {
+          "$ref": "#/$defs/sha"
+        },
+        "parent": {
+          "$ref": "#/$defs/sha"
+        }
+      }
+    },
+    "batch": {
+      "type": "object",
+      "required": [
+        "repository",
+        "base",
+        "head",
+        "members"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "repository": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+        },
+        "base": {
+          "$ref": "#/$defs/sha"
+        },
+        "head": {
+          "$ref": "#/$defs/sha"
+        },
+        "members": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/member"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "required": [
+        "id",
+        "attempt",
+        "event",
+        "workflow",
+        "event_base"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/count"
+        },
+        "attempt": {
+          "$ref": "#/$defs/count"
+        },
+        "event": {
+          "enum": [
+            "push",
+            "merge_group"
+          ]
+        },
+        "workflow": {
+          "const": ".github/workflows/ci.yml"
+        },
+        "event_base": {
+          "$ref": "#/$defs/sha"
+        }
+      }
+    },
+    "outcome": {
+      "type": "object",
+      "required": [
+        "name",
+        "result"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/name"
+        },
+        "result": {
+          "enum": [
+            "success",
+            "failure",
+            "cancelled",
+            "skipped",
+            "pending",
+            "unknown"
+          ]
+        }
+      }
+    },
+    "check": {
+      "type": "object",
+      "required": [
+        "name",
+        "result",
+        "head",
+        "id",
+        "attempt"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/name"
+        },
+        "result": {
+          "enum": [
+            "success",
+            "failure",
+            "cancelled",
+            "skipped",
+            "pending",
+            "unknown"
+          ]
+        },
+        "head": {
+          "$ref": "#/$defs/sha"
+        },
+        "id": {
+          "$ref": "#/$defs/count"
+        },
+        "attempt": {
+          "$ref": "#/$defs/count"
+        }
+      }
+    },
+    "receipt": {
+      "type": "object",
+      "required": [
+        "lane",
+        "tests",
+        "plan_sha256",
+        "run"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "lane": {
+          "$ref": "#/$defs/name"
+        },
+        "tests": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/name"
+          }
+        },
+        "plan_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "run": {
+          "$ref": "#/$defs/run"
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "required": [
+        "schema",
+        "batch",
+        "execution",
+        "plan",
+        "receipts",
+        "outcomes",
+        "checks"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "const": "openwiz.ci-main-batch.v1"
+        },
+        "batch": {
+          "$ref": "#/$defs/batch"
+        },
+        "execution": {
+          "$ref": "#/$defs/execution"
+        },
+        "plan": {
+          "type": "string",
+          "minLength": 1
+        },
+        "receipts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/receipt"
+          },
+          "uniqueItems": true
+        },
+        "outcomes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/outcome"
+          },
+          "uniqueItems": true
+        },
+        "checks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/check"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "context": {
+      "type": "object",
+      "required": [
+        "batch",
+        "execution",
+        "previous_head",
+        "inventory",
+        "required_checks"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "batch": {
+          "$ref": "#/$defs/batch"
+        },
+        "execution": {
+          "$ref": "#/$defs/execution"
+        },
+        "previous_head": {
+          "$ref": "#/$defs/sha"
+        },
+        "inventory": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/name"
+          },
+          "uniqueItems": true
+        },
+        "required_checks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/check_identity"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "run": {
+      "type": "object",
+      "required": [
+        "id",
+        "attempt",
+        "event",
+        "action",
+        "base_branch",
+        "base",
+        "head",
+        "pull_request"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/count"
+        },
+        "attempt": {
+          "$ref": "#/$defs/count"
+        },
+        "event": {
+          "enum": [
+            "pull_request",
+            "push",
+            "schedule",
+            "merge_group"
+          ]
+        },
+        "action": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/action"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "base_branch": {
+          "$ref": "#/$defs/branch"
+        },
+        "base": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sha"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "head": {
+          "$ref": "#/$defs/sha"
+        },
+        "pull_request": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/count"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "action": {
+      "enum": [
+        "opened",
+        "synchronize",
+        "reopened",
+        "ready_for_review"
+      ]
+    },
+    "branch": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-][A-Za-z0-9_./-]*$"
+    },
+    "check_identity": {
+      "type": "object",
+      "required": [
+        "name",
+        "id",
+        "attempt"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/name"
+        },
+        "id": {
+          "$ref": "#/$defs/count"
+        },
+        "attempt": {
+          "$ref": "#/$defs/count"
+        }
+      }
+    }
+  }
+}

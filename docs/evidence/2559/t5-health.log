@@ -1,0 +1,2 @@
+test placing_the_fake_room_cli_leaves_no_writer_a_concurrent_fork_could_inherit ... ok
+test result: ok. 58 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.78s

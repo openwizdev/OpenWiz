@@ -1,0 +1,241 @@
+# Public CloudRoom setup v1 (`openwiz.cloudroom-setup.v1`)
+
+Setup's CloudRoom step installs CloudRoom for a new user, or reuses the
+installation and login they already have. It has one CloudRoom sign-in screen
+and a short powered-by line. Authority: Jake's P2 decision, recorded in
+[docs/decisions/public-cloudroom-setup.md](../docs/decisions/public-cloudroom-setup.md)
+(ticket #2201, spec #2194).
+
+This contract is proven on fixtures and recording fakes only. A real download,
+installation or sign-in is observed only in #2207's bounded live run; until
+then every claim here about real CloudRoom behaviour is Unverified.
+
+It changes neither [setup.v1](setup.v1.md) nor its schema. The step reports
+through setup's existing `cloudroom` component and its four states, and adds no
+setup write route. The install operation is the tool's own record (below),
+not one of setup's `operations`.
+
+## Supported CloudRoom interfaces
+
+Each interface below was read on 2026-11-13 (CloudRoom `gui-v152`, source
+`davidondrej/cloudroom` at `850947f5b2c24c5d8aa62843bfb889145c742cb4`).
+
+| Interface | What it gives | Source |
+| --- | --- | --- |
+| Install guide, `https://www.cloudroom.dev/setup.md` | One GitHub release link per platform: macOS Apple Silicon `.dmg`, Linux x64 `.AppImage`, Windows x64 `.exe`. "Use only the installer links on this page." "Never ask for passwords, tokens, or API keys." CloudRoom creates `~/.local/bin/room-cli` the first time it opens | Listed under "Install" in `https://www.cloudroom.dev/llms.txt` |
+| GitHub release, `GET https://api.github.com/repos/davidondrej/cloudroom/releases/tags/<tag>` | Each asset's `digest` (`sha256:<hex>`), `size` and `browser_download_url`; `draft`, `prerelease` | GitHub REST API |
+| The release's `SHA256SUMS.txt` asset | `<sha256>  <file>` per installer | The release notes: "SHA-256 checksums are in `SHA256SUMS.txt`" |
+| `room-cli cloud status --json` | `CloudroomStatus`: `account` (`{id, email}` or `null`), `signedOut` ("True only when the saved connection confirms no signed-in Cloudroom account"), `signingIn`, `selfHosted` | CloudRoom's room-cli command index (`gui/plugins/cloudroom-guide/skills/room-cli/references/command-index.md`), `gui/apps/cli/src/commands/cloudroom.ts`, `gui/packages/sdk/src/areas/cloudroom.ts` |
+| `room-cli cloud sign-in --json` | `{url}`: the browser link to CloudRoom's own sign-in | Same files |
+| `https://www.cloudroom.dev/download` | CloudRoom's own download page (it asks the visitor to sign in first) | `https://www.cloudroom.dev/docs/get-started.md` |
+| `codesign --verify --deep --strict` (macOS) | Apple's signature check of the installed app | The release notes: "Signed and notarized by Apple" |
+
+## Targets
+
+| OpenWiz host | Target | Installer | Destination |
+| --- | --- | --- | --- |
+| macOS, `arm64` | `macos-arm64` | `Cloudroom-v<N>-arm64.dmg` | `/Applications/Cloudroom.app` |
+| Linux, `x86_64` | `linux-x64` | `Cloudroom-v<N>-x86_64.AppImage` | `~/Applications/Cloudroom.AppImage` |
+| Anything else, including macOS `x86_64` | none | none | none |
+
+CloudRoom publishes no installer for macOS on Intel or for Linux on ARM.
+OpenWiz does not run on Windows. On a host without a target, the tool installs
+nothing and says so (`cloudroom_unsupported`). Asked to install, it opens
+CloudRoom's download page once instead.
+
+## Installer source and integrity check
+
+The tool reads CloudRoom's install guide and accepts exactly one link for the
+target, matching
+`https://github.com/davidondrej/cloudroom/releases/download/gui-v<N>/Cloudroom-v<N>-<arch>.<kind>`.
+The guide's tag and file must name the same `<N>`. Then it reads that tag's
+GitHub release. The release must be published (`draft` and `prerelease` both
+`false`). The installer and `SHA256SUMS.txt` each appear exactly once, each
+with a `sha256:` digest, a positive size of at most 1 GiB, and the download URL
+the guide named. The downloaded `SHA256SUMS.txt` must match its own digest and
+size. Its one line for the installer must equal the installer's digest.
+
+If any of this fails, no source is accepted (`cloudroom_source_unchecked`). The
+tool proposes nothing, downloads nothing and installs nothing. Asked to
+install, it opens CloudRoom's download page once instead.
+
+The installer is downloaded into the owner-only record folder. It is installed
+only if its size and SHA-256 equal the accepted ones. On a mismatch it is
+deleted and nothing is installed (`cloudroom_checksum_mismatch`). Every read is
+HTTPS, through no proxy, to `www.cloudroom.dev`, `api.github.com`, `github.com`
+or GitHub's release-asset hosts only.
+
+## The install operation
+
+`tools/install/cloudroom/cloudroom.py install` is the only write. It follows
+setup's discipline for operations:
+
+1. **Preview** (`install`). Reuse is checked first: an existing installation
+   proposes nothing. Otherwise the tool accepts a source, then saves one
+   operation before any effect. The operation has an `operation_id` (32
+   lowercase hex), `kind` `install_cloudroom`, `phase` `proposed`, a
+   `fingerprint` (SHA-256 of the canonical request), the `request` (`target`,
+   `tag`, `name`, `url`, `sha256`, `bytes`, `destination`) and its plain
+   `effects`. A repeated preview of the same request reuses the id.
+2. **Confirm** (`install --yes --operation ID`). The tool installs only that
+   saved request, and only if nothing is installed by then. Before downloading
+   it saves `phase` `installing` with its process id and start time. Then it
+   downloads, checks and places the installer, never over an existing file or
+   app. macOS mounts the image read-only and copies `Cloudroom.app` into a
+   staging folder beside the destination (always detaching). The staged copy
+   must pass `codesign`. Then it is published with a rename that never
+   replaces anything (`renamex_np` with `RENAME_EXCL`). An app that appears
+   meanwhile, even while mounting or just before publishing, is left exactly
+   as it is, and the attempt fails. Linux copies the AppImage, makes it
+   executable and hard-links it into place, which also never replaces.
+   `applied` requires the installed copy to verify: the AppImage's SHA-256
+   equals the request's, or the published app passes `codesign`. Launching
+   CloudRoom never counts as applied, and installing launches nothing.
+3. **Decline** (`install --no --operation ID`). The proposal becomes
+   `refused`, `declined`. Nothing is installed, and that id can no longer be
+   confirmed.
+
+| Phase | Means |
+| --- | --- |
+| `proposed` | Saved, awaiting an explicit yes |
+| `installing` | An attempt started. If its process is no longer alive, or 30 minutes have passed, it reads as uncertain |
+| `applied` | CloudRoom's checked copy is installed and verified |
+| `failed` | The download or the install did not complete, or the copy did not verify |
+| `refused` | Declined, a checksum mismatch, or an installation appeared first (`existing`): nothing was installed |
+| `uncertain` | No answer came back from the copy step (a lost reply), or the attempt's process was lost |
+
+**A retry reuses the operation.** A preview returns a saved uncertain,
+interrupted or failed operation itself, never a reuse answer or a new id. An uncertain, interrupted or failed operation
+is reconciled against the actual installation before any further attempt. A
+verifying copy makes it `applied`. A missing copy lets the same id try again.
+A copy that does not verify is never copied over: an uncertain operation stays
+uncertain, and a failure stays failed. A later refusal or failure never lowers
+uncertainty. An uncertain operation cannot be declined.
+
+The record is `<state>/cloudroom/install.json` (`openwiz.cloudroom-install.v1`:
+exactly `schema` and `operation`). Its folder is owner-only (`0700`) and the
+file is `0600`. It is written atomically under an exclusive lock and read with
+exact keys, refusing a duplicate key. On first use, the state folder, any missing ancestors and the record's folder
+are created one at a time, and the parent holding each new folder is synced.
+A folder left behind by a failed sync is not taken as durable. Every attempt
+syncs the record's folder again, and the parent holding each folder in the
+state chain the user owns, stopping at the first folder someone else owns.
+Each save syncs the file, then its folder, before returning. All of this
+happens before any effect, and a failed sync stops the step there. `<state>` is setup's state directory.
+Reads (`status`, setup's check) write nothing.
+
+## Reuse
+
+These count as an existing installation: `~/.local/bin/room-cli`; on macOS,
+`/Applications/Cloudroom.app` or `~/Applications/Cloudroom.app`; on Linux, a
+launchable (regular and executable) `~/Applications/Cloudroom*.AppImage` or
+`~/Downloads/Cloudroom*.AppImage`. A plain download that is not executable is
+not an installation: the checked install may still go to its own destination.
+A file at `~/Applications/Cloudroom.AppImage` that is not executable blocks
+the install (`cloudroom_destination_blocked`). It is never overwritten or made
+executable, and sign-in refuses until the user fixes it. An
+existing installation is reused as it is: nothing is downloaded, reinstalled,
+replaced or downgraded, and no operation is proposed. A copy left behind by
+this tool's own failed or uncertain attempt is not reused: it shows that
+attempt's state until it is reconciled.
+
+## Sign-in handoff and login evidence
+
+**Login evidence** comes only from `room-cli cloud status --json`, run from
+`~/.local/bin/room-cli`, with no other arguments and nothing on standard input.
+Verified needs all of these: an exact `account` object with exactly non-empty
+`id` and `email` strings; `signingIn` exactly `false`; and `signedOut` and
+`selfHosted` absent or `false`. `account: null` with `signedOut: true` is
+missing. Anything else is unknown: a timeout, an error, an unparsable answer,
+a duplicate key, still signing in, or contradictory fields. A reachable
+inventory or a listed harness is never login evidence. The account values are
+never printed, saved or shown.
+
+**Sign-in** (`sign-in`) opens CloudRoom's own sign-in once, then reads the login
+back:
+
+- A current verified login is reused. Nothing opens, so there is no second
+  sign-in.
+- If CloudRoom has opened before (its launcher exists), the tool runs
+  `room-cli cloud sign-in --json` once. It opens the returned link once with
+  `/usr/bin/open` (macOS) or `/usr/bin/xdg-open` (Linux), and only if the link
+  is `https` on `www.cloudroom.dev` or `cloudroom.dev` (no port, user or
+  whitespace). The link is never printed or saved.
+- If CloudRoom has never opened here, the tool opens the CloudRoom app once.
+  CloudRoom's own first-run setup starts with its sign-in.
+
+OpenWiz never asks for, receives, stores or logs a CloudRoom password or token.
+The tool has no option for one and reads nothing from standard input.
+
+## States, codes and reasons
+
+Setup's check (`tools/install/setup/setup.py check`) stores the tool's one code
+as the `cloudroom` observation. The server maps it through its fixed `CODES`
+table (`crates/server/src/setup.rs`). A code is current for an hour and for the
+current selection, as for every component; old evidence is unknown.
+
+| Code | State | Meaning |
+| --- | --- | --- |
+| `cloudroom_not_installed` | missing | Nothing installed; a target exists |
+| `cloudroom_installing` | unknown | An install is running |
+| `cloudroom_installed` | unknown | Installed by setup; CloudRoom has not opened yet, so no login was read |
+| `cloudroom_reused` | unknown | An existing installation is reused; CloudRoom has not opened yet |
+| `cloudroom_install_failed` | unknown | The install failed: never installed |
+| `cloudroom_install_uncertain` | unknown | Lost reply or lost process: reconcile first |
+| `cloudroom_install_declined` | refused | The user declined: nothing installed |
+| `cloudroom_checksum_mismatch` | refused | The installer did not match its published checksum: nothing installed |
+| `cloudroom_unsupported` | refused | No checkable installer for this platform: nothing installed |
+| `cloudroom_destination_blocked` | refused | A non-executable file occupies the Linux destination: nothing installed or changed |
+| `cloudroom_login_missing` | missing | Installed; CloudRoom reports no signed-in account |
+| `cloudroom_login_unknown` | unknown | Installed; no current login evidence |
+| `cloudroom_login_verified` | verified | Installed; CloudRoom reports a signed-in account now |
+
+The login codes apply once CloudRoom is installed or reused and its launcher
+exists. Install codes take precedence. `cloudroom_source_unchecked` is a tool
+answer only: setup's check never stores it, and the step keeps showing not
+installed. A runtime without the tool keeps the earlier read
+(`cloudroom_reachable`, `cloudroom_missing`, `cloudroom_unreadable`,
+`cloudroom_partial`), all of which stay unknown or missing. Unknown, failed and
+uncertain are never shown as installed or signed in. Each row's reason and next
+step are fixed public text.
+
+## The sign-in screen and the powered-by line
+
+The setup page's CloudRoom step (`apps/web/src/components/CloudRoomSetup.tsx`,
+mounted only by `Setup.tsx`'s `cloudroom` component) is the one sign-in screen.
+It is display only: its state, reason and next step come from
+`GET /api/v1/setup`. It says that sign-in happens once, in CloudRoom's own
+window, and that OpenWiz never asks for, sees or stores a CloudRoom password or
+token. It says signed in only when the state is verified. It has no password
+field, no link and no request of its own. The main flow stays in OpenWiz.
+
+**Powered-by line:** exactly `Powered by CloudRoom`, plain text, no logo or
+link. It is the last line of the CloudRoom step, in the caption style
+(`.meta`). It appears on the CloudRoom step only, once.
+
+## The tool's command line (seam for #1109 and #2207)
+
+`python3 -I <build>/runtime/cloudroom/cloudroom.py status | install [--yes | --no] [--operation ID] | sign-in [--state-dir DIR]`.
+It prints one JSON object: `{"schema": "openwiz.cloudroom-setup.v1", "code": <code>, "operation": <operation or null>, "opened": null | "sign_in" | "app" | "download_page"}`.
+A refusal exits 5 with `openwiz-cloudroom: refused: <reason>` on standard
+error. The packaged runtime ships the tool as `runtime/cloudroom/cloudroom.py`
+(mode `0600`), and the installer requires it. #1109 wires these commands into
+the install line and skill. #2207 runs them for real.
+
+## The two `room-cli` calls (allowlist pin)
+
+Jake approved exactly two `room-cli` calls for this tool (J30, 2026-11-13,
+recorded on #2201). They are pinned here and in
+`crates/adapters/cloudroom/src/allowlist.rs` as `SETUP_LAUNCHER` and
+`SETUP_CALLS`:
+
+| Call | Run from | Purpose |
+| --- | --- | --- |
+| `room-cli cloud status --json` | `~/.local/bin/room-cli` | The login read |
+| `room-cli cloud sign-in --json` | `~/.local/bin/room-cli` | CloudRoom's own sign-in link |
+
+The tool's one builder, `room_cli`, refuses every other argument list before
+running anything, and `PATH` is never searched. Its tests bind the tool's calls
+to the allowlist entries and show that every install, reuse, login and sign-in
+path runs only these two. Nothing else in the allowlist changes. The Rust
+adapter never runs these calls.

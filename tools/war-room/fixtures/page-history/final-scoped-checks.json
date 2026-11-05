@@ -1,0 +1,27 @@
+{
+  "head": "3653926d6e712aa4f9a77173da4f8b9f511f317a",
+  "checks": [
+    {
+      "command": [
+        "python3",
+        "-I",
+        "tools/war-room/test_page_history.py"
+      ],
+      "exit": 0,
+      "stdout": "",
+      "stderr": "test_approved_board_point_projection (__main__.PageHistory.test_approved_board_point_projection) ... ok\ntest_approved_pending_decision_projection (__main__.PageHistory.test_approved_pending_decision_projection) ... ok\ntest_ci_native_units_and_cost_gap (__main__.PageHistory.test_ci_native_units_and_cost_gap) ... ok\ntest_differing_concurrent_samples_refuse (__main__.PageHistory.test_differing_concurrent_samples_refuse) ... ok\ntest_existing_daily_usage_credits_and_journey (__main__.PageHistory.test_existing_daily_usage_credits_and_journey) ... ok\ntest_factory_artifact_refuses_undeclared_fields (__main__.PageHistory.test_factory_artifact_refuses_undeclared_fields) ... ok\ntest_factory_daily_usage_is_separate_from_pr_attribution (__main__.PageHistory.test_factory_daily_usage_is_separate_from_pr_attribution) ... ok\ntest_finite_invocation (__main__.PageHistory.test_finite_invocation) ... ok\ntest_generic_page_and_missing_slots (__main__.PageHistory.test_generic_page_and_missing_slots) ... ok\ntest_immutable_atomic_history (__main__.PageHistory.test_immutable_atomic_history) ... ok\ntest_page_failure_restart_and_readback (__main__.PageHistory.test_page_failure_restart_and_readback) ... ok\ntest_privacy_and_escaping (__main__.PageHistory.test_privacy_and_escaping) ... ok\ntest_recorded_eval_readiness_retains_source (__main__.PageHistory.test_recorded_eval_readiness_retains_source) ... ok\ntest_selection_and_history_fail_closed (__main__.PageHistory.test_selection_and_history_fail_closed) ... ok\ntest_source_omission_keeps_last_evidence (__main__.PageHistory.test_source_omission_keeps_last_evidence) ... ok\ntest_ticks_restart_and_partial_source (__main__.PageHistory.test_ticks_restart_and_partial_source) ... ok\n\n----------------------------------------------------------------------\nRan 16 tests in 0.712s\n\nOK\n"
+    },
+    {
+      "command": [
+        "cargo",
+        "fmt",
+        "--check"
+      ],
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "clippy": "not applicable: no touched crates",
+  "toolchain": "Rust 1.99.1, installed in disposable build sandbox under ops disposition 6781074763"
+}

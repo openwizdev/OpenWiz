@@ -1,7 +1,7 @@
 //! A store-level send harness. Test-only: never built into `openwiz`.
 //!
 //! It calls the core's `send` directly, the way a server would (there is no
-//! server send route until the implementation), with the file-backed send record and
+//! server send route until ClosedWiz#9), with the file-backed send record and
 //! the CloudRoom adapter pointed at the fake `room-cli`. M8 races it against
 //! `openwiz send` processes on one op id.
 //!

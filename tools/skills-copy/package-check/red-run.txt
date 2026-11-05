@@ -1,0 +1,466 @@
+# WZ7 (#2632) red run: python3 -I tools/skills-copy/package-check/test_check.py
+# against the do-nothing stub check/run.py (exit 0, SUITES = {}) and stub ci.yml, before the check was written.
+
+FFFFFFFFFFFFFFFFFFFF.FFFFFFFFFFFFFF.FFFFFFFFFFF.F
+======================================================================
+FAIL: test_a_missing_interface_field_is_refused (__main__.Codex.test_a_missing_interface_field_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 238, in test_a_missing_interface_field_is_refused
+    self.refused('codex', 'skills/triage/agents/openai.yaml')
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_a_missing_openai_yaml_is_refused (__main__.Codex.test_a_missing_openai_yaml_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 220, in test_a_missing_openai_yaml_is_refused
+    self.refused('codex', 'skills/triage/agents/openai.yaml')
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_an_unknown_interface_field_is_refused (__main__.Codex.test_an_unknown_interface_field_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 234, in test_an_unknown_interface_field_is_refused
+    self.refused('codex', 'skills/triage/agents/openai.yaml')
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_ask_wiz_requires_its_policy (__main__.Codex.test_ask_wiz_requires_its_policy)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 229, in test_ask_wiz_requires_its_policy
+    self.refused('codex', 'skills/ask-wiz/agents/openai.yaml')
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_policy_is_refused_outside_ask_wiz (__main__.Codex.test_policy_is_refused_outside_ask_wiz)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 225, in test_policy_is_refused_outside_ask_wiz
+    self.refused('codex', 'skills/triage/agents/openai.yaml')
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_a_value_yaml_misreads_is_refused (__main__.Frontmatter.test_a_value_yaml_misreads_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 210, in test_a_value_yaml_misreads_is_refused
+    self.refused('frontmatter', 'skills/triage/SKILL.md')
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_an_extra_key_is_refused (__main__.Frontmatter.test_an_extra_key_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 191, in test_an_extra_key_is_refused
+    self.refused('frontmatter', 'skills/triage/SKILL.md')
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_ask_wiz_requires_disable_model_invocation (__main__.Frontmatter.test_ask_wiz_requires_disable_model_invocation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 205, in test_ask_wiz_requires_disable_model_invocation
+    self.refused('frontmatter', 'skills/ask-wiz/SKILL.md')
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_missing_frontmatter_is_refused (__main__.Frontmatter.test_missing_frontmatter_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 214, in test_missing_frontmatter_is_refused
+    self.refused('frontmatter', 'skills/triage/SKILL.md')
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_name_must_be_the_folder (__main__.Frontmatter.test_name_must_be_the_folder)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 196, in test_name_must_be_the_folder
+    self.refused('frontmatter', 'skills/triage/SKILL.md')
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_only_ask_wiz_may_disable_model_invocation (__main__.Frontmatter.test_only_ask_wiz_may_disable_model_invocation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 201, in test_only_ask_wiz_may_disable_model_invocation
+    self.refused('frontmatter', 'skills/triage/SKILL.md')
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_suites_are_ci_select_skills_list_without_closedwiz_tools (__main__.Inventory.test_suites_are_ci_select_skills_list_without_closedwiz_tools)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 429, in test_suites_are_ci_select_skills_list_without_closedwiz_tools
+    self.assertEqual(load_run().SUITES, expected)
+AssertionError: {} != {'triage': [['python3', '-I', 'skills/tria[770 chars]y']]}
+Diff is 1384 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_a_folder_without_skill_md_is_refused (__main__.Layout.test_a_folder_without_skill_md_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 364, in test_a_folder_without_skill_md_is_refused
+    self.refused('layout', 'skills/zeta/SKILL.md')
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_a_stray_file_in_skills_is_refused (__main__.Layout.test_a_stray_file_in_skills_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 360, in test_a_stray_file_in_skills_is_refused
+    self.refused('layout', 'skills/notes.txt')
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_the_skills_readme_is_required (__main__.Layout.test_the_skills_readme_is_required)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 368, in test_the_skills_readme_is_required
+    self.refused('layout', 'skills/README.md')
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_a_link_leaving_the_tree_is_refused (__main__.Links.test_a_link_leaving_the_tree_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 279, in test_a_link_leaving_the_tree_is_refused
+    out = self.refused('links', 'skills/triage/notes.md')
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_a_reference_link_is_checked (__main__.Links.test_a_reference_link_is_checked)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 284, in test_a_reference_link_is_checked
+    self.refused('links', 'skills/triage/notes.md')
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_a_relative_link_that_does_not_resolve_is_refused (__main__.Links.test_a_relative_link_that_does_not_resolve_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 272, in test_a_relative_link_that_does_not_resolve_is_refused
+    out = self.refused('links', 'skills/triage/SKILL.md')
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_a_symlink_inside_skills_is_refused (__main__.Links.test_a_symlink_inside_skills_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 296, in test_a_symlink_inside_skills_is_refused
+    self.refused('symlink', 'skills/triage/README.md')
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_a_symlinked_skill_folder_is_refused (__main__.Links.test_a_symlinked_skill_folder_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 300, in test_a_symlinked_skill_folder_is_refused
+    self.refused('symlink', 'skills/sorting')
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_a_carried_skill_missing_from_the_manifest_is_refused (__main__.Manifest.test_a_carried_skill_missing_from_the_manifest_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 309, in test_a_carried_skill_missing_from_the_manifest_is_refused
+    self.refused('manifest', self.PLUGIN)
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_a_duplicate_entry_is_refused (__main__.Manifest.test_a_duplicate_entry_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 317, in test_a_duplicate_entry_is_refused
+    self.refused('manifest', self.PLUGIN)
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_a_missing_manifest_is_refused (__main__.Manifest.test_a_missing_manifest_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 354, in test_a_missing_manifest_is_refused
+    self.refused('manifest', self.PLUGIN)
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_a_repeated_version_must_agree (__main__.Manifest.test_a_repeated_version_must_agree)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 350, in test_a_repeated_version_must_agree
+    self.refused('manifest', self.MARKET)
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_an_extra_entry_is_refused (__main__.Manifest.test_an_extra_entry_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 313, in test_an_extra_entry_is_refused
+    self.refused('manifest', self.PLUGIN)
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_duplicate_json_keys_are_refused (__main__.Manifest.test_duplicate_json_keys_are_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 338, in test_duplicate_json_keys_are_refused
+    self.refused('manifest', self.PLUGIN)
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_entries_are_sorted_by_name (__main__.Manifest.test_entries_are_sorted_by_name)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 321, in test_entries_are_sorted_by_name
+    self.refused('manifest', self.PLUGIN)
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_the_marketplace_is_named_wizskills (__main__.Manifest.test_the_marketplace_is_named_wizskills)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 342, in test_the_marketplace_is_named_wizskills
+    self.refused('manifest', self.MARKET)
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_the_marketplace_source_is_the_root (__main__.Manifest.test_the_marketplace_source_is_the_root)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 346, in test_the_marketplace_source_is_the_root
+    self.refused('manifest', self.MARKET)
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_the_plugin_is_named_openwiz (__main__.Manifest.test_the_plugin_is_named_openwiz)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 325, in test_the_plugin_is_named_openwiz
+    self.refused('manifest', self.PLUGIN)
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_the_plugin_ships_no_hooks (__main__.Manifest.test_the_plugin_ships_no_hooks)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 333, in test_the_plugin_ships_no_hooks
+    self.refused('manifest', self.PLUGIN)
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_the_version_is_semver_without_a_v (__main__.Manifest.test_the_version_is_semver_without_a_v)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 329, in test_the_version_is_semver_without_a_v
+    self.refused('manifest', self.PLUGIN)
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_a_listed_skill_carries_its_source_line (__main__.Notice.test_a_listed_skill_carries_its_source_line)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 256, in test_a_listed_skill_carries_its_source_line
+    self.refused('notice', 'skills/image/SKILL.md')
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_a_listed_skill_never_carries_matts_notice (__main__.Notice.test_a_listed_skill_never_carries_matts_notice)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 260, in test_a_listed_skill_never_carries_matts_notice
+    self.refused('notice', 'skills/image/SKILL.md')
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_matts_notice_must_be_word_for_word (__main__.Notice.test_matts_notice_must_be_word_for_word)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 245, in test_matts_notice_must_be_word_for_word
+    self.refused('notice', 'skills/triage/SKILL.md')
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_where_are_we_has_its_own_source_line (__main__.Notice.test_where_are_we_has_its_own_source_line)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 265, in test_where_are_we_has_its_own_source_line
+    self.refused('notice', 'skills/where-are-we/SKILL.md')
+  File "tools/skills-copy/package-check/test_check.py", line 174, in refused
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_a_failing_suite_fails_the_check_after_every_suite_ran (__main__.Suites.test_a_failing_suite_fails_the_check_after_every_suite_ran)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 376, in test_a_failing_suite_fails_the_check_after_every_suite_ran
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_a_failing_unittest_suite_fails_the_check (__main__.Suites.test_a_failing_unittest_suite_fails_the_check)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 385, in test_a_failing_unittest_suite_fails_the_check
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_a_missing_standalone_check_fails_the_check (__main__.Suites.test_a_missing_standalone_check_fails_the_check)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 412, in test_a_missing_standalone_check_fails_the_check
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_a_missing_suite_fails_the_check (__main__.Suites.test_a_missing_suite_fails_the_check)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 391, in test_a_missing_suite_fails_the_check
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_a_standalone_refusal_fails_the_check (__main__.Suites.test_a_standalone_refusal_fails_the_check)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 405, in test_a_standalone_refusal_fails_the_check
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_a_unittest_folder_with_no_tests_fails_the_check (__main__.Suites.test_a_unittest_folder_with_no_tests_fails_the_check)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 397, in test_a_unittest_folder_with_no_tests_fails_the_check
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_the_check_takes_no_arguments (__main__.Suites.test_the_check_takes_no_arguments)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 418, in test_the_check_takes_no_arguments
+    self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
+AssertionError: 0 != 2 : 
+
+======================================================================
+FAIL: test_valid_tree_passes_and_runs_every_suite (__main__.ValidTree.test_valid_tree_passes_and_runs_every_suite)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 183, in test_valid_tree_passes_and_runs_every_suite
+    self.assertEqual(ran(self.root), self.suites)
+AssertionError: Lists differ: [] != ['skills/hill-climb/tests/test_synthetic.p[456 chars].py']
+
+Second list contains 11 additional elements.
+First extra element 0:
+'skills/hill-climb/tests/test_synthetic.py'
+
+- []
++ ['skills/hill-climb/tests/test_synthetic.py',
++  'skills/image/tests/test_synthetic.py',
++  'skills/launch-fleet/scripts/test-effects.py',
++  'skills/launch-fleet/scripts/test-grants.py',
++  'skills/launch-fleet/scripts/test-inbox.py',
++  'skills/launch-fleet/scripts/test.sh',
++  'skills/launch-fleet/test/ops-protocol/test_protocol.py',
++  'skills/plan-graph/scripts/test_check_approval.py',
++  'skills/plan-graph/test/test-revision.sh',
++  'skills/triage/test/test_find_work.py',
++  'skills/where-are-we/test/test_read_github.py']
+
+======================================================================
+FAIL: test_is_read_only_with_no_secret (__main__.Workflow.test_is_read_only_with_no_secret)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 442, in test_is_read_only_with_no_secret
+    self.assertRegex(self.text, r'(?m)^permissions:\n  contents: read\n(?!  \S)')
+AssertionError: Regex didn't match: '(?m)^permissions:\\n  contents: read\\n(?!  \\S)' not found in 'name: stub\n'
+
+======================================================================
+FAIL: test_runs_the_check_on_every_push_and_pull_request (__main__.Workflow.test_runs_the_check_on_every_push_and_pull_request)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/skills-copy/package-check/test_check.py", line 438, in test_runs_the_check_on_every_push_and_pull_request
+    self.assertRegex(self.text, r'(?m)^on:\n  push:\n  pull_request:\n(?!  \S)')
+AssertionError: Regex didn't match: '(?m)^on:\\n  push:\\n  pull_request:\\n(?!  \\S)' not found in 'name: stub\n'
+
+----------------------------------------------------------------------
+Ran 49 tests in 0.706s
+
+FAILED (failures=46)

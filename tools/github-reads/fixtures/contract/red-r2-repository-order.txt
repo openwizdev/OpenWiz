@@ -1,0 +1,21 @@
+.F.
+======================================================================
+FAIL: test_schema_and_refusal_cases (__main__.Contract.test_schema_and_refusal_cases) (case='repository set order does not change binding')
+C1-auth/cache/budget/share: literal fixture decisions, not live proof.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-reads/test_contract.py", line 102, in test_schema_and_refusal_cases
+    self.assertEqual(assess(value['record'], value['current']), tuple(case['expect']))
+AssertionError: Tuples differ: ('refused', 'binding') != ('fresh', 'current')
+
+First differing element 0:
+'refused'
+'fresh'
+
+- ('refused', 'binding')
++ ('fresh', 'current')
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.177s
+
+FAILED (failures=1)

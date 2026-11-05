@@ -1,0 +1,33 @@
+{
+ "schema": "openwiz.inventory.v1",
+ "source": {
+  "name": "room-cli",
+  "version": {
+   "known": "v127"
+  },
+  "tested_version": "v127",
+  "version_tested": true
+ },
+ "coverage": {
+  "state": "complete",
+  "counts": {
+   "listed": 0,
+   "unreadable": 0,
+   "excluded_hidden": 0,
+   "excluded_archived": 0,
+   "hidden_read": false,
+   "archived_read": false,
+   "matched": 0,
+   "offset": 0,
+   "limit": 100,
+   "shown": 0
+  }
+ },
+ "freshness": {
+  "snapshot_at": 1700000600000
+ },
+ "gaps": [],
+ "data": {
+  "sessions": []
+ }
+}

@@ -47,12 +47,17 @@ pub struct LookupReport {
 /// Looks up `op_id`'s send to `target`. See the module documentation.
 ///
 /// `store` is `None` when there is no send record yet (nothing was ever
-/// claimed): the answer is then "no record".
+/// claimed): the answer is then "no record". `tested` is this build's own
+/// tested version for sending, as
+/// [`Messenger::tested_version`](super::send::Messenger::tested_version)
+/// gives it: a record's version is reported against it, never against the
+/// record's stored claim.
 pub fn lookup(
     store: Option<&dyn SendStore>,
     clock: &dyn Clock,
     target: &SessionId,
     op_id: &OpId,
+    tested: &str,
 ) -> Result<LookupReport, StoreError> {
     let record = match store {
         Some(store) => store.inspect(op_id, clock.now())?,
@@ -76,8 +81,8 @@ pub fn lookup(
         ),
         Some(record) => {
             let report = match record.state {
-                RecordState::Finished => from_record(&record, true, vec![]),
-                _ => in_flight_report(&record),
+                RecordState::Finished => from_record(&record, true, vec![], tested),
+                _ => in_flight_report(&record, tested),
             };
             (
                 format!("op {op_id}'s record, as it is now; no call was made"),

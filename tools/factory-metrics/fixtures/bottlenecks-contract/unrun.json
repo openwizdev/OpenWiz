@@ -1,0 +1,295 @@
+{
+  "schema": "openwiz.bottlenecks.v1",
+  "experiment": {
+    "tag": "synthetic-skills-1",
+    "repo": "example/factory",
+    "frozen_at": "2030-01-01T08:00:00Z",
+    "arms": {
+      "old": {
+        "revision": {
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "tree": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "build_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "review_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "cf4": {
+          "manifest_hash": "1111111111111111111111111111111111111111111111111111111111111111",
+          "settings_hash": "2222222222222222222222222222222222222222222222222222222222222222",
+          "cases_hash": "3333333333333333333333333333333333333333333333333333333333333333",
+          "code_hash": "4444444444444444444444444444444444444444444444444444444444444444",
+          "schema_hash": "5555555555555555555555555555555555555555555555555555555555555555",
+          "revision": {
+            "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "tree": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "repeats": 3,
+          "case_count": 20
+        },
+        "brief_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "candidate": {
+        "revision": {
+          "commit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "build_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "review_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "cf4": {
+          "manifest_hash": "1111111111111111111111111111111111111111111111111111111111111111",
+          "settings_hash": "2222222222222222222222222222222222222222222222222222222222222222",
+          "cases_hash": "3333333333333333333333333333333333333333333333333333333333333333",
+          "code_hash": "4444444444444444444444444444444444444444444444444444444444444444",
+          "schema_hash": "5555555555555555555555555555555555555555555555555555555555555555",
+          "revision": {
+            "commit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          },
+          "repeats": 3,
+          "case_count": 20
+        },
+        "brief_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    },
+    "defect_policy": {
+      "rule": "explicit-causal-fix-link-v1",
+      "followup_hours": 48,
+      "deduplication": "root-cause-per-merge",
+      "unknown_attribution": "retain-unknown"
+    },
+    "settings_hash": "176699f1d83cdeadee82b9b393e17d2ed089cec154a17acc22d0653fa61c9b91",
+    "change_kind": "skill",
+    "replay_settings": {
+      "provider": "codex",
+      "model": "gpt-6.1-sol",
+      "effort": "high",
+      "service_tier": "default",
+      "tools": "read-only-scoped",
+      "context": "first-review-only-v1"
+    }
+  },
+  "experiment_hash": "ef3d5d8fb903d34c132d2123a5ffaeaed3f124dd7f3612de0e6fbfc02a85da61",
+  "journey": {
+    "schema": "closedwiz.journey.outcomes.v1",
+    "journey_hash": "764d3065544deb9a9359c7576d405a2a8848c9e4db3e609001dd12d7dfedba08",
+    "measurements": [
+      {
+        "pr": 4201,
+        "first_push": {
+          "status": "observed",
+          "at": "2030-01-01T12:00:00Z",
+          "kind": "builder-push-receipt",
+          "source": "s1",
+          "coverage": "partial"
+        },
+        "merge": {
+          "status": "verified",
+          "at": "2030-01-02T06:00:00Z",
+          "commit": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "source": "s2",
+          "read_at": "2030-01-02T07:00:00Z"
+        },
+        "rounds": [
+          "e13",
+          "e17",
+          "e22"
+        ],
+        "helpers": [
+          "e19"
+        ],
+        "defects": {
+          "status": "unmatured",
+          "observed_until": "2030-01-03T06:00:00Z",
+          "events": [
+            {
+              "key": "D1",
+              "kind": "later-defect-fix",
+              "at": "2030-01-03T05:00:00Z",
+              "attribution": "unknown",
+              "source": "s3"
+            }
+          ],
+          "resolutions": []
+        }
+      },
+      {
+        "pr": 4202,
+        "first_push": {
+          "status": "unknown",
+          "at": null,
+          "kind": null,
+          "source": null,
+          "coverage": "unknown"
+        },
+        "merge": {
+          "status": "unknown",
+          "at": null,
+          "commit": null,
+          "source": null,
+          "read_at": null
+        },
+        "rounds": [],
+        "helpers": [],
+        "defects": {
+          "status": "unknown",
+          "observed_until": null,
+          "events": [],
+          "resolutions": []
+        }
+      }
+    ]
+  },
+  "assignments": [],
+  "deviations": [],
+  "stages": {
+    "research": {
+      "status": "not_run",
+      "artifact_hash": null,
+      "source": null,
+      "at": null
+    },
+    "cf4": {
+      "status": "not_run",
+      "artifact_hash": null,
+      "source": null,
+      "at": null
+    },
+    "replay": {
+      "status": "not_run",
+      "artifact_hash": null,
+      "source": null,
+      "at": null
+    },
+    "live": {
+      "status": "not_run",
+      "artifact_hash": null,
+      "source": null,
+      "at": null
+    }
+  },
+  "replay": null,
+  "preregistration": null,
+  "result": null,
+  "usage": [
+    {
+      "scope": "old",
+      "provider": "codex",
+      "unit": "tokens",
+      "status": "known",
+      "value": 1200,
+      "coverage": "complete",
+      "attribution": "direct",
+      "source": "s6",
+      "gaps": []
+    },
+    {
+      "scope": "candidate",
+      "provider": "cloudroom",
+      "unit": "credits",
+      "status": "unknown",
+      "value": null,
+      "coverage": "partial",
+      "attribution": "unavailable",
+      "source": null,
+      "gaps": [
+        "missing-export"
+      ]
+    },
+    {
+      "scope": "total",
+      "provider": "cloudroom",
+      "unit": "sandbox_hours",
+      "status": "known",
+      "value": 0.25,
+      "coverage": "partial",
+      "attribution": "shared",
+      "source": "s6",
+      "gaps": [
+        "shared-sandbox"
+      ]
+    },
+    {
+      "scope": "candidate",
+      "provider": "codex",
+      "unit": "tokens",
+      "status": "unknown",
+      "value": null,
+      "coverage": "partial",
+      "attribution": "unavailable",
+      "source": null,
+      "gaps": [
+        "missing-export"
+      ]
+    },
+    {
+      "scope": "total",
+      "provider": "codex",
+      "unit": "tokens",
+      "status": "known",
+      "value": 1500,
+      "coverage": "partial",
+      "attribution": "direct",
+      "source": "s6",
+      "gaps": [
+        "missing-export"
+      ]
+    },
+    {
+      "scope": "old",
+      "provider": "cloudroom",
+      "unit": "credits",
+      "status": "known",
+      "value": 1.25,
+      "coverage": "complete",
+      "attribution": "direct",
+      "source": "s6",
+      "gaps": []
+    },
+    {
+      "scope": "total",
+      "provider": "cloudroom",
+      "unit": "credits",
+      "status": "unknown",
+      "value": null,
+      "coverage": "partial",
+      "attribution": "unavailable",
+      "source": null,
+      "gaps": [
+        "missing-export"
+      ]
+    }
+  ],
+  "sources": {
+    "s1": "https://github.com/example/factory/issues/4900#issuecomment-9001",
+    "s2": "https://github.com/example/factory/issues/4900#issuecomment-9002",
+    "s3": "https://github.com/example/factory/issues/4900#issuecomment-9003",
+    "s4": "https://github.com/example/factory/issues/4900#issuecomment-9004",
+    "s5": "https://github.com/example/factory/issues/4900#issuecomment-9005",
+    "s6": "https://github.com/example/factory/issues/4900#issuecomment-9006",
+    "s7": "https://github.com/example/factory/issues/4900#issuecomment-9007",
+    "s8": "https://github.com/example/factory/issues/4900#issuecomment-9008"
+  },
+  "cf4_runs": {
+    "old": [
+      {
+        "key": "old-cf4-1",
+        "status": "pass",
+        "runs": 60,
+        "passed": 60,
+        "score_hash": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "at": "2030-01-03T12:00:00Z",
+        "source": "s1"
+      }
+    ],
+    "candidate": [
+      {
+        "key": "candidate-cf4-1",
+        "status": "pass",
+        "runs": 60,
+        "passed": 60,
+        "score_hash": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "at": "2030-01-03T12:00:00Z",
+        "source": "s1"
+      }
+    ]
+  }
+}

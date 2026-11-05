@@ -26,7 +26,7 @@ use openwiz_core::new_thread::record::{
 
 use crate::{Area, Claimed, Kind, Store};
 
-/// The new-thread record (OpenWiz 0.0.4, the implementation): `new-threads/`.
+/// The new-thread record (OpenWiz 0.0.4, ClosedWiz#11): `new-threads/`.
 #[derive(Debug)]
 pub struct NewThreads;
 
@@ -69,6 +69,10 @@ impl Kind for NewThreads {
 pub type NewThreadFileStore = Store<NewThreads>;
 
 impl NewThreadStore for Store<NewThreads> {
+    fn load(&self, op_id: &OpId) -> Result<Option<NewThreadRecord>, StoreError> {
+        self.record(op_id)
+    }
+
     fn claim(&self, record: &NewThreadRecord, now: Timestamp) -> Result<Claim, StoreError> {
         Ok(match self.claim_record(record, now)? {
             Claimed::Owned => Claim::Owned,

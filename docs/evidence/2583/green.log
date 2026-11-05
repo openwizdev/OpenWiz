@@ -1,0 +1,35 @@
+Green proofs and full affected binaries, same tree as the green commit. Full runs:
+
+$ cargo test -p openwiz-service --test l5b-watchdog
+test placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit ... ok
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.36s
+
+$ cargo test -p openwiz-service --test t4b-tick
+test executor::placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit ... ok
+test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.74s
+
+$ cargo test -p openwiz-service --test t4-service
+test install_engine_reads::placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit ... ok
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.58s
+
+$ cargo test -p openwiz-service --test l3-runner
+test placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit ... ok
+test result: ok. 55 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.00s
+
+$ cargo test -p openwiz-tests --test service
+test t2_locate::process::placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit ... ok
+test result: FAILED. 57 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 97.12s
+
+$ cargo test -p openwiz-service --test t4-unit
+test setup::placing_a_fake_executable_leaves_no_writer_a_concurrent_fork_could_inherit ... ok
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.37s
+
+$ cargo test -p openwiz-service --test t6-update
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 275.85s
+
+service: the one failure (t2_documented_synthetic_server_uses_the_fixture_and_synthetic_inventory) is the missing apps/web/out export ("cannot serve --web-root"), a prerequisite this change does not touch; rerun with a synthetic apps/web/out/index.html:
+$ cargo test -p openwiz-tests --test service t2_documented_synthetic_server
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 57 filtered out
+
+$ cargo clippy -p openwiz-service -p openwiz-tests --all-targets -- -D warnings   (exit 0)
+$ cargo fmt --check   (exit 0)

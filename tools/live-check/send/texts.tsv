@@ -1,0 +1,23 @@
+# label	thread	text (synthetic; #10's prepared texts, PR #23 at 7e5c920; decided L-5, 2026-10-30)
+M01	T-A	OpenWiz acceptance L2 idle send to T-A: reply with the word ok.
+M02	T-A	OpenWiz acceptance L2 setup 1 for T-A: run the shell command sleep 120, then reply with the word done.
+M03	T-A	OpenWiz acceptance L2 queue on busy T-A: reply with the word ok.
+M04	T-A	OpenWiz acceptance L2 setup 2 for T-A: run the shell command sleep 120, then reply with the word done.
+M05	T-A	OpenWiz acceptance L2 steer on busy T-A: reply with the word ok.
+M06	T-B	OpenWiz acceptance L2 idle send to T-B: reply with the word ok.
+M07	T-B	OpenWiz acceptance L2 setup 1 for T-B: run the shell command sleep 120, then reply with the word done.
+M08	T-B	OpenWiz acceptance L2 queue on busy T-B: reply with the word ok.
+M09	T-B	OpenWiz acceptance L2 setup 2 for T-B: run the shell command sleep 120, then reply with the word done.
+M10	T-B	OpenWiz acceptance L2 steer on busy T-B: reply with the word ok.
+M11	T-C	OpenWiz acceptance L3 setup for T-C: run the shell command sleep 120, then reply with the word done.
+M12	T-C	OpenWiz acceptance L3 steer on T-C: this message must not be delivered or queued.
+M13	T-A	- OpenWiz acceptance L11 dash text to T-A: reply with the word ok.
+M14	T-A	OpenWiz acceptance L11 path text to T-A: /tmp/openwiz-acceptance/not-a-file.txt is only text, do not open it; reply with the word ok.
+M15	T-B	OpenWiz acceptance L6 network cut, T-B: reply with the word ok.
+M16	T-B	OpenWiz acceptance L6 lost acknowledgement, T-B: reply with the word ok.
+M17	T-A	OpenWiz acceptance L6 and L7 CLI killed after the call, T-A: reply with the word ok.
+M18	T-A	OpenWiz acceptance L7 CLI killed before the call, T-A: this message must not be delivered.
+M19	T-A	OpenWiz acceptance L8 op id rerun, T-A: reply with the word ok.
+M20	T-A	OpenWiz acceptance L8 conflicting reuse: this message must never be delivered.
+M21	T-A	OpenWiz acceptance L8 race, T-A: reply with the word ok.
+M25	T-A	OpenWiz acceptance L9 unauthorized probe: this message must never be delivered.

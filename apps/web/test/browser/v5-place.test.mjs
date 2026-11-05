@@ -75,6 +75,52 @@ for (const [what, next] of [
   });
 }
 
+for (const viewport of [{ width: 1200, height: 900 }, PHONE]) {
+  test(`${viewport.width}px: the last visible survivor stays put when every preceding visible row disappears`, async () => {
+    const first = rows(60);
+    const fx = await sequence([inventory(first)]);
+    const p = await openPage(browser, fx.site.origin, { clock: START, paused: true, viewport });
+    try {
+      await waitFor(async () => ids(await readView(p.page)).length === 60, { what: 'rows' });
+      await p.page.$eval('[data-session-id="thr_web_0011"]', (el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 80));
+      const visible = await p.page.$$eval('main [data-session-id]', (els) => els.filter((el) => {
+        const r = el.getBoundingClientRect();
+        return r.bottom > 48 && r.top < window.innerHeight;
+      }).map((el) => el.dataset.sessionId));
+      assert.ok(visible.length > 10, 'the viewport must exercise capture beyond ten anchors');
+      const anchor = visible.at(-1);
+      const removed = new Set(visible.slice(0, -1));
+      const second = first.filter((s) => !removed.has(s.id));
+      fx.api.setList(() => json(200, inventory(second)));
+      const y = await top(p.page, anchor);
+      await refresh(p, fx);
+      assert.deepEqual(ids(await readView(p.page)).toSorted(), second.map((s) => s.id).toSorted(), 'exactly the remaining rows, each once');
+      const after = await top(p.page, anchor);
+      assert.ok(Math.abs(after - y) <= 1, `first surviving visible row moved from ${y}px to ${after}px`);
+    } finally {
+      await p.close();
+      await fx.close();
+    }
+  });
+
+  test(`${viewport.width}px: new rows appear at the top without scrolling`, async () => {
+    const first = rows(60);
+    const second = [...rows(5, 500), ...first];
+    const fx = await sequence([inventory(first), inventory(second)]);
+    const p = await openPage(browser, fx.site.origin, { clock: START, paused: true, viewport });
+    try {
+      await waitFor(async () => ids(await readView(p.page)).length === 60, { what: 'rows' });
+      assert.equal(await p.page.evaluate(() => window.scrollY), 0);
+      await refresh(p, fx);
+      assert.deepEqual(ids(await readView(p.page)).toSorted(), second.map((s) => s.id).toSorted());
+      assert.equal(await p.page.evaluate(() => window.scrollY), 0, 'refresh leaves the page at the top');
+    } finally {
+      await p.close();
+      await fx.close();
+    }
+  });
+}
+
 test('a failed refresh that brings a notice above the rows keeps the scroll position', async () => {
   for (const viewport of [PHONE, DESKTOP]) {
     const fx = await fakeSite();
@@ -176,7 +222,7 @@ test('paging with the panel open keeps it, marked "no longer listed on this page
   }
 });
 
-test('a page read after the list changed says so: offset paging over a live list can miss or repeat a row ', async () => {
+test('a page read after the list changed says so: offset paging over a live list can miss or repeat a row (Sol 2)', async () => {
   let source = rows(250);
   const fx = await fakeSite();
   fx.api.setList((url) => {

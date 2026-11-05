@@ -1,0 +1,14 @@
+# CI web-export fix (#2222). Red: CI run 43366251504, web-export npm test at 51b7187cc: update_rejected's install.install()
+# refused 'path must be private, owned and have the expected type': its root was made with a plain mkdir(), so the runner's umask 022 left it 0755.
+# Reproduced locally with umask 022:
+$ (umask 022; python3 -I -B tools/install/tests/first-hour/providers/codes.py owner-cases)
+    raise Refused(reason)
+install.Refused: path must be private, owned and have the expected type
+
+# Fix: the case's install root and web folder are made with mode 0700.
+$ (umask 022; cd apps/web && node --test test/unit/first-hour-recovery.test.ts)
+ℹ pass 3
+ℹ fail 0
+$ (umask 077; cd apps/web && node --test test/unit/first-hour-recovery.test.ts)
+ℹ pass 3
+ℹ fail 0

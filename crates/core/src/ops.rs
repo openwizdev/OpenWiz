@@ -1,7 +1,7 @@
 //! Operations: `list` (for `ls` and `ls -l`) and `show`.
 //!
-//! Every run reads the source's version first and goes on whatever it is.
-//! Then `list` reads the session,
+//! Every run reads the source's version first and goes on whatever it is
+//! (#37: the version is never a gate). Then `list` reads the session,
 //! project and machine lists, and `show` reads one session, the project and machine lists, and its final
 //! output. Grouping and location use only the lists read in the same run.
 //!
@@ -96,6 +96,9 @@ pub enum OpError {
     InvalidRequest(String),
 }
 
+/// What the run read as the source's version. Never a gate (#37, policy (b)):
+/// any version runs; one other than the live-tested version is marked
+/// untested, and text that is not a recognised version is unknown, with a gap.
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct VersionRead {
     version: Fact<String>,
@@ -104,8 +107,8 @@ struct VersionRead {
 }
 
 /// A recognised version: `N.N.N` (1 to 4 digits each), as `room-cli` 0.43.1
-/// printed, or `v<N>` (1 to 6 digits), as `room-cli` v127 prints. The
-/// only version text ever shown: the adapter's sanitizer  and `send` use
+/// printed, or `v<N>` (1 to 6 digits), as `room-cli` v127 prints (#37). The
+/// only version text ever shown: the adapter's sanitizer (#21) and `send` use
 /// it too.
 pub fn is_version_text(text: &str) -> bool {
     let digits = |s: &str, max: usize| {
@@ -118,7 +121,7 @@ pub fn is_version_text(text: &str) -> bool {
     parts.len() == 3 && parts.iter().all(|p| digits(p, 4))
 }
 
-/// The version a run reports, and whether it is `tested`. Never a gate:
+/// The version a run reports, and whether it is `tested`. Never a gate (#37):
 /// the reads and `send` both use it. `read` names the version read, such as
 /// `room-cli --version`. A recognised version is known; anything else is
 /// unknown with OpenWiz's reason, and its text is never echoed.
@@ -151,6 +154,36 @@ pub fn version_fact(
 pub const VERSION_NOT_RECOGNISED: &str =
     "printed a version that is not N.N.N or v<N> (detail withheld)";
 
+/// Only these complete, fixed diagnostics identify a pre-launch failure.
+/// Never extract a category from arbitrary source/OS text or a substring.
+pub fn launch_failure_category(detail: &str) -> Option<&'static str> {
+    match detail {
+        "CloudRoom not running: room-cli could not be started (no bundled launcher)" => {
+            Some("no bundle")
+        }
+        "CloudRoom not running: room-cli could not be started (no running app identified)" => {
+            Some("no running app identified")
+        }
+        // The adapter's refusal for two or more running mounts, with its
+        // mid-update guidance (#1336); the adapter's tests pin both together.
+        "CloudRoom not running: room-cli could not be started (ambiguous app bundles). \
+         CloudRoom is mid-update (two running app mounts): restart CloudRoom to finish the \
+         update, then try again." => Some("ambiguous bundle"),
+        "CloudRoom not running: room-cli could not be started (unexpected bundle file)" => {
+            Some("unexpected bundle")
+        }
+        "CloudRoom not running: room-cli could not be started (unreadable app bundle)" => {
+            Some("unreadable bundle")
+        }
+        "room-cli could not be started" => Some("executable could not start"),
+        _ => None,
+    }
+}
+
+/// A failed version read, described by safe facts only: the exit code, timeout
+/// or allowlisted launch category, never arbitrary source text.
+/// Even a line #21's sanitizer would show is withheld: the version read's
+/// failure reaches every envelope and send report.
 fn version_failure(error: &SourceError) -> String {
     match error {
         SourceError::CommandFailed {
@@ -162,11 +195,14 @@ fn version_failure(error: &SourceError) -> String {
         } => "ended without an exit code (detail withheld)".to_owned(),
         SourceError::TimedOut { after_ms } => format!("timed out after {after_ms} ms"),
         // The one malformed detail that is shown: OpenWiz's own fixed words
-        // for a version outside the grammar. Allowlisted, so any
+        // for a version outside the grammar (#21, #37). Allowlisted, so any
         // other detail is withheld.
         SourceError::Malformed { detail } if detail == VERSION_NOT_RECOGNISED => detail.clone(),
         SourceError::Malformed { .. } => "returned malformed output (detail withheld)".to_owned(),
-        SourceError::Unavailable { .. } => "could not be run (detail withheld)".to_owned(),
+        SourceError::Unavailable { detail } => match launch_failure_category(detail) {
+            Some(category) => format!("could not be run ({category})"),
+            None => "could not be run (detail withheld)".to_owned(),
+        },
         SourceError::NotFound { .. } | SourceError::InvalidId { .. } => {
             "failed (detail withheld)".to_owned()
         }
@@ -207,6 +243,8 @@ pub fn show(
     show_report(source, clock, request).map(|r| r.envelope)
 }
 
+const STATUS_CONFLICT: &str = "session list returned conflicting status facts for this session id";
+
 /// [`list`], with the shared project names for display.
 pub fn list_report(
     source: &dyn SessionSource,
@@ -233,8 +271,11 @@ pub fn list_report(
     let listed = rows.records.len() + rows.unreadable.len();
     let mut unreadable = rows.unreadable.len();
     gaps.extend(rows.unreadable);
-    let mut seen = BTreeSet::new();
-    let mut kept = Vec::new();
+    // Each kept id's index in `kept`, and the ids whose rows disagree on
+    // status: one gap each, pushed in id order so row order never matters.
+    let mut seen: BTreeMap<SessionId, usize> = BTreeMap::new();
+    let mut conflicted = BTreeSet::new();
+    let mut kept: Vec<SessionRecord> = Vec::new();
     for record in rows.records {
         if record.id.0.is_empty() || record.id.0.chars().count() > FIELD_MAX_CHARS {
             unreadable += 1;
@@ -246,7 +287,12 @@ pub fn list_report(
                     source.read_name(Read::Sessions)
                 ),
             ));
-        } else if !seen.insert(record.id.clone()) {
+        } else if let Some(&index) = seen.get(&record.id) {
+            // Compare source facts before capping: different values may share a prefix.
+            if kept[index].status != record.status {
+                kept[index].status = Fact::Unknown(STATUS_CONFLICT.to_owned());
+                conflicted.insert(record.id.0.clone());
+            }
             unreadable += 1;
             gaps.push(gap(
                 GapKind::Malformed,
@@ -258,8 +304,16 @@ pub fn list_report(
             ));
         } else {
             gaps.extend(record.problems.iter().cloned());
+            seen.insert(record.id.clone(), kept.len());
             kept.push(record);
         }
+    }
+    for id in conflicted {
+        gaps.push(gap(
+            GapKind::Malformed,
+            Some(id),
+            STATUS_CONFLICT.to_owned(),
+        ));
     }
 
     let (mut excluded_hidden, mut excluded_archived) = (0, 0);
@@ -273,7 +327,8 @@ pub fn list_report(
             matched.push(record);
         }
     }
-    matched.sort_by(sort_key);
+    // IDs are unique here, so the id tie-breaker makes every sort key distinct.
+    matched.sort_unstable_by(sort_key);
     let matched_count = matched.len();
     let page: Vec<SessionRecord> = matched
         .into_iter()
@@ -284,10 +339,12 @@ pub fn list_report(
     let projects = run.projects(request.include_hidden, &mut gaps);
     let machines = run.machines(&mut gaps);
 
-    let configurations: Vec<ReportedConfiguration> = match request.detail {
+    // Each session's reported configuration and, from `ls -l`'s detail read,
+    // the start time that read reports (#539, R1): `show` reports it too.
+    let configurations: Vec<(ReportedConfiguration, Option<Timestamp>)> = match request.detail {
         Detail::Short => page
             .iter()
-            .map(|_| not_read(NOT_READ_SHORT.to_owned()))
+            .map(|_| (not_read(NOT_READ_SHORT.to_owned()), None))
             .collect(),
         Detail::Long => {
             let ids: Vec<SessionId> = page.iter().map(|r| r.id.clone()).collect();
@@ -301,9 +358,23 @@ pub fn list_report(
     let sessions: Vec<Session> = page
         .iter()
         .zip(configurations)
-        .map(|(record, configuration)| {
-            build_session(record, configuration, &projects, &machines, run.snapshot)
-        })
+        .map(
+            |(record, (configuration, detail_start))| match (&record.started_at, detail_start) {
+                // Only when the list reported none; build_session still checks it
+                // against the snapshot.
+                (Fact::Unknown(_), Some(at)) => build_session(
+                    &SessionRecord {
+                        started_at: Fact::Known(at),
+                        ..record.clone()
+                    },
+                    configuration,
+                    &projects,
+                    &machines,
+                    run.snapshot,
+                ),
+                _ => build_session(record, configuration, &projects, &machines, run.snapshot),
+            },
+        )
         .collect();
     let shared_names = shared_names(&projects, sessions.iter().map(|s| &s.group));
     let counts = Counts {
@@ -423,7 +494,7 @@ impl<'a> Run<'a> {
         format!("{} {error}", self.name(read))
     }
 
-    /// The source's version, read once. Never a gate: the run goes on
+    /// The source's version, read once. Never a gate (#37): the run goes on
     /// whatever it is. Only a recognised version text is shown; anything else
     /// is unknown with a reason and a gap, and is never echoed.
     fn read_version(&self) -> VersionRead {
@@ -453,6 +524,10 @@ impl<'a> Run<'a> {
             self.source.list_projects(include_hidden, deadline)
         })?;
         let mut names = BTreeMap::new();
+        // Conflicting ids, collected in a set so each yields one gap. The
+        // gaps are pushed after the loop in id order, so the project-row
+        // order never changes the merged gap's subjects (#714).
+        let mut conflicted: BTreeSet<ProjectId> = BTreeSet::new();
         for ProjectRecord { id, name } in rows {
             if id.0.chars().count() > FIELD_MAX_CHARS {
                 gaps.push(gap(
@@ -461,10 +536,31 @@ impl<'a> Run<'a> {
                     format!("a project id is longer than {FIELD_MAX_CHARS} characters"),
                 ));
             } else {
-                names.entry(id).or_insert_with(|| cap_fact(&name));
+                names
+                    .entry(id.clone())
+                    .and_modify(|previous| {
+                        if *previous != name {
+                            let why =
+                                "project list returned conflicting name facts for this project id";
+                            *previous = Fact::Unknown(why.to_owned());
+                            conflicted.insert(id.clone());
+                        }
+                    })
+                    .or_insert(name);
             }
         }
-        Ok(names)
+        for id in &conflicted {
+            gaps.push(gap(
+                GapKind::Malformed,
+                Some(id.0.clone()),
+                "project list returned conflicting name facts for this project id".to_owned(),
+            ));
+        }
+        // Compare source facts before capping: different names may share a prefix.
+        Ok(names
+            .into_iter()
+            .map(|(id, name)| (id, cap_fact(&name)))
+            .collect())
     }
 
     /// The machine list of this run: names by id.
@@ -474,9 +570,23 @@ impl<'a> Run<'a> {
         })?;
         let mut names = BTreeMap::new();
         for MachineRecord { id, name } in rows {
-            names.entry(id).or_insert_with(|| cap_fact(&name));
+            names
+                .entry(id.clone())
+                .and_modify(|previous| {
+                    if *previous != name {
+                        let why =
+                            "machine list returned conflicting name facts for this machine id";
+                        *previous = Fact::Unknown(why.to_owned());
+                        gaps.push(gap(GapKind::Malformed, Some(id.clone()), why.to_owned()));
+                    }
+                })
+                .or_insert(name);
         }
-        Ok(names)
+        // Compare source facts before capping: different names may share a prefix.
+        Ok(names
+            .into_iter()
+            .map(|(id, name)| (id, cap_fact(&name)))
+            .collect())
     }
 
     /// Reads a supporting list. A failure is a gap, and the reason the list
@@ -544,26 +654,34 @@ impl<'a> Run<'a> {
             .collect()
     }
 
-    /// The reported configuration from one detail read, and its gaps.
+    /// The reported configuration from one detail read, its known start
+    /// time, if it reports one, and its gaps.
     fn configuration(
         &self,
         id: &SessionId,
         outcome: Outcome,
         gaps: &mut Vec<Gap>,
-    ) -> ReportedConfiguration {
+    ) -> (ReportedConfiguration, Option<Timestamp>) {
         match outcome {
             Outcome::Read(detail) => {
                 let detail = *detail;
                 gaps.extend(detail.session.problems);
-                ReportedConfiguration {
-                    model: cap_fact(&detail.model),
-                    effort: cap_fact(&detail.effort),
-                }
+                let started = match detail.session.started_at {
+                    Fact::Known(at) => Some(at),
+                    Fact::Unknown(_) => None,
+                };
+                (
+                    ReportedConfiguration {
+                        model: cap_fact(&detail.model),
+                        effort: cap_fact(&detail.effort),
+                    },
+                    started,
+                )
             }
             Outcome::Failed(e) => {
                 let why = self.describe(Read::SessionDetail, &e);
                 gaps.push(gap(kind_of(&e), Some(id.0.clone()), why.clone()));
-                not_read(cap_field(&why))
+                (not_read(cap_field(&why)), None)
             }
             Outcome::NotRead => {
                 gaps.push(gap(
@@ -571,7 +689,7 @@ impl<'a> Run<'a> {
                     Some(id.0.clone()),
                     NOT_READ_BUDGET.to_owned(),
                 ));
-                not_read(NOT_READ_BUDGET.to_owned())
+                (not_read(NOT_READ_BUDGET.to_owned()), None)
             }
         }
     }
@@ -719,6 +837,14 @@ fn build_session(
         },
         Fact::Unknown(why) => Fact::Unknown(why.clone()),
     };
+    let started_at = match &record.started_at {
+        Fact::Known(at) if at.0 <= snapshot.0 => Fact::Known(*at),
+        Fact::Known(at) => Fact::Unknown(format!(
+            "the reported start time {} is after the snapshot",
+            at.0
+        )),
+        Fact::Unknown(why) => Fact::Unknown(cap_field(why)),
+    };
     Session {
         id: record.id.clone(),
         title: cap_fact(&record.title),
@@ -733,6 +859,7 @@ fn build_session(
         reported_configuration,
         updated_at,
         age_ms,
+        started_at,
     }
 }
 

@@ -1,4 +1,4 @@
-// Shared setup for the composer's proofs, on the fake
+// Shared setup for the composer's proofs (#9 step 3, W7 to W13), on the fake
 // API's send routes. Synthetic values only.
 
 import { DESKTOP, openPage, readDetail, readView, waitFor } from './browser.mjs';
@@ -71,7 +71,7 @@ export function readComposer(page) {
     const newest = rows.at(-1) ?? null;
     const acts = all('[data-part=actions] [data-action]').map((a) => {
       const b = a.querySelector('button');
-      return { key: a.dataset.action, label: b?.textContent ?? null, mode: b?.dataset.mode ?? null, disabled: b ? b.disabled || b.getAttribute('aria-disabled') === 'true' : null, effect: a.querySelector('.effect')?.textContent ?? null };
+      return { key: a.dataset.action, label: b?.textContent ?? null, mode: b?.dataset.mode ?? null, disabled: b ? b.disabled || b.getAttribute('aria-disabled') === 'true' : null, effect: c.querySelector(`[data-send-details="${a.dataset.action}"] .effect`)?.textContent ?? a.querySelector('.effect')?.textContent ?? null };
     });
     return {
       target: c.dataset.target,

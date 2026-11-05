@@ -1,4 +1,4 @@
-// Renders DEMO-labelled screenshots of the composer's states  at
+// Renders DEMO-labelled screenshots of the composer's states (#9 step 3) at
 // 390 and 1440 px, on the fake API: `node test/composer-screens.mjs [out-dir]`.
 // Not a proof. Synthetic data only.
 

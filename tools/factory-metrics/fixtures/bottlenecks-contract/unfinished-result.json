@@ -1,0 +1,51 @@
+{
+  "at": "2030-02-01T00:00:00Z",
+  "preregistration_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "status": "inconclusive",
+  "verdict": "inconclusive",
+  "samples": {
+    "old": {
+      "assigned": 1,
+      "merged": 0,
+      "open": 1,
+      "closed_unmerged": 0,
+      "unknown_timing": 1,
+      "mature_defects": 0
+    },
+    "candidate": {
+      "assigned": 0,
+      "merged": 0,
+      "open": 0,
+      "closed_unmerged": 0,
+      "unknown_timing": 0,
+      "mature_defects": 0
+    }
+  },
+  "effects": {
+    "time": {
+      "unit": "hours",
+      "old": null,
+      "candidate": null,
+      "delta": null,
+      "percent": null,
+      "interval": null
+    },
+    "rounds": {
+      "unit": "rounds",
+      "old": null,
+      "candidate": null,
+      "delta": null,
+      "percent": null,
+      "interval": null
+    },
+    "defects": {
+      "unit": "proportion",
+      "old": null,
+      "candidate": null,
+      "delta": null,
+      "percent": null,
+      "interval": null
+    }
+  },
+  "stops": []
+}

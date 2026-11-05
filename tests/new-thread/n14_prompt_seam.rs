@@ -1,8 +1,8 @@
 //! N14: the prompt seam. A file path in the text is sent as text; the empty
 //! list has its fixed digest on every record.
 //!
-//! **Updated for B2 (the implementation)**, with this recorded reason: B2 relaxes
-//! the seam A1 left. So: without an
+//! **Updated for B2 (ClosedWiz#15)**, with this recorded reason: B2 relaxes
+//! the seam A1 left (sheet B-1 to B-10, Jake, 2026-10-30). So: without an
 //! attachment store (`new_thread`, as the server calls it until B3) any
 //! attachment is still refused, now by the one gate, naming it, with zero
 //! calls and no claim; an attachment reaches the argument builder only as
@@ -26,6 +26,39 @@ fn with_attachment() -> openwiz_core::new_thread::NewThreadRequest {
 }
 
 #[test]
+fn n14_prompt_seam_contracts_preserve_all_original_cases() {
+    let cases: [(&str, fn()); 6] = [
+        (
+            "a_file_path_in_the_text_is_sent_as_text",
+            a_file_path_in_the_text_is_sent_as_text,
+        ),
+        (
+            "a_text_only_prompt_passes_no_attachment_flag",
+            a_text_only_prompt_passes_no_attachment_flag,
+        ),
+        (
+            "an_attachment_id_is_one_safe_segment",
+            an_attachment_id_is_one_safe_segment,
+        ),
+        (
+            "the_empty_list_has_its_fixed_digest_on_every_record",
+            the_empty_list_has_its_fixed_digest_on_every_record,
+        ),
+        (
+            "the_prompt_schema_allows_attachment_ids_each_once",
+            the_prompt_schema_allows_attachment_ids_each_once,
+        ),
+        (
+            "without_an_attachment_store_any_attachment_is_refused_with_zero_calls_and_no_claim",
+            without_an_attachment_store_any_attachment_is_refused_with_zero_calls_and_no_claim,
+        ),
+    ];
+    for (name, proof) in cases {
+        eprintln!("TA2 case: n14_prompt_seam::{name}");
+        proof();
+    }
+}
+
 fn without_an_attachment_store_any_attachment_is_refused_with_zero_calls_and_no_claim() {
     let client = FakeClient::new();
     let store = MemoryStore::new();
@@ -44,7 +77,6 @@ fn without_an_attachment_store_any_attachment_is_refused_with_zero_calls_and_no_
     assert_eq!(client.calls(), 0);
 }
 
-#[test]
 fn a_text_only_prompt_passes_no_attachment_flag() {
     let spawn = SpawnRequest {
         project_id: "prj_syn_0001".to_owned(),
@@ -66,7 +98,6 @@ fn a_text_only_prompt_passes_no_attachment_flag() {
     assert_eq!(argv.last().map(String::as_str), Some("Synthetic"));
 }
 
-#[test]
 fn a_file_path_in_the_text_is_sent_as_text() {
     let client = FakeClient::new();
     let store = MemoryStore::new();
@@ -77,7 +108,6 @@ fn a_file_path_in_the_text_is_sent_as_text() {
     assert!(!argv.iter().any(|w| w == "--file" || w == "--image"));
 }
 
-#[test]
 fn the_empty_list_has_its_fixed_digest_on_every_record() {
     assert_eq!(
         empty_attachments_digest(),
@@ -95,7 +125,6 @@ fn the_empty_list_has_its_fixed_digest_on_every_record() {
     );
 }
 
-#[test]
 fn an_attachment_id_is_one_safe_segment() {
     for good in ["a", "att-syn-0001", "A_1"] {
         assert!(AttachmentId::parse(good).is_ok(), "{good}");
@@ -110,7 +139,6 @@ fn prompt_schema() -> Value {
     serde_json::from_str(&std::fs::read_to_string(PROMPT_SCHEMA).unwrap()).unwrap()
 }
 
-#[test]
 fn the_prompt_schema_allows_attachment_ids_each_once() {
     let schema = prompt_schema();
     assert_eq!(schema["title"], "openwiz.prompt.v1");

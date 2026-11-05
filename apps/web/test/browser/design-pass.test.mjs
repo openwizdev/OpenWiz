@@ -1,4 +1,4 @@
-// The design pass: presentation proofs at 390 and 1440 px. The selected
+// The design pass (#75): presentation proofs at 390 and 1440 px. The selected
 // row has a shape, not only a tint; the core's words are shown whole and as
 // reported; desktop rows are one line; labels sit on one line; every marker's
 // glyph lines up with the text above it (its box hangs outside).
@@ -8,9 +8,10 @@ import { after, before, test } from 'node:test';
 
 import { DESKTOP, launchBrowser, openPage, PHONE, readDetail, readView, waitFor } from '../support/browser.mjs';
 import { json } from '../support/fake-api.mjs';
+import { clock } from '../support/expect.mjs';
 import { fakeSite } from '../support/harness.mjs';
 import { decodePng, inkMask, maskDifference } from '../support/png.mjs';
-import { inventory, session, sessionView, statusSessions } from '../support/synthetic.ts';
+import { inventory, session, sessionView, statusSessions, T0 } from '../support/synthetic.ts';
 
 const LONG_STATUS = `syn-very-long-status-word-${'x'.repeat(40)}`;
 const rows = [
@@ -102,10 +103,10 @@ const plainRowHeights = (page) =>
     els.filter((el) => !el.querySelector('[data-part=reason]') && el.querySelector('[data-part=status]').textContent.length < 20).map((el) => el.getBoundingClientRect().height),
   );
 
-test('thin rows: one 44 px line on desktop, at most 60 px on a phone', async () => {
+test('calm rows: title and metadata have room on desktop and phone', async () => {
   for (const [viewport, max] of [
-    [DESKTOP, 44],
-    [PHONE, 60],
+    [DESKTOP, 72],
+    [PHONE, 64],
   ]) {
     const p = await ready(viewport);
     try {
@@ -139,6 +140,50 @@ test('every detail label sits on one line', async () => {
   }
 });
 
+test('thread header: inline status, whole metadata items, quiet id and phone controls', async () => {
+  for (const viewport of [PHONE, DESKTOP]) {
+    const p = await ready(viewport);
+    try {
+      await open(p, 'thr_web_0002');
+      await p.page.evaluate(() => document.fonts.ready);
+      const header = await p.page.locator('.thread-header').evaluate((el) => {
+        const status = el.querySelector('[data-part=status]');
+        const glyph = status.querySelector('.glyph').getBoundingClientRect();
+        const word = status.querySelector('.word').getBoundingClientRect();
+        const title = el.querySelector('h2').getBoundingClientRect();
+        const chip = status.getBoundingClientRect();
+        const meta = el.querySelector('.thread-meta');
+        const items = [...meta.querySelectorAll('dd:not([data-field=configuration]), .thread-meta-item')];
+        const id = el.querySelector('.thread-id').getBoundingClientRect();
+        return {
+          statusInline: Math.abs((glyph.top + glyph.height / 2) - (word.top + word.height / 2)) < 1,
+          firstLineAligned: Math.abs(chip.top - title.top) < 1,
+          items: items.map((item) => ({ text: item.textContent, height: item.getBoundingClientRect().height })),
+          provider: meta.querySelector('[data-field=provider]').textContent,
+          updatedLabel: getComputedStyle(meta.querySelector('[data-field=age]'), '::before').content,
+          idBelowMeta: id.top >= meta.getBoundingClientRect().bottom,
+          monoId: getComputedStyle(el.querySelector('.thread-id code')).fontFamily.includes('GeistMono'),
+        };
+      });
+      assert.equal(header.statusInline, true, `status at ${viewport.width}px`);
+      assert.equal(header.firstLineAligned, true, `first title line at ${viewport.width}px`);
+      assert.equal(header.items.length, 6, 'project, provider, model, effort, location, updated');
+      assert.equal(header.provider, rows[1].provider.known);
+      assert.match(header.updatedLabel, /Updated/);
+      for (const item of header.items) assert.equal(item.height, 16, `whole metadata item: ${item.text}`);
+      assert.equal(header.idBelowMeta, true);
+      assert.equal(header.monoId, true);
+      if (viewport === PHONE) {
+        assert.equal(await p.page.locator('.thread-sheet .sheet-cmd').isVisible(), false);
+        assert.equal(await p.page.locator('.thread-sheet [aria-label="Sessions — close panel"]').isVisible(), true);
+        assert.equal(await p.page.locator('.thread-sheet .command-trigger.compact').isVisible(), true);
+      }
+    } finally {
+      await p.close();
+    }
+  }
+});
+
 test('every marker\'s glyph lines up with the title above it, whatever its tier', async () => {
   const p = await ready(PHONE);
   try {
@@ -151,7 +196,7 @@ test('every marker\'s glyph lines up with the title above it, whatever its tier'
         })
     );
     assert.ok(offsets.length >= 5);
-    for (const o of offsets) assert.ok(Math.abs(o) <= 1, `a glyph is ${o} px off the title's edge`);
+    for (const o of offsets) assert.ok(Math.abs(o + 36) <= 1, `a glyph is ${o} px off the title's edge`);
   } finally {
     await p.close();
   }
@@ -166,18 +211,21 @@ test('the gaps toggle: a small dashed tag in a 44 px target, showing whether it 
         return { target: b.getBoundingClientRect().height, tag: dashed ? dashed.getBoundingClientRect().height : null, text: b.innerText };
       });
     const closed = await look();
+    assert.equal(await p.page.locator('.gap-summary').isVisible(), true, 'the gap summary is visible before expanding');
+    assert.equal(await p.page.locator('.gap-summary').textContent(), gaps[0].detail, 'the gap detail remains verbatim');
     assert.ok(closed.target >= 44, `target ${closed.target}`);
     assert.ok(closed.tag !== null && closed.tag <= 24, `the dashed tag is ${closed.tag} px tall`);
     await p.page.click('[data-part=coverage]');
     const opened = await look();
-    assert.notEqual(opened.text, closed.text, 'open and closed look different');
+    assert.equal(await p.page.locator('button.cov').getAttribute('aria-expanded'), 'true', 'the disclosure announces its open state');
+    assert.equal(await p.page.locator('button.cov svg.open').count(), 1, 'the chevron turns when opened');
     assert.equal((await readView(p.page)).coverage, 'partial · 1 gap', 'the coverage words are unchanged');
   } finally {
     await p.close();
   }
 });
 
-test('headings that share a name end with the project id\'s last 4 characters, and only those', async () => {
+test('G2: headings that share a name end with the project id\'s last 4 characters, and only those', async () => {
   const p = await ready(PHONE);
   try {
     assert.deepEqual(
@@ -211,8 +259,8 @@ test('the selected row keeps the title column: every title starts at the same x'
 
 test('the "Sessions" heading costs about half its space on a phone, and stays as it was on desktop', async () => {
   for (const [viewport, check] of [
-    [PHONE, (h) => h <= 24],
-    [DESKTOP, (h) => h === 40],
+    [PHONE, (h) => h === 28],
+    [DESKTOP, (h) => h === 32],
   ]) {
     const p = await ready(viewport);
     try {
@@ -250,7 +298,7 @@ const borderContrast = (page, selector, pseudo = null) =>
     pseudo,
   );
 
-test('partial\'s dashed tag, with gaps and with none, and the t5 marker\'s box are at least 3:1 as rendered ', async () => {
+test('partial\'s dashed tag, with gaps and with none, and the t5 marker\'s box are at least 3:1 as rendered (Sol round 1)', async () => {
   const zero = await fakeSite();
   zero.api.setList(() => json(200, inventory(rows, { state: 'partial', gaps: [] })));
   try {
@@ -261,9 +309,10 @@ test('partial\'s dashed tag, with gaps and with none, and the t5 marker\'s box a
       const p = await openPage(browser, origin, { viewport: PHONE });
       try {
         await waitFor(async () => (await readView(p.page)).groups.length > 0, { what: 'rows' });
-        const shapes = [...(await borderContrast(p.page, '[data-part=coverage]')), ...(await borderContrast(p.page, 'main [data-tier=t5]', '::before'))];
-        assert.equal(shapes[0]?.text, what);
+        const shapes = [...(await borderContrast(p.page, '.coverage-chip')), ...(await borderContrast(p.page, 'main [data-tier=t5] .glyph svg'))];
+        assert.equal(shapes[0]?.text, `${what}· read ${clock(T0, await p.page.evaluate(() => Date.now()))}`);
         assert.equal(shapes[0]?.style, 'dashed', `${what} is a dashed tag`);
+        assert.ok(await p.page.locator('main [data-tier=t5] svg circle[stroke-dasharray]').count() >= 1, 'unknown has a dashed SVG ring');
         for (const s of shapes) assert.ok(s.ratio >= 3, `${s.text}: its ${s.style} border is ${s.ratio.toFixed(2)}:1`);
       } finally {
         await p.close();
@@ -271,5 +320,21 @@ test('partial\'s dashed tag, with gaps and with none, and the t5 marker\'s box a
     }
   } finally {
     await zero.close();
+  }
+});
+
+test('Projects links name the current groups and counts and only navigate to their anchors', async () => {
+  const p = await ready(DESKTOP);
+  try {
+    const groups = (await readView(p.page)).groups.filter((g) => g.key.startsWith('project:'));
+    const links = await p.page.locator('nav[aria-label=Projects] a').evaluateAll((els) => els.map((a) => ({ target: a.getAttribute('href').slice(1), name: a.children[1].textContent, count: a.children[2].textContent })));
+    assert.deepEqual(links, groups.map((g) => ({ target: `project-${g.key}`, name: g.heading.replace(/ · 000[45]$/, ''), count: String(g.rows.length) })));
+    await p.page.locator('nav[aria-label=Projects] a').last().click();
+    const target = await p.page.evaluate(() => document.getElementById(decodeURIComponent(location.hash.slice(1)))?.getAttribute('data-group-key'));
+    assert.equal(target, groups.at(-1).key);
+    assert.equal(p.requests.filter((r) => r.method !== 'GET').length, 0, 'project navigation never writes');
+    assert.equal(await p.page.locator('[data-part=detail][open]').count(), 0, 'project navigation opens no dialog');
+  } finally {
+    await p.close();
   }
 });

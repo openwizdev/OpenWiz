@@ -1,0 +1,721 @@
+{
+  "schema": "closedwiz.journey.v1",
+  "repo": "example/factory",
+  "history": "unknown",
+  "duplicates": 0,
+  "specs": [
+    {
+      "spec": 4100,
+      "events": [
+        {
+          "id": "e1",
+          "kind": "grill",
+          "at": null,
+          "source": "s1",
+          "completeness": "unknown",
+          "path": "docs/grills/2030-01-01-synthetic.md"
+        },
+        {
+          "id": "e2",
+          "kind": "spec",
+          "at": "2030-01-01T08:00:00Z",
+          "source": "s1",
+          "completeness": "complete"
+        },
+        {
+          "id": "e3",
+          "kind": "plan_graph",
+          "at": "2030-01-01T09:00:00Z",
+          "source": "s2",
+          "completeness": "complete",
+          "revision": 1
+        }
+      ],
+      "usage": [
+        {
+          "provider": "claude",
+          "unit": "tokens",
+          "status": "known",
+          "value": 300,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "claude",
+          "unit": "credits",
+          "status": "known",
+          "value": 0,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "claude",
+          "unit": "usd",
+          "status": "known",
+          "value": 0,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "gpt",
+          "unit": "tokens",
+          "status": "unattributed",
+          "value": null,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "gpt",
+          "unit": "credits",
+          "status": "unattributed",
+          "value": null,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "gpt",
+          "unit": "usd",
+          "status": "unattributed",
+          "value": null,
+          "missing_days": [],
+          "attribution": "thread-record"
+        }
+      ]
+    }
+  ],
+  "tickets": [
+    {
+      "ticket": 4101,
+      "spec": 4100,
+      "state": "merged",
+      "pull_requests": [
+        4201
+      ],
+      "events": [
+        {
+          "id": "e4",
+          "kind": "ticket",
+          "at": "2030-01-01T10:00:00Z",
+          "source": "s3",
+          "completeness": "complete"
+        },
+        {
+          "id": "e5",
+          "kind": "ready",
+          "at": "2030-01-01T11:00:00Z",
+          "source": "s3",
+          "completeness": "complete"
+        },
+        {
+          "id": "e6",
+          "kind": "builder_start",
+          "at": "2030-01-01T12:00:00Z",
+          "source": "s4",
+          "completeness": "complete"
+        }
+      ],
+      "gaps": [],
+      "usage": [
+        {
+          "provider": "claude",
+          "unit": "tokens",
+          "status": "known",
+          "value": 3500,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "claude",
+          "unit": "credits",
+          "status": "known",
+          "value": 7,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "claude",
+          "unit": "usd",
+          "status": "unknown",
+          "value": null,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "gpt",
+          "unit": "tokens",
+          "status": "unattributed",
+          "value": null,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "gpt",
+          "unit": "credits",
+          "status": "unattributed",
+          "value": null,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "gpt",
+          "unit": "usd",
+          "status": "unattributed",
+          "value": null,
+          "missing_days": [],
+          "attribution": "thread-record"
+        }
+      ]
+    },
+    {
+      "ticket": 4102,
+      "spec": 4100,
+      "state": "open",
+      "pull_requests": [],
+      "events": [
+        {
+          "id": "e7",
+          "kind": "ticket",
+          "at": "2030-01-01T10:30:00Z",
+          "source": "s5",
+          "completeness": "complete"
+        },
+        {
+          "id": "e8",
+          "kind": "ready",
+          "at": "2030-01-01T11:30:00Z",
+          "source": "s5",
+          "completeness": "complete"
+        },
+        {
+          "id": "e9",
+          "kind": "builder_start",
+          "at": "2030-01-01T12:00:00Z",
+          "source": "s6",
+          "completeness": "complete"
+        }
+      ],
+      "gaps": [
+        "no pull request",
+        "no merge"
+      ],
+      "usage": [
+        {
+          "provider": "claude",
+          "unit": "tokens",
+          "status": "unattributed",
+          "value": null,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "claude",
+          "unit": "credits",
+          "status": "unattributed",
+          "value": null,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "claude",
+          "unit": "usd",
+          "status": "unattributed",
+          "value": null,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "gpt",
+          "unit": "tokens",
+          "status": "known",
+          "value": 0,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "gpt",
+          "unit": "credits",
+          "status": "known",
+          "value": 0,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "gpt",
+          "unit": "usd",
+          "status": "known",
+          "value": 0,
+          "missing_days": [],
+          "attribution": "thread-record"
+        }
+      ]
+    },
+    {
+      "ticket": 4103,
+      "spec": null,
+      "state": "merged",
+      "pull_requests": [
+        4202
+      ],
+      "events": [
+        {
+          "id": "e10",
+          "kind": "ticket",
+          "at": "2030-01-02T01:00:00Z",
+          "source": "s7",
+          "completeness": "complete"
+        }
+      ],
+      "gaps": [
+        "no ready label",
+        "no builder start record",
+        "no spec",
+        "no grill path",
+        "no plan graph approval"
+      ],
+      "usage": [
+        {
+          "provider": "claude",
+          "unit": "tokens",
+          "status": "unattributed",
+          "value": null,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "claude",
+          "unit": "credits",
+          "status": "unattributed",
+          "value": null,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "claude",
+          "unit": "usd",
+          "status": "unattributed",
+          "value": null,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "gpt",
+          "unit": "tokens",
+          "status": "unattributed",
+          "value": null,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "gpt",
+          "unit": "credits",
+          "status": "unattributed",
+          "value": null,
+          "missing_days": [],
+          "attribution": "thread-record"
+        },
+        {
+          "provider": "gpt",
+          "unit": "usd",
+          "status": "unattributed",
+          "value": null,
+          "missing_days": [],
+          "attribution": "thread-record"
+        }
+      ]
+    }
+  ],
+  "pull_requests": [
+    {
+      "number": 4201,
+      "tickets": [
+        4101
+      ],
+      "state": "merged",
+      "revisions": {
+        "base": "dddddddddddddddddddddddddddddddddddddddd",
+        "head": "cccccccccccccccccccccccccccccccccccccccc",
+        "merge": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      },
+      "experiment": {
+        "tag": "build-ticket-r2",
+        "cf4": {
+          "settings_hash": "2222222222222222222222222222222222222222222222222222222222222222",
+          "cases_hash": "3333333333333333333333333333333333333333333333333333333333333333",
+          "code_hash": "4444444444444444444444444444444444444444444444444444444444444444",
+          "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "events": [
+        {
+          "id": "e11",
+          "kind": "pr_opened",
+          "at": "2030-01-01T14:00:00Z",
+          "source": "s8",
+          "completeness": "complete"
+        },
+        {
+          "id": "e12",
+          "kind": "ci_attempt",
+          "at": "2030-01-01T14:01:00Z",
+          "source": "s9",
+          "completeness": "complete",
+          "run": 7001,
+          "attempt": 1,
+          "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "rerun": false,
+          "conclusion": "success"
+        },
+        {
+          "id": "e13",
+          "kind": "verdict",
+          "at": "2030-01-01T16:00:00Z",
+          "source": "s10",
+          "completeness": "complete",
+          "verdict": "CHANGES",
+          "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "independent": true,
+          "duplicate_of": null
+        },
+        {
+          "id": "e14",
+          "kind": "fix_round",
+          "at": "2030-01-01T18:00:00Z",
+          "source": "s11",
+          "completeness": "complete",
+          "round": 1,
+          "after": "e13",
+          "answers": [
+            {
+              "finding": "R1",
+              "answer": "fixed"
+            },
+            {
+              "finding": "R2",
+              "answer": "disputed"
+            }
+          ]
+        },
+        {
+          "id": "e15",
+          "kind": "ci_attempt",
+          "at": "2030-01-01T19:00:00Z",
+          "source": "s12",
+          "completeness": "complete",
+          "run": 7002,
+          "attempt": 1,
+          "head": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "rerun": false,
+          "conclusion": "failure"
+        },
+        {
+          "id": "e16",
+          "kind": "ci_attempt",
+          "at": "2030-01-01T19:30:00Z",
+          "source": "s13",
+          "completeness": "complete",
+          "run": 7002,
+          "attempt": 2,
+          "head": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "rerun": true,
+          "conclusion": "success"
+        },
+        {
+          "id": "e17",
+          "kind": "verdict",
+          "at": "2030-01-01T20:00:00Z",
+          "source": "s14",
+          "completeness": "complete",
+          "verdict": "CHANGES",
+          "head": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "independent": true,
+          "duplicate_of": null
+        },
+        {
+          "id": "e18",
+          "kind": "verdict",
+          "at": "2030-01-01T20:01:00Z",
+          "source": "s15",
+          "completeness": "complete",
+          "verdict": "CHANGES",
+          "head": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "independent": true,
+          "duplicate_of": "e17"
+        },
+        {
+          "id": "e19",
+          "kind": "verdict",
+          "at": "2030-01-01T21:00:00Z",
+          "source": "s16",
+          "completeness": "complete",
+          "verdict": "APPROVE",
+          "head": "cccccccccccccccccccccccccccccccccccccccc",
+          "independent": false,
+          "duplicate_of": null
+        },
+        {
+          "id": "e20",
+          "kind": "fix_round",
+          "at": "2030-01-01T22:00:00Z",
+          "source": "s17",
+          "completeness": "edited",
+          "round": 2,
+          "after": "e17",
+          "answers": [
+            {
+              "finding": "R2",
+              "answer": "fixed"
+            },
+            {
+              "finding": "R4",
+              "answer": "fixed"
+            }
+          ]
+        },
+        {
+          "id": "e21",
+          "kind": "ci_attempt",
+          "at": "2030-01-02T04:00:00Z",
+          "source": "s18",
+          "completeness": "complete",
+          "run": 7003,
+          "attempt": 1,
+          "head": "cccccccccccccccccccccccccccccccccccccccc",
+          "rerun": false,
+          "conclusion": "success"
+        },
+        {
+          "id": "e22",
+          "kind": "verdict",
+          "at": "2030-01-02T05:00:00Z",
+          "source": "s19",
+          "completeness": "complete",
+          "verdict": "APPROVE",
+          "head": "cccccccccccccccccccccccccccccccccccccccc",
+          "independent": true,
+          "duplicate_of": null
+        },
+        {
+          "id": "e23",
+          "kind": "merge",
+          "at": "2030-01-02T06:00:00Z",
+          "source": "s8",
+          "completeness": "complete",
+          "commit": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+        }
+      ],
+      "findings": [
+        {
+          "id": "R1",
+          "severity": "high",
+          "check": "Spec",
+          "kind": "fail-open",
+          "kind_evidence": "marker",
+          "raised_by": "e13",
+          "statuses": [
+            {
+              "verdict": "e17",
+              "status": "resolved"
+            },
+            {
+              "verdict": "e22",
+              "status": "resolved"
+            }
+          ]
+        },
+        {
+          "id": "R2",
+          "severity": "medium",
+          "check": "Standards",
+          "kind": "unknown",
+          "kind_evidence": "no marker",
+          "raised_by": "e13",
+          "statuses": [
+            {
+              "verdict": "e17",
+              "status": "disputed, kept"
+            },
+            {
+              "verdict": "e22",
+              "status": "resolved"
+            }
+          ]
+        },
+        {
+          "id": "R3",
+          "severity": "low",
+          "check": "Sweep",
+          "kind": "unknown",
+          "kind_evidence": "unrecognised marker",
+          "raised_by": "e13",
+          "statuses": [
+            {
+              "verdict": "e17",
+              "status": "follow-up"
+            },
+            {
+              "verdict": "e22",
+              "status": "follow-up"
+            }
+          ]
+        },
+        {
+          "id": "R4",
+          "severity": "medium",
+          "check": "Sweep",
+          "kind": "stale-docs",
+          "kind_evidence": "marker",
+          "raised_by": "e17",
+          "statuses": [
+            {
+              "verdict": "e22",
+              "status": "resolved"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "number": 4202,
+      "tickets": [
+        4103
+      ],
+      "state": "merged",
+      "revisions": {
+        "base": "dddddddddddddddddddddddddddddddddddddddd",
+        "head": "ffffffffffffffffffffffffffffffffffffffff",
+        "merge": "1111111111111111111111111111111111111111"
+      },
+      "experiment": null,
+      "events": [
+        {
+          "id": "e24",
+          "kind": "pr_opened",
+          "at": "2030-01-02T01:30:00Z",
+          "source": "s20",
+          "completeness": "complete"
+        },
+        {
+          "id": "e25",
+          "kind": "merge",
+          "at": "2030-01-02T02:00:00Z",
+          "source": "s20",
+          "completeness": "complete",
+          "commit": "1111111111111111111111111111111111111111"
+        }
+      ],
+      "findings": []
+    }
+  ],
+  "daily_usage": [
+    {
+      "date": "2030-01-01",
+      "merged_prs": 1,
+      "totals": {
+        "claude": {
+          "tokens": {
+            "total": 2050.0,
+            "per_merged_pr": 2050.0
+          },
+          "credits": {
+            "total": 5.0,
+            "per_merged_pr": 5.0
+          },
+          "usd": {
+            "total": null,
+            "per_merged_pr": null
+          }
+        },
+        "gpt": {
+          "tokens": {
+            "total": 0.0,
+            "per_merged_pr": 0.0
+          },
+          "credits": {
+            "total": 0.0,
+            "per_merged_pr": 0.0
+          },
+          "usd": {
+            "total": 0.0,
+            "per_merged_pr": 0.0
+          }
+        },
+        "sandbox": {
+          "hours": {
+            "total": 6.0,
+            "per_merged_pr": 6.0
+          },
+          "usd": {
+            "total": 3.0,
+            "per_merged_pr": 3.0
+          }
+        }
+      }
+    },
+    {
+      "date": "2030-01-02",
+      "merged_prs": 2,
+      "totals": {
+        "claude": {
+          "tokens": {
+            "total": 2700.0,
+            "per_merged_pr": 1350.0
+          },
+          "credits": {
+            "total": 5.0,
+            "per_merged_pr": 2.5
+          },
+          "usd": {
+            "total": 3.0,
+            "per_merged_pr": 1.5
+          }
+        },
+        "gpt": {
+          "tokens": {
+            "total": 0.0,
+            "per_merged_pr": 0.0
+          },
+          "credits": {
+            "total": 0.0,
+            "per_merged_pr": 0.0
+          },
+          "usd": {
+            "total": 0.0,
+            "per_merged_pr": 0.0
+          }
+        },
+        "sandbox": {
+          "hours": {
+            "total": 1.0,
+            "per_merged_pr": 0.5
+          },
+          "usd": {
+            "total": null,
+            "per_merged_pr": null
+          }
+        }
+      }
+    }
+  ],
+  "sources": {
+    "s1": "https://github.com/example/factory/issues/4100",
+    "s2": "https://github.com/example/factory/issues/4100#issuecomment-5001",
+    "s3": "https://github.com/example/factory/issues/4101",
+    "s4": "https://github.com/example/factory/issues/4101#issuecomment-5101",
+    "s5": "https://github.com/example/factory/issues/4102",
+    "s6": "https://github.com/example/factory/issues/4102#issuecomment-5111",
+    "s7": "https://github.com/example/factory/issues/4103",
+    "s8": "https://github.com/example/factory/pull/4201",
+    "s9": "https://github.com/example/factory/actions/runs/7001",
+    "s10": "https://github.com/example/factory/pull/4201#issuecomment-5201",
+    "s11": "https://github.com/example/factory/pull/4201#issuecomment-5203",
+    "s12": "https://github.com/example/factory/actions/runs/7002/attempts/1",
+    "s13": "https://github.com/example/factory/actions/runs/7002",
+    "s14": "https://github.com/example/factory/pull/4201#issuecomment-5204",
+    "s15": "https://github.com/example/factory/pull/4201#issuecomment-5205",
+    "s16": "https://github.com/example/factory/pull/4201#issuecomment-5206",
+    "s17": "https://github.com/example/factory/pull/4201#issuecomment-5207",
+    "s18": "https://github.com/example/factory/actions/runs/7003",
+    "s19": "https://github.com/example/factory/pull/4201#issuecomment-5208",
+    "s20": "https://github.com/example/factory/pull/4202"
+  }
+}

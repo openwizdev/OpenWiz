@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+"""Synthetic thread door; rejects every operation except list and tell."""
+import json
+import os
+from pathlib import Path
+import sys
+
+args = sys.argv[1:]
+world = json.loads(Path(os.environ["RELAY_WORLD"]).read_text())
+with open(os.environ["RELAY_CALLS"], "a") as log:
+    log.write(json.dumps({"tool": "room-cli", "args": args}) + "\n")
+if args in (["thread", "list", "--include-archived", "--json"],
+            ["thread", "list", "--include-archived", "--include-hidden", "--json"]):
+    if world.get("room_fail"):
+        sys.exit(1)
+    print(json.dumps([t for t in world["threads"] if not t.get("hidden") or "--include-hidden" in args]))
+elif len(args) == 4 and args[:2] == ["thread", "tell"]:
+    if world.get("tell_fail"):
+        sys.exit(1)
+    print("synthetic acknowledgement")
+else:
+    raise AssertionError(args)

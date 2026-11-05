@@ -1,0 +1,121 @@
+$ python3 -I tools/war-room/test_gather.py
+EEEEEE
+======================================================================
+ERROR: test_a_planted_secret_turns_the_privacy_scan_red (__main__.Gather.test_a_planted_secret_turns_the_privacy_scan_red) [ghp_]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/war-room/test_gather.py", line 235, in test_a_planted_secret_turns_the_privacy_scan_red
+    with self.assertRaises(gatherer().Fail) as refused, contextlib.redirect_stdout(io.StringIO()):
+                           ^^^^^^^^^^
+  File "<checkout>/tools/war-room/test_gather.py", line 51, in gatherer
+    return load('gather', HERE / 'gather.py')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<checkout>/tools/war-room/test_gather.py", line 38, in load
+    spec.loader.exec_module(module)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '<checkout>/tools/war-room/gather.py'
+
+======================================================================
+ERROR: test_a_planted_secret_turns_the_privacy_scan_red (__main__.Gather.test_a_planted_secret_turns_the_privacy_scan_red) [thr_]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/war-room/test_gather.py", line 235, in test_a_planted_secret_turns_the_privacy_scan_red
+    with self.assertRaises(gatherer().Fail) as refused, contextlib.redirect_stdout(io.StringIO()):
+                           ^^^^^^^^^^
+  File "<checkout>/tools/war-room/test_gather.py", line 51, in gatherer
+    return load('gather', HERE / 'gather.py')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<checkout>/tools/war-room/test_gather.py", line 38, in load
+    spec.loader.exec_module(module)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '<checkout>/tools/war-room/gather.py'
+
+======================================================================
+ERROR: test_a_removed_or_unreadable_source_greys_only_its_own_card (__main__.Gather.test_a_removed_or_unreadable_source_greys_only_its_own_card)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/war-room/test_gather.py", line 199, in test_a_removed_or_unreadable_source_greys_only_its_own_card
+    root, selection = self.gather()
+                      ^^^^^^^^^^^^^
+  File "<checkout>/tools/war-room/test_gather.py", line 123, in gather
+    gatherer().gather(out, **args)
+    ^^^^^^^^^^
+  File "<checkout>/tools/war-room/test_gather.py", line 51, in gatherer
+    return load('gather', HERE / 'gather.py')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<checkout>/tools/war-room/test_gather.py", line 38, in load
+    spec.loader.exec_module(module)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '<checkout>/tools/war-room/gather.py'
+
+======================================================================
+ERROR: test_gather_writes_a_selection_sources_select_accepts (__main__.Gather.test_gather_writes_a_selection_sources_select_accepts)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/war-room/test_gather.py", line 144, in test_gather_writes_a_selection_sources_select_accepts
+    root, selection = self.gather()
+                      ^^^^^^^^^^^^^
+  File "<checkout>/tools/war-room/test_gather.py", line 123, in gather
+    gatherer().gather(out, **args)
+    ^^^^^^^^^^
+  File "<checkout>/tools/war-room/test_gather.py", line 51, in gatherer
+    return load('gather', HERE / 'gather.py')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<checkout>/tools/war-room/test_gather.py", line 38, in load
+    spec.loader.exec_module(module)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '<checkout>/tools/war-room/gather.py'
+
+======================================================================
+ERROR: test_publish_shows_measured_values_with_provenance (__main__.Gather.test_publish_shows_measured_values_with_provenance)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/war-room/test_gather.py", line 172, in test_publish_shows_measured_values_with_provenance
+    root, selection = self.gather()
+                      ^^^^^^^^^^^^^
+  File "<checkout>/tools/war-room/test_gather.py", line 123, in gather
+    gatherer().gather(out, **args)
+    ^^^^^^^^^^
+  File "<checkout>/tools/war-room/test_gather.py", line 51, in gatherer
+    return load('gather', HERE / 'gather.py')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<checkout>/tools/war-room/test_gather.py", line 38, in load
+    spec.loader.exec_module(module)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '<checkout>/tools/war-room/gather.py'
+
+======================================================================
+ERROR: test_without_journeys_or_answer_records_each_card_names_its_prerequisite (__main__.Gather.test_without_journeys_or_answer_records_each_card_names_its_prerequisite)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/war-room/test_gather.py", line 219, in test_without_journeys_or_answer_records_each_card_names_its_prerequisite
+    root, selection = self.gather(journeys=None, cohort=None, answer_time=None)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<checkout>/tools/war-room/test_gather.py", line 123, in gather
+    gatherer().gather(out, **args)
+    ^^^^^^^^^^
+  File "<checkout>/tools/war-room/test_gather.py", line 51, in gatherer
+    return load('gather', HERE / 'gather.py')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<checkout>/tools/war-room/test_gather.py", line 38, in load
+    spec.loader.exec_module(module)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '<checkout>/tools/war-room/gather.py'
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.446s
+
+FAILED (errors=6)
+exit 1

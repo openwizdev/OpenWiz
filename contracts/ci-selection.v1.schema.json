@@ -1,0 +1,718 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:openwiz:schema:ci-selection:v1",
+  "title": "openwiz.ci-selection.v1",
+  "description": "The CI selection record: one plan per CI run (contract only, #1405). See ci-selection.v1.md for the words, the test ids, the rules beyond this schema and where a run keeps its plan. Fixtures (ci/selection/) prove shapes, never a live run.",
+  "$ref": "#/$defs/plan",
+  "$defs": {
+    "plan": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/full"
+        },
+        {
+          "$ref": "#/$defs/selected"
+        }
+      ]
+    },
+    "full": {
+      "type": "object",
+      "required": [
+        "schema",
+        "run",
+        "diff",
+        "selection",
+        "builds",
+        "lanes",
+        "store"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "$ref": "#/$defs/name"
+        },
+        "run": {
+          "$ref": "#/$defs/run"
+        },
+        "diff": {
+          "$ref": "#/$defs/diff"
+        },
+        "selection": {
+          "type": "object",
+          "required": [
+            "mode",
+            "reasons"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "const": "full"
+            },
+            "reasons": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "$ref": "#/$defs/reason"
+              }
+            }
+          }
+        },
+        "builds": {
+          "$ref": "#/$defs/builds_full"
+        },
+        "lanes": {
+          "$ref": "#/$defs/lanes_full"
+        },
+        "store": {
+          "$ref": "#/$defs/store"
+        }
+      }
+    },
+    "selected": {
+      "type": "object",
+      "required": [
+        "schema",
+        "run",
+        "diff",
+        "selection",
+        "builds",
+        "lanes",
+        "store"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "$ref": "#/$defs/name"
+        },
+        "run": {
+          "$ref": "#/$defs/run_selected"
+        },
+        "diff": {
+          "$ref": "#/$defs/diff_read"
+        },
+        "selection": {
+          "type": "object",
+          "required": [
+            "mode"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "const": "selected"
+            }
+          }
+        },
+        "builds": {
+          "$ref": "#/$defs/builds_selected"
+        },
+        "lanes": {
+          "$ref": "#/$defs/lanes_selected"
+        },
+        "store": {
+          "$ref": "#/$defs/store"
+        }
+      }
+    },
+    "name": {
+      "const": "openwiz.ci-selection.v1"
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]$"
+    },
+    "branch": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-][A-Za-z0-9_./-]*$"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "pattern": "^[^\\u0000-\\u001f\\u007f]*$"
+    },
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\u0000-\\u001f\\u007f/][^\\u0000-\\u001f\\u007f]*$"
+    },
+    "paths": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/path"
+      }
+    },
+    "action": {
+      "enum": [
+        "opened",
+        "synchronize",
+        "reopened",
+        "ready_for_review"
+      ]
+    },
+    "run": {
+      "type": "object",
+      "required": [
+        "id",
+        "attempt",
+        "event",
+        "action",
+        "base_branch",
+        "base",
+        "head",
+        "pull_request"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/count"
+        },
+        "attempt": {
+          "$ref": "#/$defs/count"
+        },
+        "event": {
+          "enum": [
+            "pull_request",
+            "push",
+            "schedule",
+            "merge_group"
+          ]
+        },
+        "action": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/action"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "base_branch": {
+          "$ref": "#/$defs/branch"
+        },
+        "base": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sha"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "head": {
+          "$ref": "#/$defs/sha"
+        },
+        "pull_request": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/count"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "run_selected": {
+      "type": "object",
+      "required": [
+        "id",
+        "attempt",
+        "event",
+        "action",
+        "base_branch",
+        "base",
+        "head",
+        "pull_request"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/count"
+        },
+        "attempt": {
+          "const": 1
+        },
+        "event": {
+          "const": "pull_request"
+        },
+        "action": {
+          "enum": [
+            "opened",
+            "synchronize",
+            "reopened"
+          ]
+        },
+        "base_branch": {
+          "const": "main"
+        },
+        "base": {
+          "$ref": "#/$defs/sha"
+        },
+        "head": {
+          "$ref": "#/$defs/sha"
+        },
+        "pull_request": {
+          "$ref": "#/$defs/count"
+        }
+      }
+    },
+    "diff": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/diff_read"
+        },
+        {
+          "type": "object",
+          "required": [
+            "state"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "state": {
+              "const": "empty"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "state",
+            "error"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "state": {
+              "const": "failed"
+            },
+            "error": {
+              "$ref": "#/$defs/text"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "state"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "state": {
+              "const": "not_read"
+            }
+          }
+        }
+      ]
+    },
+    "diff_read": {
+      "type": "object",
+      "required": [
+        "state",
+        "paths"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "state": {
+          "const": "read"
+        },
+        "paths": {
+          "$ref": "#/$defs/paths"
+        }
+      }
+    },
+    "reason": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "code"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "code": {
+              "enum": [
+                "push_main",
+                "nightly",
+                "rerun",
+                "release_branch",
+                "merge_group",
+                "ready_for_review",
+                "empty_diff",
+                "failed_diff"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "code",
+            "paths"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "code": {
+              "enum": [
+                "unknown_path",
+                "ci_change"
+              ]
+            },
+            "paths": {
+              "$ref": "#/$defs/paths"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "code",
+            "detail"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "code": {
+              "enum": [
+                "stale_event",
+                "selector_error"
+              ]
+            },
+            "detail": {
+              "$ref": "#/$defs/text"
+            }
+          }
+        }
+      ]
+    },
+    "test": {
+      "type": "string",
+      "pattern": "^[a-z][a-z]*:[A-Za-z0-9_.-][A-Za-z0-9_.:-]*$"
+    },
+    "tests": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/test"
+      }
+    },
+    "skip": {
+      "type": "object",
+      "required": [
+        "test",
+        "reason"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "test": {
+          "$ref": "#/$defs/test"
+        },
+        "reason": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "lane_all": {
+      "type": "object",
+      "required": [
+        "decision",
+        "tests",
+        "skipped"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "decision": {
+          "const": "run"
+        },
+        "tests": {
+          "$ref": "#/$defs/tests"
+        },
+        "skipped": {
+          "const": []
+        }
+      }
+    },
+    "lane_run": {
+      "type": "object",
+      "required": [
+        "decision",
+        "tests",
+        "skipped"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "decision": {
+          "const": "run"
+        },
+        "tests": {
+          "$ref": "#/$defs/tests"
+        },
+        "skipped": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/skip"
+          }
+        }
+      }
+    },
+    "lane_skip": {
+      "type": "object",
+      "required": [
+        "decision",
+        "reason"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "decision": {
+          "const": "skip"
+        },
+        "reason": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "lane": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/lane_run"
+        },
+        {
+          "$ref": "#/$defs/lane_skip"
+        }
+      ]
+    },
+    "skill_name": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "skill_all": {
+      "type": "object",
+      "required": [
+        "skill",
+        "decision",
+        "tests",
+        "skipped"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "skill": {
+          "$ref": "#/$defs/skill_name"
+        },
+        "decision": {
+          "const": "run"
+        },
+        "tests": {
+          "$ref": "#/$defs/tests"
+        },
+        "skipped": {
+          "const": []
+        }
+      }
+    },
+    "skill_run": {
+      "type": "object",
+      "required": [
+        "skill",
+        "decision",
+        "tests",
+        "skipped"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "skill": {
+          "$ref": "#/$defs/skill_name"
+        },
+        "decision": {
+          "const": "run"
+        },
+        "tests": {
+          "$ref": "#/$defs/tests"
+        },
+        "skipped": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/skip"
+          }
+        }
+      }
+    },
+    "skill_skip": {
+      "type": "object",
+      "required": [
+        "skill",
+        "decision",
+        "reason"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "skill": {
+          "$ref": "#/$defs/skill_name"
+        },
+        "decision": {
+          "const": "skip"
+        },
+        "reason": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "skill_lane": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/skill_run"
+        },
+        {
+          "$ref": "#/$defs/skill_skip"
+        }
+      ]
+    },
+    "lanes_full": {
+      "type": "object",
+      "required": [
+        "always",
+        "rust",
+        "web",
+        "site",
+        "skills"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "always": {
+          "$ref": "#/$defs/lane_all"
+        },
+        "rust": {
+          "$ref": "#/$defs/lane_all"
+        },
+        "web": {
+          "$ref": "#/$defs/lane_all"
+        },
+        "site": {
+          "$ref": "#/$defs/lane_all"
+        },
+        "skills": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/skill_all"
+          }
+        }
+      }
+    },
+    "lanes_selected": {
+      "type": "object",
+      "required": [
+        "always",
+        "rust",
+        "web",
+        "site",
+        "skills"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "always": {
+          "$ref": "#/$defs/lane_all"
+        },
+        "rust": {
+          "$ref": "#/$defs/lane"
+        },
+        "web": {
+          "$ref": "#/$defs/lane"
+        },
+        "site": {
+          "$ref": "#/$defs/lane"
+        },
+        "skills": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/skill_lane"
+          }
+        }
+      }
+    },
+    "build_all": {
+      "type": "object",
+      "required": [
+        "decision"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "decision": {
+          "const": "run"
+        }
+      }
+    },
+    "build": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/build_all"
+        },
+        {
+          "type": "object",
+          "required": [
+            "decision",
+            "reason"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "decision": {
+              "const": "skip"
+            },
+            "reason": {
+              "$ref": "#/$defs/text"
+            }
+          }
+        }
+      ]
+    },
+    "builds_full": {
+      "type": "object",
+      "required": [
+        "web_export"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "web_export": {
+          "$ref": "#/$defs/build_all"
+        }
+      }
+    },
+    "builds_selected": {
+      "type": "object",
+      "required": [
+        "web_export"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "web_export": {
+          "$ref": "#/$defs/build"
+        }
+      }
+    },
+    "store": {
+      "type": "object",
+      "required": [
+        "artifact",
+        "file"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "artifact": {
+          "type": "string",
+          "pattern": "^ci-selection-[1-9][0-9]*$"
+        },
+        "file": {
+          "const": "ci-selection.json"
+        }
+      }
+    }
+  }
+}

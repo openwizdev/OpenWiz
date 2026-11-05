@@ -1,3 +1,22 @@
+//! A7 (continued): no `room-cli` diagnostic text (its stderr, and what it
+//! prints on stdout where JSON, a version or a recorded value was
+//! expected) reaches any server response, error body or log, except a line
+//! in 0.0.1's safe grammar. Session content (titles, purposes, final output,
+//! a recorded error) is data, shown by design, and not covered here.
+//!
+//! Sol S1: `room-cli`'s stderr, and text it prints where JSON or a version
+//! was expected, reached `error.message` and envelope gaps. The fix is
+//! 0.0.1's (#21, `crates/adapters/cloudroom`); these proofs show it through
+//! the server: every planted variant, for each read, through every route
+//! and option below, in the in-process server's bodies and log and in the
+//! built binary's bodies and stderr. Each inventory and session body still
+//! equals `openwiz … --json` (A6), and `every_read_the_server_makes_is_planted`
+//! fails if the server starts a read that has no row here.
+//!
+//! The variants are #21's (`tests/proof/p04b_source_diagnostics.rs`),
+//! written at run time into each test's own directory, over the committed
+//! `normal` scenario, so the fixture scan's committed-file rules hold.
+
 use std::io::{BufRead, BufReader, Read};
 use std::net::SocketAddr;
 use std::path::Path;
@@ -82,6 +101,8 @@ fn token() -> String {
     format!("{}{}", "gh", "p_SyntheticTokenAbcDefGhiJklMnoPqrStu12")
 }
 
+/// #21's planted stderr variants, and the committed diagnostics fixtures'
+/// own text.
 fn stderr_variants() -> Vec<Planted> {
     let token = token();
     let long_phrase = "Synthetic ".repeat(2_000);
@@ -261,6 +282,8 @@ fn stderr_variants() -> Vec<Planted> {
             &["Internal Server Error", "10.0.0.7", "7:8443"],
             "Error: HTTP 500 (detail withheld)",
         ),
+        // Added after the Haiku verification round (N2): the contract's
+        // empty-stderr branch.
         planted("empty stderr", "", &[], "no error output"),
         planted(
             "not-found line with an unsafe suffix",
@@ -288,7 +311,9 @@ const READS: &[FailingRead] = &[
     FailingRead {
         read: "room-cli --version",
         argv_prefix: &["--version"],
-
+        // #37: a failed version read no longer stops the run, so a refused
+        // id (`thr.syn`) is answered as `invalid_request`, which shows nothing
+        // of the version read. The leak check still covers that route.
         hits: &["/api/v1/inventory", "/api/v1/sessions/thr_syn_0001"],
     },
     FailingRead {
@@ -477,7 +502,23 @@ fn check_routes(
     let label = expect.label;
     let mut found = Vec::new();
     for (target, args) in ROUTES {
-        let r = get(target);
+        // Same immutable scenario: route and CLI reads may overlap. Join both
+        // before the next scenario is planted so every parity assertion remains.
+        let (r, cli) = thread::scope(|scope| {
+            let cli = args.filter(|_| parity).map(|args| {
+                scope.spawn(move || {
+                    let mut argv = args.to_vec();
+                    argv.push("--json");
+                    let answer = fake.cli(&argv);
+                    (argv, answer)
+                })
+            });
+            let response = get(target);
+            (
+                response,
+                cli.map(|call| call.join().expect("A7 parity read")),
+            )
+        });
         let texts = texts(&r);
         found.extend(shown(
             &format!("{label}: GET {target}"),
@@ -506,20 +547,17 @@ fn check_routes(
                 r.text()
             ));
         }
-        if let Some(args) = args.filter(|_| parity) {
-            let mut argv = args.to_vec();
-            argv.push("--json");
-            let (code, out, err) = fake.cli(&argv);
-            if let Err(panic) = std::panic::catch_unwind(|| {
+        if let Some((argv, (code, out, err))) = cli
+            && let Err(panic) = std::panic::catch_unwind(|| {
                 compare(target, &argv, &r, code, &out, &err);
-            }) {
-                let why = panic
-                    .downcast_ref::<String>()
-                    .cloned()
-                    .unwrap_or_else(|| "a panic".to_owned());
-                let why: String = why.chars().take(300).collect();
-                found.push(format!("{label}: GET {target} is not the CLI's: {why}"));
-            }
+            })
+        {
+            let why = panic
+                .downcast_ref::<String>()
+                .cloned()
+                .unwrap_or_else(|| "a panic".to_owned());
+            let why: String = why.chars().take(300).collect();
+            found.push(format!("{label}: GET {target} is not the CLI's: {why}"));
         }
     }
     found
@@ -542,40 +580,82 @@ fn report(found: Vec<String>) {
     );
 }
 
-/// Every stderr variant of one failing read, through every route of one
-/// in-process server; then its log.
-fn check_failing_read(read: &FailingRead) {
-    let fake = Fake::new(
-        &format!("web_a7_diag_{}", read.read.replace([' ', '-'], "_")),
-        "normal",
-    );
-    let s = serve(&fake);
-    let mut found = Vec::new();
-    let mut all_markers = vec![
-        fake.dir.display().to_string(),
-        FAILED_STDOUT_MARKER.to_owned(),
-    ];
-    let cases = stderr_cases(read);
-    for case in &cases {
-        found.extend(case.check(&|target| s.get(target), &fake, true));
+/// How many in-process servers a list of cases is spread over.
+const WORKERS: usize = 3;
+
+/// Every case through every route of an in-process server, the cases spread
+/// over [`WORKERS`] servers that run at once, each with its own fake (#1259:
+/// one after another on one server, the cases spent most of their time
+/// waiting on `room-cli`). Then each server's log: one line per request,
+/// and no marker of any case, nor any fake's directory. `extra` are markers
+/// no response or log may show besides the cases' own.
+fn check_cases(name: &str, cases: &[Case], extra: &[&str]) -> Vec<String> {
+    let runs: Vec<(Vec<String>, usize, String, String)> = thread::scope(|scope| {
+        let workers: Vec<_> = (0..WORKERS)
+            .map(|w| {
+                scope.spawn(move || {
+                    let fake = Fake::new(&format!("{name}_{w}"), "normal");
+                    let s = serve(&fake);
+                    let mine: Vec<&Case> = cases.iter().skip(w).step_by(WORKERS).collect();
+                    let mut found = Vec::new();
+                    for case in &mine {
+                        found.extend(case.check(&|target| s.get(target), &fake, true));
+                    }
+                    let requests = mine.len() * ROUTES.len();
+                    wait_for_log(&s, requests);
+                    (
+                        found,
+                        requests,
+                        s.log_text(),
+                        fake.dir.display().to_string(),
+                    )
+                })
+            })
+            .collect();
+        workers
+            .into_iter()
+            .map(|w| w.join().expect("a7 worker"))
+            .collect()
+    });
+    let mut all_markers: Vec<String> = extra.iter().map(|m| (*m).to_owned()).collect();
+    all_markers.extend(runs.iter().map(|(_, _, _, dir)| dir.clone()));
+    for case in cases {
         all_markers.extend(case.markers.clone());
     }
-    let requests = cases.len() * ROUTES.len();
-    wait_for_log(&s, requests);
-    let log = s.log_text();
-    if log.lines().count() != requests {
-        found.push(format!(
-            "{}: {} log lines, not {requests}",
-            read.read,
-            log.lines().count()
+    let mut found = Vec::new();
+    let mut requests = 0;
+    for (w, (problems, expected, log, _)) in runs.into_iter().enumerate() {
+        found.extend(problems);
+        requests += expected;
+        if log.lines().count() != expected {
+            found.push(format!(
+                "{name} server {w}: {} log lines, not {expected}",
+                log.lines().count()
+            ));
+        }
+        found.extend(shown(
+            &format!("{name} server {w}: the log"),
+            &[log],
+            &all_markers,
         ));
     }
-    found.extend(shown(
-        &format!("{}: the log", read.read),
-        &[log],
-        &all_markers,
+    assert_eq!(
+        requests,
+        cases.len() * ROUTES.len(),
+        "{name}: every case ran once"
+    );
+    found
+}
+
+/// Every stderr variant of one failing read, through every route of an
+/// in-process server; then the logs.
+fn check_failing_read(read: &FailingRead) {
+    let name = format!("web_a7_diag_{}", read.read.replace([' ', '-'], "_"));
+    report(check_cases(
+        &name,
+        &stderr_cases(read),
+        &[FAILED_STDOUT_MARKER],
     ));
-    report(found);
 }
 
 #[test]
@@ -643,7 +723,8 @@ fn stderr_cases(read: &FailingRead) -> Vec<Case> {
         .into_iter()
         .map(|variant| {
             let mut markers = variant.markers;
-
+            // #37, Sol's PR #40 finding 1: a failed version read keeps safe
+            // facts only, so even #21's safe line is never shown for it.
             let kept = if read.read == "room-cli --version" {
                 markers.push(variant.kept.clone());
                 "exited 1 (detail withheld)".to_owned()
@@ -752,23 +833,7 @@ fn stdout_markers() -> Vec<String> {
 
 #[test]
 fn unexpected_stdout_reaches_no_response_or_log() {
-    let fake = Fake::new("web_a7_diag_stdout", "normal");
-    let s = serve(&fake);
-    let mut found = Vec::new();
-    let mut all_markers = vec![fake.dir.display().to_string()];
-    let cases = stdout_cases();
-    for case in &cases {
-        found.extend(case.check(&|target| s.get(target), &fake, true));
-        all_markers.extend(case.markers.clone());
-    }
-    let requests = cases.len() * ROUTES.len();
-    wait_for_log(&s, requests);
-    let log = s.log_text();
-    if log.lines().count() != requests {
-        found.push(format!("{} log lines, not {requests}", log.lines().count()));
-    }
-    found.extend(shown("the log", &[log], &all_markers));
-    report(found);
+    report(check_cases("web_a7_diag_stdout", &stdout_cases(), &[]));
 }
 
 /// Every read the server makes, on every route, is one `READS` plants, and
@@ -810,23 +875,130 @@ fn every_read_the_server_makes_is_planted() {
     }
 }
 
+/// How many parts the binary's cases run in.
+const PARTS: usize = 4;
+
+/// Every case the binary replays: every stderr variant of every read, then
+/// the stdout cases.
+fn binary_cases() -> Vec<Case> {
+    let mut cases: Vec<Case> = READS.iter().flat_map(stderr_cases).collect();
+    cases.extend(stdout_cases());
+    cases
+}
+
+/// The cases of one part of the binary's replay: every `PARTS`th case,
+/// from the `part`th.
+fn binary_part(part: usize) -> Vec<Case> {
+    binary_cases()
+        .into_iter()
+        .enumerate()
+        .filter(|(i, _)| i % PARTS == part)
+        .map(|(_, case)| case)
+        .collect()
+}
+
+/// The binary's parts together are every case, each in exactly one part,
+/// and no part is empty.
+#[test]
+fn the_binarys_parts_together_are_every_case_once() {
+    let mut every: Vec<String> = binary_cases().into_iter().map(|c| c.label).collect();
+    every.sort();
+    let mut unique = every.clone();
+    unique.dedup();
+    assert_eq!(unique, every, "each case has its own label");
+    let mut joined = Vec::new();
+    for part in 0..PARTS {
+        let labels: Vec<String> = binary_part(part).into_iter().map(|c| c.label).collect();
+        assert!(
+            !labels.is_empty(),
+            "part {} of {PARTS} has no case",
+            part + 1
+        );
+        joined.extend(labels);
+    }
+    joined.sort();
+    assert_eq!(joined, every, "the parts together are every case, once");
+}
+
 /// The built binary, with the fake first on `PATH`: every stderr variant of
 /// every read, and the stdout cases, through every route, with the same
 /// checks as in process (markers, whole bodies, the kept line) except CLI
 /// parity: the binary uses the system clock, so its snapshot times differ.
-/// Neither its stdout nor its stderr (its log) shows a marker.
+/// Neither its stdout nor its stderr (its log) shows a marker. The cases
+/// run in `PARTS` parts at once, and each part's cases over `WORKERS`
+/// servers at once, each with its own fake (#1259); each case's responses
+/// are checked for its own markers, and each server's stdout and log for
+/// every case's.
 #[test]
-fn the_binary_shows_no_diagnostics_in_responses_or_its_log() {
+fn the_binary_shows_no_diagnostics_in_responses_or_its_log_part_1() {
+    binary_shows_no_diagnostics(0);
+}
+
+#[test]
+fn the_binary_shows_no_diagnostics_in_responses_or_its_log_part_2() {
+    binary_shows_no_diagnostics(1);
+}
+
+#[test]
+fn the_binary_shows_no_diagnostics_in_responses_or_its_log_part_3() {
+    binary_shows_no_diagnostics(2);
+}
+
+#[test]
+fn the_binary_shows_no_diagnostics_in_responses_or_its_log_part_4() {
+    binary_shows_no_diagnostics(3);
+}
+
+fn binary_shows_no_diagnostics(part: usize) {
     let program = http::server_binary();
-    let fake = Fake::new("web_a7_diag_binary", "normal");
-    let path = format!(
-        "{}:{}",
-        fake.dir.display(),
-        std::env::var("PATH").unwrap_or_default()
-    );
-    let mut child = Command::new(&program)
+    let cases = binary_part(part);
+    // The part's cases are spread over WORKERS servers that run at once,
+    // each with its own fake (#1259), as `check_cases` does in process.
+    let runs: Vec<(Vec<String>, String, String)> = thread::scope(|scope| {
+        let workers: Vec<_> = (0..WORKERS)
+            .map(|w| {
+                let (program, cases) = (&program, &cases);
+                scope.spawn(move || {
+                    let mine: Vec<&Case> = cases.iter().skip(w).step_by(WORKERS).collect();
+                    binary_server(
+                        program,
+                        &format!("web_a7_diag_binary_{}_{w}", part + 1),
+                        &mine,
+                    )
+                })
+            })
+            .collect();
+        workers
+            .into_iter()
+            .map(|w| w.join().expect("a7 binary worker"))
+            .collect()
+    });
+    let mut all_markers = stdout_markers();
+    all_markers.extend(runs.iter().map(|(_, _, dir)| dir.clone()));
+    all_markers.push(FAILED_STDOUT_MARKER.to_owned());
+    for case in &binary_cases() {
+        all_markers.extend(case.markers.clone());
+    }
+    let mut found = Vec::new();
+    for (w, (problems, rest, _)) in runs.into_iter().enumerate() {
+        found.extend(problems);
+        found.extend(shown(
+            &format!("binary {w}: its stderr"),
+            &[rest],
+            &all_markers,
+        ));
+    }
+    report(found);
+}
+
+/// One built server over its own fake, `cases` through every route, then
+/// its stdout and log: (problems, its log, the fake's directory). The log is
+/// checked for markers by the caller, against every case's.
+fn binary_server(program: &Path, name: &str, cases: &[&Case]) -> (Vec<String>, String, String) {
+    let fake = Fake::new(name, "normal");
+    let mut child = Command::new(program)
         .args(["--port", "0"])
-        .env("PATH", path)
+        .env("OPENWIZ_FIXTURE_PROGRAM", fake.program())
         .current_dir(&fake.dir)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -841,19 +1013,11 @@ fn the_binary_shows_no_diagnostics_in_responses_or_its_log() {
         .strip_prefix("openwiz-server: listening on http://")
         .and_then(|rest| rest.split(' ').next())
         .and_then(|a| a.parse().ok());
-    let mut all_markers = stdout_markers();
-    all_markers.push(fake.dir.display().to_string());
-    all_markers.push(FAILED_STDOUT_MARKER.to_owned());
-    let mut cases: Vec<Case> = READS.iter().flat_map(stderr_cases).collect();
-    cases.extend(stdout_cases());
-    for case in &cases {
-        all_markers.extend(case.markers.clone());
-    }
     let requests = cases.len() * ROUTES.len();
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let addr = addr.unwrap_or_else(|| panic!("unexpected first line {first:?}"));
         let mut found = Vec::new();
-        for case in &cases {
+        for case in cases {
             let get = |target: &str| http::get(addr, target);
             for problem in case.check(&get, &fake, false) {
                 found.push(format!("binary: {problem}"));
@@ -898,10 +1062,13 @@ fn the_binary_shows_no_diagnostics_in_responses_or_its_log() {
             ));
         }
     }
-    found.extend(shown("binary: its stderr", &[rest], &all_markers));
-    report(found);
+    (found, rest, fake.dir.display().to_string())
 }
 
+/// #37, Sol's PR #40 finding 1: a failed version read never stops a run, so
+/// its failure lands in a `200` envelope (`source.version` and a gap, which
+/// the viewer renders). Only safe facts reach it, never the source's text,
+/// even a line in #21's general diagnostic grammar; nor the server's log.
 #[test]
 fn a_failed_version_read_never_reaches_a_200_envelope() {
     const MARKER: &str = "Synthetic private version marker";

@@ -1,0 +1,43 @@
+$ python3 -I tools/war-room/test_gather.py Gather.test_the_full_gathered_selection_publishes_with_real_chromium   # review R1, real chromium, before the fix
+F
+======================================================================
+FAIL: test_the_full_gathered_selection_publishes_with_real_chromium (__main__.Gather.test_the_full_gathered_selection_publishes_with_real_chromium)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/war-room/test_gather.py", line 229, in test_the_full_gathered_selection_publishes_with_real_chromium
+    self.assertEqual(result.returncode, 0, result.stderr)
+AssertionError: 1 != 0 : war-room: chromium measured no picture; nothing published
+
+
+----------------------------------------------------------------------
+Ran 1 test in 1.669s
+
+FAILED (failures=1)
+
+$ python3 -I tools/war-room/test_publish.py Publish.test_the_height_bound_is_in_device_pixels   # before the fix
+test_the_height_bound_is_in_device_pixels (__main__.Publish.test_the_height_bound_is_in_device_pixels) ...
+  test_the_height_bound_is_in_device_pixels (__main__.Publish.test_the_height_bound_is_in_device_pixels) [28302] ... FAIL
+  test_the_height_bound_is_in_device_pixels (__main__.Publish.test_the_height_bound_is_in_device_pixels) [32500] ... FAIL
+
+======================================================================
+FAIL: test_the_height_bound_is_in_device_pixels (__main__.Publish.test_the_height_bound_is_in_device_pixels) [28302]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/war-room/test_publish.py", line 172, in test_the_height_bound_is_in_device_pixels
+    self.assertEqual(result.returncode, 0, result.stderr)
+AssertionError: 1 != 0 : war-room: chromium measured no picture; nothing published
+
+
+======================================================================
+FAIL: test_the_height_bound_is_in_device_pixels (__main__.Publish.test_the_height_bound_is_in_device_pixels) [32500]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/war-room/test_publish.py", line 172, in test_the_height_bound_is_in_device_pixels
+    self.assertEqual(result.returncode, 0, result.stderr)
+AssertionError: 1 != 0 : war-room: chromium measured no picture; nothing published
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.577s
+
+FAILED (failures=2)

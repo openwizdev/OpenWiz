@@ -1,0 +1,16 @@
+F
+======================================================================
+FAIL: test_replacement_edited_to_given_up_keeps_its_own_archive_identity (__main__.Fleet.test_replacement_edited_to_given_up_keeps_its_own_archive_identity)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-1273/skills/launch-fleet/scripts/test-records.py", line 155, in test_replacement_edited_to_given_up_keeps_its_own_archive_identity
+    self.assertEqual(self.run_fleet('wake', '12'),
+AssertionError: 'look #31: two threads match review:31:313[35 chars]31\n' != 're-check #31 for #12 at 31f31f31f31f31f31[61 chars]sh\n'
+- look #31: two threads match review:31:3131313131313131313131313131313131313131
++ re-check #31 for #12 at 31f31f31f31f31f31f31f31f31f31f31f31f31f3: tell its reviewer, thread thr_synfresh
+
+
+----------------------------------------------------------------------
+Ran 1 test in 2.386s
+
+FAILED (failures=1)

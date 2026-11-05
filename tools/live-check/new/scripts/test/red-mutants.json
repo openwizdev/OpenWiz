@@ -1,0 +1,1063 @@
+[
+ {
+  "name": "00-kit-absent-batch",
+  "why": "new-kit.py, x2-shim.py and plan.json do not exist (main before this kit)",
+  "delete": [
+   "new/scripts/new-kit.py",
+   "new/scripts/x2-shim.py",
+   "new/scripts/plan.json"
+  ],
+  "only": "",
+  "must_fail": [
+   "the 6 synthetic files"
+  ],
+  "may_fail": [
+   ""
+  ]
+ },
+ {
+  "name": "01-x2-no-parent-check",
+  "why": "X2 calls after a hold-before even when its parent is gone (the server killed before the call would still create)",
+  "only": "x2",
+  "must_fail": [
+   "X2-6"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "new/scripts/x2-shim.py",
+    "old": "            if os.getppid() != parent or not alive:\n                outcome = \"aborted_parent_gone\"",
+    "new": "            if False:\n                outcome = \"aborted_parent_gone\""
+   }
+  ]
+ },
+ {
+  "name": "02-x2-no-consumption",
+  "why": "#168's R1 and R8, in X2: a write already made (in the sitting, or under the approval) is admitted again",
+  "only": "x2",
+  "must_fail": [
+   "X2-3",
+   "X2-20 repeat"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "new/scripts/x2-shim.py",
+    "old": "            elif done >= int(allow.get(\"max_calls\", 1)):",
+    "new": "            elif False:"
+   },
+   {
+    "file": "new/scripts/x2-shim.py",
+    "old": "                elif len(charges(ap, auth=auth)) >= int(allow.get(\"max_calls\", 1)):",
+    "new": "                elif False:"
+   }
+  ]
+ },
+ {
+  "name": "03-x2-no-gate",
+  "why": "X2 lets every write through its gate: any project, thread, setting, text or file (the ledger still counts)",
+  "only": "x2",
+  "must_fail": [
+   "X2-4",
+   "X2-5 refusals",
+   "X2-8"
+  ],
+  "may_fail": [
+   "X2-5 rc",
+   "X2-1"
+  ],
+  "changes": [
+   {
+    "file": "new/scripts/x2-shim.py",
+    "old": "            why = why_not(step, kind, target, fields, text, pairs)",
+    "new": "            why = None"
+   }
+  ]
+ },
+ {
+  "name": "04-x2-no-expiry",
+  "why": "X2 lets a write through after its step expired (a step left armed by a crash)",
+  "only": "x2",
+  "must_fail": [
+   "X2-8"
+  ],
+  "may_fail": [
+   "X2-12",
+   "X2-13"
+  ],
+  "changes": [
+   {
+    "file": "new/scripts/x2-shim.py",
+    "old": "    if not isinstance(step.get(\"expires_ms\"), int) or now_ms() > step[\"expires_ms\"]:",
+    "new": "    if not isinstance(step.get(\"expires_ms\"), int):"
+   }
+  ]
+ },
+ {
+  "name": "05-x2-no-file-bytes",
+  "why": "X2 checks each attachment's flag only, never its bytes",
+  "only": "x2",
+  "must_fail": [
+   "X2-5 refusals"
+  ],
+  "may_fail": [
+   "X2-5 rc",
+   "X2-14"
+  ],
+  "changes": [
+   {
+    "file": "new/scripts/x2-shim.py",
+    "old": "        if w.get(\"flag\") != flag or w.get(\"sha256\") != digest or w.get(\"size\") != size:",
+    "new": "        if w.get(\"flag\") != flag:"
+   }
+  ]
+ },
+ {
+  "name": "06-x2-any-read",
+  "why": "X2 passes any read (thread log, an upload) as if it were OpenWiz's",
+  "only": "x2",
+  "must_fail": [
+   "X2-4"
+  ],
+  "may_fail": [
+   "X2-1",
+   "X2-3",
+   "X2-5",
+   "X2-8",
+   "X2-2",
+   "X2-6",
+   "X2-7"
+  ],
+  "changes": [
+   {
+    "file": "new/scripts/x2-shim.py",
+    "old": "    if a in ([\"--version\"], [\"machine\", \"list\", \"--json\"], [\"cloud\", \"status\", \"--json\"],",
+    "new": "    if True or a in ([\"--version\"], [\"machine\", \"list\", \"--json\"], [\"cloud\", \"status\", \"--json\"],"
+   }
+  ]
+ },
+ {
+  "name": "07-x1-no-landing",
+  "why": "the landing check never fails (where each text landed, and what P-A gained)",
+  "only": "faults",
+  "must_fail": [
+   "plant spawn-twice",
+   "plant prompt-prefix",
+   "plant jake-in-pa",
+   "plant misroute",
+   "plant dup-late"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "    if bad:\n        out[\"verdict\"] = \"not_as_expected: \" + \"; \".join(bad)\n    return out",
+    "new": "    return out"
+   }
+  ]
+ },
+ {
+  "name": "08-x1-no-thread-checks",
+  "why": "a new thread's project, harness, model and effort are taken as requested, never read",
+  "only": "faults",
+  "must_fail": [
+   "plant wrong-project",
+   "plant wrong-model"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "    got = {\"in_p_a\": s[\"project\"] == kit.targets[\"P-A\"], \"provider_as_requested\": s[\"provider\"] == h,\n           \"model_as_requested\": s[\"model\"] == m, \"effort_as_requested\": s[\"effort\"] == e, \"cloud\": not s[\"local\"]}",
+    "new": "    got = {\"in_p_a\": True, \"provider_as_requested\": True, \"model_as_requested\": True, \"effort_as_requested\": True,\n           \"cloud\": True}"
+   }
+  ]
+ },
+ {
+  "name": "09-x1-no-bracket",
+  "why": "the bracket never finds a judged session changed",
+  "only": "faults",
+  "must_fail": [
+   "plant touch-sample",
+   "plant cold-pending"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "core.py",
+    "old": "                failures[f] = failures.get(f, 0) + 1",
+    "new": "                pass"
+   }
+  ]
+ },
+ {
+  "name": "10-x1-judges-recent",
+  "why": "the 48 h rule is gone: Jake's recent sessions are judged too",
+  "only": "plan",
+  "must_fail": [
+   "the CLI part C0 to C5"
+  ],
+  "may_fail": [
+   "S2 and S5",
+   "AL1",
+   "the swap",
+   "the web part",
+   "Jake's part",
+   "S10 parity",
+   "S4 receipts",
+   "X2 let through",
+   "the fake got",
+   "Jake's recent session",
+   "planned writes",
+   "fake writes",
+   "R6 generated wrong types"
+  ],
+  "changes": [
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "                and isinstance(up, int) and not isinstance(up, bool) and up < cut):",
+    "new": "                and isinstance(up, int)):"
+   }
+  ]
+ },
+ {
+  "name": "11-x1-no-unknown-thread",
+  "why": "a thread in P-A that no step made is not named as such",
+  "only": "faults",
+  "must_fail": [
+   "plant jake-in-pa"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "    if unknown:\n        bad.append(\"%d thread(s) in P-A that no step made\" % len(unknown))",
+    "new": ""
+   }
+  ]
+ },
+ {
+  "name": "12-x1-unknown-shape-matches",
+  "why": "#168's R4, round 2: with no reply shape known, any hash after the prompt is claimed as the agent's",
+  "only": "r168",
+  "must_fail": [
+   "R4 impersonation",
+   "R4 no reply shape"
+  ],
+  "may_fail": [],
+  "env": {
+   "KIT_R168": "R4"
+  },
+  "changes": [
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "    if reply is None or pe is None:\n        rec[\"verdict\"] = \"unattributed\" if reply is None else \"absent\"\n        return rec",
+    "new": "    if reply is None or pe is None:\n        rec[\"verdict\"] = \"matches\" if any(f[\"expected\"] for f in rec[\"found\"]) else \"absent\"\n        return rec"
+   }
+  ]
+ },
+ {
+  "name": "13-x1-guard-no-restore",
+  "why": "#152's R2 (one owner): the guard ends without restoring the confirmed launch",
+  "only": "sol",
+  "must_fail": [
+   "R2 supervisor killed:"
+  ],
+  "may_fail": [
+   "R2"
+  ],
+  "changes": [
+   {
+    "file": "core.py",
+    "old": "        ok = (not port_answers(c[\"port\"]) and restore_old(kit)) if old_stopped else health(c[\"port\"])",
+    "new": "        ok = True"
+   }
+  ]
+ },
+ {
+  "name": "14-x1-scan-no-short",
+  "why": "#152's R4: short forbidden strings are dropped",
+  "only": "sol",
+  "must_fail": [
+   "R4"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "        if isinstance(v, str) and v.strip() and v != observe.MISSING:",
+    "new": "        if isinstance(v, str) and len(v.strip()) >= 3 and v != observe.MISSING:"
+   }
+  ]
+ },
+ {
+  "name": "15-x1-scan-serialised",
+  "why": "#152's R4: the scan compares the serialised report (JSON escapes quotes, backslashes and non-ASCII)",
+  "only": "sol",
+  "must_fail": [
+   "R4"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "core.py",
+    "old": "    for s in set(decoded_strings(rep)):",
+    "new": "    for s in [json.dumps(rep)]:"
+   }
+  ]
+ },
+ {
+  "name": "16-x1-schema-no-types",
+  "why": "#152's R6: the contract check ignores JSON types",
+  "only": "x1",
+  "must_fail": [
+   "contracts"
+  ],
+  "may_fail": [
+   "settings",
+   "map",
+   "recheck",
+   "run: P-A",
+   "setup"
+  ],
+  "changes": [
+   {
+    "file": "core.py",
+    "old": "            if not any(self._type_ok(v, t) for t in types):",
+    "new": "            if False:"
+   }
+  ]
+ },
+ {
+  "name": "17-x1-exit-0",
+  "why": "#152's R8: a command whose outcome is not as expected exits 0",
+  "only": "sol",
+  "must_fail": [
+   "R8: parity",
+   "R8: receipts"
+  ],
+  "may_fail": [
+   "R9",
+   "R2 startup timeout",
+   "R2 restart after"
+  ],
+  "changes": [
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "    return 0 if rep.get(\"outcome\") == \"as_expected\" else 10  # #152, Sol R8: every command's outcome decides",
+    "new": "    return 0"
+   }
+  ]
+ },
+ {
+  "name": "18-x1-receipts-first-only",
+  "why": "#152's R9: only the first receipt of a kind decides whether it is documented",
+  "only": "sol",
+  "must_fail": [
+   "R9: one undocumented"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "            k[\"documented_keys\"] = k.get(\"documented_keys\", True) and entry[\"documented_keys\"]",
+    "new": "            k.setdefault(\"documented_keys\", entry[\"documented_keys\"])"
+   }
+  ]
+ },
+ {
+  "name": "19-x1-recheck-blind",
+  "why": "lesson 6: a flag missing from today's help is not noticed",
+  "only": "x1",
+  "must_fail": [
+   "recheck: a help without"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "                    \"missing\": [f for f in want if not re.search(r\"(^|[\\s\\[,])%s([\\s\\]=<,]|$)\" % re.escape(f), text)]}",
+    "new": "                    \"missing\": []}"
+   }
+  ]
+ },
+ {
+  "name": "20-x1-settings-unchecked",
+  "why": "settings uses whatever openwiz models printed, drift included",
+  "only": "x1",
+  "must_fail": [
+   "settings: a drifted"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "    if code != 0 or contract_problem(kit, rep, \"openwiz.cloud-options.v1\") or w[\"attempts\"]:",
+    "new": "    if w[\"attempts\"]:"
+   }
+  ]
+ },
+ {
+  "name": "21-x1-pa-busy-ignored",
+  "why": "L-2: a create runs although P-A has work in flight",
+  "only": "x1",
+  "must_fail": [
+   "run: P-A with work in flight"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "        raise Stop(\"P-A has work in flight (L-2); nothing was created or sent\")",
+    "new": "        pass"
+   }
+  ]
+ },
+ {
+  "name": "22-reap-by-name",
+  "why": "#152's R11: the cleanup also stops a server it didn't start, by its command line",
+  "only": "sol",
+  "must_fail": [
+   "R11"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "new/scripts/test/reap.py",
+    "old": "        if want in env:",
+    "new": "        if want in env or os.environ[\"OLDHOST\"].encode() in open(\"/proc/%s/cmdline\" % name, \"rb\").read():"
+   }
+  ]
+ },
+ {
+  "name": "23-x1-texts-unchecked",
+  "why": "a text that is not the approved one is used",
+  "only": "x1",
+  "must_fail": [
+   "a changed text"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "            if label not in APPROVED or sha(text) != APPROVED[label] or label in texts:",
+    "new": "            if label not in APPROVED or label in texts:"
+   }
+  ]
+ },
+ {
+  "name": "24-x1-files-unchecked",
+  "why": "a synthetic file that is not the approved one is used",
+  "only": "x1",
+  "must_fail": [
+   "a changed synthetic file"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "        if not os.path.isfile(p) or os.path.getsize(p) != size or observe.file_sha256(p) != digest:",
+    "new": "        if not os.path.isfile(p):"
+   }
+  ]
+ },
+ {
+  "name": "25-x1-guard-ignores-gone",
+  "why": "#152's R2 (one owner): the guard does nothing when the supervisor is gone",
+  "only": "sol",
+  "must_fail": [
+   "R2 supervisor killed:"
+  ],
+  "may_fail": [
+   "R2"
+  ],
+  "changes": [
+   {
+    "file": "core.py",
+    "old": "    except (Gone, SystemExit):\n        finish(\"restored-by-guard\")",
+    "new": "    except (Gone, SystemExit):\n        pass"
+   }
+  ]
+ },
+ {
+  "name": "26-x1-wrapper-ignores-pipe",
+  "why": "#152's R2 (one owner): the wrapper ignores the guard's pipe, so the server outlives the guard",
+  "only": "sol",
+  "must_fail": [
+   "R2 guard killed"
+  ],
+  "may_fail": [
+   "R2"
+  ],
+  "changes": [
+   {
+    "file": "core.py",
+    "old": "    \"    if r:\\n\"",
+    "new": "    \"    if r and False:\\n\""
+   }
+  ]
+ },
+ {
+  "name": "27-x1-child-not-stopped",
+  "why": "#152's R2 (one owner): the guard restores without stopping X1's server first",
+  "only": "sol",
+  "must_fail": [
+   "R2 supervisor killed:"
+  ],
+  "may_fail": [
+   "R2"
+  ],
+  "changes": [
+   {
+    "file": "core.py",
+    "old": "        close_gate(kit)\n        stop_server(sweep=True)",
+    "new": "        close_gate(kit)"
+   }
+  ]
+ },
+ {
+  "name": "28-x2-judged-before-lock",
+  "why": "#168's R2: X2 judges a write on the step it read before waiting for the lock",
+  "only": "r168",
+  "must_fail": [
+   "R2 admission after disarm",
+   "R2 waiting spawns reached the fake"
+  ],
+  "may_fail": [],
+  "env": {
+   "KIT_R168": "R2"
+  },
+  "changes": [
+   {
+    "file": "new/scripts/x2-shim.py",
+    "old": "        cur = load_step()\n        led = load_ledger()",
+    "new": "        cur = step\n        led = load_ledger()"
+   }
+  ]
+ },
+ {
+  "name": "29-x2-no-budget",
+  "why": "#168's R1, in X2: the sitting's budget is not checked at admission",
+  "only": "x2",
+  "must_fail": [
+   "X2-10"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "new/scripts/x2-shim.py",
+    "old": "            elif int(led[\"used\"].get(kind, 0)) >= int(led[\"budget\"].get(kind, 0)):",
+    "new": "            elif False:"
+   }
+  ]
+ },
+ {
+  "name": "30-x1-no-reentry-check",
+  "why": "#168's R1 and R8, in X1: a step whose write was already made (in the sitting, or under the approval) is armed again",
+  "only": "r168",
+  "must_fail": [
+   "R1 C2 run again",
+   "R1 crash: C2-N1 could be armed again"
+  ],
+  "may_fail": [],
+  "env": {
+   "KIT_R168": "R1"
+  },
+  "changes": [
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "                if int((led[\"auth\"].get(auth) or {}).get(\"calls\", 0)) >= int(write.get(\"max_calls\", 1)):",
+    "new": "                if False:"
+   },
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "                if len(made) >= int(write.get(\"max_calls\", 1)):",
+    "new": "                if False:"
+   }
+  ]
+ },
+ {
+  "name": "31-x1-no-budget",
+  "why": "#168's R1 and R8, in X1: neither the sitting's budget nor the approval's allowance is checked before arming",
+  "only": "r168",
+  "must_fail": [
+   "R1 the run's budget"
+  ],
+  "may_fail": [],
+  "env": {
+   "KIT_R168": "R1"
+  },
+  "changes": [
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "                if int(led[\"used\"].get(kind, 0)) >= int(led[\"budget\"].get(kind, 0)):",
+    "new": "                if False:"
+   },
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "                if not remaining(ap, kind):",
+    "new": "                if False:"
+   }
+  ]
+ },
+ {
+  "name": "32-x1-sitting-recomputed",
+  "why": "#168's R3: every run takes a new judged set and baseline",
+  "only": "r168",
+  "must_fail": [
+   "R3 a judged (cold)",
+   "R3 a judged session's lastReadAt"
+  ],
+  "may_fail": [],
+  "env": {
+   "KIT_R168": "R3,R6"
+  },
+  "changes": [
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "    sitting = kit._load(\"sitting.json\", None)",
+    "new": "    sitting = None"
+   }
+  ]
+ },
+ {
+  "name": "33-x1-agent-any-event",
+  "why": "#168's R4, round 2: any event and any field after the prompt counts as the agent's reply",
+  "only": "r168",
+  "must_fail": [
+   "R4 impersonation"
+  ],
+  "may_fail": [],
+  "env": {
+   "KIT_R168": "R4"
+  },
+  "changes": [
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "        if e.get(\"type\") != rtype:\n            continue\n        replies += 1",
+    "new": "        replies += 1"
+   },
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "            if path == rfield:",
+    "new": "            if True:"
+   }
+  ]
+ },
+ {
+  "name": "34-x2-no-taint",
+  "why": "#168's R6, final round: X2 refuses a call but never taints the sitting",
+  "only": "x2,r168",
+  "env": {
+   "KIT_R168": "R6"
+  },
+  "must_fail": [
+   "X2-15",
+   "R6 an upload attempt",
+   "R6 a refusal between",
+   "R6 a refusal before",
+   "R6 a call refused during settings",
+   "R6 settings again",
+   "R6 a refusal during the final snapshot",
+   "R6 a refusal right before"
+  ],
+  "may_fail": [
+   "X2-16",
+   "R6 a tainted sitting",
+   "R6 the tainted sitting",
+   "X2-17",
+   "X2-18",
+   "R6 Sol's held-write probe"
+  ],
+  "changes": [
+   {
+    "file": "new/scripts/x2-shim.py",
+    "old": "        led[\"tainted\"] = True\n",
+    "new": ""
+   }
+  ]
+ },
+ {
+  "name": "35-x1-probe-trusts-status",
+  "why": "#168's R7: an edge's status is trusted though the app answered",
+  "only": "r168",
+  "must_fail": [
+   "R7 a request that reaches the app"
+  ],
+  "may_fail": [],
+  "env": {
+   "KIT_R168": "R7"
+  },
+  "changes": [
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "    app = csp == OPENWIZ_CSP or (isinstance(doc, dict) and isinstance(doc.get(\"error\"), dict)) \\",
+    "new": "    app = False and (csp == OPENWIZ_CSP or (isinstance(doc, dict) and isinstance(doc.get(\"error\"), dict)) \\"
+   },
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "        or (isinstance(doc, dict) and \"schema\" in doc) or create_lines(kit) > n0",
+    "new": "        or (isinstance(doc, dict) and \"schema\" in doc) or create_lines(kit) > n0)"
+   }
+  ]
+ },
+ {
+  "name": "36-plan-ui-gate-open",
+  "why": "#168's R5: Jake's 'changes' passes the UI gate",
+  "only": "r168",
+  "must_fail": [
+   "R5"
+  ],
+  "may_fail": [],
+  "env": {
+   "KIT_R168": "R5"
+  },
+  "changes": [
+   {
+    "file": "new/scripts/plan.json",
+    "old": "\"said_launcher\": \"accept\", \"said_tray\": \"accept\"",
+    "new": "\"said_launcher\": [\"accept\", \"changes\"], \"said_tray\": [\"accept\", \"changes\"]"
+   }
+  ]
+ },
+ {
+  "name": "37-x2-post-hold-unjudged",
+  "why": "#168's R2, round 2: after a hold, X2 checks only the parent and the generation, never the expiry or the payload",
+  "only": "x2",
+  "must_fail": [
+   "X2-12",
+   "X2-13",
+   "X2-14"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "new/scripts/x2-shim.py",
+    "old": "                why = why_not(now, kind, target, fields, text, pairs)",
+    "new": "                why = None"
+   }
+  ]
+ },
+ {
+  "name": "38-x1-decide-ignores-taint",
+  "why": "#168's R6, final round: the outcome is decided without reading the sitting's taint",
+  "only": "r168",
+  "env": {
+   "KIT_R168": "R6"
+  },
+  "must_fail": [
+   "R6 an upload attempt",
+   "R6 a refusal between",
+   "R6 a refusal before",
+   "R6 a call refused during settings",
+   "R6 settings again",
+   "R6 a refusal during the final snapshot",
+   "R6 a refusal right before"
+  ],
+  "may_fail": [
+   "R6 a tainted sitting"
+  ],
+  "changes": [
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "    if not led.get(\"tainted\"):\n        return rep\n    msg = TAINTED",
+    "new": "    if True:\n        return rep\n    msg = TAINTED"
+   }
+  ]
+ },
+ {
+  "name": "39-x1-arms-when-tainted",
+  "why": "#168's R6, final round: X1 arms a write in a tainted sitting",
+  "only": "r168",
+  "env": {
+   "KIT_R168": "R6"
+  },
+  "must_fail": [
+   "R6 a tainted sitting: X1 arms no write"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "            if write and led.get(\"tainted\"):",
+    "new": "            if False:"
+   }
+  ]
+ },
+ {
+  "name": "40-x2-admits-when-tainted",
+  "why": "#168's R6, final round: X2 admits a write in a tainted sitting",
+  "only": "x2",
+  "must_fail": [
+   "X2-16"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "new/scripts/x2-shim.py",
+    "old": "        elif led.get(\"tainted\"):\n            why = \"the sitting is tainted: X2 refused a call before\"\n",
+    "new": ""
+   }
+  ]
+ },
+ {
+  "name": "41-x2-hold-ignores-taint",
+  "why": "#168's R6 (Jake's (a)): after a hold, X2 never reads the ledger's taint, so a write admitted before a refusal still goes out",
+  "only": "x2,r168",
+  "env": {
+   "KIT_R168": "R6"
+  },
+  "must_fail": [
+   "X2-17",
+   "X2-18",
+   "R6 Sol's held-write probe"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "new/scripts/x2-shim.py",
+    "old": "            elif led_now.get(\"tainted\"):\n                outcome = \"aborted_tainted\"\n",
+    "new": ""
+   }
+  ]
+ },
+ {
+  "name": "42-x2-hold-ignores-ledger",
+  "why": "#168's R6 (Jake's (a)): after a hold, X2 calls although the ledger can't be read",
+  "only": "x2",
+  "must_fail": [
+   "X2-19"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "new/scripts/x2-shim.py",
+    "old": "            elif led_now is None:\n                outcome = \"aborted_no_ledger\"\n            elif led_now.get(\"tainted\"):",
+    "new": "            elif led_now is not None and led_now.get(\"tainted\"):"
+   }
+  ]
+ },
+ {
+  "name": "43-x2-no-approval-allowance",
+  "why": "#168's R8, in X2: the approval's total is never checked, so another sitting's budget lets a write past L-8",
+  "only": "x2",
+  "must_fail": [
+   "X2-20 rc=",
+   "X2-21 uncertain counted"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "new/scripts/x2-shim.py",
+    "old": "                elif len(charges(ap, kind=kind)) >= int(ap[\"total\"].get(kind, 0)):\n                    why = \"the approval's allowance is used up\"\n",
+    "new": ""
+   }
+  ]
+ },
+ {
+  "name": "44-x2-no-approval-repeat",
+  "why": "#168's R8, in X2: a step's write made in another sitting under the approval is admitted again",
+  "only": "x2",
+  "must_fail": [
+   "X2-20 repeat"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "new/scripts/x2-shim.py",
+    "old": "                elif len(charges(ap, auth=auth)) >= int(allow.get(\"max_calls\", 1)):",
+    "new": "                elif False:"
+   }
+  ]
+ },
+ {
+  "name": "45-x2-uncertain-not-charged",
+  "why": "#168's R8, in X2: a charge left reserved (no proof of zero calls) stops counting against the allowance",
+  "only": "x2",
+  "must_fail": [
+   "X2-21 uncertain counted"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "new/scripts/x2-shim.py",
+    "old": "    return [c for c in ap[\"charges\"] if c.get(\"state\") != \"released\"",
+    "new": "    return [c for c in ap[\"charges\"] if c.get(\"state\") == \"dispatched\""
+   }
+  ]
+ },
+ {
+  "name": "46-x2-admits-without-approval",
+  "why": "#168's R8, in X2: an approval it can't read lets the write through, uncharged",
+  "only": "x2",
+  "must_fail": [
+   "X2-22"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "new/scripts/x2-shim.py",
+    "old": "                if ap is None:\n                    why = \"no readable approval\"\n",
+    "new": "                if ap is None:\n                    pass\n"
+   }
+  ]
+ },
+ {
+  "name": "47-x1-uncertain-not-charged",
+  "why": "#168's R8, in X1: the approval's report and every setup count a reserved (uncertain) charge as free",
+  "only": "x2",
+  "must_fail": [
+   "X2-21 the approval's report"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "    return [c for c in ap[\"charges\"] if c.get(\"state\") != \"released\"",
+    "new": "    return [c for c in ap[\"charges\"] if c.get(\"state\") == \"dispatched\""
+   }
+  ]
+ },
+ {
+  "name": "48-x1-arm-ignores-approval",
+  "why": "#168's R8, in X1: a step whose write was made in an earlier sitting under the approval is armed again in a fresh one",
+  "only": "r168",
+  "env": {
+   "KIT_R168": "R8"
+  },
+  "must_fail": [
+   "R8 Sol's recovery: the fresh sitting never repeats"
+  ],
+  "may_fail": [
+   "R8 the one create left",
+   "R8 sitting 3",
+   "R8 after Jake's amendment",
+   "R8 the approval keeps every made write",
+   "R8 after the amendment"
+  ],
+  "changes": [
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "                if len(made) >= int(write.get(\"max_calls\", 1)):",
+    "new": "                if False:"
+   }
+  ]
+ },
+ {
+  "name": "49-x1-arm-ignores-allowance",
+  "why": "#168's R8, in X1: a write is armed once the approval's allowance is used up by other sittings",
+  "only": "r168",
+  "env": {
+   "KIT_R168": "R8"
+  },
+  "must_fail": [
+   "R8 sitting 3, set up with 1 create inherited"
+  ],
+  "may_fail": [
+   "R8 after Jake's amendment",
+   "R8 the approval keeps every made write",
+   "R8 after the amendment"
+  ],
+  "changes": [
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "                if not remaining(ap, kind):",
+    "new": "                if False:"
+   }
+  ]
+ },
+ {
+  "name": "50-x1-setup-full-budget",
+  "why": "#168's R8, in X1: a fresh setup gets L-8's whole allowance again, whatever the earlier sittings used",
+  "only": "r168",
+  "env": {
+   "KIT_R168": "R8"
+  },
+  "must_fail": [
+   "R8 a fresh setup asking for more than is left",
+   "R8 a fresh setup under the same approval inherits"
+  ],
+  "may_fail": [
+   "R8 a refused setup made something",
+   "R8 the one create left",
+   "R8 the approval keeps every made write"
+  ],
+  "changes": [
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "        left = {k: remaining(ap, k) for k in L8}",
+    "new": "        left = dict(L8)"
+   }
+  ]
+ },
+ {
+  "name": "51-x1-amend-without-words",
+  "why": "#168's R8, in X1: the approval's total is raised without Jake's own words",
+  "only": "r168",
+  "env": {
+   "KIT_R168": "R8"
+  },
+  "must_fail": [
+   "R8 raising the total without Jake's own words"
+  ],
+  "may_fail": [
+   "R8 Jake amending the approval raises the total"
+  ],
+  "changes": [
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "        if not (a.jake_said or \"\").strip():",
+    "new": "        if False:"
+   }
+  ]
+ },
+ {
+  "name": "52-x1-init-above-l8",
+  "why": "#168's R8, in X1: an approval is made with more than L-8's totals",
+  "only": "r168",
+  "env": {
+   "KIT_R168": "R8"
+  },
+  "must_fail": [
+   "R8 an approval made with more than",
+   "R8 init above L-8's totals"
+  ],
+  "may_fail": [],
+  "changes": [
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "        if any(not 0 <= want[k] <= L8[k] for k in L8):",
+    "new": "        if False:"
+   }
+  ]
+ },
+ {
+  "name": "53-x1-init-twice",
+  "why": "#168's R8, in X1: an approval's file is made again over the one every sitting charges",
+  "only": "r168",
+  "env": {
+   "KIT_R168": "R8"
+  },
+  "must_fail": [
+   "R8 an approval file is made once"
+  ],
+  "may_fail": [
+   "R8 a fresh setup under the same approval inherits",
+   "R8 the approval keeps every made write",
+   "R8 Sol's recovery: the fresh sitting never repeats a completed create",
+   "R8 the one create left: sitting 2 makes C9-N5",
+   "R8 sitting 3, set up with 1 create inherited",
+   "R8 across three sittings: 3 spawns",
+   "R8 Jake amending the approval raises the total: 5 creates, 1 left",
+   "R8 after Jake's amendment, sitting 3 makes the one more create",
+   "R8 after the amendment: 3 spawns"
+  ],
+  "changes": [
+   {
+    "file": "new/scripts/new-kit.py",
+    "old": "            if os.path.exists(path):\n                raise Stop(\"an approval's file is made once",
+    "new": "            if False:\n                raise Stop(\"an approval's file is made once"
+   }
+  ]
+ }
+]

@@ -1,0 +1,75 @@
+test_finite_invocation (__main__.PageHistory.test_finite_invocation) ... FAIL
+test_generic_page_and_missing_slots (__main__.PageHistory.test_generic_page_and_missing_slots) ... ERROR
+test_immutable_atomic_history (__main__.PageHistory.test_immutable_atomic_history) ... ERROR
+test_privacy_and_escaping (__main__.PageHistory.test_privacy_and_escaping) ... ERROR
+test_ticks_restart_and_partial_source (__main__.PageHistory.test_ticks_restart_and_partial_source) ... ERROR
+
+======================================================================
+ERROR: test_generic_page_and_missing_slots (__main__.PageHistory.test_generic_page_and_missing_slots)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-wr2/tools/war-room/test_page_history.py", line 96, in test_generic_page_and_missing_slots
+    page = module('page')
+           ^^^^^^^^^^^^^^
+  File "/code/ClosedWiz-wr2/tools/war-room/test_page_history.py", line 23, in module
+    spec.loader.exec_module(result)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '/code/ClosedWiz-wr2/tools/war-room/page.py'
+
+======================================================================
+ERROR: test_immutable_atomic_history (__main__.PageHistory.test_immutable_atomic_history)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-wr2/tools/war-room/test_page_history.py", line 43, in test_immutable_atomic_history
+    h = module('history')
+        ^^^^^^^^^^^^^^^^^
+  File "/code/ClosedWiz-wr2/tools/war-room/test_page_history.py", line 23, in module
+    spec.loader.exec_module(result)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '/code/ClosedWiz-wr2/tools/war-room/history.py'
+
+======================================================================
+ERROR: test_privacy_and_escaping (__main__.PageHistory.test_privacy_and_escaping)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-wr2/tools/war-room/test_page_history.py", line 115, in test_privacy_and_escaping
+    page, h = module('page'), module('history')
+              ^^^^^^^^^^^^^^
+  File "/code/ClosedWiz-wr2/tools/war-room/test_page_history.py", line 23, in module
+    spec.loader.exec_module(result)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '/code/ClosedWiz-wr2/tools/war-room/page.py'
+
+======================================================================
+ERROR: test_ticks_restart_and_partial_source (__main__.PageHistory.test_ticks_restart_and_partial_source)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-wr2/tools/war-room/test_page_history.py", line 67, in test_ticks_restart_and_partial_source
+    main, h, sources = module('main'), module('history'), module('sources')
+                       ^^^^^^^^^^^^^^
+  File "/code/ClosedWiz-wr2/tools/war-room/test_page_history.py", line 23, in module
+    spec.loader.exec_module(result)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '/code/ClosedWiz-wr2/tools/war-room/main.py'
+
+======================================================================
+FAIL: test_finite_invocation (__main__.PageHistory.test_finite_invocation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-wr2/tools/war-room/test_page_history.py", line 151, in test_finite_invocation
+    self.assertEqual(result.returncode, 0, result.stderr)
+AssertionError: 2 != 0 : /usr/bin/python3: can't open file '/code/ClosedWiz-wr2/tools/war-room/main.py': [Errno 2] No such file or directory
+
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.011s
+
+FAILED (failures=1, errors=4)

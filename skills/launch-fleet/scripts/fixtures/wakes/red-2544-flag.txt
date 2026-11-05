@@ -1,0 +1,7 @@
+FAIL GI2: a loop id room-cli would read as a flag runs nothing, as today: unexpected output:
+    --- /tmp/tmp.mEEhHkJxv1/case-1/want.txt	2026-11-13 08:34:18.263082481 +0000
+    +++ /tmp/tmp.mEEhHkJxv1/case-1/out	2026-11-13 08:34:18.249082851 +0000
+    @@ -0,0 +1 @@
+    +wake fleet #10: room-cli loop run --all
+ok   every gh call was one of fleet.sh's reads
+1 cases, 1 failed

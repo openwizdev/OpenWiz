@@ -1,0 +1,123 @@
+{
+  "scenario": "complete",
+  "description": "Contract example 1 (contracts/fleet.v1.md) as gh would print it: fleets 901 (one ticket in each state) and 930, #902 blocking #932 across them, and blockers #811 and #812 from no listed fleet. Also an open issue with no sub-issues, a closed spec, a closed pull request closing #906 and an open one closing nothing: none of them is a fleet's or a ticket's.",
+  "synthetic_assumptions": [
+    "Every value is synthetic; the shapes are gh 2.100.0's as A1's spike observed them (A1, #109).",
+    "The held label (#155) and the fail bucket are gh's documented values, not observed by A1.",
+    "The no-checks diagnostic for #954 matches gh 2.100.0's populateStatusChecks (pkg/cmd/pr/checks/checks.go); its branch is synthetic. This shape was verified against source, not observed live.",
+    "Renamed from the example, as the fixture scan holds no such value: the repository (syn-example-repo), the specs' label (documentation, for spec) and the check names (syn-build, syn-test).",
+    "No pull request's comments are here: a VERDICT line has no form in the fixture scan, so the tests write those answers (tests/fleet/a4_fleets.rs).",
+    "AL1 adds a synthetic nonempty PR title to the approved PR-list fields; this fixture is not a live observation of that read."
+  ],
+  "responses": [
+    {
+      "argv": [
+        "--version"
+      ],
+      "stdout": "gh version 2.100.0 (2026-09-03)\n"
+    },
+    {
+      "argv": [
+        "repo",
+        "view",
+        "--json",
+        "nameWithOwner"
+      ],
+      "stdout": "{\"nameWithOwner\": \"syn-owner/syn-example-repo\"}\n"
+    },
+    {
+      "argv": [
+        "issue",
+        "list",
+        "--state",
+        "all",
+        "--limit",
+        "1000",
+        "--json",
+        "blockedBy,body,id,labels,milestone,number,state,subIssues,title"
+      ],
+      "stdout_file": "issues.json"
+    },
+    {
+      "argv": [
+        "pr",
+        "list",
+        "--state",
+        "all",
+        "--limit",
+        "1000",
+        "--json",
+        "baseRefName,closingIssuesReferences,headRefName,headRefOid,isDraft,mergeCommit,mergedAt,number,state,title"
+      ],
+      "stdout_file": "prs.json"
+    },
+    {
+      "argv": [
+        "pr",
+        "checks",
+        "952",
+        "--json",
+        "bucket,name"
+      ],
+      "stdout": "[{\"bucket\": \"pass\", \"name\": \"syn-build\"}, {\"bucket\": \"pass\", \"name\": \"syn-test\"}]"
+    },
+    {
+      "argv": [
+        "pr",
+        "checks",
+        "953",
+        "--json",
+        "bucket,name"
+      ],
+      "stdout": "[{\"bucket\": \"pass\", \"name\": \"syn-build\"}, {\"bucket\": \"pass\", \"name\": \"syn-test\"}]"
+    },
+    {
+      "argv": [
+        "pr",
+        "checks",
+        "954",
+        "--json",
+        "bucket,name"
+      ],
+      "exit": 1,
+      "stderr": "no checks reported on the 'room/syn-a5-0005' branch\n"
+    },
+    {
+      "argv": [
+        "pr",
+        "checks",
+        "955",
+        "--json",
+        "bucket,name"
+      ],
+      "stdout": "[{\"bucket\": \"pass\", \"name\": \"syn-build\"}, {\"bucket\": \"fail\", \"name\": \"syn-test\"}]"
+    },
+    {
+      "argv": [
+        "api",
+        "repos/{owner}/{repo}/compare/2222222222222222222222222222222222222222...main",
+        "--jq",
+        "{status: .status, behind_by: .behind_by}"
+      ],
+      "stdout": "{\"behind_by\": 0, \"status\": \"identical\"}"
+    },
+    {
+      "argv": [
+        "api",
+        "repos/{owner}/{repo}/compare/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb...main",
+        "--jq",
+        "{status: .status, behind_by: .behind_by}"
+      ],
+      "stdout": "{\"behind_by\": 0, \"status\": \"ahead\"}"
+    },
+    {
+      "argv": [
+        "api",
+        "repos/{owner}/{repo}/compare/dddddddddddddddddddddddddddddddddddddddd...main",
+        "--jq",
+        "{status: .status, behind_by: .behind_by}"
+      ],
+      "stdout": "{\"behind_by\": 0, \"status\": \"identical\"}"
+    }
+  ]
+}

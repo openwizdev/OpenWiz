@@ -1,10 +1,10 @@
-//! The attachment routes: the upload (`POST /api/v1/attachments`),
+//! The attachment routes (#16, B3): the upload (`POST /api/v1/attachments`),
 //! the list (`GET`) and the removal (`DELETE /api/v1/attachments/{id}`). See
-//! `contracts/web-api.v1.md`, "Attachments", for route rules and
-//! `docs/web-access.md` for access boundaries.
+//! `contracts/web-api.v1.md`, "Attachments", and the upload addendum in
+//! `docs/web-access.md` (B-9).
 //!
 //! The server checks only the request's shape: the write `Host`, the send's
-//! cross-site checks, a raw
+//! cross-site checks (B-9 keeps them unchanged), a raw
 //! `application/octet-stream` body (never multipart), its framing and size,
 //! the name header, a cap of two uploads at a time and the upload deadline.
 //! Then it calls the attachment store (`openwiz-store`) and its reports
@@ -16,7 +16,7 @@
 //!
 //! The body streams straight into the store's staging
 //! ([`openwiz_store::attachments::AttachmentStore::stage_stream`]): no file
-//! is written beside the store.
+//! is written beside the store (#16's Q1).
 
 use std::io::{self, Read};
 use std::net::TcpStream;
@@ -74,6 +74,9 @@ fn name_of(head: &Head) -> Option<String> {
         match b {
             b'%' => {
                 let hex = [it.next()?, it.next()?];
+                if !hex.iter().all(u8::is_ascii_hexdigit) {
+                    return None;
+                }
                 let hex = std::str::from_utf8(&hex).ok()?;
                 bytes.push(u8::from_str_radix(hex, 16).ok()?);
             }
@@ -219,6 +222,9 @@ pub(crate) fn upload(
     reply
 }
 
+/// The upload, with its slot: the store opened and swept as `attachment add`
+/// opens it, then the body streamed into its staging (#16's Q1: no file
+/// beside the store).
 fn staged(
     head: &Head,
     stream: &mut TcpStream,

@@ -1,0 +1,64 @@
+E..F..F.F.F
+======================================================================
+ERROR: test_calendar_boundary_remains_valid_without_an_elapsed_window (__main__.ActivityTests.test_calendar_boundary_remains_valid_without_an_elapsed_window)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-2352/tools/war-room/test_activity.py", line 206, in test_calendar_boundary_remains_valid_without_an_elapsed_window
+    metrics = self.project(at='2030-01-02T00:00:00Z',
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/code/ClosedWiz-2352/tools/war-room/test_activity.py", line 98, in project
+    record = S.compose(at, [provider])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/code/ClosedWiz-2352/tools/war-room/suite.py", line 236, in compose
+    validate(record)
+  File "/code/ClosedWiz-2352/tools/war-room/suite.py", line 203, in validate
+    _metric(metric, definition['groups'], assembled)
+  File "/code/ClosedWiz-2352/tools/war-room/suite.py", line 126, in _metric
+    require(since < until, 'reversed or empty source window')
+  File "/code/ClosedWiz-2352/tools/war-room/suite.py", line 18, in require
+    raise ValueError(reason)
+ValueError: reversed or empty source window
+
+======================================================================
+FAIL: test_completed_job_in_active_run_is_not_in_completed_run_cost_cohort (__main__.ActivityTests.test_completed_job_in_active_run_is_not_in_completed_run_cost_cohort)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-2352/tools/war-room/test_activity.py", line 217, in test_completed_job_in_active_run_is_not_in_completed_run_cost_cohort
+    self.assertEqual(metrics['ci-cost-today-estimate']['sample']['identities'], [])
+AssertionError: Lists differ: ['job-104'] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+'job-104'
+
+- ['job-104']
++ []
+
+======================================================================
+FAIL: test_missing_milestone_title_is_not_sideways (__main__.ActivityTests.test_missing_milestone_title_is_not_sideways)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-2352/tools/war-room/test_activity.py", line 223, in test_missing_milestone_title_is_not_sideways
+    self.assertIsNone(metrics['merged-day-sideways']['value'])
+AssertionError: 1 is not None
+
+======================================================================
+FAIL: test_source_bundle_drops_untrusted_labels (__main__.ActivityTests.test_source_bundle_drops_untrusted_labels)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-2352/tools/war-room/test_activity.py", line 203, in test_source_bundle_drops_untrusted_labels
+    self.assertNotIn(b'sensitive-synthetic-label', self.wire)
+AssertionError: b'sensitive-synthetic-label' unexpectedly found in b'{"ci":{"cost":{"billed_minutes":{},"per_code_run_usd":null,"prices":[{"compute_usd_per_minute":0.0,"platform_usd_per_minute":0.0,"runner_kind":"self-hosted","source_url":"https://docs.github.com/en/billing/concepts/product-billing/github-actions","verified_on":"2026-11-05"},{"compute_usd_per_minute":0.002,"platform_usd_per_minute":0.0,"runner_kind":"github-hosted-slim","source_url":"https://docs.github.com/en/billing/reference/actions-runner-pricing","verified_on":"2026-11-05"},{"compute_usd_per_minute":0.006,"platform_usd_per_minute":0.0,"runner_kind":"github-hosted","source_url":"https://docs.github.com/en/billing/reference/actions-runner-pricing","verified_on":"2026-11-05"},{"compute_usd_per_minute":0.004,"platform_usd_per_minute":0.0,"runner_kind":"blacksmith-2vcpu-ubuntu-2404","source_url":"https://www.blacksmith.sh/pricing","verified_on":"2026-11-05"},{"compute_usd_per_minute":null,"platform_usd_per_minute":null,"runner_kind":"unknown","source_url":"https://docs.github.com/en/rest/actions/workflow-jobs","verified_on":"2026-11-05"}],"runner_minutes":{},"unknown_minutes":0,"window_usd":0},"jobs":[{"attempt":1,"id":101,"labels":["ubuntu-24.04"],"run":71,"status":"in_progress"},{"attempt":1,"id":102,"labels":["ubuntu-24.04","sensitive-synthetic-label"],"run":71,"status":"queued"},{"attempt":1,"id":103,"labels":["ubuntu-slim"],"run":71,"status":"queued"}]},"gaps":[],"observed_at":"2030-01-02T12:30:00Z","pools":["ubuntu-24.04","ubuntu-slim"],"prs":[{"direction":"forward","merged_at":"2030-01-02T12:05:00Z","number":81},{"direction":"backwards","merged_at":"2030-01-02T12:10:00Z","number":82},{"direction":"sideways","merged_at":"2030-01-02T11:10:00Z","number":83}],"read_started_at":"2030-01-02T12:29:00Z","repo":"synthetic-owner/work","schema":"openwiz.war-room.activity.v1"}\n'
+
+======================================================================
+FAIL: test_unread_old_ticket_metadata_does_not_hide_today (__main__.ActivityTests.test_unread_old_ticket_metadata_does_not_hide_today)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-2352/tools/war-room/test_activity.py", line 232, in test_unread_old_ticket_metadata_does_not_hide_today
+    self.assertEqual(metrics['merged-hour-forward']['value'], 1)
+AssertionError: None != 1
+
+----------------------------------------------------------------------
+Ran 11 tests in 3.403s
+
+FAILED (failures=4, errors=1)

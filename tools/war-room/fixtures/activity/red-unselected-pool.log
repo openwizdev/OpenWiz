@@ -1,0 +1,14 @@
+E
+======================================================================
+ERROR: test_unselected_pool_capability_stays_visible (__main__.ActivityTests.test_unselected_pool_capability_stays_visible)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-2352/tools/war-room/test_activity.py", line 247, in test_unselected_pool_capability_stays_visible
+    self.assertEqual(metrics['ci-pools']['state'], 'unavailable')
+                     ~~~~~~~^^^^^^^^^^^^
+KeyError: 'ci-pools'
+
+----------------------------------------------------------------------
+Ran 1 test in 0.178s
+
+FAILED (errors=1)

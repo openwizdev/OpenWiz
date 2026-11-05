@@ -1,0 +1,6 @@
+#1754 stress check with the fix (not committed as a test).
+The same temporary test placed the debug openwiz with the fixed place() (a
+separate cp process) 200 times and launched each copy with `--help` at once,
+while 4 threads kept spawning `true` from the same test process.
+
+place then exec, 4 concurrent spawners: 200 launched, 0 ETXTBSY (errno 26), 0 other

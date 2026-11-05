@@ -1,0 +1,26 @@
+✔ text: every text colour on every surface it is used on is at least 4.5:1 (0.954254ms)
+✔ shapes: every colour that draws a status or state shape is at least 3:1 (0.175965ms)
+✔ shapes: every colour a status or state shape rule draws with is at least 3:1 (1.516079ms)
+✔ Home Live retains active rows, page scope, gap and freshness (8.054347ms)
+✔ Home Live distinguishes unread, fresh zero, partial zero and stale zero (2.108554ms)
+✔ Home numbers existing decisions before fleets and retains status shapes (9.0698ms)
+✔ Home never calls a partial zero-decision snapshot Nothing needs you (1.946869ms)
+✔ P1: the manifest at the exact path names the app, opens standalone at /, and its icons are bundled PNGs of their sizes (143.599621ms)
+✔ P2: every exported page links the manifest, the touch icon and the one registration script, from this origin (0.727338ms)
+✔ P3: Chromium finds the app installable, with no CSP violation, and /sw.js controls / (748.818577ms)
+✔ P4: after the page has read the API, the cache holds only the static shell (726.043935ms)
+✔ P5: offline the shell opens, no API answer comes from the worker, and no write is queued, retried or replayed (648.118706ms)
+✔ P6: the worker listens only for install, activate and fetch, and the registration only registers /sw.js (0.803301ms)
+✔ P7: when the cache write fails, the worker still serves the network's answer (3.068053ms)
+✔ P8: when reading the cache fails, the worker fetches the shell file once and serves it (1.97575ms)
+✔ every fleet marker has a distinct drawn glyph without colour or its word (8.459023ms)
+✔ a novel reported word is preserved as text with an unknown icon (0.394939ms)
+✔ list and detail coverage visibly distinguish snapshots within the same minute (7.073915ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 18
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3662.003042

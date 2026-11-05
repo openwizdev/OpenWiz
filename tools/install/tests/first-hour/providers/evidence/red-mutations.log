@@ -1,0 +1,30 @@
+# Mutation runs (#2222), each on a temporary edit restored with git checkout afterwards: the fault cases fail for each realistic bug.
+# cd apps/web && node --test --test-reporter=spec test/unit/first-hour-recovery.test.ts
+== M1 composer.ts load(): a reload forgets the stored draft, root and attempts
+✖ #2222: browser-state fault cases keep drafts, identities and work, with no duplicate effect or blind retry (3.237739ms)
+✔ #2222: owner-state fault cases keep setup state, operation identities and the last good build (393.611044ms)
+✔ #2222: the checks refuse the fault cases’ known ways to fail (32.446596ms)
+ℹ pass 2
+ℹ fail 1
+✖ #2222: browser-state fault cases keep drafts, identities and work, with no duplicate effect or blind retry (3.237739ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + ''
+  - 'Synthetic first-hour message: keep these exact bytes ✓'
+== M2 launcher.ts settle(): an unanswered create frees the draft for a new op id
+✖ #2222: browser-state fault cases keep drafts, identities and work, with no duplicate effect or blind retry (8.104738ms)
+✔ #2222: owner-state fault cases keep setup state, operation identities and the last good build (405.602587ms)
+✔ #2222: the checks refuse the fault cases’ known ways to fail (30.626731ms)
+ℹ pass 2
+ℹ fail 1
+✖ #2222: browser-state fault cases keep drafts, identities and work, with no duplicate effect or blind retry (8.104738ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  - 'unknown'
+== M3 composer.ts press(): Try again after no answer sends a new op id
+✖ #2222: browser-state fault cases keep drafts, identities and work, with no duplicate effect or blind retry (12.858384ms)
+✔ #2222: owner-state fault cases keep setup state, operation identities and the last good build (399.189615ms)
+✔ #2222: the checks refuse the fault cases’ known ways to fail (30.47208ms)
+ℹ pass 2
+ℹ fail 1
+✖ #2222: browser-state fault cases keep drafts, identities and work, with no duplicate effect or blind retry (12.858384ms)
+  AssertionError [ERR_ASSERTION]: the repeat reused the op id
+  -   'web-000000000000000000000000000f100b-q1'

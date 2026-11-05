@@ -12,6 +12,27 @@ use openwiz_core::source::SourceError;
 use crate::support::*;
 
 #[test]
+fn n05_honest_options_affected_contracts_preserve_original_cases() {
+    let cases: [(&str, fn()); 3] = [
+        (
+            "account_and_other_fields_never_reach_the_core",
+            account_and_other_fields_never_reach_the_core,
+        ),
+        (
+            "not_ready_null_harnesses_and_a_failed_read_give_no_options",
+            not_ready_null_harnesses_and_a_failed_read_give_no_options,
+        ),
+        (
+            "the_options_carry_the_read_time_and_the_saved_copy_label",
+            the_options_carry_the_read_time_and_the_saved_copy_label,
+        ),
+    ];
+    for (name, proof) in cases {
+        eprintln!("TA2 case: n05_honest_options::{name}");
+        proof();
+    }
+}
+
 fn the_options_carry_the_read_time_and_the_saved_copy_label() {
     let o = cloud_options(
         parse_catalogue(&fixture("cloud-status.json")),
@@ -42,7 +63,6 @@ fn no_options(
     }
 }
 
-#[test]
 fn not_ready_null_harnesses_and_a_failed_read_give_no_options() {
     assert_eq!(
         no_options(parse_catalogue(&fixture("cloud-status-not-ready.json"))),
@@ -62,7 +82,6 @@ fn not_ready_null_harnesses_and_a_failed_read_give_no_options() {
 
 /// The account and every other field are dropped at the adapter's boundary:
 /// nothing of them reaches the core, whatever their type.
-#[test]
 fn account_and_other_fields_never_reach_the_core() {
     let mut doc = fixture_json("cloud-status.json");
     doc["account"] = serde_json::json!({

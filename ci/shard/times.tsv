@@ -1,0 +1,26 @@
+# Each Rust test's time in seconds, for ci/shard/shard.py plan (#1266).
+# The median of its libtest totals over the rust job's logs of the 5 latest
+# green runs of ci.yml (of the 40 latest) that ran every Rust test at once,
+# untraced, with rust:test:notifications; read 2026-11-08
+# (python3 -I ci/shard/shard.py times LOG...). Runs:
+# 42477507675 42486198889 42491364816 42491568017 42498687050
+rust:lib:openwiz-adapter-cloudroom	0.01
+rust:lib:openwiz-adapter-github	2.04
+rust:lib:openwiz-cli	0.00
+rust:lib:openwiz-core	0.02
+rust:lib:openwiz-server	0.04
+rust:lib:openwiz-service	88.12
+rust:lib:openwiz-store	0.00
+rust:lib:openwiz-terminal	0.00
+rust:test:attachments	2.98
+rust:test:checks	20.98
+rust:test:cli-agent	25.48
+rust:test:fleet	69.81
+rust:test:loops	3.87
+rust:test:messaging	9.75
+rust:test:new-thread	7.52
+rust:test:notifications	1.22
+rust:test:proof	9.19
+rust:test:service	6.62
+rust:test:terminal	13.06
+rust:test:web-api	39.15

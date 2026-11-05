@@ -1,5 +1,5 @@
-// AW7: safe previews. An SVG with a script, an HTML page, a polyglot
-// (a PNG with markup after it) and a PNG named with an `.svg` extension never render as markup;
+// AW7 (#16): safe previews. An SVG with a script, an HTML page, a polyglot
+// (a PNG with markup after it) and a PNG named .svg never render as markup;
 // thumbnails appear only for PNG, JPEG, GIF and WebP, from the browser's own
 // copy (an object URL), and are revoked on removal. The page loads under its
 // CSP with no violation, and nothing in a file ever runs. AW8: one tray, in
@@ -22,7 +22,7 @@ after(() => browser.close());
 
 test('AW7: thumbnails only for the four image types, from an object URL; markup never renders', async () => {
   const { fx } = await composerSite();
-  // The core refuses a PNG named with an `.svg` extension (the name and the bytes disagree); everything else is staged.
+  // The core refuses a PNG named .svg (B-5: the name and the bytes disagree); everything else is staged.
   fx.api.setUpload((name, bytes) => (name === 'png-as.svg' ? at.failed(name, 'extension_mismatch', 'its name says .svg but its bytes are a PNG') : at.ready(fx.api.staged, name, bytes)));
   const p = await openThread(browser, fx, 1);
   try {
@@ -59,12 +59,23 @@ test('AW7: thumbnails only for the four image types, from an object URL; markup 
     for (const r of t.rows) if (r.thumb === 'no') assert.equal(r.img, null, `${r.name}: a glyph, never an image`);
     assert.equal(t.rows.find((r) => r.name === 'png-as.svg').state, 'failed');
     // Nothing ran, nothing framed, no other element shows a file, and the CSP saw nothing to block.
-    const page = await p.page.evaluate(() => ({
+    // The tray now draws app icons as SVG. Only these exact bundled drawings
+    // are permitted: a file's markup cannot masquerade as one by adding a class.
+    const icon = (body) => `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+    const status = (tier, body) => `<svg class="status-icon ${tier}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">${body}</svg>`;
+    const trustedIcons = [
+      icon('<path d="m8 12 7-7a3 3 0 0 1 4 4l-9 9a5 5 0 0 1-7-7l9-9M6 14l9-9"></path>'),
+      icon('<path d="M14 3H6v18h13V8l-5-5Z"></path><path d="M14 3v5h5M8 13h8M8 17h5"></path>'),
+      icon('<path d="m6 6 12 12M18 6 6 18"></path>'),
+      status('t2', '<rect x="4" y="4" width="16" height="16" rx="4"></rect><path d="m7 12 4 4 6-7"></path>'),
+      status('t1', '<path d="m12 4 8 8-8 8-8-8Z" fill="currentColor" stroke-linejoin="round"></path>'),
+    ];
+    const page = await p.page.evaluate((trustedIcons) => ({
       pwned: window.__pwned ?? null,
       frames: document.querySelectorAll('iframe, object, embed, frame').length,
-      svgs: document.querySelectorAll('[data-part=tray] svg').length,
+      svgs: [...document.querySelectorAll('[data-part=tray] svg')].filter((svg) => !trustedIcons.includes(svg.outerHTML)).length,
       images: [...document.querySelectorAll('img')].map((i) => i.getAttribute('src')).filter((s) => !s.startsWith('blob:')),
-    }));
+    }), trustedIcons);
     assert.deepEqual(page, { pwned: null, frames: 0, svgs: 0, images: [] });
     assert.deepEqual(await p.csp(), []);
     // Removal revokes the object URL: the browser no longer resolves it.

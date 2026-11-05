@@ -177,7 +177,8 @@
         },
         "reported_configuration": { "$ref": "#/$defs/reported_configuration" },
         "updated_at": { "$ref": "#/$defs/fact_integer" },
-        "age_ms": { "$ref": "#/$defs/fact_integer" }
+        "age_ms": { "$ref": "#/$defs/fact_integer" },
+        "started_at": { "$ref": "#/$defs/fact_integer", "description": "Optional (#539): when the session started, only as room-cli reports it; never creation or update time. Unknown when unreported." }
       }
     },
     "location": {

@@ -1,9 +1,9 @@
 {
   "name": "openwiz-web",
-  "version": "0.0.5",
+  "version": "0.0.2-dev",
   "private": true,
   "type": "module",
-  "description": "OpenWiz: a static web client for inventory, messaging, new threads and attachments.",
+  "description": "OpenWiz 0.0.2: the read-only web viewer over openwiz-server's API. A static export, same-origin under /.",
   "engines": {
     "node": "24.22.1"
   },
@@ -11,9 +11,9 @@
     "build": "NEXT_TELEMETRY_DISABLED=1 next build --webpack",
     "typecheck": "tsc --noEmit",
     "check": "node scripts/check.mjs",
-    "test": "npm run test:unit && npm run test:browser",
+    "test": "node test/run-browser.mjs --with-unit",
     "test:unit": "node --test --test-reporter=spec \"test/unit/**/*.test.ts\"",
-    "test:browser": "node --test --test-concurrency=1 --test-force-exit --test-reporter=spec \"test/browser/**/*.test.mjs\""
+    "test:browser": "node test/run-browser.mjs"
   },
   "dependencies": {
     "next": "16.4.3",

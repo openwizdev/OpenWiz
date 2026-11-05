@@ -1,0 +1,47 @@
+{
+  "format": "ops-live-kit-controls/1",
+  "candidates": {
+    "heads": [
+      {
+        "repository": "example-owner/example-repo",
+        "branch": "room/4001-synthetic-candidate",
+        "commit": "1111111111111111111111111111111111111111"
+      }
+    ],
+    "revisions": [
+      {
+        "kind": "rule",
+        "path": "docs/agents/fleet.md",
+        "blob": "2222222222222222222222222222222222222222"
+      },
+      {
+        "kind": "contract",
+        "path": "contracts/example.v1.md",
+        "blob": "3333333333333333333333333333333333333333"
+      }
+    ]
+  },
+  "limits": {
+    "threads": {"active": 3, "total": 6},
+    "operations": {"active": 2, "total": 40},
+    "duration_minutes": 120
+  },
+  "permissions": {
+    "machine": {"needed": true, "granted": false, "record": null},
+    "live": {"needed": true, "granted": false, "record": null},
+    "write": {"needed": true, "granted": false, "record": null},
+    "merge": {"needed": false, "granted": false, "record": null},
+    "activation": {"needed": false, "granted": false, "record": null},
+    "spending": {
+      "needed": true,
+      "granted": true,
+      "record": "https://github.com/jparker2006/ClosedWiz/issues/4001#issuecomment-9001"
+    }
+  },
+  "stop": {
+    "conditions": ["any refusal or unexpected result", "a count or duration bound is reached"],
+    "reconciliation": ["read back every started thread and operation before any retry"]
+  },
+  "restoration": ["return each test-owned label and branch to its recorded starting state"],
+  "cleanup": ["archive every test-owned thread", "delete every test-owned branch"]
+}

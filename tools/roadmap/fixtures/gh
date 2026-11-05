@@ -1,0 +1,120 @@
+#!/usr/bin/env python3
+"""A fake `gh` for roadmap.py's tests (test.py puts it first on PATH).
+
+It answers only the reads roadmap.py makes, from a synthetic GitHub in the
+JSON file $FAKE_GH_WORLD (see world.json), and logs each call, as its
+arguments joined by spaces, to $FAKE_GH_LOG. Any other call, every write
+included, fails, so a test catches it. A ticket read by number is found in
+the world's milestone issue lists or its "outside" list (issues in no version
+milestone, pull requests included); a number in neither fails as GitHub's
+404 does.
+
+What it prints is what the real `gh` prints for that read: one compact JSON
+object per line (its keys sorted), or one ref per line. A list item of the
+form {"__raw__": "<text>"} is printed as <text> exactly, for the bad-shape
+cases.
+
+$FAKE_GH_PUBLIC names the repository whose tags it answers (default
+jparker2006/OpenWiz, roadmap.py's default --public-repo).
+
+Faults, for the error cases:
+  FAKE_GH_FAIL=<text>     a call whose log line contains <text> prints nothing
+                          and fails (exit 1)
+  FAKE_GH_PARTIAL=<text>  such a call prints its answer, then fails (exit 1),
+                          like a read that breaks on a later page
+  FAKE_GH_NOT_UTF8=<text> such a call's answer ends with a byte that isn't UTF-8
+  FAKE_GH_NO_NEWLINE=<text> such a call's answer loses its final newline
+"""
+import json
+import os
+import sys
+
+MILESTONES_JQ = ".[] | {number, title, description, html_url}"
+ISSUES_JQ = (".[] | select(.pull_request == null)"
+             " | {number, state, state_reason, sub_issues: .sub_issues_summary.total, html_url}")
+REFS_JQ = ".[].ref"
+TICKET_JQ = "{number, state, state_reason, pull: (.pull_request != null), html_url}"
+PUBLIC = os.environ.get("FAKE_GH_PUBLIC", "jparker2006/OpenWiz")  # the repository with the tags
+
+
+def fail(message):
+    print(f"fake gh: {message}", file=sys.stderr)
+    sys.exit(1)
+
+
+def line_of(item):
+    if isinstance(item, dict) and set(item) == {"__raw__"}:
+        return item["__raw__"]
+    if isinstance(item, str):
+        return item
+    return json.dumps(item, separators=(",", ":"), sort_keys=True, ensure_ascii=False)
+
+
+def emit(out, logline):
+    """Print OUT as the answer, with any planted fault, and exit."""
+    def planted(name):
+        text = os.environ.get(name, "")
+        return bool(text) and text in logline
+    if planted("FAKE_GH_FAIL"):
+        fail(f"planted failure: {logline}")
+    data = out.encode("utf-8")
+    if planted("FAKE_GH_NO_NEWLINE"):
+        data = data[:-1] if data.endswith(b"\n") else data
+    if planted("FAKE_GH_NOT_UTF8"):
+        data += b"\xff\n"
+    sys.stdout.buffer.write(data)
+    sys.stdout.flush()
+    if planted("FAKE_GH_PARTIAL"):
+        fail(f"planted failure after the answer: {logline}")
+    sys.exit(0)
+
+
+def main(args):
+    world_file = os.environ.get("FAKE_GH_WORLD") or fail("FAKE_GH_WORLD is not set")
+    log_file = os.environ.get("FAKE_GH_LOG") or fail("FAKE_GH_LOG is not set")
+    with open(world_file, encoding="utf-8") as f:
+        world = json.load(f)
+    logline = " ".join(args)
+    with open(log_file, "a", encoding="utf-8") as f:
+        f.write(logline + "\n")
+
+    ticket_prefix = "repos/{owner}/{repo}/issues/"
+    if len(args) == 4 and args[0] == "api" and args[1].startswith(ticket_prefix) and args[2:] == ["--jq", TICKET_JQ]:
+        number = args[1][len(ticket_prefix):]
+        if not number.isdigit():
+            fail(f"unexpected: gh {logline}")
+        raw = world.get("ticket_raw", {}).get(number)
+        found = [i for lst in [*world["issues"].values(), world.get("outside", [])] for i in lst
+                 if isinstance(i, dict) and i.get("number") == int(number)]
+        if raw is None and not found:
+            fail("Not Found (HTTP 404)")
+        if raw is not None:
+            emit(raw + "\n", logline)
+        i = found[0]
+        emit(line_of({"number": i["number"], "state": i["state"], "state_reason": i["state_reason"],
+                      "pull": i.get("pull", False), "html_url": i["html_url"]}) + "\n", logline)
+
+    if len(args) != 5 or args[:2] != ["api", "--paginate"] or args[3] != "--jq":
+        fail(f"unexpected: gh {logline}")
+    path, jq = args[2], args[4]
+    issues_prefix = "repos/{owner}/{repo}/issues?milestone="
+    issues_suffix = "&state=all&per_page=100"
+    if path == "repos/{owner}/{repo}/milestones?state=all&per_page=100" and jq == MILESTONES_JQ:
+        items = world["milestones"]
+    elif path == "repos/{owner}/{repo}/git/matching-refs/heads/release-" and jq == REFS_JQ:
+        items = world["heads"]
+    elif path == f"repos/{PUBLIC}/git/matching-refs/tags/v" and jq == REFS_JQ:
+        items = world["public_tags"]
+    elif path.startswith(issues_prefix) and path.endswith(issues_suffix) and jq == ISSUES_JQ:
+        number = path[len(issues_prefix):-len(issues_suffix)]
+        if not number.isdigit():
+            fail(f"unexpected: gh {logline}")
+        items = world["issues"].get(number, [])
+    else:
+        fail(f"unexpected: gh {logline}")
+
+    emit("".join(line_of(item) + "\n" for item in items), logline)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

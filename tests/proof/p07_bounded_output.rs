@@ -149,7 +149,7 @@ fn rows_are_capped() {
     }
 }
 
-/// The cut must be shown
+/// Changed in ticket 1's correction round 1 (Sol S4): the cut must be shown
 /// (text contract 7 in `support.rs`), for the final output and the purpose.
 #[test]
 fn printed_final_output_and_purpose_show_their_cut() {
@@ -175,6 +175,39 @@ fn printed_final_output_and_purpose_show_their_cut() {
         .expect("text");
     assert!(printed.len() <= 4096);
     assert_eq!(json["data"]["final_output"]["known"]["truncated"], true);
+
+    // Raw ASCII output isolates the byte boundary from the Unicode case above.
+    // An intact exactly-4096-byte output must not claim a cut in either format.
+    for (size, kept, truncated) in [(4095, 4095, false), (4096, 4096, false), (4097, 4096, true)] {
+        let source = ScriptedSource::new(1).with_output(OutputRecord {
+            output: Fact::Known(Some("x".repeat(size))),
+            error: Fact::Known(None),
+            problems: vec![],
+        });
+        let expected = "x".repeat(kept);
+        let json = cli_json_with(&source, &["show", "thr_syn_0001", "--json"]);
+        let reported = &json["data"]["final_output"]["known"];
+        let json_text = reported["text"].as_str().expect("final output text");
+        assert_eq!(json_text.len(), kept, "{size} input bytes: JSON length");
+        assert_eq!(json_text, expected, "{size} input bytes: JSON content");
+        assert_eq!(
+            reported["truncated"], truncated,
+            "{size} input bytes: JSON cut flag"
+        );
+
+        let (code, text, err) = cli_with(&source, &["show", "thr_syn_0001"]);
+        assert_eq!(code, 0, "{err}");
+        let block = text.split_once("final output:\n").expect("output block").1;
+        let printed = block.lines().next().expect("final output line");
+        let retained = printed.strip_suffix(CUT_MARKER).unwrap_or(printed);
+        assert_eq!(retained.len(), kept, "{size} input bytes: printed length");
+        assert_eq!(retained, expected, "{size} input bytes: printed content");
+        assert_eq!(
+            block.contains(CUT_MARKER),
+            truncated,
+            "{size} input bytes: printed cut marker"
+        );
+    }
 
     let rows = fixture_json("thread-list.json");
     let purpose = rows[1]["purpose"]["text"].as_str().expect("purpose");
@@ -327,7 +360,8 @@ fn assert_every_string_is_capped(label: &str, json: &Value) {
     }
 }
 
-/// Every string field in the result is capped; plain text fields keep
+/// Changed in ticket 1's correction round 1 (Sol S4), from a title-only
+/// check. Every string field in the result is capped; plain text fields keep
 /// their first `FIELD_MAX_CHARS - 1` characters and end with `…`, and
 /// bounded texts set `truncated`.
 #[test]
@@ -422,6 +456,13 @@ fn every_field_is_capped() {
     }
 }
 
+/// New in ticket 1's correction round 1 (Sol S4). Every cut value is shown
+/// as cut in the printed output (text contract 7), and nothing past a cap is
+/// printed, in `ls -l`, `show`, `--json` and on stderr.
+///
+/// Changed after the internal Haiku review (H1): the ungrouped reason with
+/// the long project id is shown as cut in `ls -l`, and the cut project name
+/// in `show`.
 #[test]
 fn printed_output_shows_every_cut() {
     let (source, o) = oversized_source();
@@ -505,7 +546,7 @@ fn printed_output_shows_every_cut() {
     let wanted = format!("unknown ({})", capped(&o.reasons[0]));
     assert!(text.contains(&wanted), "show shows {wanted:?}:\n{text}");
 
-    // An oversized version: not a recognised version, so
+    // An oversized version (#37: never a gate): not a recognised version, so
     // it is unknown with a reason and never echoed; the run goes on.
     let version = oversized("version");
     let source = ScriptedSource::new(1).with_version(&version);
@@ -516,6 +557,10 @@ fn printed_output_shows_every_cut() {
     assert!(header.contains("room-cli unknown ("), "{header}");
 }
 
+/// New in ticket 2, after the internal Haiku review (A, R4): the text never
+/// prints characters that drive or reorder the terminal (escape, bidi
+/// controls, line and paragraph separators, zero-width marks). The JSON
+/// keeps the reported value.
 #[test]
 fn the_text_never_prints_terminal_control_or_bidi_characters() {
     const UNSAFE: [char; 9] = [
@@ -551,6 +596,8 @@ fn the_text_never_prints_terminal_control_or_bidi_characters() {
     assert_eq!(json["data"]["session"]["title"]["known"], mixed.as_str());
 }
 
+/// New in ticket 2, after the Sol review (S2): replacing unsafe characters
+/// never makes the printed final output longer than the 4 KiB it was cut to.
 #[test]
 fn the_printed_final_output_stays_within_4_kib() {
     for (label, unit) in [

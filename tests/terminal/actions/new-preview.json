@@ -1,0 +1,75 @@
+{
+  "schema": "openwiz.new-thread-preview.v1",
+  "op_id": "op-create",
+  "request_id": "ow1-2bb4cef96bb955038dfbde69956132309d775923",
+  "project_ref": {
+    "kind": "id",
+    "value": "prj_syn_0001"
+  },
+  "project": {
+    "id": "prj_syn_0001",
+    "name": {
+      "known": "Synthetic project one"
+    }
+  },
+  "source": {
+    "name": "room-cli",
+    "version": {
+      "known": "v127"
+    },
+    "tested_version": "",
+    "version_tested": false
+  },
+  "requested": {
+    "harness": "codex",
+    "model": "syn-codex-model-01",
+    "effort": "high"
+  },
+  "verdict": {
+    "kind": "ready",
+    "provider": "codex"
+  },
+  "effects": {
+    "read_at": 1793978204237,
+    "project": {
+      "id": "prj_syn_0001",
+      "name": {
+        "known": "Synthetic project one"
+      }
+    },
+    "effects": [
+      {
+        "kind": "creates_and_starts",
+        "text": "creates one Cloud thread in Synthetic project one and starts its first turn"
+      },
+      {
+        "kind": "starts_from_github",
+        "text": "starts from the project's default branch on GitHub"
+      },
+      {
+        "kind": "copies_env_files",
+        "text": "copies the project's .env files from this computer"
+      },
+      {
+        "kind": "full_permissions",
+        "text": "runs with full permissions in its own sandbox"
+      },
+      {
+        "kind": "uses_cloud_agent",
+        "text": "uses one Cloud agent from your plan"
+      },
+      {
+        "kind": "mac_stays_awake",
+        "text": "this computer must stay awake until the start is confirmed"
+      },
+      {
+        "kind": "cloud_room_names_it",
+        "text": "CloudRoom names it"
+      }
+    ]
+  },
+  "text_sha256": "4a85827ad80e8635fb4a2b41a3fce1d0f23ba1eb27db0aa84113a7b0ca415d42",
+  "attachments_digest": "9131a728018dae734e1265648a0f318ea7fc9c8652996003cf71e2295df9810e",
+  "text_bytes": 9,
+  "gaps": []
+}

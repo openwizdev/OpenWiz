@@ -1,0 +1,64 @@
+FFFFF
+======================================================================
+FAIL: test_edited_give_up_keeps_retired_identity_for_closure_only (__main__.Fleet.test_edited_give_up_keeps_retired_identity_for_closure_only) (replacement='3131313131313131313131313131313131313131', discovery=True)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-1273/skills/launch-fleet/scripts/test-records.py", line 133, in test_edited_give_up_keeps_retired_identity_for_closure_only
+    self.assertEqual(self.run_fleet('wake', '12'),
+AssertionError: 'look #31: two threads match review:31:313[35 chars]31\n' != 're-check #31 for #12 at 42424242424242424[61 chars]sh\n'
+- look #31: two threads match review:31:3131313131313131313131313131313131313131
++ re-check #31 for #12 at 4242424242424242424242424242424242424242: tell its reviewer, thread thr_synfresh
+
+
+======================================================================
+FAIL: test_edited_give_up_keeps_retired_identity_for_closure_only (__main__.Fleet.test_edited_give_up_keeps_retired_identity_for_closure_only) (replacement='3131313131313131313131313131313131313131', discovery=False)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-1273/skills/launch-fleet/scripts/test-records.py", line 137, in test_edited_give_up_keeps_retired_identity_for_closure_only
+    self.assertEqual(self.run_fleet('wake', '12'),
+AssertionError: 'archive #12: closed; archive thr_synbuilder, thr_synfresh\n' != 'archive #12: closed; archive thr_synbuilder, thr_synfresh, thr_synreviewer\n'
+- archive #12: closed; archive thr_synbuilder, thr_synfresh
++ archive #12: closed; archive thr_synbuilder, thr_synfresh, thr_synreviewer
+?                                                          +++++++++++++++++
+
+
+======================================================================
+FAIL: test_edited_give_up_keeps_retired_identity_for_closure_only (__main__.Fleet.test_edited_give_up_keeps_retired_identity_for_closure_only) (replacement='31f31f31f31f31f31f31f31f31f31f31f31f31f3', discovery=True)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-1273/skills/launch-fleet/scripts/test-records.py", line 137, in test_edited_give_up_keeps_retired_identity_for_closure_only
+    self.assertEqual(self.run_fleet('wake', '12'),
+AssertionError: 'archive #12: closed; archive thr_synbuilder, thr_synfresh\n' != 'archive #12: closed; archive thr_synbuilder, thr_synfresh, thr_synreviewer\n'
+- archive #12: closed; archive thr_synbuilder, thr_synfresh
++ archive #12: closed; archive thr_synbuilder, thr_synfresh, thr_synreviewer
+?                                                          +++++++++++++++++
+
+
+======================================================================
+FAIL: test_edited_give_up_keeps_retired_identity_for_closure_only (__main__.Fleet.test_edited_give_up_keeps_retired_identity_for_closure_only) (replacement='31f31f31f31f31f31f31f31f31f31f31f31f31f3', discovery=False)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-1273/skills/launch-fleet/scripts/test-records.py", line 137, in test_edited_give_up_keeps_retired_identity_for_closure_only
+    self.assertEqual(self.run_fleet('wake', '12'),
+AssertionError: 'archive #12: closed; archive thr_synbuilder, thr_synfresh\n' != 'archive #12: closed; archive thr_synbuilder, thr_synfresh, thr_synreviewer\n'
+- archive #12: closed; archive thr_synbuilder, thr_synfresh
++ archive #12: closed; archive thr_synbuilder, thr_synfresh, thr_synreviewer
+?                                                          +++++++++++++++++
+
+
+======================================================================
+FAIL: test_edited_give_up_can_archive_from_older_commit_map (__main__.Fleet.test_edited_give_up_can_archive_from_older_commit_map)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-1273/skills/launch-fleet/scripts/test-records.py", line 151, in test_edited_give_up_can_archive_from_older_commit_map
+    self.assertEqual(self.run_fleet('wake', '12'),
+AssertionError: 'archive #12: closed; archive thr_synbuilder, thr_synfresh\n' != 'archive #12: closed; archive thr_synbuilder, thr_synfresh, thr_synreviewer\n'
+- archive #12: closed; archive thr_synbuilder, thr_synfresh
++ archive #12: closed; archive thr_synbuilder, thr_synfresh, thr_synreviewer
+?                                                          +++++++++++++++++
+
+
+----------------------------------------------------------------------
+Ran 2 tests in 26.714s
+
+FAILED (failures=5)

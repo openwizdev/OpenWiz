@@ -1,0 +1,85 @@
+name: War room
+
+# The War room, redrawn every hour on the branch `war-room` (WR9, #2411), like the
+# board: the page as a picture, a one-column phone picture and the saved samples.
+# Bookmark: https://github.com/jparker2006/ClosedWiz/tree/war-room
+
+on:
+  # An hourly CloudRoom loop dispatches this; the cron is a thin backup, every 6 hours.
+  schedule:
+    - cron: '37 */6 * * *'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'tools/war-room/**'
+      - 'tools/privacy-check/**'
+      - '.github/workflows/war-room.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    # Pull requests only: publish.sh runs the same tests before it publishes, so a dispatched or
+    # scheduled run is one job, one billed minute.
+    if: github.event_name == 'pull_request'
+    # GitHub-hosted on purpose, never vars.CI_RUNS_ON: the charge shows in GitHub's own billing.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Python
+        run: sh tools/ci-bench/python.sh
+      - name: The War room publish and gather tests
+        run: |
+          python3 -I tools/war-room/test_publish.py
+          python3 -I tools/war-room/test_gather.py
+
+  preview:
+    # A pull request ticks and draws on an empty private history, and publishes nothing.
+    needs: proof
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Python
+        run: sh tools/ci-bench/python.sh
+      - name: Tick and draw, no publish
+        run: python3 -I tools/war-room/publish.py preview --out "$RUNNER_TEMP/war-room" --at "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+  publish:
+    # No `needs: proof`: publish.sh runs test_publish.py first, and a failed test publishes nothing.
+    # Default off: nothing publishes, scheduled or dispatched, until the orchestrator activates it
+    # with the repository variable WAR_ROOM_PUBLISH=on (tools/war-room/README.md, Publish).
+    if: vars.WAR_ROOM_PUBLISH == 'on' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    # A cap, not a budget: gather.py's read-only gh reads add to the one-minute publish.
+    timeout-minutes: 15
+    # Only this job writes, and publish.py pushes only refs/heads/war-room. The read scopes are
+    # gather.py's (WR10): it fetches `board` and `ci-benchmarks` and runs read-only gh queries.
+    permissions:
+      contents: write
+      actions: read
+      issues: read
+      pull-requests: read
+    concurrency:
+      group: war-room-publication
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Python
+        run: sh tools/ci-bench/python.sh
+      - name: Tests, then gather the sources (reads only), tick, draw and publish only war-room
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh auth setup-git
+          sh tools/war-room/publish.sh "https://github.com/${{ github.repository }}.git" \
+            --gather "${{ github.repository }}" "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"

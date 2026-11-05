@@ -1,0 +1,112 @@
+# WR9 review round 1 red at 7eefdb5 + new regressions (R1-R5): python3 -I tools/war-room/test_publish.py (exit 1).
+test_a_broken_branch_publishes_nothing (__main__.Publish.test_a_broken_branch_publishes_nothing) ... ok
+test_a_failed_read_or_render_publishes_nothing (__main__.Publish.test_a_failed_read_or_render_publishes_nothing) ... ok
+test_a_failed_selected_artifact_publishes_nothing (__main__.Publish.test_a_failed_selected_artifact_publishes_nothing) ... 
+  test_a_failed_selected_artifact_publishes_nothing (__main__.Publish.test_a_failed_selected_artifact_publishes_nothing) [missing] ... FAIL
+  test_a_failed_selected_artifact_publishes_nothing (__main__.Publish.test_a_failed_selected_artifact_publishes_nothing) [corrupt] ... FAIL
+test_a_failed_selected_artifact_publishes_nothing (__main__.Publish.test_a_failed_selected_artifact_publishes_nothing) ... FAIL
+test_a_link_or_odd_mode_on_the_branch_publishes_nothing (__main__.Publish.test_a_link_or_odd_mode_on_the_branch_publishes_nothing) ... 
+  test_a_link_or_odd_mode_on_the_branch_publishes_nothing (__main__.Publish.test_a_link_or_odd_mode_on_the_branch_publishes_nothing) [README.md] (change='link') ... FAIL
+  test_a_link_or_odd_mode_on_the_branch_publishes_nothing (__main__.Publish.test_a_link_or_odd_mode_on_the_branch_publishes_nothing) [war-room.png] (change='link') ... FAIL
+  test_a_link_or_odd_mode_on_the_branch_publishes_nothing (__main__.Publish.test_a_link_or_odd_mode_on_the_branch_publishes_nothing) [samples/2030-01-02T12-00-00Z.json] (change='link') ... FAIL
+  test_a_link_or_odd_mode_on_the_branch_publishes_nothing (__main__.Publish.test_a_link_or_odd_mode_on_the_branch_publishes_nothing) [war-room.png] (change='executable') ... FAIL
+test_a_sample_rewritten_in_a_merge_publishes_nothing (__main__.Publish.test_a_sample_rewritten_in_a_merge_publishes_nothing) ... FAIL
+test_consecutive_ticks_carry_history_forward (__main__.Publish.test_consecutive_ticks_carry_history_forward) ... ok
+test_five_minute_collection_survives_hourly_publication (__main__.Publish.test_five_minute_collection_survives_hourly_publication) ... FAIL
+test_preview_draws_and_publishes_nothing (__main__.Publish.test_preview_draws_and_publishes_nothing) ... ok
+test_privacy_scan_refuses_a_planted_secret (__main__.Publish.test_privacy_scan_refuses_a_planted_secret) ... ok
+test_publish_sh_runs_its_tests_first (__main__.Publish.test_publish_sh_runs_its_tests_first) ... ok
+test_publish_writes_only_the_war_room_branch (__main__.Publish.test_publish_writes_only_the_war_room_branch) ... ok
+test_hosted_runners_and_pull_request_only_proof (__main__.Workflow.test_hosted_runners_and_pull_request_only_proof) ... FAIL
+test_only_publish_writes_and_publication_is_serialised (__main__.Workflow.test_only_publish_writes_and_publication_is_serialised) ... ok
+
+======================================================================
+FAIL: test_a_failed_selected_artifact_publishes_nothing (__main__.Publish.test_a_failed_selected_artifact_publishes_nothing) [missing]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_publish.py", line 175, in test_a_failed_selected_artifact_publishes_nothing
+    self.assertNotEqual(result.returncode, 0)
+AssertionError: 0 == 0
+
+======================================================================
+FAIL: test_a_failed_selected_artifact_publishes_nothing (__main__.Publish.test_a_failed_selected_artifact_publishes_nothing) [corrupt]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_publish.py", line 176, in test_a_failed_selected_artifact_publishes_nothing
+    self.assertIn('a selected source could not be read; nothing published', result.stderr)
+AssertionError: 'a selected source could not be read; nothing published' not found in 'war-room: git commit failed (exit 1); nothing published\n'
+
+======================================================================
+FAIL: test_a_failed_selected_artifact_publishes_nothing (__main__.Publish.test_a_failed_selected_artifact_publishes_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_publish.py", line 179, in test_a_failed_selected_artifact_publishes_nothing
+    self.assertIn('**Last good render:** 2030-01-02T12:03:00Z', self.show('README.md').decode())
+AssertionError: '**Last good render:** 2030-01-02T12:03:00Z' not found in '# War room\n\n**Last good render:** 2030-01-02T13:07:00Z (UTC), sample 2030-01-02T13:05:00Z, 2 saved samples.\n\nPublished by `.github/workflows/war-room.yml` on `main`; a failed test, read or render publishes nothing, so this page keeps its last good state and time. Live sources, five-minute operation and complete history remain Unverified.\n\n<picture><source media="(max-width: 700px)" srcset="war-room-phone.png"><img alt="The War room" src="war-room.png"></picture>\n\nOn a phone, [the one-column picture](war-room-phone.png).\n\n## Benches\n\nEvery bench in the saved sample, with its state and how many of its values are measured. Unknown is never zero; the picture names each prerequisite.\n\n| Bench | State | Measured |\n| --- | --- | --- |\n| Current activity | unavailable | 0 of 0 |\n| Stage waits | unavailable | 0 of 0 |\n| Board | unavailable | 0 of 0 |\n| CI bench | partial | 2 of 2 |\n| Daily factory | unavailable | 0 of 0 |\n| Ticket journeys | unavailable | 0 of 0 |\n| Skills eval | unavailable | 0 of 0 |\n| All-in cost per merged PR | unavailable | 0 of 0 |\n| Credits | unavailable | 0 of 0 |\n| Claude usage | unavailable | 0 of 0 |\n| Pending decisions | unavailable | 0 of 0 |\n| Orchestrator answer time | unavailable | 0 of 0 |\n| Rework rate | unavailable | 0 of 0 |\n| EB6 | unavailable | 0 of 0 |\n| EB7 | unavailable | 0 of 0 |\n| EB8 | unavailable | 0 of 0 |\n| EB9 | unavailable | 0 of 0 |\n\nSaved samples are in `samples/`, one per five-minute boundary sampled; a boundary not sampled stays absent.\n'
+
+======================================================================
+FAIL: test_a_link_or_odd_mode_on_the_branch_publishes_nothing (__main__.Publish.test_a_link_or_odd_mode_on_the_branch_publishes_nothing) [README.md] (change='link')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_publish.py", line 282, in test_a_link_or_odd_mode_on_the_branch_publishes_nothing
+    self.assertNotEqual(result.returncode, 0)
+AssertionError: 0 == 0
+
+======================================================================
+FAIL: test_a_link_or_odd_mode_on_the_branch_publishes_nothing (__main__.Publish.test_a_link_or_odd_mode_on_the_branch_publishes_nothing) [war-room.png] (change='link')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_publish.py", line 282, in test_a_link_or_odd_mode_on_the_branch_publishes_nothing
+    self.assertNotEqual(result.returncode, 0)
+AssertionError: 0 == 0
+
+======================================================================
+FAIL: test_a_link_or_odd_mode_on_the_branch_publishes_nothing (__main__.Publish.test_a_link_or_odd_mode_on_the_branch_publishes_nothing) [samples/2030-01-02T12-00-00Z.json] (change='link')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_publish.py", line 283, in test_a_link_or_odd_mode_on_the_branch_publishes_nothing
+    self.assertIn('the branch holds an unexpected file; nothing published', result.stderr)
+AssertionError: 'the branch holds an unexpected file; nothing published' not found in 'war-room: a saved sample was rewritten on the branch; nothing published\n'
+
+======================================================================
+FAIL: test_a_link_or_odd_mode_on_the_branch_publishes_nothing (__main__.Publish.test_a_link_or_odd_mode_on_the_branch_publishes_nothing) [war-room.png] (change='executable')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_publish.py", line 282, in test_a_link_or_odd_mode_on_the_branch_publishes_nothing
+    self.assertNotEqual(result.returncode, 0)
+AssertionError: 0 == 0
+
+======================================================================
+FAIL: test_a_sample_rewritten_in_a_merge_publishes_nothing (__main__.Publish.test_a_sample_rewritten_in_a_merge_publishes_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_publish.py", line 254, in test_a_sample_rewritten_in_a_merge_publishes_nothing
+    self.assertNotEqual(result.returncode, 0)
+AssertionError: 0 == 0
+
+======================================================================
+FAIL: test_five_minute_collection_survives_hourly_publication (__main__.Publish.test_five_minute_collection_survives_hourly_publication)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_publish.py", line 186, in test_five_minute_collection_survives_hourly_publication
+    self.assertEqual(result.returncode, 0, result.stderr)
+AssertionError: 2 != 0 : usage: publish.py [-h] {publish,preview} ...
+publish.py: error: argument cmd: invalid choice: 'collect' (choose from 'publish', 'preview')
+
+
+======================================================================
+FAIL: test_hosted_runners_and_pull_request_only_proof (__main__.Workflow.test_hosted_runners_and_pull_request_only_proof)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/war-room/test_publish.py", line 383, in test_hosted_runners_and_pull_request_only_proof
+    self.assertEqual(self.jobs['publish']['if'],
+AssertionError: "github.event_name != 'pull_request' && gi[25 chars]ain'" != "vars.WAR_ROOM_PUBLISH == 'on' && github.e[58 chars]ain'"
+- github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
++ vars.WAR_ROOM_PUBLISH == 'on' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+? +++++++++++++++++++++++++++++++++
+
+
+----------------------------------------------------------------------
+Ran 13 tests in 6.666s
+
+FAILED (failures=10)

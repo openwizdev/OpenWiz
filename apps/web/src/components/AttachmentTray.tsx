@@ -1,4 +1,6 @@
-// The one attachment tray, in the one prompt body's attachments
+import { FileIcon, AttachIcon, CloseIcon } from './Icons.tsx';
+import { OutcomeGlyph } from './StatusMark.tsx';
+// The one attachment tray (#16, B3), in the one prompt body's attachments
 // region, so the composer and the launcher show the same one (AW8: `npm run
 // check` allows <AttachmentTray> only in PromptBody.tsx, and a file input only
 // here). Each row: a thumbnail or a glyph, the name as plain text (cut in the
@@ -31,11 +33,13 @@ const SHOWN: Record<ItemState, { word: string; glyph: string; shape: string }> =
 
 /** A long name, cut in the middle so its end (and extension) stays: the cut is CSS's, never the text's. */
 function Name({ name }: { name: string }) {
-  const cut = Math.max(0, name.length - 10);
+  // Split on code points so a surrogate pair never crosses the two spans.
+  const points = Array.from(name);
+  const cut = Math.max(0, points.length - 10);
   return (
     <bdi className="att-name" data-part="attachment-name" title={name}>
-      <span className="att-head">{name.slice(0, cut)}</span>
-      <span className="att-tail">{name.slice(cut)}</span>
+      <span className="att-head">{points.slice(0, cut).join('')}</span>
+      <span className="att-tail">{points.slice(cut).join('')}</span>
     </bdi>
   );
 }
@@ -47,7 +51,7 @@ function Row({ item, uploads, target, locked, url }: { item: Item; uploads: Uplo
   return (
     <li className="att" data-part="attachment" data-state={item.state} data-kind={item.kind ?? 'unknown'} data-thumb={thumb ? 'yes' : 'no'}>
       <span className="att-pic" aria-hidden="true">
-        {thumb ? <img className="att-img" src={url} alt="" width={44} height={44} draggable={false} /> : <span className="att-glyph">{item.kind === 'image' ? '[▣]' : '[≡]'}</span>}
+        {thumb ? <img className="att-img" src={url} alt="" width={44} height={44} draggable={false} /> : <span className="att-glyph"><FileIcon /></span>}
       </span>
       <span className="att-text">
         <Name name={item.name} />
@@ -57,7 +61,7 @@ function Row({ item, uploads, target, locked, url }: { item: Item; uploads: Uplo
           </span>{' '}
           <span className={`oc ${shown.shape}`} data-part="attachment-state">
             <span className="glyph" aria-hidden="true">
-              {shown.glyph}
+              <OutcomeGlyph shape={shown.shape} />
             </span>{' '}
             <span className="word">{shown.word}</span>
           </span>
@@ -90,7 +94,7 @@ function Row({ item, uploads, target, locked, url }: { item: Item; uploads: Uplo
           aria-disabled={locked ? 'true' : undefined}
           onClick={() => !locked && void uploads.remove(target, item.key)}
         >
-          <span aria-hidden="true">×</span>
+          <CloseIcon />
         </button>
       </span>
     </li>
@@ -126,7 +130,7 @@ export function AttachmentTray({
     <div className="tray" data-part="tray" data-target={target}>
       <div className="act">
         <button type="button" className="btn" data-part="attach" aria-disabled={locked ? 'true' : undefined} onClick={() => !locked && picker.current?.click()}>
-          Add files
+          <AttachIcon /><span className="attach-label">Add files</span>
         </button>
         <p className="effect">{locked ? 'fixed while this attempt may have been sent' : 'each uploads to your controller; nothing is sent until you press'}</p>
         <input

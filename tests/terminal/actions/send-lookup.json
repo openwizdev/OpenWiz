@@ -1,0 +1,68 @@
+{
+  "schema": "openwiz.send-lookup.v1",
+  "op_id": "op-send",
+  "target": "thr_syn_0001",
+  "summary": "op op-send's record, as it is now; no call was made",
+  "result": {
+    "kind": "recorded",
+    "report": {
+      "schema": "openwiz.messaging.v1",
+      "op_id": "op-send",
+      "target": {
+        "id": "thr_syn_0001",
+        "title": {
+          "known": "Synthetic session 1"
+        }
+      },
+      "source": {
+        "name": "room-cli",
+        "version": {
+          "known": "v127"
+        },
+        "tested_version": "",
+        "version_tested": false
+      },
+      "requested_mode": "queue",
+      "status": "accepted",
+      "summary": "Queue requested · sent: the provider accepted the message, not that the work completed",
+      "result": {
+        "kind": "outcome",
+        "delivery": {
+          "kind": "accepted",
+          "joined_running_turn": {
+            "unknown": "not reported by the provider"
+          },
+          "text": "sent: the provider accepted the message, not that the work completed"
+        },
+        "replayed": true,
+        "recovered": false
+      },
+      "effects": {
+        "read_at": 1793978204149,
+        "read_age_ms": 12,
+        "effect": {
+          "known": {
+            "kind": "starts_turn",
+            "text": "starts a turn; may wake it"
+          }
+        },
+        "paused_queue": {
+          "known": {
+            "appears_paused": false,
+            "queued_messages": {
+              "known": 0
+            },
+            "text": "no paused queue seen"
+          }
+        },
+        "needs_acknowledgement": false
+      },
+      "text_sha256": "4a85827ad80e8635fb4a2b41a3fce1d0f23ba1eb27db0aa84113a7b0ca415d42",
+      "text_bytes": 9,
+      "gaps": [],
+      "claimed_at": 1793978204142,
+      "dispatching_at": 1793978204161,
+      "finished_at": 1793978204168
+    }
+  }
+}

@@ -1,0 +1,232 @@
+#!/usr/bin/env python3
+"""Synthetic REST fixture. Refuses all non-GET and unknown calls."""
+import json
+import os
+from pathlib import Path
+import sys
+
+args = sys.argv[1:]
+with open(os.environ['OPEN_TICKETS_LOG'], 'a') as log:
+    log.write(json.dumps(args) + '\n')
+world = json.loads(Path(os.environ['OPEN_TICKETS_WORLD']).read_text())
+if 'move' in world:
+    import re
+    fixture = world['move']
+    public = fixture['target']
+    private = 'jparker2006/ClosedWiz'
+
+    def answer(value, write=False):
+        if write:
+            world['writes'] += 1
+            Path(os.environ['OPEN_TICKETS_WORLD']).write_text(json.dumps(world))
+            if world['writes'] == world.get('stop_after_write'):
+                sys.exit('fake-gh: planted lost response after effect')
+        print(json.dumps(value) if not isinstance(value, str) else value)
+        sys.exit(0)
+
+    if args[:2] in (['issue', 'view'], ['pr', 'view']) and len(args) == 7 and args[3] == '--repo' and args[5] == '--json':
+        n, repo, fields = args[2], args[4], args[6].split(',')
+        if repo == private:
+            if n == '9900':
+                source = dict(number=9900, state='MERGED', mergeCommit={'oid': 'a' * 40}, baseRefName='main',
+                              url='https://github.com/' + private + '/pull/9900')
+                answer({key: source[key] for key in fields})
+            matches = [item for item in fixture['graph']['items'] if str(item['number']) == n]
+            if len(matches) != 1:
+                sys.exit('fake-gh: unknown source view')
+            item = matches[0]
+            def source_node(value):
+                return {'number': value, 'url': 'https://github.com/' + private + '/issues/' + str(value)}
+            source = {'number': int(n), 'title': item['title'], 'body': fixture['bodies'].get(n, ''),
+                      'state': 'OPEN' if item['state'] == 'open' else 'CLOSED',
+                      'stateReason': world.get('state_reasons', {}).get(n, 'COMPLETED'),
+                      'labels': [{'name': name} for name in item['labels']],
+                      'milestone': None if item['milestone'] is None else {'title': item['milestone'], 'number': 3},
+                      'parent': None if item['parent'] is None else source_node(item['parent']),
+                      'blockedBy': {'nodes': [source_node(v) for v in item['blockers']], 'totalCount': len(item['blockers'])},
+                      'subIssues': {'nodes': [source_node(i['number']) for i in fixture['graph']['items'] if i['parent'] == int(n)],
+                                    'totalCount': sum(i['parent'] == int(n) for i in fixture['graph']['items'])},
+                      'closedByPullRequestsReferences': [] if world.get('unmerged_blocker') or n in world.get('state_reasons', {}) else
+                          [{'number': 9900, 'url': 'https://github.com/' + private + '/pull/9900'}]}
+            if item['kind'] == 'pull_request':
+                descriptor = fixture['pulls'][n]
+                source.update(baseRefOid=descriptor.get('observed_base', descriptor['source_base']), headRefOid=descriptor['source_head'])
+            if world.get('collect_fault') == 'partial-graph' and 'subIssues' in fields:
+                source['subIssues']['totalCount'] += 1
+            if world.get('collect_fault') == 'changed-source' and 'subIssues' in fields:
+                calls = Path(os.environ['OPEN_TICKETS_LOG']).read_text().count('subIssues')
+                if calls > 4:
+                    source['body'] += 'changed'
+            if world.get('collect_fault') == 'always-changing-source' and 'subIssues' in fields:
+                source['body'] += str(Path(os.environ['OPEN_TICKETS_LOG']).read_text().count('subIssues'))
+            answer({key: source[key] for key in fields})
+        if repo == public and n in world['created']:
+            value = {key: world['created'][n][key] for key in fields}
+            def decorate(node):
+                value = dict(node)
+                value.setdefault('url', 'https://github.com/' + public + '/issues/' + str(node['number']))
+                if world.get('native_graph_shape'):
+                    value.update(id='I_syn' + str(node['number']), state='OPEN', title='Synthetic graph node')
+                if world.get('foreign_graph_urls'):
+                    value['url'] = 'https://github.com/foreign-synthetic/repo/issues/' + str(node['number'])
+                return value
+            if value.get('parent') is not None:
+                value['parent'] = decorate(value['parent'])
+            if 'blockedBy' in value:
+                value['blockedBy'] = dict(value['blockedBy'], nodes=[decorate(node) for node in value['blockedBy']['nodes']])
+            answer(value)
+        sys.exit('fake-gh: unknown destination view')
+    if args[:5] == ['api', '--method', 'GET', '--paginate', '--slurp']:
+        endpoint = args[-1]
+        if endpoint == 'repos/' + private + '/issues/1257/sub_issues?per_page=100':
+            answer([[{'number': n} for n in world.get('remaining', [1283])]])
+        if endpoint == 'repos/' + public + '/issues?state=all&per_page=100':
+            answer([list(world['created'].values())])
+        match = re.fullmatch('repos/' + private + r'/issues/([1-9][0-9]*)/comments\?per_page=100', endpoint)
+        if match:
+            if world.get('collect_fault') == 'stale-approval' and match[1] == '9001':
+                answer([[{'id': 9000000001, 'body': '**Plan graph approved by Synthetic, 2030-01-02:** approved\nFingerprint: `' + '0' * 64 + '`'}]])
+            answer([[] if world.get('hide_comments_for') == match[1] else world['comments'].get(match[1], [])])
+        if endpoint != 'repos/' + private + '/issues?state=open&per_page=100':
+            sys.exit('fake-gh: unknown paginated read')
+    if args[:3] == ['api', '--method', 'GET']:
+        for descriptor in fixture.get('pulls', {}).values():
+            expected = 'repos/' + private + '/compare/' + descriptor['observed_base'] + '...' + descriptor['source_head']
+            if args[-1] == expected:
+                answer({'merge_base_commit': {'sha': descriptor['source_base']}})
+    if args == ['api', '--method', 'GET', 'repos/' + private + '/compare/' + 'a' * 40 + '...main']:
+        answer({'status': 'ahead', 'behind_by': 0})
+    if args == ['api', '--method', 'GET', 'repos/' + public + '/commits/main']:
+        answer({'sha': world['public_base']})
+    prefix = 'repos/' + public + '/git/matching-refs/heads/'
+    if args[:3] == ['api', '--method', 'GET'] and args[-1].startswith(prefix):
+        ref = 'refs/heads/' + args[-1][len(prefix):]
+        answer([{'ref': key, 'object': {'sha': value}} for key, value in world['refs'].items() if key.startswith(ref)])
+    if args[:3] == ['api', '--method', 'PATCH'] and args[-2:] == ['--input', '-']:
+        prefix = 'repos/' + public + '/issues/'
+        if not args[3].startswith(prefix):
+            sys.exit('fake-gh: prohibited patch')
+        n = args[3][len(prefix):]
+        payload = json.load(sys.stdin)
+        if set(payload) != {'labels', 'milestone'} or n not in world['created']:
+            sys.exit('fake-gh: unknown metadata effect')
+        row = world['created'][n]
+        row['labels'] = [{'name': label} for label in payload['labels']]
+        row['milestone'] = next((m for m in fixture['graph']['milestones'] if m['number'] == payload['milestone']), None)
+        answer(row, write=True)
+    if args == ['api', '--method', 'GET', 'repos/' + private]:
+        answer({'open_issues_count': sum(i['state'] == 'open' for i in fixture['graph']['items']) +
+                (1 if world.get('collect_fault') == 'count-changed' else 0)})
+    if args == ['api', '--method', 'GET', '--paginate', '--slurp', 'repos/' + private + '/issues?state=open&per_page=100']:
+        rows = [dict(number=i['number'], **({'pull_request': {}} if i['kind'] == 'pull_request' else {}))
+                for i in fixture['graph']['items'] if i['state'] == 'open']
+        if world.get('collect_fault') == 'inventory-changed' and Path(os.environ['OPEN_TICKETS_LOG']).read_text().count(args[-1]) % 2 == 0:
+            next(row for row in rows if row['number'] == 9003)['pull_request'] = {}
+        answer([rows])
+    if args == ['api', '--method', 'GET', 'repos/' + private + '/issues/1257']:
+        answer({'sub_issues_summary': {'total': len(world.get('remaining', [1283]))}})
+    if args[:3] == ['api', '--method', 'POST'] and args[-2:] == ['--input', '-']:
+        if args[3] == 'repos/' + public + '/issues':
+            payload = json.load(sys.stdin)
+            if set(payload) != {'title', 'body', 'labels', 'milestone'} or not isinstance(payload['labels'], list):
+                sys.exit('fake-gh: invalid creation payload')
+            n = max([4000] + list(map(int, world['created']))) + 1
+            milestone = next((m for m in fixture['graph']['milestones'] if m['number'] == payload['milestone']), None)
+            world['created'][str(n)] = {'number': n, 'title': payload['title'], 'body': payload['body'],
+                'labels': [{'name': label} for label in payload['labels']],
+                'milestone': milestone, 'parent': None, 'blockedBy': {'nodes': [], 'totalCount': 0}}
+            answer({'number': n}, write=True)
+        if args[3] == 'repos/' + public + '/pulls':
+            payload = json.load(sys.stdin)
+            if set(payload) != {'title', 'body', 'base', 'head'} or payload['base'] != 'main':
+                sys.exit('fake-gh: invalid PR creation')
+            ref = 'refs/heads/' + payload['head']
+            if ref not in world['refs']:
+                sys.exit('fake-gh: absent PR head')
+            n = max([4000] + list(map(int, world['created']))) + 1
+            world['created'][str(n)] = dict(number=n, title=payload['title'], body=payload['body'],
+                labels=[], milestone=None, pull_request={}, state='OPEN', headRefName=payload['head'],
+                headRefOid=world['refs'][ref], baseRefName='main', baseRefOid=world['public_base'], isCrossRepository=False)
+            answer({'number': n}, write=True)
+        match = re.fullmatch('repos/' + private + r'/issues/([1-9][0-9]*)/comments', args[3])
+        if not match:
+            sys.exit('fake-gh: prohibited source mutation')
+        body = json.load(sys.stdin)['body']
+        if not (body.startswith('**Private record for OpenWiz #') or body.startswith('moved to [OpenWiz #')):
+            sys.exit('fake-gh: non-contract source comment')
+        rows = world['comments'].setdefault(match[1], [])
+        new = 9000000001 + sum(len(v) for v in world['comments'].values())
+        rows.append({'id': new, 'body': body})
+        answer({'id': new}, write=True)
+    if args[:2] in (['issue', 'create'], ['issue', 'edit'], ['pr', 'edit']):
+        verb = args[1]
+        at = 2 if verb == 'create' else 3
+        options = {}
+        while at < len(args):
+            key = args[at]
+            if key not in {'--repo','--title','--body-file','--milestone','--label','--parent','--add-blocked-by'} or at + 1 >= len(args):
+                sys.exit('fake-gh: unknown mutation flag')
+            options.setdefault(key, []).append(args[at + 1])
+            at += 2
+        if options.get('--repo') != [public] or (verb == 'create' and options.get('--body-file') != ['-']):
+            sys.exit('fake-gh: prohibited source mutation or payload')
+        body = sys.stdin.read()
+        if verb == 'create':
+            n = max([4000] + list(map(int, world['created']))) + 1
+            milestone = options.get('--milestone', [None])[0]
+            ms = next((m for m in fixture['graph']['milestones'] if m['title'] == milestone), None)
+            world['created'][str(n)] = {'number': n, 'title': options['--title'][0], 'body': body,
+                'labels': [{'name': label} for value in options.get('--label', []) for label in value.split(',')],
+                'milestone': ms, 'parent': None, 'blockedBy': {'nodes': [], 'totalCount': 0}}
+            answer('https://github.com/' + public + '/issues/' + str(n), write=True)
+        n = args[2]
+        if n not in world['created']:
+            sys.exit('fake-gh: editing absent destination')
+        row = world['created'][n]
+        if '--body-file' in options:
+            row['body'] = body
+        if '--parent' in options:
+            row['parent'] = {'number': int(options['--parent'][0])}
+        if '--add-blocked-by' in options:
+            nodes = [{'number': int(v)} for v in options['--add-blocked-by'][0].split(',')]
+            numbers = sorted({node['number'] for node in row['blockedBy']['nodes'] + nodes})
+            row['blockedBy'] = {'nodes': [{'number': n} for n in numbers], 'totalCount': len(numbers)}
+        answer('https://github.com/' + public + '/issues/' + n, write=True)
+    sys.exit('fake-gh: unknown or prohibited lifecycle operation')
+
+if args[:2] == ['issue', 'view'] and len(args) == 7 and args[3:6] == ['--repo', 'synthetic-org/openwiz', '--json']:
+    answer = world.get('destinations', {}).get(args[2])
+    if answer is None:
+        sys.exit('fake-gh: unknown issue read')
+    print(json.dumps(answer))
+    sys.exit(0)
+if args[:3] != ['api', '--method', 'GET']:
+    sys.exit('fake-gh: mutation or unknown command')
+endpoint = args[-1]
+mode = world.get('mode')
+if mode == 'failed':
+    sys.exit('fake-gh: planted unreadable input')
+if endpoint == 'repos/jparker2006/ClosedWiz':
+    print(json.dumps({'open_issues_count': len(world['issues']) + len(world['pulls'])}))
+elif endpoint == 'repos/jparker2006/ClosedWiz/issues/1257':
+    print(json.dumps({'sub_issues_summary': {'total': len(world['remaining'])}}))
+elif endpoint == 'repos/jparker2006/ClosedWiz/issues?state=open&per_page=100':
+    issues = world['issues'] + [dict(p, pull_request={}) for p in world['pulls']]
+    if mode == 'duplicate':
+        issues = issues + [issues[0]]
+    if mode == 'bad-number':
+        issues[0]['number'] = True
+    if mode == 'truncated':
+        issues = issues[:-1]
+    if mode == 'changed' and Path(os.environ['OPEN_TICKETS_LOG']).read_text().count(endpoint) > 1:
+        issues[-1] = {'number': 9011, 'pull_request': {}}
+    # --paginate --slurp returns one array per page.
+    print(json.dumps([issues[:2], issues[2:]]))
+elif endpoint == 'repos/jparker2006/ClosedWiz/issues/1257/sub_issues?per_page=100':
+    if mode == 'partial':
+        print('{}')
+    else:
+        children = world['remaining'][:-1] if mode == 'partial-children' else world['remaining']
+        print(json.dumps([[{'number': n} for n in children]]))
+else:
+    sys.exit('fake-gh: unknown endpoint')

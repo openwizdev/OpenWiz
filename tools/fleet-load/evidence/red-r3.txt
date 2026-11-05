@@ -1,0 +1,7 @@
+R3 red at cd8d8df5d6561b452299f1a99aee41ce13ad7c42: launch-fleet's SKILL.md sends installers to an overload guide outside the package.
+$ git grep -n 'tools/ci-overload/README.md' cd8d8df5d6561b452299f1a99aee41ce13ad7c42 -- skills/launch-fleet/SKILL.md
+skills/launch-fleet/SKILL.md:101:across all fleets). Follow `tools/ci-overload/README.md` for the input and unknown
+The skills copy carries skills/<name>/ and the listed contracts only (tools/skills-copy/README.md, "Reviewed carriage list"); tools/ci-overload/ is not carried.
+$ git cat-file -e cd8d8df5d6561b452299f1a99aee41ce13ad7c42:skills/launch-fleet/overload.md
+fatal: path 'skills/launch-fleet/overload.md' does not exist in 'cd8d8df5d6561b452299f1a99aee41ce13ad7c42'
+exit 128

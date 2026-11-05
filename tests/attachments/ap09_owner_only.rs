@@ -1,3 +1,9 @@
+//! AP9 Owner-only storage. Every directory the store makes is 0700, the
+//! staged copy 0400 and the store's own files 0600. A state directory open
+//! to others, inside a repository, or with `attachments/` as a link, is
+//! refused before anything is staged, by #8's own checks. Nothing is written
+//! inside the repository.
+
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
@@ -9,6 +15,31 @@ use crate::bench::{Bench, CONTENT, mode, walk};
 use crate::support::ROOT;
 
 #[test]
+fn ap9_owner_only_contracts_preserve_original_cases() {
+    let cases: [(&str, fn()); 4] = [
+        (
+            "a_link_in_place_of_attachments_is_refused",
+            a_link_in_place_of_attachments_is_refused,
+        ),
+        (
+            "a_state_directory_others_can_use_is_refused",
+            a_state_directory_others_can_use_is_refused,
+        ),
+        (
+            "every_directory_and_file_is_the_owners_only",
+            every_directory_and_file_is_the_owners_only,
+        ),
+        (
+            "nothing_is_written_inside_a_repository",
+            nothing_is_written_inside_a_repository,
+        ),
+    ];
+    for (name, proof) in cases {
+        eprintln!("TA2 case: ap09_owner_only::{name}");
+        proof();
+    }
+}
+
 fn every_directory_and_file_is_the_owners_only() {
     let bench = Bench::new("ap09_modes");
     let source = bench.source("syn-ap09-notes.txt", CONTENT.as_bytes());
@@ -23,7 +54,7 @@ fn every_directory_and_file_is_the_owners_only() {
     assert_eq!(mode(&bench.state), 0o700);
     assert_eq!(mode(&attachments), 0o700);
     assert_eq!(mode(&attachments.join(STAGING_LOCK)), 0o600);
-    // B2 (the implementation): the claims lock, which every sweep holds while it
+    // B2 (ClosedWiz#15): the claims lock, which every sweep holds while it
     // applies the retention rule, is the owner's only too.
     assert_eq!(mode(&attachments.join(CLAIMS_LOCK)), 0o600);
     assert_eq!(mode(&dir), 0o700);
@@ -43,7 +74,6 @@ fn every_directory_and_file_is_the_owners_only() {
     );
 }
 
-#[test]
 fn a_state_directory_others_can_use_is_refused() {
     let bench = Bench::new("ap09_open_to_others");
     crate::dirs::private_dir_all(&bench.state).unwrap();
@@ -60,7 +90,6 @@ fn a_state_directory_others_can_use_is_refused() {
     assert_eq!(ls.code, 10, "{ls:?}");
 }
 
-#[test]
 fn a_link_in_place_of_attachments_is_refused() {
     let bench = Bench::new("ap09_link");
     crate::dirs::private_dir_all(&bench.state).unwrap();
@@ -79,7 +108,6 @@ fn a_link_in_place_of_attachments_is_refused() {
     );
 }
 
-#[test]
 fn nothing_is_written_inside_a_repository() {
     let bench = Bench::new("ap09_repository");
     let repo = bench.root.join("repo");

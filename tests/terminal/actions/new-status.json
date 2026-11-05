@@ -1,0 +1,138 @@
+{
+  "schema": "openwiz.new-thread-status.v1",
+  "op_id": "op-create",
+  "result": {
+    "kind": "recorded",
+    "report": {
+      "schema": "openwiz.new-thread.v1",
+      "op_id": "op-create",
+      "request_id": "ow1-2bb4cef96bb955038dfbde69956132309d775923",
+      "project_ref": {
+        "kind": "id",
+        "value": "prj_syn_0001"
+      },
+      "project": {
+        "id": "prj_syn_0001",
+        "name": {
+          "known": "Synthetic project one"
+        }
+      },
+      "source": {
+        "name": "room-cli",
+        "version": {
+          "known": "v127"
+        },
+        "tested_version": "",
+        "version_tested": false
+      },
+      "requested": {
+        "harness": "codex",
+        "model": "syn-codex-model-01",
+        "effort": "high"
+      },
+      "provider": "codex",
+      "status": "created",
+      "summary": "codex · syn-codex-model-01 · high requested · created: CloudRoom recorded the thread and its first prompt. That is not a start: the start stage is shown separately",
+      "result": {
+        "kind": "outcome",
+        "outcome": {
+          "kind": "created",
+          "thread_id": "thr_syn_0021",
+          "text": "created: CloudRoom recorded the thread and its first prompt. That is not a start: the start stage is shown separately"
+        },
+        "replayed": true,
+        "recovered": false
+      },
+      "effects": {
+        "read_at": 1793978204260,
+        "project": {
+          "id": "prj_syn_0001",
+          "name": {
+            "known": "Synthetic project one"
+          }
+        },
+        "effects": [
+          {
+            "kind": "creates_and_starts",
+            "text": "creates one Cloud thread in Synthetic project one and starts its first turn"
+          },
+          {
+            "kind": "starts_from_github",
+            "text": "starts from the project's default branch on GitHub"
+          },
+          {
+            "kind": "copies_env_files",
+            "text": "copies the project's .env files from this computer"
+          },
+          {
+            "kind": "full_permissions",
+            "text": "runs with full permissions in its own sandbox"
+          },
+          {
+            "kind": "uses_cloud_agent",
+            "text": "uses one Cloud agent from your plan"
+          },
+          {
+            "kind": "mac_stays_awake",
+            "text": "this computer must stay awake until the start is confirmed"
+          },
+          {
+            "kind": "cloud_room_names_it",
+            "text": "CloudRoom names it"
+          }
+        ]
+      },
+      "text_sha256": "4a85827ad80e8635fb4a2b41a3fce1d0f23ba1eb27db0aa84113a7b0ca415d42",
+      "attachments_digest": "9131a728018dae734e1265648a0f318ea7fc9c8652996003cf71e2295df9810e",
+      "text_bytes": 9,
+      "gaps": [],
+      "claimed_at": 1793978204248,
+      "dispatching_at": 1793978204266,
+      "finished_at": 1793978204273,
+      "start": null
+    },
+    "start": {
+      "thread_id": "thr_syn_0021",
+      "read_at": 1793978204291,
+      "stage": {
+        "kind": "started",
+        "text": "started: its first turn is running, as reported"
+      },
+      "reported": {
+        "label": "reported configuration: what CloudRoom reports, never the serving model",
+        "provider": {
+          "requested": "codex",
+          "reported": {
+            "known": "codex"
+          },
+          "differs_from_requested": {
+            "known": false
+          },
+          "text": "provider codex, as requested"
+        },
+        "model": {
+          "requested": "syn-codex-model-01",
+          "reported": {
+            "known": "syn-codex-model-01"
+          },
+          "differs_from_requested": {
+            "known": false
+          },
+          "text": "model syn-codex-model-01, as requested"
+        },
+        "effort": {
+          "requested": "high",
+          "reported": {
+            "known": "high"
+          },
+          "differs_from_requested": {
+            "known": false
+          },
+          "text": "effort high, as requested"
+        }
+      },
+      "gaps": []
+    },
+    "observations": null
+  }
+}

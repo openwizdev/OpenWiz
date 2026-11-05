@@ -42,6 +42,7 @@ describe('V1 over every 0.0.1 fixture scenario, through ticket 1\'s server', { c
         const ids = view.groups.flatMap((g) => g.rows.map((r) => r.id));
         assert.equal(new Set(ids).size, ids.length, 'every row once');
         assert.equal(ids.length, body.data.sessions.length, 'no row dropped');
+        assert.equal(await p.page.locator('main [data-part=status] .glyph svg').count(), ids.length, 'each status has an inline SVG shape');
         assert.equal(view.coverage, expect.coverage(body));
         if (body.gaps.length > 0) {
           await p.page.click('[data-part=coverage]');

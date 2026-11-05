@@ -51,6 +51,10 @@ struct Store {
 }
 
 impl NewThreadStore for Store {
+    fn load(&self, op_id: &OpId) -> Result<Option<NewThreadRecord>, StoreError> {
+        self.inner.load(op_id)
+    }
+
     fn claim(&self, record: &NewThreadRecord, now: Timestamp) -> Result<Claim, StoreError> {
         let claim = self.inner.claim(record, now)?;
         if claim == Claim::Owned && self.crash_at == CrashAt::AfterClaim {

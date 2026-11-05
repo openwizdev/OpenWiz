@@ -1,0 +1,90 @@
+{
+  "schema": "openwiz.ci-selection.v1",
+  "run": {
+    "id": 9000003,
+    "attempt": 1,
+    "event": "pull_request",
+    "action": "synchronize",
+    "base_branch": "main",
+    "base": "1111111111111111111111111111111111111111",
+    "head": "2222222222222222222222222222222222222222",
+    "pull_request": 901
+  },
+  "diff": {
+    "state": "read",
+    "paths": [
+      "crates/server/src/routes.rs"
+    ]
+  },
+  "selection": {
+    "mode": "selected"
+  },
+  "builds": {
+    "web_export": {
+      "decision": "run"
+    }
+  },
+  "lanes": {
+    "always": {
+      "decision": "run",
+      "tests": [
+        "always:fmt",
+        "always:classifier",
+        "always:selector",
+        "always:architecture",
+        "always:privacy"
+      ],
+      "skipped": []
+    },
+    "rust": {
+      "decision": "run",
+      "tests": [
+        "rust:lib:openwiz-server",
+        "rust:test:web-api"
+      ],
+      "skipped": [
+        {
+          "test": "rust:lib:openwiz-core",
+          "reason": "openwiz-core doesn't depend on openwiz-server"
+        },
+        {
+          "test": "rust:test:checks",
+          "reason": "the map links no changed path to it"
+        },
+        {
+          "test": "rust:test:messaging",
+          "reason": "the map links no changed path to it"
+        }
+      ]
+    },
+    "web": {
+      "decision": "skip",
+      "reason": "no changed path reaches it"
+    },
+    "site": {
+      "decision": "skip",
+      "reason": "no changed path reaches it"
+    },
+    "skills": [
+      {
+        "skill": "launch-fleet",
+        "decision": "skip",
+        "reason": "no changed path is in skills/launch-fleet/"
+      },
+      {
+        "skill": "plan-graph",
+        "decision": "skip",
+        "reason": "no changed path is in skills/plan-graph/"
+      },
+      {
+        "skill": "triage",
+        "decision": "skip",
+        "reason": "no changed path is in skills/triage/"
+      }
+    ]
+  },
+  "store": {
+    "artifact": "ci-selection-1",
+    "file": "ci-selection.json"
+  }
+}

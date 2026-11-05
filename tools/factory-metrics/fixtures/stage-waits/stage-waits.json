@@ -1,0 +1,377 @@
+{
+  "schema": "closedwiz.journey.stage-waits.v1",
+  "repo": "example/factory",
+  "journey_hash": "514c3894c881f00c046065e7c97880aa530bfc3e10fbe57e774b05a177aeefc0",
+  "read_at": "2030-03-01T12:00:00Z",
+  "history": "unknown",
+  "holds": {
+    "4301": [
+      [
+        "2030-03-01T08:05:00Z",
+        "2030-03-01T09:00:00Z"
+      ]
+    ],
+    "4302": [
+      [
+        "2030-03-01T11:00:00Z",
+        null
+      ]
+    ],
+    "4303": [],
+    "4304": null
+  },
+  "intervals": [
+    {
+      "key": "builder_start:t4301",
+      "stage": "builder_start",
+      "tickets": [
+        4301
+      ],
+      "pull_request": null,
+      "head": null,
+      "origin": null,
+      "start": {
+        "at": "2030-03-01T09:00:00Z",
+        "latest": "2030-03-01T09:00:00Z",
+        "source": "s1"
+      },
+      "clock_from": "2030-03-01T09:00:00Z",
+      "end": {
+        "at": "2030-03-01T09:10:00Z",
+        "latest": "2030-03-01T09:10:00Z",
+        "source": "s2"
+      },
+      "support": [],
+      "state": "ended",
+      "folded": 1,
+      "gaps": []
+    },
+    {
+      "key": "builder_question_answer:t4301:c6102",
+      "stage": "builder_question_answer",
+      "tickets": [
+        4301
+      ],
+      "pull_request": null,
+      "head": null,
+      "origin": 6102,
+      "start": {
+        "at": "2030-03-01T09:45:00Z",
+        "latest": "2030-03-01T09:45:00Z",
+        "source": "s3"
+      },
+      "clock_from": "2030-03-01T09:45:00Z",
+      "end": {
+        "at": "2030-03-01T10:01:00Z",
+        "latest": "2030-03-01T10:01:00Z",
+        "source": "s4"
+      },
+      "support": [],
+      "state": "ended",
+      "folded": 1,
+      "gaps": []
+    },
+    {
+      "key": "builder_start:t4302",
+      "stage": "builder_start",
+      "tickets": [
+        4302
+      ],
+      "pull_request": null,
+      "head": null,
+      "origin": null,
+      "start": null,
+      "clock_from": null,
+      "end": {
+        "at": "2030-03-01T07:00:00Z",
+        "latest": "2030-03-01T07:00:00Z",
+        "source": "s5"
+      },
+      "support": [],
+      "state": "unknown",
+      "folded": 0,
+      "gaps": [
+        "start record outside its gate"
+      ]
+    },
+    {
+      "key": "builder_question_answer:t4302:c6302",
+      "stage": "builder_question_answer",
+      "tickets": [
+        4302
+      ],
+      "pull_request": null,
+      "head": null,
+      "origin": 6302,
+      "start": null,
+      "clock_from": null,
+      "end": null,
+      "support": [],
+      "state": "unknown",
+      "folded": 0,
+      "gaps": [
+        "edited record"
+      ]
+    },
+    {
+      "key": "builder_start:t4303",
+      "stage": "builder_start",
+      "tickets": [
+        4303
+      ],
+      "pull_request": null,
+      "head": null,
+      "origin": null,
+      "start": {
+        "at": "2030-03-01T11:55:00Z",
+        "latest": "2030-03-01T11:55:00Z",
+        "source": "s6"
+      },
+      "clock_from": "2030-03-01T11:55:00Z",
+      "end": null,
+      "support": [],
+      "state": "open",
+      "folded": 0,
+      "gaps": []
+    },
+    {
+      "key": "builder_start:t4304",
+      "stage": "builder_start",
+      "tickets": [
+        4304
+      ],
+      "pull_request": null,
+      "head": null,
+      "origin": null,
+      "start": null,
+      "clock_from": null,
+      "end": {
+        "at": "2030-03-01T08:30:00Z",
+        "latest": "2030-03-01T08:30:00Z",
+        "source": "s7"
+      },
+      "support": [],
+      "state": "unknown",
+      "folded": 0,
+      "gaps": [
+        "label history incomplete"
+      ]
+    },
+    {
+      "key": "reviewer_start:p4401:1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a:2030-03-01T10:00:00Z",
+      "stage": "reviewer_start",
+      "tickets": [
+        4301
+      ],
+      "pull_request": 4401,
+      "head": "1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a",
+      "origin": null,
+      "start": {
+        "at": "2030-03-01T10:00:00Z",
+        "latest": "2030-03-01T10:00:00Z",
+        "source": "s8"
+      },
+      "clock_from": "2030-03-01T10:00:00Z",
+      "end": {
+        "at": "2030-03-01T10:06:00Z",
+        "latest": "2030-03-01T10:06:00Z",
+        "source": "s9"
+      },
+      "support": [],
+      "state": "ended",
+      "folded": 0,
+      "gaps": []
+    },
+    {
+      "key": "reviewer_start:p4401:2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b:2030-03-01T11:11:00Z",
+      "stage": "reviewer_start",
+      "tickets": [
+        4301
+      ],
+      "pull_request": 4401,
+      "head": "2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b",
+      "origin": null,
+      "start": {
+        "at": "2030-03-01T11:11:00Z",
+        "latest": "2030-03-01T11:11:00Z",
+        "source": "s10"
+      },
+      "clock_from": "2030-03-01T11:11:00Z",
+      "end": {
+        "at": "2030-03-01T11:15:00Z",
+        "latest": "2030-03-01T11:15:00Z",
+        "source": "s11"
+      },
+      "support": [],
+      "state": "ended",
+      "folded": 0,
+      "gaps": []
+    },
+    {
+      "key": "fix_after_changes:p4401:1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a:c6202",
+      "stage": "fix_after_changes",
+      "tickets": [
+        4301
+      ],
+      "pull_request": 4401,
+      "head": "1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a",
+      "origin": 6202,
+      "start": {
+        "at": "2030-03-01T10:30:00Z",
+        "latest": "2030-03-01T10:30:00Z",
+        "source": "s12"
+      },
+      "clock_from": "2030-03-01T10:30:00Z",
+      "end": {
+        "at": "2030-03-01T11:01:00Z",
+        "latest": "2030-03-01T11:01:00Z",
+        "source": "s13"
+      },
+      "support": [
+        "s14"
+      ],
+      "state": "ended",
+      "folded": 0,
+      "gaps": []
+    },
+    {
+      "key": "merge:p4401:2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b:c6205:2030-03-01T11:31:00Z",
+      "stage": "merge",
+      "tickets": [
+        4301
+      ],
+      "pull_request": 4401,
+      "head": "2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b",
+      "origin": 6205,
+      "start": {
+        "at": "2030-03-01T11:31:00Z",
+        "latest": "2030-03-01T11:31:00Z",
+        "source": "s15"
+      },
+      "clock_from": "2030-03-01T11:31:00Z",
+      "end": {
+        "at": "2030-03-01T11:36:00Z",
+        "latest": "2030-03-01T11:36:00Z",
+        "source": "s16"
+      },
+      "support": [],
+      "state": "ended",
+      "folded": 0,
+      "gaps": []
+    },
+    {
+      "key": "reviewer_start:p4402:3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c:2030-03-01T08:20:00Z",
+      "stage": "reviewer_start",
+      "tickets": [
+        4302
+      ],
+      "pull_request": 4402,
+      "head": "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c",
+      "origin": null,
+      "start": {
+        "at": "2030-03-01T08:20:00Z",
+        "latest": "2030-03-01T08:20:00Z",
+        "source": "s17"
+      },
+      "clock_from": null,
+      "end": null,
+      "support": [],
+      "state": "unknown",
+      "folded": 0,
+      "gaps": [
+        "reviewer start unconfirmed"
+      ]
+    },
+    {
+      "key": "reviewer_start:p4402:5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e:2030-03-01T08:35:00Z",
+      "stage": "reviewer_start",
+      "tickets": [
+        4302
+      ],
+      "pull_request": 4402,
+      "head": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "origin": null,
+      "start": {
+        "at": "2030-03-01T08:35:00Z",
+        "latest": "2030-03-01T08:35:00Z",
+        "source": "s18"
+      },
+      "clock_from": null,
+      "end": null,
+      "support": [],
+      "state": "stale",
+      "folded": 0,
+      "gaps": [
+        "no longer current"
+      ]
+    },
+    {
+      "key": "reviewer_start:p4402:4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d:2030-03-01T08:50:00Z",
+      "stage": "reviewer_start",
+      "tickets": [
+        4302
+      ],
+      "pull_request": 4402,
+      "head": "4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d",
+      "origin": null,
+      "start": {
+        "at": "2030-03-01T08:50:00Z",
+        "latest": "2030-03-01T08:50:00Z",
+        "source": "s19"
+      },
+      "clock_from": null,
+      "end": null,
+      "support": [],
+      "state": "gated",
+      "folded": 0,
+      "gaps": [
+        "held"
+      ]
+    },
+    {
+      "key": "merge:p4402:3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c:c6402:2030-03-01T08:23:00Z",
+      "stage": "merge",
+      "tickets": [
+        4302
+      ],
+      "pull_request": 4402,
+      "head": "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c",
+      "origin": 6402,
+      "start": {
+        "at": "2030-03-01T08:23:00Z",
+        "latest": "2030-03-01T08:23:00Z",
+        "source": "s20"
+      },
+      "clock_from": null,
+      "end": null,
+      "support": [],
+      "state": "stale",
+      "folded": 0,
+      "gaps": [
+        "no longer current"
+      ]
+    }
+  ],
+  "sources": {
+    "s1": "https://github.com/example/factory/issues/4301",
+    "s2": "https://github.com/example/factory/issues/4301#issuecomment-6101",
+    "s3": "https://github.com/example/factory/issues/4301#issuecomment-6102",
+    "s4": "https://github.com/example/factory/issues/4301#issuecomment-6104",
+    "s5": "https://github.com/example/factory/issues/4302#issuecomment-6301",
+    "s6": "https://github.com/example/factory/issues/4303",
+    "s7": "https://github.com/example/factory/issues/4304#issuecomment-6501",
+    "s8": "https://github.com/example/factory/actions/runs/9001",
+    "s9": "https://github.com/example/factory/pull/4401#issuecomment-6201",
+    "s10": "https://github.com/example/factory/actions/runs/9002",
+    "s11": "https://github.com/example/factory/pull/4401#issuecomment-6204",
+    "s12": "https://github.com/example/factory/pull/4401#issuecomment-6202",
+    "s13": "https://github.com/example/factory/commit/2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b",
+    "s14": "https://github.com/example/factory/pull/4401#issuecomment-6203",
+    "s15": "https://github.com/example/factory/pull/4401#issuecomment-6205",
+    "s16": "https://github.com/example/factory/pull/4401",
+    "s17": "https://github.com/example/factory/actions/runs/9003",
+    "s18": "https://github.com/example/factory/actions/runs/9005",
+    "s19": "https://github.com/example/factory/actions/runs/9004",
+    "s20": "https://github.com/example/factory/pull/4402#issuecomment-6402"
+  }
+}

@@ -83,6 +83,8 @@ export type Session = {
   reported_configuration: ReportedConfiguration;
   updated_at: FactInteger;
   age_ms: FactInteger;
+  /** #539: when the session started, only as room-cli reports it; optional. */
+  started_at?: FactInteger;
 };
 
 export type Inventory = { sessions: Session[] };
@@ -120,7 +122,11 @@ export const exact =
     Object.keys(v).length === Object.keys(shape).length &&
     Object.entries(shape).every(([key, check]) => Object.hasOwn(v, key) && check(v[key]));
 
-
+/**
+ * `exact`, plus keys that may be absent (#16: the reports' optional
+ * `attachments`, absent when there are none): every key is one of these, each
+ * required one is there, and every one there passes its check.
+ */
 export const exactWith =
   (shape: Record<string, Check>, optional: Record<string, Check>): Check =>
   (v) =>
@@ -149,11 +155,31 @@ export const list =
   (v) =>
     Array.isArray(v) && v.every(check);
 
-const unknownCheck = exact({ unknown: (v) => str(v) && (v as string).length >= 1 });
-export const fact = (check: Check): Check => oneOf(exact({ known: check }), unknownCheck);
+// Only private, fixed schema literals use cached metadata. Exported shape
+// helpers above keep observing mutations to their callers' maps.
+const fixedExact = (shape: Record<string, Check>): Check => {
+  const entries = Object.entries(shape);
+  return (v) =>
+    isObject(v) &&
+    Object.keys(v).length === entries.length &&
+    entries.every(([key, check]) => Object.hasOwn(v, key) && check(v[key]));
+};
 
-const sourceCheck = exact({ name: str, version: fact(str), tested_version: str, version_tested: bool });
-const countsCheck = exact({
+const fixedWith = (shape: Record<string, Check>, optional: Record<string, Check>): Check => {
+  const required = Object.entries(shape);
+  const extra = Object.entries(optional);
+  return (v) =>
+    isObject(v) &&
+    Object.keys(v).every((key) => Object.hasOwn(shape, key) || Object.hasOwn(optional, key)) &&
+    required.every(([key, check]) => Object.hasOwn(v, key) && check(v[key])) &&
+    extra.every(([key, check]) => !Object.hasOwn(v, key) || check(v[key]));
+};
+
+const unknownCheck = fixedExact({ unknown: (v) => str(v) && (v as string).length >= 1 });
+export const fact = (check: Check): Check => oneOf(fixedExact({ known: check }), unknownCheck);
+
+const sourceCheck = fixedExact({ name: str, version: fact(str), tested_version: str, version_tested: bool });
+const countsCheck = fixedExact({
   listed: count,
   unreadable: count,
   excluded_hidden: count,
@@ -165,21 +191,21 @@ const countsCheck = exact({
   limit: count,
   shown: count,
 });
-const coverageCheck = exact({ state: is('complete', 'partial'), counts: oneOf(isNull, countsCheck) });
-const freshnessCheck = exact({ snapshot_at: int });
-const gapCheck = exact({ kind: is(...GAP_KINDS), subject: oneOf(isNull, str), detail: str });
-const locationCheck = oneOf(exact({ kind: is('cloud') }), exact({ kind: is('local'), machine: fact(str) }));
+const coverageCheck = fixedExact({ state: is('complete', 'partial'), counts: oneOf(isNull, countsCheck) });
+const freshnessCheck = fixedExact({ snapshot_at: int });
+const gapCheck = fixedExact({ kind: is(...GAP_KINDS), subject: oneOf(isNull, str), detail: str });
+const locationCheck = oneOf(fixedExact({ kind: is('cloud') }), fixedExact({ kind: is('local'), machine: fact(str) }));
 const groupingCheck = oneOf(
-  exact({ kind: is('project'), id: str, name: fact(str) }),
-  exact({ kind: is('ungrouped'), reason: str }),
+  fixedExact({ kind: is('project'), id: str, name: fact(str) }),
+  fixedExact({ kind: is('ungrouped'), reason: str }),
 );
 const recapCheck = oneOf(
-  exact({ kind: is('purpose_as_reported'), text: (v) => str(v) && [...(v as string)].length <= 120, truncated: bool }),
-  exact({ kind: is('no_recap_yet') }),
+  fixedExact({ kind: is('purpose_as_reported'), text: (v) => str(v) && [...(v as string)].length <= 120, truncated: bool }),
+  fixedExact({ kind: is('no_recap_yet') }),
 );
-const finalOutputCheck = oneOf(exact({ kind: is('reported'), text: str, truncated: bool }), exact({ kind: is('no_final_output_yet') }));
-const boundedTextCheck = exact({ text: str, truncated: bool });
-const sessionCheck = exact({
+const finalOutputCheck = oneOf(fixedExact({ kind: is('reported'), text: str, truncated: bool }), fixedExact({ kind: is('no_final_output_yet') }));
+const boundedTextCheck = fixedExact({ text: str, truncated: bool });
+const sessionCheck = fixedWith({
   id: str,
   title: fact(str),
   provider: fact(str),
@@ -190,18 +216,18 @@ const sessionCheck = exact({
   hidden: fact(bool),
   archived: fact(bool),
   recap: fact(recapCheck),
-  reported_configuration: exact({ model: fact(str), effort: fact(str) }),
+  reported_configuration: fixedExact({ model: fact(str), effort: fact(str) }),
   updated_at: fact(int),
   age_ms: fact(int),
-});
+}, { started_at: fact(int) });
 const envelopeCheck = (data: Check): Check =>
-  exact({ schema: is(SCHEMA_ID), source: sourceCheck, coverage: coverageCheck, freshness: freshnessCheck, gaps: list(gapCheck), data });
+  fixedExact({ schema: is(SCHEMA_ID), source: sourceCheck, coverage: coverageCheck, freshness: freshnessCheck, gaps: list(gapCheck), data });
 
-const inventoryEnvelope = envelopeCheck(exact({ sessions: list(sessionCheck) }));
+const inventoryEnvelope = envelopeCheck(fixedExact({ sessions: list(sessionCheck) }));
 const sessionViewEnvelope = envelopeCheck(
-  exact({ session: sessionCheck, final_output: fact(finalOutputCheck), reported_error: fact(oneOf(isNull, boundedTextCheck)) }),
+  fixedExact({ session: sessionCheck, final_output: fact(finalOutputCheck), reported_error: fact(oneOf(isNull, boundedTextCheck)) }),
 );
-const apiErrorCheck = exact({ error: exact({ kind: str, message: str }) });
+const apiErrorCheck = fixedExact({ error: fixedExact({ kind: str, message: str }) });
 
 /** An inventory envelope, or null when `json` is not exactly one. */
 export function parseInventory(json: unknown): Envelope<Inventory> | null {

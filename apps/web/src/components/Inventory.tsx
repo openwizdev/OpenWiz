@@ -1,3 +1,5 @@
+import { Button, SectionLabel, SoftPanel } from './Ui.tsx';
+import { SessionsIcon } from './Icons.tsx';
 // The list: one page of the core's order under its group headings (G1), thin
 // rows (name, status, age), the empty states and the page controls. Refreshes
 // keep the rows on screen where they were (V5).
@@ -9,8 +11,9 @@ import type { Envelope, Inventory as InventoryData, Session } from '../envelope.
 import { ageText, clockText, factText, groupPage, pageRange, unknownText } from '../present.ts';
 import type { LaunchProject } from './Launcher.tsx';
 import { Marker } from './Status.tsx';
+import { statusMarker } from '../markers.ts';
 
-function Row({ session, selected, onSelect }: { session: Session; selected: boolean; onSelect: (id: string) => void }) {
+export function SessionRow({ session, selected, onSelect, project }: { session: Session; selected: boolean; onSelect: (id: string) => void; project?: string }) {
   const known = 'known' in session.title;
   return (
     <li>
@@ -20,6 +23,7 @@ function Row({ session, selected, onSelect }: { session: Session; selected: bool
         data-session-id={session.id}
         aria-current={selected ? 'true' : undefined}
         onClick={() => {
+          performance.clearMarks('detail-tap');
           performance.mark('detail-tap');
           onSelect(session.id);
         }}
@@ -29,23 +33,26 @@ function Row({ session, selected, onSelect }: { session: Session; selected: bool
             <bdi>{factText(session.title)}</bdi>
           </span>
           <span className="age" data-part="age">
-            {'known' in session.age_ms ? ageText(session.age_ms.known) : unknownText(session.age_ms.unknown)}
+            {'known' in session.age_ms ? ageText(session.age_ms.known) : <>unknown<span className="age-reason-a11y">{` (${session.age_ms.unknown})`}</span></>}
           </span>
         </span>
-        <span className="row-meta">
+        {/* Status and adjacent facts replace together as one reported metadata run. */}
+        <span className="row-meta" key={statusMarker(session.status).word}>
           <Marker status={session.status} />
+          <span className="session-facts" data-part="session-meta">{project ? <><bdi>{project}</bdi> · </> : null}<bdi>{'known' in session.reported_configuration.model ? session.reported_configuration.model.known : 'unknown'}</bdi> · <bdi>{'known' in session.location ? session.location.known.kind === 'cloud' ? 'Cloud' : factText(session.location.known.machine) : unknownText(session.location.unknown)}</bdi></span>
           {session.group.kind === 'ungrouped' ? (
             <span className="reason" data-part="reason">
               <bdi>{session.group.reason}</bdi>
             </span>
           ) : null}
+          {'unknown' in session.age_ms ? <span className="age-reason" aria-hidden="true"><bdi>{unknownText(session.age_ms.unknown)}</bdi></span> : null}
         </span>
       </button>
     </li>
   );
 }
 
-/** A project heading's New thread: opens the launcher for that project. It creates nothing. */
+/** A project heading's New thread (#12, A-11): opens the launcher for that project. It creates nothing. */
 function NewThread({ project, open, onNewThread }: { project: LaunchProject; open: boolean; onNewThread: (project: LaunchProject) => void }) {
   const name = `${factText(project.name)}${project.suffix === null ? '' : ` · ${project.suffix}`}`;
   return (
@@ -69,7 +76,6 @@ const rowsOnScreen = (): Anchor[] => {
   for (const el of document.querySelectorAll<HTMLElement>('main [data-session-id]')) {
     const r = el.getBoundingClientRect();
     if (r.bottom > 48 && r.top < window.innerHeight && el.dataset['sessionId']) out.push({ id: el.dataset['sessionId'], top: r.top });
-    if (out.length >= 8) break;
   }
   return out;
 };
@@ -106,6 +112,8 @@ export class KeepPlace extends Component<{ snapshot: unknown; children: ReactNod
   }
 }
 
+export const groupAnchor = (key: string): string => `project-${key}`;
+
 export type EmptyKind = 'verified-empty' | 'empty-page' | 'empty-partial' | 'empty-stale';
 
 export function Inventory({
@@ -127,7 +135,7 @@ export function Inventory({
   fresh: boolean;
   now: Date;
   onSelect: (id: string) => void;
-  /** A project heading's New thread: opens the launcher in the panel or sheet. */
+  /** A project heading's New thread (#12): opens the launcher in the panel or sheet. */
   onNewThread: (project: LaunchProject) => void;
   onPage: (offset: number) => void;
 }) {
@@ -150,25 +158,26 @@ export function Inventory({
         </p>
       ) : null}
       {groupPage(sessions).map((g) => (
-          <section className="group" key={g.key} data-group-key={g.key}>
+          <section className="group" id={groupAnchor(g.key)} key={g.key} data-group-key={g.key}>
             <div className="group-head">
-              <h2 className="kicker">
+              <SectionLabel>
                 {g.group.kind === 'project' ? <bdi>{factText(g.group.name)}</bdi> : 'ungrouped'}
                 {g.suffix === null ? null : <span className="gid">{` · ${g.suffix}`}</span>}
-              </h2>
+              </SectionLabel>
               {g.group.kind === 'project' ? (
                 <NewThread project={{ id: g.group.id, name: g.group.name, suffix: g.suffix }} open={launchId === g.group.id} onNewThread={onNewThread} />
               ) : null}
             </div>
             <ul className="rows">
               {g.sessions.map((s) => (
-                <Row key={s.id} session={s} selected={s.id === selectedId} onSelect={onSelect} />
+                <SessionRow key={s.id} session={s} selected={s.id === selectedId} onSelect={onSelect} />
               ))}
             </ul>
           </section>
         ))}
       {empty ? (
-        <div className="empty" data-part="empty" data-kind={empty}>
+        <SoftPanel className="empty session-state" data-part="empty" data-kind={empty}>
+          <span className="session-state-tile" aria-hidden="true"><SessionsIcon /></span>
           <p className="body">
             {empty === 'verified-empty'
               ? 'No sessions'
@@ -179,23 +188,23 @@ export function Inventory({
                   : `No sessions as of ${clockText(envelope.freshness.snapshot_at, now)}`}
           </p>
           {empty === 'empty-page' ? (
-            <button type="button" className="btn" onClick={() => onPage(0)}>
+            <Button onClick={() => onPage(0)}>
               First page
-            </button>
+            </Button>
           ) : null}
-        </div>
+        </SoftPanel>
       ) : null}
       {range && (range.previousOffset !== null || range.nextOffset !== null) ? (
         <nav className="paging" data-part="paging" aria-label="Pages">
-          <button type="button" className="btn" data-part="previous" disabled={range.previousOffset === null} onClick={() => range.previousOffset !== null && onPage(range.previousOffset)}>
+          <Button data-part="previous" disabled={range.previousOffset === null} onClick={() => range.previousOffset !== null && onPage(range.previousOffset)}>
             Previous
-          </button>
+          </Button>
           <span className="meta" data-part="range">
             {range.first}–{range.last} of {range.matched}
           </span>
-          <button type="button" className="btn" data-part="next" disabled={range.nextOffset === null} onClick={() => range.nextOffset !== null && onPage(range.nextOffset)}>
+          <Button data-part="next" disabled={range.nextOffset === null} onClick={() => range.nextOffset !== null && onPage(range.nextOffset)}>
             Next
-          </button>
+          </Button>
         </nav>
       ) : null}
       {range && (range.previousOffset !== null || range.nextOffset !== null) ? (

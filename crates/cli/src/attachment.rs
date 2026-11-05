@@ -1,3 +1,19 @@
+//! `openwiz attachment add | ls | rm` (OpenWiz 0.0.4, B1 phase 2,
+//! ClosedWiz#14): parse the command line, call the store's staging and its
+//! reports (`openwiz_store::attachments`, and since #16 its `report`
+//! module, which the web server prints too: one implementation), and print
+//! each report as text or as `contracts/attachment.v1.schema.json`'s JSON.
+//!
+//! Text and `--json` print the same report. Every path or id is reported,
+//! in the order given: one failure hides no other. A usage error, or a
+//! store that can't be opened, goes to stderr as one `openwiz: ` line, with
+//! stdout empty. The exit codes are the `EXIT_*` constants here, documented
+//! in [`help`](crate::help).
+//!
+//! **Nothing here sends or uploads anything.** `ready` means only that this
+//! machine holds a verified copy. A path is staged only when it is given to
+//! `attachment add`; a path in a message's text is never an attachment.
+
 use std::ffi::OsString;
 use std::io::Write;
 use std::ops::Deref;
@@ -10,7 +26,7 @@ use openwiz_store::attachments::report::{self, RemoveResult, StagedView};
 use openwiz_store::attachments::{AttachmentStore, Claims, FreeSpace};
 use serde::Serialize;
 
-use crate::{EXIT_OK, EXIT_USAGE, UsageError, age, clean, help, utc};
+use crate::{EXIT_OK, EXIT_READ_FAILED, EXIT_USAGE, UsageError, age, clean, help, utc};
 
 /// `rm`: an id was not found. The other ids were removed.
 pub const EXIT_ATTACHMENT_NOT_FOUND: i32 = 3;
@@ -143,21 +159,31 @@ pub fn run_attachment(
     let now = context.clock.now();
     let result = match command {
         AttachmentCommand::Help => {
-            let _ = stdout.write_all(help().as_bytes());
+            let _ = stdout.write_all(
+                crate::response::help(
+                    crate::response::Request::for_command("attachment", args).json,
+                    help(),
+                )
+                .as_bytes(),
+            );
             return EXIT_OK;
         }
         AttachmentCommand::Add { paths, json } => add(&paths, now, &context).map(|report| {
             let code = report.exit_code();
-            print(stdout, json, &report, report.text());
+            let _ = print(stdout, json, &report, report.text());
             code
         }),
         AttachmentCommand::Ls { json } => list(now, &context).map(|report| {
-            print(stdout, json, &report, report.text());
-            EXIT_OK
+            if print(stdout, json, &report, report.text()).is_err() {
+                let _ = writeln!(stderr, "openwiz: the attachment list could not be printed");
+                EXIT_READ_FAILED
+            } else {
+                EXIT_OK
+            }
         }),
         AttachmentCommand::Rm { ids, json } => remove(&ids, now, &context).map(|report| {
             let code = report.exit_code();
-            print(stdout, json, &report, report.text());
+            let _ = print(stdout, json, &report, report.text());
             code
         }),
     };
@@ -172,7 +198,12 @@ pub fn run_attachment(
 }
 
 /// Prints `value` as pretty JSON, or `text`.
-fn print(stdout: &mut dyn Write, json: bool, value: &impl Serialize, text: String) {
+fn print(
+    stdout: &mut dyn Write,
+    json: bool,
+    value: &impl Serialize,
+    text: String,
+) -> std::io::Result<()> {
     let printed = if json {
         let mut out = serde_json::to_string_pretty(value)
             .unwrap_or_else(|e| format!("{{\"error\": \"{e}\"}}"));
@@ -181,8 +212,9 @@ fn print(stdout: &mut dyn Write, json: bool, value: &impl Serialize, text: Strin
     } else {
         text
     };
-    let _ = stdout.write_all(printed.as_bytes());
-    let _ = stdout.flush();
+    let written = stdout.write_all(printed.as_bytes());
+    let flushed = stdout.flush();
+    written.and(flushed)
 }
 
 /// Opens the store and sweeps it: unfinished copies go, expired ones are
@@ -302,7 +334,7 @@ fn expired_lines(out: &mut String, expired: &[StagedView]) {
 }
 
 /// `openwiz attachment add`'s report (`openwiz.attachment-add.v1`): the
-/// store's, with the CLI's exit code and text.
+/// store's (#16), with the CLI's exit code and text.
 #[derive(Clone, Debug, Serialize)]
 #[serde(transparent)]
 pub struct AddReport(pub report::AddReport);
@@ -375,7 +407,7 @@ impl AddReport {
 }
 
 /// `openwiz attachment ls`'s report (`openwiz.attachment-list.v1`): the
-/// store's, with the CLI's text.
+/// store's (#16), with the CLI's text.
 #[derive(Clone, Debug, Serialize)]
 #[serde(transparent)]
 pub struct ListReport(pub report::ListReport);
@@ -431,7 +463,7 @@ fn result_words(result: RemoveResult) -> &'static str {
 }
 
 /// `openwiz attachment rm`'s report (`openwiz.attachment-remove.v1`): the
-/// store's, with the CLI's exit code and text.
+/// store's (#16), with the CLI's exit code and text.
 #[derive(Clone, Debug, Serialize)]
 #[serde(transparent)]
 pub struct RemoveReport(pub report::RemoveReport);

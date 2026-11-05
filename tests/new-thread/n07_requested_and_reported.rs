@@ -11,6 +11,35 @@ use crate::support::*;
 const REQUESTED: (&str, &str, &str) = ("codex", "syn-codex-model-01", "high");
 
 #[test]
+fn n07_requested_and_reported_contracts_preserve_all_original_cases() {
+    let cases: [(&str, fn()); 5] = [
+        (
+            "a_differing_report_is_shown_as_differing",
+            a_differing_report_is_shown_as_differing,
+        ),
+        (
+            "a_matching_report_is_shown_as_requested",
+            a_matching_report_is_shown_as_requested,
+        ),
+        (
+            "an_unread_report_is_never_called_as_requested",
+            an_unread_report_is_never_called_as_requested,
+        ),
+        (
+            "reported_is_never_the_serving_model",
+            reported_is_never_the_serving_model,
+        ),
+        (
+            "the_report_keeps_the_request_as_it_was_asked",
+            the_report_keeps_the_request_as_it_was_asked,
+        ),
+    ];
+    for (name, proof) in cases {
+        eprintln!("TA2 case: n07_requested_and_reported::{name}");
+        proof();
+    }
+}
+
 fn a_differing_report_is_shown_as_differing() {
     let shown = parse_shown_thread(&fixture("thread-show-differs.json"), "thr_syn_0021");
     let view = start_view("thr_syn_0021", REQUESTED, shown, T0);
@@ -32,7 +61,6 @@ fn a_differing_report_is_shown_as_differing() {
     }
 }
 
-#[test]
 fn a_matching_report_is_shown_as_requested() {
     let shown = parse_shown_thread(&fixture("thread-show-active.json"), "thr_syn_0021");
     let reported = start_view("thr_syn_0021", REQUESTED, shown, T0)
@@ -44,7 +72,6 @@ fn a_matching_report_is_shown_as_requested() {
     }
 }
 
-#[test]
 fn an_unread_report_is_never_called_as_requested() {
     let shown = parse_shown_thread(&fixture("thread-show-drift.json"), "thr_syn_0021");
     let view = start_view("thr_syn_0021", REQUESTED, shown, T0);
@@ -57,7 +84,6 @@ fn an_unread_report_is_never_called_as_requested() {
     assert!(!view.gaps.is_empty(), "the drift is a gap");
 }
 
-#[test]
 fn reported_is_never_the_serving_model() {
     let shown = parse_shown_thread(&fixture("thread-show-differs.json"), "thr_syn_0021");
     let view = start_view("thr_syn_0021", REQUESTED, shown, T0);
@@ -75,7 +101,6 @@ fn reported_is_never_the_serving_model() {
     }
 }
 
-#[test]
 fn the_report_keeps_the_request_as_it_was_asked() {
     let client = FakeClient::new();
     let store = MemoryStore::new();

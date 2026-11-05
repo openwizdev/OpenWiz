@@ -59,7 +59,8 @@ pub struct SendRecord {
     pub state: RecordState,
     /// The target's title as read for this send.
     pub target_title: Option<Fact<String>>,
-
+    /// The provider and the version read for this send (#37). Absent from
+    /// records written before #37.
     #[serde(default)]
     pub source: Option<SourceInfo>,
     /// The effects shown before sending, once worked out.

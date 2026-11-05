@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="970" viewBox="0 0 820 970" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" fill="#f0f6fc" role="img">
+<title>Daily CI metrics</title>
+<rect width="820" height="970" fill="#0d1117"/>
+<text x="0.0" y="22.0" font-size="18" fill="#f0f6fc" font-weight="600">Daily CI metrics</text>
+<text x="0.0" y="42.0" font-size="13" fill="#9198a1">One point per fixed PST day · time, capacity and CI spend</text>
+<polyline points="32.0,273.0 317.0,273.0" fill="none" stroke="#3987e5" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<text x="0.0" y="78.0" font-size="14" fill="#f0f6fc" font-weight="600">Minutes per PR (median)</text>
+<text class="hero" x="0.0" y="134.0" font-size="52" fill="#f0f6fc" font-weight="600">1.5</text>
+<text x="105.0" y="134.0" font-size="18" fill="#9198a1">min</text>
+<text x="0" y="160" font-size="13" fill="#9198a1">Wed Jan 2 · same as Tue</text>
+<text x="0.0" y="180.0" font-size="13" fill="#9198a1">Tonight's goal: under 10 · met</text>
+<line x1="32" x2="317" y1="408" y2="408" stroke="#3d444d"/>
+<text class="off-scale" x="317.0" y="214.0" font-size="11" fill="#9198a1" text-anchor="end">goals: tonight 10, this week 3, north star 1 min</text>
+<text x="32.0" y="428.0" font-size="12" fill="#9198a1" text-anchor="middle">Tue Jan 1</text>
+<g class="metric-point"><title>2030-01-01: 1.50 min; 5 robots assumed</title><circle cx="32.0" cy="273.0" r="4" fill="#3987e5" stroke="#0d1117" stroke-width="2"/></g>
+<text class="value" x="32.0" y="261.0" font-size="12" fill="#f0f6fc" text-anchor="middle">1.5</text>
+<text x="317.0" y="428.0" font-size="12" fill="#9198a1" text-anchor="middle">Wed Jan 2</text>
+<g class="metric-point"><title>2030-01-02: 1.50 min; 5 robots assumed</title><circle cx="317.0" cy="273.0" r="6" fill="#3987e5" stroke="#0d1117" stroke-width="2"/></g>
+<text class="value" x="317.0" y="261.0" font-size="15" fill="#f0f6fc" text-anchor="middle" font-weight="600">1.5</text>
+<polyline points="457.0,264.0 742.0,264.0" fill="none" stroke="#3987e5" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<text x="425.0" y="78.0" font-size="14" fill="#f0f6fc" font-weight="600">PRs an hour of capacity</text>
+<text class="hero" x="425.0" y="134.0" font-size="52" fill="#f0f6fc" font-weight="600">200.0</text>
+<text x="592.0" y="134.0" font-size="18" fill="#9198a1">PRs/hour</text>
+<text x="425" y="160" font-size="13" fill="#9198a1">Wed Jan 2 · same as Tue</text>
+<text x="425.0" y="180.0" font-size="13" fill="#9198a1">Tonight's goal: 25+ · met</text>
+<line x1="457" x2="742" y1="408" y2="408" stroke="#3d444d"/>
+<line class="goal-line" x1="457" x2="742" y1="390.0" y2="390.0" stroke="#9198a1" stroke-dasharray="6 4"><title>Tonight: 25 PRs/hour</title></line>
+<text x="748.0" y="394.0" font-size="11" fill="#9198a1">Tonight 25</text>
+<text class="off-scale" x="742.0" y="214.0" font-size="11" fill="#9198a1" text-anchor="end">then this week 80, north star 500 PRs/hour</text>
+<text x="457.0" y="428.0" font-size="12" fill="#9198a1" text-anchor="middle">Tue Jan 1</text>
+<g class="metric-point"><title>2030-01-01: 200.00 PRs/hour; 5 robots assumed</title><circle cx="457.0" cy="264.0" r="4" fill="#3987e5" stroke="#0d1117" stroke-width="2"/></g>
+<text class="value" x="457.0" y="252.0" font-size="12" fill="#f0f6fc" text-anchor="middle">200.0</text>
+<text x="742.0" y="428.0" font-size="12" fill="#9198a1" text-anchor="middle">Wed Jan 2</text>
+<g class="metric-point"><title>2030-01-02: 200.00 PRs/hour; 5 robots assumed</title><circle cx="742.0" cy="264.0" r="6" fill="#3987e5" stroke="#0d1117" stroke-width="2"/></g>
+<text class="value" x="742.0" y="252.0" font-size="15" fill="#f0f6fc" text-anchor="middle" font-weight="600">200.0</text>
+<g transform="translate(0 440)">
+<text x="0.0" y="78.0" font-size="14" fill="#f0f6fc" font-weight="600">USD per merged PR</text>
+<text class="cost-hero" x="0.0" y="134.0" font-size="44" fill="#f0f6fc" font-weight="600">$0.0154</text>
+<text x="0.0" y="160.0" font-size="13" fill="#9198a1">Wed Jan 2 · day-over-day +$0.0077</text>
+<text x="0.0" y="180.0" font-size="13" fill="#9198a1">List-rate USD before free minutes</text>
+<line x1="32" x2="317" y1="408" y2="408" stroke="#3d444d"/>
+<text x="32.0" y="428.0" font-size="12" fill="#9198a1" text-anchor="middle">Tue Jan 1</text>
+<g class="cost-point"><title>2030-01-01: $0.0077</title><circle cx="32.0" cy="338.7" r="4" fill="#3987e5"/></g>
+<text x="32.0" y="326.7" font-size="12" fill="#f0f6fc" text-anchor="middle">$0.0077</text>
+<text x="317.0" y="428.0" font-size="12" fill="#9198a1" text-anchor="middle">Wed Jan 2</text>
+<g class="cost-point"><title>2030-01-02: $0.0154</title><circle cx="317.0" cy="269.4" r="4" fill="#3987e5"/></g>
+<text x="317.0" y="257.4" font-size="12" fill="#f0f6fc" text-anchor="middle">$0.0154</text>
+<polyline points="32.0,338.7 317.0,269.4" fill="none" stroke="#3987e5" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+</g>
+<g transform="translate(0 440)">
+<text x="425.0" y="78.0" font-size="14" fill="#f0f6fc" font-weight="600">USD per code run</text>
+<text class="cost-hero" x="425.0" y="134.0" font-size="44" fill="#f0f6fc" font-weight="600">$0.0132</text>
+<text x="425.0" y="160.0" font-size="13" fill="#9198a1">Wed Jan 2 · day-over-day +$0.0066</text>
+<text x="425.0" y="180.0" font-size="13" fill="#9198a1">List-rate USD before free minutes</text>
+<line x1="457" x2="742" y1="408" y2="408" stroke="#3d444d"/>
+<text x="457.0" y="428.0" font-size="12" fill="#9198a1" text-anchor="middle">Tue Jan 1</text>
+<g class="cost-point"><title>2030-01-01: $0.0066</title><circle cx="457.0" cy="328.8" r="4" fill="#3987e5"/></g>
+<text x="457.0" y="316.8" font-size="12" fill="#f0f6fc" text-anchor="middle">$0.0066</text>
+<text x="742.0" y="428.0" font-size="12" fill="#9198a1" text-anchor="middle">Wed Jan 2</text>
+<g class="cost-point"><title>2030-01-02: $0.0132</title><circle cx="742.0" cy="249.6" r="4" fill="#3987e5"/></g>
+<text x="742.0" y="237.6" font-size="12" fill="#f0f6fc" text-anchor="middle">$0.0132</text>
+<polyline points="457.0,328.8 742.0,249.6" fill="none" stroke="#3987e5" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+</g>
+<text x="0.0" y="914.0" font-size="12" fill="#7d8590">Minutes: workflow created → last job done (push-to-result proxy); one successful code run per PR assumed.</text>
+<text x="0.0" y="932.0" font-size="12" fill="#7d8590">Capacity assumes 5 robots; not a verified historic fleet size. Unknown days break the lines.</text>
+<text x="0.0" y="950.0" font-size="12" fill="#7d8590">USD/merged PR: all window CI spend ÷ merges; USD/code run: successful code-run spend only.</text>
+</svg>

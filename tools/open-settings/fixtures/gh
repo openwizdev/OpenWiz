@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+"""Synthetic GitHub REST subset; rejects unknown paths/methods and bad payloads."""
+import json
+import os
+import signal
+from pathlib import Path
+import sys
+from urllib.parse import parse_qs, unquote, urlsplit
+
+state = Path(os.environ["SETTINGS_FAKE_STATE"])
+w = json.loads(state.read_text())
+args = sys.argv[1:]
+assert args.pop(0) == "api"
+method = "GET"
+paginate = slurp = False
+path = None
+while args:
+    arg = args.pop(0)
+    if arg == "--method": method = args.pop(0)
+    elif arg == "--paginate": paginate = True
+    elif arg == "--slurp": slurp = True
+    elif arg in ("--header", "-H"): args.pop(0)
+    elif arg == "--input": assert args.pop(0) == "-"
+    else:
+        assert path is None, arg
+        path = arg
+payload = json.load(sys.stdin) if method not in ("GET", "DELETE") else None
+call = {"method": method, "path": path, "payload": payload}
+w["calls"].append(call)
+state.write_text(json.dumps(w))
+writes = sum(c["method"] != "GET" for c in w["calls"])
+fault = next((k for k in ("fail_write", "fail_write_applied", "crash_write")
+              if method != "GET" and w.get(k) == writes), None)
+if fault == "fail_write":
+    print("synthetic write failure", file=sys.stderr); sys.exit(1)
+if w.get("fail") == {"method": method, "path": path} or (
+        method == "GET" and w.get("fail_after_write") and any(c["method"] != "GET" for c in w["calls"])):
+    print("synthetic request failure", file=sys.stderr); sys.exit(1)
+if method == "GET" and w.get("override", {}).get("path") == path:
+    print(w["override"]["raw"]); sys.exit(0)
+
+query = parse_qs(urlsplit(path).query)
+parts = urlsplit(path).path.split("/")
+assert parts[:1] == ["repos"] and len(parts) >= 3, path
+repo = "/".join(parts[1:3])
+assert repo in ("openwizdev/openwiz", "jparker2006/OpenWiz", "jparker2006/ClosedWiz"), repo
+source = repo == "jparker2006/ClosedWiz"
+assert not source or method == "GET", "private source mutation"
+resource = "/".join(parts[3:])
+list_key = None
+answer = None
+if not resource:
+    assert method == "GET" and not paginate
+    answer = w["repo"]
+elif resource == "actions/permissions/fork-pr-contributor-approval":
+    assert not paginate
+    if method == "PUT":
+        assert set(payload) == {"approval_policy"} and payload["approval_policy"] in (
+            "first_time_contributors_new_to_github", "first_time_contributors", "all_external_contributors")
+        if w.get("drop_write") != path: w["fork"] = payload
+        answer = None
+    else:
+        assert method == "GET"; answer = w["fork"]
+elif resource in ("actions/runners", "actions/variables", "actions/organization-variables"):
+    assert method == "GET"
+    name, list_key = {"actions/runners": ("runners", "runners"), "actions/variables": ("variables", "variables"),
+                      "actions/organization-variables": ("organization_variables", "variables")}[resource]
+    answer = w[name]
+elif resource == "rulesets" or resource.startswith("rulesets/"):
+    if method == "GET":
+        if resource == "rulesets": answer = w["rulesets"]
+        else: answer = next(r for r in w["rulesets"] if r["id"] == int(parts[-1]))
+    else:
+        assert method in ("POST", "PUT", "DELETE")
+    if method == "DELETE":
+        ident = int(parts[-1]); assert payload is None and any(r["id"] == ident for r in w["rulesets"])
+        w["rulesets"] = [r for r in w["rulesets"] if r["id"] != ident]
+    elif method != "GET":
+        assert set(payload) == {"name", "target", "enforcement", "bypass_actors", "conditions", "rules"}
+        assert isinstance(payload["rules"], list) and payload["rules"]
+        for rule in payload["rules"]:
+            if rule["type"] == "merge_queue":
+                p = rule["parameters"]
+                assert set(p) == {"check_response_timeout_minutes", "grouping_strategy", "max_entries_to_build", "max_entries_to_merge", "merge_method", "min_entries_to_merge", "min_entries_to_merge_wait_minutes"}
+                assert p["merge_method"] in ("MERGE", "SQUASH", "REBASE")
+        ident = max([r["id"] for r in w["rulesets"]] + [0]) + 1 if method == "POST" else int(parts[-1])
+        answer = dict(payload, id=ident, source=repo, source_type="Repository")
+        if w.get("ruleset_note"): answer["note"] = w["ruleset_note"]
+        if w.get("drop_write") != path:
+            w["rulesets"] = [r for r in w["rulesets"] if r["id"] != ident] + [answer]
+elif resource == "labels" or resource.startswith("labels/"):
+    key = "source_labels" if source else "labels"
+    if method == "GET": answer = w[key]
+    elif method == "DELETE":
+        assert payload is None and not source
+        name = unquote(parts[-1]); assert any(l["name"] == name for l in w[key])
+        w[key] = [l for l in w[key] if l["name"] != name]
+    else:
+        assert method in ("POST", "PATCH")
+        assert set(payload) == ({"new_name", "color", "description"} if method == "PATCH" else {"name", "color", "description"})
+        payload = {"name" if k == "new_name" else k: v for k, v in payload.items()}
+        if w.get("drop_write") != path:
+            old = unquote(parts[-1]) if method == "PATCH" else payload["name"]
+            w[key] = [l for l in w[key] if l["name"] != old] + [payload]
+        answer = payload
+elif resource == "milestones" or resource.startswith("milestones/"):
+    key = "source_milestones" if source else "milestones"
+    if method == "GET":
+        wanted_state = query.get("state", ["open"])[0]
+        answer = [m for m in w[key] if wanted_state == "all" or m["state"] == wanted_state]
+    elif method == "DELETE":
+        ident = int(parts[-1]); assert payload is None and any(m["number"] == ident for m in w[key])
+        w[key] = [m for m in w[key] if m["number"] != ident]
+    else:
+        assert method in ("POST", "PATCH")
+        assert set(payload) == {"title", "description", "state", "due_on"}
+        ident = max([m["number"] for m in w[key]] + [0]) + 1 if method == "POST" else int(parts[-1])
+        answer = dict(payload, number=ident)
+        if w.get("drop_write") != path: w[key] = [m for m in w[key] if m["number"] != ident] + [answer]
+else:
+    raise AssertionError(f"unhandled endpoint {path}")
+state.write_text(json.dumps(w))
+if fault == "fail_write_applied":
+    print("synthetic failure after the write applied", file=sys.stderr); sys.exit(1)
+if fault == "crash_write":
+    os.kill(os.getppid(), signal.SIGKILL); sys.exit(1)
+if method == "GET" and paginate:
+    assert slurp and isinstance(answer, list)
+    page_size = int(query.get("per_page", ["30"])[0])
+    assert 1 <= page_size <= (30 if "variables" in resource else 100)
+    pages = [answer[i:i+page_size] for i in range(0, max(len(answer), 1), page_size)]
+    if list_key: pages = [{"total_count": len(answer), list_key: p} for p in pages]
+    print(json.dumps(pages))
+elif answer is not None:
+    print(json.dumps(answer))

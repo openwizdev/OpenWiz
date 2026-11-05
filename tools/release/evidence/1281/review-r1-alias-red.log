@@ -1,0 +1,15 @@
+test_r1_complete_public_development_tree (test_review.ReviewFixes.test_r1_complete_public_development_tree) ... FAIL
+
+======================================================================
+FAIL: test_r1_complete_public_development_tree (test_review.ReviewFixes.test_r1_complete_public_development_tree)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz-1281/tools/release/test_review.py", line 50, in test_r1_complete_public_development_tree
+    self.assertEqual(result.returncode,0,result.stderr)
+AssertionError: 1 != 0 : release check refused: plan: link: only approved .agents/skills aliases may be links
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.173s
+
+FAILED (failures=1)

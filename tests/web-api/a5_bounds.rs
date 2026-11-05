@@ -409,6 +409,9 @@ fn identical_concurrent_requests_share_one_core_run() {
     s.wait_for("eight requests on one run", |st| {
         st.attached == 8 && st.core_runs == 1
     });
+    // The server counts its core run before that run reaches the source:
+    // wait for the run to be held at the gate, which counts it first.
+    gated.wait_held(1);
     assert_eq!(gated.runs(), 1);
     gated.open();
     let responses: Vec<_> = clients.into_iter().map(|c| c.join().unwrap()).collect();

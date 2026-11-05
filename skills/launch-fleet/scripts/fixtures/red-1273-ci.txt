@@ -1,0 +1,80 @@
+FAIL a verdict after it was told again ends the check: unexpected output:
+    --- /tmp/tmp.NQ19Lr2JSI/case-1/want.txt	2026-11-07 09:37:19.740610665 +0000
+    +++ /tmp/tmp.NQ19Lr2JSI/case-1/out	2026-11-07 09:37:19.724611124 +0000
+    @@ -1 +1 @@
+    -findings #31 for #12 at 3131313131313131313131313131313131313131: tell its builder, thread thr_syn12
+    +look #31: review record has no readable start on this pull request
+ok   K9: two approved pull requests change the same file at once: only the first merges
+FAIL K9: the first merged: the second is re-tested before it merges: unexpected output:
+    --- /tmp/tmp.NQ19Lr2JSI/case-2/want2.txt	2026-11-07 09:37:29.213338781 +0000
+    +++ /tmp/tmp.NQ19Lr2JSI/case-2/out2	2026-11-07 09:37:29.194418423 +0000
+    @@ -1,2 +1,2 @@
+    -archive #12: closed; archive thr_synrev31, thr_syn12
+    +archive #12: closed; archive thr_syn12, thr_synrev31
+     re-test #32 for #13 at 3232323232323232323232323232323232323232: main changed src/store/store.rs in #31 after 2026-11-01T10:30:00Z, which its CI may not have tested; run its CI again on the latest main
+FAIL a closed ticket gets its builder and reviewer archived: unexpected output:
+    --- /tmp/tmp.NQ19Lr2JSI/case-4/want.txt	2026-11-07 09:37:34.770117051 +0000
+    +++ /tmp/tmp.NQ19Lr2JSI/case-4/out	2026-11-07 09:37:34.710991522 +0000
+    @@ -1,2 +1,2 @@
+    -archive #12: closed; archive thr_synrev22, thr_syn12
+    +archive #12: closed; archive thr_syn12, thr_synrev22
+     start #13: W3: widget page (spec #10)
+FAIL a failed reviewer's thread is still archived when its ticket closes: unexpected output:
+    --- /tmp/tmp.NQ19Lr2JSI/case-5/want.txt	2026-11-07 09:37:40.801857453 +0000
+    +++ /tmp/tmp.NQ19Lr2JSI/case-5/out	2026-11-07 09:37:40.783396590 +0000
+    @@ -1,2 +1,2 @@
+    -archive #12: closed; archive thr_synrev22a, thr_synrev22b, thr_syn12
+    +archive #12: closed; archive thr_syn12, thr_synrev22a, thr_synrev22b
+     start #13: W3: widget page (spec #10)
+FAIL the loop's script clones the project and runs its check: python3: can't open file '/tmp/tmp.NQ19Lr2JSI/loop/home/synthetic-owner/synthetic-repo/skills/launch-fleet/scripts/records.py': [Errno 2] No such file or directory
+fleet.sh: can't resolve fleet records
+FAIL the next run updates its clone: python3: can't open file '/tmp/tmp.NQ19Lr2JSI/loop/home/synthetic-owner/synthetic-repo/skills/launch-fleet/scripts/records.py': [Errno 2] No such file or directory
+fleet.sh: can't resolve fleet records
+ok   the loop's script without GH_REPO exits 2
+ok   the bundled loop works without a consumer skills/ or plugin cache
+FAIL budget: the check reports the points and questions it used, on stderr: unexpected stderr:
+    --- /tmp/tmp.NQ19Lr2JSI/case-10/want-err	2026-11-07 09:38:01.555410121 +0000
+    +++ /tmp/tmp.NQ19Lr2JSI/case-10/err	2026-11-07 09:38:01.545410408 +0000
+    @@ -1 +1 @@
+    -fleet.sh: used 5 GitHub points in 31 questions; 5000 of 5000 left
+    +fleet.sh: used 5 GitHub points in 32 questions; 5000 of 5000 left
+FAIL budget: revision.sh's questions are counted, a point each: unexpected stderr:
+    --- /tmp/tmp.NQ19Lr2JSI/case-11/want-err	2026-11-07 09:38:06.690262707 +0000
+    +++ /tmp/tmp.NQ19Lr2JSI/case-11/err	2026-11-07 09:38:06.682262937 +0000
+    @@ -1 +1 @@
+    -fleet.sh: used 15 GitHub points in 43 questions; 5000 of 5000 left
+    +fleet.sh: used 15 GitHub points in 44 questions; 5000 of 5000 left
+FAIL budget: a quarter of the allowance left still checks: unexpected stderr:
+    --- /tmp/tmp.NQ19Lr2JSI/case-12/want-err	2026-11-07 09:38:11.812115697 +0000
+    +++ /tmp/tmp.NQ19Lr2JSI/case-12/err	2026-11-07 09:38:11.802115984 +0000
+    @@ -1 +1 @@
+    -fleet.sh: used 15 GitHub points in 43 questions; 1250 of 5000 left
+    +fleet.sh: used 15 GitHub points in 44 questions; 1250 of 5000 left
+FAIL budget: several fleets, the first check: unexpected stderr:
+    --- /tmp/tmp.NQ19Lr2JSI/case-13/want-err	2026-11-07 09:38:23.665775474 +0000
+    +++ /tmp/tmp.NQ19Lr2JSI/case-13/err	2026-11-07 09:38:23.616776880 +0000
+    @@ -1 +1 @@
+    -fleet.sh: used 43 GitHub points in 126 questions; 5000 of 5000 left
+    +fleet.sh: used 43 GitHub points in 127 questions; 5000 of 5000 left
+FAIL budget: several fleets, the next check: the same lines, about a quarter of the points: unexpected stderr:
+    --- /tmp/tmp.NQ19Lr2JSI/case-13/want-err2	2026-11-07 09:38:29.450537123 +0000
+    +++ /tmp/tmp.NQ19Lr2JSI/case-13/err2	2026-11-07 09:38:29.337612689 +0000
+    @@ -1 +1 @@
+    -fleet.sh: used 6 GitHub points in 82 questions; 5000 of 5000 left
+    +fleet.sh: used 6 GitHub points in 83 questions; 5000 of 5000 left
+ok   budget: a quiet spec, before fleet.sh changes
+FAIL budget: a quiet spec is read again by a changed fleet.sh: exit 2, not 0; stdout: ; stderr: python3: can't open file '/tmp/tmp.NQ19Lr2JSI/records.py': [Errno 2] No such file or directory
+fleet.sh: can't resolve fleet records
+FAIL wake: it reports its points: one read of 1 point, and the two settings files: unexpected stderr:
+    --- /tmp/tmp.NQ19Lr2JSI/case-17/want-err	2026-11-07 09:38:38.547348437 +0000
+    +++ /tmp/tmp.NQ19Lr2JSI/case-17/err	2026-11-07 09:38:38.538348695 +0000
+    @@ -1 +1 @@
+    -fleet.sh: used 1 GitHub points in 10 questions; 5000 of 5000 left
+    +fleet.sh: used 1 GitHub points in 11 questions; 5000 of 5000 left
+FAIL REST cache: reader updates retain conditional GETs: repeat read: python3: can't open file '/tmp/tmp.NQ19Lr2JSI/cache-18/records.py': [Errno 2] No such file or directory
+fleet.sh: can't resolve fleet records
+FAIL loop: with FLEET_SPEC, the loop's script runs that spec's check alone: python3: can't open file '/tmp/tmp.NQ19Lr2JSI/case-fleetloop/home/synthetic-owner/synthetic-repo/skills/launch-fleet/scripts/records.py': [Errno 2] No such file or directory
+fleet.sh: can't resolve fleet records
+ok   loop: a FLEET_SPEC that is no number exits 2
+ok   every gh call was one of fleet.sh's reads
+20 cases, 15 failed

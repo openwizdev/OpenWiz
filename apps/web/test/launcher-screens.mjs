@@ -1,6 +1,6 @@
-// Renders DEMO-labelled screenshots of the launcher's states  at 390 and
+// Renders DEMO-labelled screenshots of the launcher's states (#12) at 390 and
 // 1440 px, on the fake API: `node test/launcher-screens.mjs [out-dir]`. Not a
-// proof, and not the maintainer acceptance: his design loop is on the working site.
+// proof, and not Jake's acceptance: his design loop is on the working site.
 // Synthetic data only.
 
 import { mkdirSync } from 'node:fs';

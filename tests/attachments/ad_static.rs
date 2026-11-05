@@ -1,4 +1,4 @@
-//! B2 (the implementation): the rules and the static checks. AD8 (no stronger
+//! B2 (ClosedWiz#15): the rules and the static checks. AD8 (no stronger
 //! claim), AD11 (one implementation), the attachments digest, the one
 //! claim rule, the gate's all-or-nothing on an in-memory store, the
 //! dispatch order, the allowance, and the messaging schema's attachments.
@@ -86,6 +86,43 @@ fn staged(a: PromptAttachment) -> StagedAttachment {
 // The attachments digest.
 
 #[test]
+fn ad_static_affected_contracts_preserve_original_cases() {
+    let cases: [(&str, fn()); 7] = [
+        (
+            "a_prompt_lists_an_attachment_once",
+            a_prompt_lists_an_attachment_once,
+        ),
+        (
+            "files_go_first_then_images_each_in_the_owners_order",
+            files_go_first_then_images_each_in_the_owners_order,
+        ),
+        (
+            "the_allowance_is_one_second_per_started_mib",
+            the_allowance_is_one_second_per_started_mib,
+        ),
+        (
+            "the_claim_rule_follows_retention",
+            the_claim_rule_follows_retention,
+        ),
+        (
+            "the_digest_is_the_canonical_list_in_the_owners_order_and_the_empty_one_is_fixed",
+            the_digest_is_the_canonical_list_in_the_owners_order_and_the_empty_one_is_fixed,
+        ),
+        (
+            "the_gate_passes_every_attachment_or_names_every_one_that_cant_go",
+            the_gate_passes_every_attachment_or_names_every_one_that_cant_go,
+        ),
+        (
+            "the_messaging_schema_takes_attachments_only_in_their_shape",
+            the_messaging_schema_takes_attachments_only_in_their_shape,
+        ),
+    ];
+    for (name, proof) in cases {
+        eprintln!("TA2 case: ad_static::{name}");
+        proof();
+    }
+}
+
 fn the_digest_is_the_canonical_list_in_the_owners_order_and_the_empty_one_is_fixed() {
     assert_eq!(
         attachments_digest(&[]),
@@ -113,7 +150,6 @@ fn the_digest_is_the_canonical_list_in_the_owners_order_and_the_empty_one_is_fix
     assert_eq!(attachments_digest(&[a]), attachments_digest(&[same_bytes]));
 }
 
-#[test]
 fn files_go_first_then_images_each_in_the_owners_order() {
     let prompt = ReadyPrompt {
         text: "Synthetic".to_owned(),
@@ -139,7 +175,6 @@ fn files_go_first_then_images_each_in_the_owners_order() {
     assert_eq!(bound, ["att-i1", "att-f1", "att-i2", "att-f2"]);
 }
 
-#[test]
 fn the_allowance_is_one_second_per_started_mib() {
     for (bytes, secs) in [
         (0, 0),
@@ -156,7 +191,6 @@ fn the_allowance_is_one_second_per_started_mib() {
     }
 }
 
-#[test]
 fn a_prompt_lists_an_attachment_once() {
     let mut p = PromptPayload::text("Synthetic");
     p.attachments = vec![
@@ -175,7 +209,6 @@ fn a_prompt_lists_an_attachment_once() {
 
 // The one claim rule.
 
-#[test]
 fn the_claim_rule_follows_retention() {
     let me = op(OpKind::Send, "op-me");
     let other = op(OpKind::NewThread, "op-other");
@@ -267,7 +300,6 @@ fn ready_lookup(a: PromptAttachment, at: Timestamp, claim: Option<(OpRef, Claim)
     }
 }
 
-#[test]
 fn the_gate_passes_every_attachment_or_names_every_one_that_cant_go() {
     let me = op(OpKind::Send, "op-gate");
     let other = op(OpKind::Send, "op-other");
@@ -515,7 +547,6 @@ fn validate_messaging(def: &str, value: &Value) -> Vec<String> {
     crate::schema::validate(&schema, value)
 }
 
-#[test]
 fn the_messaging_schema_takes_attachments_only_in_their_shape() {
     let a = json!({
         "id": "att-syn-1",

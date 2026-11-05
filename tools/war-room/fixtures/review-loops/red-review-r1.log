@@ -1,0 +1,22 @@
+# Review round 1 (R1-R3) red at c5c174c3330e65dde175c2f315050134154b36a1 plus the new proofs and an ignored bench(reports=) parameter
+$ python3 -I tools/war-room/test_review_loops.py
+ERROR: test_a_missing_report_makes_the_share_unavailable (__main__.Classifications.test_a_missing_report_makes_the_share_unavailable)
+KeyError: 'reports'
+ERROR: test_line_basis_counts_the_reports_blocking_findings (__main__.Classifications.test_line_basis_counts_the_reports_blocking_findings)
+KeyError: 'reports'
+ERROR: test_a_one_in_three_defect_rate_projects_exactly (__main__.Publish.test_a_one_in_three_defect_rate_projects_exactly)
+ValueError: ratio arithmetic mismatch
+FAIL: test_a_missing_line_classification_stays_unknown (__main__.Classifications.test_a_missing_line_classification_stays_unknown)
+AssertionError: Tuples differ: (5, 3, 2, 2, 0.666667, 0.6) != (4, 3, 1, 2, 0.666667, 0.75)
+FAIL: test_line_classifications_need_an_inventoried_finding (__main__.Classifications.test_line_classifications_need_an_inventoried_finding)
+AssertionError: ValueError not raised
+FAIL: test_reports_bind_to_admitted_rounds_only (__main__.Classifications.test_reports_bind_to_admitted_rounds_only)
+AssertionError: ValueError not raised
+FAIL: test_a_changed_defect_policy_refuses_the_comparison (__main__.Compare.test_a_changed_defect_policy_refuses_the_comparison)
+AssertionError: "frozen defect policy" does not match "BEFORE and AFTER differ in defect policy"
+FAIL: test_only_the_frozen_defect_policy_is_admitted (__main__.Measures.test_only_the_frozen_defect_policy_is_admitted)
+AssertionError: ValueError not raised
+FAIL: test_worked_cohort_arithmetic_unknown_and_coverage (__main__.Measures.test_worked_cohort_arithmetic_unknown_and_coverage)
+AssertionError: {'fin[89 chars], 'coverage': 0.666667, 'basis': ['judgment'], 'reports': None} != {'fin[89 chars], 'coverage': 0.666667, 'basis': ['judgment']}
+Ran 30 tests in 5.381s
+FAILED (failures=6, errors=3)

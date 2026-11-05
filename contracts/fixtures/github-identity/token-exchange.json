@@ -1,0 +1,107 @@
+{
+  "synthetic": true,
+  "note": "For GI5's fake exchange. Owner, repository, ids, times and tokens are synthetic placeholders; times are Unix seconds on a controlled clock.",
+  "now": 1000,
+  "cases": [
+    {
+      "mode": "write",
+      "argv": ["openwiz", "github", "token", "--repository", "synthetic-owner/work"],
+      "installation": {"id": 2002, "account": "synthetic-owner", "repository_selection": "selected"},
+      "request": {
+        "repositories": ["work"],
+        "permissions": {
+          "metadata": "read",
+          "contents": "write",
+          "issues": "write",
+          "pull_requests": "write",
+          "checks": "read",
+          "actions": "read"
+        }
+      },
+      "answer": {
+        "token": "synthetic-installation-token",
+        "expires_at": 4600,
+        "repository_selection": "selected",
+        "repositories": [{"full_name": "synthetic-owner/work"}],
+        "permissions": {
+          "metadata": "read",
+          "contents": "write",
+          "issues": "write",
+          "pull_requests": "write",
+          "checks": "read",
+          "actions": "read"
+        }
+      },
+      "stdout": "synthetic-installation-token\n",
+      "stderr": "expires_at 4600\n",
+      "exit": 0
+    },
+    {
+      "mode": "read",
+      "argv": ["openwiz", "github", "token", "--repository", "synthetic-owner/work", "--read"],
+      "installation": {"id": 2002, "account": "synthetic-owner", "repository_selection": "selected"},
+      "request": {
+        "repositories": ["work"],
+        "permissions": {
+          "metadata": "read",
+          "contents": "read",
+          "issues": "read",
+          "pull_requests": "read",
+          "checks": "read",
+          "actions": "read"
+        }
+      },
+      "answer": {
+        "token": "synthetic-read-token",
+        "expires_at": 4600,
+        "repository_selection": "selected",
+        "repositories": [{"full_name": "synthetic-owner/work"}],
+        "permissions": {
+          "metadata": "read",
+          "contents": "read",
+          "issues": "read",
+          "pull_requests": "read",
+          "checks": "read",
+          "actions": "read"
+        }
+      },
+      "stdout": "synthetic-read-token\n",
+      "stderr": "expires_at 4600\n",
+      "exit": 0
+    },
+    {
+      "mode": "read",
+      "argv": ["openwiz", "github", "token", "--repository", "synthetic-owner/work", "--read"],
+      "installation": {"id": 2002, "account": "synthetic-owner", "repository_selection": "selected"},
+      "request": {
+        "repositories": ["work"],
+        "permissions": {
+          "metadata": "read",
+          "contents": "read",
+          "issues": "read",
+          "pull_requests": "read",
+          "checks": "read",
+          "actions": "read"
+        }
+      },
+      "answer": {
+        "token": "synthetic-near-expiry-token",
+        "expires_at": 1300,
+        "repository_selection": "selected",
+        "repositories": [{"full_name": "synthetic-owner/work"}],
+        "permissions": {
+          "metadata": "read",
+          "contents": "read",
+          "issues": "read",
+          "pull_requests": "read",
+          "checks": "read",
+          "actions": "read"
+        }
+      },
+      "stdout": "",
+      "stderr_has_no": ["synthetic-near-expiry-token"],
+      "exit": 5,
+      "why": "300 seconds or less remain: the near-expiry guard refuses it"
+    }
+  ]
+}

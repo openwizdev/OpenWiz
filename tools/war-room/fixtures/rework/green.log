@@ -1,0 +1,12 @@
+WR6 scoped offline proof summary (synthetic fixtures only)
+python3 -I tools/war-room/test_rework.py
+PASS: 7 tests. CLI and callable source-to-suite arithmetic/coverage/refusal.
+python3 -I tools/war-room/test_contract.py
+PASS: 18 tests. Existing suite admission and native denominator semantics.
+python3 -I tools/factory-metrics/test_journey.py
+PASS: 18 tests. Existing collector/check/bench/CF4 compatibility on fake tools.
+python3 -I tools/factory-metrics/journey.py check tools/war-room/fixtures/rework/journeys.json
+PASS: fixture conforms to the existing source validator.
+python3 -I tools/war-room/suite.py compose --at 2030-01-03T00:00:00Z --providers tools/war-room/fixtures/rework/providers.json
+PASS: complete suite envelope generated; check round-trip preserves the record.
+No Rust crate touched; no full workspace/browser suite run locally.

@@ -1,0 +1,55 @@
+test_jog_published_prices_and_second_billing (__main__.Dashboard.test_jog_published_prices_and_second_billing) ... 
+  test_jog_published_prices_and_second_billing (__main__.Dashboard.test_jog_published_prices_and_second_billing) (label='jog-4vcpu') ... FAIL
+  test_jog_published_prices_and_second_billing (__main__.Dashboard.test_jog_published_prices_and_second_billing) (label='jog-8vcpu') ... FAIL
+  test_jog_published_prices_and_second_billing (__main__.Dashboard.test_jog_published_prices_and_second_billing) (label='jog-16vcpu') ... FAIL
+test_unpriced_or_ambiguous_jog_never_falls_back_to_free_self_hosted (__main__.Dashboard.test_unpriced_or_ambiguous_jog_never_falls_back_to_free_self_hosted) ... 
+  test_unpriced_or_ambiguous_jog_never_falls_back_to_free_self_hosted (__main__.Dashboard.test_unpriced_or_ambiguous_jog_never_falls_back_to_free_self_hosted) (label='jog-unknown') ... FAIL
+  test_unpriced_or_ambiguous_jog_never_falls_back_to_free_self_hosted (__main__.Dashboard.test_unpriced_or_ambiguous_jog_never_falls_back_to_free_self_hosted) (label='jog-max-16vcpu') ... FAIL
+
+======================================================================
+FAIL: test_jog_published_prices_and_second_billing (__main__.Dashboard.test_jog_published_prices_and_second_billing) (label='jog-4vcpu')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/ci-bench/test_dashboard.py", line 142, in test_jog_published_prices_and_second_billing
+    self.assertEqual(cost['window_usd'], total)
+AssertionError: None != 0.0084
+
+======================================================================
+FAIL: test_jog_published_prices_and_second_billing (__main__.Dashboard.test_jog_published_prices_and_second_billing) (label='jog-8vcpu')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/ci-bench/test_dashboard.py", line 142, in test_jog_published_prices_and_second_billing
+    self.assertEqual(cost['window_usd'], total)
+AssertionError: None != 0.0154
+
+======================================================================
+FAIL: test_jog_published_prices_and_second_billing (__main__.Dashboard.test_jog_published_prices_and_second_billing) (label='jog-16vcpu')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/ci-bench/test_dashboard.py", line 142, in test_jog_published_prices_and_second_billing
+    self.assertEqual(cost['window_usd'], total)
+AssertionError: None != 0.0308
+
+======================================================================
+FAIL: test_unpriced_or_ambiguous_jog_never_falls_back_to_free_self_hosted (__main__.Dashboard.test_unpriced_or_ambiguous_jog_never_falls_back_to_free_self_hosted) (label='jog-unknown')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/ci-bench/test_dashboard.py", line 159, in test_unpriced_or_ambiguous_jog_never_falls_back_to_free_self_hosted
+    self.assertIsNone(json.loads((w/'point.json').read_text())['cost']['window_usd'])
+AssertionError: 0.0 is not None
+
+======================================================================
+FAIL: test_unpriced_or_ambiguous_jog_never_falls_back_to_free_self_hosted (__main__.Dashboard.test_unpriced_or_ambiguous_jog_never_falls_back_to_free_self_hosted) (label='jog-max-16vcpu')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/ClosedWiz/tools/ci-bench/test_dashboard.py", line 159, in test_unpriced_or_ambiguous_jog_never_falls_back_to_free_self_hosted
+    self.assertIsNone(json.loads((w/'point.json').read_text())['cost']['window_usd'])
+AssertionError: 0.0 is not None
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.315s
+
+FAILED (failures=5)
+jog-4vcpu: window USD=None; expected 0.0084
+jog-8vcpu: window USD=None; expected 0.0154
+jog-16vcpu: window USD=None; expected 0.0308

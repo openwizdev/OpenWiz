@@ -1,0 +1,4 @@
+R1 empty recovery (synthetic live label): {'problems': ['unproven_pass'], 'failures': [], 'unproven': ['recovery_operations_missing:case', 'recovery_work_missing:case']}
+R2 omitted uncertain intent: {'problems': ['unproven_pass'], 'failures': [], 'unproven': ['final_operation_missing:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1', 'operation_uncertain:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1']}
+R3 conflicting duplicate: {'problems': ['duplicate_work:0:after:pending_operation:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1'], 'failures': [], 'unproven': []}
+R4 persisted zero-call proposal: {'problems': [], 'failures': [], 'unproven': ['candidate_unknown', 'not_live']}

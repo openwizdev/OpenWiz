@@ -1,0 +1,91 @@
+name: CI benchmarks
+
+on:
+  schedule:
+    # Fixed PST midnight = 08:00 UTC, with time for completed runs to settle.
+    - cron: '17 8 * * *'
+  workflow_dispatch:
+    inputs:
+      since:
+        description: 'Optional checkpoint start (UTC YYYY-MM-DDTHH:MM:SSZ); provide until and label too'
+        type: string
+      until:
+        description: 'Optional checkpoint end (UTC YYYY-MM-DDTHH:MM:SSZ)'
+        type: string
+      label:
+        description: 'Checkpoint label, e.g. after #1251; blank = last full PST day'
+        type: string
+      robots:
+        description: 'Capacity assumption: number of concurrent runners'
+        type: string
+        default: '5'
+  pull_request:
+    paths:
+      - 'tools/ci-bench/**'
+      - 'tools/factory-metrics/**'
+      - 'tools/skills-eval/**'
+      - 'tools/war-room/**'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/ci-bench.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    # The configured PC has no provider charge; otherwise cheapest hosted SKU.
+    runs-on: ${{ vars.CI_RUNS_ON || 'ubuntu-slim' }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Python for the benchmark
+        run: sh tools/ci-bench/python.sh
+      - name: Benchmark fixture proofs and workflow step coverage
+        run: |
+          python3 -I tools/ci-bench/bench.py check-steps
+          python3 -I tools/war-room/test_contract.py
+          python3 -I tools/war-room/test_activity.py
+          python3 -I tools/ci-bench/test.py
+          python3 -I tools/ci-bench/test_backfill.py
+          python3 -I tools/ci-bench/test_dashboard.py
+          python3 -I tools/ci-bench/test_publish.py
+          python3 -I tools/ci-bench/test_factory.py
+          python3 -I tools/factory-metrics/test.py
+          python3 -I tools/factory-metrics/test_journey.py
+          python3 -I tools/war-room/test_rework.py
+          python3 -I tools/war-room/test_review_loops.py
+          python3 -I tools/factory-metrics/test_experiment_contract.py
+          python3 -I tools/ci-bench/test_trends.py
+          python3 -I tools/ci-bench/test_required.py
+
+  publish:
+    needs: proof
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ${{ vars.CI_RUNS_ON || 'ubuntu-slim' }}
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+      issues: read
+      pull-requests: read
+    concurrency:
+      group: ci-benchmarks-publication
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Python for the benchmark
+        run: sh tools/ci-bench/python.sh
+      - name: Measure and publish only ci-benchmarks
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BENCH_SINCE: ${{ inputs.since }}
+          BENCH_UNTIL: ${{ inputs.until }}
+          BENCH_LABEL: ${{ inputs.label }}
+          BENCH_ROBOTS: ${{ inputs.robots || '5' }}
+        run: |
+          gh auth setup-git
+          sh tools/ci-bench/daily.sh

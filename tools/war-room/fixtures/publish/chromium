@@ -1,0 +1,28 @@
+#!/usr/bin/env python3
+"""A fake chromium for the War room publish tests. --dump-dom prints a measured
+page; --screenshot writes a small PNG whose header records the window size times
+the scale factor. FAKE_CHROMIUM_FAIL=1 fails every call; FAKE_CHROMIUM_LOG
+appends one line per call: the size, the scale and the action."""
+import os
+import struct
+import sys
+import zlib
+
+args = sys.argv[1:]
+size = next((a.split('=', 1)[1] for a in args if a.startswith('--window-size=')), '0,0')
+scale = next((a.split('=', 1)[1] for a in args if a.startswith('--force-device-scale-factor=')), '1')
+shot = next((a.split('=', 1)[1] for a in args if a.startswith('--screenshot=')), None)
+if os.environ.get('FAKE_CHROMIUM_LOG'):
+    with open(os.environ['FAKE_CHROMIUM_LOG'], 'a') as log:
+        log.write('%s %s %s\n' % (size, scale, 'screenshot' if shot else 'dump-dom'))
+if os.environ.get('FAKE_CHROMIUM_FAIL') == '1':
+    sys.exit(1)
+if shot:
+    width, height = (int(n) * int(scale) for n in size.split(','))
+    def chunk(kind, data):
+        return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data))
+    with open(shot, 'wb') as png:
+        png.write(b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 0, 0, 0, 0))
+                  + chunk(b'IEND', b''))
+elif '--dump-dom' in args:
+    print('<html><body data-h="%s"></body></html>' % os.environ.get('FAKE_CHROMIUM_HEIGHT', '1500'))

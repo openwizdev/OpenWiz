@@ -1,0 +1,16 @@
+E
+======================================================================
+ERROR: test_capture_never_claims_terminal_coverage_and_preserves_exact_bytes (__main__.Shadow.test_capture_never_claims_terminal_coverage_and_preserves_exact_bytes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "ci/main-batch/test_shadow.py", line 51, in setUp
+    spec.loader.exec_module(self.shadow)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: 'ci/main-batch/shadow.py'
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+FAILED (errors=1)

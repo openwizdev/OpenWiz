@@ -1,0 +1,63 @@
+# Separate from CI: labels can invalidate a passing exemption without a push.
+name: Changelog
+
+on:
+  pull_request:
+    branches: [main, 'release-*']
+    types: [opened, synchronize, reopened, labeled, unlabeled, ready_for_review, edited]
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: changelog-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changelog:
+    # This small read-only job needs Python and gh: gh is on the PC runner and
+    # GitHub's Ubuntu image; Python comes from the step below. It runs where
+    # ci.yml's jobs run, so it spends no GitHub-hosted minutes while
+    # CI_RUNS_ON names the PC (#1307).
+    runs-on: ${{ vars.CI_RUNS_ON || 'ubuntu-24.04' }}
+    timeout-minutes: 5
+    steps:
+      - id: checkout
+        timeout-minutes: 2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/actions/changelog/
+            /.github/workflows/changelog.yml
+      - name: Report checkout failure
+        if: ${{ always() && steps.checkout.outcome != 'success' }}
+        run: |
+          echo "::error::Changelog checkout failed or exceeded 2 minutes; inspect the checkout log before retrying."
+          exit 1
+      # The PC's deployed image may have no python3 (#1307 R1): ci.yml's pinned
+      # CPython, word for word, on GITHUB_PATH for both steps below.
+      - name: Python
+        run: |
+          if ! command -v python3 > /dev/null; then
+            case "$(uname -m)" in
+              x86_64) sum=df15fe60d3ff55bf9dcf25824b5572756bb8816ff93865a273d3301d7066a8b7 ;;
+              aarch64) sum=578d9da1983463ffb0c8c98ab0da2f18177f44069328eb0af847860c1eb05c3e ;;
+              *) echo "no pinned Python for $(uname -m)" >&2; exit 1 ;;
+            esac
+            curl -fsSL --retry 3 -o "$RUNNER_TEMP/python.tar.gz" \
+              "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.13.18+20261026-$(uname -m)-unknown-linux-gnu-install_only_stripped.tar.gz"
+            echo "$sum  $RUNNER_TEMP/python.tar.gz" | sha256sum -c -
+            python="$(mktemp -d "$RUNNER_TEMP/python.XXXXXX")"
+            tar -xzf "$RUNNER_TEMP/python.tar.gz" -C "$python" --strip-components=1
+            export PATH="$python/bin:$PATH"
+            echo "$python/bin" >> "$GITHUB_PATH"
+          fi
+      - name: Synthetic pull requests
+        run: python3 -I .github/actions/changelog/test_check.py
+      - uses: ./.github/actions/changelog

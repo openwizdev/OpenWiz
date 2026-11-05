@@ -1,3 +1,14 @@
+//! AP11, the schema half: **one table of JSON**, each row read by the core
+//! and checked by the schema, and both must agree (Sol rounds 1 and 2,
+//! findings 3 and 4). The core reads only the exact shapes the schema
+//! allows: a kind, a reason or a state is a string from a fixed list; a
+//! readiness or an attachment is an object with exactly its keys.
+//!
+//! Each row is read from text (`serde_json::from_str`) and from a parsed
+//! value (`serde_json::from_value`), so both of serde_json's readers are
+//! covered. Every disagreement is collected before the test fails, so a
+//! red run lists them all.
+
 use openwiz_core::attachment::{AttachmentRef, FailReason, Kind, Readiness};
 use serde_json::{Value, json};
 
@@ -189,6 +200,24 @@ macro_rules! core_reads {
 }
 
 #[test]
+fn parity_contracts_preserve_all_original_cases() {
+    let cases: [(&str, fn()); 3] = [
+        ("a_key_given_twice_is_refused", a_key_given_twice_is_refused),
+        (
+            "the_core_reads_exactly_the_shapes_the_schema_allows",
+            the_core_reads_exactly_the_shapes_the_schema_allows,
+        ),
+        (
+            "the_label_lists_are_the_schemas_enums",
+            the_label_lists_are_the_schemas_enums,
+        ),
+    ];
+    for (name, proof) in cases {
+        eprintln!("TA2 case: parity::{name}");
+        proof();
+    }
+}
+
 fn the_core_reads_exactly_the_shapes_the_schema_allows() {
     let mut disagreements = Vec::new();
     let rows = table();
@@ -227,7 +256,6 @@ fn verdict(ok: bool) -> &'static str {
 
 /// Text the schema can't see (a parsed value has one entry per key): a key
 /// given twice is refused by the core.
-#[test]
 fn a_key_given_twice_is_refused() {
     let mut accepted = Vec::new();
     for text in [
@@ -249,7 +277,6 @@ fn a_key_given_twice_is_refused() {
 
 /// The core's label lists are the schema's enums, in the same order, so
 /// the strings each side accepts are one list.
-#[test]
 fn the_label_lists_are_the_schemas_enums() {
     let schema = crate::support::attachment_schema();
     let enum_of = |pointer: &str| -> Vec<String> {

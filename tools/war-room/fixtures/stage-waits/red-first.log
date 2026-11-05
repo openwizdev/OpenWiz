@@ -1,0 +1,103 @@
+EEEEEEE
+======================================================================
+ERROR: test_cli_prints_a_projected_provider_for_source_selection (__main__.StageWaits.test_cli_prints_a_projected_provider_for_source_selection)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 67, in setUp
+    self.adapter = module('stage_waits')
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 38, in module
+    spec.loader.exec_module(result)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: 'tools/war-room/stage_waits.py'
+
+======================================================================
+ERROR: test_default_fixture_counts_waits_and_ticket_linked_misses (__main__.StageWaits.test_default_fixture_counts_waits_and_ticket_linked_misses)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 67, in setUp
+    self.adapter = module('stage_waits')
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 38, in module
+    spec.loader.exec_module(result)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: 'tools/war-room/stage_waits.py'
+
+======================================================================
+ERROR: test_each_stage_at_below_and_above_its_loaded_limit (__main__.StageWaits.test_each_stage_at_below_and_above_its_loaded_limit)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 67, in setUp
+    self.adapter = module('stage_waits')
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 38, in module
+    spec.loader.exec_module(result)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: 'tools/war-room/stage_waits.py'
+
+======================================================================
+ERROR: test_projection_starts_nothing_and_has_no_authority (__main__.StageWaits.test_projection_starts_nothing_and_has_no_authority)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 67, in setUp
+    self.adapter = module('stage_waits')
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 38, in module
+    spec.loader.exec_module(result)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: 'tools/war-room/stage_waits.py'
+
+======================================================================
+ERROR: test_refused_or_missing_producer_evidence_is_grey_never_a_miss (__main__.StageWaits.test_refused_or_missing_producer_evidence_is_grey_never_a_miss)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 67, in setUp
+    self.adapter = module('stage_waits')
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 38, in module
+    spec.loader.exec_module(result)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: 'tools/war-room/stage_waits.py'
+
+======================================================================
+ERROR: test_saved_sample_and_page_carry_the_stage_group (__main__.StageWaits.test_saved_sample_and_page_carry_the_stage_group)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 67, in setUp
+    self.adapter = module('stage_waits')
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 38, in module
+    spec.loader.exec_module(result)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: 'tools/war-room/stage_waits.py'
+
+======================================================================
+ERROR: test_unknown_gated_and_stale_stay_unknown_even_under_tiny_limits (__main__.StageWaits.test_unknown_gated_and_stale_stay_unknown_even_under_tiny_limits)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/war-room/test_stage_waits.py", line 67, in setUp
+    self.adapter = module('stage_waits')
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "tools/war-room/test_stage_waits.py", line 38, in module
+    spec.loader.exec_module(result)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: 'tools/war-room/stage_waits.py'
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.002s
+
+FAILED (errors=7)

@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+"""Synthetic REST transport; no network or GitHub writes."""
+import hashlib
+import json
+import os
+from pathlib import Path
+import sys
+import time
+
+args = sys.argv[1:]
+world = json.loads(Path(os.environ["RELAY_WORLD"]).read_text())
+with open(os.environ["RELAY_CALLS"], "a") as log:
+    log.write(json.dumps({"tool": "gh", "args": args,
+                          "token": os.environ.get("GH_TOKEN")}) + "\n")
+if args[:2] == ["repo", "view"]:
+    assert args[3:] == ["--json", "isPrivate", "--jq", ".isPrivate"]
+    print("true" if world.get("private", True) else "false")
+    sys.exit(0)
+assert args[:4] == ["api", "--method", "GET", "--include"], args
+path = args[4]
+assert all(args[i] == "--header" for i in range(5, len(args), 2)), args
+headers = dict(v.split(": ", 1) for v in args[6::2])
+if path in world.get("barrier", []):
+    marker = Path(os.environ["RELAY_WORLD"]).parent / ("barrier-" + str(world["barrier"].index(path)))
+    marker.touch()
+    deadline = time.monotonic() + 3
+    while not all((marker.parent / ("barrier-" + str(i))).exists() for i in range(len(world["barrier"]))):
+        if time.monotonic() > deadline:
+            sys.exit(1)
+        time.sleep(0.01)
+if path == world.get("fail"):
+    print("synthetic private failure\nnever echo this", file=sys.stderr)
+    sys.exit(1)
+response = world["api"][path]
+if isinstance(response, dict) and "http_status" in response:
+    print(f'HTTP/2 {response["http_status"]}\n\n{{}}')
+    sys.exit(1)
+body = json.dumps(response)
+tag = '"' + hashlib.sha256(body.encode()).hexdigest() + '"'
+if headers.get("If-None-Match") == tag:
+    print("HTTP/2 304\n\n", end="")
+    # gh api 2.100.0 returns exit 1 for an HTTP 304 (observed read-only).
+    sys.exit(1)
+else:
+    print("HTTP/2 200")
+    print("ETag: " + tag)
+    if path in world.get("next", {}):
+        # GitHub advertises numeric repository routes even for named requests.
+        target = world["next"][path].replace("repos/example/synthetic/", "repositories/123/", 1)
+        print('Link: <https://api.github.com/' + target + '>; rel="next"')
+    print("\n" + body)

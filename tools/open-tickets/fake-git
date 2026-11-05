@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+"""Local Git publisher boundary; network URLs are never executed."""
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+
+args = sys.argv[1:]
+world_path = Path(os.environ['OPEN_TICKETS_WORLD'])
+world = json.loads(world_path.read_text())
+if len(args) < 5 or args[0] != '-C' or args[2:4] != ['-c', 'core.hooksPath=/dev/null']:
+    sys.exit('fake-git: prohibited prefix')
+command = args[4:]
+if (len(command) == 4 and command[:3] == ['config', '--local', 'credential.https://github.com.helper'] and
+        command[3].startswith('!') and command[3].endswith(' auth git-credential')):
+    r = subprocess.run(['git', *args], capture_output=True)
+    sys.exit(r.returncode)
+if command in [['init', '--bare', '-q'], ['pack-objects', '--stdout', '--revs'], ['unpack-objects', '-q']]:
+    # Exact local operations, with actual Git bytes and no network fallback.
+    r = subprocess.run(['git', *args], input=sys.stdin.buffer.read(), capture_output=True)
+    sys.stdout.buffer.write(r.stdout)
+    sys.stderr.buffer.write(r.stderr)
+    sys.exit(r.returncode)
+if (len(command) != 6 or command[:-2] != ['push', '--no-verify', '--no-follow-tags', '--recurse-submodules=no'] or
+        command[-2] != 'https://github.com/' + world['move']['target'] + '.git' or
+        not re.fullmatch('[0-9a-f]{40}:refs/heads/openwiz-move-[1-9][0-9]*-[0-9a-f]{32}', command[-1])):
+    sys.exit('fake-git: prohibited publication')
+commit, ref = command[-1].split(':')
+check = subprocess.run(['git', '-C', args[1], 'cat-file', '-t', commit], capture_output=True, text=True)
+if check.returncode or check.stdout != 'commit\n' or ref in world['refs']:
+    sys.exit('fake-git: absent commit or duplicate publication')
+if 'receiver' in world:
+    local = ['git', *args[:-2], world['receiver'], args[-1]]
+    r = subprocess.run(local, capture_output=True)
+    if r.returncode:
+        sys.exit('fake-git: local receiver refused')
+world['refs'][ref] = commit
+world['writes'] += 1
+world_path.write_text(json.dumps(world))
+if world['writes'] == world.get('stop_after_write'):
+    sys.exit('fake-git: planted lost response after effect')

@@ -2,11 +2,11 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:openwiz:schema:messaging:v1",
   "title": "openwiz.messaging.v1",
-  "description": "OpenWiz send reports, requests, previews, lookups and records. Unknown values carry reasons. Attachments are staged ids, Queue only. Fixture-tested; the separately recorded 0.0.3 PC test held its release-blocking claims with gaps; this combined export has not itself been live-tested. Receipt parsers cover documented shapes and synthetic copies of individually observed sent and Cloud queued receipts; those observations do not establish complete delivery acceptance.",
+  "description": "OpenWiz 0.0.3 send: the report printed by openwiz send --json (the root), the request, the effects and the send record ($defs); and the two read-only shapes, the preview (openwiz send <id> --preview --json) and the lookup (openwiz send <id> --op-id <op id> --check --json). Unknown values are {\"unknown\": reason}. Times are integer milliseconds since the Unix epoch. Receipt shapes behind it are documented for room-cli 0.43.1, not observed. B2 (ClosedWiz#15): a send may carry staged attachments (queue only; Steer with attachments is refused before anything). The report, the binding and the record name them only when there are some: absent means none, so every 0.0.3 shape is unchanged. The attachment shapes are the help's (room-cli v131), never observed.",
   "$ref": "#/$defs/report",
   "$defs": {
     "report": {
-      "description": "What openwiz send --json prints: one send's report. The requested mode and the reported delivery are separate fields. summary is '<Mode> requested \u00b7 <reported delivery>' in the core's words.",
+      "description": "What openwiz send --json prints: one send's report. The requested mode and the reported delivery are separate fields. summary is '<Mode> requested · <reported delivery>' in the core's words.",
       "type": "object",
       "required": [
         "schema",
@@ -37,7 +37,7 @@
           "$ref": "#/$defs/target"
         },
         "source": {
-          "description": "Null when no version was read for this op id: a refusal before the read, or a record written before .",
+          "description": "Null when no version was read for this op id: a refusal before the read, or a record written before #37.",
           "oneOf": [
             {
               "type": "null"
@@ -123,7 +123,7 @@
       }
     },
     "request": {
-      "description": "One send request, as the core's SendRequest takes it. Exactly one target. The web route's body  is {op_id, mode, text, resume_paused_queue, accept_possible_duplicate}: its target comes only from the path, never the body, and each flag is set only by its own explicit button.",
+      "description": "One send request, as the core's SendRequest takes it. Exactly one target. The web route's body (#9, sheet U8) is {op_id, mode, text, resume_paused_queue, accept_possible_duplicate}: its target comes only from the path, never the body, and each flag is set only by its own explicit button.",
       "type": "object",
       "required": [
         "target",
@@ -145,13 +145,16 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 16384,
-          "description": "Text only: not empty, not only whitespace, no NUL, at most 16384 bytes of UTF-8 (the core counts bytes; maxLength here counts characters, so it is only an outer bound)."
+          "maxUtf8Bytes": 16384,
+          "pattern": "^[^\\u0000]*[^\\u0000\\u0009-\\u000d\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000][^\\u0000]*$",
+          "description": "Text only: not empty, not only whitespace, no NUL, at most 16384 bytes of UTF-8 (maxUtf8Bytes is OpenWiz's companion keyword; standard validators enforce only the character bound)."
         },
         "attachments": {
           "type": "array",
           "items": {
             "$ref": "#/$defs/attachment_id"
           },
+          "uniqueItems": true,
           "description": "B2: staged attachment ids, each at most once, in the owner's order; queue only. Absent or empty means none. The web route takes none until B3."
         },
         "op_id": {
@@ -228,7 +231,7 @@
           ]
         },
         "source": {
-          "description": "Absent from records written before .",
+          "description": "Absent from records written before #37.",
           "oneOf": [
             {
               "type": "null"
@@ -516,7 +519,7 @@
       }
     },
     "source": {
-      "description": "The provider and the version this send read, as the reads report it in openwiz.inventory.v1 . tested_version is the version last live-tested: evidence, not a requirement.",
+      "description": "The provider and the version this send read (#37: the version is never a gate). tested_version is send's own: the room-cli version a live send last passed with, or \"\" while none has (#200). It is never the reads' live-tested version in openwiz.inventory.v1. version_tested is true only when version is known and equals it. Evidence, not a requirement.",
       "type": "object",
       "required": [
         "name",
@@ -1115,7 +1118,7 @@
       "type": "string",
       "minLength": 1,
       "maxLength": 64,
-      "description": "A staged attachment's id (B1, the implementation): 1 to 64 ASCII letters, digits, _ or -, starting with a letter or digit (the core checks the characters)."
+      "description": "A staged attachment's id (B1, ClosedWiz#14): 1 to 64 ASCII letters, digits, _ or -, starting with a letter or digit (the core checks the characters)."
     },
     "prompt_attachment": {
       "description": "One attachment of a send, as the op id binds it and the record keeps it (B2): never its bytes, never the owner's original file name.",

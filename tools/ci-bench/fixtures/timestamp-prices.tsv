@@ -1,0 +1,6 @@
+runner_kind	compute_usd_per_minute	platform_usd_per_minute	source_url	verified_on
+self-hosted	0	0	https://docs.github.com/en/billing/concepts/product-billing/github-actions	2026-11-05
+github-hosted-slim	0.002	0	https://docs.github.com/en/billing/reference/actions-runner-pricing	2026-11-05
+github-hosted	0.006	0	https://docs.github.com/en/billing/reference/actions-runner-pricing	2026-11-05
+blacksmith-2vcpu-ubuntu-2404	0.004	0	https://www.blacksmith.sh/pricing	2026-11-05
+unknown	unknown	unknown	https://docs.github.com/en/rest/actions/workflow-jobs	2026-11-05

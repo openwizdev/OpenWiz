@@ -1,0 +1,48 @@
+{
+  padding: 0,
+  measured: [ 7744, 119948, 239557 ],
+  expected: [ 7745, 119972.95, 239606.95 ]
+}
+{
+  padding: 1000,
+  measured: [ 7744, 119948, 239557 ],
+  expected: [ 8745, 120972.95, 240606.95 ]
+}
+✖ P4 measures refresh reply bytes and detects 1000 extra bytes per answer (13695.474092ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 13870.954642
+
+✖ failing tests:
+
+test at test/unit/v11-refresh.test.ts:15:1
+✖ P4 measures refresh reply bytes and detects 1000 extra bytes per answer (13695.474092ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+
+    [
+  +   0,
+  +   0,
+  +   0
+  -   1000,
+  -   1000,
+  -   1000
+    ]
+
+      at TestContext.<anonymous> (file:///code/ClosedWiz/apps/web/test/unit/v11-refresh.test.ts:41:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 0, 0, 0 ],
+    expected: [ 1000, 1000, 1000 ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
