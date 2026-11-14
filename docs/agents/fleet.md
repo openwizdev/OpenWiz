@@ -4,6 +4,8 @@ Every fleet in this project starts from these settings. Development work, ticket
 
 The fleet skills read this file instead of naming any project's agents, commands or rules. Each value names its source; when a source changes, run the `setup` skill again (or edit the line by hand) so the two agree. Keep the machine-read table headings, columns and agent rows unchanged.
 
+Orchestrator: Claude Code, Opus 5.5, High (`--provider claude-code --model claude-opus-5-5 --reasoning-level high`). Source: Jake, 2026-11-13: orchestration stays with Claude at High effort ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6839863170)).
+
 ## Builder
 
 One per ticket. Every ticket without an exact `polish`, `huntr` or `proposal` label uses this table. It builds on its own branch and never reviews or merges.
@@ -12,29 +14,29 @@ One per ticket. Every ticket without an exact `polish`, `huntr` or `proposal` la
 | --- | --- | --- |
 | Harness | Claude Code | `--provider claude-code` |
 | Model | Opus 5.5 | `--model claude-opus-5-5` |
-| Effort | High | `--reasoning-level high` |
+| Effort | Medium | `--reasoning-level medium` |
 
 ## Builder for small tickets
 
-Tickets with any of the exact labels `polish`, `huntr` or `proposal` use this table. The rules are complementary; ambiguous or unmatched classifications use `## Builder`. Small tickets use Codex Sol 6.1, High; everything else uses Claude Code, Opus 5.5, High.
+Tickets with any of the exact labels `polish`, `huntr` or `proposal` use this table. The rules are complementary; ambiguous or unmatched classifications use `## Builder`. Both ticket classes use Claude Code, Opus 5.5, Medium.
 
 | Setting | Value | `room-cli thread spawn` flag |
 | --- | --- | --- |
-| Harness | Codex | `--provider codex` |
-| Model | Sol 6.1 | `--model gpt-6.1-sol` |
-| Effort | High | `--reasoning-level high` |
+| Harness | Claude Code | `--provider claude-code` |
+| Model | Opus 5.5 | `--model claude-opus-5-5` |
+| Effort | Medium | `--reasoning-level medium` |
 
-Source: Jake, 2026-11-05: default builders use Claude Code, Opus 5.5, High, with Haiku helpers; the other family reviews ([private record](https://github.com/jparker2006/ClosedWiz/issues/1275#issuecomment-6704671951)).
-
-Small-ticket override: Jake, 2026-11-06: small or mechanical tickets use Codex Sol 6.1, High; the main builder profile remains Opus 5.5, High ([private record](https://github.com/jparker2006/ClosedWiz/issues/1275#issuecomment-6704671951)).
+Source: Jake, 2026-11-13: both builder profiles use Claude Code, Opus 5.5, Medium; Codex Sol 6.1, High reviews Claude-built work ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6839863170)).
 
 Codex service tier: builders, reviewers, helpers and hunters use Sol 6.1 at High, or XHigh for hard work, at the default service tier. Do not enable fast mode; omit `--service-tier` overrides. Source: Jake, 2026-11-07: use Sol High or XHigh and turn off Codex fast mode, superseding the 2026-11-04 fast-mode rule ([private record](https://github.com/jparker2006/ClosedWiz/issues/1988#issuecomment-6712108296)). (A sentence, not a table row: the fleet tick's planner reads these tables strictly.)
 
 **Rust dispatch limitation (#1465):** `AgentRule` and start `Settings` have no service-tier field, and the `ThreadSpawn` argument builder emits no service-tier argument. Rust-dispatched Codex starts depend on endpoint defaults. Effective tiers of existing threads are unverified; this settings change does not establish their tier or change them.
 
-**Claude plan-limit fallback (#1196):** only a Claude builder with a verified branch and a positively reported Claude usage-limit stop gets one `restart` due item, using `## Builder for small tickets` and keeping that branch. With these settings, the restart selects Codex Sol 6.1, High, matching Jake's FB1 approval on [#1330](https://github.com/jparker2006/ClosedWiz/issues/1330#issuecomment-6673930927). This restores FB1's selection but does not finish #1330's separately approved dedicated fallback table and once-per-ticket restart proof. The tick records `launch-fleet: builder fallback due, branch <branch>` before printing it; the orchestrator performs the restart. That record consumes the ticket's single fallback; a dry run writes nothing. A reviewer never takes this fallback: its review waits for the selected family. A recorded builder replacement retains earlier code on the branch, so its family remains conflicting for new reviewer assignments. First and fresh reviews yield `look`, without starting a reviewer; the orchestrator or Jake chooses the reviewer explicitly.
+**Claude plan-limit fallback (#1196):** only a Claude builder with a verified branch and a positively reported Claude usage-limit stop gets one `restart` due item, using `## Builder for small tickets` and keeping that branch. With the 2026-11-13 profiles, that table selects Claude Code, Opus 5.5, Medium, so it no longer supplies the Codex fallback approved in [#1330](https://github.com/jparker2006/ClosedWiz/issues/1330#issuecomment-6673930927). The orchestrator must hold the restart for an explicit fallback choice; #1330's dedicated fallback table and once-per-ticket restart proof remain unfinished. The tick records `launch-fleet: builder fallback due, branch <branch>` before printing it; the orchestrator handles the restart after the fallback choice is resolved. That record consumes the ticket's single fallback; a dry run writes nothing. A reviewer never takes this fallback: its review waits for the selected family. A recorded builder replacement retains earlier code on the branch, so its family remains conflicting for new reviewer assignments. First and fresh reviews yield `look`, without starting a reviewer; the orchestrator or Jake chooses the reviewer explicitly.
 
 ## Reviewer for Claude-built
+
+Source: Jake, 2026-11-13: Claude-built pull requests receive Codex Sol 6.1 reviews at High effort ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6839863170)). Reviewers use the default service tier with fast mode off; the Codex service-tier rule above still applies.
 
 | Setting | Value | `room-cli thread spawn` flag |
 | --- | --- | --- |
