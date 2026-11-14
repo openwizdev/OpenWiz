@@ -69,6 +69,7 @@ flowchart LR
 - **Planning at factory scale, parked (Jake, 2026-11-01):** one continuous plan graph planned far ahead, factory loops, and many agents planning in parallel while Jake only decides; a first `wayfind` map when its time comes. Jake placed this beyond wayfind, possibly after loops, and parked it while clearer work only one move ahead remains. No number (plan-and-ship grill, P1; [private record](https://github.com/jparker2006/ClosedWiz/issues/2299#issuecomment-6765399493)).
 - **Way later:** other kinds of agents (Claude desktop, Codex and others), then dot and PACP; Jake kept this expansion behind getting the foundations right ([private record](https://github.com/jparker2006/ClosedWiz/issues/2299#issuecomment-6765399493)).
 - **A second real project** is a test for a much later version.
+- **OpenWiz 0.1.0, the first release a stranger can use (wayfind map, Jake, 2026-11-13):** the map is a private-repository issue (wayfind:map, number 2501). Cloudroom-only, with the cockpit and WizBar as its two big plugins. Its versions get numbered from the map.
 
 ## Sources
 
