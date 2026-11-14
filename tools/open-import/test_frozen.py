@@ -252,10 +252,14 @@ class Workflow(unittest.TestCase):
         return [step for step in re.split(r'^      - ', jobs, flags=re.M)[1:]]
 
     def checkout(self, step, workspace):
-        # Each checkout's declared ref: the base's sha, or the change (the
-        # default ref of a pull_request run is the change as it would land).
+        # Resolve the declared PR-event expression, including a literal main.
+        # An omitted ref defaults to the change as it would land.
         ref = re.search(r'^          ref: \$\{\{ (.+) \}\}$', step, re.M)
-        commit = self.base if ref and 'base' in ref[1] else self.head
+        values = {'github.event.pull_request.base.sha': self.base,
+                  'github.event.pull_request.head.sha': self.head,
+                  'github.event.merge_group.base_sha': None,
+                  'github.event.merge_group.head_sha': None, "'main'": 'main'}
+        commit = next((values[v] for v in ref[1].split(' || ') if values[v]), None) if ref else self.head
         path = re.search(r'^          path: (.+)$', step, re.M)
         target = workspace / path[1] if path else workspace
         subprocess.run(['git', 'clone', '-q', '--no-checkout', str(self.repo.root), str(target)], check=True)
@@ -267,6 +271,29 @@ class Workflow(unittest.TestCase):
                                   '--repo', str(self.repo.root), '--base=' + self.base, '--head=HEAD'],
                                  capture_output=True, text=True, env={**os.environ, 'FROZEN_SINCE': SINCE})
         self.assertEqual(planted.returncode, 0, planted.stdout + planted.stderr)
+        result = self.run_workflow()
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        listed = result.stdout.split('Touched frozen paths:\n', 1)[1].split('\n\n', 1)[0].splitlines()
+        self.assertEqual(listed, ['crates/core/src/lib.rs', 'tools/open-import/frozen.py'])
+        self.assertIn("#1287's exception covers deleted frozen paths only", result.stdout)
+
+    def test_an_older_pr_uses_current_main_tools_but_only_its_own_diff(self):
+        self.repo.git('checkout', '-q', 'main')
+        for name in self.TOOLS:
+            self.repo.git('rm', 'tools/open-import/' + name)
+        self.base = self.repo.commit('synthetic base before trusted tools existed')
+        for name in self.TOOLS:
+            self.repo.write('tools/open-import/' + name, (HERE / name).read_text())
+        self.repo.write('crates/core/src/main_only.rs')
+        self.repo.commit('synthetic main adds tools and unrelated frozen code')
+        self.repo.git('checkout', '-q', '-b', 'older-pr', self.base)
+        self.repo.write('private/notes.md')
+        self.head = self.repo.commit('synthetic private-only PR')
+        result = self.run_workflow()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('no frozen path touched (1 touched)', result.stdout)
+
+    def run_workflow(self):
         workspace = self.root / 'workspace'
         workspace.mkdir()
         env = {**{k: v for k, v in os.environ.items() if not k.startswith('GIT_')},
@@ -288,10 +315,7 @@ class Workflow(unittest.TestCase):
             result = subprocess.run(['bash', '-e', '-c', body], cwd=workspace, env=env,
                                     capture_output=True, text=True)
             self.assertIn(result.returncode, (0, 1), result.stdout + result.stderr)
-        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-        listed = result.stdout.split('Touched frozen paths:\n', 1)[1].split('\n\n', 1)[0].splitlines()
-        self.assertEqual(listed, ['crates/core/src/lib.rs', 'tools/open-import/frozen.py'])
-        self.assertIn("#1287's exception covers deleted frozen paths only", result.stdout)
+        return result
 
 
 class SameAsImporter(unittest.TestCase):

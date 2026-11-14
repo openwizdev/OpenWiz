@@ -5,7 +5,8 @@
 # or queue ref, is excepted.
 #
 # R1: the change never supplies the checker. pull_request_target runs this file
-# as it is on main, and every step runs the base's own tools from .frozen-tools;
+# as it is on main, and every step runs main's tools from .frozen-tools (a merge
+# group uses its base);
 # the change is checked out only as Git data in candidate/, never run, with no
 # credentials kept. A merge group's PRs already passed this base-run check, and
 # it refuses any change to this file or the tools, which are frozen paths.
@@ -34,11 +35,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      # The trusted tools: the base's checker, its proofs and this workflow.
+      # Current main's tools, even when the PR's base predates this check.
+      # A merge group uses its base. Never run tools supplied by the PR.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          ref: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          ref: ${{ github.event.merge_group.base_sha || 'main' }}
           path: .frozen-tools
           filter: blob:none
           sparse-checkout-cone-mode: false
@@ -58,7 +60,7 @@ jobs:
           sparse-checkout: |
             /tools/open-import/paths.json
       # The list is judged at the base. When the change edits it, the base's
-      # blob is not in the blobless clone and lazy fetch is off: add the base's
+      # blob is not in the blobless clone and lazy fetch is off: add main's
       # copy by content. Only that exact blob can satisfy the check's read.
       - name: The base's carriage list
         run: git -C candidate hash-object -w --no-filters "$PWD/.frozen-tools/tools/open-import/paths.json"

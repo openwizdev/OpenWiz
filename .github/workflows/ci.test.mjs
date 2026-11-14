@@ -122,9 +122,9 @@ test('the carriage guard runs on pull requests and merge groups and fails closed
 });
 
 // #2931: the frozen old code check's own always-on workflow, frozen.yml.
-// R1: GitHub runs the base's frozen.yml for pull_request_target, and every
-// step runs the base's checker; the change is read only as Git data.
-test('frozen.yml runs the base\'s frozen old code check on GitHub-hosted runners for every PR and merge group to main', () => {
+// Trusted tools come from current main (the base for a merge group), while
+// the PR's own base-to-head diff is read only as Git data.
+test('frozen.yml runs main\'s frozen old code check on GitHub-hosted runners for every PR and merge group to main', () => {
   const frozen = readFileSync(new URL('./frozen.yml', import.meta.url), 'utf8');
   const on = frozen.match(/^on:\n((?:  .*\n|\n)*)/m)?.[1];
   assert.match(on, /^  pull_request_target:\n    branches: \[main\]\n/m);
@@ -147,7 +147,7 @@ test('frozen.yml runs the base\'s frozen old code check on GitHub-hosted runners
     assert.match(checkout, /^          persist-credentials: false$/m);
     assert.match(checkout, /^          filter: blob:none$/m);
   }
-  // The trusted tools: the base's own checker, its proofs and this workflow.
+  // The trusted tools: main's checker, its proofs and this workflow.
   assert.match(steps[0], /^          path: \.frozen-tools$/m);
   assert.match(steps[0], /^          sparse-checkout: \|\n            \/tools\/open-import\/\n            \/\.github\/workflows\/frozen\.yml\n/m);
   // The change as data: full history, no tool of its own checked out.
@@ -162,7 +162,7 @@ test('frozen.yml runs the base\'s frozen old code check on GitHub-hosted runners
   const pr = { event_name: 'pull_request_target', event: { pull_request: { base: { sha: 'a'.repeat(40) }, head: { sha: 'd'.repeat(40) }, title: '#1287: t' } } };
   const group = { event_name: 'merge_group', event: { merge_group: { base_sha: 'b'.repeat(40), head_sha: 'e'.repeat(40), head_ref: ref } } };
   for (const [github, base, head] of [[pr, 'a'.repeat(40), 'd'.repeat(40)], [group, 'b'.repeat(40), 'e'.repeat(40)]]) {
-    assert.equal(evaluate(expression(steps[0], 'ref'), github), base, github.event_name);
+    assert.equal(evaluate(expression(steps[0], 'ref'), github), github === pr ? 'main' : base, github.event_name);
     assert.equal(evaluate(expression(steps[1], 'ref'), github), head, github.event_name);
     assert.equal(evaluate(expression(steps[3], 'BASE_SHA'), github), base, github.event_name);
     assert.equal(evaluate(expression(steps[3], 'HEAD_SHA'), github), head, github.event_name);
@@ -175,7 +175,7 @@ test('frozen.yml runs the base\'s frozen old code check on GitHub-hosted runners
   assert.equal(evaluate(expression(steps[3], 'QUEUE_REF'), group), ref);
   assert.match(steps[3], /^          FROZEN_SINCE: \$\{\{ vars\.CLOSEDWIZ_FROZEN_SINCE \}\}$/m);
   assert.match(steps[3], /^        run: \|\n          python3 -I \.frozen-tools\/tools\/open-import\/test_frozen\.py\n          python3 -I \.frozen-tools\/tools\/open-import\/frozen\.py --repo=candidate "--base=\$BASE_SHA" "--head=\$HEAD_SHA"$/m);
-  // Nothing from the change is run: every script runs only the base's tools.
+  // Nothing from the change is run: every script runs only the trusted tools.
   for (const run of frozen.matchAll(/^        run: .*(?:\n {10}.*)*/gm)) {
     for (const line of run[0].split('\n').filter((l) => /python3|\bsh\b|node/.test(l))) {
       assert.match(line, /\.frozen-tools\//, line);
