@@ -798,6 +798,26 @@ class Candidate(World):
         self.assertEqual(self.evaluate()[0], 0)
         self.assertEqual(self.writes(), [])
 
+    def test_a_run_whose_ci_job_was_skipped_is_not_evidence(self):
+        """#18: since main pushes run only main-light, the newest ci.yml run at a
+        main commit skips its `ci` job; the older merge-queue run is the evidence."""
+        self.ready()
+        path = f'repos/{PUBLIC}/commits/{self.head}/check-runs?per_page=100'
+        flows = f'repos/{PUBLIC}/actions/runs?head_sha={self.head}&per_page=100'
+        runs, workflows = self.world[path][0]['check_runs'], self.world[flows][0]['workflow_runs']
+        queued = dict(workflows[0], event='merge_group')
+        pushed = dict(workflows[0], id=604, event='push', check_suite_id=504, created_at='2026-11-20T01:00:00Z')
+        skipped = dict(runs[0], id=14, conclusion='skipped', check_suite={'id': 504})
+        self.world[path] = [{'check_runs': runs + [skipped]}]
+        self.world[flows] = [{'workflow_runs': [queued, pushed, workflows[1]]}]
+        self.save()
+        self.assertEqual(self.evaluate()[0], 0)
+        # Every run skipped its ci job: no run concluded ci, so nothing is evidence.
+        self.world[path] = [{'check_runs': [dict(runs[0], conclusion='skipped'), skipped, runs[1]]}]
+        self.save()
+        self.assertEqual(self.blocked(self.publish(), 'ci_missing')['reasons'], ['ci_missing'])
+        self.assertEqual(self.writes(), [])
+
     def test_r1_products_pass_only_through_rl4s_verifiers_of_the_staged_archives(self):
         self.ready()
         self.assertEqual(self.evaluate()[0], 0)
