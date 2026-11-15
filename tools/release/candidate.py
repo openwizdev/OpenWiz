@@ -895,6 +895,16 @@ def required_check(gate, commit):
     if not trusted or any(not isinstance(r.get('app'), dict) or r['app'].get('slug') != 'github-actions'
                           for r in runs):
         return ['untrusted'], None
+
+    def skipped(workflow):
+        # #18: a run whose own check of this name was only skipped (a main push's
+        # main-light run) is not evidence; the merge-queue run at that commit is.
+        own = [r for r in runs if isinstance(r.get('check_suite'), dict)
+               and r['check_suite'].get('id') == workflow.get('check_suite_id')]
+        return bool(own) and all(r.get('status') == 'completed' and r.get('conclusion') == 'skipped' for r in own)
+    trusted = [w for w in trusted if not skipped(w)]
+    if not trusted:
+        return ['missing'], None
     latest = max(trusted, key=lambda w: (str(w.get('created_at')), w.get('run_attempt') or 0))
     own = [r for r in runs if isinstance(r.get('check_suite'), dict)
            and r['check_suite'].get('id') == latest.get('check_suite_id')]

@@ -218,7 +218,9 @@ its own reads at every gated effect; no caller receipt or comment counts for the
 
 - **D1, `ci` and `privacy`:** GitHub Actions check runs at the exact public commit,
   belonging to the latest run of the trusted workflow file (`.github/workflows/ci.yml`,
-  `.github/workflows/privacy.yml`) at that commit, all `success`.
+  `.github/workflows/privacy.yml`) at that commit, all `success`. A run whose own
+  check of that name was only skipped (a main push's `main-light` run) is not
+  evidence and is ignored; with no other run, the gate is missing.
 - **D2, artifact privacy:** every archive is staged through the installer's own checks,
   then the existing O3 checker scans the staged runtime and web files with the
   operator's private `--literals` file. Any finding refuses.
