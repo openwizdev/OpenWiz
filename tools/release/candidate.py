@@ -18,7 +18,8 @@ waits: missing evidence returns `blocked` with its reasons, and the next event
 runs it again. Decisions are read from their actual private comments, never
 from a caller's flag. Publication creates only the annotated tag and the
 immutable release with its complete assets, from a commit already on public
-`main`, and reads every byte back. An interrupted write is never repeated.
+`main` or on the protected public `release-<version>` branch, and reads every
+byte back. An interrupted write is never repeated.
 """
 import argparse
 import datetime
@@ -385,7 +386,7 @@ def check_source(repo, body, scratch):
         remote_git(work, 'cat-file', '-e', source['commit'] + '^{commit}')
         remote_git(work, 'merge-base', '--is-ancestor', source['commit'], 'HEAD')
     except Refused:
-        block('not_on_public_main')
+        release_source(work, body)
     try:
         remote_git(work, 'merge-base', '--is-ancestor', ANCHOR, source['commit'])
     except Refused:
@@ -393,6 +394,40 @@ def check_source(repo, body, scratch):
     if remote_git(work, 'rev-parse', source['commit'] + '^{tree}').decode().strip() != source['tree']:
         block('tree_mismatch')
     return work
+
+
+def release_heads(work):
+    """#964: every public `release-*` branch head, fetched into `refs/release/`."""
+    remote_git(work, 'fetch', '-q', '--no-tags', remote_url(PUBLIC), '+refs/heads/release-*:refs/release/release-*')
+    return remote_git(work, 'for-each-ref', '--format=%(refname)', 'refs/release/').decode().split()
+
+
+def release_source(work, body):
+    """#964: a commit not on public main is accepted only at or below the head of
+    the public `release-<version>` branch, exactly the candidate's version, while
+    that branch is protected (D3's ruleset read)."""
+    commit, version = body['source']['commit'], body.get('release_version')
+    if not isinstance(version, str) or VERSION.fullmatch(version) is None:
+        block('not_on_public_main')
+    try:
+        heads = release_heads(work)
+    except Refused:
+        block('release_branch_unreadable')
+    own = 'refs/release/release-' + version
+
+    def reaches(head):
+        try:
+            remote_git(work, 'merge-base', '--is-ancestor', commit, head)
+            return True
+        except Refused:
+            return False
+    if own not in heads or not reaches(own):
+        if any(reaches(head) for head in heads if head != own):
+            block('release_branch_wrong_version')
+        block('not_on_release_branch' if own in heads else 'not_on_public_main')
+    reasons = release_protection('refs/heads/release-' + version)
+    if reasons:
+        block(*reasons)
 
 
 def check_versions(body, cwd, own=None):
@@ -1023,9 +1058,10 @@ def ref_matches(pattern, ref, default):
     return re.fullmatch('[^/]*'.join(map(re.escape, pattern.split('*'))), ref) is not None
 
 
-def ruleset_applies(detail, default):
-    """D3: an active branch ruleset whose include matches the default branch and
-    whose exclude does not. A ref matching any exclude is outside the ruleset."""
+def ruleset_applies(detail, default, ref=None):
+    """D3: an active branch ruleset whose include matches `ref` (the default
+    branch unless named) and whose exclude does not. A ref matching any exclude
+    is outside the ruleset."""
     if detail.get('enforcement') != 'active' or detail.get('target') != 'branch':
         return False
     conditions = detail.get('conditions')
@@ -1033,9 +1069,38 @@ def ruleset_applies(detail, default):
     names = conditions['ref_name']
     require(isinstance(names, dict) and set(names) <= {'include', 'exclude'}
             and all(isinstance(names.get(k, []), list) for k in ('include', 'exclude')), 'unevaluable ruleset conditions')
-    ref = 'refs/heads/' + default
+    ref = ref or 'refs/heads/' + default
     return (any(ref_matches(p, ref, default) for p in names.get('include', []))
             and not any(ref_matches(p, ref, default) for p in names.get('exclude', [])))
+
+
+def branch_rulesets(ref=None):
+    """D3's read: the public repository, and every active branch ruleset that
+    applies to `ref` (its default branch unless named). Anything unreadable raises."""
+    meta = gh_json(f'repos/{PUBLIC}')
+    sets = [gh_json(f"repos/{PUBLIC}/rulesets/{r['id']}") for r in pages(f'repos/{PUBLIC}/rulesets?per_page=100')]
+    default = meta.get('default_branch')
+    require(isinstance(default, str) and re.fullmatch(r'[A-Za-z0-9._/-]+', default) is not None,
+            'unreadable default branch')
+    return meta, [d for d in sets if ruleset_applies(d, default, ref)]
+
+
+def required_contexts(rulesets):
+    return {c.get('context') for d in rulesets for rule in d.get('rules') or [] if rule.get('type') ==
+            'required_status_checks' for c in (rule.get('parameters') or {}).get('required_status_checks') or []}
+
+
+def release_protection(ref):
+    """#964: the release branch's rulesets require ci and privacy, have no bypass
+    actors, and block force-pushes and deletion; anything unreadable refuses."""
+    try:
+        _, applied = branch_rulesets(ref)
+        types = {rule.get('type') for d in applied for rule in d.get('rules') or []}
+        ok = (applied and {'ci', 'privacy'} <= required_contexts(applied) and {'non_fast_forward', 'deletion'} <= types
+              and all(d.get('bypass_actors') == [] for d in applied))
+    except (Blocked, Refused, ValueError, AttributeError, KeyError, TypeError):
+        return ['release_ruleset_unreadable']
+    return [] if ok else ['release_branch_unprotected']
 
 
 def cutover_reasons():
@@ -1045,15 +1110,9 @@ def cutover_reasons():
 
         def held(issue):
             return any(isinstance(label, dict) and label.get('name') == 'held' for label in issue.get('labels', []))
-        meta = gh_json(f'repos/{PUBLIC}')
         immutable = gh_json(f'repos/{PUBLIC}/immutable-releases')
-        sets = [gh_json(f"repos/{PUBLIC}/rulesets/{r['id']}") for r in pages(f'repos/{PUBLIC}/rulesets?per_page=100')]
-        default = meta.get('default_branch')
-        require(isinstance(default, str) and re.fullmatch(r'[A-Za-z0-9._/-]+', default) is not None,
-                'unreadable default branch')
-        main = [d for d in sets if ruleset_applies(d, default)]
-        contexts = {c.get('context') for d in main for rule in d.get('rules') or [] if rule.get('type') ==
-                    'required_status_checks' for c in (rule.get('parameters') or {}).get('required_status_checks') or []}
+        meta, main = branch_rulesets()
+        contexts = required_contexts(main)
         ok = (o17.get('state') == 'closed' and o17.get('state_reason') == 'completed' and not held(o17)
               and not held(o16) and same_name(meta.get('full_name'), PUBLIC) and meta.get('visibility') == 'public'
               and meta.get('archived') is False and immutable.get('enabled') is True and main
@@ -1451,6 +1510,10 @@ def publish(args):
                 work = Path(scratch) / 'main.git'
                 remote_git(scratch, 'clone', '-q', '--bare', '--no-local', '--no-tags', '--single-branch',
                            '--branch', 'main', remote_url(PUBLIC), work)
+                try:
+                    remote_git(work, 'cat-file', '-e', body['source']['commit'] + '^{commit}')
+                except Refused:
+                    release_heads(work)  # #964: the commit reasons_for just found on its release branch
                 name, email = tagger(work, body['source']['commit'])
                 # The annotated tag object is made locally first, so the attempt persists it as
                 # the intended effect; only that object settles the push.

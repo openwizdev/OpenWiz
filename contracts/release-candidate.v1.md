@@ -33,7 +33,7 @@ commits/trees. Hashes establish byte integrity, not a signed publisher identity.
 
 | Candidate field | Required meaning |
 | --- | --- |
-| `source` | Exactly `openwizdev/OpenWiz`, selected commit and tree, descending from the contract's fixed public anchor through its own history. Read the remote identity, tree and ancestry; a matching tree copied from private history is insufficient. |
+| `source` | Exactly `openwizdev/OpenWiz`, selected commit and tree, descending from the contract's fixed public anchor through its own history, and reachable from public `main` or from the protected public `release-<version>` branch of exactly the release version (#964). Read the remote identity, tree and ancestry; a matching tree copied from private history is insufficient. |
 | `build_id` | SHA-256 of the immutable build-provenance record identifying the clean source job(s), commands and exact complete product inventories; not an arbitrary label chosen while packaging. |
 | `release_version` | Highest included version; the tag is `v<release_version>`. |
 | `included_versions` | Unique versions, newest first by numeric minor/patch, each newer than all already published versions. Each retains one dated changelog section and a nonempty list of unique promise IDs used by the smoke kit. Single-version patches use the same shape. |

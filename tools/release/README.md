@@ -184,7 +184,8 @@ cut at the candidate commit.
 
 **Prepare** seals the agent-assembled candidate body. It refuses a non-public
 repository or origin, an anchor other than the fixed public anchor, a commit
-that is not on the public remote's own `main`, a tree mismatch, versions out
+that is not on the public remote's own `main` (`not_on_public_main`) or on its
+protected `release-<version>` branch (#964), a tree mismatch, versions out
 of order or not newer than every published `v*` tag, malformed or range
 headings, changed section/notes bytes or placeholders, and a commit
 `CHANGELOG.md` that is not exactly the newest published tag's changelog plus
@@ -193,6 +194,17 @@ inventory, broken alias, checksum or `SHA256SUMS` links, a manifest failing
 the install contract and a missing risk classification. A changed candidate
 keeps the original ship time and decision records, drops every
 candidate-bound receipt and refuses once a publication write has started.
+
+A commit not on public `main` is accepted only at or below the head of the
+public `release-<version>` branch named for exactly the candidate's version,
+and only while D3's ruleset read (default-branch resolution, include and
+exclude patterns) finds that branch covered by active rulesets that require
+`ci` and `privacy`, have no bypass actors, and block force-pushes and deletion.
+Prepare, evaluate and publish each refuse `release_branch_wrong_version` (the
+commit is only on another version's branch), `not_on_release_branch` (the
+branch exists but does not reach the commit), `release_branch_unprotected`,
+`release_branch_unreadable` (the branch fetch failed) and
+`release_ruleset_unreadable` (an unreadable or unevaluable ruleset).
 Preparing the same candidate again (the same `candidate_sha256`) saves any
 `entry.json` or `classification.json` that changed, after the same
 validation, and reports `"unchanged": false`; an identical repeat reports
