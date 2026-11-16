@@ -13,9 +13,9 @@ OIDC token (`id-token: write`, which ci.yml already has for cache.sh) whose
 audience is bound to the map's SHA-256 (`sign`), and keeps both in GitHub's
 cache. GitHub signs the token: the repository, ref, event, workflow and
 commit of the run that asked. `select` uses a map only if that signature is
-GitHub's (its published keys), for exactly this map, from a `push` or
-`schedule` run of this repository's `.github/workflows/ci.yml` on
-`refs/heads/main`, at the map's own commit, and that commit is an ancestor
+GitHub's (its published keys), for exactly this map, from a `push`,
+`schedule` or `workflow_dispatch` (#783) run of this repository's
+`.github/workflows/ci.yml` on `refs/heads/main`, at the map's own commit, and that commit is an ancestor
 of the tested one. A pull request's run can ask for a token too, but GitHub
 signs its ref (`refs/pull/N/merge`) and event, so nothing it keeps passes.
 
@@ -56,7 +56,7 @@ ISSUER = 'https://token.actions.githubusercontent.com'
 JWKS_URL = ISSUER + '/.well-known/jwks'
 WORKFLOW = '.github/workflows/ci.yml'
 MAIN = 'refs/heads/main'
-TRUSTED_EVENTS = ('push', 'schedule')
+TRUSTED_EVENTS = ('push', 'schedule', 'workflow_dispatch')
 AUDIENCE = 'closedwiz-ci-select-map-'
 # PKCS #1 v1.5's DigestInfo prefix for SHA-256 (RFC 8017, section 9.2).
 DIGEST_INFO = bytes.fromhex('3031300d060960864801650304020105000420')
@@ -140,7 +140,7 @@ def verify(data, token, keys, repo, now=None):
         if c.get(key) != value:
             raise Untrusted(f'{key} is {c.get(key)!r}, not {value!r}')
     if c.get('event_name') not in TRUSTED_EVENTS:
-        raise Untrusted(f'event_name is {c.get("event_name")!r}, not a push or the nightly run')
+        raise Untrusted(f'event_name is {c.get("event_name")!r}, not a push, the nightly run or a manual dispatch')
     iat = c.get('iat')
     if isinstance(iat, bool) or not isinstance(iat, int) or iat > (now or time.time()) + 300:
         raise Untrusted('issued at no plain time, or in the future')
