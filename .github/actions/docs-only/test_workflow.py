@@ -33,6 +33,7 @@ class Workflow(unittest.TestCase):
             'push': ['branches: [main]'],
             'schedule': ["- cron: '23 9 * * *'"],
             'merge_group': ['types: [checks_requested]', 'branches: [main]'],
+            'workflow_dispatch': [],
         }
         self.assertCountEqual(re.findall(r'^  ([a-z_]+):$',block[1],re.M),expected,
                               'operative trigger event set')
@@ -47,7 +48,7 @@ class Workflow(unittest.TestCase):
     def test_missing_or_altered_safety_triggers_are_refused(self):
         source=(ROOT/'.github/workflows/ci.yml').read_text()
         self.assert_trigger_contract(source)
-        for event in ('pull_request','push','schedule','merge_group'):
+        for event in ('pull_request','push','schedule','merge_group','workflow_dispatch'):
             mutant=re.sub(r'^  '+event+r':\n.*?(?=^  [a-z_]+:\n|^permissions:)',
                           '',source,flags=re.M|re.S)
             with self.subTest(removed=event), self.assertRaisesRegex(AssertionError,'trigger event set'):
@@ -333,14 +334,18 @@ class Security(unittest.TestCase):
         self.assertEqual(len(downloads),1)
         self.assertTrue(downloads[0].startswith('curl -fsSL --retry 5 --retry-delay 10 '))
 
-    def test_actual_map_step_signs_and_enables_save_only_for_main_push_or_nightly(self):
+    # #783: a manual dispatch from main signs like the nightly run; from any
+    # other ref (a branch, a release branch, a tag) it signs nothing.
+    def test_actual_map_step_signs_and_enables_save_only_for_main_push_nightly_or_dispatch(self):
         step=jobs()['select-map'].split('      - name: Save the select-map cache\n',1)[1].split('      - ',1)[0]
         expression=re.search(r'^          MAIN: \$\{\{ (.*) \}\}$',step,re.M)[1]
         body=step.split('        run: |\n',1)[1]
         script='\n'.join(line[10:] for line in body.splitlines() if not line or line.startswith('          '))
         for event,ref,wants in [('push','refs/heads/main',True),('schedule','refs/heads/main',True),
             ('pull_request','refs/pull/7/merge',False),('pull_request','refs/heads/main',False),
-            ('workflow_dispatch','refs/heads/main',False),('push','refs/heads/release-0.1',False),
+            ('workflow_dispatch','refs/heads/main',True),('workflow_dispatch','refs/heads/room/some-branch',False),
+            ('workflow_dispatch','refs/heads/release-0.1',False),('workflow_dispatch','refs/tags/main',False),
+            ('schedule','refs/heads/room/some-branch',False),('push','refs/heads/release-0.1',False),
             ('push','refs/tags/main',False)]:
             with self.subTest(event=event,ref=ref),tempfile.TemporaryDirectory() as folder:
                 tmp=Path(folder);(tmp/'bin').mkdir()

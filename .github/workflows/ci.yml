@@ -8,7 +8,9 @@ on:
     types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   # #744: a push to main runs only main-light. The merge queue already ran the
   # full suite on that exact merge (ruleset: no direct pushes), and nightly
-  # stays full, signs the map and refreshes the trusted caches.
+  # stays full, signs the map and refreshes the trusted caches. A manual
+  # dispatch from main (#783) also signs the map; from any other ref it signs
+  # nothing.
   push:
     branches: [main]
   # Full safety run on main, regardless of changed paths.
@@ -21,6 +23,9 @@ on:
   merge_group:
     types: [checks_requested]
     branches: [main]
+  # #783: a manual run (write access only). From main it traces and signs the
+  # selector map like the nightly run; toolkit-nightly stays schedule-only.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -1352,7 +1357,7 @@ jobs:
       - name: Save the select-map cache
         id: map
         env:
-          MAIN: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule') }}
+          MAIN: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
         run: |
           dir="$HOME/.cache/closedwiz-ci-select"
           mkdir -p "$dir"
