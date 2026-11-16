@@ -37,13 +37,13 @@ NOREPLY = '123+fixture@users.noreply.github.com'
 PUBLISHED = '# Changelog\n\n## 0.0.98 · 2026-01-01\n\nContext: Earlier public entry.  \n'
 NOTES = ('## 0.0.99 · 2026-11-20\n\nFixture-tested: You can preview a synthetic export.\n\n'
          '- Fixture-tested: You can save a preview.\n- Fixture-tested: You can cancel a preview.\n\n'
-         'Fixture-tested: Synthetic export fixtures pass; live export remains unverified.\n\n'
+         'Live-checked: Synthetic export smoke passes; a real export remains unverified.\n\n'
          '[Full release on GitHub](https://github.com/openwizdev/OpenWiz/releases/tag/v0.0.99)\n')
 
 # RL6 (#739): a curated notes section in VS9's three parts (synthetic wording).
 CURATED = ("## 0.0.99 · 2026-11-20\n\n**Preview an export**\n\n**What's new for you**\n\n"
            "- You can preview a synthetic export.\n- You can cancel a preview.\n\n"
-           "Tested on synthetic fixtures; a live export is still unverified.\n\n"
+           "Live-checked: a synthetic export smoke; a real export is still unverified.\n\n"
            "**Under the hood**\n\n- The preview reads one synthetic file.\n\n"
            "[Full release on GitHub](https://github.com/openwizdev/OpenWiz/releases/tag/v0.0.99)\n")
 
@@ -1333,15 +1333,16 @@ class Candidate(World):
         sections = '\n'.join(
             f'## {v} · 2026-11-20\n\nFixture-tested: Version {v} headline.\n'
             + ('' if v == '0.0.7' else f'\n- Fixture-tested: Synthetic {v} entry.\n\n'
-               f'Fixture-tested: Synthetic {v} checks pass.\n\n'
+               f'Live-checked: Synthetic {v} checks pass.\n\n'
                '[Full release on GitHub](https://github.com/openwizdev/OpenWiz/releases/tag/v0.0.12)\n')
             for v in versions)
         published = '# Changelog\n\n## 0.0.5 · 2026-01-05\n\nContext: Earlier public entry.  \n'
         shutil.rmtree(self.repo)
         shutil.rmtree(self.remote)
         self.history(notes=sections, published=published, published_version='0.0.5')
+        # #18: headline-only 0.0.7 has no live-checked line, so it is a named not-live gap.
         coverage = [{'version': v, 'promise': f'synthetic_{v}', 'steps': receipts_fixture.FLEET_ROW + ['send_once', 'new_once']}
-                    for v in versions]
+                    for v in versions if v != '0.0.7']
         self.smoke_kit(coverage=coverage, version='0.0.12')
         self.artifacts(version='0.0.12')
         self.made = self.body(version='0.0.12', promises=[(v, [f'synthetic_{v}']) for v in versions])

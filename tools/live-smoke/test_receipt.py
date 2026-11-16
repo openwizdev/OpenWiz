@@ -59,6 +59,22 @@ PLAN = {'schema': 'openwiz.fleet-tick.v1', 'mode': 'dry_run', 'planned_at': 1893
 READS = ('swarms', 'service', 'loops', 'cockpit', 'decisions', 'terminal', 'json', 'app', 'read_safety')
 FLEET_ROW = ['fleet_tick'] + list(READS)
 GAP = 'Synthetic gap: no real phone radio, WebKit or Mac observation.'
+LIVE_NOTES = ('## 0.0.99 · 2030-01-02\n\n**Synthetic patch**\n\n'
+              'Live-checked in this release\'s smoke test, run by agents: the synthetic steps.\n')
+# The v0.0.12 notes' shape (#18): seven versions, only 0.0.12's section live-checked;
+# each other version's promise is its section's headline, carried as a not-live gap.
+HEADLINES = [('0.0.12', 'Scripts and agents can drive OpenWiz'),
+             ('0.0.11', 'Make every decision in one place, and see the whole plan'),
+             ('0.0.10', 'A cockpit for your phone and PC'),
+             ('0.0.9', 'All your loops in one place'),
+             ('0.0.8', 'OpenWiz keeps running on your PC'),
+             ('0.0.7', 'Helpers for builders and reviewers, and a "where are we?" report'),
+             ('0.0.6', 'Fleets run inside OpenWiz')]
+COMBINED_NOTES = ''.join(
+    f'## {v} · 2030-01-02\n\n**{p}**\n\n'
+    + ('Live-checked in this release\'s smoke test, run by agents: install, send and new.\n\n' if v == '0.0.12'
+       else 'Tested on synthetic fixtures only; the whole flow is still unverified.\n\n')
+    for v, p in HEADLINES).rstrip('\n') + '\n'
 
 
 def contract_sha(value):
@@ -106,6 +122,7 @@ class Receipts(unittest.TestCase):
         with open(ROOT / 'tests/fixtures/release/candidate/synthetic-ready.json', 'rb') as stream:
             self.candidate = json.load(stream)
         self.candidate['candidate']['included_versions'][0]['promises'] = ['synthetic_fleet', 'synthetic_send']
+        self.notes(LIVE_NOTES)
         self.candidate['candidate']['risk']['send'] = {'required': 'yes', 'reason': 'Synthetic send change.'}
         self.candidate['candidate']['risk']['new'] = {'required': 'yes', 'reason': 'Synthetic new change.'}
         for product in self.candidate['candidate']['products']:
@@ -134,6 +151,12 @@ class Receipts(unittest.TestCase):
 
     def reseal(self):
         self.candidate['candidate_sha256'] = contract_sha(self.candidate['candidate'])
+
+    def notes(self, text):
+        """The candidate's approved notes: which sections carry a live-checked line."""
+        raw = text.encode('utf-8')
+        self.candidate['candidate']['changelog'] = {'utf8': text, 'sha256': hashlib.sha256(raw).hexdigest(),
+                                                    'bytes': len(raw)}
 
     def checkpoint(self, states=None, finished=1893542580):
         """A runner checkpoint for this kit, as smoke.py saves it."""
@@ -658,6 +681,7 @@ class Receipts(unittest.TestCase):
         body = self.candidate['candidate']
         body['release_version'] = version
         body['included_versions'][0]['version'] = version
+        self.notes(LIVE_NOTES.replace('0.0.99', version))
         body['risk']['app_permissions'] = {'required': 'yes', 'reason': 'Synthetic App permission change.'}
         self.live()
         self.ran()
@@ -708,6 +732,99 @@ class Receipts(unittest.TestCase):
         self.candidate['candidate']['risk']['spending'] = {'required': 'yes', 'reason': 'Synthetic spending change.'}
         self.ship3()
         self.refused('risk_missing', self.produce, 'synthetic:smoke-run', self.WAIVER)
+
+    """#18: versions with no live-checked line in the notes are recorded not-live gaps."""
+
+    def combined(self, rows=None, notes=COMBINED_NOTES):
+        """The v0.0.12 shape: seven included versions, the one live 0.0.12 row in the kit."""
+        body = self.candidate['candidate']
+        template = body['included_versions'][0]
+        body['release_version'] = '0.0.12'
+        body['included_versions'] = [dict(template, version=v, promises=[p]) for v, p in HEADLINES]
+        self.notes(notes)
+        every = [s['id'] for s in self.kit['steps']]
+        self.kit['release']['coverage'] = rows or [{'version': '0.0.12', 'promise': HEADLINES[0][1], 'steps': every}]
+        self.live()
+        self.ran()
+
+    def not_live_gaps(self):
+        return [f'Not live-checked in this release: {v} {p}' for v, p in HEADLINES[1:]]
+
+    def test_the_one_row_kit_covers_the_live_version_and_names_every_other_as_a_gap(self):
+        """catches: the one-row v0.0.12 kit refused as coverage_mismatch against the
+        seven-version candidate, or the six fixture-only versions dropped silently."""
+        self.combined()
+        doc = self.produce()
+        live = [{'version': '0.0.12', 'promise': HEADLINES[0][1], 'outcome': 'pass'}]
+        for gate in ('smoke', 'send', 'new'):
+            self.assertEqual(doc['gates'][gate]['coverage'], live, gate)
+            self.assertEqual([g for g in doc['gates'][gate]['gaps'] if g.startswith('Not live-checked')],
+                             self.not_live_gaps(), gate)
+            receipt.accept(gate, doc, self.candidate, self.kit_path, self.state, self.resolver(doc))
+
+    def test_a_not_live_version_is_never_counted_as_covered(self):
+        """catches: a kit row recording a fixture-only version as live-checked, or
+        an included version with no notes section passing as neither."""
+        every = [s['id'] for s in self.kit['steps']]
+        self.combined(rows=[{'version': v, 'promise': p, 'steps': every} for v, p in HEADLINES])
+        self.refused('not_live_covered', self.produce)
+        self.state = self.root / 'state-unlisted'
+        self.combined()
+        body = self.candidate['candidate']
+        body['included_versions'].append(dict(body['included_versions'][-1], version='0.0.5', promises=['Unlisted']))
+        self.reseal()
+        self.refused('coverage_mismatch', self.produce)
+
+    def test_a_receipt_that_drops_a_not_live_gap_is_refused(self):
+        """catches: accept() passing a smoke receipt whose gaps omit a not-live
+        version, or that lists one as a passing coverage row."""
+        self.combined()
+        doc = self.produce()
+        dropped = copy.deepcopy(doc)
+        dropped['gates']['smoke']['gaps'].remove(self.not_live_gaps()[0])
+        self.refused('gaps_missing', receipt.accept, 'smoke', dropped, self.candidate, self.kit_path,
+                     self.state, self.resolver(dropped))
+        claimed = copy.deepcopy(doc)
+        claimed['gates']['smoke']['coverage'].append(
+            {'version': '0.0.11', 'promise': HEADLINES[1][1], 'outcome': 'pass'})
+        self.refused('coverage_mismatch', receipt.accept, 'smoke', claimed, self.candidate, self.kit_path,
+                     self.state, self.resolver(claimed))
+
+    def test_a_non_lf_line_separator_in_the_notes_refuses_in_produce_and_accept(self):
+        """catches (#915 R1): a U+2028-style separator inside 0.0.12's headline
+        moving its Live-checked line onto 0.0.11, so a kit row for the not-live
+        0.0.11 is accepted and the live 0.0.12 becomes a gap."""
+        every = [s['id'] for s in self.kit['steps']]
+        injected = '**Scripts and agents can drive OpenWiz**'
+        for separator in (' ', ' ', '\x85', '\r', '\x0b', '\x0c', '\x1c', '\x1d', '\x1e'):
+            with self.subTest(separator=hex(ord(separator))):
+                self.state = self.root / f'state-{ord(separator)}'
+                self.combined(rows=[{'version': '0.0.11', 'promise': HEADLINES[1][1], 'steps': every}],
+                              notes=COMBINED_NOTES.replace(injected, f'**Scripts{separator}## 0.0.11 · injected**'))
+                self.refused('invalid_notes', self.produce)
+        # accept() reads the sealed candidate itself: a receipt rebound to such notes refuses too.
+        self.state = self.root / 'state-accept'
+        self.combined()
+        doc = self.produce()
+        self.notes(COMBINED_NOTES.replace(injected, '**Scripts ## 0.0.11 · injected**'))
+        self.reseal()
+        for gate in ('smoke', 'send', 'new'):
+            doc['gates'][gate]['candidate_sha256'] = doc['inputs'][gate]['candidate_sha256'] = \
+                self.candidate['candidate_sha256']
+            doc['gates'][gate]['inputs_sha256'] = contract_sha(doc['inputs'][gate])
+            self.refused('invalid_notes', receipt.accept, gate, doc, self.candidate, self.kit_path,
+                         self.state, self.resolver(doc))
+
+    def test_the_approved_v0_0_12_notes_split_into_one_live_promise_and_six_gaps(self):
+        """catches: the separator refusal (or the LF-only split) rejecting or
+        re-partitioning the approved LF-only v0.0.12 notes (sha256 27135ed4…)."""
+        whole = (ROOT / 'CHANGELOG.md').read_text(encoding='utf-8')
+        notes = whole[whole.index('## 0.0.12 · '):whole.index('## 0.0.5 · ')].rstrip('\n') + '\n'
+        self.assertEqual(hashlib.sha256(notes.encode()).hexdigest(),
+                         '27135ed4d22479e17d6f02806ccb9e8a8b33e2ef37a970e1a216800da4af9191')
+        live, not_live = receipt.split_promises({'changelog': {'utf8': notes}, 'included_versions': [
+            {'version': v, 'promises': [p]} for v, p in HEADLINES]})
+        self.assertEqual((live, not_live), (HEADLINES[:1], HEADLINES[1:]))
 
 
 if __name__ == '__main__':

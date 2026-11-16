@@ -12,7 +12,8 @@ The kit's `release` section declares, inside the approved kit digest:
 `scope` (throwaway targets, write-step counts per claim, the App permissions
 the existing grant already has, a spending cap in cents), the candidate
 `products` the kit's pinned programs are, `coverage` (the bounded steps that
-exercise each included version's promise end to end), `risk` (the steps that
+exercise each live included version's promise end to end; every other
+included promise is a named not-live gap), `risk` (the steps that
 check send, new, App permissions and spending) and known `gaps`. Nothing here
 grants, widens or runs anything: it reads files and hashes. Standard library only.
 """
@@ -62,6 +63,14 @@ PRODUCTS = ('cli', 'server', 'service', 'web', 'runtime')
 TARGETS = ('aarch64-apple-darwin', 'x86_64-apple-darwin', 'x86_64-unknown-linux-gnu')
 PC_GAP = 'Agent-run PC smoke only: no Mac, real-device, real-radio or WebKit observation.'
 NOT_LIVE_GAP = 'Fixture or dry-run evidence: diagnostic only, never a live result.'
+# #18: only a version whose approved notes section carries a live-checked line
+# needs live coverage; every other included promise is one named not-live gap.
+LIVE_LINE = 'Live-checked'
+NOT_LIVE = 'Not live-checked in this release: {version} {promise}'
+SECTION = re.compile(r'## (0\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)) · ')
+# #915 R1: the approved notes are LF-only. Every other line or paragraph break
+# str.splitlines() honours could move a section boundary, so it refuses.
+OTHER_BREAKS = re.compile('[\r\x0b\x0c\x1c\x1d\x1e\x85  ]')
 RECORD = re.compile(r'(https://github\.com/jparker2006/ClosedWiz/(issues|pull)/[1-9][0-9]*'
                     r'#issuecomment-[1-9][0-9]*|[a-z][a-z0-9-]{0,31}:[A-Za-z0-9._-]{1,128})')
 
@@ -122,6 +131,29 @@ def release_section(kit):
         if sum(s['kind'] == 'write' and s['claim'] == claim for s in kit['steps']) > scope['writes'].get(claim, 0):
             raise Refusal('scope_exceeded')
     return section
+
+
+def split_promises(body):
+    """The candidate's (version, promise) pairs, split into the live ones (their
+    notes section has a line starting `Live-checked`) and the not-live ones. An
+    included version with no notes section is neither, and refuses. Lines are
+    split only on LF; notes holding any other line break refuse."""
+    text = body['changelog']['utf8']
+    if type(text) is not str or OTHER_BREAKS.search(text):
+        raise Refusal('invalid_notes')
+    live_versions, sections, current = set(), set(), None
+    for line in text.split('\n'):
+        heading = SECTION.match(line)
+        if heading:
+            current = heading[1]
+            sections.add(current)
+        elif current and line.startswith(LIVE_LINE):
+            live_versions.add(current)
+    promises = [(v['version'], p) for v in body['included_versions'] for p in v['promises']]
+    if any(v not in sections for v, _ in promises) or len(set(promises)) != len(promises):
+        raise Refusal('coverage_mismatch')
+    return ([(v, p) for v, p in promises if v in live_versions],
+            [(v, p) for v, p in promises if v not in live_versions])
 
 
 def _status(states, finished):
@@ -199,9 +231,11 @@ def produce(kit_path, state_dir, candidate, record, waiver=None):
         if len(match) != 1 or match[0]['payload_sha256'] not in pinned:
             raise Refusal('product_mismatch')
         tested.append(dict(item, payload_sha256=match[0]['payload_sha256']))
-    promises = [(v['version'], p) for v in body['included_versions'] for p in v['promises']]
+    promises, not_live = split_promises(body)
     rows = {(r['version'], r['promise']): r['steps'] for r in section['coverage']}
-    if sorted(promises) != sorted(rows) or len(set(promises)) != len(promises):
+    if any(v == version for v, _ in rows for version, _ in not_live):
+        raise Refusal('not_live_covered')
+    if sorted(promises) != sorted(rows):
         raise Refusal('coverage_mismatch')
     for category in RISKS:
         required = body['risk'][category]['required']
@@ -235,7 +269,8 @@ def produce(kit_path, state_dir, candidate, record, waiver=None):
     finished = state['times']['finished'] if whole == 'pass' else None
     verdict = whole if whole in ('pass', 'fail') else 'incomplete'
     run_report = smoke.report(kit, state, verdict, state['reason'] if ran else 'dry_run')
-    gaps = section['gaps'] + [PC_GAP] + ([] if evidence_class == 'live' else [NOT_LIVE_GAP])
+    named = [NOT_LIVE.format(version=v, promise=p) for v, p in not_live]
+    gaps = section['gaps'] + [PC_GAP] + ([] if evidence_class == 'live' else [NOT_LIVE_GAP]) + named
     base = {'candidate_sha256': candidate['candidate_sha256'], 'artifacts_sha256': sha(body['artifacts']),
             'kit_sha256': smoke.digest(kit), 'scope_sha256': sha(section['scope']),
             'evidence_class': evidence_class, 'tested_products': tested, 'report_sha256': sha(run_report),
@@ -243,7 +278,8 @@ def produce(kit_path, state_dir, candidate, record, waiver=None):
             'journal_sha256': journal_sha, 'writes_consumed': consumed,
             'steps': [{'id': s['id'], 'claim': s['claim'], 'kind': s['kind'], 'state': item['state']}
                       for s, item in zip(kit['steps'], state['steps'])],
-            'coverage': [{'version': v, 'promise': p, 'steps': rows[(v, p)]} for v, p in promises]}
+            'coverage': [{'version': v, 'promise': p, 'steps': rows[(v, p)]} for v, p in promises],
+            'not_live': named}
 
     def receipt(gate, inputs, ids, covered):
         status = _status([states[i] for i in ids], state['times']['finished'])
@@ -330,7 +366,11 @@ def accept(gate, doc, candidate, kit_path, state_dir, resolve=None, waiver=None)
                    for p in inputs['tested_products'])
             or (gate != 'smoke' and inputs.get('classification') != body['risk'][gate])):
         raise Refusal('stale')
-    promises = [{'version': v['version'], 'promise': p} for v in body['included_versions'] for p in v['promises']]
+    live_pairs, not_live = split_promises(body)
+    promises = [{'version': v, 'promise': p} for v, p in live_pairs]
+    named = [NOT_LIVE.format(version=v, promise=p) for v, p in not_live]
+    if inputs.get('not_live') != named:
+        raise Refusal('gaps_missing')
     if gate == 'smoke':
         expected = promises
     else:
@@ -343,7 +383,7 @@ def accept(gate, doc, candidate, kit_path, state_dir, resolve=None, waiver=None)
         raise Refusal('coverage_mismatch')
     gaps = found.get('gaps')
     if (type(gaps) is not list or type(inputs.get('gaps')) is not list or not inputs['gaps']
-            or not set(inputs['gaps']) | {PC_GAP} <= set(gaps)):
+            or not set(inputs['gaps']) | {PC_GAP} | set(named) <= set(gaps)):
         raise Refusal('gaps_missing')
     if kit_path is None or state_dir is None:
         raise Refusal('evidence_mismatch')

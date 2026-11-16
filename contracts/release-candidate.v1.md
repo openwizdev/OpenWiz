@@ -150,8 +150,12 @@ at or after start. Receipt inputs are canonical JSON of the complete gate inputs
 | smoke | Kit and scope digest, end-to-end exercise of every included version/promise on the combined candidate, tested product hashes, restriction inputs and bounded observations; live |
 | each required risk | The classification diff/reason, matching bounded kit steps, existing grant/allowlist/count/spending authority and results for that category; live |
 
-`coverage` in smoke is exactly one row for every (included version, promise),
-all pass, with no extra/duplicate/omitted rows. A smoke coverage row passes only
+`coverage` in smoke is exactly one row for every included (version, promise)
+whose approved notes section carries a live-checked line (a line starting
+`Live-checked`), all pass, with no extra/duplicate/omitted rows. Every other
+included version is carried in the receipt's `gaps` as one named not-live gap
+per (version, promise), `Not live-checked in this release: <version> <promise>`,
+never as a coverage row, and none is omitted (#18). A smoke coverage row passes only
 when its live evidence proves the complete user flow for that promise was
 exercised end to end on the combined candidate. A partial check cannot satisfy
 the row. The receipt's inputs identify the bounded kit steps and observations

@@ -269,7 +269,14 @@ python3 -I tools/live-smoke/receipt.py check --gate smoke --receipts receipts.js
 `produce` refuses unless the kit digest and its `release.scope` digest are the
 candidate's `kit.sha256` and `kit.scope_sha256`, each declared candidate product
 payload is a pinned kit artifact, and `release.coverage` has exactly one row of
-bounded steps per included (version, promise). `produce` also refuses a run bound to another
+bounded steps per live included (version, promise): one whose version's notes
+section has a line starting `Live-checked` (#18). Every other included promise is
+carried in each receipt's `gaps` as `Not live-checked in this release: <version>
+<promise>`, never as covered and never dropped; a kit row for such a version
+refuses `not_live_covered`, and an included version with no notes section
+`coverage_mismatch`. Notes are split only on LF, their approved line ending;
+notes holding any other line or paragraph break (CR, NEL, U+2028, U+2029 and the
+other breaks `str.splitlines()` honours) refuse `invalid_notes` (#915 R1). `produce` also refuses a run bound to another
 candidate (`candidate_changed`) or to none (`unbound_run`), a missing journal
 (`evidence_missing`), and a journal whose chain, start record or replay does not
 yield the checkpoint's step states and consumed writes exactly
@@ -297,8 +304,8 @@ scope; approval or a ship instruction never widens it.
 
 `check` accepts only a `live`, `pass` receipt with a finish time, bound to this
 exact sealed candidate, artifacts, kit and scope, whose inputs digest matches,
-whose coverage is every promise passing (or, for a risk, its covered promises)
-and which keeps every gap. It then reads the evidence itself: the receipt must be
+whose coverage is every live promise passing (or, for a risk, its covered promises)
+and which keeps every gap, including each not-live gap. It then reads the evidence itself: the receipt must be
 exactly what the approved kit, checkpoint and journal produce now, so a
 relabelled or edited receipt, or evidence that no longer shows the pass,
 refuses. Finally it resolves the record independently (the command line reads
