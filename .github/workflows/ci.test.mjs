@@ -247,3 +247,35 @@ test('pull requests and merge groups run the full suite and every required check
   const kept = workflow.replace(ci, "  ci:\n    needs: $1\n    if: ${{ always() && github.event_name != 'push' }}");
   assert.ok(simulate(kept, 'merge_group', FULL_PLAN).includes('ci'));
 });
+
+// #783 (CI3 C5): a manual dispatch from main signs the selector map like the
+// nightly run, and a dispatch from any other ref signs nothing.
+// catches: a signing condition that trusts a dispatch from a branch (anyone
+// with write access could then sign a map traced on unreviewed code), and a
+// dispatch that drops the signing, so only a late nightly can refresh the map.
+test('a dispatch from main signs the selector map like the nightly run; a dispatch from any other ref signs nothing', () => {
+  assert.match(workflow.match(/^on:\n((?:  .*\n|\n)*)/m)?.[1] ?? '', /^  workflow_dispatch:$/m);
+  const job = workflow.match(/^  select-map:\n((?:    .*\n|\n)*)/m)?.[1] ?? '';
+  const main = job.match(/^          MAIN: \$\{\{ (.+) \}\}$/m)?.[1];
+  assert.ok(main, 'the select-map signing step reads MAIN');
+  assert.match(job, /^          if \[ "\$MAIN" = true \]; then\n            python3 -I ci\/select\/job\.py sign /m);
+  const signs = (event_name, ref) => runInNewContext(main, { github: { event_name, ref } }, { timeout: 100 });
+  for (const [event_name, ref, want] of [
+    ['workflow_dispatch', 'refs/heads/main', true],
+    ['schedule', 'refs/heads/main', true],
+    ['push', 'refs/heads/main', true],
+    ['workflow_dispatch', 'refs/heads/room/some-branch', false],
+    ['workflow_dispatch', 'refs/heads/release-0.0.9', false],
+    ['workflow_dispatch', 'refs/tags/v0.0.9', false],
+    ['schedule', 'refs/heads/room/some-branch', false],
+    ['pull_request', 'refs/pull/1/merge', false],
+    ['merge_group', 'refs/heads/gh-readonly-queue/main/pr-1-' + 'a'.repeat(40), false],
+  ]) {
+    assert.equal(signs(event_name, ref), want, `${event_name} on ${ref}`);
+  }
+  // The dispatch runs the full suite and the map job, and the nightly's
+  // toolkit job stays schedule-only.
+  const traced = { changes: { ...FULL_PLAN.changes, trace: 'true' } };
+  assert.deepEqual(simulate(workflow, 'workflow_dispatch', traced), [...FULL_SUITE, 'select-map'].sort(), 'dispatch');
+  assert.deepEqual(simulate(workflow, 'schedule', traced), [...FULL_SUITE, 'select-map', 'toolkit-nightly'].sort(), 'nightly');
+});
