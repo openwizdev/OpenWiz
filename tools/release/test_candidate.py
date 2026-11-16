@@ -711,6 +711,34 @@ class Candidate(World):
         self.assertEqual(self.evaluate()[0], 0)
         self.d3_cutover_read_backs_refuse()
 
+    # ------------------------------------------------------------ #964: a protected public release branch
+    def release_branch(self, name='release-' + VERSION, ruleset=None):
+        """Main has moved on; the candidate is one cherry-picked commit on a public
+        release branch, protected by its own ruleset unless `ruleset` replaces it."""
+        self.git(self.repo, 'checkout', '-q', '-b', 'release')
+        (self.repo / 'README.md').write_text('# Synthetic public repository\n\nSynthetic cherry-picked fix.\n')
+        self.head = self.commit('Synthetic cherry-picked fix')
+        self.git(self.repo, 'push', '-q', self.remote, f'HEAD:refs/heads/{name}')
+        self.git(self.root / 'public.git', 'update-ref', 'refs/heads/main', self.published)  # main moved elsewhere
+        self.world[f'repos/{PUBLIC}/rulesets?per_page=100'] = [[{'id': 71}, {'id': 72}]]
+        self.world[f'repos/{PUBLIC}/rulesets/72'] = ruleset or {
+            'id': 72, 'enforcement': 'active', 'target': 'branch', 'bypass_actors': [],
+            'conditions': {'ref_name': {'include': ['refs/heads/release-*'], 'exclude': []}},
+            'rules': [{'type': 'deletion'}, {'type': 'non_fast_forward'},
+                      {'type': 'required_status_checks', 'parameters': {'required_status_checks': [
+                          {'context': 'ci'}, {'context': 'privacy'}]}}]}
+        self.save()
+
+    def test_964_a_candidate_on_its_protected_release_branch_publishes(self):
+        self.release_branch()
+        self.ready()
+        self.assertEqual(self.evaluate()[0], 0)
+        code, out = self.publish()
+        self.assertEqual((code, out['status']), (0, 'published'), out)
+        self.assertEqual(self.writes(), ['tag', 'tag-push', 'release'])
+        self.assertEqual(self.git(self.remote, 'rev-parse', f'refs/tags/v{VERSION}^{{}}'), self.head)
+        self.assertEqual(self.git(self.remote, 'rev-parse', 'main'), self.published)
+
     def d3_cutover_read_backs_refuse(self):
         """R1/D3: only the command's own cut-over read-backs count."""
         public = f'repos/{PUBLIC}'
