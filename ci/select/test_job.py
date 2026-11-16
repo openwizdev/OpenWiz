@@ -101,8 +101,9 @@ class Provenance(unittest.TestCase):
     def check(self, token, data=MAP, keys=None):
         return job.verify(data, token, keys or jwks(KEY), REPO)
 
-    def test_a_push_or_the_nightly_run_on_main_is_accepted(self):
-        for event in ('push', 'schedule'):
+    # #783: a manual dispatch from main is trusted like the nightly run.
+    def test_a_push_the_nightly_run_or_a_dispatch_on_main_is_accepted(self):
+        for event in ('push', 'schedule', 'workflow_dispatch'):
             with self.subTest(event):
                 self.assertEqual(self.check(sign(claims(event_name=event), KEY))['event_name'], event)
 
@@ -110,7 +111,11 @@ class Provenance(unittest.TestCase):
         refused = {
             'a pull request\'s run': sign(claims(ref='refs/pull/7/merge', event_name='pull_request'), KEY),
             'a pull request event on main': sign(claims(event_name='pull_request'), KEY),
-            'a workflow_dispatch': sign(claims(event_name='workflow_dispatch'), KEY),
+            'a workflow_dispatch from another branch': sign(claims(event_name='workflow_dispatch', ref='refs/heads/feature'), KEY),
+            'a workflow_dispatch from a tag': sign(claims(event_name='workflow_dispatch', ref='refs/tags/main', ref_type='tag'), KEY),
+            'a workflow_dispatch of ci.yml from another branch': sign(claims(
+                event_name='workflow_dispatch', workflow_ref=f'{REPO}/.github/workflows/ci.yml@refs/heads/x'), KEY),
+            'another event on main': sign(claims(event_name='workflow_run'), KEY),
             'another branch': sign(claims(ref='refs/heads/feature'), KEY),
             'a tag': sign(claims(ref='refs/tags/main', ref_type='tag'), KEY),
             'another repository': sign(claims(repository='someone/else'), KEY),
@@ -427,8 +432,8 @@ class Repo(unittest.TestCase):
 class Trace(unittest.TestCase):
     """Which runs trace their tests to make a map."""
 
-    def test_a_push_or_the_nightly_run_on_main_traces(self):
-        for event in ('push', 'schedule'):
+    def test_a_push_the_nightly_run_or_a_dispatch_on_main_traces(self):
+        for event in ('push', 'schedule', 'workflow_dispatch'):
             self.assertTrue(job.traces(event, 'refs/heads/main', []))
 
     def test_a_pull_request_traces_only_when_it_changes_the_tracer(self):
@@ -440,6 +445,8 @@ class Trace(unittest.TestCase):
         self.assertFalse(job.traces('push', 'refs/heads/other', []))
         self.assertFalse(job.traces('merge_group', 'refs/heads/gh-readonly-queue/main/x', ['ci/select/trace.py']))
         self.assertFalse(job.traces('schedule', 'refs/heads/other', []))
+        self.assertFalse(job.traces('workflow_dispatch', 'refs/heads/other', []))
+        self.assertFalse(job.traces('workflow_dispatch', 'refs/tags/main', ['ci/select/trace.py']))
 
 
 class Planted(unittest.TestCase):
