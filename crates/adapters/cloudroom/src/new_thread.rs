@@ -429,100 +429,6 @@ pub fn spawn_error(exit_code: Option<i32>, stderr: &str) -> SpawnReply {
     }
 }
 
-/// The type of one key of the documented thread row.
-#[derive(Clone, Copy)]
-enum RowType {
-    Text,
-    TextOrNull,
-    Count,
-    CountOrNull,
-    Flag,
-    FlagOrNull,
-    /// An object, whose content is not read (its keys still once each), or
-    /// null.
-    ObjectOrNull,
-}
-
-/// Every key the `spawn` receipt may have, and its type: the thread row of
-/// `thread list` and `thread show` (capture C), which the receipt is
-/// source-read to be (ClosedWiz#11; not observed). `id` and `projectId` are
-/// required; any other key is uncertain.
-pub const RECEIPT_KEYS: &[&str] = &[
-    "id",
-    "projectId",
-    "providerId",
-    "title",
-    "titleFallback",
-    "status",
-    "visibility",
-    "queuedWork",
-    "environmentWorkspaceDisplayKind",
-    "executionTarget",
-    "environmentId",
-    "environmentHostId",
-    "environmentPath",
-    "environmentProviderId",
-    "environmentBranchName",
-    "environmentName",
-    "environmentIsWorktree",
-    "parentThreadId",
-    "sectionId",
-    "sourceThreadId",
-    "originKind",
-    "originPluginId",
-    "pinSortKey",
-    "lastError",
-    "archivedAt",
-    "pinnedAt",
-    "deletedAt",
-    "lastReadAt",
-    "latestAttentionAt",
-    "createdAt",
-    "updatedAt",
-    "activeBackgroundAgentCount",
-    "queuedMessageCount",
-    "canSpawnChild",
-    "hasPendingInteraction",
-    "purpose",
-    "activity",
-    "runtime",
-    "projectCopy",
-];
-
-/// The type of each of [`RECEIPT_KEYS`] other than `id` and `projectId`.
-fn receipt_type(key: &str) -> Option<RowType> {
-    Some(match key {
-        "providerId" | "status" | "visibility" | "queuedWork" => RowType::Text,
-        "title"
-        | "titleFallback"
-        | "environmentWorkspaceDisplayKind"
-        | "executionTarget"
-        | "environmentId"
-        | "environmentHostId"
-        | "environmentPath"
-        | "environmentProviderId"
-        | "environmentBranchName"
-        | "environmentName"
-        | "parentThreadId"
-        | "sectionId"
-        | "sourceThreadId"
-        | "originKind"
-        | "originPluginId"
-        | "pinSortKey"
-        | "lastError" => RowType::TextOrNull,
-        "createdAt" | "updatedAt" | "activeBackgroundAgentCount" | "queuedMessageCount" => {
-            RowType::Count
-        }
-        "archivedAt" | "pinnedAt" | "deletedAt" | "lastReadAt" | "latestAttentionAt" => {
-            RowType::CountOrNull
-        }
-        "canSpawnChild" | "hasPendingInteraction" => RowType::Flag,
-        "environmentIsWorktree" => RowType::FlagOrNull,
-        "purpose" | "activity" | "runtime" | "projectCopy" => RowType::ObjectOrNull,
-        _ => return None,
-    })
-}
-
 /// What the receipt says: the new thread and its project.
 struct Receipt {
     id: String,
@@ -552,30 +458,12 @@ impl<'de> Visitor<'de> for ReceiptVisitor {
             match key.as_str() {
                 "id" => id = Some(map.next_value::<String>()?),
                 "projectId" => project_id = Some(map.next_value::<String>()?),
-                other => match receipt_type(other) {
-                    Some(RowType::Text) => {
-                        map.next_value::<String>()?;
-                    }
-                    Some(RowType::TextOrNull) => {
-                        map.next_value::<Option<String>>()?;
-                    }
-                    Some(RowType::Count) => {
-                        map.next_value::<i64>()?;
-                    }
-                    Some(RowType::CountOrNull) => {
-                        map.next_value::<Option<i64>>()?;
-                    }
-                    Some(RowType::Flag) => {
-                        map.next_value::<bool>()?;
-                    }
-                    Some(RowType::FlagOrNull) => {
-                        map.next_value::<Option<bool>>()?;
-                    }
-                    Some(RowType::ObjectOrNull) => {
-                        map.next_value::<Option<ObjectKeysOnce>>()?;
-                    }
-                    None => return Err(de::Error::custom("a key the thread row does not have")),
-                },
+                // #949: any other key, of any type, is read only for a key
+                // given twice at any depth; an additive room-cli release
+                // (v155's declared row) is not drift.
+                _ => {
+                    map.next_value::<KeysOnce>()?;
+                }
             }
         }
         Ok(Receipt {
@@ -643,17 +531,6 @@ impl<'de> Visitor<'de> for KeysOnceVisitor {
     }
 }
 
-/// A JSON object (only) with no key given twice, at any depth. Its content
-/// is not kept.
-struct ObjectKeysOnce;
-
-impl<'de> Deserialize<'de> for ObjectKeysOnce {
-    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
-        d.deserialize_map(KeysOnceVisitor)
-            .map(|KeysOnce| ObjectKeysOnce)
-    }
-}
-
 /// Refuses a document that gives any key twice, at any depth: a read of it
 /// through `serde_json::Value` would silently keep only the last.
 fn keys_once(stdout: &[u8], read: &str) -> Result<(), SourceError> {
@@ -665,14 +542,16 @@ fn keys_once(stdout: &[u8], read: &str) -> Result<(), SourceError> {
 }
 
 /// The reply to a call that exited 0: its stdout must be the new thread's
-/// row, read strictly: exactly the documented row's keys
-/// ([`RECEIPT_KEYS`]), each of its type, each once, with `id` a safe id and
-/// `projectId` this create's project. Anything else is uncertain (N17): the
-/// thread may exist, and the prompt is kept. Nothing of the receipt is
-/// passed on but the thread id.
+/// row, an object read strictly for the keys OpenWiz uses: `id` and
+/// `projectId`, each a string, each once, with `id` a safe id and
+/// `projectId` this create's project. Any other key, of any type, is
+/// accepted unread (#949), but no key may be given twice at any depth.
+/// Anything else is uncertain (N17): the thread may exist, and the prompt is
+/// kept. Nothing of the receipt is passed on but the thread id.
 ///
 /// The receipt's shape is **source-read, not observed** ("`--json` prints
-/// the new thread row", written with `status: "pending"`).
+/// the new thread row", written with `status: "pending"`; room-cli v155's
+/// declared `ThreadResponse`, #949).
 pub fn spawn_receipt(stdout: &[u8], project_id: &str) -> SpawnReply {
     let unexpected = |detail: &str| {
         unclear(
@@ -684,8 +563,8 @@ pub fn spawn_receipt(stdout: &[u8], project_id: &str) -> SpawnReply {
         Ok(receipt) => receipt,
         Err(e) if e.classify() == Category::Data => {
             return unexpected(
-                "the receipt is not the documented thread row: a key given twice, a key the row \
-                 does not have or of another type, or no id or projectId (withheld)",
+                "the receipt is not a thread row: not an object, a key given twice, or no id or \
+                 projectId string (withheld)",
             );
         }
         Err(_) => {

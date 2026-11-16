@@ -4,9 +4,10 @@
 //! pattern), never through `serde_json::Value`, which keeps only the last of
 //! a key given twice.
 //!
-//! - **The receipt:** exactly the documented thread row's keys, each typed,
-//!   each once; `id` and `projectId` required. Anything else is uncertain,
-//!   with the prompt kept.
+//! - **The receipt:** `id` and `projectId` required, each a string, each
+//!   once; any other key of any type is accepted unread (#949), but no key
+//!   may be given twice at any depth. Anything else is uncertain, with the
+//!   prompt kept.
 //! - **The catalogue:** only sheet A-2's keys are read, each typed, each
 //!   once; every other key is still dropped unread (A-2). Anything else
 //!   offers nothing and dispatches nothing.
@@ -78,7 +79,23 @@ fn the_receipt_table() {
     let good = [
         text.clone(),
         documented.to_string(),
+        // #949: room-cli v155's declared receipt adds keys the old reader refused.
+        String::from_utf8(fixture("spawn-receipt-created-v155.json")).unwrap(),
         json!({"id": "thr_syn_0021", "projectId": "prj_syn_0001", "status": "pending"}).to_string(),
+        // #949: only id and projectId are read; any other key, of any type,
+        // is not drift (an additive room-cli release must not break new).
+        with(&receipt, "unexpected", json!(true)),
+        with(&receipt, "thread", json!({})),
+        with(
+            &receipt,
+            "syntheticExtraField",
+            json!([{"a": null}, 1.5, "x"]),
+        ),
+        with(&receipt, "createdAt", json!("1700000600000")),
+        with(&receipt, "canSpawnChild", json!("true")),
+        with(&receipt, "title", json!(7)),
+        with(&receipt, "status", Value::Null),
+        with(&receipt, "purpose", json!("Synthetic purpose")),
     ];
     for row in &good {
         assert_eq!(
@@ -104,8 +121,6 @@ fn the_receipt_table() {
             "\"percent\":",
             "\"percent\":1,\"percent\":",
         ),
-        with(&receipt, "unexpected", json!(true)),
-        with(&receipt, "thread", json!({})),
         without(&receipt, "id"),
         without(&receipt, "projectId"),
         Value::Array(receipt.as_object().unwrap().values().cloned().collect()).to_string(),
@@ -113,13 +128,14 @@ fn the_receipt_table() {
         json!({"created": receipt}).to_string(),
         with(&receipt, "id", json!(21)),
         with(&receipt, "projectId", json!({"id": "prj_syn_0001"})),
-        with(&receipt, "createdAt", json!("1700000600000")),
-        with(&receipt, "createdAt", json!(1.5)),
-        with(&receipt, "canSpawnChild", json!("true")),
-        with(&receipt, "title", json!(7)),
-        with(&receipt, "status", Value::Null),
-        with(&receipt, "purpose", json!("Synthetic purpose")),
-        with(&receipt, "archivedAt", json!([1])),
+        with(&receipt, "id", Value::Null),
+        with(&receipt, "projectId", Value::Null),
+        // #949: a key given twice inside a key OpenWiz does not read.
+        twice(
+            &with(&receipt, "syntheticExtraField", json!({"x": 1})),
+            "\"x\":",
+            "\"x\":2,\"x\":",
+        ),
     ];
     for row in &bad {
         let reply = spawn_receipt(row.as_bytes(), "prj_syn_0001");

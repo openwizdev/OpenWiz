@@ -10,6 +10,7 @@
     "cloud-status-not-ready and cloud-status-harnesses-null are source-read (ClosedWiz#11): ready was true and harnesses a list in run 3.",
     "Every cloud-status-drift file is invented drift.",
     "The spawn receipt is source-read, not observed: --json prints the new thread's row, written with status pending. Its keys here are the thread list row's (capture C). Every spawn-receipt-drift file and spawn-receipt-not-json.txt is invented.",
+    "spawn-receipt-created-v155.json is declared, not observed: room-cli v155's ThreadResponse type, read from its client code (one flat object; the new thread's id is top-level id, its project top-level projectId; no repeated keys). The bytes of the observed v155 receipt were not retained. Every value is invented, and its enum values inside projectCopy and teleport are syn- labels. The declared optional keys asleepSince, dispatchingMessageCount, teleport and teleportLocalStep are left out, because the fixture scan has no record of them (or, for teleport, of its required owner). The reader accepts any additional key.",
     "The spawn error lines (Error: Failed to create thread: HTTP <status>: <message>) are source-read, not observed; they live in the adapter's DOCUMENTED_REFUSALS, not here.",
     "thread show's pending and starting statuses and thread.lastError are source-read, not observed (capture C saw idle, active and error, and no lastError key).",
     "thread-show-differs and thread-show-drift are invented.",
