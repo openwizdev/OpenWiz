@@ -516,7 +516,7 @@ def check(args):
             value['revision'] = bound = revision + 1
         now = int(time.time() * 1000)
         for component, code in results.items():
-            value['observations'][component] = {'code': code, 'revision': bound, 'at': now}
+            value['observations'][component] = {'code': code, 'revision': bound + 1, 'at': now}
     setup.update(change)
     print(json.dumps({'schema': 'openwiz.setup-check.v1', 'results': results}, sort_keys=True))
 
