@@ -888,6 +888,105 @@ fn a_passing_main_merge_is_staged_but_not_reported_as_running() {
     assert!(f.build(&candidate).join("web/index.html").is_file());
 }
 
+/// #1060 (#1044): the service forks from many threads. A child forked while
+/// this process holds a writable descriptor for the staged program keeps that
+/// descriptor after the stager closes its own, and the identity check's exec
+/// then fails with ETXTBSY: a good merge is not staged. A watcher stands in for
+/// such a fork: it reopens for writing any writer of the staged program it sees
+/// in this process, and holds it until the attempt ends. The gates are fakes;
+/// Git and the identity exec are real. The program is padded so its copy lasts
+/// long enough to be seen.
+#[cfg(target_os = "linux")]
+#[test]
+fn a_concurrent_fork_cannot_keep_the_staged_program_busy() {
+    use std::{
+        fs,
+        sync::{
+            Arc,
+            atomic::{AtomicBool, Ordering},
+        },
+    };
+    struct Gates(String);
+    impl update::Executor for Gates {
+        fn run(&self, call: &update::Call) -> Result<String, String> {
+            let args: Vec<_> = call.argv().iter().map(String::as_str).collect();
+            match (call.program().to_str(), args.as_slice()) {
+                (Some("npm"), ["run", "build"]) => {
+                    fixture::directory(&call.directory().join("out"));
+                    fixture::file(&call.directory().join("out/index.html"), "<html></html>");
+                }
+                (Some("cargo"), ["build", "--release"]) => {
+                    let release = call.directory().join("target/release");
+                    fixture::directory(&release);
+                    let mut program = format!("#!/bin/sh\necho {}\nexit 0\n", self.0).into_bytes();
+                    program.resize(program.len() + (64 << 20), b'#');
+                    fixture::file(&release.join("openwiz-service"), program);
+                }
+                (Some("sh" | "npm" | "cargo"), _) => {}
+                _ => return update::Executor::run(&update::System, call),
+            }
+            Ok(String::new())
+        }
+    }
+    let f = fixture::Fixture::new();
+    let old = f.head();
+    let candidate = f.merge("pass");
+    let staged = fs::canonicalize(&f.root)
+        .unwrap()
+        .join("service/builds")
+        .join(&candidate)
+        .join("openwiz-service");
+    let done = Arc::new(AtomicBool::new(false));
+    let watcher = {
+        let done = Arc::clone(&done);
+        std::thread::spawn(move || {
+            // One inherited writer is enough; it stays open until joined.
+            let mut held = None;
+            while held.is_none() && !done.load(Ordering::SeqCst) {
+                held = fs::read_dir("/proc/self/fd")
+                    .unwrap()
+                    .flatten()
+                    .find_map(|fd| {
+                        let fd = fd.path();
+                        let info = fs::read_to_string(
+                            Path::new("/proc/self/fdinfo").join(fd.file_name()?),
+                        )
+                        .ok()?;
+                        let flags = info.lines().find_map(|l| l.strip_prefix("flags:"))?;
+                        let writable = u32::from_str_radix(flags.trim(), 8).ok()? & 3 != 0;
+                        (writable && fs::read_link(&fd).ok()? == staged)
+                            .then(|| fs::OpenOptions::new().write(true).open(&fd).ok())?
+                    });
+            }
+            held
+        })
+    };
+    let updater = update::Updater::fixture(
+        &f.root,
+        &f.install,
+        &f.repo,
+        &old,
+        f.sink(),
+        Arc::new(Gates(candidate.clone())),
+    )
+    .unwrap();
+    let state = f.state();
+    let staged_ok = updater.check(&state, 1000).unwrap();
+    done.store(true, Ordering::SeqCst);
+    let inherited = watcher.join().unwrap().is_some();
+    assert!(
+        staged_ok,
+        "a good merge was not staged (writer inherited by a concurrent fork: \
+         {inherited}): {:?}",
+        state.lock().unwrap().snapshot()["update"]
+    );
+    assert_eq!(f.pending()["phase"], "queued");
+    assert!(
+        !inherited,
+        "this process held a writer for the staged program"
+    );
+}
+
 #[test]
 fn only_the_complete_fixed_gate_can_run() {
     let expected: &[(&str, &[&str])] = &[
