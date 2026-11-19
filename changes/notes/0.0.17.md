@@ -2,7 +2,7 @@
 
 All OpenWiz versions, newest first. How versions work: [RELEASING.md](https://github.com/openwizdev/OpenWiz/blob/main/RELEASING.md).
 
-## 0.0.17 · 2026-11-19
+## 0.0.17 · 2026-11-20
 
 **Keep your loops as files, with no always-on engine to run**
 
@@ -23,7 +23,7 @@ Live-checked in this release's smoke test, run by agents on Linux: a fresh insta
 
 [Full release on GitHub](https://github.com/openwizdev/OpenWiz/releases/tag/v0.0.17)
 
-## 0.0.16 · 2026-11-19
+## 0.0.16 · 2026-11-20
 
 **One install instruction, on to your first fleet**
 
