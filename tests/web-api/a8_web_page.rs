@@ -350,6 +350,97 @@ fn w2_every_trap_in_the_root_stops_the_start() {
     }
 }
 
+/// #1274: the release's web export carries its product record,
+/// `openwiz-product.json`, beside `index.html`
+/// (`contracts/release-candidate.v1.md`).
+const PRODUCT_RECORD: &str = "openwiz-product.json";
+
+#[test]
+fn w2_a_packaged_root_with_its_product_record_loads_and_serves_the_page() {
+    // catches: the loader refuses a packaged web root for its product record, so the service exits at start.
+    let fake = Fake::new("web_a8_w2_product", "normal");
+    let t = tree("w2_product");
+    let record = b"{\"schema\":\"synthetic.product\",\"version\":\"0.0.99\"}\n";
+    fs::write(t.root.join(PRODUCT_RECORD), record).unwrap();
+    let s = serve_tree(&fake, &t);
+    let r = s.get("/");
+    assert_eq!(r.status, 200, "{}", r.status_line);
+    assert_eq!(r.body, t.files["/"]);
+    // The record is allowed on disk for its readers, never served.
+    for url in ["/openwiz-product.json", "/openwiz-product.json/"] {
+        let r = s.get(url);
+        assert_not_served(url, &r);
+        assert!(!r.body.windows(record.len()).any(|w| w == record), "{url}");
+    }
+    assert!(fake.invocations().is_empty());
+}
+
+/// #1274: only the product record's exact top-level name is allowed; each
+/// of these, alone beside a valid record, still stops the start.
+const PRODUCT_TRAPS: &[Trap] = &[
+    ("another top-level JSON file", |root, _| {
+        fs::write(root.join("other.json"), b"{}").unwrap();
+    }),
+    ("the record's name below the top", |root, _| {
+        fs::write(root.join("fonts").join(PRODUCT_RECORD), b"{}").unwrap();
+    }),
+    ("the record's name in _next/static", |root, _| {
+        fs::write(root.join("_next/static").join(PRODUCT_RECORD), b"{}").unwrap();
+    }),
+    ("a near name", |root, _| {
+        fs::write(root.join("openwiz-product.json.json"), b"{}").unwrap();
+    }),
+    ("an upper-case record name", |root, _| {
+        fs::write(root.join("OPENWIZ-PRODUCT.JSON"), b"{}").unwrap();
+    }),
+    ("another new extension", |root, _| {
+        fs::write(root.join("data.xml"), b"<x/>").unwrap();
+    }),
+];
+
+#[test]
+fn w2_the_product_record_opens_no_other_file() {
+    // catches: allowing the product record lets other JSON files, names or extensions into the root.
+    for (n, (what, plant)) in PRODUCT_TRAPS.iter().enumerate() {
+        let t = tree(&format!("w2_product_trap_{n}"));
+        fs::write(t.root.join(PRODUCT_RECORD), b"{}").unwrap();
+        plant(&t.root, t.root.parent().unwrap());
+        assert!(
+            WebRoot::open(&t.root).is_err(),
+            "{what}: the root was accepted"
+        );
+    }
+    // The record itself keeps every other rule: no symlink, hard link,
+    // directory-shaped trap or oversized file.
+    let record_traps: &[Trap] = &[
+        ("the record as a symlink", |root, base| {
+            symlink(
+                base.join("secret.txt").to_str().unwrap(),
+                &root.join(PRODUCT_RECORD),
+            );
+        }),
+        ("the record hard-linked", |root, base| {
+            fs::write(base.join("record.json"), b"{}").unwrap();
+            fs::hard_link(base.join("record.json"), root.join(PRODUCT_RECORD)).unwrap();
+        }),
+        ("the record as a FIFO", |root, _| {
+            mkfifo(&root.join(PRODUCT_RECORD));
+        }),
+        ("the record over the cap", |root, _| {
+            let big = usize::try_from(MAX_FILE_BYTES).unwrap() + 1;
+            fs::write(root.join(PRODUCT_RECORD), vec![b' '; big]).unwrap();
+        }),
+    ];
+    for (n, (what, plant)) in record_traps.iter().enumerate() {
+        let t = tree(&format!("w2_product_record_trap_{n}"));
+        plant(&t.root, t.root.parent().unwrap());
+        assert!(
+            WebRoot::open(&t.root).is_err(),
+            "{what}: the root was accepted"
+        );
+    }
+}
+
 #[test]
 fn w2_the_binary_checks_the_web_root_before_it_starts() {
     let t = tree("w2_binary");
