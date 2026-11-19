@@ -1,0 +1,10 @@
+FAIL: test_a_bad_command_line_exits_2_before_any_read (__main__.Command.test_a_bad_command_line_exits_2_before_any_read)
+AssertionError: SystemExit not raised
+FAIL: test_it_prints_and_saves_the_measures_with_the_window_and_rules (__main__.Command.test_it_prints_and_saves_the_measures_with_the_window_and_rules)
+AssertionError: Tuples differ: (None, None) != ('BEFORE', {'since': '2026-01-10T00:00:00Z[50 chars]TC'})
+FAIL: test_a_read_whole_ticket_splits_its_hours_and_waits_exactly (__main__.Measures.test_a_read_whole_ticket_splits_its_hours_and_waits_exactly)
+AssertionError: {'builder': 0, 'ci': 0, 'wake': 0, 'review': 0, 'rewo[14 chars]': 0} != {'builder': 1.0, 'ci': 2.5, 'wake': 0.67, 'review': 0[28 chars] 6.0}
+FAIL: test_an_unreadable_ticket_or_head_is_unknown_never_zero (__main__.Measures.test_an_unreadable_ticket_or_head_is_unknown_never_zero)
+AssertionError: Lists differ: [11, 12, 13, 14] != [11, 12, 13]
+Ran 4 tests in 0.002s
+FAILED (failures=4)
