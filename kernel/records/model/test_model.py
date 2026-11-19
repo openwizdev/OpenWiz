@@ -20,6 +20,15 @@ def run(*args):
     return p.returncode, p.stdout.splitlines(), p.stderr
 
 
+# Each variant breaks the rule it drops, and exactly these rules in all.
+BREAKS = {
+    'no-post-fence': {'P1', 'P4'},
+    'older-only-fence': {'P2', 'P4'},
+    'edit-stopped': {'P3'},
+    'asking-not-claiming': {'P1', 'P2', 'P4'},
+}
+
+
 def broken(lines):
     return {line.split()[1].rstrip(':') for line in lines if line.startswith('broken ')}
 
@@ -35,11 +44,13 @@ class CurrentRules(unittest.TestCase):
 class BrokenVariants(unittest.TestCase):
     def test_each_variant_breaks_the_rule_it_drops(self):
         self.assertEqual(sorted(rule for rule, _ in model.VARIANTS.values()), sorted(model.RULES))
+        self.assertEqual(set(BREAKS), set(model.VARIANTS))
         for variant, (rule, _) in model.VARIANTS.items():
             with self.subTest(variant=variant):
                 code, out, err = run('--variant', variant)
                 self.assertEqual((code, err), (1, ''), out)
-                self.assertIn(rule, broken(out), out)
+                self.assertIn(rule, BREAKS[variant])
+                self.assertEqual(broken(out), BREAKS[variant], out)
                 self.assertFalse(any(line.startswith('vacuous') for line in out), out)
                 # A counterexample is a numbered trace, not just a verdict.
                 self.assertTrue(any(line.startswith('  1. ') for line in out), out)
@@ -51,7 +62,7 @@ class SplitWrites(unittest.TestCase):
         # note can claim between them and the lapsed one still takes the ticket back.
         code, out, err = run('--writes', 'split')
         self.assertEqual((code, err), (1, ''), out)
-        self.assertLessEqual({'P1', 'P2', 'P4'}, broken(out), out)
+        self.assertEqual(broken(out), {'P1', 'P2', 'P3', 'P4'}, out)
 
     def test_the_lost_release_needs_two_overlapping_wakes(self):
         saved = model.RUNS['split']
@@ -61,8 +72,8 @@ class SplitWrites(unittest.TestCase):
         finally:
             model.RUNS['split'] = saved
         _, overlapping, _ = model.check(model.Model(None, 'split'))
-        self.assertNotIn('P3', single)
-        self.assertIn('P3', overlapping)
+        self.assertEqual(set(single), {'P1', 'P2', 'P4'})
+        self.assertEqual(set(overlapping), {'P1', 'P2', 'P3', 'P4'})
 
 
 class NotVacuous(unittest.TestCase):

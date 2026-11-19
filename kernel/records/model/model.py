@@ -94,12 +94,18 @@ class Model:
     # NOTES is the ticket now. Returns (notes, pending readback note id) or None
     # when the fence stops it (nothing written).
     def edit(self, view, notes, agent, i, state):
-        # Red: no fence yet.
+        _, mine_state, h = view
+        if mine_state == 'stopped' and self.variant != 'edit-stopped':
+            return None
+        if h is not None and h != i and not (self.variant == 'older-only-fence' and h > i):
+            return None
         return put(notes, i, agent, state), None
 
     def post(self, view, notes, agent, state):
-        # Red: no fence and no read-back yet.
-        return notes + ((agent, state, 0),), None
+        if self.variant != 'no-post-fence' and view[2] is not None:
+            return None
+        notes = notes + ((agent, state, 0),)
+        return notes, (None if self.variant == 'no-post-fence' else len(notes) - 1)
 
     def readback(self, notes, i):
         h = holder(notes, kind(notes[i][0]), self.claiming)
