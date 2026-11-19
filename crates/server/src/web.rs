@@ -4,6 +4,9 @@
 //! the root with an extension in [`TYPES`]. Since #1029 (the installable app),
 //! the approved exception also serves exactly `/manifest.webmanifest`, `/sw.js`,
 //! `/sw-register.js` and `/icons/…`. Nothing else is served.
+//! Since #1274, the root may also hold the release's product record,
+//! [`PRODUCT_RECORD`], at its top level only: checked like every file, never
+//! served.
 //! Jake's approval is preserved in the [private record](https://github.com/jparker2006/ClosedWiz/issues/1277#issuecomment-6704800036), recorded 2026-11-07.
 //!
 //! **Loaded once, at start, into memory; no request touches the
@@ -94,6 +97,11 @@ pub(crate) const PAGE_HEADERS: &[(&str, &str)] = &[
     ("Content-Security-Policy", PAGE_CSP),
     ("Connection", "close"),
 ];
+
+/// #1274: the release's product record, which the packaged web export
+/// carries at its top level (`contracts/release-candidate.v1.md`). The one
+/// file allowed outside [`TYPES`]; checked like every file, never served.
+const PRODUCT_RECORD: &str = "openwiz-product.json";
 
 /// How deep directories may nest under the root.
 const MAX_DEPTH: usize = 16;
@@ -194,8 +202,12 @@ impl Loaded {
             if !kind.is_file() {
                 return Err(refused("an entry that is not a regular file or directory"));
             }
-            let content_type =
-                content_type(name).ok_or_else(|| refused("a file type outside the table"))?;
+            let content_type = if relative == PRODUCT_RECORD {
+                Some("application/json")
+            } else {
+                content_type(name)
+            }
+            .ok_or_else(|| refused("a file type outside the table"))?;
             if meta.nlink() != 1 {
                 return Err(refused("a hard link"));
             }
