@@ -822,7 +822,9 @@ fn real_export() -> PathBuf {
 }
 
 /// The export's files that are deliberately not served.
-const NOT_SERVED: &[&str] = &["404.html"];
+/// #1274: a packaging build's export also emits the product record, which
+/// is loaded but never served.
+const NOT_SERVED: &[&str] = &["404.html", PRODUCT_RECORD];
 
 #[test]
 fn w8_the_real_export_is_served_byte_for_byte() {
