@@ -10,6 +10,7 @@ import sys
 import tempfile
 import time
 import unittest
+import urllib.error
 import urllib.request
 
 sys.dont_write_bytecode = True
@@ -47,6 +48,9 @@ class Package(unittest.TestCase):
             web.mkdir()
             page = b'Synthetic page, no accounts.'
             (web / 'index.html').write_bytes(page)
+            # catches (#1274): a packaged web root carrying its product record stops the service at start.
+            record = b'{"schema":"synthetic.product","version":"0.0.99"}\n'
+            (web / 'openwiz-product.json').write_bytes(record)
             # Only the installed service can serve the page.
             inert_server = root / 'inert-server'
             inert_server.write_bytes(b'#!/bin/sh\nexit 1\n')
@@ -113,6 +117,10 @@ class Package(unittest.TestCase):
                                                 opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
                                                 with opener.open(f'http://127.0.0.1:{port}/', timeout=3) as response:
                                                     self.assertEqual(response.read(), page)
+                                                with self.assertRaises(urllib.error.HTTPError) as missing:
+                                                    opener.open(f'http://127.0.0.1:{port}/openwiz-product.json', timeout=3)
+                                                self.assertEqual(missing.exception.code, 404)
+                                                self.assertEqual((selected / 'web/openwiz-product.json').read_bytes(), record)
                                                 break
                                         time.sleep(0.05)
                                     else:
