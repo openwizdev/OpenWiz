@@ -2,6 +2,48 @@
 
 All OpenWiz versions, newest first. How versions work: [RELEASING.md](https://github.com/openwizdev/OpenWiz/blob/main/RELEASING.md).
 
+## 0.0.17 · 2026-11-19
+
+**Keep your loops as files, with no always-on engine to run**
+
+**What's new for you**
+
+- Keep your Cloudroom loops as files: `openwiz loop validate` checks them, `openwiz loop export` writes your loops out, `openwiz loop plan` shows the exact changes, and `openwiz loop apply` makes one loop match its file and reads it back.
+- A fresh install starts its service and serves the web view, with no activation step.
+- The always-on engine is gone: no scheduled fleet tick, health checks and takeover, push notifications or engine step in Setup; your fleets run as fleet threads with their own loops.
+
+Live-checked in this release's smoke test, run by agents on Linux: a fresh install of this release, its service starting and serving the web view, `openwiz help --agent`, `ls --json` and `show --json`, one send to a throwaway thread, and one new thread in a throwaway project; the loop commands are tested on synthetic fixtures and [one read-only replay of real loops](https://github.com/openwizdev/OpenWiz/blob/v0.0.17/docs/evidence/794/README.md), `openwiz loop apply` was never run live, and nothing was checked on a Mac.
+
+**Under the hood**
+
+- `openwiz engine preview`, `activate` and `status` and the executing `openwiz fleet tick` are removed; `fleet tick --dry-run` and `fleet due --github-only` still read and plan.
+- The package no longer ships the engine preparation, activation and handover runtimes.
+- The packaged service still checks its manifest, package ownership and owner-only state before it starts, but no longer needs an activation record.
+- `openwiz loop export` never writes a webhook address or a secret value, and reports each loop it cannot represent instead of dropping it.
+
+[Full release on GitHub](https://github.com/openwizdev/OpenWiz/releases/tag/v0.0.17)
+
+## 0.0.16 · 2026-11-19
+
+**One install instruction, on to your first fleet**
+
+**What's new for you**
+
+- The install instruction continues in one path: GitHub sign-in in your browser, your own private OpenWiz App or an explicit skip, your factory's private brain, then onboarding to a first fleet.
+- `openwiz init` places your private brain by your repository's visibility: in the repository when it is private, or in a linked private companion when it is public, proposed through one pull request.
+- The visual terminal app is removed: `openwiz ui` says so, and `openwiz` with no arguments prints the help.
+
+Tested on [recordings and synthetic fixtures](https://github.com/openwizdev/OpenWiz/blob/v0.0.17/docs/evidence/openwiz-0.0.16/recording.md) only; a real sign-in, a real App registration and a fresh machine's first merged pull request are still unverified.
+
+**Under the hood**
+
+- Your own GitHub App is registered private, and its tokens are minted only for repositories on the account that owns it.
+- Onboarding accepts fleet records only from configured authors, and creates the demo repository only after GitHub sign-in is verified, with a first commit on its default branch.
+- Updates no longer fail to stage when another process briefly holds the new program open.
+- An upload no longer fails with a server error when another upload is cancelled at the same moment.
+
+[Full release on GitHub](https://github.com/openwizdev/OpenWiz/releases/tag/v0.0.17)
+
 ## 0.0.12 · 2026-11-16
 
 **Scripts and agents can drive OpenWiz**
