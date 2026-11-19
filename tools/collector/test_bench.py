@@ -14,7 +14,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 
 sys.dont_write_bytecode = True
 HERE = Path(__file__).resolve().parent
@@ -178,7 +178,7 @@ class Command(unittest.TestCase):
                      ['--repo', 'not a repository', '--since', SINCE, '--until', UNTIL, '--out', 'x.json'],
                      ['--repo', REPO, '--since', SINCE, '--until', '2999-01-01T00:00:00Z', '--out', 'x.json']):
             reads = Reads()
-            with redirect_stdout(io.StringIO()), self.assertRaises(SystemExit) as exit_:
+            with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as exit_:
                 bench.main(args, reads=reads)
             self.assertEqual((exit_.exception.code, reads.asked), (2, []), args)
 
