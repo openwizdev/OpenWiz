@@ -42,11 +42,14 @@ class Cursor(unittest.TestCase):
             json.dump({'record_authors': ['example-bot[bot]'], 'comments': []}, f)
         self.turns, self.hold = os.path.join(self.folder, 'turns'), os.path.join(self.folder, 'hold')
         self.log = os.path.join(self.folder, 'calls')
-        self.env = dict(os.environ, KIT_TRACKER=self.tracker, KIT_TEST=self.mark, CURSOR_API_KEY=TOKEN,
+        self.env = dict(KIT_TRACKER=self.tracker, KIT_TEST=self.mark, CURSOR_API_KEY=TOKEN,
                         FAKE_TURNS=self.turns, FAKE_HOLD=self.hold, FAKE_CURSOR_LOG=self.log,
                         FAKE_CURSOR_STATE=os.path.join(self.folder, 'cursor.json'),
                         OPENWIZ_CURSOR_STATE=os.path.join(self.folder, 'state'),
                         PATH=os.path.join(HERE, 'fixtures', 'bin') + os.pathsep + python)
+        real = [n for n in ('claude', 'codex', 'agent', 'cursor-agent', 'gh', 'boat') if shutil.which(n, path=self.env['PATH'])]
+        if real or shutil.which('curl', path=self.env['PATH']) != os.path.join(HERE, 'fixtures', 'bin', 'curl'):
+            raise RuntimeError('the test PATH reaches a real program: %s' % (real or ['curl']))
 
     def tearDown(self):
         for pid in self.marked():
