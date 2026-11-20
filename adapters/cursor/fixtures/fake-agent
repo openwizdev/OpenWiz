@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-"""A synthetic Cursor cloud agent run, started by the fake `curl`: `fake-agent first|woken <model> <prompt>`.
-
-It posts (first) or edits (woken) one builder status note in the local tracker named by KIT_TRACKER, as a record
-author, naming the skill its prompt names. Then it ends its turn, or keeps running while the file named by
-FAKE_HOLD exists, as a long turn does. A cancelled run is killed by the fake `curl`.
-"""
 import json, os, re, sys, time
 
 woken, model, prompt = sys.argv[1] == 'woken', sys.argv[2], sys.argv[3]

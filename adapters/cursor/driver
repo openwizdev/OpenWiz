@@ -1,11 +1,4 @@
 #!/usr/bin/env python3
-"""The Cursor cloud agents driver (kernel/driver.v1.md): each run is one Cursor cloud agent on its own machine.
-
-`start` creates the agent (POST /v1/agents) under an agent id the driver saved first, `wake` sends it a follow-up
-run once its last run has ended, and `stop` cancels its active run and archives it, never deleting it. Every call
-goes through the user's own `curl --netrc`, which reads their Cursor API key from their ~/.netrc: the driver never
-reads, passes or prints a key. Nothing runs on this machine between calls. Standard library only.
-"""
 import fcntl, json, os, re, secrets, subprocess, sys, uuid
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -17,7 +10,7 @@ START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket':
          'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
          'model': r'[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}'}
 RUN = {'run': r'run-[0-9a-f]{12}'}
-HARNESS = 'cursor'  # Cursor cloud agents run only Cursor's own agent
+HARNESS = 'cursor'
 SIGN_IN = 'put your Cursor API key in ~/.netrc yourself, as the driver README says'
 FIX_STATE = 'make OPENWIZ_CURSOR_STATE (or ~/.local/state/openwiz-cursor) a folder you can write'
 
@@ -33,7 +26,6 @@ def unique(pairs):
 
 
 def read(fields):
-    """The request on stdin, with exactly these fields, each valid, or Refused."""
     try:
         req = json.loads(sys.stdin.read(), object_pairs_hook=unique)
     except ValueError:
@@ -48,9 +40,6 @@ def read(fields):
 
 
 def api(method, path, body=None):
-    """(HTTP status, answer) from Cursor's API through the user's own `curl --netrc`, or (None, None) when no
-    answer came back, so whether the call took effect is unknown. The key stays in ~/.netrc: never in an
-    argument, an environment or this program."""
     cmd = ['curl', '-sS', '--netrc', '--max-time', '60', '-X', method, '-H', 'Accept: application/json']
     if body is not None:
         cmd += ['-H', 'Content-Type: application/json', '--data-binary', '@-']
@@ -72,7 +61,6 @@ def api(method, path, body=None):
 
 
 def why(code, answer):
-    """Cursor's error code, never its message: the message may quote what was sent."""
     error = answer.get('error') if isinstance(answer, dict) else None
     name = error.get('code') if isinstance(error, dict) else error
     return 'HTTP %d%s' % (code, ' ' + name if isinstance(name, str) and re.fullmatch(r'[a-z_]{1,40}', name) else '')
@@ -85,7 +73,6 @@ def refused(code, answer, what, then):
 
 
 def pinned_skills():
-    """The WizSkills release OpenWiz pins (its wizskills.lock): version, commit and tree, each checked."""
     try:
         with open(os.path.join(HERE, '..', '..', 'wizskills.lock')) as f:
             lock = json.load(f)
@@ -98,8 +85,6 @@ def pinned_skills():
 
 
 def prompt(req, lock=None):
-    """The first run's prompt installs the pinned skills (the cloud machine has none of the user's), and a wake's
-    asks the same agent, with its memory, to read the ticket again."""
     if lock is None:
         return ('You were woken: read the ticket again and carry on: GitHub repository %s, ticket #%d, with the %s '
                 'skill.' % (req['repository'], req['ticket'], req['skill']))
@@ -129,7 +114,6 @@ def saved(run, state=None):
 
 
 def lock(run):
-    """Hold the run's lock until this command ends, so its start, wakes and stops take turns."""
     try:
         fcntl.flock(os.open(path(run, '.lock'), os.O_RDONLY | os.O_CREAT, 0o600), fcntl.LOCK_EX)
     except OSError:
@@ -137,8 +121,6 @@ def lock(run):
 
 
 def end(agent):
-    """Cancel the agent's active run, then archive the agent (reversible; never the permanent delete). A list of
-    what Cursor did not confirm: empty once the agent is archived, or when it never existed."""
     code, answer = api('GET', '/agents/' + agent)
     if code == 404:
         return []
@@ -149,7 +131,7 @@ def end(agent):
         failed, run = [], answer.get('latestRunId')
     if isinstance(run, str) and re.fullmatch(r'[A-Za-z0-9_-]{1,100}', run) and answer.get('status') != 'ARCHIVED':
         code, answer = api('POST', '/agents/%s/runs/%s/cancel' % (agent, run))
-        if code not in (200, 409):  # 409 run_not_cancellable: that run has already ended
+        if code not in (200, 409):
             failed.append('cancelling run %s (%s)' % (run, 'no answer' if code is None else why(code, answer)))
     code, answer = api('POST', '/agents/%s/archive' % agent)
     if code != 200:
@@ -164,8 +146,8 @@ def start():
                       'start again with harness cursor, or use a driver for %s' % req['harness'])
     pins = pinned_skills()
     run, agent = 'run-' + secrets.token_hex(6), 'bc-' + str(uuid.uuid4())
-    state = {'request': req, 'agent': agent, 'stopped': False, 'starting': True}  # never woken while starting
-    try:  # save the agent's id before it exists: nowhere to keep it, nothing is created
+    state = {'request': req, 'agent': agent, 'stopped': False, 'starting': True}
+    try:
         saved(run, state)
         lock(run)
     except (OSError, Refused):
@@ -174,7 +156,7 @@ def start():
         'prompt': {'text': prompt(req, pins)}, 'model': {'id': req['model']},
         'repos': [{'url': 'https://github.com/' + req['repository']}], 'name': 'openwiz-' + run,
         'agentId': agent, 'autoCreatePR': False})
-    if code is None or code >= 500 or code == 409:  # it may exist: end it by the id saved for it
+    if code is None or code >= 500 or code == 409:
         failed = end(agent)
         try:
             saved(run, dict(state, stopped=True))
@@ -195,7 +177,7 @@ def start():
                       'check the repository is connected to Cursor and the model is one Cursor lists, then start again')
     try:
         saved(run, dict(state, starting=False))
-    except OSError:  # the agent exists but its run is not saved: end it, and never say retry
+    except OSError:
         if end(agent):
             raise Refused('run %s created agent %s but could not save it, nor confirm ending it; its outcome is '
                           'unknown' % (run, agent), 'archive agent %s at cursor.com/agents, and read the ticket for '
@@ -221,7 +203,7 @@ def wake():
                       'check that api.cursor.com answers and ' + SIGN_IN + ', then wake it again')
     if answer.get('status') == 'ARCHIVED':
         raise Refused('run %s\'s agent is archived on Cursor' % run, 'stop it, then start a new run')
-    if answer.get('status') == 'ACTIVE':  # one agent, one run at a time: it is awake and reads the ticket itself
+    if answer.get('status') == 'ACTIVE':
         return {'run': run, 'woke': True}
     code, answer = api('POST', '/agents/%s/runs' % state['agent'], {'prompt': {'text': prompt(state['request'])}})
     if code is None:
@@ -237,12 +219,12 @@ def stop():
     saved(run)
     lock(run)
     state = saved(run)
-    try:  # first, so no wake sends a follow-up meanwhile
+    try:
         saved(run, dict(state, stopped=True))
         kept = True
     except OSError:
         kept = False
-    failed = end(state['agent'])  # whether or not that save worked
+    failed = end(state['agent'])
     if failed:
         raise Refused('run %s: Cursor did not confirm %s' % (run, '; '.join(failed)),
                       'stop it again, or archive agent %s at cursor.com/agents' % state['agent'])
@@ -270,7 +252,7 @@ def main():
         out, code = {'error': e.args[0], 'next': e.args[1]}, 1
     except Exception as e:
         out, code = {'error': 'the driver failed: ' + type(e).__name__, 'next': 'read its code, fix it, retry'}, 1
-    if code:  # D3: each one line of 1 to 300 characters
+    if code:
         out = {k: ' '.join(v.split())[:300] for k, v in out.items()}
     print(json.dumps(out))
     sys.exit(code)

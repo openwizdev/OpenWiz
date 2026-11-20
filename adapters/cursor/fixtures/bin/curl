@@ -1,20 +1,4 @@
 #!/usr/bin/env python3
-"""A synthetic Cursor cloud agents API behind a fake `curl`, for the Cursor driver's own tests and the kit.
-
-It takes only the call the driver makes: `curl -sS --netrc --max-time <s> -X <method> -H 'Accept: ...'
-[-H 'Content-Type: application/json' --data-binary @-] -o - -w '\\n%{http_code}' https://api.cursor.com/v1/...`,
-and refuses any other argument, so a login on the command line (`-u`, an Authorization header) fails the tests.
-It prints the answer's JSON body, then a newline and the HTTP status, as curl does with that `-w`.
-
-The routes and answer shapes follow cursor.com/docs/cloud-agent/api/endpoints (read 2026-11-20). An agent's
-run is a local process (`fixtures/fake-agent`): it posts, or when woken edits, one builder status note in the
-tracker named by KIT_TRACKER, then ends its turn, or keeps running while the file named by FAKE_HOLD exists.
-
-State: the JSON file named by FAKE_CURSOR_STATE. Each call is appended, as one JSON line holding its argv and
-body, to the file named by FAKE_CURSOR_LOG when set. FAKE_CURSOR_FAIL=`<METHOD> <path suffix>=<status>`
-answers that call with that status and an error body; a status of `lost` makes the call take effect, then
-fail as a timed-out curl does (exit 28, no answer).
-"""
 import fcntl, json, os, re, signal, subprocess, sys, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -94,7 +78,7 @@ def route(method, path, body, agents):
     if method == 'GET' and m.group(2) is None:
         return 200, public(agent)
     if method == 'POST' and m.group(2) == '/runs':
-        if agent['archived']:  # UNVERIFIED code: the docs say only that an archived agent takes no new run
+        if agent['archived']:
             return 409, {'error': {'code': 'agent_archived', 'message': 'archived'}}
         if status(agent['runs'][-1]) in ACTIVE:
             return 409, {'error': {'code': 'agent_busy', 'message': 'a run is active'}}

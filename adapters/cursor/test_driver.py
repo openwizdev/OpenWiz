@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-"""The Cursor cloud agents driver passes the kit on a synthetic Cursor, and never leaves an agent running.
-
-Run: python3 -I adapters/cursor/test_driver.py   (Linux: it reads /proc)
-`fixtures/bin/curl` is a synthetic Cursor cloud agents API behind a fake `curl`; nothing reaches the network.
-"""
 import json
 import os
 import secrets
@@ -21,7 +16,7 @@ DRIVER = os.path.join(HERE, 'driver')
 KIT = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'kit.py')
 START = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'cursor',
          'model': 'synthetic-model-1'}
-TOKEN = 'synthetic-' + 'x' * 24  # in the driver's environment as CURSOR_API_KEY: it must never pass it on
+TOKEN = 'synthetic-' + 'x' * 24
 
 
 def alive(pid):
@@ -56,7 +51,6 @@ class Cursor(unittest.TestCase):
         shutil.rmtree(self.folder, ignore_errors=True)
 
     def marked(self):
-        """Every live process this test started that still carries its mark."""
         found = []
         for pid in filter(str.isdigit, os.listdir('/proc')):
             try:
@@ -87,7 +81,6 @@ class Cursor(unittest.TestCase):
             return {}
 
     def logged(self, count=0):
-        """The runs the fake agent logged: [(pid, first|woken)], waiting up to 10 seconds for `count` of them."""
         deadline = time.monotonic() + 10
         while True:
             try:
@@ -106,8 +99,6 @@ class Cursor(unittest.TestCase):
         return ready()
 
     def test_kit_passes_all_five(self):
-        # catches: a driver that runs a local harness instead of Cursor's API, a wake that opens a second agent
-        # (a second note), a stop that leaves the run working, and a key passed to the `curl` processes it starts.
         p = subprocess.run([sys.executable, '-I', KIT, '--driver', DRIVER, '--repo', 'example/site',
                             '--ticket', '7', '--harness', 'cursor', '--model', 'synthetic-model-1',
                             '--tracker', self.tracker, '--wait', '8'],
@@ -120,9 +111,6 @@ class Cursor(unittest.TestCase):
             'pass token: no login or token passed through the driver']), p.stderr)
 
     def test_start_creates_one_agent_under_an_id_it_saved_first_with_no_login(self):
-        # catches: a key put on curl's command line (`-u`, an Authorization header) or in the request body, a
-        # start that lets Cursor mint the agent id so a lost answer leaves an agent no stop can reach, and a
-        # prompt that never tells the cloud agent where the pinned skills are.
         code, out = self.driver('start', START)
         self.assertEqual(code, 0, out)
         [call] = self.calls()
@@ -142,15 +130,12 @@ class Cursor(unittest.TestCase):
         self.assertEqual(list(self.agents()), [body['agentId']])
 
     def test_start_refuses_any_harness_but_cursor_and_creates_nothing(self):
-        # catches: a driver that quietly runs Cursor's own agent when the user asked for another harness.
         code, out = self.driver('start', dict(START, harness='synthetic-harness'))
         self.assertEqual(code, 1, out)
         self.assertIn('cursor', out['next'])
         self.assertEqual(self.calls(), [])
 
     def test_a_start_whose_answer_is_lost_archives_its_agent(self):
-        # catches: a create whose answer never came back leaving a cloud agent working on the ticket with no
-        # run id to stop it, and an error that says to retry, which starts a second agent beside it.
         open(self.hold, 'w').close()
         code, out = self.driver('start', START, FAKE_CURSOR_FAIL='POST /agents=lost')
         self.assertEqual(code, 1, out)
@@ -162,15 +147,12 @@ class Cursor(unittest.TestCase):
         self.assertEqual(self.marked(), [])
 
     def test_a_wake_during_a_run_starts_no_second_run_and_one_after_it_follows_up(self):
-        # catches: a wake that sends a follow-up while the agent's run is active (Cursor refuses it as busy, so a
-        # driver that reports that as an error tells the fleet the run is lost), and a wake after the run ended
-        # that starts nothing.
         open(self.hold, 'w').close()
         code, out = self.driver('start', START)
         self.assertEqual(code, 0, out)
         [(first, _)] = self.logged(1)
         self.assertEqual(self.driver('wake', out), (0, dict(out, woke=True)))
-        time.sleep(0.5)  # time for a second run to log itself, if one was started
+        time.sleep(0.5)
         self.assertEqual(len(self.logged()), 1, 'a wake during an active run started a second run')
         os.remove(self.hold)
         self.assertTrue(self.until(lambda: not alive(first)), 'the fake run did not end')
@@ -180,8 +162,6 @@ class Cursor(unittest.TestCase):
         self.assertIn('build-ticket skill', agent['prompt'])
 
     def test_stop_cancels_the_active_run_then_archives_and_never_deletes(self):
-        # catches: a stop that archives without cancelling (the run may keep working), one that deletes the agent
-        # for good, a wake after stop that is taken, and a second stop that fails instead of answering again.
         open(self.hold, 'w').close()
         code, out = self.driver('start', START)
         self.assertEqual(code, 0, out)
@@ -198,8 +178,6 @@ class Cursor(unittest.TestCase):
         self.assertTrue(agent['archived'])
 
     def test_a_stop_that_cannot_save_still_archives_and_no_wake_reopens_it(self):
-        # catches: a stop whose save fails before it reaches Cursor, leaving the agent working, and a wake that
-        # then trusts the stale local record and sends a follow-up.
         open(self.hold, 'w').close()
         code, out = self.driver('start', START)
         self.assertEqual(code, 0, out)
@@ -216,8 +194,6 @@ class Cursor(unittest.TestCase):
         self.assertEqual(len(self.logged()), 1, 'a wake reopened the stopped run')
 
     def test_a_failed_archive_is_reported_with_the_agent_to_archive(self):
-        # catches: a stop that answers stopped while Cursor never confirmed the archive, so an agent nobody
-        # watches keeps its machine.
         code, out = self.driver('start', START)
         self.assertEqual(code, 0, out)
         code, err = self.driver('stop', out, FAKE_CURSOR_FAIL='POST /archive=500')
@@ -227,8 +203,6 @@ class Cursor(unittest.TestCase):
         self.assertEqual(self.driver('wake', out)[0], 1, 'a wake was taken after a stop')
 
     def test_a_refused_login_says_where_the_key_lives_and_shows_no_answer(self):
-        # catches: a driver that asks for the key in its input or echoes Cursor's error message (which may quote
-        # what was sent) instead of pointing to the user's own ~/.netrc.
         code, err = self.driver('start', START, FAKE_CURSOR_FAIL='POST /agents=401')
         self.assertEqual(code, 1, err)
         self.assertIn('~/.netrc', err['next'])
