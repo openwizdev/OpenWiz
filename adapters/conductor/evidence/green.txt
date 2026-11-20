@@ -1,5 +1,5 @@
-# at 44478b95
-$ python3 -I adapters/conductor/test_driver.py
+# at e7536761
+$ python3 -I adapters/conductor/test_driver.py   # PATH: fixtures/bin and a python3 link only
 test_a_failed_archive_says_so_and_the_run_stays_stopped (__main__.Conductor.test_a_failed_archive_says_so_and_the_run_stays_stopped) ... ok
 test_a_lost_start_reply_is_never_retried (__main__.Conductor.test_a_lost_start_reply_is_never_retried) ... ok
 test_a_refused_start_starts_nothing_and_says_what_to_do (__main__.Conductor.test_a_refused_start_starts_nothing_and_says_what_to_do) ... ok
@@ -12,7 +12,7 @@ Ran 6 tests in <n>s
 
 OK
 
-$ python3 -I kernel/driver-kit/kit.py --driver adapters/conductor/driver --repo example/site --ticket 7 --harness claude --model opus-5-5-1m --tracker <tmp>/t.json --wait 20   # on the fake Conductor (fixtures/bin first on PATH, a synthetic CONDUCTOR_API_KEY)
+$ python3 -I kernel/driver-kit/kit.py --driver adapters/conductor/driver --repo example/site --ticket 7 --harness claude --model opus-5-5-1m --tracker <tmp>/t.json --wait 20   # PATH: fixtures/bin and a python3 link only; a synthetic CONDUCTOR_API_KEY
 pass version: openwiz:records v1, and the schema is driver v1
 pass start: the run posted builder status note 1
 pass wake: the run edited builder status note 1
