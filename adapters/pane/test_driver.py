@@ -81,14 +81,14 @@ class Pane(unittest.TestCase):
     def test_errors_carry_fixed_reasons_never_pane_text(self):
         code, run = self.driver('start', REQUEST)
         answers = [self.driver('start', REQUEST, FAKE_PANE_DOWN='1'), self.driver('start', REQUEST, FAKE_PANE_READY='no'),
-                   self.driver('stop', run, FAKE_PANE_DIRTY='uncommitted')]
+                   self.driver('stop', run, FAKE_PANE_DOWN='1')]
         for code, out in answers:
             self.assertEqual(code, 1, out)
             self.assertNotIn('synthetic', out['error'] + out['next'])
         self.assertNotIn('/synthetic/', json.dumps(answers))
         self.assertIn('open the Pane app', answers[0][1]['next'])
         self.assertIn('command-exited', answers[1][1]['error'])
-        self.assertIn('openwiz-' + run['run'], answers[2][1]['error'])
+        self.assertIn('runpane panels close failed', answers[2][1]['error'])
 
     def test_kit_passes_all_five(self):
         p = subprocess.run([sys.executable, '-I', KIT, '--driver', DRIVER, '--repo', 'example/site',
@@ -137,32 +137,37 @@ class Pane(unittest.TestCase):
         self.assertEqual(([p['closed'] for p in state['panels'].values()],
                           [p['archived'] for p in state['panes'].values()]), ([True], [True]))
 
-    def test_stop_keeps_uncommitted_work_and_says_where(self):
+    def test_stop_with_work_ends_the_agent_keeps_the_pane_and_answers_stopped(self):
+        for dirty in ('unpushed', 'uncommitted'):
+            with self.subTest(dirty=dirty):
+                code, run = self.driver('start', REQUEST)
+                self.assertEqual(code, 0, run)
+                agent = self.pane()['panels']['panel-%d' % len(self.pane()['panels'])]['agent']
+                self.assertEqual(self.driver('stop', run, FAKE_PANE_DIRTY=dirty), (0, dict(run, stopped=True)))
+                self.assertFalse(self.alive(agent))
+                self.assertEqual(self.pane()['panes']['pane-%d' % len(self.pane()['panes'])]['archived'], False)
+                self.assertEqual(self.driver('stop', run, FAKE_PANE_DIRTY=dirty), (0, dict(run, stopped=True)))
+                code, out = self.driver('wake', run)
+                self.assertEqual(code, 1, out)
+                self.assertIn('is stopped', out['error'])
+        archives = [c for c in self.called() if c[:2] == ['panes', 'archive']]
+        self.assertEqual((len(archives), [c for c in archives if '--force' in c]), (4, []))
+
+    def test_a_later_stop_archives_the_pane_once_its_work_is_gone(self):
         code, run = self.driver('start', REQUEST)
-        self.assertEqual(code, 0, run)
-        code, out = self.driver('stop', run, FAKE_PANE_DIRTY='uncommitted')
-        self.assertEqual(code, 1, out)
-        self.assertIn('Pane openwiz-' + run['run'], out['error'])
-        self.assertEqual([p['archived'] for p in self.pane()['panes'].values()], [False])
-        self.assertTrue(all(p['closed'] for p in self.pane()['panels'].values()))
-        self.assertEqual(self.driver('wake', run)[0], 1)
+        self.assertEqual(self.driver('stop', run, FAKE_PANE_DIRTY='unpushed'), (0, dict(run, stopped=True)))
         self.assertEqual(self.driver('stop', run), (0, dict(run, stopped=True)))
         self.assertEqual([p['archived'] for p in self.pane()['panes'].values()], [True])
-
-    def test_stop_never_forces_the_archive_and_answers_again(self):
-        code, run = self.driver('start', REQUEST)
-        code, out = self.driver('stop', run, FAKE_PANE_DIRTY='unpushed')
-        self.assertEqual(code, 1, out)
-        self.assertIn('Pane openwiz-' + run['run'], out['error'])
-        self.assertEqual([p['archived'] for p in self.pane()['panes'].values()], [False])
-        self.assertEqual(self.driver('stop', run), (0, dict(run, stopped=True)))
-        archives = [c for c in self.called() if c[:2] == ['panes', 'archive']]
-        self.assertEqual([('--force' in c) for c in archives], [False, False])
         before = len(self.called())
         self.assertEqual(self.driver('stop', run), (0, dict(run, stopped=True)))
-        code, out = self.driver('wake', run)
-        self.assertEqual((code, len(self.called())), (1, before), out)
-        self.assertIn('is stopped', out['error'])
+        self.assertEqual(len(self.called()), before)
+
+    def alive(self, pid):
+        try:
+            with open('/proc/%d/stat' % pid) as f:
+                return f.read().rpartition(')')[2].split()[0] != 'Z'
+        except OSError:
+            return False
 
     def test_start_refuses_a_credential_in_any_field(self):
         shapes = (TOKEN, 'sk-' + 'Synthetic0Value0' * 2, 'AKIA' + 'SYNTHETIC0VALUE0', 'xoxb-' + 'synthetic-0value',
