@@ -260,6 +260,6 @@ test('an unreadable main-map gate still schedules the final failure check', () =
 
 test('main pushes with an old map run the traced full plan and sign; nightly signing stays unconditional', () => {
   const traced = { changes: { ...FULL_PLAN.changes, trace: 'true' } };
-  assert.deepEqual(simulate(workflow, 'push', traced), [...FULL_SUITE, 'main-light', 'select-map'].sort(), '121-minute map: traced full run signs');
-  assert.deepEqual(simulate(workflow, 'schedule', traced), [...FULL_SUITE, 'select-map'].sort(), 'nightly still signs');
+  assert.deepEqual(simulate(workflow, 'push', traced), [...FULL_SUITE, 'main-light'].sort(), '121-minute map: traced full run signs');
+  assert.deepEqual(simulate(workflow, 'schedule', traced), [...FULL_SUITE].sort(), 'nightly still signs');
 });

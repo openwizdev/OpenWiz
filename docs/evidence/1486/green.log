@@ -1,0 +1,20 @@
+# #1486 green: the scoped local checks at the hand-back head's parent tree
+python3 -I .github/actions/docs-only/test_plan.py: OK
+python3 -I .github/actions/docs-only/test_workflow.py: OK
+python3 -I .github/actions/docs-only/test_execution.py: OK
+python3 -I .github/actions/docs-only/test_lanes.py: OK
+python3 -I .github/actions/docs-only/test_gate.py: OK
+python3 -I ci/escapes/test.py: OK
+python3 -I ci/shard/test.py: OK
+python3 -I ci/main-batch/test_shadow.py: OK
+python3 -I ci/main-batch/test_admit.py: OK
+python3 -I ci/main-batch/test_contract.py: OK
+python3 -I tools/open-import/test_guard.py: OK
+python3 -I tools/owned-paths/test_check.py: OK
+python3 -I tools/war-room/test_budgets.py: OK
+python3 -I tools/collector/test_ci3.py: OK
+sh .github/actions/docs-only/test.sh: all ok
+node --test .github/workflows/ci.test.mjs: ℹ pass 10 ℹ fail 0 
+python3 -I tools/war-room/budgets.py check: budgets: 11 jobs in 2 workflows match 15 rows
+python3 -I tools/collector/ci3.py check-steps: covered 92 CI steps
+python3 -I docs/evidence/1486/compare.py: see compare.log (old tree is main before #1486)

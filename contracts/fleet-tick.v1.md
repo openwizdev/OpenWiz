@@ -1,95 +1,39 @@
 # OpenWiz fleet tick contract, version 1 (`openwiz.fleet-tick.v1`)
 
-**OB1 / OB-A1 (#2187):** the separate
-[ops record/claim contract](ops-dispatch.v1.md) is GitHub-first agent coordination,
-with atomic create-if-absent claims per generation and operation. It is not this
-private mechanical tick envelope and adds no wire field or Rust implementation.
-Mechanical due detection supplies candidates; an agent must independently check
-current authority/evidence. A ref claim does not fence a later external call.
-All new ops start/delivery/recheck/hold-release/merge effects remain disabled
-where their actual boundary is unavailable or unfenced; record/refusal
-certification does not enable them or change existing tick behavior. P5 stays
-Unverified; #2244 owns separate unstarted Local discovery. Every existing live,
-review/CI/base/merge, activation, spending and publication gate remains.
-
-What the fleet tick decides (OpenWiz 0.0.6, spec #116). `openwiz fleet tick --dry-run --json` prints the actions it would take. The planner (B2, #118) returns exactly these actions and the CLI (B5, #121) prints them. The executing `openwiz fleet tick` that carried them out, with its `--expect-plan` restriction, was retired in 0.0.17 (#800, spec #786): the agents running `launch-fleet` act. The schema is [`fleet-tick.v1.schema.json`](fleet-tick.v1.schema.json); this file adds the rules file, what each action means, the rules a schema can't express, and examples.
-
-**Public records (O4, #1272):** GitHub comments follow the thread-free forms in
-[open development v1](open-development.v1.md#fleet-records), including its
-reviewer spans and ambiguity rule. Writers use those forms on both repositories.
-Only the contract's private repository accepts legacy thread-carrying comments
-and quoted approvals; any other or unknown repository requires public forms.
-Public plan approvals keep the same revision text, fingerprint and table, with
-a plain decision and the required private-comment pointer on the second line.
-The local JSON action envelope is private execution data: its thread facts are
-needed for dispatch and archiving and must never be copied to GitHub. Its schema
-and dispatch facts are unchanged by this revision.
-A comment counts as a record or a verdict only when one of the rules file's
-record authors wrote it (#718); every other comment, and one with no author, is
-dropped before any record reader or the verdict is read.
-
-Thread resolution uses B4's private start records keyed by repository and ticket,
-or repository, PR and original start commit. Public re-check records add commit
-aliases in memory, pointing to that span's original start. A give-up retires all
-aliases in the span, including records created after a claim later edited to a
-give-up. The retired identity is kept only for fresh-review and archive facts;
-its output is not read and no message is sent to it. Without a readable start,
-activity is a `look`. Records are ordered by creation time, with comment id as
-the tie-breaker; edit time updates activity, never lineage.
-
-The fallback is the same repository project's exact builder title prefix or
-reviewer title specified by open development v1. Hidden and archived threads are
-included. Builders also match the checked branch, read through the existing
-workspace command; an unread branch is a `look`. Duplicate matches or private
-state disagreeing with titles are a `look`, never a selection. The Rust start
-path continues to send **no title**: its own threads are resolved by B4 state,
-while titled threads from the skill path can be found without that state.
-A public fallback due record consumes the same one restart as a legacy record.
-The existing manual replacement form is accepted only privately; an unsettled
-public handover yields `look`, never a guessed replacement.
-
-GitHub-only `fleet due` cannot resolve a thread-free identity without CloudRoom
-or private starts. It emits a conservative candidate for the agent it wakes to settle;
-it never invents an agent identity or performs a CloudRoom read.
-
-**Revision #1196:** conditional builder/reviewer tables, selected start settings and one-time restart due items. The CLI prints this contract. Fixture proofs are in `tests/fleet/`.
+What the fleet tick decides. `openwiz fleet tick --dry-run --json` prints the actions due; the planner (`crates/core/src/fleet/tick/`) returns exactly these actions and the CLI (`crates/cli/src/fleet_tick.rs`) prints them. Nothing executes them: the executing tick and its `--expect-plan` restriction were retired in 0.0.17 (#800), and the agents running `launch-fleet` act. `openwiz fleet due --github-only` is a GitHub-only candidate check; it never reads CloudRoom or invents an agent identity, and the agent it wakes settles each candidate. The schema is [`fleet-tick.v1.schema.json`](fleet-tick.v1.schema.json); this file adds the rules file, what each action means, the rules a schema can't express, and an example. GitHub-first agent coordination is the separate [ops-dispatch v1](ops-dispatch.v1.md), not this envelope.
 
 **Always true:**
-- **Every action cites its rule and carries the facts that justify it.** The rule is one id from [the action table](#the-actions); the facts are what the action acts on and what its rule found, as read. What a rule needs to be absent (no record yet, no open pull request, no verdict, no hold) is in its "When", not in its facts. Nothing in a tick is decided without a rule.
-- **Only these actions.** No branch deleted, nothing forced, no comment edited, nothing released or published (grill Q5, Q6; spec #116). A case no rule covers gets no action, or a `look` for an agent.
-- **Fail closed.** An action is planned only when every fact it needs was read in full and every condition of its rule holds. An unread or doubtful fact plans nothing but a `look` (below): never a guess. If the rules file, the repository or the spec list can't be read, the tick plans nothing and prints no document (B5's exit status says why).
+- **Every action cites its rule and carries the facts that justify it.** The rule is one id from [the action table](#the-actions); the facts are what the action acts on and what its rule found, as read. What a rule needs to be absent (no record yet, no open pull request, no verdict, no hold) is in its "When", not in its facts.
+- **Only these actions.** A case no rule covers gets no action, or a `look` for an agent.
+- **Fail closed.** An action is planned only when every fact it needs was read in full and every condition of its rule holds. An unread or doubtful fact plans nothing but a `look`. If the rules file, the repository or the spec list can't be read, the tick plans nothing and prints no document (the exit status says why).
 - **Authority is checked, never inferred.** A start or a merge needs the spec's current plan graph approval (fleet.v1's [Approval and authority](fleet.v1.md#approval-and-authority)), which the tick checks itself. A label, a `ready` state or an `approve` verdict alone never starts or merges anything.
-- **No private data:** the facts are numbers, commits, labels, file paths, check names and results, thread ids and OpenWiz's own reasons. No comment, issue or thread content, and no account names.
+- **Records come only from record authors.** A comment counts as a record or a verdict only when one of the rules file's record authors wrote it (#718); every other comment, and one with no author, is dropped before any record reader or the verdict is read.
+- **The envelope is private.** Its thread ids are needed for dispatch and archiving and are never copied to GitHub. GitHub comments use the thread-free forms of [open development v1](open-development.v1.md#fleet-records).
+
+## Threads
+
+Thread resolution uses OpenWiz's private start records (`crates/core/src/fleet/starts.rs`), keyed by repository and ticket, or repository, pull request and original start commit. Public re-check records add commit aliases in memory, pointing to that span's original start. A give-up retires all aliases in the span, including records created after a claim later edited to a give-up; the retired identity is kept only for fresh-review and archive facts. Without a readable start, activity is a `look`. Records are ordered by creation time, with comment id as the tie-breaker; edit time updates activity, never lineage.
+
+The fallback is the same repository project's exact builder title prefix or reviewer title that open development v1 specifies. Hidden and archived threads are included. Builders also match the checked branch, read through the workspace command; an unread branch is a `look`. Duplicate matches, or private state disagreeing with titles, are a `look`, never a selection. A public fallback due record consumes the same one restart as a legacy record; an unsettled public handover is a `look`, never a guessed replacement.
 
 ## The document
-
-### Envelope fields
 
 | Field | What |
 | --- | --- |
 | `schema` | Always `openwiz.fleet-tick.v1` |
-| `mode` | `dry_run` (`--dry-run`: nothing is written; every outcome is `planned`). The schema's `run` belonged to the retired executing tick (#800); the CLI never prints it |
+| `mode` | `dry_run`: nothing is written, and every outcome is `planned`. The schema's `run` belonged to the retired executing tick; the CLI never prints it |
 | `planned_at` | The clock the planner used, in milliseconds since 1970 |
 | `default_branch` | The repository's default branch, as read: the only base the tick reviews or merges into |
 | `rules` | [The rules file](#the-rules-file), as read |
 | `actions` | Every action due, in [order](#order); `[]` when nothing is due |
 
-**Silent when nothing is due** (S2-4): an empty `actions` list. Without `--json`, the tick prints only the `wake` and `needs_you` actions (one line each). Those lines' wording is B5's.
+Without `--json`, the tick prints only the judgment items, one line each; nothing when none is due.
 
-## Reading it
-
-Readers use hand-written strict readers, as for `openwiz.fleet.v1` ([Reading it](fleet.v1.md#reading-it)), never serde's derived ones:
-
-- **An object** only from a JSON object with **exactly its keys, each once.** A missing, extra or **duplicate** key is refused.
-- **An enum or a tag** (`mode`, `kind`, `rule`, an outcome's `state`, a role, a result, a verdict) only as **one string from its list.** Never another spelling (`Merge`, `dry-run`), never a number or a bool, never a **tagged object** such as `{"merge": null}`, `{"dry_run": {}}` or `{"planned": null}`.
-- **A list** only from a JSON array, **an object** only from a JSON object: a **positional array** in place of an object (`["merge", "adr_0008", 930, 931]`) is refused.
-- **Integers** only as JSON integers: no `1.0`, no `"1"`, no `true`. `NaN` and `Infinity` aren't JSON.
-- `null` only where the schema has it.
-- **The rules below are part of the contract.** A reader that checks only the schema must not rely on them.
+Readers use strict hand-written readers, as for fleet.v1 ([Reading it](fleet.v1.md#reading-it)): exact keys each once, enums and tags only as one string from their list (never a tagged object such as `{"planned": null}`), no positional arrays, integers only as JSON integers, and `null` only where the schema has it. The rules below are part of the contract.
 
 ## The rules file
 
-The tick reads the project's rules from **`docs/agents/fleet.md` on the default branch**, in the format `setup` writes (`skills/setup/templates/fleet.md`, #97). Only the parts below are machine-readable; every other line is for people. They are read exactly as written here, and **anything else is refused:** a section missing or twice, a table missing, a header or separator row that differs, a row out of form, a value twice. A refused rules file means the tick plans nothing.
+The tick reads the project's rules from **`docs/agents/fleet.md` on the default branch**. Only the parts below are machine-readable; every other line is for people. They are read exactly as written here, and **anything else is refused:** a section missing or twice, a table missing, a header or separator row that differs, a row out of form, a value twice. A refused rules file means the tick plans nothing.
 
 A section is the lines from its heading line, exactly as written (`## Builder`), to the next line starting `## `. Its table is its one block of consecutive lines starting `|`. A row's cells are split on `|` and trimmed, and every row of a table read here has exactly three; the first row is the header, the second the separator, each of its cells exactly `---`. `<value>` below is a **setting**: lowercase letters, digits, `.`, `_` and `-`, starting with a letter or digit, at most 128 (a narrower form of new-thread.v1's `setting`, so a template's `<id>` is refused).
 
@@ -100,66 +44,64 @@ A section is the lines from its heading line, exactly as written (`## Builder`),
 | `## Reviewer for Claude-built` | The same | The same | `rules.reviewer_claude`; harness must be `codex` |
 | `## Reviewer for GPT-built` | The same | The same | `rules.reviewer_gpt`; harness must be `claude-code` |
 | `## CI checks` | `\| Check \| Runs \| Required on \|` | One or more. First cell exactly `` `<name>` `` (letters, digits, `.`, `_` and `-`, starting with a letter or digit); third cell one or more `` `<branch>` `` (letters, digits, `.`, `_`, `-` and `/`, starting with a letter or digit, and maybe a final `*`), separated by `, `, each once | `rules.ci_checks`: `{"name", "required_on"}` each, in the table's order |
-| `## Standing merge rules` | `\| Pull request \| Review \| Merged by, and when \|` | The one row whose first cell starts `A ticket in an approved plan graph` and whose third cell starts `The loop, as soon as the reviewer's APPROVE names that exact commit` | `rules.merge`: `adr_0008` when that row is there; `none` when no row is (every merge waits for the user, `setup`'s default) |
+| `## Standing merge rules` | `\| Pull request \| Review \| Merged by, and when \|` | The one row whose first cell starts `A ticket in an approved plan graph` and whose third cell starts `The loop, as soon as the reviewer's APPROVE names that exact commit` | `rules.merge`: `adr_0008` when that row is there; `none` when no row is (every merge waits for the user) |
 | `## GitHub identity` | Not read | Exactly one row whose line starts `\|`, spaces, `Record authors`, spaces, `\|`, read as launch-fleet reads it: nothing after its value cell, and that whole cell one or more `` `<login>` `` (letters and digits, single `-` between them, maybe a final `[bot]`) separated by commas. No row, an empty cell, a malformed or extra entry, or two rows refuse the rules file | The record authors, compared case-insensitively |
 
-The display values (the second cells of the agent tables), the `Runs` column, the other merge rows (docs-only, grills, `release-*`) and every paragraph are not read. A `<branch>` in `Required on` may end in `*`, which matches any rest of a branch name (`release-*`); nothing else is a pattern.
+The display values (the second cells of the agent tables), the `Runs` column, the other merge rows and every paragraph are not read. A `<branch>` in `Required on` may end in `*`, which matches any rest of a branch name (`release-*`); nothing else is a pattern.
 
-- **Builder selection:** an exact `polish`, `huntr` or `proposal` label selects `builder_small`; every other ticket uses `builder`. These rules are complementary; ambiguous/unmatched classifications fall to `builder`. Each `frontier` action carries its selected `settings`.
-- **Reviewer selection:** `first_review` and `fresh_review` carry `settings` from `reviewer_claude` or `reviewer_gpt`, using the ticket's unique `launch-fleet: start checked, branch <branch>` record. Its branch must equal the PR head branch; that exact thread's provider must be `claude-code` (Claude) or `codex` (GPT). Missing, malformed, conflicting, unread or unsupported observations yield `look`, never a reviewer start. Today's builder setting cannot establish an earlier builder's family. Existing reviewer re-checks keep their thread; unavailable reviewers wait, never swap families. Sonnet eligibility remains outside this tick (#588).
-- **Claude plan-limit fallback:** for an approved, open, unheld agent ticket, a verified, unarchived Claude builder stopped (`idle` or `error`) with its own complete output/error containing a recognized limit line yields `wake/restart`, once per ticket. Recognized lines are exactly `Claude usage limit reached`, `You've hit your limit`, or `You've hit your limit · resets <nonempty reset text>`, after trimming. Generic errors do not qualify. The branch must match any open PR. Its facts contain `builder`, `branch`, and the small-ticket `settings`. Run mode saves `launch-fleet: builder fallback due, branch <branch>` before printing the due line. This durable record consumes the fallback; dry runs never consume it. The orchestrator carries out the restart on that branch; the tick starts no replacement itself. This rule never applies to reviewers. In the private compatibility form only, after a manual restart the orchestrator updates the original checked record to the replacement thread on the same branch and appends `Replacement: <id>` to the due comment. Only this consistent handover retires the original stored builder; conflicts yield `look`. A recorded replacement retains earlier code on the branch, so the builder family stays conflicting for new reviewer assignments: `first_review` and `fresh_review` yield `look: builder family unknown or conflicting`, with no spawn. The orchestrator or Jake chooses the reviewer explicitly.
+- **Builder selection:** an exact `polish`, `huntr` or `proposal` label selects `builder_small`; every other ticket uses `builder`. Each `frontier` action carries its selected `settings`.
+- **Reviewer selection:** `first_review` and `fresh_review` carry `settings` from `reviewer_claude` or `reviewer_gpt`, using the ticket's unique `launch-fleet: start checked, branch <branch>` record. Its branch must equal the pull request's head branch, and that exact thread's provider must be `claude-code` (Claude) or `codex` (GPT). Anything missing, malformed, conflicting, unread or unsupported is a `look`, never a reviewer start. Today's builder setting never establishes an earlier builder's family. Re-checks keep their reviewer thread.
+- **Claude plan-limit fallback:** for an approved, open, unheld agent ticket, a verified, unarchived Claude builder stopped (`idle` or `error`) whose own complete output or error contains a recognized limit line is due `wake`/`restart`, once per ticket. The recognized lines are exactly `Claude usage limit reached`, `You've hit your limit`, or `You've hit your limit · resets <nonempty reset text>`, after trimming. The branch must match any open pull request. Its durable record, `launch-fleet: builder fallback due, branch <branch>`, consumes the fallback; a dry run never consumes it. The tick starts no replacement, and the rule never applies to reviewers. In the private form only, after a manual restart the orchestrator updates the original checked record to the replacement thread on the same branch and appends `Replacement: <id>` to the due comment; only this consistent handover retires the original builder, and conflicts are a `look`. A replacement keeps earlier code on the branch, so the builder family stays conflicting: `first_review` and `fresh_review` are `look: builder family unknown or conflicting`.
 - **The required checks of a pull request** are the `ci_checks` whose `required_on` matches its base branch, in the table's order. **CI is green on a head** when its base has at least one required check, each required check is on it with result `pass`, and no check on it is `fail`, `cancel` or `pending`.
-- **The merge rule** is ADR 0008's, in full, under [`merge`](#merge). With `none`, the tick never merges.
+- **The merge rule** is ADR 0008's, in full, under [Merge](#merge). With `none`, the tick never merges.
 
 ## The review report
 
-The tick reads two parts of `review-ticket`'s report (#101, "The report") and nothing else of it:
+The tick reads two parts of a review report and nothing else of it:
 
 - **The verdict:** the pull request's latest comment whose first line starts `VERDICT: `, read as fleet.v1 reads it: exactly `VERDICT: APPROVE at <commit>` or `VERDICT: CHANGES at <commit>`, with all 40 characters. A latest `VERDICT:` line in any other form is a `look`, never a verdict.
-- **The findings,** on a `CHANGES` report: each line that starts `- **R<n> [<severity>]** `. Its status is `disputed, kept` when the rest starts `disputed, kept:`, and still open after `<k>` rounds when it starts `still open after <k> rounds:`. A finding line in neither form is new, resolved, withdrawn or a follow-up, and needs no diagnosis. The ids come from these lines, never from the `Next:` line.
+- **The findings,** on a `CHANGES` report: each line that starts `- **R<n> [<severity>]** `, the severity `high`, `medium` or `low`. Its status is `disputed, kept` when the rest starts `disputed, kept:`, and still open after `<k>` rounds when it starts `still open after <k> rounds:`. A finding line in neither form needs no diagnosis. The ids come from these lines, never from the `Next:` line.
 
 ## Actions
 
 Every action is `{"kind", "rule", "spec", "ticket", "facts", "outcome"}`:
 
-- **`kind`:** one of the ticket's ten (#117): `start_builder`, `start_reviewer`, `send_findings`, `merge`, `close`, `hold`, `archive`, `log_refused_start`, `wake`, `needs_you`.
+- **`kind`:** one of `start_builder`, `start_reviewer`, `send_findings`, `merge`, `close`, `hold`, `archive`, `log_refused_start`, `wake`, `needs_you`.
 - **`rule`:** the rule it cites. Each rule belongs to one kind, and fixes the shape of `facts`.
 - **`spec`:** the spec (fleet) the action is under. **`ticket`:** its ticket, or `null` for an action on the spec itself: always `null` for `all_closed`, `re_approve` and `spec_summary`, either for `look`, and never for the rest.
 - **`facts`:** the facts that justify it, below.
-- **`outcome`:** always `{"state": "planned"}`: due, not carried out.
+- **`outcome`:** always `{"state": "planned"}`.
 
 ### The actions
 
-| Kind | Rule | `ticket` | When (the rule's source) | Does |
+| Kind | Rule | `ticket` | When | Means |
 | --- | --- | --- | --- | --- |
-| `start_builder` | `frontier` | the ticket | The ticket is on the frontier: approved (its row in the spec's current plan graph approval says `ready-for-agent`); ready (open, the `ready-for-agent` label, no other triage label); unblocked (every blocker a verified merge); not started (no start in OpenWiz's records but ones settled with no thread, no open pull request); not held (no `held` label, and no contract hold due) (launch-fleet, "The frontier"; spec #116, stories 5 and 6) | Starts its builder |
-| `start_reviewer` | `first_review` | the ticket | Its open pull request's head is a hand-back (its subject has the word `green`), CI is green on it, it has no verdict, and no reviewer was ever started on the pull request (launch-fleet, step 4, "Starting a review"; story 8) | Starts a reviewer |
-| | `fresh_review` | the ticket | The same, but every reviewer started on it was given up on (`review given up <commit>: <why>`) (launch-fleet, step 4, "A quiet reviewer", 3) | Starts a new reviewer |
-| | `re_check` | the ticket | The same, but a reviewer not given up on reviewed an earlier head (launch-fleet, step 4, "A re-check"; review-ticket, "Re-checks") | Asks that reviewer to re-check |
-| `send_findings` | `review_findings` | the ticket | Its open pull request's head is a hand-back, CI is green on it, and the latest verdict is `CHANGES` on it (launch-fleet, step 4, "Findings"; spec #116, "Findings go to the builder through 0.0.3's `send`") | Tells the builder to fix or dispute |
-| | `ci_failed` | the ticket | The head is a hand-back and a check on it failed or was cancelled (launch-fleet, `CI failed`) | Tells the builder CI failed |
-| | `contract_changed` | the ticket | A merge changed a file its `Relies on` line names, and it is being built (launch-fleet, step 5, `note`; story 9) | Tells the builder which files changed |
-| `merge` | `adr_0008` | the ticket | Every condition of [the merge rule](#merge) holds (ADR 0008; `fleet.md`, "Standing merge rules"; spec #116, "Merging") | Merges that exact head, and reads it back |
-| `close` | `merged` | the ticket | Its pull request's merge is read back on the default branch, and the ticket is still open (launch-fleet, step 4, "Merging", 4) | Closes the ticket |
-| | `all_closed` | `null` | Every ticket of the spec is closed and archived (no `finished` due), its summary is written, and no follow-up is open (launch-fleet, `close spec`) | Closes the spec |
-| `hold` | `contract_hold` | the ticket | A merge changed a file its `Relies on` line names, and it has no builder yet (launch-fleet, step 5, `hold`; ADR 0006; story 9) | Holds it: the `held` label on, its ready label off |
-| | `release` | the ticket | It still has the `held` label from the tick's own hold, and the user approved it again since (launch-fleet, `release`) | Takes the `held` label off |
-| `archive` | `finished` | the ticket | The ticket is closed and has a recorded builder or reviewer, and either an agent is not archived or the final `launch-fleet: archived` record is missing; already-archived agents count as done (launch-fleet, `archive`; story 10) | Archives those agents |
-| `log_refused_start` | `builder_refused` | the ticket | A builder start was refused, or failed with no thread made, and isn't logged yet (launch-fleet, step 3, 3) | Logs it on the ticket; the ticket stays on the frontier |
-| | `reviewer_refused` | the ticket | The same for a reviewer start (launch-fleet, step 4, `review refused`) | Logs it on the pull request; the review waits |
-| `wake` | `restart` | the ticket | A verified Claude builder reports its plan limit, and no fallback due record exists (revision #1196, above) | Records and prints one restart due item, keeping its branch |
-| `wake` | `needs_info` | the ticket | It has the `needs-info` label and a question newer than the last time it was passed on (launch-fleet, `needs-info`; grill Q7) | An agent passes the question to the orchestrator |
-| | `disputed` | the ticket | The latest verdict is `CHANGES` on the head, the report keeps a disputed finding (`disputed, kept`), and no `dispute asked <commit>` is there yet (review-ticket, "Re-checks", 2; grill Q7) | An agent asks the orchestrator for its diagnosis |
-| | `diagnosis` | the ticket | The latest verdict is `CHANGES` on the head, a finding is still open after 2 or more rounds, and no `diagnosis asked <commit>` is there yet (review-ticket, 2 + 1; grill Q7) | An agent asks the orchestrator for its diagnosis, or, after a diagnosis round, to take it to the user |
-| | `look` | the ticket, or `null` | Something can't be read in full, there are two of something, a start's outcome can't be settled, a reviewer is quiet (no verdict 30 minutes after its start or re-check), or a merge whose conditions held was blocked: the tick leaves the item alone (launch-fleet, `look`, `check review` and `merge blocked`; the orchestrator on #117, 2026-11-01: grill Q7's list is the normal flow's judgment items, and these the fail-closed case, for the orchestrator). One `look` per ticket (or spec) and tick, its reason naming every item | An agent looks, and records what it did in `launch-fleet`'s forms (a quiet reviewer: `review told again <commit>`, or `review given up <commit>: <why>` once it gives up and archives it), which later ticks read |
-| `needs_you` | `held` | the ticket | The tick's `held for #<merged>` record is on the ticket (its `hold`), and no `needs you sent: held for #<merged>` yet: the pass or tick after the hold (launch-fleet, step 5) | Asks the user to re-approve it |
-| | `re_approve` | `null` | A ticket of the spec could start, but its plan changed since the latest approval (launch-fleet, `re-approve`) | Asks the user to approve the plan as it now stands |
-| | `person_ready` | the ticket | A `ready-for-human` ticket is approved, unblocked and not held (launch-fleet, `person`) | Tells the user it's theirs to do |
-| | `spec_summary` | `null` | Every approved ticket of the spec is closed, and no summary is written yet (launch-fleet, `spec done`) | Writes the closing summary |
+| `start_builder` | `frontier` | the ticket | The ticket is on the frontier: approved (its row in the spec's current plan graph approval says `ready-for-agent`); ready (open, the `ready-for-agent` label, no other triage label); unblocked (every blocker a verified merge); not started (no start in OpenWiz's records but ones settled with no thread, no open pull request); not held (no `held` label, and no contract hold due) | Start its builder |
+| `start_reviewer` | `first_review` | the ticket | Its open pull request's head is a hand-back (its subject has the word `green`), CI is green on it, it has no verdict, and no reviewer was ever started on the pull request | Start a reviewer |
+| | `fresh_review` | the ticket | The same, but every reviewer started on it was given up on (`review given up <commit>: <why>`) | Start a new reviewer |
+| | `re_check` | the ticket | The same, but a reviewer not given up on reviewed an earlier head | Ask that reviewer to re-check |
+| `send_findings` | `review_findings` | the ticket | Its open pull request's head is a hand-back, CI is green on it, and the latest verdict is `CHANGES` on it | Tell the builder to fix or dispute |
+| | `ci_failed` | the ticket | The head is a hand-back and a check on it failed or was cancelled | Tell the builder CI failed |
+| | `contract_changed` | the ticket | A merge changed a file its `Relies on` line names, and it is being built | Tell the builder which files changed |
+| `merge` | `adr_0008` | the ticket | Every condition of [the merge rule](#merge) holds | Merge that exact head, and read it back |
+| `close` | `merged` | the ticket | Its pull request's merge is read back on the default branch, and the ticket is still open | Close the ticket |
+| | `all_closed` | `null` | Every ticket of the spec is closed and archived (no `finished` due), its summary is written, and no follow-up is open | Close the spec |
+| `hold` | `contract_hold` | the ticket | A merge changed a file its `Relies on` line names, and it has no builder yet (ADR 0006) | Hold it: the `held` label on, its ready label off |
+| | `release` | the ticket | It still has the `held` label from the tick's own hold, and the user approved it again since | Take the `held` label off |
+| `archive` | `finished` | the ticket | The ticket is closed and has a recorded builder or reviewer, and either an agent is not archived or the final `launch-fleet: archived` record is missing; already-archived agents count as done | Archive those agents |
+| `log_refused_start` | `builder_refused` | the ticket | A builder start was refused, or failed with no thread made, and isn't logged yet | Log it on the ticket; the ticket stays on the frontier |
+| | `reviewer_refused` | the ticket | The same for a reviewer start | Log it on the pull request; the review waits |
+| `wake` | `restart` | the ticket | A verified Claude builder reports its plan limit, and no fallback due record exists (above) | Record and print one restart due item, keeping its branch |
+| | `needs_info` | the ticket | It has the `needs-info` label and a question newer than the last time it was passed on | An agent passes the question to the orchestrator |
+| | `disputed` | the ticket | The latest verdict is `CHANGES` on the head, the report keeps a disputed finding (`disputed, kept`), and no `dispute asked <commit>` is there yet | An agent asks the orchestrator for its diagnosis |
+| | `diagnosis` | the ticket | The latest verdict is `CHANGES` on the head, a finding is still open after 2 or more rounds (the review and its re-check of the [1 + 1 rule](review-loops.v2.md)), and no `diagnosis asked <commit>` is there yet | An agent asks the orchestrator to decide it |
+| | `look` | the ticket, or `null` | Something can't be read in full, there are two of something, a start's outcome can't be settled, a reviewer is quiet (no verdict 30 minutes after its start or re-check), or a merge whose conditions held was blocked. One `look` per ticket (or spec) and tick, its reason naming every item | An agent looks, and records what it did in `launch-fleet`'s forms (`review told again <commit>`, or `review given up <commit>: <why>`), which later ticks read |
+| `needs_you` | `held` | the ticket | The tick's `held for #<merged>` record is on the ticket, and no `needs you sent: held for #<merged>` yet | Ask the user to re-approve it |
+| | `re_approve` | `null` | A ticket of the spec could start, but its plan changed since the latest approval | Ask the user to approve the plan as it now stands |
+| | `person_ready` | the ticket | A `ready-for-human` ticket is approved, unblocked and not held | Tell the user it's theirs to do |
+| | `spec_summary` | `null` | Every approved ticket of the spec is closed, and no summary is written yet | Write the closing summary |
 
-The `all_closed` and `spec_summary` rules retain v1's completion conditions; see [Changed from launch-fleet](#changed-from-launch-fleet) for their differences from #1021.
-
-A `wake` is printed for an agent to act on (spec #116: "disputes and 2 + 1 diagnoses are printed for an agent"); a `needs_you` is written by the tick itself, in the orchestrator's thread and on the spec issue. Those two kinds are the only ones a quiet tick would print.
+**Spec completion is narrower than launch-fleet's.** `all_closed` waits for every sub-issue to close, its agents to be archived, the summary to be recorded and no open follow-up. `spec_summary` requires closed approved tickets, not verified planned merges, and lists the `follow_ups` input plus every open unapproved sub-issue as follow-ups. Neither reads live-check evidence or labels follow-ups `polish`, so the orchestrator checks the live-check evidence and classifies follow-ups before acting on either; neither waives launch-fleet's completion gates.
 
 ### Facts
 
@@ -172,9 +114,9 @@ The shared shapes:
 | merge | `{"number", "merge_commit"}` | A merged pull request and its merge commit, read back on the default branch |
 | blocker | `{"number", "pr", "merge_commit"}` | A blocking issue with a verified merge: closed, and its pull request's merge commit read back on the default branch |
 | check | `{"name", "result"}` | A check on the head: its latest run (fleet.v1's `checks` read); `result` is `pass`, `fail`, `pending`, `skipping` or `cancel` |
-| verdict | `{"verdict", "commit", "comment"}` | The pull request's latest `VERDICT:` comment (review-ticket's first line): `approve` or `changes`, the commit it names, and its comment id |
+| verdict | `{"verdict", "commit", "comment"}` | The pull request's latest `VERDICT:` comment: `approve` or `changes`, the commit it names, and its comment id |
 
-Ids: a **comment** is GitHub's comment id (an integer); a **thread** is a CloudRoom thread id; a **start** is the op id of OpenWiz's own start record (B4; new-thread.v1's `op_id`); a **commit** is 40 lowercase hex digits, a **fingerprint** 64; a **finding** is a report's id, `R` and a number.
+Ids: a **comment** is GitHub's comment id (an integer); a **thread** is a CloudRoom thread id; a **start** is the op id of OpenWiz's own start record (new-thread.v1's `op_id`); a **commit** is 40 lowercase hex digits, a **fingerprint** 64; a **finding** is a report's id, `R` and a number.
 
 Each rule's `facts`, every key required:
 
@@ -207,46 +149,39 @@ Each rule's `facts`, every key required:
 
 ### Merge
 
-ADR 0008 in full: a ticket's pull request merges **only when every one of these holds**, and then the tick performs it. Any one missing, or unread, means no merge (S2-1).
+ADR 0008 in full: a ticket's pull request is due to merge **only when every one of these holds**. Any one missing, or unread, means no merge.
 
 1. **The rules file's merge rule is `adr_0008`.**
 2. **Approval:** the ticket is in the spec's latest plan graph approval, and that approval is current (`facts.approval`).
-3. **APPROVE on the head:** the pull request's latest verdict is `approve` and names its head commit (`facts.verdict.commit` is `facts.pr.head_commit`), and the reviewer's own thread shows that same line (`facts.reviewer`; launch-fleet, step 4, "Merging", 1). Every agent posts from the same GitHub account, so the comment alone never decides.
+3. **APPROVE on the head:** the pull request's latest verdict is `approve` and names its head commit (`facts.verdict.commit` is `facts.pr.head_commit`), and the reviewer's own thread shows that same line (`facts.reviewer`).
 4. **CI green on the head:** as the rules file defines it (`facts.checks`).
 5. **The base is unchanged:** the base CI ran against is the base branch's head now (`facts.base_commit`).
-6. **Not a release line:** the base branch is the default branch, and no `release-*` branch. Release lines, publishing and anything live stay the user's (grill Q5; story 4).
-
-### Shared relay record
-
-**Shared relay record (#546):** a relay is sent at most once per key (pull request, head and kind, scoped to its repository), and repeated only when its shared record is uncertain, such as a crash between send and outcome recording. The direct route and the tick's check-in consult the same durable `RelayStore` record before relaying; `RelayKey` and `RelayStore` are exported by `openwiz_service::events`, and the tick's consumer is #694. `RelayKey::op_id()` hashes the canonical repository, PR, head and relay kind with the `openwiz.fleet-relay.v1` domain into the existing private `sends/<op_id>.json` send record; both clients open the same OpenWiz state root. Its atomic claim and dispatch mark are synced before the provider call. A live in-progress record never permits another call; a stopped dispatch is uncertain, not failed or successful. The uncertainty exception does not request an automatic retry: these APIs return the saved outcome by default and never generate a new ID for a repeated hint. Post-send GitHub comments remain notifications; their absence cannot replace or bypass this shared record. A comment the table says "unless it's there already" is found by its first line and never posted twice.
+6. **Not a release line:** the base branch is the default branch, and no `release-*` branch. Release lines, publishing and anything live stay the user's.
 
 ### Order
 
-A dry run performs no recovery: an unresolved pending start remains a `look`
-with a `planned` outcome.
-
-Actions are listed by `spec` ascending; within a spec, its spec-level actions (`ticket` `null`) last, the rest by `ticket` ascending; within a ticket (or the spec), by kind in the action table's order; within a kind, by rule in its order. A document has at most one action per kind and rule for each ticket, and at most one `start_builder` per ticket: **never two builders**. Each action stands alone: none needs another beside it. But **actions from one review report agree:** a ticket's `review_findings`, `disputed` and `diagnosis` in one document have the same `pr` and the same `verdict` (a ticket has one open pull request, and its latest verdict is one comment). A `contract_hold` and its `held` are never in one document, since the notification is due only once the hold's record is there.
+Actions are listed by `spec` ascending; within a spec, its spec-level actions (`ticket` `null`) last, the rest by `ticket` ascending; within a ticket (or the spec), by kind in the action table's order; within a kind, by rule in its order. A document has at most one action per kind and rule for each ticket, and at most one `start_builder` per ticket: **never two builders**. A ticket's `review_findings`, `disputed` and `diagnosis` in one document have the same `pr` and the same `verdict`. A `contract_hold` and its `held` are never in one document. A dry run performs no recovery: an unresolved pending start stays a `look`.
 
 ## Where each fact comes from
 
 | Facts | From |
 | --- | --- |
 | `title`, `labels`, a ticket's `Relies on` paths, `blockers`, a `pr`'s number, head and base, `checks`, a `verdict`'s verdict and commit, a `merge` and its read back | fleet.v1's reads (`issue`, `blocked_by`, `pr_discovery`, `checks`, `comments`, `merge_readback`) |
-| `default_branch`, `subject`, `base_commit`, a verdict's `comment`, the approval, `fingerprint_now`, the `launch-fleet:` records, `files`, `question`, `findings`, `follow_ups` | GitHub reads fleet.v1 doesn't make: the spec's comments (`plan-graph`'s approval), `revision.sh`, the head commit, the base branch's head, comments and records, the files a merge changed, review reports. They join fleet.v1's allowlist of reads (B5) |
+| `default_branch`, `subject`, `base_commit`, a verdict's `comment`, the approval, `fingerprint_now`, the `launch-fleet:` records, `files`, `question`, `findings`, `follow_ups` | GitHub reads fleet.v1 doesn't make: the spec's comments, `revision.sh`, the head commit, the base branch's head, comments and records, the files a merge changed, review reports |
 | `rules` | `docs/agents/fleet.md`, as [above](#the-rules-file) |
-| `start`, `retry_after`, `builder`, `reviewer`, `given_up`, `threads` | OpenWiz's start records (B4) and the `launch-fleet:` records; `reviewer` in `adr_0008` also its thread's own output (`room-cli thread output`) |
+| `start`, `retry_after`, `builder`, `reviewer`, `given_up`, `threads` | OpenWiz's start records and the `launch-fleet:` records; `reviewer` in `adr_0008` also its thread's own output (`room-cli thread output`) |
 | `reason`, `planned_at`, `outcome` | OpenWiz's own |
 
 ## Rules the schema can't express
 
-Each has the finding id the check reports. The planner (B2) produces only documents that keep them; a reader that checks only the schema must not rely on them.
+The planner produces only documents that keep them; a reader that checks only the schema must not rely on them.
 
 | Id | Rule |
 | --- | --- |
 | `mode` | In a `dry_run` every outcome is `planned` |
 | `head` | A `verdict` in `adr_0008`, `review_findings`, `disputed` and `diagnosis` names its `pr`'s `head_commit`; a `re_check`'s `last_verdict` names another commit |
 | `base` | Every `pr` has the document's `default_branch` as its base, and the default branch is no release line (it doesn't start `release-`) |
-| `checks` | No check name twice. In `first_review`, `fresh_review`, `re_check`, `review_findings` and `adr_0008`, CI is green on the head (its base has a required check, each required check `pass`; none `fail`, `cancel` or `pending`); in `ci_failed`, at least one check is `fail` or `cancel` |
+| `checks` | No check name twice. In `first_review`, `fresh_review`, `re_check`, `review_findings` and `adr_0008`, CI is green on the head; in `ci_failed`, at least one check is `fail` or `cancel` |
 | `merge_rule` | A `merge` only when `rules.merge` is `adr_0008` |
 | `green` | A `subject` has the word `green` (any case, a whole word) |
 | `labels` | A `frontier` ticket's labels have `ready-for-agent`, and none of `needs-info`, `needs-triage`, `ready-for-human`, `wontfix` or `held` |
@@ -258,54 +193,11 @@ Each has the finding id the check reports. The planner (B2) produces only docume
 | `actions` | The document's actions are in [order](#order), at most one per kind and rule for each ticket (or spec); a spec with an `all_closed` has no other action; a ticket with a `contract_hold` has no `start_builder`, and no `held` for the same merge; a ticket's `review_findings`, `disputed` and `diagnosis` have the same `pr` and `verdict` |
 | `one_approval` | Within one spec, every current `approval` is the same one (the spec's latest). A spec with a `re_approve` has no `frontier`, `adr_0008`, `release` or `person_ready`: a stale plan starts and merges nothing |
 
-`approval` being current, `base_commit` being the base's head now, `reviewer`'s own output, the facts being as read, and every condition of each rule's "When": those the planner establishes from its reads (B2, B5), and B2's table tests prove; no document can show them.
-
-## launch-fleet's lines
-
-Every line of `launch-fleet`'s check (`skills/launch-fleet/scripts/fleet.sh`), and its action here:
-
-| Line | Action |
-| --- | --- |
-| `start #N` | `start_builder`, `frontier` |
-| `reconcile start #N`, `reconcile review #P` | None of its own: B4's status read settles an uncertain start before the tick plans; one it can't settle is a `look` |
-| `check start #N` | Not in version 1 (below) |
-| `review #P … first review`, `review #P … a fresh reviewer` | `start_reviewer`, `first_review` or `fresh_review` |
-| `re-check #P` | `start_reviewer`, `re_check` |
-| `check review #P` (a quiet reviewer) | `wake`, `look`: an agent tells it again or gives up on it, and records `review told again` or `review given up`; a fresh reviewer then follows by `fresh_review` |
-| `CI failed #P` | `send_findings`, `ci_failed` |
-| `findings #P` | `send_findings`, `review_findings`; and `wake`, `disputed` or `diagnosis` when the report says so, each until its agent records it (`dispute asked`, `diagnosis asked`) |
-| `merge #P` | `merge`, `adr_0008`; then `close`, `merged`, if the ticket is still open |
-| `archive #N` | `archive`, `finished` |
-| `hold #N` | `hold`, `contract_hold`; once its record is there, `needs_you`, `held` |
-| `note #N` | `send_findings`, `contract_changed` |
-| `release #N` | `hold`, `release` |
-| `needs-info #N` | `wake`, `needs_info` |
-| `person #N` | `needs_you`, `person_ready` |
-| `re-approve #S` | `needs_you`, `re_approve` |
-| `spec done #S` | `needs_you`, `spec_summary` |
-| `close spec #S` | `close`, `all_closed` |
-| `look #N` | `wake`, `look` |
-
-### Changed from launch-fleet
-
-Where the tick does what `launch-fleet` does differently, and why:
-
-| Change | Why |
-| --- | --- |
-| **Spec completion remains v1 behavior:** `all_closed` still waits for every sub-issue to close and its agents to be archived, the summary to be recorded, and no open follow-up. `spec_summary` requires closed approved tickets, not verified planned builder merges; it lists the `follow_ups` input plus every open unapproved sub-issue, classifying the latter as follow-ups without checking a `polish` label or body marker. Neither rule checks live-check evidence or labels follow-ups `polish` | #1021 changed `launch-fleet`: verified planned builder merges, completed planned human work and any required live-check pass permit completion; confirmed follow-ups go to `polish` and never block it, while unclassified sub-issues require judgment. V1 has no live-check evidence input and no per-sub-issue follow-up marker (an `Issue` carries no body; the `follow_ups` input lists marked external issues). The plan has no step that checks live-check evidence or classifies follow-ups. Until it has one, the orchestrator running `launch-fleet` must check the live-check evidence and classify and label follow-ups before a `spec_summary` or `all_closed` action is carried out. These documented differences grant no waiver of #1021's completion gates and do not claim planner parity |
-| **No comment is ever edited.** A start is recorded in OpenWiz's own start records before it's made, not as a `launch-fleet: starting` claim edited on; every record is a new comment | B3: "Never delete a branch, force anything, or edit any comment"; spec #116: "A start is recorded before it's made, like `send`'s op ids" |
-| **A merge also needs the spec's current approval** and the rules file's `adr_0008` row | Spec #116, "Merging": "the ticket belongs to a plan graph whose approval comment matches its current revision"; fleet.v1, "Approval and authority". `launch-fleet`'s `merge` line tests neither |
-| **The required checks are the `Required on` column's,** for the pull request's base | `fleet.md`, "CI checks"; `fleet.sh` takes every check in the table |
-| **New records:** `merged #<P> at <commit> by ADR 0008: …` on the ticket, `closed: …` before a close, `(start <start>)` at the end of a refused or failed start's record, `needs you sent: held for #<P>`, `dispute asked <commit>` and `diagnosis asked <commit>` | Spec #116: every merge "records which rule allowed it" (story 3), and "the rule cited in a comment"; `docs/agents/issue-tracker.md`: post the reason, then close; one record per start attempt, so each is logged once; and a notification, a dispute and a diagnosis each end with their own record, so a failure before one is retried, and one never ends another (the review of #304, R1 and R4) |
-| **What ends an action is its own record, written last, or a state read back:** a close ends only when the issue reads back closed, never with its reason comment | A record written before its writes would hide a failed or interrupted one for good (the review of #304, R1 and R2) |
-| **A hold is two label edits, and the tick creates no label** | B3's writes: one label per edit, each read back, and no label create |
-| **One `look` per ticket (or spec) and tick,** recorded on the ticket even for its pull request's item | One action per kind and rule per ticket ([Order](#order)) |
-| **Quiet reviewers and blocked merges are a `look`** for an agent; the agent tells the reviewer again or gives up on it | Telling a reviewer again needs its thread's output read and judged (below, "Not in version 1") |
-| **Issues approved on their own** get no action | fleet.v1's fleets are specs; an issue outside any spec is in no fleet (below) |
+The approval being current, `base_commit` being the base's head now, `reviewer`'s own output, the facts being as read, and every condition of each rule's "When" are established by the planner from its reads; no document can show them.
 
 ## Examples
 
-Synthetic values only. The check validates every `json` block here.
+Synthetic values only.
 
 1. **A dry run with one action of every rule:** spec 960's tickets 961 to 978 (#970 held now, #978 held in an earlier tick, its notification due); spec 985, whose plan changed since its approval; spec 990, every ticket closed; spec 995, closed and archived, its summary written.
 
@@ -529,11 +421,10 @@ Synthetic values only. The check validates every `json` block here.
 
 Open, for later tickets or the user; none is guessed in the meantime:
 
-1. **Checking a started builder is at work** (launch-fleet's `check start`): OpenWiz's start record and 0.0.4's status read say a thread started; whether it is working is not read.
-2. **Quiet reviewers** are a `look` for an agent, not handled in code: telling a reviewer again needs its thread's output read and judged.
-3. **Issues approved on their own** (`triage`'s `**Approved on its own by`) are not fleets in fleet.v1, so the tick plans nothing for them.
-4. **Label names.** As in fleet.v1, the triage roles' names (`ready-for-agent`, `needs-info`, `held`, …), which are ClosedWiz's own; `docs/agents/triage-labels.md` is not read.
-5. **The user deciding a finding** (still open in the round after the diagnosis) is the orchestrator's call, woken by `diagnosis`; the tick doesn't tell rounds after a diagnosis apart.
+1. **Whether a started builder is at work:** a start record says a thread started, not that it is working.
+2. **Quiet reviewers** are a `look` for an agent: telling a reviewer again needs its thread's output read and judged.
+3. **Issues approved on their own** are not fleets in fleet.v1, so the tick plans nothing for them.
+4. **Label names** are the triage roles' names (`ready-for-agent`, `needs-info`, `held`, …); `docs/agents/triage-labels.md` is not read.
+5. **The user deciding a finding** after its diagnosis is the orchestrator's call, woken by `diagnosis`; the tick doesn't tell rounds after a diagnosis apart.
 6. **Other merge rules.** Only ADR 0008's row is read; docs-only and grill merges stay the orchestrator's, and `release-*` the user's.
-7. **Reaching agents another thread started.** A CloudRoom thread can tell and archive only the threads it started (`docs/grills/2026-10-31-fleets-at-scale.md`, its facts; ADR 0011), so a `send` or an archive aimed at an agent another tick or the orchestrator started may fail. Its outcome says so, it leaves no record, and the next tick plans it again.
-8. **Changes.** A change to a field, a rule or a reading rule is a new version, `openwiz.fleet-tick.v2`, or a revision recorded here; a changed contract holds the tickets that rely on it (ADR 0006).
+7. **Changes.** A change to a field, a rule or a reading rule is a new version, `openwiz.fleet-tick.v2`, or a revision recorded here; a changed contract holds the tickets that rely on it (ADR 0006).

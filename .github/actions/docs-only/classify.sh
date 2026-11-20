@@ -28,17 +28,19 @@ case "$step" in
   '' | site) ;;
   *) echo "classify: unknown step '$step'" >&2; exit 1 ;;
 esac
-skips=
+skips= tests=
 case "$#:${1:-}" in
   0:) ;;
+  1:--tests) tests=1 ;;
   2:--skips)
     case "$2" in
       web-build | rust | web-test | release) skips="$2" ;;
       *) echo "classify: unknown job '$2'" >&2; exit 1 ;;
     esac
     [ -z "$step" ] || { echo "classify: --skips is for jobs, not CLASSIFY_STEP=$step" >&2; exit 1; } ;;
-  *) echo "usage: classify.sh [--skips web-build|rust|web-test|release] < paths" >&2; exit 1 ;;
+  *) echo "usage: classify.sh [--tests | --skips web-build|rust|web-test|release] < paths" >&2; exit 1 ;;
 esac
+[ -z "$tests" ] || [ -z "$step" ] || { echo "classify: --tests is for jobs, not CLASSIFY_STEP=$step" >&2; exit 1; }
 [ -f "$READS" ] && [ -r "$READS" ] && cat "$READS" > /dev/null || { echo "classify: $READS is missing or unreadable" >&2; exit 1; }
 table="$(mktemp)"
 trap 'rm -f "$table"' EXIT
@@ -51,34 +53,57 @@ trap 'rm -f "$table"' EXIT
 # fixture there.
 # So are changes/ and every other folder of tests/ and tools/, as before
 # (the last row), which the site step never reads.
+#
+# The second column (#1486) names the Rust tests a change to the path runs
+# in a pull request's plan (plan.py): `*` every one, `-` none but the always
+# lane's (rust:test:checks, which runs in every plan), or the test ids that
+# read it. A doc or skill names its readers here, found by reading the Rust
+# sources: a doc no Rust test reads selects nothing. A named reader needs
+# `rust` in the row's jobs, or the prune deletes its file. With `--tests`,
+# classify.sh prints each path's column, one per line in order: `?` for a
+# path no row knows (every test).
 cat > "$table" <<'TABLE'
--               STATUS\.md|AGENTS\.md
--               private/.+
-rust            \.claude/skills/(export-review|live-quick-check)/SKILL\.md
--               \.claude/skills/[^/]+/SKILL\.md
--               ci/runner/(README\.md|Dockerfile|compose\.yaml|entrypoint\.sh|test\.sh)
+-               -       STATUS\.md|AGENTS\.md
+-               -       private/.+
+rust            -       \.claude/skills/(export-review|live-quick-check)/SKILL\.md
+-               -       \.claude/skills/[^/]+/SKILL\.md
+-               -       ci/runner/(README\.md|Dockerfile|compose\.yaml|entrypoint\.sh|test\.sh)
 # X5 reuses the escape reader validator in every lane. Keep X6's other paths below.
-web-build,rust,web-test ci/escapes/escapes\.py
--               ci/escapes/.+|\.github/workflows/ci-escapes\.yml
-web-build,rust  ci/rust-tests\.sh
-rust            skills|\.claude/skills/[^/]+|\.agents/skills/[^/]+
-rust            docs/.+|GLOSSARY\.md
-web-build,rust  tests/(attachments|checks|messaging|new-thread|proof|support)/.+|tests/pending-ticket-2\.txt
-rust,web-test   tools/install/.+
-rust,web-test,site tools/release/.+
-rust            tools/github-app/.+
-rust,web-test   Cargo\.toml|Cargo\.lock
-web-build,rust,web-test,site tests/fixtures/release/.+
-web-build,rust,web-test ci/runner/cache\.sh|crates/.+|contracts/.+|tests/Cargo\.toml|tests/fake-room-cli/.+|tests/fixtures/.+
-web-build,rust,web-test changes/.+|tests/.+|tools/.+
+web-build,rust,web-test * ci/escapes/escapes\.py
+-               -       ci/escapes/.+|\.github/workflows/ci-escapes\.yml
+web-build,rust  *       ci/rust-tests\.sh
+# tests/fleet/b2_planner.rs reads the installed skills' fleet template through the link.
+rust            rust:test:fleet skills
+rust            -       \.claude/skills/[^/]+|\.agents/skills/[^/]+
+# tests/fleet/b2_planner.rs parses it (include_str!).
+rust            rust:test:fleet docs/agents/fleet\.md
+rust            -       docs/.+|GLOSSARY\.md
+web-build,rust  -       tests/checks/.+
+web-build,rust  *       tests/(attachments|messaging|new-thread|proof|support)/.+|tests/pending-ticket-2\.txt
+rust,web-test   *       tools/install/.+
+rust,web-test,site *    tools/release/.+
+rust            *       tools/github-app/.+
+rust,web-test   *       Cargo\.toml|Cargo\.lock
+web-build,rust,web-test,site * tests/fixtures/release/.+
+web-build,rust,web-test * ci/runner/cache\.sh|crates/.+|contracts/.+|tests/Cargo\.toml|tests/fake-room-cli/.+|tests/fixtures/.+
+web-build,rust,web-test * changes/.+|tests/.+|tools/.+
+# Read by every job, as a path no row knows; only their Rust tests are named.
+web-build,rust,web-test,site * \.githooks/.+|\.gitignore|LICENSE|adapters/.+|deploy/.+|kernel/.+|loops/.+|release/.+
+# The pin moves the installed skills, so it reaches the template's reader.
+web-build,rust,web-test,site rust:test:fleet wizskills\.lock
+web-build,rust,web-test,site - [^/]+\.md|\.claude/skills/.+|\.agents/skills/.+
 TABLE
 # Identify each file explicitly: an empty reads list has no first record.
-awk -v skips="$skips" -v step="$step" '
-  FILENAME == ARGV[1] { who[++rows] = $1; pat[rows] = "^(" $2 ")$"; next }
+awk -v skips="$skips" -v step="$step" -v tests="$tests" '
+  FILENAME == ARGV[1] {
+    if ($1 ~ /^#/) next
+    who[++rows] = $1; ids[rows] = $2; pat[rows] = "^(" $3 ")$"; next
+  }
   FILENAME == ARGV[2] { listed[$0] = 1; next }
   {
-    readers = "web-build,rust,web-test,site"
-    if (!($0 in listed)) for (i = 1; i <= rows; i++) if ($0 ~ pat[i]) { readers = who[i]; break }
+    readers = "web-build,rust,web-test,site"; rust = ($0 in listed) ? "*" : "?"
+    if (!($0 in listed)) for (i = 1; i <= rows; i++) if ($0 ~ pat[i]) { readers = who[i]; rust = ids[i]; break }
+    if (tests) { print rust; next }
     if (skips != "") {
       # X5 combines the old Rust tool proofs and web release proofs.
       keep = (skips == "release") ? (index("," readers ",", ",rust,") || index("," readers ",", ",web-test,")) : index("," readers ",", "," skips ",")
@@ -94,7 +119,7 @@ awk -v skips="$skips" -v step="$step" '
     }
   }
   END {
-    if (skips != "") exit 0
+    if (skips != "" || tests) exit 0
     if (!paths || ran["rust"] || ran["web-test"]) ran["web-build"] = 1
     if (!paths) ran["rust"] = ran["web-test"] = 1
     out = ""

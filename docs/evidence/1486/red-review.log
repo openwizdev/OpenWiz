@@ -1,0 +1,15 @@
+# #1612 R1 and R2 red, at 606c2ea plus these tests
+FAIL: test_a_doc_pin_or_link_a_rust_test_reads_runs_only_that_test (__main__.Plans.test_a_doc_pin_or_link_a_rust_test_reads_runs_only_that_test) [wizskills.lock]
+AssertionError: {'launch-fleet': 'skip'} != {'launch-fleet': 'run'}
+FAIL: test_a_doc_pin_or_link_a_rust_test_reads_runs_only_that_test (__main__.Plans.test_a_doc_pin_or_link_a_rust_test_reads_runs_only_that_test) [skills]
+AssertionError: {'launch-fleet': 'skip'} != {'launch-fleet': 'run'}
+Ran 1 test in 0.187s
+FAILED (failures=2)
+      2 AssertionError: False != True
+      2 AssertionError: True != False
+      1 FAIL: test_main_push_plan_requires_an_old_full_run_but_other_events_do_not (__main__.Workflow.test_main_push_plan_requires_an_old_full_run_but_other_events_do_not) (event='push', old=False, attempt=2, step='Check the last full main run')
+      1 FAIL: test_main_push_plan_requires_an_old_full_run_but_other_events_do_not (__main__.Workflow.test_main_push_plan_requires_an_old_full_run_but_other_events_do_not) (event='push', old=False, attempt=2, step='Write the CI plan')
+      1 FAIL: test_main_push_plan_requires_an_old_full_run_but_other_events_do_not (__main__.Workflow.test_main_push_plan_requires_an_old_full_run_but_other_events_do_not) (event='push', old=False, attempt=2, step='selection artifact')
+      1 FAIL: test_main_push_plan_requires_an_old_full_run_but_other_events_do_not (__main__.Workflow.test_main_push_plan_requires_an_old_full_run_but_other_events_do_not) (event='push', old=True, attempt=2, step='Check the last full main run')
+      1 FAILED (failures=4)
+      1 Ran 1 test in 0.003s

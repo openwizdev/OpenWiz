@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""K15 trace/fallback/planted proofs at X5's actual executor boundary.
+"""Lane execution proofs at X5's actual executor boundary.
 
 Only suite/build processes are replaced; no Cargo work runs. The web, site
 and export cases went with the web view and the site copy (#1264).
@@ -46,7 +46,7 @@ class Execution(unittest.TestCase):
             (tmp/'ci-selection.json').write_text(raw)
             dispatch=dict.fromkeys(('build-site','image-skills','rust','release'),True)
             dispatch.update(**{'lint-rust':checks_only},skills=['launch-fleet','plan-graph','triage'],
-                            trace=over.pop('trace',True),planted=over.pop('planted',False),
+                            trace=False,planted=False,
                             plan_sha256=hashlib.sha256(raw.encode()).hexdigest())
             if checks_only:
                 dispatch['rust']=False
@@ -61,9 +61,6 @@ if os.environ.get('RELEASE_SMOKE') and 'tools/release/test.py' in sys.argv:
     os.chdir(os.environ['REAL_ROOT'])
     os.execv(os.environ['REAL_INTERPRETER'],[os.environ['REAL_INTERPRETER'],*sys.argv[1:],
         'ExportFindings.test_fixed_prose_and_technical_check_references_pass'])
-if 'trace.py ready' in line: sys.exit(int(os.environ.get('READY_RC','0')))
-if 'ci/rust-tests.sh --can-run-at-once' in line: sys.exit(int(os.environ.get('ROOM_RC','0')))
-if 'ci/select/trace.py ' in line: sys.exit(int(os.environ.get('TRACE_RC','0')))
 if os.environ.get('FAIL') and os.environ['FAIL'] in line: sys.exit(9)
 '''.replace('PYTHON',sys.executable)
             for name in ('python3','sh','cargo'):
@@ -81,13 +78,13 @@ if os.environ.get('FAIL') and os.environ['FAIL'] in line: sys.exit(9)
         # catches (#743): a member split that drops or doubles a release proof
         # or runs the package proof without its build.
         tests=['release:package','release:install','release:test','release:ci-runner']
-        code,whole,err=self.execute('release',trace=False,release_tests=tests)
+        code,whole,err=self.execute('release',release_tests=tests)
         self.assertEqual(code,0,err)
         want=sorted(whole)
         with tempfile.TemporaryDirectory() as keep:
             ran=[]
             for k in (1,2,3):
-                code,calls,err=self.execute('release',trace=False,release_tests=tests,KEEP_RAN=keep,
+                code,calls,err=self.execute('release',release_tests=tests,KEEP_RAN=keep,
                     args=['--shard',f'{k}/3',f'ran-{k}.json'])
                 self.assertEqual(code,0,err)
                 if any('test_package.py' in c for c in calls):
@@ -97,52 +94,32 @@ if os.environ.get('FAIL') and os.environ['FAIL'] in line: sys.exit(9)
             self.assertEqual(sorted(ran),want)
             self.assertEqual(len(list(Path(keep).glob('ran-*.json'))),3)
 
-    def test_trace_failures_fallback_and_planted_edits(self):
-        for kind in ('rust',):
-            for overrides,traces,normal,fails in [({},True,False,False),({'TRACE_RC':'1'},True,False,True),
-                ({'TRACE_RC':'3'},True,True,False),({'READY_RC':'1'},False,True,False),
-                ({'trace':False},False,True,False)]:
-                with self.subTest(kind=kind,overrides=overrides):
-                    code,calls,err=self.execute(kind,planted=True,**overrides)
-                    self.assertEqual(code!=0,fails,err)
-                    self.assertEqual(any('ci/select/trace.py '+kind+' ' in c for c in calls),traces)
-                    needle='sh ci/rust-tests.sh --only '
-                    self.assertEqual(any(c.startswith(needle) for c in calls),normal,calls)
-                    self.assertEqual(any('planted.py '+kind+' ' in c for c in calls),not fails,calls)
-        code,calls,err=self.execute('rust',ROOM_RC='1',planted=True)
-        self.assertEqual(code,0,err)
-        self.assertFalse(any('trace.py rust ' in c for c in calls))
-        self.assertTrue(any('planted.py rust ' in c for c in calls))
-        self.assertTrue(any(c.startswith('sh ci/rust-tests.sh --only ') for c in calls))
-
     def test_always_runs_format_selector_and_the_whole_static_checks_binary_once(self):
-        code,calls,err=self.execute('always',trace=False)
+        code,calls,err=self.execute('always')
         self.assertEqual(code,0,err)
         self.assertEqual(calls,['cargo fmt --check','sh .github/actions/docs-only/test.sh --always',
-            'sh ci/hosted/test.sh','python3 -I ci/select/test_pick.py','python3 -I ci/select/test_trace.py',
-            'python3 -I ci/select/test_job.py','python3 -I ci/select/test_steps.py',
-            'cargo test -p openwiz-tests --test checks --locked'])
+            'sh ci/hosted/test.sh','cargo test -p openwiz-tests --test checks --locked'])
 
     def test_checks_only_selection_still_executes_its_lint_request(self):
-        code,calls,err=self.execute('rust',checks_only=True,trace=False,mode='lint')
+        code,calls,err=self.execute('rust',checks_only=True,mode='lint')
         self.assertEqual(code,0,err)
         self.assertEqual(calls,['cargo clippy --workspace --all-targets -- -D warnings',
             'cargo build --workspace --locked','cargo build --release --locked'])
 
     def test_always_lint_fallback_runs_only_without_a_rust_test_lane(self):
-        code,calls,err=self.execute('rust',checks_only=True,trace=False,mode='lint-always')
+        code,calls,err=self.execute('rust',checks_only=True,mode='lint-always')
         self.assertEqual(code,0,err)
         self.assertEqual(len(calls),3,calls)
-        code,calls,err=self.execute('rust',trace=False,mode='lint-always')
+        code,calls,err=self.execute('rust',mode='lint-always')
         self.assertEqual(code,0,err)
         self.assertEqual(calls,[])
 
     def test_selected_suite_failure_is_never_swallowed(self):
         for kind,fail in [('rust','ci/rust-tests.sh --only'),('release','tools/release/test_package.py'),
                           ('release','cargo build')]:
-            good,successful,err=self.execute(kind,trace=False)
+            good,successful,err=self.execute(kind)
             self.assertEqual(good,0,(successful,err))
-            code,calls,err=self.execute(kind,trace=False,FAIL=fail)
+            code,calls,err=self.execute(kind,FAIL=fail)
             self.assertEqual(code,1,(calls,err))
             matches=[i for i,c in enumerate(calls) if fail in c]
             self.assertEqual(len(matches),1,(kind,calls))
@@ -154,24 +131,24 @@ if os.environ.get('FAIL') and os.environ['FAIL'] in line: sys.exit(9)
         # it even when its Cargo cache is cold.
         build='cargo build --locked --jobs 2 -p openwiz-cli --bins'
         package='python3 -I tools/release/test_package.py'
-        code,calls,err=self.execute('release',trace=False,release_tests=['release:package'])
+        code,calls,err=self.execute('release',release_tests=['release:package'])
         self.assertEqual(code,0,err)
         self.assertEqual(calls,[build,package])
         for fail,wants in [('cargo build',[build]),('test_package.py',[build,package])]:
             with self.subTest(fail=fail):
-                code,calls,err=self.execute('release',trace=False,
+                code,calls,err=self.execute('release',
                     release_tests=['release:package'],FAIL=fail)
                 self.assertEqual(code,1,(calls,err))
                 self.assertEqual(calls,wants)
                 self.assertIn('exit status 9',err)
-        code,calls,err=self.execute('release',trace=False,release_tests=['release:install'])
+        code,calls,err=self.execute('release',release_tests=['release:install'])
         self.assertEqual(code,0,err)
         self.assertEqual(calls,['python3 -I tools/install/test_install.py'])
 
     def test_release_entrypoint_can_import_its_sibling_proofs(self):
         # Exercise the real release entrypoint and one existing cheap case;
         # stubbing Python here previously hid its script-directory imports.
-        code,calls,err=self.execute('release',trace=False,RELEASE_SMOKE='1')
+        code,calls,err=self.execute('release',RELEASE_SMOKE='1')
         self.assertEqual(code,0,err)
         self.assertEqual(len(calls),1,calls)
         self.assertIn('Ran 1 test',err)

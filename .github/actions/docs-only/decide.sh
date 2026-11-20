@@ -23,9 +23,9 @@
 # (ci/retry.sh), for a network fault a rerun would pass. A read that never
 # succeeds still fails, so it can never skip a job.
 # With DECIDE_PLAIN set to a file (#432, the action), decide.sh writes
-# `plain` there once every check above has passed, and only then: the test
-# selector (ci/select/) may narrow the tests only on that plain case. Any
-# other answer leaves the file absent, so it can never narrow one.
+# `plain` there once every check above has passed, and only then. A plan
+# (plan.py, which checks the same) narrows the tests only on that case. Any
+# other answer leaves the file absent.
 set -eu
 HERE="$(dirname "$0")"
 RETRY="$HERE/../../../ci/retry.sh"

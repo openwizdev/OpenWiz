@@ -9,7 +9,6 @@ ci.yml	rust	planted	90	0	1	5	2026-11-14T03:17:38Z	2026-11-17T22:26:26Z	unmeasure
 ci.yml	release	all	21	839	344	148	2026-11-15T23:47:55Z	2026-11-16T07:16:00Z	measured
 ci.yml	skills	all	5	79	695	148	2026-11-15T23:47:55Z	2026-11-16T07:16:00Z	measured
 ci.yml	launch-fleet	all	14	529	464	148	2026-11-15T23:47:55Z	2026-11-16T07:16:00Z	measured
-ci.yml	select-map	all	5	13	24	24	2026-11-14T10:46:20Z	2026-11-15T20:01:10Z	measured
 ci.yml	ci	all	5	16	122	150	2026-11-15T23:47:55Z	2026-11-16T07:16:00Z	measured
 ci.yml	web-test	all	5	8	122	150	2026-11-15T23:47:55Z	2026-11-16T07:16:00Z	measured
 ci.yml	main-light	all	5	20	28	150	2026-11-15T23:47:55Z	2026-11-16T07:16:00Z	measured

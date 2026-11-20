@@ -1,267 +1,38 @@
-# War room record and suite contract v1
+# War room record contract v1 (legacy)
 
-**Legacy versus successor (WRD1, #629).** New snapshots are written as
-[`openwiz.war-room.v2`](contract.v2.md), which keeps every v1 field and rule
-below unchanged and adds a separate `health` section. Saved v1 samples are
-never rewritten. Read either version with `suite.validate`/`suite.load`, check
-`suite.schema_of`, and read health only through `suite.health`, which shows a v1
-sample's health as unobserved. `compose` below now returns v2.
+`openwiz.war-room.v1` is one complete five-minute snapshot over the existing benches. New snapshots are [v2](contract.v2.md), which keeps every rule here and adds `health`; saved v1 samples are never rewritten, and both read through `suite.validate` and `suite.load` (`suite.schema_of` names the version, `suite.health` shows a v1 sample's health as unobserved).
 
-WR1 (#2345), spec #2340. `openwiz.war-room.v1` is one complete snapshot
-envelope over existing benches, **not** a new collector or source authority.
-Only synthetic/offline preparation is proved here. Source availability,
-complete history, five-minute operation, private hosting and live results remain
-Unverified. No schedule, endpoint, deployment, publication, access rule, paid
-evaluation, stage setting, recovery action or additional benchmark is supplied.
+## The boundary
 
-## One boundary
+`suite.py`, Python standard library:
 
-`suite.py` uses Python's standard library. Public calls:
+- `compose(sample_at, providers=(), *, assembled_at=None)` fills every missing slot with its unavailable stub, validates the envelope and returns a copy (now v2). It runs no provider and reads no source.
+- `validate(record)` raises `ValueError` on any refusal. `loads(wire)` and `load(path)` parse strict JSON (duplicate keys, nonfinite and overflowing numbers refuse) and validate.
+- CLI: `check PATH|-` prints the validated snapshot (exit 0, or 1 with no stdout); `compose --at UTC [--assembled-at UTC] [--providers PATH]`; bad arguments exit 2. Neither saves history, runs tools or opens a socket.
+- `python3 -I tools/collector/test_contract.py` proves it on the synthetic `fixtures/contract/` snapshots.
 
-- `compose(sample_at, providers=(), *, assembled_at=None) -> dict`: takes already
-  projected provider objects, fills every missing slot with its explicit
-  unavailable stub, validates the entire envelope and returns an independent
-  copy. It invokes no provider and reads no source artifact.
-- `validate(record) -> None`: strict shape and semantic check; raises
-  `ValueError` on refusal. Does not mutate its input.
-- `loads(wire) -> dict` / `load(path) -> dict`: strict JSON plus validation.
-  Duplicate keys at every depth, nonfinite constants and overflowing numbers
-  refuse. No key normalization or silent last-write-wins behavior.
-- CLI `check PATH` (or `check -` for stdin) prints the validated snapshot, exits
-  0; invalid/unreadable input exits 1 with sanitized stderr and no stdout.
-  `compose --at UTC_TIME [--assembled-at UTC_TIME] [--providers PATH]` reads only
-  an explicit local array of projected provider objects. Bad arguments exit 2.
-  Neither command saves history, runs tools, uses a clock or opens a socket.
+`record.schema.json` is the structural schema; its `x-providers` registry is the authoritative slot order and default prerequisites. The schema can't check identities, dates, coverage or arithmetic: **always call `validate`**. Neither checks the truth of a source hash or link; adapters validate their source first.
 
-`record.schema.json` is the structural JSON Schema (draft 2020-12). Its
-`x-providers` registry is the authoritative slot order, allowed groups and
-default readiness prerequisites used by composition. The stdlib checker
-evaluates the schema's local references, nullable alternatives, exact objects,
-types, enums, constants, patterns, array bounds/uniqueness and numeric bounds.
-Schema conformance alone cannot prove cross-field identities, calendar dates,
-source freshness, coverage or arithmetic; **always call `validate`**. Neither
-checker verifies the bytes or truth asserted by a source hash/evidence link.
-Adapters must first use the existing source's own validator and verify its
-artifact binding; the suite does not parse native source records again.
+## The envelope
 
-## Fixed presentation and named slots
+Exactly `schema`, `sample_id`, `sample_at`, `assembled_at`, `groups`, `providers`, with no undeclared key at any depth. Groups, always in this order: `throughput`, `stage_waits`, `board`, `ci`, `usage`, `decisions`. Slots, each exactly once in registry order: `activity`, `stage_waits`, `board`, `ci_bench`, `factory_metrics`, `journey`, `skills_eval`, `cost`, `credits`, `claude_usage`, `decisions`, `answer_time`, `rework`, `eb6`, `eb7`, `eb8`, `eb9`. An absent provider is `unavailable` with prerequisites and no metrics: a grey bench, never an empty success. A new bench outside these slots needs a decision.
 
-The envelope has exactly `schema`, `sample_id`, `sample_at`, `assembled_at`,
-`groups`, `providers`. All objects at every depth require their declared
-required keys and refuse undeclared keys. Only a metric's documented `rounding`
-field is optional. Groups are always in this order, even with no observations:
+`sample_at` and `sample_id` are the same UTC five-minute boundary. History keeps one immutable record per sample id: validate the whole envelope, then create it if absent; an identical duplicate is a no-op and a different one refuses. Never synthesise a missing sample.
 
-| Group | Contents |
-| --- | --- |
-| `throughput` | Hour/day merged PRs by forward/sideways/backwards direction |
-| `stage_waits` | Observed waits, source-owned limits and ticket-linked misses |
-| `board` | Existing board measures and bench inventory/readiness, including rework |
-| `ci` | Current running/queued jobs per exact pool, cost today and cost readiness |
-| `usage` | Credits and Claude usage, separately by provider/unit/window |
-| `decisions` | Sanitized pending decisions and answer-latency readiness |
+## Every metric
 
-Every snapshot includes these slots **once in the registry order**. An absent
-provider is unavailable, has nonempty prerequisites and an empty metric list;
-this is a visible grey bench, never a successful empty result.
+Fields: `id`, `group`, `label`, `state`, `value`, `unit`, `native_unit`, `statistic`, `window`, `observed_at`, `fresh_until`, `freshness`, `source`, `evidence`, `sample`, `dimensions`, `interval`, `prerequisites`, and optional `rounding`. `(slot, id)` is the series; keep its meaning, unit, statistic, dimensions and window basis across samples, or start a new series.
 
-| Slot | Source / later owner |
-| --- | --- |
-| `activity` | Existing CI/factory/board projection, WR8 #2352; throughput and current CI |
-| `stage_waits` | Actual merged TL1/TL2 contracts, WR3 #2347 |
-| `board` | Existing plan-links graph/measures/history, WR2 #2346 |
-| `ci_bench` | Existing points/trends, WR2; completed-window capacity/timing and list-rate estimates |
-| `factory_metrics` | Existing daily factory artifacts, WR2; UTC all-base-branch merge/usage semantics |
-| `journey` | Validated existing journey/bench artifacts, WR2; incomplete history stays explicit |
-| `skills_eval` | Existing manifests/scores/coverage, WR2; no eval is run |
-| `cost` | All-in merged-PR cost readiness, WR4 #2348 |
-| `credits` | Existing board credit samples/history, WR2; partial samples stay partial |
-| `claude_usage` | Existing usage artifacts or owner-supplied day export, WR2; no assumed endpoint |
-| `decisions` | Structured decisions discovery, WR2; no raw questions/replies or answer action |
-| `answer_time` | Source-linked substantive dispositions, WR5 #2349 |
-| `rework` | Journey independent nonduplicate review/fix facts, WR6 #2350 |
-| `eb6` | #2177 sourced first-push timing/defects, awaiting actual measured artifacts |
-| `eb7` | #2178 frozen-cohort paired replay, awaiting actual result and separate gates |
-| `eb8` | #2179 bounded live experiment, awaiting separate go-ahead/result |
-| `eb9` | #2192 huntr/settings A/B, retained hold and separate artifact gates |
+- **Units** are explicit (count, hours, minutes, seconds, `usd`, credits, tokens, sandbox hours, ratio, percent, USD per merged PR, PRs an hour, robot-minutes per code run). `unit` equals `native_unit`: no conversion and no cross-unit sum. CI list prices are estimates, not invoices.
+- **`window`** is the source's half-open `[since, until)` in UTC, with `timezone` `UTC` or `PST-fixed-UTC-08:00`. `observed_at` is when the source was read, at or after the window's end, never assembly time.
+- **`source`** pins a repository-relative artifact path, its native schema and SHA-256; `evidence` holds GitHub links. No raw comments, transcripts, credentials, thread ids or usage keys anywhere.
+- **`sample`** gives observed and expected counts (unknown expected is null), unique observation ids, and numerator and denominator. A numeric ratio needs a nonzero denominator equal to observed and the exact quotient. `ratio` may exceed 1; `proportion` and every percent may not. `usd_per_merged_pr` is a USD numerator over merged PRs. Median and p90 need observations.
+- **`rounding`** only on ratio or proportion: `exact` (default), `half_up_0` (whole percent) or `half_up_1` (one decimal of a native ratio), and only when the source contract says so.
+- **`dimensions`** keeps direction, source pool, source stage, ticket and cohort apart, each null when it doesn't apply; unknown direction is never assigned.
+- **`interval`** is one native wait or answer with source-backed start and end, each at or before `observed_at`; unknown ends are null and never complete.
 
-These inventory stubs assert no status change for those owners. WR2 renders
-generic metrics/readiness even before WR3–WR8 exist. Later owners supply their
-slot through `compose`; adding projected metrics within an existing slot does
-not change the envelope version or require a new page/collector. No raw native
-record or arbitrary extension object is accepted. A truly new bench/interface
-outside the confirmed eight points requires a decision.
+**States.** `known` needs a numeric value, complete coverage, source, window, evidence and no unmet prerequisite (a sourced zero is fine). `partial` needs prerequisites and may carry a labelled lower bound or null. `unavailable` has a null value and prerequisites. A provider is `known` only with all-known metrics, `partial` with prerequisites and at least one sourced metric, else `unavailable`. A source failure is projected as partial or unavailable, never omitted. A malformed provider refuses the whole composition.
 
-## Every displayed value
+**Freshness** comes only from the source's own validity bound (`fresh_until`): fresh until then, stale after, unknown without one. Stale values keep their old observation time and are labelled, never shown as current.
 
-Each metric carries `id`, `group`, `label`, `state`, `value`, `unit`,
-`native_unit`, `statistic`, `window`, `observed_at`, `fresh_until`, `freshness`,
-`source`, `evidence`, `sample`, `dimensions`, `interval`, `prerequisites`.
-An optional `rounding` field declares source-owned ratio arithmetic (below);
-omission means `exact`, without rewriting the record or source value.
-The schema fixes all nested fields/types. Metric ids are unique within a slot;
-the full series identity is `(slot, id)`. Preserve its meaning, unit, statistic,
-dimensions and source-window basis across samples; changed basis is a new
-series or an explicit noncomparable history, never an apparent speedup.
-
-- Units are explicit: count, hours, minutes, seconds, USD (`usd`), credits,
-  tokens, sandbox hours, ratio, percent, USD/merged PR, PRs/hour, robot-minutes/code-run. The
-  adapter preserves the native unit in both unit fields; the suite refuses a
-  mismatch and performs no conversion or cross-unit sum. CI capacity is not
-  observed merged throughput. CI list prices remain estimates, not invoices.
-- `window` is the half-open native source interval `[since, until)` in UTC
-  timestamps, with `timezone` preserving `UTC` or `PST-fixed-UTC-08:00`. Never
-  relabel a UTC daily usage ratio as a PST day or an hour. `observed_at` is the
-  actual artifact/source read bound, at/after window end, never assembly time.
-- `source` pins a sanitized repository-relative artifact path, native schema
-  identity and SHA-256. `evidence` contains source links (GitHub issue/PR,
-  comment, run or commit); references are assertions for independent checking,
-  not authority. No raw comments, transcripts, credentials, runtime/thread ids
-  or usage keys belong in any field. Producers must sanitize their labels,
-  prerequisites and identities; page consumers still escape all untrusted text.
-- `sample` names observed/expected cohort sizes, unique sanitized observation
-  identities, and nullable numerator/denominator. Observed equals identity
-  count. Unknown expected coverage is null. Ratios with numeric values require
-  a nonzero denominator equal to observed and the independently checkable
-  quotient, with only the source rounding explicitly declared below (times 100
-  for percent). A `ratio` statistic in native `ratio` units is a general ratio:
-  its integer numerator can exceed the denominator, as ready stock can exceed
-  running builders. A `proportion` statistic in `ratio` or `percent` units has
-  an integer numerator <= denominator. Percent values are always bounded
-  proportions, including the existing `ratio` statistic with `percent` units.
-  `usd_per_merged_pr` uses a numeric USD numerator and a merged PR denominator,
-  with the `ratio` statistic. WR4 owns that allocation and derived source value;
-  the suite only checks its quotient, with no conversion of credits or other
-  units. Median/p90 cannot have an empty observed distribution. This is coverage,
-  not a confidence score.
-- `rounding` applies only to `ratio`/`proportion`. `exact` (the default) retains
-  quotient validation; it cannot accept a rounded replacement as an exact
-  value. `half_up_0` applies only to `percent` and validates a whole percent
-  rounded half up. `half_up_1` applies only to native `ratio` units and validates
-  one decimal rounded half up. Both use the source numerator/denominator and
-  exact integer remainders, including ties; no broad tolerance is added to
-  admit rounded results. Unknown modes, a mode on another statistic and
-  incompatible mode/unit combinations refuse. USD-per-PR remains exact.
-  A producer may declare rounding only when its source contract specifies it,
-  never to excuse a mismatched value or alter the source basis.
-- `dimensions` keeps direction, exact source pool, source stage, ticket and
-  cohort separate; each is nullable when inapplicable. Direction unknown is not
-  assigned to another direction. Pools/stages are source-owned names, not an
-  inference from a runner or an invented TL stage vocabulary. Ticket-linked
-  misses are individual metrics with a ticket and source evidence; limits,
-  observed waits and miss counts have distinct ids/units, not a composite score.
-- `interval`, when available, names one stable native wait/answer observation
-  with source-backed start/end. Unknown/open endpoints are null and cannot be
-  known complete. This is a **War room projection**, not a declaration of TL2
-  native fields. Each populated endpoint requires `observed_at` and must be at
-  or before it; later assembly cannot establish a later source event. Ordering
-  and open/null rules still apply. The same native interval id survives repeated
-  snapshots.
-
-Native board projection examples from `contracts/plan-links.v1.md` preserve the
-source's values and counts; no adapter is implemented here:
-
-| Measure | Numerator / denominator | Unit | Statistic | Rounding | Value |
-| --- | --- | --- | --- | --- | --- |
-| Fed ratio | 3 ready / 1 running | `ratio` | `ratio` | `half_up_1` | 3.0 |
-| Fed ratio | 1 ready / 3 running | `ratio` | `ratio` | `half_up_1` | 0.3 |
-| Startable percent | 2 startable / 3 approved | `percent` | `proportion` | `half_up_0` | 67 |
-
-The source's zero-denominator result stays unavailable/null, never zero. A share
-such as rework uses `proportion`, not the unbounded stock-ratio semantics.
-
-`known` requires a numeric value, complete expected/observed sample coverage,
-source/window/time/evidence and no unmet prerequisites. An explicit sourced
-known zero is allowed. `partial` requires prerequisites and can retain a
-labelled numeric lower bound or null total; it never implies full coverage.
-`unavailable` requires null value and prerequisites. A provider's state cannot
-hide incomplete metrics: known needs nonempty all-known metrics; partial needs
-prerequisites and at least one non-unavailable metric with a source, observation
-time and nonempty evidence; a partial label alone is not an observation.
-Unavailable cannot contain available metrics. A sourced zero observation or
-sourced partial/null total remains valid; a wholly unobserved provider must use
-explicit unavailable states.
-Malformed supplied providers refuse the whole composition. A source failure
-must be projected explicitly as partial/unavailable; omission never means zero.
-
-Freshness is separate from numerical knowledge. `fresh_until` is nullable and
-must come from the selected source's validity contract, not a new suite timeout.
-With no validity bound, freshness is unknown. Otherwise it is fresh through
-that bound, stale afterwards; the validator checks against `assembled_at`.
-Known historical values may remain saved when stale, with their old observation
-time. Stale/unknown freshness must be labelled (grey for unavailable current
-observations), never shown as a current complete count or silently refreshed.
-
-## Conservative category prerequisites
-
-- **Stages:** WR3 waits for **both verified merges** of #2336/#2337, reads their
-  actual contracts and consumes measured waits and loaded limits. WR1 supplies
-  no TL2 native field names, limit numbers, timers, settings or recovery logic.
-- **All-in PR cost:** complete, nonduplicated USD allocation to one named
-  merged-PR cohort, including shared-parent work, helpers, sandbox and CI, is
-  required. Each component is counted once. Missing/unallocated parts or no
-  merged denominator leave all-in Unknown. Daily usage/merge ratios, journey
-  thread-record lower bounds and CI estimates remain separately labelled;
-  credits/tokens/hours cannot become USD. No allocation rule is invented here.
-- **Answer time:** a recorded request starts the interval; only an independently
-  sourced, linked substantive orchestrator disposition ends it. Sent/accepted
-  notifications, removed needs-info and resolved JSON status alone are not
-  evidence of an answer. Open, edited/deleted or unprovable intervals remain
-  censored/Unknown with coverage. Reuse TL2's fact when it is the same interval.
-- **Rework:** use validated journey independent, nonduplicate CHANGES and fix
-  rounds once per PR, with a named merged cohort and reviewed coverage. Missing
-  reviews never mean first-pass success. CI reruns remain separate CI rework.
-  CF4/finding semantics and all correction counters remain source-owned.
-
-These are provider admission obligations, not computations WR1 implements.
-The generic validator checks the record/denominator, not the provenance truth
-of an all-in allocation, substantive disposition or independent review.
-
-## Five-minute persistence seam (WR2)
-
-`sample_at` and `sample_id` are the same canonical UTC boundary, second zero
-and minute divisible by five. WR2 floors its injected tick time to this boundary;
-assembly is at/after it. Sampling identity never replaces native source times.
-One repository's selected history has one immutable record per sample id.
-
-WR2 must validate the **entire** envelope before atomic create-if-absent
-persistence; publish no subset of its metrics or partial file. Complete snapshot
-means a structurally complete envelope, including all explicit unavailable
-states, not a claim that all sources are ready. Identical duplicates are
-idempotent; a differing payload for an existing id refuses, never overwrites.
-Out-of-order new samples cannot regress the latest pointer. Interrupted writes
-leave no readable sample. Retain historical samples/gaps and last good evidence;
-do not synthesize missing samples or change old timestamps. Persistence,
-concurrency, crash and restart behavior belongs to WR2, not this validator.
-
-## Weekly history seam (WR7)
-
-Use two adjacent **nonoverlapping seven-day stage cohorts**, ending at the end
-of the latest complete fixed-PST day: `[end-14 days, end-7 days)` and
-`[end-7 days, end)`. Fixed PST boundaries are 08:00 UTC; retain source UTC/PST
-labels. Assign each completed native stage interval once by its source-backed
-end, deduplicate its identity across five-minute snapshots; open/censored waits
-and unknown endpoints are reported separately, never completed zero waits.
-
-Expected retained five-minute samples are 2016 per seven-day week, distinct
-from the number of independent intervals. Report observed/expected sample/day
-coverage and per-stage observed/expected interval counts where ascertainable;
-unknown expected intervals are null. Missing samples/history remain gaps, never
-healthy zeros. Compare only compatible units, limits, source windows and stage
-basis, with sample sizes. Changed limits/basis, thin cohorts or incomplete
-history cannot produce a confident faster/slower claim. Do not add a new
-minimum-sample policy or threshold; reuse the selected source's comparison
-semantics and show their limitations. Recorded changes retain source links
-beside timing comparisons, with no causal claim. WR7 owns comparison arithmetic
-and any deduplication proof after the actual TL producers are available.
-
-## Synthetic proof
-
-`fixtures/contract/known.json` has 3 PRs in a UTC hour; `partial.json` adds a
-two-of-four reviewed cohort whose overall rework value is null;
-`unavailable.json` contains only named grey stubs. All dates, paths, links,
-hashes, source schemas, identities and observations are synthetic assumptions;
-the repeated hashes assert no real source bytes or capability. No fixture is a
-live observation. `test_contract.py` owns the boundary cases and CLI round trip.
-`red-first.log` records the missing seam before its implementation commit.
-`review-1-red.log` records R1–R4 before their corrections: native board ratio and
-rounding support, source-bound interval endpoints and observed partial readiness.
+**Weekly comparisons** use two adjacent seven-day cohorts ending at the latest complete fixed-PST day, each interval counted once by its end. Missing samples are gaps, not zeros; changed limits, bases or thin cohorts give no faster or slower claim.

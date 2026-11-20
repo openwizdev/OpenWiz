@@ -1,9 +1,13 @@
 # OpenWiz feedback and sharing contract, version 1 (`openwiz.feedback.v1`)
 
 How feedback a user chooses reaches Jake's agents, and how a user shares
-OpenWiz, without exposing private work. Ticket P4 (#2203) of spec #2194. The
-decision behind it and the consumer plan are in
-[docs/decisions/public-feedback.md](../docs/decisions/public-feedback.md).
+OpenWiz, without exposing private work. Ticket P4 (#2203) of spec #2194.
+Sources: Jake, 2026-11-10: feedback goes to a GitHub issue on the public OpenWiz
+repository, created by the user's agent after an exact preview and a yes, carrying
+only content the user chose ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6763149732)).
+Jake, 2026-11-13: confirmed that route through the user's own GitHub login, and
+added the receiver side: his agent reviews incoming feedback issues, queues each
+for his approval, then replies ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6845243425)).
 
 **Contract only.** This adds no OpenWiz server route, method, header or write
 authorization, no OpenWiz App permission and no stored credential. It changes no

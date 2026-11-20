@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run CI's selected skill suites (#433). Unknown or empty selection runs all.
 
-python3 -I ci/select/skills.py 'triage where-are-we'   # or all / none
+python3 -I .github/actions/docs-only/skills.py 'triage where-are-we'   # or all / none
 The order of the full run is the existing CI order. No shell interpolation.
 """
 import subprocess

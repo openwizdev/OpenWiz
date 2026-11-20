@@ -282,12 +282,12 @@ checkouts="$(awk '
   inside && /^        / { print; next }
   { inside = 0 }
 ' "$WORKFLOW")"
-for job in changes always rust release skills launch-fleet select-map ci web-test main-light owned-paths; do
+for job in changes always rust release skills launch-fleet ci web-test main-light owned-paths; do
   steps="$(printf '%s\n' "$checkouts" | grep -cxF "job $job")"
   with="$(printf '%s\n' "$checkouts" | awk -v j="job $job" '/^job / { on = ($0 == j); next } on')"
   if [ "$steps" = 1 ] && [ "$with" = "$want_with" ]; then ok "ci.yml: $job checks out blobless and sparse, private/ only as ci-reads.txt lists"; else bad "ci.yml: $job has $steps checkout steps, with [$(printf '%s\n' "$with" | sed 's/^ *//' | tr '\n' ';')]"; fi
 done
-if [ "$(printf '%s\n' "$checkouts" | grep -c '^job ')" = 11 ]; then ok "ci.yml: eleven main checkout steps (X5, launch-fleet's shards, main-light and owned-paths)"; else bad "ci.yml: $(printf '%s\n' "$checkouts" | grep -c '^job ') checkout steps"; fi
+if [ "$(printf '%s\n' "$checkouts" | grep -c '^job ')" = 10 ]; then ok "ci.yml: ten main checkout steps (X5, launch-fleet's shards, main-light and owned-paths)"; else bad "ci.yml: $(printf '%s\n' "$checkouts" | grep -c '^job ') checkout steps"; fi
 # The patterns as CI uses them: the first job's (the check above holds all
 # to the same list). Keep this tied to the actual workflow: pending X5's
 # update must remain a failing checkout proof, never a substituted pattern.
@@ -822,13 +822,8 @@ if Path(sys.argv[0]).name == 'cargo':
         binary.parent.mkdir(parents=True, exist_ok=True)
         binary.write_text('#!/bin/sh\\nexit 0\\n')
         binary.chmod(0o755)
-elif 'ready' in args:
-    sys.exit(int(os.environ.get('READY_RC', '0')))
-elif '--can-run-at-once' in args:
-    sys.exit(int(os.environ.get('ROOM_RC', '0')))
 elif '--only' in args:
     if 'rust:test:loops' not in ' '.join(args): sys.exit(8)
-    if 'ci/select/trace.py' in args and os.environ.get('TRACE_RC'): sys.exit(3)
     binary = Path('target/debug/openwiz')
     if not binary.is_file():
         sys.exit('missing target/debug/openwiz before selected loop tests')
@@ -844,11 +839,7 @@ for job in ('rust',):
     assert len(steps) == 1, f'{job}: expected one test step'
     script = steps[0].split('        run: |\n', 1)[1]
     script = '\n'.join(line[10:] for line in script.splitlines())
-    for case, overrides in [('normal', {}), ('traced', {'TRACE': '1'}),
-                            ('trace fallback', {'TRACE': '1', 'TRACE_RC': '3'}),
-                            ('unavailable tracer', {'TRACE': '1', 'READY_RC': '1'}),
-                            ('limited runner', {'TRACE': '1', 'ROOM_RC': '1'}),
-                            ('failed build', {'BUILD_FAIL': '1'})]:
+    for case, overrides in [('normal', {}), ('failed build', {'BUILD_FAIL': '1'})]:
         fixture = test_lanes.Lanes('test_every_planned_job_and_skill_member_passed')
         fixture.setUp()
         try:
@@ -861,8 +852,7 @@ for job in ('rust',):
             plan['lanes']['rust']['tests'] = ['rust:test:loops']
             raw = json.dumps(plan)
             (root/'ci-selection.json').write_text(raw)
-            fixture.dispatch.update(trace=overrides.get('TRACE') == '1',
-                                    **{'lint-rust': False},
+            fixture.dispatch.update(**{'lint-rust': False},
                                     plan_sha256=hashlib.sha256(raw.encode()).hexdigest())
             (root/'ci-dispatch.json').write_text(json.dumps(fixture.dispatch))
             (root/'.github').symlink_to(test_workflow.ROOT/'.github', target_is_directory=True)
@@ -899,8 +889,7 @@ fi
 
 # X5 moves workflow boundary coverage to executable plan/dispatch/gate proofs.
 # The classifier, prune/checkout, live-event decider and Rust-runner fixture
-# cases above retain their coverage. Legacy action output validation remains
-# in ci/select/test_steps.py; no lane re-runs the action's decision.
+# cases above retain their coverage; no lane re-runs the action's decision.
 for proof in test_gate.py test_plan.py test_lanes.py test_execution.py test_release_prune.py test_workflow.py; do
   if python3 -I "$HERE/$proof"; then ok "X5: $proof"; else bad "X5: $proof"; fi
 done

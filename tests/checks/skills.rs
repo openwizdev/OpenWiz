@@ -1,7 +1,7 @@
 //! OpenWiz integration with the pinned WizSkills install (#555, #814).
 //! Keep harness links, local release/installation contracts and wrappers
 //! without a green CI replacement. Portable checks belong to WizSkills;
-//! see tools/test-value/evidence/tv12/ledger.md for each disposition.
+//! each test's disposition is in #814's TV12 ledger, in the private records (#1303).
 
 use std::fs;
 use std::os::unix::fs::symlink;

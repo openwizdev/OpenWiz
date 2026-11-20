@@ -163,10 +163,9 @@ gate's own input binding. Fixture and dry-run receipts are useful diagnostics
 but never satisfy a live gate. Known device, Mac and real-radio gaps stay explicit;
 a gap that leaves a required promise unproved blocks that gate.
 
-Reuse [fleet tick's reviewed-plan restriction](fleet-tick.v1.md#reviewed-plan-execution-revision-1892):
-compare the complete ordered dry-run document before effects with `--expect-plan`;
-refuse pending-start recovery before it can run. A post-effect scope check is
-insufficient. The kit never widens App grants, room-cli allowlist calls,
+The kit runs no `openwiz fleet tick` step: the executing tick and its
+`--expect-plan` restriction were retired (#800), and the live-smoke runner refuses
+any `fleet tick` or `engine` step (`retired_command`). The kit never widens App grants, room-cli allowlist calls,
 throwaway targets, counts, spending or approved host scope. No unsafe automatic
 retry. Read-only discovery remains bounded by its separate recorded authority.
 

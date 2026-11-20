@@ -83,6 +83,8 @@ setup	The hosted setup
 # X5: one plan, independent lanes, receipts, and the required-check transition.
 # #1055: the push-only trusted map-age read is setup, including key fetch.
 setup	Check the signed main map age
+# #1486: the push-only last-full-run read is setup.
+setup	Check the last full main run
 setup	Write the CI plan
 setup	Prepare lane
 setup	Prune unused inputs

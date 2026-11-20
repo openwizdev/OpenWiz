@@ -1,0 +1,27 @@
+# #1486 AC2: python3 -I docs/evidence/1486/compare.py <main before #1486> <this branch>
+# Old: ci/select's signed map with FF5's readers. New: classify.sh's path table.
+case | ci/select: mode, rust lane | path table: mode, rust lane | same?
+docs-only | selected, [] | selected, [] | same
+skills-only | selected, [] | selected, [] | same
+a doc a test reads | selected, ['rust:test:fleet'] | selected, ['rust:test:fleet'] | same
+a pin move | selected, ['rust:test:fleet'] | selected, ['rust:test:fleet'] | same
+5: a path no job reads | selected, [] | selected, [] | same
+6: a modified source | selected, ['rust:lib:openwiz-core'] | selected, ['rust:lib:openwiz-core', 'rust:test:fleet'] | DIFF
+6: a modified file no test reads | selected, [] | selected, [] | same
+8: a new source | full (unknown_path), ['rust:lib:openwiz-core', 'rust:test:fleet'] | selected, ['rust:lib:openwiz-core', 'rust:test:fleet'] | DIFF
+8: a new file under tools/ | full (unknown_path), ['rust:lib:openwiz-core', 'rust:test:fleet'] | selected, ['rust:lib:openwiz-core', 'rust:test:fleet'] | DIFF
+8: a new top-level folder | full (unknown_path), ['rust:lib:openwiz-core', 'rust:test:fleet'] | full (unknown_path), ['rust:lib:openwiz-core', 'rust:test:fleet'] | same
+9: a new doc beside the class | full (unknown_path), ['rust:lib:openwiz-core', 'rust:test:fleet'] | full (unknown_path), ['rust:lib:openwiz-core', 'rust:test:fleet'] | same
+4: a CI path | full (ci_change), ['rust:lib:openwiz-core', 'rust:test:fleet'] | full (ci_change), ['rust:lib:openwiz-core', 'rust:test:fleet'] | same
+10: a test of its own | selected, ['rust:test:fleet'] | selected, ['rust:lib:openwiz-core', 'rust:test:fleet'] | DIFF
+the checks test | selected, [] | selected, [] | same
+
+# Why each DIFF (none runs fewer Rust tests):
+# - 6, a modified source: the table has no per-file readers for code; crates/ runs every Rust test.
+# - 8, a new source or tools/ file: ci/select ran everything because its map could not know a new
+#   file's readers. The table knows a path by its row, so a new file is treated as a modified one:
+#   every Rust test, and the release lane as before. Only K16's skill-suite rule (skills/<suite>/)
+#   still decides the skill lanes, as for a modified file.
+# - 10, a test folder: tests/<target>/ runs every Rust test, because test folders include each
+#   other's files (#[path]: tests/cli-agent includes ../fleet/b5_fake.rs, tests/attachments
+#   ../new-thread/pattern.rs). Only tests/checks/ (the always lane's) narrows.

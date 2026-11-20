@@ -32,8 +32,8 @@
 # have finished, then a line saying whether it passed. Either failing fails
 # the step.
 #
-# With `--only IDS` (#432, K15), it runs only the tests the selector picked
-# (ci/select/), by the CI selection record's ids, space-separated:
+# With `--only IDS` (#432, K15), it runs only the tests the plan picked
+# (#1486: by path), by the CI selection record's ids, space-separated:
 # `rust:lib:<package>` runs `cargo test -p <package>` (every test of that
 # crate) and `rust:test:<target>` one openwiz-tests target. Every target at
 # once: one crates call for just the selected packages (none if none), and

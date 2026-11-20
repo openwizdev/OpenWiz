@@ -187,7 +187,7 @@ in the after run.
 
 ## The baseline
 
-[`evidence/baseline/`](evidence/baseline/README.md) holds one result for
+[`evidence/baseline/`](evidence/baseline/) holds one result for
 every test target in `tests/`, measured before any group changed anything:
 the campaign's starting numbers. Each group still measures its own before
 at its pull request's base, since earlier groups move the numbers.

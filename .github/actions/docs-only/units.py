@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""The tests the selector picks from (#432, K15), listed from the tree.
+"""The tests the plan picks from (#432, K15; #1486), listed from the tree.
 
-  python3 -I ci/select/units.py [ROOT]    # one test id per line
+  python3 -I .github/actions/docs-only/units.py [ROOT]    # one test id per line
 
 Ids are the CI selection record's (contracts/ci-selection.v1.md, "Test ids"):
 - `rust:lib:<package>`: every test of one workspace package other than

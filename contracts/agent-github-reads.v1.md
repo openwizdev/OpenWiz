@@ -34,9 +34,9 @@ An unavailable seam refuses; it never silently becomes independent caches.
 
 ## Read authentication and permission checklist for C9
 
-- Jake explicitly authorizes the App installation, exact selected repositories
-  and engine host. Installation or live rollout is not authorized by this file.
-- Reuse the existing service App and protected provisioning. The product App's
+- Jake explicitly authorizes the App installation and exact selected
+  repositories. Installation or live rollout is not authorized by this file.
+- Reuse the existing OpenWiz App and protected provisioning. The product App's
   profile in `contracts/setup.v1.md` stays unchanged. Downscope **read tokens**
   to Metadata, Contents, Issues, Pull requests, Checks and Actions, each `read`,
   the exact existing `tools/github-app/app.py:PERMISSIONS` profile. No new App

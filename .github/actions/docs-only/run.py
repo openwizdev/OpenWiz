@@ -8,7 +8,6 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import sys
 import time
@@ -57,7 +56,7 @@ def load(folder):
     record = gate.read_plan(folder / 'ci-selection.json')
     dispatch = gate.escapes.strict_json((folder / 'ci-dispatch.json').read_text())
     sha = hashlib.sha256((folder / 'ci-selection.json').read_bytes()).hexdigest()
-    booleans = set(planner.steps.FLAGS) | {'rust','release','trace','planted'}
+    booleans = set(planner.FLAGS) | {'rust','release','trace','planted'}
     if (not isinstance(dispatch, dict) or set(dispatch) != booleans | {'skills','plan_sha256'}
             or dispatch['plan_sha256'] != sha
             or any(type(dispatch[k]) is not bool for k in booleans)):
@@ -170,24 +169,6 @@ def check_shards(folder, kind, *ran):
     if problems: raise ValueError('shard check failed:\n' + '\n'.join(problems))
 
 
-def trace(kind, selected, dispatch):
-    if not dispatch['trace']: return False
-    if subprocess.run(['python3','-I','ci/select/trace.py','ready']).returncode: return False
-    if kind=='rust' and subprocess.run(['sh','ci/rust-tests.sh','--can-run-at-once']).returncode: return False
-    if kind=='rust':
-        args = ['cargo','test','--workspace','--no-run','--locked'] if selected!=['rust:test:checks'] else ['cargo','test','-p','openwiz-tests','--test','checks','--no-run','--locked']
-        call(args)
-    args = ['python3','-I','ci/select/trace.py',kind,os.path.join(os.environ['RUNNER_TEMP'],'select-records'),'--jobs','3']
-    if selected: args += ['--only',*selected]
-    code = subprocess.run(args).returncode
-    if code==3:
-        print('trace: tracer failed; run selected tests normally and make no map',flush=True)
-        shutil.rmtree(os.path.join(os.environ['RUNNER_TEMP'],'select-records'),ignore_errors=True)
-        return False
-    if code: raise subprocess.CalledProcessError(code,args)
-    return True
-
-
 def execute(folder, kind):
     record, dispatch = load(folder)
     tests = tests_for(record,kind)
@@ -197,17 +178,11 @@ def execute(folder, kind):
         call(['cargo','fmt','--check'])
         call(['sh','.github/actions/docs-only/test.sh','--always'])
         call(['sh','ci/hosted/test.sh'])
-        for script in ('test_pick.py','test_trace.py','test_job.py','test_steps.py'):
-            call(['python3','-I','ci/select/'+script])
-        if not trace('rust',['rust:test:checks'],dispatch):
-            call(['cargo','test','-p','openwiz-tests','--test','checks','--locked'])
+        call(['cargo','test','-p','openwiz-tests','--test','checks','--locked'])
     elif kind=='rust':
         # Selected tests can execute debug binaries even when lint was skipped.
-        # Prepare them before tracing, its fallbacks, and planted tests alike.
         call(['cargo','build','--workspace','--bins','--locked'])
-        if not trace('rust',tests,dispatch): call(['sh','ci/rust-tests.sh','--only',' '.join(tests)])
-        if dispatch['planted']:
-            call(['python3','-I','ci/select/planted.py','rust',os.path.join(os.environ['RUNNER_TEMP'],'select-records/planted-rust.jsonl'),'--jobs','3'])
+        call(['sh','ci/rust-tests.sh','--only',' '.join(tests)])
     elif kind.startswith('skill:'):
         # Each matrix member executes exactly its named suite. A missing or
         # invalid plan is an error, never skills.py's permissive all fallback.

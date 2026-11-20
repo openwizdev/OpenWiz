@@ -1,236 +1,38 @@
-# Local public-tree preparation
+# Public-tree import
 
-`import.py` implements O14 of the open development contract. Python 3.11+ and
-Git are the only runtime tools. It has no network operation, push, branch update,
-checkout, source fetch, package dependency, watcher or live application call.
-
-The inputs are separate existing local repositories. Resolve/fetch their commits
-before running this tool. Missing objects refuse rather than being fetched. A
-shallow repository, graft, unsupported entry or unreadable input refuses. The
-destination must have a local `refs/heads/main`; its canonical public ancestry is
-checked by the actual O3 checker on the candidate before a destination write.
-Repository subdirectory inputs resolve to the worktree root (or bare Git root),
-so an output beside the supplied subdirectory still counts as inside that input.
-Use a verified O3 implementation and its matching private literals file, extracted
-outside both inputs. Do not put that list in a public repository.
+`import.py` builds the public tree from ClosedWiz for OpenWiz, checked by the [privacy check](../privacy-check/README.md). Python 3.11+ and Git only; it never fetches, pushes, checks out or moves a branch. Fetch both repositories' commits first. Keep the checker and its private literals list outside both repositories.
 
 ```sh
-python3 -I tools/open-import/import.py tree \
-  --source /path/to/ClosedWiz --commit SOURCE_COMMIT \
-  --destination /path/to/OpenWiz \
-  --checker /private/checker/tools/privacy-check/check.py \
-  --literals /private/checker/literals.txt
+# a whole tree: one ordinary commit on top of the destination's main (a dry run unless --write-local)
+python3 -I tools/open-import/import.py tree --source CLOSEDWIZ --commit SOURCE_COMMIT \
+  --destination OPENWIZ --checker CHECK_PY --literals LIST [--write-local]
+# a reviewed patch of public files for a source range, written to a new private folder
+python3 -I tools/open-import/import.py patch --source CLOSEDWIZ --source-base BASE --commit HEAD \
+  --destination OPENWIZ --checker CHECK_PY --literals LIST --output /private/patch
+# apply that patch to OpenWiz, bound to the digest you reviewed
+python3 -I tools/open-import/import.py apply-patch --destination OPENWIZ --patch-dir /private/patch \
+  --binding-sha256 DIGEST --checker CHECK_PY --literals LIST [--write-local]
+python3 -I tools/open-import/test_import.py           # offline proofs, real Git, synthetic roots
 ```
 
-The default is a dry run: no input object, ref, index or worktree changes. A
-temporary, independent object store receives only the destination's reachable
-history. Selected source blobs are read individually, with replacement objects
-and lazy fetches disabled. No source refs, commits, notes, tags, history pack or
-object-store link is copied. The temporary store is deleted on exit.
+Exit 0 is checked, 1 refused or unreadable, 2 bad arguments; the result is JSON. `--write-local` saves only the checked commit's objects: no branch, index or worktree changes. `patch` writes `public.patch` and `binding.json`; keep the binding private and record its `binding_sha256` from the result. Any branch, push or pull request after that is a separate, gated step.
 
-Successful JSON includes the candidate commit and tree, destination base, file
-count, byte count, added/deleted/modified file counts, and the check's result.
-Identical inputs produce identical commits and trees, using a fixed noreply
-identity, fixed message and the destination base's timestamp. This is one ordinary
-commit with exactly the destination `main` as its parent, including an unchanged
-tree. Dry-run commit IDs are informational: their objects disappear with scratch.
+## The carriage list
 
-`tree --write-local` additionally saves the checked commit's objects in the local
-destination. It leaves every branch, HEAD, index and worktree untouched. Dirty
-inputs are allowed: their committed bytes are read, and their local edits survive.
-The JSON adds `saved: true`. Any later branch creation, push or PR is a separate,
-gated cut-over action outside this tool.
+`paths.json` decides what is carried. `source` patterns select public files; `keep` names destination files that survive and wins over `source`; `private/`, grills (but their README) and retiring kits are never carried. An unknown source path refuses the import.
 
-Exit 0 means checked; exit 1 means refused/unreadable; invalid CLI arguments exit
-2. On a candidate privacy refusal, JSON still reports size and diff counts with
-`status: refused` and the full checker output, but no commit is saved. Earlier
-input, ancestry/shape or patch-binding failures report an error on stderr. Git
-stderr and source snippets are never printed. An existing public baseline can
-contain text being replaced: the checker judges the candidate and its one-commit
-range, rather than rescanning old baseline trees as newly published material.
-
-## Reviewed carriage list
-
-`paths.json` is the carriage list reviewed with this PR. `source` follows O1's
-public code/docs/contracts/skills/test classes and its folder patterns. For the
-current tree it explicitly adds the subsequent CI selection/hosted/escape code,
-CLI docs, live-check procedures/tools, scale tests, skills evaluation and the
-approved open-development tools. These are code or procedures under the same
-public classes. New top-level folders and new tools need a list review: unknown
-source paths refuse the import, even when their contents look public.
-
-`keep` takes precedence over `source`. Only these destination files survive from
-the old public tree: its changelog, licence spellings, contributing and releasing
-guides, and `docs/grills/README.md`. Their source counterparts are omitted, so
-ClosedWiz can keep updating its grill index while OpenWiz keeps its own copy.
-The root README is not kept: `source`
-carries ClosedWiz's own `README.md`, which quotes the install line (#1285). The plugin and
-marketplace manifests are not kept: `source` carries them byte for byte
-(#2428). Other old destination files are removed unless selected from source.
-This intentionally preserves OpenWiz's own public release wording.
-
-Private classes and retiring paths are unconditionally excluded, including all
-`private/`, grills except their README, the overflow/capacity tools and the PC
-runner kit except its three explicitly public files (test runner, cache helper
-and attributes). O3 checks all selected contents, paths and symlink targets with
-the required named literals before final staging. Symlinks must resolve within
-the selected public tree; absolute, escaping, private, cyclic and dangling links
-refuse. Resolution traverses each symlink before applying later parent (`..`)
-components, including repeated finite uses of an alias. Executable modes, binary
-bytes and safe symlinks are retained. Submodules
-are refused. SHA-256 Git repositories are currently unsupported.
-
-## Public-file patch seam for O15 (#1283)
-
-Use an exact source base/head range and the exact destination main that will
-receive the patch. Patch generation is also a dry run, except for its explicitly
-requested new output directory, which must be outside both input repositories.
-This excludes every registered worktree of each input (primary and siblings),
-plus its canonical Git and common directories, even if a linked worktree was
-supplied. Git's NUL-delimited inventory preserves whitespace in worktree paths;
-an unreadable or malformed inventory refuses. Containment is rechecked just
-before artifact creation. Symlink aliases cannot bypass these exclusions.
-The folder is owner-only; an existing folder refuses rather than overwriting a
-previous reviewed artifact.
-
-```sh
-python3 -I tools/open-import/import.py patch \
-  --source /path/to/ClosedWiz --source-base SOURCE_BASE --commit SOURCE_HEAD \
-  --destination /path/to/OpenWiz \
-  --checker /private/checker/tools/privacy-check/check.py \
-  --literals /private/checker/literals.txt --output /private/reviewed-patch
-```
-
-The output is exactly:
-
-- `public.patch`: ordinary Git binary diff, with full blob IDs and no source
-  commit headers, message, author or history. Renames become deletion/addition.
-- `binding.json`: `openwiz.public-patch.v1`, retained **privately**, with exact
-  `source_base`, `source_head`, `destination_base`, expected destination `tree`,
-  `patch_sha256`, `policy_sha256`, sorted changed public `paths`, and an `excluded`
-  count for changed private/retired/preserved paths omitted from the patch.
-
-The JSON command result supplies `binding_sha256`. Review both artifacts and
-record that digest in O15's private move state; it is the required trust input to
-reapplication. Never publish the binding or fetch a source branch into OpenWiz.
-The binding is provenance for the reviewer, not a signature or an automatic
-approval. Source base must be an ancestor of source head. Unknown changed paths
-refuse; a range with no carried public changes refuses. Public paths with private
-contents refuse even when the offending text was removed: both sides of the diff
-are checked. Source diff-presentation settings cannot change the patch format.
-Those early old/new scans include actual unchanged destination workflow files
-and symlinks as context. A reusable workflow reference can therefore resolve
-without adding that unchanged file to the patch. A genuinely missing reference
-still refuses; the complete applied tree is checked separately afterward.
-
-```sh
-python3 -I tools/open-import/import.py apply-patch \
-  --destination /path/to/OpenWiz --patch-dir /private/reviewed-patch \
-  --binding-sha256 REVIEWED_BINDING_SHA256 \
-  --checker /private/checker/tools/privacy-check/check.py \
-  --literals /private/checker/literals.txt
-```
-
-Reapplication requires no ClosedWiz access. It verifies the reviewed binding
-digest, strict binding shape, policy digest, current destination main, patch
-digest, exact changed public paths and complete expected result tree. It applies
-without three-way fallback, then checks the complete resulting tree, new commit
-metadata and ancestry with O3. A conflict, stale main, edited byte, missing
-checker/list or mismatched tree refuses before any destination change. There is
-no retarget/retry/rebase or public PR creation. `apply-patch --write-local` saves
-only the checked ordinary commit, with the same ref/index/worktree guarantees.
-
-O15 may consume this seam only after its implementation/list are reviewed. It
-still owns PR text checks, both tracker links, private mapping and publication
-gates. The import/patch tool grants no migration authority.
-
-## Per-PR carriage guard
-
-`guard.py` keeps the carriage list from drifting (#2412). The `changes` job of
-the required `ci` workflow runs it on every pull request and merge group:
+`guard.py` keeps the list current: CI's `changes` job runs it on every pull request and merge group, and it fails (exit 1) on any added path that no `source`, `keep` or private class covers. Fix it in the same pull request: add the path, or its folder as `<folder>/**`, to `source`, or put a private file under a private class.
 
 ```sh
 python3 -I tools/open-import/guard.py --base=BASE_SHA --head=HEAD
+python3 -I tools/open-import/test_guard.py
 ```
-
-It takes every path the change adds: present at head, but neither on the base
-nor at the branch point. Renames count at their new name; deleted and modified
-paths, and paths already on `main`, are not judged. Each added path is
-classified with this importer's own `carries` and `private_or_retired`, loaded
-from `import.py` rather than copied, against `paths.json` at head. It passes
-when `source` or `keep` selects it, or a private/retiring class covers it.
-
-Any other added path fails the check. The output lists every unclassified path,
-one per line, and how to classify it in the same pull request: a public path
-gets a matching `source` entry (the exact path, or its folder as `<folder>/**`);
-a private path goes under an existing private class such as `private/`, or the
-contract's private/retiring classes are extended in `import.py` for their own
-review. Exit 1 is that refusal. An unreadable base, head or list, or a shallow
-clone, fails closed with exit 2. Its proofs are `test_guard.py`, which the same
-step runs first.
 
 ## Frozen old code
 
-`frozen.py` keeps product work out of ClosedWiz after the cut-over (#2931).
-From then on, ClosedWiz's old code is a frozen copy until #1287 deletes it.
-Its own small workflow, `.github/workflows/frozen.yml` (check `frozen`, on
-GitHub-hosted runners), runs it on every pull request and merge group to `main`.
-Cut-over step 7 keeps that workflow enabled while ClosedWiz's other CI stops, and
-switches the ruleset to require only this check.
-
-**The change never supplies the checker.** On `pull_request_target`, GitHub runs
-`frozen.yml` as it is on `main`. Every step runs the base's own tools, checked out
-in `.frozen-tools/`. The change is checked out in `candidate/` as Git data only,
-never run, with no credentials kept. A merge group's PRs have already passed this
-base-run check. That check refuses any change to the workflow or the tools,
-because they are frozen paths themselves. The workflow then runs:
+After the cut-over, `frozen.py` refuses any ClosedWiz pull request that touches a carried path (exit 1), so product work goes to OpenWiz. `.github/workflows/frozen.yml` runs it from the base branch's own copy, so a change can't supply its own checker. It acts only once the repository variable `CLOSEDWIZ_FROZEN_SINCE` holds the switch date; before that it lists what it would refuse and passes. The one exception is #1287's pull request, which may only delete frozen paths.
 
 ```sh
-FROZEN_SINCE="$CLOSEDWIZ_FROZEN_SINCE" python3 -I .frozen-tools/tools/open-import/frozen.py --repo=candidate --base=BASE_SHA --head=HEAD_SHA
+FROZEN_SINCE=YYYY-MM-DD python3 -I tools/open-import/frozen.py --repo=. --base=BASE_SHA --head=HEAD_SHA
+python3 -I tools/open-import/test_frozen.py
 ```
-
-It takes every path the change itself adds, modifies or deletes: different at
-head from both the base and the branch point, so later changes on `main`
-alone are not judged. A path is **frozen** when this importer's own `carries`
-selects it, or when `private_or_retired` covers it outside the private records.
-`private/` (its orchestration and evidence folders included) and `docs/grills/`
-are private records. Both functions are loaded from `import.py`, not copied, and
-`paths.json` is read at the base, so a change cannot unfreeze its own paths.
-The workflow's checkout is blobless, so it adds the base's `paths.json` by
-content (`git hash-object -w`). Only that exact blob satisfies the read.
-
-It activates only once O17's switch is recorded: the switch date
-(`YYYY-MM-DD`) in the repository variable `CLOSEDWIZ_FROZEN_SINCE`, set and
-read back at cut-over step 7, never by a pull request. Before
-that, it lists the frozen paths it would refuse and passes. After it, any touched
-frozen path fails the check with exit 1. The output lists every such path, one per
-line, and says that product work goes to `openwizdev/OpenWiz`. An invalid
-activation value, or an unreadable base, head or list, fails closed with exit 2.
-
-**The one exception** is #1287's own pull request, which deletes the old tree.
-It is named by a title starting `#1287:` (`PR_TITLE`), or in a merge group by its
-queue ref, `refs/heads/gh-readonly-queue/<base>/pr-1287-<sha>` (`QUEUE_REF`). It
-passes only when every touched frozen path is a deletion. An added or modified
-frozen path still fails, even there, and only those paths are listed.
-Its proofs are `test_frozen.py`, which the workflow runs first, and the
-workflow's own assertions in `.github/workflows/ci.test.mjs`. Its `Workflow`
-proof runs `frozen.yml`'s own steps on a synthetic layout of the checkouts that
-file declares. The case is a `#1287:` PR that edits a frozen path and plants a
-checker that always passes, and it must still be refused.
-
-## Proofs and limits
-
-```sh
-python3 -I tools/open-import/test_import.py
-cargo fmt --check
-```
-
-The CLI proofs use real Git and the real O3 checker, with synthetic history roots
-set only in the test harness (the same technique as O3's own history tests).
-No production root/anchor override exists. Fixture literals are synthetic;
-real-main preparation uses the separately pinned actual checker and private list.
-
-Fixture tests prove preparation, never publication or live acceptance. Privacy's
-binary-image/personal-fact limitations remain review responsibilities. Current
-real-main refusals are recorded under the ticket's owned private evidence, and
-the whole-tree clean result belongs to O16 after the public-word tickets merge.

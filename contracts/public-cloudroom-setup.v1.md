@@ -2,9 +2,9 @@
 
 Setup's CloudRoom step installs CloudRoom for a new user, or reuses the
 installation and login they already have. It has one CloudRoom sign-in screen
-and a short powered-by line. Authority: Jake's P2 decision, recorded in
-[docs/decisions/public-cloudroom-setup.md](../docs/decisions/public-cloudroom-setup.md)
-(ticket #2201, spec #2194).
+and a short powered-by line (ticket #2201, spec #2194). Source: Jake,
+2026-11-13: OpenWiz bundles CloudRoom's installation, with one CloudRoom sign-in
+screen and a short powered-by CloudRoom line ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6847807740)).
 
 This contract is proven on fixtures and recording fakes only. A real download,
 installation or sign-in is observed only in #2207's bounded live run; until

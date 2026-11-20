@@ -9,6 +9,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 sys.dont_write_bytecode = True
 import unittest
 from unittest import mock
@@ -24,113 +25,81 @@ def jobs():
     return dict((m[1],m[2]) for m in re.finditer(r'^  ([a-z][a-z0-9-]*):\n(.*?)(?=^  [a-z][a-z0-9-]*:\n|\Z)',source,re.M|re.S))
 
 
-class MainMapAge(unittest.TestCase):
-    """C7: execute the workflow gate with real synthetic RSA signatures.
+class MainRunAge(unittest.TestCase):
+    """#1055, #1486: a main push runs the full plan only when main's last full
+    run (a push or nightly whose ci job passed) finished over 120 minutes ago.
 
-    catches: tracing a fresh map, rounding away the strict 120-minute
-    boundary, or trusting a forged/cache-metadata timestamp to skip work.
-    Only the clock and GitHub's published key response are fixture inputs.
+    catches: a push running everything after a recent full run, rounding away
+    the strict 120-minute boundary, a light push counting as a full run, or an
+    unreadable answer deciding instead of failing. Only GitHub's answers and
+    the clock are fixture inputs.
     """
     NOW = 1_700_010_000
 
-    @classmethod
-    def setUpClass(cls):
-        sys.path.insert(0, str(ROOT / 'ci/select'))
-        import test_job
-        cls.signed = test_job
-
     def setUp(self):
-        tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(tmp.cleanup)
-        self.root = Path(tmp.name)
-        self.git('init', '-q')
-        self.git('-c', 'user.name=Synthetic', '-c', 'user.email=synthetic@example.invalid',
-                 'commit', '--allow-empty', '-qm', 'synthetic map source')
-        self.commit = self.git('rev-parse', 'HEAD').stdout.strip()
-        self.maps = self.root / '.cache/closedwiz-ci-select'
-        self.maps.mkdir(parents=True)
-        step = jobs()['changes'].split('      - name: Check the signed main map age\n', 1)[1].split('      - ', 1)[0]
+        blocks = jobs()['changes']
+        self.assertIn('      - name: Check the last full main run\n', blocks)
+        step = blocks.split('      - name: Check the last full main run\n', 1)[1].split('      - ', 1)[0]
         body = step.split('        run: |\n', 1)[1]
         lines = [line[10:] for line in body.splitlines() if line.startswith('          ')]
         self.script = '\n'.join(lines[1:-1])
-        self.output = self.root / 'output'
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.tmp = Path(tmp.name)
+        (self.tmp / 'bin').mkdir()
+        gh = self.tmp / 'bin/gh'
+        gh.write_text('#!' + sys.executable + ' -I\nimport json, os, sys\n'
+                      'if os.environ.get("GH_FAIL"): sys.exit(1)\n'
+                      'print(json.load(open(os.environ["GH_ANSWERS"]))[sys.argv[2].split("?")[0]])\n')
+        gh.chmod(0o755)
 
-    def git(self, *args):
-        return subprocess.run(['git', '-c', 'core.hooksPath=/dev/null', '-C', str(self.root), *args],
-                              text=True, capture_output=True, check=True)
+    def at(self, minutes):
+        return time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(round(self.NOW - minutes * 60)))
 
-    def write_map(self, age=121 * 60, **claims):
-        data = json.dumps({'schema': 'openwiz.ci-select-map.v1', 'commit': self.commit,
-            'units': {'rust:test:proof': {'files': ['proof.txt'], 'dirs': []}}}).encode()
-        signed = self.signed
-        values = signed.claims(aud=signed.job.audience(data), sha=self.commit, iat=self.NOW - age)
-        values.update(claims)
-        (self.maps / 'map.json').write_bytes(data)
-        (self.maps / 'map.jwt').write_text(signed.sign(values, signed.KEY))
-        self.output.unlink(missing_ok=True)
-
-    def run_gate(self):
+    def gate(self, runs, fail=False):
+        """runs: (id, event, updated minutes ago, ci job's completion minutes ago or None)."""
+        answers = {'repos/synthetic/repo/actions/workflows/ci.yml/runs': json.dumps({'workflow_runs': [
+            {'id': i, 'event': e, 'updated_at': self.at(u)} for i, e, u, _ in runs]})}
+        for i, _, _, ci in runs:
+            answers[f'repos/synthetic/repo/actions/runs/{i}/jobs'] = json.dumps({'jobs': [
+                {'name': 'changes', 'conclusion': 'success', 'completed_at': self.at(1)}]
+                + ([{'name': 'ci', 'conclusion': 'success', 'completed_at': self.at(ci)}] if ci is not None else [])})
+        (self.tmp / 'answers.json').write_text(json.dumps(answers))
+        output = self.tmp / 'output'
+        output.unlink(missing_ok=True)
+        env = dict(GH_ANSWERS=str(self.tmp / 'answers.json'), GITHUB_OUTPUT=str(output), GITHUB_RUN_ID='77',
+                   GITHUB_REPOSITORY='synthetic/repo', RETRY_WAIT='0', GH_FAIL='1' if fail else '',
+                   PATH=str(self.tmp / 'bin') + os.pathsep + os.environ['PATH'])
         original = Path.cwd()
         try:
-            os.chdir(self.root)
-            with mock.patch.dict(os.environ, HOME=str(self.root), GITHUB_OUTPUT=str(self.output),
-                                 GITHUB_REPOSITORY=self.signed.REPO), \
-                    mock.patch.object(self.signed.job, 'fetch_jwks', return_value=self.signed.jwks(self.signed.KEY)), \
-                    mock.patch('time.time', return_value=self.NOW), contextlib.redirect_stdout(io.StringIO()):
-                exec(compile(self.script, 'ci.yml:main_map', 'exec'), {'__name__': '__main__'})
+            os.chdir(ROOT)
+            with mock.patch.dict(os.environ, env), mock.patch('time.time', return_value=self.NOW), \
+                    contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                exec(compile(self.script, 'ci.yml:main_age', 'exec'), {'__name__': '__main__'})
         finally:
             os.chdir(original)
-        return self.output.read_text()
+        return output.read_text()
 
-    def test_main_push_119_minutes_stays_light(self):
-        self.write_map(age=119 * 60)
-        os.utime(self.maps / 'map.json', (self.NOW - 86400, self.NOW - 86400))
-        self.assertEqual(self.run_gate(), 'trace=false\n', '119-minute signed map must keep the push light')
-
-    def test_main_push_121_minutes_traces(self):
+    def test_a_full_run_119_minutes_ago_keeps_the_push_light_and_121_runs_everything(self):
         for event in ('push', 'schedule'):
-            with self.subTest(signed_by=event):
-                self.write_map(age=121 * 60, event_name=event)
-                os.utime(self.maps / 'map.json', (self.NOW, self.NOW))
-                self.assertEqual(self.run_gate(), 'trace=true\n', '121-minute signed map must trigger tracing')
+            with self.subTest(event=event):
+                self.assertEqual(self.gate([(5, event, 100, 119)]), 'trace=false\n')
+                self.assertEqual(self.gate([(5, event, 100, 121)]), 'trace=true\n')
 
     def test_exactly_120_minutes_is_not_older_but_one_second_more_is(self):
-        for age, expected in ((7200, 'false'), (7201, 'true')):
-            with self.subTest(age_seconds=age):
-                self.write_map(age=age)
-                self.assertEqual(self.run_gate(), 'trace=' + expected + '\n')
+        self.assertEqual(self.gate([(5, 'push', 100, 120)]), 'trace=false\n')
+        self.assertEqual(self.gate([(5, 'push', 100, 120 + 1 / 60)]), 'trace=true\n')
 
-    def test_missing_or_untrusted_map_cannot_supply_an_age_decision(self):
-        for case in ('missing-map', 'missing-token', 'tampered-map', 'wrong-repository',
-                     'PR-token', 'foreign-commit', 'invalid-shape', 'future-time', 'boolean-time'):
-            with self.subTest(case=case):
-                self.write_map(age=119 * 60)
-                if case.startswith('missing-'):
-                    (self.maps / ('map.json' if case == 'missing-map' else 'map.jwt')).unlink()
-                elif case == 'tampered-map':
-                    path = self.maps / 'map.json'
-                    path.write_bytes(path.read_bytes() + b' ')
-                elif case == 'wrong-repository':
-                    self.write_map(repository='someone/else')
-                elif case == 'PR-token':
-                    self.write_map(event_name='pull_request', ref='refs/pull/7/merge')
-                elif case == 'foreign-commit':
-                    commit = self.commit
-                    self.commit = 'd' * 40
-                    self.write_map()
-                    self.commit = commit
-                elif case == 'invalid-shape':
-                    data = json.dumps({'schema': 'unknown', 'commit': self.commit, 'units': {}}).encode()
-                    values = self.signed.claims(aud=self.signed.job.audience(data), sha=self.commit, iat=self.NOW - 7260)
-                    (self.maps / 'map.json').write_bytes(data)
-                    (self.maps / 'map.jwt').write_text(self.signed.sign(values, self.signed.KEY))
-                elif case == 'future-time':
-                    self.write_map(iat=self.NOW + 301)
-                elif case == 'boolean-time':
-                    self.write_map(iat=True)
-                with self.assertRaisesRegex(SystemExit, 'Main map age: unknown'):
-                    self.run_gate()
-                self.assertFalse(self.output.exists(), 'an unreadable age must not emit a trace decision')
+    def test_a_light_push_a_pull_request_or_this_run_is_not_a_full_run(self):
+        runs = [(77, 'push', 1, 1), (6, 'push', 5, None), (7, 'pull_request', 5, 5), (8, 'merge_group', 5, 5)]
+        self.assertEqual(self.gate(runs), 'trace=true\n')
+        self.assertEqual(self.gate([]), 'trace=true\n')
+        self.assertEqual(self.gate(runs + [(9, 'schedule', 30, 30)]), 'trace=false\n')
+
+    def test_an_unreadable_answer_decides_nothing(self):
+        with self.assertRaisesRegex(SystemExit, 'Last full main run: unknown'):
+            self.gate([(5, 'push', 100, 119)], fail=True)
+        self.assertFalse((self.tmp / 'output').exists(), 'an unreadable age must not emit a decision')
 
 
 class Workflow(unittest.TestCase):
@@ -177,7 +146,7 @@ class Workflow(unittest.TestCase):
     def test_independent_jobs_need_only_the_plan(self):
         blocks=jobs()
         self.assertEqual(set(blocks),{'changes','always','rust','release','skills','launch-fleet',
-                                      'select-map','ci','web-test','main-light','owned-paths'})
+                                      'ci','web-test','main-light','owned-paths'})
         for name in ('always','rust','release','skills','launch-fleet'):
             self.assertRegex(blocks[name],r'^    needs: changes\n')
         self.assertIn('fail-fast: false',blocks['skills'])
@@ -217,25 +186,31 @@ class Workflow(unittest.TestCase):
         self.assertIn('run.py check-shards "$RUNNER_TEMP/ci-plan" release ', blocks['ci'])
         self.assertIn('run.py stamp "$RUNNER_TEMP/ci-plan" release', blocks['ci'])
 
-    def test_main_push_plan_requires_an_old_signed_map_but_other_events_do_not(self):
-        # catches: a fresh main push still writes a full plan, or a PR/nightly/
-        # merge group is accidentally made dependent on the main-push age read.
+    def test_main_push_plan_requires_an_old_full_run_but_other_events_do_not(self):
+        # catches: a main push writing a full plan after a recent full run, or a PR/nightly/
+        # merge group made dependent on the main-push age read (#1055, #1486).
         block = jobs()['changes']
+        self.assertIn('      - name: Check the last full main run\n', block)
         steps = {name: block.split('      - name: ' + name + '\n', 1)[1].split('      - ', 1)[0]
-                 for name in ('Check the signed main map age', 'Write the CI plan')}
+                 for name in ('Check the last full main run', 'Write the CI plan')}
         upload = block.split('      - uses: actions/upload-artifact@', 1)[1]
+        # catches (#1612 R2): a main push's rerun skipping the full suite because another
+        # full run finished within 120 minutes; every rerun runs everything.
         for event in ('push', 'pull_request', 'schedule', 'merge_group'):
             for old in (False, True):
-                values = {'github.event_name': repr(event), 'steps.main_map.outputs.trace': repr(str(old).lower())}
-                for name, step in {**steps, 'selection artifact': upload}.items():
-                    expression = re.search(r'^        if: (.+)$', step, re.M)
-                    code = expression[1] if expression else 'True'
-                    for key, value in values.items():
-                        code = code.replace(key, value)
-                    code = code.replace('&&', ' and ').replace('||', ' or ')
-                    expected = event == 'push' if name == 'Check the signed main map age' else event != 'push' or old
-                    with self.subTest(event=event, old=old, step=name):
-                        self.assertEqual(eval(code, {'__builtins__': {}}, {}), expected)
+                for attempt in (1, 2):
+                    values = {'github.event_name': repr(event), 'github.run_attempt': repr(str(attempt)),
+                              'steps.main_age.outputs.trace': repr(str(old).lower())}
+                    for name, step in {**steps, 'selection artifact': upload}.items():
+                        expression = re.search(r'^        if: (.+)$', step, re.M)
+                        code = expression[1] if expression else 'True'
+                        for key, value in values.items():
+                            code = code.replace(key, value)
+                        code = code.replace('&&', ' and ').replace('||', ' or ')
+                        gate = event == 'push' and attempt == 1
+                        expected = gate if name == 'Check the last full main run' else not gate or old
+                        with self.subTest(event=event, old=old, attempt=attempt, step=name):
+                            self.assertEqual(eval(code, {'__builtins__': {}}, {}), expected)
 
     def test_one_writer_keeps_attempt_specific_plan_and_summary(self):
         workflow=(ROOT/'.github/workflows/ci.yml').read_text()
@@ -249,11 +224,11 @@ class Workflow(unittest.TestCase):
         self.assertNotIn('uses: ./.github/actions/docs-only\n',workflow)
 
     # Which events run ci (always on pull requests, merge groups and nightly,
-    # on an admitted old-map main push) is ci.test.mjs's job-graph simulation (#1055).
+    # on a main push after an old full run) is ci.test.mjs's job-graph simulation (#1055, #1486).
     def test_final_ci_waits_for_all_jobs_and_always_runs(self):
         block=jobs()['ci']
         deps=re.search(r'^    needs: \[(.*)\]$',block,re.M)[1].split(', ')
-        self.assertEqual(set(deps),set(jobs())-{'ci','select-map','web-test','main-light','owned-paths'})
+        self.assertEqual(set(deps),set(jobs())-{'ci','web-test','main-light','owned-paths'})
         self.assertIn('NEEDS: ${{ toJSON(needs) }}',block)
 
     def test_actual_ci_script_refuses_failure_cancellation_and_missing_lane(self):
@@ -284,7 +259,7 @@ class Security(unittest.TestCase):
     def test_privacy_and_ci_small_jobs_share_fallback_order_and_hosted_forks(self):
         privacy=(ROOT/'.github/workflows/privacy.yml').read_text()
         runners={'privacy':re.search(r'^    runs-on: (.*)$',privacy,re.M)[1]}
-        for name in ('changes','select-map','ci','web-test'):
+        for name in ('changes','ci','web-test'):
             runners[name]=re.search(r'^    runs-on: (.*)$',jobs()[name],re.M)[1]
         for event,head in [('push',''),('pull_request','jparker2006/ClosedWiz'),
                            ('merge_group',''),('pull_request','fork/repo')]:
@@ -309,7 +284,7 @@ class Security(unittest.TestCase):
                         self.assertEqual(actual,'ubuntu-24.04' if head=='fork/repo' else expected)
 
     def test_runner_choices_keep_small_jobs_independent_and_forks_hosted(self):
-        small={'changes','select-map','ci','web-test','main-light','owned-paths'}
+        small={'changes','ci','web-test','main-light','owned-paths'}
         rust={'always','rust'}
         web={'release','skills','launch-fleet'}
         blocks=jobs()
@@ -372,7 +347,7 @@ class Security(unittest.TestCase):
                 self.assertIn('run: sh ci/hosted/guard.sh',steps[1])
                 self.assertIn('HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}',steps[1])
                 self.assertNotIn('        if:',steps[1])
-                if name not in ('changes','ci','select-map','web-test','main-light','owned-paths'):
+                if name not in ('changes','ci','web-test','main-light','owned-paths'):
                     prepare=[s for s in steps if 'uses: ./.github/actions/docs-only/setup\n' in s]
                     self.assertEqual(len(prepare),1,name)
                     self.assertIn('hosted: ${{ steps.guard.outputs.hosted }}',prepare[0])
@@ -385,40 +360,11 @@ class Security(unittest.TestCase):
                         self.assertIn("browser: ${{ matrix.skill == 'image' }}",prepare[0])
                 for step in steps:
                     if 'uses: actions/cache/restore@' in step:
-                        if name=='changes':
-                            self.assertIn('path: ~/.cache/closedwiz-ci-select',step)
-                            self.assertIn('key: ci-select-map-none',step)
-                            self.assertIn('restore-keys: ci-select-map-',step)
-                        else:self.assertIn("if: steps.guard.outputs.hosted == 'true'",step)
+                        self.assertIn("if: steps.guard.outputs.hosted == 'true'",step)
                     if 'uses: actions/cache/save@' in step:
-                        if name=='select-map':
-                            self.assertIn("if: steps.map.outputs.save == 'true'",step)
-                            self.assertIn('path: ~/.cache/closedwiz-ci-select',step)
-                        else:self.assertIn("if: steps.guard.outputs.save == 'true'",step)
+                        self.assertIn("if: steps.guard.outputs.save == 'true'",step)
                     if re.search(r'^        run: sh ci/runner/cache.sh save ',step,re.M):
                         self.assertIn("if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')",step)
-
-    def test_actual_map_step_signs_and_enables_save_only_for_main_push_or_nightly(self):
-        step=jobs()['select-map'].split('      - name: Save the select-map cache\n',1)[1].split('      - ',1)[0]
-        expression=re.search(r'^          MAIN: \$\{\{ (.*) \}\}$',step,re.M)[1]
-        body=step.split('        run: |\n',1)[1]
-        script='\n'.join(line[10:] for line in body.splitlines() if not line or line.startswith('          '))
-        for event,ref,wants in [('push','refs/heads/main',True),('schedule','refs/heads/main',True),
-            ('pull_request','refs/pull/7/merge',False),('pull_request','refs/heads/main',False),
-            ('workflow_dispatch','refs/heads/main',False),('push','refs/heads/release-0.1',False),
-            ('push','refs/tags/main',False)]:
-            with self.subTest(event=event,ref=ref),tempfile.TemporaryDirectory() as folder:
-                tmp=Path(folder);(tmp/'bin').mkdir()
-                fake=tmp/'bin/python3';fake.write_text('#!/bin/sh\nprintf \"%s\\n\" \"$*\" >> \"$CALLS\"\n');fake.chmod(0o755)
-                expr=expression.replace('github.ref',repr(ref)).replace('github.event_name',repr(event)).replace('&&',' and ').replace('||',' or ')
-                main=eval(expr,{'__builtins__':{}},{})
-                env=dict(os.environ,HOME=str(tmp),MAIN=str(main).lower(),PATH=str(tmp/'bin')+os.pathsep+os.environ['PATH'],
-                    CALLS=str(tmp/'calls'),GITHUB_OUTPUT=str(tmp/'output'),GITHUB_SHA='a'*40,RUNNER_TEMP=str(tmp))
-                result=subprocess.run(['bash','-euo','pipefail','-c',script],cwd=ROOT,env=env,capture_output=True,text=True)
-                self.assertEqual(result.returncode,0,result.stderr)
-                calls=(tmp/'calls').read_text().splitlines()
-                self.assertEqual(sum('ci/select/job.py sign' in c for c in calls),int(wants),calls)
-                self.assertEqual((tmp/'output').read_text().splitlines() if (tmp/'output').exists() else [],['save=true'] if wants else [])
 
     def test_shared_setup_preserves_hosted_cache_and_setup_guards(self):
         source=(HERE/'setup/action.yml').read_text()

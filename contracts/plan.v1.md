@@ -1,8 +1,9 @@
 # OpenWiz plan contract, version 1 (`openwiz.plan.v1`)
 
-The repository-wide plan read for the cockpit's plan graph page, `GET /api/v1/plan`
-(0.0.11, #648, U1 #651). Its schema is [plan.v1.schema.json](plan.v1.schema.json).
-**Contract only:** U2 builds the source/route and U3 the page. Inline synthetic
+The repository-wide plan read, `openwiz.plan.v1` (0.0.11, #648, U1 #651). Its
+schema is [plan.v1.schema.json](plan.v1.schema.json). The GitHub adapter's
+bounded reads (`crates/adapters/github/src/plan.rs`) gather its sources; no
+OpenWiz route serves it since #1264. Inline synthetic
 conformance cases are in `tests/checks/plan_decisions_schema_conformance.rs`.
 They prove parsed shapes, not a graph calculation or live completeness.
 
@@ -44,7 +45,7 @@ mandatory even when schema validation succeeds.
 
 ## Universe and lanes
 
-One response covers the server's working-directory repository. It never joins
+One response covers the working-directory repository. It never joins
 issue numbers across repositories. Read GitHub milestones (open and closed),
 specs (issues with sub-issues, open and closed), their tickets, labels and native
 blocked-by links. Enumerate every page and check GitHub totals before claiming
@@ -90,7 +91,7 @@ or ambiguous discovery is unknown. Existing `fleet.v1` output remains unchanged.
 its precedence, required input reads, verified merge readback and unknown states.
 Closed without a verified merge is unknown, never done. No PR, all prerequisites
 merged and `ready-for-human` still has unknown fleet state. A branch, PR or state
-does not prove a running agent. U2 must use the same facts to derive these values;
+does not prove a running agent. A producer must use the same facts to derive these values;
 this contract grants no different merge/start authority.
 
 `yours` is true exactly when the complete label read contains `ready-for-human`.
@@ -134,12 +135,12 @@ missing referenced node or cycle produces an unknown chain and a sanitized gap
 (`malformed` for a cycle). Retain usable lanes/tickets. No partial subgraph is
 advertised as the global maximum. The fixtures' `902 → 942`, reach 1, is a worked
 example; computing the algorithm, ties, cycles and incomplete reads belongs to
-U2's route proofs, not these schema checks.
+a producer's proofs, not these schema checks.
 
 ## Coverage and freshness
 
 `coverage` is `{state: complete, gaps: []}` or `{state: partial, gaps: [gap, ...]}`;
-`gap` has `kind` and nonempty sanitized `detail`. Kinds reuse cockpit's ten:
+`gap` has `kind` and nonempty sanitized `detail`. Kinds are these ten:
 `untested_version`, `command_failed`, `timed_out`, `budget_exhausted`, `malformed`,
 `missing_field`, `wrong_type`, `not_found`, `truncated`, `unsupported`. Include
 all required read/derivation failures. Unknown fleet state after complete reads
@@ -150,28 +151,21 @@ is a gap. No raw error output or source bodies enter a gap/unknown reason.
 required source snapshot, preserved when old data is retained. It is a known
 nonnegative millisecond time for `fresh` or `stale`; it is an unknown reason when
 `state` is `unknown`. With every required time known and not after assembly,
-`fresh` means age ≤70,000 ms and `stale` means older, as in `cockpit.v1`.
+`fresh` means age ≤70,000 ms and `stale` means older.
 Missing times or an unestablished clock relationship are unknown. Coverage and
 freshness are independent; assembling or refreshing never renews an old snapshot.
 Clients continue to age source data after receipt. Complete fresh emptiness is
 the only basis for an unqualified empty-plan claim; stale or partial emptiness
-states its limit. This contract adds no polling interval or server result cache.
+states its limit. This contract adds no polling interval or result cache.
 
-## Route and proof limits
+## Proof limits
 
-One exact `GET /api/v1/plan`; no query (even `?`), request body or server-side
-filter. Standard API Host, framing, method, security headers, `no-store` and
-sanitized route-only logging apply. Other methods: `405`, `Allow: GET`; HEAD
-has neither body nor Content-Length. Valid complete, partial, stale and empty
-envelopes are `200`; source failures remain explicit gaps, not invented empty
-success. Existing transport-error envelopes/statuses, shared two read slots,
-five-second slot wait, forty-second request deadline and source budgets apply.
-Identical in-flight reads may share a result; a later request reads anew. Slot
-exhaustion is `503` with Retry-After; deadline expiry is `504`, with its unfinished
-run retaining its slot. Read GitHub through the read-only App token when configured;
-no send, stage, start, answer, label, approve, merge or GitHub write.
+No OpenWiz route serves this read since #1264, so no HTTP status, method or
+slot rule applies. A producer reads GitHub only, through the read-only App
+token when configured: no send, stage, start, answer, label, approve, merge or
+GitHub write. Source failures stay explicit gaps, never invented empty success.
 
-U2/U3 must additionally prove universe/ordering, parent placement, inverse edges,
+A producer must additionally prove universe/ordering, parent placement, inverse edges,
 URL repository/number checks, state and column derivation, ownership provenance,
 merge readback, freshness math, graph uniqueness/DAG/ties/maximum reach, and honest
 partial/empty displays. The schema cannot verify those cross-record facts.
@@ -196,7 +190,7 @@ One row per declared property; inline fact fields retain the enclosing field’s
 | `freshness.snapshot_at.known` | Nonnegative oldest required source time, never rewritten as assembly time |
 | `freshness.state` | Oldest required source snapshot and assembly clock, using the existing 70,000 ms threshold |
 | `gap.detail` | Sanitized explanation of the required failed/incomplete read or derivation |
-| `gap.kind` | Existing inventory/fleet/cockpit failure classification |
+| `gap.kind` | Existing inventory/fleet failure classification |
 | `lane.kind` | GitHub milestone versus a spec with no milestone |
 | `lane.number` | GitHub milestone number for version; spec issue number for side_spec |
 | `lane.title` | Milestone title or unmilestoned spec title, preserving unknown reads |
@@ -210,7 +204,7 @@ One row per declared property; inline fact fields retain the enclosing field’s
 | `response.freshness` | Oldest required GitHub plan snapshot |
 | `response.lanes` | Every GitHub milestone and unmilestoned spec, including closed/empty lanes |
 | `response.schema` | Contract constant openwiz.plan.v1 |
-| `response.snapshot_at` | Server clock after assembling required reads |
+| `response.snapshot_at` | Producer's clock after assembling required reads |
 | `response.tickets` | Union of all spec sub-issues and recursively referenced external blockers |
 | `ticket.blockers` | Native GitHub blocked-by links, not body text, unique ascending numbers |
 | `ticket.column` | The ordered column mapping in this contract, using positively known state/labels/prerequisites |
