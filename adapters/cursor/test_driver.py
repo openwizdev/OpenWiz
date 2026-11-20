@@ -151,10 +151,10 @@ class Cursor(unittest.TestCase):
         with open(DRIVER) as f:
             source = f.read()
         self.assertNotIn(TOKEN, source)
-        self.assertEqual(re.findall(r'environ\S*', source), ["environ.get('OPENWIZ_CURSOR_STATE')"])
-        self.assertNotIn('env=', source)
+        self.assertEqual(re.findall(r'\benviron\b\S*', source), ["environ.get('OPENWIZ_CURSOR_STATE')"])
+        self.assertEqual([x for x in ('getenv', 'environb', 'env=') if x in source], [])
         calls = self.calls()
-        self.assertEqual(len(calls), 7)
+        self.assertEqual([c['call'].split(' ')[0] for c in calls], ['POST', 'GET', 'POST', 'GET', 'POST', 'POST'])
         self.assertNotIn(TOKEN, json.dumps(calls) + ''.join(outputs))
         self.assertEqual({tuple(c['key_in']) for c in calls}, {('CURSOR_API_KEY',)})
 

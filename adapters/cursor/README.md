@@ -18,17 +18,12 @@ A [driver v1](../../kernel/driver.v1.md) that runs each builder as one [Cursor c
 
 ## Before the first run (yours to do)
 
-The driver never touches a login (driver v1, N1 to N3). It calls Cursor with your own `curl --netrc`, so `curl` reads your key from your `~/.netrc`. The driver never reads, passes or prints it.
+The driver never touches a login (driver v1, N1 to N3). Cursor's own CLI can't start, wake or stop cloud agents, so the driver calls Cursor's API with your own `curl`, run as `curl --variable %CURSOR_API_KEY --expand-oauth2-bearer '{{CURSOR_API_KEY}}' ...`. curl reads the key itself from the `CURSOR_API_KEY` environment variable you run the driver with, and sends it as `Authorization: Bearer`. The driver never reads, holds, passes or prints the key: it is in no argument, no environment the driver builds, and no output.
 
 1. Have a Cursor plan that includes cloud agents, and connect GitHub to Cursor (Cursor's Cloud Agents setup), so the agent can clone, push and comment as Cursor's GitHub app or your account.
-2. Make a Cursor API key at cursor.com/dashboard (API Keys), and add one line to `~/.netrc` (then `chmod 600 ~/.netrc`):
-
-   ```
-   machine api.cursor.com login <your Cursor API key>
-   ```
-
-   `curl` sends it as Cursor's Basic login (the key, then an empty password). The driver passes no key, token or password anywhere.
-3. Make sure your throwaway repository's `docs/agents/fleet.md` names, as a record author, the account Cursor's agent comments as.
+2. Install curl 8.3 or later (`curl --version`): older curl has no `--variable`, and the driver refuses it before sending anything.
+3. Make a Cursor API key at cursor.com/dashboard (API Keys), and set it yourself as `CURSOR_API_KEY` in the environment you run the driver from. If it is unset or empty, the driver says so and sends nothing.
+4. Make sure your throwaway repository's `docs/agents/fleet.md` names, as a record author, the account Cursor's agent comments as.
 
 Cursor bills cloud agents at its model rates, against your plan.
 
@@ -40,4 +35,4 @@ python3 -I kernel/driver-kit/kit.py --driver adapters/cursor/driver \
 python3 -I adapters/cursor/test_driver.py      # the fixture tests, on a synthetic Cursor
 ```
 
-`fixtures/bin/curl` is a synthetic Cursor cloud agents API behind a fake `curl`. It takes only the call the driver makes, refuses any login on its command line, and follows the routes and answers of Cursor's endpoint reference: `POST /v1/agents` answers `{agent, run}`, `GET /v1/agents/{id}` gives `status` (`ACTIVE`, `IDLE` or `ARCHIVED`) and `latestRunId`, and a follow-up during an active run is `409 agent_busy`. Its run is `fixtures/fake-agent`, which posts or edits one builder note. The code Cursor answers to a follow-up on an archived agent is a guess; the driver refuses any code it doesn't expect.
+`fixtures/bin/curl` is a synthetic Cursor cloud agents API behind a fake `curl`. It takes only the call the driver makes (`--version`, then the call with `--variable %CURSOR_API_KEY`), refuses any other argument, fails as real curl does when `CURSOR_API_KEY` is unset or empty, and follows the routes and answers of Cursor's endpoint reference: `POST /v1/agents` answers `{agent, run}`, `GET /v1/agents/{id}` gives `status` (`ACTIVE`, `IDLE` or `ARCHIVED`) and `latestRunId`, and a follow-up during an active run is `409 agent_busy`. Its run is `fixtures/fake-agent`, which posts or edits one builder note. The code Cursor answers to a follow-up on an archived agent is a guess; the driver refuses any code it doesn't expect.

@@ -4,13 +4,15 @@ test_a_refused_login_says_where_the_key_lives_and_shows_no_answer (__main__.Curs
 test_a_start_whose_answer_is_lost_archives_its_agent (__main__.Cursor.test_a_start_whose_answer_is_lost_archives_its_agent) ... ok
 test_a_stop_that_cannot_save_still_archives_and_no_wake_reopens_it (__main__.Cursor.test_a_stop_that_cannot_save_still_archives_and_no_wake_reopens_it) ... ok
 test_a_wake_during_a_run_starts_no_second_run_and_one_after_it_follows_up (__main__.Cursor.test_a_wake_during_a_run_starts_no_second_run_and_one_after_it_follows_up) ... ok
+test_an_old_curl_or_a_missing_key_is_a_clear_error_and_sends_nothing (__main__.Cursor.test_an_old_curl_or_a_missing_key_is_a_clear_error_and_sends_nothing) ... ok
 test_kit_passes_all_five (__main__.Cursor.test_kit_passes_all_five) ... ok
 test_runs_reach_only_the_fake_cursor_and_python (__main__.Cursor.test_runs_reach_only_the_fake_cursor_and_python) ... ok
 test_start_creates_one_agent_under_an_id_it_saved_first_with_no_login (__main__.Cursor.test_start_creates_one_agent_under_an_id_it_saved_first_with_no_login) ... ok
 test_start_refuses_any_harness_but_cursor_and_creates_nothing (__main__.Cursor.test_start_refuses_any_harness_but_cursor_and_creates_nothing) ... ok
 test_stop_cancels_the_active_run_then_archives_and_never_deletes (__main__.Cursor.test_stop_cancels_the_active_run_then_archives_and_never_deletes) ... ok
+test_the_key_never_passes_through_the_driver (__main__.Cursor.test_the_key_never_passes_through_the_driver) ... ok
 
 ----------------------------------------------------------------------
-Ran 10 tests in 2.307s
+Ran 12 tests in 3.190s
 
 OK

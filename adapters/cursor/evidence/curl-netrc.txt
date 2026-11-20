@@ -1,4 +1,0 @@
-# Ad-hoc check, 2026-11-20: the driver's own api() with real curl 7.88.1 against a local HTTP server (API pointed at http://127.0.0.1:8766/v1 for this check only), HOME holding a synthetic ~/.netrc line 'machine 127.0.0.1 login synthetic-key-123'. Synthetic key; nothing reached Cursor.
-api('POST', '/agents', {...}) -> (201, {'agent': {'id': 'bc-x'}})
-api('GET', '/agents/x') with the server gone -> (None, None)
-server saw: AUTH Basic c3ludGhldGljLWtleS0xMjM6 (base64 of 'synthetic-key-123:') BODY {"prompt": {"text": "hi"}}

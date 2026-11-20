@@ -16,7 +16,7 @@ def refuse(why):
 def args():
     a = sys.argv[1:]
     if a == ['--version']:
-        print('curl %s (fake) libcurl/%s' % ((os.environ.get('FAKE_CURL_VERSION') or '8.11.0'),) * 2)
+        print('curl %s (fake) libcurl/%s' % ((os.environ.get('FAKE_CURL_VERSION') or '8.11.0',) * 2))
         sys.exit(0)
     head = ['-sS', '--variable', '%CURSOR_API_KEY', '--expand-oauth2-bearer', '{{CURSOR_API_KEY}}', '--max-time']
     if a[:6] != head or not a[6].isdigit() or a[7] != '-X' or a[9:11] != ['-H', 'Accept: application/json']:
