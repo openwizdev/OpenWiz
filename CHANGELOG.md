@@ -13,7 +13,7 @@ All OpenWiz versions, newest first. How versions work: [RELEASING.md](https://gi
 - Installing puts OpenWiz's skills into the agents you already use (Claude Code, Codex, Cursor, OpenCode and Grok) and leaves your own skills untouched; they are now WizSkills 0.2.0, 18 shorter skills.
 - The `send`, `new` and `attachment` commands, the local web view and its server and service are gone: OpenWiz is now the command, the drivers and the skills, and the app lives on the web.
 
-Live-checked against real hosts: on Linux, the local, Cloudroom and boat.dev drivers each started, woke and stopped a real builder with no login or token in their output, and a boat.dev builder woke again after its turn had ended; on a MacBook, the boat.dev driver passed the same five checks; the local driver on macOS is tested on a simulated macOS only, on macOS the driver kit's stop and token checks rely on `ps` showing the run's own processes, a macOS package install was not checked live, the app on a real phone and laptop is still unverified, and the skills install and `openwiz init` are tested on synthetic home folders and a synthetic GitHub only.
+Live-checked against real hosts: the boat.dev driver passed all five driver-kit checks live from both Linux and a Mac, the local and Cloudroom drivers passed them on Linux with no login or token in their output, and a boat.dev builder woke again after its turn had ended; the owner checked the app on a laptop, and its phone tab bar is still for him to confirm; the local and template drivers were not run on a Mac, the kit's macOS process listing has a known edge, logged as [#2039](https://github.com/openwizdev/OpenWiz/issues/2039), a macOS package install was not checked live, and the skills install and `openwiz init` are tested on synthetic home folders and a synthetic GitHub only.
 
 **Under the hood**
 
@@ -32,7 +32,6 @@ Live-checked against real hosts: on Linux, the local, Cloudroom and boat.dev dri
 **What's new for you**
 
 - Keep your Cloudroom loops as files: `openwiz loop validate` checks them, `openwiz loop export` writes your loops out, `openwiz loop plan` shows the exact changes, and `openwiz loop apply` makes one loop match its file and reads it back.
-- A fresh install starts its service and serves the web view, with no activation step.
 - The always-on engine is gone: no scheduled fleet tick, health checks and takeover, push notifications or engine step in Setup; your fleets run as fleet threads with their own loops.
 
 Checked live in the 0.0.17 candidate's own smoke test, run by agents on Linux: a fresh install of that candidate, its service starting and serving the web view, `openwiz help --agent`, `ls --json` and `show --json`, one send to a throwaway thread, and one new thread in a throwaway project; the loop commands are tested on synthetic fixtures and [one read-only replay of real loops](https://github.com/openwizdev/OpenWiz/blob/release-0.0.17/docs/evidence/794/README.md), `openwiz loop apply` was never run live, and nothing was checked on a Mac.
@@ -41,7 +40,6 @@ Checked live in the 0.0.17 candidate's own smoke test, run by agents on Linux: a
 
 - `openwiz engine preview`, `activate` and `status` and the executing `openwiz fleet tick` are removed; `fleet tick --dry-run` and `fleet due --github-only` still read and plan.
 - The package no longer ships the engine preparation, activation and handover runtimes.
-- The packaged service still checks its manifest, package ownership and owner-only state before it starts, but no longer needs an activation record.
 - `openwiz loop export` never writes a webhook address or a secret value, and reports each loop it cannot represent instead of dropping it.
 
 [Full release on GitHub](https://github.com/openwizdev/OpenWiz/releases/tag/v0.1.0)
@@ -63,7 +61,6 @@ Tested on [recordings and synthetic fixtures](https://github.com/openwizdev/Open
 - Your own GitHub App is registered private, and its tokens are minted only for repositories on the account that owns it.
 - Onboarding accepts fleet records only from configured authors, and creates the demo repository only after GitHub sign-in is verified, with a first commit on its default branch.
 - Updates no longer fail to stage when another process briefly holds the new program open.
-- An upload no longer fails with a server error when another upload is cancelled at the same moment.
 
 [Full release on GitHub](https://github.com/openwizdev/OpenWiz/releases/tag/v0.1.0)
 
