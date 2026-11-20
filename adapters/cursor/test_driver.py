@@ -60,7 +60,14 @@ class Cursor(unittest.TestCase):
         shutil.rmtree(self.folder, ignore_errors=True)
 
     def running(self):
-        return [pid for pid, _ in self.logged() if alive(pid)]
+        return [pid for pid, _ in self.logged() if alive(pid) and self.fake_agent(pid)]
+
+    def fake_agent(self, pid):
+        try:
+            with open('/proc/%d/cmdline' % pid, 'rb') as f:
+                return os.path.join(HERE, 'fixtures', 'fake-agent').encode() in f.read().split(b'\0')
+        except OSError:
+            return False
 
     def driver(self, cmd, request, **env):
         p = subprocess.run([DRIVER, cmd], input=json.dumps(request), env=dict(self.env, **env),
@@ -253,6 +260,7 @@ class Cursor(unittest.TestCase):
         code, out = self.driver('start', START)
         self.assertEqual(code, 0, out)
         [(first, _)] = self.logged(1)
+        self.assertEqual(self.running(), [first])
         self.assertEqual(self.driver('stop', out), (0, dict(out, stopped=True)))
         self.assertFalse(alive(first), 'the active run still works after stop')
         names = [c['call'].split(' /agents/')[0] + ' ' + c['call'].rpartition('/')[2] for c in self.calls()[1:]]

@@ -1,4 +1,4 @@
-# Green run: python3 -I adapters/cursor/test_driver.py, on the synthetic Cursor (fixtures/bin/curl), after R1 to R4. Each test's environment is built from scratch, with PATH set to fixtures/bin and one folder holding only python3; cleanup ends only the fake runs the tests logged.
+# Green run: python3 -I adapters/cursor/test_driver.py, on the synthetic Cursor (fixtures/bin/curl), after merging main (driver v1's login-line section). Each test's environment is built from scratch, with PATH set to fixtures/bin and one folder holding only python3; cleanup ends only the fake runs the tests logged, each checked by its command line to still be the fake agent.
 test_a_failed_archive_is_reported_with_the_agent_to_archive (__main__.Cursor.test_a_failed_archive_is_reported_with_the_agent_to_archive) ... ok
 test_a_lost_create_cursor_does_not_show_yet_stays_unconfirmed_and_stoppable (__main__.Cursor.test_a_lost_create_cursor_does_not_show_yet_stays_unconfirmed_and_stoppable) ... ok
 test_a_refused_login_says_where_the_key_lives_and_shows_no_answer (__main__.Cursor.test_a_refused_login_says_where_the_key_lives_and_shows_no_answer) ... ok
@@ -16,6 +16,6 @@ test_the_key_never_passes_through_the_driver (__main__.Cursor.test_the_key_never
 test_the_tests_read_no_other_process_environment (__main__.Cursor.test_the_tests_read_no_other_process_environment) ... ok
 
 ----------------------------------------------------------------------
-Ran 15 tests in 3.434s
+Ran 15 tests in 3.583s
 
 OK

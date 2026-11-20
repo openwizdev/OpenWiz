@@ -1,6 +1,6 @@
-Login: held by Cursor
-
 # Cursor cloud agents driver
+
+Login: held by Cursor
 
 A [driver v1](../../kernel/driver.v1.md) that runs each builder as one [Cursor cloud agent](https://cursor.com/docs/cloud-agent), on its own Cursor-hosted machine, through Cursor's Cloud Agents API (v1, public beta). One Python file, standard library only. Runs are saved in `$OPENWIZ_CURSOR_STATE` (default `~/.local/state/openwiz-cursor`), owner-only.
 

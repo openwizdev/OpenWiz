@@ -2,7 +2,7 @@
 import fcntl, json, os, re, signal, subprocess, sys, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-AGENT = os.path.join(HERE, '..', 'fake-agent')
+AGENT = os.path.normpath(os.path.join(HERE, '..', 'fake-agent'))
 API = 'https://api.cursor.com/v1'
 ACTIVE = ('CREATING', 'RUNNING', 'WAITING_FOR_BACKGROUND_WORK')
 CREATE = {'prompt', 'model', 'repos', 'name', 'agentId', 'autoCreatePR'}
