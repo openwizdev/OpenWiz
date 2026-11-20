@@ -69,6 +69,10 @@ class Pane(unittest.TestCase):
         self.assertEqual({k: v for k, v in found.items() if v}, {})
         self.assertEqual(shutil.which('runpane', path=self.env['PATH']), os.path.join(HERE, 'fixtures', 'bin', 'runpane'))
 
+    def test_the_environment_is_built_from_scratch(self):
+        self.assertEqual(sorted(self.env), sorted(('KIT_TRACKER', 'KIT_TEST', 'GH_TOKEN', 'FAKE_PANE_STATE',
+                                                   'FAKE_PANE_CALLS', 'OPENWIZ_PANE_STATE', 'PATH', 'HOME')))
+
     def test_kit_passes_all_five(self):
         p = subprocess.run([sys.executable, '-I', KIT, '--driver', DRIVER, '--repo', 'example/site',
                             '--ticket', '7', '--harness', 'claude', '--model', 'claude-opus-5-5',
