@@ -98,6 +98,11 @@ class Cursor(unittest.TestCase):
             time.sleep(0.05)
         return ready()
 
+    def test_runs_reach_only_the_fake_cursor_and_python(self):
+        found = {name: shutil.which(name, path=self.env['PATH']) for name in ('curl', 'claude', 'codex', 'agent', 'gh')}
+        self.assertEqual(found, dict.fromkeys(found, None) | {'curl': os.path.join(HERE, 'fixtures', 'bin', 'curl')})
+        self.assertEqual(sorted(os.listdir(self.env['PATH'].split(os.pathsep)[1])), ['python3'])
+
     def test_kit_passes_all_five(self):
         p = subprocess.run([sys.executable, '-I', KIT, '--driver', DRIVER, '--repo', 'example/site',
                             '--ticket', '7', '--harness', 'cursor', '--model', 'synthetic-model-1',
