@@ -1,12 +1,4 @@
 #!/usr/bin/env python3
-"""The local driver (kernel/driver.v1.md): runs builders on the machine it runs on, a laptop or a VPS.
-
-Each turn of a run is one local process of a harness the person has already signed into, under its own
-supervisor, which keeps every process the turn starts: `start` runs the first turn, `wake` another once the
-last one has ended, `stop` ends everything the turns started. A run is saved before its first turn starts,
-and a wake or a stop holds the run's lock throughout. Several runs at once are independent. It never reads,
-passes or prints a login. Linux; Python 3.11 or later; standard library only. Built on adapters/template.
-"""
 import ctypes, fcntl, json, os, re, secrets, shutil, signal, subprocess, sys, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -153,8 +145,51 @@ def prompt(req, woken):
     return 'Build the ticket: %s, with the %s skill. Keep one status note there.' % (where, req['skill'])
 
 
+LINUX = os.path.isdir('/proc/self') and hasattr(os, 'pidfd_open')
+PR_SET_CHILD_SUBREAPER = 36
+
+
+TURN = re.compile(r'\s--turn\s')
+
+
+def ps(*args):
+    try:
+        p = subprocess.Popen(['ps'] + list(args), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, text=True)
+        out, err = p.communicate(timeout=30)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        raise OSError('ps did not run: %s' % e)
+    if p.returncode and err.strip():
+        raise OSError('ps failed: %s' % err.strip()[:100])
+    return out.splitlines(), p.pid
+
+
+def members(roots, run):
+    rows, me = ps('-A', '-ww', '-o', 'pid=', '-o', 'ppid=', '-o', 'pgid=', '-o', 'stat=', '-o', 'command=', '-E')
+    mark = re.compile(r'(?:^|\s)OPENWIZ_RUN=%s(?:\s|$)' % re.escape(run))
+    found, children = set(), {}
+    for row in rows:
+        f = row.split(None, 4)
+        if len(f) < 4 or f[3].startswith('Z'):
+            continue
+        pid, ppid, group = int(f[0]), int(f[1]), int(f[2])
+        children.setdefault(ppid, []).append(pid)
+        if group in roots or len(f) > 4 and mark.search(f[4]) and not TURN.search(f[4]):
+            found.add(pid)
+    todo = list(roots) + list(found)
+    while todo:
+        for c in children.get(todo.pop(), []):
+            if c not in found:
+                found.add(c)
+                todo.append(c)
+    return found - set(roots) - {os.getpid(), me}
+
+
 def since(pid):
     """When process pid started, or None once it has exited: with its pid, this names one process."""
+    if not LINUX:
+        row = ps('-o', 'stat=', '-o', 'lstart=', '-p', str(pid))[0]
+        return row[0].split(None, 1)[1].strip() if row and not row[0].lstrip().startswith('Z') else None
     try:
         with open('/proc/%d/stat' % pid) as f:
             fields = f.read().rpartition(')')[2].split()
@@ -187,7 +222,7 @@ def supervise(cmd):
     """One turn, as `driver --turn <command>`: run the harness, its output going to the run's log, and keep
     every process it starts as this turn's (an orphan comes back here, whatever its session or environment)
     until none is left; then exit."""
-    if ctypes.CDLL(None, use_errno=True).prctl(36, 1, 0, 0, 0) != 0:  # PR_SET_CHILD_SUBREAPER
+    if LINUX and ctypes.CDLL(None, use_errno=True).prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0) != 0:
         print(json.dumps({'error': 'this host cannot keep a turn\'s processes together'}), flush=True)
         return
     try:
@@ -202,7 +237,10 @@ def supervise(cmd):
         try:
             pid, status = os.wait()
         except ChildProcessError:
-            return
+            if LINUX or not members({os.getpid()}, os.environ['OPENWIZ_RUN']):
+                return
+            time.sleep(0.2)
+            continue
         if pid == harness.pid:  # its exit code, for `start` to read (`exited`)
             try:
                 with open(exit_file(os.environ['OPENWIZ_RUN'], pid), 'w') as f:
@@ -274,6 +312,15 @@ def end(turns, run):
             kept = [(p, t) for p, t in kept if since(p) == t]
             if not kept:
                 return
+            if not LINUX:
+                for p in members({s for s, _ in kept}, run) - sent:
+                    try:
+                        os.kill(p, sig)
+                        sent.add(p)
+                    except OSError:
+                        pass
+                time.sleep(0.1)
+                continue
             pinned = {}
             for p in set().union(*(descendants(s) for s, _ in kept)) - sent:
                 try:  # pin each pid first, then check it is still under a supervisor, so no reused pid is hit

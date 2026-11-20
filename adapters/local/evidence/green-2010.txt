@@ -1,0 +1,14 @@
+$ python3.11 -I adapters/local/test_driver.py -k without_proc
+test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild (__main__.Local.test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 8.011s
+
+OK
+$ python3.9 -I adapters/local/test_driver.py -k without_proc
+test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild (__main__.Local) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 7.832s
+
+OK

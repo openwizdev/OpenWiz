@@ -19,6 +19,7 @@ import unittest
 sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.abspath(__file__))
 DRIVER = os.path.join(HERE, 'driver')
+NO_PROC = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'fixtures', 'no-proc')
 START = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'fake-harness',
          'model': 'Synthetic 1'}
 # A driver whose next save fails once its turn has begun, as a full disk or a removed folder would make it:
@@ -297,6 +298,22 @@ class Template(unittest.TestCase):
         self.assertIn('unknown', err['error'])
         self.assertNotIn('retry', json.dumps(err))
         self.assertTrue(self.until(lambda: set(self.marked()) <= before), 'the unsaved turn still runs')
+
+
+    def test_without_proc_as_on_macos_stop_ends_each_grandchild(self):
+        for worker in ({}, {'FAKE_CLEAN': '1', 'FAKE_SAME_GROUP': '1'}):
+            with self.subTest(**worker):
+                self.tearDown()
+                self.setUp()
+                macos = dict(worker, PATH=NO_PROC + os.pathsep + self.env['PATH'], NO_PROC_PYTHON=sys.executable)
+                code, out = self.call('start', START, **macos)
+                self.assertEqual(code, 0, out)
+                [(turn, child, _)] = self.logged(1)
+                self.assertTrue(self.until(lambda: not alive(turn)), 'the fake turn did not end')
+                self.assertTrue(alive(child))
+                self.assertEqual(self.call('stop', out, **macos), (0, dict(out, stopped=True)))
+                self.assertFalse(alive(child), 'a grandchild of the harness still runs after stop')
+                self.assertEqual(self.marked(), [], 'a process the run started still runs after stop')
 
 
 if __name__ == '__main__':

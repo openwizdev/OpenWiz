@@ -1,0 +1,105 @@
+$ python3 -I kernel/driver-kit/test_kit.py -k without_proc   # R1 and R2 of the review, before the fix
+test_without_proc_as_on_macos_the_template_passes_all_five (__main__.Kit.test_without_proc_as_on_macos_the_template_passes_all_five) ... FAIL
+test_without_proc_or_any_visible_environment_stop_and_token_fail_unverified (__main__.Kit.test_without_proc_or_any_visible_environment_stop_and_token_fail_unverified) ... 
+  test_without_proc_or_any_visible_environment_stop_and_token_fail_unverified (__main__.Kit.test_without_proc_or_any_visible_environment_stop_and_token_fail_unverified) [template] ... FAIL
+  test_without_proc_or_any_visible_environment_stop_and_token_fail_unverified (__main__.Kit.test_without_proc_or_any_visible_environment_stop_and_token_fail_unverified) [stop-leaves-run] ... FAIL
+  test_without_proc_or_any_visible_environment_stop_and_token_fail_unverified (__main__.Kit.test_without_proc_or_any_visible_environment_stop_and_token_fail_unverified) [token-in-env] ... FAIL
+
+======================================================================
+FAIL: test_without_proc_as_on_macos_the_template_passes_all_five (__main__.Kit.test_without_proc_as_on_macos_the_template_passes_all_five)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./kernel/driver-kit/test_kit.py", line 113, in test_without_proc_as_on_macos_the_template_passes_all_five
+    self.assertEqual((code, out), (1, PLANTED['token-in-env']), err)
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[245 chars]er']) != (1, ['pass version: openwiz:records v1, an[296 chars]it'])
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+-   'pass token: no login or token passed through the driver'])
++   'fail token: a process the driver started holds a credential in '
++   'OPENWIZ_GITHUB, which the kit never gave it']) : 
+
+======================================================================
+FAIL: test_without_proc_or_any_visible_environment_stop_and_token_fail_unverified (__main__.Kit.test_without_proc_or_any_visible_environment_stop_and_token_fail_unverified) [template]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./kernel/driver-kit/test_kit.py", line 127, in test_without_proc_or_any_visible_environment_stop_and_token_fail_unverified
+    self.assertEqual((code, out), (1, lines), err)
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[245 chars]er']) != (1, ['pass version: openwiz:records v1, an[351 chars]ed"])
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+-   'pass stop: the run ended, and a wake after it is refused',
+-   'pass token: no login or token passed through the driver'])
++   "fail stop: ps shows no process's environment here, so the kit cannot tell "
++   'which processes the driver started',
++   "fail token: ps shows no process's environment here, so the kit cannot tell "
++   'which processes the driver started']) : 
+
+======================================================================
+FAIL: test_without_proc_or_any_visible_environment_stop_and_token_fail_unverified (__main__.Kit.test_without_proc_or_any_visible_environment_stop_and_token_fail_unverified) [stop-leaves-run]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./kernel/driver-kit/test_kit.py", line 127, in test_without_proc_or_any_visible_environment_stop_and_token_fail_unverified
+    self.assertEqual((code, out), (1, lines), err)
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[245 chars]er']) != (1, ['pass version: openwiz:records v1, an[351 chars]ed"])
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+-   'pass stop: the run ended, and a wake after it is refused',
+-   'pass token: no login or token passed through the driver'])
++   "fail stop: ps shows no process's environment here, so the kit cannot tell "
++   'which processes the driver started',
++   "fail token: ps shows no process's environment here, so the kit cannot tell "
++   'which processes the driver started']) : 
+
+======================================================================
+FAIL: test_without_proc_or_any_visible_environment_stop_and_token_fail_unverified (__main__.Kit.test_without_proc_or_any_visible_environment_stop_and_token_fail_unverified) [token-in-env]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./kernel/driver-kit/test_kit.py", line 127, in test_without_proc_or_any_visible_environment_stop_and_token_fail_unverified
+    self.assertEqual((code, out), (1, lines), err)
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[245 chars]er']) != (1, ['pass version: openwiz:records v1, an[351 chars]ed"])
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+-   'pass stop: the run ended, and a wake after it is refused',
+-   'pass token: no login or token passed through the driver'])
++   "fail stop: ps shows no process's environment here, so the kit cannot tell "
++   'which processes the driver started',
++   "fail token: ps shows no process's environment here, so the kit cannot tell "
++   'which processes the driver started']) : 
+
+----------------------------------------------------------------------
+Ran 2 tests in 12.547s
+
+FAILED (failures=4)

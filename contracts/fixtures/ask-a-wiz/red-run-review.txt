@@ -1,0 +1,55 @@
+Review red run (#1899, R1 to R5 at cef39829): the new checker and contract against the fixtures at cef39829, before they carried the max prices, the two-table store with store_after, the shared salt, the dispatch-day reservation and a failing store.
+Command: python3 -I contracts/fixtures/ask-a-wiz/test_fixtures.py (exit 1)
+
+test_every_case_holds_to_the_pin (__main__.Fixtures.test_every_case_holds_to_the_pin) ... 
+  test_every_case_holds_to_the_pin (__main__.Fixtures.test_every_case_holds_to_the_pin) (case='answer') ... FAIL
+  test_every_case_holds_to_the_pin (__main__.Fixtures.test_every_case_holds_to_the_pin) (case='answer-escaped') ... FAIL
+  test_every_case_holds_to_the_pin (__main__.Fixtures.test_every_case_holds_to_the_pin) (case='not-covered') ... FAIL
+  test_every_case_holds_to_the_pin (__main__.Fixtures.test_every_case_holds_to_the_pin) (case='not-covered-model') ... FAIL
+  test_every_case_holds_to_the_pin (__main__.Fixtures.test_every_case_holds_to_the_pin) (case='too-long') ... FAIL
+  test_every_case_holds_to_the_pin (__main__.Fixtures.test_every_case_holds_to_the_pin) (case='rate-limited') ... FAIL
+  test_every_case_holds_to_the_pin (__main__.Fixtures.test_every_case_holds_to_the_pin) (case='daily-cap') ... FAIL
+  test_every_case_holds_to_the_pin (__main__.Fixtures.test_every_case_holds_to_the_pin) (case='upstream-error') ... FAIL
+  test_every_case_holds_to_the_pin (__main__.Fixtures.test_every_case_holds_to_the_pin) (case='upstream-error-midstream') ... FAIL
+  test_every_case_holds_to_the_pin (__main__.Fixtures.test_every_case_holds_to_the_pin) (case='bad-request') ... FAIL
+  test_every_case_holds_to_the_pin (__main__.Fixtures.test_every_case_holds_to_the_pin) (case='unavailable') ... FAIL
+  test_every_case_holds_to_the_pin (__main__.Fixtures.test_every_case_holds_to_the_pin) (case='off') ... FAIL
+  test_every_case_holds_to_the_pin (__main__.Fixtures.test_every_case_holds_to_the_pin) (case='probe-on') ... FAIL
+  test_every_case_holds_to_the_pin (__main__.Fixtures.test_every_case_holds_to_the_pin) (case='probe-off') ... FAIL
+  test_every_case_holds_to_the_pin (__main__.Fixtures.test_every_case_holds_to_the_pin) (case='answer-trimmed-count') ... FAIL
+  test_every_case_holds_to_the_pin (__main__.Fixtures.test_every_case_holds_to_the_pin) (case='answer-trimmed-bytes') ... FAIL
+  test_every_case_holds_to_the_pin (__main__.Fixtures.test_every_case_holds_to_the_pin) (case='answer-overflow') ... FAIL
+  test_every_case_holds_to_the_pin (__main__.Fixtures.test_every_case_holds_to_the_pin) (case='off-not-exact') ... FAIL
+  test_every_case_holds_to_the_pin (__main__.Fixtures.test_every_case_holds_to_the_pin) (case='unavailable-price') ... FAIL
+  test_every_case_holds_to_the_pin (__main__.Fixtures.test_every_case_holds_to_the_pin) (case='store-error') ... FAIL
+  test_every_case_holds_to_the_pin (__main__.Fixtures.test_every_case_holds_to_the_pin) (case='midnight-cap') ... FAIL
+  test_every_case_holds_to_the_pin (__main__.Fixtures.test_every_case_holds_to_the_pin) (case='midnight-answer') ... FAIL
+  test_every_case_holds_to_the_pin (__main__.Fixtures.test_every_case_holds_to_the_pin) (case='first-write-race') ... FAIL
+test_nothing_holds_a_real_key_or_private_value (__main__.Fixtures.test_nothing_holds_a_real_key_or_private_value) ... ok
+test_the_index_fixture_is_valid (__main__.Fixtures.test_the_index_fixture_is_valid) ... ok
+test_the_store_holds_only_counters (__main__.Fixtures.test_the_store_holds_only_counters) ... ERROR
+test_every_refusal_has_a_case (__main__.Pin.test_every_refusal_has_a_case) ... FAIL
+test_names_jake_uses_are_fixed_and_the_switch_is_off_by_default (__main__.Pin.test_names_jake_uses_are_fixed_and_the_switch_is_off_by_default) ... ok
+test_one_call_is_bounded_so_the_cap_bounds_spend (__main__.Pin.test_one_call_is_bounded_so_the_cap_bounds_spend) ... ok
+test_a_bad_index_is_found (__main__.TheCheckCatches.test_a_bad_index_is_found) ... ok
+test_planted_breaks_are_found (__main__.TheCheckCatches.test_planted_breaks_are_found) ... 
+  test_planted_breaks_are_found (__main__.TheCheckCatches.test_planted_breaks_are_found) (plant='an IP in the store') ... ERROR
+  test_planted_breaks_are_found (__main__.TheCheckCatches.test_planted_breaks_are_found) (plant='no max price on the call') ... ERROR
+  test_planted_breaks_are_found (__main__.TheCheckCatches.test_planted_breaks_are_found) (plant='a call sent while off') ... FAIL
+  test_planted_breaks_are_found (__main__.TheCheckCatches.test_planted_breaks_are_found) (plant='the old day pays after midnight') ... FAIL
+  test_planted_breaks_are_found (__main__.TheCheckCatches.test_planted_breaks_are_found) (plant='its own salt, not the stored one') ... FAIL
+  test_planted_breaks_are_found (__main__.TheCheckCatches.test_planted_breaks_are_found) (plant='a failed store still answered') ... FAIL
+
+     17 AssertionError: Lists differ: ['the store is not just its counters and s[49 chars]lts'] != []
+      2 AssertionError: missing fixture: first-write-race.json
+      1 AssertionError: missing fixture: midnight-answer.json
+      2 AssertionError: missing fixture: midnight-cap.json
+      3 AssertionError: missing fixture: off-not-exact.json
+      2 AssertionError: missing fixture: store-error.json
+      1 AssertionError: missing fixture: unavailable-price.json
+      1 KeyError: 'provider'
+      1 KeyError: 'salts'
+      1 KeyError: 'store_after'
+
+Ran 9 tests in 0.010s
+FAILED (failures=28, errors=3)

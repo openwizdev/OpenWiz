@@ -1,14 +1,4 @@
 #!/usr/bin/env python3
-"""The driver v1 test kit: run the five checks against one driver on a throwaway ticket.
-
-    kit.py --driver <program> --repo <owner>/<name> --ticket <n> --harness <h> --model <m>
-           [--skill <skill>] [--wait <seconds>] [--tracker <file>]
-
-Prints one line per check, `pass <check>: ...` or `fail <check>: ...`, in the order version, start,
-wake, stop, token. Exit 0: all five pass; 1: a check failed; 2: the kit could not run. It never
-writes to GitHub: the agent the driver starts writes its own status note. Linux: it watches /proc.
-The rules are kernel/driver.v1.md's.
-"""
 import argparse
 import importlib.machinery
 import importlib.util
@@ -41,6 +31,7 @@ SECRETS = [v for k, v in os.environ.items()
 KEYWORDS = {'$schema', 'type', 'required', 'additionalProperties', 'properties', 'pattern', 'minLength',
             'maxLength', 'minimum', 'items', 'minItems', 'uniqueItems', 'enum', 'const', 'allOf', 'contains'}
 TYPES = {'object': dict, 'array': list, 'string': str, 'boolean': bool}
+PROC = os.path.isdir('/proc/self')
 
 
 class Unusable(Exception):
@@ -223,6 +214,8 @@ class Kit:
         self.mark = 'OPENWIZ_KIT_RUN=' + secrets.token_hex(8)
         self.env = dict(os.environ, OPENWIZ_KIT_RUN=self.mark.partition('=')[2])
         self.leaks = []
+        self.groups = set()
+        self.blind = None if PROC else self.unseen()
 
     def leak(self, what):
         if what not in self.leaks:
@@ -257,6 +250,9 @@ class Kit:
 
     def started(self):
         """(command line, environment) of every live process the driver started (they carry the kit's mark)."""
+        if not PROC:
+            yield from self.listed()
+            return
         for pid in filter(str.isdigit, os.listdir('/proc')):
             try:
                 with open('/proc/%s/environ' % pid, 'rb') as f:
@@ -267,6 +263,53 @@ class Kit:
                 continue
             if self.mark in env:
                 yield cmd, env
+
+    @staticmethod
+    def ps(*args):
+        try:
+            p = subprocess.run(['ps', '-A', '-ww', '-o', 'pid='] + list(args), stdin=subprocess.DEVNULL,
+                               capture_output=True, text=True, timeout=30)
+        except (OSError, subprocess.TimeoutExpired) as e:
+            raise Unusable('ps did not run: %s' % e)
+        if p.returncode:
+            raise Unusable('ps failed: %s' % p.stderr.strip()[:200])
+        return {int(pid): rest for pid, _, rest in (row.strip().partition(' ') for row in p.stdout.splitlines())}
+
+    def unseen(self):
+        probe = 'OPENWIZ_KIT_PROBE=' + self.mark.partition('=')[2]
+        p = subprocess.Popen([sys.executable, '-I', '-c', 'import time; time.sleep(60)'], stdin=subprocess.DEVNULL,
+                             env=dict(os.environ, OPENWIZ_KIT_PROBE=probe.partition('=')[2]))
+        try:
+            for _ in range(50):
+                if re.search(r'(?:^|\s)%s(?:\s|$)' % re.escape(probe), self.ps('-o', 'command=', '-E').get(p.pid, '')):
+                    return None
+                time.sleep(0.1)
+        finally:
+            p.kill()
+            p.wait()
+        return "ps shows no process's environment here, so the kit cannot tell which processes the driver started"
+
+    def listed(self):
+        args = self.ps('-o', 'pgid=', '-o', 'stat=', '-o', 'command=')
+        full = self.ps('-o', 'command=', '-E')
+        mark = re.compile(r'(?:^|\s)%s(?:\s|$)' % re.escape(self.mark))
+        found = []
+        for pid, row in args.items():
+            f = row.split(None, 2)
+            if len(f) < 2 or f[1].startswith('Z') or pid == os.getpid():
+                continue
+            group, cmd = int(f[0]), f[2] if len(f) > 2 else ''
+            words = full.get(pid, '').strip()
+            text = ' ' + (words[len(cmd):] if words.startswith(cmd) else words)
+            marked = bool(mark.search(text))
+            if marked and group != os.getpgrp():
+                self.groups.add(group)
+            found.append((group, cmd, text, marked))
+        for group, cmd, text, marked in found:
+            if marked or group in self.groups:
+                for k, v in self.env.items():
+                    text = re.sub(r'(?<=\s)%s(?=\s|$)' % re.escape('%s=%s' % (k, v)), '', text)
+                yield [cmd], [e.strip() for e in re.split(r'\s(?=[A-Za-z_][A-Za-z0-9_]*=)', text) if e.strip()]
 
     def scan(self):
         for cmd, env in self.started():
@@ -348,6 +391,8 @@ class Kit:
             return 'fail', 'a wake after stop was taken'
         if kind == 'bad':
             return 'fail', v
+        if self.blind:
+            return 'fail', self.blind
         if not self.wait(lambda: not any(True for _ in self.started())):
             return 'fail', 'a process the run started still runs after stop'
         return 'pass', 'the run ended, and a wake after it is refused'
@@ -362,6 +407,8 @@ class Kit:
         elif kind == 'bad':
             self.leak('its answer to a token field: ' + v)
         self.scan()
+        if self.blind:
+            self.leak(self.blind)
         if self.leaks:
             return 'fail', '; '.join(self.leaks)
         return 'pass', 'no login or token passed through the driver'
@@ -386,8 +433,6 @@ def main(argv):
     args = ap.parse_args(argv)
     failed = False
     try:
-        if not os.path.isdir('/proc/self'):
-            raise Unusable("the kit needs Linux's /proc to watch the processes a driver starts")
         kit = Kit(args, Ticket(args.repo, args.ticket, args.tracker))
         for name, (verdict, what) in kit.checks():
             print('%s %s: %s' % (verdict, name, what), flush=True)

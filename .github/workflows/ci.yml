@@ -129,6 +129,7 @@ jobs:
           python3 -I adapters/cloudroom/test_driver.py
           python3 -I contracts/fixtures/write-driver/check.py
           python3 -I contracts/fixtures/feedback-loop/test_check.py
+          python3 -I contracts/fixtures/ask-a-wiz/test_fixtures.py
       # #555: fail on any carried contract that differs from the pinned
       # WizSkills release by one byte.
       - name: The WizSkills installer

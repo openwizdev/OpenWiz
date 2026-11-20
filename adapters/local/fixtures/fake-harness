@@ -39,7 +39,7 @@ if not worker:
     if mode in quick:
         print(quick[mode][0])
         sys.exit(quick[mode][1])
-    child = subprocess.Popen(['sleep', '120'], start_new_session=True, stdin=subprocess.DEVNULL,
+    child = subprocess.Popen(['sleep', '120'], start_new_session=not os.environ.get('FAKE_SAME_GROUP'), stdin=subprocess.DEVNULL,
                              env={'PATH': os.environ['PATH']} if os.environ.get('FAKE_CLEAN') else None)
     with open(os.environ['FAKE_TURNS'], 'a') as f:
         f.write('%d %d %s %s %s\n' % (os.getpid(), child.pid, 'woken' if woken else 'first', os.getcwd(), mode))

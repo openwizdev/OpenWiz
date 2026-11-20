@@ -2,7 +2,7 @@
 
 Login: stays on your machine
 
-The default host: a [driver v1](../../kernel/driver.v1.md) that runs builders on the machine it runs on, your computer or a VPS, with the harnesses you have already signed into. One Python file, standard library only, Linux (it finds a run's processes through `/proc`).
+The default host: a [driver v1](../../kernel/driver.v1.md) that runs builders on the machine it runs on, your computer or a VPS, with the harnesses you have already signed into. One Python file, standard library only. **Platforms:** Linux and macOS, Python 3.9 or later (it finds a run's processes through `/proc` on Linux, and through each turn's process group and `ps` on macOS).
 
 ```sh
 echo '{"repository":"example/site","ticket":7,"skill":"build-ticket","harness":"claude","model":"claude-opus-5-5"}' \
