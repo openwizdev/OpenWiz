@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import re
 import os
 import secrets
 import shutil
@@ -123,7 +124,8 @@ class Cursor(unittest.TestCase):
         self.assertEqual(code, 0, out)
         [call] = self.calls()
         self.assertEqual(call['call'], 'POST /agents')
-        self.assertIn('--netrc', call['argv'])
+        self.assertEqual(call['argv'][1:5], ['--variable', '%CURSOR_API_KEY', '--expand-oauth2-bearer',
+                                             '{{CURSOR_API_KEY}}'])
         self.assertNotIn(TOKEN, json.dumps(call))
         body = json.loads(call['body'])
         self.assertEqual(body['repos'], [{'url': 'https://github.com/example/site'}])
@@ -136,6 +138,40 @@ class Cursor(unittest.TestCase):
         with open(os.path.join(self.env['OPENWIZ_CURSOR_STATE'], out['run'] + '.json')) as f:
             self.assertEqual(json.load(f)['agent'], body['agentId'])
         self.assertEqual(list(self.agents()), [body['agentId']])
+
+    def test_the_key_never_passes_through_the_driver(self):
+        code, out = self.driver('start', START)
+        self.assertEqual(code, 0, out)
+        outputs = [json.dumps(out)]
+        for cmd in ('wake', 'stop'):
+            self.until(lambda: not any(alive(p) for p, _ in self.logged(1)))
+            code, answer = self.driver(cmd, out)
+            self.assertEqual(code, 0, answer)
+            outputs.append(json.dumps(answer))
+        with open(DRIVER) as f:
+            source = f.read()
+        self.assertNotIn(TOKEN, source)
+        self.assertEqual(re.findall(r'environ\S*', source), ["environ.get('OPENWIZ_CURSOR_STATE')"])
+        self.assertNotIn('env=', source)
+        calls = self.calls()
+        self.assertEqual(len(calls), 7)
+        self.assertNotIn(TOKEN, json.dumps(calls) + ''.join(outputs))
+        self.assertEqual({tuple(c['key_in']) for c in calls}, {('CURSOR_API_KEY',)})
+
+    def test_an_old_curl_or_a_missing_key_is_a_clear_error_and_sends_nothing(self):
+        code, err = self.driver('start', START, FAKE_CURL_VERSION='8.2.1')
+        self.assertEqual(code, 1, err)
+        self.assertIn('8.3', err['error'] + err['next'])
+        for key in (None, ''):
+            env = dict(self.env, CURSOR_API_KEY=key) if key is not None else \
+                {k: v for k, v in self.env.items() if k != 'CURSOR_API_KEY'}
+            p = subprocess.run([DRIVER, 'start'], input=json.dumps(START), env=env, capture_output=True, text=True,
+                               timeout=60)
+            err = json.loads(p.stdout)
+            self.assertEqual(p.returncode, 1, err)
+            self.assertIn('CURSOR_API_KEY', err['error'])
+            self.assertNotIn('unknown', err['error'])
+        self.assertEqual((self.calls(), self.agents()), ([], {}))
 
     def test_start_refuses_any_harness_but_cursor_and_creates_nothing(self):
         code, out = self.driver('start', dict(START, harness='synthetic-harness'))
@@ -213,7 +249,7 @@ class Cursor(unittest.TestCase):
     def test_a_refused_login_says_where_the_key_lives_and_shows_no_answer(self):
         code, err = self.driver('start', START, FAKE_CURSOR_FAIL='POST /agents=401')
         self.assertEqual(code, 1, err)
-        self.assertIn('~/.netrc', err['next'])
+        self.assertIn('CURSOR_API_KEY', err['next'])
         self.assertNotIn('told to fail', json.dumps(err))
         self.assertEqual(self.agents(), {})
 

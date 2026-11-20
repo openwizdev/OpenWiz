@@ -15,10 +15,18 @@ def refuse(why):
 
 def args():
     a = sys.argv[1:]
-    head = ['-sS', '--netrc', '--max-time']
-    if a[:3] != head or not a[3].isdigit() or a[4] != '-X' or a[6:8] != ['-H', 'Accept: application/json']:
+    if a == ['--version']:
+        print('curl %s (fake) libcurl/%s' % ((os.environ.get('FAKE_CURL_VERSION') or '8.11.0'),) * 2)
+        sys.exit(0)
+    head = ['-sS', '--variable', '%CURSOR_API_KEY', '--expand-oauth2-bearer', '{{CURSOR_API_KEY}}', '--max-time']
+    if a[:6] != head or not a[6].isdigit() or a[7] != '-X' or a[9:11] != ['-H', 'Accept: application/json']:
         refuse('unexpected arguments %r' % a)
-    method, rest = a[5], a[8:]
+    if not os.environ.get('CURSOR_API_KEY'):
+        print('curl: option --%s' % ('variable: variable expansion failure' if 'CURSOR_API_KEY' not in os.environ
+                                     else 'expand-oauth2-bearer: blank argument where content is expected'),
+              file=sys.stderr)
+        sys.exit(2)
+    method, rest = a[8], a[11:]
     has_body = rest[:4] == ['-H', 'Content-Type: application/json', '--data-binary', '@-']
     if has_body:
         rest = rest[4:]
@@ -111,7 +119,9 @@ def main():
     text = sys.stdin.read() if has_body else ''
     if os.environ.get('FAKE_CURSOR_LOG'):
         with open(os.environ['FAKE_CURSOR_LOG'], 'a') as f:
-            f.write(json.dumps({'argv': sys.argv[1:], 'call': method + ' ' + path, 'body': text}) + '\n')
+            f.write(json.dumps({'argv': sys.argv[1:], 'call': method + ' ' + path, 'body': text,
+                                'key_in': sorted(k for k, v in os.environ.items()
+                                                 if os.environ['CURSOR_API_KEY'] in v)}) + '\n')
     body = json.loads(text) if has_body else None
     fail = re.fullmatch(r'(\w+) (\S+)=(\d+|lost)', os.environ.get('FAKE_CURSOR_FAIL', ''))
     failing = fail and fail.group(1) == method and path.endswith(fail.group(2))
