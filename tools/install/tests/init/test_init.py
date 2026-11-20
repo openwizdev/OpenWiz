@@ -482,5 +482,73 @@ class BrainReference(unittest.TestCase):
         self.assertEqual(resolve(dict(merged, hidden=True)), 'project_settings_missing')
 
 
+
+# The Models section of WizSkills' setup template (#1807), filled with synthetic choices.
+MODELS = """## Models
+
+One table for every agent the fleet starts, in the models contract's form (`openwiz.models.v1`).
+
+| Role | Harness | Model | Effort | `room-cli thread spawn` flags |
+| --- | --- | --- | --- | --- |
+| Orchestrator | Claude Code | Synthetic | High | `--provider claude-code --model syn-claude --reasoning-level high` |
+| Builder | Claude Code | Synthetic | High | `--provider claude-code --model syn-claude --reasoning-level high` |
+| Reviewer | Codex | Synthetic | Medium | `--provider codex --model vendor/syn-codex --reasoning-level medium` |
+| Small builder | follows Builder | | | |
+| Fixer | follows Builder | | | |
+
+Source: synthetic owner, 2026-11-20.
+
+"""
+
+
+class ConnectSettings(unittest.TestCase):
+    """#1807: Connect's settings check reads the one Models table and still the older tables."""
+
+    def setUp(self):
+        spec = importlib.util.spec_from_file_location('openwiz_setup', ROOT / 'tools/install/setup/setup.py')
+        self.setup = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.setup)
+        self.older = (ROOT / 'tools/install/tests/fixtures/install-connections/consumer/docs/agents/fleet.md').read_text()
+        start, end = self.older.index('## Builder\n'), self.older.index('## Test commands')
+        self.models = self.older[:start] + MODELS + self.older[end:]
+
+    # Catches: a project whose setup wrote only the Models table refused at
+    # Connect as project_settings_missing, so the user never reaches Choose the agents.
+    def test_a_filled_models_table_is_usable_settings(self):
+        self.assertTrue(self.setup.fleet_settings_usable(self.older), 'the older tables still pass')
+        self.assertTrue(self.setup.fleet_settings_usable(self.models))
+        self.assertTrue(self.setup.fleet_settings_usable(self.models.replace('| Fixer | follows Builder | | | |\n', '')))
+        # Review R2 of #1947: beside a whole Models table, a half-migrated older section is ignored, as the contract reads it.
+        start = self.models.index('## Test commands')
+        for older in ('## Builder\n\nMoving to the Models table.\n\n', self.older[self.older.index('## Reviewer\n'):
+                      self.older.index('## Test commands')].replace('Source: synthetic owner, 2026-11-06.\n', '')):
+            with self.subTest(older=older[:12]):
+                self.assertTrue(self.setup.fleet_settings_usable(self.models[:start] + older + self.models[start:]))
+
+    # Catches: a Models table Connect counts as settings although the models
+    # contract's readers refuse it, or the bare template counted as filled.
+    def test_an_unfilled_or_broken_models_table_is_not_settings(self):
+        builder = '| Builder | Claude Code | Synthetic | High | `--provider claude-code --model syn-claude --reasoning-level high` |'
+        reviewer = '| Reviewer | Codex | Synthetic | Medium | `--provider codex --model vendor/syn-codex --reasoning-level medium` |'
+        for name, text in (
+                ('placeholder', self.models.replace('| Synthetic | High | `--provider claude-code --model syn-claude',
+                                                    '| <model> | High | `--provider claude-code --model syn-claude', 1)),
+                ('no source', self.models.replace('Source: synthetic owner, 2026-11-20.\n', '')),
+                ('no reviewer row', self.models.replace(reviewer + '\n', '')),
+                ('empty effort', self.models.replace(builder, builder.replace('| High |', '| |'))),
+                ('flags broken', self.models.replace(builder, builder.replace('--model syn-claude', '--model  syn-claude'))),
+                ('model id broken', self.models.replace(reviewer, reviewer.replace('vendor/syn-codex', 'vendor//syn'))),
+                ('reviewer follows', self.models.replace(reviewer, '| Reviewer | follows Builder | | | |')),
+                # Review R1 of #1947: the reserved Harness value is no choice, even with its other cells filled.
+                ('reviewer follows, filled', self.models.replace(reviewer, reviewer.replace('| Codex |', '| follows Builder |'))),
+                ('fixer follows, leftover cells', self.models.replace(
+                    '| Fixer | follows Builder | | | |',
+                    '| Fixer | follows Builder | Synthetic | High | `--provider codex --model syn --reasoning-level high` |')),
+                ('header', self.models.replace('| Effort |', '| Level |')),
+                ('two headings', self.models + '## Models\n\nOld.\n'),
+                ('no test commands', self.models.replace('## Test commands', '## Commands'))):
+            with self.subTest(name):
+                self.assertFalse(self.setup.fleet_settings_usable(text))
+
 if __name__ == '__main__':
     unittest.main()

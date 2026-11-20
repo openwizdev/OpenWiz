@@ -1,0 +1,51 @@
+{
+  "kind": "landed",
+  "about": "A second fix for the same report merges through its own brief: the report already has its landed comment, so nothing is posted.",
+  "input": {
+    "pull_request": {
+      "repository": "openwizdev/OpenWiz",
+      "number": 9202,
+      "merged": true,
+      "closes": [
+        "Closes openwizdev/OpenWiz#9108"
+      ]
+    },
+    "issues": {
+      "9108": {
+        "number": 9108,
+        "author": "synthetic-maintainer",
+        "pull_request": false,
+        "title": "Keep the approve button above the footer in landscape too",
+        "body": "The approve button also sits under the footer in landscape.\n\nReport: #9101",
+        "labels": [
+          "ready-for-agent"
+        ],
+        "milestone": "9.4.2",
+        "comments": []
+      },
+      "9101": {
+        "number": 9101,
+        "author": "synthetic-user",
+        "pull_request": false,
+        "title": "Plan page hides the approve button on a narrow phone",
+        "body": "On a 360-pixel screen the approve button sits under the footer.\n\nOpenWiz feedback operation 3f2a9c4e1b7d40a6958e0c2d7b1a4f63",
+        "labels": [
+          "feedback"
+        ],
+        "milestone": "9.4.2",
+        "comments": [
+          {
+            "author": "synthetic-maintainer",
+            "body": "Landed: the fix for this report merged in openwizdev/WizSkills#9201 and will ship in OpenWiz 9.4.2."
+          }
+        ]
+      }
+    },
+    "record_authors": [
+      "synthetic-maintainer"
+    ]
+  },
+  "expect": {
+    "posts": []
+  }
+}

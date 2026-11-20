@@ -1,0 +1,313 @@
+{
+  "synthetic": true,
+  "note": "GA3's and GA4's seam: one helper run. 'call' is what the pairing call returned; the token appears only in GH_TOKEN of the child that uses it.",
+  "cases": [
+    {
+      "name": "a good answer over a pairing whose read-back passed",
+      "service": "answer",
+      "argv": [
+        "room-cli",
+        "mac",
+        "run",
+        "--stdin",
+        "python3 -I '/synthetic/openwiz/tools/github-app/token-service.py' mint"
+      ],
+      "token": "synthetic-write-token",
+      "call": {
+        "exit": 0,
+        "stdout": "<requests.json's good write answer>"
+      },
+      "out": {
+        "gh": "openwiz[bot]",
+        "git": "openwiz[bot]",
+        "token_file": "synthetic-write-token",
+        "env": {
+          "OPENWIZ_TOKEN_SERVICE": "/synthetic/openwiz/tools/github-app/token-service.py",
+          "OPENWIZ_TOKEN_SERVICE_ROUTE": "pairing",
+          "OPENWIZ_TOKEN_SERVICE_READBACK": "passed",
+          "GH_TOKEN": "synthetic-write-token"
+        },
+        "stderr": ""
+      }
+    },
+    {
+      "name": "a local thread needs no read-back",
+      "service": "answer",
+      "argv": [
+        "python3",
+        "-I",
+        "/synthetic/openwiz/tools/github-app/token-service.py",
+        "mint"
+      ],
+      "token": "synthetic-write-token",
+      "call": {
+        "exit": 0,
+        "stdout": "<requests.json's good write answer>"
+      },
+      "out": {
+        "gh": "openwiz[bot]",
+        "git": "openwiz[bot]",
+        "token_file": "synthetic-write-token",
+        "env": {
+          "OPENWIZ_TOKEN_SERVICE": "/synthetic/openwiz/tools/github-app/token-service.py",
+          "OPENWIZ_TOKEN_SERVICE_ROUTE": "local",
+          "GH_TOKEN": "synthetic-write-token"
+        },
+        "stderr": ""
+      }
+    },
+    {
+      "name": "no service configured",
+      "service": "not-configured",
+      "call": null,
+      "out": {
+        "gh": "owner",
+        "git": "owner",
+        "token_file": null,
+        "env": {},
+        "stderr": ""
+      }
+    },
+    {
+      "name": "the pairing read-back has not run",
+      "service": "pairing-off",
+      "reason": "pairing-off",
+      "call": null,
+      "out": {
+        "gh": "owner",
+        "git": "owner",
+        "token_file": null,
+        "env": {
+          "OPENWIZ_TOKEN_SERVICE": "/synthetic/openwiz/tools/github-app/token-service.py",
+          "OPENWIZ_TOKEN_SERVICE_ROUTE": "pairing"
+        },
+        "stderr": "openwiz: no openwiz[bot] token (pairing-off); using the owner's GitHub account\n"
+      }
+    },
+    {
+      "name": "the pairing read-back was inconclusive",
+      "service": "pairing-off",
+      "reason": "pairing-off",
+      "call": null,
+      "out": {
+        "gh": "owner",
+        "git": "owner",
+        "token_file": null,
+        "env": {
+          "OPENWIZ_TOKEN_SERVICE": "/synthetic/openwiz/tools/github-app/token-service.py",
+          "OPENWIZ_TOKEN_SERVICE_ROUTE": "pairing",
+          "OPENWIZ_TOKEN_SERVICE_READBACK": "inconclusive"
+        },
+        "stderr": "openwiz: no openwiz[bot] token (pairing-off); using the owner's GitHub account\n"
+      }
+    },
+    {
+      "name": "the pairing read-back failed",
+      "service": "pairing-off",
+      "reason": "pairing-off",
+      "call": null,
+      "out": {
+        "gh": "owner",
+        "git": "owner",
+        "token_file": null,
+        "env": {
+          "OPENWIZ_TOKEN_SERVICE": "/synthetic/openwiz/tools/github-app/token-service.py",
+          "OPENWIZ_TOKEN_SERVICE_ROUTE": "pairing",
+          "OPENWIZ_TOKEN_SERVICE_READBACK": "failed"
+        },
+        "stderr": "openwiz: no openwiz[bot] token (pairing-off); using the owner's GitHub account\n"
+      }
+    },
+    {
+      "name": "the pairing read-back value is unknown",
+      "service": "pairing-off",
+      "reason": "pairing-off",
+      "call": null,
+      "out": {
+        "gh": "owner",
+        "git": "owner",
+        "token_file": null,
+        "env": {
+          "OPENWIZ_TOKEN_SERVICE": "/synthetic/openwiz/tools/github-app/token-service.py",
+          "OPENWIZ_TOKEN_SERVICE_ROUTE": "pairing",
+          "OPENWIZ_TOKEN_SERVICE_READBACK": "Passed"
+        },
+        "stderr": "openwiz: no openwiz[bot] token (pairing-off); using the owner's GitHub account\n"
+      }
+    },
+    {
+      "name": "the owner's machine is unavailable",
+      "service": "unreachable",
+      "reason": "unreachable",
+      "call": {
+        "exit": 1,
+        "stdout": "",
+        "stderr": "Mac unavailable"
+      },
+      "out": {
+        "gh": "owner",
+        "git": "owner",
+        "token_file": null,
+        "env": {
+          "OPENWIZ_TOKEN_SERVICE": "/synthetic/openwiz/tools/github-app/token-service.py",
+          "OPENWIZ_TOKEN_SERVICE_ROUTE": "pairing",
+          "OPENWIZ_TOKEN_SERVICE_READBACK": "passed"
+        },
+        "stderr": "openwiz: no openwiz[bot] token (unreachable); using the owner's GitHub account\n"
+      }
+    },
+    {
+      "name": "the owner's machine does not answer in 60 seconds",
+      "service": "unreachable",
+      "reason": "unreachable",
+      "call": {
+        "exit": null,
+        "timeout": true
+      },
+      "out": {
+        "gh": "owner",
+        "git": "owner",
+        "token_file": null,
+        "env": {
+          "OPENWIZ_TOKEN_SERVICE": "/synthetic/openwiz/tools/github-app/token-service.py",
+          "OPENWIZ_TOKEN_SERVICE_ROUTE": "pairing",
+          "OPENWIZ_TOKEN_SERVICE_READBACK": "passed"
+        },
+        "stderr": "openwiz: no openwiz[bot] token (unreachable); using the owner's GitHub account\n"
+      }
+    },
+    {
+      "name": "the service is stopped",
+      "service": "unreachable",
+      "reason": "unreachable",
+      "call": {
+        "exit": 1,
+        "stdout": "",
+        "stderr": "<the service's stopped sentence>"
+      },
+      "out": {
+        "gh": "owner",
+        "git": "owner",
+        "token_file": null,
+        "env": {
+          "OPENWIZ_TOKEN_SERVICE": "/synthetic/openwiz/tools/github-app/token-service.py",
+          "OPENWIZ_TOKEN_SERVICE_ROUTE": "pairing",
+          "OPENWIZ_TOKEN_SERVICE_READBACK": "passed"
+        },
+        "stderr": "openwiz: no openwiz[bot] token (unreachable); using the owner's GitHub account\n"
+      }
+    },
+    {
+      "name": "an answer that is not JSON",
+      "service": "bad-answer",
+      "reason": "bad-answer",
+      "call": {
+        "exit": 0,
+        "stdout": "garbled"
+      },
+      "out": {
+        "gh": "owner",
+        "git": "owner",
+        "token_file": null,
+        "env": {
+          "OPENWIZ_TOKEN_SERVICE": "/synthetic/openwiz/tools/github-app/token-service.py",
+          "OPENWIZ_TOKEN_SERVICE_ROUTE": "pairing",
+          "OPENWIZ_TOKEN_SERVICE_READBACK": "passed"
+        },
+        "stderr": "openwiz: no openwiz[bot] token (bad-answer); using the owner's GitHub account\n"
+      }
+    },
+    {
+      "name": "an answer wider than the request",
+      "service": "bad-answer",
+      "reason": "bad-answer",
+      "call": {
+        "exit": 0,
+        "stdout": "<an answer naming another repository>"
+      },
+      "out": {
+        "gh": "owner",
+        "git": "owner",
+        "token_file": null,
+        "env": {
+          "OPENWIZ_TOKEN_SERVICE": "/synthetic/openwiz/tools/github-app/token-service.py",
+          "OPENWIZ_TOKEN_SERVICE_ROUTE": "pairing",
+          "OPENWIZ_TOKEN_SERVICE_READBACK": "passed"
+        },
+        "stderr": "openwiz: no openwiz[bot] token (bad-answer); using the owner's GitHub account\n"
+      }
+    },
+    {
+      "name": "a repository outside the installation",
+      "service": "refusal",
+      "reason": "not-installed",
+      "call": {
+        "exit": 3,
+        "stdout": "<requests.json's not-installed refusal>"
+      },
+      "out": {
+        "gh": "owner",
+        "git": "owner",
+        "token_file": null,
+        "env": {
+          "OPENWIZ_TOKEN_SERVICE": "/synthetic/openwiz/tools/github-app/token-service.py",
+          "OPENWIZ_TOKEN_SERVICE_ROUTE": "pairing",
+          "OPENWIZ_TOKEN_SERVICE_READBACK": "passed"
+        },
+        "stderr": "openwiz: no openwiz[bot] token (not-installed); using the owner's GitHub account\n"
+      }
+    },
+    {
+      "name": "the service cannot reach GitHub",
+      "service": "refusal",
+      "reason": "unavailable",
+      "call": {
+        "exit": 1,
+        "stdout": "<requests.json's unavailable refusal>"
+      },
+      "out": {
+        "gh": "owner",
+        "git": "owner",
+        "token_file": null,
+        "env": {
+          "OPENWIZ_TOKEN_SERVICE": "/synthetic/openwiz/tools/github-app/token-service.py",
+          "OPENWIZ_TOKEN_SERVICE_ROUTE": "pairing",
+          "OPENWIZ_TOKEN_SERVICE_READBACK": "passed"
+        },
+        "stderr": "openwiz: no openwiz[bot] token (unavailable); using the owner's GitHub account\n"
+      }
+    },
+    {
+      "name": "a refresh that fails",
+      "service": "unreachable",
+      "reason": "unreachable",
+      "call": {
+        "exit": 1,
+        "stdout": "",
+        "stderr": "Mac not responding"
+      },
+      "before": {
+        "gh": "openwiz[bot]",
+        "git": "openwiz[bot]",
+        "token_file": "synthetic-old-token",
+        "env": {
+          "OPENWIZ_TOKEN_SERVICE": "/synthetic/openwiz/tools/github-app/token-service.py",
+          "OPENWIZ_TOKEN_SERVICE_ROUTE": "pairing",
+          "OPENWIZ_TOKEN_SERVICE_READBACK": "passed",
+          "GH_TOKEN": "synthetic-old-token"
+        }
+      },
+      "out": {
+        "gh": "owner",
+        "git": "owner",
+        "token_file": null,
+        "env": {
+          "OPENWIZ_TOKEN_SERVICE": "/synthetic/openwiz/tools/github-app/token-service.py",
+          "OPENWIZ_TOKEN_SERVICE_ROUTE": "pairing",
+          "OPENWIZ_TOKEN_SERVICE_READBACK": "passed"
+        },
+        "stderr": "openwiz: no openwiz[bot] token (unreachable); using the owner's GitHub account\n"
+      }
+    }
+  ]
+}

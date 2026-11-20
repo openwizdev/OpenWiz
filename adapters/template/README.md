@@ -1,5 +1,7 @@
 # Driver template
 
+Login: stays on your machine
+
 The smallest [driver v1](../../kernel/driver.v1.md): one Python file, standard library only, Linux. It passes the [kit](../../kernel/driver-kit/README.md). Each turn of a run is a local process: `start` runs the first turn, `wake` runs another once the last one has ended, and `stop` ends every process the run's turns started. Runs are saved in `$OPENWIZ_TEMPLATE_STATE` (default `~/.local/state/openwiz-template`), each one before its first turn starts.
 
 ## Make your own in an hour

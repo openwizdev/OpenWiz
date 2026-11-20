@@ -1,0 +1,19 @@
+{
+  "kind": "report",
+  "about": "Filed on GitHub's form from the feedback template, which applied the feedback label.",
+  "input": {
+    "number": 9102,
+    "author": "synthetic-user",
+    "pull_request": false,
+    "title": "Plan page hides the approve button on a narrow phone",
+    "body": "### What went wrong?\n\nThe plan page hides the approve button on a narrow phone.\n\n### What did you expect instead?\n\nThe approve button stays above the footer.\n\n### How can someone see it happen?\n\nOpen a plan on a 360-pixel-wide screen.\n\n### Public words only\n\n- [X] Everything above is public words I chose to share.",
+    "labels": [
+      "feedback"
+    ],
+    "milestone": null,
+    "comments": []
+  },
+  "expect": {
+    "is_report": true
+  }
+}
