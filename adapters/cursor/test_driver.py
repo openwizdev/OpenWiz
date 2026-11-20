@@ -52,33 +52,25 @@ class Cursor(unittest.TestCase):
             raise RuntimeError('the test PATH reaches a real program: %s' % (real or ['curl']))
 
     def tearDown(self):
-        for pid in self.marked():
+        for pid in self.running():
             try:
-                os.kill(pid, signal.SIGKILL)
+                os.killpg(pid, signal.SIGKILL)
             except OSError:
                 pass
         shutil.rmtree(self.folder, ignore_errors=True)
 
-    def marked(self):
-        found = []
-        for pid in filter(str.isdigit, os.listdir('/proc')):
-            try:
-                with open('/proc/%s/environ' % pid, 'rb') as f:
-                    if ('KIT_TEST=' + self.mark).encode() in f.read().split(b'\0') and alive(int(pid)):
-                        found.append(int(pid))
-            except OSError:
-                pass
-        return found
+    def running(self):
+        return [pid for pid, _ in self.logged() if alive(pid)]
 
     def driver(self, cmd, request, **env):
         p = subprocess.run([DRIVER, cmd], input=json.dumps(request), env=dict(self.env, **env),
                            capture_output=True, text=True, timeout=120)
         return p.returncode, json.loads(p.stdout)
 
-    def calls(self):
+    def calls(self, version=False):
         try:
             with open(self.log) as f:
-                return [json.loads(x) for x in f]
+                return [c for c in map(json.loads, f) if (c['call'] == 'VERSION') == version]
         except FileNotFoundError:
             return []
 
@@ -130,7 +122,9 @@ class Cursor(unittest.TestCase):
         self.assertEqual(code, 0, out)
         [call] = self.calls()
         self.assertEqual(call['call'], 'POST /agents')
-        self.assertEqual(call['argv'][1:5], ['--variable', '%CURSOR_API_KEY', '--expand-oauth2-bearer',
+        self.assertEqual([c['argv'] for c in self.calls(version=True)], [['--disable', '--version']])
+        self.assertEqual(call['argv'][0], '--disable')
+        self.assertEqual(call['argv'][2:6], ['--variable', '%CURSOR_API_KEY', '--expand-oauth2-bearer',
                                              '{{CURSOR_API_KEY}}'])
         self.assertNotIn(TOKEN, json.dumps(call))
         body = json.loads(call['body'])
@@ -179,6 +173,49 @@ class Cursor(unittest.TestCase):
             self.assertNotIn('unknown', err['error'])
         self.assertEqual((self.calls(), self.agents()), ([], {}))
 
+    def test_the_tests_read_no_other_process_environment(self):
+        with open(os.path.abspath(__file__)) as f:
+            self.assertNotIn('/' + 'environ', f.read())
+
+    def test_an_installed_driver_starts_with_the_pin_its_build_names(self):
+        runtime = os.path.join(self.folder, 'current', 'runtime')
+        os.makedirs(os.path.join(runtime, 'adapters', 'cursor'))
+        for name in ('driver', 'schema.json'):
+            shutil.copy2(os.path.join(HERE, name), os.path.join(runtime, 'adapters', 'cursor', name))
+        source = '0123456789abcdef0123456789abcdef01234567'
+        with open(os.path.join(runtime, 'openwiz-build.txt'), 'w') as f:
+            f.write('openwiz.package.v1\n0.1.1\n%s\nx86_64-unknown-linux-gnu\n' % source)
+        p = subprocess.run([os.path.join(runtime, 'adapters', 'cursor', 'driver'), 'start'], input=json.dumps(START),
+                           env=self.env, capture_output=True, text=True, timeout=60)
+        self.assertEqual(p.returncode, 0, p.stdout)
+        [call] = self.calls()
+        text = json.loads(call['body'])['prompt']['text']
+        for part in ('wizskills.lock', 'https://github.com/openwizdev/OpenWiz', source, 'build-ticket skill'):
+            self.assertIn(part, text)
+
+    def test_a_lost_create_cursor_does_not_show_yet_stays_unconfirmed_and_stoppable(self):
+        open(self.hold, 'w').close()
+        code, err = self.driver('start', START, FAKE_CURSOR_FAIL='POST /agents=pending')
+        self.assertEqual(code, 1, err)
+        self.assertNotIn('archived', err['error'])
+        self.assertIn('unknown', err['error'])
+        run = re.search(r'run-[0-9a-f]{12}', err['error'] + err['next']).group()
+        self.assertIn('stop', err['next'])
+        with open(self.env['FAKE_CURSOR_STATE'] + '.pending') as f:
+            late = f.read()
+        subprocess.run([os.path.join(HERE, 'fixtures', 'bin', 'curl'), '--disable', '-sS', '--variable',
+                        '%CURSOR_API_KEY', '--expand-oauth2-bearer', '{{CURSOR_API_KEY}}', '--max-time', '60', '-X',
+                        'POST', '-H', 'Accept: application/json', '-H', 'Content-Type: application/json',
+                        '--data-binary', '@-', '-o', '-', '-w', '\\n%{http_code}', 'https://api.cursor.com/v1/agents'],
+                       input=late, env=self.env, capture_output=True, text=True, timeout=60, check=True)
+        [agent] = self.agents().values()
+        self.assertFalse(agent['archived'])
+        self.assertEqual(self.driver('wake', {'run': run})[0], 1, 'a wake reopened an unconfirmed start')
+        self.assertEqual(self.driver('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
+        [agent] = self.agents().values()
+        self.assertTrue(agent['archived'])
+        self.assertEqual(self.running(), [])
+
     def test_start_refuses_any_harness_but_cursor_and_creates_nothing(self):
         code, out = self.driver('start', dict(START, harness='synthetic-harness'))
         self.assertEqual(code, 1, out)
@@ -194,7 +231,7 @@ class Cursor(unittest.TestCase):
         [agent] = self.agents().values()
         self.assertTrue(agent['archived'])
         self.assertEqual([r['status'] for r in agent['runs']], ['CANCELLED'])
-        self.assertEqual(self.marked(), [])
+        self.assertEqual(self.running(), [])
 
     def test_a_wake_during_a_run_starts_no_second_run_and_one_after_it_follows_up(self):
         open(self.hold, 'w').close()

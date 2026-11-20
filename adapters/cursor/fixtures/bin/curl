@@ -14,8 +14,13 @@ def refuse(why):
 
 
 def args():
-    a = sys.argv[1:]
+    if sys.argv[1:2] != ['--disable']:
+        refuse('--disable is not the first argument, so a default curl config would be read')
+    a = sys.argv[2:]
     if a == ['--version']:
+        if os.environ.get('FAKE_CURSOR_LOG'):
+            with open(os.environ['FAKE_CURSOR_LOG'], 'a') as f:
+                f.write(json.dumps({'argv': sys.argv[1:], 'call': 'VERSION'}) + '\n')
         print('curl %s (fake) libcurl/%s' % ((os.environ.get('FAKE_CURL_VERSION') or '8.11.0',) * 2))
         sys.exit(0)
     head = ['-sS', '--variable', '%CURSOR_API_KEY', '--expand-oauth2-bearer', '{{CURSOR_API_KEY}}', '--max-time']
@@ -123,8 +128,13 @@ def main():
                                 'key_in': sorted(k for k, v in os.environ.items()
                                                  if os.environ['CURSOR_API_KEY'] in v)}) + '\n')
     body = json.loads(text) if has_body else None
-    fail = re.fullmatch(r'(\w+) (\S+)=(\d+|lost)', os.environ.get('FAKE_CURSOR_FAIL', ''))
+    fail = re.fullmatch(r'(\w+) (\S+)=(\d+|lost|pending)', os.environ.get('FAKE_CURSOR_FAIL', ''))
     failing = fail and fail.group(1) == method and path.endswith(fail.group(2))
+    if failing and fail.group(3) == 'pending':
+        with open(os.environ['FAKE_CURSOR_STATE'] + '.pending', 'w') as f:
+            f.write(text)
+        print('curl: (28) Operation timed out after 60000 milliseconds with 0 bytes received', file=sys.stderr)
+        sys.exit(28)
     if failing and fail.group(3) != 'lost':
         print(json.dumps({'error': {'code': 'fake_failure', 'message': 'the fake was told to fail'}}))
         print(fail.group(3), end='')
