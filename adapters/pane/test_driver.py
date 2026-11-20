@@ -16,7 +16,6 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DRIVER = os.path.join(HERE, 'driver')
 KIT = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'kit.py')
 TOKEN = 'gh' + 'p_' + 'Synthetic0Pane0Value' * 2 + '00'
-# git is on the test PATH only to read the synthetic checkouts' own config (their effective origin); nothing else.
 REAL = ('claude', 'codex', 'cursor-agent', 'agent', 'opencode', 'pi', 'boat', 'gh', 'npm', 'node')
 REQUEST = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude',
            'model': 'claude-opus-5-5'}

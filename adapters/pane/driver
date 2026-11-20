@@ -11,8 +11,10 @@ START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket':
 RUN = {'run': r'run-[0-9a-f]{12}'}
 ID = re.compile(r'[A-Za-z0-9_.:-]{1,100}')
 CODE = re.compile(r'[a-z0-9][a-z0-9._-]{0,59}')
-CREDENTIAL = re.compile(r'\bgh[pousr]_[A-Za-z0-9]{8,}|github_pat_|\bAKIA[0-9A-Z]{16}|\bxox[abposr]-|\bsk-[A-Za-z0-9_-]{16,}'
-                        r'|\bbearer\s+\S|\b(?:password|passwd|secret|token|key)\s*[:=]', re.I)
+CREDENTIAL = re.compile(r'\b(?:[a-z_]*token|[a-z_]*key|secret|password|passwd|pwd|sig|signature|auth|credentials?)\s*='
+                        r'|\b(?:password|passwd|secret|token|key)\s*[:=]\s*\S|\bbearer\s+\S'
+                        r'|gh[pousr]_[A-Za-z0-9]{8,}|github_pat_|AKIA[0-9A-Z]{16}|xox[abposr]-|sk-[A-Za-z0-9_-]{16,}'
+                        r'|AIza[0-9A-Za-z_-]{30,}', re.I)
 ORIGIN = re.compile(r'^(?:[a-z+]+://)?(?:[^@/]+@)?github\.com[:/]+([A-Za-z0-9_.-]{1,100})/([A-Za-z0-9_.-]{1,100}?)(?:\.git)?/*$')
 READY_MS = 60000
 UNWRITABLE = 'make OPENWIZ_PANE_STATE (or ~/.local/state/openwiz-pane) a folder you can write'
@@ -96,35 +98,26 @@ def text_id(value):
     return value if isinstance(value, str) and ID.fullmatch(value) else None
 
 
-def git_config(checkout):
-    git = os.path.join(checkout, '.git')
-    if os.path.isfile(git):
-        with open(git) as f:
-            pointer = f.read().strip()
-        if not pointer.startswith('gitdir:'):
-            return ''
-        git = os.path.join(checkout, pointer[len('gitdir:'):].strip())
-        if os.path.isfile(os.path.join(git, 'commondir')):
-            with open(os.path.join(git, 'commondir')) as f:
-                git = os.path.join(git, f.read().strip())
-    with open(os.path.join(git, 'config')) as f:
-        return f.read()
-
-
 def origin(checkout):
-    try:
-        text = git_config(checkout) if isinstance(checkout, str) else ''
-    except (OSError, UnicodeDecodeError):
+    if not isinstance(checkout, str) or not os.path.isabs(checkout):
         return None
-    section, urls = None, []
-    for raw in text.splitlines():
-        entry = raw.strip()
-        if entry.startswith('['):
-            section = entry.replace(' ', '').lower()
-        elif section == '[remote"origin"]' and re.match(r'url\s*=', entry, re.I):
-            urls.append(entry.split('=', 1)[1].strip())
-    found = ORIGIN.search(urls[0]) if len(urls) == 1 else None
-    return ('%s/%s' % found.groups()).lower() if found else None
+    git = shutil.which('git')
+    if not git:
+        raise Refused('git is not installed here; nothing was started', 'install git, then start again')
+    env = {k: v for k, v in os.environ.items() if not k.startswith('GIT_')}
+    names = set()
+    for push in ([], ['--push']):
+        try:
+            p = subprocess.run([git, '-C', checkout, 'remote', 'get-url', '--all'] + push + ['origin'],
+                               stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=20, env=env)
+        except (OSError, subprocess.SubprocessError, UnicodeDecodeError):
+            return None
+        urls = p.stdout.splitlines() if p.returncode == 0 else []
+        found = [ORIGIN.search(u.strip()) for u in urls]
+        if not urls or not all(found):
+            return None
+        names.update(('%s/%s' % f.groups()).lower() for f in found)
+    return names.pop() if len(names) == 1 else None
 
 
 def saved_repository(repository):
@@ -132,8 +125,9 @@ def saved_repository(repository):
              if isinstance(r, dict) and type(r.get('id')) is int and origin(r.get('path')) == repository.lower()]
     if not found:
         raise Refused('Pane has no saved checkout of %s; nothing was started' % repository,
-                      'save a checkout whose origin remote is github.com/%s in Pane (runpane repos add --path '
-                      '<that checkout>), then start again' % repository)
+                      'save a checkout whose every origin URL (as `git remote get-url --all [--push] origin` shows) '
+                      'is github.com/%s in Pane (runpane repos add --path <that checkout>), then start again'
+                      % repository)
     if len(found) > 1:
         raise Refused('Pane has %s saved more than once; nothing was started' % repository,
                       'remove all but one checkout of %s from Pane, then start again' % repository)

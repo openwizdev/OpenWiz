@@ -55,7 +55,6 @@ def checkout(number, full):
         os.makedirs(os.path.join(git, folder))
     with open(os.path.join(git, 'HEAD'), 'w') as f:
         f.write('ref: refs/heads/main\n')
-    # FAKE_PANE_GIT points the checkout's effective origin at other/site behind an inline example/site line.
     other = {'include': '[include]\n\tpath = other.config\n',
              'insteadof': '[url "https://github.com/other/"]\n\tinsteadOf = https://github.com/%s/\n'
                           % full.split('/')[0]}.get(os.environ.get('FAKE_PANE_GIT'), '')
