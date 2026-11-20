@@ -39,14 +39,22 @@ def update(change):
             with open(STATE) as f:
                 state = json.load(f)
         except FileNotFoundError:
-            names = os.environ.get('FAKE_PANE_REPOS', 'site').split(',')
-            state = {'repos': [{'id': i + 1, 'name': n, 'path': '/synthetic/repos/' + n, 'active': i == 0,
-                                'sessionCount': 0} for i, n in enumerate(names) if n], 'panes': {}, 'panels': {}}
+            full = [n for n in os.environ.get('FAKE_PANE_REPOS', 'example/site').split(',') if n]
+            state = {'repos': [checkout(i + 1, n) for i, n in enumerate(full)], 'panes': {}, 'panels': {}}
         out = change(state)
         with open(STATE + '.new', 'w') as f:
             json.dump(state, f)
         os.replace(STATE + '.new', STATE)
         return out
+
+
+def checkout(number, full):
+    path = os.path.join(STATE + '.repos', '%d-%s' % (number, full.split('/')[1]))
+    os.makedirs(os.path.join(path, '.git'))
+    with open(os.path.join(path, '.git', 'config'), 'w') as f:
+        f.write('[core]\n\tbare = false\n[remote "origin"]\n\turl = https://github.com/%s.git\n'
+                '\tfetch = +refs/heads/*:refs/remotes/origin/*\n' % full)
+    return {'id': number, 'name': full.split('/')[1], 'path': path, 'active': number == 1, 'sessionCount': 0}
 
 
 def note(panel, woken):
@@ -107,9 +115,9 @@ def create(args):
                  'state': 'ready' if ready else 'exited'}
     if not ready:
         readiness['reason'] = {'code': 'command-exited', 'message': 'synthetic: the command exited'}
-    say({'ok': True, 'repo': repo, 'items': [{'ok': True, 'index': 0, 'name': f['--name'], 'pinned': False,
-                                              'sessionId': pane, 'paneId': pane, 'panelId': panel,
-                                              'worktreePath': worktree, 'readiness': readiness}]})
+    say({'ok': ready, 'repo': repo, 'items': [{'ok': ready, 'index': 0, 'name': f['--name'], 'pinned': False,
+                                               'sessionId': pane, 'paneId': pane, 'panelId': panel,
+                                               'worktreePath': worktree, 'readiness': readiness}]}, 0 if ready else 1)
 
 
 def submit(args):

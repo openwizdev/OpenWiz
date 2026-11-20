@@ -104,7 +104,7 @@ class Pane(unittest.TestCase):
 
     def test_start_opens_one_agent_tab_with_the_model_and_no_permission_flag(self):
         code, out = self.driver('start', dict(REQUEST, harness='codex', model='gpt 5.5'),
-                                FAKE_PANE_REPOS='active,site')
+                                FAKE_PANE_REPOS='other/site,example/site')
         self.assertEqual(code, 0, out)
         create = [c for c in self.called() if c[:2] == ['panes', 'create']]
         self.assertEqual(len(create), 1)
@@ -117,8 +117,9 @@ class Pane(unittest.TestCase):
 
     def test_start_refuses_before_creating_anything(self):
         cases = (({}, dict(REQUEST, harness='gemini'), 'Pane runs no harness gemini'),
-                 ({'FAKE_PANE_REPOS': 'other'}, REQUEST, 'runpane repos add'),
-                 ({'FAKE_PANE_REPOS': 'site,site'}, REQUEST, 'saved more than once'),
+                 ({'FAKE_PANE_REPOS': 'example/other'}, REQUEST, 'runpane repos add'),
+                 ({'FAKE_PANE_REPOS': 'other/site'}, REQUEST, 'runpane repos add'),
+                 ({'FAKE_PANE_REPOS': 'example/site,example/site'}, REQUEST, 'saved more than once'),
                  ({'FAKE_PANE_DOWN': '1'}, REQUEST, 'open the Pane app'))
         for i, (env, request, words) in enumerate(cases):
             with self.subTest(env=env, harness=request['harness']):
@@ -148,16 +149,31 @@ class Pane(unittest.TestCase):
         self.assertEqual(self.driver('stop', run), (0, dict(run, stopped=True)))
         self.assertEqual([p['archived'] for p in self.pane()['panes'].values()], [True])
 
-    def test_stop_archives_unpushed_commits_and_answers_again(self):
+    def test_stop_never_forces_the_archive_and_answers_again(self):
         code, run = self.driver('start', REQUEST)
-        self.assertEqual(self.driver('stop', run, FAKE_PANE_DIRTY='unpushed'), (0, dict(run, stopped=True)))
+        code, out = self.driver('stop', run, FAKE_PANE_DIRTY='unpushed')
+        self.assertEqual(code, 1, out)
+        self.assertIn('Pane openwiz-' + run['run'], out['error'])
+        self.assertEqual([p['archived'] for p in self.pane()['panes'].values()], [False])
+        self.assertEqual(self.driver('stop', run), (0, dict(run, stopped=True)))
         archives = [c for c in self.called() if c[:2] == ['panes', 'archive']]
-        self.assertEqual([('--force' in c) for c in archives], [False, True])
+        self.assertEqual([('--force' in c) for c in archives], [False, False])
         before = len(self.called())
         self.assertEqual(self.driver('stop', run), (0, dict(run, stopped=True)))
         code, out = self.driver('wake', run)
         self.assertEqual((code, len(self.called())), (1, before), out)
         self.assertIn('is stopped', out['error'])
+
+    def test_start_refuses_a_credential_in_any_field(self):
+        shapes = (TOKEN, 'sk-' + 'Synthetic0Value0' * 2, 'AKIA' + 'SYNTHETIC0VALUE0', 'xoxb-' + 'synthetic-0value',
+                  'github_pat_' + 'Synthetic0Value0' * 2, 'bearer ' + 'synthetic', 'token: ' + 'synthetic')
+        for value in shapes:
+            with self.subTest(shape=value[:4]):
+                code, out = self.driver('start', dict(REQUEST, model=value))
+                self.assertEqual(code, 1, out)
+                self.assertNotIn(value, json.dumps(out))
+                self.assertEqual([c for c in self.called() if value in json.dumps(c)], [])
+        self.assertFalse([c for c in self.called() if c[:2] == ['panes', 'create']])
 
 
 if __name__ == '__main__':

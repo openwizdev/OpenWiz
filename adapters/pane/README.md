@@ -50,7 +50,7 @@ It plays Pane and its agents. It keeps its Panes in the JSON file `FAKE_PANE_STA
 
 | Variable | What it plants |
 | --- | --- |
-| `FAKE_PANE_REPOS` | Comma-separated saved repository names (default `site`) |
+| `FAKE_PANE_REPOS` | Comma-separated `owner/name` checkouts Pane has saved, each saved under its name with that GitHub repository as its `origin` (default `example/site`) |
 | `FAKE_PANE_DOWN` | Set: the Pane app and its daemon are not running, so every command fails |
 | `FAKE_PANE_READY` | `no`: the tab's command exits before its agent's input box is ready |
 | `FAKE_PANE_DIRTY` | `uncommitted` or `unpushed`: what archive's safety check finds in the worktree |
