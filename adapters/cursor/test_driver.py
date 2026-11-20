@@ -151,6 +151,7 @@ class Cursor(unittest.TestCase):
     def test_a_start_whose_answer_is_lost_archives_its_agent(self):
         # catches: a create whose answer never came back leaving a cloud agent working on the ticket with no
         # run id to stop it, and an error that says to retry, which starts a second agent beside it.
+        open(self.hold, 'w').close()
         code, out = self.driver('start', START, FAKE_CURSOR_FAIL='POST /agents=lost')
         self.assertEqual(code, 1, out)
         self.assertIn('unknown', out['error'])
@@ -226,12 +227,12 @@ class Cursor(unittest.TestCase):
         self.assertEqual(self.driver('wake', out)[0], 1, 'a wake was taken after a stop')
 
     def test_a_refused_login_says_where_the_key_lives_and_shows_no_answer(self):
-        # catches: a driver that asks for the key in its input or echoes Cursor's error body (which may quote
+        # catches: a driver that asks for the key in its input or echoes Cursor's error message (which may quote
         # what was sent) instead of pointing to the user's own ~/.netrc.
         code, err = self.driver('start', START, FAKE_CURSOR_FAIL='POST /agents=401')
         self.assertEqual(code, 1, err)
         self.assertIn('~/.netrc', err['next'])
-        self.assertNotIn('fake_failure', json.dumps(err))
+        self.assertNotIn('told to fail', json.dumps(err))
         self.assertEqual(self.agents(), {})
 
 

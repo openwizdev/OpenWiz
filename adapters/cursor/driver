@@ -1,21 +1,25 @@
 #!/usr/bin/env python3
-"""A minimal OpenWiz driver (kernel/driver.v1.md). Copy this folder to adapters/<host>/ and adapt it.
+"""The Cursor cloud agents driver (kernel/driver.v1.md): each run is one Cursor cloud agent on its own machine.
 
-Each turn of a run is a local process under its own supervisor, which keeps every process the turn starts:
-`start` runs the first turn, `wake` another once the last one has ended, `stop` ends everything the turns
-started. A run is saved before its first turn starts, and a wake or a stop holds the run's lock throughout.
-Adapt `command` to your harness, and `launch`, `running` and `end` to your host. Linux; standard library only.
+`start` creates the agent (POST /v1/agents) under an agent id the driver saved first, `wake` sends it a follow-up
+run once its last run has ended, and `stop` cancels its active run and archives it, never deleting it. Every call
+goes through the user's own `curl --netrc`, which reads their Cursor API key from their ~/.netrc: the driver never
+reads, passes or prints a key. Nothing runs on this machine between calls. Standard library only.
 """
-import ctypes, fcntl, json, os, re, secrets, shutil, signal, subprocess, sys, time
+import fcntl, json, os, re, secrets, subprocess, sys, uuid
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATE = os.environ.get('OPENWIZ_CURSOR_STATE') or os.path.expanduser('~/.local/state/openwiz-cursor')
-VERSION = {'driver': 'cursor', 'records': ['openwiz:records v1'], 'can': ['start', 'wake', 'stop']}
+API = 'https://api.cursor.com/v1'
+VERSION = {'driver': 'cursor', 'records': ['openwiz:records v1'],
+           'can': ['start', 'wake', 'stop', 'many-at-once', 'own-sandbox']}
 START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
          'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
          'model': r'[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}'}
 RUN = {'run': r'run-[0-9a-f]{12}'}
-GRACE = 10  # seconds a stopped process has to exit before it is killed
+HARNESS = 'cursor'  # Cursor cloud agents run only Cursor's own agent
+SIGN_IN = 'put your Cursor API key in ~/.netrc yourself, as the driver README says'
+FIX_STATE = 'make OPENWIZ_CURSOR_STATE (or ~/.local/state/openwiz-cursor) a folder you can write'
 
 
 class Refused(Exception):
@@ -43,160 +47,209 @@ def read(fields):
     return req
 
 
-def command(req, woken):
-    """Adapt: your harness's own signed-in command. Never add a login or a token."""
-    what = 'You were woken: read the ticket again and carry on' if woken else 'Build the ticket'
-    prompt = '%s: %s#%d, with the %s skill.' % (what, req['repository'], req['ticket'], req['skill'])
-    return [req['harness'], '--model', req['model'], '-p', prompt]
-
-
-def since(pid):
-    """When process pid started, or None once it has exited: with its pid, this names one process."""
+def api(method, path, body=None):
+    """(HTTP status, answer) from Cursor's API through the user's own `curl --netrc`, or (None, None) when no
+    answer came back, so whether the call took effect is unknown. The key stays in ~/.netrc: never in an
+    argument, an environment or this program."""
+    cmd = ['curl', '-sS', '--netrc', '--max-time', '60', '-X', method, '-H', 'Accept: application/json']
+    if body is not None:
+        cmd += ['-H', 'Content-Type: application/json', '--data-binary', '@-']
+    cmd += ['-o', '-', '-w', '\\n%{http_code}', API + path]
     try:
-        with open('/proc/%d/stat' % pid) as f:
-            fields = f.read().rpartition(')')[2].split()
-    except OSError:
-        return None
-    return None if fields[0] == 'Z' else int(fields[19])
-
-
-def descendants(pid):
-    """Every live process under pid."""
-    children = {}
-    for p in filter(str.isdigit, os.listdir('/proc')):
-        try:
-            with open('/proc/%s/stat' % p) as f:
-                fields = f.read().rpartition(')')[2].split()
-        except OSError:
-            continue
-        if fields[0] != 'Z':
-            children.setdefault(int(fields[1]), []).append(int(p))
-    found, todo = set(), [pid]
-    while todo:
-        for c in children.get(todo.pop(), []):
-            if c not in found:
-                found.add(c)
-                todo.append(c)
-    return found
-
-
-def supervise(cmd):
-    """One turn, as `driver --turn <command>`: run the harness, and keep every process it starts as this turn's
-    (an orphan comes back here, whatever its session or environment) until none is left; then exit."""
-    if ctypes.CDLL(None, use_errno=True).prctl(36, 1, 0, 0, 0) != 0:  # PR_SET_CHILD_SUBREAPER
-        print(json.dumps({'error': 'this host cannot keep a turn\'s processes together'}), flush=True)
-        return
+        p = subprocess.run(cmd, input='' if body is None else json.dumps(body), capture_output=True, text=True,
+                           timeout=90)
+    except FileNotFoundError:
+        raise Refused('curl is not installed here; nothing was sent to Cursor', 'install curl, then try again')
+    except subprocess.TimeoutExpired:
+        return None, None
+    text, _, code = p.stdout.rpartition('\n')
+    if p.returncode != 0 or not code.isdigit() or code == '000':
+        return None, None
     try:
-        harness = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                                   stderr=subprocess.DEVNULL)
-    except OSError as e:
-        print(json.dumps({'error': e.strerror}), flush=True)
-        return
-    signal.signal(signal.SIGTERM, signal.SIG_IGN)  # only `end` stops a turn, and it never orphans one
-    print(json.dumps({'pid': harness.pid, 'since': since(harness.pid)}), flush=True)
-    os.dup2(os.open(os.devnull, os.O_WRONLY), 1)
-    while True:
-        try:
-            os.wait()
-        except ChildProcessError:
-            return
-
-
-def launch(req, run, woken):
-    """Start one turn under its supervisor; return what `running` and `end` need."""
-    if not shutil.which(req['harness']):
-        raise Refused('harness %s is not installed here' % req['harness'],
-                      'install %s and sign in to it yourself, then start again' % req['harness'])
-    try:
-        sup = subprocess.Popen([sys.executable, '-I', os.path.abspath(__file__), '--turn'] + command(req, woken),
-                               env=dict(os.environ, OPENWIZ_RUN=run), start_new_session=True,
-                               stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
-        with sup.stdout:
-            line = sup.stdout.readline()
-    except OSError as e:
-        raise Refused('harness %s did not start: %s' % (req['harness'], e.strerror), 'check that it runs by hand')
-    try:
-        turn = json.loads(line)
+        return int(code), json.loads(text) if text.strip() else {}
     except ValueError:
-        turn = {'error': 'its supervisor did not answer'}
-    if 'pid' not in turn:
-        raise Refused('harness %s did not start: %s' % (req['harness'], turn['error']), 'check that it runs by hand')
-    return {'pid': turn['pid'], 'since': turn['since'], 'supervisor': sup.pid, 'supervisor_since': since(sup.pid)}
+        return int(code), {}
 
 
-def running(turn, run):
-    """Whether the turn `launch` returned still runs its harness."""
-    return bool(turn) and turn['since'] is not None and since(turn['pid']) == turn['since']
+def why(code, answer):
+    """Cursor's error code, never its message: the message may quote what was sent."""
+    error = answer.get('error') if isinstance(answer, dict) else None
+    name = error.get('code') if isinstance(error, dict) else error
+    return 'HTTP %d%s' % (code, ' ' + name if isinstance(name, str) and re.fullmatch(r'[a-z_]{1,40}', name) else '')
 
 
-def end(turns, run):
-    """Stop the run: every process its turns' supervisors still keep, whatever its session or environment.
-    A supervisor exits only once none of its processes is left, so answer once every supervisor has exited."""
-    kept = [(t['supervisor'], t['supervisor_since']) for t in turns if t and t['supervisor_since'] is not None]
-    for sig, wait in ((signal.SIGTERM, GRACE), (signal.SIGKILL, 2)):
-        sent, deadline = set(), time.monotonic() + wait
-        while time.monotonic() < deadline:
-            kept = [(p, t) for p, t in kept if since(p) == t]
-            if not kept:
-                return
-            pinned = {}
-            for p in set().union(*(descendants(s) for s, _ in kept)) - sent:
-                try:  # pin each pid first, then check it is still under a supervisor, so no reused pid is hit
-                    pinned[p] = os.pidfd_open(p)
-                except OSError:
-                    pass
-            under = set().union(*(descendants(s) for s, _ in kept))
-            for p, fd in pinned.items():
-                try:
-                    if p in under:
-                        sent.add(p)
-                        signal.pidfd_send_signal(fd, sig)
-                except OSError:
-                    pass
-                finally:
-                    os.close(fd)
-            time.sleep(0.1)
-    raise Refused('run %s still has processes after stop' % run,
-                  'stop it again, or end its processes by hand: they run under process %s'
-                  % ', '.join(str(p) for p, _ in kept))
+def refused(code, answer, what, then):
+    if code in (401, 403) and 'feature_unavailable' not in why(code, answer):
+        return Refused('Cursor refused the API key in ~/.netrc (%s) when it %s' % (why(code, answer), what), SIGN_IN)
+    return Refused('Cursor refused to %s (%s)' % (what, why(code, answer)), then)
 
 
-def lock(run):
-    """Hold the run's lock until this command ends, so its wakes and stops take turns."""
-    if not os.path.exists(os.path.join(STATE, run + '.json')):
-        raise Refused('no run ' + run, 'check the run id that `driver start` printed')
+def pinned_skills():
+    """The WizSkills release OpenWiz pins (its wizskills.lock): version, commit and tree, each checked."""
     try:
-        fcntl.flock(os.open(os.path.join(STATE, run + '.lock'), os.O_RDONLY | os.O_CREAT, 0o600), fcntl.LOCK_EX)
-    except OSError:
-        raise Refused('the driver cannot lock run %s in its state folder' % run,
-                      'make OPENWIZ_CURSOR_STATE (or ~/.local/state/openwiz-cursor) a folder you can write')
+        with open(os.path.join(HERE, '..', '..', 'wizskills.lock')) as f:
+            lock = json.load(f)
+        assert set(lock) == {'version', 'commit', 'tree'} and re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', lock['version'])
+        assert all(re.fullmatch(r'[0-9a-f]{40}', lock[k]) for k in ('commit', 'tree'))
+        return lock
+    except (OSError, ValueError, TypeError, AssertionError):
+        raise Refused("OpenWiz's wizskills.lock is missing or malformed; nothing was started",
+                      'run the driver from an OpenWiz checkout whose wizskills.lock pins a WizSkills release')
+
+
+def prompt(req, lock=None):
+    """The first run's prompt installs the pinned skills (the cloud machine has none of the user's), and a wake's
+    asks the same agent, with its memory, to read the ticket again."""
+    if lock is None:
+        return ('You were woken: read the ticket again and carry on: GitHub repository %s, ticket #%d, with the %s '
+                'skill.' % (req['repository'], req['ticket'], req['skill']))
+    return ('Build the ticket: GitHub repository %(repository)s, ticket #%(ticket)d, with the %(skill)s skill. First '
+            'get the WizSkills release OpenWiz pins: fetch tag v%(version)s of https://github.com/openwizdev/WizSkills,'
+            ' check that it is commit %(commit)s with tree %(tree)s, and refuse to go on if it is not. Then read '
+            'skills/%(skill)s/SKILL.md from that commit and follow it, as the builder of that ticket.'
+            % dict(req, **lock))
+
+
+def path(run, ext):
+    return os.path.join(STATE, run + ext)
 
 
 def saved(run, state=None):
-    path = os.path.join(STATE, run + '.json')
     if state is not None:
         os.makedirs(STATE, mode=0o700, exist_ok=True)
-        with open(path + '.new', 'w') as f:
+        with open(path(run, '.json.new'), 'w') as f:
             json.dump(state, f)
-        os.replace(path + '.new', path)
+        os.replace(path(run, '.json.new'), path(run, '.json'))
         return state
     try:
-        with open(path) as f:
+        with open(path(run, '.json')) as f:
             return json.load(f)
     except FileNotFoundError:
         raise Refused('no run ' + run, 'check the run id that `driver start` printed')
 
 
-def unsaved(run, turn, cmd):
-    """A turn began but could not be saved: end it, and say the outcome is unknown, never retry."""
+def lock(run):
+    """Hold the run's lock until this command ends, so its start, wakes and stops take turns."""
     try:
-        end([turn], run)
-    except Refused:
-        raise Refused('run %s began a turn it could not save, and could not confirm the turn ended; its outcome is '
-                      'unknown' % run, 'end process %d and everything under it by hand, and read the ticket for '
-                      'what its agent did, before you %s it again' % (turn['supervisor'], cmd))
-    raise Refused('run %s began a turn it could not save, so the driver ended it; its outcome is unknown' % run,
-                  'read the ticket for what its agent did before you %s it again' % cmd)
+        fcntl.flock(os.open(path(run, '.lock'), os.O_RDONLY | os.O_CREAT, 0o600), fcntl.LOCK_EX)
+    except OSError:
+        raise Refused('the driver cannot lock run %s in its state folder' % run, FIX_STATE)
+
+
+def end(agent):
+    """Cancel the agent's active run, then archive the agent (reversible; never the permanent delete). A list of
+    what Cursor did not confirm: empty once the agent is archived, or when it never existed."""
+    code, answer = api('GET', '/agents/' + agent)
+    if code == 404:
+        return []
+    if code != 200 or not isinstance(answer, dict):
+        failed = ['reading agent %s (%s)' % (agent, 'no answer' if code is None else why(code, answer))]
+        run = None
+    else:
+        failed, run = [], answer.get('latestRunId')
+    if isinstance(run, str) and re.fullmatch(r'[A-Za-z0-9_-]{1,100}', run) and answer.get('status') != 'ARCHIVED':
+        code, answer = api('POST', '/agents/%s/runs/%s/cancel' % (agent, run))
+        if code not in (200, 409):  # 409 run_not_cancellable: that run has already ended
+            failed.append('cancelling run %s (%s)' % (run, 'no answer' if code is None else why(code, answer)))
+    code, answer = api('POST', '/agents/%s/archive' % agent)
+    if code != 200:
+        failed.append('archiving agent %s (%s)' % (agent, 'no answer' if code is None else why(code, answer)))
+    return failed
+
+
+def start():
+    req = read(START)
+    if req['harness'] != HARNESS:
+        raise Refused('Cursor cloud agents run only Cursor\'s own agent, not %s' % req['harness'],
+                      'start again with harness cursor, or use a driver for %s' % req['harness'])
+    pins = pinned_skills()
+    run, agent = 'run-' + secrets.token_hex(6), 'bc-' + str(uuid.uuid4())
+    state = {'request': req, 'agent': agent, 'stopped': False, 'starting': True}  # never woken while starting
+    try:  # save the agent's id before it exists: nowhere to keep it, nothing is created
+        saved(run, state)
+        lock(run)
+    except (OSError, Refused):
+        raise Refused('the driver cannot save runs in its state folder; nothing was started', FIX_STATE)
+    code, answer = api('POST', '/agents', {
+        'prompt': {'text': prompt(req, pins)}, 'model': {'id': req['model']},
+        'repos': [{'url': 'https://github.com/' + req['repository']}], 'name': 'openwiz-' + run,
+        'agentId': agent, 'autoCreatePR': False})
+    if code is None or code >= 500 or code == 409:  # it may exist: end it by the id saved for it
+        failed = end(agent)
+        try:
+            saved(run, dict(state, stopped=True))
+        except OSError:
+            pass
+        if failed:
+            raise Refused('Cursor gave no answer to the start of run %s, and did not confirm ending its agent, so its '
+                          'outcome is unknown' % run, 'archive agent %s at cursor.com/agents, and read the ticket for '
+                          'what it did, before you start again' % agent)
+        raise Refused('Cursor gave no answer to the start of run %s, so the driver archived its agent; its outcome '
+                      'is unknown' % run, 'read the ticket for what its agent did before you start again')
+    if code not in (200, 201):
+        try:
+            saved(run, dict(state, stopped=True))
+        except OSError:
+            pass
+        raise refused(code, answer, 'create the agent; nothing was started',
+                      'check the repository is connected to Cursor and the model is one Cursor lists, then start again')
+    try:
+        saved(run, dict(state, starting=False))
+    except OSError:  # the agent exists but its run is not saved: end it, and never say retry
+        if end(agent):
+            raise Refused('run %s created agent %s but could not save it, nor confirm ending it; its outcome is '
+                          'unknown' % (run, agent), 'archive agent %s at cursor.com/agents, and read the ticket for '
+                          'what it did, before you start again' % agent)
+        raise Refused('run %s created an agent it could not save, so the driver archived it; its outcome is unknown'
+                      % run, 'read the ticket for what its agent did before you start again')
+    return {'run': run}
+
+
+def wake():
+    run = read(RUN)['run']
+    state = saved(run)
+    lock(run)
+    state = saved(run)
+    if state['stopped']:
+        raise Refused('run %s is stopped' % run, 'start a new run')
+    if state['starting']:
+        raise Refused('run %s never finished starting' % run, 'stop it, then start a new run')
+    code, answer = api('GET', '/agents/' + state['agent'])
+    if code != 200 or not isinstance(answer, dict):
+        raise Refused('Cursor did not show run %s\'s agent (%s); nothing was sent'
+                      % (run, 'no answer' if code is None else why(code, answer)),
+                      'check that api.cursor.com answers and ' + SIGN_IN + ', then wake it again')
+    if answer.get('status') == 'ARCHIVED':
+        raise Refused('run %s\'s agent is archived on Cursor' % run, 'stop it, then start a new run')
+    if answer.get('status') == 'ACTIVE':  # one agent, one run at a time: it is awake and reads the ticket itself
+        return {'run': run, 'woke': True}
+    code, answer = api('POST', '/agents/%s/runs' % state['agent'], {'prompt': {'text': prompt(state['request'])}})
+    if code is None:
+        raise Refused('Cursor gave no answer to the wake of run %s, so whether it woke is unknown' % run,
+                      'read the ticket; Cursor runs one turn per agent at a time, so waking again never starts two')
+    if code in (200, 201) or why(code, answer) == 'HTTP 409 agent_busy':
+        return {'run': run, 'woke': True}
+    raise refused(code, answer, 'wake run %s' % run, 'stop it, then start a new run')
+
+
+def stop():
+    run = read(RUN)['run']
+    saved(run)
+    lock(run)
+    state = saved(run)
+    try:  # first, so no wake sends a follow-up meanwhile
+        saved(run, dict(state, stopped=True))
+        kept = True
+    except OSError:
+        kept = False
+    failed = end(state['agent'])  # whether or not that save worked
+    if failed:
+        raise Refused('run %s: Cursor did not confirm %s' % (run, '; '.join(failed)),
+                      'stop it again, or archive agent %s at cursor.com/agents' % state['agent'])
+    if not kept:
+        raise Refused('run %s\'s agent is archived, but the driver could not save that it is stopped' % run,
+                      FIX_STATE + ', then stop it again')
+    return {'run': run, 'stopped': True}
 
 
 def answer(cmd):
@@ -205,74 +258,20 @@ def answer(cmd):
     if cmd == 'schema':
         with open(os.path.join(HERE, 'schema.json')) as f:
             return json.load(f)
-    if cmd == 'start':
-        req, run = read(START), 'run-' + secrets.token_hex(6)
-        state = {'request': req, 'turns': [], 'stopped': False, 'starting': True}  # never woken while starting
-        try:  # save the run before its turn starts: nowhere to keep it, nothing starts
-            saved(run, state)
-            os.close(os.open(os.path.join(STATE, run + '.lock'), os.O_WRONLY | os.O_CREAT, 0o600))
-        except OSError:
-            raise Refused('the driver cannot save runs in its state folder; nothing was started',
-                          'make OPENWIZ_CURSOR_STATE (or ~/.local/state/openwiz-cursor) a folder you can write')
-        try:
-            turn = launch(req, run, False)
-        except Refused:
-            try:
-                saved(run, dict(state, stopped=True))
-            except OSError:
-                pass
-            raise
-        try:
-            saved(run, dict(state, turns=[turn], starting=False))
-        except OSError:  # the turn began but its run is not saved: end it, and never say retry
-            unsaved(run, turn, 'start')
-        return {'run': run}
-    if cmd in ('wake', 'stop'):
-        run = read(RUN)['run']
-        lock(run)
-        state = saved(run)
-        if cmd == 'stop':
-            try:  # first, so no wake starts a turn meanwhile
-                saved(run, dict(state, stopped=True))
-                kept = True
-            except OSError:
-                kept = False
-            end(state['turns'], run)  # whether or not that save worked
-            if not kept:
-                raise Refused('run %s has ended, but the driver could not save that it is stopped' % run,
-                              'make OPENWIZ_CURSOR_STATE (or ~/.local/state/openwiz-cursor) a folder you can '
-                              'write, then stop it again')
-            return {'run': run, 'stopped': True}
-        if state['stopped']:
-            raise Refused('run %s is stopped' % run, 'start a new run')
-        if state.get('starting'):
-            raise Refused('run %s never finished starting' % run, 'stop it, then start a new run')
-        # One agent per run: while its last turn runs, that agent is awake and reads the ticket itself.
-        if state['turns'] and running(state['turns'][-1], run):
-            return {'run': run, 'woke': True}
-        try:  # a turn it could not save would be beyond a later wake's check: save first, or start nothing
-            saved(run, state)
-        except OSError:
-            raise Refused('the driver cannot save run %s; nothing was started' % run,
-                          'make OPENWIZ_CURSOR_STATE (or ~/.local/state/openwiz-cursor) a folder you can write')
-        turn = launch(state['request'], run, True)
-        try:
-            saved(run, dict(state, turns=state['turns'] + [turn]))
-        except OSError:
-            unsaved(run, turn, 'wake')
-        return {'run': run, 'woke': True}
+    if cmd in ('start', 'wake', 'stop'):
+        return globals()[cmd]()
     raise Refused('unknown command', 'run one of: version, schema, start, wake, stop')
 
 
 def main():
-    if len(sys.argv) > 2 and sys.argv[1] == '--turn':
-        return supervise(sys.argv[2:])
     try:
         out, code = answer(sys.argv[1] if len(sys.argv) == 2 else ''), 0
     except Refused as e:
         out, code = {'error': e.args[0], 'next': e.args[1]}, 1
     except Exception as e:
         out, code = {'error': 'the driver failed: ' + type(e).__name__, 'next': 'read its code, fix it, retry'}, 1
+    if code:  # D3: each one line of 1 to 300 characters
+        out = {k: ' '.join(v.split())[:300] for k, v in out.items()}
     print(json.dumps(out))
     sys.exit(code)
 
