@@ -1,0 +1,12 @@
+# red r2: python3 -I kernel/proofs/grok-bot/test_sanitize.py with CRLF notes, a non-pull pr value and changed raw shapes (assertion lines cut at 160 characters)
+FAIL: test_a_crlf_note_reads_like_any_other (__main__.Sanitize.test_a_crlf_note_reads_like_any_other)
+  File "kernel/proofs/grok-bot/test_sanitize.py", line 91, in test_a_crlf_note_reads_like_any_other
+AssertionError: 0 != 1
+FAIL: test_a_note_whose_pr_is_not_a_pull_request_url_is_withheld (__main__.Sanitize.test_a_note_whose_pr_is_not_a_pull_request_url_is_withheld)
+  File "kernel/proofs/grok-bot/test_sanitize.py", line 99, in test_a_note_whose_pr_is_not_a_pull_request_url_is_withheld
+AssertionError: 'PLANTED' unexpectedly found in '# Recorded run on example-owner/demo\n\n## Issue #1: Spec: a tiny greeting page\nclosed, completed; labels: spe
+FAIL: test_raw_records_with_unknown_or_missing_keys_are_refused (__main__.Sanitize.test_raw_records_with_unknown_or_missing_keys_are_refused)
+  File "kernel/proofs/grok-bot/test_sanitize.py", line 109, in test_raw_records_with_unknown_or_missing_keys_are_refused
+AssertionError: 0 != 2 : stages: ok
+Ran 10 tests in 0.329s
+FAILED (failures=3)

@@ -80,6 +80,36 @@ class Sanitize(unittest.TestCase):
         self.assertEqual(done.returncode, 1)
         self.assertIn('stages missing: merged', done.stdout)
 
+    def test_a_crlf_note_reads_like_any_other(self):
+        # catches: carriage returns from GitHub's web editor left in kept values
+        raw = copy.deepcopy(RAW)
+        note = raw['items'][1]['comments'][1]
+        note['body'] = note['body'].replace('\n', '\r\n')
+        done, run = build(raw)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertNotIn('\r', run)
+        self.assertEqual(run.count('builder done'), 1)
+
+    def test_a_note_whose_pr_is_not_a_pull_request_url_is_withheld(self):
+        # catches: a prefix check on pr letting any github.com text through
+        raw = copy.deepcopy(RAW)
+        note = raw['items'][1]['comments'][1]
+        note['body'] = note['body'].replace('pull/3', 'pull/3 and PLANTED words')
+        done, run = build(raw)
+        self.assertNotIn('PLANTED', run)
+        self.assertIn('status note withheld: private value', run)
+
+    def test_raw_records_with_unknown_or_missing_keys_are_refused(self):
+        # catches: a reader that guesses at a changed fetch shape instead of refusing it
+        for change in (lambda r: r['items'][0].update(extra=1), lambda r: r['items'][0].pop('labels'),
+                       lambda r: r['items'][1]['comments'][0].update(extra=1), lambda r: r.update(extra=1)):
+            raw = copy.deepcopy(RAW)
+            change(raw)
+            done, run = build(raw)
+            self.assertEqual(done.returncode, 2, done.stdout)
+            self.assertIn('sanitize.py: raw records', done.stderr)
+            self.assertEqual(run, '')
+
     def test_a_private_title_is_withheld(self):
         # catches: titles copied without the same guard as notes
         raw = copy.deepcopy(RAW)
