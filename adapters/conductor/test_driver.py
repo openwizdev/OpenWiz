@@ -30,6 +30,7 @@ t = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(t)
 t.main()
 '''
+KNOBS = {'OPENWIZ_KIT_RUN', 'FAKE_CONDUCTOR_FAIL', 'FAKE_CONDUCTOR_LOSE', 'FAKE_CURL_VERSION'}
 REQUEST = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude',
            'model': 'opus-5-5-1m'}
 
@@ -48,10 +49,10 @@ class Conductor(unittest.TestCase):
         for real in ('claude', 'codex', 'cursor', 'conductor'):
             self.assertIsNone(shutil.which(real, path=path), 'a real %s is reachable from the tests' % real)
         self.assertEqual(shutil.which('curl', path=path), os.path.join(HERE, 'fixtures', 'bin', 'curl'))
-        self.env = dict(os.environ, KIT_TRACKER=self.tracker, CONDUCTOR_API_KEY=KEY, FAKE_CONDUCTOR_KEY=KEY,
+        self.env = dict(KIT_TRACKER=self.tracker, CONDUCTOR_API_KEY=KEY, FAKE_CONDUCTOR_KEY=KEY,
                         FAKE_CONDUCTOR_STATE=self.host, FAKE_CONDUCTOR_LOG=self.log,
                         OPENWIZ_CONDUCTOR_STATE=os.path.join(self.folder, 'state'),
-                        PATH=path)
+                        PATH=path, HOME=self.folder, LANG='C.UTF-8')
 
     def driver(self, cmd, request=None, **env):
         p = subprocess.run([DRIVER, cmd], input=json.dumps(request) if request is not None else '',
@@ -69,6 +70,8 @@ class Conductor(unittest.TestCase):
             self.assertNotIn(KEY, ' '.join(c['args']), 'the key was on a command line')
             self.assertEqual(c['key_in'], ['CONDUCTOR_API_KEY', 'FAKE_CONDUCTOR_KEY'],
                              'curl got the key in a variable the test never gave it')
+            self.assertLessEqual(set(c['env']), set(self.env) | KNOBS,
+                                 'curl ran with a variable the test never gave it')
         return [(c['args'][4], c['args'][-1].split('.build', 1)[1]) for c in logged if c['args'] != ['--version']]
 
     def workspaces(self):

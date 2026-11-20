@@ -99,7 +99,7 @@ def main():
     holding = sorted(k for k, v in os.environ.items() if key and v == key)
     if LOG:
         with open(LOG, 'a') as f:
-            f.write(json.dumps({'args': args, 'key_in': holding}) + '\n')
+            f.write(json.dumps({'args': args, 'key_in': holding, 'env': sorted(os.environ)}) + '\n')
     if args == ['--version']:
         print('curl %s (fake)' % (os.environ.get('FAKE_CURL_VERSION') or '8.11.1'))
         sys.exit(0)
