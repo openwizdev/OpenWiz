@@ -1,7 +1,7 @@
 <h1 align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/openwizdev/.github/main/profile/art/lockup-dark.svg">
-    <img alt="OpenWiz" src="https://raw.githubusercontent.com/openwizdev/.github/main/profile/art/lockup-light.svg" width="320">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/openwizdev/.github/main/profile/art/lockup-dark.png">
+    <img alt="OpenWiz" src="https://raw.githubusercontent.com/openwizdev/.github/main/profile/art/lockup-light.png" width="320">
   </picture>
 </h1>
 
