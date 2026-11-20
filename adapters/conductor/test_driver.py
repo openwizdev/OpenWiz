@@ -65,8 +65,8 @@ if sys.argv[1:] == ['start'] and os.fork() == 0:
         null = os.open(os.devnull, os.O_RDWR)
         for fd in (0, 1, 2):
             os.dup2(null, fd)
-        with open(%r, 'w') as f:
-            f.write(str(os.getpid()))
+        with open(%r, 'a') as f:
+            f.write('%%d\\n' %% os.getpid())
         os.execv(sys.executable, [sys.executable, '-c', 'import time; time.sleep(30)'])
     os._exit(0)
 os.execv(%r, [%r] + sys.argv[1:])
@@ -153,11 +153,12 @@ class Conductor(unittest.TestCase):
             p = self.kit(leaves, 3)
         finally:
             with open(worker) as f:
-                pid = int(f.read())
-            try:
-                os.kill(pid, 9)
-            except ProcessLookupError:
-                pass
+                pids = [int(line) for line in f]
+            for pid in pids:
+                try:
+                    os.kill(pid, 9)
+                except ProcessLookupError:
+                    pass
         self.assertIn('fail stop: a process the run started still runs after stop', p.stdout, p.stdout + p.stderr)
 
     def test_start_wake_and_stop_reach_one_workspace(self):
