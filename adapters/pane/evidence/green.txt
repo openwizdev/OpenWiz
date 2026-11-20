@@ -1,4 +1,5 @@
 $ python3 -I adapters/pane/test_driver.py   # the same tests against adapters/pane/driver; each test environment is built from scratch (no BASH_ENV), PATH is fixtures/bin, python3 and sleep only
+test_a_later_stop_archives_the_pane_once_its_work_is_gone (__main__.Pane.test_a_later_stop_archives_the_pane_once_its_work_is_gone) ... ok
 test_a_start_whose_agent_never_gets_ready_closes_its_tab_and_archives_its_pane (__main__.Pane.test_a_start_whose_agent_never_gets_ready_closes_its_tab_and_archives_its_pane) ... ok
 test_errors_carry_fixed_reasons_never_pane_text (__main__.Pane.test_errors_carry_fixed_reasons_never_pane_text) ... ok
 test_kit_passes_all_five (__main__.Pane.test_kit_passes_all_five) ... ok
@@ -6,8 +7,7 @@ test_no_real_harness_or_host_cli_is_on_the_path (__main__.Pane.test_no_real_harn
 test_start_opens_one_agent_tab_with_the_model_and_no_permission_flag (__main__.Pane.test_start_opens_one_agent_tab_with_the_model_and_no_permission_flag) ... ok
 test_start_refuses_a_credential_in_any_field (__main__.Pane.test_start_refuses_a_credential_in_any_field) ... ok
 test_start_refuses_before_creating_anything (__main__.Pane.test_start_refuses_before_creating_anything) ... ok
-test_stop_keeps_uncommitted_work_and_says_where (__main__.Pane.test_stop_keeps_uncommitted_work_and_says_where) ... ok
-test_stop_never_forces_the_archive_and_answers_again (__main__.Pane.test_stop_never_forces_the_archive_and_answers_again) ... ok
+test_stop_with_work_ends_the_agent_keeps_the_pane_and_answers_stopped (__main__.Pane.test_stop_with_work_ends_the_agent_keeps_the_pane_and_answers_stopped) ... ok
 test_the_environment_is_built_from_scratch (__main__.Pane.test_the_environment_is_built_from_scratch) ... ok
 
 ----------------------------------------------------------------------

@@ -181,20 +181,18 @@ def lock(run):
         raise Refused('the driver cannot lock run %s in its state folder' % run, UNWRITABLE)
 
 
-def archive(run, state):
-    then = 'stop the run again'
+def archive(state):
     try:
-        runpane(then, 'panes', 'archive', '--pane', state['pane'], '--remove-worktree', '--yes')
-    except Failed as e:
-        blocked = (e.out or {}).get('blocked')
-        code = blocked.get('code') if isinstance(blocked, dict) else None
-        if code in ('unpushed-commits', 'uncommitted-changes', 'uncommitted-and-unpushed'):
-            raise Refused('run %s is stopped and its agent has ended, but Pane kept its Pane openwiz-%s and worktree: '
-                          'it holds work not yet committed or pushed (%s)' % (run, run, code),
-                          'push or discard that work yourself, then stop the run again to archive its Pane')
-        else:
-            raise Refused(line('run %s is stopped and its agent has ended, but its Pane was not archived: %s'
-                               % (run, e.args[0])), e.args[1])
+        runpane('stop the run again', 'panes', 'archive', '--pane', state['pane'], '--remove-worktree', '--yes')
+    except Refused:
+        return False
+    return True
+
+
+def archive_or_refuse(run, state):
+    if not archive(state):
+        raise Refused('Pane kept its Pane openwiz-%s and worktree' % run,
+                      'push or discard any work in it, then archive the Pane openwiz-%s in Pane yourself' % run)
 
 
 def created(out):
@@ -251,7 +249,7 @@ def start(req):
         step = 'check that `%s` runs and is signed in on this machine, then start again' % PROGRAMS[req['harness']]
     state['stopped'] = True
     failures = []
-    for undo in (lambda: close(state, 'start again'), lambda: archive(run, state)):
+    for undo in (lambda: close(state, 'start again'), lambda: archive_or_refuse(run, state)):
         try:
             undo()
         except Refused as e:
@@ -289,8 +287,7 @@ def stop(run):
         state['closed'] = True
         saved(run, state)
     if state['pane'] and not state['archived']:
-        archive(run, state)
-        state['archived'] = True
+        state['archived'] = archive(state)
         saved(run, state)
     return {'run': run, 'stopped': True}
 
