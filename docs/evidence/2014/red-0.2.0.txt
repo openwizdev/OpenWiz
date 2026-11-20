@@ -1,0 +1,15 @@
+# #2014 red run: the installed-build test, before the fix, WizSkills 0.2.0 (wizskills.lock on main, 4651b62f815fd8f142eaceaed1cb573d00bed091)
+$ python3 -I tools/release/test_package.py Package.test_installed_build_carries_the_wizskills_root_files_its_skills_read
+F
+======================================================================
+FAIL: test_installed_build_carries_the_wizskills_root_files_its_skills_read (__main__.Package.test_installed_build_carries_the_wizskills_root_files_its_skills_read)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/release/test_package.py", line 240, in test_installed_build_carries_the_wizskills_root_files_its_skills_read
+    self.assertNotIn('FileNotFoundError', host.stderr)
+AssertionError: 'FileNotFoundError' unexpectedly found in 'Traceback (most recent call last):\n  File "<tmp>/installed/current/runtime/skills/launch-fleet/scripts/host.py", line 76, in <module>\n    status, post = sibling(\'status\'), sibling(\'post\')\n                                      ^^^^^^^^^^^^^^^\n  File "<tmp>/installed/current/runtime/skills/launch-fleet/scripts/host.py", line 72, in sibling\n    spec.loader.exec_module(module)\n  File "<frozen importlib._bootstrap_external>", line 940, in exec_module\n  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed\n  File "<tmp>/installed/state/service/builds/c0d2a85cf96c17cce079f20c1e686196459b827c/runtime/skills/launch-fleet/scripts/post.py", line 28, in <module>\n    _spec.loader.exec_module(grants)\n  File "<frozen importlib._bootstrap_external>", line 940, in exec_module\n  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed\n  File "<tmp>/installed/state/service/builds/c0d2a85cf96c17cce079f20c1e686196459b827c/runtime/skills/launch-fleet/scripts/grants.py", line 20, in <module>\n    spec.loader.exec_module(protocol)\n  File "<frozen importlib._bootstrap_external>", line 940, in exec_module\n  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed\n  File "<tmp>/installed/state/service/builds/c0d2a85cf96c17cce079f20c1e686196459b827c/runtime/skills/launch-fleet/test/ops-protocol/protocol.py", line 13, in <module>\n    SCHEMA = json.loads((ROOT / "contracts/ops-dispatch.v1.schema.json").read_text())\n                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "<python>/pathlib.py", line 1059, in read_text\n    with self.open(mode=\'r\', encoding=encoding, errors=errors) as f:\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "<python>/pathlib.py", line 1045, in open\n    return io.open(self, mode, buffering, encoding, errors, newline)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: \'<tmp>/installed/state/service/builds/c0d2a85cf96c17cce079f20c1e686196459b827c/runtime/contracts/ops-dispatch.v1.schema.json\'\n'
+
+----------------------------------------------------------------------
+Ran 1 test in 4.214s
+
+FAILED (failures=1)

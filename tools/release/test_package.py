@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import shutil
 from pathlib import Path
 import subprocess
 import sys
@@ -195,6 +196,47 @@ class Package(unittest.TestCase):
                                      env={'PATH': os.environ['PATH']})
             self.assertEqual(checked.stdout.splitlines()[:1],
                              ['pass version: openwiz:records v1, and the schema is driver v1'], checked.stderr)
+
+    def test_installed_build_carries_the_wizskills_root_files_its_skills_read(self):
+        release = ROOT / '.wizskills'
+        self.assertTrue((release / '.git').is_dir(), 'Install the pinned WizSkills first: tools/wizskills/install.py')
+        show = lambda *a: subprocess.check_output(['git', '-C', str(release), *a])
+        roots = [p for p in show('ls-tree', '-r', '-z', '--name-only', 'HEAD', '--', 'contracts').decode().split('\0') if p]
+        with tempfile.TemporaryDirectory(prefix='openwiz-wizskills-products-') as temporary:
+            root = Path(temporary)
+            binaries = root / 'bin'
+            binaries.mkdir()
+            runtime_root(self, root)
+            subprocess.run(['rm', '-rf', str(root / 'skills')], check=True)
+            shutil.copytree(release, root / '.wizskills', symlinks=True)
+            os.symlink('.wizskills/skills', root / 'skills')
+            (root / '.gitignore').write_bytes(b'/.wizskills/\n')
+            shutil.copyfile(ROOT / 'wizskills.lock', root / 'wizskills.lock')
+            source = commit(root, '.gitignore', 'wizskills.lock', 'skills', 'tools')
+            target = TARGETS[0]
+            (root / 'job').mkdir()
+            receipts = build(binaries, source, target, root / 'job')
+            output = root / 'products'
+            result = subprocess.run(collector(root, binaries, output, source, target, receipts),
+                                    capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            bundle = root / 'bundle'
+            result = subprocess.run([sys.executable, str(ROOT / 'tools/release/package.py'), '--products', str(output),
+                                     '--identity', str(output) + '.json', '--output', str(bundle)],
+                                    capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.bound_and_installed(root, target, Path(str(output) + '.json'), bundle,
+                                     products=output, home=root / 'installed')
+            runtime = root / 'installed/current/runtime'
+            host = subprocess.run([sys.executable, '-I', str(runtime / 'skills/launch-fleet/scripts/host.py')],
+                                  cwd=root, capture_output=True, text=True, timeout=60, env={'PATH': os.environ['PATH']})
+            self.assertNotIn('FileNotFoundError', host.stderr)
+            self.assertIn('usage: which', host.stderr)
+            for path in roots:
+                self.assertEqual((runtime / path).read_bytes(), show('show', 'HEAD:' + path), path)
+            assets = json.loads(Path(str(output) + '.json').read_bytes())['assets']
+            self.assertEqual(sorted(a['path'] for a in assets if a['path'].startswith('runtime/contracts/')),
+                             sorted('runtime/' + path for path in roots))
 
     def bound_and_installed(self, root, target, identity_file, bundle, products=None, home=None):
         """#1148: the collected, packaged target's candidate artifact rows bind

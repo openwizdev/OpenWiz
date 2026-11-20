@@ -105,8 +105,11 @@ def collect(root, binaries, output, version, source, target, program_receipt):
     # #555: a runtime file's repository path, as the receipt records it and the
     # candidate verifies it: a skill is skills/<path>, the path users and briefs
     # see through the link, even when its bytes come from the WizSkills install.
+    released = {'runtime/' + relative for relative in installed or ()}
+
     def repository(name, path):
-        return name[len('runtime/'):] if name.startswith('runtime/skills/') else path.relative_to(root).as_posix()
+        return name[len('runtime/'):] if name.startswith('runtime/skills/') or name in released \
+            else path.relative_to(root).as_posix()
 
     output.mkdir(mode=0o700)
     rows, runtime = [], {}

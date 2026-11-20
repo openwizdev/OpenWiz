@@ -306,11 +306,15 @@ class CandidateSourceInstall(_wizskills_fixture().Fixture):
         finally:
             os.environ.clear()
             os.environ.update(saved)
-        skills = {'skills/alpha/SKILL.md': (install / 'skills/alpha/SKILL.md').read_bytes(),
-                  'skills/alpha/scripts/run.sh': (install / 'skills/alpha/scripts/run.sh').read_bytes()}
-        rl4.verify_runtime(bare, commit, skills, install)
-        with self.assertRaises(rl4.Refused):
-            rl4.verify_runtime(bare, commit, {**skills, 'skills/alpha/SKILL.md': b'Edited.\n'}, install)
+        skills_and_contracts = {path: (install / path).read_bytes() for path in
+                                ['skills/alpha/SKILL.md', 'skills/alpha/scripts/run.sh',
+                                 *(p.relative_to(install).as_posix() for p in (install / 'contracts').iterdir())]}
+        rl4.verify_runtime(bare, commit, skills_and_contracts, install)
+        for changed in ({**skills_and_contracts, 'skills/alpha/SKILL.md': b'Edited.\n'},
+                        {**skills_and_contracts, 'contracts/cli.v1.md': b'Edited.\n'},
+                        {p: d for p, d in skills_and_contracts.items() if p != 'contracts/cli.v1.md'}):
+            with self.assertRaises(rl4.Refused):
+                rl4.verify_runtime(bare, commit, changed, install)
 
 
 class CompiledProductIdentity(Repository):
