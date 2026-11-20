@@ -17,6 +17,8 @@ DRIVER = os.path.join(HERE, 'driver')
 KIT = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'kit.py')
 START = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'cursor',
          'model': 'synthetic-model-1'}
+ENV_KEYS = ('PATH', 'KIT_TRACKER', 'KIT_TEST', 'CURSOR_API_KEY', 'FAKE_TURNS', 'FAKE_HOLD', 'FAKE_CURSOR_LOG',
+            'FAKE_CURSOR_STATE', 'OPENWIZ_CURSOR_STATE')
 TOKEN = 'synthetic-' + 'x' * 24
 
 
@@ -106,6 +108,7 @@ class Cursor(unittest.TestCase):
         found = {name: shutil.which(name, path=self.env['PATH']) for name in ('curl', 'claude', 'codex', 'agent', 'gh')}
         self.assertEqual(found, dict.fromkeys(found, None) | {'curl': os.path.join(HERE, 'fixtures', 'bin', 'curl')})
         self.assertEqual(sorted(os.listdir(self.env['PATH'].split(os.pathsep)[1])), ['python3'])
+        self.assertEqual(sorted(self.env), sorted(ENV_KEYS))
 
     def test_kit_passes_all_five(self):
         p = subprocess.run([sys.executable, '-I', KIT, '--driver', DRIVER, '--repo', 'example/site',
