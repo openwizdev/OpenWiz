@@ -10,7 +10,7 @@ Ticket #1396 (KN9 of spec #1365). The proof is one live run: Grok Bot, as orches
 | --- | --- |
 | `sanitize.py` | `fetch` reads the demo repository's records into a private file; `build` turns them into `run.md` and names any stage the run missed |
 | `test_sanitize.py`, `fixtures/raw.json` | The sanitizer's proofs, on synthetic records with planted private text |
-| `evidence/red.txt`, `evidence/green.txt` | The sanitizer's failing-first run and its passing run |
+| `evidence/red.txt`, `evidence/red-r1.txt`, `evidence/green.txt` | The sanitizer's failing-first runs (its first slice, then the plan approval forms) and its passing run |
 | `run.md` | After the run: the sanitized timeline of every issue and pull request on the demo repository |
 | `checks.txt` | After the run: the stage line, the privacy check and the no-special-case check, each with its exit code |
 
@@ -20,7 +20,7 @@ python3 -I kernel/proofs/grok-bot/test_sanitize.py
 
 ## What `run.md` keeps
 
-Only record forms, from the demo repository's record authors (its `docs/agents/fleet.md` row): status notes (agent, state, harness, model, skills, step, pull request), `VERDICT:` headers, `launch-fleet:` first lines, plan approval headers without the name or words, private-record pointers in an issue body, and merges with their heads. Every other body, including the grill's answers, review findings and anyone else's comments, is dropped to `comment, body dropped`. A note or title holding a thread id, machine path, credential shape, email address or quote mark is withheld whole. The stages it checks are: spec, grill pointer, plan approved, started, builder, reviewer, approved, merged.
+Only record forms, from the demo repository's record authors (its `docs/agents/fleet.md` row): status notes (agent, state, harness, model, skills, step, pull request), `VERDICT:` headers, `launch-fleet:` first lines, the machine plan approval header with its `Grill confirmed:` pointer, `Checks:` and `Fingerprint:` lines, human plan approval and spec confirmation headers without the name or words (with their `Private record:` pointer), and merges with their heads. Every other body, including the grill's answers, review findings and anyone else's comments, is dropped to `comment, body dropped`. A note or title holding a thread id, machine path, credential shape, email address or quote mark is withheld whole. The stages it checks are: spec (an issue labelled `spec`), grill pointer (a `Grill confirmed:` line), plan approved, started, builder, reviewer, approved, merged.
 
 ## The owner's run
 

@@ -1,4 +1,5 @@
 # green: python3 -I kernel/proofs/grok-bot/test_sanitize.py
+test_a_human_plan_approval_keeps_its_header_without_the_name (__main__.Sanitize.test_a_human_plan_approval_keeps_its_header_without_the_name) ... ok
 test_a_missing_stage_fails_and_is_named (__main__.Sanitize.test_a_missing_stage_fails_and_is_named) ... ok
 test_a_note_from_someone_else_is_discussion (__main__.Sanitize.test_a_note_from_someone_else_is_discussion) ... ok
 test_a_note_with_a_private_value_is_withheld_whole (__main__.Sanitize.test_a_note_with_a_private_value_is_withheld_whole) ... ok
@@ -7,6 +8,6 @@ test_full_run_keeps_every_record_form_and_covers_every_stage (__main__.Sanitize.
 test_prose_and_exact_words_never_reach_the_evidence (__main__.Sanitize.test_prose_and_exact_words_never_reach_the_evidence) ... ok
 
 ----------------------------------------------------------------------
-Ran 6 tests in 0.230s
+Ran 7 tests in 0.238s
 
 OK
