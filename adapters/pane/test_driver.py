@@ -27,10 +27,13 @@ class Pane(unittest.TestCase):
         with open(self.tracker, 'w') as f:
             json.dump({'record_authors': ['example-bot[bot]'], 'comments': []}, f)
         self.calls = os.path.join(self.folder, 'calls')
-        self.env = dict(os.environ, KIT_TRACKER=self.tracker, KIT_TEST=self.mark, GH_TOKEN=TOKEN,
+        self.env = dict(HOME=self.folder, KIT_TRACKER=self.tracker, KIT_TEST=self.mark, GH_TOKEN=TOKEN,
                         FAKE_PANE_STATE=os.path.join(self.folder, 'pane.json'), FAKE_PANE_CALLS=self.calls,
                         OPENWIZ_PANE_STATE=os.path.join(self.folder, 'state'),
                         PATH=os.path.join(HERE, 'fixtures', 'bin') + os.pathsep + self.tools())
+        reachable = [name for name in REAL if shutil.which(name, path=self.env['PATH'])]
+        if reachable:
+            raise RuntimeError('a real program is on the test PATH: ' + ', '.join(reachable))
 
     def tools(self):
         folder = os.path.join(self.folder, 'tools')

@@ -1,4 +1,4 @@
-$ python3 -I adapters/pane/test_driver.py   # the same tests against adapters/pane/driver; PATH is fixtures/bin, python3 and sleep only
+$ python3 -I adapters/pane/test_driver.py   # the same tests against adapters/pane/driver; each test environment is built from scratch (no BASH_ENV), PATH is fixtures/bin, python3 and sleep only
 test_a_start_whose_agent_never_gets_ready_closes_its_tab_and_archives_its_pane (__main__.Pane.test_a_start_whose_agent_never_gets_ready_closes_its_tab_and_archives_its_pane) ... ok
 test_kit_passes_all_five (__main__.Pane.test_kit_passes_all_five) ... ok
 test_no_real_harness_or_host_cli_is_on_the_path (__main__.Pane.test_no_real_harness_or_host_cli_is_on_the_path) ... ok
@@ -6,8 +6,9 @@ test_start_opens_one_agent_tab_with_the_model_and_no_permission_flag (__main__.P
 test_start_refuses_before_creating_anything (__main__.Pane.test_start_refuses_before_creating_anything) ... ok
 test_stop_archives_unpushed_commits_and_answers_again (__main__.Pane.test_stop_archives_unpushed_commits_and_answers_again) ... ok
 test_stop_keeps_uncommitted_work_and_says_where (__main__.Pane.test_stop_keeps_uncommitted_work_and_says_where) ... ok
+test_the_environment_is_built_from_scratch (__main__.Pane.test_the_environment_is_built_from_scratch) ... ok
 
 ----------------------------------------------------------------------
-Ran 7 tests in <t>s
+Ran 8 tests in <t>s
 
 OK
