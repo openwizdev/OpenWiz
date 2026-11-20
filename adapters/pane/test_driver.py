@@ -76,6 +76,18 @@ class Pane(unittest.TestCase):
         self.assertEqual(sorted(self.env), sorted(('KIT_TRACKER', 'KIT_TEST', 'GH_TOKEN', 'FAKE_PANE_STATE',
                                                    'FAKE_PANE_CALLS', 'OPENWIZ_PANE_STATE', 'PATH', 'HOME')))
 
+    def test_errors_carry_fixed_reasons_never_pane_text(self):
+        code, run = self.driver('start', REQUEST)
+        answers = [self.driver('start', REQUEST, FAKE_PANE_DOWN='1'), self.driver('start', REQUEST, FAKE_PANE_READY='no'),
+                   self.driver('stop', run, FAKE_PANE_DIRTY='uncommitted')]
+        for code, out in answers:
+            self.assertEqual(code, 1, out)
+            self.assertNotIn('synthetic', out['error'] + out['next'])
+        self.assertNotIn('/synthetic/', json.dumps(answers))
+        self.assertIn('open the Pane app', answers[0][1]['next'])
+        self.assertIn('command-exited', answers[1][1]['error'])
+        self.assertIn('openwiz-' + run['run'], answers[2][1]['error'])
+
     def test_kit_passes_all_five(self):
         p = subprocess.run([sys.executable, '-I', KIT, '--driver', DRIVER, '--repo', 'example/site',
                             '--ticket', '7', '--harness', 'claude', '--model', 'claude-opus-5-5',
