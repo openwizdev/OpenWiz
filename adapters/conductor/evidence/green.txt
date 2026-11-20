@@ -1,4 +1,4 @@
-# at 33134307
+# at 44478b95
 $ python3 -I adapters/conductor/test_driver.py
 test_a_failed_archive_says_so_and_the_run_stays_stopped (__main__.Conductor.test_a_failed_archive_says_so_and_the_run_stays_stopped) ... ok
 test_a_lost_start_reply_is_never_retried (__main__.Conductor.test_a_lost_start_reply_is_never_retried) ... ok
