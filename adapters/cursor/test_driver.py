@@ -31,6 +31,9 @@ class Cursor(unittest.TestCase):
     def setUp(self):
         self.folder = tempfile.mkdtemp()
         self.mark = secrets.token_hex(8)
+        python = os.path.join(self.folder, 'python')
+        os.mkdir(python)
+        os.symlink(sys.executable, os.path.join(python, 'python3'))
         self.tracker = os.path.join(self.folder, 'tracker.json')
         with open(self.tracker, 'w') as f:
             json.dump({'record_authors': ['example-bot[bot]'], 'comments': []}, f)
@@ -40,7 +43,7 @@ class Cursor(unittest.TestCase):
                         FAKE_TURNS=self.turns, FAKE_HOLD=self.hold, FAKE_CURSOR_LOG=self.log,
                         FAKE_CURSOR_STATE=os.path.join(self.folder, 'cursor.json'),
                         OPENWIZ_CURSOR_STATE=os.path.join(self.folder, 'state'),
-                        PATH=os.path.join(HERE, 'fixtures', 'bin') + os.pathsep + os.environ.get('PATH', ''))
+                        PATH=os.path.join(HERE, 'fixtures', 'bin') + os.pathsep + python)
 
     def tearDown(self):
         for pid in self.marked():
