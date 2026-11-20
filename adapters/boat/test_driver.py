@@ -18,6 +18,7 @@ sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.abspath(__file__))
 DRIVER = os.path.join(HERE, 'driver')
 KIT = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'kit.py')
+NO_PROC = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'fixtures', 'no-proc')  # macOS, faked (#2010)
 # A synthetic value in a GitHub token's shape, built here so no file holds one.
 TOKEN = 'gh' + 'p_' + 'Synthetic0Boat0Value' * 2 + '00'
 # A driver whose next save fails once a turn's `boat prompt` has begun, as a full disk would make it.
@@ -424,6 +425,38 @@ class Boat(unittest.TestCase):
                 open(self.env['FAKE_BOAT_STATE'] + '.homes/bx_fake0005/wizskills/.git/fake.json') as g:
             self.assertEqual((code, json.load(g)['commit']), (0, json.load(f)['commit']), out)
 
+
+    def test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild(self):
+        # catches: a driver that keeps or stops its processes only through Linux's /proc, subreaper or pidfd,
+        # so on macOS a turn never starts, or a worker `boat prompt` left runs on after stop: one in the turn's
+        # process group with a clean environment, or one in its own session carrying the run's mark (#2010).
+        macos = {'PATH': NO_PROC + os.pathsep + self.env['PATH'], 'NO_PROC_PYTHON': sys.executable}
+        for worker in ({}, {'FAKE_CLEAN': '1', 'FAKE_SAME_GROUP': '1'}):
+            with self.subTest(**worker):
+                self.tearDown()
+                self.setUp()
+                macos['PATH'] = NO_PROC + os.pathsep + self.env['PATH']
+                code, out = self.driver('start', REQUEST, **macos, **worker)
+                self.assertEqual(code, 0, out)
+                self.assertTrue(self.until(lambda: len(self.logged()) == 1 and not alive(self.logged()[0][0])))
+                worker_pid = self.logged()[0][1]
+                self.assertTrue(alive(worker_pid))
+                self.assertEqual(self.driver('stop', out, **macos), (0, dict(out, stopped=True)))
+                self.assertFalse(alive(worker_pid), 'a worker the prompt left still runs after stop')
+
+        self.tearDown()
+        self.setUp()
+        macos['PATH'] = NO_PROC + os.pathsep + self.env['PATH']
+        p = subprocess.run([os.path.join(NO_PROC, 'python3'), '-I', KIT, '--driver', DRIVER, '--repo', 'example/site',
+                            '--ticket', '7', '--harness', 'claude', '--model', 'claude-opus-5-5',
+                            '--tracker', self.tracker, '--wait', '8'],
+                           env=dict(self.env, **macos), capture_output=True, text=True, timeout=300)
+        self.assertEqual((p.returncode, p.stdout.splitlines()), (0, [
+            'pass version: openwiz:records v1, and the schema is driver v1',
+            'pass start: the run posted builder status note 1',
+            'pass wake: the run edited builder status note 1',
+            'pass stop: the run ended, and a wake after it is refused',
+            'pass token: no login or token passed through the driver']), p.stderr)
 
 if __name__ == '__main__':
     unittest.main()

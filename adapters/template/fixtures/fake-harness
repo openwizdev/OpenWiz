@@ -4,13 +4,14 @@
 Each turn hands work to a detached child in its own session (as a harness that starts a worker does),
 appends `<turn pid> <child pid> first|woken` to the file named by FAKE_TURNS, then ends its turn, or keeps
 running while the file named by FAKE_HOLD exists. With FAKE_CLEAN set, the child gets a clean environment
-(only PATH), so it carries no mark it inherited.
+(only PATH), so it carries no mark it inherited. With FAKE_SAME_GROUP set, the child stays in the turn's
+process group and session instead (#2010).
 """
 import os, subprocess, sys, time
 
 args = sys.argv[1:]
 woken = args[args.index('-p') + 1].startswith('You were woken')
-child = subprocess.Popen(['sleep', '120'], start_new_session=True,
+child = subprocess.Popen(['sleep', '120'], start_new_session=not os.environ.get('FAKE_SAME_GROUP'),
                          env={'PATH': os.environ['PATH']} if os.environ.get('FAKE_CLEAN') else None,
                          stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 with open(os.environ['FAKE_TURNS'], 'a') as f:

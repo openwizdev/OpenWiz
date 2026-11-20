@@ -18,6 +18,7 @@ sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.abspath(__file__))
 FIXTURES = os.path.join(HERE, 'fixtures')
 TEMPLATE = os.path.join(HERE, '..', '..', 'adapters', 'template', 'driver')
+NO_PROC = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'fixtures', 'no-proc')  # macOS, faked (#2010)
 # A synthetic value in a GitHub token's shape, built here so no file holds one.
 TOKEN = 'gh' + 'p_' + 'Synthetic0Kit0Value' * 2 + '00'
 PASS = ['pass version: openwiz:records v1, and the schema is driver v1',
@@ -83,15 +84,29 @@ class Kit(unittest.TestCase):
             except OSError:
                 pass
 
-    def kit(self, driver):
-        p = subprocess.run([sys.executable, '-I', os.path.join(HERE, 'kit.py'), '--driver', driver,
+    def kit(self, driver, python=sys.executable, **env):
+        p = subprocess.run([python, '-I', os.path.join(HERE, 'kit.py'), '--driver', driver,
                             '--repo', 'example/site', '--ticket', '7', '--harness', 'fake-harness',
                             '--model', 'Synthetic 1', '--tracker', self.env['KIT_TRACKER'], '--wait', '8'],
-                           env=self.env, capture_output=True, text=True, timeout=120)
+                           env=dict(self.env, **env), capture_output=True, text=True, timeout=120)
         return p.returncode, p.stdout.splitlines(), p.stderr
 
     def test_template_passes_all_five(self):
         self.assertEqual(self.kit(TEMPLATE)[:2], (0, PASS))
+
+    def test_without_proc_as_on_macos_the_template_passes_all_five(self):
+        # catches: a kit that watches the driver's processes only through Linux's /proc, so on macOS it cannot
+        # run at all, or its stop and token checks see no process and pass a driver that leaves one (#2010).
+        macos = {'PATH': NO_PROC + os.pathsep + self.env['PATH'], 'NO_PROC_PYTHON': sys.executable}
+        self.assertEqual(self.kit(TEMPLATE, os.path.join(NO_PROC, 'python3'), **macos)[:2], (0, PASS))
+        for name in ('stop-leaves-run', 'token-in-env'):
+            with self.subTest(name):
+                self.tearDown()
+                self.setUp()
+                macos['PATH'] = NO_PROC + os.pathsep + self.env['PATH']
+                code, out, err = self.kit(os.path.join(FIXTURES, 'planted', name), os.path.join(NO_PROC, 'python3'),
+                                          **macos)
+                self.assertEqual((code, out), (1, PLANTED[name]), err)
 
     def test_each_planted_driver_fails_its_check(self):
         for name, lines in PLANTED.items():

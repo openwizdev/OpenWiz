@@ -1,0 +1,14 @@
+#!/bin/sh
+# python3 as on macOS (see no_proc.py), with this folder first on PATH. The real python3 is NO_PROC_PYTHON,
+# or else the next python3 on PATH.
+here=$(cd "$(dirname "$0")" && pwd)
+real=$NO_PROC_PYTHON
+if [ -z "$real" ]; then
+    IFS=:
+    for d in $PATH; do
+        [ "$(cd "$d" 2>/dev/null && pwd)" = "$here" ] && continue
+        [ -x "$d/python3" ] && real=$d/python3 && break
+    done
+    unset IFS
+fi
+exec "$real" -I "$here/no_proc.py" "$@"
