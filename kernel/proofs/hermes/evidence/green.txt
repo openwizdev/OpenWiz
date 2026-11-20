@@ -1,0 +1,9 @@
+test_cli_refuses_without_literals_and_writes_nothing (__main__.Sanitize.test_cli_refuses_without_literals_and_writes_nothing) ... ok
+test_cli_removes_output_when_the_privacy_check_refuses (__main__.Sanitize.test_cli_removes_output_when_the_privacy_check_refuses) ... ok
+test_live_identifiers_and_credentials_are_replaced (__main__.Sanitize.test_live_identifiers_and_credentials_are_replaced) ... ok
+test_same_run_id_maps_to_the_same_placeholder (__main__.Sanitize.test_same_run_id_maps_to_the_same_placeholder) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.082s
+
+OK
