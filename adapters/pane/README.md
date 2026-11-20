@@ -4,13 +4,13 @@ Login: stays on your machine
 
 A [driver v1](../../kernel/driver.v1.md) that runs each builder in its own Pane, through your own `runpane` CLI and the [Pane](https://runpane.com) app on your computer. A Pane is a git worktree on its own branch, with tabs; each run is one Pane with one agent tab. One Python file, standard library only. Runs are saved in `$OPENWIZ_PANE_STATE` (default `~/.local/state/openwiz-pane`), owner-only.
 
-**Pane's desktop app, or its daemon (`runpane install daemon`), must be running.** The `runpane` CLI talks to it, and it runs the agents. Without it, every command refuses with Pane's own next step.
+**Pane's desktop app, or its daemon (`runpane install daemon`), must be running.** The `runpane` CLI talks to it, and it runs the agents. Without it, every command refuses and says to open the Pane app.
 
 | Command | What it does in Pane |
 | --- | --- |
 | `start` | Finds the repository you saved in Pane under the GitHub repository's name (`runpane repos list`). Then `runpane panes create --repo <its id> --name openwiz-<run> --agent <harness> --tool-command "<program> --model <model>" --prompt <the ticket and skill> --source agent --wait-ready`. It answers once Pane has seen the agent's input box and delivered the prompt. If the agent never gets ready, it closes the tab and archives the new Pane before refusing. |
 | `wake` | `runpane panels submit --panel <the run's tab>`: the same agent, in the same tab, reads its ticket again and edits its own status note. A stopped run is never woken. |
-| `stop` | `runpane panels close --force` closes the tab, which ends its agent even mid-turn. Then `runpane panes archive --remove-worktree` removes the Pane and its worktree. Pane always keeps the local branch. When Pane only reports commits not yet pushed, the driver archives anyway (`--force`), because those commits stay on that branch. When the worktree holds uncommitted work, the driver never forces it away. The run stays stopped, and the error names the worktree. Commit or discard that work, then stop again to archive it. |
+| `stop` | `runpane panels close --force` closes the tab, which ends its agent even mid-turn. Then `runpane panes archive --remove-worktree` removes the Pane and its worktree. Pane always keeps the local branch. When Pane only reports commits not yet pushed, the driver archives anyway (`--force`), because those commits stay on that branch. When the worktree holds uncommitted work, the driver never forces it away. The run stays stopped, and the error names the Pane. Commit or discard that work, then stop again to archive it. |
 
 `version` adds `many-at-once` to `can`: Pane runs many Panes side by side.
 
@@ -31,15 +31,22 @@ Pane is licensed AGPL-3.0. This driver only runs the `runpane` program you insta
 
 ## The kit
 
+The fixture tests run only on the synthetic `runpane`, with nothing real on their PATH, and cost nothing:
+
+```sh
+python3 -I adapters/pane/test_driver.py
+```
+
+**Live check only.** The kit command below starts a real agent in your real Pane, on your real agent account. Each run is one start and one wake of that agent, so it uses that agent's paid model usage or subscription allowance. It also creates and then archives a Pane and its worktree in the repository you name. Run it only for the live check, by hand, on a throwaway repository and ticket:
+
 ```sh
 python3 -I kernel/driver-kit/kit.py --driver adapters/pane/driver \
   --repo <owner>/<throwaway> --ticket <n> --harness claude --model <model>
-python3 -I adapters/pane/test_driver.py      # the fixture tests, on a synthetic runpane CLI
 ```
 
 `fixtures/bin/runpane` is a synthetic `runpane` CLI, written for these tests. Its JSON answers follow the shapes `runpane help` and its published JSON schemas name (runpane 2.4.246). No answer in it was observed on a live Pane; the live check on the real host is the proof.
 
-It plays Pane and its agents. It keeps its Panes in the JSON file `FAKE_PANE_STATE`. `panes create` starts the tab's agent, a `sleep` that inherits the caller's environment and ends when its tab closes, and, when the prompt names a skill, posts one builder status note in the kit's local tracker (`KIT_TRACKER`); each `panels submit` edits that note. It takes only the flags the driver passes and exits 2 on any other. Its settings:
+It plays Pane and its agents. It keeps its Panes in the JSON file `FAKE_PANE_STATE`. `panes create` starts the tab's agent, a `sleep` that inherits the caller's environment and ends when its tab closes, and, when the prompt names a skill, posts one builder status note in the kit's local tracker (`KIT_TRACKER`); each `panels submit` edits that note. It takes only the flags the driver passes and exits 2 on any other. Its failure texts carry the word `synthetic`, so a test can show that the driver's errors keep only Pane's error code and its own fixed text. Its settings:
 
 | Variable | What it plants |
 | --- | --- |

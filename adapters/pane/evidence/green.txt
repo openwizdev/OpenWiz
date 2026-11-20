@@ -1,5 +1,6 @@
 $ python3 -I adapters/pane/test_driver.py   # the same tests against adapters/pane/driver; each test environment is built from scratch (no BASH_ENV), PATH is fixtures/bin, python3 and sleep only
 test_a_start_whose_agent_never_gets_ready_closes_its_tab_and_archives_its_pane (__main__.Pane.test_a_start_whose_agent_never_gets_ready_closes_its_tab_and_archives_its_pane) ... ok
+test_errors_carry_fixed_reasons_never_pane_text (__main__.Pane.test_errors_carry_fixed_reasons_never_pane_text) ... ok
 test_kit_passes_all_five (__main__.Pane.test_kit_passes_all_five) ... ok
 test_no_real_harness_or_host_cli_is_on_the_path (__main__.Pane.test_no_real_harness_or_host_cli_is_on_the_path) ... ok
 test_start_opens_one_agent_tab_with_the_model_and_no_permission_flag (__main__.Pane.test_start_opens_one_agent_tab_with_the_model_and_no_permission_flag) ... ok
@@ -9,6 +10,6 @@ test_stop_keeps_uncommitted_work_and_says_where (__main__.Pane.test_stop_keeps_u
 test_the_environment_is_built_from_scratch (__main__.Pane.test_the_environment_is_built_from_scratch) ... ok
 
 ----------------------------------------------------------------------
-Ran 8 tests in <t>s
+Ran 9 tests in <t>s
 
 OK

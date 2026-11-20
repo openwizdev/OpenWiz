@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
+import glob
 import json
 import os
-import secrets
 import shutil
 import signal
 import subprocess
@@ -22,12 +22,11 @@ REQUEST = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', '
 class Pane(unittest.TestCase):
     def setUp(self):
         self.folder = tempfile.mkdtemp()
-        self.mark = secrets.token_hex(8)
         self.tracker = os.path.join(self.folder, 'tracker.json')
         with open(self.tracker, 'w') as f:
             json.dump({'record_authors': ['example-bot[bot]'], 'comments': []}, f)
         self.calls = os.path.join(self.folder, 'calls')
-        self.env = dict(HOME=self.folder, KIT_TRACKER=self.tracker, KIT_TEST=self.mark, GH_TOKEN=TOKEN,
+        self.env = dict(HOME=self.folder, KIT_TRACKER=self.tracker, GH_TOKEN=TOKEN,
                         FAKE_PANE_STATE=os.path.join(self.folder, 'pane.json'), FAKE_PANE_CALLS=self.calls,
                         OPENWIZ_PANE_STATE=os.path.join(self.folder, 'state'),
                         PATH=os.path.join(HERE, 'fixtures', 'bin') + os.pathsep + self.tools())
@@ -43,13 +42,16 @@ class Pane(unittest.TestCase):
         return folder
 
     def tearDown(self):
-        for pid in filter(str.isdigit, os.listdir('/proc')):
-            try:
-                with open('/proc/%s/environ' % pid, 'rb') as f:
-                    if ('KIT_TEST=' + self.mark).encode() in f.read().split(b'\0'):
-                        os.kill(int(pid), signal.SIGKILL)
-            except OSError:
-                pass
+        for state in glob.glob(os.path.join(self.folder, 'pane*.json')):
+            with open(state) as f:
+                agents = [p['agent'] for p in json.load(f)['panels'].values() if p['agent']]
+            for pid in agents:
+                try:
+                    with open('/proc/%d/cmdline' % pid, 'rb') as f:
+                        if f.read().split(b'\0')[:2] == [b'sleep', b'300']:
+                            os.kill(pid, signal.SIGKILL)
+                except OSError:
+                    pass
 
     def driver(self, cmd, request, **env):
         p = subprocess.run([DRIVER, cmd], input=json.dumps(request), env=dict(self.env, **env),
@@ -73,7 +75,7 @@ class Pane(unittest.TestCase):
         self.assertEqual(shutil.which('runpane', path=self.env['PATH']), os.path.join(HERE, 'fixtures', 'bin', 'runpane'))
 
     def test_the_environment_is_built_from_scratch(self):
-        self.assertEqual(sorted(self.env), sorted(('KIT_TRACKER', 'KIT_TEST', 'GH_TOKEN', 'FAKE_PANE_STATE',
+        self.assertEqual(sorted(self.env), sorted(('KIT_TRACKER', 'GH_TOKEN', 'FAKE_PANE_STATE',
                                                    'FAKE_PANE_CALLS', 'OPENWIZ_PANE_STATE', 'PATH', 'HOME')))
 
     def test_errors_carry_fixed_reasons_never_pane_text(self):
@@ -139,7 +141,7 @@ class Pane(unittest.TestCase):
         self.assertEqual(code, 0, run)
         code, out = self.driver('stop', run, FAKE_PANE_DIRTY='uncommitted')
         self.assertEqual(code, 1, out)
-        self.assertIn('/synthetic/worktrees/openwiz-' + run['run'], out['error'])
+        self.assertIn('Pane openwiz-' + run['run'], out['error'])
         self.assertEqual([p['archived'] for p in self.pane()['panes'].values()], [False])
         self.assertTrue(all(p['closed'] for p in self.pane()['panels'].values()))
         self.assertEqual(self.driver('wake', run)[0], 1)

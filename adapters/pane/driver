@@ -10,6 +10,7 @@ START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket':
          'model': r'[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}'}
 RUN = {'run': r'run-[0-9a-f]{12}'}
 ID = re.compile(r'[A-Za-z0-9_.:-]{1,100}')
+CODE = re.compile(r'[a-z0-9][a-z0-9._-]{0,59}')
 READY_MS = 60000
 UNWRITABLE = 'make OPENWIZ_PANE_STATE (or ~/.local/state/openwiz-pane) a folder you can write'
 
@@ -75,9 +76,14 @@ def runpane(then, *args, wait=100):
     if p.returncode == 0 and out and out.get('ok') is True:
         return out
     why = [x for x in ((out or {}).get(k) for k in ('error', 'blocked', 'refused')) if isinstance(x, dict)]
-    detail = '%s (%s)' % (why[0].get('message'), why[0].get('code')) if why else p.stderr.strip()[-200:] or 'no answer'
-    step = why[0].get('next') if why and isinstance(why[0].get('next'), str) else 'fix what Pane said'
-    raise Failed(line('runpane %s %s failed: %s' % (args[0], args[1], detail)), line('%s, then %s' % (step, then)), out)
+    raise Failed('runpane %s %s failed (%s)' % (args[0], args[1], code_of(why[0] if why else {})),
+                 'open the Pane app (or start its daemon) if it is closed, and run `runpane %s %s` yourself to see '
+                 'why; then %s' % (args[0], args[1], then), out)
+
+
+def code_of(answer):
+    code = answer.get('code')
+    return code if isinstance(code, str) and CODE.fullmatch(code) else 'no code'
 
 
 def text_id(value):
@@ -150,8 +156,8 @@ def archive(run, state):
             # DATA LOSS: --force only for commits Pane keeps on the local branch; uncommitted work is never forced.
             runpane(then, 'panes', 'archive', '--pane', state['pane'], '--remove-worktree', '--force', '--yes')
         elif code in ('uncommitted-changes', 'uncommitted-and-unpushed'):
-            raise Refused(line('run %s is stopped and its agent has ended, but Pane kept its worktree %s: it holds '
-                               'uncommitted work' % (run, state['worktree'])),
+            raise Refused(line('run %s is stopped and its agent has ended, but Pane kept its Pane openwiz-%s and '
+                               'worktree: it holds uncommitted work' % (run, run)),
                           'commit and push that work, or discard it, yourself; then stop the run again to archive '
                           'its Pane')
         else:
@@ -168,7 +174,7 @@ def start(req):
         raise Refused('Pane runs no harness %s' % req['harness'], 'use one of: ' + ', '.join(PROGRAMS))
     repo = saved_repository(req['repository'])
     run = 'run-' + secrets.token_hex(6)
-    state = {'request': req, 'pane': None, 'panel': None, 'worktree': None, 'starting': True, 'stopped': False,
+    state = {'request': req, 'pane': None, 'panel': None, 'starting': True, 'stopped': False,
              'closed': False, 'archived': False}
     try:
         saved(run, state)
@@ -187,8 +193,7 @@ def start(req):
         raise Refused(e.args[0], line(e.args[1] + '; if Pane shows a Pane named %s, archive it first' % name))
     item = (out.get('items') or [None])[0]
     item = item if isinstance(item, dict) else {}
-    state.update(pane=text_id(item.get('paneId')), panel=text_id(item.get('panelId')),
-                 worktree=item.get('worktreePath') if isinstance(item.get('worktreePath'), str) else 'unknown')
+    state.update(pane=text_id(item.get('paneId')), panel=text_id(item.get('panelId')))
     readiness = item.get('readiness') if isinstance(item.get('readiness'), dict) else {}
     if state['pane'] and state['panel'] and item.get('ok') is True and readiness.get('ok') is True:
         try:
@@ -202,8 +207,7 @@ def start(req):
                       'archive the Pane named %s in Pane yourself, then start again' % name)
     else:
         reason = readiness.get('reason') if isinstance(readiness.get('reason'), dict) else {}
-        why = line('the %s agent in Pane %s did not get ready: %s (%s)' % (
-            req['harness'], name, reason.get('message', 'no detail'), reason.get('code', 'unknown')))
+        why = 'the %s agent in Pane %s did not get ready (%s)' % (req['harness'], name, code_of(reason))
         step = 'check that `%s` runs and is signed in on this machine, then start again' % PROGRAMS[req['harness']]
     state['stopped'] = True
     failures = []
