@@ -1,27 +1,16 @@
 #!/usr/bin/env python3
-"""The Pane driver (kernel/driver.v1.md): each run is one Pane, a git worktree on its own branch, with one agent tab.
-
-`start` creates the Pane in the person's saved checkout with the agent's tab and the ticket as its first prompt
-(`runpane panes create --wait-ready`); `wake` submits a message to that tab (`runpane panels submit`); `stop`
-closes the tab, which ends its agent (`runpane panels close --force`), then archives the Pane with its worktree
-removed (`runpane panes archive --remove-worktree`); Pane keeps the local branch. Pane is AGPL-3.0: this driver
-only runs the person's own `runpane` CLI as a separate program, and the Pane app (or its daemon) runs the agents.
-It never reads a login. Standard library only.
-"""
 import fcntl, json, os, re, secrets, shlex, shutil, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATE = os.environ.get('OPENWIZ_PANE_STATE') or os.path.expanduser('~/.local/state/openwiz-pane')
 VERSION = {'driver': 'pane', 'records': ['openwiz:records v1'], 'can': ['start', 'wake', 'stop', 'many-at-once']}
-# Pane's agents (`runpane panes create --agent`, runpane 2.4.246) and the program each runs. Pane's docs give a
-# terminal agent its model through the agent's own flag in `--tool-command`; no other flag is added.
 PROGRAMS = {'claude': 'claude', 'codex': 'codex', 'cursor': 'cursor-agent', 'opencode': 'opencode', 'pi': 'pi'}
 START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
          'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
          'model': r'[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}'}
 RUN = {'run': r'run-[0-9a-f]{12}'}
 ID = re.compile(r'[A-Za-z0-9_.:-]{1,100}')
-READY_MS = 60000  # how long Pane waits for the agent's input box; the kit gives a command 120 seconds
+READY_MS = 60000
 UNWRITABLE = 'make OPENWIZ_PANE_STATE (or ~/.local/state/openwiz-pane) a folder you can write'
 
 
@@ -30,14 +19,12 @@ class Refused(Exception):
 
 
 class Failed(Refused):
-    """runpane answered a failure; `out` is its JSON answer, or None."""
     def __init__(self, what, step, out):
         super().__init__(what, step)
         self.out = out
 
 
 def line(text):
-    """One line of at most 300 characters, as driver v1's errors need."""
     text = ' '.join(str(text).split()) or 'no detail'
     return text if len(text) <= 300 else text[:297] + '...'
 
@@ -49,7 +36,6 @@ def unique(pairs):
 
 
 def read(fields):
-    """The request on stdin, with exactly these fields, each valid, or Refused."""
     try:
         req = json.loads(sys.stdin.read(), object_pairs_hook=unique)
     except ValueError:
@@ -64,7 +50,6 @@ def read(fields):
 
 
 def answer_of(text):
-    """runpane's JSON answer: the whole output, or its last line; None if neither is a JSON object."""
     for candidate in (text, (text.strip().splitlines() or [''])[-1]):
         try:
             out = json.loads(candidate)
@@ -76,8 +61,6 @@ def answer_of(text):
 
 
 def runpane(then, *args, wait=100):
-    """Run one `runpane ... --json` to its end; its answer when it says ok, else Failed. `then` is the step
-    after the fix."""
     program = shutil.which('runpane')
     if not program:
         raise Refused('the runpane CLI is not installed here',
@@ -102,7 +85,6 @@ def text_id(value):
 
 
 def saved_repository(repository):
-    """The id of the one repository saved in Pane under the GitHub repository's name, or Refused."""
     name = repository.split('/')[1]
     found = [r for r in runpane('start again', 'repos', 'list').get('repos') or []
              if isinstance(r, dict) and r.get('name') == name and type(r.get('id')) is int]
@@ -143,8 +125,6 @@ def saved(run, state=None):
 
 
 def keep(run, state):
-    """Save state if the folder lets it, on a path that is already refusing: a stopped run that can't be saved
-    stays `starting`, which a wake refuses too."""
     try:
         saved(run, state)
     except OSError:
@@ -152,7 +132,6 @@ def keep(run, state):
 
 
 def lock(run):
-    """Hold the run's lock until this command ends, so its wakes and stops take turns."""
     saved(run)
     try:
         fcntl.flock(os.open(path(run, 'lock'), os.O_RDONLY | os.O_CREAT, 0o600), fcntl.LOCK_EX)
@@ -161,8 +140,6 @@ def lock(run):
 
 
 def archive(run, state):
-    """Archive the run's Pane with its worktree. Pane keeps the local branch, so commits it hasn't pushed stay
-    there; uncommitted work is never forced away: the run stays stopped and the person decides."""
     then = 'stop the run again'
     try:
         runpane(then, 'panes', 'archive', '--pane', state['pane'], '--remove-worktree', '--yes')
@@ -170,6 +147,7 @@ def archive(run, state):
         blocked = (e.out or {}).get('blocked')
         code = blocked.get('code') if isinstance(blocked, dict) else None
         if code == 'unpushed-commits':
+            # DATA LOSS: only commits Pane keeps on the local branch are archived with --force; uncommitted work never is.
             runpane(then, 'panes', 'archive', '--pane', state['pane'], '--remove-worktree', '--force', '--yes')
         elif code in ('uncommitted-changes', 'uncommitted-and-unpushed'):
             raise Refused(line('run %s is stopped and its agent has ended, but Pane kept its worktree %s: it holds '
@@ -182,7 +160,6 @@ def archive(run, state):
 
 
 def close(state, then):
-    """Close the run's tab, which ends its agent, even mid-turn: an already closed tab is closed."""
     runpane(then, 'panels', 'close', '--panel', state['panel'], '--force', '--source', 'agent', '--yes')
 
 
@@ -193,7 +170,7 @@ def start(req):
     run = 'run-' + secrets.token_hex(6)
     state = {'request': req, 'pane': None, 'panel': None, 'worktree': None, 'starting': True, 'stopped': False,
              'closed': False, 'archived': False}
-    try:  # save the run before anything starts: nowhere to keep it, nothing starts
+    try:
         saved(run, state)
         os.close(os.open(path(run, 'lock'), os.O_WRONLY | os.O_CREAT, 0o600))
     except OSError:
@@ -228,7 +205,6 @@ def start(req):
         why = line('the %s agent in Pane %s did not get ready: %s (%s)' % (
             req['harness'], name, reason.get('message', 'no detail'), reason.get('code', 'unknown')))
         step = 'check that `%s` runs and is signed in on this machine, then start again' % PROGRAMS[req['harness']]
-    # The Pane exists but the run did not start: end its agent and put its Pane away before refusing.
     state['stopped'] = True
     failures = []
     for undo in (lambda: close(state, 'start again'), lambda: archive(run, state)):
@@ -258,7 +234,7 @@ def wake(run):
 def stop(run):
     lock(run)
     state = saved(run)
-    try:  # first, so no wake reaches the tab once its stop has begun
+    try:
         saved(run, dict(state, stopped=True))
     except OSError:
         raise Refused('the driver cannot save that run %s is stopping; nothing was stopped' % run,

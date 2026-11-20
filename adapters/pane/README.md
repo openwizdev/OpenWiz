@@ -38,3 +38,14 @@ python3 -I adapters/pane/test_driver.py      # the fixture tests, on a synthetic
 ```
 
 `fixtures/bin/runpane` is a synthetic `runpane` CLI, written for these tests. Its JSON answers follow the shapes `runpane help` and its published JSON schemas name (runpane 2.4.246). No answer in it was observed on a live Pane; the live check on the real host is the proof.
+
+It plays Pane and its agents. It keeps its Panes in the JSON file `FAKE_PANE_STATE`. `panes create` starts the tab's agent, a `sleep` that inherits the caller's environment and ends when its tab closes, and, when the prompt names a skill, posts one builder status note in the kit's local tracker (`KIT_TRACKER`); each `panels submit` edits that note. It takes only the flags the driver passes and exits 2 on any other. Its settings:
+
+| Variable | What it plants |
+| --- | --- |
+| `FAKE_PANE_REPOS` | Comma-separated saved repository names (default `site`) |
+| `FAKE_PANE_FAIL` | Comma-separated commands that fail: `create`, `submit`, `close`, `archive`, `repos` |
+| `FAKE_PANE_DOWN` | Set: the Pane app and its daemon are not running, so every command fails |
+| `FAKE_PANE_READY` | `no`: the tab's command exits before its agent's input box is ready |
+| `FAKE_PANE_DIRTY` | `uncommitted` or `unpushed`: what archive's safety check finds in the worktree |
+| `FAKE_PANE_CALLS` | A file each call's arguments are appended to, one JSON array per line |
