@@ -33,6 +33,8 @@ mod models_contract;
 mod process;
 mod results;
 mod review;
+#[path = "../../contracts/fixtures/roster/roster_contract.rs"]
+mod roster_contract;
 mod ui;
 
 const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/..");
