@@ -1,6 +1,6 @@
-Login: stays on your machine
-
 # Pane driver
+
+Login: stays on your machine
 
 A [driver v1](../../kernel/driver.v1.md) that runs each builder in its own Pane, through your own `runpane` CLI and the [Pane](https://runpane.com) app on your computer. A Pane is a git worktree on its own branch, with tabs; each run is one Pane with one agent tab. One Python file, standard library only. Runs are saved in `$OPENWIZ_PANE_STATE` (default `~/.local/state/openwiz-pane`), owner-only.
 
