@@ -215,6 +215,7 @@ class Kit:
         self.env = dict(os.environ, OPENWIZ_KIT_RUN=self.mark.partition('=')[2])
         self.leaks = []
         self.groups = set()
+        self.blind = None if PROC else self.unseen()
 
     def leak(self, what):
         if what not in self.leaks:
@@ -263,18 +264,35 @@ class Kit:
             if self.mark in env:
                 yield cmd, env
 
+    @staticmethod
+    def ps(*args):
+        try:
+            p = subprocess.run(['ps', '-A', '-ww', '-o', 'pid='] + list(args), stdin=subprocess.DEVNULL,
+                               capture_output=True, text=True, timeout=30)
+        except (OSError, subprocess.TimeoutExpired) as e:
+            raise Unusable('ps did not run: %s' % e)
+        if p.returncode:
+            raise Unusable('ps failed: %s' % p.stderr.strip()[:200])
+        return {int(pid): rest for pid, _, rest in (row.strip().partition(' ') for row in p.stdout.splitlines())}
+
+    def unseen(self):
+        probe = 'OPENWIZ_KIT_PROBE=' + self.mark.partition('=')[2]
+        p = subprocess.Popen([sys.executable, '-I', '-c', 'import time; time.sleep(60)'], stdin=subprocess.DEVNULL,
+                             env=dict(os.environ, OPENWIZ_KIT_PROBE=probe.partition('=')[2]))
+        try:
+            for _ in range(50):
+                if re.search(r'(?:^|\s)%s(?:\s|$)' % re.escape(probe), self.ps('-o', 'command=', '-E').get(p.pid, '')):
+                    return None
+                time.sleep(0.1)
+        finally:
+            p.kill()
+            p.wait()
+        return "ps shows no process's environment here, so the kit cannot tell which processes the driver started"
+
     def listed(self):
-        def ps(*args):
-            try:
-                p = subprocess.run(['ps', '-A', '-ww', '-o', 'pid='] + list(args), stdin=subprocess.DEVNULL,
-                                   capture_output=True, text=True, timeout=30)
-            except (OSError, subprocess.TimeoutExpired) as e:
-                raise Unusable('ps did not run: %s' % e)
-            if p.returncode:
-                raise Unusable('ps failed: %s' % p.stderr.strip()[:200])
-            return {int(pid): rest for pid, _, rest in (row.strip().partition(' ') for row in p.stdout.splitlines())}
-        args = ps('-o', 'pgid=', '-o', 'stat=', '-o', 'command=')
-        full = ps('-o', 'command=', '-E')
+        args = self.ps('-o', 'pgid=', '-o', 'stat=', '-o', 'command=')
+        full = self.ps('-o', 'command=', '-E')
+        mark = re.compile(r'(?:^|\s)%s(?:\s|$)' % re.escape(self.mark))
         found = []
         for pid, row in args.items():
             f = row.split(None, 2)
@@ -282,13 +300,16 @@ class Kit:
                 continue
             group, cmd = int(f[0]), f[2] if len(f) > 2 else ''
             words = full.get(pid, '').strip()
-            env = (words[len(cmd):] if words.startswith(cmd) else words).split()
-            if self.mark in env and group != os.getpgrp():
+            text = ' ' + (words[len(cmd):] if words.startswith(cmd) else words)
+            marked = bool(mark.search(text))
+            if marked and group != os.getpgrp():
                 self.groups.add(group)
-            found.append((group, cmd, env))
-        for group, cmd, env in found:
-            if self.mark in env or group in self.groups:
-                yield [cmd], env
+            found.append((group, cmd, text, marked))
+        for group, cmd, text, marked in found:
+            if marked or group in self.groups:
+                for k, v in self.env.items():
+                    text = re.sub(r'(?<=\s)%s(?=\s|$)' % re.escape('%s=%s' % (k, v)), '', text)
+                yield [cmd], [e.strip() for e in re.split(r'\s(?=[A-Za-z_][A-Za-z0-9_]*=)', text) if e.strip()]
 
     def scan(self):
         for cmd, env in self.started():
@@ -370,6 +391,8 @@ class Kit:
             return 'fail', 'a wake after stop was taken'
         if kind == 'bad':
             return 'fail', v
+        if self.blind:
+            return 'fail', self.blind
         if not self.wait(lambda: not any(True for _ in self.started())):
             return 'fail', 'a process the run started still runs after stop'
         return 'pass', 'the run ended, and a wake after it is refused'
@@ -384,6 +407,8 @@ class Kit:
         elif kind == 'bad':
             self.leak('its answer to a token field: ' + v)
         self.scan()
+        if self.blind:
+            self.leak(self.blind)
         if self.leaks:
             return 'fail', '; '.join(self.leaks)
         return 'pass', 'no login or token passed through the driver'
