@@ -9,8 +9,7 @@ does: it prints why and ends its turn at once, exit 0, posting nothing. Mode `ex
 and exits 0; `fail` exits 3 (each of the three lines holds a synthetic opaque value); `quick` prints a plain line and exits 0, a turn that simply finished.
 
 Otherwise it leaves a detached child in its own session that `stop` must also end (with FAKE_CLEAN set, the
-child gets only PATH, so it carries no mark it inherited; with FAKE_SAME_GROUP set, it stays in the turn's
-process group instead), and appends `<turn pid> <child pid> first|woken
+child gets only PATH, so it carries no mark it inherited), and appends `<turn pid> <child pid> first|woken
 <working folder> <mode>` to the file named by FAKE_TURNS. Its turn lasts until the driver has saved the run
 as started (OPENWIZ_LOCAL_STATE/<OPENWIZ_RUN>.json), and while the file named by FAKE_HOLD exists; then it
 hands the note to a worker and ends. Once the turn has ended, the worker posts (or, when woken, edits) one

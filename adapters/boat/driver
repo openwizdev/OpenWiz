@@ -1,14 +1,4 @@
 #!/usr/bin/env python3
-"""The boat.dev driver (kernel/driver.v1.md): each run is one boat.dev sandbox and one agent conversation in it.
-
-`start` creates a sandbox (`boat new`) and prompts its integrated agent in a new conversation; `wake`
-prompts that conversation again once the last turn has ended, only while boat shows the sandbox running;
-`stop` ends every local process the turns started, interrupts the agent and stops the sandbox (`boat stop`
-keeps its disk). Each turn is a local `boat prompt` under its own supervisor, which keeps every process the
-turn starts. A run is saved before anything is started for it, stays `starting` until its first turn is
-saved, and a wake or a stop holds the run's lock throughout. It calls only the user's own signed-in `boat`
-CLI and never reads a login. Linux or macOS; Python 3.9 or later; standard library only.
-"""
 import ctypes, fcntl, json, os, re, secrets, shutil, signal, subprocess, sys, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -184,30 +174,26 @@ def path(run, name):
     return os.path.join(STATE, '%s.%s' % (run, name))
 
 
-LINUX = os.path.isdir('/proc/self') and hasattr(os, 'pidfd_open')  # else (macOS): `ps` and each turn's group
+LINUX = os.path.isdir('/proc/self') and hasattr(os, 'pidfd_open')
+PR_SET_CHILD_SUBREAPER = 36
 
 
 TURN = re.compile(r'\s--turn\s')
 
 
 def ps(*args):
-    """Without /proc (macOS): `ps`'s lines for args (one keyword per -o), and the pid it ran as."""
     try:
         p = subprocess.Popen(['ps'] + list(args), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE, text=True)
         out, err = p.communicate(timeout=30)
     except (OSError, subprocess.TimeoutExpired) as e:
         raise OSError('ps did not run: %s' % e)
-    if p.returncode and err.strip():  # with no such process, ps only exits 1
+    if p.returncode and err.strip():
         raise OSError('ps failed: %s' % err.strip()[:100])
     return out.splitlines(), p.pid
 
 
 def members(roots, run):
-    """Without /proc (macOS): every live process of these supervisors but themselves: under one, in its
-    process group (each supervisor leads its own session), or carrying OPENWIZ_RUN=<run> where `ps` shows its
-    environment, but another turn's supervisor. A process that leaves both the group and the mark is beyond
-    reach here."""
     rows, me = ps('-A', '-ww', '-o', 'pid=', '-o', 'ppid=', '-o', 'pgid=', '-o', 'stat=', '-o', 'command=', '-E')
     mark = re.compile(r'(?:^|\s)OPENWIZ_RUN=%s(?:\s|$)' % re.escape(run))
     found, children = set(), {}
@@ -265,7 +251,7 @@ def supervise(log, cmd):
     """One turn, as `driver --turn <log> <boat prompt ...>`: run it with its output in log, and keep every
     process it starts as this turn's (an orphan comes back here, whatever its session or environment) until
     none is left; then exit."""
-    if LINUX and ctypes.CDLL(None, use_errno=True).prctl(36, 1, 0, 0, 0) != 0:  # PR_SET_CHILD_SUBREAPER
+    if LINUX and ctypes.CDLL(None, use_errno=True).prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0) != 0:
         print(json.dumps({'error': "this host cannot keep a turn's processes together"}), flush=True)
         return
     try:
@@ -280,7 +266,7 @@ def supervise(log, cmd):
     while True:
         try:
             os.wait()
-        except ChildProcessError:  # macOS has no subreaper: wait for the rest of this turn's group
+        except ChildProcessError:
             if LINUX or not members({os.getpid()}, os.environ['OPENWIZ_RUN']):
                 return
             time.sleep(0.2)
@@ -301,7 +287,7 @@ def end(turns, run):
             kept = [(p, t) for p, t in kept if since(p) == t]
             if not kept:
                 return
-            if not LINUX:  # macOS: no pidfd; each pid is checked to be the run's just before it is signalled
+            if not LINUX:
                 for p in members({s for s, _ in kept}, run) - sent:
                     try:
                         os.kill(p, sig)
@@ -483,7 +469,7 @@ def strays(run, known):
     """This run's turn supervisors on this machine that its record doesn't name: a turn begun by a command
     that then failed before it could save it. Found by the run's mark and the `--turn` argument."""
     found = []
-    if not LINUX:  # macOS: the same two marks, where `ps` shows a process's environment
+    if not LINUX:
         mark = re.compile(r'(?:^|\s)OPENWIZ_RUN=%s(?:\s|$)' % re.escape(run))
         for row in ps('-A', '-ww', '-o', 'pid=', '-o', 'command=', '-E')[0]:
             p, _, command = row.strip().partition(' ')

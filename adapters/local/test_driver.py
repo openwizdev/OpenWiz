@@ -22,7 +22,7 @@ DRIVER = os.path.join(HERE, 'driver')
 KIT = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit')
 sys.path.insert(0, KIT)
 import kit  # noqa: E402
-NO_PROC = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'fixtures', 'no-proc')  # macOS, faked (#2010)
+NO_PROC = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'fixtures', 'no-proc')
 
 # A synthetic value in a GitHub token's shape, built here so no file holds one.
 TOKEN = 'gh' + 'p_' + 'Synthetic0Local0Value' * 2 + '00'
@@ -384,9 +384,6 @@ class Local(unittest.TestCase):
 
 
     def test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild(self):
-        # catches: a driver that keeps or stops its processes only through Linux's /proc, subreaper or pidfd,
-        # so on macOS a turn never starts, or a grandchild of the harness runs on after stop: one in the turn's
-        # process group with a clean environment, or one in its own session carrying the run's mark (#2010).
         macos = {'PATH': NO_PROC + os.pathsep + self.env['PATH'], 'NO_PROC_PYTHON': sys.executable}
         for worker in ({}, {'FAKE_CLEAN': '1', 'FAKE_SAME_GROUP': '1'}):
             with self.subTest(**worker):

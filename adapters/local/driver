@@ -1,12 +1,4 @@
 #!/usr/bin/env python3
-"""The local driver (kernel/driver.v1.md): runs builders on the machine it runs on, a laptop or a VPS.
-
-Each turn of a run is one local process of a harness the person has already signed into, under its own
-supervisor, which keeps every process the turn starts: `start` runs the first turn, `wake` another once the
-last one has ended, `stop` ends everything the turns started. A run is saved before its first turn starts,
-and a wake or a stop holds the run's lock throughout. Several runs at once are independent. It never reads,
-passes or prints a login. Linux or macOS; Python 3.9 or later; standard library only. Built on adapters/template.
-"""
 import ctypes, fcntl, json, os, re, secrets, shutil, signal, subprocess, sys, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -153,30 +145,26 @@ def prompt(req, woken):
     return 'Build the ticket: %s, with the %s skill. Keep one status note there.' % (where, req['skill'])
 
 
-LINUX = os.path.isdir('/proc/self') and hasattr(os, 'pidfd_open')  # else (macOS): `ps` and each turn's group
+LINUX = os.path.isdir('/proc/self') and hasattr(os, 'pidfd_open')
+PR_SET_CHILD_SUBREAPER = 36
 
 
 TURN = re.compile(r'\s--turn\s')
 
 
 def ps(*args):
-    """Without /proc (macOS): `ps`'s lines for args (one keyword per -o), and the pid it ran as."""
     try:
         p = subprocess.Popen(['ps'] + list(args), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE, text=True)
         out, err = p.communicate(timeout=30)
     except (OSError, subprocess.TimeoutExpired) as e:
         raise OSError('ps did not run: %s' % e)
-    if p.returncode and err.strip():  # with no such process, ps only exits 1
+    if p.returncode and err.strip():
         raise OSError('ps failed: %s' % err.strip()[:100])
     return out.splitlines(), p.pid
 
 
 def members(roots, run):
-    """Without /proc (macOS): every live process of these supervisors but themselves: under one, in its
-    process group (each supervisor leads its own session), or carrying OPENWIZ_RUN=<run> where `ps` shows its
-    environment, but another turn's supervisor. A process that leaves both the group and the mark is beyond
-    reach here."""
     rows, me = ps('-A', '-ww', '-o', 'pid=', '-o', 'ppid=', '-o', 'pgid=', '-o', 'stat=', '-o', 'command=', '-E')
     mark = re.compile(r'(?:^|\s)OPENWIZ_RUN=%s(?:\s|$)' % re.escape(run))
     found, children = set(), {}
@@ -234,7 +222,7 @@ def supervise(cmd):
     """One turn, as `driver --turn <command>`: run the harness, its output going to the run's log, and keep
     every process it starts as this turn's (an orphan comes back here, whatever its session or environment)
     until none is left; then exit."""
-    if LINUX and ctypes.CDLL(None, use_errno=True).prctl(36, 1, 0, 0, 0) != 0:  # PR_SET_CHILD_SUBREAPER
+    if LINUX and ctypes.CDLL(None, use_errno=True).prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0) != 0:
         print(json.dumps({'error': 'this host cannot keep a turn\'s processes together'}), flush=True)
         return
     try:
@@ -248,7 +236,7 @@ def supervise(cmd):
     while True:
         try:
             pid, status = os.wait()
-        except ChildProcessError:  # macOS has no subreaper: wait for the rest of this turn's group
+        except ChildProcessError:
             if LINUX or not members({os.getpid()}, os.environ['OPENWIZ_RUN']):
                 return
             time.sleep(0.2)
@@ -324,7 +312,7 @@ def end(turns, run):
             kept = [(p, t) for p, t in kept if since(p) == t]
             if not kept:
                 return
-            if not LINUX:  # macOS: no pidfd; each pid is checked to be the run's just before it is signalled
+            if not LINUX:
                 for p in members({s for s, _ in kept}, run) - sent:
                     try:
                         os.kill(p, sig)

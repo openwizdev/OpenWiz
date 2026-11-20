@@ -1,14 +1,4 @@
 #!/usr/bin/env python3
-"""The driver v1 test kit: run the five checks against one driver on a throwaway ticket.
-
-    kit.py --driver <program> --repo <owner>/<name> --ticket <n> --harness <h> --model <m>
-           [--skill <skill>] [--wait <seconds>] [--tracker <file>]
-
-Prints one line per check, `pass <check>: ...` or `fail <check>: ...`, in the order version, start,
-wake, stop, token. Exit 0: all five pass; 1: a check failed; 2: the kit could not run. It never
-writes to GitHub: the agent the driver starts writes its own status note. It watches the driver's processes
-through /proc on Linux and through `ps` on macOS. The rules are kernel/driver.v1.md's.
-"""
 import argparse
 import importlib.machinery
 import importlib.util
@@ -224,7 +214,7 @@ class Kit:
         self.mark = 'OPENWIZ_KIT_RUN=' + secrets.token_hex(8)
         self.env = dict(os.environ, OPENWIZ_KIT_RUN=self.mark.partition('=')[2])
         self.leaks = []
-        self.groups = set()  # without /proc: the process groups of the processes seen carrying the mark
+        self.groups = set()
 
     def leak(self, what):
         if what not in self.leaks:
@@ -274,10 +264,6 @@ class Kit:
                 yield cmd, env
 
     def listed(self):
-        """Without /proc (macOS): started()'s processes, through `ps`. A process carries the mark where `ps -E`
-        shows its environment; where it shows none, a process is the run's when it is in a process group a
-        marked process was seen in (never the kit's own). Its command line is one string; its environment,
-        `ps`'s words after the command line."""
         def ps(*args):
             try:
                 p = subprocess.run(['ps', '-A', '-ww', '-o', 'pid='] + list(args), stdin=subprocess.DEVNULL,

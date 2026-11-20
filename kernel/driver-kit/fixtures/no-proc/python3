@@ -1,6 +1,4 @@
 #!/bin/sh
-# python3 as on macOS (see no_proc.py), with this folder first on PATH. The real python3 is NO_PROC_PYTHON,
-# or else the next python3 on PATH.
 here=$(cd "$(dirname "$0")" && pwd)
 real=$NO_PROC_PYTHON
 if [ -z "$real" ]; then

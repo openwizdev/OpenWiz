@@ -1,6 +1,4 @@
 #!/bin/sh
-# ps as on macOS, over Linux's procps: macOS shows each process's environment with -E, procps with the BSD
-# option e. Everything else the drivers and the kit pass means the same in both.
 for a; do shift; if [ "$a" = -E ]; then set -- "$@" e; else set -- "$@" "$a"; fi; done
 for ps in /bin/ps /usr/bin/ps; do [ -x "$ps" ] && exec "$ps" "$@"; done
 exit 127

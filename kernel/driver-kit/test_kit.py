@@ -18,7 +18,7 @@ sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.abspath(__file__))
 FIXTURES = os.path.join(HERE, 'fixtures')
 TEMPLATE = os.path.join(HERE, '..', '..', 'adapters', 'template', 'driver')
-NO_PROC = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'fixtures', 'no-proc')  # macOS, faked (#2010)
+NO_PROC = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'fixtures', 'no-proc')
 # A synthetic value in a GitHub token's shape, built here so no file holds one.
 TOKEN = 'gh' + 'p_' + 'Synthetic0Kit0Value' * 2 + '00'
 PASS = ['pass version: openwiz:records v1, and the schema is driver v1',
@@ -95,8 +95,6 @@ class Kit(unittest.TestCase):
         self.assertEqual(self.kit(TEMPLATE)[:2], (0, PASS))
 
     def test_without_proc_as_on_macos_the_template_passes_all_five(self):
-        # catches: a kit that watches the driver's processes only through Linux's /proc, so on macOS it cannot
-        # run at all, or its stop and token checks see no process and pass a driver that leaves one (#2010).
         macos = {'PATH': NO_PROC + os.pathsep + self.env['PATH'], 'NO_PROC_PYTHON': sys.executable}
         self.assertEqual(self.kit(TEMPLATE, os.path.join(NO_PROC, 'python3'), **macos)[:2], (0, PASS))
         for name in ('stop-leaves-run', 'token-in-env'):

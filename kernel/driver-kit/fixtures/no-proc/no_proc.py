@@ -1,7 +1,3 @@
-"""Run a Python program as it runs on macOS, on Linux: no /proc, no prctl (so no subreaper), no pidfd, and
-sys.platform 'darwin'. Called as `python3 [-I] <program> [args]` through the `python3` beside it, which a
-program started by `#!/usr/bin/env python3` or by sys.executable also goes through, with this folder first on
-PATH. The `ps` beside it is macOS's `ps -E`. The drivers' and the kit's own tests use it (#2010)."""
 import builtins, ctypes, io, os, runpy, signal, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -44,7 +40,7 @@ if hasattr(signal, 'pidfd_send_signal'):
 
 class CDLL(ctypes.CDLL):
     def __getattr__(self, name):
-        if name == 'prctl':  # macOS has no prctl
+        if name == 'prctl':
             raise AttributeError(name)
         return super().__getattr__(name)
 

@@ -19,7 +19,7 @@ import unittest
 sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.abspath(__file__))
 DRIVER = os.path.join(HERE, 'driver')
-NO_PROC = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'fixtures', 'no-proc')  # macOS, faked (#2010)
+NO_PROC = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'fixtures', 'no-proc')
 START = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'fake-harness',
          'model': 'Synthetic 1'}
 # A driver whose next save fails once its turn has begun, as a full disk or a removed folder would make it:
@@ -301,9 +301,6 @@ class Template(unittest.TestCase):
 
 
     def test_without_proc_as_on_macos_stop_ends_each_grandchild(self):
-        # catches: a driver that keeps or stops its processes only through Linux's /proc, subreaper or pidfd,
-        # so on macOS a turn never starts, or a grandchild of the harness runs on after stop: one in the turn's
-        # process group with a clean environment, or one in its own session carrying the run's mark (#2010).
         for worker in ({}, {'FAKE_CLEAN': '1', 'FAKE_SAME_GROUP': '1'}):
             with self.subTest(**worker):
                 self.tearDown()
