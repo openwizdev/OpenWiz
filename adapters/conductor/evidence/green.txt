@@ -1,5 +1,5 @@
-# at 8f4dea0d
-$ python3 -I adapters/conductor/test_driver.py   # each test builds its environment from scratch; PATH: fixtures/bin and a python3 link only
+# at 66af7fe8
+$ python3 -I adapters/conductor/test_driver.py   # under env -i; each test builds its environment from scratch; PATH: fixtures/bin and a python3 link only; the kit runs scoped to its own run
 test_a_failed_archive_says_so_and_the_run_stays_stopped (__main__.Conductor.test_a_failed_archive_says_so_and_the_run_stays_stopped) ... ok
 test_a_lost_start_reply_is_never_retried (__main__.Conductor.test_a_lost_start_reply_is_never_retried) ... ok
 test_a_refused_start_starts_nothing_and_says_what_to_do (__main__.Conductor.test_a_refused_start_starts_nothing_and_says_what_to_do) ... ok
@@ -8,16 +8,9 @@ test_nothing_is_called_without_a_key_a_harness_or_a_state_folder (__main__.Condu
 test_start_wake_and_stop_reach_one_workspace (__main__.Conductor.test_start_wake_and_stop_reach_one_workspace) ... ok
 test_the_driver_never_reads_the_key (__main__.Conductor.test_the_driver_never_reads_the_key) ... ok
 test_the_kit_passes_all_five (__main__.Conductor.test_the_kit_passes_all_five) ... ok
+test_the_scoped_kit_still_sees_a_process_the_run_leaves (__main__.Conductor.test_the_scoped_kit_still_sees_a_process_the_run_leaves) ... ok
 
 ----------------------------------------------------------------------
-Ran 8 tests in <n>s
+Ran 9 tests in <n>s
 
 OK
-
-$ env -i ... python3 -I kernel/driver-kit/kit.py --driver adapters/conductor/driver --repo example/site --ticket 7 --harness claude --model opus-5-5-1m --tracker <tmp>/t.json --wait 20   # an empty environment plus the fake's variables; PATH: fixtures/bin and a python3 link only; a synthetic CONDUCTOR_API_KEY
-pass version: openwiz:records v1, and the schema is driver v1
-pass start: the run posted builder status note 1
-pass wake: the run edited builder status note 1
-pass stop: the run ended, and a wake after it is refused
-pass token: no login or token passed through the driver
-exit 0
