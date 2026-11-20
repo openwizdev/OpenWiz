@@ -128,6 +128,7 @@ jobs:
           python3 -I adapters/template/test_driver.py
           python3 -I adapters/cloudroom/test_driver.py
           python3 -I contracts/fixtures/write-driver/check.py
+          python3 -I contracts/fixtures/feedback-loop/test_check.py
       # #555: fail on any carried contract that differs from the pinned
       # WizSkills release by one byte.
       - name: The WizSkills installer
@@ -156,7 +157,9 @@ jobs:
           python3 -I tools/install/tests/skills-linked-config/test_linked_config.py
       - name: The GitHub App
         if: matrix.part == 2
-        run: python3 -I tools/github-app/test.py
+        run: |
+          python3 -I tools/github-app/test.py
+          python3 -I contracts/fixtures/token-service/test_fixtures.py
       - name: Save the Cargo cache
         if: github.event_name == 'push' && matrix.part == 2
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

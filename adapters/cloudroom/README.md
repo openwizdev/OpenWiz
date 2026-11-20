@@ -1,5 +1,7 @@
 # Cloudroom driver
 
+Login: held by Cloudroom
+
 A [driver v1](../../kernel/driver.v1.md) for [Cloudroom](https://cloudroom.dev): each run is one Cloudroom thread. One Python file, standard library only. Run it inside a Cloudroom thread of the project the repository belongs to, where `room-cli` is already signed in and `ROOM_PROJECT_ID` is set; the threads it starts are that thread's children, each in its own sandbox.
 
 | Command | What it runs |

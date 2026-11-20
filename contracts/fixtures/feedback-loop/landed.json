@@ -1,0 +1,52 @@
+{
+  "kind": "landed",
+  "about": "The fix merges in another openwizdev repository: one landed comment on the report, naming the pull request in full and the version.",
+  "input": {
+    "pull_request": {
+      "repository": "openwizdev/WizSkills",
+      "number": 9201,
+      "merged": true,
+      "closes": [
+        "Closes openwizdev/OpenWiz#9106",
+        "Closes openwizdev/OpenWiz#9101"
+      ]
+    },
+    "issues": {
+      "9106": {
+        "number": 9106,
+        "author": "synthetic-maintainer",
+        "pull_request": false,
+        "title": "Keep the approve button above the footer",
+        "body": "Keep the approve button above the footer.\n\nReport: #9101",
+        "labels": [
+          "ready-for-agent"
+        ],
+        "milestone": "9.4.2",
+        "comments": []
+      },
+      "9101": {
+        "number": 9101,
+        "author": "synthetic-user",
+        "pull_request": false,
+        "title": "Plan page hides the approve button on a narrow phone",
+        "body": "On a 360-pixel screen the approve button sits under the footer.\n\nOpenWiz feedback operation 3f2a9c4e1b7d40a6958e0c2d7b1a4f63",
+        "labels": [
+          "feedback"
+        ],
+        "milestone": "9.4.2",
+        "comments": []
+      }
+    },
+    "record_authors": [
+      "synthetic-maintainer"
+    ]
+  },
+  "expect": {
+    "posts": [
+      [
+        9101,
+        "Landed: the fix for this report merged in openwizdev/WizSkills#9201 and will ship in OpenWiz 9.4.2."
+      ]
+    ]
+  }
+}

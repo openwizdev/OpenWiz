@@ -1,0 +1,189 @@
+{
+  "synthetic": true,
+  "note": "Messages the schema must refuse.",
+  "cases": [
+    {
+      "name": "a mint log holding a token",
+      "message": {
+        "schema": "openwiz.token-service.v1",
+        "kind": "mint-log",
+        "at": 1000,
+        "requester": "builder-1839",
+        "repositories": [
+          "synthetic-owner/work"
+        ],
+        "permissions": {
+          "metadata": "read",
+          "contents": "write",
+          "issues": "write",
+          "pull_requests": "write",
+          "checks": "read",
+          "actions": "read"
+        },
+        "outcome": "minted",
+        "expires_at": 4600,
+        "token": "synthetic-write-token"
+      }
+    },
+    {
+      "name": "a mint log with an out-of-profile permission",
+      "message": {
+        "schema": "openwiz.token-service.v1",
+        "kind": "mint-log",
+        "at": 1000,
+        "requester": "builder-1839",
+        "repositories": [
+          "synthetic-owner/work"
+        ],
+        "permissions": {
+          "synthetic_sentinel": "read"
+        },
+        "outcome": "minted",
+        "expires_at": 4600
+      }
+    },
+    {
+      "name": "a refusal carrying a token",
+      "message": {
+        "schema": "openwiz.token-service.v1",
+        "kind": "refusal",
+        "refusal": "usage",
+        "message": "Token refused: the request is not one valid token-service request.",
+        "token": "synthetic-write-token"
+      }
+    },
+    {
+      "name": "an answer without an expiry",
+      "message": {
+        "schema": "openwiz.token-service.v1",
+        "kind": "answer",
+        "token": "synthetic-write-token",
+        "repositories": [
+          "synthetic-owner/work"
+        ],
+        "permissions": {
+          "metadata": "read",
+          "contents": "write",
+          "issues": "write",
+          "pull_requests": "write",
+          "checks": "read",
+          "actions": "read"
+        }
+      }
+    },
+    {
+      "name": "an answer with a fractional expiry",
+      "message": {
+        "schema": "openwiz.token-service.v1",
+        "kind": "answer",
+        "token": "synthetic-write-token",
+        "expires_at": 4600.5,
+        "repositories": [
+          "synthetic-owner/work"
+        ],
+        "permissions": {
+          "metadata": "read",
+          "contents": "write",
+          "issues": "write",
+          "pull_requests": "write",
+          "checks": "read",
+          "actions": "read"
+        }
+      }
+    },
+    {
+      "name": "a request with an unknown level",
+      "message": {
+        "schema": "openwiz.token-service.v1",
+        "kind": "request",
+        "requester": "builder-1839",
+        "repositories": [
+          "synthetic-owner/work"
+        ],
+        "permissions": {
+          "contents": "admin"
+        }
+      }
+    },
+    {
+      "name": "a request with no permission",
+      "message": {
+        "schema": "openwiz.token-service.v1",
+        "kind": "request",
+        "requester": "builder-1839",
+        "repositories": [
+          "synthetic-owner/work"
+        ],
+        "permissions": {}
+      }
+    },
+    {
+      "name": "a request with a repeated repository",
+      "message": {
+        "schema": "openwiz.token-service.v1",
+        "kind": "request",
+        "requester": "builder-1839",
+        "repositories": [
+          "synthetic-owner/work",
+          "synthetic-owner/work"
+        ],
+        "permissions": {
+          "metadata": "read",
+          "contents": "read",
+          "issues": "read",
+          "pull_requests": "read",
+          "checks": "read",
+          "actions": "read"
+        }
+      }
+    },
+    {
+      "name": "a request from a requester with spaces",
+      "message": {
+        "schema": "openwiz.token-service.v1",
+        "kind": "request",
+        "requester": "a builder",
+        "repositories": [
+          "synthetic-owner/work"
+        ],
+        "permissions": {
+          "metadata": "read",
+          "contents": "read",
+          "issues": "read",
+          "pull_requests": "read",
+          "checks": "read",
+          "actions": "read"
+        }
+      }
+    },
+    {
+      "name": "a refusal with an unknown code",
+      "message": {
+        "schema": "openwiz.token-service.v1",
+        "kind": "refusal",
+        "refusal": "maybe",
+        "message": "Token refused: maybe."
+      }
+    },
+    {
+      "name": "a message of another schema version",
+      "message": {
+        "schema": "openwiz.token-service.v2",
+        "kind": "answer",
+        "token": "synthetic-write-token",
+        "expires_at": 4600,
+        "repositories": [
+          "synthetic-owner/work"
+        ],
+        "permissions": {
+          "metadata": "read",
+          "contents": "write",
+          "issues": "write",
+          "pull_requests": "write",
+          "checks": "read",
+          "actions": "read"
+        }
+      }
+    }
+  ]
+}

@@ -33,7 +33,7 @@ These files are inputs to a release, not proof that it was published. Gathering
 and publishing do not weaken the export's privacy and claim checks. Published
 entries never change: an ordinary fix belongs to the next version, and an urgent
 privacy or security fix gets its own small version. This contract does not
-change the frozen `release/openwiz/` files or authorize publishing.
+authorize publishing.
 
 ## Format examples
 

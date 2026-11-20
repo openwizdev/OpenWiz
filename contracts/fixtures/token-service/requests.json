@@ -1,0 +1,660 @@
+{
+  "synthetic": true,
+  "note": "GA2's seam. Owners, tokens and times are synthetic placeholders; times are Unix seconds on a controlled clock. 'github' names what the fake GitHub does to a valid request.",
+  "now": 1000,
+  "installed": [
+    "synthetic-owner/work",
+    "synthetic-owner/tools"
+  ],
+  "cases": [
+    {
+      "name": "a good write request gets the App's profile for one repository",
+      "argv": [
+        "room-cli",
+        "mac",
+        "run",
+        "--stdin",
+        "python3 -I '/synthetic/openwiz/tools/github-app/token-service.py' mint"
+      ],
+      "request": {
+        "schema": "openwiz.token-service.v1",
+        "kind": "request",
+        "requester": "builder-1839",
+        "repositories": [
+          "synthetic-owner/work"
+        ],
+        "permissions": {
+          "metadata": "read",
+          "contents": "write",
+          "issues": "write",
+          "pull_requests": "write",
+          "checks": "read",
+          "actions": "read"
+        }
+      },
+      "out": {
+        "exit": 0,
+        "stderr": "",
+        "message": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "answer",
+          "token": "synthetic-write-token",
+          "expires_at": 4600,
+          "repositories": [
+            "synthetic-owner/work"
+          ],
+          "permissions": {
+            "metadata": "read",
+            "contents": "write",
+            "issues": "write",
+            "pull_requests": "write",
+            "checks": "read",
+            "actions": "read"
+          }
+        },
+        "log": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "mint-log",
+          "at": 1000,
+          "requester": "builder-1839",
+          "repositories": [
+            "synthetic-owner/work"
+          ],
+          "permissions": {
+            "metadata": "read",
+            "contents": "write",
+            "issues": "write",
+            "pull_requests": "write",
+            "checks": "read",
+            "actions": "read"
+          },
+          "outcome": "minted",
+          "expires_at": 4600
+        }
+      }
+    },
+    {
+      "name": "a good read request gets read levels for two repositories",
+      "argv": [
+        "room-cli",
+        "mac",
+        "run",
+        "--stdin",
+        "python3 -I '/synthetic/openwiz/tools/github-app/token-service.py' mint"
+      ],
+      "request": {
+        "schema": "openwiz.token-service.v1",
+        "kind": "request",
+        "requester": "reviewer-1839",
+        "repositories": [
+          "synthetic-owner/work",
+          "synthetic-owner/tools"
+        ],
+        "permissions": {
+          "metadata": "read",
+          "contents": "read",
+          "issues": "read",
+          "pull_requests": "read",
+          "checks": "read",
+          "actions": "read"
+        }
+      },
+      "out": {
+        "exit": 0,
+        "stderr": "",
+        "message": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "answer",
+          "token": "synthetic-read-token",
+          "expires_at": 4500,
+          "repositories": [
+            "synthetic-owner/work",
+            "synthetic-owner/tools"
+          ],
+          "permissions": {
+            "metadata": "read",
+            "contents": "read",
+            "issues": "read",
+            "pull_requests": "read",
+            "checks": "read",
+            "actions": "read"
+          }
+        },
+        "log": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "mint-log",
+          "at": 1000,
+          "requester": "reviewer-1839",
+          "repositories": [
+            "synthetic-owner/work",
+            "synthetic-owner/tools"
+          ],
+          "permissions": {
+            "metadata": "read",
+            "contents": "read",
+            "issues": "read",
+            "pull_requests": "read",
+            "checks": "read",
+            "actions": "read"
+          },
+          "outcome": "minted",
+          "expires_at": 4500
+        }
+      }
+    },
+    {
+      "name": "a request that is not JSON",
+      "argv": [
+        "room-cli",
+        "mac",
+        "run",
+        "--stdin",
+        "python3 -I '/synthetic/openwiz/tools/github-app/token-service.py' mint"
+      ],
+      "request": "not json",
+      "out": {
+        "exit": 2,
+        "stderr": "",
+        "message": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "refusal",
+          "refusal": "usage",
+          "message": "Token refused: the request is not one valid token-service request."
+        },
+        "log": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "mint-log",
+          "at": 1000,
+          "requester": "-",
+          "outcome": "usage"
+        }
+      }
+    },
+    {
+      "name": "a request with a repeated key",
+      "argv": [
+        "room-cli",
+        "mac",
+        "run",
+        "--stdin",
+        "python3 -I '/synthetic/openwiz/tools/github-app/token-service.py' mint"
+      ],
+      "request": "{\"schema\": \"openwiz.token-service.v1\", \"kind\": \"request\", \"requester\": \"builder-1839\", \"repositories\": [\"synthetic-owner/work\"], \"permissions\": {\"metadata\": \"read\"}, \"permissions\": {\"contents\": \"write\"}}",
+      "out": {
+        "exit": 2,
+        "stderr": "",
+        "message": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "refusal",
+          "refusal": "usage",
+          "message": "Token refused: the request is not one valid token-service request."
+        },
+        "log": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "mint-log",
+          "at": 1000,
+          "requester": "-",
+          "outcome": "usage"
+        }
+      }
+    },
+    {
+      "name": "repository names match the installation in any case",
+      "argv": [
+        "room-cli",
+        "mac",
+        "run",
+        "--stdin",
+        "python3 -I '/synthetic/openwiz/tools/github-app/token-service.py' mint"
+      ],
+      "request": {
+        "schema": "openwiz.token-service.v1",
+        "kind": "request",
+        "requester": "builder-1839",
+        "repositories": [
+          "Synthetic-Owner/Work"
+        ],
+        "permissions": {
+          "metadata": "read"
+        }
+      },
+      "out": {
+        "exit": 0,
+        "stderr": "",
+        "message": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "answer",
+          "token": "synthetic-case-token",
+          "expires_at": 4600,
+          "repositories": [
+            "Synthetic-Owner/Work"
+          ],
+          "permissions": {
+            "metadata": "read"
+          }
+        },
+        "log": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "mint-log",
+          "at": 1000,
+          "requester": "builder-1839",
+          "repositories": [
+            "Synthetic-Owner/Work"
+          ],
+          "permissions": {
+            "metadata": "read"
+          },
+          "outcome": "minted",
+          "expires_at": 4600
+        }
+      }
+    },
+    {
+      "name": "a request that names the key",
+      "argv": [
+        "room-cli",
+        "mac",
+        "run",
+        "--stdin",
+        "python3 -I '/synthetic/openwiz/tools/github-app/token-service.py' mint"
+      ],
+      "request": {
+        "schema": "openwiz.token-service.v1",
+        "kind": "request",
+        "requester": "builder-1839",
+        "repositories": [
+          "synthetic-owner/work"
+        ],
+        "permissions": {
+          "metadata": "read",
+          "contents": "read",
+          "issues": "read",
+          "pull_requests": "read",
+          "checks": "read",
+          "actions": "read"
+        },
+        "key_path": "<state>/service/app/private-key.pem"
+      },
+      "out": {
+        "exit": 2,
+        "stderr": "",
+        "message": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "refusal",
+          "refusal": "usage",
+          "message": "Token refused: the request is not one valid token-service request."
+        },
+        "log": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "mint-log",
+          "at": 1000,
+          "requester": "-",
+          "outcome": "usage"
+        }
+      }
+    },
+    {
+      "name": "a request with no repository",
+      "argv": [
+        "room-cli",
+        "mac",
+        "run",
+        "--stdin",
+        "python3 -I '/synthetic/openwiz/tools/github-app/token-service.py' mint"
+      ],
+      "request": {
+        "schema": "openwiz.token-service.v1",
+        "kind": "request",
+        "requester": "builder-1839",
+        "repositories": [],
+        "permissions": {
+          "metadata": "read",
+          "contents": "read",
+          "issues": "read",
+          "pull_requests": "read",
+          "checks": "read",
+          "actions": "read"
+        }
+      },
+      "out": {
+        "exit": 2,
+        "stderr": "",
+        "message": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "refusal",
+          "refusal": "usage",
+          "message": "Token refused: the request is not one valid token-service request."
+        },
+        "log": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "mint-log",
+          "at": 1000,
+          "requester": "-",
+          "outcome": "usage"
+        }
+      }
+    },
+    {
+      "name": "repositories of two owners",
+      "argv": [
+        "room-cli",
+        "mac",
+        "run",
+        "--stdin",
+        "python3 -I '/synthetic/openwiz/tools/github-app/token-service.py' mint"
+      ],
+      "request": {
+        "schema": "openwiz.token-service.v1",
+        "kind": "request",
+        "requester": "builder-1839",
+        "repositories": [
+          "synthetic-owner/work",
+          "other-owner/work"
+        ],
+        "permissions": {
+          "metadata": "read",
+          "contents": "read",
+          "issues": "read",
+          "pull_requests": "read",
+          "checks": "read",
+          "actions": "read"
+        }
+      },
+      "out": {
+        "exit": 2,
+        "stderr": "",
+        "message": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "refusal",
+          "refusal": "one-owner",
+          "message": "Token refused: the repositories must share one owner."
+        },
+        "log": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "mint-log",
+          "at": 1000,
+          "requester": "builder-1839",
+          "repositories": [
+            "synthetic-owner/work",
+            "other-owner/work"
+          ],
+          "outcome": "one-owner"
+        }
+      }
+    },
+    {
+      "name": "a repository outside the installation",
+      "argv": [
+        "room-cli",
+        "mac",
+        "run",
+        "--stdin",
+        "python3 -I '/synthetic/openwiz/tools/github-app/token-service.py' mint"
+      ],
+      "request": {
+        "schema": "openwiz.token-service.v1",
+        "kind": "request",
+        "requester": "builder-1839",
+        "repositories": [
+          "synthetic-owner/elsewhere"
+        ],
+        "permissions": {
+          "metadata": "read",
+          "contents": "read",
+          "issues": "read",
+          "pull_requests": "read",
+          "checks": "read",
+          "actions": "read"
+        }
+      },
+      "out": {
+        "exit": 3,
+        "stderr": "",
+        "message": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "refusal",
+          "refusal": "not-installed",
+          "message": "Token refused: a repository is not in the App's installation."
+        },
+        "log": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "mint-log",
+          "at": 1000,
+          "requester": "builder-1839",
+          "repositories": [
+            "synthetic-owner/elsewhere"
+          ],
+          "outcome": "not-installed"
+        }
+      }
+    },
+    {
+      "name": "a permission outside the App's profile",
+      "argv": [
+        "room-cli",
+        "mac",
+        "run",
+        "--stdin",
+        "python3 -I '/synthetic/openwiz/tools/github-app/token-service.py' mint"
+      ],
+      "request": {
+        "schema": "openwiz.token-service.v1",
+        "kind": "request",
+        "requester": "builder-1839",
+        "repositories": [
+          "synthetic-owner/work"
+        ],
+        "permissions": {
+          "workflows": "write"
+        }
+      },
+      "out": {
+        "exit": 5,
+        "stderr": "",
+        "message": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "refusal",
+          "refusal": "permission",
+          "message": "Token refused: a permission is outside the App's."
+        },
+        "log": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "mint-log",
+          "at": 1000,
+          "requester": "builder-1839",
+          "repositories": [
+            "synthetic-owner/work"
+          ],
+          "outcome": "permission"
+        }
+      }
+    },
+    {
+      "name": "a permission above the App's level",
+      "argv": [
+        "room-cli",
+        "mac",
+        "run",
+        "--stdin",
+        "python3 -I '/synthetic/openwiz/tools/github-app/token-service.py' mint"
+      ],
+      "request": {
+        "schema": "openwiz.token-service.v1",
+        "kind": "request",
+        "requester": "builder-1839",
+        "repositories": [
+          "synthetic-owner/work"
+        ],
+        "permissions": {
+          "metadata": "read",
+          "contents": "read",
+          "issues": "read",
+          "pull_requests": "read",
+          "checks": "write",
+          "actions": "read"
+        }
+      },
+      "out": {
+        "exit": 5,
+        "stderr": "",
+        "message": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "refusal",
+          "refusal": "permission",
+          "message": "Token refused: a permission is outside the App's."
+        },
+        "log": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "mint-log",
+          "at": 1000,
+          "requester": "builder-1839",
+          "repositories": [
+            "synthetic-owner/work"
+          ],
+          "outcome": "permission"
+        }
+      }
+    },
+    {
+      "name": "GitHub refuses the exchange",
+      "argv": [
+        "room-cli",
+        "mac",
+        "run",
+        "--stdin",
+        "python3 -I '/synthetic/openwiz/tools/github-app/token-service.py' mint"
+      ],
+      "request": {
+        "schema": "openwiz.token-service.v1",
+        "kind": "request",
+        "requester": "builder-1839",
+        "repositories": [
+          "synthetic-owner/work"
+        ],
+        "permissions": {
+          "metadata": "read",
+          "contents": "read",
+          "issues": "read",
+          "pull_requests": "read",
+          "checks": "read",
+          "actions": "read"
+        }
+      },
+      "github": "github",
+      "out": {
+        "exit": 5,
+        "stderr": "",
+        "message": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "refusal",
+          "refusal": "github",
+          "message": "Token refused: GitHub refused the exchange or granted a different scope."
+        },
+        "log": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "mint-log",
+          "at": 1000,
+          "requester": "builder-1839",
+          "repositories": [
+            "synthetic-owner/work"
+          ],
+          "outcome": "github"
+        }
+      }
+    },
+    {
+      "name": "GitHub's token has under five minutes left",
+      "argv": [
+        "room-cli",
+        "mac",
+        "run",
+        "--stdin",
+        "python3 -I '/synthetic/openwiz/tools/github-app/token-service.py' mint"
+      ],
+      "request": {
+        "schema": "openwiz.token-service.v1",
+        "kind": "request",
+        "requester": "builder-1839",
+        "repositories": [
+          "synthetic-owner/work"
+        ],
+        "permissions": {
+          "metadata": "read",
+          "contents": "read",
+          "issues": "read",
+          "pull_requests": "read",
+          "checks": "read",
+          "actions": "read"
+        }
+      },
+      "github": "expiry",
+      "out": {
+        "exit": 5,
+        "stderr": "",
+        "message": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "refusal",
+          "refusal": "expiry",
+          "message": "Token refused: the minted token failed the expiry guards."
+        },
+        "log": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "mint-log",
+          "at": 1000,
+          "requester": "builder-1839",
+          "repositories": [
+            "synthetic-owner/work"
+          ],
+          "outcome": "expiry"
+        }
+      }
+    },
+    {
+      "name": "the service cannot reach GitHub",
+      "argv": [
+        "room-cli",
+        "mac",
+        "run",
+        "--stdin",
+        "python3 -I '/synthetic/openwiz/tools/github-app/token-service.py' mint"
+      ],
+      "request": {
+        "schema": "openwiz.token-service.v1",
+        "kind": "request",
+        "requester": "builder-1839",
+        "repositories": [
+          "synthetic-owner/work"
+        ],
+        "permissions": {
+          "metadata": "read",
+          "contents": "read",
+          "issues": "read",
+          "pull_requests": "read",
+          "checks": "read",
+          "actions": "read"
+        }
+      },
+      "github": "unavailable",
+      "out": {
+        "exit": 1,
+        "stderr": "",
+        "message": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "refusal",
+          "refusal": "unavailable",
+          "message": "Token refused: the service cannot read its App state or reach GitHub."
+        },
+        "log": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "mint-log",
+          "at": 1000,
+          "requester": "builder-1839",
+          "repositories": [
+            "synthetic-owner/work"
+          ],
+          "outcome": "unavailable"
+        }
+      }
+    }
+  ]
+}

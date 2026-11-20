@@ -1,0 +1,21 @@
+test_the_fixtures_and_template_hold_and_cover_the_loop (__main__.Fixtures.test_the_fixtures_and_template_hold_and_cover_the_loop) ... ok
+test_a_case_with_an_unknown_or_repeated_key_is_refused (__main__.PlantedBreaks.test_a_case_with_an_unknown_or_repeated_key_is_refused) ... ok
+test_a_failed_criterion_never_goes_to_a_fleet (__main__.PlantedBreaks.test_a_failed_criterion_never_goes_to_a_fleet) ... ok
+test_a_held_report_keeps_needs_triage (__main__.PlantedBreaks.test_a_held_report_keeps_needs_triage) ... ok
+test_a_marker_counts_only_as_the_last_line (__main__.PlantedBreaks.test_a_marker_counts_only_as_the_last_line) ... ok
+test_a_report_link_counts_only_from_a_record_author_and_last (__main__.PlantedBreaks.test_a_report_link_counts_only_from_a_record_author_and_last) ... ok
+test_a_second_merge_posts_nothing (__main__.PlantedBreaks.test_a_second_merge_posts_nothing) ... ok
+test_an_instruction_carrying_report_is_held (__main__.PlantedBreaks.test_an_instruction_carrying_report_is_held) ... ok
+test_no_landed_comment_without_a_version_or_a_merge (__main__.PlantedBreaks.test_no_landed_comment_without_a_version_or_a_merge) ... ok
+test_only_a_full_closing_line_reaches_the_destination (__main__.PlantedBreaks.test_only_a_full_closing_line_reaches_the_destination) ... ok
+test_only_a_record_authors_landed_comment_counts (__main__.PlantedBreaks.test_only_a_record_authors_landed_comment_counts) ... ok
+test_the_brief_copies_no_link_or_code_from_the_report (__main__.PlantedBreaks.test_the_brief_copies_no_link_or_code_from_the_report) ... ok
+test_the_landed_comment_follows_the_brief_link (__main__.PlantedBreaks.test_the_landed_comment_follows_the_brief_link) ... ok
+test_the_landed_comment_names_the_pull_request_in_full (__main__.PlantedBreaks.test_the_landed_comment_names_the_pull_request_in_full) ... ok
+test_the_template_asks_only_for_public_words (__main__.PlantedBreaks.test_the_template_asks_only_for_public_words) ... ok
+test_triage_posts_no_comment_on_the_report (__main__.PlantedBreaks.test_triage_posts_no_comment_on_the_report) ... ok
+
+----------------------------------------------------------------------
+Ran 16 tests in 0.066s
+
+OK

@@ -1,0 +1,34 @@
+name: Report a problem
+description: Tell OpenWiz about a problem, in public words anyone can read.
+labels: [feedback]
+body:
+  - type: markdown
+    attributes:
+      value: "Everything you write here is public: anyone can read it. Use only public words you choose to share. Do not paste prompts, transcripts, code, file paths, tokens, logs or screenshots of private work."
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What went wrong?
+      description: In your own public words.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How can someone see it happen?
+      description: Optional. Steps anyone could follow, with no private details.
+    validations:
+      required: false
+  - type: checkboxes
+    id: public-words
+    attributes:
+      label: Public words only
+      options:
+        - label: Everything above is public words I chose to share.
+          required: true

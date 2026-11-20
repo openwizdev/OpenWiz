@@ -1,0 +1,24 @@
+{
+  "kind": "link",
+  "about": "A record author's brief ends with the report link: it leads to report 9101.",
+  "input": {
+    "issue": {
+      "number": 9106,
+      "author": "synthetic-maintainer",
+      "pull_request": false,
+      "title": "Keep the approve button above the footer",
+      "body": "Keep the approve button above the footer.\n\nReport: #9101",
+      "labels": [
+        "ready-for-agent"
+      ],
+      "milestone": "9.4.2",
+      "comments": []
+    },
+    "record_authors": [
+      "synthetic-maintainer"
+    ]
+  },
+  "expect": {
+    "report": 9101
+  }
+}
