@@ -2,15 +2,15 @@
 
 Login: stays on your machine
 
-A [driver v1](../../kernel/driver.v1.md) that runs each builder in its own Pane, through your own `runpane` CLI and the [Pane](https://runpane.com) app on your computer. A Pane is a git worktree on its own branch, with tabs; each run is one Pane with one agent tab. One Python file, standard library only. Runs are saved in `$OPENWIZ_PANE_STATE` (default `~/.local/state/openwiz-pane`), owner-only.
+A [driver v1](../../kernel/driver.v1.md) that runs each builder in its own Pane, through your own `runpane` CLI and the [Pane](https://runpane.com) app on your computer. A Pane is a git worktree on its own branch, with tabs; each run is one Pane with one agent tab. One Python file, standard library only. **Platforms:** Linux and macOS, Python 3.9 or later, wherever Pane runs; its fixture tests run on Linux (they check their own fake agents through `/proc`). Runs are saved in `$OPENWIZ_PANE_STATE` (default `~/.local/state/openwiz-pane`), owner-only.
 
-**Pane's desktop app, or its daemon (`runpane install daemon`), must be running.** The `runpane` CLI talks to it, and it runs the agents. Without it, every command refuses and says to open the Pane app.
+**Pane's desktop app, or its daemon (`runpane install daemon`), must be running for `start`, `wake` and `stop`.** The `runpane` CLI talks to it, and it runs the agents. Without it, those commands refuse and say to open the Pane app. `version` and `schema` need nothing.
 
 | Command | What it does in Pane |
 | --- | --- |
-| `start` | Finds the repository you saved in Pane under the GitHub repository's name (`runpane repos list`). Then `runpane panes create --repo <its id> --name openwiz-<run> --agent <harness> --tool-command "<program> --model <model>" --prompt <the ticket and skill> --source agent --wait-ready`. It answers once Pane has seen the agent's input box and delivered the prompt. If the agent never gets ready, it closes the tab and archives the new Pane before refusing. |
+| `start` | Finds the one checkout saved in Pane (`runpane repos list`) whose git `origin` remote is exactly that GitHub repository, read from the checkout's own `.git/config`; a fork of another owner never matches. Then `runpane panes create --repo <its id> --name openwiz-<run> --agent <harness> --tool-command "<program> --model <model>" --prompt <the ticket and skill> --source agent --wait-ready`. It answers once Pane has seen the agent's input box and delivered the prompt. If the agent never gets ready, it closes the tab and archives the new Pane before refusing, also when Pane answers that failure with `ok: false`. |
 | `wake` | `runpane panels submit --panel <the run's tab>`: the same agent, in the same tab, reads its ticket again and edits its own status note. A stopped run is never woken. |
-| `stop` | `runpane panels close --force` closes the tab, which ends its agent even mid-turn. Then `runpane panes archive --remove-worktree` removes the Pane and its worktree. Pane always keeps the local branch. When Pane only reports commits not yet pushed, the driver archives anyway (`--force`), because those commits stay on that branch. When the worktree holds uncommitted work, the driver never forces it away. The run stays stopped, and the error names the Pane. Commit or discard that work, then stop again to archive it. |
+| `stop` | `runpane panels close --force` closes the tab, which ends its agent even mid-turn. Then `runpane panes archive --remove-worktree` removes the Pane and its worktree; Pane keeps the local branch. The driver never forces an archive. When Pane refuses because the worktree holds work not yet committed or pushed, the run stays stopped, the Pane stays, and the error names it. Push or discard that work, then stop again to archive it. |
 
 `version` adds `many-at-once` to `can`: Pane runs many Panes side by side.
 
@@ -21,9 +21,9 @@ The tab is opened with `--source agent`, because Pane lets an agent close only a
 The driver never touches a login (driver v1, N1 to N3). It calls `runpane` with your environment unchanged, and passes no key, token or password anywhere. Your agents sign in on this machine, as they do in Pane itself.
 
 1. Install Pane and its `runpane` CLI, and open the app (or run `runpane install daemon`).
-2. Save your checkout of the repository in Pane under the GitHub repository's name: `runpane repos add --path <checkout> --name <name>`. A start refuses when no saved repository, or more than one, has that name.
+2. Save your checkout of the repository in Pane: `runpane repos add --path <checkout>`. Its `origin` remote must be the GitHub repository (`https://github.com/<owner>/<name>` or `git@github.com:<owner>/<name>`). A start refuses when no saved checkout, or more than one, has that origin.
 3. Sign in, yourself, to each agent you use, and to `gh`, so the agent can post its status note.
-4. `harness` is one of Pane's agents: `claude`, `codex`, `cursor` (it runs `cursor-agent`), `opencode` or `pi`. `model` goes to that program's `--model` flag, quoted. Pane's docs give a terminal agent its model this way.
+4. `harness` is one of Pane's agents: `claude`, `codex`, `cursor` (it runs `cursor-agent`), `opencode` or `pi`. `model` goes to that program's `--model` flag, quoted. Pane's docs give a terminal agent its model this way. A field that looks like a login, token or key is refused before anything starts, and never echoed.
 
 The driver adds no permission flag. Each agent runs with your own settings for it, and Pane shows you any permission prompt it asks.
 

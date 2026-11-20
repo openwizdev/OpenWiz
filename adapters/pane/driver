@@ -11,6 +11,9 @@ START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket':
 RUN = {'run': r'run-[0-9a-f]{12}'}
 ID = re.compile(r'[A-Za-z0-9_.:-]{1,100}')
 CODE = re.compile(r'[a-z0-9][a-z0-9._-]{0,59}')
+CREDENTIAL = re.compile(r'\bgh[pousr]_[A-Za-z0-9]{8,}|github_pat_|\bAKIA[0-9A-Z]{16}|\bxox[abposr]-|\bsk-[A-Za-z0-9_-]{16,}'
+                        r'|\bbearer\s+\S|\b(?:password|passwd|secret|token|key)\s*[:=]', re.I)
+ORIGIN = re.compile(r'^(?:[a-z+]+://)?(?:[^@/]+@)?github\.com[:/]+([A-Za-z0-9_.-]{1,100})/([A-Za-z0-9_.-]{1,100}?)(?:\.git)?/*$')
 READY_MS = 60000
 UNWRITABLE = 'make OPENWIZ_PANE_STATE (or ~/.local/state/openwiz-pane) a folder you can write'
 
@@ -47,6 +50,9 @@ def read(fields):
         v = req[key]
         if not (type(v) is int and v > 0 if pattern is None else isinstance(v, str) and re.fullmatch(pattern, v)):
             raise Refused(key + ' is not valid', 'fix ' + key + ' as `driver schema` shows')
+        if isinstance(v, str) and CREDENTIAL.search(v):
+            raise Refused(key + ' looks like a login, token or key; nothing was started',
+                          'never send a login; send ' + key + ' as `driver schema` shows')
     return req
 
 
@@ -90,17 +96,47 @@ def text_id(value):
     return value if isinstance(value, str) and ID.fullmatch(value) else None
 
 
+def git_config(checkout):
+    git = os.path.join(checkout, '.git')
+    if os.path.isfile(git):
+        with open(git) as f:
+            pointer = f.read().strip()
+        if not pointer.startswith('gitdir:'):
+            return ''
+        git = os.path.join(checkout, pointer[len('gitdir:'):].strip())
+        if os.path.isfile(os.path.join(git, 'commondir')):
+            with open(os.path.join(git, 'commondir')) as f:
+                git = os.path.join(git, f.read().strip())
+    with open(os.path.join(git, 'config')) as f:
+        return f.read()
+
+
+def origin(checkout):
+    try:
+        text = git_config(checkout) if isinstance(checkout, str) else ''
+    except (OSError, UnicodeDecodeError):
+        return None
+    section, urls = None, []
+    for raw in text.splitlines():
+        entry = raw.strip()
+        if entry.startswith('['):
+            section = entry.replace(' ', '').lower()
+        elif section == '[remote"origin"]' and re.match(r'url\s*=', entry, re.I):
+            urls.append(entry.split('=', 1)[1].strip())
+    found = ORIGIN.search(urls[0]) if len(urls) == 1 else None
+    return ('%s/%s' % found.groups()).lower() if found else None
+
+
 def saved_repository(repository):
-    name = repository.split('/')[1]
     found = [r for r in runpane('start again', 'repos', 'list').get('repos') or []
-             if isinstance(r, dict) and r.get('name') == name and type(r.get('id')) is int]
-    add = 'runpane repos add --path <your checkout of %s> --name %s' % (repository, name)
+             if isinstance(r, dict) and type(r.get('id')) is int and origin(r.get('path')) == repository.lower()]
     if not found:
-        raise Refused('Pane has no saved repository named %s; nothing was started' % name,
-                      'save your checkout in Pane (%s), then start again' % add)
+        raise Refused('Pane has no saved checkout of %s; nothing was started' % repository,
+                      'save a checkout whose origin remote is github.com/%s in Pane (runpane repos add --path '
+                      '<that checkout>), then start again' % repository)
     if len(found) > 1:
-        raise Refused('Pane has %s saved more than once; nothing was started' % name,
-                      'rename all but your checkout of %s in Pane (runpane repos rename), then start again' % repository)
+        raise Refused('Pane has %s saved more than once; nothing was started' % repository,
+                      'remove all but one checkout of %s from Pane, then start again' % repository)
     return found[0]['id']
 
 
@@ -152,17 +188,19 @@ def archive(run, state):
     except Failed as e:
         blocked = (e.out or {}).get('blocked')
         code = blocked.get('code') if isinstance(blocked, dict) else None
-        if code == 'unpushed-commits':
-            # DATA LOSS: --force only for commits Pane keeps on the local branch; uncommitted work is never forced.
-            runpane(then, 'panes', 'archive', '--pane', state['pane'], '--remove-worktree', '--force', '--yes')
-        elif code in ('uncommitted-changes', 'uncommitted-and-unpushed'):
-            raise Refused(line('run %s is stopped and its agent has ended, but Pane kept its Pane openwiz-%s and '
-                               'worktree: it holds uncommitted work' % (run, run)),
-                          'commit and push that work, or discard it, yourself; then stop the run again to archive '
-                          'its Pane')
+        if code in ('unpushed-commits', 'uncommitted-changes', 'uncommitted-and-unpushed'):
+            raise Refused('run %s is stopped and its agent has ended, but Pane kept its Pane openwiz-%s and worktree: '
+                          'it holds work not yet committed or pushed (%s)' % (run, run, code),
+                          'push or discard that work yourself, then stop the run again to archive its Pane')
         else:
             raise Refused(line('run %s is stopped and its agent has ended, but its Pane was not archived: %s'
                                % (run, e.args[0])), e.args[1])
+
+
+def created(out):
+    items = out.get('items') if isinstance(out, dict) else None
+    item = items[0] if isinstance(items, list) and items and isinstance(items[0], dict) else None
+    return item if item and text_id(item.get('paneId')) and text_id(item.get('panelId')) else None
 
 
 def close(state, then):
@@ -189,25 +227,27 @@ def start(req):
                       '--source', 'agent', '--no-focus', '--no-expect-report', '--wait-ready',
                       '--ready-timeout-ms', str(READY_MS), '--yes')
     except Refused as e:
+        out = e.out if isinstance(e, Failed) and created(e.out) else None
+        if out is None:
+            keep(run, dict(state, stopped=True))
+            raise Refused(e.args[0], line(e.args[1] + '; if Pane shows a Pane named %s, archive it first' % name))
+    item = created(out)
+    if not item:
         keep(run, dict(state, stopped=True))
-        raise Refused(e.args[0], line(e.args[1] + '; if Pane shows a Pane named %s, archive it first' % name))
-    item = (out.get('items') or [None])[0]
-    item = item if isinstance(item, dict) else {}
-    state.update(pane=text_id(item.get('paneId')), panel=text_id(item.get('panelId')))
+        raise Refused('Pane gave no Pane and tab id for %s; its outcome is unknown' % name,
+                      'archive the Pane named %s in Pane yourself, then start again' % name)
+    state.update(pane=item['paneId'], panel=item['panelId'])
     readiness = item.get('readiness') if isinstance(item.get('readiness'), dict) else {}
-    if state['pane'] and state['panel'] and item.get('ok') is True and readiness.get('ok') is True:
+    if out.get('ok') is True and item.get('ok') is True and readiness.get('ok') is True:
         try:
             saved(run, dict(state, starting=False))
             return {'run': run}
         except OSError:
             why, step = 'the driver could not save run %s' % run, UNWRITABLE + ', then start again'
-    elif not (state['pane'] and state['panel']):
-        keep(run, dict(state, stopped=True))
-        raise Refused('Pane gave no Pane and tab id for %s; its outcome is unknown' % name,
-                      'archive the Pane named %s in Pane yourself, then start again' % name)
     else:
-        reason = readiness.get('reason') if isinstance(readiness.get('reason'), dict) else {}
-        why = 'the %s agent in Pane %s did not get ready (%s)' % (req['harness'], name, code_of(reason))
+        reason = readiness.get('reason') or out.get('error')
+        why = 'the %s agent in Pane %s did not get ready (%s)' % (
+            req['harness'], name, code_of(reason if isinstance(reason, dict) else {}))
         step = 'check that `%s` runs and is signed in on this machine, then start again' % PROGRAMS[req['harness']]
     state['stopped'] = True
     failures = []
