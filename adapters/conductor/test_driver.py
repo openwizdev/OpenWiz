@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -22,10 +23,17 @@ class Conductor(unittest.TestCase):
         with open(self.tracker, 'w') as f:
             json.dump({'record_authors': ['example-bot[bot]'], 'comments': []}, f)
         self.log, self.host = os.path.join(self.folder, 'calls'), os.path.join(self.folder, 'conductor.json')
+        tools = os.path.join(self.folder, 'bin')
+        os.mkdir(tools)
+        os.symlink(sys.executable, os.path.join(tools, 'python3'))
+        path = os.path.join(HERE, 'fixtures', 'bin') + os.pathsep + tools
+        for real in ('claude', 'codex', 'cursor', 'conductor'):
+            self.assertIsNone(shutil.which(real, path=path), 'a real %s is reachable from the tests' % real)
+        self.assertEqual(shutil.which('curl', path=path), os.path.join(HERE, 'fixtures', 'bin', 'curl'))
         self.env = dict(os.environ, KIT_TRACKER=self.tracker, CONDUCTOR_API_KEY=KEY, FAKE_CONDUCTOR_KEY=KEY,
                         FAKE_CONDUCTOR_STATE=self.host, FAKE_CONDUCTOR_LOG=self.log,
                         OPENWIZ_CONDUCTOR_STATE=os.path.join(self.folder, 'state'),
-                        PATH=os.path.join(HERE, 'fixtures', 'bin') + os.pathsep + os.environ.get('PATH', ''))
+                        PATH=path)
 
     def driver(self, cmd, request=None, **env):
         p = subprocess.run([DRIVER, cmd], input=json.dumps(request) if request is not None else '',
