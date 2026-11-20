@@ -1,0 +1,134 @@
+# python3 -I kernel/proofs/openclaw/test_sanitize.py against the copying stub (exit 1). Planted values are shown as [planted ...]; paths are repository-relative.
+test_a_credential_refuses_the_whole_run_and_is_never_printed (__main__.Sanitize.test_a_credential_refuses_the_whole_run_and_is_never_printed) ... 
+  test_a_credential_refuses_the_whole_run_and_is_never_printed (__main__.Sanitize.test_a_credential_refuses_the_whole_run_and_is_never_printed) (i=0) ... FAIL
+  test_a_credential_refuses_the_whole_run_and_is_never_printed (__main__.Sanitize.test_a_credential_refuses_the_whole_run_and_is_never_printed) (i=1) ... FAIL
+  test_a_credential_refuses_the_whole_run_and_is_never_printed (__main__.Sanitize.test_a_credential_refuses_the_whole_run_and_is_never_printed) (i=2) ... FAIL
+  test_a_credential_refuses_the_whole_run_and_is_never_printed (__main__.Sanitize.test_a_credential_refuses_the_whole_run_and_is_never_printed) (i=3) ... FAIL
+test_an_existing_output_folder_is_never_overwritten (__main__.Sanitize.test_an_existing_output_folder_is_never_overwritten) ... ok
+test_literals_are_required_and_must_be_readable (__main__.Sanitize.test_literals_are_required_and_must_be_readable) ... FAIL
+test_private_forms_are_rewritten_and_public_ones_kept (__main__.Sanitize.test_private_forms_are_rewritten_and_public_ones_kept) ... FAIL
+test_the_privacy_check_gates_what_rewriting_misses (__main__.Sanitize.test_the_privacy_check_gates_what_rewriting_misses) ... FAIL
+test_unknown_files_refuse (__main__.Sanitize.test_unknown_files_refuse) ... 
+  test_unknown_files_refuse (__main__.Sanitize.test_unknown_files_refuse) (name='shot.png') ... FAIL
+  test_unknown_files_refuse (__main__.Sanitize.test_unknown_files_refuse) (name='data.bin') ... FAIL
+  test_unknown_files_refuse (__main__.Sanitize.test_unknown_files_refuse) (name='bad.txt') ... FAIL
+test_unknown_files_refuse (__main__.Sanitize.test_unknown_files_refuse) ... FAIL
+
+======================================================================
+FAIL: test_a_credential_refuses_the_whole_run_and_is_never_printed (__main__.Sanitize.test_a_credential_refuses_the_whole_run_and_is_never_printed) (i=0)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/proofs/openclaw/test_sanitize.py", line 80, in test_a_credential_refuses_the_whole_run_and_is_never_printed
+    self.refused(result)
+  File "kernel/proofs/openclaw/test_sanitize.py", line 47, in refused
+    self.assertEqual(result.returncode, code, result.stdout + result.stderr)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_a_credential_refuses_the_whole_run_and_is_never_printed (__main__.Sanitize.test_a_credential_refuses_the_whole_run_and_is_never_printed) (i=1)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/proofs/openclaw/test_sanitize.py", line 80, in test_a_credential_refuses_the_whole_run_and_is_never_printed
+    self.refused(result)
+  File "kernel/proofs/openclaw/test_sanitize.py", line 48, in refused
+    self.assertFalse(self.out.exists(), 'a refused run wrote its output folder')
+AssertionError: True is not false : a refused run wrote its output folder
+
+======================================================================
+FAIL: test_a_credential_refuses_the_whole_run_and_is_never_printed (__main__.Sanitize.test_a_credential_refuses_the_whole_run_and_is_never_printed) (i=2)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/proofs/openclaw/test_sanitize.py", line 80, in test_a_credential_refuses_the_whole_run_and_is_never_printed
+    self.refused(result)
+  File "kernel/proofs/openclaw/test_sanitize.py", line 48, in refused
+    self.assertFalse(self.out.exists(), 'a refused run wrote its output folder')
+AssertionError: True is not false : a refused run wrote its output folder
+
+======================================================================
+FAIL: test_a_credential_refuses_the_whole_run_and_is_never_printed (__main__.Sanitize.test_a_credential_refuses_the_whole_run_and_is_never_printed) (i=3)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/proofs/openclaw/test_sanitize.py", line 80, in test_a_credential_refuses_the_whole_run_and_is_never_printed
+    self.refused(result)
+  File "kernel/proofs/openclaw/test_sanitize.py", line 48, in refused
+    self.assertFalse(self.out.exists(), 'a refused run wrote its output folder')
+AssertionError: True is not false : a refused run wrote its output folder
+
+======================================================================
+FAIL: test_literals_are_required_and_must_be_readable (__main__.Sanitize.test_literals_are_required_and_must_be_readable)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/proofs/openclaw/test_sanitize.py", line 102, in test_literals_are_required_and_must_be_readable
+    self.refused(self.run_it('--literals', str(self.root / 'missing.txt')), 2)
+  File "kernel/proofs/openclaw/test_sanitize.py", line 47, in refused
+    self.assertEqual(result.returncode, code, result.stdout + result.stderr)
+AssertionError: 0 != 2 : 
+
+======================================================================
+FAIL: test_private_forms_are_rewritten_and_public_ones_kept (__main__.Sanitize.test_private_forms_are_rewritten_and_public_ones_kept)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/proofs/openclaw/test_sanitize.py", line 62, in test_private_forms_are_rewritten_and_public_ones_kept
+    self.assertEqual((self.out / 'notes/run.md').read_text(encoding='utf-8').splitlines(), [
+AssertionError: Lists differ: ['builder thread [planted thread id] started', 'log at [planted home][284 chars]567'] != ['builder thread <thread> started', 'log at ~/.local/state[218 chars]567']
+
+First differing element 0:
+'builder thread [planted thread id] started'
+'builder thread <thread> started'
+
+Diff is 740 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_the_privacy_check_gates_what_rewriting_misses (__main__.Sanitize.test_the_privacy_check_gates_what_rewriting_misses)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/proofs/openclaw/test_sanitize.py", line 111, in test_the_privacy_check_gates_what_rewriting_misses
+    self.refused(result)
+  File "kernel/proofs/openclaw/test_sanitize.py", line 47, in refused
+    self.assertEqual(result.returncode, code, result.stdout + result.stderr)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_unknown_files_refuse (__main__.Sanitize.test_unknown_files_refuse) (name='shot.png')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/proofs/openclaw/test_sanitize.py", line 92, in test_unknown_files_refuse
+    self.refused(self.run_it())
+  File "kernel/proofs/openclaw/test_sanitize.py", line 47, in refused
+    self.assertEqual(result.returncode, code, result.stdout + result.stderr)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_unknown_files_refuse (__main__.Sanitize.test_unknown_files_refuse) (name='data.bin')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/proofs/openclaw/test_sanitize.py", line 92, in test_unknown_files_refuse
+    self.refused(self.run_it())
+  File "kernel/proofs/openclaw/test_sanitize.py", line 48, in refused
+    self.assertFalse(self.out.exists(), 'a refused run wrote its output folder')
+AssertionError: True is not false : a refused run wrote its output folder
+
+======================================================================
+FAIL: test_unknown_files_refuse (__main__.Sanitize.test_unknown_files_refuse) (name='bad.txt')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/proofs/openclaw/test_sanitize.py", line 92, in test_unknown_files_refuse
+    self.refused(self.run_it())
+  File "kernel/proofs/openclaw/test_sanitize.py", line 48, in refused
+    self.assertFalse(self.out.exists(), 'a refused run wrote its output folder')
+AssertionError: True is not false : a refused run wrote its output folder
+
+======================================================================
+FAIL: test_unknown_files_refuse (__main__.Sanitize.test_unknown_files_refuse)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/proofs/openclaw/test_sanitize.py", line 97, in test_unknown_files_refuse
+    self.refused(self.run_it())
+  File "kernel/proofs/openclaw/test_sanitize.py", line 48, in refused
+    self.assertFalse(self.out.exists(), 'a refused run wrote its output folder')
+AssertionError: True is not false : a refused run wrote its output folder
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.466s
+
+FAILED (failures=11)
