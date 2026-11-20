@@ -1,4 +1,4 @@
-# at b6674634
+# at 54c16276
 $ python3 -I adapters/conductor/test_driver.py   # under env -i; each test builds its environment from scratch; PATH: fixtures/bin and a python3 link only; the kit runs scoped to its own run
 test_a_failed_archive_says_so_and_the_run_stays_stopped (__main__.Conductor.test_a_failed_archive_says_so_and_the_run_stays_stopped) ... ok
 test_a_lost_start_reply_is_never_retried (__main__.Conductor.test_a_lost_start_reply_is_never_retried) ... ok
