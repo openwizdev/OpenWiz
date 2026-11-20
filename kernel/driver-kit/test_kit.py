@@ -105,6 +105,26 @@ class Kit(unittest.TestCase):
                 code, out, err = self.kit(os.path.join(FIXTURES, 'planted', name), os.path.join(NO_PROC, 'python3'),
                                           **macos)
                 self.assertEqual((code, out), (1, PLANTED[name]), err)
+        self.tearDown()
+        self.setUp()
+        spaced = dict(macos, PATH=NO_PROC + os.pathsep + self.env['PATH'], GH_TOKEN='Bearer ' + TOKEN[4:])
+        code, out, err = self.kit(os.path.join(FIXTURES, 'planted', 'token-in-env'), os.path.join(NO_PROC, 'python3'),
+                                  **spaced)
+        self.assertEqual((code, out), (1, PLANTED['token-in-env']), err)
+
+    def test_without_proc_or_any_visible_environment_stop_and_token_fail_unverified(self):
+        blind = "ps shows no process's environment here, so the kit cannot tell which processes the driver started"
+        expected = {'template': PASS[:3] + ['fail stop: ' + blind, 'fail token: ' + blind],
+                    'stop-leaves-run': PASS[:3] + ['fail stop: ' + blind, 'fail token: ' + blind],
+                    'token-in-env': PASS[:3] + ['fail stop: ' + blind, 'fail token: ' + blind]}
+        for name, lines in expected.items():
+            with self.subTest(name):
+                self.tearDown()
+                self.setUp()
+                driver = TEMPLATE if name == 'template' else os.path.join(FIXTURES, 'planted', name)
+                code, out, err = self.kit(driver, os.path.join(NO_PROC, 'python3'), NO_PROC_HIDE_ENV='1',
+                                          PATH=NO_PROC + os.pathsep + self.env['PATH'], NO_PROC_PYTHON=sys.executable)
+                self.assertEqual((code, out), (1, lines), err)
 
     def test_each_planted_driver_fails_its_check(self):
         for name, lines in PLANTED.items():
