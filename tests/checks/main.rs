@@ -10,7 +10,6 @@ mod schema;
 mod dirs;
 
 mod cli_build_script;
-mod cockpit_schema_conformance;
 mod dependencies;
 mod evidence_outside_crates;
 mod fixture_scan;

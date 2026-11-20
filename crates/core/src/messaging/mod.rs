@@ -7,19 +7,17 @@
 //!
 //! Like the rest of the core, this module does no I/O. Reads and the one
 //! write go through a [`send::Messenger`] (the adapter), the durable send
-//! record through a [`record::SendStore`] (`openwiz-store`), and time through
+//! record through a [`record::SendStore`], and time through
 //! a [`Clock`](crate::ops::Clock). Op ids are generated outside the core.
 //!
 //! - [`send`]: the operation, its outcomes and its report;
 //! - [`preview`]: what a send would do, read before any text is written,
 //!   with no claim and no call;
-//! - [`lookup`]: one op id's record, for "Check again", with no call;
 //! - [`effects`]: what a send is expected to do, worked out before sending;
 //! - [`record`]: the send record, the store interface and the recovery rule;
 //! - [`reconcile`]: the rule for a lost acknowledgement.
 
 pub mod effects;
-pub mod lookup;
 pub mod preview;
 pub mod reconcile;
 pub mod record;

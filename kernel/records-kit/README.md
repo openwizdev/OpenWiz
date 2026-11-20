@@ -32,6 +32,12 @@ Each `blocked_by` entry is a native blocker: `number`, `state` (`open` or `close
 - A **spec** is an open issue without a parent that carries `spec`, or that is the parent of an open issue in the tracker.
 - L3 checks a ticket's spec only when that spec is open (in the tracker).
 
+## What it reads in a body
+
+- A template section counts only outside fenced code blocks and HTML comments, read as the pinned [plan links contract](https://github.com/openwizdev/WizSkills/blob/a2993f47b8fd3d7853ee45e6c21feea708c70c02/contracts/plan-links.v1.md)'s "Reading a section" reads them.
+- B1 checks a ticket's `## Links` section by that contract's mechanical rules: each native blocker needs exactly one reason line (`#<n> has no reason line`, `#<n> has more than one line`), and a malformed section labels nothing (`malformed section: <detail>`). A reason's wording is not checked.
+- A status note counts toward S1 only when every field has the pinned [status schema](https://github.com/openwizdev/WizSkills/blob/a2993f47b8fd3d7853ee45e6c21feea708c70c02/contracts/agent-status.v1.schema.json)'s shape; any other is S2.
+
 ## Fixtures
 
 `fixtures/valid.json` passes. It holds a lapsed note exactly 30 minutes old, a record author's name in another case, a v1 marker from someone who isn't a record author, a v2 note, a heading inside a code block and a project's own label. Each `fixtures/broken-<name>.json` is that tracker with one planted break; `test_check.py` names the exact lines each must print.

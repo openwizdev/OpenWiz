@@ -30,3 +30,5 @@ mod p09_reported_configuration;
 mod p10_json_matches_text;
 mod p11_visibility;
 mod p12_drift;
+// #1264: #267's bundle-location proofs, moved from the deleted `service` target.
+mod t2_locate;

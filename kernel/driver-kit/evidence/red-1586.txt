@@ -1,0 +1,261 @@
+$ python3 -I kernel/driver-kit/test_kit.py   # #1586 red: the two new tests, before the fix (the planted sample shown as <sample>)
+test_a_refusal_holding_a_credential_never_reaches_the_output (__main__.Kit.test_a_refusal_holding_a_credential_never_reaches_the_output) ... FAIL
+test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) ... ok
+test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) ... 
+  test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) [key=] ... FAIL
+  test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) [sig=] ... FAIL
+  test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) [password:] ... FAIL
+  test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) [Bearer] ... FAIL
+  test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) [gh?_] ... FAIL
+  test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) [gho_] ... FAIL
+  test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) [ghu_] ... FAIL
+  test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) [ghs_] ... FAIL
+  test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) [ghr_] ... FAIL
+  test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) [github_pat_] ... FAIL
+  test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) [sk-] ... FAIL
+test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) ... ok
+test_template_passes_all_five (__main__.Kit.test_template_passes_all_five) ... ok
+
+======================================================================
+FAIL: test_a_refusal_holding_a_credential_never_reaches_the_output (__main__.Kit.test_a_refusal_holding_a_credential_never_reaches_the_output)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 108, in test_a_refusal_holding_a_credential_never_reaches_the_output
+    self.assertNotIn(sample, '\n'.join(out) + err)
+AssertionError: '<sample>' unexpectedly found in 'pass version: openwiz:records v1, and the schema is driver v1\npass start: the run posted builder status note 2\npass wake: the run edited builder status note 2\nfail stop: the run would not stop (debug: <sample>)\nfail token: the driver printed a credential'
+
+======================================================================
+FAIL: test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) [key=]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 125, in test_each_status_contract_credential_format_is_caught
+    self.assertEqual((code, out), (1, PASS[:4] + ['fail token: the driver printed a credential']))
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[245 chars]er']) != (1, ['pass version: openwiz:records v1, an[233 chars]al'])
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+-   'pass token: no login or token passed through the driver'])
++   'fail token: the driver printed a credential'])
+
+======================================================================
+FAIL: test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) [sig=]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 125, in test_each_status_contract_credential_format_is_caught
+    self.assertEqual((code, out), (1, PASS[:4] + ['fail token: the driver printed a credential']))
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[245 chars]er']) != (1, ['pass version: openwiz:records v1, an[233 chars]al'])
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+-   'pass token: no login or token passed through the driver'])
++   'fail token: the driver printed a credential'])
+
+======================================================================
+FAIL: test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) [password:]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 125, in test_each_status_contract_credential_format_is_caught
+    self.assertEqual((code, out), (1, PASS[:4] + ['fail token: the driver printed a credential']))
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[245 chars]er']) != (1, ['pass version: openwiz:records v1, an[233 chars]al'])
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+-   'pass token: no login or token passed through the driver'])
++   'fail token: the driver printed a credential'])
+
+======================================================================
+FAIL: test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) [Bearer]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 125, in test_each_status_contract_credential_format_is_caught
+    self.assertEqual((code, out), (1, PASS[:4] + ['fail token: the driver printed a credential']))
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[245 chars]er']) != (1, ['pass version: openwiz:records v1, an[233 chars]al'])
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+-   'pass token: no login or token passed through the driver'])
++   'fail token: the driver printed a credential'])
+
+======================================================================
+FAIL: test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) [gh?_]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 125, in test_each_status_contract_credential_format_is_caught
+    self.assertEqual((code, out), (1, PASS[:4] + ['fail token: the driver printed a credential']))
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[245 chars]er']) != (1, ['pass version: openwiz:records v1, an[233 chars]al'])
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+-   'pass token: no login or token passed through the driver'])
++   'fail token: the driver printed a credential'])
+
+======================================================================
+FAIL: test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) [gho_]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 125, in test_each_status_contract_credential_format_is_caught
+    self.assertEqual((code, out), (1, PASS[:4] + ['fail token: the driver printed a credential']))
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[245 chars]er']) != (1, ['pass version: openwiz:records v1, an[233 chars]al'])
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+-   'pass token: no login or token passed through the driver'])
++   'fail token: the driver printed a credential'])
+
+======================================================================
+FAIL: test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) [ghu_]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 125, in test_each_status_contract_credential_format_is_caught
+    self.assertEqual((code, out), (1, PASS[:4] + ['fail token: the driver printed a credential']))
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[245 chars]er']) != (1, ['pass version: openwiz:records v1, an[233 chars]al'])
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+-   'pass token: no login or token passed through the driver'])
++   'fail token: the driver printed a credential'])
+
+======================================================================
+FAIL: test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) [ghs_]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 125, in test_each_status_contract_credential_format_is_caught
+    self.assertEqual((code, out), (1, PASS[:4] + ['fail token: the driver printed a credential']))
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[245 chars]er']) != (1, ['pass version: openwiz:records v1, an[233 chars]al'])
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+-   'pass token: no login or token passed through the driver'])
++   'fail token: the driver printed a credential'])
+
+======================================================================
+FAIL: test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) [ghr_]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 125, in test_each_status_contract_credential_format_is_caught
+    self.assertEqual((code, out), (1, PASS[:4] + ['fail token: the driver printed a credential']))
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[245 chars]er']) != (1, ['pass version: openwiz:records v1, an[233 chars]al'])
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+-   'pass token: no login or token passed through the driver'])
++   'fail token: the driver printed a credential'])
+
+======================================================================
+FAIL: test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) [github_pat_]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 125, in test_each_status_contract_credential_format_is_caught
+    self.assertEqual((code, out), (1, PASS[:4] + ['fail token: the driver printed a credential']))
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[245 chars]er']) != (1, ['pass version: openwiz:records v1, an[233 chars]al'])
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+-   'pass token: no login or token passed through the driver'])
++   'fail token: the driver printed a credential'])
+
+======================================================================
+FAIL: test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) [sk-]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 125, in test_each_status_contract_credential_format_is_caught
+    self.assertEqual((code, out), (1, PASS[:4] + ['fail token: the driver printed a credential']))
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[245 chars]er']) != (1, ['pass version: openwiz:records v1, an[233 chars]al'])
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+-   'pass token: no login or token passed through the driver'])
++   'fail token: the driver printed a credential'])
+
+----------------------------------------------------------------------
+Ran 5 tests in 25.529s
+
+FAILED (failures=12)

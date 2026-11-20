@@ -279,15 +279,31 @@ fourth acceptance criterion asks.
 
 | Part | Files | Delete (lines) | Fold (lines) | Keep (lines) | Removed by AP11 |
 | --- | ---: | ---: | ---: | ---: | --- |
-| The web view (`apps/web`) | 324 | 313 (48550) | 11 (621) | 0 (0) | |
-| OpenWiz's copy of the website (`apps/site`) | 19 | 19 (1931) | 0 (0) | 0 (0) | |
-| The local server (`crates/server`) | 18 | 18 (10090) | 0 (0) | 0 (0) | |
-| The service (`crates/service`) | 33 | 33 (7928) | 0 (0) | 0 (0) | |
-| The store (`crates/store`) | 18 | 9 (3738) | 9 (3642) | 0 (0) | |
-| Act-from-the-UI pieces in the core, command line and adapters | 36 | 8 (3506) | 0 (0) | 28 (10475) | |
-| Their tests | 182 | 153 (53832) | 2 (913) | 27 (6816) | |
-| Their contracts, docs and deployment | 19 | 7 (2362) | 0 (0) | 12 (7996) | |
-| **Total** | **649** | **560 (131937)** | **22 (5176)** | **67 (25287)** | |
+| The web view (`apps/web`) | 324 | 313 (48550) | 11 (621) | 0 (0) | 48550: 313 files deleted; 11 folded unchanged |
+| OpenWiz's copy of the website (`apps/site`) | 19 | 19 (1931) | 0 (0) | 0 (0) | 1931: 19 files deleted |
+| The local server (`crates/server`) | 18 | 18 (10090) | 0 (0) | 0 (0) | 10102: 18 files deleted (12 lines more than at the base, from #1274) |
+| The service (`crates/service`) | 33 | 33 (7928) | 0 (0) | 0 (0) | 7928: 33 files deleted |
+| The store (`crates/store`) | 18 | 9 (3738) | 9 (3642) | 0 (0) | 4158: 9 files deleted (3738); 420 removed or rewritten in the fold (the send record and claim code in `mod.rs`; renamed lines in `state_dir.rs` and the loops files) |
+| Act-from-the-UI pieces in the core, command line and adapters | 36 | 8 (3506) | 0 (0) | 28 (10475) | 3565: 8 files deleted (3506); 59 dropped from keep rows |
+| Their tests | 182 | 153 (53832) | 2 (913) | 27 (6816) | 54455: 152 files deleted (53814; `tests/service/t7_python.rs` was already gone in #1143); 633 dropped from keep rows; 8 in the folds |
+| Their contracts, docs and deployment | 19 | 7 (2362) | 0 (0) | 12 (7996) | 2362: 7 files deleted |
+| **Total** | **649** | **560 (131937)** | **22 (5176)** | **67 (25287)** | **133051** |
+
+Granted beside the table on #1264, each "behaviour gone": `tests/fleet/lock_release.rs` (144, the
+new-thread file store's claim lock), `tests/checks/cockpit_schema_conformance.rs` (321, the cockpit
+contract), `tools/install/test_setup_api.mjs` (89, the web setup client),
+`tools/install/tests/first-hour/providers/recording.ts` (241, the web page's fault cases), and
+`tools/install/platform/runtime.py` and `test_runtime.py` (311 and 226, the local service supervisor),
+and `tools/live-smoke/browser.mjs` (89, the web view's live browser sitting) with its probe rule and
+cases: 1421 lines in the files.
+
+Kept beside the table by J233 (#1264): `openwiz models --json`, read-only, because setup's harness
+check and onboarding read it. Its read and rendering moved from the deleted `crates/cli/src/new_thread.rs`
+to `crates/cli/src/models.rs` (about 100 lines); `new`'s write paths went as the row says.
+
+The CI budget table (`tools/war-room/budgets.tsv`) loses the rows of the removed `web-build`, `web`,
+`web-export`, `rust-export` and `site` jobs (13 rows); `rust`'s three rows, derived from the
+`rust-export` twin with the same steps, now carry that twin's own sources.
 
 ## The rows
 

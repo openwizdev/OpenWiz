@@ -1081,5 +1081,5 @@ fn token_answer(mut result: Vec<u8>) -> Result<Vec<u8>, Error> {
 }
 
 #[cfg(test)]
-#[path = "../../../../tests/service/t7_transport.rs"]
+#[path = "app_transport_tests.rs"]
 mod transport_tests;

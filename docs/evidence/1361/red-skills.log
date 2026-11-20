@@ -1,0 +1,23 @@
+test_absent_harness_is_reported_and_an_unsafe_destination_changes_nothing (__main__.HarnessSkills.test_absent_harness_is_reported_and_an_unsafe_destination_changes_nothing) ... FAIL
+test_skills_reach_the_canonical_folder_and_every_named_harness (__main__.HarnessSkills.test_skills_reach_the_canonical_folder_and_every_named_harness) ... FAIL
+
+======================================================================
+FAIL: test_absent_harness_is_reported_and_an_unsafe_destination_changes_nothing (__main__.HarnessSkills.test_absent_harness_is_reported_and_an_unsafe_destination_changes_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/test_install.py", line 299, in test_absent_harness_is_reported_and_an_unsafe_destination_changes_nothing
+    self.assertEqual(code, 0, result)
+AssertionError: 2 != 0 : {'schema': 'openwiz.install-error.v1', 'outcome': 'usage', 'reason': "argument command: invalid choice: 'skills' (choose from 'preflight', 'download', 'install', 'status', 'open')"}
+
+======================================================================
+FAIL: test_skills_reach_the_canonical_folder_and_every_named_harness (__main__.HarnessSkills.test_skills_reach_the_canonical_folder_and_every_named_harness)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/test_install.py", line 280, in test_skills_reach_the_canonical_folder_and_every_named_harness
+    self.assertEqual(code, 0, result)
+AssertionError: 2 != 0 : {'schema': 'openwiz.install-error.v1', 'outcome': 'usage', 'reason': "argument command: invalid choice: 'skills' (choose from 'preflight', 'download', 'install', 'status', 'open')"}
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.987s
+
+FAILED (failures=2)

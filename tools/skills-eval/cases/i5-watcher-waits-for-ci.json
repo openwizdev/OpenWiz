@@ -46,7 +46,7 @@
    {
     "pid": 4310,
     "owner": "other",
-    "cmd": "node apps/web/dev-server.js --port 3100"
+    "cmd": "node apps/portal/dev-server.js --port 3100"
    }
   ]
  },

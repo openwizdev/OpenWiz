@@ -1,9 +1,11 @@
 # Resumable setup v1
 
-Setup is independent of installation. `GET /api/v1/setup` is read-only and has
-no body or query. It creates no state, calls no CloudRoom/GitHub executable,
-and cannot activate an engine. It returns `openwiz.setup.v1`: `ready`, the
-ordered `components` array, `engine`, `cost` and `operations`.
+Setup is independent of installation. `openwiz.setup.v1` is the owner's
+read-only setup report: `ready`, the ordered `components` array, `engine`,
+`cost` and `operations`. Producing it creates no state, calls no
+CloudRoom/GitHub executable and activates nothing. No OpenWiz route serves it
+since #1264; `tools/install/setup/` checks the components and saves their
+results, and `tools/install/access/` reads the report's operations.
 
 Each component has `id`, `state`, `reason` and `next`. The fixed independent ids
 are `cloudroom`, `harness`, `personal_github`, `github_app`, `project` and
@@ -45,13 +47,13 @@ request fingerprint and proposal before any effect; apply only a matching,
 current explicit authorization. Retry/reload reuses the id. A lost reply is
 uncertain and must be reconciled against the provider's exact resource before
 another call. Never infer applied from process launch or erase uncertainty with
-a later refusal. This contract alone authorizes no write route: T1 exposes none.
+a later refusal. This contract authorizes no write route.
 
-App state uses OpenWiz's established service App, selected repositories only,
+App state uses OpenWiz's established App, selected repositories only,
 Metadata read, Contents/Issues/Pull requests write, Checks/Actions read; no
 personal-token fallback. Reused CloudRoom login, harness/model availability and
 personal GitHub push identity are checked independently. Keys remain in
-owner-only state on the explicitly selected engine host, through protected
+owner-only state on the owner's machine, through protected
 secret provisioning for Cloud, never prompts/args/URLs/logs/repository files.
 
 Remote access defaults unknown. Named Cloudflare Tunnel plus owner-only Access
@@ -65,7 +67,7 @@ spec confirmation or plan approval, and install permission never starts work.
 
 [setup-onboard.v1](setup-onboard.v1.md) pins the shapes; this section is the
 compatible change to `openwiz.setup.v1`. The schema name, component ids, states,
-`GET` read-only rule and operation rules are unchanged.
+read-only rule and operation rules are unchanged.
 
 - **Two optional response fields.** `identity` is `selected` (`app`,
   `personal_login`, `unselected`), `app_choice` (`create`, `reuse`, `skip`,
@@ -89,9 +91,8 @@ compatible change to `openwiz.setup.v1`. The schema name, component ids, states,
 - **Old and new readers.** Readers are strict, so a reader that predates these
   fields refuses a response carrying either field as unreadable, rather than
   ignoring it; it never shows a partial or upgraded state. A producer emits
-  them only in a package whose reader accepts them (T2 #633 ships the server
-  and page together; T5 #635 adds `brain`). A new reader accepts both the old
-  and the new form and applies the rule that form selects.
-- **No effect.** `GET /api/v1/setup` still creates nothing and calls no
+  them only in a package whose reader accepts them. A new reader accepts both
+  the old and the new form and applies the rule that form selects.
+- **No effect.** The report still creates nothing and calls no
   CloudRoom or GitHub executable; sign-in, skip and init are separate,
   disclosed, authorized operations.

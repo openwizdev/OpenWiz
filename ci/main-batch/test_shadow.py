@@ -22,7 +22,7 @@ class Shadow(unittest.TestCase):
         ci = workflow[workflow.index('\n  ci:\n'):start]
         # #1055: an admitted old-map main push runs ci; every other event always.
         self.assertIn("    if: ${{ always() && (github.event_name != 'push' || needs.changes.result != 'success' || needs.changes.outputs.trace == 'true') }}\n", ci, 'required result always runs')
-        self.assertIn('    needs: [changes, always, web-build, rust, rust-export, web, web-export, site, release, skills, launch-fleet]\n',
+        self.assertIn('    needs: [changes, always, rust, release, skills, launch-fleet]\n',
                       ci, 'required result dependencies')
         finish = '          python3 -I .github/actions/docs-only/run.py finish "$RUNNER_TEMP/ci-plan" "$RUNNER_TEMP/needs.json" "$RUNNER_TEMP/receipts"'
         self.assertEqual(workflow.count('run.py finish'), 1, 'required result finish count')

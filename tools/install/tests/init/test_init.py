@@ -12,6 +12,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -29,6 +30,10 @@ spec.loader.exec_module(contract)
 
 CODE = 'synthetic-owner/synthetic-app'
 COMPANION = 'synthetic-owner/synthetic-app-brain'
+# #1361: the five labels people set, read from records v1 itself (section 1's table), plus init's own.
+RECORDS_LABELS = re.findall(r'^\| `([a-z-]+)` \|', (ROOT / 'kernel/records.v1.md').read_text()
+                            .split('## 1. Labels', 1)[1].split('\n## ', 1)[0], re.M)
+FACTORY_LABELS = ['openwiz'] + RECORDS_LABELS
 FILES = {'.openwiz/brain/README.md', '.openwiz/brain/settings.json',
          '.openwiz/brain/grills/README.md', '.openwiz/brain/decisions/README.md'}
 
@@ -133,6 +138,62 @@ class Init(unittest.TestCase):
                          {'README.md': 'Synthetic app.\n'}, 'only proposed, never pushed to main')
         self.assertEqual(self.saved()['brain'], applied['brain'])
 
+    # Catches (#1361): a first fleet's records v1 labels missing after init; a label made without its
+    # colour or description; the owner's own label changed or deleted; a second run writing again.
+    def test_init_sets_up_the_records_v1_labels_and_keeps_the_owners_own(self):
+        self.assertEqual(RECORDS_LABELS, ['spec', 'ready-for-agent', 'ready-for-human', 'needs-info', 'held'])
+        owners = {'color': '000000', 'description': 'The owner meaning'}
+        self.world({CODE.lower(): repository(CODE, 'private', labels=['needs-info', 'bug'],
+                                             label_details={'needs-info': owners})})
+        preview = self.init()
+        self.assertEqual(self.writes(), [])
+        self.assertEqual(self.apply(preview)['outcome'], 'applied')
+        code = self.read()['repos'][CODE.lower()]
+        made = ['openwiz', 'spec', 'ready-for-agent', 'ready-for-human', 'held']
+        self.assertEqual(code['labels'], ['needs-info', 'bug'] + made)
+        self.assertEqual([c for c in self.writes() if c[1] == f'repos/{CODE}/labels'],
+                         [['POST', f'repos/{CODE}/labels']] * len(made))
+        self.assertEqual(code['label_details']['needs-info'], owners)
+        for name in made:
+            with self.subTest(label=name):
+                self.assertRegex(code['label_details'][name]['color'], '^[0-9a-f]{6}$')
+                self.assertTrue(code['label_details'][name]['description'])
+        before = self.read()
+        again = self.init()
+        self.assertEqual(self.apply(again)['outcome'], 'applied')
+        after = self.read()
+        self.assertEqual((after['repos'], self.writes()), (before['repos'], [c for c in before['log'] if c[0] != 'GET']))
+
+    # Catches (#1595): a label POST refused with 422 that created nothing, taken as "made
+    # concurrently", so init reports applied and opens the proposal with the label missing.
+    def test_a_refused_label_fails_the_effect_and_opens_no_proposal(self):
+        for existing, refused in (([], 'openwiz'), (['openwiz'], 'spec')):
+            with self.subTest(label=refused):
+                shutil.rmtree(self.state, ignore_errors=True)
+                self.world({CODE.lower(): repository(CODE, 'private', labels=list(existing))},
+                           faults=[{'method': 'POST', 'path': f'repos/{CODE}/labels', 'mode': 422, 'times': 1}])
+                failed = self.apply(self.init(), expect=5)
+                self.assertEqual((failed['outcome'], failed['reason_code']), ('refused', 'effect_denied'))
+                code = self.read()['repos'][CODE.lower()]
+                self.assertNotIn(refused, code['labels'])
+                self.assertEqual(code['pulls'], [])
+                self.assertNotIn('openwiz/brain', code['branches'])
+
+    # Catches (#1595): a label someone else made between init's read and its POST (a 422 that
+    # is really there) counted as failed, changed to init's colours, or written again next run.
+    def test_a_label_made_concurrently_counts_as_applied_and_stays_theirs(self):
+        theirs = {'color': '000000', 'description': 'Made by someone else'}
+        self.world(faults=[{'method': 'POST', 'path': f'repos/{CODE}/labels', 'mode': 'taken', 'times': 1,
+                            'body': theirs}])
+        self.assertEqual(self.apply(self.init())['outcome'], 'applied')
+        code = self.read()['repos'][CODE.lower()]
+        self.assertEqual(code['labels'], FACTORY_LABELS)
+        self.assertEqual(code['label_details']['openwiz'], theirs)
+        before = self.read()
+        self.assertEqual(self.apply(self.init())['outcome'], 'applied')
+        self.assertEqual(self.read()['repos'], before['repos'])
+        self.assertEqual(self.writes(), [c for c in before['log'] if c[0] != 'GET'])
+
     # Catches: private records written into public code, or a companion that is
     # public or unlinked.
     def test_public_code_gets_a_linked_private_companion_and_no_private_content(self):
@@ -148,9 +209,9 @@ class Init(unittest.TestCase):
         self.assertEqual(set(self.files(COMPANION)), FILES)
         code = self.read()['repos'][CODE.lower()]
         self.assertEqual(code['branches'], {'main': {'README.md': 'Synthetic app.\n'}}, 'public code untouched')
-        self.assertEqual(code['labels'], ['openwiz'])
-        self.assertEqual(sum(1 for call in self.writes() if call[1].startswith(f'repos/{CODE}/')), 1,
-                         'only the label is written on public code')
+        self.assertEqual(code['labels'], FACTORY_LABELS)
+        self.assertEqual(sum(1 for call in self.writes() if call[1].startswith(f'repos/{CODE}/')), len(FACTORY_LABELS),
+                         'only the labels are written on public code')
         self.assertEqual(applied['private_content_written'], 'brain_repository')
 
     # Catches: visibility inferred from a missing, internal, contradictory,
@@ -235,7 +296,7 @@ class Init(unittest.TestCase):
                     self.assertEqual(sum(1 for c in world['log'] if c == ['POST', 'user/repos']),
                                      2 if (mode, path) == ('drop', 'user/repos') else 1)
                     self.assertEqual(len(world['repos'][COMPANION.lower()]['pulls']), 1)
-                    self.assertEqual(world['repos'][CODE.lower()]['labels'], ['openwiz'])
+                    self.assertEqual(world['repos'][CODE.lower()]['labels'], FACTORY_LABELS)
                     self.assertEqual(set(world['repos'][COMPANION.lower()]['branches']['openwiz/brain']), FILES)
                     retried = [e for e in done['effects'] if e['attempts'] > 1]
                     self.assertTrue(all(e['reconciliation'] == 'provider_read_back' for e in retried))

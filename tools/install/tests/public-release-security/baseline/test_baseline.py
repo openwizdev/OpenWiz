@@ -34,7 +34,7 @@ sys.dont_write_bytecode = True
 ROOT = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(ROOT / 'tools/install/access'))
 import access  # noqa: E402
-sys.path.insert(0, str(ROOT / 'apps/web/test/fixtures/install-access'))
+sys.path.insert(0, str(ROOT / 'tools/install/access/fixtures'))
 from provider import Recording, credentials, jwt, selected  # noqa: E402
 
 OWNER_EMAIL = 'owner@example.invalid'
@@ -129,8 +129,8 @@ class AccessBoundaries(unittest.TestCase):
         past = '2020-01-01T00:00:00Z'
         foreign_open = [{'action': 'accept', 'src': ['*'], 'dst': ['100.100.100.10:443']}]
         cases = [
-            # (provider, case, change, code): codes from the setup report's table
-            # (crates/server/src/setup.rs): refused = owner-only access or refusal
+            # (provider, case, change, code): codes from the setup report's table:
+            # refused = owner-only access or refusal
             # not proved; expired = account, session or device authorization.
             ('cloudflare', 'API token revoked', lambda r, s: setattr(r, 'revoked', True), 'access_expired'),
             ('cloudflare', 'anonymous request reaches OpenWiz', lambda r, s: r.leak.add('anonymous'), 'access_refused'),

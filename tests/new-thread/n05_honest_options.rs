@@ -1,7 +1,7 @@
 //! N5: honest options. The read time, the saved-copy label and the
 //! unavailable harnesses with their reasons; `harnesses: null` gives no
 //! options; account fields (and every other non-catalogue field) are never
-//! parsed into the core. The CLI's half (`openwiz models`) is phase 2's.
+//! parsed into the core.
 
 use openwiz_adapter_cloudroom::new_thread::{CLI_REASONING_LEVELS, parse_catalogue};
 use openwiz_core::new_thread::options::{

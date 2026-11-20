@@ -15,9 +15,12 @@
   install status --root ROOT [--state-root STATE]
       Verifies the selected build against its state and reads its identity and
       update channel. No effects.
-  install open --root ROOT [--state-root STATE] [--port PORT] [--browser]
-      Verifies the selected build, then serves its own setup page on loopback,
-      reading setup from STATE (default ROOT/state), until stopped.
+  install skills --root ROOT [--state-root STATE]
+      Verifies the selected build, then copies its skills into ROOT/skills and
+      into each harness present here: Claude Code, Codex, Cursor, OpenCode and
+      Grok (contracts/install.v1.md, "Harness skills", #1361). An absent
+      harness gets nothing; an unsafe folder or the user's own same-named
+      skill refuses the whole step before any write.
 
 Every command prints one JSON object. Exit codes: 0 done, 1 failed,
 2 usage, 5 refused (nothing selected or changed). Python 3.9+, standard
@@ -39,6 +42,7 @@ sys.dont_write_bytecode = True
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import install as installer  # noqa: E402
+import harness  # noqa: E402
 import pull  # noqa: E402
 
 HOSTS = {('Darwin', 'arm64'): 'aarch64-apple-darwin', ('Darwin', 'x86_64'): 'x86_64-apple-darwin',
@@ -189,7 +193,7 @@ def selected(root, state_root=None):
     installer.private(manifest, False)
     raw = manifest.read_bytes()
     target = json.loads(raw, object_pairs_hook=installer.unique).get('target')
-    value, assets, raw = installer.manifest_at(manifest, installer.sha(raw), target)
+    value, assets, raw = installer.manifest_at(manifest, installer.sha(raw), target, selected=True)
     installer.require(value['source'] == build.name, 'the selected build is not its own source')
     installer.verify_installed(build, assets, raw)
     channel = root / 'channel.json'
@@ -203,16 +207,6 @@ def status(root, state_root):
     return {'schema': 'openwiz.install-status.v1', 'outcome': 'installed', 'version': value['version'],
             'source': value['source'], 'target': value['target'], 'channel': channel, 'build': str(build),
             'state_root': str(state), 'reason': 'Read and verified the selected build only; nothing was changed.'}
-
-
-def open_setup(root, state_root, port, browser, out):
-    build, state, _, _ = selected(root, state_root)
-    # The setup server reads the same state every setup and engine command writes.
-    os.environ['OPENWIZ_STATE_DIR'] = str(state)
-    print(json.dumps({'schema': 'openwiz.setup-open.v1', 'outcome': 'serving', 'build': str(build),
-                      'state_root': str(state), 'setup_url': f'http://127.0.0.1:{port}/setup'},
-                     separators=(',', ':')), file=out, flush=True)
-    return installer.serve_installed({'activated': True, 'build': str(build)}, port, browser)
 
 
 def main(argv=None, fetch=pull.fetch_bytes, host=None, stdout=None):
@@ -231,11 +225,9 @@ def main(argv=None, fetch=pull.fetch_bytes, host=None, stdout=None):
     s = commands.add_parser('status')
     s.add_argument('--root', required=True)
     s.add_argument('--state-root')
-    o = commands.add_parser('open')
-    o.add_argument('--root', required=True)
-    o.add_argument('--state-root')
-    o.add_argument('--port', type=int, default=7370)
-    o.add_argument('--browser', action='store_true')
+    k = commands.add_parser('skills')
+    k.add_argument('--root', required=True)
+    k.add_argument('--state-root')
     try:
         args = parser.parse_args(sys.argv[1:] if argv is None else argv)
     except Usage as usage:
@@ -253,11 +245,12 @@ def main(argv=None, fetch=pull.fetch_bytes, host=None, stdout=None):
             value, code = download(args.target, args.dir, fetch), 0
         elif args.command == 'install':
             value, code = install(args.assets, args.target, args.root, args.state_root), 0
-        elif args.command == 'status':
-            value, code = status(args.root, args.state_root), 0
+        elif args.command == 'skills':
+            build, _, manifest, _ = selected(args.root, args.state_root)
+            value, code = harness.install_skills(build, manifest, args.root, Path.home(),
+                                                 os.environ.get('CODEX_HOME'))
         else:
-            installer.require(1 <= args.port <= 65535, 'invalid setup port')
-            return open_setup(args.root, args.state_root, args.port, args.browser, out)
+            value, code = status(args.root, args.state_root), 0
     except (installer.Refused, OSError, ValueError, KeyError, TypeError, tarfile.TarError) as refusal:
         reason = str(refusal) if isinstance(refusal, installer.Refused) else 'the step could not be completed safely'
         print(json.dumps({'schema': 'openwiz.install-error.v1', 'outcome': 'refused', 'command': args.command,

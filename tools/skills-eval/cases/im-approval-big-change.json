@@ -75,7 +75,7 @@
     "events": [
      [
       "local",
-      "write-file apps/web/settings/page.tsx"
+      "write-file apps/portal/settings/page.tsx"
      ],
      [
       "write",

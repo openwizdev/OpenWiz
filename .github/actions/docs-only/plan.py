@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Write one X0 selection record and its execution prerequisites, once per run.
 
-The signed K15 map selects tests; K16 supplies export/lint requirements.
+A pull request's plain case (decide.sh's) narrows the Rust lane by path
+(#1486): classify.sh's table names the Rust tests each changed path reaches.
 Execution metadata is kept beside (and bound to) the contract record, never
 used to make a second selection in another job.
 """
@@ -9,6 +10,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 
@@ -16,18 +18,13 @@ sys.dont_write_bytecode = True
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 sys.path.insert(0, str(HERE))
-sys.path.insert(0, str(ROOT / 'ci/select'))
 import gate
-import job
-import pick
 import skills
-import steps
 import units
 
 ALWAYS = ['always:fmt', 'always:classifier', 'always:selector', 'always:checks']
-SITE = ['site:build', 'site:test', 'site:ci']
 RELEASE = ['release:test', 'release:package', 'release:install', 'release:pull',
-           'release:setup-api', 'release:github-app', 'release:ci-runner',
+           'release:github-app', 'release:ci-runner',
            'release:security-baseline',
            'release:security-candidate',
            'release:ci2-batch-contract', 'release:ci2-batch-shadow',
@@ -48,6 +45,13 @@ RELEASE = ['release:test', 'release:package', 'release:install', 'release:pull',
 if (ROOT / 'tools/ci-overflow/test.py').is_file():
     RELEASE.insert(RELEASE.index('release:ci2-batch-contract'), 'release:ci2-spending')
 SKIP = 'no changed path reaches it'
+# CI and the toolchain (the contract's `ci_change`): the workflows and the
+# classifier, the runner kit and CI's scripts, the workspace manifest and
+# every lockfile, and toolchain pins. Never under private/, which no job reads.
+CI_CHANGE = re.compile(r'(?!private/)(?:\.github/.+|ci/runner/.+|ci/[^/]+|ci/hosted/.+|ci/escapes/escapes\.py'
+                       r'|Cargo\.toml|Cargo\.lock|(.+/)?package-lock\.json'
+                       r'|rust-toolchain(\.toml)?|\.nvmrc|\.node-version|\.tool-versions)')
+FLAGS = ('lint-rust', 'build-site', 'image-skills')
 
 
 def text(value):
@@ -62,15 +66,6 @@ def lane(all_tests, selected):
             'skipped': [{'test': t, 'reason': SKIP} for t in sorted(set(all_tests) - set(tests))]}
 
 
-def combine_site_release(record):
-    # Only an already validated selected PR plan shares the existing release
-    # checkout. Keep both logical test sets and their independent receipts.
-    tests = record['lanes']['site'].get('tests', [])
-    return (record['selection']['mode'] == 'selected'
-            and any(t.startswith('site:') for t in tests)
-            and any(t.startswith('release:') for t in tests))
-
-
 def event_reasons(run):
     return [{'code': code} for code, yes in (
         ('push_main', run['event'] == 'push'), ('nightly', run['event'] == 'schedule'),
@@ -80,8 +75,61 @@ def event_reasons(run):
 
 
 def mandatory_ci_paths(paths):
-    return sorted(p for p in paths if pick.CI_CHANGE.fullmatch(p)
-                  or p.startswith('ci/hosted/') or p=='ci/escapes/escapes.py')
+    return sorted(p for p in paths if CI_CHANGE.fullmatch(p))
+
+
+def odd_path(path):
+    """A path the plan refuses to reason about."""
+    return (not path or path.startswith('/') or any(p in ('', '.', '..') for p in path.split('/'))
+            or any(ord(c) < 32 or ord(c) == 127 for c in path))
+
+
+def changed(root, base, head):
+    """Every path that differs between the two commits, or raises (a failed diff)."""
+    out = subprocess.run(['git', '-C', str(root), 'diff', '--no-renames', '--no-ext-diff', '-z', '--name-only',
+                          base, head, '--'], capture_output=True, check=True).stdout
+    return sorted({p.decode('utf-8', errors='surrogateescape') for p in out.split(b'\0') if p})
+
+
+def classify(root, paths, *args, step=''):
+    return subprocess.run(['sh', str(root / '.github/actions/docs-only/classify.sh'), *args],
+        input='\n'.join(paths) + '\n', capture_output=True, text=True, check=True,
+        env=dict(os.environ, CLASSIFY_STEP=step, READS=str(root / '.github/actions/docs-only/ci-reads.txt'))).stdout
+
+
+def rust_tests(root, paths, inventory):
+    """The Rust tests the paths reach by classify.sh's table, and the paths no row knows."""
+    answers = classify(root, paths, '--tests').splitlines()
+    if len(answers) != len(paths):
+        raise ValueError('classify.sh gave no answer for every path')
+    every = {t for t in inventory if t.startswith('rust:')}
+    tests, unknown = set(), []
+    for path, answer in zip(paths, answers):
+        if answer == '?':
+            unknown.append(path)
+        elif answer == '*':
+            tests |= every
+        elif answer != '-':
+            named = set(answer.split(','))
+            if not named <= every:
+                raise ValueError('the path table names a test that is not in the tree: ' + answer)
+            tests |= named
+    return tests, unknown
+
+
+def steps(paths, root):
+    """K16's step requirements: Rust lint, the release proofs' step, skill suites."""
+    suites = sorted({p.split('/')[1] for p in paths if p.startswith('skills/') and p.count('/') > 1} & set(skills.SUITES))
+    if any(p in ('wizskills.lock', 'skills') for p in paths):
+        suites = sorted(skills.SUITES)  # the pin or the link moves every installed suite (#1612 R1)
+    lint = any(p.endswith('.rs') or p.startswith('crates/') or p in ('Cargo.toml', 'Cargo.lock', 'tests/Cargo.toml')
+               for p in paths)
+    site = classify(root, paths, step='site').strip()
+    if site not in ('none', 'web-build', 'web-build web-test'):
+        raise ValueError('no site decision from classify.sh')
+    values = (lint, 'web-test' in site.split(), 'image' in suites)
+    return {**{k: 'true' if v else 'false' for k, v in zip(FLAGS, values)},
+            'skill-tests': ' '.join(suites) if suites else 'none'}
 
 
 def legacy_readers(root, paths, step=''):
@@ -91,16 +139,14 @@ def legacy_readers(root, paths, step=''):
     paths=[p for p in paths if not any(p.startswith('skills/'+s+'/') for s in skills.SUITES)]
     if not paths:
         return set()
-    result=subprocess.run(['sh',str(root/'.github/actions/docs-only/classify.sh')],
-        input='\n'.join(paths)+'\n',capture_output=True,text=True,check=True,
-        env=dict(os.environ,CLASSIFY_STEP=step,READS=str(root/'.github/actions/docs-only/ci-reads.txt')))
-    if result.stdout.strip() not in ('none','web-build','web-build rust','web-build web-test','web-build rust web-test'):
+    result=classify(root,paths,step=step)
+    if result.strip() not in ('none','web-build','web-build rust','web-build web-test','web-build rust web-test'):
         raise ValueError('unreadable legacy reader decision')
-    return set(result.stdout.split())-{'none'}
+    return set(result.split())-{'none'}
 
 
-def build(root, run, live, map_dir, repo, keys=None):
-    root, map_dir = Path(root), Path(map_dir)
+def build(root, run, live):
+    root = Path(root)
     inventory = sorted(units.list_units(root))
     reasons = event_reasons(run)
     if run['event'] == 'pull_request':
@@ -114,7 +160,7 @@ def build(root, run, live, map_dir, repo, keys=None):
             raise ValueError('unreadable live pull request identity')
         if actual != (run['base_branch'], run['base'], run['head']):
             reasons.append({'code': 'stale_event', 'detail': 'live PR base or head differs from its event'})
-    diff, changes = {'state': 'not_read'}, []
+    diff = {'state': 'not_read'}
     if (run['event'] == 'pull_request' and not any(r['code']=='stale_event' for r in reasons)) or not reasons:
         if subprocess.run(['git', '-C', str(root), 'cat-file', '-e', f"{run['base']}^{{commit}}"],
                           capture_output=True).returncode:
@@ -123,9 +169,8 @@ def build(root, run, live, map_dir, repo, keys=None):
             try:
                 base = subprocess.check_output(['git', '-C', str(root), 'merge-base', run['base'], run['head']],
                                                text=True, stderr=subprocess.PIPE).strip()
-                changes = pick.diff(str(root), base, run['head'])
-                paths = sorted({p for _, p in changes})
-                if any(pick.odd_path(p) for p in paths):
+                paths = changed(root, base, run['head'])
+                if any(odd_path(p) for p in paths):
                     raise ValueError('diff contains an unsafe or unrepresentable path')
                 diff = {'state': 'read', 'paths': paths} if paths else {'state': 'empty'}
                 if not paths:
@@ -133,94 +178,62 @@ def build(root, run, live, map_dir, repo, keys=None):
             except Exception as error:
                 diff = {'state': 'failed', 'error': text(error)}
                 reasons.append({'code': 'failed_diff'})
-    # Full PR attempts still need the diff for K15's tracer/planted-edit
-    # proofs. Reading it never narrows an event-forced full selection.
     ci_paths = mandatory_ci_paths(diff.get('paths',[]))
     if ci_paths:
         reasons.append({'code':'ci_change','paths':ci_paths})
     chosen = set(inventory)
-    requirements = {k: 'true' for k in steps.FLAGS}
+    requirements = {k: 'true' for k in FLAGS}
     selected_skills = list(skills.SUITES)
     if not reasons:
         try:
-            data = (map_dir / 'map.json').read_bytes()
-            token = (map_dir / 'map.jwt').read_text().strip()
-            claims = job.verify(data, token, keys if keys is not None else job.fetch_jwks(), repo)
-            mp = pick.strict_json(data.decode('utf-8'))
-            known = pick.check_map(mp)
-            if subprocess.run(['git', '-C', str(root), 'merge-base', '--is-ancestor', claims['sha'], 'HEAD'],
-                              capture_output=True).returncode:
-                raise ValueError('signed map is not an ancestor of the tested commit')
-            # Include drift since the trace. All reason paths belong to the
-            # recorded conservative diff, including the PR's own paths.
-            drift = pick.diff(str(root), claims['sha'], 'HEAD')
-            if any(pick.odd_path(p) for _, p in drift):
-                raise ValueError('map-to-head diff contains an unsafe path')
-            diff['paths'] = sorted(set(diff['paths']) | {p for _, p in drift})
-            if not drift:
-                raise ValueError('map-to-tested diff is empty while the recorded PR diff is nonempty')
-            def read(path):
-                try:
-                    return (root / path).read_bytes()
-                except (FileNotFoundError, IsADirectoryError, NotADirectoryError):
-                    return None
-            result = pick.select(drift, mp, inventory, read, pick.classify_nobody(str(root)))
-            mandatory = mandatory_ci_paths(diff['paths'])
-            if mandatory:
-                result['mode']='full'
-                other=[r for r in result['reasons'] if r['code']!='ci_change']
-                result['reasons']=[{'code':'ci_change','paths':mandatory},*other]
-            if result['mode'] == 'full':
-                reasons = result['reasons']
-            elif result['mode'] == 'selected':
-                if not result['tests'] or not set(result['tests']) <= set(inventory):
-                    raise ValueError('empty or unknown selector answer')
-                chosen = set(result['tests'])
-                requirements = steps.plan(result['tests'], drift, known, str(root))
-                selected_skills = skills.selected(requirements['skill-tests'])
+            chosen, unknown = rust_tests(root, diff['paths'], inventory)
+            if unknown:
+                reasons = [{'code': 'unknown_path', 'paths': unknown}]
             else:
-                raise ValueError('unknown selector mode')
+                requirements = steps(diff['paths'], root)
+                selected_skills = skills.selected(requirements['skill-tests'])
         except Exception as error:
             reasons = [{'code': 'selector_error', 'detail': text(error)}]
     if reasons:
         chosen = set(inventory)
-        requirements = {k: 'true' for k in steps.FLAGS}
+        requirements = {k: 'true' for k in FLAGS}
         selected_skills = list(skills.SUITES)
     paths = diff.get('paths', [])
-    site = bool(reasons) or requirements['build-site'] == 'true'
+    # The site lane holds only the release proofs since the site copy went
+    # (#1264); `build-site` is a change to their inputs.
+    release_inputs = bool(reasons) or requirements['build-site'] == 'true'
     try:
         readers=legacy_readers(root,paths) if not reasons else {'rust','web-test'}
     except Exception as error:
         reasons=[{'code':'selector_error','detail':text(error)}]
         chosen=set(inventory)
-        requirements={k:'true' for k in steps.FLAGS}
+        requirements={k:'true' for k in FLAGS}
         selected_skills=list(skills.SUITES)
-        site=True
+        release_inputs=True
         readers={'rust','web-test'}
-    release = bool(reasons) or site or bool(readers & {'rust','web-test'})
+    release = bool(reasons) or release_inputs or bool(readers & {'rust','web-test'})
     # The whole checks binary is in the always lane (architecture, privacy,
     # contract/static checks and pending markers), exactly once in every run.
     rust_all = [t for t in inventory if t.startswith('rust:') and t != 'rust:test:checks']
     web_all = [t for t in inventory if t.startswith('web:')]
     record = {'schema': 'openwiz.ci-selection.v1', 'run': run, 'diff': diff,
         'selection': {'mode': 'full', 'reasons': reasons} if reasons else {'mode': 'selected'},
-        'builds': {'web_export': {'decision': 'run'} if requirements['build-web'] == 'true' else
-                   {'decision': 'skip', 'reason': 'no selected test or web input needs the export'}},
+        'builds': {'web_export': {'decision': 'skip', 'reason': 'the web view and its export went in #1264'}},
         'lanes': {'always': {'decision': 'run', 'tests': ALWAYS, 'skipped': []},
             'rust': lane(rust_all, chosen), 'web': lane(web_all, chosen),
-            'site': lane(SITE + RELEASE, (SITE if site else []) + (RELEASE if release else [])),
+            'site': lane(RELEASE, RELEASE if release else []),
             'skills': [dict(skill=s, **lane(['skill:' + s], ['skill:' + s] if s in selected_skills else []))
                        for s in skills.SUITES]},
         'store': {'artifact': f"ci-selection-{run['attempt']}", 'file': 'ci-selection.json'}}
     errors = gate.escapes.refusals(json.dumps(record))
     if errors:
         raise ValueError('refused generated plan: ' + '; '.join(errors))
-    dispatch = {k: requirements[k] == 'true' for k in steps.FLAGS}
+    dispatch = {k: requirements[k] == 'true' for k in FLAGS}
+    # Nothing traces or plants since #1486. ci.yml's always, rust and ci jobs
+    # still read `trace` as a main push's or the nightly run's full mode.
     dispatch.update(skills=selected_skills,
-        rust=record['lanes']['rust']['decision'] == 'run', web=record['lanes']['web']['decision'] == 'run',
-        site=site, release=release,
-        trace=job.traces(run['event'], 'refs/heads/' + run['base_branch'], paths),
-        planted=job.plants(run['event'], paths, (root / 'ci/select/map.json').is_file()))
+        rust=record['lanes']['rust']['decision'] == 'run', release=release,
+        trace=run['event'] in ('push', 'schedule') and run['base_branch'] == 'main', planted=False)
     return record, dispatch
 
 
@@ -251,15 +264,14 @@ def main(argv):
         raw = subprocess.check_output(['sh', 'ci/retry.sh', '3', '--', 'gh', 'api',
             f"repos/{os.environ['GITHUB_REPOSITORY']}/pulls/{run['pull_request']}"], text=True)
         live = gate.escapes.strict_json(raw)
-    record, dispatch = build(ROOT, run, live, Path.home() / '.cache/closedwiz-ci-select',
-                             os.environ['GITHUB_REPOSITORY'])
+    record, dispatch = build(ROOT, run, live)
     out = Path(argv[0]); out.mkdir(parents=True, exist_ok=True)
     raw = json.dumps(record, indent=2) + '\n'
     (out / 'ci-selection.json').write_text(raw)
     dispatch['plan_sha256'] = hashlib.sha256(raw.encode()).hexdigest()
     (out / 'ci-dispatch.json').write_text(json.dumps(dispatch, indent=2) + '\n')
     with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-        for key, value in dict(dispatch, **{'site-in-release': combine_site_release(record),
+        for key, value in dict(dispatch, **{
                 'skill-jobs': [s for s in dispatch['skills'] if s not in skills.SHARDED]}).items():
             f.write(key + '=' + json.dumps(value, separators=(',', ':')) + '\n')
     lines = [f"CI selection: {record['selection']['mode']}"]

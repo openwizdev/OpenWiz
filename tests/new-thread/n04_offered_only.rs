@@ -284,7 +284,7 @@ fn nothing_is_defaulted() {
 }
 
 fn conflicting_catalogue_rows_are_unavailable_in_both_orders() {
-    use openwiz_cli::new_thread::render_options;
+    use openwiz_cli::models::render_options;
     use serde_json::json;
 
     // synthetic_assumptions: duplicate catalogue rows and conflicting capabilities

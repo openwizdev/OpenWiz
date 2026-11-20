@@ -1,0 +1,27 @@
+test_installed_openwiz_sets_up_a_repository_label_and_records_without_build_tools (__main__.InstalledCommand.test_installed_openwiz_sets_up_a_repository_label_and_records_without_build_tools) ...    Compiling openwiz-cli v0.0.1-dev (<checkout>/crates/cli)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.04s
+FAIL
+
+======================================================================
+FAIL: test_installed_openwiz_sets_up_a_repository_label_and_records_without_build_tools (__main__.InstalledCommand.test_installed_openwiz_sets_up_a_repository_label_and_records_without_build_tools)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/test_install.py", line 368, in test_installed_openwiz_sets_up_a_repository_label_and_records_without_build_tools
+    self.assertEqual(sorted(repo['labels']), sorted(['openwiz', 'spec', 'ready-for-agent', 'ready-for-human', 'needs-info', 'held']))
+AssertionError: Lists differ: ['openwiz'] != ['held', 'needs-info', 'openwiz', 'ready-for-agent', 'ready-for-human', 'spec']
+
+First differing element 0:
+'openwiz'
+'held'
+
+Second list contains 5 additional elements.
+First extra element 1:
+'needs-info'
+
+- ['openwiz']
++ ['held', 'needs-info', 'openwiz', 'ready-for-agent', 'ready-for-human', 'spec']
+
+----------------------------------------------------------------------
+Ran 1 test in 12.655s
+
+FAILED (failures=1)

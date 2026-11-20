@@ -1,18 +1,11 @@
 # First-hour recording and fault providers (#2222)
 
 P12 of #2194: the recovery and recording providers for
-[first-hour evidence](../README.md#evidence-and-validation). The
-fault cases are in
-[apps/web/test/unit/first-hour-recovery.test.ts](../../../../../apps/web/test/unit/first-hour-recovery.test.ts),
-which the web unit suite runs:
-
-```sh
-cd apps/web && node --test --test-reporter=spec test/unit/first-hour-recovery.test.ts
-```
+[first-hour evidence](../README.md#evidence-and-validation). The web page's
+fault cases and their recording provider went with the web view (#1264).
 
 | File | What |
 | --- | --- |
-| `recording.ts` | `RecordingProvider`: a `FetchLike` that stands where the server and core stand for the page. It has the send, lookup, create, status and Cloud options routes, keeps the core's once-only record per op id (a repeat is answered from the record, never a second call), and counts each intent's calls, effects and record reads. It takes faults: `signed_out`, `refused`, `lose_reply`, `stop_after_effect` (plus `restart`). `TabStorage` is a tab's sessionStorage, and `restored()` is a browser's session restore. |
 | `document.ts` | Builds one `recovery` document per case from what the case observed: drafts by the SHA-256 of their exact bytes, pending intents by id and request fingerprint, the provider's counts. `codes()` returns #2200's codes for it. |
 | `codes.py` | `check` gives #2200's codes for each document (it loads `../../first-hour-contract/check.py` by path). `owner-cases` runs the owner-state cases through existing tools: `setup_interrupted` through `tools/install/access/access.py` with its recording provider, and `update_rejected` through `tools/install/install.py` on a synthetic bundle. |
 | `evidence/` | The red-first run, the mutation runs, and the scoped checks. |

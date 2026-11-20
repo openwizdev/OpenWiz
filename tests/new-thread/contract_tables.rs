@@ -26,7 +26,6 @@ use openwiz_core::prompt::{AttachmentId, PromptPayload, empty_attachments_digest
 use serde_json::{Value, json};
 
 use crate::pattern;
-use crate::record_store::read;
 use crate::support::*;
 
 fn prompt_schema() -> Value {
@@ -448,4 +447,12 @@ fn erased_created_records_require_both_digest_length_and_lowercase_hex() {
             "strict record reader: {digest}: {result:?}"
         );
     }
+}
+
+/// The core's strict record reader over a JSON value (moved here from the
+/// deleted `record_store.rs` by #1264).
+fn read(value: &Value) -> Result<NewThreadRecord, String> {
+    let tree: openwiz_core::new_thread::read::StrictJson =
+        serde_json::from_str(&value.to_string()).map_err(|e| format!("tree: {e}"))?;
+    NewThreadRecord::read(&tree).map_err(|e| e.0)
 }

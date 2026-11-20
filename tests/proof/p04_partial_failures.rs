@@ -621,10 +621,9 @@ fn help_documents_the_commands_the_order_and_the_exit_codes() {
             "On an error, stdout is empty unless ls, show or --help fails to write or flush output;\nsome output may already be on stdout in that case.",
             "  2  usage error, or a request out of bounds",
             "  3  show: the session was not found",
-            "ls, show, send and new can read and show room-cli --version.",
-            "send --preview, models and new --status do not read the version. send --check and attachment never run room-cli.",
+            "ls and show can read and show room-cli --version.",
             "Any version runs; one other than the run's own live-tested version is marked untested, or not live-tested while it has none.",
-            "Live-tested: the reads with v127; send with no version yet; new with no version yet.",
+            "Live-tested: the reads with v127.",
         ] {
             assert!(
                 out.contains(wanted),

@@ -1706,6 +1706,169 @@ class AgentSetupTests(KeyFixture):
                 self.assertFalse((self.state / "setup").exists())
 
 
+class AgentTokenTests(KeyFixture):
+    """G2 (#1402): agents' GH_TOKEN from App installation tokens: the write
+    profile, the secret key route and the refresh helper. Synthetic only."""
+    REFUSED = b"App token refused: check PC state permissions, App installation and GitHub availability.\n"
+
+    def setUp(self):
+        super().setUp()
+        # A logging openssl ahead on PATH: it sees every argument and its environment.
+        self.bin = Path(self.tmp.name) / "bin"
+        self.bin.mkdir()
+        self.openssl_log = Path(self.tmp.name) / "openssl.log"
+        fake = self.bin / "openssl"
+        fake.write_text(f'#!/bin/sh\n{{ printf "%s\\n" "$@"; env; }} >> "{self.openssl_log}"\n'
+                        f'exec {shutil.which("openssl")} "$@"\n')
+        fake.chmod(0o700)
+        self.secret = base64.b64encode(self.pem).decode()
+
+    def run_tool(self, script, endpoint, *extra, now=None, env=None, repositories=("synthetic-owner/work",)):
+        base = {k: v for k, v in os.environ.items() if not k.startswith(("OPENWIZ_GITHUB_APP", "GH_", "GITHUB_"))}
+        base["PATH"] = f"{self.bin}{os.pathsep}{base.get('PATH', '')}"
+        base.update(env or {})
+        args = ["--state-dir", str(self.state), "--installation-id", "2002", "--api-base", endpoint,
+                *[a for r in repositories for a in ("--repository", r)], *extra]
+        if now is None:
+            # Exactly as docs/github-app.md runs it: isolated mode (R1, #1403).
+            command = ["python3", "-I", str(HERE / script), *args]
+        else:
+            command = ["python3", "-c", """
+import datetime, runpy, sys
+from pathlib import Path
+from unittest.mock import patch
+script, instant, *args = sys.argv[1:]
+fixed = datetime.datetime.fromtimestamp(float(instant), datetime.timezone.utc)
+class DeviceClock(datetime.datetime):
+    @classmethod
+    def now(cls, tz=None):
+        return fixed.astimezone(tz) if tz is not None else fixed.replace(tzinfo=None)
+sys.path.insert(0, str(Path(script).parent))
+sys.argv = [script, *args]
+with patch("datetime.datetime", DeviceClock), patch("time.time", return_value=fixed.timestamp()):
+    runpy.run_path(script, run_name="__main__")
+""", str(HERE / script), str(now), *args]
+        return subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=15, env=base)
+
+    def assert_hidden(self, token, *outputs):
+        """Neither the key (PEM, its lines or its base64), the JWT nor the token
+        reached a child's arguments or environment, or any other output."""
+        log = self.openssl_log.read_bytes() if self.openssl_log.exists() else b""
+        self.assert_no_key(log, *outputs)
+        for needle in (self.secret.encode(), self.secret[:40].encode(), token.encode()):
+            for output in (log, *outputs):
+                self.assertNotIn(needle, output if isinstance(output, bytes) else output.encode())
+
+    def test_write_token_asks_for_and_accepts_exactly_the_apps_profile(self):
+        """catches: a write token that loses a write, or gains workflows or administration."""
+        with fake_github(self.pem) as (endpoint, calls, behavior):
+            original = behavior.copy()
+            for granted, ok in ((SERVICE, True), (PERMISSIONS, False),
+                                (dict(SERVICE, workflows="write"), False),
+                                (dict(SERVICE, administration="write"), False),
+                                (dict(SERVICE, contents="read"), False)):
+                with self.subTest(granted=granted):
+                    behavior.clear()
+                    behavior.update(original, permissions=granted)
+                    shutil.rmtree(self.state / "tokens", ignore_errors=True)  # mint every time
+                    result = self.run_tool("refresh-token.py", endpoint, "--write",
+                                           env={"GH_TOKEN": "synthetic-caller-token"})
+                    self.assert_hidden("synthetic-caller-token")  # never inherited by OpenSSL
+                    if ok:
+                        self.assertEqual((result.returncode, result.stdout, result.stderr),
+                                         (0, b"synthetic-installation-token\n", b""))
+                    else:
+                        self.assertEqual((result.returncode, result.stdout, result.stderr), (1, b"", self.REFUSED))
+                    self.assertEqual(json.loads(mints(calls)[-1][2]),
+                                     {"permissions": SERVICE, "repositories": ["work"]})
+            self.assertEqual(len(mints(calls)), 5)
+            self.assert_hidden("synthetic-installation-token", repr(calls))
+
+    def test_secret_key_mints_with_no_key_file_and_never_reaches_the_signer_environment(self):
+        """catches: the cloud route needing a key file, or the key leaking into openssl's argv or environment."""
+        shutil.rmtree(self.app)
+        secret = {"OPENWIZ_GITHUB_APP_KEY": self.secret, "OPENWIZ_GITHUB_APP_ID": "1001"}
+        with fake_github(self.pem) as (endpoint, calls, behavior):
+            behavior["permissions"] = SERVICE
+            result = self.run_tool("refresh-token.py", endpoint, "--write", "--from-secret", env=secret)
+            self.assertEqual((result.returncode, result.stdout, result.stderr),
+                             (0, b"synthetic-installation-token\n", b""))
+            self.assertEqual([c[0] for c in calls], OWNER_READS + ["/app/installations/2002/access_tokens"])
+            self.assertIn(b"/dev/fd/", self.openssl_log.read_bytes())
+            self.assert_hidden("synthetic-installation-token", result.stderr, repr(calls))
+            before = len(calls)
+            for bad in ({}, {"OPENWIZ_GITHUB_APP_KEY": self.secret}, dict(secret, OPENWIZ_GITHUB_APP_ID="01001"),
+                        dict(secret, OPENWIZ_GITHUB_APP_KEY="not base64!"),
+                        dict(secret, OPENWIZ_GITHUB_APP_KEY=base64.b64encode(b"x" * 5000).decode())):
+                with self.subTest(bad=sorted(bad)):
+                    shutil.rmtree(self.state / "tokens", ignore_errors=True)
+                    result = self.run_tool("refresh-token.py", endpoint, "--write", "--from-secret", env=bad)
+                    self.assertEqual((result.returncode, result.stdout, result.stderr), (1, b"", self.REFUSED))
+            self.assertEqual(len(calls), before)  # refused before any request
+
+    def test_refresh_reuses_a_token_until_five_minutes_are_left_then_mints_anew(self):
+        """catches: a mint per call (drains the App's budget) or a token handed out with 300 seconds or less."""
+        start = 1767225600  # 2026-01-01T00:00:00Z
+        cache = self.state / "tokens"
+        with fake_github(self.pem) as (endpoint, calls, behavior):
+            behavior.update(permissions=SERVICE, expires_at="2026-01-01T01:00:00Z", token="synthetic-token-one")
+            steps = [(0, "synthetic-token-one", 1), (3299, "synthetic-token-one", 1),
+                     (3300, "synthetic-token-two", 2), (3301, "synthetic-token-two", 2)]
+            for offset, expected, minted in steps:
+                with self.subTest(offset=offset):
+                    if offset == 3300:
+                        behavior.update(token="synthetic-token-two", expires_at="2026-01-01T01:55:00Z")
+                    result = self.run_tool("refresh-token.py", endpoint, "--write", now=start + offset)
+                    self.assertEqual((result.returncode, result.stdout, result.stderr),
+                                     (0, expected.encode() + b"\n", b""))
+                    self.assertEqual(len(mints(calls)), minted)
+            # Another scope never reuses this token: read-only, or another repository.
+            behavior.update(permissions=PERMISSIONS, token="synthetic-token-read")
+            result = self.run_tool("refresh-token.py", endpoint, now=start + 3301)
+            self.assertEqual((result.returncode, result.stdout), (0, b"synthetic-token-read\n"))
+            self.assertEqual(len(mints(calls)), 3)
+            # A fresh answer with 300 seconds or less is refused, never cached.
+            behavior.update(permissions=SERVICE, token="synthetic-token-short", expires_at="2026-01-01T02:00:00Z")
+            behavior["read_profile"] = {"repository_selection": "selected",
+                                        "repositories": [{"full_name": "synthetic-owner/other"}]}
+            result = self.run_tool("refresh-token.py", endpoint, "--write", now=start + 6900,
+                                   repositories=("synthetic-owner/other",))
+            self.assertEqual((result.returncode, result.stdout, result.stderr), (1, b"", self.REFUSED))
+            self.assertEqual(len(mints(calls)), 4)
+        self.assertEqual(cache.stat().st_mode & 0o777, 0o700)
+        names = sorted(p.name for p in cache.iterdir())
+        self.assertEqual(len([n for n in names if n.endswith(".json")]), 2)
+        for path in cache.iterdir():
+            self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+            self.assertNotIn(b"synthetic-token", path.name.encode())
+        self.assert_hidden("synthetic-token-one", repr(calls))
+        self.assert_hidden("synthetic-token-two", repr(calls))
+
+    def test_refresh_refuses_an_unsafe_cache_without_using_it(self):
+        """catches: a planted or widened cache file handing out a token."""
+        start = 1767225600
+        with fake_github(self.pem) as (endpoint, calls, behavior):
+            behavior.update(permissions=SERVICE, expires_at="2026-01-01T01:00:00Z")
+            self.assertEqual(self.run_tool("refresh-token.py", endpoint, "--write", now=start).returncode, 0)
+            (path,) = [p for p in (self.state / "tokens").iterdir() if p.name.endswith(".json")]
+            for spoil in ("mode", "symlink", "directory"):
+                with self.subTest(spoil=spoil):
+                    if spoil == "mode":
+                        path.chmod(0o644)
+                    elif spoil == "symlink":
+                        path.chmod(0o600)
+                        target = path.with_name("planted")
+                        path.rename(target)
+                        path.symlink_to(target)
+                    else:
+                        path.unlink()
+                        target.rename(path)
+                        path.parent.chmod(0o755)
+                    result = self.run_tool("refresh-token.py", endpoint, "--write", now=start + 60)
+                    self.assertEqual((result.returncode, result.stdout, result.stderr), (1, b"", self.REFUSED))
+            self.assertEqual(len(mints(calls)), 1)
+
+
 sys.path.insert(0, str(HERE))  # GI3 (#2545): the identity contract's fixture test runs with release:github-app
 from test_identity_contract import *  # noqa: E402,F401,F403
 

@@ -165,9 +165,8 @@ pub struct NewThreadReport {
     pub claimed_at: Option<Timestamp>,
     pub dispatching_at: Option<Timestamp>,
     pub finished_at: Option<Timestamp>,
-    /// The start of a created thread, once followed (`openwiz new` follows
-    /// it after the create, sheet A-9). `new_thread` itself never reads it:
-    /// always `None` from here.
+    /// The start of a created thread, once followed (sheet A-9).
+    /// `new_thread` itself never reads it: always `None` from here.
     pub start: Option<StartView>,
 }
 

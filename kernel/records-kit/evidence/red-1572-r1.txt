@@ -1,0 +1,66 @@
+# Red run (#1572, R1): python3 -I kernel/records-kit/test_check.py, with the fence and comment cases before the fix (exit 1)
+test_each_planted_break_is_reported (__main__.Kit.test_each_planted_break_is_reported) ... ok
+test_fences_and_comments_hide_only_what_github_hides (__main__.Kit.test_fences_and_comments_hide_only_what_github_hides) ... 
+  test_fences_and_comments_hide_only_what_github_hides (__main__.Kit.test_fences_and_comments_hide_only_what_github_hides) [comment opener in a fence] ... FAIL
+  test_fences_and_comments_hide_only_what_github_hides (__main__.Kit.test_fences_and_comments_hide_only_what_github_hides) [fence in a comment] ... FAIL
+  test_fences_and_comments_hide_only_what_github_hides (__main__.Kit.test_fences_and_comments_hide_only_what_github_hides) [opener after a closer] ... FAIL
+test_links_section_read_as_plan_links_reads_it (__main__.Kit.test_links_section_read_as_plan_links_reads_it) ... ok
+test_reader_refuses_any_other_shape (__main__.Kit.test_reader_refuses_any_other_shape) ... ok
+test_valid_tracker_passes (__main__.Kit.test_valid_tracker_passes) ... ok
+
+======================================================================
+FAIL: test_fences_and_comments_hide_only_what_github_hides (__main__.Kit.test_fences_and_comments_hide_only_what_github_hides) [comment opener in a fence]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/records-kit/test_check.py", line 110, in test_fences_and_comments_hide_only_what_github_hides
+    self.assertEqual((code, out), (1 if want else 0, want), err)
+AssertionError: Tuples differ: (1, ['#2 T1: ticket lacks ## Owned paths',[176 chars]ne']) != (0, [])
+
+First differing element 0:
+1
+0
+
++ (0, [])
+- (1,
+-  ['#2 T1: ticket lacks ## Owned paths',
+-   '#2 T1: ticket lacks ## Links',
+-   '#2 T1: ticket lacks ## Acceptance criteria',
+-   '#2 T1: ticket lacks ## Proof',
+-   '#2 T1: ticket lacks **Relies on:**',
+-   '#2 B1: #3 has no reason line']) : 
+
+======================================================================
+FAIL: test_fences_and_comments_hide_only_what_github_hides (__main__.Kit.test_fences_and_comments_hide_only_what_github_hides) [fence in a comment]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/records-kit/test_check.py", line 110, in test_fences_and_comments_hide_only_what_github_hides
+    self.assertEqual((code, out), (1 if want else 0, want), err)
+AssertionError: Tuples differ: (1, ['#2 T1: ticket lacks ## Proof']) != (0, [])
+
+First differing element 0:
+1
+0
+
+- (1, ['#2 T1: ticket lacks ## Proof'])
++ (0, []) : 
+
+======================================================================
+FAIL: test_fences_and_comments_hide_only_what_github_hides (__main__.Kit.test_fences_and_comments_hide_only_what_github_hides) [opener after a closer]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/records-kit/test_check.py", line 110, in test_fences_and_comments_hide_only_what_github_hides
+    self.assertEqual((code, out), (1 if want else 0, want), err)
+AssertionError: Tuples differ: (0, []) != (1, ['#2 T1: ticket lacks ## Proof'])
+
+First differing element 0:
+0
+1
+
+- (0, [])
++ (1, ['#2 T1: ticket lacks ## Proof']) : 
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.928s
+
+FAILED (failures=3)
+# exit 1

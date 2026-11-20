@@ -34,11 +34,11 @@ class Refusal(Exception):
 
 
 JOURNAL = 'journal.jsonl'
-# The reviewed probe scripts a live fleet-claim write may run (the AC6 phone
-# reply and T3 cleanup). launch-fleet makes the fleet's own writes; the runner
-# only reads them back. Anything else, such as a wrapper, is refused before any step.
-PROBES = (str(Path(__file__).resolve().with_name('browser.mjs')),
-          str(Path(__file__).resolve().with_name('cleanup.py')))
+# The reviewed probe script a live fleet-claim write may run (T3 cleanup; the
+# AC6 phone-reply browser probe went with the web view, #1264). launch-fleet
+# makes the fleet's own writes; the runner only reads them back. Anything else,
+# such as a wrapper, is refused before any step.
+PROBES = (str(Path(__file__).resolve().with_name('cleanup.py')),)
 
 
 # my.openwiz.dev's server owns 7370 on the PC (#772): no step may reach it.
@@ -48,7 +48,7 @@ RESERVED_PORT = 7370
 
 def refuse_reserved_port(kit, argv):
     """Refuse 7370 wherever a step's argv reaches a loopback port: `--port N`,
-    the HTTP probe's port and a browser probe config's origin. A launch that would fall back to
+    and the HTTP probe's port. A launch that would fall back to
     the default port (bare `openwiz`, `openwiz ui`, bare `openwiz-terminal`)
     is refused as if it named 7370."""
     ports = []
@@ -60,18 +60,6 @@ def refuse_reserved_port(kit, argv):
             ports.append(arg[len('--port='):])
         elif Path(arg).is_absolute() and Path(arg).name == 'http.py' and following is not None:
             ports.append(following)
-        elif Path(arg).is_absolute() and Path(arg).name == 'browser.mjs' and following is not None:
-            try:
-                if not Path(following).is_absolute():
-                    raise OSError()
-                config = decode(Path(following).read_bytes())
-            except (OSError, Refusal) as error:
-                raise Refusal('invalid_kit') from error
-            match = re.fullmatch(r'http://127\.0\.0\.1:([0-9]{1,5})/', config.get('origin', '')
-                                 if type(config) is dict and type(config.get('origin')) is str else '')
-            if not match:
-                raise Refusal('invalid_kit')
-            ports.append(match.group(1))
         rest = argv[index + 1:]
         explicit = any(r == '--port' or r.startswith('--port=') for r in rest)
         if ((arg == kit['openwiz'] and (not rest or (rest[0] == 'ui' and rest != ['ui', '--json'] and not explicit)))
@@ -123,9 +111,7 @@ def _elf(path, name=None):
 def reviewed_probe(argv):
     """The whole reviewed invocation: a real interpreter running this folder's
     probe with exactly its arguments. A pinned wrapper is never an interpreter."""
-    if len(argv) == 3 and argv[1] == PROBES[0]:
-        return _elf(argv[0], r'node[0-9.]*')
-    if (len(argv) == 11 and argv[1:4] == ['-I', PROBES[1], '--gh'] and argv[5] == '--repo'
+    if (len(argv) == 11 and argv[1:4] == ['-I', PROBES[0], '--gh'] and argv[5] == '--repo'
             and argv[7] == '--ticket' and argv[9] == '--action' and argv[10] in ('unlabel', 'close')):
         try:
             same = Path(argv[0]).resolve(strict=True) == Path(sys.executable).resolve(strict=True)

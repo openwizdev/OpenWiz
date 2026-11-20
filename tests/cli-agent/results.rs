@@ -31,16 +31,7 @@ fn cp2_usage_errors_cover_every_dispatch_family_without_effects() {
     for (args, command) in [
         (vec!["ls", "--unknown", "--json"], "ls"),
         (vec!["show", "--json"], "show"),
-        (vec!["send", "--json"], "send"),
-        (vec!["send", "--preview", "--json"], "send.preview"),
-        (vec!["send", "--check", "--json"], "send.check"),
-        (vec!["new", "--yes", "--json"], "new"),
-        (vec!["new", "--json"], "new.preview"),
-        (vec!["new", "--status=bad value", "--json"], "new.status"),
         (vec!["models", "--unknown", "--json"], "models"),
-        (vec!["attachment", "add", "--json"], "attachment.add"),
-        (vec!["attachment", "ls", "extra", "--json"], "attachment.ls"),
-        (vec!["attachment", "rm", "--json"], "attachment.rm"),
         (vec!["fleets", "--json", "--json"], "fleets"),
         (vec!["fleet", "--json"], "fleet"),
         (vec!["fleet", "tick", "--unknown", "--json"], "fleet.tick"),
@@ -59,29 +50,6 @@ fn cp2_usage_errors_cover_every_dispatch_family_without_effects() {
         ),
         (vec!["unknown-synthetic", "--json"], "unknown"),
         (vec!["ls", "--json=value", "--json"], "ls"),
-        (
-            vec![
-                "send",
-                "thr_syn_0001",
-                "--op-id",
-                "op-one",
-                "--op-id",
-                "op-two",
-                "--json",
-            ],
-            "send",
-        ),
-        (
-            vec![
-                "new",
-                "--model",
-                "synthetic-one",
-                "--model",
-                "synthetic-two",
-                "--json",
-            ],
-            "new.preview",
-        ),
         (
             vec!["loop", "off", "synthetic", "--json", "--json"],
             "loop.off",
@@ -104,16 +72,7 @@ fn cp2_json_help_is_one_document_with_no_reads_or_state() {
         vec!["--help", "--json"],
         vec!["ls", "--help", "--json"],
         vec!["show", "-h", "--json"],
-        vec!["send", "--help", "--json"],
-        vec!["new", "--help", "--json"],
         vec!["models", "--help", "--json"],
-        vec!["attachment", "--help", "--json"],
-        vec!["attachment", "add", "--help", "--json"],
-        vec!["attachment", "ls", "--help", "--json"],
-        vec!["attachment", "rm", "--help", "--json"],
-        vec!["send", "--preview", "--help", "--json"],
-        vec!["send", "--check", "--help", "--json"],
-        vec!["new", "--status", "op-synthetic", "--help", "--json"],
         vec!["fleets", "-h", "--json"],
         vec!["loop", "--help", "--json"],
     ] {
@@ -133,13 +92,8 @@ fn cp2_json_help_is_one_document_with_no_reads_or_state() {
 fn cp2_json_selection_respects_values_delimiters_and_invalid_bytes() {
     let sandbox = Sandbox::new();
     for args in [
-        vec!["send", "--op-id", "--json"],
-        vec!["new", "--model=--json"],
         vec!["ls", "--limit", "--json"],
         vec!["ls", "--offset=--json"],
-        vec!["attachment", "ls", "--", "--json"],
-        vec!["send", "--", "--json"],
-        vec!["new", "--status", "--json"],
         vec!["ls", "--json=true"],
     ] {
         let output = sandbox.run(&args);
@@ -149,9 +103,7 @@ fn cp2_json_selection_respects_values_delimiters_and_invalid_bytes() {
             "data must not select JSON: {args:?}"
         );
     }
-    for command in [
-        "ls", "show", "send", "new", "models", "fleets", "fleet", "loop",
-    ] {
+    for command in ["ls", "show", "models", "fleets", "fleet", "loop"] {
         let output = sandbox.run_os(&[
             OsString::from(command),
             OsString::from_vec(vec![0xff]),
@@ -177,22 +129,7 @@ fn cp2_no_command_json_is_bounded_usage_without_effects() {
 #[test]
 fn cp2_all_known_value_options_consume_flag_looking_data() {
     let sandbox = Sandbox::new();
-    for (command, flag) in [
-        ("ls", "--limit"),
-        ("ls", "--offset"),
-        ("send", "--op-id"),
-        ("send", "--attach"),
-        ("send", "--attachment"),
-        ("new", "--project-id"),
-        ("new", "--harness"),
-        ("new", "--model"),
-        ("new", "--effort"),
-        ("new", "--op-id"),
-        ("new", "--text-sha256"),
-        ("new", "--status"),
-        ("new", "--attach"),
-        ("new", "--attachment"),
-    ] {
+    for (command, flag) in [("ls", "--limit"), ("ls", "--offset")] {
         let inline = format!("{flag}=--json");
         for args in [
             vec![command, flag, "--json"],

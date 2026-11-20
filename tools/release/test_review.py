@@ -31,8 +31,8 @@ class ReviewFixes(OpenRelease):
         self.save_plan()
 
     def test_r1_complete_public_development_tree(self):
-        paths = ['docs/grills/README.md','STATUS.md','apps/web/AGENTS.md','design-rules.md',
-                 'apps/web/design-rules.md','tools/release/synthetic/check.md',
+        paths = ['docs/grills/README.md','STATUS.md','tools/war-room/AGENTS.md','design-rules.md',
+                 'tools/war-room/design-rules.md','tools/release/synthetic/check.md',
                  'tests/checks/evidence-synthetic/check.md','docs/fleets/README.md',
                  '.claude/skills/export-synthetic/SKILL.md','docs/GLOSSARY.md','skills/synthetic/SKILL.md']
         for name in paths:

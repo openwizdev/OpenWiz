@@ -8,7 +8,6 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import sys
 import time
@@ -25,13 +24,10 @@ COMMANDS = {
     'release:ci2-batch-shadow': ['python3', '-I', 'ci/main-batch/test_shadow.py'],
     'release:ci2-batch-contract': ['python3', '-I', 'ci/main-batch/test_contract.py'],
     'release:ci2-main-batch-admit': ['python3', '-I', 'ci/main-batch/test_admit.py'],
-    'site:build': ['npm', 'run', 'build'], 'site:test': ['npm', 'test'],
-    'site:ci': ['npm', 'run', 'test:ci'],
     'release:test': ['python3', 'tools/release/test.py'],
     'release:package': ['python3', '-I', 'tools/release/test_package.py'],
     'release:install': ['python3', '-I', 'tools/install/test_install.py'],
     'release:pull': ['python3', '-I', 'tools/install/test_pull.py'],
-    'release:setup-api': ['node', '--test', 'tools/install/test_setup_api.mjs'],
     'release:github-app': ['python3', '-I', 'tools/github-app/test.py'],
     'release:security-baseline': ['python3', '-I', 'tools/install/tests/public-release-security/baseline/test_baseline.py'],
     'release:security-candidate': ['python3', '-I', 'tools/install/tests/public-release-security/test_candidate.py'],
@@ -48,8 +44,7 @@ COMMANDS = {
     'release:fleet-load': ['sh', 'tools/fleet-load/ci.sh'],
 }
 # This independent job cannot use the Rust job's target/.
-# Its installed-engine proof consumes both debug binaries.
-PACKAGE_BUILD = ['cargo','build','--locked','--jobs','2','-p','openwiz-cli','-p','openwiz-service','--bins']
+PACKAGE_BUILD = ['cargo','build','--locked','--jobs','2','-p','openwiz-cli','--bins']
 # #743: the lanes CI splits across members (ci/shard/lanes.py), and the
 # scripts among their units that split themselves by group and count cases.
 SHARDED = {'release'} | {'skill:' + s for s in planner.skills.SHARDED}
@@ -61,7 +56,7 @@ def load(folder):
     record = gate.read_plan(folder / 'ci-selection.json')
     dispatch = gate.escapes.strict_json((folder / 'ci-dispatch.json').read_text())
     sha = hashlib.sha256((folder / 'ci-selection.json').read_bytes()).hexdigest()
-    booleans = set(planner.steps.FLAGS) | {'rust','web','site','release','trace','planted'}
+    booleans = set(planner.FLAGS) | {'rust','release','trace','planted'}
     if (not isinstance(dispatch, dict) or set(dispatch) != booleans | {'skills','plan_sha256'}
             or dispatch['plan_sha256'] != sha
             or any(type(dispatch[k]) is not bool for k in booleans)):
@@ -69,15 +64,15 @@ def load(folder):
     selected = [s['skill'] for s in record['lanes']['skills'] if s['decision']=='run']
     if dispatch['skills'] != selected:
         raise ValueError('skill execution metadata differs from plan')
-    for key in ('rust','web'):
-        if dispatch[key] != (record['lanes'][key]['decision']=='run'):
-            raise ValueError(key + ' execution metadata differs from plan')
-    for key in ('site','release'):
-        if dispatch[key] != bool(tests_for(record,key)):
-            raise ValueError(key + ' execution metadata differs from plan')
-    export = record['builds']['web_export']['decision']=='run'
-    if dispatch['build-web'] != export or any(dispatch[k] and not export for k in ('export-rust','export-web')):
-        raise ValueError('export execution metadata differs from plan')
+    if dispatch['rust'] != (record['lanes']['rust']['decision']=='run'):
+        raise ValueError('rust execution metadata differs from plan')
+    if dispatch['release'] != bool(tests_for(record,'release')):
+        raise ValueError('release execution metadata differs from plan')
+    # #1264: the web view, the site copy and the export went; the plan keeps
+    # their lanes and build in its record, always skipped.
+    if (record['lanes']['web']['decision']=='run' or tests_for(record,'site')
+            or record['builds']['web_export']['decision']=='run'):
+        raise ValueError('plan selects a lane or build that no longer exists')
     for field, variable in (('id','GITHUB_RUN_ID'),('attempt','GITHUB_RUN_ATTEMPT'),('event','GITHUB_EVENT_NAME')):
         if os.environ.get(variable) != str(record['run'][field]):
             raise ValueError('plan does not belong to this run: ' + variable)
@@ -85,7 +80,6 @@ def load(folder):
 
 
 def tests_for(record, kind):
-    if kind=='build:web_export': return []
     if kind.startswith('skill:'):
         lanes = [s for s in record['lanes']['skills'] if s['skill']==kind[6:]]
         if len(lanes)!=1: raise ValueError('unknown skill lane: '+kind)
@@ -106,8 +100,6 @@ def units(record, kind):
     if kind.startswith('skill:'):
         return [(kind + ':' + c[-1], [(c, None)]) for c in planner.skills.SUITES[kind[6:]]]
     out = []
-    if planner.combine_site_release(record):
-        out.append(('site', [(COMMANDS[t], 'apps/site') for t in tests_for(record, 'site')]))
     for test in tests_for(record, kind):
         if test not in COMMANDS: raise ValueError('unknown planned test: '+test)
         if test == 'release:package':
@@ -177,61 +169,20 @@ def check_shards(folder, kind, *ran):
     if problems: raise ValueError('shard check failed:\n' + '\n'.join(problems))
 
 
-def trace(kind, selected, dispatch, full=False):
-    if not dispatch['trace']: return False
-    if subprocess.run(['python3','-I','ci/select/trace.py','ready']).returncode: return False
-    if kind=='rust' and subprocess.run(['sh','ci/rust-tests.sh','--can-run-at-once']).returncode: return False
-    if kind=='rust':
-        args = ['cargo','test','--workspace','--no-run','--locked'] if selected!=['rust:test:checks'] else ['cargo','test','-p','openwiz-tests','--test','checks','--no-run','--locked']
-        call(args)
-    args = ['python3','-I','ci/select/trace.py',kind,os.path.join(os.environ['RUNNER_TEMP'],'select-records'),'--jobs','3']
-    if selected and not (kind=='web' and full): args += ['--only',*selected]
-    code = subprocess.run(args).returncode
-    if code==3:
-        print('trace: tracer failed; run selected tests normally and make no map',flush=True)
-        shutil.rmtree(os.path.join(os.environ['RUNNER_TEMP'],'select-records'),ignore_errors=True)
-        return False
-    if code: raise subprocess.CalledProcessError(code,args)
-    return True
-
-
 def execute(folder, kind):
     record, dispatch = load(folder)
     tests = tests_for(record,kind)
-    if kind == 'release' and planner.combine_site_release(record):
-        execute(folder, 'site')
-    if kind=='build:web_export':
-        if record['builds']['web_export']['decision']!='run': raise ValueError('export is not planned')
-        if not trace('export',[],dispatch): call(['npm','run','build'],cwd='apps/web')
-        call(['npm','run','typecheck'],cwd='apps/web')
-        call(['npm','run','check'],cwd='apps/web')
-    elif not tests:
+    if not tests:
         raise ValueError('lane is not planned: '+kind)
     elif kind=='always':
         call(['cargo','fmt','--check'])
         call(['sh','.github/actions/docs-only/test.sh','--always'])
         call(['sh','ci/hosted/test.sh'])
-        for script in ('test_pick.py','test_trace.py','test_job.py','test_steps.py'):
-            call(['python3','-I','ci/select/'+script])
-        if not trace('rust',['rust:test:checks'],dispatch):
-            call(['cargo','test','-p','openwiz-tests','--test','checks','--locked'])
+        call(['cargo','test','-p','openwiz-tests','--test','checks','--locked'])
     elif kind=='rust':
         # Selected tests can execute debug binaries even when lint was skipped.
-        # Prepare them before tracing, its fallbacks, and planted tests alike.
         call(['cargo','build','--workspace','--bins','--locked'])
-        if not trace('rust',tests,dispatch): call(['sh','ci/rust-tests.sh','--only',' '.join(tests)])
-        if dispatch['planted']:
-            call(['python3','-I','ci/select/planted.py','rust',os.path.join(os.environ['RUNNER_TEMP'],'select-records/planted-rust.jsonl'),'--jobs','3'])
-    elif kind=='web':
-        full = record['selection']['mode']=='full'
-        if not trace('web',tests,dispatch,full=full):
-            if full:
-                call(['npm','test'],cwd='apps/web')
-            else:
-                paths = planner.units.web_units('.')
-                call(['node','test/run-browser.mjs','--with-unit','--only',*[paths[t] for t in tests]],cwd='apps/web')
-        if dispatch['planted']:
-            call(['python3','-I','ci/select/planted.py','web',os.path.join(os.environ['RUNNER_TEMP'],'select-records/planted-web.jsonl'),'--jobs','3'])
+        call(['sh','ci/rust-tests.sh','--only',' '.join(tests)])
     elif kind.startswith('skill:'):
         # Each matrix member executes exactly its named suite. A missing or
         # invalid plan is an error, never skills.py's permissive all fallback.
@@ -241,7 +192,7 @@ def execute(folder, kind):
             if test not in COMMANDS: raise ValueError('unknown planned test: '+test)
             if test=='release:package':
                 call(PACKAGE_BUILD)
-            call(COMMANDS[test],cwd='apps/site' if test.startswith('site:') else None)
+            call(COMMANDS[test])
 
 
 def lint(folder):
@@ -268,13 +219,9 @@ def receipt(record, dispatch, kind, tests):
 def stamp(folder, kind, receipts):
     record, dispatch = load(folder)
     tests = tests_for(record,kind)
-    if not tests and kind!='build:web_export': raise ValueError('cannot stamp unplanned lane '+kind)
-    if kind=='build:web_export' and record['builds']['web_export']['decision']!='run':
-        raise ValueError('cannot stamp unplanned export')
+    if not tests: raise ValueError('cannot stamp unplanned lane '+kind)
     receipts = Path(receipts); receipts.mkdir(parents=True,exist_ok=True)
     (receipts/(kind.replace(':','-')+'.json')).write_text(json.dumps(receipt(record,dispatch,kind,tests)))
-    if kind == 'release' and planner.combine_site_release(record):
-        stamp(folder, 'site', receipts)
 
 
 def finish(folder, needs_path, receipts):
@@ -289,21 +236,15 @@ def finish(folder, needs_path, receipts):
         if not active and state not in (None,'skipped'): raise ValueError(job+': expected skipped, got '+repr(state))
         return state
     outcomes = {k: result(k,True) for k in ('changes','always')}
-    outcomes['build:web_export'] = result('web-build',dispatch['build-web'])
-    for kind in ('rust','web'):
-        exported = dispatch['export-'+kind]
-        state=result(kind+'-export' if exported else kind,dispatch[kind])
-        outcomes[kind] = state if dispatch[kind] else 'skipped'
-        result(kind if exported else kind+'-export',False)
-    result('site', dispatch['site'] and not planner.combine_site_release(record))
+    state = result('rust',dispatch['rust'])
+    outcomes['rust'] = state if dispatch['rust'] else 'skipped'
     result('release', dispatch['release'])
-    outcomes['site'] = 'success' if dispatch['site'] or dispatch['release'] else 'skipped'
+    outcomes['site'] = 'success' if dispatch['release'] else 'skipped'
     sharded = [s for s in dispatch['skills'] if s in planner.skills.SHARDED]
     result('skills',len(dispatch['skills'])>len(sharded))
     for skill in planner.skills.SHARDED: result(skill,skill in sharded)
-    expected = {k: tests_for(record,k) for k in ('always','rust','web','site','release') if tests_for(record,k)}
+    expected = {k: tests_for(record,k) for k in ('always','rust','release') if tests_for(record,k)}
     expected.update({'skill:'+s: tests_for(record,'skill:'+s) for s in dispatch['skills']})
-    if dispatch['build-web']: expected['build:web_export']=[]
     seen = set()
     for path in sorted(Path(receipts).glob('*.json')):
         entry = gate.escapes.strict_json(path.read_text())

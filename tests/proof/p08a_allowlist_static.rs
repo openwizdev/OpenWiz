@@ -34,9 +34,9 @@
 //! measure free space without `unsafe` or a new crate. Jake approved B-3
 //! option (a) on #14, 2026-10-31: the store may run exactly
 //! `/bin/df -P -k <state dir>` with `LC_ALL=C` and nothing else, failing
-//! closed (any error or unparsable output stages nothing). So
-//! `crates/store/src/attachments.rs` is the one source outside the adapter
-//! that may start a process, and only that one: one `Command::new`, of
+//! closed (any error or unparsable output stages nothing). So the
+//! attachment store was the one source outside the adapter that may start a
+//! process (#1264 removed it, and this exception with it), and only that one: one `Command::new`, of
 //! `DF_PROGRAM` (`/bin/df`), with exactly `DF_ARGS` (`-P -k`), the directory,
 //! a cleared environment and `LC_ALL=C`
 //! (`the_free_space_measure_runs_only_bin_df`). It names no `room-cli`
@@ -644,17 +644,13 @@ fn product_sources() -> Vec<(PathBuf, String)> {
         .collect()
 }
 
-/// The store's attachment module retains P8(a)'s one fixed program, `/bin/df`.
-const FREE_SPACE_MEASURE: &str = "../crates/store/src/attachments.rs";
-
 /// The GitHub adapter's runner: the one source there that may start a
 /// process, `gh` with an allowlisted invocation only (#111, Q3 (a)).
 const GITHUB_RUNNER: &str = "../crates/adapters/github/src/process.rs";
 const GITHUB_APP: &str = "../crates/adapters/github/src/app.rs";
+const GITHUB_APP_TRANSPORT_TESTS: &str = "../crates/adapters/github/src/app_transport_tests.rs";
 
-const LOOP_REPOSITORY: &str = "../crates/store/src/loops/repository.rs";
-const LOOP_CHECK: &str = "../crates/service/src/loops/check.rs";
-const LOOP_EXECUTOR: &str = "../crates/service/src/loops/mod.rs";
+const LOOP_REPOSITORY: &str = "../crates/cli/src/state/loops/repository.rs";
 
 /// J99 (#635), approved by Jake 2026-11-15: installed `openwiz init` runs only
 /// the fixed sibling `runtime/setup/init.py` through absolute
@@ -666,18 +662,10 @@ const INIT_LAUNCHER: &str = "../crates/cli/src/init.rs";
 
 #[test]
 fn allowlist_source_contracts_preserve_original_cases() {
-    let cases: [(&str, fn()); 17] = [
+    let cases: [(&str, fn()); 12] = [
         (
             "init_interpreter_exception_rejects_planted_widening",
             init_interpreter_exception_rejects_planted_widening,
-        ),
-        (
-            "l3_check_admission_rejects_removed_approval_or_limits",
-            l3_check_admission_rejects_removed_approval_or_limits,
-        ),
-        (
-            "l3_check_exception_rejects_planted_breaks",
-            l3_check_exception_rejects_planted_breaks,
         ),
         (
             "l3_exceptions_reject_aliased_process_starts",
@@ -696,20 +684,12 @@ fn allowlist_source_contracts_preserve_original_cases() {
             only_the_adapter_can_start_a_process_and_only_from_the_allowlist,
         ),
         (
-            "service_update_field_exception_catches_command_like_literals",
-            service_update_field_exception_catches_command_like_literals,
-        ),
-        (
             "t13_key_helper_keeps_one_fixed_descriptor_handover",
             t13_key_helper_keeps_one_fixed_descriptor_handover,
         ),
         (
             "t2_linux_owner_query_keeps_the_existing_kernel_boundary",
             t2_linux_owner_query_keeps_the_existing_kernel_boundary,
-        ),
-        (
-            "t2_store_retains_p8s_single_program_exception",
-            t2_store_retains_p8s_single_program_exception,
         ),
         (
             "t7_app_guards_catch_extra_programs_arguments_environments_and_endpoints",
@@ -731,10 +711,6 @@ fn allowlist_source_contracts_preserve_original_cases() {
             "the_github_runner_rule_catches_a_planted_break",
             the_github_runner_rule_catches_a_planted_break,
         ),
-        (
-            "updater_runner_exception_still_rejects_extra_effects",
-            updater_runner_exception_still_rejects_extra_effects,
-        ),
     ];
     for (name, proof) in cases {
         eprintln!("TA2 case: p08a_allowlist_static::{name}");
@@ -747,26 +723,25 @@ fn only_the_adapter_can_start_a_process_and_only_from_the_allowlist() {
         .join("../crates/adapters/cloudroom")
         .canonicalize()
         .expect("adapter dir");
-    let measure = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join(FREE_SPACE_MEASURE)
-        .canonicalize()
-        .expect("the free-space measure");
     let github_runner = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join(GITHUB_RUNNER)
         .canonicalize()
         .expect("the GitHub runner");
-    let mut measured = false;
     let mut ran = false;
     let app = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join(GITHUB_APP)
         .canonicalize()
         .unwrap();
     let mut signed = false;
-    let updater = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../crates/service/src/update.rs")
+    // #1264: T7's curl transport test moved, unchanged, from
+    // `tests/service/` to beside `app.rs`. It is that file's
+    // `#[cfg(test)]` module only, never product code, so it keeps the
+    // process start it had outside `crates/`, and nothing else does.
+    let app_transport_tests = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join(GITHUB_APP_TRANSPORT_TESTS)
         .canonicalize()
         .unwrap();
-    let mut updated = false;
+    let mut transport_tests = false;
     let init_launcher = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join(INIT_LAUNCHER)
         .canonicalize()
@@ -779,9 +754,7 @@ fn only_the_adapter_can_start_a_process_and_only_from_the_allowlist() {
             .expect("canonical L3 source")
     };
     let loop_repository = canonical_loop(LOOP_REPOSITORY);
-    let loop_check = canonical_loop(LOOP_CHECK);
-    let loop_executor = canonical_loop(LOOP_EXECUTOR);
-    let mut checked_loops = [false; 3];
+    let mut checked_loops = [false; 1];
     for (path, text) in product_sources() {
         let starts_process = text.contains("process::Command")
             || text.contains("Command::new")
@@ -794,35 +767,10 @@ fn only_the_adapter_can_start_a_process_and_only_from_the_allowlist() {
             checked_loops[0] = true;
             continue;
         }
-        if canonical == loop_check {
-            assert_eq!(l3_check_problems(&text), Vec::<String>::new());
-            checked_loops[1] = true;
-            continue;
-        }
-        if canonical == loop_executor {
-            assert_eq!(l3_executor_problems(&text), Vec::<String>::new());
-            checked_loops[2] = true;
-            // The executor itself gains no process-start exception.
-        } else {
-            assert!(
-                !l3_compact(&text).contains("check::run("),
-                "{path:?}: ungated check caller"
-            );
-        }
-        if canonical == updater {
-            assert_eq!(
-                updater_runner_problems(&text),
-                Vec::<String>::new(),
-                "T6 updater runner"
-            );
-            updated = true;
-            continue;
-        }
-        if canonical == measure {
-            the_free_space_measure_runs_only_bin_df(&text);
-            measured = true;
-            continue;
-        }
+        assert!(
+            !l3_compact(&text).contains("check::run("),
+            "{path:?}: ungated check caller"
+        );
         if canonical == github_runner {
             assert_eq!(
                 github_runner_problems(&text),
@@ -839,6 +787,21 @@ fn only_the_adapter_can_start_a_process_and_only_from_the_allowlist() {
                 "{INIT_LAUNCHER}"
             );
             init_launched = true;
+            continue;
+        }
+        if canonical == app_transport_tests {
+            let app_text = fs::read_to_string(&app).unwrap();
+            assert_eq!(
+                app_text
+                    .matches(
+                        "#[cfg(test)]\n#[path = \"app_transport_tests.rs\"]\nmod transport_tests;"
+                    )
+                    .count(),
+                1,
+                "{GITHUB_APP_TRANSPORT_TESTS} is only app.rs's test module"
+            );
+            assert_eq!(app_text.matches("app_transport_tests.rs").count(), 1);
+            transport_tests = true;
             continue;
         }
         if canonical == app {
@@ -868,12 +831,14 @@ fn only_the_adapter_can_start_a_process_and_only_from_the_allowlist() {
             }
         }
     }
-    assert!(measured, "{FREE_SPACE_MEASURE} was not checked");
     assert!(ran, "{GITHUB_RUNNER} was not checked");
     assert!(signed, "{GITHUB_APP} was not checked");
-    assert!(updated, "the canonical updater runner was not checked");
+    assert!(
+        transport_tests,
+        "{GITHUB_APP_TRANSPORT_TESTS} was not checked"
+    );
     assert!(init_launched, "{INIT_LAUNCHER} was not checked");
-    assert_eq!(checked_loops, [true; 3], "all canonical L3 gates checked");
+    assert_eq!(checked_loops, [true; 1], "the canonical L3 gate checked");
 }
 
 // Normalize layout and discard comments, retaining literal contents. A cited
@@ -1176,146 +1141,6 @@ fn l3_repository_problems(text: &str) -> Vec<String> {
     problems
 }
 
-fn l3_check_problems(text: &str) -> Vec<String> {
-    let code = l3_compact(text);
-    let mut problems = Vec::new();
-    l3_counts(
-        &mut problems,
-        &code,
-        &[
-            ("Command::new(", 2),
-            ("::new(", 3),
-            ("Vec::new(", 1),
-            // Only the existing pipe-reader thread uses qualified spawn.
-            ("::spawn(", 1),
-            ("thread::spawn(", 1),
-            ("::status(", 0),
-            ("::output(", 0),
-            ("::exec(", 0),
-            ("Commandas", 0),
-            ("processas", 0),
-            ("process::", 2),
-            ("process::{Command,Stdio},", 1),
-            ("os::unix::process::CommandExt,", 1),
-            (".arg(", 0),
-            (".args(", 2),
-            (".current_dir(", 1),
-            (".process_group(", 1),
-            (".spawn(", 1),
-            (".status(", 1),
-            (".output(", 0),
-            (".exec(", 0),
-            (".env(", 0),
-            (".envs(", 0),
-            (".env_clear(", 0),
-            (".env_remove(", 0),
-            ("check::run(", 0),
-        ],
-    );
-    let signature = "pubfnrun(root:&Path,check:&Value,clock:&dynClock)->Value";
-    let body = l3_function(&code, signature).unwrap_or_default();
-    let before_spawn = l3_compact(
-        r#"
-        pub fn run(root: &Path, check: &Value, clock: &dyn Clock) -> Value {
-            let argv = check["argv"].as_array().unwrap();
-            let Some(deadline) = clock.monotonic()
-                .checked_add(Duration::from_millis(check["timeout_ms"].as_u64().unwrap()))
-            else { return failed(); };
-            let mut child = match Command::new(argv[0].as_str().unwrap())
-                .args(argv[1..].iter().map(|s| s.as_str().unwrap()))
-                .current_dir(root).stdin(Stdio::null()).stdout(Stdio::piped())
-                .stderr(Stdio::null()).process_group(0).spawn()
-            { Ok(child) => child, Err(_) => return failed(), };
-    "#,
-    );
-    if !body.starts_with(&before_spawn) {
-        problems.push("check argv/cwd/deadline before spawn changed".to_owned());
-    }
-    for required in [
-        r#"let result = loop { if clock.monotonic() >= deadline { break json!({"kind":"check_timed_out"}); }"#,
-        "if let (Some(status), Some(output)) = (&status, &output)",
-        r#"let _ = Command::new("/bin/kill").args(["-KILL", "--", &format!("-{}", child.id())])
-            .stdout(Stdio::null()).stderr(Stdio::null()).status();
-            let _ = child.kill(); let _ = child.wait();"#,
-    ] {
-        if !body.contains(&l3_compact(required)) {
-            problems.push(format!("missing check gate: {required}"));
-        }
-    }
-    problems
-}
-
-fn l3_executor_problems(text: &str) -> Vec<String> {
-    let code = l3_compact(text);
-    let mut problems = Vec::new();
-    l3_counts(
-        &mut problems,
-        &code,
-        &[("check::run(", 1), ("modcheck;", 1)],
-    );
-    l3_exact_function(
-        &mut problems,
-        &code,
-        "fn approved(&self, d: &Definition) -> bool",
-        r#"
-        fn approved(&self, d: &Definition) -> bool {
-            self.services.approval.as_ref().is_some_and(|approval| approval.verify(&d.value, &d.revision))
-        }
-    "#,
-    );
-    l3_exact_function(
-        &mut problems,
-        &code,
-        "fn valid_limits(&self) -> Result<Limits, String>",
-        r#"
-        fn valid_limits(&self) -> Result<Limits, String> {
-            let limits = self.config.limits.ok_or("shared loop capacities were not supplied")?;
-            if [limits.checks, limits.agents].iter().any(|c| c.urgent_reserve > c.max) {
-                return Err("invalid shared loop capacities".to_owned());
-            }
-            Ok(limits)
-        }
-    "#,
-    );
-    let snapshot = l3_function(&code, "fnsnapshot(&self,repo:&Repository,definitions:&[Definition],runs:&[Value],switches:&serde_json::Map<String,Value>,)->Result<model::Snapshot,String>").unwrap_or_default();
-    if !snapshot.contains(&l3_compact(r#"
-        let definitions = definitions.iter().map(|d| {
-            d.project(switches[d.value["id"].as_str().unwrap()].as_bool().unwrap() && self.approved(d),)
-        }).collect();
-    "#)) { problems.push("snapshot does not require exact definition approval".to_owned()); }
-    let pass =
-        l3_function(&code, "pubfnpass(&self)->Result<Vec<Value>,String>").unwrap_or_default();
-    let mut previous = 0;
-    for required in [
-        "let limits = match self.valid_limits()",
-        "let definitions = repository.current()?;",
-        "let snapshot = self.snapshot(&repository, &definitions, &runs, &switches)?;",
-        "let plan = model::plan(&snapshot, self.now()?, &limits)",
-        r#"if let model::Action::Check { loop_id, revision, occurrence: model::Occurrence::Scheduled { due_at_ms }, } = action"#,
-        r#"let d = definitions.iter().find(|d| d.value["id"] == loop_id.as_str() && d.revision == revision.as_str()).ok_or("missing planned definition")?;"#,
-        r#"let mut result = check::run(&self.config.checkout, &d.value["check"], self.services.clock.as_ref(),);"#,
-    ] {
-        match pass[previous..].find(&l3_compact(required)) {
-            Some(at) => previous += at + l3_compact(required).len(),
-            None => problems.push(format!("missing or reordered admission gate: {required}")),
-        }
-    }
-    // No new CloudRoom route: the existing validation and preview still
-    // precede durable reservation and the existing new_thread operation.
-    for required in [
-        "if !self.approved(&definition)",
-        "if request.validate().is_err()",
-        "let ready = preview_new_thread(",
-        "if !ready || !self.approved(&definition)",
-        "let _ = new_thread(",
-    ] {
-        if !pass.contains(&l3_compact(required)) {
-            problems.push(format!("missing existing new-thread gate: {required}"));
-        }
-    }
-    problems
-}
-
 fn l3_plant(code: &str, from: &str, to: &str) -> String {
     let from = l3_compact(from);
     assert_eq!(
@@ -1327,7 +1152,9 @@ fn l3_plant(code: &str, from: &str, to: &str) -> String {
 }
 
 fn l3_repository_exception_rejects_planted_breaks() {
-    let code = l3_compact(include_str!("../../crates/store/src/loops/repository.rs"));
+    let code = l3_compact(include_str!(
+        "../../crates/cli/src/state/loops/repository.rs"
+    ));
     assert!(l3_repository_problems(&code).is_empty());
     for (from, to) in [
         (r#"Command::new("git")"#, r#"Command::new("room-cli")"#),
@@ -1420,73 +1247,15 @@ fn l3_repository_exception_rejects_planted_breaks() {
     assert!(!l3_repository_problems(&extra).is_empty());
 }
 
-fn l3_check_exception_rejects_planted_breaks() {
-    let code = l3_compact(include_str!("../../crates/service/src/loops/check.rs"));
-    assert!(l3_check_problems(&code).is_empty());
-    for (from, to) in [
-        (
-            "Command::new(argv[0].as_str().unwrap())",
-            r#"Command::new("sh")"#,
-        ),
-        (
-            ".args(argv[1..].iter().map(|s| s.as_str().unwrap()))",
-            ".args(arbitrary_arguments)",
-        ),
-        (
-            ".current_dir(root)",
-            r#".current_dir("/synthetic/other-root")"#,
-        ),
-        (
-            ".current_dir(root)",
-            r#".arg("synthetic-extra").current_dir(root)"#,
-        ),
-        (".process_group(0)", ".process_group(1)"),
-        ("check[\"timeout_ms\"].as_u64().unwrap()", "u64::MAX"),
-        (
-            "if clock.monotonic() >= deadline",
-            "if false /* if clock.monotonic() >= deadline */",
-        ),
-        (
-            "&format!(\"-{}\", child.id())",
-            "&format!(\"-{}\", std::process::id())",
-        ),
-        ("&format!(\"-{}\", child.id())", "&caller_supplied_target"),
-        (
-            "&format!(\"-{}\", child.id())",
-            "&format!(\"{}\", child.id())",
-        ),
-        ("\"-KILL\", \"--\"", "\"-TERM\", \"--\""),
-        (
-            r#"Command::new("/bin/kill")"#,
-            r#"Command::new("/bin/kill").arg("-1")"#,
-        ),
-    ] {
-        let planted = l3_plant(&code, from, to);
-        assert!(
-            !l3_check_problems(&planted).is_empty(),
-            "missed {from} -> {to}"
-        );
-    }
-    let extra = format!("{code}fn extra() {{ Command::new(\"sh\").spawn(); }}");
-    assert!(!l3_check_problems(&extra).is_empty());
-}
-
 // #1015: extra starts must fail even when literal Command::new/.spawn
 // counts stay unchanged. Mutate copies only; no planted command is executed.
 fn l3_exceptions_reject_aliased_process_starts() {
     let mut missed = Vec::new();
-    for (name, text, inspect) in [
-        (
-            "repository",
-            include_str!("../../crates/store/src/loops/repository.rs"),
-            l3_repository_problems as fn(&str) -> Vec<String>,
-        ),
-        (
-            "check",
-            include_str!("../../crates/service/src/loops/check.rs"),
-            l3_check_problems as fn(&str) -> Vec<String>,
-        ),
-    ] {
+    for (name, text, inspect) in [(
+        "repository",
+        include_str!("../../crates/cli/src/state/loops/repository.rs"),
+        l3_repository_problems as fn(&str) -> Vec<String>,
+    )] {
         assert!(inspect(text).is_empty(), "clean {name}");
         for extra in [
             r#"use std::process::Command as C;
@@ -1510,106 +1279,6 @@ fn l3_exceptions_reject_aliased_process_starts() {
         }
     }
     assert!(missed.is_empty(), "missed planted breaks: {missed:#?}");
-}
-
-fn l3_check_admission_rejects_removed_approval_or_limits() {
-    let code = l3_compact(include_str!("../../crates/service/src/loops/mod.rs"));
-    assert!(l3_executor_problems(&code).is_empty());
-    for (from, to) in [
-        (
-            ".is_some_and(|approval| approval.verify(&d.value, &d.revision))",
-            ".is_none()",
-        ),
-        ("&& self.approved(d)", "/* && self.approved(d) */"),
-        (
-            "let limits = match self.valid_limits()",
-            "let limits = match Ok(arbitrary_limits)",
-        ),
-        ("c.urgent_reserve > c.max", "false"),
-        (
-            "let plan = model::plan(&snapshot, self.now()?, &limits).map_err(|_| \"invalid loop snapshot\".to_owned())?;",
-            "let plan = arbitrary_plan(&snapshot)?;",
-        ),
-        ("&d.value[\"check\"],", "&unverified_check,"),
-        ("if request.validate().is_err()", "if false"),
-        ("if !ready || !self.approved(&definition)", "if !ready"),
-    ] {
-        let planted = l3_plant(&code, from, to);
-        assert!(
-            !l3_executor_problems(&planted).is_empty(),
-            "missed {from} -> {to}"
-        );
-    }
-}
-
-fn updater_runner_problems(text: &str) -> Vec<String> {
-    let mut problems = Vec::new();
-    for (marker, count) in [
-        ("Command::new(", 1),
-        ("Command::new(call.program())", 1),
-        (".args(", 1),
-        (".args(call.argv())", 1),
-        (".current_dir(call.directory())", 1),
-        (".process_group(0)", 1),
-        (".stdin(Stdio::null())", 1),
-        (".stdout(Stdio::null())", 1),
-        (".stderr(Stdio::null())", 1),
-        ("if !allows_command(call.program(), &args)", 1),
-        (".env(", 7),
-        (".env_remove(", 0),
-        (".envs(", 0),
-        (".env_clear(", 1),
-        (".arg(", 0),
-        (".env(\"OPENWIZ_SERVICE_BUILD\", call.commit.as_str())", 1),
-        (".env(\"CIRCLE_NODE_TOTAL\", \"2\")", 1),
-        (".env(\"CARGO_BUILD_JOBS\", \"2\")", 1),
-        (".env(\"LANG\", \"C.UTF-8\")", 1),
-        (".env(key, value)", 1),
-        ("for key in GATE_ENV", 1),
-        (".env(\"GIT_TERMINAL_PROMPT\", \"0\")", 1),
-        (".env(\"GIT_CONFIG_NOSYSTEM\", \"1\")", 1),
-        (".spawn()", 1),
-        (".status()", 1),
-        (".exec()", 1),
-        ("pub fn new(", 0),
-        ("pub program:", 0),
-        ("pub argv:", 0),
-    ] {
-        if text.matches(marker).count() != count {
-            problems.push(format!("{marker}: expected {count}"));
-        }
-    }
-    let compact: String = text.split_whitespace().collect();
-    if !compact.contains("constGATE_ENV:&[&str]=&[\"PATH\",\"HOME\",\"CARGO_HOME\",\"RUSTUP_HOME\",\"OPENWIZ_CHROMIUM\",];") {
-        problems.push("gate environment is not the exact tool allowlist".to_owned());
-    }
-    problems
-}
-
-fn updater_runner_exception_still_rejects_extra_effects() {
-    let text = include_str!("../../crates/service/src/update.rs");
-    assert!(updater_runner_problems(text).is_empty());
-    for bad in [
-        text.replace(".env_clear()", ""),
-        text.replace(
-            "\"OPENWIZ_CHROMIUM\",",
-            "\"OPENWIZ_CHROMIUM\", \"OPENWIZ_STATE_DIR\",",
-        ),
-        text.replace("Command::new(call.program())", "Command::new(\"room-cli\")"),
-        text.replace(
-            ".args(call.argv())",
-            ".args(call.argv()).arg(\"synthetic-extra\")",
-        ),
-        text.replace(".args(call.argv())", ".args(arbitrary_arguments)"),
-        text.replace("if !allows_command(call.program(), &args)", "if false"),
-        text.replace(
-            ".env(\"CIRCLE_NODE_TOTAL\", \"2\")",
-            ".env(\"SYNTHETIC_UNAPPROVED\", \"2\")",
-        ),
-        format!("{text}\nfn bad() {{ Command::new(\"room-cli\").spawn(); }}"),
-    ] {
-        assert!(!updater_runner_problems(&bad).is_empty());
-    }
 }
 
 /// #111's one exception for GitHub, and nothing more: one process, of the
@@ -2019,53 +1688,6 @@ fn t7_app_guards_catch_extra_programs_arguments_environments_and_endpoints() {
     }
 }
 
-/// B-3's one exception, and nothing more: one process, of `/bin/df`, with
-/// `-P -k`, the directory, a cleared environment and `LC_ALL=C`, in exactly
-/// that call. No other program, argument or variable can be given.
-fn the_free_space_measure_runs_only_bin_df(text: &str) {
-    let once = |needle: &str| {
-        assert_eq!(
-            text.matches(needle).count(),
-            1,
-            "{FREE_SPACE_MEASURE} names {needle:?} once"
-        );
-    };
-    once("Command::new(");
-    once("Command::new(DF_PROGRAM)");
-    once("pub const DF_PROGRAM: &str = \"/bin/df\";");
-    once("pub const DF_ARGS: [&str; 2] = [\"-P\", \"-k\"];");
-    once("use std::process::{Command, Stdio};");
-    once(".args(");
-    once(".arg(");
-    once(".env(");
-    let call = text
-        .split("Command::new(DF_PROGRAM)")
-        .nth(1)
-        .and_then(|rest| rest.split(".output()").next())
-        .expect("the call");
-    let call: String = call.split_whitespace().collect();
-    assert_eq!(
-        call,
-        ".args(DF_ARGS).arg(dir).env_clear().env(\"LC_ALL\",\"C\").stdin(Stdio::null())\
-         .stdout(Stdio::piped()).stderr(Stdio::null())",
-        "the measure's call is exactly /bin/df -P -k <dir>, LC_ALL=C, nothing else"
-    );
-    for word in [
-        "process::Command",
-        "process::Child",
-        "CommandExt",
-        ".spawn(",
-        ".status(",
-        ".envs(",
-        ".current_dir(",
-        ".env_remove(",
-        "room-cli",
-        "room_cli",
-    ] {
-        assert!(!text.contains(word), "{FREE_SPACE_MEASURE} names {word}");
-    }
-}
-
 fn no_product_source_spells_a_forbidden_argument() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../crates");
     let allowlist = root
@@ -2073,10 +1695,6 @@ fn no_product_source_spells_a_forbidden_argument() {
         .canonicalize()
         .expect("allowlist");
     let cli = root.join("cli").canonicalize().expect("cli");
-    let service_reader = root
-        .join("service/src/document.rs")
-        .canonicalize()
-        .expect("service reader");
     for (path, text) in product_sources() {
         let path = path.canonicalize().expect("path");
         for word in FORBIDDEN {
@@ -2105,13 +1723,6 @@ fn no_product_source_spells_a_forbidden_argument() {
                 assert!(
                     arm.starts_with(&format!("letmutw=vec![\"loop\",\"{word}\",")),
                     "{path:?}: {word} outside {variant}"
-                );
-                continue;
-            }
-            if *word == "update" {
-                assert!(
-                    service_update_fields_only(&path, &service_reader, &text),
-                    "{path:?}: update is not the service JSON field"
                 );
                 continue;
             }
@@ -2159,60 +1770,6 @@ fn no_product_source_spells_a_forbidden_argument() {
     }
 }
 
-// #269: the same exact service JSON-field exception as M12, with no
-// command-like literal allowed, in this file or anywhere else.
-fn service_update_fields_only(path: &Path, reader: &Path, text: &str) -> bool {
-    text.match_indices("\"update\"").all(|(at, literal)| {
-        if path == reader.with_file_name("update.rs") {
-            let start = text[..at].rfind('\n').map_or(0, |n| n + 1);
-            let end = text[at..].find('\n').map_or(text.len(), |n| at + n);
-            return text[start..end].trim() == "const UPDATE: &str = \"update\";";
-        }
-        if path != reader {
-            return false;
-        }
-        let before = &text[..at];
-        let Some(prefix) = before.strip_suffix("value[") else {
-            return false;
-        };
-        let boundary = prefix
-            .chars()
-            .next_back()
-            .is_none_or(|c| !c.is_alphanumeric() && c != '_');
-        boundary && text[at + literal.len()..].starts_with(']')
-    })
-}
-
-fn service_update_field_exception_catches_command_like_literals() {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../crates/service/src");
-    let reader = root.join("document.rs").canonicalize().unwrap();
-    let other = root.join("runtime.rs").canonicalize().unwrap();
-    let fields =
-        r#"!value["update"].is_null(); value["update"]["outcome"]; value["update"][field];"#;
-    assert!(service_update_fields_only(&reader, &reader, fields));
-    for bad in [
-        r#"let argv = ["thread", "update", "thr_syn_0001"];"#,
-        r#"value["update"]; let argv = ["update"];"#,
-        r#"other_value["update"];"#,
-        r#"value["update", "argument"];"#,
-    ] {
-        assert!(
-            !service_update_fields_only(&reader, &reader, bad),
-            "command-like occurrence escaped: {bad}"
-        );
-    }
-    assert!(!service_update_fields_only(&other, &reader, fields));
-    let updater = root.join("update.rs").canonicalize().unwrap();
-    let key = "const UPDATE: &str = \"update\";";
-    assert!(service_update_fields_only(&updater, &reader, key));
-    assert!(!service_update_fields_only(&other, &reader, key));
-    assert!(!service_update_fields_only(
-        &updater,
-        &reader,
-        &format!("{key}\nlet argv = [\"update\"];")
-    ));
-}
-
 fn t13_key_helper_keeps_one_fixed_descriptor_handover() {
     fn allowed(script: &str) -> bool {
         let code: String = script.split_whitespace().collect();
@@ -2235,7 +1792,8 @@ fn t13_key_helper_keeps_one_fixed_descriptor_handover() {
 }
 
 fn t2_linux_owner_query_keeps_the_existing_kernel_boundary() {
-    let code = l3_compact(include_str!("../../crates/store/src/attachments.rs"));
+    // #1264: the owner query moved, unchanged, to the command's state module.
+    let code = l3_compact(include_str!("../../crates/cli/src/state/owner.rs"));
     let linux = code
         .split_once("#[cfg(target_os=\"linux\")]")
         .map(|(_, tail)| tail.split("#[cfg").next().unwrap_or_default())
@@ -2248,11 +1806,6 @@ fn t2_linux_owner_query_keeps_the_existing_kernel_boundary() {
             && !body.contains(".output()"),
         "Linux ownership must use its existing kernel metadata, with no subprocess"
     );
-}
-
-fn t2_store_retains_p8s_single_program_exception() {
-    let text = include_str!("../../crates/store/src/attachments.rs");
-    the_free_space_measure_runs_only_bin_df(text);
 }
 
 // #1680: the public invocation must carry the allowance for the aggregate

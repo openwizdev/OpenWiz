@@ -1,0 +1,99 @@
+$ python3 -I ci/select/test_pick.py Synthetic PullRequestPlan   # at the red commit, pick.py and steps.py unchanged
+.............FFFFF........................FF
+======================================================================
+FAIL: test_a_new_doc_or_skill_nobody_looks_for_reaches_no_test (__main__.Synthetic.test_a_new_doc_or_skill_nobody_looks_for_reaches_no_test) [docs/cleanup/brand-new.md]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/ci/select/test_pick.py", line 190, in test_a_new_doc_or_skill_nobody_looks_for_reaches_no_test
+    self.picked(result, has=pick.ALWAYS, lacks=['rust:test:proof', 'rust:test:web-api',
+  File "/code/openwiz/ci/select/test_pick.py", line 86, in picked
+    self.assertEqual(result['mode'], 'selected', result)
+AssertionError: 'full' != 'selected'
+- full
++ selected
+ : {'mode': 'full', 'reasons': [{'code': 'unknown_path', 'paths': ['docs/cleanup/brand-new.md']}], 'tests': ['rust:lib:openwiz-core', 'rust:test:checks', 'rust:test:proof', 'rust:test:web-api', 'web:browser:v1-faithful', 'web:unit:api', 'web:unit:brand-new'], 'skipped': [], 'why': {'rust:lib:openwiz-core': 'everything runs: unknown_path', 'rust:test:checks': 'everything runs: unknown_path', 'rust:test:proof': 'everything runs: unknown_path', 'rust:test:web-api': 'everything runs: unknown_path', 'web:browser:v1-faithful': 'everything runs: unknown_path', 'web:unit:api': 'everything runs: unknown_path', 'web:unit:brand-new': 'everything runs: unknown_path'}}
+
+======================================================================
+FAIL: test_a_new_doc_or_skill_nobody_looks_for_reaches_no_test (__main__.Synthetic.test_a_new_doc_or_skill_nobody_looks_for_reaches_no_test) [docs/evidence/1335/red.log]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/ci/select/test_pick.py", line 190, in test_a_new_doc_or_skill_nobody_looks_for_reaches_no_test
+    self.picked(result, has=pick.ALWAYS, lacks=['rust:test:proof', 'rust:test:web-api',
+  File "/code/openwiz/ci/select/test_pick.py", line 86, in picked
+    self.assertEqual(result['mode'], 'selected', result)
+AssertionError: 'full' != 'selected'
+- full
++ selected
+ : {'mode': 'full', 'reasons': [{'code': 'unknown_path', 'paths': ['docs/evidence/1335/red.log']}], 'tests': ['rust:lib:openwiz-core', 'rust:test:checks', 'rust:test:proof', 'rust:test:web-api', 'web:browser:v1-faithful', 'web:unit:api', 'web:unit:brand-new'], 'skipped': [], 'why': {'rust:lib:openwiz-core': 'everything runs: unknown_path', 'rust:test:checks': 'everything runs: unknown_path', 'rust:test:proof': 'everything runs: unknown_path', 'rust:test:web-api': 'everything runs: unknown_path', 'web:browser:v1-faithful': 'everything runs: unknown_path', 'web:unit:api': 'everything runs: unknown_path', 'web:unit:brand-new': 'everything runs: unknown_path'}}
+
+======================================================================
+FAIL: test_a_new_doc_or_skill_nobody_looks_for_reaches_no_test (__main__.Synthetic.test_a_new_doc_or_skill_nobody_looks_for_reaches_no_test) [NOTES.md]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/ci/select/test_pick.py", line 190, in test_a_new_doc_or_skill_nobody_looks_for_reaches_no_test
+    self.picked(result, has=pick.ALWAYS, lacks=['rust:test:proof', 'rust:test:web-api',
+  File "/code/openwiz/ci/select/test_pick.py", line 86, in picked
+    self.assertEqual(result['mode'], 'selected', result)
+AssertionError: 'full' != 'selected'
+- full
++ selected
+ : {'mode': 'full', 'reasons': [{'code': 'unknown_path', 'paths': ['NOTES.md']}], 'tests': ['rust:lib:openwiz-core', 'rust:test:checks', 'rust:test:proof', 'rust:test:web-api', 'web:browser:v1-faithful', 'web:unit:api', 'web:unit:brand-new'], 'skipped': [], 'why': {'rust:lib:openwiz-core': 'everything runs: unknown_path', 'rust:test:checks': 'everything runs: unknown_path', 'rust:test:proof': 'everything runs: unknown_path', 'rust:test:web-api': 'everything runs: unknown_path', 'web:browser:v1-faithful': 'everything runs: unknown_path', 'web:unit:api': 'everything runs: unknown_path', 'web:unit:brand-new': 'everything runs: unknown_path'}}
+
+======================================================================
+FAIL: test_a_new_doc_or_skill_nobody_looks_for_reaches_no_test (__main__.Synthetic.test_a_new_doc_or_skill_nobody_looks_for_reaches_no_test) [.claude/skills/brand-new/SKILL.md]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/ci/select/test_pick.py", line 190, in test_a_new_doc_or_skill_nobody_looks_for_reaches_no_test
+    self.picked(result, has=pick.ALWAYS, lacks=['rust:test:proof', 'rust:test:web-api',
+  File "/code/openwiz/ci/select/test_pick.py", line 86, in picked
+    self.assertEqual(result['mode'], 'selected', result)
+AssertionError: 'full' != 'selected'
+- full
++ selected
+ : {'mode': 'full', 'reasons': [{'code': 'unknown_path', 'paths': ['.claude/skills/brand-new/SKILL.md']}], 'tests': ['rust:lib:openwiz-core', 'rust:test:checks', 'rust:test:proof', 'rust:test:web-api', 'web:browser:v1-faithful', 'web:unit:api', 'web:unit:brand-new'], 'skipped': [], 'why': {'rust:lib:openwiz-core': 'everything runs: unknown_path', 'rust:test:checks': 'everything runs: unknown_path', 'rust:test:proof': 'everything runs: unknown_path', 'rust:test:web-api': 'everything runs: unknown_path', 'web:browser:v1-faithful': 'everything runs: unknown_path', 'web:unit:api': 'everything runs: unknown_path', 'web:unit:brand-new': 'everything runs: unknown_path'}}
+
+======================================================================
+FAIL: test_a_new_doc_or_skill_nobody_looks_for_reaches_no_test (__main__.Synthetic.test_a_new_doc_or_skill_nobody_looks_for_reaches_no_test) [.agents/skills/brand-new]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/ci/select/test_pick.py", line 190, in test_a_new_doc_or_skill_nobody_looks_for_reaches_no_test
+    self.picked(result, has=pick.ALWAYS, lacks=['rust:test:proof', 'rust:test:web-api',
+  File "/code/openwiz/ci/select/test_pick.py", line 86, in picked
+    self.assertEqual(result['mode'], 'selected', result)
+AssertionError: 'full' != 'selected'
+- full
++ selected
+ : {'mode': 'full', 'reasons': [{'code': 'unknown_path', 'paths': ['.agents/skills/brand-new']}], 'tests': ['rust:lib:openwiz-core', 'rust:test:checks', 'rust:test:proof', 'rust:test:web-api', 'web:browser:v1-faithful', 'web:unit:api', 'web:unit:brand-new'], 'skipped': [], 'why': {'rust:lib:openwiz-core': 'everything runs: unknown_path', 'rust:test:checks': 'everything runs: unknown_path', 'rust:test:proof': 'everything runs: unknown_path', 'rust:test:web-api': 'everything runs: unknown_path', 'web:browser:v1-faithful': 'everything runs: unknown_path', 'web:unit:api': 'everything runs: unknown_path', 'web:unit:brand-new': 'everything runs: unknown_path'}}
+
+======================================================================
+FAIL: test_a_docs_only_or_skills_only_pr_skips_the_rust_and_web_jobs (__main__.PullRequestPlan.test_a_docs_only_or_skills_only_pr_skips_the_rust_and_web_jobs) [('docs/ROADMAP.md', 'docs/cleanup/new-table.md', 'NOTES.md')]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/ci/select/test_pick.py", line 344, in test_a_docs_only_or_skills_only_pr_skips_the_rust_and_web_jobs
+    self.assertEqual(self.decisions(self.plan_for(*edits)), skip)
+AssertionError: {'rust': 'run', 'web': 'run', 'export': 'run', 'mode': 'full'} != {'rust': 'skip', 'web': 'skip', 'export': 'skip', 'mode': 'selected'}
+- {'export': 'run', 'mode': 'full', 'rust': 'run', 'web': 'run'}
+?             ^^^            ^^ ^            ^^^           ^^^
+
++ {'export': 'skip', 'mode': 'selected', 'rust': 'skip', 'web': 'skip'}
+?             ^^^^            ^^ ^^^^^            ^^^^           ^^^^
+
+
+======================================================================
+FAIL: test_a_docs_only_or_skills_only_pr_skips_the_rust_and_web_jobs (__main__.PullRequestPlan.test_a_docs_only_or_skills_only_pr_skips_the_rust_and_web_jobs) [('.claude/skills/old/SKILL.md', '.claude/skills/new/SKILL.md', '.agents/skills/new/x')]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/ci/select/test_pick.py", line 344, in test_a_docs_only_or_skills_only_pr_skips_the_rust_and_web_jobs
+    self.assertEqual(self.decisions(self.plan_for(*edits)), skip)
+AssertionError: {'rust': 'run', 'web': 'run', 'export': 'run', 'mode': 'full'} != {'rust': 'skip', 'web': 'skip', 'export': 'skip', 'mode': 'selected'}
+- {'export': 'run', 'mode': 'full', 'rust': 'run', 'web': 'run'}
+?             ^^^            ^^ ^            ^^^           ^^^
+
++ {'export': 'skip', 'mode': 'selected', 'rust': 'skip', 'web': 'skip'}
+?             ^^^^            ^^ ^^^^^            ^^^^           ^^^^
+
+
+----------------------------------------------------------------------
+Ran 39 tests in 2.073s
+
+FAILED (failures=7)

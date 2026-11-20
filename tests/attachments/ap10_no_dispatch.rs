@@ -64,21 +64,13 @@ fn the_model_has_no_dispatch_path_and_no_io() {
     }
 }
 
-/// Phase 2: the model reaches the store and the CLI, and nothing else. The
-/// store's staging and the CLI's attachment commands name no `room-cli`
-/// call, no adapter and no write: nothing is sent or uploaded.
+/// Phase 2: in the adapter, only the allowlist uses the model. (The store
+/// and the CLI's attachment commands, which this also checked, went in
+/// #1264.)
 #[test]
 fn only_the_store_and_the_cli_use_the_model_and_neither_dispatches() {
     // B2: in the adapter, only the allowlist uses the model (B-7's staged
     // attachments).
-    //
-    // Updated for #16 (B3) with this reason (the orchestrator, 2026-10-31,
-    // #16 Q2): the server serves attachments, so it must name the model (its
-    // upload cap is the core's per-file limit; its routes parse attachment
-    // ids), and `crates/server/src` leaves this word check. The server's side
-    // of the same claim is B3's: AW4 (`tests/web-api/aw04_same_operation.rs`)
-    // finds no kind, name, limit, floor, gate or retention rule in it, and A4
-    // that it starts no process and calls no `room-cli` for attachments.
     for dir in ["crates/adapters/cloudroom/src"] {
         let mut files = Vec::new();
         rust_files(&Path::new(ROOT).join(dir), &mut files);
@@ -93,35 +85,6 @@ fn only_the_store_and_the_cli_use_the_model_and_neither_dispatches() {
             );
         }
     }
-    for file in [
-        "crates/store/src/attachments.rs",
-        "crates/cli/src/attachment.rs",
-    ] {
-        let text = read(file);
-        assert!(text.contains("openwiz_core::attachment::"), "{file}");
-        for word in [
-            "room-cli",
-            "room_cli",
-            "Invocation",
-            "openwiz_adapter",
-            "CloudRoomSource",
-            "allowlist",
-            "\"tell\"",
-            "\"spawn\"",
-            "\"--file\"",
-            "\"--image\"",
-            "Messenger",
-            "NewThreadClient",
-            "std::net",
-        ] {
-            assert!(!text.contains(word), "{file} names {word}");
-        }
-    }
-    // The CLI's module starts no process. The store's starts one program,
-    // `/bin/df`, for the free space (Jake, 2026-10-31, #14): P8(a) checks
-    // that call word for word, and `program` that nothing on `PATH` runs.
-    let cli = read("crates/cli/src/attachment.rs");
-    assert!(!cli.contains("Command::new") && !cli.contains("process::Command"));
 }
 
 fn rust_files(dir: &Path, out: &mut Vec<std::path::PathBuf>) {

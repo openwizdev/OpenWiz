@@ -1,0 +1,329 @@
+$ python3 -I ci/select/test_job.py   # at the red commit, planted.py unchanged
+EEEE.planted: {"as": "f.txt", "catchers": ["web"], "caught_by": [], "edit": ["old", "new"], "hidden": [], "lane": "rust", "path": "f.txt", "picked": ["rust:test:x", "rust:test:y"], "selection": "selected", "skipped": [], "verdict": "not caught in this lane"}
+.planted: {"as": "f.txt", "catchers": ["rust"], "caught_by": ["rust:test:x"], "edit": ["old", "new"], "hidden": [], "lane": "rust", "path": "f.txt", "picked": ["rust:test:x", "rust:test:y"], "selection": "selected", "skipped": [], "verdict": "caught"}
+.planted: {"as": "f.txt", "catchers": ["rust"], "caught_by": [], "edit": ["old", "new"], "hidden": [], "lane": "rust", "path": "f.txt", "picked": ["rust:test:x", "rust:test:y"], "selection": "selected", "skipped": [], "verdict": "FAIL: this lane must catch it, and none of its picked tests did"}
+..planted: {"as": "f.txt", "catchers": ["rust"], "caught_by": ["rust:test:x"], "edit": ["old", "new"], "hidden": [], "lane": "rust", "path": "f.txt", "picked": ["rust:test:x"], "selection": "selected", "skipped": [], "verdict": "caught"}
+......test selection: full: the selector failed: no network
+rust: all
+web: all
+skills: all
+build-web: true
+lint-rust: true
+export-rust: true
+export-web: true
+build-site: true
+image-skills: true
+.test selection: full: an untrusted map: aud is 'closedwiz-ci-select-map-58ba543499cc6347944fb331719e53a7a6c045b47139613a97e03d9a5c10aeb6', not 'closedwiz-ci-select-map-a0ea824371e55e30bf64a4c7e74028fd9a4fed16340ed6f3bdbcd793abc79ede'
+rust: all
+web: all
+skills: all
+build-web: true
+lint-rust: true
+export-rust: true
+export-web: true
+build-site: true
+image-skills: true
+.test selection: full: the map's commit eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee is not an ancestor of the tested commit
+rust: all
+web: all
+skills: all
+build-web: true
+lint-rust: true
+export-rust: true
+export-web: true
+build-site: true
+image-skills: true
+.test selection: full: the map's commit 8463c4017be4b88188ce1a47670668a8b3e6cdbf is not an ancestor of the tested commit
+rust: all
+web: all
+skills: all
+build-web: true
+lint-rust: true
+export-rust: true
+export-web: true
+build-site: true
+image-skills: true
+.test selection: full: an untrusted map: event_name is 'pull_request', not a push or the nightly run
+rust: all
+web: all
+skills: all
+build-web: true
+lint-rust: true
+export-rust: true
+export-web: true
+build-site: true
+image-skills: true
+.test selection: full: an untrusted map: the signature is not the issuer's
+rust: all
+web: all
+skills: all
+build-web: true
+lint-rust: true
+export-rust: true
+export-web: true
+build-site: true
+image-skills: true
+.test selection: full: the selector runs everything: {"code": "ci_change", "paths": [".github/workflows/ci.yml"]}
+rust: all
+web: all
+skills: all
+build-web: true
+lint-rust: true
+export-rust: true
+export-web: true
+build-site: true
+image-skills: true
+.test selection: selected: map of 5c5b5e42be5283e4d6243e2cf374b93da0f26899 (run 123, push); 2 tests run, 2 skipped
+rust: rust:test:checks rust:test:proof
+web: none
+skills: none
+build-web: true
+lint-rust: true
+export-rust: true
+export-web: false
+build-site: false
+image-skills: false
+.test selection: selected: map of 5c5b5e42be5283e4d6243e2cf374b93da0f26899 (run 123, push); 3 tests run, 1 skipped
+rust: rust:lib:openwiz-core rust:test:checks rust:test:proof
+web: none
+skills: none
+build-web: true
+lint-rust: true
+export-rust: true
+export-web: false
+build-site: false
+image-skills: false
+.test selection: selected: map of ded4a7485de4b0123010dc713cd0d339b98b1d0d (run 123, push); 2 tests run, 2 skipped
+rust: rust:test:checks
+web: web:unit:api
+skills: none
+build-web: true
+lint-rust: false
+export-rust: false
+export-web: true
+build-site: false
+image-skills: false
+.test selection: selected: map of ded4a7485de4b0123010dc713cd0d339b98b1d0d (run 123, push); 1 tests run, 3 skipped
+rust: rust:test:checks
+web: none
+skills: none
+build-web: false
+lint-rust: false
+export-rust: false
+export-web: false
+build-site: false
+image-skills: false
+test selection: full: not the plain case: decide.sh runs everything for this run
+rust: all
+web: all
+skills: all
+build-web: true
+lint-rust: true
+export-rust: true
+export-web: true
+build-site: true
+image-skills: true
+.test selection: selected: map of ded4a7485de4b0123010dc713cd0d339b98b1d0d (run 123, push); 1 tests run, 3 skipped
+rust: rust:test:checks
+web: none
+skills: launch-fleet
+build-web: true
+lint-rust: false
+export-rust: true
+export-web: false
+build-site: false
+image-skills: false
+.test selection: full: the selector runs everything: {"code": "selector_error", "detail": "rust:test:proof: web_export is not a boolean"}
+rust: all
+web: all
+skills: all
+build-web: true
+lint-rust: true
+export-rust: true
+export-web: true
+build-site: true
+image-skills: true
+.test selection: selected: map of ded4a7485de4b0123010dc713cd0d339b98b1d0d (run 123, push); 1 tests run, 3 skipped
+rust: rust:test:checks
+web: none
+skills: none
+build-web: true
+lint-rust: false
+export-rust: true
+export-web: false
+build-site: false
+image-skills: false
+test selection: selected: map of ded4a7485de4b0123010dc713cd0d339b98b1d0d (run 123, push); 2 tests run, 3 skipped
+rust: rust:test:checks rust:test:new-proof
+web: none
+skills: none
+build-web: true
+lint-rust: false
+export-rust: true
+export-web: false
+build-site: false
+image-skills: false
+.test selection: selected: map of ded4a7485de4b0123010dc713cd0d339b98b1d0d (run 123, push); 2 tests run, 2 skipped
+rust: rust:test:checks rust:test:proof
+web: none
+skills: none
+build-web: true
+lint-rust: true
+export-rust: true
+export-web: false
+build-site: false
+image-skills: false
+.test selection: full: the selector runs everything: {"code": "ci_change", "paths": ["ci/select/job.py"]}
+rust: all
+web: all
+skills: all
+build-web: true
+lint-rust: true
+export-rust: true
+export-web: true
+build-site: true
+image-skills: true
+.test selection: selected: map of ded4a7485de4b0123010dc713cd0d339b98b1d0d (run 123, push); 1 tests run, 3 skipped
+rust: rust:test:checks
+web: none
+skills: none
+build-web: true
+lint-rust: false
+export-rust: true
+export-web: false
+build-site: false
+image-skills: false
+.test selection: selected: map of ded4a7485de4b0123010dc713cd0d339b98b1d0d (run 123, push); 2 tests run, 2 skipped
+rust: rust:test:checks
+web: web:unit:api
+skills: none
+build-web: true
+lint-rust: false
+export-rust: false
+export-web: true
+build-site: false
+image-skills: false
+test selection: selected: map of ded4a7485de4b0123010dc713cd0d339b98b1d0d (run 123, push); 2 tests run, 2 skipped
+rust: rust:test:checks
+web: web:unit:api
+skills: none
+build-web: true
+lint-rust: false
+export-rust: false
+export-web: true
+build-site: false
+image-skills: false
+.test selection: full: no map from main (map.json and map.jwt) in the cache
+rust: all
+web: all
+skills: all
+build-web: true
+lint-rust: true
+export-rust: true
+export-web: true
+build-site: true
+image-skills: true
+.test selection: full: not the plain case: decide.sh runs everything for this run
+rust: all
+web: all
+skills: all
+build-web: true
+lint-rust: true
+export-rust: true
+export-web: true
+build-site: true
+image-skills: true
+.test selection: full: no map from main (map.json and map.jwt) in the cache
+rust: all
+web: all
+skills: all
+build-web: true
+lint-rust: true
+export-rust: true
+export-web: true
+build-site: true
+image-skills: true
+.test selection: selected: map of ded4a7485de4b0123010dc713cd0d339b98b1d0d (run 123, push); 2 tests run, 2 skipped
+rust: rust:test:checks
+web: web:unit:api
+skills: none
+build-web: true
+lint-rust: false
+export-rust: true
+export-web: true
+build-site: false
+image-skills: false
+....
+======================================================================
+ERROR: test_a_case_its_lane_prunes_and_need_not_catch_is_recorded_not_planted (__main__.Planted.test_a_case_its_lane_prunes_and_need_not_catch_is_recorded_not_planted)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/ci/select/test_job.py", line 546, in test_a_case_its_lane_prunes_and_need_not_catch_is_recorded_not_planted
+    rc, row, ran = self.run_missing(('web',), True)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/code/openwiz/ci/select/test_job.py", line 534, in run_missing
+    rc = planted.main(['rust', out])
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/code/openwiz/ci/select/planted.py", line 138, in main
+    original = apply(root, path, old, new)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/code/openwiz/ci/select/planted.py", line 75, in apply
+    with open(full, 'rb') as f:
+         ^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/SYNTH/docs/gone.md'
+
+======================================================================
+ERROR: test_a_case_whose_file_is_missing_otherwise_fails_with_its_name (__main__.Planted.test_a_case_whose_file_is_missing_otherwise_fails_with_its_name) (catchers=('web',), pruned=False)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/ci/select/test_job.py", line 555, in test_a_case_whose_file_is_missing_otherwise_fails_with_its_name
+    self.run_missing(catchers, pruned)
+  File "/code/openwiz/ci/select/test_job.py", line 534, in run_missing
+    rc = planted.main(['rust', out])
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/code/openwiz/ci/select/planted.py", line 138, in main
+    original = apply(root, path, old, new)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/code/openwiz/ci/select/planted.py", line 75, in apply
+    with open(full, 'rb') as f:
+         ^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/SYNTH/docs/gone.md'
+
+======================================================================
+ERROR: test_a_case_whose_file_is_missing_otherwise_fails_with_its_name (__main__.Planted.test_a_case_whose_file_is_missing_otherwise_fails_with_its_name) (catchers=('rust',), pruned=True)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/ci/select/test_job.py", line 555, in test_a_case_whose_file_is_missing_otherwise_fails_with_its_name
+    self.run_missing(catchers, pruned)
+  File "/code/openwiz/ci/select/test_job.py", line 534, in run_missing
+    rc = planted.main(['rust', out])
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/code/openwiz/ci/select/planted.py", line 138, in main
+    original = apply(root, path, old, new)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/code/openwiz/ci/select/planted.py", line 75, in apply
+    with open(full, 'rb') as f:
+         ^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/SYNTH/docs/gone.md'
+
+======================================================================
+ERROR: test_a_case_whose_file_is_missing_otherwise_fails_with_its_name (__main__.Planted.test_a_case_whose_file_is_missing_otherwise_fails_with_its_name) (catchers=('rust',), pruned=False)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/ci/select/test_job.py", line 555, in test_a_case_whose_file_is_missing_otherwise_fails_with_its_name
+    self.run_missing(catchers, pruned)
+  File "/code/openwiz/ci/select/test_job.py", line 534, in run_missing
+    rc = planted.main(['rust', out])
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/code/openwiz/ci/select/planted.py", line 138, in main
+    original = apply(root, path, old, new)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/code/openwiz/ci/select/planted.py", line 75, in apply
+    with open(full, 'rb') as f:
+         ^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/SYNTH/docs/gone.md'
+
+----------------------------------------------------------------------
+Ran 38 tests in 2.376s
+
+FAILED (errors=4)

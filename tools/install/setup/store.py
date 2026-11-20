@@ -4,8 +4,7 @@ One file, replaced atomically under `setup/.lock`. It holds the explicitly
 selected project settings, the App's public ids, the latest observation code of
 each checked component and the setup operations of contracts/setup.v1.md.
 It never holds a credential: tokens, keys and provider bodies are refused by
-shape before a write. `crates/store/src/setup.rs` reads the same file for the
-server's `GET /api/v1/setup`; the schema is `openwiz.setup-state.v1` there.
+shape before a write. Its schema is `openwiz.setup-state.v1`.
 """
 from contextlib import contextmanager
 import fcntl
@@ -26,7 +25,7 @@ PHASES = ('proposed', 'applied', 'refused', 'uncertain')
 COMPONENTS = ('cloudroom', 'harness', 'personal_github', 'github_app', 'project', 'engine', 'remote_access')
 MAX_OPERATIONS = 64
 MAX_BYTES = 256 * 1024
-# The same refusals as crates/store/src/setup.rs: no C0 or C1 control, no edge space.
+# No C0 or C1 control, no edge space.
 TEXT = re.compile(r'[^\x00-\x1f\x7f-\x9f]{1,300}')
 CODE = re.compile(r'[a-z][a-z_]{0,39}')
 REPOSITORY = re.compile(r'[A-Za-z0-9-]{1,39}/[A-Za-z0-9_.-]{1,100}')

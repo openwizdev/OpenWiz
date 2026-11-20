@@ -1,6 +1,6 @@
 //! `loop off/on`: shared local switches with trusted context only.
+use crate::state::loops::{Context, SwitchError};
 use openwiz_core::ops::Clock;
-use openwiz_store::loops::{Context, SwitchError};
 use std::{ffi::OsString, io::Write};
 
 pub const USAGE: &str = "  openwiz loop off <name> [--json]\n  openwiz loop on <name> [--json]\n";
@@ -90,9 +90,9 @@ pub fn run_local(
     }
     let context = (|| -> Result<Context, String> {
         let state =
-            openwiz_store::default_state_dir(&|name| std::env::var_os(name)).map_err(|e| e.0)?;
+            crate::state::default_state_dir(&|name| std::env::var_os(name)).map_err(|e| e.0)?;
         let checkout = std::env::current_dir().map_err(|_| "cannot identify the local checkout")?;
-        openwiz_store::loops::config::installed(&checkout, &state)
+        crate::state::loops::config::installed(&checkout, &state)
     })();
     match context {
         Ok(context) => run(args, Some(&context), clock, stdout, stderr),

@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+"""A synthetic harness for the template's own tests, called as `fake-harness --model <m> -p <prompt>`.
+
+Each turn hands work to a detached child in its own session (as a harness that starts a worker does),
+appends `<turn pid> <child pid> first|woken` to the file named by FAKE_TURNS, then ends its turn, or keeps
+running while the file named by FAKE_HOLD exists. With FAKE_CLEAN set, the child gets a clean environment
+(only PATH), so it carries no mark it inherited.
+"""
+import os, subprocess, sys, time
+
+args = sys.argv[1:]
+woken = args[args.index('-p') + 1].startswith('You were woken')
+child = subprocess.Popen(['sleep', '120'], start_new_session=True,
+                         env={'PATH': os.environ['PATH']} if os.environ.get('FAKE_CLEAN') else None,
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+with open(os.environ['FAKE_TURNS'], 'a') as f:
+    f.write('%d %d %s\n' % (os.getpid(), child.pid, 'woken' if woken else 'first'))
+while os.environ.get('FAKE_HOLD') and os.path.exists(os.environ['FAKE_HOLD']):
+    time.sleep(0.05)

@@ -179,7 +179,7 @@ Source: Jake, 2026-11-01: webhook wakes handle named work immediately, with a sl
 
 The project's standing supporting-edit rule. Every ticket of every fleet may make these edits without asking, beside its owned paths:
 
-1. **Its own rows in shared registries:** `tools/open-import/paths.json`, the CLI test catalogue in `tests/cli-agent/main.rs`, and CI step lists such as `tools/war-room/steps.tsv`.
+1. **Its own rows in shared registries:** `tools/open-import/paths.json`, the CLI test catalogue in `tests/cli-agent/main.rs`, and CI step lists such as `tools/collector/steps.tsv`.
 2. **Its changelog line** as `changes/<ticket>.md`, whatever its owned paths name.
 3. **Its own evidence folder** under `docs/evidence/`.
 4. **Synthetic answers to test fakes its change breaks,** with no assertion change.
@@ -213,28 +213,23 @@ Locally, a builder runs the red/green proof and only the tests its change can af
 
 Source: Jake, 2026-11-03: run affected tests locally and leave the full set to CI; reaffirmed 2026-11-06 ([private record](https://github.com/jparker2006/ClosedWiz/issues/1724#issuecomment-6697900652)).
 
-The product CI command reference, distributed across the planned lanes; the public privacy check is additional, as listed below. Rust 1.99.1 with `rustfmt` and `clippy` (there is no `rust-toolchain.toml`), and Node 24.22.1.
+The product CI command reference, distributed across the planned lanes; the public privacy check is additional, as listed below. Rust 1.99.1 with `rustfmt` and `clippy` (there is no `rust-toolchain.toml`).
 
-**Only one `cargo` command may run per checkout at a time.** While tests or builds run, run no second Cargo command in that checkout, including a mutation script or another proof that invokes Cargo. A build can replace `target/debug/fake-room-cli` (which the tests' fake `room-cli` symlinks use), `target/release/openwiz` or `target/debug/openwiz-server` while tests are using them, causing a transient missing-binary failure. Anything that runs beside those checks must use a separate worktree with its own `target/`; never share a target directory between those worktrees, including through `CARGO_TARGET_DIR`. Source: #195, from #176's diagnosis of #146's report 2.
+**Only one `cargo` command may run per checkout at a time.** While tests or builds run, run no second Cargo command in that checkout, including a mutation script or another proof that invokes Cargo. A build can replace `target/debug/fake-room-cli` (which the tests' fake `room-cli` symlinks use), or `target/release/openwiz` while tests are using them, causing a transient missing-binary failure. Anything that runs beside those checks must use a separate worktree with its own `target/`; never share a target directory between those worktrees, including through `CARGO_TARGET_DIR`. Source: #195, from #176's diagnosis of #146's report 2.
 
 | # | Folder | Command | CI check |
 | --- | --- | --- | --- |
 | 1 | root | `sh .github/actions/docs-only/test.sh` | `ci` |
-| 2 | `apps/web` | `npm ci --ignore-scripts` | `ci` |
-| 3 | `apps/web` | `npm run build` | `ci` |
-| 4 | `apps/web` | `npm run typecheck` | `ci` |
-| 5 | `apps/web` | `npm run check` | `ci` |
-| 6 | root | `cargo fmt --check` | `ci` |
-| 7 | root | `cargo clippy --workspace --all-targets -- -D warnings` | `ci` |
-| 8 | root | `cargo build --workspace` | `ci` |
-| 9 | root | `cargo test --workspace` | `ci` |
-| 10 | root | `cargo test -p openwiz-tests --test checks pending` | `ci` |
-| 11 | root | `cargo build --release` | `ci` |
-| 12 | `apps/web` | `npm test` (its browser files 3 at a time, longest first: `test/run-browser.mjs`, #431) | `ci` |
+| 2 | root | `cargo fmt --check` | `ci` |
+| 3 | root | `cargo clippy --workspace --all-targets -- -D warnings` | `ci` |
+| 4 | root | `cargo build --workspace` | `ci` |
+| 5 | root | `cargo test --workspace` | `ci` |
+| 6 | root | `cargo test -p openwiz-tests --test checks pending` | `ci` |
+| 7 | root | `cargo build --release` | `ci` |
 
-Only selected export consumers wait for the web build (3). A full run includes A8 and the browser tests that read `apps/web/out`; tests without that prerequisite can start after the plan. `npm test` drives a Chromium: `/usr/bin/chromium`, or the one `OPENWIZ_CHROMIUM` names.
+The web app's build and browser tests went with it (#1264); the app lives at [openwiz.dev/app](https://openwiz.dev/app).
 
-Source: [AGENTS.md, Commands](../../AGENTS.md#commands), and [the CI workflow](../../.github/workflows/ci.yml), which owns the current job steps. The Chromium: [`apps/web/test/support/browser.mjs`](../../apps/web/test/support/browser.mjs).
+Source: [AGENTS.md, Commands](../../AGENTS.md#commands), and [the CI workflow](../../.github/workflows/ci.yml), which owns the current job steps.
 
 ## CI checks
 
@@ -249,7 +244,7 @@ In ClosedWiz, `CI_SMALL_RUNS_ON` routes `changes`, `always`, `select-map`, `ci` 
 - **Every required product check and the additional public privacy check must pass** before anything merges to `main` or a `release-*` branch: the ruleset "CI must pass" has no bypass, and also refuses force-pushes and branch deletion. It does not require a pull request: sending every change to those branches through one is this project's standing procedure.
 - **`ci` must pass** before merge. The orchestrator switches the ruleset once at X5's merge, from `web-build`, `rust` and `web-test` to `ci`, and reads it back. This documentation does not establish that the live transition happened. The ruleset's no-bypass, deletion and non-fast-forward rules and the PR procedure are unchanged. The temporary `web-test` bridge follows `ci` so the migration PR also satisfies the old required name.
 - **A draft fails the plan and `ci`.** Marking it ready starts a full run.
-- **Selection is computed once** in `changes`, using the classifier and the signed K15 map with K16 prerequisites. The plan lists every run/skip and reason. The always-run set covers format, classifier/selector tests, architecture, privacy and static checks. A skill-only change can run just that set and its skill suite. Unknown paths, empty/failed diffs, untrusted maps, stale events, reruns, release bases, nightly runs and merge groups cannot narrow coverage. Lanes read the saved plan. Only a selected export consumer waits for the web build.
+- **Selection is computed once** in `changes`, using the classifier and the signed K15 map with K16 prerequisites. The plan lists every run/skip and reason. The always-run set covers format, classifier/selector tests, architecture, privacy and static checks. A skill-only change can run just that set and its skill suite. Unknown paths, empty/failed diffs, untrusted maps, stale events, reruns, release bases, nightly runs and merge groups cannot narrow coverage. Lanes read the saved plan.
 - **Main pushes keep the light check and use a 120-minute signed-map gate (#1055).** `changes` reads the newest restored map with the existing signature and ancestry checks, admitting the full traced plan and signing only when its signed issue time is strictly older than 120 minutes, keeping a fresh push to `main-light` plus the age read and `privacy.yml`, and refusing unreadable age; newer main pushes cancel older main-push work while PR cancellation, merge-group isolation and unconditional nightly tracing/signing stay as before ([ruling](https://github.com/openwizdev/OpenWiz/issues/1055#issuecomment-6975999484)). `ci/main-batch/admit.py` (C12, #2319) no longer gates main pushes.
 
 Source: [the workflow](../../.github/workflows/ci.yml), [the legacy classifier](../../.github/actions/docs-only/classify.sh), [the selection contract](../../contracts/ci-selection.v1.md), spec #1256 and X5 #1262. The orchestrator owns the live product required-check transition and read-back; O3 supplies the fixed public privacy check and O12 applies and reads back the public ruleset. Until those preparations and cut-over finish, these public requirements are not a claim about deployed settings. Merge policy and agent assignments are unchanged.

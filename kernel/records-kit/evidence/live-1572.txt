@@ -1,0 +1,27 @@
+# Live read (#1572): python3 -I kernel/records-kit/check.py --repo openwizdev/OpenWiz, 2026-11-20 at 00:42 UTC (exit 1)
+# A read of the public repository's open issues; it wrote nothing. Breaks by rule:
+# 20 B1
+# 4 B2
+# 89 L3
+# 230 T1
+# The B1 breaks, each a ticket's native blocker with no reason line in its ## Links section:
+#118 B1: #117 has no reason line
+#435 B1: #109 has no reason line
+#436 B1: #117 has no reason line
+#436 B1: #435 has no reason line
+#440 B1: #436 has no reason line
+#691 B1: #687 has no reason line
+#691 B1: #690 has no reason line
+#694 B1: #697 has no reason line
+#694 B1: #948 has no reason line
+#695 B1: #687 has no reason line
+#696 B1: #694 has no reason line
+#696 B1: #948 has no reason line
+#698 B1: #697 has no reason line
+#706 B1: #696 has no reason line
+#836 B1: #840 has no reason line
+#837 B1: #833 has no reason line
+#841 B1: #509 has no reason line
+#841 B1: #839 has no reason line
+#845 B1: #834 has no reason line
+#845 B1: #838 has no reason line

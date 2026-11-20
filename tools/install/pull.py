@@ -34,11 +34,11 @@ def fetch_bytes(url, limit):
         return data
 
 
-def load(raw, checksum, target):
+def load(raw, checksum, target, selected=False):
     with tempfile.TemporaryDirectory(prefix='openwiz-package-manifest-') as temporary:
         file = Path(temporary) / 'manifest.json'
         file.write_bytes(raw)
-        return manifest_at(file, checksum, target)[0]
+        return manifest_at(file, checksum, target, selected)[0]
 
 
 def discover(target, fetch=fetch_bytes):
@@ -66,7 +66,7 @@ def stage(target, version, source, checksum, root, state_root, fetch=fetch_bytes
     private(selected)
     private(selected / 'install-manifest.json', False)
     old_raw = (selected / 'install-manifest.json').read_bytes()
-    old = load(old_raw, sha(old_raw), target)
+    old = load(old_raw, sha(old_raw), target, selected=True)  # #1575: may be pre-AP11
     require(tuple(map(int, version.split('.'))) > tuple(map(int, old['version'].split('.'))), 'published version must advance')
     name = f'openwiz-{version}-{target}.manifest.json'
     prefix = BASE + 'download/v' + version + '/'

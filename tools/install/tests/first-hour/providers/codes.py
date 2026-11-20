@@ -69,7 +69,7 @@ def pending_items(value):
 def setup_interrupted(base):
     """configure_access: its one verification run stops before any reply; resuming reuses its id."""
     sys.path.insert(0, str(ROOT / 'tools/install/access'))
-    sys.path.insert(0, str(ROOT / 'apps/web/test/fixtures/install-access'))
+    sys.path.insert(0, str(ROOT / 'tools/install/access/fixtures'))
     import access
     from provider import Recording, credentials, selected
     state, plan_file, secret_file = base / 'state', base / 'plan.json', base / 'secrets.json'
@@ -135,12 +135,10 @@ def update_rejected(base):
     import fixture_bundle
     import install
     import store
-    server, web, root = base / 'server', base / 'web', base / 'installed'
-    server.write_bytes(b'#!/bin/sh\nexit 0\n')
-    # Private, owned directories whatever the runner's umask: install.py refuses any other root (install.v1).
-    web.mkdir(mode=0o700)
+    root = base / 'installed'
+    # A private, owned directory whatever the runner's umask: install.py refuses any other root (install.v1).
     root.mkdir(mode=0o700)
-    good = fixture_bundle.create(base / 'good', server, web, source='1' * 40)
+    good = fixture_bundle.create(base / 'good', source='1' * 40)
     target = 'x86_64-unknown-linux-gnu'
     with contextlib.redirect_stdout(io.StringIO()):
         install.install(good['manifest'], good['archive'], good['checksum'], root, target)
@@ -155,7 +153,7 @@ def update_rejected(base):
                  'basis': 'owner_state_read_back'}] + pending_items(value)
 
     before = inventory()
-    update = fixture_bundle.create(base / 'update', server, web, source='2' * 40)
+    update = fixture_bundle.create(base / 'update', source='2' * 40)
     Path(update['archive']).write_bytes(Path(update['archive']).read_bytes() + b'synthetic corruption')
     refused = None
     try:

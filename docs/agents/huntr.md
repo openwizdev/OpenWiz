@@ -197,12 +197,9 @@ Exact candidate files use ASCII repository-relative paths: no glob, directory, e
     "code": {
       "prefixes": [
         "crates/core/src/",
-        "crates/store/src/",
         "crates/cli/src/",
-        "crates/server/src/",
         "crates/adapters/cloudroom/src/",
-        "crates/adapters/github/src/",
-        "apps/web/src/"
+        "crates/adapters/github/src/"
       ],
       "suffixes": [
         ".rs",
@@ -216,8 +213,7 @@ Exact candidate files use ASCII repository-relative paths: no glob, directory, e
     },
     "tests": {
       "prefixes": [
-        "tests/",
-        "apps/web/test/"
+        "tests/"
       ],
       "suffixes": [],
       "root_suffixes": []
@@ -246,14 +242,6 @@ Exact candidate files use ASCII repository-relative paths: no glob, directory, e
     "crates/adapters/github/src/process.rs",
     "crates/adapters/github/src/fleets.rs",
     "crates/adapters/github/src/writes.rs",
-    "crates/server/src/lib.rs",
-    "crates/server/src/web.rs",
-    "crates/server/src/http.rs",
-    "apps/web/src/timing.ts",
-    "apps/web/src/launcher.ts",
-    "apps/web/src/composer.ts",
-    "apps/web/src/attachments.ts",
-    "apps/web/src/fleets.ts",
     "release/openwiz/",
     "contracts/",
     ".github/workflows/",

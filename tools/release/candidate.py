@@ -48,9 +48,8 @@ PRIVATE = 'jparker2006/ClosedWiz'
 OWNER = 'jparker2006'
 SCHEMA = 'openwiz.release-candidate.v1'
 TARGETS = ('aarch64-apple-darwin', 'x86_64-apple-darwin', 'x86_64-unknown-linux-gnu')
-PRODUCTS = ('cli', 'runtime', 'server', 'service', 'web')
-METHODS = {'cli': {'embedded-record', 'native-query'}, 'server': {'embedded-record', 'native-query'},
-           'service': {'embedded-record', 'native-query'}, 'web': {'web-build'}, 'runtime': {'tracked-tree'}}
+PRODUCTS = ('cli', 'runtime')
+METHODS = {'cli': {'embedded-record', 'native-query'}, 'runtime': {'tracked-tree'}}
 RISKS = ('send', 'new', 'app_permissions', 'spending')
 GATES = ('cutover', 'ci', 'privacy', 'claims', 'products', 'smoke') + RISKS
 CLASSES = {'cutover': {'source-inspection'}, 'ci': {'ci'}, 'privacy': {'source-inspection', 'ci'},
@@ -85,12 +84,9 @@ AUTHORITY = re.compile(r'Release kit authority: scope ([0-9a-f]{64})')
 # Spending has no pattern yet: its `no` rests on every row saying `no`.
 RISK_PATTERNS = {
     'send': ('crates/adapters/cloudroom/src/allowlist.rs', 'crates/adapters/cloudroom/src/messaging.rs',
-             'crates/core/src/messaging/**', 'crates/cli/src/send.rs', 'crates/cli/src/attach.rs',
-             'crates/cli/src/attachment.rs', 'crates/server/src/send.rs', 'crates/server/src/attachments.rs',
-             'crates/core/src/attachment.rs'),
+             'crates/core/src/messaging/**', 'crates/core/src/attachment.rs'),
     'new': ('crates/adapters/cloudroom/src/allowlist.rs', 'crates/adapters/cloudroom/src/new_thread.rs',
-            'crates/core/src/new_thread/**', 'crates/cli/src/new_thread.rs', 'crates/cli/src/attach.rs',
-            'crates/cli/src/attachment.rs', 'crates/server/src/new_thread.rs', 'crates/server/src/attachments.rs'),
+            'crates/core/src/new_thread/**'),
     'app_permissions': ('tools/github-app/**', 'crates/adapters/github/src/allowlist.rs',
                         'crates/adapters/github/src/app.rs'),
     'spending': ()}
@@ -911,9 +907,8 @@ def gate_reasons(record, gate, receipt, inputs, ctx=None):
 
 def verify_products(record, inputs, ctx):
     """RL4's own verifiers over each archive as the installer stages it: the
-    compiled programs against their native query receipt, the web export
-    against its build receipt and the runtime against the public commit's
-    tracked tree. The results must be exactly the candidate's product rows."""
+    compiled program against its native query receipt and the runtime
+    against the public commit's tracked tree. The results must be exactly the candidate's product rows."""
     import product_identity as rl4
     body = record['candidate']
     version, source = body['release_version'], body['source']['commit']
@@ -928,14 +923,14 @@ def verify_products(record, inputs, ctx):
         with tempfile.TemporaryDirectory(prefix='release-products-') as scratch:
             installed = {}
             for row in receipts:
-                keys(row, 'target program web selection', 'invalid')
+                keys(row, 'target program selection', 'invalid')
                 target = row['target']
                 manifest = folder / f'openwiz-{version}-{target}.manifest.json'
                 checksum = sha(manifest.read_bytes())
                 build = stage(manifest, folder / f'openwiz-{version}-{target}.tar.gz', checksum, target, keep=scratch)
                 saved = Path(scratch) / ('receipts-' + target)
                 saved.mkdir()
-                for kind in ('program', 'web'):
+                for kind in ('program',):
                     keys(row[kind], 'name utf8', 'invalid')
                     if not isinstance(row[kind]['name'], str) or not re.fullmatch(r'[A-Za-z0-9_.-]+\.json',
                                                                                  row[kind]['name']):
@@ -946,12 +941,8 @@ def verify_products(record, inputs, ctx):
                 value, _, _ = manifest_at(manifest, checksum, target)
                 assets = [a for a in value['assets'] if a['path'] not in rl4.STAMPS]
                 # #2539: the receipt and selection checks read the stamp-free rows;
-                # each payload hash reads the complete stamped inventory.
-                final = {kind: rl4.payload([a for a in value['assets'] if a['path'].startswith(kind + '/')])
-                         for kind in ('web', 'runtime')}
-                rows.append({**rl4.verify_web([a for a in assets if a['path'].startswith('web/')],
-                                              saved / row['web']['name'], version, source, target),
-                             'payload_sha256': final['web']})
+                # the payload hash reads the complete stamped inventory.
+                final = {'runtime': rl4.payload([a for a in value['assets'] if a['path'].startswith('runtime/')])}
                 runtime = [a for a in assets if a['path'].startswith('runtime/')]
                 selection = row['selection']
                 if (not isinstance(selection, list) or selection != sorted(selection)
@@ -1024,7 +1015,7 @@ def required_check(gate, commit):
 
 
 def scan_artifacts(body, folder, literals):
-    """D2: the existing O3 checker over every staged runtime and web file."""
+    """D2: the existing O3 checker over every staged runtime file."""
     import subprocess
     if literals is None or not Path(literals).is_file():
         return ['literals_missing']
@@ -1039,7 +1030,7 @@ def scan_artifacts(body, folder, literals):
                               sha(manifest.read_bytes()), target, keep=scratch)
             except (Blocked, OSError):
                 return ['unverified']
-            for part in ('runtime', 'web'):
+            for part in ('runtime',):
                 shutil.copytree(build / part, tree / target / part)
         try:
             done = subprocess.run([sys.executable, '-I', str(HERE.parent / 'privacy-check/check.py'), '--tree', str(tree),

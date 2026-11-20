@@ -14,7 +14,7 @@
         {
           "attempt": 1,
           "artifacts": {
-            "ci-selection-1": "invalid/test-twice.json"
+            "ci-selection-1": "invalid/duplicate-key.json"
           }
         }
       ]

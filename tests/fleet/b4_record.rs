@@ -1,6 +1,6 @@
 //! B4 (ClosedWiz#120): the start record. It is read back only exactly:
 //! a table of good and bad records through the store's reader
-//! (`openwiz_store::starts::read`), each bad one refused; and the store
+//! (`openwiz_cli::state::starts::read`), each bad one refused; and the store
 //! keeps it owner-only, locks it across processes and writes it only under
 //! the lock, while the read-only store `fleet tick --dry-run` opens never
 //! locks.
@@ -8,10 +8,10 @@
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 
+use openwiz_cli::state::StartFileStore;
+use openwiz_cli::state::starts::read;
 use openwiz_core::fleet::starts::{Attempt, AttemptOutcome, Locked, StartRecord, StartStore};
 use openwiz_core::model::Timestamp;
-use openwiz_store::StartFileStore;
-use openwiz_store::starts::read;
 use serde_json::{Value, json};
 
 use super::fake::*;

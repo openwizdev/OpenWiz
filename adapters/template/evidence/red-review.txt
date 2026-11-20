@@ -1,0 +1,88 @@
+$ python3 -I adapters/template/test_driver.py   # the review's R1-R5 tests against the driver at 420cf144
+test_save_failure_after_spawn_reports_unknown (__main__.Template.test_save_failure_after_spawn_reports_unknown) ... ok
+test_simultaneous_wakes_start_one_turn (__main__.Template.test_simultaneous_wakes_start_one_turn) ... FAIL
+/usr/lib/python3.11/unittest/case.py:622: ResourceWarning: unclosed file <_io.BufferedReader name=5>
+  with outcome.testPartExecutor(self):
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/usr/lib/python3.11/unittest/case.py:622: ResourceWarning: unclosed file <_io.BufferedReader name=6>
+  with outcome.testPartExecutor(self):
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+test_start_record_is_not_wakeable_before_it_is_confirmed (__main__.Template.test_start_record_is_not_wakeable_before_it_is_confirmed) ... FAIL
+test_start_with_nowhere_to_save_starts_nothing (__main__.Template.test_start_with_nowhere_to_save_starts_nothing) ... ok
+test_stop_ends_a_worker_with_a_clean_environment (__main__.Template.test_stop_ends_a_worker_with_a_clean_environment) ... FAIL
+test_stop_ends_the_run_when_it_cannot_save (__main__.Template.test_stop_ends_the_run_when_it_cannot_save) ... FAIL
+test_stop_ends_what_the_turn_left_behind_after_it_exits (__main__.Template.test_stop_ends_what_the_turn_left_behind_after_it_exits) ... ok
+test_wake_checks_its_save_before_and_after_spawn (__main__.Template.test_wake_checks_its_save_before_and_after_spawn) ... FAIL
+test_wake_while_a_turn_runs_starts_no_second_turn (__main__.Template.test_wake_while_a_turn_runs_starts_no_second_turn) ... ok
+
+======================================================================
+FAIL: test_simultaneous_wakes_start_one_turn (__main__.Template.test_simultaneous_wakes_start_one_turn)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/template/test_driver.py", line 259, in test_simultaneous_wakes_start_one_turn
+    self.assertEqual([t[2] for t in self.logged()], ['first', 'woken'], 'two wakes started two turns')
+AssertionError: Lists differ: ['first', 'woken', 'woken'] != ['first', 'woken']
+
+First list contains 1 additional elements.
+First extra element 2:
+'woken'
+
+- ['first', 'woken', 'woken']
+?           ---------
+
++ ['first', 'woken'] : two wakes started two turns
+
+======================================================================
+FAIL: test_start_record_is_not_wakeable_before_it_is_confirmed (__main__.Template.test_start_record_is_not_wakeable_before_it_is_confirmed)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/template/test_driver.py", line 220, in test_start_record_is_not_wakeable_before_it_is_confirmed
+    self.assertEqual((code, len(self.logged()), self.marked()), (1, turns, []), 'a wake started the failed run')
+AssertionError: Tuples differ: (0, 1, [941]) != (1, 0, [])
+
+First differing element 0:
+0
+1
+
+- (0, 1, [941])
++ (1, 0, []) : a wake started the failed run
+
+======================================================================
+FAIL: test_stop_ends_a_worker_with_a_clean_environment (__main__.Template.test_stop_ends_a_worker_with_a_clean_environment)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/template/test_driver.py", line 231, in test_stop_ends_a_worker_with_a_clean_environment
+    self.assertFalse(alive(child), 'a worker without the mark still runs after stop')
+AssertionError: True is not false : a worker without the mark still runs after stop
+
+======================================================================
+FAIL: test_stop_ends_the_run_when_it_cannot_save (__main__.Template.test_stop_ends_the_run_when_it_cannot_save)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/template/test_driver.py", line 271, in test_stop_ends_the_run_when_it_cannot_save
+    self.assertNotIn('retry', json.dumps(err))
+AssertionError: 'retry' unexpectedly found in '{"error": "the driver failed: IsADirectoryError", "next": "read its code, fix it, retry"}'
+
+======================================================================
+FAIL: test_wake_checks_its_save_before_and_after_spawn (__main__.Template.test_wake_checks_its_save_before_and_after_spawn)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/template/test_driver.py", line 288, in test_wake_checks_its_save_before_and_after_spawn
+    self.assertEqual((code, len(self.logged())), (1, 1), 'a wake launched with nowhere to save its turn')
+AssertionError: Tuples differ: (1, 2) != (1, 1)
+
+First differing element 1:
+2
+1
+
+- (1, 2)
+?     ^
+
++ (1, 1)
+?     ^
+ : a wake launched with nowhere to save its turn
+
+----------------------------------------------------------------------
+Ran 9 tests in 5.731s
+
+FAILED (failures=5)

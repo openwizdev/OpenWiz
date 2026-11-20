@@ -41,7 +41,7 @@
      "state_reason": "duplicate"
     }
    ],
-   "body": "## Parent\n\nTicket A1 of spec #1.\n\n## What to build\n\nA synthetic change.\n\n## Owned paths\n\n- `src/example.txt`\n\n**Relies on:** nothing\n\n## Links\n\n- #3 real: the example shape\n\n## Acceptance criteria\n\n- [ ] It works\n\n```md\n## Proof\n```\n\n## Proof\n\nA fixture test.\n",
+   "body": "## Parent\n\nTicket A1 of spec #1.\n\n## What to build\n\nA synthetic change.\n\n## Owned paths\n\n- `src/example.txt`\n\n**Relies on:** nothing\n\n## Links\n\n- #3 real: the example shape\n- #9 real: the example shape it was\n- #10 real: the example shape it copied\n\n## Acceptance criteria\n\n- [ ] It works\n\n```md\n## Proof\n```\n\n## Proof\n\nA fixture test.\n",
    "comments": [
     {
      "id": 201,

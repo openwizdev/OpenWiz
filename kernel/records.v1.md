@@ -63,6 +63,17 @@ Nothing else is stored. A tool reads the rest from GitHub itself:
 | A ticket's spec | Its parent issue |
 | Done | Closed as completed |
 
+## 6. The host setting
+
+A project says where its agents run in one file on its default branch, `docs/agents/host.md`. It holds one setting line, `Host: <name>`, where `<name>` is a driver's folder in OpenWiz's `adapters/` (such as `local`, `cloudroom` or `boat`): lowercase letters, digits and single hyphens, at most 40 characters, as a [driver v1](driver.v1.md) names itself. The rest of the file is prose for people.
+
+- **H1.** Onboarding asks once and writes the file. The person changes it by asking their agent, which edits that one line; nothing else changes.
+- **H2.** A tool that starts, wakes or stops agents reads the setting and calls that host's driver. A run is woken and stopped through the driver that started it, even after the setting changes; only later starts use the new host.
+- **H3.** A file without exactly one valid setting line starts nothing: the tool says what is wrong. A project with no file has chosen no host, and its tools keep their own default.
+- **H4.** The setting names a host and nothing more: never a login, token, key, machine or account.
+
+The kit doesn't check the setting: it reads the tracker, not the repository's files.
+
 ## The kit's checks
 
 | Rule | The kit reports |
@@ -73,6 +84,7 @@ Nothing else is stored. A tool reads the rest from GitHub itself:
 | S1 | Two or more live notes of one kind on one open issue |
 | S2 | A record author's v1-marked comment that doesn't read as a v1 note |
 | T1 | An open spec or ticket missing a template section, each missing part on its own line |
+| B1 | An open ticket's native blocker with no reason line or more than one in `## Links`, or a malformed `## Links` section, as the plan links contract reads them |
 | B2 | An open issue with a native blocker closed as anything but completed |
 
-B1 is not checked: a text "blocked by" and a reason line's wording need a reader's judgement. Rules on closed issues are not checked: their records are history.
+B1 is checked in part: the kit reports a ticket's native blocker with no reason line or more than one, and a malformed `## Links` section, as the plan links contract reads them; it is narrower than that contract's checker, never reporting a line that names no native blocker, a reason line's wording or a text "blocked by", which need a reader's judgement. Rules on closed issues are not checked: their records are history.

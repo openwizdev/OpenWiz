@@ -168,7 +168,7 @@ def capture(folder, needs, receipts, destination):
         need(match is not None, 'unknown Rust share file')
         need(path.stat().st_size <= MAX_BYTES, 'Rust share byte bound')
         shares.append(dict(shard=int(match[1]), tests=path.read_text().split()))
-    rust_job = [name for name in ('rust', 'rust-export') if load(needs).get(name, {}).get('result') == 'success']
+    rust_job = [name for name in ('rust',) if load(needs).get(name, {}).get('result') == 'success']
     need(len(rust_job) == 1, 'unknown active Rust job')
     validate_shares(shares, plan['lanes']['rust']['tests'])
     packet = dict(plan=(Path(folder)/'ci-selection.json').read_bytes().decode('utf-8'),
@@ -321,7 +321,7 @@ def facts(gh, context, packet):
         need(name in by_name, 'missing actual job: '+name)
         successful(by_name[name])
         return by_name[name]
-    for name in ('changes', 'always', 'web-build', 'site'):
+    for name in ('changes', 'always'):
         one(name)
     # #743: release and each sharded skill run as members 1 to N of a matrix.
     def members(prefix):
@@ -333,17 +333,15 @@ def facts(gh, context, packet):
     members('release')
     plan = strict_json(packet['plan'])
     exact(packet['rust'], 'job shares')
-    need(packet['rust']['job'] in ('rust', 'rust-export'), 'unknown Rust job')
+    need(packet['rust']['job'] == 'rust', 'unknown Rust job')
     validate_shares(packet['rust']['shares'], plan['lanes']['rust']['tests'])
-    rust = [j for j in jobs if re.fullmatch(r'rust(?:-export)? \([1-9][0-9]*\)', j['name'])]
+    rust = [j for j in jobs if re.fullmatch(r'rust \([1-9][0-9]*\)', j['name'])]
     need(rust, 'missing Rust matrix')
     prefix = packet['rust']['job']
     need({j['name'] for j in rust} == {f'{prefix} ({s["shard"]})' for s in packet['rust']['shares']},
          'missing or mixed Rust matrix member')
     for job in rust:
         successful(job)
-    web = [name for name in ('web', 'web-export') if name in by_name and by_name[name].get('conclusion') != 'skipped']
-    need(len(web) == 1, 'missing or ambiguous web result'); one(web[0])
     sharded = executor.planner.skills.SHARDED
     for skill in sorted({s['skill'] for s in plan['lanes']['skills']} & set(sharded)):
         members(skill)

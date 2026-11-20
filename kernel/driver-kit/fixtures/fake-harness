@@ -1,0 +1,34 @@
+#!/usr/bin/env python3
+"""A synthetic harness for the kit's own tests. Called as `fake-harness --model <m> -p <prompt>`, it
+posts (or, when woken, edits) one builder status note in the local tracker named by KIT_TRACKER, as a
+record author, then waits until it is stopped. Its turn hands that work to a worker in its own session
+and ends."""
+import json, os, re, subprocess, sys, time
+
+path, args = os.environ['KIT_TRACKER'], sys.argv[1:]
+if not os.environ.get('FAKE_WORKER'):  # the turn: its command line and environment go to the worker
+    subprocess.Popen([sys.executable] + sys.argv, env=dict(os.environ, FAKE_WORKER=str(os.getpid())),
+                     start_new_session=True)
+    sys.exit(0)
+while os.getppid() == int(os.environ['FAKE_WORKER']):  # the worker posts once the turn has ended
+    time.sleep(0.01)
+model, prompt = args[args.index('--model') + 1], args[args.index('-p') + 1]
+skill = re.search(r'with the ([a-z0-9-]+) skill', prompt).group(1)
+woken = prompt.startswith('You were woken')
+now = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+body = '\n'.join(['<!-- openwiz:status v1 -->', 'agent: builder', 'state: working', 'harness: Fake',
+                  'model: ' + model, 'skills: %s@0.1.2' % skill,
+                  'step: ' + ('woke and read the ticket again' if woken else 'started the throwaway ticket'),
+                  'time: ' + now]) + '\n'
+with open(path) as f:
+    tracker = json.load(f)
+mine = [c for c in tracker['comments'] if c['author'] == 'example-bot[bot]' and 'agent: builder' in c['body']]
+if woken:
+    mine[-1].update(body=body, updated_at=now)
+else:
+    tracker['comments'].append({'id': 1 + max([c['id'] for c in tracker['comments']], default=0),
+                                'author': 'example-bot[bot]', 'updated_at': now, 'body': body})
+with open(path + '.%d' % os.getpid(), 'w') as f:
+    json.dump(tracker, f)
+os.replace(path + '.%d' % os.getpid(), path)
+time.sleep(120)

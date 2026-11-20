@@ -1,0 +1,34 @@
+{
+ "pr": {
+  "body": "A docs companion; see #9 and example/other#3.",
+  "baseRefOid": "0000000000000000000000000000000000000000",
+  "closingIssuesReferences": {
+   "nodes": []
+  },
+  "files": [
+   {
+    "pageInfo": {
+     "hasNextPage": false,
+     "endCursor": null
+    },
+    "nodes": [
+     {
+      "path": "anything/at/all.md"
+     }
+    ]
+   }
+  ],
+  "comments": {
+   "pageInfo": {
+    "hasNextPage": false,
+    "endCursor": null
+   },
+   "nodes": []
+  }
+ },
+ "issues": {},
+ "exit": 0,
+ "out": [
+  "owned-paths: note: pull request #42 links no ticket in example/project: nothing to check"
+ ]
+}

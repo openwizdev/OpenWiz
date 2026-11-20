@@ -149,15 +149,11 @@ in the after run.
   processes are instrumented too, so their lines count. A child a test starts
   with a cleared environment writes its raw profile into its working folder
   instead; the script moves each such new profile into the coverage folder
-  after the target's run, so it counts too (service's installed-service
-  startup is one), and leaves any profile that was there before the run. One
-  exception: a service test runs `<repo>/target/debug/examples/openwiz-server`
-  by its documented path, which is the plain build, so that one child
-  process's lines don't count. A failed test stops the measure: a red run is
-  never a number.
-- **Prerequisites,** as for the tests themselves (`AGENTS.md`): zsh, Node
-  24.22.1, a user other than root, and for `web-api` the web export
-  (`cd apps/web && npm ci --ignore-scripts && npm run build`).
+  after the target's run, so it counts too, and leaves any profile that was
+  there before the run. A failed test stops the measure: a red run is never a
+  number.
+- **Prerequisites,** as for the tests themselves (`AGENTS.md`): zsh and a
+  user other than root.
 - **Line coverage** per workspace crate: covered and total lines from
   `cargo llvm-cov report --json --summary-only`, product sources only. The
   whole `openwiz-tests` package, and every crate's `tests/`, `examples/` and
@@ -185,16 +181,13 @@ in the after run.
   same machine.
 - **Repeatable:** on an unchanged tree, two runs print the same coverage,
   test count and size. The baseline below was measured twice to show it.
-  The known exceptions are race branches whose execution depends on timing:
-  socket reads in the server (`crates/server/src/http.rs:350`,
-  `crates/server/src/send.rs:241-248`) and concurrent requests in the store
-  (`crates/store/src/lib.rs:238`, `568-572`), 1 or 2 lines under `loops` or
-  `web-api`. A group whose drop is confined to those lines reruns its measure
-  before calling the drop real (#892).
+  The known exceptions are race branches whose execution depends on timing,
+  1 or 2 lines under `loops`. A group whose drop is confined to those lines
+  reruns its measure before calling the drop real (#892).
 
 ## The baseline
 
-[`evidence/baseline/`](evidence/baseline/README.md) holds one result for
+[`evidence/baseline/`](evidence/baseline/) holds one result for
 every test target in `tests/`, measured before any group changed anything:
 the campaign's starting numbers. Each group still measures its own before
 at its pull request's base, since earlier groups move the numbers.

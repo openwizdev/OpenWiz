@@ -1,6 +1,6 @@
 //! LP5: synthetic private checkout/state and explicit trusted inputs only.
 use super::fixture::{Fixture, git};
-use openwiz_store::loops::Trust;
+use openwiz_cli::state::loops::Trust;
 use serde_json::json;
 use std::{
     fs,
@@ -183,7 +183,7 @@ fn corrupt_switch_documents_and_linked_files_fail_closed() {
 
 #[test]
 fn switch_and_scheduler_share_the_lock_and_authority_is_rechecked_under_it() {
-    use openwiz_store::loops::storage::Storage;
+    use openwiz_cli::state::loops::storage::Storage;
     let mut f = Fixture::new();
     f.context.switch("loop-syn-reminder", false, 1000).unwrap();
     let before = f.saved();
@@ -191,7 +191,7 @@ fn switch_and_scheduler_share_the_lock_and_authority_is_rechecked_under_it() {
     assert!(matches!(
         f.context
             .switch_with_clock("loop-syn-reminder", true, &ExpiredClock::new()),
-        Err(openwiz_store::loops::SwitchError::Busy)
+        Err(openwiz_cli::state::loops::SwitchError::Busy)
     ));
     assert_eq!(f.saved(), before);
     drop(lock);
@@ -238,7 +238,7 @@ impl openwiz_core::ops::Clock for ExpiredClock {
 }
 #[test]
 fn r1_busy_deadline_changes_no_state_and_retry_saves_once() {
-    use openwiz_store::loops::{SwitchError, storage::Storage};
+    use openwiz_cli::state::loops::{SwitchError, storage::Storage};
     let f = Fixture::new();
     f.context.switch("loop-syn-reminder", false, 1000).unwrap();
     let before = f.saved();

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Record native build products, web export and exact skill runtime: the source's
-tracked skills, or (#555) the WizSkills install its lock pins."""
+"""Record the native program and exact skill runtime: the source's tracked
+skills, or (#555) the WizSkills install its lock pins."""
 import argparse
 import json
 from pathlib import Path
@@ -13,10 +13,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'install'))
 from install import PROGRAMS, Refused, TARGETS, digest, require, sha
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from product_identity import PROGRAMS as COMPILED, WIZSKILLS, architecture, canonical, expected, git, \
-    locked_skills, mode, payload, release_version, verify_programs, verify_runtime, verify_web
+    locked_skills, mode, payload, release_version, verify_programs, verify_runtime
 
 
-def collect(root, binaries, web, output, version, source, target, program_receipt, web_receipt):
+def collect(root, binaries, output, version, source, target, program_receipt):
     require(target in TARGETS and digest(source, 40) and release_version(version), 'invalid build identity')
     require(not output.exists(), 'products output must be new')
     files = {}
@@ -24,10 +24,6 @@ def collect(root, binaries, web, output, version, source, target, program_receip
         path = binaries / program
         require(path.is_file() and not path.is_symlink() and architecture(path.open('rb').read(64), target), 'native binary target mismatch')
         files[program] = path
-    for path in web.rglob('*'):
-        require(not path.is_symlink(), 'web symlink')
-        if path.is_file():
-            files['web/' + path.relative_to(web).as_posix()] = path
     # #555: a source tracking `skills` as the WizSkills link packages the
     # verified install its lock pins; verify_runtime checks the bytes again.
     installed = locked_skills(root, source)
@@ -50,9 +46,6 @@ def collect(root, binaries, web, output, version, source, target, program_receip
         path = root / tool
         require(path.is_file() and not path.is_symlink(), 'unsafe or missing setup tool')
         files['runtime/' + name] = path
-    manager = root / 'tools/install/platform/runtime.py'
-    require(manager.is_file() and not manager.is_symlink(), 'unsafe or missing platform runtime')
-    files['runtime/platform/runtime.py'] = manager
     # #1107: explicit production files only; never fixture providers or tests.
     access = root / 'tools/install/access/access.py'
     require(access.is_file() and access.stat().st_nlink == 1
@@ -106,12 +99,10 @@ def collect(root, binaries, web, output, version, source, target, program_receip
     try:
         # #2217: the copied runtime bytes are the requested commit's, before any stamp.
         verify_runtime(root, source, runtime)
-        # #1148: so are the compiled programs and the web export, by their own
-        # build identity and receipts; a correct architecture or stamp is not.
+        # #1148: so is the compiled program, by its own build identity and
+        # receipt; a correct architecture or stamp is not.
         products = verify_programs({p: (output / name).read_bytes() for p, name in COMPILED.items()},
                                    program_receipt, version, source, target)
-        # #2539: the web-build receipt matches the export as built, before its stamp.
-        products.append(verify_web([r for r in rows if r['path'].startswith('web/')], web_receipt, version, source, target))
         selection = sorted([repository(name, path), name] for name, path in files.items()
                            if name.startswith('runtime/'))
         products.append({'identity': expected('runtime', version, source, target),
@@ -122,17 +113,17 @@ def collect(root, binaries, web, output, version, source, target, program_receip
         shutil.rmtree(output)
         raise
     identity = f'openwiz.package.v1\n{version}\n{source}\n{target}\n'.encode()
-    for name in ('web/openwiz-build.txt', 'runtime/openwiz-build.txt'):
+    for name in ('runtime/openwiz-build.txt',):
         destination = output / name
         require(not destination.exists(), 'build stamp must be produced in this job')
         destination.write_bytes(identity)
         destination.chmod(0o600)
         rows.append({'path':name, 'sha256':sha(identity), 'bytes':len(identity), 'mode':'0600'})
-    # #2539: each web/runtime payload is its complete final inventory, stamp
+    # #2539: the runtime payload is its complete final inventory, stamp
     # included; the stamp is a deterministic function of version/source/target.
     for product in products:
         kind = product['identity']['product']
-        if kind in ('web', 'runtime'):
+        if kind == 'runtime':
             product['payload_sha256'] = payload([r for r in rows if r['path'].startswith(kind + '/')])
     record = {'schema': 'openwiz.product-record.v1', 'version': version, 'source': source, 'target': target,
               'products': sorted(products, key=lambda row: row['identity']['product'])}
@@ -142,7 +133,7 @@ def collect(root, binaries, web, output, version, source, target, program_receip
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    for key in ('root', 'binaries', 'web', 'output', 'program-receipt', 'web-receipt'):
+    for key in ('root', 'binaries', 'output', 'program-receipt'):
         parser.add_argument('--' + key, required=True, type=Path)
     for key in ('version', 'source', 'target'):
         parser.add_argument('--' + key, required=True)

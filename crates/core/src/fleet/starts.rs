@@ -39,7 +39,7 @@
 //! The harness, model and effort come from the caller (fleet.md's builder
 //! and reviewer rows), never from here. The prompt is the one-line brief
 //! ([`brief`]). Like the rest of the core, this module does no I/O: the
-//! record goes through a [`StartStore`] (`openwiz-store`), the reads and the
+//! record goes through a [`StartStore`] (the command's `state`), the reads and the
 //! one write through a [`NewThreadClient`] (the adapter).
 
 use std::time::Duration;

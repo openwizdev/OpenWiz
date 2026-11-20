@@ -3,9 +3,9 @@
 
 Each case builds a synthetic Git repository, runs the real collector against a
 requested source commit and observes only its exit status and its products.
-A stale or mismatched tracked runtime (#2217), or a compiled program or web
-export without this build's own identity (#1148), must refuse and leave no
-products; the exact matching products are accepted and stamped.
+A stale or mismatched tracked runtime (#2217), or a compiled program without
+this build's own identity (#1148), must refuse and leave no products; the
+exact matching products are accepted and stamped.
 """
 import gzip
 import hashlib
@@ -35,7 +35,6 @@ RUNTIME = {
     'tools/install/pull.py': b'# Synthetic pull.\n',
     'tools/install/setup/setup.py': b'# Synthetic setup.\n',
     'tools/install/setup/store.py': b'# Synthetic store.\n',
-    'tools/install/platform/runtime.py': b'# Synthetic platform runtime.\n',
     'tools/install/access/access.py': b'# Synthetic access tool.\n',
     'tools/github-app/setup.py': b'# Synthetic App setup.\n',
     'tools/github-app/app.py': b'# Synthetic App.\n',
@@ -44,7 +43,6 @@ RUNTIME = {
 PACKAGED = {'tools/install/install.py': 'runtime/install.py', 'tools/install/pull.py': 'runtime/pull.py',
             'tools/install/setup/setup.py': 'runtime/setup/setup.py',
             'tools/install/setup/store.py': 'runtime/setup/store.py',
-            'tools/install/platform/runtime.py': 'runtime/platform/runtime.py',
             'tools/install/access/access.py': 'runtime/access/access.py',
             'tools/github-app/setup.py': 'runtime/github-app/setup.py',
             'tools/github-app/app.py': 'runtime/github-app/app.py',
@@ -53,7 +51,7 @@ PACKAGED = {'tools/install/install.py': 'runtime/install.py', 'tools/install/pul
 
 # #1148: contracts/release-candidate.v1.md, "Minimum product identity (RL4)".
 RECORD = b'OPENWIZ_PRODUCT_V1:'
-PROGRAMS = {'cli': 'openwiz', 'server': 'openwiz-server', 'service': 'openwiz-service'}
+PROGRAMS = {'cli': 'openwiz'}
 TARGETS = ('aarch64-apple-darwin', 'x86_64-apple-darwin', 'x86_64-unknown-linux-gnu')
 
 
@@ -90,42 +88,26 @@ def program(target, *records, appended=b''):
     return bytes(header) + segment + body + appended
 
 
-def inventory(web):
-    """The install-relative {path, mode, bytes, sha256} rows of a web export."""
-    rows = []
-    for path in sorted(web.rglob('*')):
-        if path.is_file():
-            data = path.read_bytes()
-            name = 'web/' + path.relative_to(web).as_posix()
-            rows.append({'path': name, 'mode': '0700' if name.endswith('.sh') else '0600',
-                         'bytes': len(data), 'sha256': sha(data)})
-    return sorted(rows, key=lambda row: row['path'])
-
-
-def build(binaries, web, source, target, work, version=VERSION):
-    """What one native build job leaves: three programs compiled with this
-    identity, a web export generated with it, and the job's two receipts (here
-    written as that job would, since synthetic programs cannot run)."""
+def build(binaries, source, target, work, version=VERSION):
+    """What one native build job leaves: the program compiled with this
+    identity and the job's receipt (here written as that job would, since
+    synthetic programs cannot run)."""
     for product, name in PROGRAMS.items():
         (binaries / name).write_bytes(program(target, identity(product, source, target, version)))
-    (web / 'openwiz-product.json').write_bytes(canonical(identity('web', source, target, version)) + b'\n')
     programs = [{'product': product, 'program': name, 'sha256': sha((binaries / name).read_bytes()),
                  'bytes': len((binaries / name).read_bytes()), 'identity': identity(product, source, target, version)}
                 for product, name in sorted(PROGRAMS.items())]
-    receipts = {'program': work / 'program-receipt.json', 'web': work / 'web-receipt.json'}
+    receipts = {'program': work / 'program-receipt.json'}
     receipts['program'].write_bytes(canonical({'schema': 'openwiz.build-receipt.v1', 'method': 'native-query',
                                                'target': target, 'programs': programs}))
-    rows = inventory(web)
-    receipts['web'].write_bytes(canonical({'schema': 'openwiz.build-receipt.v1', 'method': 'web-build',
-        'identity': identity('web', source, target, version), 'payload_sha256': sha(canonical(rows)), 'inventory': rows}))
     return receipts
 
 
-def collector(root, binaries, web, output, source, target, receipts, version=VERSION):
+def collector(root, binaries, output, source, target, receipts, version=VERSION):
     return [sys.executable, '-I', str(COLLECTOR), '--root', str(root), '--binaries', str(binaries),
-            '--web', str(web), '--output', str(output), '--version', version, '--source', source,
+            '--output', str(output), '--version', version, '--source', source,
             '--target', target, '--identity', str(output) + '.json', '--record', str(output) + '.record.json',
-            '--program-receipt', str(receipts['program']), '--web-receipt', str(receipts['web'])]
+            '--program-receipt', str(receipts['program'])]
 
 
 class Repository(unittest.TestCase):
@@ -141,10 +123,8 @@ class Repository(unittest.TestCase):
             (self.repo / path).write_bytes(data)
         self.git('init', '-q')
         self.source = self.commit('synthetic runtime')
-        self.binaries, self.web = self.work / 'bin', self.work / 'web'
+        self.binaries = self.work / 'bin'
         self.binaries.mkdir()
-        self.web.mkdir()
-        (self.web / 'setup.html').write_bytes(b'Synthetic setup page.\n')
         self.runs = 0
 
     def git(self, *args):
@@ -159,10 +139,10 @@ class Repository(unittest.TestCase):
     def collect(self, source, receipts=None):
         # The compiled products match the requested source unless a case says
         # otherwise, so a runtime case refuses only for its runtime.
-        receipts = receipts or build(self.binaries, self.web, source, TARGET, self.work)
+        receipts = receipts or build(self.binaries, source, TARGET, self.work)
         self.runs += 1
         output = self.work / f'products-{self.runs}'
-        result = subprocess.run(collector(self.repo, self.binaries, self.web, output, source, TARGET, receipts),
+        result = subprocess.run(collector(self.repo, self.binaries, output, source, TARGET, receipts),
                                 capture_output=True, text=True)
         return result, output, Path(str(output) + '.json')
 
@@ -334,11 +314,11 @@ class CandidateSourceInstall(_wizskills_fixture().Fixture):
 
 
 class CompiledProductIdentity(Repository):
-    """#1148: compiled CLI/server/service and generated web identity. The
-    runtime always matches here, so each refusal is the compiled product's."""
+    """#1148: the compiled CLI's identity. The runtime always matches here,
+    so each refusal is the compiled product's."""
 
     def prepared(self, target=TARGET, source=None):
-        return build(self.binaries, self.web, source or self.source, target, self.work)
+        return build(self.binaries, source or self.source, target, self.work)
 
     def requery(self, receipts, target=TARGET, source=None, claimed=None):
         """Rewrite the native receipt over the programs' current bytes, as a
@@ -351,15 +331,10 @@ class CompiledProductIdentity(Repository):
         receipts['program'].write_bytes(canonical({'schema': 'openwiz.build-receipt.v1', 'method': 'native-query',
                                                    'target': target, 'programs': rows}))
 
-    def rerecord_web(self, receipts, target=TARGET):
-        rows = inventory(self.web)
-        receipts['web'].write_bytes(canonical({'schema': 'openwiz.build-receipt.v1', 'method': 'web-build',
-            'identity': identity('web', self.source, target), 'payload_sha256': sha(canonical(rows)), 'inventory': rows}))
-
     def refused_with(self, receipts, target=TARGET):
         self.runs += 1
         output = self.work / f'products-{self.runs}'
-        result = subprocess.run(collector(self.repo, self.binaries, self.web, output, self.source, target, receipts),
+        result = subprocess.run(collector(self.repo, self.binaries, output, self.source, target, receipts),
                                 capture_output=True, text=True)
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertEqual(result.stderr, 'build-products: refused incomplete or non-native products\n')
@@ -385,7 +360,7 @@ class CompiledProductIdentity(Repository):
                 'older version': [identity(product, self.source, TARGET, '0.0.98')],
                 'older source': [identity(product, other, TARGET)],
                 'other target': [identity(product, self.source, 'x86_64-apple-darwin')],
-                'other product': [identity('server' if product == 'cli' else 'cli', self.source, TARGET)],
+                'other product': [identity('runtime', self.source, TARGET)],
                 'other schema': [dict(want, schema='openwiz.product.v0')],
                 'extra field': [dict(want, build='synthetic')],
                 'missing field': [{k: v for k, v in want.items() if k != 'target'}],
@@ -410,10 +385,10 @@ class CompiledProductIdentity(Repository):
         # The contract's version: 0.<minor>.<patch>, without leading zeroes.
         for version in ('0.0.1-dev', '1.0.0', '0.01.2', '0.0', ''):
             with self.subTest(version=version):
-                receipts = build(self.binaries, self.web, self.source, TARGET, self.work, version)
+                receipts = build(self.binaries, self.source, TARGET, self.work, version)
                 self.runs += 1
                 output = self.work / f'products-{self.runs}'
-                result = subprocess.run(collector(self.repo, self.binaries, self.web, output, self.source, TARGET,
+                result = subprocess.run(collector(self.repo, self.binaries, output, self.source, TARGET,
                                                   receipts, version), capture_output=True, text=True)
                 self.assertEqual(result.returncode, 1, result.stderr)
                 self.assertFalse(output.exists())
@@ -432,7 +407,7 @@ class CompiledProductIdentity(Repository):
 
     def test_programs_must_be_the_bytes_the_native_build_job_queried(self):
         cases = {
-            'rebuilt after the query': lambda r: self.rebuilt('openwiz-server'),
+            'rebuilt after the query': lambda r: self.rebuilt('openwiz'),
             'receipt claims another identity': lambda r: self.requery(
                 r, claimed={'cli': identity('cli', '1' * 40, TARGET)}),
             'receipt for another target': lambda r: r['program'].write_bytes(
@@ -440,7 +415,7 @@ class CompiledProductIdentity(Repository):
             'receipt from another method': lambda r: r['program'].write_bytes(
                 r['program'].read_bytes().replace(b'native-query', b'embedded-record')),
             'receipt without a program': lambda r: r['program'].write_bytes(canonical(dict(
-                json.loads(r['program'].read_bytes()), programs=json.loads(r['program'].read_bytes())['programs'][:2]))),
+                json.loads(r['program'].read_bytes()), programs=[]))),
             'no receipt': lambda r: r['program'].unlink(),
             'malformed receipt': lambda r: r['program'].write_bytes(b'[]'),
         }
@@ -450,65 +425,37 @@ class CompiledProductIdentity(Repository):
                 change(receipts)
                 self.refused_with(receipts)
 
-    def test_web_export_must_carry_this_builds_identity_and_receipted_files(self):
-        marker = self.web / 'openwiz-product.json'
-        cases = {
-            'no generated identity': lambda r: (marker.unlink(), self.rerecord_web(r)),
-            'stale identity': lambda r: (marker.write_bytes(
-                canonical(identity('web', '1' * 40, TARGET)) + b'\n'), self.rerecord_web(r)),
-            'identity of another product': lambda r: (marker.write_bytes(
-                canonical(identity('cli', self.source, TARGET)) + b'\n'), self.rerecord_web(r)),
-            'malformed identity': lambda r: (marker.write_bytes(b'{}\n'), self.rerecord_web(r)),
-            'file changed after the build': lambda r: (self.web / 'setup.html').write_bytes(b'Synthetic later page.\n'),
-            'file added after the build': lambda r: (self.web / 'later.html').write_bytes(b'Synthetic later page.\n'),
-            'no web receipt': lambda r: r['web'].unlink(),
-        }
-        for case, change in cases.items():
-            with self.subTest(case=case):
-                receipts = self.prepared()
-                change(receipts)
-                self.refused_with(receipts)
-                for extra in ('later.html',):
-                    (self.web / extra).unlink(missing_ok=True)
-                (self.web / 'setup.html').write_bytes(b'Synthetic setup page.\n')
-
     def test_every_target_accepts_its_complete_matching_products_without_running_them(self):
         for target in TARGETS:
             with self.subTest(target=target):
                 receipts = self.prepared(target)
-                web_rows = inventory(self.web)
                 self.runs += 1
                 output = self.work / f'products-{self.runs}'
-                result = subprocess.run(collector(self.repo, self.binaries, self.web, output, self.source, target,
+                result = subprocess.run(collector(self.repo, self.binaries, output, self.source, target,
                                                   receipts), capture_output=True, text=True)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 record = json.loads(Path(str(output) + '.record.json').read_bytes())
                 self.assertEqual(record['schema'], 'openwiz.product-record.v1')
                 products = record['products']
                 self.assertEqual([row['identity'] for row in products],
-                                 [identity(p, self.source, target) for p in ('cli', 'runtime', 'server', 'service', 'web')])
+                                 [identity(p, self.source, target) for p in ('cli', 'runtime')])
                 rows = {row['identity']['product']: row for row in products}
                 for product, name in PROGRAMS.items():
                     self.assertEqual(rows[product]['payload_sha256'], sha((self.binaries / name).read_bytes()))
                     self.assertEqual(rows[product]['verification'], 'embedded-record')
                     self.assertEqual(rows[product]['build_receipt'],
                                      {'record': 'program-receipt.json', 'sha256': sha(receipts['program'].read_bytes())})
-                # #2539: a web/runtime payload is its complete final inventory,
+                # #2539: the runtime payload is its complete final inventory,
                 # including the package stamp the collector writes.
                 stamp = f'openwiz.package.v1\n{VERSION}\n{self.source}\n{target}\n'.encode()
-                stamps = {prefix: {'path': prefix + 'openwiz-build.txt', 'mode': '0600',
-                                   'bytes': len(stamp), 'sha256': sha(stamp)} for prefix in ('web/', 'runtime/')}
+                stamps = {'runtime/': {'path': 'runtime/openwiz-build.txt', 'mode': '0600',
+                                       'bytes': len(stamp), 'sha256': sha(stamp)}}
                 assets = json.loads(Path(str(output) + '.json').read_bytes())['assets']
-                for product in ('web', 'runtime'):
-                    final = [row for row in assets if row['path'].startswith(product + '/')]
-                    self.assertIn(stamps[product + '/'], final)
-                    self.assertEqual(rows[product]['payload_sha256'],
-                                     sha(canonical(sorted(final, key=lambda row: row['path']))))
-                self.assertEqual(rows['web']['payload_sha256'],
-                                 sha(canonical(sorted(web_rows + [stamps['web/']], key=lambda row: row['path']))))
-                self.assertEqual(rows['web']['verification'], 'web-build')
-                self.assertEqual(rows['web']['build_receipt'],
-                                 {'record': 'web-receipt.json', 'sha256': sha(receipts['web'].read_bytes())})
+                final = [row for row in assets if row['path'].startswith('runtime/')]
+                self.assertIn(stamps['runtime/'], final)
+                self.assertEqual(rows['runtime']['payload_sha256'],
+                                 sha(canonical(sorted(final, key=lambda row: row['path']))))
+                self.assertFalse([row for row in assets if row['path'].startswith('web/')])
                 runtime = [{'path': PACKAGED.get(path, 'runtime/' + path),
                             'mode': '0700' if path.endswith('.sh') else '0600',
                             'bytes': len(data), 'sha256': sha(data)} for path, data in RUNTIME.items()]
@@ -516,46 +463,6 @@ class CompiledProductIdentity(Repository):
                 self.assertEqual(rows['runtime']['payload_sha256'],
                                  sha(canonical(sorted(runtime, key=lambda row: row['path']))))
                 self.assertEqual(rows['runtime']['verification'], 'tracked-tree')
-                self.assertEqual((output / 'web/openwiz-product.json').read_bytes(),
-                                 canonical(identity('web', self.source, target)) + b'\n')
-
-    def test_the_export_config_generates_the_web_identity_it_is_built_for(self):
-        # next.config.mjs runs at the start of the actual export; copy it alone
-        # so its public/ is this case's, never the repository's.
-        app = self.work / 'app'
-        (app / 'public').mkdir(parents=True)
-        config = app / 'next.config.mjs'
-        config.write_bytes((ROOT / 'apps/web/next.config.mjs').read_bytes())
-        marker = app / 'public/openwiz-product.json'
-
-        def load(**env):
-            return subprocess.run(['node', '--input-type=module', '-e', 'await import(process.argv[1])',
-                                   config.as_uri()], env={'PATH': os.environ['PATH'], **env},
-                                  capture_output=True, text=True)
-
-        built = {'OPENWIZ_BUILD_VERSION': VERSION, 'OPENWIZ_BUILD_TARGET': TARGET, 'OPENWIZ_SERVICE_BUILD': self.source}
-        result = load(**built)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(marker.read_bytes(), canonical(identity('web', self.source, TARGET)) + b'\n')
-        receipts = self.prepared()
-        (self.web / 'openwiz-product.json').write_bytes(marker.read_bytes())
-        self.assertEqual(self.collect(self.source, receipts)[0].returncode, 0)
-        for case, env in {'no version': {k: v for k, v in built.items() if k != 'OPENWIZ_BUILD_VERSION'},
-                          'no source': {k: v for k, v in built.items() if k != 'OPENWIZ_SERVICE_BUILD'},
-                          'bad source': dict(built, OPENWIZ_SERVICE_BUILD='unavailable'),
-                          'dev version': dict(built, OPENWIZ_BUILD_VERSION='0.0.1-dev'),
-                          'leading zero': dict(built, OPENWIZ_BUILD_VERSION='0.01.2'),
-                          'unsupported target': dict(built, OPENWIZ_BUILD_TARGET='synthetic-target')}.items():
-            with self.subTest(case=case):
-                marker.unlink(missing_ok=True)
-                self.assertNotEqual(load(**env).returncode, 0)
-                self.assertFalse(marker.exists())
-        marker.write_bytes(b'stale\n')
-        # An ordinary build, or the service's own update build, carries none.
-        for env in ({}, {'OPENWIZ_SERVICE_BUILD': self.source}):
-            marker.write_bytes(b'stale\n')
-            self.assertEqual(load(**env).returncode, 0)
-            self.assertFalse(marker.exists())
 
 
 class CandidateArtifacts(unittest.TestCase):
@@ -573,7 +480,7 @@ class CandidateArtifacts(unittest.TestCase):
         payload, rows = self.work / 'products', []
         for name in REQUIRED:
             data = f'synthetic {name}\n'.encode()
-            if name in ('web/openwiz-build.txt', 'runtime/openwiz-build.txt'):
+            if name == 'runtime/openwiz-build.txt':
                 data = f'openwiz.package.v1\n{VERSION}\n{"1" * 40}\n{TARGET}\n'.encode()
             (payload / name).parent.mkdir(parents=True, exist_ok=True)
             (payload / name).write_bytes(data)
@@ -645,15 +552,15 @@ class CandidateArtifacts(unittest.TestCase):
         self.assertEqual(len(json.loads(output.read_bytes())['artifacts']), 4)
         program = next(data for member, data in self.members if member.name == 'openwiz')
         same_size = bytes([program[0] ^ 1]) + program[1:]
-        link = tarfile.TarInfo('web/index.html')
+        link = tarfile.TarInfo('runtime/install.py')
         link.type, link.linkname = tarfile.SYMTYPE, 'openwiz'
-        folder = tarfile.TarInfo('web/index.html')
+        folder = tarfile.TarInfo('runtime/install.py')
         folder.type, folder.mode = tarfile.DIRTYPE, 0o700
         extra = tarfile.TarInfo('runtime/extra.py')
         extra.mode, extra.size = 0o600, 6
         escape = tarfile.TarInfo('../openwiz')
         escape.mode, escape.size = 0o700, len(program)
-        others = [(m, d) for m, d in self.members if m.name != 'web/index.html']
+        others = [(m, d) for m, d in self.members if m.name != 'runtime/install.py']
         cases = {
             'not a gzip tar archive': b'synthetic bytes that are not a gzip tar archive\n',
             'changed program payload of the same size': self.tar(self.changed('openwiz', data=same_size)),

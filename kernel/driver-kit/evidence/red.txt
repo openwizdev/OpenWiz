@@ -1,0 +1,297 @@
+test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) ... 
+  test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [token-in-args] ... FAIL
+  test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [token-in-env] ... FAIL
+  test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [echoes-token] ... FAIL
+  test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [takes-token] ... FAIL
+  test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [stop-leaves-run] ... FAIL
+  test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [wake-does-nothing] ... FAIL
+  test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [old-records] ... FAIL
+test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) ... 
+  test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) [{"repository": "example/site", "ticket": 7, "skill": "build-ticket", "harness": "true", "model": "Opus 5.5 Medium", "token": "x"}] ... FAIL
+  test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) [{"repository": "example/site"}] ... FAIL
+  test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) [{"repository": "example/site", "ticket": 0, "skill": "build-ticket", "harness": "true", "model": "Opus 5.5 Medium"}] ... FAIL
+  test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) [{"repository": "example/site", "ticket": "7", "skill": "build-ticket", "harness": "true", "model": "Opus 5.5 Medium"}] ... FAIL
+  test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) [{"repository": "example/site", "ticket": true, "skill": "build-ticket", "harness": "true", "model": "Opus 5.5 Medium"}] ... FAIL
+  test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) [{"repository": "a/b/c", "ticket": 7, "skill": "build-ticket", "harness": "true", "model": "Opus 5.5 Medium"}] ... FAIL
+  test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) [{"repository": "example/site", "ticket": 7, "skill": "Build", "harness": "true", "model": "Opus 5.5 Medium"}] ... FAIL
+  test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) [{"repository": "example/site", "ticket": 7, "skill": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "harness": "true", "model": "Opus 5.5 Medium"}] ... FAIL
+  test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) [{"repository": "example/site", "ticket": 7, "skill": "build-ticket", "harness": "/usr/bin/true", "model": "Opus 5.5 Medium"}] ... FAIL
+  test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) [{"repository": "example/site", "ticket": 7, "skill": "build-ticket", "harness": "true", "model": "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm"}] ... FAIL
+  test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) [{"repository": "example/site", "ticket": 7, "skill": "build-ticket", "harness": "true", "model": "m\n"}] ... FAIL
+  test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) [[{"repository": "example/site", "ticket": 7, "skill": "build-ticket", "harness": "true", "model": "Opus 5.5 Medium"}]] ... FAIL
+test_template_passes_all_five (__main__.Kit.test_template_passes_all_five) ... FAIL
+
+======================================================================
+FAIL: test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [token-in-args]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 83, in test_each_planted_driver_fails_its_check
+    self.assertEqual(self.kit(os.path.join(FIXTURES, 'planted', name))[:2], (1, lines))
+AssertionError: Tuples differ: (0, []) != (1, ['pass version: openwiz:records v1, an[269 chars]ne'])
+
+First differing element 0:
+0
+1
+
+- (0, [])
++ (1,
++  ['pass version: openwiz:records v1, and the schema is driver v1',
++   'pass start: the run posted builder status note 2',
++   'pass wake: the run edited builder status note 2',
++   'pass stop: the run ended, and a wake after it is refused',
++   'fail token: a process the driver started holds a credential on its command '
++   'line'])
+
+======================================================================
+FAIL: test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [token-in-env]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 83, in test_each_planted_driver_fails_its_check
+    self.assertEqual(self.kit(os.path.join(FIXTURES, 'planted', name))[:2], (1, lines))
+AssertionError: Tuples differ: (0, []) != (1, ['pass version: openwiz:records v1, an[296 chars]it'])
+
+First differing element 0:
+0
+1
+
+- (0, [])
++ (1,
++  ['pass version: openwiz:records v1, and the schema is driver v1',
++   'pass start: the run posted builder status note 2',
++   'pass wake: the run edited builder status note 2',
++   'pass stop: the run ended, and a wake after it is refused',
++   'fail token: a process the driver started holds a credential in '
++   'OPENWIZ_GITHUB, which the kit never gave it'])
+
+======================================================================
+FAIL: test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [echoes-token]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 83, in test_each_planted_driver_fails_its_check
+    self.assertEqual(self.kit(os.path.join(FIXTURES, 'planted', name))[:2], (1, lines))
+AssertionError: Tuples differ: (0, []) != (1, ['pass version: openwiz:records v1, an[233 chars]al'])
+
+First differing element 0:
+0
+1
+
+- (0, [])
++ (1,
++  ['pass version: openwiz:records v1, and the schema is driver v1',
++   'pass start: the run posted builder status note 2',
++   'pass wake: the run edited builder status note 2',
++   'pass stop: the run ended, and a wake after it is refused',
++   'fail token: the driver printed a credential'])
+
+======================================================================
+FAIL: test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [takes-token]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 83, in test_each_planted_driver_fails_its_check
+    self.assertEqual(self.kit(os.path.join(FIXTURES, 'planted', name))[:2], (1, lines))
+AssertionError: Tuples differ: (0, []) != (1, ['pass version: openwiz:records v1, an[249 chars]it'])
+
+First differing element 0:
+0
+1
+
+- (0, [])
++ (1,
++  ['pass version: openwiz:records v1, and the schema is driver v1',
++   'pass start: the run posted builder status note 2',
++   'pass wake: the run edited builder status note 2',
++   'pass stop: the run ended, and a wake after it is refused',
++   'fail token: start took a token field instead of refusing it'])
+
+======================================================================
+FAIL: test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [stop-leaves-run]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 83, in test_each_planted_driver_fails_its_check
+    self.assertEqual(self.kit(os.path.join(FIXTURES, 'planted', name))[:2], (1, lines))
+AssertionError: Tuples differ: (0, []) != (1, ['pass version: openwiz:records v1, an[247 chars]er'])
+
+First differing element 0:
+0
+1
+
+- (0, [])
++ (1,
++  ['pass version: openwiz:records v1, and the schema is driver v1',
++   'pass start: the run posted builder status note 2',
++   'pass wake: the run edited builder status note 2',
++   'fail stop: a process the run started still runs after stop',
++   'pass token: no login or token passed through the driver'])
+
+======================================================================
+FAIL: test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [wake-does-nothing]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 83, in test_each_planted_driver_fails_its_check
+    self.assertEqual(self.kit(os.path.join(FIXTURES, 'planted', name))[:2], (1, lines))
+AssertionError: Tuples differ: (0, []) != (1, ['pass version: openwiz:records v1, an[260 chars]er'])
+
+First differing element 0:
+0
+1
+
+- (0, [])
++ (1,
++  ['pass version: openwiz:records v1, and the schema is driver v1',
++   'pass start: the run posted builder status note 2',
++   'fail wake: builder status note 2 did not change after the wake',
++   'pass stop: the run ended, and a wake after it is refused',
++   'pass token: no login or token passed through the driver'])
+
+======================================================================
+FAIL: test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [old-records]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 83, in test_each_planted_driver_fails_its_check
+    self.assertEqual(self.kit(os.path.join(FIXTURES, 'planted', name))[:2], (1, lines))
+AssertionError: Tuples differ: (0, []) != (1, ['fail version: it names no openwiz:re[228 chars]er'])
+
+First differing element 0:
+0
+1
+
+- (0, [])
++ (1,
++  ['fail version: it names no openwiz:records v1',
++   'pass start: the run posted builder status note 2',
++   'pass wake: the run edited builder status note 2',
++   'pass stop: the run ended, and a wake after it is refused',
++   'pass token: no login or token passed through the driver'])
+
+======================================================================
+FAIL: test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) [{"repository": "example/site", "ticket": 7, "skill": "build-ticket", "harness": "true", "model": "Opus 5.5 Medium", "token": "x"}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 106, in test_template_and_schema_refuse_the_same_starts
+    self.assertEqual((p.returncode == 0), valid, p.stdout)
+AssertionError: False != True : {"error": "the input needs exactly repository, ticket, skill, harness, model", "next": "send only those fields; never a login"}
+
+
+======================================================================
+FAIL: test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) [{"repository": "example/site"}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 106, in test_template_and_schema_refuse_the_same_starts
+    self.assertEqual((p.returncode == 0), valid, p.stdout)
+AssertionError: False != True : {"error": "the input needs exactly repository, ticket, skill, harness, model", "next": "send only those fields; never a login"}
+
+
+======================================================================
+FAIL: test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) [{"repository": "example/site", "ticket": 0, "skill": "build-ticket", "harness": "true", "model": "Opus 5.5 Medium"}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 106, in test_template_and_schema_refuse_the_same_starts
+    self.assertEqual((p.returncode == 0), valid, p.stdout)
+AssertionError: False != True : {"error": "ticket is not valid", "next": "fix ticket as `driver schema` shows"}
+
+
+======================================================================
+FAIL: test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) [{"repository": "example/site", "ticket": "7", "skill": "build-ticket", "harness": "true", "model": "Opus 5.5 Medium"}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 106, in test_template_and_schema_refuse_the_same_starts
+    self.assertEqual((p.returncode == 0), valid, p.stdout)
+AssertionError: False != True : {"error": "ticket is not valid", "next": "fix ticket as `driver schema` shows"}
+
+
+======================================================================
+FAIL: test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) [{"repository": "example/site", "ticket": true, "skill": "build-ticket", "harness": "true", "model": "Opus 5.5 Medium"}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 106, in test_template_and_schema_refuse_the_same_starts
+    self.assertEqual((p.returncode == 0), valid, p.stdout)
+AssertionError: False != True : {"error": "ticket is not valid", "next": "fix ticket as `driver schema` shows"}
+
+
+======================================================================
+FAIL: test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) [{"repository": "a/b/c", "ticket": 7, "skill": "build-ticket", "harness": "true", "model": "Opus 5.5 Medium"}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 106, in test_template_and_schema_refuse_the_same_starts
+    self.assertEqual((p.returncode == 0), valid, p.stdout)
+AssertionError: False != True : {"error": "repository is not valid", "next": "fix repository as `driver schema` shows"}
+
+
+======================================================================
+FAIL: test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) [{"repository": "example/site", "ticket": 7, "skill": "Build", "harness": "true", "model": "Opus 5.5 Medium"}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 106, in test_template_and_schema_refuse_the_same_starts
+    self.assertEqual((p.returncode == 0), valid, p.stdout)
+AssertionError: False != True : {"error": "skill is not valid", "next": "fix skill as `driver schema` shows"}
+
+
+======================================================================
+FAIL: test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) [{"repository": "example/site", "ticket": 7, "skill": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "harness": "true", "model": "Opus 5.5 Medium"}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 106, in test_template_and_schema_refuse_the_same_starts
+    self.assertEqual((p.returncode == 0), valid, p.stdout)
+AssertionError: False != True : {"error": "skill is not valid", "next": "fix skill as `driver schema` shows"}
+
+
+======================================================================
+FAIL: test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) [{"repository": "example/site", "ticket": 7, "skill": "build-ticket", "harness": "/usr/bin/true", "model": "Opus 5.5 Medium"}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 106, in test_template_and_schema_refuse_the_same_starts
+    self.assertEqual((p.returncode == 0), valid, p.stdout)
+AssertionError: False != True : {"error": "harness is not valid", "next": "fix harness as `driver schema` shows"}
+
+
+======================================================================
+FAIL: test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) [{"repository": "example/site", "ticket": 7, "skill": "build-ticket", "harness": "true", "model": "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm"}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 106, in test_template_and_schema_refuse_the_same_starts
+    self.assertEqual((p.returncode == 0), valid, p.stdout)
+AssertionError: False != True : {"error": "model is not valid", "next": "fix model as `driver schema` shows"}
+
+
+======================================================================
+FAIL: test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) [{"repository": "example/site", "ticket": 7, "skill": "build-ticket", "harness": "true", "model": "m\n"}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 106, in test_template_and_schema_refuse_the_same_starts
+    self.assertEqual((p.returncode == 0), valid, p.stdout)
+AssertionError: False != True : {"error": "model is not valid", "next": "fix model as `driver schema` shows"}
+
+
+======================================================================
+FAIL: test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) [[{"repository": "example/site", "ticket": 7, "skill": "build-ticket", "harness": "true", "model": "Opus 5.5 Medium"}]]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 106, in test_template_and_schema_refuse_the_same_starts
+    self.assertEqual((p.returncode == 0), valid, p.stdout)
+AssertionError: False != True : {"error": "the input needs exactly repository, ticket, skill, harness, model", "next": "send only those fields; never a login"}
+
+
+======================================================================
+FAIL: test_template_passes_all_five (__main__.Kit.test_template_passes_all_five)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 76, in test_template_passes_all_five
+    self.assertEqual(self.kit(TEMPLATE)[:2], (0, PASS))
+AssertionError: Tuples differ: (0, []) != (0, ['pass version: openwiz:records v1, and th[241 chars]er'])
+
+First differing element 1:
+[]
+['pass version: openwiz:records v1, and th[240 chars]ver']
+
+- (0, [])
++ (0,
++  ['pass version: openwiz:records v1, and the schema is driver v1',
++   'pass start: the run posted builder status note 2',
++   'pass wake: the run edited builder status note 2',
++   'pass stop: the run ended, and a wake after it is refused',
++   'pass token: no login or token passed through the driver'])
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.608s
+
+FAILED (failures=20)

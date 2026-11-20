@@ -14,7 +14,7 @@ a stale event head, or changed labels/base/head/count during those reads.
 It makes no GitHub writes. Inputs: `EVENT`, `REPO`, `PR`, `EVENT_HEAD`, `GH_TOKEN`.
 Merge groups pass without reading a PR.
 
-Product files include `crates/`, `apps/web/`, `contracts/`, `skills/`,
+Product files include `crates/`, `contracts/`, `skills/`,
 `.claude-plugin/`, `Cargo.toml` and `Cargo.lock`. Only the explicitly known infra/docs/test paths in `product()`
 are exempt; unknown paths conservatively require a line. Nested docs/tests in
 product trees can use the reviewed `no-changelog` label. Renames count both

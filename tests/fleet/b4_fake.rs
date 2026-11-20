@@ -16,11 +16,11 @@ use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
 use openwiz_adapter_cloudroom::source::CloudRoomSource;
+use openwiz_cli::state::StartFileStore;
 use openwiz_core::fleet::model::{Commit, Number};
 use openwiz_core::fleet::starts::{Repository, StartKey, StartRequest};
 use openwiz_core::messaging::OpId;
 use openwiz_core::new_thread::Settings;
-use openwiz_store::{NewThreadFileStore, StartFileStore};
 use serde_json::{Value, json};
 
 /// The new-thread fixtures, served by absolute path.
@@ -252,10 +252,6 @@ impl Fake {
 
     pub fn source(&self) -> CloudRoomSource {
         CloudRoomSource::new(self.program())
-    }
-
-    pub fn threads(&self) -> NewThreadFileStore {
-        NewThreadFileStore::open(&self.state).expect("open the new-thread record")
     }
 
     pub fn starts(&self) -> StartFileStore {

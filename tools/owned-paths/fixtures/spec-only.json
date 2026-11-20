@@ -1,0 +1,53 @@
+{
+ "pr": {
+  "body": "Closes #9",
+  "baseRefOid": "0000000000000000000000000000000000000000",
+  "closingIssuesReferences": {
+   "nodes": [
+    {
+     "number": 9,
+     "repository": {
+      "nameWithOwner": "example/project"
+     }
+    }
+   ]
+  },
+  "files": [
+   {
+    "pageInfo": {
+     "hasNextPage": false,
+     "endCursor": null
+    },
+    "nodes": [
+     {
+      "path": "anything.md"
+     }
+    ]
+   }
+  ],
+  "comments": {
+   "pageInfo": {
+    "hasNextPage": false,
+    "endCursor": null
+   },
+   "nodes": []
+  }
+ },
+ "issues": {
+  "9": {
+   "__typename": "Issue",
+   "body": "## What\n\nA bug report with no owned paths.\n",
+   "comments": {
+    "pageInfo": {
+     "hasNextPage": false,
+     "endCursor": null
+    },
+    "nodes": []
+   }
+  }
+ },
+ "exit": 0,
+ "out": [
+  "owned-paths: note: #9 has no ## Owned paths section: nothing to check"
+ ]
+}

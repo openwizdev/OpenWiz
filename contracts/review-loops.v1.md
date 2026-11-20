@@ -1,20 +1,14 @@
 # Review loops contract, version 1 (`closedwiz.review-loops.v1`)
 
-Spec #2454 (review loops that ship). This contract fixes the shapes the spec's
-tickets build against: the four bench measures and their cohorts, the review
-report's blocking and polish lines, the reviewer-question and
-orchestrator-answer lines, the 1 + 1 `Next:` states and the orchestrator's
-decision record, the watchdog's limits and event record, the 1.5-rounds target
-and the rollback trigger. RL0 (#2455) writes it and the bench tool
-[`tools/war-room/review_loops.py`](../tools/war-room/review_loops.py) that
-checks and measures it; RL0b (#2571) runs it on the BEFORE cohort and
-publishes the numbers. RL1 (#2456) puts the blocking rule into the
-review-ticket skill, RL2 (#2457) the 1 + 1 rule into the live skills, docs and
-router, RL3 (#2458) the watchdog into the router, and RL4 (#2459) runs the
-AFTER bench and the comparison.
+The shapes [`tools/war-room/review_loops.py`](../tools/war-room/review_loops.py)
+reads: the bench's measures, cohorts and records, the review report's
+blocking and polish lines, the reviewer-question and orchestrator-answer
+lines, v1's `Next:` states and decision record, the watchdog's event record,
+and the comparison's target and rollback. [Review loops v2](review-loops.v2.md)
+supersedes v1's rounds and `Next:` states for live reviews; `check-report`
+keeps reading both.
 
-Every example below is synthetic: made-up PR and issue numbers, heads and
-times. None is a live observation.
+Every example below is synthetic.
 
 ## Words
 
@@ -30,18 +24,15 @@ times. None is a live observation.
 
 ## Cohorts
 
-- **BEFORE:** PRs merged to `main` in the half-open window
-  `[2026-11-10T08:00:00Z, 2026-11-13T08:00:00Z)`: the three fixed-PST days
-  2026-11-10 to 2026-11-12 (77 PRs had merged at planning). The window is
-  fixed; every PR merged inside it belongs to the cohort.
-- **AFTER:** PRs whose first review round starts after the last of RL1, RL2
-  and RL3 has merged and RL3's router copy is installed, and which merge in
-  the seven fixed-PST days that follow (`[D, D + 7 days)`, `D` the next
-  08:00Z boundary after that install). A PR with a review round on each side
-  of the install is **mixed-rule**: excluded from AFTER and counted.
-- The cohort is named in a cohort record (below), read from GitHub once, and
-  the bench never re-reads GitHub. A cohort PR missing from the journey or
-  outcome inputs is listed in the bench output with why; it stays in the
+- **BEFORE:** PRs merged to `main` in a fixed half-open window, every PR
+  merged inside it included.
+- **AFTER:** PRs whose first review round starts after the rule changes are
+  installed, and which merge in the seven days from the next 08:00Z boundary
+  (`[D, D + 7 days)`). A PR with a review round on each side of the install
+  is **mixed-rule**: excluded from AFTER and counted.
+- A cohort is named in a cohort record (below), read from GitHub once; the
+  bench never re-reads GitHub. A cohort PR missing from the journey or
+  outcome inputs is listed in the bench output with why, and stays in the
   denominator.
 
 ## The four measures
@@ -87,8 +78,7 @@ value.
    The rate is mature PRs with an attributable defect over mature PRs with no
    unknown attribution (EB6's `outcome_cohort`). An immature PR (merged less
    than 72 hours before the read) or one with unknown follow-up stays out of
-   the rate. No mature PR leaves the rate Unknown. BEFORE matures on
-   2026-11-16 PST; RL4 re-reads it then.
+   the rate. No mature PR leaves the rate Unknown.
 
 **Watchdog events** (AFTER only): flags, restarts and asks per kind, and the
 distinct PR heads they touched, from the watchdog event log. BEFORE has none:
@@ -273,12 +263,10 @@ The router's five-minute pass:
   BEFORE's (both known), or any escaped security, privacy or data-loss defect
   traces to a finding logged as polish; `unknown` when either rate is Unknown
   and no such defect is recorded; otherwise `not triggered`. When triggered,
-  the orchestrator reverts the blocking and 1 + 1 rule changes (RL1, RL2) and
-  tells Jake; the watchdog stays.
+  the orchestrator reverts the blocking and 1 + 1 rule changes and tells
+  Jake; the watchdog stays.
 
 ## Gaps
 
-Fixture tests prove the arithmetic, Unknown handling and refusals only. The
-BEFORE numbers are a read-only observation of GitHub's surviving records,
-with journey v1's unknown historical completeness; BEFORE's real-user-path
-share is a recorded judgment, not a measured line.
+Fixture tests prove the arithmetic, Unknown handling and refusals only.
+BEFORE's real-user-path share is a recorded judgment, not a measured line.

@@ -1,0 +1,24 @@
+# #1575: release (2) at 83ab283, the release:pull unit (CI runs tools/install/test_pull.py there).
+# The test built its legacy build with mkdir(parents=True), which ignores the 0700 mode, so under the runner's umask 022 the folders were 0755 and status refused them as not private.
++ python3 -I tools/install/test_pull.py
+F.
+======================================================================
+FAIL: test_pre_ap11_selected_build_reports_status_and_upgrades_to_a_cli_only_candidate (__main__.Pull.test_pre_ap11_selected_build_reports_status_and_upgrades_to_a_cli_only_candidate)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/test_pull.py", line 98, in test_pre_ap11_selected_build_reports_status_and_upgrades_to_a_cli_only_candidate
+    self.assertEqual((code, value.get('source'), value.get('version')), (0, legacy, '0.0.98'), value)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Tuples differ: (5, None, None) != (0, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', '0.0.98')
+
+First differing element 0:
+5
+0
+
+- (5, None, None)
++ (0, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', '0.0.98') : {'schema': 'openwiz.install-error.v1', 'outcome': 'refused', 'command': 'status', 'reason': 'path must be private, owned and have the expected type; the last good build and owner settings are retained'}
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.237s
+
+FAILED (failures=1)

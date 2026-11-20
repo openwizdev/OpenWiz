@@ -92,7 +92,7 @@ settings.local
 .claude/settings.local.json
 ```
 
-## apps/web/styles/fixture.css
+## tools/war-room/styles/fixture.css
 
 ```text
 body { background: #151719; color: #123; border-color: #1234; outline-color: #12345678; }
@@ -104,7 +104,7 @@ body { background: #151719; color: #123; border-color: #1234; outline-color: #12
 <svg><path fill="#552583"/></svg>
 ```
 
-## apps/web/test/fixture.mjs
+## tools/war-room/test/fixture.mjs
 
 ```text
 export const style = { background: '#141414' };

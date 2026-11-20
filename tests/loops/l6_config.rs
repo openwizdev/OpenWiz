@@ -28,8 +28,9 @@ fn installed_operator_and_project_are_read_from_private_config_and_rechecked() {
     let path = f.context.state.join("service/config.json");
     let mut configured = config(&f);
     fs::write(&path, configured.to_string()).unwrap();
-    let context = openwiz_store::loops::config::installed(&f.context.checkout, &f.context.state)
-        .expect("configured operator must be usable");
+    let context =
+        openwiz_cli::state::loops::config::installed(&f.context.checkout, &f.context.state)
+            .expect("configured operator must be usable");
     let off = context.switch("loop-syn-reminder", false, 1000).unwrap();
     assert_eq!(off["actor"], "synthetic-installed-operator");
     let before = f.saved();
@@ -64,21 +65,24 @@ fn missing_invalid_duplicate_or_foreign_install_context_never_switches() {
         value["operator"] = actor;
         fs::write(&path, value.to_string()).unwrap();
         assert!(
-            openwiz_store::loops::config::installed(&f.context.checkout, &f.context.state).is_err()
+            openwiz_cli::state::loops::config::installed(&f.context.checkout, &f.context.state)
+                .is_err()
         );
     }
     let mut value = config(&f);
     value.as_object_mut().unwrap().remove("operator");
     fs::write(&path, value.to_string()).unwrap();
     assert!(
-        openwiz_store::loops::config::installed(&f.context.checkout, &f.context.state).is_err()
+        openwiz_cli::state::loops::config::installed(&f.context.checkout, &f.context.state)
+            .is_err()
     );
     let duplicate = config(&f)
         .to_string()
         .replacen("{", "{\"operator\":\"synthetic-other\",", 1);
     fs::write(&path, duplicate).unwrap();
     assert!(
-        openwiz_store::loops::config::installed(&f.context.checkout, &f.context.state).is_err()
+        openwiz_cli::state::loops::config::installed(&f.context.checkout, &f.context.state)
+            .is_err()
     );
     let float = config(&f)
         .to_string()
@@ -86,7 +90,8 @@ fn missing_invalid_duplicate_or_foreign_install_context_never_switches() {
     assert_ne!(float, config(&f).to_string());
     fs::write(&path, float).unwrap();
     assert!(
-        openwiz_store::loops::config::installed(&f.context.checkout, &f.context.state).is_err()
+        openwiz_cli::state::loops::config::installed(&f.context.checkout, &f.context.state)
+            .is_err()
     );
     for (key, other) in [
         ("project", json!("prj_syn_foreign")),
@@ -99,7 +104,8 @@ fn missing_invalid_duplicate_or_foreign_install_context_never_switches() {
         value[key] = other;
         fs::write(&path, value.to_string()).unwrap();
         let context =
-            openwiz_store::loops::config::installed(&f.context.checkout, &f.context.state).unwrap();
+            openwiz_cli::state::loops::config::installed(&f.context.checkout, &f.context.state)
+                .unwrap();
         assert!(context.switch("loop-syn-reminder", false, 1000).is_err());
     }
     fs::write(&path, config(&f).to_string()).unwrap();
@@ -113,7 +119,8 @@ fn missing_invalid_duplicate_or_foreign_install_context_never_switches() {
         ],
     );
     let context =
-        openwiz_store::loops::config::installed(&f.context.checkout, &f.context.state).unwrap();
+        openwiz_cli::state::loops::config::installed(&f.context.checkout, &f.context.state)
+            .unwrap();
     assert!(context.switch("loop-syn-reminder", false, 1000).is_err());
     assert!(!f.context.state.join("service/loops").exists());
 }
@@ -136,7 +143,8 @@ fn installed_origin_requires_one_exact_existing_github_remote() {
         ],
     );
     let context =
-        openwiz_store::loops::config::installed(&f.context.checkout, &f.context.state).unwrap();
+        openwiz_cli::state::loops::config::installed(&f.context.checkout, &f.context.state)
+            .unwrap();
     for (n, url) in [
         "https://github.com/synthetic-owner/synthetic-repo.git",
         "ssh://git@github.com/synthetic-owner/synthetic-repo",
@@ -289,7 +297,8 @@ fn unsupported_or_ambiguous_origin_headers_are_refused() {
     )
     .unwrap();
     let context =
-        openwiz_store::loops::config::installed(&f.context.checkout, &f.context.state).unwrap();
+        openwiz_cli::state::loops::config::installed(&f.context.checkout, &f.context.state)
+            .unwrap();
     context.switch("loop-syn-reminder", false, 1000).unwrap();
     let before = f.saved();
     let path = f.context.checkout.join(".git/config");

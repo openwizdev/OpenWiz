@@ -1,0 +1,107 @@
+$ python3 -I kernel/records/model/test_model.py
+test_each_variant_breaks_the_rule_it_drops (__main__.BrokenVariants.test_each_variant_breaks_the_rule_it_drops) ... ok
+test_every_rule_holds_over_every_reachable_state (__main__.CurrentRules.test_every_rule_holds_over_every_reachable_state) ... ok
+test_a_model_where_time_never_passes_misses_the_lapse_witness (__main__.NotVacuous.test_a_model_where_time_never_passes_misses_the_lapse_witness) ... ok
+test_the_current_rules_meet_every_witness (__main__.NotVacuous.test_the_current_rules_meet_every_witness) ... ok
+test_the_lost_release_needs_two_overlapping_wakes (__main__.SplitWrites.test_the_lost_release_needs_two_overlapping_wakes) ... ok
+test_the_pinned_writers_read_then_write_order_loses_the_fence (__main__.SplitWrites.test_the_pinned_writers_read_then_write_order_loses_the_fence) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 7.752s
+
+OK
+exit 0
+
+$ python3 -I kernel/records/model/model.py
+ok: atomic writes, current rules: P1 to P4 hold over 20097 states
+exit 0
+
+$ python3 -I kernel/records/model/model.py --variant no-post-fence
+broken P1: never two live holders: a claim write succeeded but its note does not hold the claim
+  1. builder 1 wake 1: post a working note
+  2. builder 2 wake 1: post a working note
+broken P4: a claim is neither held, released nor lapsed: two live notes of one kind
+  1. builder 1 wake 1: post a working note
+  2. builder 2 wake 1: post a working note
+exit 1
+
+$ python3 -I kernel/records/model/model.py --variant older-only-fence
+broken P2: a lapsed holder took the ticket back from a newer one
+  1. builder 1 wake 1: post a working note, reads back: kept
+  2. time passes
+  3. time passes
+  4. builder 2 wake 1: post a working note, reads back: kept
+  5. builder 1 wake 1: edit note 0 to working
+broken P4: a claim is neither held, released nor lapsed: two live notes of one kind
+  1. builder 1 wake 1: post a working note, reads back: kept
+  2. builder 1 wake 1: edit note 0 to done
+  3. builder 2 wake 1: post a working note, reads back: kept
+  4. builder 1 wake 1: edit note 0 to working
+exit 1
+
+$ python3 -I kernel/records/model/model.py --variant edit-stopped
+broken P3: a release was lost
+  1. builder 1 wake 1: post a working note, reads back: kept
+  2. builder 1 wake 1: edit note 0 to stopped
+  3. builder 1 wake 1: edit note 0 to working
+exit 1
+
+$ python3 -I kernel/records/model/model.py --variant asking-not-claiming
+broken P1: never two live holders: a claim write succeeded but its note does not hold the claim
+  1. builder 1 wake 1: post a asking note, reads back: kept
+  2. builder 2 wake 1: post a working note, reads back: kept
+broken P2: a lapsed holder took the ticket back from a newer one
+  1. builder 1 wake 1: post a working note, reads back: kept
+  2. time passes
+  3. time passes
+  4. builder 2 wake 1: post a asking note, reads back: kept
+  5. builder 1 wake 1: edit note 0 to working
+broken P4: a claim is neither held, released nor lapsed: two live notes of one kind
+  1. builder 1 wake 1: post a asking note, reads back: kept
+  2. builder 2 wake 1: post a working note, reads back: kept
+exit 1
+
+$ python3 -I kernel/records/model/model.py --writes split
+broken P1: never two live holders: a claim write succeeded but its note does not hold the claim
+  1. builder 1 wake 1 reads the ticket
+  2. builder 1 wake 1: post a working note
+  3. builder 1 wake 2 reads the ticket
+  4. builder 1 wake 2: edit note 0 to done
+  5. builder 1 wake 2 reads the ticket
+  6. builder 2 wake 1 reads the ticket
+  7. builder 2 wake 1: post a working note
+  8. builder 2 wake 1 reads back note 1: kept
+  9. builder 2 wake 1 reads the ticket
+  10. builder 1 wake 2: edit note 0 to working
+  11. builder 2 wake 1: edit note 1 to working
+broken P2: a lapsed holder took the ticket back from a newer one
+  1. builder 1 wake 1 reads the ticket
+  2. builder 1 wake 1: post a working note
+  3. builder 1 wake 1 reads back note 0: kept
+  4. time passes
+  5. time passes
+  6. builder 1 wake 1 reads the ticket
+  7. builder 2 wake 1 reads the ticket
+  8. builder 2 wake 1: post a working note
+  9. builder 1 wake 1: edit note 0 to working
+broken P3: a release was lost
+  1. builder 1 wake 1 reads the ticket
+  2. builder 1 wake 1: post a working note
+  3. builder 1 wake 1 reads back note 0: kept
+  4. builder 1 wake 1 reads the ticket
+  5. builder 1 wake 2 reads the ticket
+  6. builder 1 wake 1: edit note 0 to done
+  7. builder 1 wake 2: edit note 0 to working
+broken P4: a claim is neither held, released nor lapsed: two live notes of one kind
+  1. builder 1 wake 1 reads the ticket
+  2. builder 1 wake 1: post a working note
+  3. builder 1 wake 1 reads back note 0: kept
+  4. time passes
+  5. time passes
+  6. builder 1 wake 1 reads the ticket
+  7. builder 2 wake 1 reads the ticket
+  8. builder 2 wake 1: post a working note
+  9. builder 2 wake 1 reads back note 1: kept
+  10. builder 1 wake 1: edit note 0 to working
+exit 1
+

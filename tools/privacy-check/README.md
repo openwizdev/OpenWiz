@@ -1,129 +1,28 @@
 # Privacy check
 
-One read-only command implements `openwiz.open-development.v1` (§ The privacy
-check). It never pushes, stages, fetches objects, follows directory symlinks or
-writes repository files. Python 3.11+ and Git are its only runtime tools. No new
-package dependencies.
+`check.py` is the read-only check of the [open development contract](../../contracts/open-development.v1.md)'s privacy rules. It never pushes, stages, fetches or writes. Python 3.11+ and Git only.
 
 ```sh
-# An explicit staged public directory (also works inside the private clone):
-python3 -I tools/privacy-check/check.py --tree /tmp/staged-public \
-  --literals /path/to/ClosedWiz/private/evidence/open-development/privacy-check/literals.txt \
-  --require-literals
-
-# Immutable Git objects and an exact commit range, without checkout:
-python3 -I tools/privacy-check/check.py --repo /path/to/OpenWiz \
-  --git-tree HEAD --base origin/main --head HEAD \
-  --title-file /tmp/proposed-title --body-file /tmp/proposed-body
-
-# Proposed issue/PR text alone (the ticket mover's seam):
-python3 -I tools/privacy-check/check.py --title-file /tmp/proposed-title \
-  --body-file /tmp/proposed-body --literals /path/to/literals.txt --require-literals
-
-# Synthetic command and hook proofs; no network and no Rust/browser suites:
+# a staged public directory (importers must pass --require-literals)
+python3 -I tools/privacy-check/check.py --tree /tmp/staged-public --literals LIST --require-literals
+# Git objects and a commit range, plus proposed pull request text, without checkout
+python3 -I tools/privacy-check/check.py --repo PATH --git-tree HEAD --base origin/main --head HEAD \
+  --title-file TITLE --body-file BODY
+# proposed issue or pull request text alone
+python3 -I tools/privacy-check/check.py --title-file TITLE --body-file BODY --literals LIST --require-literals
+# offline proofs
 python3 -I tools/privacy-check/test_check.py
 sh .githooks/test.sh --fixtures-only
 ```
 
-Inputs combine: a directory, a Git tree, history and text can be checked in one
-invocation. Importers must pass `--require-literals`; an absent, empty or
-unreadable list refuses. Explicitly supplying an unreadable optional list also
-refuses. Every result reports `literals: used` or `literals: not used`.
-No inputs, unreadable inputs and unknown workflow syntax refuse.
+Inputs combine in one run. Exit 0 is no refusal, 1 a refusal, 2 bad arguments. Each refusal names its contract rule, input and line, never the matched text. A missing, empty or unreadable literals list refuses under `--require-literals`; each result says whether literals were used. Without `--base`, history is checked from the contract's public anchor; `--upstream REF` narrows it to the commits after the merge-base with an already published REF. Every commit's message, identities and tree are checked, so deleting a private file at the tip doesn't clear history.
 
-Exit 0 means no refusal; exit 1 means refusal; malformed command arguments exit
-2. Each refusal gives its contract rule, input location and line, without a
-source snippet. File locations redact identifiers and escape control characters.
-`commit-N` and `commit-tree-N` follow Git's `rev-list` order, newest first; a
-`tree:` location names the requested Git tree and `staged:` the directory. The
-line is in the commit message, PR text or named file; structural rules use line
-1. No message or identifier is printed on errors.
+Workflows are read as a safe YAML subset; anything it doesn't recognise refuses, and every job needs an allowlisted runner.
 
-T3 also refuses the two forms that stopped the first skills export (#1409,
-WZ2 #2630): a concrete helper snapshot or window location with its per-run
-suffix (`snapshot.<suffix>/state.json`, or one under `helper-checks/`), and
-an owner machine's CPU facts, i.e. a CPU count, `cpu.max` or quota number next
-to the PC, the Mac, an owner's or a host's machine, even wrapped over two
-comment lines. Generic templates (`snapshot.*`, `window.<run>`, an all-`X`
-mktemp template) and text that says the example is invented, synthetic,
-hypothetical or "for example" pass. This is a pattern rule, so it does not
-replace review.
+## Where it runs
 
-Trees refuse private paths even when empty, including symlink entries. Text
-rules scan filenames and symlink targets as well as UTF-8 contents. Binary
-contents (NUL bytes or recognized image/PDF signatures) need review; unknown
-non-UTF-8 encodings refuse. In `contracts/open-development.v1.md` only, fenced
-`bad` examples are skipped, preserving line numbers. A `good` example, a line
-outside a `bad` block or a `bad` block in any other file is scanned.
+- **CI:** the `privacy` check in `.github/workflows/privacy.yml`, on every pull request, merge group and push to `main` of the public repository.
+- **Pre-push:** `git config core.hooksPath .githooks`; set `OPENWIZ_PRIVACY_LITERALS` to the literals file. The hook scans from the push destination's `main`, fetched from that URL when needed.
+- **Importer, release and ticket mover** call it before they publish; they own what they carry.
 
-History must have exactly the contract's public root and contain its public
-anchor. Replace objects are disabled, grafts and shallow clones refuse, and
-missing objects are never fetched. Every newly reachable commit after the
-anchor has its message, author/committer email and tree checked: deleting a
-private file at the tip does not remove it from published history. Without
-`--base`, the range begins after the approved public anchor; `--upstream REF`
-(a new ref's first push) narrows it to the commits after their merge-bases
-with REF, a commit already published at the push destination. A missing REF
-or no merge-base falls back to the anchor. The hook never trusts a local
-tracking ref for this: it asks the exact push URL for its `main`
-(`git ls-remote`), and narrows only when the URL is on `hook.py`'s
-`PUBLIC_URLS`, the push carries no command-scoped Git setting or override
-variable (`git -c`, `GIT_CONFIG_*`, `GIT_SSH*`, `GIT_DIR`, ...; only
-`HOOK_GIT_VARIABLES` may be set, plus a complete `GIT_CONFIG_COUNT`/`KEY_<i>`/
-`VALUE_<i>` set whose every key starts `hook.`), Git would not rewrite that URL, the
-destination names exactly one `main` and that commit is present locally.
-When it is not (main moved on since this clone's last fetch), the hook
-fetches the destination's `main` objects from the same URL first, writing no
-ref (#872); a failed fetch scans from the anchor. Its lookups reach only the
-push URL: no lazy fetch, no bundle source, no promisor remote a server
-offers, and any `remote.<push URL>.*` setting scans from the anchor.
-check.py itself still never fetches.
-Within one run, each file version (Git blob) is read and checked once for
-each rule set its paths need (workflow, the contract, other text), and that
-verdict is repeated at every later path and commit tree holding it (#761).
-The key also holds the checker's code, its decider list and the literals;
-only a finished check is kept, nothing is cached across runs, and path rules,
-local workflow targets, messages and identities are still checked for every
-path and commit. A staged directory is never cached.
-`ci.py` passes `origin/main`, fetched from the destination in that job, for a
-new branch, never for a new `main`. There is no command
-option or environment override for the root, anchor or decider list. Tests
-substitute synthetic policy constants in memory and traverse real fixture Git
-graphs, including an unrelated root arriving through a merge.
-
-Workflow parsing deliberately recognizes a safe YAML subset: block mappings
-and sequences, flow lists, quoted/plain scalars and opaque block scalars. It
-refuses duplicate keys, aliases, tags, flow mappings, directives and multiline
-plain/quoted scalars. Unrecognized syntax cannot silently drop a runner key.
-Each job needs an allowlisted runner or a local reusable workflow present in
-the checked tree. Matrix includes are checked as well as the selected axis.
-Block-valued runner expressions refuse; block-valued shell steps cannot
-introduce YAML keys. Existing private CI's runner fallback may still fail the
-contract until the CI tickets change it; this ticket does not edit that workflow.
-
-## Integrations
-
-- **Ruleset check name: `privacy`**, fixed by job id and name in
-  `.github/workflows/privacy.yml`. O12 (#1280) requires this name. It runs on
-  `ubuntu-24.04` with read-only permissions for every PR (including text
-  edits), merge group and push to `main`. Tests use synthetic fixtures on both repositories.
-  Its private checkout contains only this tool, hook fixtures and this workflow,
-  excluding private files. The event gate exits on the private repository before
-  reading its event or tree. On public repositories it checks exact event SHAs and PR title/body.
-- **Pre-push:** install with `git config core.hooksPath .githooks`. The hook checks
-  each pushed commit before the no-file-change shortcut and before the existing
-  format/fast checks. Network destinations other than the private repository
-  are guarded, including forks. Local filesystem remotes remain fixture-only.
-  Set `OPENWIZ_PRIVACY_LITERALS` to an explicit literals path (or pass
-  `hook.py --literals PATH` when invoking the adapter directly). A configured
-  list is required and fails closed when unreadable. No directory basename
-  discovers a private repository or supplies literals. A deletion publishes no commit. Annotated tags resolve to their commit.
-- **Importer/release/skills copy:** O14 (#1282), O13 (#1281), O21 (#1408) use
-  `check.py --tree` and/or the Git inputs above before final staging/publishing.
-  They own carriage lists and publication; this tool only decides privacy.
-- **Ticket mover:** O15 (#1283) uses the title/body inputs after transformations.
-- **Rehearsal:** O16 (#1284) uses the same command on the complete staged tree.
-
-No fixture proves live publication. CI without the private list cannot check
-named literals. Images, unquoted personal facts and quotations outside the
-contract's record forms remain review responsibilities.
+It can't see named literals without the private list, and images, unquoted personal facts and quotations stay a reviewer's job.

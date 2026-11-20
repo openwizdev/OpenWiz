@@ -1,0 +1,64 @@
+{
+ "pr": {
+  "body": "Closes #7",
+  "baseRefOid": "0000000000000000000000000000000000000000",
+  "closingIssuesReferences": {
+   "nodes": [
+    {
+     "number": 7,
+     "repository": {
+      "nameWithOwner": "example/project"
+     }
+    }
+   ]
+  },
+  "files": [
+   {
+    "pageInfo": {
+     "hasNextPage": true,
+     "endCursor": "c1"
+    },
+    "nodes": [
+     {
+      "path": "tools/widget/a.py"
+     }
+    ]
+   },
+   {
+    "pageInfo": {
+     "hasNextPage": false,
+     "endCursor": null
+    },
+    "nodes": [
+     {
+      "path": "late/out.py"
+     }
+    ]
+   }
+  ],
+  "comments": {
+   "pageInfo": {
+    "hasNextPage": false,
+    "endCursor": null
+   },
+   "nodes": []
+  }
+ },
+ "issues": {
+  "7": {
+   "__typename": "Issue",
+   "body": "## What to build\n\nSynthetic ticket.\n\n## Owned paths\n\n- `tools/widget/` in `example/project` (new: the widget and its tests)\n- `.github/workflows/` in `example/project` (shared: one new job)\n- `crates/*/src/widget.rs` and `docs/**/widget.md`\n- `apps/gadget` (a folder named without its slash)\n- `README.md` in `example/other` (the other repository's half)\n- the widget's icon files in `example/project`\n\n**Relies on:** nothing\n\n## Acceptance criteria\n\n- [ ] `outside/mentioned.txt` is only mentioned here, never owned\n",
+   "comments": {
+    "pageInfo": {
+     "hasNextPage": false,
+     "endCursor": null
+    },
+    "nodes": []
+   }
+  }
+ },
+ "exit": 1,
+ "out": [
+  "OUT: late/out.py (ticket #7)"
+ ]
+}

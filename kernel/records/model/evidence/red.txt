@@ -1,0 +1,77 @@
+$ python3 -I kernel/records/model/test_model.py
+test_each_variant_breaks_the_rule_it_drops (__main__.BrokenVariants.test_each_variant_breaks_the_rule_it_drops) ... ok
+test_every_rule_holds_over_every_reachable_state (__main__.CurrentRules.test_every_rule_holds_over_every_reachable_state) ... FAIL
+test_a_model_where_time_never_passes_misses_the_lapse_witness (__main__.NotVacuous.test_a_model_where_time_never_passes_misses_the_lapse_witness) ... FAIL
+test_the_current_rules_meet_every_witness (__main__.NotVacuous.test_the_current_rules_meet_every_witness) ... FAIL
+test_the_lost_release_needs_two_overlapping_wakes (__main__.SplitWrites.test_the_lost_release_needs_two_overlapping_wakes) ... FAIL
+test_the_pinned_writers_read_then_write_order_loses_the_fence (__main__.SplitWrites.test_the_pinned_writers_read_then_write_order_loses_the_fence) ... ok
+
+======================================================================
+FAIL: test_every_rule_holds_over_every_reachable_state (__main__.CurrentRules.test_every_rule_holds_over_every_reachable_state)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/records/model/test_model.py", line 30, in test_every_rule_holds_over_every_reachable_state
+    self.assertEqual((code, err), (0, ''), out)
+AssertionError: Tuples differ: (1, '') != (0, '')
+
+First differing element 0:
+1
+0
+
+- (1, '')
+?  ^
+
++ (0, '')
+?  ^
+ : ['broken P1: never two live holders: a claim write succeeded but its note does not hold the claim', '  1. builder 1 wake 1: post a working note', '  2. builder 2 wake 1: post a working note', 'broken P2: a lapsed holder took the ticket back from a newer one', '  1. builder 1 wake 1: post a working note', '  2. time passes', '  3. time passes', '  4. builder 2 wake 1: post a working note', '  5. builder 1 wake 1: edit note 0 to working', 'broken P3: a release was lost', '  1. builder 1 wake 1: post a working note', '  2. builder 1 wake 1: edit note 0 to stopped', '  3. builder 1 wake 1: edit note 0 to working', 'broken P4: a claim is neither held, released nor lapsed: two live notes of one kind', '  1. builder 1 wake 1: post a working note', '  2. builder 2 wake 1: post a working note']
+
+======================================================================
+FAIL: test_a_model_where_time_never_passes_misses_the_lapse_witness (__main__.NotVacuous.test_a_model_where_time_never_passes_misses_the_lapse_witness)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/records/model/test_model.py", line 79, in test_a_model_where_time_never_passes_misses_the_lapse_witness
+    self.assertEqual(found, {})
+AssertionError: {'P1': ['builder 1 wake 1: post a working [270 chars]ng']} != {}
++ {}
+- {'P1': ['builder 1 wake 1: post a working note',
+-         'builder 2 wake 1: post a working note'],
+-  'P3': ['builder 1 wake 1: post a working note',
+-         'builder 1 wake 1: edit note 0 to stopped',
+-         'builder 1 wake 1: edit note 0 to working'],
+-  'P4': ['builder 1 wake 1: post a working note',
+-         'builder 2 wake 1: post a working note']}
+
+======================================================================
+FAIL: test_the_current_rules_meet_every_witness (__main__.NotVacuous.test_the_current_rules_meet_every_witness)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/records/model/test_model.py", line 71, in test_the_current_rules_meet_every_witness
+    self.assertEqual(found, {})
+AssertionError: {'P1': ['builder 1 wake 1: post a working [434 chars]ng']} != {}
++ {}
+- {'P1': ['builder 1 wake 1: post a working note',
+-         'builder 2 wake 1: post a working note'],
+-  'P2': ['builder 1 wake 1: post a working note',
+-         'time passes',
+-         'time passes',
+-         'builder 2 wake 1: post a working note',
+-         'builder 1 wake 1: edit note 0 to working'],
+-  'P3': ['builder 1 wake 1: post a working note',
+-         'builder 1 wake 1: edit note 0 to stopped',
+-         'builder 1 wake 1: edit note 0 to working'],
+-  'P4': ['builder 1 wake 1: post a working note',
+-         'builder 2 wake 1: post a working note']}
+
+======================================================================
+FAIL: test_the_lost_release_needs_two_overlapping_wakes (__main__.SplitWrites.test_the_lost_release_needs_two_overlapping_wakes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/records/model/test_model.py", line 64, in test_the_lost_release_needs_two_overlapping_wakes
+    self.assertNotIn('P3', single)
+AssertionError: 'P3' unexpectedly found in {'P1': ['builder 1 wake 1 reads the ticket', 'builder 1 wake 1: post a working note', 'builder 2 wake 1 reads the ticket', 'builder 2 wake 1: post a working note'], 'P4': ['builder 1 wake 1 reads the ticket', 'builder 1 wake 1: post a working note', 'builder 2 wake 1 reads the ticket', 'builder 2 wake 1: post a working note'], 'P3': ['builder 1 wake 1 reads the ticket', 'builder 1 wake 1: post a working note', 'builder 1 wake 1 reads the ticket', 'builder 1 wake 1: edit note 0 to stopped', 'builder 1 wake 1 reads the ticket', 'builder 1 wake 1: edit note 0 to working'], 'P2': ['builder 1 wake 1 reads the ticket', 'builder 1 wake 1: post a working note', 'time passes', 'time passes', 'builder 1 wake 1 reads the ticket', 'builder 2 wake 1 reads the ticket', 'builder 2 wake 1: post a working note', 'builder 1 wake 1: edit note 0 to working']}
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.461s
+
+FAILED (failures=4)
+exit 1

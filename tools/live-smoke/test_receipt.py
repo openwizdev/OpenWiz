@@ -533,15 +533,14 @@ class Receipts(unittest.TestCase):
         wrapper.write_text('#!/bin/sh\nexec %s fleet 9001 --json\n' % FAKE)
         wrapper.chmod(0o700)
         python = str(Path(sys.executable).resolve())
-        probes = (str(HERE / 'browser.mjs'), str(HERE / 'cleanup.py'))
+        probes = (str(HERE / 'cleanup.py'),)
         pins = {str(wrapper): hashlib.sha256(wrapper.read_bytes()).hexdigest(),
                 python: hashlib.sha256(Path(python).read_bytes()).hexdigest()}
         for probe in probes:
             pins[probe] = hashlib.sha256(Path(probe).read_bytes()).hexdigest()
-        cleanup = ['-I', probes[1], '--gh', python, '--repo', 'synthetic-owner/synthetic-repo',
+        cleanup = ['-I', probes[0], '--gh', python, '--repo', 'synthetic-owner/synthetic-repo',
                    '--ticket', '9004', '--action', 'close']
-        cases = {'browser-shaped wrapper': [str(wrapper), probes[0], 'phone-reply'],
-                 'cleanup-shaped wrapper': [str(wrapper)] + cleanup,
+        cases = {'cleanup-shaped wrapper': [str(wrapper)] + cleanup,
                  'cleanup with a wrapper gh': [python] + cleanup[:3] + [str(wrapper)] + cleanup[4:],
                  'cleanup with extra arguments': [python] + cleanup + ['--extra']}
         for name, argv in cases.items():

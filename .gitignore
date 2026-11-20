@@ -1,11 +1,9 @@
-# Build output (Rust and the web app).
+# Build output.
 # Jake, 2026-10-28: ignore generated builds ([private record](https://github.com/jparker2006/ClosedWiz/issues/1275#issuecomment-6704671951)).
 /target/
-/apps/web/node_modules/
 /tools/war-room/node_modules/
-/apps/web/out/
-/apps/web/.next/
 /tools/**/__pycache__/
+/kernel/**/__pycache__/
 
 # WizSkills, installed from wizskills.lock (#555); never tracked
 /.wizskills/

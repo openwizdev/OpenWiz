@@ -97,7 +97,7 @@ fn malformed_cli_forms_and_missing_trust_save_nothing() {
 #[test]
 fn r1_cli_reports_a_running_pass_and_retry_without_writing() {
     use super::l6_switches::ExpiredClock;
-    use openwiz_store::loops::storage::Storage;
+    use openwiz_cli::state::loops::storage::Storage;
     let f = Fixture::new();
     f.context.switch("loop-syn-reminder", false, 1000).unwrap();
     let before = f.saved();

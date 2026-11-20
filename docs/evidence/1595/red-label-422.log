@@ -1,0 +1,39 @@
+test_a_refused_label_fails_the_effect_and_opens_no_proposal (__main__.Init.test_a_refused_label_fails_the_effect_and_opens_no_proposal) ... 
+  test_a_refused_label_fails_the_effect_and_opens_no_proposal (__main__.Init.test_a_refused_label_fails_the_effect_and_opens_no_proposal) (label='openwiz') ... FAIL
+  test_a_refused_label_fails_the_effect_and_opens_no_proposal (__main__.Init.test_a_refused_label_fails_the_effect_and_opens_no_proposal) (label='spec') ... FAIL
+test_a_label_made_concurrently_counts_as_applied_and_stays_theirs (__main__.Init.test_a_label_made_concurrently_counts_as_applied_and_stays_theirs) ... ok
+
+======================================================================
+FAIL: test_a_refused_label_fails_the_effect_and_opens_no_proposal (__main__.Init.test_a_refused_label_fails_the_effect_and_opens_no_proposal) (label='openwiz')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/tests/init/test_init.py", line 175, in test_a_refused_label_fails_the_effect_and_opens_no_proposal
+    failed = self.apply(self.init(), expect=5)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<checkout>/tools/install/tests/init/test_init.py", line 110, in apply
+    return self.init('--yes', '--operation', preview['operation_id'], expect=expect)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<checkout>/tools/install/tests/init/test_init.py", line 97, in init
+    self.assertEqual(result.returncode, expect, result.stdout + result.stderr)
+AssertionError: 0 != 5 : {"brain": {"brain_repository": "synthetic-owner/synthetic-app", "brain_visibility": {"known": "private"}, "code_repository": "synthetic-owner/synthetic-app", "code_visibility": "private", "decision_repositories": null, "folder": ".openwiz/brain", "location": "in_repository", "setting": "brain_location", "visibility_basis": "github_repository_read"}, "effects": [{"attempts": 1, "effect_count": 1, "kind": "create_label", "phase": "applied", "reconciliation": "none", "repository": "synthetic-owner/synthetic-app"}, {"attempts": 1, "effect_count": 1, "kind": "open_pull_request", "phase": "applied", "reconciliation": "none", "repository": "synthetic-owner/synthetic-app"}], "fingerprint": "<fingerprint>", "kind": "init_result", "operation_id": "<operation>", "outcome": "applied", "placement_question": false, "private_content_written": "brain_repository", "private_record": null, "proof_class": "recording", "pull_requests": [{"number": 1, "repository": "synthetic-owner/synthetic-app", "state": "open", "visible": true}], "reason_code": "brain_proposed", "report_line": "Brain: in-repository synthetic-owner/synthetic-app in .openwiz/brain; change it with the brain_location setting.", "repository": {"basis": "github_repository_read", "full_name": "synthetic-owner/synthetic-app", "visibility": {"known": "private"}}, "schema": "openwiz.setup-onboard.v1", "synthetic_assumptions": ["A command outcome is not a live proof; live brain creation is observed only under its own kit."]}
+
+
+======================================================================
+FAIL: test_a_refused_label_fails_the_effect_and_opens_no_proposal (__main__.Init.test_a_refused_label_fails_the_effect_and_opens_no_proposal) (label='spec')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/tests/init/test_init.py", line 175, in test_a_refused_label_fails_the_effect_and_opens_no_proposal
+    failed = self.apply(self.init(), expect=5)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<checkout>/tools/install/tests/init/test_init.py", line 110, in apply
+    return self.init('--yes', '--operation', preview['operation_id'], expect=expect)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<checkout>/tools/install/tests/init/test_init.py", line 97, in init
+    self.assertEqual(result.returncode, expect, result.stdout + result.stderr)
+AssertionError: 0 != 5 : {"brain": {"brain_repository": "synthetic-owner/synthetic-app", "brain_visibility": {"known": "private"}, "code_repository": "synthetic-owner/synthetic-app", "code_visibility": "private", "decision_repositories": null, "folder": ".openwiz/brain", "location": "in_repository", "setting": "brain_location", "visibility_basis": "github_repository_read"}, "effects": [{"attempts": 1, "effect_count": 1, "kind": "create_label", "phase": "applied", "reconciliation": "none", "repository": "synthetic-owner/synthetic-app"}, {"attempts": 1, "effect_count": 1, "kind": "open_pull_request", "phase": "applied", "reconciliation": "none", "repository": "synthetic-owner/synthetic-app"}], "fingerprint": "<fingerprint>", "kind": "init_result", "operation_id": "<operation>", "outcome": "applied", "placement_question": false, "private_content_written": "brain_repository", "private_record": null, "proof_class": "recording", "pull_requests": [{"number": 1, "repository": "synthetic-owner/synthetic-app", "state": "open", "visible": true}], "reason_code": "brain_proposed", "report_line": "Brain: in-repository synthetic-owner/synthetic-app in .openwiz/brain; change it with the brain_location setting.", "repository": {"basis": "github_repository_read", "full_name": "synthetic-owner/synthetic-app", "visibility": {"known": "private"}}, "schema": "openwiz.setup-onboard.v1", "synthetic_assumptions": ["A command outcome is not a live proof; live brain creation is observed only under its own kit."]}
+
+
+----------------------------------------------------------------------
+Ran 2 tests in <time>s
+
+FAILED (failures=2)

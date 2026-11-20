@@ -1,0 +1,179 @@
+$ python3 -I kernel/driver-kit/test_kit.py   # the fixed template, before the kit fake-harness change
+test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) ... 
+  test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [token-in-args] ... FAIL
+  test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [token-in-env] ... FAIL
+  test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [echoes-token] ... FAIL
+  test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [takes-token] ... FAIL
+  test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [stop-leaves-run] ... FAIL
+  test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [old-records] ... FAIL
+  test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [error-without-next] ... FAIL
+test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) ... ok
+test_template_passes_all_five (__main__.Kit.test_template_passes_all_five) ... FAIL
+
+======================================================================
+FAIL: test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [token-in-args]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 85, in test_each_planted_driver_fails_its_check
+    self.assertEqual(self.kit(os.path.join(FIXTURES, 'planted', name))[:2], (1, lines))
+AssertionError: Tuples differ: (1, [[113 chars]2', 'fail wake: builder status note 2 did not [162 chars]ne']) != (1, [[113 chars]2', 'pass wake: the run edited builder status [147 chars]ne'])
+
+First differing element 1:
+['pas[109 chars]2', 'fail wake: builder status note 2 did not [161 chars]ine']
+['pas[109 chars]2', 'pass wake: the run edited builder status [146 chars]ine']
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+-   'fail wake: builder status note 2 did not change after the wake',
++   'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+    'fail token: a process the driver started holds a credential on its command '
+    'line'])
+
+======================================================================
+FAIL: test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [token-in-env]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 85, in test_each_planted_driver_fails_its_check
+    self.assertEqual(self.kit(os.path.join(FIXTURES, 'planted', name))[:2], (1, lines))
+AssertionError: Tuples differ: (1, [[113 chars]2', 'fail wake: builder status note 2 did not [189 chars]it']) != (1, [[113 chars]2', 'pass wake: the run edited builder status [174 chars]it'])
+
+First differing element 1:
+['pas[109 chars]2', 'fail wake: builder status note 2 did not [188 chars] it']
+['pas[109 chars]2', 'pass wake: the run edited builder status [173 chars] it']
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+-   'fail wake: builder status note 2 did not change after the wake',
++   'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+    'fail token: a process the driver started holds a credential in '
+    'OPENWIZ_GITHUB, which the kit never gave it'])
+
+======================================================================
+FAIL: test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [echoes-token]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 85, in test_each_planted_driver_fails_its_check
+    self.assertEqual(self.kit(os.path.join(FIXTURES, 'planted', name))[:2], (1, lines))
+AssertionError: Tuples differ: (1, [[113 chars]2', 'fail wake: builder status note 2 did not [126 chars]al']) != (1, [[113 chars]2', 'pass wake: the run edited builder status [111 chars]al'])
+
+First differing element 1:
+['pas[109 chars]2', 'fail wake: builder status note 2 did not [125 chars]ial']
+['pas[109 chars]2', 'pass wake: the run edited builder status [110 chars]ial']
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+-   'fail wake: builder status note 2 did not change after the wake',
++   'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+    'fail token: the driver printed a credential'])
+
+======================================================================
+FAIL: test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [takes-token]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 85, in test_each_planted_driver_fails_its_check
+    self.assertEqual(self.kit(os.path.join(FIXTURES, 'planted', name))[:2], (1, lines))
+AssertionError: Tuples differ: (1, [[113 chars]2', 'fail wake: builder status note 2 did not [142 chars]it']) != (1, [[113 chars]2', 'pass wake: the run edited builder status [127 chars]it'])
+
+First differing element 1:
+['pas[109 chars]2', 'fail wake: builder status note 2 did not [141 chars] it']
+['pas[109 chars]2', 'pass wake: the run edited builder status [126 chars] it']
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+-   'fail wake: builder status note 2 did not change after the wake',
++   'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+    'fail token: start took a token field instead of refusing it'])
+
+======================================================================
+FAIL: test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [stop-leaves-run]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 85, in test_each_planted_driver_fails_its_check
+    self.assertEqual(self.kit(os.path.join(FIXTURES, 'planted', name))[:2], (1, lines))
+AssertionError: Tuples differ: (1, [[113 chars]2', 'fail wake: builder status note 2 did not [140 chars]er']) != (1, [[113 chars]2', 'pass wake: the run edited builder status [125 chars]er'])
+
+First differing element 1:
+['pas[109 chars]2', 'fail wake: builder status note 2 did not [139 chars]ver']
+['pas[109 chars]2', 'pass wake: the run edited builder status [124 chars]ver']
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+-   'fail wake: builder status note 2 did not change after the wake',
++   'pass wake: the run edited builder status note 2',
+    'fail stop: a process the run started still runs after stop',
+    'pass token: no login or token passed through the driver'])
+
+======================================================================
+FAIL: test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [old-records]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 85, in test_each_planted_driver_fails_its_check
+    self.assertEqual(self.kit(os.path.join(FIXTURES, 'planted', name))[:2], (1, lines))
+AssertionError: Tuples differ: (1, [[96 chars]2', 'fail wake: builder status note 2 did not [138 chars]er']) != (1, [[96 chars]2', 'pass wake: the run edited builder status [123 chars]er'])
+
+First differing element 1:
+['fai[92 chars]2', 'fail wake: builder status note 2 did not [137 chars]ver']
+['fai[92 chars]2', 'pass wake: the run edited builder status [122 chars]ver']
+
+  (1,
+   ['fail version: it names no openwiz:records v1',
+    'pass start: the run posted builder status note 2',
+-   'fail wake: builder status note 2 did not change after the wake',
++   'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+    'pass token: no login or token passed through the driver'])
+
+======================================================================
+FAIL: test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [error-without-next]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 85, in test_each_planted_driver_fails_its_check
+    self.assertEqual(self.kit(os.path.join(FIXTURES, 'planted', name))[:2], (1, lines))
+AssertionError: Tuples differ: (1, [[113 chars]2', 'fail wake: builder status note 2 did not [119 chars]ng']) != (1, [[113 chars]2', 'pass wake: the run edited builder status [104 chars]ng'])
+
+First differing element 1:
+['pas[109 chars]2', 'fail wake: builder status note 2 did not [118 chars]ing']
+['pas[109 chars]2', 'pass wake: the run edited builder status [103 chars]ing']
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+-   'fail wake: builder status note 2 did not change after the wake',
++   'pass wake: the run edited builder status note 2',
+    'fail stop: next is not a string',
+    'fail token: its answer to a token field: next is not a string'])
+
+======================================================================
+FAIL: test_template_passes_all_five (__main__.Kit.test_template_passes_all_five)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 78, in test_template_passes_all_five
+    self.assertEqual(self.kit(TEMPLATE)[:2], (0, PASS))
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[260 chars]er']) != (0, ['pass version: openwiz:records v1, an[245 chars]er'])
+
+First differing element 0:
+1
+0
+
+- (1,
++ (0,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+-   'fail wake: builder status note 2 did not change after the wake',
++   'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+    'pass token: no login or token passed through the driver'])
+
+----------------------------------------------------------------------
+Ran 3 tests in 85.219s
+
+FAILED (failures=8)

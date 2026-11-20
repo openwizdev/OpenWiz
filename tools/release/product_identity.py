@@ -11,11 +11,12 @@ be exactly the lock's release tree (tools/wizskills/install.py's own check),
 and the packaged skills exactly that tree's `skills/` blobs; a missing or
 edited install refuses.
 
-#1148 (RL4): the compiled CLI/server/service and generated web identity of
-contracts/release-candidate.v1.md, "Minimum product identity (RL4)". The
-native build job runs `query` and `web` to write its receipts; the collector
-verifies each product against them without executing any program; `artifacts`
-binds one target's packaged files for the release candidate. Never publishes.
+#1148 (RL4): the compiled CLI identity of contracts/release-candidate.v1.md,
+"Minimum product identity (RL4)". The native build job runs `query` to write
+its receipt; the collector verifies the product against it without executing
+any program; `artifacts` binds one target's packaged files for the release
+candidate. Never publishes. (The server, the service and the web export, and
+their identities, went in #1264.)
 """
 import argparse
 import hashlib
@@ -41,9 +42,8 @@ RECORD = b'OPENWIZ_PRODUCT_V1:'
 SCHEMA = 'openwiz.product.v1'
 RECEIPT = 'openwiz.build-receipt.v1'
 FIELDS = {'schema', 'product', 'version', 'source', 'target'}
-PROGRAMS = {'cli': 'openwiz', 'server': 'openwiz-server', 'service': 'openwiz-service'}
-WEB_IDENTITY = 'openwiz-product.json'
-STAMPS = ('web/openwiz-build.txt', 'runtime/openwiz-build.txt')
+PROGRAMS = {'cli': 'openwiz'}
+STAMPS = ('runtime/openwiz-build.txt',)
 
 
 def git(root, *args):
@@ -200,7 +200,7 @@ def mode(name):
 
 
 def payload(rows):
-    """A web/runtime payload hash: its path-sorted {path, mode, bytes, sha256} rows."""
+    """A runtime payload hash: its path-sorted {path, mode, bytes, sha256} rows."""
     return sha(canonical(sorted(rows, key=lambda row: row['path'])))
 
 
@@ -275,28 +275,6 @@ def query(binaries, target):
     return {'schema': RECEIPT, 'method': 'native-query', 'target': target, 'programs': rows}
 
 
-def inventory(web):
-    """A web export's install-relative rows."""
-    rows = []
-    for path in sorted(web.rglob('*')):
-        require(not path.is_symlink(), 'web symlink')
-        if path.is_file():
-            data, name = path.read_bytes(), 'web/' + path.relative_to(web).as_posix()
-            rows.append({'path': name, 'mode': mode(name), 'bytes': len(data), 'sha256': sha(data)})
-    return sorted(rows, key=lambda row: row['path'])
-
-
-def record_web(web):
-    """The web build job's receipt, written right after the export it made."""
-    raw = (web / WEB_IDENTITY).read_bytes()
-    require(raw.endswith(b'\n'), 'malformed web product identity')
-    value = identity(raw[:-1])
-    require(value['product'] == 'web', 'web product identity mismatch')
-    rows = inventory(web)
-    return {'schema': RECEIPT, 'method': 'web-build', 'identity': value, 'payload_sha256': payload(rows),
-            'inventory': rows}
-
-
 def receipt(path):
     raw = path.read_bytes()
     return strict(raw), {'record': path.name, 'sha256': sha(raw)}
@@ -311,30 +289,14 @@ def verify_programs(programs, path, version, source, target):
             and value['schema'] == RECEIPT and value['method'] == 'native-query' and value['target'] == target
             and type(value['programs']) is list, 'invalid native query receipt')
     rows = []
-    for (product, name), row in zip(sorted(PROGRAMS.items()), value['programs'] + [None] * 3):
+    for (product, name), row in zip(sorted(PROGRAMS.items()), value['programs'] + [None] * len(PROGRAMS)):
         data, want = programs[product], expected(product, version, source, target)
         require(architecture(data, target) and embedded(data) == want, 'stale or mismatched compiled product')
-        require(len(value['programs']) == 3 and row == {'product': product, 'program': name, 'sha256': sha(data),
+        require(len(value['programs']) == len(PROGRAMS) and row == {'product': product, 'program': name, 'sha256': sha(data),
                 'bytes': len(data), 'identity': want}, 'program differs from its native query receipt')
         rows.append({'identity': want, 'payload_sha256': sha(data), 'verification': 'embedded-record',
                      'build_receipt': evidence})
     return rows
-
-
-def verify_web(rows, path, version, source, target):
-    """Refuse unless the packaged web rows are exactly the export the web
-    build job recorded, carrying this build's generated identity."""
-    value, evidence = receipt(path)
-    want = expected('web', version, source, target)
-    marker = [row for row in rows if row['path'] == 'web/' + WEB_IDENTITY]
-    require(type(value) is dict and set(value) == {'schema', 'method', 'identity', 'payload_sha256', 'inventory'}
-            and value['schema'] == RECEIPT and value['method'] == 'web-build' and value['identity'] == want
-            and value['inventory'] == sorted(rows, key=lambda row: row['path'])
-            and value['payload_sha256'] == payload(rows), 'web export differs from its build receipt')
-    data = canonical(want) + b'\n'
-    require(marker == [{'path': 'web/' + WEB_IDENTITY, 'mode': '0600', 'bytes': len(data), 'sha256': sha(data)}],
-            'stale or missing web product identity')
-    return {'identity': want, 'payload_sha256': payload(rows), 'verification': 'web-build', 'build_receipt': evidence}
 
 
 def members(archive, assets):
@@ -392,20 +354,16 @@ def main():
     native = commands.add_parser('query', help="write the native build job's program receipt")
     native.add_argument('--binaries', required=True, type=Path)
     native.add_argument('--target', required=True)
-    web = commands.add_parser('web', help="write the web build job's receipt")
-    web.add_argument('--web', required=True, type=Path)
     bound = commands.add_parser('artifacts', help="write one target's candidate artifact rows")
     bound.add_argument('--identity', required=True, type=Path)
     bound.add_argument('--packages', required=True, type=Path)
-    for command in (native, web, bound):
+    for command in (native, bound):
         command.add_argument('--output', required=True, type=Path)
     args = parser.parse_args()
     try:
         require(not args.output.exists(), 'output must be new')
         if args.command == 'query':
             value = query(args.binaries, args.target)
-        elif args.command == 'web':
-            value = record_web(args.web)
         else:
             value = {'schema': 'openwiz.candidate-artifacts.v1', 'artifacts': artifacts(args.identity, args.packages)}
         args.output.write_bytes(canonical(value) + b'\n')

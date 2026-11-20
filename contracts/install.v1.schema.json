@@ -63,7 +63,7 @@
         "properties": {
           "path": {
             "type": "string",
-            "pattern": "^(?!.*(?:^|/)\\.)((?:openwiz|openwiz-service|openwiz-server)|(?:web|runtime)/(?:[A-Za-z0-9_+-][A-Za-z0-9_.+-]*/)*[A-Za-z0-9_+-][A-Za-z0-9_.+-]*)$"
+            "pattern": "^(?!.*(?:^|/)\\.)(openwiz|runtime/(?:[A-Za-z0-9_+-][A-Za-z0-9_.+-]*/)*[A-Za-z0-9_+-][A-Za-z0-9_.+-]*)$"
           },
           "sha256": {
             "type": "string",
@@ -88,9 +88,7 @@
                   "anyOf": [
                     {
                       "enum": [
-                        "openwiz",
-                        "openwiz-service",
-                        "openwiz-server"
+                        "openwiz"
                       ]
                     },
                     {
@@ -128,71 +126,6 @@
             "properties": {
               "path": {
                 "const": "openwiz"
-              }
-            }
-          }
-        },
-        {
-          "contains": {
-            "type": "object",
-            "required": [
-              "path"
-            ],
-            "properties": {
-              "path": {
-                "const": "openwiz-service"
-              }
-            }
-          }
-        },
-        {
-          "contains": {
-            "type": "object",
-            "required": [
-              "path"
-            ],
-            "properties": {
-              "path": {
-                "const": "openwiz-server"
-              }
-            }
-          }
-        },
-        {
-          "contains": {
-            "type": "object",
-            "required": [
-              "path"
-            ],
-            "properties": {
-              "path": {
-                "const": "web/index.html"
-              }
-            }
-          }
-        },
-        {
-          "contains": {
-            "type": "object",
-            "required": [
-              "path"
-            ],
-            "properties": {
-              "path": {
-                "const": "web/setup.html"
-              }
-            }
-          }
-        },
-        {
-          "contains": {
-            "type": "object",
-            "required": [
-              "path"
-            ],
-            "properties": {
-              "path": {
-                "const": "web/openwiz-build.txt"
               }
             }
           }
@@ -301,6 +234,18 @@
             }
           }
         }
+      ]
+    }
+  },
+  "$defs": {
+    "harness": {
+      "$comment": "#1361: the harness targets of install.v1.md \"Harness skills\"; not part of the manifest.",
+      "enum": [
+        "claude-code",
+        "codex",
+        "cursor",
+        "opencode",
+        "grok"
       ]
     }
   }

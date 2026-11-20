@@ -1,0 +1,32 @@
+# at e82b02ac
+$ python3 -I adapters/template/test_driver.py
+test_save_failure_after_spawn_reports_unknown (__main__.Template.test_save_failure_after_spawn_reports_unknown) ... ok
+test_simultaneous_wakes_start_one_turn (__main__.Template.test_simultaneous_wakes_start_one_turn) ... /usr/lib/python3.11/unittest/case.py:579: ResourceWarning: unclosed file <_io.BufferedReader name=5>
+  if method() is not None:
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/usr/lib/python3.11/unittest/case.py:579: ResourceWarning: unclosed file <_io.BufferedReader name=6>
+  if method() is not None:
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_start_record_is_not_wakeable_before_it_is_confirmed (__main__.Template.test_start_record_is_not_wakeable_before_it_is_confirmed) ... ok
+test_start_with_nowhere_to_save_starts_nothing (__main__.Template.test_start_with_nowhere_to_save_starts_nothing) ... ok
+test_stop_ends_a_worker_with_a_clean_environment (__main__.Template.test_stop_ends_a_worker_with_a_clean_environment) ... ok
+test_stop_ends_the_run_when_it_cannot_save (__main__.Template.test_stop_ends_the_run_when_it_cannot_save) ... ok
+test_stop_ends_what_the_turn_left_behind_after_it_exits (__main__.Template.test_stop_ends_what_the_turn_left_behind_after_it_exits) ... ok
+test_wake_checks_its_save_before_and_after_spawn (__main__.Template.test_wake_checks_its_save_before_and_after_spawn) ... ok
+test_wake_while_a_turn_runs_starts_no_second_turn (__main__.Template.test_wake_while_a_turn_runs_starts_no_second_turn) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in <n>s
+
+OK
+
+$ python3 -I kernel/driver-kit/test_kit.py
+test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) ... ok
+test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) ... ok
+test_template_passes_all_five (__main__.Kit.test_template_passes_all_five) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in <n>s
+
+OK

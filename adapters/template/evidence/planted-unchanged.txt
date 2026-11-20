@@ -1,0 +1,69 @@
+# The kit run on the template and each planted driver, as kernel/driver-kit/test_kit.py runs it
+# (local tracker, fake-harness, --wait 8), once on main (9be224a: old template, old fake harness)
+# and once on this branch (fixed template, the granted fake-harness change).
+# diff main.txt branch.txt: no output, so every result is identical.
+# Re-run at e82b02ac (after the review's R1-R5 fixes): identical again.
+
+## main and this branch, identical:
+template: exit 0
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 2
+pass wake: the run edited builder status note 2
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+echoes-token: exit 1
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 2
+pass wake: the run edited builder status note 2
+pass stop: the run ended, and a wake after it is refused
+fail token: the driver printed a credential
+error-without-next: exit 1
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 2
+pass wake: the run edited builder status note 2
+fail stop: next is not a string
+fail token: its answer to a token field: next is not a string
+old-records: exit 1
+fail version: it names no openwiz:records v1
+pass start: the run posted builder status note 2
+pass wake: the run edited builder status note 2
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+stop-leaves-run: exit 1
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 2
+pass wake: the run edited builder status note 2
+fail stop: a process the run started still runs after stop
+pass token: no login or token passed through the driver
+takes-token: exit 1
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 2
+pass wake: the run edited builder status note 2
+pass stop: the run ended, and a wake after it is refused
+fail token: start took a token field instead of refusing it
+token-in-args: exit 1
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 2
+pass wake: the run edited builder status note 2
+pass stop: the run ended, and a wake after it is refused
+fail token: a process the driver started holds a credential on its command line
+token-in-env: exit 1
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 2
+pass wake: the run edited builder status note 2
+pass stop: the run ended, and a wake after it is refused
+fail token: a process the driver started holds a credential in OPENWIZ_GITHUB, which the kit never gave it
+wake-does-nothing: exit 1
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 2
+fail wake: builder status note 2 did not change after the wake
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+
+## main's template with the new fake harness: the kit's stop check now catches #1530
+template: exit 1
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 2
+pass wake: the run edited builder status note 2
+fail stop: a process the run started still runs after stop
+pass token: no login or token passed through the driver

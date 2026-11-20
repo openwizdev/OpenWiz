@@ -58,8 +58,8 @@ sys.exit(reply.get("exit", 0))
         return calls
 
     def test_product_needs_line(self):
-        for filename in [PRODUCT["filename"], "apps/web/app/page.tsx",
-                         "contracts/web-api.v1.md", "Cargo.toml", "Cargo.lock",
+        for filename in [PRODUCT["filename"], "crates/cli/src/main.rs",
+                         "contracts/fleet.v1.md", "Cargo.toml", "Cargo.lock",
                          "skills/example/SKILL.md", ".claude-plugin/plugin.json",
                          "new-product/src/main.rs"]:
             for status in ["added", "modified", "removed"]:

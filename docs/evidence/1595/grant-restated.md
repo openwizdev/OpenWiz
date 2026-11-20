@@ -1,0 +1,1 @@
+The owned-paths grant for tools/install/tests/init/test_init.py and tools/install/tests/init/fake_gh.py was restated on #1595 in the form the owned-paths check reads (F4 supporting edit granted); the code and tests are unchanged from 35065e5.

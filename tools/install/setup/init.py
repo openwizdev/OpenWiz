@@ -42,6 +42,16 @@ SCHEMA = 'openwiz.setup-onboard.v1'
 FOLDER = '.openwiz/brain'
 BRANCH = 'openwiz/brain'
 LABEL = 'openwiz'
+# #1361: the labels a first fleet needs: init's own, then the five people set in
+# records v1 (kernel/records.v1.md, section 1), with the descriptions the setup
+# skill writes. Colours are fixed so every factory looks the same. A label that
+# already exists is the owner's and is never changed or deleted.
+LABELS = ((LABEL, '5319e7', 'OpenWiz specs and tickets'),
+          ('spec', 'c5def5', 'The issue is a spec'),
+          ('ready-for-agent', '0e8a16', 'Fully specified, ready for an agent to take unattended'),
+          ('ready-for-human', '1d76db', 'Requires human implementation'),
+          ('needs-info', 'd4c5f9', 'Waiting on reporter for more information'),
+          ('held', 'fef2c0', "Held: waits for the user's approval"))
 BASIS = 'github_repository_read'
 SUFFIX = '-brain'
 TIMEOUT = 60
@@ -176,6 +186,7 @@ class Plan:
     def __init__(self, gh, repository):
         self.gh = gh
         self.requested = repository
+        self.missing = []  # factory labels not on the code repository, from the last read
         self.visibility = None
         self.reason = 'GitHub did not answer the visibility read.'
         self.brain = None
@@ -215,7 +226,7 @@ class Plan:
         """The fingerprinted request: stable across this init's own effects."""
         return {'repository': self.repository, 'visibility': self.visibility,
                 'location': self.brain['location'], 'brain_repository': self.brain['brain_repository'],
-                'label': LABEL, 'branch': BRANCH,
+                'labels': [list(label) for label in LABELS], 'branch': BRANCH,
                 'files': {p: hashlib.sha256(t.encode()).hexdigest() for p, t in sorted(self.content.items())}}
 
     # Each read returns True (present and ours), False (absent) or raises a refusal.
@@ -265,11 +276,19 @@ class Plan:
                           'init does not reopen or replace it.')
         return found
 
+    def missing_labels(self):
+        """The factory labels GitHub doesn't show on the code repository now."""
+        missing = []
+        for name, _, _ in LABELS:
+            status, _ = self.gh.call('GET', f'repos/{self.repository}/labels/{quote(name)}')
+            if status not in (200, 404):
+                raise Unread()
+            if status == 404:
+                missing.append(name)
+        return missing
+
     def label(self):
-        status, _ = self.gh.call('GET', f'repos/{self.repository}/labels/{LABEL}')
-        if status in (200, 404):
-            return status == 200
-        raise Unread()
+        return not self.missing_labels()
 
     def pull(self):
         """The brain proposal, read back: dict with number and state, or None."""
@@ -363,7 +382,8 @@ def disclosed(plan, rows):
     b, code = plan.brain['brain_repository'], plan.repository
     text = {'create_companion': f'Create the private repository {b} for the brain.',
             'link_companion': f'Link {b} to {code} (its homepage), exposing nothing in {code}.',
-            'create_label': f'Create the {LABEL} label on {code} for specs and tickets.',
+            'create_label': f'Create the labels {", ".join(plan.missing)} on {code} for specs and tickets; '
+                            'labels already there are kept as they are.',
             'open_pull_request': f'Open a visible pull request on {b} proposing {FOLDER} (records only).'}
     return [text[r['kind']] for r in rows] or [f'Reuse the existing brain proposal on {b}; nothing new is written.']
 
@@ -382,7 +402,8 @@ def needed(plan):
             row('create_companion', b)
         if not present or plan.companion_repo.get('homepage') != link(code):
             row('link_companion', b)
-    if not plan.label():
+    plan.missing = plan.missing_labels()
+    if plan.missing:
         row('create_label', code)
     existing = plan.pull() if plan.brain['location'] == 'in_repository' or plan.companion() else None
     if existing is not None and existing['state'] == 'closed':
@@ -562,8 +583,25 @@ def write(plan, row, entry, save):
     if kind == 'link_companion':
         return gh.call('PATCH', f'repos/{b}', {'homepage': link(code)})[0]
     if kind == 'create_label':
-        return gh.call('POST', f'repos/{code}/labels',
-                       {'name': LABEL, 'color': '5319e7', 'description': 'OpenWiz specs and tickets'})[0]
+        # Read just before the writes: a label already there is the owner's.
+        missing = plan.missing_labels()
+        for name, color, description in LABELS:
+            if name not in missing:
+                continue
+            status = gh.call('POST', f'repos/{code}/labels',
+                             {'name': name, 'color': color, 'description': description})[0]
+            if status is None or status >= 500:
+                return None
+            if status == 422:  # made by someone else since that read only if it is there now
+                status, _ = gh.call('GET', f'repos/{code}/labels/{quote(name)}')
+                if status == 200:
+                    continue  # theirs, kept as it is
+                if status != 404:
+                    return None
+                return 422
+            if status not in range(200, 300):
+                return status
+        return 201
     # open_pull_request: branch, the brain's files, then the pull request. Each
     # step is read first; an existing file with other content is owner work.
     base = plan.destination()['default_branch']  # R1: before any content write

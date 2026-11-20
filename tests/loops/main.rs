@@ -3,7 +3,6 @@
 //! they stay here; the core planner's tables (LP1, LP2) moved to
 //! `crates/core/tests/loops/` (TV10, #812).
 mod fixture;
-mod l6_api;
 mod l6_cli;
 mod l6_config;
 mod l6_switches;

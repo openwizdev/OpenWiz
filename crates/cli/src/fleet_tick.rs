@@ -82,7 +82,7 @@ fn run_inner(args: Args, out: &mut dyn Write) -> Result<(), &'static str> {
     let state = if args.due {
         std::path::PathBuf::new()
     } else {
-        openwiz_store::default_state_dir(&|n| std::env::var_os(n))
+        crate::state::default_state_dir(&|n| std::env::var_os(n))
             .map_err(|_| "state path unavailable")?
     };
     let room = CloudRoomSource::from_path();

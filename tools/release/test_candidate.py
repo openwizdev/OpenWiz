@@ -31,7 +31,7 @@ PUBLIC = 'openwizdev/OpenWiz'
 PUBLIC_URL = 'https://github.com/openwizdev/OpenWiz.git'
 PRIVATE = 'jparker2006/ClosedWiz'
 TARGETS = ('aarch64-apple-darwin', 'x86_64-apple-darwin', 'x86_64-unknown-linux-gnu')
-PRODUCTS = ('cli', 'runtime', 'server', 'service', 'web')
+PRODUCTS = ('cli', 'runtime')
 VERSION = '0.0.99'
 NOREPLY = '123+fixture@users.noreply.github.com'
 PUBLISHED = '# Changelog\n\n## 0.0.98 · 2026-01-01\n\nContext: Earlier public entry.  \n'
@@ -61,7 +61,7 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(ROOT / 'tools/install'))
 import package  # noqa: E402
 import build_products  # noqa: E402
-# RL4's own fixture: synthetic compiled programs, web exports and their receipts.
+# RL4's own fixture: synthetic compiled programs and their receipts.
 rl4 = load('release_candidate_rl4_fixture', HERE / 'test_product_identity.py')
 # The tracked runtime the collector packages: RL4's files plus the skills the
 # install contract requires.
@@ -317,14 +317,12 @@ class World(unittest.TestCase):
         sums, self.product_rows, self.product_receipts = [], [], []
         build = Path(tempfile.mkdtemp(prefix='build-', dir=self.root))
         for target in TARGETS:
-            binaries, web, work = (build / f'{kind}-{target}' for kind in ('bin', 'web', 'work'))
-            for path in (binaries, web, work):
+            binaries, work = (build / f'{kind}-{target}' for kind in ('bin', 'work'))
+            for path in (binaries, work):
                 path.mkdir()
-            for name in ('index.html', 'setup.html'):
-                (web / name).write_text('Synthetic setup, no accounts.\n')
-            receipts = rl4.build(binaries, web, self.head, target, work, version)
-            identity, record = build_products.collect(self.repo, binaries, web, build / f'products-{target}', version,
-                                                      self.head, target, receipts['program'], receipts['web'])
+            receipts = rl4.build(binaries, self.head, target, work, version)
+            identity, record = build_products.collect(self.repo, binaries, build / f'products-{target}', version,
+                                                      self.head, target, receipts['program'])
             (build / f'identity-{target}.json').write_text(json.dumps(identity))
             out = build / f'bundle-{target}'
             package.assemble(build / f'products-{target}', build / f'identity-{target}.json', out)
@@ -336,7 +334,7 @@ class World(unittest.TestCase):
             assert sha(rl4.canonical({'source': self.head, 'selection': selection})) == runtime['build_receipt']['sha256']
             self.product_receipts.append({
                 'target': target, 'selection': selection,
-                **{kind: {'name': receipts[kind].name, 'utf8': receipts[kind].read_text()} for kind in ('program', 'web')}})
+                **{kind: {'name': receipts[kind].name, 'utf8': receipts[kind].read_text()} for kind in ('program',)}})
             for item in out.iterdir():
                 if item.name == 'SHA256SUMS':
                     sums += item.read_text().splitlines(keepends=True)
@@ -965,7 +963,7 @@ class Candidate(World):
         self.blocked(self.receipt('products', 'ci'), 'products_unverified')
         self.assertEqual(self.writes(), [])
 
-    def test_d2_a_private_term_in_any_staged_runtime_or_web_file_refuses(self):
+    def test_d2_a_private_term_in_any_staged_runtime_file_refuses(self):
         self.ready()
         self.assertEqual(self.evaluate()[0], 0)
         # A named term that occurs in one packaged runtime file (synthetic).

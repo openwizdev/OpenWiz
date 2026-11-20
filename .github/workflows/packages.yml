@@ -30,7 +30,6 @@ jobs:
       OPENWIZ_SERVICE_BUILD: ${{ github.sha }}
       CARGO_BUILD_JOBS: 2
       CIRCLE_NODE_TOTAL: 2
-      NEXT_TELEMETRY_DISABLED: 1
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -41,21 +40,9 @@ jobs:
           import os, re
           assert re.fullmatch(r'0\.[0-9]+\.[0-9]+', os.environ['VERSION'])
           PY
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24.22.1
-          package-manager-cache: false
       - name: Native Rust
         run: rustup toolchain install 1.99.1 --profile minimal --no-self-update && rustup default 1.99.1
-      - name: Build the matching web export
-        working-directory: apps/web
-        env:
-          OPENWIZ_BUILD_VERSION: ${{ inputs.version }}
-          OPENWIZ_BUILD_TARGET: ${{ matrix.target }}
-        run: npm ci --ignore-scripts && npm run build
-      - name: Record the web build receipt
-        run: python3 tools/release/product_identity.py web --web apps/web/out --output web-receipt.json
-      - name: Build the three matching programs
+      - name: Build the matching program
         run: |
           python3 - <<'PY'
           import os
@@ -72,9 +59,7 @@ jobs:
                   blocks[at] = blocks[at].replace('\nversion = "0.0.1-dev"\n', '\nversion = "' + os.environ['VERSION'] + '"\n', 1)
           lock.write_text('[[package]]'.join(blocks))
           PY
-          cargo build --release --locked --target "$TARGET" -p openwiz-cli -p openwiz-service -p openwiz-server
-          "target/$TARGET/release/openwiz-service" --update-build > compiled-source.txt
-          test "$(cat compiled-source.txt)" = "$GITHUB_SHA"
+          cargo build --release --locked --target "$TARGET" -p openwiz-cli
       - name: Query the native programs' compiled identity
         run: python3 tools/release/product_identity.py query --binaries "target/$TARGET/release" --target "$TARGET" --output program-receipt.json
       # #555: `skills` links to the gitignored .wizskills/skills; install the
@@ -85,9 +70,9 @@ jobs:
       - name: Record and assemble exact products
         run: |
           python3 tools/release/build_products.py --root "$GITHUB_WORKSPACE" \
-            --binaries "target/$TARGET/release" --web apps/web/out --output products \
+            --binaries "target/$TARGET/release" --output products \
             --version "$VERSION" --source "$GITHUB_SHA" --target "$TARGET" --identity products.json \
-            --program-receipt program-receipt.json --web-receipt web-receipt.json --record product-record.json
+            --program-receipt program-receipt.json --record product-record.json
           python3 tools/release/package.py --products products --identity products.json --output packages
           python3 tools/release/product_identity.py artifacts --identity products.json --packages packages --output artifacts.json
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -97,7 +82,6 @@ jobs:
             packages/
             products.json
             program-receipt.json
-            web-receipt.json
             product-record.json
             artifacts.json
           if-no-files-found: error

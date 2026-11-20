@@ -14,8 +14,9 @@ run record: identity + occurrence + check result + dispatch outcome + cost
 
 This contract follows spec #541 and the confirmed 0.0.9 grill (PR #320,
 `189a8d70a5269299312877c663d2e08b44abed71`, L1–L9). Run records are kept in
-the service's private state directory, as the approved spec says, separate
-from the repository's definitions. Check findings are never automatically
+OpenWiz's private state directory, separate from the repository's definitions.
+The always-on service that executed loops went in #1264; the pure planner
+(`crates/core/src/loops/`) and `openwiz loop on|off` follow this contract. Check findings are never automatically
 published to GitHub. The grill's L2 settlement leaves those record details
 to the spec; its earlier unconfirmed summary is not a storage decision.
 No publication or live action is authorized by this document.
@@ -39,7 +40,7 @@ A schema pass establishes structure, not approval or execution safety.
 ## Definition (`kind: "definition"`)
 
 Definitions live in the project's default branch, one JSON file per loop
-under `loops/`. The service reads those definitions, not an agent's
+under `loops/`. An executor reads those definitions, not an agent's
 unmerged proposal. IDs are unique within a project; changing the file name
 keeps its identity when `id` stays the same. Duplicate IDs are an error.
 
@@ -113,7 +114,7 @@ On a successful exit, zero stdout bytes means `quiet`. Any nonempty valid
 stdout, including whitespace, means work; it is the run's `finding`.
 Shadow records that finding without dispatch. A disabled loop admits
 nothing new; off does not undo an effect or kill an existing thread.
-Runtime off/on state is durable in the service and must survive restarts
+Runtime off/on state is durable in OpenWiz's private state and must survive restarts
 and default-branch refreshes; `enabled` initializes a previously unseen
 loop. L6's off/on writes operate only on these OpenWiz loop identities.
 
@@ -158,8 +159,8 @@ run once per pass, after receipt reconciliation and checks, immediately
 before dispatch planning. `pending`, `starting` and `active` occupy capacity;
 a failed read or any other status leaves occupancy unknown and holds
 dispatch. An observed `idle` or `error` retires that run from occupancy,
-durably keyed by its run and thread identities in private service state.
-Later passes and service restarts do not read retired runs again. This
+durably keyed by its run and thread identities in private state.
+Later passes and restarts do not read retired runs again. This
 retires only the loop's original work: later activity on that thread is
 outside this loop admission accounting. The created receipt, budget charge
 and unknown outcome rules remain unchanged.

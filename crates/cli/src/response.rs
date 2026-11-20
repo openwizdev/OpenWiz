@@ -19,10 +19,6 @@ impl Request {
 
     pub fn for_command<S: AsRef<OsStr>>(command: &str, args: &[S]) -> Self {
         let mut json = false;
-        let mut preview = false;
-        let mut check = false;
-        let mut yes = false;
-        let mut status = false;
         let mut dry_run = false;
         let mut agent = false;
         let mut index = 0;
@@ -44,14 +40,9 @@ impl Request {
             let flag = bytes.split(|b| *b == b'=').next().unwrap_or_default();
             let takes_value = match command {
                 "ls" => matches!(flag, b"--limit" | b"--offset"),
-                "send" => matches!(flag, b"--op-id" | b"--attach" | b"--attachment"),
-                "new" => crate::new_thread::is_value_option(flag),
                 "fleet" => flag == b"--expect-plan",
                 _ => false,
             };
-            if command == "new" && flag == b"--status" {
-                status = true;
-            }
             if takes_value {
                 if flag.len() == bytes.len() {
                     index += 1;
@@ -62,9 +53,6 @@ impl Request {
             // malformed options do not stop scanning for a later genuine one.
             match bytes {
                 b"--json" => json = true,
-                b"--preview" => preview = true,
-                b"--check" => check = true,
-                b"--yes" => yes = true,
                 b"--dry-run" => dry_run = true,
                 b"--agent" => agent = true,
                 _ => {}
@@ -74,19 +62,7 @@ impl Request {
         let command = match command {
             "ls" => "ls",
             "show" => "show",
-            "send" if check => "send.check",
-            "send" if preview => "send.preview",
-            "send" => "send",
-            "new" if status => "new.status",
-            "new" if yes => "new",
-            "new" => "new.preview",
             "models" => "models",
-            "attachment" => match first {
-                Some("add") => "attachment.add",
-                Some("ls") => "attachment.ls",
-                Some("rm") => "attachment.rm",
-                _ => "unknown",
-            },
             "fleets" => "fleets",
             "fleet" => match first {
                 Some("due") => "fleet.due",

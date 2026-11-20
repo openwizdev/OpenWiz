@@ -1,0 +1,76 @@
+{
+ "pr": {
+  "body": "Closes #7",
+  "baseRefOid": "0000000000000000000000000000000000000000",
+  "closingIssuesReferences": {
+   "nodes": [
+    {
+     "number": 7,
+     "repository": {
+      "nameWithOwner": "example/project"
+     }
+    }
+   ]
+  },
+  "files": [
+   {
+    "pageInfo": {
+     "hasNextPage": false,
+     "endCursor": null
+    },
+    "nodes": [
+     {
+      "path": "tools/widget/check.py"
+     },
+     {
+      "path": "outside/mentioned.txt"
+     },
+     {
+      "path": "README.md"
+     },
+     {
+      "path": "crates/core/src/other.rs"
+     },
+     {
+      "path": "crates/core/sub/src/widget.rs"
+     },
+     {
+      "path": "apps/gadgetry.js"
+     }
+    ]
+   }
+  ],
+  "comments": {
+   "pageInfo": {
+    "hasNextPage": false,
+    "endCursor": null
+   },
+   "nodes": []
+  }
+ },
+ "issues": {
+  "7": {
+   "__typename": "Issue",
+   "body": "## What to build\n\nSynthetic ticket.\n\n## Owned paths\n\n- `tools/widget/` in `example/project` (new: the widget and its tests)\n- `.github/workflows/` in `example/project` (shared: one new job)\n- `crates/*/src/widget.rs` and `docs/**/widget.md`\n- `apps/gadget` (a folder named without its slash)\n- `README.md` in `example/other` (the other repository's half)\n- the widget's icon files in `example/project`\n\n**Relies on:** nothing\n\n## Acceptance criteria\n\n- [ ] `outside/mentioned.txt` is only mentioned here, never owned\n",
+   "comments": {
+    "pageInfo": {
+     "hasNextPage": false,
+     "endCursor": null
+    },
+    "nodes": []
+   }
+  }
+ },
+ "exit": 1,
+ "out": [
+  "OUT: outside/mentioned.txt (ticket #7)",
+  "OUT: README.md (ticket #7)",
+  "OUT: crates/core/src/other.rs (ticket #7)",
+  "OUT: crates/core/sub/src/widget.rs (ticket #7)",
+  "OUT: apps/gadgetry.js (ticket #7)",
+  "owned-paths: 5 file(s) outside the owned paths and grants of ticket #7"
+ ],
+ "absent": [
+  "OUT: tools/widget/check.py"
+ ]
+}

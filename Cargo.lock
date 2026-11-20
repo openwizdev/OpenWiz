@@ -39,7 +39,6 @@ dependencies = [
  "openwiz-adapter-cloudroom",
  "openwiz-adapter-github",
  "openwiz-core",
- "openwiz-store",
  "serde",
  "serde_json",
 ]
@@ -52,41 +51,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "openwiz-server"
-version = "0.0.1-dev"
-dependencies = [
- "openwiz-adapter-cloudroom",
- "openwiz-adapter-github",
- "openwiz-core",
- "openwiz-store",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "openwiz-service"
-version = "0.0.1-dev"
-dependencies = [
- "openwiz-adapter-cloudroom",
- "openwiz-adapter-github",
- "openwiz-cli",
- "openwiz-core",
- "openwiz-server",
- "openwiz-store",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "openwiz-store"
-version = "0.0.1-dev"
-dependencies = [
- "openwiz-core",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "openwiz-tests"
 version = "0.0.1-dev"
 dependencies = [
@@ -94,8 +58,6 @@ dependencies = [
  "openwiz-adapter-github",
  "openwiz-cli",
  "openwiz-core",
- "openwiz-server",
- "openwiz-store",
  "serde",
  "serde_json",
 ]

@@ -470,33 +470,13 @@ class Check:
         (home/"tmp").mkdir()
         require((self.fresh/"Cargo.toml").is_file() and (self.fresh/"Cargo.lock").is_file(), "Rust workspace and lock required")
         tasks = []
-        if (self.fresh/"apps/web/package.json").exists():
-            tasks.extend(("apps/web", ["npm",*cmd]) for cmd in (["ci","--ignore-scripts"],["run","build"],["run","typecheck"],["run","check"]))
-        site = any(f["path"].startswith("apps/site/") for f in self.report["files"])
-        if site:
-            require(all((self.fresh/"apps/site"/name).is_file() for name in ("package.json","build.mjs")),
-                    "site build tooling missing")
-            tasks.append(("apps/site",["npm","run","build"]))
         tasks.extend((".",["cargo",*cmd]) for cmd in (["build","--workspace","--release","--locked"],
                      ["test","--workspace","--locked"],["fmt","--check"],
                      ["clippy","--workspace","--all-targets","--locked","--","-D","warnings"]))
-        if (self.fresh/"apps/web/package.json").exists():
-            tasks.append(("apps/web",["npm","test"]))
-        if site:
-            tasks.append(("apps/site",["npm","test"]))
         for index,(folder,cmd) in enumerate(tasks):
             output = command(cmd,self.fresh/folder,env,log=self.args.evidence/f"build-{index+1:02}.log")
             if cmd[:2] == ["cargo","test"]:
                 require(re.search(rb"test result: ok\. [1-9][0-9]* passed",output), "no passing Rust tests observed")
-            if folder == "apps/site" and cmd == ["npm","test"]:
-                text = output.decode("utf-8")
-                counts = re.findall(r"^(?:#|ℹ) tests (\d+)\b",text,re.M)
-                passed = re.findall(r"^(?:#|ℹ) pass (\d+)\b",text,re.M)
-                failed = re.findall(r"^(?:#|ℹ) fail (\d+)\b",text,re.M)
-                # npm test runs the export and browser suites separately.
-                require(len(counts) == 2,"site test suites incomplete")
-                require(counts and counts == passed and all(int(n) > 0 for n in counts)
-                        and failed == ["0"]*len(counts), "no passing site tests observed")
         for name,proof,tests,exact in self.regressions:
             try:
                 if exact:
@@ -509,18 +489,13 @@ class Check:
                                       self.fresh,env,log=self.args.evidence/f"{name}-{identity.replace(':','_')}.log")
                         counts = re.findall(rb"test result: ok\. (\d+) passed",out)
                         require(sum(int(n) for n in counts) == 1,f"{name}: expected exactly one passing regression")
-                elif tests:
+                else:
                     target = re.fullmatch(r"tests/([a-z0-9-]+)/[^/]+\.rs",proof)[1]
                     for test in tests:
                         out = command(["cargo","test","--locked","-p","openwiz-tests","--test",target,test],
                                       self.fresh,env,log=self.args.evidence/f"{name}-{test}.log")
                         counts = re.findall(rb"test result: ok\. (\d+) passed",out)
                         require(sum(int(n) for n in counts) == 1,f"{name}: expected exactly one passing regression")
-                else:
-                    out = command(["node","--test","--test-reporter=tap",str(self.fresh/proof)],
-                                  self.fresh/"apps/web",env,log=self.args.evidence/f"{name}.log")
-                    require(re.search(rb"# tests 4\b",out) and re.search(rb"# pass 4\b",out),
-                            f"{name}: expected four passing browser regressions")
             except Refused as error:
                 raise Refused(f"{name}: {error}") from error
         binary = self.args.staging/"target/release/openwiz"

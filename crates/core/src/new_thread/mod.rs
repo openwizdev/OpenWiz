@@ -11,10 +11,8 @@
 //! durable record through a [`record::NewThreadStore`], and time through a
 //! [`Clock`](crate::ops::Clock). Op ids are generated outside the core.
 //!
-//! A1 phase 2 (ClosedWiz#11) makes it reachable from the CLI (`openwiz new`,
-//! `openwiz models`, `openwiz new --status`), with `thread spawn` and `cloud
-//! status` on the allowlist and the record in `openwiz-store`. No server
-//! route reaches it until A2.
+//! The fleet engine reaches it through [`crate::fleet::starts`], with
+//! `thread spawn` and `cloud status` on the allowlist.
 //!
 //! - [`options`]: the Cloud catalogue as the adapter reads it, and the
 //!   options offered from it;

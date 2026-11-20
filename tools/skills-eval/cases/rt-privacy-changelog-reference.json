@@ -52,7 +52,7 @@
       8501
      ],
      "files": [
-      "apps/web/badge.tsx",
+      "apps/portal/badge.tsx",
       "changes/8501.md"
      ],
      "diff": "diff --git a/changes/8501.md b/changes/8501.md\n+kind: added\n+\n+Fixed in pull request #8502 per private/notes/sync.md: a sync badge.\n",

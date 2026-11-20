@@ -318,8 +318,8 @@ pub enum ClaimOutcome {
     Refused(Refusal),
 }
 
-/// The staged attachments, as the gate and the operations see them.
-/// `openwiz-store` implements it; the core never touches storage.
+/// The staged attachments, as the gate and the operations see them; the
+/// core never touches storage.
 ///
 /// Required of an implementation:
 /// - [`look_up`](Self::look_up) reads the copy again whole, and writes

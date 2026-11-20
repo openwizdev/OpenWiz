@@ -10,9 +10,6 @@ inputs:
   cargo:
     default: 'false'
     description: Whether this lane uses Cargo
-  npm:
-    default: 'false'
-    description: Whether this lane reads web packages
   browser:
     default: 'false'
     description: Whether this lane needs Chromium
@@ -31,14 +28,13 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: One device for the web roots
+    - name: One device for the test roots
       if: inputs.cargo == 'true' || inputs.browser == 'true'
       shell: bash
       # One device for a directory and its files: an overlay root (Jog's,
       # #2467) gives directories the overlay's device and files another, and
-      # /proc/locks names a file by the overlay's. Then A8's web root reads as
-      # "an entry on another device" and tests/support/forks.rs never finds a
-      # held lock. /tmp, and Cargo's CARGO_TARGET_TMPDIR (target/tmp, where
+      # /proc/locks names a file by the overlay's. Then tests/support/forks.rs
+      # never finds a held lock. /tmp, and Cargo's CARGO_TARGET_TMPDIR (target/tmp, where
       # those tests make their files), go on a tmpfs when they are split.
       run: |
         split() {
@@ -50,8 +46,6 @@ runs:
         }
         if split /tmp; then
           sudo mount -t tmpfs -o size=10g,mode=1777 closedwiz-tmp /tmp
-          mkdir -p /tmp/web-out apps/web/out
-          sudo mount --bind /tmp/web-out apps/web/out
         fi
         mkdir -p target/tmp
         if split target/tmp; then
@@ -84,15 +78,10 @@ runs:
           ~/.rustup
           ~/.cargo/registry
           ${{ github.workspace }}/target
-          ~/.npm
     - name: Restore the cargo-rust cache
       if: inputs.cargo == 'true' && inputs.hosted != 'true' && steps.service.outputs.service != 'jog' && steps.volume.outputs.namespace != 'true'
       shell: bash
       run: sh ci/runner/cache.sh restore "${{ inputs.cache }}" "$HOME/.cargo/registry" "$GITHUB_WORKSPACE/target"
-    - name: Restore the npm cache
-      if: inputs.npm == 'true' && inputs.hosted != 'true' && steps.service.outputs.service != 'jog' && steps.volume.outputs.namespace != 'true'
-      shell: bash
-      run: sh ci/runner/cache.sh restore npm "$HOME/.npm"
     - name: Restore the GitHub cargo-rust cache
       if: inputs.cargo == 'true' && (inputs.hosted == 'true' || steps.service.outputs.service == 'jog')
       uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -105,13 +94,6 @@ runs:
           ${{ inputs.cache }}-${{ runner.os }}-${{ inputs.rust-version }}-${{ hashFiles('Cargo.lock') }}-
           ${{ inputs.cache }}-${{ runner.os }}-${{ inputs.rust-version }}-
           ${{ inputs.fallback && format('{0}-{1}-{2}-{3}-', inputs.fallback, runner.os, inputs.rust-version, hashFiles('Cargo.lock')) || '' }}
-    - name: Restore the GitHub npm cache
-      if: inputs.npm == 'true' && (inputs.hosted == 'true' || steps.service.outputs.service == 'jog')
-      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-      with:
-        path: ~/.npm
-        key: npm-${{ runner.os }}-${{ hashFiles('apps/web/package-lock.json') }}
-        restore-keys: npm-${{ runner.os }}-
     - name: The hosted setup
       if: inputs.hosted == 'true' || steps.service.outputs.service == 'jog'
       shell: bash
@@ -143,10 +125,6 @@ runs:
         bin="$(command -v chromium || command -v chromium-browser || command -v google-chrome)"
         "$bin" --version
         echo "OPENWIZ_CHROMIUM=$bin" >> "$GITHUB_ENV"
-    - name: Run npm ci --ignore-scripts
-      if: inputs.npm == 'true'
-      shell: bash
-      run: sh ci/retry.sh 3 -- npm ci --ignore-scripts --prefix apps/web
     # #555: `skills` is a tracked link to the gitignored .wizskills/skills, so
     # every lane installs the WizSkills release wizskills.lock pins first.
     - name: The pinned WizSkills

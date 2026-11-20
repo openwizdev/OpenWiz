@@ -1,13 +1,12 @@
-//! The OpenWiz 0.0.3 messaging proof cases, M1 to M15 (ClosedWiz#8), and
-//! M16 to M18 (#79: preview, lookup and the in-flight guard), each written
-//! before the behaviour.
+//! The kept OpenWiz 0.0.3 messaging proofs (ClosedWiz#8): M12, the
+//! allowlist's `thread tell` shape, which the engine's loop messages use.
+//! `openwiz send` and its cases went in #1264.
 //!
 //! Every case runs against the repository's fake `room-cli`. **Nothing is
-//! sent live**, and fixture tests never prove live behaviour: the `thread
-//! tell` shapes are documented, not observed, until ticket 3 (ClosedWiz#10).
+//! sent live**, and fixture tests never prove live behaviour.
 //!
-//! `structure` holds the checks that are not one M case: dependency
-//! direction for the new store crate, and a core without I/O.
+//! `structure` holds the checks that are not one M case: a core without
+//! I/O.
 
 mod support;
 
@@ -29,29 +28,5 @@ mod forks;
 #[path = "../support/counter.rs"]
 mod counter;
 
-mod m01_exact_invocation;
-mod m02_one_target;
-mod m03_mode_rules;
-mod m04_outcome_mapping;
-mod m05_effects;
-mod m06_lost_acknowledgement;
-mod m07_op_id_binding;
-mod m08_cross_process_claim;
-mod m09_crash_recovery;
-mod m10_record;
-mod m11_inventory_unchanged;
 mod m12_allowlist;
-mod m13_drift;
-mod m14_cli;
-mod m15_text_only;
-mod m16_preview;
-mod m17_lookup;
-mod m18_in_flight;
 mod structure;
-
-// B2 (ClosedWiz#15): attachments in send (AD1 to AD5, AD7, AD9, AD10,
-// AD13).
-#[path = "../attachments/staging.rs"]
-mod staging;
-
-mod ad_send_attachments;

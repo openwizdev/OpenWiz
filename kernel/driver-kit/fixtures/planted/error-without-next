@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+"""Planted bad driver for the kit's tests: its errors carry no `next`."""
+import importlib.machinery, importlib.util, os, sys
+sys.dont_write_bytecode = True
+path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', '..', 'adapters', 'template', 'driver')
+spec = importlib.util.spec_from_loader('template', importlib.machinery.SourceFileLoader('template', path))
+t = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(t)
+class Bare(Exception):
+    def __init__(self, error, next):
+        super().__init__(error, None)
+t.Refused = Bare
+t.main()

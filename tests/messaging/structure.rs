@@ -95,23 +95,19 @@ fn every_serialized_label_is_in_the_schema() {
     }
 }
 
-/// #79: the preview and lookup shapes are in the schema, with every label
-/// the core can serialize, and an earlier send says whether it is in flight.
+/// #79: the preview shape is in the schema, with every label the core can
+/// serialize, and an earlier send says whether it is in flight. (Its lookup
+/// half went with `messaging::lookup` in #1264.)
 #[test]
-fn the_preview_and_lookup_shapes_are_in_the_schema() {
-    use openwiz_core::messaging::lookup::{LOOKUP_SCHEMA_ID, LookupResult};
+fn the_preview_shape_is_in_the_schema() {
     use openwiz_core::messaging::preview::{PREVIEW_SCHEMA_ID, PreviewStatus};
     let schema = messaging_schema();
-    for def in ["preview", "lookup", "refusal"] {
+    for def in ["preview", "refusal"] {
         assert!(schema["$defs"][def].is_object(), "no $defs/{def}");
     }
     assert_eq!(
         schema["$defs"]["preview"]["properties"]["schema"]["const"],
         PREVIEW_SCHEMA_ID
-    );
-    assert_eq!(
-        schema["$defs"]["lookup"]["properties"]["schema"]["const"],
-        LOOKUP_SCHEMA_ID
     );
     let statuses = schema["$defs"]["preview"]["properties"]["status"]["enum"]
         .as_array()
@@ -125,29 +121,11 @@ fn the_preview_and_lookup_shapes_are_in_the_schema() {
         let label = serde_json::to_value(s).unwrap();
         assert!(statuses.contains(&label), "{label} is not in the schema");
     }
-    fn _exhaustive(s: PreviewStatus, r: LookupResult) {
+    fn _exhaustive(s: PreviewStatus) {
         match s {
             PreviewStatus::Ready | PreviewStatus::NeedsAcknowledgement | PreviewStatus::Refused => {
             }
         }
-        match r {
-            LookupResult::NoRecord | LookupResult::OtherTarget | LookupResult::Recorded { .. } => {}
-        }
-    }
-    for (result, ok) in [
-        (serde_json::json!({"kind": "no_record"}), true),
-        (serde_json::json!({"kind": "other_target"}), true),
-        (serde_json::json!({"kind": "recorded"}), false),
-        (serde_json::json!({"kind": "dispatched"}), false),
-    ] {
-        let lookup = serde_json::json!({
-            "schema": LOOKUP_SCHEMA_ID,
-            "op_id": "op-1",
-            "target": "thr_syn_0001",
-            "summary": "Synthetic",
-            "result": result,
-        });
-        assert_eq!(validate_def("lookup", &lookup).is_empty(), ok, "{lookup}");
     }
     let earlier = &schema["$defs"]["earlier_send"];
     assert!(

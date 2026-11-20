@@ -3,12 +3,12 @@
 a fake `gh` (fixtures/gh). Run from anywhere:  python3 -I ci/escapes/test.py
 
 P: the plan reader on the CI selection record's own fixtures
-(ci/selection/, #1405): every valid plan is accepted, every invalid one is
-refused for the reason ci/selection/README.md gives it, and the contract's
-read cases get the answers they expect. L: reading a failed job's log for
-the tests that failed. F: the finder end to end, on a synthetic GitHub: its
-exact reads, the one issue it opens for an escape, and what it says when it
-can't tell. Every expected value is written here by hand from the contract
+(ci/selection/, #1405): every valid plan is accepted, every invalid one (a
+case of ci/selection/invalid/cases.json) is refused for the reason its case
+gives, and the contract's read cases get the answers they expect. L: reading
+a failed job's log for the tests that failed. F: the finder end to end, on a
+synthetic GitHub: its exact reads, the one issue it opens for an escape, and
+what it says when it can't tell. Every expected value is written here by hand from the contract
 and the ticket, never computed the way escapes.py computes it.
 """
 import importlib.util
@@ -32,6 +32,9 @@ sys.dont_write_bytecode = True  # no __pycache__ beside the finder
 spec = importlib.util.spec_from_file_location("escapes", SCRIPT)
 escapes = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(escapes)
+spec = importlib.util.spec_from_file_location("expand", SELECTION / "invalid" / "expand.py")
+invalid = importlib.util.module_from_spec(spec)  # the invalid plans' table
+spec.loader.exec_module(invalid)
 
 
 def fixture(rel):
@@ -39,7 +42,7 @@ def fixture(rel):
 
 
 def readme_table(section):
-    """The README's rows in one section: {"invalid/x.json": "Rule 3: ..."}."""
+    """The README's rows in one section: {"valid/x.json": "A push ..."}."""
     text = (SELECTION / "README.md").read_text()
     part = text.split(f"## {section}\n", 1)[1].split("\n## ", 1)[0]
     return dict(re.findall(r"^\| `([^`]+)` \| (.+?) \|$", part, re.M))
@@ -58,14 +61,16 @@ class Plans(unittest.TestCase):
                 self.assertEqual(escapes.refusals(fixture(f"valid/{name}")), [])
 
     def test_every_invalid_plan_is_refused_for_its_reason(self):
-        table = readme_table("Invalid")
-        names = sorted(p.name for p in (SELECTION / "invalid").iterdir())
-        self.assertEqual(sorted(Path(k).name for k in table), names)
-        self.assertGreaterEqual(len(names), 54)
-        for rel, why in table.items():
-            with self.subTest(rel):
-                got = escapes.refusals(fixture(rel))
-                self.assertNotEqual(got, [], f"{rel} was accepted")
+        cases = invalid.CASES
+        self.assertGreaterEqual(len(cases), 54)
+        raw = sorted(name for name, case in cases.items() if case.get("raw"))
+        files = sorted(p.name for p in (SELECTION / "invalid").iterdir())
+        self.assertEqual(files, sorted(["cases.json", "expand.py", *raw]))
+        for name, case in cases.items():
+            why = case["why"]
+            with self.subTest(name):
+                got = escapes.refusals(invalid.plan(name))
+                self.assertNotEqual(got, [], f"{name} was accepted")
                 kind = why.split(":", 1)[0]
                 if kind == "Schema":
                     self.assertTrue(all(g.startswith("schema: ") for g in got), got)
@@ -216,8 +221,8 @@ class Logs(unittest.TestCase):
 
     def test_a_no_fail_fast_list(self):
         text = rust_tests_log({"plain": ["error: 2 targets failed:\n    `-p openwiz-tests --test messaging`\n"
-                                         "    `-p openwiz-tests --test web-api`\n", 101]})
-        self.assertEqual(escapes.failing_tests(text), ({"rust:test:messaging", "rust:test:web-api"}, []))
+                                         "    `-p openwiz-tests --test fleet`\n", 101]})
+        self.assertEqual(escapes.failing_tests(text), ({"rust:test:messaging", "rust:test:fleet"}, []))
 
     def test_a_later_steps_output_is_not_this_steps(self):
         text = rust_tests_log({"plain": [hint("web-api"), 101]}, after="##[group]Run cargo test -p openwiz-tests --test checks pending\n" + hint("checks"))
@@ -500,7 +505,11 @@ class Finder(unittest.TestCase):
         expired = {f"api {R}/actions/runs/9000013/artifacts?name=ci-selection-1&per_page=100&page=1": ok(
             {"total_count": 1, "artifacts": [{"id": 7000, "name": "ci-selection-1", "expired": True,
                                               "size_in_bytes": 4000}]})}
-        refused = {f"api {R}/actions/artifacts/7000/zip": {"zip": {"ci-selection.json": "ci/selection/invalid/test-twice.json"}}}
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        twice = Path(scratch.name) / "test-twice.json"  # an absolute path: the fake gh reads it as is
+        twice.write_text(invalid.plan("test-twice.json"))
+        refused = {f"api {R}/actions/artifacts/7000/zip": {"zip": {"ci-selection.json": str(twice)}}}
         not_in_zip = {f"api {R}/actions/artifacts/7000/zip": {"zip": {"other.json": "ci/selection/valid/selected-mixed.json"}}}
         no_run = {f"api {R}/actions/workflows/ci.yml/runs?event=pull_request&head_sha={'2' * 40}&per_page=100&page=1":
                   ok({"total_count": 0, "workflow_runs": []})}

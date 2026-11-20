@@ -28,8 +28,33 @@ use std::process::Command;
 use openwiz_adapter_cloudroom::allowlist::{Invocation, ThreadId};
 use openwiz_core::messaging::Mode;
 
-use crate::m01_exact_invocation::{EXCLUDED, tell_argv};
 use crate::support::*;
+
+/// The flags of `thread tell` OpenWiz never passes, and the mode it never
+/// asks for (moved here from M1, `m01_exact_invocation.rs`, by #1264).
+const EXCLUDED: &[&str] = &[
+    "--model",
+    "--reasoning-level",
+    "--service-tier",
+    "--permission-mode",
+    "--send-at",
+    "--plan",
+    "--file",
+    "--image",
+    "--hard",
+    "auto",
+];
+
+/// The exact argument list OpenWiz passes for one tell (moved with
+/// [`EXCLUDED`]).
+fn tell_argv(target: &str, mode: &str, text: &str) -> Vec<String> {
+    [
+        "thread", "tell", target, "--mode", mode, "--json", "--", text,
+    ]
+    .iter()
+    .map(|w| (*w).to_owned())
+    .collect()
+}
 
 /// Subcommands that change something. Only `tell` may ever be passed.
 const MUTATING: &[&str] = &[
@@ -265,19 +290,9 @@ fn no_product_source_spells_an_excluded_flag_or_another_write() {
         .canonicalize()
         .unwrap();
     // OpenWiz 0.0.4 (ClosedWiz#11, A1 phase 2): the catalogue key `steer`,
-    // only in the adapter's `cloud status` reader; and `openwiz new`'s own
-    // `--model` option, only in the CLI's `new` (not a room-cli argument
-    // there).
+    // only in the adapter's `cloud status` reader.
     let catalogue = Path::new(ROOT)
         .join("crates/adapters/cloudroom/src/new_thread.rs")
-        .canonicalize()
-        .unwrap();
-    let new_command = Path::new(ROOT)
-        .join("crates/cli/src/new_thread.rs")
-        .canonicalize()
-        .unwrap();
-    let service_reader = Path::new(ROOT)
-        .join("crates/service/src/document.rs")
         .canonicalize()
         .unwrap();
     // `spawn`'s own flags, only inside `ThreadSpawn`'s argv in the allowlist.
@@ -323,9 +338,6 @@ fn no_product_source_spells_an_excluded_flag_or_another_write() {
                 );
                 continue;
             }
-            if canonical == new_command && *flag == "--model" {
-                continue;
-            }
             if canonical == allowlist && matches!(*flag, "--file" | "--image") {
                 assert_eq!(text.matches(&literal).count(), 1, "{literal} once");
                 let builder = text
@@ -349,13 +361,6 @@ fn no_product_source_spells_an_excluded_flag_or_another_write() {
                 assert!(
                     loop_write_arms_only(&canonical, &allowlist, &text, word),
                     "{word} outside its loop write arm"
-                );
-                continue;
-            }
-            if *word == "update" {
-                assert!(
-                    service_update_fields_only(&canonical, &service_reader, &text),
-                    "{path:?}: update is not the service JSON field"
                 );
                 continue;
             }
@@ -405,66 +410,6 @@ fn no_product_source_spells_an_excluded_flag_or_another_write() {
             assert!(!text.contains(&literal), "{path:?} contains {literal}");
         }
     }
-}
-
-// #269: only the service contract reader may quote this JSON field. This
-// helper is shared by the source scan and its planted command-like breaks.
-fn service_update_fields_only(path: &Path, reader: &Path, text: &str) -> bool {
-    text.match_indices("\"update\"").all(|(at, literal)| {
-        if path == reader.with_file_name("update.rs") {
-            let start = text[..at].rfind('\n').map_or(0, |n| n + 1);
-            let end = text[at..].find('\n').map_or(text.len(), |n| at + n);
-            return text[start..end].trim() == "const UPDATE: &str = \"update\";";
-        }
-        if path != reader {
-            return false;
-        }
-        let before = &text[..at];
-        let Some(prefix) = before.strip_suffix("value[") else {
-            return false;
-        };
-        let boundary = prefix
-            .chars()
-            .next_back()
-            .is_none_or(|c| !c.is_alphanumeric() && c != '_');
-        boundary && text[at + literal.len()..].starts_with(']')
-    })
-}
-
-#[test]
-fn service_update_exception_never_allows_a_command_or_another_file() {
-    let reader = Path::new(ROOT)
-        .join("crates/service/src/document.rs")
-        .canonicalize()
-        .unwrap();
-    let other = Path::new(ROOT)
-        .join("crates/service/src/runtime.rs")
-        .canonicalize()
-        .unwrap();
-    let fields =
-        r#"!value["update"].is_null(); value["update"]["outcome"]; value["update"][field];"#;
-    assert!(service_update_fields_only(&reader, &reader, fields));
-    for bad in [
-        r#"let argv = ["thread", "update", "thr_syn_0001"];"#,
-        r#"value["update"]; let argv = ["update"];"#,
-        r#"other_value["update"];"#,
-        r#"value["update", "argument"];"#,
-    ] {
-        assert!(
-            !service_update_fields_only(&reader, &reader, bad),
-            "command-like occurrence escaped: {bad}"
-        );
-    }
-    assert!(!service_update_fields_only(&other, &reader, fields));
-    let updater = reader.with_file_name("update.rs").canonicalize().unwrap();
-    let key = "const UPDATE: &str = \"update\";";
-    assert!(service_update_fields_only(&updater, &reader, key));
-    assert!(!service_update_fields_only(&other, &reader, key));
-    assert!(!service_update_fields_only(
-        &updater,
-        &reader,
-        &format!("{key}\nlet argv = [\"update\"];")
-    ));
 }
 
 // #792 (J109): the two loop write arms of the allowlist's argv, each from

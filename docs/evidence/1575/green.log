@@ -1,0 +1,7 @@
+# #1575 green: python3 -I tools/install/test_pull.py at the fix, with the granted selected() line, under umask 022 (as on the CI runner).
+test_pre_ap11_selected_build_reports_status_and_upgrades_to_a_cli_only_candidate (__main__.Pull.test_pre_ap11_selected_build_reports_status_and_upgrades_to_a_cli_only_candidate) ... ok
+test_published_upgrade_stages_verified_files_keeps_selection_and_refuses_rollback (__main__.Pull.test_published_upgrade_stages_verified_files_keeps_selection_and_refuses_rollback) ... ok
+
+----------------------------------------------------------------------
+
+OK

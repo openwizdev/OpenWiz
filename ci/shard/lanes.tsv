@@ -21,7 +21,6 @@ release:product-identity	8.24
 release:pull	0.18
 release:security-baseline	2.18
 release:security-candidate	3.91
-release:setup-api	0.22
 release:setup-onboard-contract	0.14
 release:test	235.51
 skill:launch-fleet:skills/launch-fleet/scripts/test-effects.py	0.17

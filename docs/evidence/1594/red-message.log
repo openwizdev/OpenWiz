@@ -1,0 +1,5 @@
+$ python3 -I tools/install/test_install.py HarnessSkills   # at the message red commit, before its fix
+FAIL: test_the_refusal_names_the_unmarked_folder_and_prints_a_working_remove_command (__main__.HarnessSkills.test_the_refusal_names_the_unmarked_folder_and_prints_a_working_remove_command)
+AssertionError: 'Look inside it' not found in "/tmp/openwiz-if1-<tmp>/home it's here/.claude/skills/.openwiz-stage-grill is not an OpenWiz copy; nothing was changed"
+Ran 5 tests in 1.552s
+FAILED (failures=1)

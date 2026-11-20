@@ -6,8 +6,8 @@ targets are `aarch64-apple-darwin`, `x86_64-apple-darwin` and
 running an offline verifier. Native execution on each host needs live evidence.
 The manifest's setup API must be 1. Unknown/duplicate fields, assets and archive
 members fail closed. Version is one `0.<minor>.<patch>` pre-release; source is a
-full lowercase Git commit. Programs, web and skill runtime share this identity
-and the same build job. Review binds the exact complete asset list and hashes.
+full lowercase Git commit. The program and the skill runtime share this
+identity and the same build job. Review binds the exact complete asset list and hashes.
 
 The consumer needs Python 3.9+, a supported OS/architecture and disk space;
 no Rust, Cargo, Node or npm. `tools/install/install.py` accepts explicit
@@ -22,8 +22,11 @@ Compressed archive SHA-256 and byte length are checked before archive parsing.
 Every member is a unique regular file, with an exact manifest path, size, mode
 and content hash. No extraction API, symlink, hard link, device, directory entry,
 PAX extension, absolute path, empty/dot/dot-dot segment or unlisted file is
-accepted. Only the three named programs and files under web/ and runtime/ are
-allowed. Every asset is hash-checked before activation, including repeated
+accepted. Only the named program `openwiz` and files under runtime/ are
+allowed. Only to verify the build already selected (status, skills and the
+update's version check), a complete pre-AP11 layout, with the `openwiz-service`
+and `openwiz-server` programs, web/ and its stamp, is also read.
+Every asset is hash-checked before activation, including repeated
 installs. The manifest lists every file (not directory globs). Runtime includes
 setup, grill, plan-graph and launch-fleet skills and their script resources.
 
@@ -35,10 +38,10 @@ explicitly records `openwiz.update-channel.v1`, channel `packaged`, in
 `<root>/channel.json`; absent metadata keeps existing source installs unchanged.
 
 A nonblocking owner-only install lock serializes installation. Immutable builds
-live under `<state>/service/builds/<source>/`, with programs beside web/ and
+live under `<state>/service/builds/<source>/`, with the program beside
 runtime/, plus their exact install-manifest.json. Default private state for an
-explicit root is `<root>/state`; agents installing the standard service must
-explicitly pass its established platform state directory. Standard installation
+explicit root is `<root>/state`; agents must explicitly pass the established
+platform state directory. Standard installation
 root is `$HOME/.local/lib/openwiz`; its parent must already exist.
 An owned `current` link selects an absolute build path in that state directory.
 A foreign selection is refused. Staging, fsync, atomic rename, then atomic link
@@ -46,38 +49,57 @@ replacement preserve last-good selection on pre-activation failure. An interrupt
 staging directory is inert. Repetition verifies/reuses an identical complete
 build; a different manifest for the same source is refused. Previous builds and
 all owner work remain. `--stage-only` verifies/stages without selecting a build
-or changing channel metadata. Packaged service startup verifies the installed
-manifest, its own executable and the owner-private state and install paths.
-It requires an owner-managed `current` link selecting its build at the standard
-install root or at the installer's default `<root>/state` layout. A split
-`--root` and `--state-root` layout whose install root cannot be identified fails
-closed. No PC activation record is required, and unknown login is allowed.
+or changing channel metadata.
 
-Install result JSON names version, source, target, private build/state paths,
-activation state and the loopback setup URL. These local paths are not remote
-records. Opening setup starts only the installed server on loopback with that
-build's web export. Setup does not imply service, CloudRoom, App, harness,
-project, engine or remote readiness. No inventory read, account operation,
+Install result JSON names version, source, target, private build/state paths
+and activation state. These local paths are not remote records. Installation
+does not imply CloudRoom, App, harness, project, engine or remote readiness. No inventory read, account operation,
 engine activation, publication or fleet start is part of installation.
 
 Removal must stop only this installation's runtime, and preserve owner work by
 default. Local removal is not remote credential revocation. Guided removal and
 native platform management belong to the later setup/runtime tickets.
 
-`--serve` keeps the installed standalone server in the foreground on loopback;
-`--open` also opens its setup URL in the system browser. `--port` defaults to
-7370. The launcher verifies the served setup bytes match the selected build
-before opening the browser. A failed bind or missing setup is a failure, never
-proof another process's page belongs to this install. Stopping the launcher
-stops only its own server child. Neither flag is allowed with `--stage-only`.
-Launching this unconfigured setup does not start the service scheduler or engine.
-
-Both `web/openwiz-build.txt` and `runtime/openwiz-build.txt` are required assets.
-Their exact UTF-8 bytes are `openwiz.package.v1\n<VERSION>\n<SOURCE>\n<TARGET>\n`;
-their sizes and hashes must match these manifest fields before extraction. This
-prevents reusing an already-reviewed web/runtime payload under another identity.
+`runtime/openwiz-build.txt` is a required asset. Its exact UTF-8 bytes are
+`openwiz.package.v1\n<VERSION>\n<SOURCE>\n<TARGET>\n`; its size and hash must
+match these manifest fields before extraction. This prevents reusing an
+already-reviewed runtime payload under another identity.
 The native artifact job applies the reviewed release version to the workspace
-package version for all three programs, preserving protocol versions, and checks
-the service's compiled source plus each program's native executable architecture.
+package version for the program, preserving protocol versions, and checks the
+program's compiled source and its native executable architecture.
 
-For the future public-source release path, the [release candidate contract](release-candidate.v1.md#minimum-product-identity-rl4) adds a producer-side compiled-product identity interface: CLI, server and service embed and expose their version/source/target without effects; web identity is generated during export and runtime bytes are checked against the tracked source selection. Cross-target collectors verify the embedded identity and architecture against hash-bound native build receipts without executing incompatible programs. A packaging stamp or requested version alone is insufficient. This does not change `openwiz.install.v1`, its assets/stamps, offline integrity checks, update channel or activation rules; implementation and live verification remain separate work.
+For the future public-source release path, the [release candidate contract](release-candidate.v1.md#minimum-product-identity-rl4) adds a producer-side compiled-product identity interface: the CLI embeds and exposes its version/source/target without effects, and runtime bytes are checked against the tracked source selection. Cross-target collectors verify the embedded identity and architecture against hash-bound native build receipts without executing incompatible programs. A packaging stamp or requested version alone is insufficient. This does not change `openwiz.install.v1`, its assets/stamps, offline integrity checks, update channel or activation rules; implementation and live verification remain separate work.
+
+## Harness skills (#1361)
+
+`tools/install/install skills --root ROOT [--state-root STATE]` puts the
+selected build's skills where the user's agent finds them. It reads only the
+build `status` verifies: every file under its `runtime/skills/`, with its
+installed mode. It copies each skill folder into one canonical folder,
+`<ROOT>/skills/`, and then into each harness below that is present. A harness is
+present when its folder is a real directory this user owns. An absent harness
+is reported `absent` with what to do next, and nothing is created for it.
+
+| Harness | Present when this is a directory | Skills copy |
+| --- | --- | --- |
+| `claude-code` | `~/.claude` | `~/.claude/skills/<skill>/` |
+| `codex` | `~/.codex` (or `$CODEX_HOME` when set) | `~/.codex/skills/<skill>/` |
+| `cursor` | `~/.cursor` | `~/.cursor/skills/<skill>/` |
+| `opencode` | `~/.config/opencode` | `~/.config/opencode/skills/<skill>/` |
+| `grok` | `~/.grok` | `~/.grok/skills/<skill>/` |
+
+Each copy is marked with an `.openwiz-skill` file and is replaced only when
+that mark is there. A same-named skill without it is the user's own and is
+never touched. Before any write, the step checks every destination. A link, a
+folder that isn't the user's, or an unmarked same-named skill refuses the
+whole step (exit 5) and changes nothing. A repeated run gives the same files.
+Other skills in those folders, and skills a newer build no longer ships, stay.
+The result is one `openwiz.skills-install.v1` JSON object: version, source,
+canonical folder, skill names and one row per harness (`installed`, `absent`
+or `refused`, its folder and a plain `next`).
+
+The step needs no Rust, Cargo, Node or npm. It doesn't put anything on `PATH`.
+The installed command is the build's own `openwiz`, beside its `runtime/`,
+reached through `<ROOT>/current/openwiz`. Its `init` uses the packaged setup
+runtime and the user's `gh` login to set up the repository's `openwiz` label
+and brain records ([cli.v1](cli.v1.md)).

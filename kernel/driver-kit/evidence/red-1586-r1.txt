@@ -1,0 +1,20 @@
+$ python3 -I kernel/driver-kit/test_kit.py   # #1586 R1 red: an escaped credential that JSON decoding restores, before the fix (the planted sample shown as <sample>)
+test_a_refusal_holding_a_credential_never_reaches_the_output (__main__.Kit.test_a_refusal_holding_a_credential_never_reaches_the_output) ... 
+  test_a_refusal_holding_a_credential_never_reaches_the_output (__main__.Kit.test_a_refusal_holding_a_credential_never_reaches_the_output) (escape='1') ... FAIL
+test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) ... ok
+test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) ... ok
+test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) ... ok
+test_template_passes_all_five (__main__.Kit.test_template_passes_all_five) ... ok
+
+======================================================================
+FAIL: test_a_refusal_holding_a_credential_never_reaches_the_output (__main__.Kit.test_a_refusal_holding_a_credential_never_reaches_the_output) (escape='1')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 114, in test_a_refusal_holding_a_credential_never_reaches_the_output
+    self.assertNotIn(sample, '\n'.join(out) + err)
+AssertionError: '<sample>' unexpectedly found in 'pass version: openwiz:records v1, and the schema is driver v1\npass start: the run posted builder status note 2\npass wake: the run edited builder status note 2\nfail stop: the run would not stop (debug: <sample>)\npass token: no login or token passed through the driver'
+
+----------------------------------------------------------------------
+Ran 5 tests in 26.068s
+
+FAILED (failures=1)

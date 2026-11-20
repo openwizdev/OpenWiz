@@ -1,0 +1,51 @@
+{
+ "pr": {
+  "body": "Part of #7 (it closes once the other half lands).\nPart of example/other#5.",
+  "baseRefOid": "0000000000000000000000000000000000000000",
+  "closingIssuesReferences": {
+   "nodes": []
+  },
+  "files": [
+   {
+    "pageInfo": {
+     "hasNextPage": false,
+     "endCursor": null
+    },
+    "nodes": [
+     {
+      "path": "tools/widget/a.py"
+     },
+     {
+      "path": "README.md"
+     }
+    ]
+   }
+  ],
+  "comments": {
+   "pageInfo": {
+    "hasNextPage": false,
+    "endCursor": null
+   },
+   "nodes": []
+  }
+ },
+ "issues": {
+  "7": {
+   "__typename": "Issue",
+   "body": "## What to build\n\nSynthetic ticket.\n\n## Owned paths\n\n- `tools/widget/` in `example/project` (new: the widget and its tests)\n- `.github/workflows/` in `example/project` (shared: one new job)\n- `crates/*/src/widget.rs` and `docs/**/widget.md`\n- `apps/gadget` (a folder named without its slash)\n- `README.md` in `example/other` (the other repository's half)\n- the widget's icon files in `example/project`\n\n**Relies on:** nothing\n\n## Acceptance criteria\n\n- [ ] `outside/mentioned.txt` is only mentioned here, never owned\n",
+   "comments": {
+    "pageInfo": {
+     "hasNextPage": false,
+     "endCursor": null
+    },
+    "nodes": []
+   }
+  }
+ },
+ "exit": 1,
+ "out": [
+  "owned-paths: note: example/other#5 is not a ticket in example/project: not checked here",
+  "owned: tools/widget/a.py",
+  "OUT: README.md (ticket #7)"
+ ]
+}

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Synthetic package for installed-server proofs; never a distributable release.
+"""Synthetic package for installer proofs; never a distributable release.
 
-Only openwiz-server is a supplied real test executable; CLI/service and skills
-are inert synthetic assets. Native build identity is tested by the assembler's
+The CLI and skills are inert synthetic assets; the installer and pull tools
+are their real files. Native build identity is tested by the assembler's
 separate proofs and artifact job, not inferred from this fixture.
 """
 import argparse
@@ -17,21 +17,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from install import PROGRAMS, REQUIRED, sha
 
 
-def create(output, server, web, service=None, source='1' * 40):
+def create(output, source='1' * 40):
     output.mkdir(mode=0o700)
     assets = {path: b'Synthetic runtime, no effects.\n' for path in REQUIRED}
     for program in PROGRAMS:
         assets[program] = b'#!/bin/sh\nexit 0\n'
-    assets['openwiz-server'] = server.read_bytes()
-    if service:
-        assets['openwiz-service'] = service.read_bytes()
-    for path in web.rglob('*'):
-        if path.is_file():
-            assets['web/' + path.relative_to(web).as_posix()] = path.read_bytes()
     for name in ('install.py', 'pull.py'):
         assets['runtime/' + name] = Path(__file__).with_name(name).read_bytes()
     identity = f"openwiz.package.v1\n0.0.99\n{source}\nx86_64-unknown-linux-gnu\n".encode()
-    assets['web/openwiz-build.txt'] = identity
     assets['runtime/openwiz-build.txt'] = identity
     archive = output / 'fixture.tar.gz'
     rows = []
@@ -52,8 +45,6 @@ def create(output, server, web, service=None, source='1' * 40):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    for flag in ('output', 'server', 'web'):
-        parser.add_argument('--' + flag, type=Path, required=True)
-    parser.add_argument('--service', type=Path)
+    parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--source', default='1' * 40)
     print(json.dumps(create(**vars(parser.parse_args()))))

@@ -1126,7 +1126,7 @@ mod process_exit_tests {
 // proc/mount relationships only; no real process is inspected. Each `stat`
 // line records a parent only to show that parentage alone selects nothing:
 // BX1's pair (#2098) also needs both AppImage records, which none of these
-// fixtures has (its proofs are in `tests/service/t2_bundle_pair.rs`).
+// fixtures has.
 #[cfg(test)]
 mod mid_update_tests {
     use super::*;

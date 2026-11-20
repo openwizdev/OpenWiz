@@ -1,6 +1,6 @@
 # Using OpenWiz from a terminal
 
-OpenWiz's command line is for agents, scripts and people alike: explicit commands, each with `--json`. It is a thin client: nothing here adds a CloudRoom operation or a safety limit. People who want a visual view use the [web app](../apps/web/AGENTS.md).
+OpenWiz's command line is for agents, scripts and people alike: explicit commands, each with `--json`. It is a thin client: nothing here adds a CloudRoom operation or a safety limit. People who want a visual view use [the app](https://openwiz.dev/app).
 
 ## Explicit commands
 

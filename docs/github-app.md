@@ -14,9 +14,9 @@ Run these tools in a terminal **on the host whose OpenWiz state keeps the key**,
 its browser. Never run real setup through a command that copies its response elsewhere.
 Python 3 and `openssl` are the only runtime tools. No package install is needed.
 
-Run as the same user as the service. The supplied [PC unit](../deploy/pc/openwiz.service)
-sets `OPENWIZ_STATE_DIR=%h/.local/state/openwiz`; pass the service's effective absolute
-state directory with `--state-dir` in every example below.
+Run as the owner of the OpenWiz state directory (by default
+`~/.local/state/openwiz`), and pass its absolute path with `--state-dir` in every
+example below.
 
 ```sh
 # 1. Preview: records the proposed connect_app operation and prints its effects and id.
@@ -156,12 +156,108 @@ After Jake authorizes the live check, on the PC:
 
 The subshell keeps a mint refusal from closing your terminal; its error stays
 visible and the read is skipped. This override applies to that one read. Keep
-`GH_TOKEN` out of global shell configuration, `gh auth login`, Git configuration
-and builder/reviewer environments: their writes must continue to use Jake's login.
-Never print a token in a thread or
-save it in a repository. The orchestrator wires its loops separately and retrieves
-only the short-lived token through CloudRoom's door; the key stays on the PC.
+`GH_TOKEN` out of global shell configuration, `gh auth login` and Git configuration.
+Agents get theirs per run, as [Agent tokens](#agent-tokens-g2) says.
+Never print a token in a thread or save it in a repository.
 App-counted live reads and contribution credit remain unverified until that check.
+
+## Agent tokens (G2)
+
+Fleets, builders, reviewers, the war room collector and the map's readers read and
+write GitHub as the App (`<app slug>[bot]`), not as the person's login, so their
+API use comes out of the App's own allowance and their comments, reviews and pull
+requests are signed by the App. Each command gets `GH_TOKEN` from the refresh helper:
+
+```sh
+# Do not enable shell tracing. Repeat --repository per repository (one owner per token).
+GH_TOKEN="$(python3 -I tools/github-app/refresh-token.py --write \
+  --state-dir STATE --installation-id NUMBER --repository OWNER/NAME)" gh issue comment ...
+```
+
+- **Per run, refreshed.** The helper mints an installation token on first use and
+  reuses it while more than five minutes are left, then mints a fresh one. Its cache
+  is `<state>/tokens/`: a 0700 directory of 0600 files, one per scope (API,
+  installation, repositories, profile, key source), so a read token is never handed
+  out for a write, nor one repository's token for another. A cache file with a wider
+  mode, another owner or a symlink is refused, never used. Stdout is the token alone;
+  on any refusal it prints nothing on stdout and one fixed sentence on stderr.
+- **Scoped.** `--repository` is required: the token covers exactly the named selected
+  repositories. `--write` asks for exactly the App's profile (Contents, Issues and Pull
+  requests write; Metadata, Checks and Actions read) and refuses an answer with any
+  other permission, so no token has `workflows`, `administration` or anything else.
+  Without `--write` the token is read-only (the war room collector and the map's
+  readers need no more).
+- **Never exposed.** The token goes only to stdout, captured straight into `GH_TOKEN`
+  for one command, never an argument, a URL, a log or a file outside the cache. Git
+  reads it through a credential helper that reads the environment, never in a remote
+  URL: `git -c credential.helper= -c 'credential.helper=!f() { [ "$1" = get ] &&
+  printf "username=x-access-token\npassword=%s\n" "$GH_TOKEN"; }; f' push ...`.
+  The key reaches OpenSSL only by descriptor; the secret's key is dropped from the
+  helper's environment before any child starts, and on that route OpenSSL gets only
+  `PATH`. `tools/github-app/test.py` (`AgentTokenTests`) checks each of these with a
+  logging OpenSSL stand-in.
+- **Cloud threads: the Cloudroom secret.** A cloud thread adds `--from-secret`: the
+  helper signs with `OPENWIZ_GITHUB_APP_KEY` (base64 of the PEM, one line) and
+  `OPENWIZ_GITHUB_APP_ID`, given only to threads that mint, and caches under the
+  sandbox's own state. No key file is written. This route was chosen over handing a
+  PC-minted token to the thread because a handed-over token has to pass through a
+  transcript or a command's output to get there, and it expires within the hour with
+  no way to refresh while the PC sleeps; the secret refreshes on its own and is
+  revocable separately (give it its own key, below).
+- **One minting path per profile.** `refresh-token.py` runs `mint-token.py`'s checks
+  through the same `app.py` guards. `mint-token.py` itself stays the read-only tool,
+  byte-identical to the copy `launch-fleet` carries (`tools/fleet-load/test_carried.py`).
+- **Commits stay the person's.** Commits keep their author and committer (the
+  person's GitHub noreply address); only the push and the GitHub records are the App's.
+
+### Which identity does what
+
+| Action | Identity |
+| --- | --- |
+| Reads, issue and pull request comments, labels, pull requests, reviews by agents, pushes of ordinary branches | The App, through `refresh-token.py` |
+| Approvals the person gives (a pull request approval that counts for a rule, a grill's confirmation) | The person's login |
+| Repository and organisation settings, rulesets, secrets, App installation | The person's login |
+| Pushes that change `.github/workflows/` | The person's login: the App has no `workflows` permission and GitHub refuses the push |
+| A refused or failed mint | Today's login, said on stderr; never silently |
+
+### Rollout runbook
+
+Owner and planner steps; an agent never handles the key. Live identifiers (App id,
+installation id, state directory) stay in the private record, never on GitHub.
+
+1. **Choose the App (owner).** The token's author is that App's `<slug>[bot]`. A user
+   App mints only for repositories its owner's account owns; repositories on two
+   accounts need the factory App under `OPENWIZ_GITHUB_APP_MODE=factory`. Set the
+   chosen App's `--state-dir` and `--installation-id` (one per account) in the
+   planner's private notes.
+2. **The key (owner, once, for cloud threads only).** PC-run agents need nothing: the
+   key stays in the PC state. For cloud threads, in the App's settings click
+   **Generate a private key**, run `room-cli secret request OPENWIZ_GITHUB_APP_KEY`
+   and paste the file's one-line base64 (`base64 -w0 FILE.pem`) into Cloudroom's prompt
+   only, set `OPENWIZ_GITHUB_APP_ID` the same way, then delete the download. This is
+   the only place the key leaves the PC. Revoke it alone by deleting that key in the
+   App's settings.
+3. **Before (PC hands, the person's login).** One hour before the switch, read the
+   person's REST use with `gh api rate_limit --jq '.resources.core | {used, reset}'`
+   (this endpoint is not counted) just after a reset and again just before the next,
+   and record `used` for that hour on the ticket. Never run it with `GH_TOKEN` set.
+4. **Bot-authored write (PC hands).** In a test repository the App is installed on:
+   `GH_TOKEN="$(python3 -I tools/github-app/refresh-token.py --write --state-dir STATE
+   --installation-id NUMBER --repository OWNER/TEST)" gh issue comment N --repo
+   OWNER/TEST --body "G2 check"`, then read the comment's author (`gh api graphql`,
+   `author { login }`), record that login on the ticket, and delete the comment.
+5. **Switch each fleet loop (planner).** In each loop's tick, before its GitHub
+   commands, set `GH_TOKEN` from the helper as above (`--write` for loops that comment,
+   label or merge; read-only for the collector and the map) and use the Git credential
+   helper above for pushes. Keep the person's login for the rows above. A loop's
+   environment gets `GH_TOKEN` from its runner, never from a file in a repository.
+6. **Switch each agent brief (planner).** Builders and reviewers on the PC run each
+   GitHub command as `GH_TOKEN="$(python3 -I .../refresh-token.py --write ...)" gh ...`;
+   cloud threads add `--from-secret` and get the two secrets. A brief names the
+   repositories, never a token.
+7. **After (PC hands).** One hour after the switch, repeat step 3 and record both
+   numbers on the ticket.
+
 
 ## Revoke
 
@@ -170,7 +266,8 @@ In **Settings → Applications → Installed GitHub Apps → Configure**, choose
 open **Developer settings → GitHub Apps → your App → Advanced → Delete GitHub App**.
 Delete its private key in GitHub's App settings if rotating it. Remove the local
 `service/app/` files only on the PC after revocation; deleting files alone does
-not revoke already minted tokens.
+not revoke already minted tokens. Then remove `<state>/tokens/`, the refresh
+helper's cache.
 
 ## Fixture proof
 
@@ -178,10 +275,10 @@ not revoke already minted tokens.
 python3 tools/github-app/test.py
 ```
 
-Tests generate disposable synthetic RSA keys in private temporary state and use
-an HTTP endpoint on `127.0.0.1`, never GitHub or CloudRoom. The setup check's proofs
-run in `apps/web/test/browser/install-connections.test.mjs` (`npm test`), against the
-real tool, server and page. `--api-base` exists for
+`AgentTokenTests` there cover the write profile, the secret route and the refresh
+helper. Tests generate disposable synthetic RSA keys in private temporary state and use
+an HTTP endpoint on `127.0.0.1`, never GitHub or CloudRoom. (The setup page's browser
+proofs went with the web view in #1264.) `--api-base` exists for
 this seam: only the fixed production API or explicit HTTP `127.0.0.1:PORT` is
 accepted, and redirects are refused. Never use real keys with the test endpoint.
 The `rust` CI job runs these fixtures in its "The skills' tests" step

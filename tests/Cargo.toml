@@ -23,23 +23,10 @@ name = "fake-gh"
 path = "fake-gh/main.rs"
 test = false
 
-# The store-level send harness (OpenWiz 0.0.3): the core's send, called the
-# way a server would, with test-only crash points. Never shipped.
-[[bin]]
-name = "send-harness"
-path = "send-harness/main.rs"
-test = false
-
 # Fixture executables use existing dev-dependencies, never shipped.
-# Examples are executable targets whose dev-dependencies include the server.
 [[example]]
 name = "openwiz"
 path = "fixture-entrypoints/cli.rs"
-test = false
-
-[[example]]
-name = "openwiz-server"
-path = "fixture-entrypoints/server.rs"
 test = false
 
 # The 0.0.1 proof cases P1 to P12.
@@ -52,12 +39,6 @@ path = "proof/main.rs"
 [[test]]
 name = "checks"
 path = "checks/main.rs"
-
-# OpenWiz 0.0.2 ticket 1: the web API's proof tests (A3 to A7) and its
-# contract check, over the same fixtures and fake room-cli.
-[[test]]
-name = "web-api"
-path = "web-api/main.rs"
 
 # The 0.0.3 messaging proof cases M1 to M15.
 [[test]]
@@ -80,12 +61,6 @@ path = "attachments/main.rs"
 name = "fleet"
 path = "fleet/main.rs"
 
-# OpenWiz 0.0.8, the always-on service (spec #262): one file per ticket,
-# from T3 (#268), the health planner, on.
-[[test]]
-name = "service"
-path = "service/main.rs"
-
 # OpenWiz 0.0.9 L2 (#544): pure loop planner tables (LP1, LP2).
 [[test]]
 name = "loops"
@@ -96,27 +71,17 @@ path = "loops/main.rs"
 name = "cli-agent"
 path = "cli-agent/main.rs"
 
-# 0.0.15 T6: the kept ready-stock module's tests (push notifications retired, 0.0.17 ER4).
-[[test]]
-name = "notifications"
-path = "notifications/main.rs"
-
 [dependencies]
 serde_json.workspace = true
-# For the send harness binary, which needs them as normal dependencies.
 openwiz-core = { path = "../crates/core" }
 openwiz-adapter-cloudroom = { path = "../crates/adapters/cloudroom" }
 # The GitHub adapter, for the fleet tests (OpenWiz 0.0.6, A3, ClosedWiz#111).
 openwiz-adapter-github = { path = "../crates/adapters/github" }
 openwiz-cli = { path = "../crates/cli" }
-openwiz-store = { path = "../crates/store" }
 
-# The web API tests start openwiz-server in-process. A dev-dependency only,
-# so no normal dependency points at the server.
 [dev-dependencies]
 # The checks' strict JSON reader (#776; moved from the removed terminal crate).
 serde.workspace = true
-openwiz-server = { path = "../crates/server" }
 
 [lints]
 workspace = true

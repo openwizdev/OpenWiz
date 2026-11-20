@@ -38,7 +38,7 @@ commits/trees. Hashes establish byte integrity, not a signed publisher identity.
 | `release_version` | Highest included version; the tag is `v<release_version>`. |
 | `included_versions` | Unique versions, newest first by numeric minor/patch, each newer than all already published versions. Each retains one dated changelog section and a nonempty list of unique promise IDs used by the smoke kit. Single-version patches use the same shape. |
 | `changelog` | Exact approved release-note UTF-8 bytes, their byte count and SHA-256. No newline, date, whitespace or normalization changes after approval. |
-| `products` | Exactly cli, server, service, web and runtime for each of the three install targets, sorted by target then product. Identities, complete payload hashes and build receipts must agree with this source, release version and target. |
+| `products` | Exactly cli and runtime for each of the three install targets, sorted by target then product. Identities, complete payload hashes and build receipts must agree with this source, release version and target. |
 | `artifacts` | Complete remote asset inventory sorted by unique filename; each exact length, hash, role and target. See below. |
 | `kit` | Exact kit digest, scope/allowlist/count/spending-input digest and verified existing private authority pointer. These do not create authority. |
 | `risk` | Explicit send, new, app_permissions and spending classification, each yes/no/unknown with a reason based on the complete change since the last publication. Missing, unknown, unreadable or unsupported classification refuses; an unexplained no is not an exemption. |
@@ -67,17 +67,16 @@ alter the installer, update transport or their integrity rules.
 ## Minimum product identity (RL4)
 
 `product_identity` is exactly `{schema: "openwiz.product.v1", product, version,
-source, target}`. Product is cli/server/service/web/runtime. Version is the
+source, target}`. Product is cli/runtime. Version is the
 candidate release version; source is its public commit; target is an install
-target. All five products must originate from the clean checked source build,
+target. Both products must originate from the clean checked source build,
 not from a requested label, architecture test or newly written package stamp.
 
-The three compiled programs embed one ASCII prefix `OPENWIZ_PRODUCT_V1:` followed
-by the canonical identity JSON and LF, produced during compilation. CLI, server
-and service expose `--build-identity`: print that identity as one JSON object
-and exit successfully without reading state/accounts, calling room-cli, binding
-a port or starting a scheduler/service. The service library retains the same
-compiled identity for its executable. Absence, ambiguity, malformed identity,
+The compiled program embeds one ASCII prefix `OPENWIZ_PRODUCT_V1:` followed
+by the canonical identity JSON and LF, produced during compilation. The CLI
+exposes `--build-identity`: print that identity as one JSON object and exit
+successfully without reading state/accounts, calling room-cli, binding a port
+or starting a scheduler. Absence, ambiguity, malformed identity,
 wrong product/version/source/target or executable architecture refuses.
 
 A native build job queries its programs and binds the results to their exact
@@ -88,17 +87,14 @@ native build job's query receipt. `embedded-record` records this method;
 `native-query` records native execution. Neither an appended marker nor an
 unverified caller-supplied job receipt establishes compiled provenance.
 
-The web export contains `web/openwiz-product.json`, generated during the actual
-export with this identity. Match every exported file against that same build
-job's inventory (`web-build`), rather than adding a marker to an old export.
 The runtime's files/modes are compared to the selected public Git tree's complete
 tracked skill/runtime selection (`tracked-tree`); the receipt identifies that
-selection and any reviewed deterministic build transformations. Hash each
-web/runtime payload as canonical JSON of its complete path-sorted inventory of
+selection and any reviewed deterministic build transformations. Hash the
+runtime payload as canonical JSON of its complete path-sorted inventory of
 `{path, mode, bytes, sha256}` rows, using install-relative paths. Native payload
 hashes are the program file hashes. Build receipts bind these hashes, source,
-version, target and method. Keep the existing `openwiz-build.txt` package stamps
-and install manifest unchanged; stamps are additional integrity checks, not
+version, target and method. Keep the existing `runtime/openwiz-build.txt` package
+stamp and install manifest; stamps are additional integrity checks, not
 compiled source evidence. No verifier may trust a requested stamp as provenance.
 
 ## Two actual decisions (P1)
@@ -167,10 +163,9 @@ gate's own input binding. Fixture and dry-run receipts are useful diagnostics
 but never satisfy a live gate. Known device, Mac and real-radio gaps stay explicit;
 a gap that leaves a required promise unproved blocks that gate.
 
-Reuse [fleet tick's reviewed-plan restriction](fleet-tick.v1.md#reviewed-plan-execution-revision-1892):
-compare the complete ordered dry-run document before effects with `--expect-plan`;
-refuse pending-start recovery before it can run. A post-effect scope check is
-insufficient. The kit never widens App grants, room-cli allowlist calls,
+The kit runs no `openwiz fleet tick` step: the executing tick and its
+`--expect-plan` restriction were retired (#800), and the live-smoke runner refuses
+any `fleet tick` or `engine` step (`retired_command`). The kit never widens App grants, room-cli allowlist calls,
 throwaway targets, counts, spending or approved host scope. No unsafe automatic
 retry. Read-only discovery remains bounded by its separate recorded authority.
 
@@ -211,7 +206,7 @@ incomplete even if some downloads already exist.
 
 `install` records an agent's normal install/update route on an already approved
 test machine: version/source/target plus matching manifest/archive hashes, time
-and private evidence. Verify the selected installed programs/web/runtime agree
+and private evidence. Verify the selected installed program/runtime agree
 with that product identity, not just a downloaded filename or version string.
 There is no new installer, activation or machine authority in this contract.
 Publication success alone is not ship-to-install completion.

@@ -1,8 +1,7 @@
 //! Shared helpers for the new-thread proofs: the fixtures, a fixed clock,
-//! an in-memory record store (test-only, never shipped: phase 2 adds the
-//! real record kind to `openwiz-store`) and a fake client that answers the
-//! core through the adapter's own parsers, so the core and the adapter are
-//! proven together on the same fixtures.
+//! an in-memory record store (test-only, never shipped) and a fake client
+//! that answers the core through the adapter's own parsers, so the core and
+//! the adapter are proven together on the same fixtures.
 
 #![allow(dead_code)]
 

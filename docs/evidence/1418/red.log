@@ -1,0 +1,115 @@
+FFFFFFFFFFF
+======================================================================
+FAIL: test_a_closing_keyword_in_the_body_links_the_ticket (__main__.Check.test_a_closing_keyword_in_the_body_links_the_ticket)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/tools/owned-paths/test_check.py", line 112, in test_a_closing_keyword_in_the_body_links_the_ticket
+    self.verdict('regex-close')
+  File "/code/openwiz/tools/owned-paths/test_check.py", line 76, in verdict
+    self.assertIn(line, out)
+AssertionError: 'owned: tools/widget/a.py' not found in ''
+
+======================================================================
+FAIL: test_a_file_outside_the_owned_paths_fails_naming_file_and_ticket (__main__.Check.test_a_file_outside_the_owned_paths_fails_naming_file_and_ticket)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/tools/owned-paths/test_check.py", line 85, in test_a_file_outside_the_owned_paths_fails_naming_file_and_ticket
+    self.verdict('outside')
+  File "/code/openwiz/tools/owned-paths/test_check.py", line 74, in verdict
+    self.assertEqual(r.returncode, s['exit'], out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_a_linked_issue_without_owned_paths_passes_with_a_note (__main__.Check.test_a_linked_issue_without_owned_paths_passes_with_a_note)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/tools/owned-paths/test_check.py", line 120, in test_a_linked_issue_without_owned_paths_passes_with_a_note
+    self.verdict('spec-only')
+  File "/code/openwiz/tools/owned-paths/test_check.py", line 76, in verdict
+    self.assertIn(line, out)
+AssertionError: 'owned-paths: note: #9 has no ## Owned paths section: nothing to check' not found in ''
+
+======================================================================
+FAIL: test_a_pull_request_with_no_linked_ticket_passes_with_a_note (__main__.Check.test_a_pull_request_with_no_linked_ticket_passes_with_a_note)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/tools/owned-paths/test_check.py", line 103, in test_a_pull_request_with_no_linked_ticket_passes_with_a_note
+    self.verdict('no-ticket')
+  File "/code/openwiz/tools/owned-paths/test_check.py", line 76, in verdict
+    self.assertIn(line, out)
+AssertionError: 'owned-paths: note: pull request #42 links no ticket in example/project: nothing to check' not found in ''
+
+======================================================================
+FAIL: test_an_unreadable_pull_request_is_an_error_not_a_pass (__main__.Check.test_an_unreadable_pull_request_is_an_error_not_a_pass)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/tools/owned-paths/test_check.py", line 128, in test_an_unreadable_pull_request_is_an_error_not_a_pass
+    self.verdict('unreadable')
+  File "/code/openwiz/tools/owned-paths/test_check.py", line 74, in verdict
+    self.assertEqual(r.returncode, s['exit'], out)
+AssertionError: 0 != 2 : 
+
+======================================================================
+FAIL: test_every_page_of_changed_files_is_checked (__main__.Check.test_every_page_of_changed_files_is_checked)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/tools/owned-paths/test_check.py", line 124, in test_every_page_of_changed_files_is_checked
+    self.verdict('pages')
+  File "/code/openwiz/tools/owned-paths/test_check.py", line 74, in verdict
+    self.assertEqual(r.returncode, s['exit'], out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_files_inside_owned_paths_shared_paths_and_globs_pass (__main__.Check.test_files_inside_owned_paths_shared_paths_and_globs_pass)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/tools/owned-paths/test_check.py", line 89, in test_files_inside_owned_paths_shared_paths_and_globs_pass
+    self.verdict('inside')
+  File "/code/openwiz/tools/owned-paths/test_check.py", line 76, in verdict
+    self.assertIn(line, out)
+AssertionError: 'owned: tools/widget/check.py' not found in ''
+
+======================================================================
+FAIL: test_part_of_links_are_checked_and_other_repositories_are_noted (__main__.Check.test_part_of_links_are_checked_and_other_repositories_are_noted)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/tools/owned-paths/test_check.py", line 108, in test_part_of_links_are_checked_and_other_repositories_are_noted
+    self.verdict('part-of')
+  File "/code/openwiz/tools/owned-paths/test_check.py", line 74, in verdict
+    self.assertEqual(r.returncode, s['exit'], out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_record_author_grants_cover_their_paths_and_no_one_elses_do (__main__.Check.test_record_author_grants_cover_their_paths_and_no_one_elses_do)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/tools/owned-paths/test_check.py", line 94, in test_record_author_grants_cover_their_paths_and_no_one_elses_do
+    self.verdict('grants')
+  File "/code/openwiz/tools/owned-paths/test_check.py", line 74, in verdict
+    self.assertEqual(r.returncode, s['exit'], out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_the_standing_supporting_edit_rule_covers_its_paths_only (__main__.Check.test_the_standing_supporting_edit_rule_covers_its_paths_only)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/tools/owned-paths/test_check.py", line 99, in test_the_standing_supporting_edit_rule_covers_its_paths_only
+    self.verdict('standing')
+  File "/code/openwiz/tools/owned-paths/test_check.py", line 74, in verdict
+    self.assertEqual(r.returncode, s['exit'], out)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_two_linked_tickets_own_the_union_of_their_paths (__main__.Check.test_two_linked_tickets_own_the_union_of_their_paths)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/tools/owned-paths/test_check.py", line 116, in test_two_linked_tickets_own_the_union_of_their_paths
+    self.verdict('two-tickets')
+  File "/code/openwiz/tools/owned-paths/test_check.py", line 76, in verdict
+    self.assertIn(line, out)
+AssertionError: 'owned: other/b.py' not found in ''
+
+----------------------------------------------------------------------
+Ran 11 tests in 0.096s
+
+FAILED (failures=11)

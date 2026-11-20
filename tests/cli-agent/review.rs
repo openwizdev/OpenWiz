@@ -9,7 +9,6 @@ use std::path::Path;
 
 const INVENTORY_HELP: &str = "Help precedence: standalone --help or -h anywhere after the command selects human help before parsing, including separate value positions and after --. Embedded values such as --limit=--help do not match.";
 const FLEETS_HELP: &str = "Help precedence: standalone --help or -h selects human help despite earlier ordinary errors, unless an earlier argument is not UTF-8. Arguments after help are not parsed; embedded option values do not match.";
-const ATTACHMENT_IDS: &str = "Attachment IDs in the combined ordered --attach/--attachment list must be unique. Late duplicate-ID rejection exits 2 without send/create; staged copies and opened local stores may remain.";
 
 fn form<'a>(catalogue: &'a Value, name: &str) -> &'a Value {
     catalogue["commands"]
@@ -32,34 +31,6 @@ fn r1_help_precedence_matches_the_shipped_parser_and_catalogue() {
         .unwrap();
     assert_eq!(help_flag["arity"], "switch");
     assert_eq!(help_flag["inline"], false);
-    for text in ["--help", "--help=", "--help=1"] {
-        let args = ["thread-synthetic", "--", text].map(str::to_owned);
-        let openwiz_cli::send::SendCommand::Send(parsed) =
-            openwiz_cli::send::parse_send(&args).unwrap()
-        else {
-            panic!("message text requested help");
-        };
-        assert_eq!(parsed.text.as_deref(), Some(text));
-        let args = [
-            "project-synthetic",
-            "--harness",
-            "codex",
-            "--model",
-            text,
-            "--effort",
-            "high",
-            "--",
-            text,
-        ]
-        .map(str::to_owned);
-        let openwiz_cli::new_thread::NewCommand::New(parsed) =
-            openwiz_cli::new_thread::parse_new(&args).unwrap()
-        else {
-            panic!("model value or prompt text requested help");
-        };
-        assert_eq!(parsed.model.as_deref(), Some(text));
-        assert_eq!(parsed.text.as_deref(), Some(text));
-    }
     for args in [
         vec!["ls", "--unknown", "--help"],
         vec!["ls", "--limit", "--help"],
@@ -125,7 +96,7 @@ fn r1_help_precedence_matches_the_shipped_parser_and_catalogue() {
     // HX1: the two option-splitting parsers must agree with inline=false,
     // including empty values; standalone help and legacy precedence stay put.
     let mut cases = Vec::new();
-    for command in ["send", "new", "show", "models", "ui"] {
+    for command in ["show", "models", "ui"] {
         for (flag, code) in [
             ("--help", 0),
             ("-h", 0),
@@ -134,22 +105,6 @@ fn r1_help_precedence_matches_the_shipped_parser_and_catalogue() {
             ("--help=--json", 2),
         ] {
             cases.push((vec![command, flag], code));
-        }
-    }
-    for command in ["send", "new"] {
-        for (tail, code) in [
-            (vec!["--help", "--unknown"], 0),
-            (vec!["--unknown", "--help"], 2),
-            (vec!["--help", "--help=1"], 0),
-            (vec!["--help=1", "--help"], 2),
-            (vec!["--op-id", "--help"], 2),
-            (vec!["--op-id=--help"], 2),
-            (vec!["--", "--help"], 2),
-            (vec!["--", "--help=1"], 2),
-        ] {
-            let mut args = vec![command];
-            args.extend(tail);
-            cases.push((args, code));
         }
     }
     for (args, code) in cases {
@@ -206,140 +161,9 @@ fn r1_help_precedence_matches_the_shipped_parser_and_catalogue() {
 }
 
 #[test]
-fn r2_duplicate_attachment_rejection_retains_staged_bytes_without_source_calls() {
-    for name in ["send", "new", "new.preview"] {
-        let sandbox = Sandbox::new();
-        fs::write(sandbox.0.join("old.txt"), b"synthetic old bytes\n").unwrap();
-        fs::write(sandbox.0.join("new.txt"), b"synthetic newly staged bytes\n").unwrap();
-        let staged = sandbox.run(&["attachment", "add", "--json", "old.txt"]);
-        assert_eq!(
-            staged.status.code(),
-            Some(0),
-            "{}",
-            String::from_utf8_lossy(&staged.stderr)
-        );
-        let report: Value = serde_json::from_slice(&staged.stdout).unwrap();
-        assert_eq!(report["ready"].as_array().unwrap().len(), 1);
-        let id = report["ready"][0]["staged"]["attachment"]["id"]
-            .as_str()
-            .unwrap();
-        let mut args = if name == "send" {
-            vec!["send", "thread-synthetic", "--op-id", "op-synthetic"]
-        } else {
-            vec![
-                "new",
-                "--project-id",
-                "project-synthetic",
-                "--harness",
-                "codex",
-                "--model",
-                "model-synthetic",
-                "--effort",
-                "high",
-                "--op-id",
-                "op-synthetic",
-            ]
-        };
-        if name == "new" {
-            args.push("--yes");
-        }
-        args.extend([
-            "--attach",
-            "new.txt",
-            "--attachment",
-            id,
-            "--attachment",
-            id,
-            "--",
-            "synthetic prompt",
-        ]);
-        let rejected = sandbox.run(&args);
-        assert_eq!(
-            rejected.status.code(),
-            Some(2),
-            "{name}: {}",
-            String::from_utf8_lossy(&rejected.stderr)
-        );
-        assert!(rejected.stdout.is_empty());
-        assert!(String::from_utf8_lossy(&rejected.stderr).contains("listed twice"));
-        assert!(
-            !sandbox.0.join("calls").exists(),
-            "{name}: exactly zero CloudRoom/gh calls"
-        );
-        assert_eq!(
-            sandbox.0.join("state/sends").is_dir(),
-            name == "send",
-            "send opens its store before late validation"
-        );
-        assert!(!sandbox.0.join("state/new-threads").exists());
-
-        let listed = sandbox.run(&["attachment", "ls", "--json"]);
-        assert_eq!(listed.status.code(), Some(0));
-        let report: Value = serde_json::from_slice(&listed.stdout).unwrap();
-        let attachments = report["attachments"].as_array().unwrap();
-        assert_eq!(
-            attachments.len(),
-            2,
-            "original plus retained newly staged copy"
-        );
-        assert_eq!(report["broken"], json!([]));
-        assert_eq!(report["expired"], json!([]));
-        for (filename, bytes) in [
-            ("old.txt", b"synthetic old bytes\n".as_slice()),
-            ("new.txt", b"synthetic newly staged bytes\n".as_slice()),
-        ] {
-            let a = attachments
-                .iter()
-                .find(|a| a["attachment"]["name"] == filename)
-                .unwrap();
-            let copy = sandbox
-                .0
-                .join("state/attachments")
-                .join(a["attachment"]["id"].as_str().unwrap())
-                .join(filename);
-            assert_eq!(fs::read(copy).unwrap(), bytes);
-            assert_eq!(fs::read(sandbox.0.join(filename)).unwrap(), bytes);
-        }
-        assert!(!sandbox.0.join("calls").exists());
-    }
-}
-
-#[test]
-fn r2_catalogue_qualifies_late_usage_rejection_and_unique_ids() {
-    let catalogue = discovered();
-    for name in ["send", "new", "new.preview"] {
-        let command = form(&catalogue, name);
-        let usage = command["exits"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .find(|e| e["code"] == 2)
-            .unwrap();
-        assert_eq!(
-            usage["meaning"],
-            "Usage error or out-of-bounds request; no send/create. Attachment preparation and opened local stores may remain.",
-            "{name}: usage does not guarantee unchanged local state"
-        );
-        assert!(
-            command["rules"]
-                .as_array()
-                .unwrap()
-                .contains(&json!(ATTACHMENT_IDS)),
-            "{name}: combined attachment IDs must be unique"
-        );
-    }
-}
-
-#[test]
 fn r3_catalogue_and_schema_cover_conditional_external_programs() {
     let catalogue = discovered();
-    for (name, expected) in [
-        ("send", json!(["room-cli", "df"])),
-        ("new", json!(["room-cli", "df"])),
-        ("new.preview", json!(["room-cli", "df"])),
-        ("loop.off", json!(["git"])),
-        ("loop.on", json!(["git"])),
-    ] {
+    for (name, expected) in [("loop.off", json!(["git"])), ("loop.on", json!(["git"]))] {
         assert_eq!(
             form(&catalogue, name)["sources"],
             expected,

@@ -11,16 +11,6 @@ import os
 from check import require, Refused, alias, blob, changelog_entry, git, refuse_ranges, sha
 
 LABELS = {"fixture-tested", "live-observation", "source-inspection", "unverified", "proposal", "context"}
-SITE_PAGES = {"apps/site/index.html", "apps/site/changelog/index.html"}
-# Only the two licensed fonts pinned by the selected target C, never arbitrary
-# binary assets. Each still needs its own hash-bound site-font review in the plan.
-SITE_FONTS = {
-    "apps/site/fonts/Geist-var.woff2": "206f01ed08e05c98a51daa7472331c3c71bbb8c1f9d55ea8c70074f3c528a706",
-    "apps/site/fonts/GeistMono-var.woff2": "55419aa06f58adcd7f145c6c920e56936416f17e528f60efc6032ffa4269972b",
-}
-SITE_LICENCE = "apps/site/fonts/OFL.txt"
-SITE_LICENCE_SHA = "c683bfbcc7e087f5d37a54ef628f10387c451a83ddc459b151403a164ac46c90"
-SITE_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%23b996f1' d='M7 24 15 7 24 5 20 11 25 24ZM3 27h26v2H3Z'/%3E%3C/svg%3E"
 PUBLIC_HOSTS = {"github.com", "raw.githubusercontent.com", "doc.rust-lang.org", "rust-lang.org",
                 "crates.io", "registry.npmjs.org", "www.apache.org", "apache.org", "spdx.org",
                 "nextjs.org", "react.dev", "nodejs.org", "cloudroom.dev", "www.cloudroom.dev",
@@ -28,70 +18,10 @@ PUBLIC_HOSTS = {"github.com", "raw.githubusercontent.com", "doc.rust-lang.org", 
                 "trycloudflare.com", "cloudflareaccess.com", "127.0.0.1", "localhost"}
 
 
-class SiteProse(HTMLParser):
-    """Read site prose, public metadata and accessible text; exclude code."""
-    blocks = {"head", "title", "body", "main", "header", "footer", "nav", "div", "section", "article",
-              "h1", "h2", "h3", "h4", "h5", "h6", "p", "li", "ul", "ol", "pre",
-              "blockquote", "figcaption"}
-    ignored = {"script", "style"}
-    text_attributes = {"alt", "title", "placeholder", "label", "aria-label", "aria-description",
-                       "aria-roledescription", "aria-valuetext", "aria-braillelabel",
-                       "aria-brailleroledescription"}
-
-    def __init__(self):
-        super().__init__()
-        self.depth = 0
-        self.parts = []
-        self.lines = []
-        self.attributes = []
-
-    def flush(self):
-        text = " ".join("".join(self.parts).split())
-        if text:
-            self.lines.append(text)
-        self.parts = []
-
-    def handle_starttag(self, tag, attrs):
-        if tag in self.ignored:
-            self.depth += 1
-        elif not self.depth:
-            if tag in self.blocks:
-                self.flush()
-            elif tag == "br":
-                self.parts.append(" ")
-            input_type = next((value for name,value in attrs if name == "type"), "") or ""
-            button_value = tag == "input" and input_type.lower() in {"button", "submit", "reset"}
-            for name,value in attrs:
-                if (name in self.text_attributes or (tag == "meta" and name == "content")
-                        or (button_value and name == "value")):
-                    text = " ".join((value or "").split())
-                    # Empty decorative alternatives add no claim. A nonempty
-                    # declaration still needs review even on hidden/decorative
-                    # content; hiding it must not exempt public fallback text.
-                    if text:
-                        self.attributes.append(text)
-
-    def handle_endtag(self, tag):
-        if tag in self.ignored:
-            self.depth = max(0, self.depth-1)
-        elif not self.depth and tag in self.blocks:
-            self.flush()
-
-    def handle_data(self, data):
-        if not self.depth:
-            self.parts.append(data)
-
-
 def claim_documents(check):
     docs = {}
     for path,text in check.texts.items():
-        if path in SITE_PAGES:
-            parser = SiteProse()
-            parser.feed(text)
-            parser.close()
-            parser.flush()
-            docs[path] = "\n".join(parser.lines+parser.attributes)
-        elif path.endswith(".md"):
+        if path.endswith(".md"):
             docs[path] = text
     return docs
 
@@ -251,7 +181,6 @@ def scan(check):
         data = (check.export/path).read_bytes()
         require(sha(data) == item["sha256"], "staged hash changed")
         try:
-            require(not (path.startswith("apps/site/fonts/") and path.endswith(".woff2")),"binary")
             text = data.decode("utf-8")
             require("\0" not in text,"binary")
         except (UnicodeError, Refused):
@@ -265,19 +194,6 @@ def scan(check):
                         "release-asset: exact version/source/target review required")
                 used.update(assets)
                 continue
-            reviews = [i for i,e in enumerate(exceptions) if e["path"] == path and e["rule"] == "site-font"]
-            if reviews:
-                require(len(reviews) == 1,"site-font: repeated review")
-                require(path in SITE_FONTS and sha(data) == SITE_FONTS[path], "site-font: unapproved font bytes")
-                review = exceptions[reviews[0]]
-                require(review["value"] == SITE_LICENCE+"@"+SITE_LICENCE_SHA, "site-font: licence review differs")
-                licence = next((f for f in check.report["files"] if f["path"] == SITE_LICENCE),None)
-                require(licence and licence["sha256"] == SITE_LICENCE_SHA
-                        and sha((check.export/SITE_LICENCE).read_bytes()) == SITE_LICENCE_SHA,
-                        "site-font: licence missing or changed")
-                used.update(reviews)
-                continue
-            require(not path.startswith("apps/site/fonts/"),"site-font: explicit review required")
             # An unchanged public binary has already been published. Unknown assets
             # need a separate review; never silently skip an unreadable file.
             try:
@@ -446,10 +362,9 @@ def claims(check):
             if "label" in item:
                 reviewed_label(path,item)
             if status != "context":
-                # The site keeps its approved words; status/evidence live in its
-                # exact hash-bound review. Markdown's public-label gate stays,
-                # in its plain form or one exact reviewed label form.
-                if path not in SITE_PAGES and "label" not in item:
+                # Markdown's public-label gate, in its plain form or one exact
+                # reviewed label form.
+                if "label" not in item:
                     require(item["text"].lower().startswith(status+":"),"claim needs its public status label")
                 require(item["evidence"],"claim evidence missing")
                 evidence = link_target(check,"README.md",item["evidence"])
@@ -467,9 +382,6 @@ def claims(check):
         # explanatory prose, but deciding that it is not a capability is a review.
         fenced = False
         for line in docs[path].splitlines():
-            if path in SITE_PAGES:
-                require(any(line in text for text in covered),f"claim ledger does not cover prose in {path}")
-                continue
             if re.match(r"\s*(```|~~~)",line):
                 fenced = not fenced
                 continue
@@ -490,7 +402,6 @@ LABEL_FORMS = {"fixture-tested": ("fixture-tested", "fixture-test"),
 def reviewed_label(path, item):
     label = item["label"]
     require(item["status"] != "context", "context rows carry no label")
-    require(path not in SITE_PAGES, "site reviews carry no label")
     require(isinstance(label,str) and label.strip() == label,
             "label must be the exact reviewed label text")
     if not label:
@@ -537,23 +448,16 @@ def anchors(text):
 
 def link_target(check, source, url):
     parsed = urlsplit(unescape(url))
-    site = source in SITE_PAGES
-    require(not parsed.scheme and not parsed.netloc and (site or not parsed.path.startswith("/")),"link: relative public evidence required")
+    require(not parsed.scheme and not parsed.netloc and not parsed.path.startswith("/"),"link: relative public evidence required")
     name = unquote(parsed.path)
-    if site and name.startswith("/"):
-        target = posixpath.normpath("apps/site/"+name.lstrip("/"))
-    else:
-        target = posixpath.normpath(posixpath.join(posixpath.dirname(source),name)) if name else source
-    if site:
-        require(target == "apps/site" or target.startswith("apps/site/"),"link escapes site root")
+    target = posixpath.normpath(posixpath.join(posixpath.dirname(source),name)) if name else source
     require(target != ".." and not target.startswith("../"),"link escapes public tree")
     files = {f["path"] for f in check.report["files"]}
     if target not in files:
-        candidates = ([target.rstrip("/")+"/index.html"] if site else
-                      [target.rstrip("/")+"/README.md",target.rstrip("/")+"/index.html"])
+        candidates = [target.rstrip("/")+"/README.md",target.rstrip("/")+"/index.html"]
         target = next((p for p in candidates if p in files),target)
     folder = target.rstrip("/")
-    if target not in files and not site and any(p.startswith(folder+"/") for p in files):
+    if target not in files and any(p.startswith(folder+"/") for p in files):
         # A relative link to an exported folder, as GitHub renders it. It has no anchors.
         require(not parsed.fragment,"link fragment missing")
         return folder
@@ -614,11 +518,6 @@ def links(check):
             urls.append(refs[(key or label).lower()])
         urls.extend(refs.values())
         for url in urls:
-            # C's exact inert favicon is the sole data URI; the privacy scanner
-            # still requires review of its SVG namespace URL. No other scheme
-            # or encoded SVG gains an exception here.
-            if path in SITE_PAGES and url == SITE_ICON:
-                continue
             parsed = urlsplit(unescape(url))
             if parsed.scheme or parsed.netloc:
                 reviewed_url(check,path,decoded_url(url))
@@ -629,13 +528,8 @@ def links(check):
 # The release's own public regression tests are executed again by name. Absence
 # or a renamed/filtered-out test is a failure, not a successful zero-test run.
 REGRESSIONS = [
-    ("0.0.3-R1-fresh","crates/core/src/messaging/send.rs", "tests/messaging/m13_drift.rs",
-     ["a_send_at_the_reads_tested_version_is_not_live_tested_for_sending"]),
-    ("0.0.3-R1-replay","crates/core/src/messaging/lookup.rs", "tests/messaging/m13_drift.rs",
-     ["a_record_that_says_tested_never_replays_or_looks_up_as_tested"]),
     ("0.0.3-R3","crates/adapters/cloudroom/src/process.rs", "tests/messaging/environment.rs",
      ["every_read_runs_without_the_thread_context","every_call_of_a_send_runs_without_the_thread_context"]),
-    ("0.0.3-R4","apps/web/src/components/Composer.tsx", "apps/web/test/browser/w8-no-false-changed.test.mjs", []),
 ]
 
 

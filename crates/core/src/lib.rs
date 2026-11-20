@@ -22,7 +22,6 @@ pub mod loops;
 pub mod messaging;
 pub mod model;
 pub mod new_thread;
-pub mod notifications;
 pub mod ops;
 pub mod prompt;
 pub mod source;

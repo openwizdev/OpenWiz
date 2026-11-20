@@ -1,0 +1,22 @@
+# #1575 red: python3 -I tools/install/test_pull.py with the new test, before the fix.
+# Same failure at 5b417da (the reviewed head) and at main c7110b8; output below is from main.
+F.
+======================================================================
+FAIL: test_pre_ap11_selected_build_reports_status_and_upgrades_to_a_cli_only_candidate (__main__.Pull.test_pre_ap11_selected_build_reports_status_and_upgrades_to_a_cli_only_candidate)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/test_pull.py", line 98, in test_pre_ap11_selected_build_reports_status_and_upgrades_to_a_cli_only_candidate
+    self.assertEqual((code, value.get('source'), value.get('version')), (0, legacy, '0.0.98'), value)
+AssertionError: Tuples differ: (5, None, None) != (0, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', '0.0.98')
+
+First differing element 0:
+5
+0
+
+- (5, None, None)
++ (0, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', '0.0.98') : {'schema': 'openwiz.install-error.v1', 'outcome': 'refused', 'command': 'status', 'reason': 'unknown asset role; the last good build and owner settings are retained'}
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.306s
+
+FAILED (failures=1)

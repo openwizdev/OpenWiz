@@ -1,0 +1,19 @@
+test_installed_openwiz_sets_up_a_repository_label_and_records_without_build_tools (__main__.InstalledCommand.test_installed_openwiz_sets_up_a_repository_label_and_records_without_build_tools) ...     Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.01s
+FAIL
+
+======================================================================
+FAIL: test_installed_openwiz_sets_up_a_repository_label_and_records_without_build_tools (__main__.InstalledCommand.test_installed_openwiz_sets_up_a_repository_label_and_records_without_build_tools)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/test_install.py", line 363, in test_installed_openwiz_sets_up_a_repository_label_and_records_without_build_tools
+    preview = openwiz()
+              ^^^^^^^^^
+  File "<checkout>/tools/install/test_install.py", line 361, in openwiz
+    self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+AssertionError: 1 != 0 : {"command":"init","error":{"kind":"unavailable","message":"The init outcome is unrecognized; run the same preview again before any apply."},"exit_code":1,"schema":"openwiz.cli-error.v1"}
+
+
+----------------------------------------------------------------------
+Ran 1 test in 9.693s
+
+FAILED (failures=1)

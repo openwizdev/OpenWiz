@@ -53,17 +53,17 @@ export OPENWIZ_PRIVACY_LITERALS="$tmp/literals"
 literal='synthetic confidential sample for hook proof'
 printf '%s\n' "$literal" > "$OPENWIZ_PRIVACY_LITERALS"
 
-# No web dependencies are installed in this fixture.
-mkdir -p "$work/apps/web"
-printf '%s\n' 'Synthetic clean change' > "$work/apps/web/change.txt"
-git -C "$work" add apps/web/change.txt
-git -C "$work" commit -qm 'Clean web change'
+# No build dependencies are installed in this fixture.
+mkdir -p "$work/docs"
+printf '%s\n' 'Synthetic clean change' > "$work/docs/change.txt"
+git -C "$work" add docs/change.txt
+git -C "$work" commit -qm 'Clean docs change'
 clean="$(git -C "$work" rev-parse HEAD)"
 git -C "$work" push fixture HEAD:refs/heads/topic ||
-  fail 'a clean web ref update must succeed without build dependencies'
+  fail 'a clean ref update must succeed without build dependencies'
 [ "$(git -C "$remote" rev-parse refs/heads/topic)" = "$clean" ] ||
   fail 'the clean push did not update topic'
-echo 'ok: clean web ref update without build dependencies'
+echo 'ok: clean ref update without build dependencies'
 
 printf '%s\n' "$literal" > "$work/planted.txt"
 git -C "$work" add planted.txt

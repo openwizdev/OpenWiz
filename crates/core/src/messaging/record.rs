@@ -188,8 +188,8 @@ impl fmt::Display for StoreError {
     }
 }
 
-/// The durable, per-owner store of send records. `openwiz-store` implements
-/// it with files; the core never touches storage itself.
+/// The durable, per-owner store of send records; the core never touches
+/// storage itself.
 ///
 /// Required of an implementation:
 /// - [`claim`](Self::claim) is atomic across processes: for a new op id

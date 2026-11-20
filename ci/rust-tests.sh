@@ -10,8 +10,7 @@
 # It builds every test first (`--no-run`), then starts at once: the unit and
 # doc tests of every other crate, in one cargo call, and one cargo call for
 # each openwiz-tests target, read from `cargo metadata`, so a new target is
-# never missed. 8 test threads each, web-api 24: it mostly waits, and its
-# reader retries an interrupted read (tests/web-api/http.rs). Each call
+# never missed. 8 test threads each. Each call
 # writes its own log; once all have finished, each log is printed whole, one
 # after another, then one line per call and the peak memory. Any failure, or
 # a call that leaves no exit status, fails the step.
@@ -33,8 +32,8 @@
 # have finished, then a line saying whether it passed. Either failing fails
 # the step.
 #
-# With `--only IDS` (#432, K15), it runs only the tests the selector picked
-# (ci/select/), by the CI selection record's ids, space-separated:
+# With `--only IDS` (#432, K15), it runs only the tests the plan picked
+# (#1486: by path), by the CI selection record's ids, space-separated:
 # `rust:lib:<package>` runs `cargo test -p <package>` (every test of that
 # crate) and `rust:test:<target>` one openwiz-tests target. Every target at
 # once: one crates call for just the selected packages (none if none), and
@@ -319,7 +318,6 @@ if [ -n "$why" ]; then
 fi
 frame "rust-tests: every target at once: $cpus CPUs by nproc, and the container allows 4 CPUs and 6 GiB or more"
 threads=8
-web_api_threads=24
 # From here on a failure goes through finish (R1 on #1291), so the skills'
 # tests started above are still waited for and their log printed.
 prep() { echo "rust-tests: $*" >&2; finish 1; }
@@ -379,10 +377,8 @@ elif [ -n "$sel_pkgs" ]; then
   calls_run=crates
 fi
 for t in $targets; do
-  n="$threads"
-  [ "$t" != web-api ] || n="$web_api_threads"
   # shellcheck disable=SC2086 # the skip arguments, split (#1410)
-  run "$t" cargo test -p openwiz-tests --locked --test "$t" -- --test-threads="$n" $skip
+  run "$t" cargo test -p openwiz-tests --locked --test "$t" -- --test-threads="$threads" $skip
 done
 for p in $pids; do wait "$p" || true; done
 took=$(($(date +%s) - began))

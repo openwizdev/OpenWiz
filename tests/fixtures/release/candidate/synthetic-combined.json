@@ -100,51 +100,6 @@
       {
         "identity": {
           "schema": "openwiz.product.v1",
-          "product": "server",
-          "version": "0.0.12",
-          "source": "1111111111111111111111111111111111111111",
-          "target": "aarch64-apple-darwin"
-        },
-        "payload_sha256": "43f6a4e5cd0baba68976f30e3a34ae71b72d3e2fca56e106183e693bc02305db",
-        "verification": "embedded-record",
-        "build_receipt": {
-          "record": "synthetic:aarch64-apple-darwin-build",
-          "sha256": "10966e7b5b97e88de7f81c8539e8eed766b0246469f2b6fa729192963f0ef0cb"
-        }
-      },
-      {
-        "identity": {
-          "schema": "openwiz.product.v1",
-          "product": "service",
-          "version": "0.0.12",
-          "source": "1111111111111111111111111111111111111111",
-          "target": "aarch64-apple-darwin"
-        },
-        "payload_sha256": "db080962255303f2c96cb57fe3a6739da434e6e19e318074e73b5c8bbe6803b0",
-        "verification": "embedded-record",
-        "build_receipt": {
-          "record": "synthetic:aarch64-apple-darwin-build",
-          "sha256": "10966e7b5b97e88de7f81c8539e8eed766b0246469f2b6fa729192963f0ef0cb"
-        }
-      },
-      {
-        "identity": {
-          "schema": "openwiz.product.v1",
-          "product": "web",
-          "version": "0.0.12",
-          "source": "1111111111111111111111111111111111111111",
-          "target": "aarch64-apple-darwin"
-        },
-        "payload_sha256": "d7592d4543fa7f0ed968438a20ea87595045dd01cad33bfcc66a5c82c18533bd",
-        "verification": "web-build",
-        "build_receipt": {
-          "record": "synthetic:aarch64-apple-darwin-build",
-          "sha256": "10966e7b5b97e88de7f81c8539e8eed766b0246469f2b6fa729192963f0ef0cb"
-        }
-      },
-      {
-        "identity": {
-          "schema": "openwiz.product.v1",
           "product": "cli",
           "version": "0.0.12",
           "source": "1111111111111111111111111111111111111111",
@@ -175,51 +130,6 @@
       {
         "identity": {
           "schema": "openwiz.product.v1",
-          "product": "server",
-          "version": "0.0.12",
-          "source": "1111111111111111111111111111111111111111",
-          "target": "x86_64-apple-darwin"
-        },
-        "payload_sha256": "f9ff3cf9f44bd7cefc500b9066a5cf972761ba5abd83e64a1ab44e99e84027c2",
-        "verification": "embedded-record",
-        "build_receipt": {
-          "record": "synthetic:x86_64-apple-darwin-build",
-          "sha256": "3fb5a9b1cdb9a5e5eebaea915fb7a3b6a1ac41ffa3279eab6c781d6d1b431dc0"
-        }
-      },
-      {
-        "identity": {
-          "schema": "openwiz.product.v1",
-          "product": "service",
-          "version": "0.0.12",
-          "source": "1111111111111111111111111111111111111111",
-          "target": "x86_64-apple-darwin"
-        },
-        "payload_sha256": "8d4f32d07b8a53fff0052191813440a3cd72972662f7a8f287a59aa8148764d4",
-        "verification": "embedded-record",
-        "build_receipt": {
-          "record": "synthetic:x86_64-apple-darwin-build",
-          "sha256": "3fb5a9b1cdb9a5e5eebaea915fb7a3b6a1ac41ffa3279eab6c781d6d1b431dc0"
-        }
-      },
-      {
-        "identity": {
-          "schema": "openwiz.product.v1",
-          "product": "web",
-          "version": "0.0.12",
-          "source": "1111111111111111111111111111111111111111",
-          "target": "x86_64-apple-darwin"
-        },
-        "payload_sha256": "5612fee26f35381610382d03e7b1f377446d3a57661765d53f82e69f8a2a0bb9",
-        "verification": "web-build",
-        "build_receipt": {
-          "record": "synthetic:x86_64-apple-darwin-build",
-          "sha256": "3fb5a9b1cdb9a5e5eebaea915fb7a3b6a1ac41ffa3279eab6c781d6d1b431dc0"
-        }
-      },
-      {
-        "identity": {
-          "schema": "openwiz.product.v1",
           "product": "cli",
           "version": "0.0.12",
           "source": "1111111111111111111111111111111111111111",
@@ -242,51 +152,6 @@
         },
         "payload_sha256": "aca8f1d04284323765280f54e0d07e0c32eaf2993bfb706aba21a7195020c8b5",
         "verification": "tracked-tree",
-        "build_receipt": {
-          "record": "synthetic:x86_64-unknown-linux-gnu-build",
-          "sha256": "712930c44e5e2e9441334472e9be42d47e525aa9c7b2ba5aa363dd4c75cb1930"
-        }
-      },
-      {
-        "identity": {
-          "schema": "openwiz.product.v1",
-          "product": "server",
-          "version": "0.0.12",
-          "source": "1111111111111111111111111111111111111111",
-          "target": "x86_64-unknown-linux-gnu"
-        },
-        "payload_sha256": "353d6505f78117aeb52dad9c69c44cb514f8bdbf9044edc8758f343b92b083cf",
-        "verification": "embedded-record",
-        "build_receipt": {
-          "record": "synthetic:x86_64-unknown-linux-gnu-build",
-          "sha256": "712930c44e5e2e9441334472e9be42d47e525aa9c7b2ba5aa363dd4c75cb1930"
-        }
-      },
-      {
-        "identity": {
-          "schema": "openwiz.product.v1",
-          "product": "service",
-          "version": "0.0.12",
-          "source": "1111111111111111111111111111111111111111",
-          "target": "x86_64-unknown-linux-gnu"
-        },
-        "payload_sha256": "070f52aef6614ed5499da35338e59c59255118c4770c4a87ec07635c12270ce4",
-        "verification": "embedded-record",
-        "build_receipt": {
-          "record": "synthetic:x86_64-unknown-linux-gnu-build",
-          "sha256": "712930c44e5e2e9441334472e9be42d47e525aa9c7b2ba5aa363dd4c75cb1930"
-        }
-      },
-      {
-        "identity": {
-          "schema": "openwiz.product.v1",
-          "product": "web",
-          "version": "0.0.12",
-          "source": "1111111111111111111111111111111111111111",
-          "target": "x86_64-unknown-linux-gnu"
-        },
-        "payload_sha256": "17b57e9d23d15af6154ba7c9b1eef726edd57947090902f57703a8f3b8369a64",
-        "verification": "web-build",
         "build_receipt": {
           "record": "synthetic:x86_64-unknown-linux-gnu-build",
           "sha256": "712930c44e5e2e9441334472e9be42d47e525aa9c7b2ba5aa363dd4c75cb1930"

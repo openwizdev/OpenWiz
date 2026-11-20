@@ -5,9 +5,6 @@ members = [
     "crates/adapters/cloudroom",
     "crates/adapters/github",
     "crates/cli",
-    "crates/server",
-    "crates/store",
-    "crates/service",
     "tests",
 ]
 

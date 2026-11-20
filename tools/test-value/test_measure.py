@@ -20,7 +20,7 @@ SPEC.loader.exec_module(measure)
 ROOT = "/work/repo"
 PACKAGES = [
     ("openwiz-core", f"{ROOT}/crates/core"),
-    ("openwiz-store", f"{ROOT}/crates/store"),
+    ("openwiz-cli", f"{ROOT}/crates/cli"),
     ("openwiz-tests", f"{ROOT}/tests"),
 ]
 
@@ -41,13 +41,13 @@ class CoverageByCrate(unittest.TestCase):
             file_entry(f"{ROOT}/crates/core/src/lib.rs", 30, 40),
             file_entry(f"{ROOT}/crates/core/src/send/mod.rs", 5, 20),
             file_entry(f"{ROOT}/crates/core/tests/moved.rs", 90, 90),
-            file_entry(f"{ROOT}/crates/store/src/lib.rs", 0, 12),
-            file_entry(f"{ROOT}/crates/store/examples/demo.rs", 7, 7),
+            file_entry(f"{ROOT}/crates/cli/src/lib.rs", 0, 12),
+            file_entry(f"{ROOT}/crates/cli/examples/demo.rs", 7, 7),
             file_entry(f"{ROOT}/tests/fleet/main.rs", 50, 50),
             file_entry(f"{ROOT}/tests/fake-room-cli/main.rs", 60, 80),
             file_entry("/outside/cargo-registry/src/serde/lib.rs", 3, 9),
         ), PACKAGES)
-        self.assertEqual(got, {"openwiz-core": [35, 60], "openwiz-store": [0, 12]})
+        self.assertEqual(got, {"openwiz-core": [35, 60], "openwiz-cli": [0, 12]})
 
 
 class TestCounts(unittest.TestCase):
@@ -88,9 +88,9 @@ class Compare(unittest.TestCase):
     # crate that disappears from the after report not reported as a drop.
     def test_names_every_crate_that_lost_covered_lines(self):
         lines = measure.compare(
-            result(self.TOOLS, {"openwiz-core": [35, 60], "openwiz-store": [4, 12], "openwiz-cli": [8, 10]}),
-            result(self.TOOLS, {"openwiz-core": [40, 60], "openwiz-store": [3, 12]}, tests=7))
-        self.assertIn("drops: openwiz-cli, openwiz-store", lines)
+            result(self.TOOLS, {"openwiz-core": [35, 60], "openwiz-adapter-github": [4, 12], "openwiz-cli": [8, 10]}),
+            result(self.TOOLS, {"openwiz-core": [40, 60], "openwiz-adapter-github": [3, 12]}, tests=7))
+        self.assertIn("drops: openwiz-adapter-github, openwiz-cli", lines)
         self.assertIn("tests: 10 -> 7 (-3)", lines)
 
 

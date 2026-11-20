@@ -40,7 +40,6 @@ mod b4_starts;
 
 mod b2_planner;
 mod b5_tick;
-mod lock_release;
 
 mod c10_inventory;
 mod c10_questions;

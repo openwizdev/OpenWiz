@@ -1,0 +1,107 @@
+# Red run (#1572): python3 -I kernel/records-kit/test_check.py, with the three new fixtures and the Links test before the fix (exit 1)
+test_each_planted_break_is_reported (__main__.Kit.test_each_planted_break_is_reported) ... 
+  test_each_planted_break_is_reported (__main__.Kit.test_each_planted_break_is_reported) [malformed-beside-live-note] ... FAIL
+  test_each_planted_break_is_reported (__main__.Kit.test_each_planted_break_is_reported) [commented-out-heading] ... FAIL
+  test_each_planted_break_is_reported (__main__.Kit.test_each_planted_break_is_reported) [blocker-without-reason] ... FAIL
+test_links_section_read_as_plan_links_reads_it (__main__.Kit.test_links_section_read_as_plan_links_reads_it) ... 
+  test_links_section_read_as_plan_links_reads_it (__main__.Kit.test_links_section_read_as_plan_links_reads_it) [two lines] ... FAIL
+  test_links_section_read_as_plan_links_reads_it (__main__.Kit.test_links_section_read_as_plan_links_reads_it) [not a link line] ... FAIL
+  test_links_section_read_as_plan_links_reads_it (__main__.Kit.test_links_section_read_as_plan_links_reads_it) [heading in a comment] ... FAIL
+test_reader_refuses_any_other_shape (__main__.Kit.test_reader_refuses_any_other_shape) ... ok
+test_valid_tracker_passes (__main__.Kit.test_valid_tracker_passes) ... ok
+
+======================================================================
+FAIL: test_each_planted_break_is_reported (__main__.Kit.test_each_planted_break_is_reported) [malformed-beside-live-note]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/records-kit/test_check.py", line 61, in test_each_planted_break_is_reported
+    self.assertEqual((code, out), (1, want), err)
+AssertionError: Tuples differ: (1, ['#2 S1: 2 live builder notes: 202, 208']) != (1, ['#2 S2: note 208 does not read as openwiz:status v1'])
+
+First differing element 1:
+['#2 S1: 2 live builder notes: 202, 208']
+['#2 S2: note 208 does not read as openwiz:status v1']
+
+- (1, ['#2 S1: 2 live builder notes: 202, 208'])
++ (1, ['#2 S2: note 208 does not read as openwiz:status v1']) : 
+
+======================================================================
+FAIL: test_each_planted_break_is_reported (__main__.Kit.test_each_planted_break_is_reported) [commented-out-heading]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/records-kit/test_check.py", line 61, in test_each_planted_break_is_reported
+    self.assertEqual((code, out), (1, want), err)
+AssertionError: Tuples differ: (0, []) != (1, ['#2 T1: ticket lacks ## Proof'])
+
+First differing element 0:
+0
+1
+
+- (0, [])
++ (1, ['#2 T1: ticket lacks ## Proof']) : 
+
+======================================================================
+FAIL: test_each_planted_break_is_reported (__main__.Kit.test_each_planted_break_is_reported) [blocker-without-reason]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/records-kit/test_check.py", line 61, in test_each_planted_break_is_reported
+    self.assertEqual((code, out), (1, want), err)
+AssertionError: Tuples differ: (0, []) != (1, ['#2 B1: #3 has no reason line'])
+
+First differing element 0:
+0
+1
+
+- (0, [])
++ (1, ['#2 B1: #3 has no reason line']) : 
+
+======================================================================
+FAIL: test_links_section_read_as_plan_links_reads_it (__main__.Kit.test_links_section_read_as_plan_links_reads_it) [two lines]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/records-kit/test_check.py", line 87, in test_links_section_read_as_plan_links_reads_it
+    self.assertEqual((code, out), (1, want), err)
+AssertionError: Tuples differ: (0, []) != (1, ['#2 B1: #3 has more than one line'])
+
+First differing element 0:
+0
+1
+
+- (0, [])
++ (1, ['#2 B1: #3 has more than one line']) : 
+
+======================================================================
+FAIL: test_links_section_read_as_plan_links_reads_it (__main__.Kit.test_links_section_read_as_plan_links_reads_it) [not a link line]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/records-kit/test_check.py", line 87, in test_links_section_read_as_plan_links_reads_it
+    self.assertEqual((code, out), (1, want), err)
+AssertionError: Tuples differ: (0, []) != (1, ['#2 B1: malformed section: a line is not a link line or none'])
+
+First differing element 0:
+0
+1
+
+- (0, [])
++ (1, ['#2 B1: malformed section: a line is not a link line or none']) : 
+
+======================================================================
+FAIL: test_links_section_read_as_plan_links_reads_it (__main__.Kit.test_links_section_read_as_plan_links_reads_it) [heading in a comment]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/records-kit/test_check.py", line 87, in test_links_section_read_as_plan_links_reads_it
+    self.assertEqual((code, out), (1, want), err)
+AssertionError: Tuples differ: (0, []) != (1, ['#2 T1: ticket lacks ## Links', '#2 B1: #3 has no reason line'])
+
+First differing element 0:
+0
+1
+
+- (0, [])
++ (1, ['#2 T1: ticket lacks ## Links', '#2 B1: #3 has no reason line']) : 
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.795s
+
+FAILED (failures=6)
+# exit 1

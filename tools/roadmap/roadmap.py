@@ -2,9 +2,8 @@
 """The roadmap generator (ClosedWiz#277, spec #276, R1).
 
 Reads GitHub's milestones over REST and rewrites only the marked, generated
-parts of docs/ROADMAP.md (the Now and Next table and its picture) and
-STATUS.md (the version table); with --public FILE, writes only the short
-public roadmap to FILE instead. See README.md beside this file.
+parts of docs/ROADMAP.md (the Now and Next table and its picture); with
+--public FILE, writes only the short public roadmap to FILE instead. See README.md beside this file.
 
     python3 tools/roadmap/roadmap.py [--root DIR] [--public FILE] [--public-repo OWNER/NAME]
 """
@@ -43,7 +42,6 @@ PUBLIC_CHARS = re.compile(r"[A-Za-z0-9 .,;:!?'\"()\-’“”—–…]")
 PUBLIC_WORDS = ("You", "OpenWiz", "CloudRoom", "GitHub", "Mac", "PC")
 
 ROADMAP_REGIONS = ("now-next", "picture")
-STATUS_REGIONS = ("versions",)
 
 
 class Fail(Exception):
@@ -260,15 +258,6 @@ def picture(versions):
     return "\n".join(lines)
 
 
-def versions_table(versions):
-    rows = ["| Version | State | You can … | Done when … | Links |",
-            "| --- | --- | --- | --- | --- |"]
-    for v in versions:
-        rows.append(f"| {v['title']} | {v['state']} | {cell(v['outcome'])} | {cell(v['done'])} | "
-                    f"{links(v, 'docs/grills/')} |")
-    return "\n".join(rows)
-
-
 def public_holds(line):
     """What in LINE can't go public, or None."""
     for ch in line:
@@ -405,7 +394,7 @@ def main(argv):
                         help=f"the public repository whose v<version> tags mark published versions (default {PUBLIC_REPO})")
     args = parser.parse_args(argv)
     root = Path(args.root)
-    pages = {"docs/ROADMAP.md": ROADMAP_REGIONS, "STATUS.md": STATUS_REGIONS}
+    pages = {"docs/ROADMAP.md": ROADMAP_REGIONS}
     try:
         if args.public:
             versions, problems = read_github(root, args.public_repo)
@@ -419,7 +408,6 @@ def main(argv):
             new = {
                 "docs/ROADMAP.md": fill(old["docs/ROADMAP.md"], {"now-next": now_next_table(versions),
                                                                "picture": picture(versions)}, "docs/ROADMAP.md"),
-                "STATUS.md": fill(old["STATUS.md"], {"versions": versions_table(versions)}, "STATUS.md"),
             }
             targets = {name: root / name for name in pages}
         report = write_pages(targets, new)

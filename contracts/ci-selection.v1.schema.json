@@ -592,7 +592,7 @@
           "$ref": "#/$defs/lane_all"
         },
         "web": {
-          "$ref": "#/$defs/lane_all"
+          "$ref": "#/$defs/lane"
         },
         "site": {
           "$ref": "#/$defs/lane_all"
@@ -681,7 +681,7 @@
       "additionalProperties": false,
       "properties": {
         "web_export": {
-          "$ref": "#/$defs/build_all"
+          "$ref": "#/$defs/build"
         }
       }
     },

@@ -54,6 +54,8 @@ setup	Python for the offline installer and release proofs
 skills	The WizSkills contract copies
 skills	The WizSkills installer's tests
 skills	The fleet load checks
+# #1394/#1417/#1419: the kernel kits' tests and the records v1 model check are tests.
+skills	The kernel kits' tests
 setup	Image skill browser dependencies
 skills	The setup contract reader
 # Nov 2 historical workflow's isolated Rust static-page proof (backfill #1252).
@@ -75,15 +77,20 @@ setup	The runner guard
 build	The carriage guard
 build	The PR test-code budget
 build	The changed-file privacy guard
+build	The owned-paths tests
+build	Every changed file is inside the ticket's owned paths
 setup	The hosted setup
 # X5: one plan, independent lanes, receipts, and the required-check transition.
 # #1055: the push-only trusted map-age read is setup, including key fetch.
 setup	Check the signed main map age
+# #1486: the push-only last-full-run read is setup.
+setup	Check the last full main run
 setup	Write the CI plan
 setup	Prepare lane
 setup	Prune unused inputs
 setup	Record passed lane
 setup	Every planned lane passed
+setup	Record each job's time
 setup	Legacy checks follow ci
 # #1266 (X8): the Rust shards; each member's share, the ci job's count, and the balancer's own tests.
 setup	The Rust shard

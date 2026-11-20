@@ -73,19 +73,10 @@ flowchart LR
   v0_0_2 --> v0_0_3 --> v0_0_4 --> v0_0_10
 ```"""
 
-VERSIONS = f"""\
-| Version | State | You can … | Done when … | Links |
-| --- | --- | --- | --- | --- |
-| 0.0.1 | published | You can list your threads in the terminal. | Done when the owner lists their threads on a real machine (#11). | [milestone]({GH}/milestone/1) · spec [#10]({GH}/issues/10) · live check [#11]({GH}/issues/11) · [grill](docs/grills/2026-01-01-first-steps.md) |
-| 0.0.2 | live-checked | You can see the same list on your phone. | Done when the list opens on a real phone (#21). | [milestone]({GH}/milestone/3) · spec [#20]({GH}/issues/20) · live check [#21]({GH}/issues/21) |
-| 0.0.3 | built | You can send a message to a thread. | Done when one message reaches one real thread (#31), and no other. | [milestone]({GH}/milestone/4) · spec [#30]({GH}/issues/30) · live check [#31]({GH}/issues/31) |
-| 0.0.4 | building | You can start new threads \\| and attach files. | Done when one new thread starts on a real account (#43). | [milestone]({GH}/milestone/6) · spec [#40]({GH}/issues/40) · live check [#43]({GH}/issues/43) |
-| 0.0.10 | being grilled | You can keep a fleet running with the lid shut. | Done when the lid stays shut for a whole day. | [milestone]({GH}/milestone/7) · [grill](docs/grills/2026-01-07-ten.md) |"""
 
 # What the sample pages hold between their markers before a run.
 OLD_NOW_NEXT = "| Old | table |\n| --- | --- |\n| stale | row |"
 OLD_PICTURE = "an old picture"
-OLD_VERSIONS = "| Version | What you get |\n| --- | --- |\n| 0.0.0 | a stale row |"
 
 
 def region(name, body):
@@ -103,13 +94,6 @@ def expected_roadmap(now_next=NOW_NEXT, picture=PICTURE):
         assert text.count(before) == 1, f"the sample ROADMAP.md lost its {name} region"
         text = text.replace(before, region(name, new))
     return text
-
-
-def expected_status(versions=VERSIONS):
-    text = sample("STATUS.md")
-    before = region("versions", OLD_VERSIONS)
-    assert text.count(before) == 1, "the sample STATUS.md lost its versions region"
-    return text.replace(before, region("versions", versions))
 
 
 def world():
@@ -140,7 +124,6 @@ class Case(unittest.TestCase):
         self.root = self.tmp / "root"
         (self.root / "docs").mkdir(parents=True)
         shutil.copyfile(FIX / "ROADMAP.md", self.roadmap)
-        shutil.copyfile(FIX / "STATUS.md", self.status)
         self.bin = self.tmp / "bin"
         self.bin.mkdir()
         (self.bin / "gh").symlink_to(FIX / "gh")
@@ -148,15 +131,10 @@ class Case(unittest.TestCase):
     def fresh_pages(self):
         """The sample pages again, for each subtest: subtests share nothing."""
         shutil.copyfile(FIX / "ROADMAP.md", self.roadmap)
-        shutil.copyfile(FIX / "STATUS.md", self.status)
 
     @property
     def roadmap(self):
         return self.root / "docs" / "ROADMAP.md"
-
-    @property
-    def status(self):
-        return self.root / "STATUS.md"
 
     def run_roadmap(self, w=None, *args, env=None, path=None):
         world_file = self.tmp / "world.json"
@@ -180,12 +158,11 @@ class Case(unittest.TestCase):
         with open(path, encoding="utf-8", newline="") as f:
             return f.read()
 
-    def assert_pages(self, roadmap, status):
+    def assert_pages(self, roadmap):
         self.assertEqual(self.read(self.roadmap), roadmap)
-        self.assertEqual(self.read(self.status), status)
 
     def assert_untouched(self):
-        self.assert_pages(sample("ROADMAP.md"), sample("STATUS.md"))
+        self.assert_pages(sample("ROADMAP.md"))
 
 
 class RepositorySettings(Case):
@@ -198,7 +175,7 @@ class RepositorySettings(Case):
         self.assertEqual((r.code, r.err), (0, ""))
         self.assertEqual(r.calls, [TAGS.replace("jparker2006/OpenWiz", "synthetic-owner/public-repo")
                                    if c == TAGS else c for c in CALLS])
-        self.assert_pages(expected_roadmap(), expected_status())
+        self.assert_pages(expected_roadmap())
 
     def test_the_default_public_repo_is_openwiz(self):
         r = self.run_roadmap()
@@ -219,9 +196,8 @@ class RepositorySettings(Case):
         w = json.loads(json.dumps(world()).replace(GH, other))
         r = self.run_roadmap(w)
         self.assertEqual((r.code, r.err), (0, ""))
-        self.assert_pages(expected_roadmap(NOW_NEXT.replace(GH, other)),
-                          expected_status(VERSIONS.replace(GH, other)))
-        self.assertNotIn("example-owner", self.read(self.roadmap) + self.read(self.status))
+        self.assert_pages(expected_roadmap(NOW_NEXT.replace(GH, other)))
+        self.assertNotIn("example-owner", self.read(self.roadmap))
 
 
 def outside(text, names):
@@ -241,27 +217,32 @@ class GeneratedParts(Case):
     def test_the_generated_parts_match_the_milestones(self):
         r = self.run_roadmap()
         self.assertEqual((r.code, r.err), (0, ""))
-        self.assertEqual(r.out, "docs/ROADMAP.md: updated\nSTATUS.md: updated\n")
-        self.assert_pages(expected_roadmap(), expected_status())
+        self.assertEqual(r.out, "docs/ROADMAP.md: updated\n")
+        self.assert_pages(expected_roadmap())
 
     def test_the_hand_written_parts_are_untouched(self):
         r = self.run_roadmap()
         self.assertEqual(r.code, 0, r.err)
         self.assertEqual(outside(self.read(self.roadmap), ["now-next", "picture"]),
                          outside(sample("ROADMAP.md"), ["now-next", "picture"]))
-        self.assertEqual(outside(self.read(self.status), ["versions"]),
-                         outside(sample("STATUS.md"), ["versions"]))
         self.assertTrue(self.read(self.roadmap).endswith("The last line has no newline."))
 
     def test_running_it_twice_changes_nothing(self):
         first = self.run_roadmap()
         self.assertEqual(first.code, 0, first.err)
-        before = [(p.read_bytes(), p.stat().st_mtime_ns, p.stat().st_ino) for p in (self.roadmap, self.status)]
+        before = [(p.read_bytes(), p.stat().st_mtime_ns, p.stat().st_ino) for p in (self.roadmap,)]
         second = self.run_roadmap()
         self.assertEqual((second.code, second.err), (0, ""))
-        self.assertEqual(second.out, "docs/ROADMAP.md: unchanged\nSTATUS.md: unchanged\n")
-        after = [(p.read_bytes(), p.stat().st_mtime_ns, p.stat().st_ino) for p in (self.roadmap, self.status)]
+        self.assertEqual(second.out, "docs/ROADMAP.md: unchanged\n")
+        after = [(p.read_bytes(), p.stat().st_mtime_ns, p.stat().st_ino) for p in (self.roadmap,)]
         self.assertEqual(after, before)
+
+    def test_status_md_is_neither_read_nor_written(self):
+        # #1301: STATUS.md is deleted; the default run writes docs/ROADMAP.md only.
+        r = self.run_roadmap()
+        self.assertEqual((r.code, r.err, r.out), (0, "", "docs/ROADMAP.md: updated\n"))
+        self.assertEqual(self.read(self.roadmap), expected_roadmap())
+        self.assertEqual(sorted(p.name for p in self.root.iterdir()), ["docs"])
 
     def test_it_makes_exactly_these_reads_and_nothing_else(self):
         r = self.run_roadmap()
@@ -276,8 +257,14 @@ class States(Case):
     def states(self, w):
         r = self.run_roadmap(w)
         self.assertEqual(r.code, 0, r.err)
-        rows = [line for line in self.read(self.status).splitlines() if line.startswith("| 0.")]
-        return {row.split(" | ")[0][2:]: row.split(" | ")[1] for row in rows}
+        # #1301: the Now and Next table shows every state but published, so a
+        # sample version missing from it is published.
+        rows = [line.split(" | ") for line in self.read(self.roadmap).splitlines()
+                if line.startswith(("| Now | 0.", "| Next | 0."))]
+        found = {"0.0.1": "published", "0.0.2": "published", "0.0.3": "published",
+                 "0.0.4": "published", "0.0.10": "published"}
+        found.update({cells[1]: cells[2] for cells in rows})
+        return found
 
     def test_each_state_from_the_sample_world(self):
         # v0.0.20 doesn't publish 0.0.2; release-0.0.4-no-send doesn't build
@@ -304,12 +291,12 @@ class States(Case):
                                  "html_url": f"{GH}/issues/39"})
         r = self.run_roadmap(w)
         self.assertEqual((r.code, r.err), (0, ""))
-        expected = row(VERSIONS, "| 0.0.4 |").replace(
+        expected = row(NOW_NEXT, "| Now | 0.0.4 |").replace(
             f"[milestone]({GH}/milestone/6) · spec [#40]",
             f"[milestone]({GH}/milestone/6) · spec [#39]({GH}/issues/39) · spec [#40]").replace(
             f"live check [#43]({GH}/issues/43) |",
-            f"live check [#43]({GH}/issues/43) · [grill](docs/grills/b-later.md) · [grill](docs/grills/a-first.md) |")
-        self.assertEqual(row(self.read(self.status), "| 0.0.4 |"), expected)
+            f"live check [#43]({GH}/issues/43) · [grill](grills/b-later.md) · [grill](grills/a-first.md) |")
+        self.assertEqual(row(self.read(self.roadmap), "| Now | 0.0.4 |"), expected)
 
     def test_the_picture_with_one_version_and_with_none(self):
         w = world()
@@ -362,10 +349,9 @@ class MissingLines(Case):
         r = self.run_roadmap(w)
         self.assertEqual(r.code, 3)
         self.assertEqual(r.err, 'roadmap: 0.0.3: no "You can …" line in its milestone\n')
-        self.assertEqual(r.out, "docs/ROADMAP.md: updated\nSTATUS.md: updated\n")
+        self.assertEqual(r.out, "docs/ROADMAP.md: updated\n")
         self.assert_pages(
-            expected_roadmap(swap(NOW_NEXT, "| Now | 0.0.3 |", "You can send a message to a thread.", "_missing_")),
-            expected_status(swap(VERSIONS, "| 0.0.3 |", "You can send a message to a thread.", "_missing_")))
+            expected_roadmap(swap(NOW_NEXT, "| Now | 0.0.3 |", "You can send a message to a thread.", "_missing_")))
 
     def test_no_description_lists_both_lines(self):
         w = world()
@@ -378,11 +364,7 @@ class MissingLines(Case):
                         "You can keep a fleet running with the lid shut. | Done when the lid stays shut for a whole day.",
                         "_missing_ | _missing_")
         now_next = swap(now_next, "| Next | 0.0.10 |", " · [grill](grills/2026-01-07-ten.md)", "")
-        versions = swap(VERSIONS, "| 0.0.10 |",
-                        "You can keep a fleet running with the lid shut. | Done when the lid stays shut for a whole day.",
-                        "_missing_ | _missing_")
-        versions = swap(versions, "| 0.0.10 |", " · [grill](docs/grills/2026-01-07-ten.md)", "")
-        self.assert_pages(expected_roadmap(now_next), expected_status(versions))
+        self.assert_pages(expected_roadmap(now_next))
 
     def test_two_done_lines_are_listed_and_neither_is_read(self):
         w = world()
@@ -396,12 +378,8 @@ class MissingLines(Case):
                         "_missing (2 lines)_")
         now_next = swap(now_next, "| Now | 0.0.2 |", "live-checked", "built")
         now_next = swap(now_next, "| Now | 0.0.2 |", f" · live check [#21]({GH}/issues/21)", "")
-        versions = swap(VERSIONS, "| 0.0.2 |", "Done when the list opens on a real phone (#21).",
-                        "_missing (2 lines)_")
-        versions = swap(versions, "| 0.0.2 |", "live-checked", "built")
-        versions = swap(versions, "| 0.0.2 |", f" · live check [#21]({GH}/issues/21)", "")
         picture = PICTURE.replace('"0.0.2: live-checked"', '"0.0.2: built"')
-        self.assert_pages(expected_roadmap(now_next, picture), expected_status(versions))
+        self.assert_pages(expected_roadmap(now_next, picture))
 
     def test_two_outcome_lines_are_listed(self):
         w = world()
@@ -409,15 +387,15 @@ class MissingLines(Case):
         r = self.run_roadmap(w)
         self.assertEqual(r.code, 3)
         self.assertEqual(r.err, 'roadmap: 0.0.3: 2 "You can …" lines in its milestone\n')
-        self.assertEqual(row(self.read(self.status), "| 0.0.3 |"),
-                         row(VERSIONS, "| 0.0.3 |").replace("You can send a message to a thread.", "_missing (2 lines)_"))
+        self.assertEqual(row(self.read(self.roadmap), "| Now | 0.0.3 |"),
+                         row(NOW_NEXT, "| Now | 0.0.3 |").replace("You can send a message to a thread.", "_missing (2 lines)_"))
 
     def test_look_alike_words_are_not_lines(self):
         w = world()
         milestone(w, "0.0.3")["description"] += "\nYou cannot send two.\nYou can'\nDone whenever it is.\nDone, when asked."
         r = self.run_roadmap(w)
         self.assertEqual((r.code, r.err), (0, ""))
-        self.assert_pages(expected_roadmap(), expected_status())
+        self.assert_pages(expected_roadmap())
 
     def test_lone_carriage_returns_split_lines(self):
         w = world()
@@ -425,7 +403,7 @@ class MissingLines(Case):
         m["description"] = m["description"].replace("\n", "\r")
         r = self.run_roadmap(w)
         self.assertEqual((r.code, r.err), (0, ""))
-        self.assert_pages(expected_roadmap(), expected_status())
+        self.assert_pages(expected_roadmap())
 
     def test_no_issues_and_no_tags_at_all(self):
         w = world()
@@ -433,8 +411,12 @@ class MissingLines(Case):
         del w["issues"]["7"]
         r = self.run_roadmap(w)
         self.assertEqual((r.code, r.err), (0, ""))
-        self.assertEqual(row(self.read(self.status), "| 0.0.1 |"), row(VERSIONS, "| 0.0.1 |").replace("published", "live-checked"))
-        self.assertEqual(row(self.read(self.status), "| 0.0.10 |"), row(VERSIONS, "| 0.0.10 |"))
+        self.assertEqual(row(self.read(self.roadmap), "| Now | 0.0.1 |"),
+                         f"| Now | 0.0.1 | live-checked | You can list your threads in the terminal. | "
+                         f"Done when the owner lists their threads on a real machine (#11). | "
+                         f"[milestone]({GH}/milestone/1) · spec [#10]({GH}/issues/10) · live check [#11]({GH}/issues/11)"
+                         f" · [grill](grills/2026-01-01-first-steps.md) |")
+        self.assertEqual(row(self.read(self.roadmap), "| Next | 0.0.10 |"), row(NOW_NEXT, "| Next | 0.0.10 |"))
 
     def test_a_line_counts_only_when_it_starts_with_its_words(self):
         w = world()
@@ -451,18 +433,18 @@ class MissingLines(Case):
         milestone(w, "0.0.X")["description"] = "Nothing here."
         r = self.run_roadmap(w)
         self.assertEqual((r.code, r.err), (0, ""))
-        self.assert_pages(expected_roadmap(), expected_status())
+        self.assert_pages(expected_roadmap())
 
     def test_running_it_twice_with_a_gap_changes_nothing(self):
         w = world()
         milestone(w, "0.0.10")["description"] = "You can keep a fleet running with the lid shut."
         first = self.run_roadmap(w)
         self.assertEqual(first.code, 3)
-        before = [(p.read_bytes(), p.stat().st_mtime_ns) for p in (self.roadmap, self.status)]
+        before = [(p.read_bytes(), p.stat().st_mtime_ns) for p in (self.roadmap,)]
         second = self.run_roadmap(w)
         self.assertEqual((second.code, second.err), (3, 'roadmap: 0.0.10: no "Done when …" line in its milestone\n'))
-        self.assertEqual(second.out, "docs/ROADMAP.md: unchanged\nSTATUS.md: unchanged\n")
-        self.assertEqual([(p.read_bytes(), p.stat().st_mtime_ns) for p in (self.roadmap, self.status)], before)
+        self.assertEqual(second.out, "docs/ROADMAP.md: unchanged\n")
+        self.assertEqual([(p.read_bytes(), p.stat().st_mtime_ns) for p in (self.roadmap,)], before)
 
 
 class LiveCheckTicket(Case):
@@ -478,10 +460,10 @@ class LiveCheckTicket(Case):
         r = self.run_roadmap(w)
         self.assertEqual((r.code, r.err), (0, ""))
         self.assertEqual(r.calls, [c if c != ticket(31) else ticket(99) for c in CALLS])
-        self.assertIn(f"| 0.0.3 | live-checked | You can send a message to a thread. | "
+        self.assertIn(f"| Now | 0.0.3 | live-checked | You can send a message to a thread. | "
                       f"Done when one message reaches one real thread (#99, then #31), and no other. | "
                       f"[milestone]({GH}/milestone/4) · spec [#30]({GH}/issues/30) · live check [#99]({GH}/issues/99) |",
-                      self.read(self.status))
+                      self.read(self.roadmap))
 
     def test_only_a_whole_ticket_number_counts(self):
         w = world()
@@ -499,7 +481,7 @@ class LiveCheckTicket(Case):
                 w["issues"]["3"][1].update(state=state, state_reason=reason)
                 r = self.run_roadmap(w)
                 self.assertEqual((r.code, r.err), (0, ""))
-                self.assertIn("| 0.0.2 | built |", self.read(self.status))
+                self.assertIn("| Now | 0.0.2 | built |", self.read(self.roadmap))
 
     def test_a_pull_request_is_not_a_live_check_ticket(self):
         w = world()
@@ -510,9 +492,9 @@ class LiveCheckTicket(Case):
         r = self.run_roadmap(w)
         self.assertEqual(r.code, 3)
         self.assertEqual(r.err, "roadmap: 0.0.3: its live-check ticket #99 is a pull request\n")
-        self.assertIn(f"| 0.0.3 | built | You can send a message to a thread. | "
+        self.assertIn(f"| Now | 0.0.3 | built | You can send a message to a thread. | "
                       f"Done when one message reaches one real thread (#99), and no other. | "
-                      f"[milestone]({GH}/milestone/4) · spec [#30]({GH}/issues/30) |", self.read(self.status))
+                      f"[milestone]({GH}/milestone/4) · spec [#30]({GH}/issues/30) |", self.read(self.roadmap))
 
     def test_a_done_line_with_no_ticket_never_reads_as_live_checked(self):
         w = world()
@@ -521,9 +503,9 @@ class LiveCheckTicket(Case):
         r = self.run_roadmap(w)
         self.assertEqual((r.code, r.err), (0, ""))
         self.assertNotIn(ticket(21), r.calls)
-        self.assertIn(f"| 0.0.2 | built | You can see the same list on your phone. | "
+        self.assertIn(f"| Now | 0.0.2 | built | You can see the same list on your phone. | "
                       f"Done when the list opens on a real phone. | "
-                      f"[milestone]({GH}/milestone/3) · spec [#20]({GH}/issues/20) |", self.read(self.status))
+                      f"[milestone]({GH}/milestone/3) · spec [#20]({GH}/issues/20) |", self.read(self.roadmap))
 
 
 PUBLIC = """\
@@ -737,7 +719,7 @@ class FailsClosed(Case):
             self.assertTrue(r.err.endswith("; nothing written\n"), r.err)
             self.assertEqual(r.err.count("\n"), 1, r.err)
         self.assert_untouched()
-        self.assertEqual(sorted(p.name for p in self.root.iterdir()), ["STATUS.md", "docs"])
+        self.assertEqual(sorted(p.name for p in self.root.iterdir()), ["docs"])
         self.assertEqual(sorted(p.name for p in (self.root / "docs").iterdir()), ["ROADMAP.md"])
 
     def test_a_failed_read_writes_nothing(self):
@@ -861,7 +843,6 @@ class FailsClosed(Case):
     def test_bad_markers_stop_it_before_any_read(self):
         nb, ne = "<!-- roadmap:now-next:begin -->", "<!-- roadmap:now-next:end -->"
         pb, pe = "<!-- roadmap:picture:begin -->", "<!-- roadmap:picture:end -->"
-        vb = "<!-- roadmap:versions:begin -->"
         for page, old, new, err in (
             ("ROADMAP", nb + "\n", "",
              f"docs/ROADMAP.md: 0 lines are exactly {nb} (one is needed)"),
@@ -878,14 +859,10 @@ class FailsClosed(Case):
             ("ROADMAP", f"{ne}\n\nBetween the two regions, hand-written.\n\n{pb}\nan old picture\n{pe}",
              f"\nBetween the two regions, hand-written.\n\n{pb}\nan old picture\n{pe}\n{ne}",
              "docs/ROADMAP.md: the now-next and picture regions overlap"),
-            ("STATUS", vb, vb.upper(),
-             f"STATUS.md: 0 lines are exactly {vb} (one is needed)"),
-            ("STATUS", vb, vb + "\r",
-             f"STATUS.md: 0 lines are exactly {vb} (one is needed)"),
         ):
             with self.subTest(page=page, err=err):
                 self.fresh_pages()
-                target = self.roadmap if page == "ROADMAP" else self.status
+                target = self.roadmap
                 text = sample(f"{page}.md")
                 self.assertEqual(text.count(old), 1)
                 bad = text.replace(old, new)
@@ -912,24 +889,23 @@ class FailsClosed(Case):
         self.assertEqual(self.read(self.roadmap), expected)
 
     def test_a_page_it_cant_read_stops_it(self):
-        self.status.write_bytes(sample("STATUS.md").encode() + b"\xff")
+        bad = sample("ROADMAP.md").encode() + b"\xff"
+        self.roadmap.write_bytes(bad)
         r = self.run_roadmap()
         self.assertEqual((r.code, r.out, r.calls), (1, "", []))
-        self.assertTrue(r.err.startswith(f"roadmap: could not read {self.status}: "), r.err)
-        self.assertEqual(self.read(self.roadmap), sample("ROADMAP.md"))
-        self.status.unlink()
+        self.assertTrue(r.err.startswith(f"roadmap: could not read {self.roadmap}: "), r.err)
+        self.assertEqual(self.roadmap.read_bytes(), bad)
+        self.roadmap.unlink()
         r = self.run_roadmap()
         self.assertEqual((r.code, r.out, r.calls), (1, "", []))
-        self.assertEqual(self.read(self.roadmap), sample("ROADMAP.md"))
+        self.assertEqual(sorted(p.name for p in (self.root / "docs").iterdir()), [])
 
-    def test_a_write_that_fails_halfway_writes_nothing(self):
-        # STATUS.md grows past a file size limit the run can't exceed, after
-        # docs/ROADMAP.md (well under it) has been prepared.
-        status = sample("STATUS.md") + "\n" + ("Long hand-written notes. " * 400)
-        self.status.write_text(status, encoding="utf-8")
+    def test_a_write_that_fails_writes_nothing(self):
+        # docs/ROADMAP.md grows past a file size limit the run can't exceed.
+        roadmap = sample("ROADMAP.md") + "\n" + ("Long hand-written notes. " * 400)
+        self.roadmap.write_text(roadmap, encoding="utf-8")
         limit = 8192
-        self.assertLess(len(expected_roadmap().encode()), limit)
-        self.assertGreater(len(status.encode()), limit)
+        self.assertGreater(len(roadmap.encode()), limit)
         log = self.tmp / "gh.log"
         world_file = self.tmp / "world.json"
         world_file.write_text(json.dumps(world()), encoding="utf-8")
@@ -940,16 +916,15 @@ class FailsClosed(Case):
             [sys.executable, str(SCRIPT), "--root", str(self.root)], capture_output=True, text=True, timeout=60,
             env=env, cwd=self.tmp, preexec_fn=lambda: resource.setrlimit(resource.RLIMIT_FSIZE, (limit, limit)))
         self.assertEqual((proc.returncode, proc.stdout), (1, ""), proc.stderr)
-        self.assertTrue(proc.stderr.startswith(f"roadmap: could not write {self.status}: "), proc.stderr)
+        self.assertTrue(proc.stderr.startswith(f"roadmap: could not write {self.roadmap}: "), proc.stderr)
         self.assertTrue(proc.stderr.endswith("; nothing written\n"), proc.stderr)
-        self.assertEqual(self.read(self.roadmap), sample("ROADMAP.md"))
-        self.assertEqual(self.read(self.status), status)
-        self.assertEqual(sorted(p.name for p in self.root.iterdir()), ["STATUS.md", "docs"])
+        self.assertEqual(self.read(self.roadmap), roadmap)
+        self.assertEqual(sorted(p.name for p in self.root.iterdir()), ["docs"])
         self.assertEqual(sorted(p.name for p in (self.root / "docs").iterdir()), ["ROADMAP.md"])
 
     def test_a_page_that_cant_be_put_in_place_says_what_was_written(self):
-        # The run's second os.replace fails, as on a full disk: docs/ROADMAP.md
-        # is in place already, and the message says so.
+        # The run's os.replace fails, as on a full disk: nothing is in place,
+        # the message says so, and the staged copy is gone.
         log = self.tmp / "gh.log"
         world_file = self.tmp / "world.json"
         world_file.write_text(json.dumps(world()), encoding="utf-8")
@@ -958,30 +933,25 @@ class FailsClosed(Case):
                     "FAKE_GH_WORLD": str(world_file), "FAKE_GH_LOG": str(log)})
         driver = (
             "import os, runpy, sys\n"
-            "real, calls = os.replace, []\n"
             "def replace(a, b):\n"
-            "    calls.append(b)\n"
-            "    if len(calls) == 2:\n"
-            "        raise OSError(28, 'No space left on device')\n"
-            "    return real(a, b)\n"
+            "    raise OSError(28, 'No space left on device')\n"
             "os.replace = replace\n"
             "sys.argv = [sys.argv[1], '--root', sys.argv[2]]\n"
             "runpy.run_path(sys.argv[0], run_name='__main__')\n")
         proc = subprocess.run([sys.executable, "-c", driver, str(SCRIPT), str(self.root)], capture_output=True,
                               text=True, timeout=60, env=env, cwd=self.tmp)
         self.assertEqual((proc.returncode, proc.stdout), (1, ""), proc.stderr)
-        self.assertEqual(proc.stderr, f"roadmap: could not write {self.status}: [Errno 28] No space left on device;"
-                                      " already written: docs/ROADMAP.md\n")
-        self.assert_pages(expected_roadmap(), sample("STATUS.md"))
-        self.assertEqual(sorted(p.name for p in self.root.iterdir()), ["STATUS.md", "docs"])
+        self.assertEqual(proc.stderr, f"roadmap: could not write {self.roadmap}: [Errno 28] No space left on device;"
+                                      " already written: none\n")
+        self.assert_untouched()
+        self.assertEqual(sorted(p.name for p in self.root.iterdir()), ["docs"])
         self.assertEqual(sorted(p.name for p in (self.root / "docs").iterdir()), ["ROADMAP.md"])
 
-    def test_each_page_keeps_its_mode(self):
-        os.chmod(self.roadmap, 0o640)
-        os.chmod(self.status, 0o604)
+    def test_the_page_keeps_its_mode(self):
+        os.chmod(self.roadmap, 0o604)
         r = self.run_roadmap()
         self.assertEqual(r.code, 0, r.err)
-        self.assertEqual((self.roadmap.stat().st_mode & 0o7777, self.status.stat().st_mode & 0o7777), (0o640, 0o604))
+        self.assertEqual(self.roadmap.stat().st_mode & 0o7777, 0o604)
 
     def test_a_public_file_it_cant_write_writes_nothing(self):
         target = self.tmp / "no-such-folder" / "ROADMAP.md"

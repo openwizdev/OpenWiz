@@ -202,8 +202,7 @@ const HOLDS_FOLDERS: bool = cfg!(target_os = "linux");
 const NO_HELD_FOLDER: &str = "a loop with a check is exported only on Linux: this system cannot write a check through its folder held open, so a folder swapped for a link could put the check outside --out";
 
 /// `O_NOFOLLOW | O_NONBLOCK`, and `O_DIRECTORY`: Linux UAPI asm-generic, or
-/// arch/arm{,64} for ARM; XNU bsd/sys/fcntl.h for macOS. As
-/// `crates/store/src/setup.rs` spells them.
+/// arch/arm{,64} for ARM; XNU bsd/sys/fcntl.h for macOS.
 fn no_follow() -> i32 {
     if cfg!(target_vendor = "apple") {
         0x0100 | 0x0004

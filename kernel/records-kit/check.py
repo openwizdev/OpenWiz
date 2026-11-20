@@ -122,7 +122,22 @@ READY = ('ready-for-agent', 'ready-for-human')
 MARKER = '<!-- openwiz:status v1 -->'
 NOTE_KEYS = ('agent', 'state', 'harness', 'model', 'skills', 'step', 'time', 'pr', 'preview')
 NOTE_REQUIRED = NOTE_KEYS[:7]
-NOTE_STATE = re.compile(r'^(working|asking|done|stopped|stopped \([^()]{1,100}\))$')
+# The pinned agent-status.v1.schema.json's value shapes; a note failing one is unknown (S2), never live.
+TEXT = r'^[^\x00-\x1f\x7f"\u201c\u201d>][^\x00-\x1f\x7f"\u201c\u201d]{0,%d}$'
+SKILL = r'[a-z0-9]+(-[a-z0-9]+)*@[0-9]+\.[0-9]+\.[0-9]+'
+NOTE_VALUES = {
+    'agent': re.compile(r'^(builder|reviewer|fleet)$'),
+    'state': re.compile(r'^(working|asking|done|stopped|stopped \([^()\x00-\x1f\x7f"\u201c\u201d]{1,100}\))$'),
+    'harness': re.compile(TEXT % 59),
+    'model': re.compile(TEXT % 59),
+    'skills': re.compile(r'^(?=.{1,300}$)%s(, %s)*$' % (SKILL, SKILL)),
+    'step': re.compile(TEXT % 299),
+    'time': TIME,
+    'pr': re.compile(r'^https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/pull/[1-9][0-9]*$'),
+    'preview': re.compile(r'^(?=.{1,300}$)https://(?![^/:]*\.(?:local|internal|lan|localhost)(?:[:/]|$))'
+                          r'(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,63}(?::[0-9]{1,5})?(?:/[^\s"<>?#@\\]*)?$'),
+}
+LINK = re.compile(r'^- #([1-9][0-9]*) (real|file):')
 LIVE_SECONDS = 30 * 60
 SPEC_SECTIONS = ('Problem Statement', 'Solution', 'Changelog headline', 'User Stories',
                  'Implementation Decisions', 'Testing Decisions', 'Proof', 'Out of Scope',
@@ -145,23 +160,65 @@ def read_note(body):
         fields[key] = value
     if any(k not in fields for k in NOTE_REQUIRED):
         return None
-    if fields['agent'] not in ('builder', 'reviewer', 'fleet') or not NOTE_STATE.match(fields['state']):
+    if any(not NOTE_VALUES[k].match(v) for k, v in fields.items()):
         return None
     return fields
 
 
-def outside_code(body):
-    """The body's lines outside fenced code blocks, without trailing spaces."""
-    out, fence = [], None
+def read_lines(body):
+    """The body's lines, each without trailing spaces and tabs, and whether it is outside every fenced
+    code block and HTML comment, as the pinned plan-links contract's "Reading a section" reads them.
+    Comment syntax inside a fence and fence syntax inside a comment change nothing, and a line's
+    comment delimiters are read in order, so an opener after a closer opens a comment."""
+    out, fence, comment = [], None, False
     for line in body.replace('\r\n', '\n').split('\n'):
-        mark = line.lstrip()[:3]
-        if fence is None and mark in ('```', '~~~'):
-            fence = mark
-        elif fence is not None and mark == fence:
-            fence = None
-        elif fence is None:
-            out.append(line.rstrip())
+        line = line.rstrip(' \t')
+        out.append((line, fence is None and not comment))
+        trim = line.lstrip()
+        if fence is not None:
+            if re.match(r'^%s{%d,}\s*$' % (re.escape(fence[0]), len(fence)), trim):
+                fence = None
+            continue
+        if not comment:
+            fence = (re.match(r'^(`{3,}|~{3,})', trim) or [None])[0]
+            if fence is not None:
+                continue
+        at = 0
+        while True:
+            at = line.find('-->' if comment else '<!--', at)
+            if at < 0:
+                break
+            at += 3 if comment else 4
+            comment = not comment
     return out
+
+
+def links(lines, blockers):
+    """B1: each native blocker's missing or repeated reason line, or a malformed ## Links section,
+    with the plan-links contract's messages; every native blocker of a ticket needs one line."""
+    heads = [at for at, (line, shown) in enumerate(lines) if shown and line == '## Links']
+    if len(heads) > 1:
+        return ['malformed section: more than one ## Links section']
+    section = []
+    for line, _ in lines[heads[0] + 1:] if heads else []:
+        if re.match(r'^(#{1,6} |#{1,6}$)', line):
+            break
+        if line:
+            section.append(line)
+    if heads and not section:
+        return ['malformed section: no lines']
+    if any(line != 'none' and not LINK.match(line) for line in section):
+        return ['malformed section: a line is not a link line or none']
+    if len(section) > 1 and 'none' in section:
+        return ['malformed section: none must be the only line']
+    named = [int(LINK.match(line).group(1)) for line in section if line != 'none']
+    found = []
+    for b in sorted({b['number'] for b in blockers}):
+        if named.count(b) == 0:
+            found.append('#%d has no reason line' % b)
+        elif named.count(b) > 1:
+            found.append('#%d has more than one line' % b)
+    return found
 
 
 def breaks(tracker):
@@ -200,7 +257,8 @@ def breaks(tracker):
             if len(live[agent]) > 1:
                 ids = sorted(live[agent])
                 say('S1', '%d live %s notes: %s' % (len(ids), agent, ', '.join(map(str, ids))))
-        lines = outside_code(i['body'])
+        read = read_lines(i['body'])
+        lines = [line for line, shown in read if shown]
         if ticket:
             kind, need = 'ticket', ['## ' + s for s in TICKET_SECTIONS] + [RELIES]
             if 'ready-for-human' in labels:
@@ -216,6 +274,9 @@ def breaks(tracker):
                 present = part in lines
             if not present:
                 say('T1', '%s lacks %s' % (kind, part))
+        if ticket:
+            for what in links(read, i['blocked_by']):
+                say('B1', what)
         for b in i['blocked_by']:
             if b['state'] == 'closed' and b['state_reason'] != 'completed':
                 say('B2', 'blocker #%d is closed as %s, not completed' % (b['number'], b['state_reason'] or 'unknown'))

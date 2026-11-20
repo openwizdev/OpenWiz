@@ -182,7 +182,7 @@ class Backfill(base.ReleaseCheck):
         cases = [("private/notes.md", "forbidden public path"),
                  ("docs/grills/synthetic.md", "private process document"),
                  ("skills/alpha/.env", "forbidden public path"),
-                 ("apps/web/node_modules/synthetic.txt", "forbidden public path")]
+                 ("tools/war-room/node_modules/synthetic.txt", "forbidden public path")]
         for path, reason in cases:
             with self.subTest(path=path):
                 self.outputs_clear()
@@ -387,8 +387,7 @@ class Backfill(base.ReleaseCheck):
                                ({"tests": ["missing_test"]}, "missing named regression"),
                                ({"tests": []}, "regression successor"),
                                ({"proof": "tests/new-thread/absent.rs"}, "missing public regression proof"),
-                               ({"proof": "apps/web/test/x.mjs"}, "regression successor"),
-                               ({"id": "0.0.3-R4"}, "regression successor"),
+                               ({"proof": "tools/war-room/test/x.mjs"}, "regression successor"),
                                ({"tests": ["helper_named_like_a_test"]}, "missing named regression"),
                                ({"proof": "tests/new-thread/n03_undeclared.rs"}, "not a module of its test target")):
             with self.subTest(change=change):

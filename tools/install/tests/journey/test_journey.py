@@ -42,7 +42,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[3]
 TOOLS = ROOT / 'tools/install'
 ENTRY = TOOLS / 'install'
-CONNECT = ROOT / 'apps/web/test/fixtures/install-connections'
+CONNECT = ROOT / 'tools/install/tests/fixtures/install-connections'
 ONBOARD_TESTS = TOOLS / 'tests/onboard'
 TARGET = 'x86_64-unknown-linux-gnu'
 VERSION = '0.0.99'
@@ -111,15 +111,13 @@ def tracked(folder, prefix):
 def bundle_assets(source):
     """A synthetic release bundle holding the tracked runtime the journey runs.
 
-    Programs are fixtures: `openwiz` is the journey's dispatcher, the server and
-    service are inert. Every runtime file is the repository's own bytes."""
+    The program is a fixture: `openwiz` is the journey's dispatcher. Every
+    runtime file is the repository's own bytes."""
     assets = {path: b'Synthetic runtime, no effects.\n' for path in REQUIRED}
     for program in PROGRAMS:
         assets[program] = b'#!/bin/sh\nexit 0\n'
     assets['openwiz'] = (HERE / 'fake_openwiz').read_bytes()
     assets['runtime/cloudroom/cloudroom.py'] = (HERE / 'fake_cloudroom.py').read_bytes()  # #636: recording CloudRoom
-    assets['web/index.html'] = b'<!doctype html><title>OpenWiz</title>\n'
-    assets['web/setup.html'] = b'<!doctype html><title>Set up OpenWiz</title>\n'
     for name in ('install.py', 'pull.py'):
         assets['runtime/' + name] = (TOOLS / name).read_bytes()
     assets.update(tracked(TOOLS / 'setup', 'runtime/setup/'))
@@ -129,7 +127,6 @@ def bundle_assets(source):
         assets.update(tracked(ROOT / 'skills' / skill, f'runtime/skills/{skill}/'))
     assets = {k: v for k, v in assets.items() if not re.search(r'(^|/)test[^/]*$|/tests?/', k)}
     identity = f'openwiz.package.v1\n{VERSION}\n{source}\n{TARGET}\n'.encode()
-    assets['web/openwiz-build.txt'] = identity
     assets['runtime/openwiz-build.txt'] = identity
     return assets
 
@@ -689,10 +686,11 @@ class InstallJourney(unittest.TestCase):
         j.replay(until='grill')
         writes = c.github_writes()
         brain = 'repos/%s/' % self.repository
-        self.assertEqual(writes, [['POST', brain + 'labels'], ['POST', brain + 'git/refs']]
+        # #1361: init's own label and the five records v1 labels, each created once.
+        self.assertEqual(writes, [['POST', brain + 'labels']] * 6 + [['POST', brain + 'git/refs']]
                          + [['PUT', brain + 'contents/.openwiz/brain/' + f]
                             for f in ('README.md', 'settings.json', 'grills/README.md', 'decisions/README.md')]
-                         + [['POST', brain + 'pulls']], 'one label, branch, four files and one pull request')
+                         + [['POST', brain + 'pulls']], 'six labels, one branch, four files and one pull request')
         before = (j.state.read_text(), (self.state / 'setup/state.json').read_text())
         init_ops = [o for o in json.loads(before[1])['operations'] if 'brain' in ' '.join(o['effects']).lower()]
         self.assertTrue(init_ops, 'init saved its operation')
@@ -703,28 +701,7 @@ class InstallJourney(unittest.TestCase):
         self.assertEqual(repeat.returncode, 0, repeat.stdout)
         self.assertEqual(json.loads(j.state.read_text()), json.loads(before[0]), 'the carried record is unchanged')
 
-    def test_open_serves_setup_with_the_install_state(self):
-        # R3: the setup server `install open` starts reads the same state the tools write.
-        c = Consumer(self)
-        build, state = self.installed(c)
-        install = entry()
-        seen = {}
-
-        def serve(result, port, browser=False):
-            seen.update(result=result, state=os.environ.get('OPENWIZ_STATE_DIR'))
-            return 0
-        install.installer.serve_installed = serve
-        previous = os.environ.pop('OPENWIZ_STATE_DIR', None)
-        try:
-            self.assertEqual(install.main(['open', '--root', str(c.root)], stdout=io.StringIO()), 0)
-        finally:
-            os.environ.pop('OPENWIZ_STATE_DIR', None)
-            if previous is not None:
-                os.environ['OPENWIZ_STATE_DIR'] = previous
-        self.assertEqual(seen['state'], str(state))
-        self.assertEqual(seen['result']['build'], str(build))
-
-    def test_status_and_open_refuse_a_selection_they_cannot_verify(self):
+    def test_status_refuses_a_selection_it_cannot_verify(self):
         # R6: the selected build must be this state's, named by its own verified source.
         for case in ('foreign', 'manifest', 'source', 'asset'):
             c = Consumer(self)
@@ -745,15 +722,11 @@ class InstallJourney(unittest.TestCase):
                 os.symlink(other, c.root / 'current')
             else:
                 (build / 'runtime/setup/setup.py').write_text('# changed\n')
-            served = []
             install = entry()
-            install.installer.serve_installed = lambda *a, **k: served.append(a) or 0
-            for command in ('status', 'open'):
-                out = io.StringIO()
-                self.assertEqual(install.main([command, '--root', str(c.root)], stdout=out), 5, (case, command, out.getvalue()))
-            self.assertEqual(served, [], case)
+            out = io.StringIO()
+            self.assertEqual(install.main(['status', '--root', str(c.root)], stdout=out), 5, (case, out.getvalue()))
 
-    def test_status_and_open_refuse_a_symlinked_ancestor(self):
+    def test_status_refuses_a_symlinked_ancestor(self):
         # R6 (re-check): a valid build reached through a redirected ancestor of the
         # root, an explicit state, service/ or builds/ is refused; the paths read
         # the same, but one folder on the way is now a link to a moved copy.
@@ -785,15 +758,11 @@ class InstallJourney(unittest.TestCase):
                     redirect(state / 'service')
                 elif case == 'builds':
                     redirect(state / 'service/builds')
-                served = []
                 install = entry()
-                install.installer.serve_installed = lambda *a, **k: served.append(a) or 0
                 want = 0 if case.endswith('control') else 5
-                for command in ('status', 'open'):
-                    out = io.StringIO()
-                    self.assertEqual(install.main([command, '--root', str(c.root), *state_arg], stdout=out), want,
-                                     (case, command, out.getvalue()))
-                self.assertEqual(len(served), 1 if want == 0 else 0, case)
+                out = io.StringIO()
+                self.assertEqual(install.main(['status', '--root', str(c.root), *state_arg], stdout=out), want,
+                                 (case, out.getvalue()))
 
     def test_preflight_names_each_supported_target_and_refuses_the_rest(self):
         install = entry()

@@ -980,7 +980,7 @@ receipt_checks = load('first_hour_journey_receipt_checks', ROOT / 'tools/install
 def setup_interrupted(runtime, state):
     """configure_access on the installed runtime and the journey's own setup state; stopped, then resumed."""
     sys.path.insert(0, str(runtime / 'access'))
-    sys.path.insert(0, str(ROOT / 'apps/web/test/fixtures/install-access'))
+    sys.path.insert(0, str(ROOT / 'tools/install/access/fixtures'))
     import access
     from provider import Recording, credentials, selected
     assert Path(access.__file__).resolve().parent == (runtime / 'access').resolve(), 'the installed access tool'

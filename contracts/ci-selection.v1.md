@@ -79,7 +79,7 @@ The first six are events, the last six are doubts. A new code is a contract chan
 | --- | --- |
 | `web_export` | The web app's static export (`apps/web/out`), which some tests read. It runs when any selected test reads it; a lane that runs such a test waits for it |
 
-A build is `{"decision": "run"}` or `{"decision": "skip", "reason": "<why>"}`. In a full run every build runs. Which tests read the export is the selector's map's.
+A build is `{"decision": "run"}` or `{"decision": "skip", "reason": "<why>"}`. In a full run every build runs, except `web_export`, which may skip. Which tests read the export is the selector's map's. Since the web view went (#1264), no test reads the export and the `web` lane has no tests: both are always skipped, the `web` lane in a full run too.
 
 ## Lanes
 
@@ -98,7 +98,7 @@ A lane is one of:
 - **Run:** `{"decision": "run", "tests": [...], "skipped": [...]}`. `tests` names every test the lane runs, at least one, each once. `skipped` names each test of the lane the plan doesn't run, with its reason: `{"test": "<id>", "reason": "<why>"}`. A test is never in both.
 - **Skip:** `{"decision": "skip", "reason": "<why>"}`. The whole lane is skipped, with its reason.
 
-A skill lane carries `"skill": "<folder name under skills/>"` as well. In a full run every lane is a run with `"skipped": []`; the `always` lane is always so.
+A skill lane carries `"skill": "<folder name under skills/>"` as well. In a full run every lane but `web` is a run with `"skipped": []`; the `always` lane is always so.
 
 A reason is one line of plain text (1 to 500 characters, no control characters) a reviewer can read, such as "no changed path reaches it". X5's run summary is made from these reasons.
 
@@ -156,7 +156,7 @@ A record is valid only when it matches the schema **and** keeps every rule here;
 8. **Each skill once:** no two skill lanes name the same `skill`.
 9. **Each reason once:** no reason code is in `selection.reasons` twice.
 
-The schema already makes a selected run a first-attempt `pull_request` into `main` (opened, pushed to or reopened) with a `read` diff, keeps every lane and build of a full run running with nothing skipped, and keeps the `always` lane running in every plan.
+The schema already makes a selected run a first-attempt `pull_request` into `main` (opened, pushed to or reopened) with a `read` diff, keeps every lane and build of a full run running with nothing skipped (but `web` and `web_export`, which may skip), and keeps the `always` lane running in every plan.
 
 ## Versioning
 

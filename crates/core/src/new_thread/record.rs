@@ -11,9 +11,7 @@
 //! (interrupted before dispatch)**, and one left dispatching becomes
 //! **uncertain**.
 //!
-//! The core defines the interface only. `openwiz-store` implements it
-//! (A1 phase 2: the `new_thread` record kind, read back strictly with
-//! [`read`](super::read)); phase 1's tests use an in-memory fake.
+//! The core defines the interface only; the tests use an in-memory fake.
 
 use serde::Serialize;
 

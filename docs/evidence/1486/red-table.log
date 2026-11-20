@@ -1,0 +1,500 @@
+# #1486 red: test_plan.py against the stub path table (no rows), before the table is filled.
+# python3 -I .github/actions/docs-only/test_plan.py
+.FFFFFFFFFFFFFFFFFFFFFF..FFFFFFF.FFFFFF
+======================================================================
+FAIL: test_a_code_path_runs_every_rust_test_but_the_always_lane_s (__main__.Plans.test_a_code_path_runs_every_rust_test_but_the_always_lane_s) [crates/core/src/lib.rs]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 138, in test_a_code_path_runs_every_rust_test_but_the_always_lane_s
+    self.assertEqual(record['selection'], {'mode': 'selected'})
+AssertionError: {'mode': 'full', 'reasons': [{'code': 'unknown_path[55 chars]']}]} != {'mode': 'selected'}
++ {'mode': 'selected'}
+- {'mode': 'full',
+-  'reasons': [{'code': 'unknown_path',
+-               'paths': ['crates/core/src/lib.rs', 'docs/ROADMAP.md']}]}
+
+======================================================================
+FAIL: test_a_code_path_runs_every_rust_test_but_the_always_lane_s (__main__.Plans.test_a_code_path_runs_every_rust_test_but_the_always_lane_s) [crates/core/src/brand_new.rs]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 138, in test_a_code_path_runs_every_rust_test_but_the_always_lane_s
+    self.assertEqual(record['selection'], {'mode': 'selected'})
+AssertionError: {'mode': 'full', 'reasons': [{'code': 'unknown_path[61 chars]']}]} != {'mode': 'selected'}
++ {'mode': 'selected'}
+- {'mode': 'full',
+-  'reasons': [{'code': 'unknown_path',
+-               'paths': ['crates/core/src/brand_new.rs', 'docs/ROADMAP.md']}]}
+
+======================================================================
+FAIL: test_a_code_path_runs_every_rust_test_but_the_always_lane_s (__main__.Plans.test_a_code_path_runs_every_rust_test_but_the_always_lane_s) [tests/fixtures/new.json]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 138, in test_a_code_path_runs_every_rust_test_but_the_always_lane_s
+    self.assertEqual(record['selection'], {'mode': 'selected'})
+AssertionError: {'mode': 'full', 'reasons': [{'code': 'unknown_path[56 chars]']}]} != {'mode': 'selected'}
++ {'mode': 'selected'}
+- {'mode': 'full',
+-  'reasons': [{'code': 'unknown_path',
+-               'paths': ['docs/ROADMAP.md', 'tests/fixtures/new.json']}]}
+
+======================================================================
+FAIL: test_a_code_path_runs_every_rust_test_but_the_always_lane_s (__main__.Plans.test_a_code_path_runs_every_rust_test_but_the_always_lane_s) [tests/proof/main.rs]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 138, in test_a_code_path_runs_every_rust_test_but_the_always_lane_s
+    self.assertEqual(record['selection'], {'mode': 'selected'})
+AssertionError: {'mode': 'full', 'reasons': [{'code': 'unknown_path[52 chars]']}]} != {'mode': 'selected'}
++ {'mode': 'selected'}
+- {'mode': 'full',
+-  'reasons': [{'code': 'unknown_path',
+-               'paths': ['docs/ROADMAP.md', 'tests/proof/main.rs']}]}
+
+======================================================================
+FAIL: test_a_code_path_runs_every_rust_test_but_the_always_lane_s (__main__.Plans.test_a_code_path_runs_every_rust_test_but_the_always_lane_s) [contracts/x.v1.md]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 138, in test_a_code_path_runs_every_rust_test_but_the_always_lane_s
+    self.assertEqual(record['selection'], {'mode': 'selected'})
+AssertionError: {'mode': 'full', 'reasons': [{'code': 'unknown_path[50 chars]']}]} != {'mode': 'selected'}
++ {'mode': 'selected'}
+- {'mode': 'full',
+-  'reasons': [{'code': 'unknown_path',
+-               'paths': ['contracts/x.v1.md', 'docs/ROADMAP.md']}]}
+
+======================================================================
+FAIL: test_a_code_path_runs_every_rust_test_but_the_always_lane_s (__main__.Plans.test_a_code_path_runs_every_rust_test_but_the_always_lane_s) [loops/synthetic.json]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 138, in test_a_code_path_runs_every_rust_test_but_the_always_lane_s
+    self.assertEqual(record['selection'], {'mode': 'selected'})
+AssertionError: {'mode': 'full', 'reasons': [{'code': 'unknown_path[53 chars]']}]} != {'mode': 'selected'}
++ {'mode': 'selected'}
+- {'mode': 'full',
+-  'reasons': [{'code': 'unknown_path',
+-               'paths': ['docs/ROADMAP.md', 'loops/synthetic.json']}]}
+
+======================================================================
+FAIL: test_a_doc_pin_or_link_a_rust_test_reads_runs_only_that_test (__main__.Plans.test_a_doc_pin_or_link_a_rust_test_reads_runs_only_that_test) [docs/agents/fleet.md]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 129, in test_a_doc_pin_or_link_a_rust_test_reads_runs_only_that_test
+    self.assertEqual(self.rust(self.plan_for(edit)), ['rust:test:fleet'])
+AssertionError: Lists differ: ['rust:lib:openwiz-core', 'rust:test:fleet', 'rust:test:proof'] != ['rust:test:fleet']
+
+First differing element 0:
+'rust:lib:openwiz-core'
+'rust:test:fleet'
+
+First list contains 2 additional elements.
+First extra element 1:
+'rust:test:fleet'
+
+- ['rust:lib:openwiz-core', 'rust:test:fleet', 'rust:test:proof']
++ ['rust:test:fleet']
+
+======================================================================
+FAIL: test_a_doc_pin_or_link_a_rust_test_reads_runs_only_that_test (__main__.Plans.test_a_doc_pin_or_link_a_rust_test_reads_runs_only_that_test) [wizskills.lock]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 129, in test_a_doc_pin_or_link_a_rust_test_reads_runs_only_that_test
+    self.assertEqual(self.rust(self.plan_for(edit)), ['rust:test:fleet'])
+AssertionError: Lists differ: ['rust:lib:openwiz-core', 'rust:test:fleet', 'rust:test:proof'] != ['rust:test:fleet']
+
+First differing element 0:
+'rust:lib:openwiz-core'
+'rust:test:fleet'
+
+First list contains 2 additional elements.
+First extra element 1:
+'rust:test:fleet'
+
+- ['rust:lib:openwiz-core', 'rust:test:fleet', 'rust:test:proof']
++ ['rust:test:fleet']
+
+======================================================================
+FAIL: test_a_doc_pin_or_link_a_rust_test_reads_runs_only_that_test (__main__.Plans.test_a_doc_pin_or_link_a_rust_test_reads_runs_only_that_test) [skills]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 129, in test_a_doc_pin_or_link_a_rust_test_reads_runs_only_that_test
+    self.assertEqual(self.rust(self.plan_for(edit)), ['rust:test:fleet'])
+AssertionError: Lists differ: ['rust:lib:openwiz-core', 'rust:test:fleet', 'rust:test:proof'] != ['rust:test:fleet']
+
+First differing element 0:
+'rust:lib:openwiz-core'
+'rust:test:fleet'
+
+First list contains 2 additional elements.
+First extra element 1:
+'rust:test:fleet'
+
+- ['rust:lib:openwiz-core', 'rust:test:fleet', 'rust:test:proof']
++ ['rust:test:fleet']
+
+======================================================================
+FAIL: test_a_docs_skills_or_unread_only_pr_runs_no_rust_test (__main__.Plans.test_a_docs_skills_or_unread_only_pr_runs_no_rust_test) [('docs/ROADMAP.md', 'docs/cleanup/new-table.md', 'NOTES.md', 'README.md')]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 121, in test_a_docs_skills_or_unread_only_pr_runs_no_rust_test
+    self.assertEqual(record['selection'], {'mode': 'selected'})
+AssertionError: {'mode': 'full', 'reasons': [{'code': 'unknown_path[83 chars]']}]} != {'mode': 'selected'}
++ {'mode': 'selected'}
+- {'mode': 'full',
+-  'reasons': [{'code': 'unknown_path',
+-               'paths': ['NOTES.md',
+-                         'README.md',
+-                         'docs/ROADMAP.md',
+-                         'docs/cleanup/new-table.md']}]}
+
+======================================================================
+FAIL: test_a_docs_skills_or_unread_only_pr_runs_no_rust_test (__main__.Plans.test_a_docs_skills_or_unread_only_pr_runs_no_rust_test) [('.claude/skills/old/SKILL.md', '.claude/skills/new/SKILL.md', '.agents/skills/new/x')]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 121, in test_a_docs_skills_or_unread_only_pr_runs_no_rust_test
+    self.assertEqual(record['selection'], {'mode': 'selected'})
+AssertionError: {'mode': 'full', 'reasons': [{'code': 'unknown_path[96 chars]']}]} != {'mode': 'selected'}
++ {'mode': 'selected'}
+- {'mode': 'full',
+-  'reasons': [{'code': 'unknown_path',
+-               'paths': ['.agents/skills/new/x',
+-                         '.claude/skills/new/SKILL.md',
+-                         '.claude/skills/old/SKILL.md']}]}
+
+======================================================================
+FAIL: test_a_docs_skills_or_unread_only_pr_runs_no_rust_test (__main__.Plans.test_a_docs_skills_or_unread_only_pr_runs_no_rust_test) [('STATUS.md', 'private/notes/new.md')]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 121, in test_a_docs_skills_or_unread_only_pr_runs_no_rust_test
+    self.assertEqual(record['selection'], {'mode': 'selected'})
+AssertionError: {'mode': 'full', 'reasons': [{'code': 'unknown_path[47 chars]']}]} != {'mode': 'selected'}
++ {'mode': 'selected'}
+- {'mode': 'full',
+-  'reasons': [{'code': 'unknown_path',
+-               'paths': ['STATUS.md', 'private/notes/new.md']}]}
+
+======================================================================
+FAIL: test_a_named_reader_missing_from_the_tree_runs_everything (__main__.Plans.test_a_named_reader_missing_from_the_tree_runs_everything)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 157, in test_a_named_reader_missing_from_the_tree_runs_everything
+    self.assert_full(record, 'selector_error')
+  File "./.github/actions/docs-only/test_plan.py", line 101, in assert_full
+    self.assertIn(code, [r['code'] for r in record['selection']['reasons']])
+AssertionError: 'selector_error' not found in ['unknown_path']
+
+======================================================================
+FAIL: test_a_path_no_row_knows_runs_everything (__main__.Plans.test_a_path_no_row_knows_runs_everything) [new-unmapped/future.txt]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 148, in test_a_path_no_row_knows_runs_everything
+    self.assertEqual(record['selection']['reasons'], [{'code': 'unknown_path', 'paths': [path]}])
+AssertionError: Lists differ: [{'co[15 chars]ath', 'paths': ['docs/ROADMAP.md', 'new-unmapped/future.txt']}] != [{'co[15 chars]ath', 'paths': ['new-unmapped/future.txt']}]
+
+First differing element 0:
+{'cod[13 chars]path', 'paths': ['docs/ROADMAP.md', 'new-unmapped/future.txt']}
+{'cod[13 chars]path', 'paths': ['new-unmapped/future.txt']}
+
++ [{'code': 'unknown_path', 'paths': ['new-unmapped/future.txt']}]
+- [{'code': 'unknown_path',
+-   'paths': ['docs/ROADMAP.md', 'new-unmapped/future.txt']}]
+
+======================================================================
+FAIL: test_a_path_no_row_knows_runs_everything (__main__.Plans.test_a_path_no_row_knows_runs_everything) [docsx/new.md]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 148, in test_a_path_no_row_knows_runs_everything
+    self.assertEqual(record['selection']['reasons'], [{'code': 'unknown_path', 'paths': [path]}])
+AssertionError: Lists differ: [{'code': 'unknown_path', 'paths': ['docs/ROADMAP.md', 'docsx/new.md']}] != [{'code': 'unknown_path', 'paths': ['docsx/new.md']}]
+
+First differing element 0:
+{'code': 'unknown_path', 'paths': ['docs/ROADMAP.md', 'docsx/new.md']}
+{'code': 'unknown_path', 'paths': ['docsx/new.md']}
+
+- [{'code': 'unknown_path', 'paths': ['docs/ROADMAP.md', 'docsx/new.md']}]
+?                                     -------------------
+
++ [{'code': 'unknown_path', 'paths': ['docsx/new.md']}]
+
+======================================================================
+FAIL: test_a_path_no_row_knows_runs_everything (__main__.Plans.test_a_path_no_row_knows_runs_everything) [apps/webx/new.md]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 148, in test_a_path_no_row_knows_runs_everything
+    self.assertEqual(record['selection']['reasons'], [{'code': 'unknown_path', 'paths': [path]}])
+AssertionError: Lists differ: [{'code': 'unknown_path', 'paths': ['apps/webx/new.md', 'docs/ROADMAP.md']}] != [{'code': 'unknown_path', 'paths': ['apps/webx/new.md']}]
+
+First differing element 0:
+{'code': 'unknown_path', 'paths': ['apps/webx/new.md', 'docs/ROADMAP.md']}
+{'code': 'unknown_path', 'paths': ['apps/webx/new.md']}
+
+- [{'code': 'unknown_path', 'paths': ['apps/webx/new.md', 'docs/ROADMAP.md']}]
+?                                                       -------------------
+
++ [{'code': 'unknown_path', 'paths': ['apps/webx/new.md']}]
+
+======================================================================
+FAIL: test_a_path_no_row_knows_runs_everything (__main__.Plans.test_a_path_no_row_knows_runs_everything) [.claude/settings.json]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 148, in test_a_path_no_row_knows_runs_everything
+    self.assertEqual(record['selection']['reasons'], [{'code': 'unknown_path', 'paths': [path]}])
+AssertionError: Lists differ: [{'co[13 chars]_path', 'paths': ['.claude/settings.json', 'docs/ROADMAP.md']}] != [{'co[13 chars]_path', 'paths': ['.claude/settings.json']}]
+
+First differing element 0:
+{'code': 'unknown_path', 'paths': ['.claude/settings.json', 'docs/ROADMAP.md']}
+{'code': 'unknown_path', 'paths': ['.claude/settings.json']}
+
++ [{'code': 'unknown_path', 'paths': ['.claude/settings.json']}]
+- [{'code': 'unknown_path',
+-   'paths': ['.claude/settings.json', 'docs/ROADMAP.md']}]
+
+======================================================================
+FAIL: test_a_path_no_row_knows_runs_everything (__main__.Plans.test_a_path_no_row_knows_runs_everything) [.claude/skillsx/new]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 148, in test_a_path_no_row_knows_runs_everything
+    self.assertEqual(record['selection']['reasons'], [{'code': 'unknown_path', 'paths': [path]}])
+AssertionError: Lists differ: [{'code': 'unknown_path', 'paths': ['.claude/skillsx/new', 'docs/ROADMAP.md']}] != [{'code': 'unknown_path', 'paths': ['.claude/skillsx/new']}]
+
+First differing element 0:
+{'code': 'unknown_path', 'paths': ['.claude/skillsx/new', 'docs/ROADMAP.md']}
+{'code': 'unknown_path', 'paths': ['.claude/skillsx/new']}
+
+- [{'code': 'unknown_path', 'paths': ['.claude/skillsx/new', 'docs/ROADMAP.md']}]
+?                                                          -------------------
+
++ [{'code': 'unknown_path', 'paths': ['.claude/skillsx/new']}]
+
+======================================================================
+FAIL: test_a_path_no_row_knows_runs_everything (__main__.Plans.test_a_path_no_row_knows_runs_everything) [skills2/new.md]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 148, in test_a_path_no_row_knows_runs_everything
+    self.assertEqual(record['selection']['reasons'], [{'code': 'unknown_path', 'paths': [path]}])
+AssertionError: Lists differ: [{'code': 'unknown_path', 'paths': ['docs/ROADMAP.md', 'skills2/new.md']}] != [{'code': 'unknown_path', 'paths': ['skills2/new.md']}]
+
+First differing element 0:
+{'code': 'unknown_path', 'paths': ['docs/ROADMAP.md', 'skills2/new.md']}
+{'code': 'unknown_path', 'paths': ['skills2/new.md']}
+
+- [{'code': 'unknown_path', 'paths': ['docs/ROADMAP.md', 'skills2/new.md']}]
+?                                     -------------------
+
++ [{'code': 'unknown_path', 'paths': ['skills2/new.md']}]
+
+======================================================================
+FAIL: test_a_path_no_row_knows_runs_everything (__main__.Plans.test_a_path_no_row_knows_runs_everything) [deployx/notes.md]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 148, in test_a_path_no_row_knows_runs_everything
+    self.assertEqual(record['selection']['reasons'], [{'code': 'unknown_path', 'paths': [path]}])
+AssertionError: Lists differ: [{'code': 'unknown_path', 'paths': ['deployx/notes.md', 'docs/ROADMAP.md']}] != [{'code': 'unknown_path', 'paths': ['deployx/notes.md']}]
+
+First differing element 0:
+{'code': 'unknown_path', 'paths': ['deployx/notes.md', 'docs/ROADMAP.md']}
+{'code': 'unknown_path', 'paths': ['deployx/notes.md']}
+
+- [{'code': 'unknown_path', 'paths': ['deployx/notes.md', 'docs/ROADMAP.md']}]
+?                                                       -------------------
+
++ [{'code': 'unknown_path', 'paths': ['deployx/notes.md']}]
+
+======================================================================
+FAIL: test_a_path_no_row_knows_runs_everything (__main__.Plans.test_a_path_no_row_knows_runs_everything) [ci/shard/new.py]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 148, in test_a_path_no_row_knows_runs_everything
+    self.assertEqual(record['selection']['reasons'], [{'code': 'unknown_path', 'paths': [path]}])
+AssertionError: Lists differ: [{'code': 'unknown_path', 'paths': ['ci/shard/new.py', 'docs/ROADMAP.md']}] != [{'code': 'unknown_path', 'paths': ['ci/shard/new.py']}]
+
+First differing element 0:
+{'code': 'unknown_path', 'paths': ['ci/shard/new.py', 'docs/ROADMAP.md']}
+{'code': 'unknown_path', 'paths': ['ci/shard/new.py']}
+
+- [{'code': 'unknown_path', 'paths': ['ci/shard/new.py', 'docs/ROADMAP.md']}]
+?                                                      -------------------
+
++ [{'code': 'unknown_path', 'paths': ['ci/shard/new.py']}]
+
+======================================================================
+FAIL: test_checks_source_requests_lint_without_another_rust_test_lane (__main__.Plans.test_checks_source_requests_lint_without_another_rust_test_lane)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 250, in test_checks_source_requests_lint_without_another_rust_test_lane
+    self.assertEqual(record['lanes']['rust']['decision'],'skip')
+AssertionError: 'run' != 'skip'
+- run
++ skip
+
+
+======================================================================
+FAIL: test_release_readers_run_for_selected_doc_and_tool_changes (__main__.Plans.test_release_readers_run_for_selected_doc_and_tool_changes) (path='docs/github-app.md')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 229, in test_release_readers_run_for_selected_doc_and_tool_changes
+    self.assertEqual(record['selection'], {'mode': 'selected'})
+AssertionError: {'mode': 'full', 'reasons': [{'code': 'unknown_path[32 chars]']}]} != {'mode': 'selected'}
++ {'mode': 'selected'}
+- {'mode': 'full',
+-  'reasons': [{'code': 'unknown_path', 'paths': ['docs/github-app.md']}]}
+
+======================================================================
+FAIL: test_release_readers_run_for_selected_doc_and_tool_changes (__main__.Plans.test_release_readers_run_for_selected_doc_and_tool_changes) (path='docs/ROADMAP.md')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 229, in test_release_readers_run_for_selected_doc_and_tool_changes
+    self.assertEqual(record['selection'], {'mode': 'selected'})
+AssertionError: {'mode': 'full', 'reasons': [{'code': 'unknown_path[29 chars]']}]} != {'mode': 'selected'}
++ {'mode': 'selected'}
+- {'mode': 'full',
+-  'reasons': [{'code': 'unknown_path', 'paths': ['docs/ROADMAP.md']}]}
+
+======================================================================
+FAIL: test_release_readers_run_for_selected_doc_and_tool_changes (__main__.Plans.test_release_readers_run_for_selected_doc_and_tool_changes) (path='tools/roadmap/generate.py')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 229, in test_release_readers_run_for_selected_doc_and_tool_changes
+    self.assertEqual(record['selection'], {'mode': 'selected'})
+AssertionError: {'mode': 'full', 'reasons': [{'code': 'unknown_path[39 chars]']}]} != {'mode': 'selected'}
++ {'mode': 'selected'}
+- {'mode': 'full',
+-  'reasons': [{'code': 'unknown_path', 'paths': ['tools/roadmap/generate.py']}]}
+
+======================================================================
+FAIL: test_release_readers_run_for_selected_doc_and_tool_changes (__main__.Plans.test_release_readers_run_for_selected_doc_and_tool_changes) (path='tools/privacy-check/check.py')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 229, in test_release_readers_run_for_selected_doc_and_tool_changes
+    self.assertEqual(record['selection'], {'mode': 'selected'})
+AssertionError: {'mode': 'full', 'reasons': [{'code': 'unknown_path[42 chars]']}]} != {'mode': 'selected'}
++ {'mode': 'selected'}
+- {'mode': 'full',
+-  'reasons': [{'code': 'unknown_path',
+-               'paths': ['tools/privacy-check/check.py']}]}
+
+======================================================================
+FAIL: test_release_readers_run_for_selected_doc_and_tool_changes (__main__.Plans.test_release_readers_run_for_selected_doc_and_tool_changes) (path='tools/war-room/report.py')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 229, in test_release_readers_run_for_selected_doc_and_tool_changes
+    self.assertEqual(record['selection'], {'mode': 'selected'})
+AssertionError: {'mode': 'full', 'reasons': [{'code': 'unknown_path[38 chars]']}]} != {'mode': 'selected'}
++ {'mode': 'selected'}
+- {'mode': 'full',
+-  'reasons': [{'code': 'unknown_path', 'paths': ['tools/war-room/report.py']}]}
+
+======================================================================
+FAIL: test_release_readers_run_for_selected_doc_and_tool_changes (__main__.Plans.test_release_readers_run_for_selected_doc_and_tool_changes) (path='loops/synthetic.json')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 229, in test_release_readers_run_for_selected_doc_and_tool_changes
+    self.assertEqual(record['selection'], {'mode': 'selected'})
+AssertionError: {'mode': 'full', 'reasons': [{'code': 'unknown_path[34 chars]']}]} != {'mode': 'selected'}
++ {'mode': 'selected'}
+- {'mode': 'full',
+-  'reasons': [{'code': 'unknown_path', 'paths': ['loops/synthetic.json']}]}
+
+======================================================================
+FAIL: test_selected_release_cut_keeps_every_planned_test (__main__.Plans.test_selected_release_cut_keeps_every_planned_test)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 168, in test_selected_release_cut_keeps_every_planned_test
+    self.assertEqual(record['selection'], {'mode': 'selected'})
+AssertionError: {'mode': 'full', 'reasons': [{'code': 'unknown_path[40 chars]']}]} != {'mode': 'selected'}
++ {'mode': 'selected'}
+- {'mode': 'full',
+-  'reasons': [{'code': 'unknown_path', 'paths': ['tools/release/synthetic.py']}]}
+
+======================================================================
+FAIL: test_every_planted_edit_still_selects_its_catcher (__main__.Planted.test_every_planted_edit_still_selects_its_catcher) [tests/fixtures/envelopes/ls-long-complete.json]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 308, in test_every_planted_edit_still_selects_its_catcher
+    self.assertEqual(unknown, [])
+AssertionError: Lists differ: ['tests/fixtures/envelopes/ls-long-complete.json'] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+'tests/fixtures/envelopes/ls-long-complete.json'
+
+- ['tests/fixtures/envelopes/ls-long-complete.json']
++ []
+
+======================================================================
+FAIL: test_every_planted_edit_still_selects_its_catcher (__main__.Planted.test_every_planted_edit_still_selects_its_catcher) [crates/adapters/github/src/fleets.rs]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 308, in test_every_planted_edit_still_selects_its_catcher
+    self.assertEqual(unknown, [])
+AssertionError: Lists differ: ['crates/adapters/github/src/fleets.rs'] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+'crates/adapters/github/src/fleets.rs'
+
+- ['crates/adapters/github/src/fleets.rs']
++ []
+
+======================================================================
+FAIL: test_every_planted_edit_still_selects_its_catcher (__main__.Planted.test_every_planted_edit_still_selects_its_catcher) [contracts/attachment.v1.schema.json]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 308, in test_every_planted_edit_still_selects_its_catcher
+    self.assertEqual(unknown, [])
+AssertionError: Lists differ: ['contracts/attachment.v1.schema.json'] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+'contracts/attachment.v1.schema.json'
+
+- ['contracts/attachment.v1.schema.json']
++ []
+
+======================================================================
+FAIL: test_every_planted_edit_still_selects_its_catcher (__main__.Planted.test_every_planted_edit_still_selects_its_catcher) [docs/agents/fleet.md]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 308, in test_every_planted_edit_still_selects_its_catcher
+    self.assertEqual(unknown, [])
+AssertionError: Lists differ: ['docs/agents/fleet.md'] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+'docs/agents/fleet.md'
+
+- ['docs/agents/fleet.md']
++ []
+
+======================================================================
+FAIL: test_every_planted_edit_still_selects_its_catcher (__main__.Planted.test_every_planted_edit_still_selects_its_catcher) [skills/setup/templates/fleet.md]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 308, in test_every_planted_edit_still_selects_its_catcher
+    self.assertEqual(unknown, [])
+AssertionError: Lists differ: ['wizskills.lock'] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+'wizskills.lock'
+
+- ['wizskills.lock']
++ []
+
+======================================================================
+FAIL: test_every_planted_edit_still_selects_its_catcher (__main__.Planted.test_every_planted_edit_still_selects_its_catcher) [tests/checks/main.rs]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./.github/actions/docs-only/test_plan.py", line 308, in test_every_planted_edit_still_selects_its_catcher
+    self.assertEqual(unknown, [])
+AssertionError: Lists differ: ['tests/checks/main.rs'] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+'tests/checks/main.rs'
+
+- ['tests/checks/main.rs']
++ []
+
+----------------------------------------------------------------------
+Ran 13 tests in 1.545s
+
+FAILED (failures=35)

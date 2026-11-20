@@ -102,7 +102,7 @@ rust_tests "no --alongside, cargo fails" 2 101 0 1
 # Outside a pull request's run: CI's own event would add the main-only skips.
 saved_event="${GITHUB_EVENT_NAME-}" saved_base="${GITHUB_BASE_REF-}"
 unset GITHUB_EVENT_NAME GITHUB_BASE_REF
-export FAKE_META='{"packages":[{"name":"openwiz-core","targets":[{"name":"openwiz_core","kind":["lib"],"test":true}]},{"name":"openwiz-tests","targets":[{"name":"checks","kind":["test"],"test":true},{"name":"proof","kind":["test"],"test":true},{"name":"web-api","kind":["test"],"test":true}]}]}'
+export FAKE_META='{"packages":[{"name":"openwiz-core","targets":[{"name":"openwiz_core","kind":["lib"],"test":true}]},{"name":"openwiz-tests","targets":[{"name":"checks","kind":["test"],"test":true},{"name":"proof","kind":["test"],"test":true},{"name":"fleet","kind":["test"],"test":true}]}]}'
 # calls NAME WANT...: exactly these cargo test calls, in any order.
 calls() {
   name="$1"; shift
@@ -114,8 +114,8 @@ rust_tests "--only, every target at once" 8 0 0 0 --only "rust:lib:openwiz-core 
 calls "--only, every target at once" "cargo test --locked -p openwiz-core -- --test-threads=8" \
   "cargo test -p openwiz-tests --locked --test checks -- --test-threads=8"
 has "--only, every target at once" "rust-tests: the selected tests only (#432): rust:lib:openwiz-core rust:test:checks" "rust-tests: crates: ok" "rust-tests: checks: ok"
-rust_tests "--only, a target alone" 8 0 0 0 --only "rust:test:web-api"
-calls "--only, a target alone" "cargo test -p openwiz-tests --locked --test web-api -- --test-threads=24"
+rust_tests "--only, a target alone" 8 0 0 0 --only "rust:test:fleet"
+calls "--only, a target alone" "cargo test -p openwiz-tests --locked --test fleet -- --test-threads=8"
 rust_tests "--only, one command" 2 0 0 0 --only "rust:lib:openwiz-core rust:test:checks rust:test:proof"
 calls "--only, one command" "cargo test --locked -p openwiz-core --" \
   "cargo test --locked -p openwiz-tests --test checks --test proof --"

@@ -324,387 +324,6 @@ if name == "node":
         result = self.check()
         self.assertEqual(result.returncode, 0, result.stderr)
 
-    def site_fixture(self, extra=""):
-        files = {
-            "apps/site/index.html": '<!doctype html><html lang="en"><head><title>Fixture</title></head><body>'
-                '<h1>Site fixture</h1><p>A synthetic site prints its name.</p>'+extra+'</body></html>',
-            "apps/site/changelog/index.html": '<!doctype html><html lang="en"><body><h1>Fixture changelog</h1></body></html>',
-            "apps/site/package.json": '{"scripts":{"build":"node build.mjs","test":"node --test test/build.test.mjs && node --test test/site.test.mjs"}}',
-            "apps/site/build.mjs": '// Synthetic build fixture.\n',
-            "apps/site/test/build.test.mjs": 'import test from "node:test"; test("synthetic export", () => {});\n',
-            "apps/site/test/site.test.mjs": 'import test from "node:test"; test("synthetic", () => {});\n',
-        }
-        for path,content in files.items():
-            target = self.repo/path
-            target.parent.mkdir(parents=True,exist_ok=True)
-            target.write_text(content)
-        if self.git(self.repo,"status","--porcelain").stdout:
-            self.commit(self.repo)
-        self.replan()
-        self.site_reviews()
-
-    def site_reviews(self):
-        for path,claims in (
-            ("apps/site/index.html",[
-                {"text":"Site fixture","status":"context","evidence":""},
-                {"text":"A synthetic site prints its name.","status":"fixture-tested",
-                 "evidence":"docs/evidence/check.md#fixture"},
-                {"text":"Fixture","status":"context","evidence":""}]),
-            ("apps/site/changelog/index.html",[
-                {"text":"Fixture changelog","status":"context","evidence":""}]),
-        ):
-            row = next(f for f in self.data["files"] if f["path"] == path)
-            self.data["claim_reviews"].append({"path":path,"sha256":row["sha256"],"claims":claims})
-        self.save_plan()
-
-    def test_site_html_claim_reviews_cover_exact_prose_without_changing_approved_words(self):
-        self.site_fixture()
-        result = self.check()
-        self.assertEqual(result.returncode,0,result.stderr)
-        report = json.loads((self.evidence/"report.json").read_text())
-        self.assertEqual([c["id"] for c in report["checks"]],
-                         ["plan","open-development-privacy","stage","privacy","historical-text","links","claims","regression-proofs","fresh-clone"])
-        self.assertEqual(report["status"],"pass")
-
-    def test_site_html_cannot_omit_reviews_or_hide_unreviewed_claims(self):
-        for extra in ("", "<p>A new capability.</p>", "<p hidden>A hidden capability.</p>"):
-            with self.subTest(extra=extra):
-                self.outputs_clear()
-                self.site_fixture(extra)
-                if not extra:
-                    self.data["claim_reviews"] = [r for r in self.data["claim_reviews"]
-                                                  if not r["path"].endswith(".html")]
-                    self.save_plan()
-                self.refused("claim review missing" if not extra else "claim ledger does not cover prose")
-
-    def site_public_text(self, placement, value):
-        self.site_fixture()
-        page = self.repo/"apps/site/index.html"
-        text = page.read_text()
-        encoded = escape(value,quote=True)
-        if placement == "title":
-            text = text.replace('<title>Fixture</title>','<title>'+encoded+'</title>')
-        elif placement == "description":
-            text = text.replace('</head>','<meta name="description" content="'+encoded+'"></head>')
-        elif placement == "aria-label":
-            text = text.replace('<h1>','<h1 aria-label="'+encoded+'">')
-        else:
-            text = text.replace('</body>','<img alt="'+encoded+'"></body>')
-        page.write_text(text)
-        self.commit(self.repo)
-        self.replan()
-        self.site_reviews()
-        if placement == "title":
-            review = next(r for r in self.data["claim_reviews"] if r["path"] == "apps/site/index.html")
-            review["claims"] = [c for c in review["claims"] if c["text"] != "Fixture"]
-            self.save_plan()
-
-    def test_site_unreviewed_public_metadata_and_accessible_text_are_refused(self):
-        for placement in ("title","description","aria-label","alt"):
-            with self.subTest(placement=placement):
-                self.outputs_clear()
-                self.site_public_text(placement,"An unreviewed public capability.")
-                self.refused("claim ledger does not cover prose")
-
-    def test_site_public_metadata_and_accessible_text_keep_historical_guards(self):
-        for placement in ("title","description","aria-label","alt"):
-            with self.subTest(placement=placement):
-                self.outputs_clear()
-                self.site_public_text(placement,"It never wakes a session.")
-                self.refused("0.0.1-D3")
-
-    def test_site_reviewed_public_text_and_empty_decorations_pass(self):
-        self.site_fixture('<img alt="" role="presentation"><svg aria-hidden="true"><title></title></svg>'
-                          '<script>const excluded = "It never wakes a session.";</script>'
-                          '<style>/* It never wakes a session. */</style>')
-        page = self.repo/"apps/site/index.html"
-        text = page.read_text().replace('<title>Fixture</title>','<title>Reviewed title &amp; context.</title>')
-        text = text.replace('</head>','<meta name="description" content="Reviewed public description."></head>')
-        text = text.replace('<h1>','<h1 aria-label="Reviewed accessible heading.">')
-        text = text.replace('</body>','<img alt="Reviewed image alternative."></body>')
-        page.write_text(text)
-        self.commit(self.repo)
-        self.replan()
-        self.site_reviews()
-        review = next(r for r in self.data["claim_reviews"] if r["path"] == "apps/site/index.html")
-        review["claims"] = [c for c in review["claims"] if c["text"] != "Fixture"]
-        review["claims"].extend({"text":value,"status":"context","evidence":""} for value in (
-            'Reviewed title & context.', 'Reviewed public description.',
-            'Reviewed accessible heading.', 'Reviewed image alternative.'))
-        self.save_plan()
-        result = self.check()
-        self.assertEqual(result.returncode,0,result.stderr)
-
-    def test_site_unreviewed_input_button_value_labels_are_refused(self):
-        for kind in ("button","submit","reset","BuTtOn","SuBmIt","ReSeT"):
-            with self.subTest(kind=kind):
-                self.outputs_clear()
-                self.site_fixture('<input value="An unreviewed public capability." type="'+kind+'">')
-                self.refused("claim ledger does not cover prose")
-
-    def test_site_input_button_value_labels_keep_historical_guards(self):
-        for kind in ("button","submit","reset","BuTtOn","SuBmIt","ReSeT"):
-            with self.subTest(kind=kind):
-                self.outputs_clear()
-                self.site_fixture('<input value="It never wakes a session." type="'+kind+'">')
-                self.refused("0.0.1-D3")
-
-    def test_site_reviewed_input_button_value_labels_and_empty_values_pass(self):
-        kinds = ("button","submit","reset","BuTtOn","SuBmIt","ReSeT")
-        self.site_fixture(''.join('<input type="'+kind+'" value="  Reviewed '+kind.lower()+' &amp; action.  ">'
-                                  '<input type="'+kind+'" value=""><input type="'+kind+'">'
-                                  for kind in kinds))
-        review = next(r for r in self.data["claim_reviews"] if r["path"] == "apps/site/index.html")
-        review["claims"].extend({"text":"Reviewed "+kind+" & action.","status":"context","evidence":""}
-                                for kind in ("button","submit","reset"))
-        self.save_plan()
-        result = self.check()
-        self.assertEqual(result.returncode,0,result.stderr)
-
-    def test_site_ordinary_input_values_remain_excluded(self):
-        self.site_fixture('<input type="text" value="It never wakes a session.">'
-                          '<input type="TeXt" value="An unreviewed public capability.">'
-                          '<input value="It never wakes a session.">')
-        result = self.check()
-        self.assertEqual(result.returncode,0,result.stderr)
-
-    def test_site_svg_text_cannot_bypass_claim_or_historical_review(self):
-        for text,reason in (("An unreviewed capability.","claim ledger does not cover prose"),
-                            ("It never wakes a session.","0.0.1-D3")):
-            with self.subTest(text=text):
-                self.outputs_clear()
-                self.site_fixture('<svg><text>'+text+'</text></svg>')
-                self.refused(reason)
-
-    def test_site_root_links_resolve_inside_the_site_and_check_fragments(self):
-        self.site_fixture('<p><a href="/changelog/">Record</a> <a href="/#start">Home</a></p><div id="start"></div>')
-        self.data["claim_reviews"][-2]["claims"].append({"text":"Record Home","status":"context","evidence":""})
-        self.save_plan()
-        result = self.check()
-        self.assertEqual(result.returncode,0,result.stderr)
-        self.outputs_clear()
-        page = self.repo/"apps/site/index.html"
-        page.write_text(page.read_text().replace('/#start','/#missing'))
-        if self.git(self.repo,"status","--porcelain").stdout:
-            self.commit(self.repo)
-        self.replan()
-        self.site_reviews()
-        self.refused("link fragment missing")
-
-    def test_site_only_the_exact_target_favicon_data_uri_is_permitted(self):
-        icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%23b996f1' d='M7 24 15 7 24 5 20 11 25 24ZM3 27h26v2H3Z'/%3E%3C/svg%3E"
-        self.site_fixture('<link rel="icon" href="'+icon+'">')
-        self.allow_url("apps/site/index.html","http://www.w3.org/2000/svg")
-        result = self.check()
-        self.assertEqual(result.returncode,0,result.stderr)
-        self.outputs_clear()
-        page = self.repo/"apps/site/index.html"
-        page.write_text(page.read_text().replace("32 32", "33 33"))
-        if self.git(self.repo,"status","--porcelain").stdout:
-            self.commit(self.repo)
-        self.replan()
-        self.site_reviews()
-        self.allow_url("apps/site/index.html","http://www.w3.org/2000/svg")
-        self.refused("unknown scheme")
-
-    def site_fonts(self):
-        self.site_fixture()
-        for name in ("Geist-var.woff2", "GeistMono-var.woff2", "OFL.txt"):
-            path = "apps/site/fonts/"+name
-            target = self.repo/path
-            target.parent.mkdir(parents=True,exist_ok=True)
-            # Standard licensed product assets, never account or session data.
-            target.write_bytes((ROOT/path).read_bytes())
-        if self.git(self.repo,"status","--porcelain").stdout:
-            self.commit(self.repo)
-        self.replan()
-        self.site_reviews()
-        self.allow_url("apps/site/fonts/OFL.txt","https://openfontlicense.org")
-        self.review_site_fonts()
-
-    def review_site_fonts(self):
-        licence = "apps/site/fonts/OFL.txt@c683bfbcc7e087f5d37a54ef628f10387c451a83ddc459b151403a164ac46c90"
-        self.data.setdefault("scan_exceptions",[]).extend(
-            {"path":f["path"],"sha256":f["sha256"],"rule":"site-font","value":licence}
-            for f in self.data["files"] if f["path"].endswith(".woff2"))
-        self.save_plan()
-
-    def test_site_fonts_require_exact_reviewed_bytes_and_pinned_licence(self):
-        self.site_fonts()
-        result = self.check()
-        self.assertEqual(result.returncode,0,result.stderr)
-        report = json.loads((self.evidence/"report.json").read_text())
-        self.assertEqual(len([e for e in report["scan_exceptions"] if e["rule"] == "site-font"]),2)
-        for change,reason in (("font","site-font: unapproved font"), ("licence","site-font: licence"),
-                              ("review","site-font: explicit review required")):
-            with self.subTest(change=change):
-                self.outputs_clear()
-                self.site_fonts()
-                if change == "review":
-                    self.data["scan_exceptions"] = [e for e in self.data["scan_exceptions"] if e["rule"] != "site-font"]
-                else:
-                    path = self.repo/"apps/site/fonts"/("Geist-var.woff2" if change == "font" else "OFL.txt")
-                    path.write_bytes(path.read_bytes()+b"\nSynthetic changed bytes\n")
-                    self.commit(self.repo)
-                    self.replan()
-                    self.site_reviews()
-                    self.allow_url("apps/site/fonts/OFL.txt","https://openfontlicense.org")
-                    self.review_site_fonts()
-                self.save_plan()
-                self.refused(reason)
-
-    def test_site_build_and_tests_run_in_the_exact_fresh_clone(self):
-        self.site_fixture()
-        result = self.check()
-        self.assertEqual(result.returncode,0,result.stderr)
-        calls = [json.loads(line) for line in (self.root/"calls.jsonl").read_text().splitlines()]
-        site_calls = [c for c in calls if c["tool"] == "npm" and c["cwd"] == str(self.stage/"fresh/apps/site")]
-        self.assertEqual([c["args"] for c in site_calls],[["run","build"],["test"]])
-
-    def test_release_binary_requires_exact_reviewed_asset_identity(self):
-        path = "packages/openwiz-0.0.99-x86_64-unknown-linux-gnu.tar.gz"
-        target = self.repo/path
-        target.parent.mkdir(parents=True)
-        target.write_bytes(b"\x00Synthetic reviewed binary release bundle\n")
-        self.commit(self.repo)
-        self.replan()
-        self.data.setdefault("scan_exceptions", []).append({"path":path,
-            "sha256":hashlib.sha256(target.read_bytes()).hexdigest(), "rule":"release-asset",
-            "value":"0.0.99@" + "1"*40 + "@x86_64-unknown-linux-gnu"})
-        self.save_plan()
-        result = self.check()
-        self.assertEqual(result.returncode, 0, result.stderr)
-        review = self.data["scan_exceptions"][-1].copy()
-        self.outputs_clear()
-        target.write_bytes(b"\x00Synthetic changed bundle\n")
-        self.commit(self.repo)
-        self.replan()
-        self.data.setdefault("scan_exceptions", []).append(review)
-        self.save_plan()
-        self.refused("stale scan exception")
-
-    def existing_public_binary(self, path, data):
-        for repo,prefix in ((self.repo,""),(self.public,"")):
-            target = repo/prefix/path
-            target.parent.mkdir(parents=True,exist_ok=True)
-            target.write_bytes(data)
-            self.commit(repo)
-        self.base = self.git(self.public,"rev-parse","HEAD").stdout.strip()
-        self.replan()
-        self.site_reviews()
-
-    def test_site_published_font_still_needs_its_pinned_review_and_licence(self):
-        self.site_fixture()
-        self.existing_public_binary("apps/site/fonts/Unknown.woff2",b"\x00Synthetic existing font\n")
-        self.refused("site-font: explicit review required")
-
-    def test_site_rules_preserve_unchanged_public_non_font_binary(self):
-        self.site_fixture()
-        self.existing_public_binary("docs/assets/old.bin",b"\x00Synthetic existing asset\n")
-        result = self.check()
-        self.assertEqual(result.returncode,0,result.stderr)
-
-    def test_site_failed_build_failed_test_and_empty_test_never_pass(self):
-        self.site_fixture()
-        for env,reason in (({"FAIL_SITE":"build"},"npm run failed"),
-                           ({"FAIL_SITE":"test"},"npm test failed"),
-                           ({"ZERO_SITE_TESTS":"1"},"no passing site tests")):
-            with self.subTest(env=env):
-                self.outputs_clear()
-                self.refused(reason,**env)
-
-    def test_site_missing_either_portable_test_suite_is_refused(self):
-        self.site_fixture()
-        self.refused("site test suites incomplete",PARTIAL_SITE_TESTS="1")
-
-    def test_site_export_without_its_build_tooling_is_refused(self):
-        self.site_fixture()
-        (self.repo/"apps/site/build.mjs").unlink()
-        self.commit(self.repo)
-        self.replan()
-        self.site_reviews()
-        self.refused("site build tooling missing")
-
-    def test_site_font_reviews_refuse_conflicts_and_text_disguised_as_a_font(self):
-        for case in ("conflict", "text"):
-            with self.subTest(case=case):
-                self.outputs_clear()
-                self.site_fonts()
-                if case == "conflict":
-                    review = next(e for e in self.data["scan_exceptions"] if e["rule"] == "site-font")
-                    self.data["scan_exceptions"].append(dict(review,value="unreviewed licence"))
-                else:
-                    (self.repo/"apps/site/fonts/Geist-var.woff2").write_text("Synthetic font placeholder\n")
-                    self.commit(self.repo)
-                    self.replan()
-                    self.site_reviews()
-                    self.allow_url("apps/site/fonts/OFL.txt","https://openfontlicense.org")
-                    self.review_site_fonts()
-                    self.data["scan_exceptions"] = [e for e in self.data["scan_exceptions"]
-                                                  if e["path"] != "apps/site/fonts/Geist-var.woff2"]
-                self.save_plan()
-                self.refused("site-font: repeated review" if case == "conflict" else "site-font: explicit review required")
-
-    def test_site_html_reviews_keep_hash_status_evidence_and_historical_guards(self):
-        for case,reason in (("hash","claim review is stale"), ("status","claim status unknown"),
-                            ("evidence","claim evidence missing"),
-                            ("live","live capability needs published live evidence"),
-                            ("absolute","0.0.1-D3")):
-            with self.subTest(case=case):
-                self.outputs_clear()
-                self.site_fixture()
-                review = self.data["claim_reviews"][-2]
-                if case == "hash":
-                    review["sha256"] = "0"*64
-                elif case == "status":
-                    review["claims"][1]["status"] = "invented"
-                elif case == "evidence":
-                    review["claims"][1]["evidence"] = ""
-                elif case == "live":
-                    review["claims"][1]["status"] = "live-observation"
-                else:
-                    page = self.repo/"apps/site/index.html"
-                    page.write_text(page.read_text().replace("A synthetic site prints its name.","It never wakes a session."))
-                    self.commit(self.repo)
-                    self.replan()
-                    self.site_reviews()
-                self.save_plan()
-                self.refused(reason)
-
-    def test_site_links_cannot_escape_the_site_or_relax_markdown_evidence(self):
-        self.site_fixture('<a href="/%2e%2e/README.md">Outside</a>')
-        self.refused("link escapes site root")
-        self.outputs_clear()
-        self.plant("docs/link.md",'# Link\n\nFixture-tested: [Synthetic](/).\n')
-        # Remove the earlier site violation so the ordinary-document rule is tested.
-        page = self.repo/"apps/site/index.html"
-        page.write_text(page.read_text().replace('<a href="/%2e%2e/README.md">Outside</a>',""))
-        self.commit(self.repo)
-        self.replan()
-        self.site_reviews()
-        self.refused("relative public evidence required")
-
-    def test_site_font_review_cannot_approve_an_unknown_font_or_licence(self):
-        for case in ("font", "licence", "missing"):
-            with self.subTest(case=case):
-                self.outputs_clear()
-                self.site_fonts()
-                if case == "font":
-                    (self.repo/"apps/site/fonts/Geist-var.woff2").rename(self.repo/"apps/site/fonts/Unknown.woff2")
-                elif case == "missing":
-                    (self.repo/"apps/site/fonts/OFL.txt").unlink()
-                if case != "licence":
-                    self.commit(self.repo)
-                    self.replan()
-                    self.site_reviews()
-                    if case != "missing":
-                        self.allow_url("apps/site/fonts/OFL.txt","https://openfontlicense.org")
-                    self.review_site_fonts()
-                else:
-                    next(e for e in self.data["scan_exceptions"] if e["rule"] == "site-font")["value"] = "unreviewed licence"
-                self.save_plan()
-                self.refused("site-font: unapproved font" if case == "font" else "site-font: licence")
-
     def test_clean_tree_report_hashes_and_no_publication_or_input_write(self):
         home = self.root/"home"
         temp = self.root/"tmp"
@@ -869,14 +488,14 @@ fn env_configuration_value() {}
 
     def test_numeric_colour_literals_pass_without_scan_exceptions(self):
         for path, template in (
-            ("apps/web/styles/fixture.css", ".fixture {{ color: {colour}; }}"),
+            ("tools/war-room/styles/fixture.css", ".fixture {{ color: {colour}; }}"),
             ("docs/assets/fixture.svg", '<svg><path fill="{colour}"/></svg>'),
-            ("apps/web/test/fixture.mjs", "const style = {{ background: '{colour}' }};"),
-            ("apps/web/src/fixture.tsx", 'const style = {{ color: "{colour}" }};'),
-            ("apps/web/fixture.html", '<div style="color: {colour};"></div>'),
+            ("tools/war-room/test/fixture.mjs", "const style = {{ background: '{colour}' }};"),
+            ("tools/war-room/src/fixture.tsx", 'const style = {{ color: "{colour}" }};'),
+            ("tools/war-room/fixture.html", '<div style="color: {colour};"></div>'),
             ("docs/assets/fixture.svg", '<svg style="fill: {colour};"/>'),
             ("docs/assets/fixture.svg", '<svg><style>path {{ fill: {colour}; }}</style></svg>'),
-            ("apps/web/styles/fixture.css", ".fixture {{ border: 1px solid {colour}; }}"),
+            ("tools/war-room/styles/fixture.css", ".fixture {{ border: 1px solid {colour}; }}"),
         ):
             for colour in ("#123", "#1234", "#151719", "#12345678"):
                 with self.subTest(path=path, colour=colour):
@@ -906,19 +525,19 @@ fn env_configuration_value() {}
             ("internal", "src/note.txt", "#123"),
             ("internal", "src/lib.rs", "//! Background: #613 explains this module."),
             ("internal", "src/note.txt", "Fill: #1234 tracks the rollout."),
-            ("internal", "apps/web/test/fixture.mjs", "// stroke = #613 regression"),
-            ("internal", "apps/web/test/fixture.mjs", 'export const message = "Background: #613 explains this module.";'),
-            ("internal", "apps/web/test/fixture.mjs", 'export const message = "Background: \'#613\' explains this module.";'),
-            ("internal", "apps/web/test/fixture.mjs", "export const message = `Background: '#613' explains this module.`;"),
-            ("internal", "apps/web/test/fixture.mjs", "export const pattern = /Background: '#613' explains this module./;"),
-            ("internal", "apps/web/test/fixture.mjs", "const style = { background: '#613 explains this module.' };"),
-            ("internal", "apps/web/test/fixture.mjs", "const issue = '#123';"),
-            ("internal", "apps/web/styles/fixture.css", ".fixture { color: #12345; }"),
+            ("internal", "tools/war-room/test/fixture.mjs", "// stroke = #613 regression"),
+            ("internal", "tools/war-room/test/fixture.mjs", 'export const message = "Background: #613 explains this module.";'),
+            ("internal", "tools/war-room/test/fixture.mjs", 'export const message = "Background: \'#613\' explains this module.";'),
+            ("internal", "tools/war-room/test/fixture.mjs", "export const message = `Background: '#613' explains this module.`;"),
+            ("internal", "tools/war-room/test/fixture.mjs", "export const pattern = /Background: '#613' explains this module./;"),
+            ("internal", "tools/war-room/test/fixture.mjs", "const style = { background: '#613 explains this module.' };"),
+            ("internal", "tools/war-room/test/fixture.mjs", "const issue = '#123';"),
+            ("internal", "tools/war-room/styles/fixture.css", ".fixture { color: #12345; }"),
             ("internal", "docs/assets/fixture.svg", '<svg fill="#1234567"/>'),
-            ("internal", "apps/web/test/fixture.mjs", "const style = { color: '#123456789' };"),
-            ("internal", "apps/web/styles/fixture.css", "/* PR #123 */"),
-            ("internal", "apps/web/styles/fixture.css", "/* see #123 */"),
-            ("internal", "apps/web/styles/fixture.css", "/* color: #123 */"),
+            ("internal", "tools/war-room/test/fixture.mjs", "const style = { color: '#123456789' };"),
+            ("internal", "tools/war-room/styles/fixture.css", "/* PR #123 */"),
+            ("internal", "tools/war-room/styles/fixture.css", "/* see #123 */"),
+            ("internal", "tools/war-room/styles/fixture.css", "/* color: #123 */"),
             ("internal", "docs/assets/fixture.svg", "<svg><text>See issue #123 </text></svg>"),
             ("internal", "docs/assets/fixture.svg", "<svg><text>color: #123 </text></svg>"),
             ("internal", "docs/assets/fixture.svg", '<svg><!-- <path fill="#123"/> --></svg>'),
@@ -967,10 +586,7 @@ fn env_configuration_value() {}
 
     def test_missing_regression_proofs_fail(self):
         required = [
-            ("0.0.3-R1-fresh","crates/core/src/messaging/send.rs"),
-            ("0.0.3-R1-replay","crates/core/src/messaging/lookup.rs"),
             ("0.0.3-R3","crates/adapters/cloudroom/src/process.rs"),
-            ("0.0.3-R4","apps/web/src/components/Composer.tsx"),
         ]
         for finding,path in required:
             with self.subTest(finding=finding):
@@ -1030,13 +646,8 @@ fn env_configuration_value() {}
 
     def regression_fixture(self):
         proofs = {
-            "crates/core/src/messaging/send.rs":"// Synthetic send\n",
-            "crates/core/src/messaging/lookup.rs":"// Synthetic lookup\n",
             "crates/adapters/cloudroom/src/process.rs":"// Synthetic process\n",
-            "apps/web/src/components/Composer.tsx":"// Synthetic composer\n",
-            "tests/messaging/m13_drift.rs": "fn a_send_at_the_reads_tested_version_is_not_live_tested_for_sending() {}\nfn a_record_that_says_tested_never_replays_or_looks_up_as_tested() {}\n",
             "tests/messaging/environment.rs":"fn every_read_runs_without_the_thread_context() {}\nfn every_call_of_a_send_runs_without_the_thread_context() {}\n",
-            "apps/web/test/browser/w8-no-false-changed.test.mjs":"// Synthetic browser proof\n",
         }
         for path,text in proofs.items():
             p = self.repo/path
@@ -1049,11 +660,8 @@ fn env_configuration_value() {}
         self.regression_fixture()
         r = self.check()
         self.assertEqual(r.returncode,0,r.stderr)
-        cases = [("0.0.3-R1-fresh","a_send_at_the_reads_tested_version_is_not_live_tested_for_sending"),
-                 ("0.0.3-R1-replay","a_record_that_says_tested_never_replays_or_looks_up_as_tested"),
-                 ("0.0.3-R3","every_read_runs_without_the_thread_context"),
-                 ("0.0.3-R3","every_call_of_a_send_runs_without_the_thread_context"),
-                 ("0.0.3-R4","browser")]
+        cases = [("0.0.3-R3","every_read_runs_without_the_thread_context"),
+                 ("0.0.3-R3","every_call_of_a_send_runs_without_the_thread_context")]
         # The fake evaluates the planted tree, simulating each exported public
         # regression failing. These prove orchestration, not product behaviour.
         for finding,test in cases:
@@ -1067,8 +675,6 @@ fn env_configuration_value() {}
 
     def test_named_regressions_cannot_be_missing_from_existing_proof_files(self):
         cases = [
-            ("tests/messaging/m13_drift.rs","a_send_at_the_reads_tested_version_is_not_live_tested_for_sending"),
-            ("tests/messaging/m13_drift.rs","a_record_that_says_tested_never_replays_or_looks_up_as_tested"),
             ("tests/messaging/environment.rs","every_read_runs_without_the_thread_context"),
             ("tests/messaging/environment.rs","every_call_of_a_send_runs_without_the_thread_context"),
         ]
@@ -1080,14 +686,6 @@ fn env_configuration_value() {}
                 self.plant(path,proof.read_text().replace("fn "+name+"(","fn renamed_regression("))
                 self.refused("missing named regression")
 
-    def test_browser_regression_requires_four_tests_and_four_passes(self):
-        self.regression_fixture()
-        for tests,passed in (("3","4"),("4","3"),("0","0")):
-            with self.subTest(tests=tests,passed=passed):
-                self.outputs_clear()
-                self.refused("0.0.3-R4: expected four passing browser regressions",
-                             BROWSER_TESTS=tests,BROWSER_PASSED=passed)
-
     def test_named_regression_cargo_calls_are_locked(self):
         self.regression_fixture()
         result = self.check()
@@ -1095,8 +693,6 @@ fn env_configuration_value() {}
         calls = [json.loads(line) for line in (self.root/"calls.jsonl").read_text().splitlines()]
         self.assertEqual([c["args"] for c in calls if c["tool"] == "cargo" and "-p" in c["args"]],
                          [["test","--locked","-p","openwiz-tests","--test","messaging",name] for name in (
-                             "a_send_at_the_reads_tested_version_is_not_live_tested_for_sending",
-                             "a_record_that_says_tested_never_replays_or_looks_up_as_tested",
                              "every_read_runs_without_the_thread_context",
                              "every_call_of_a_send_runs_without_the_thread_context")])
 
@@ -1299,7 +895,7 @@ fn env_configuration_value() {}
         cases = [
             ("docs/assets/diagram.svg", '<svg xmlns="http://www.w3.org/2000/svg"/>\n',
              "http://www.w3.org/2000/svg"),
-            ("apps/web/package-lock.json", '{"funding":{"url":"https://opencollective.com/libvips"}}\n',
+            ("tools/war-room/package-lock.json", '{"funding":{"url":"https://opencollective.com/libvips"}}\n',
              "https://opencollective.com/libvips"),
             ("contracts/fixture.schema.json", '{"$schema":"https://json-schema.org/draft/2020-12/schema"}\n',
              "https://json-schema.org/draft/2020-12/schema"),

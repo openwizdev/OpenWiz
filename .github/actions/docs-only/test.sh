@@ -68,8 +68,8 @@ jobs "web-build rust" docs/grills/2026-10-31-ci-speed.md docs/adr/0010-infra-wor
 jobs "web-build rust" skills STATUS.md private/evidence/x.md ci/runner/README.md
 # The Rust-only tests: web-test builds only the server and the fake.
 jobs "web-build rust" tests/checks/skills.rs
-jobs "web-build rust" tests/proof/p01_inventory.rs tests/messaging/support.rs tests/web-api/a8_web_page.rs
-jobs "web-build rust" tests/attachments/ap01_kind.rs tests/new-thread/main.rs tests/support/dirs.rs tests/send-harness/main.rs
+jobs "web-build rust" tests/proof/p01_inventory.rs tests/messaging/support.rs
+jobs "web-build rust" tests/attachments/ad_static.rs tests/new-thread/main.rs tests/support/dirs.rs
 jobs "web-build rust" tests/pending-ticket-2.txt
 jobs "web-build rust" private/evidence/x.md tests/checks/dependencies.rs
 # GitHub App fixtures (#422): only rust reads these tools.
@@ -78,8 +78,8 @@ jobs "web-build rust" tools/github-app/test.py tools/github-app/mint-token.py to
 jobs "web-build rust" tools/github-app/fixtures/synthetic.json
 jobs "$ALL" tools/github-app-other/test.py
 jobs "$ALL" tools/github-app
-# Everything else runs every job: the code, the web app, the contracts,
-# what web-test builds, the workflow and this action.
+# Everything else runs every job: the code, the contracts, the fixtures,
+# the workflow and this action.
 jobs "$ALL" tools/install/install.py tools/release/package.py
 jobs "$ALL" crates/core/src/lib.rs
 jobs "$ALL" STATUS.md crates/core/src/lib.rs
@@ -90,13 +90,10 @@ jobs "$ALL" tests/fake-room-cli/main.rs
 jobs "$ALL" tests/fixtures/room-cli-0.43.1/ls-basic/scenario.json
 jobs "$ALL" tests/newdir/x.rs
 jobs "$ALL" tests/checks
-jobs "$ALL" apps/web/src/components/App.tsx
-jobs "$ALL" apps/web/package.json apps/web/package-lock.json
-jobs "$ALL" apps/web/AGENTS.md
 jobs "$ALL" contracts/fleet.v1.md
 jobs "$ALL" .github/workflows/ci.yml
 jobs "$ALL" .github/actions/docs-only/ci-reads.txt
-jobs "$ALL" skills/grill/SKILL.md apps/web/src/api.ts
+jobs "$ALL" skills/grill/SKILL.md crates/core/src/lib.rs
 jobs "$ALL" docs/agents/fleet.md tests/fixtures/README.md
 # A path no row knows runs every job (fail closed).
 jobs "$ALL" README.md
@@ -120,41 +117,30 @@ jobs "$ALL" ' skills/a.md'
 # Nothing changed: run everything.
 jobs "$ALL"
 # The site step's rows (#1251): CLASSIFY_STEP=site answers whether
-# web-test's site step runs (web-test in the answer) or skips. It reads
-# apps/site/, the release proofs (tools/release/, all copied by one test)
-# and their fixture (tests/fixtures/release/), the app's tokens, fonts and
-# package files (its tests use apps/web's playwright-core and axe-core),
-# the workflow and this classifier (.github/, no row), and any path no row
-# knows. The web app's code, the crates, the root Cargo files (the release
-# proofs' are synthetic, and their cargo a fake), the contracts, the Rust
-# tests, skills and docs it never reads: traced under strace
-# (private/evidence/ci-quick-wins/README.md).
+# the release proofs' step runs (web-test in the answer) or skips. It reads
+# the release proofs (tools/release/, all copied by one test) and their
+# fixture (tests/fixtures/release/), the workflow and this classifier
+# (.github/, no row), and any path no row knows. The crates, the root Cargo
+# files (the release proofs' are synthetic, and their cargo a fake), the
+# contracts, the Rust tests, skills and docs it never reads: traced under
+# strace (private/evidence/ci-quick-wins/README.md). The site copy and the
+# web view it also read went in #1264.
 site() {
   want="$1"; shift
   got="$(printf '%s\n' "$@" | sed '/^$/d' | CLASSIFY_STEP=site sh "$HERE/classify.sh" 2>&1)" || got="error: $got"
   case " $got " in *" web-test "*) got=runs ;; *" error: "*) ;; *) got=skips ;; esac
   if [ "$got" = "$want" ]; then ok "site step $want  <=  $*"; else bad "site step: want '$want', got '$got':  $*"; fi
 }
-site runs apps/site/index.html
-site runs apps/site/test/ci.test.mjs
 site runs tools/release/test.py tools/release/check.py
 site runs tests/fixtures/release/clean/README.md
-site runs apps/web/package.json
-site runs apps/web/package-lock.json
-site runs apps/web/styles/tokens.css
-site runs apps/web/public/fonts/Geist-var.woff2
 site runs .github/workflows/ci.yml
 site runs .github/actions/docs-only/classify.sh
 site runs README.md
 site runs newdir/x.md
-site runs crates/core/src/lib.rs apps/site/style.css
+site runs crates/core/src/lib.rs tools/release/check.py
 site runs
 site skips crates/core/src/lib.rs
 site skips crates/adapters/cloudroom/src/allowlist.rs crates/cli/src/main.rs
-site skips apps/web/src/components/App.tsx
-site skips apps/web/test/v1.test.mjs
-site skips apps/web/styles/app.css
-site skips apps/web/public/favicon.svg
 site skips contracts/fleet.v1.md
 site skips tests/Cargo.toml
 site skips tests/fake-room-cli/main.rs
@@ -173,21 +159,20 @@ site skips STATUS.md private/evidence/x.md
 # jobs' answer for them stays every job.
 site skips changes/1251.md
 site skips changes/README.md
-site skips tests/service/t4_service.rs tests/fleet/b2_cases.rs tests/cli-agent/main.rs
+site skips tests/loops/main.rs tests/fleet/b2_cases.rs tests/cli-agent/main.rs
 site skips tests/newdir/x.rs
 site skips tools/war-room/test_gather.py tools/collector/steps.tsv
-site skips changes/1102.md tests/service/t4_paths.rs
-site runs changes/1251.md apps/site/index.html
-site runs tests/fixtures/release/clean/README.md tests/service/t4_service.rs
+site skips changes/1102.md tests/loops/fixture.rs
+site runs changes/1251.md tools/release/test.py
+site runs tests/fixtures/release/clean/README.md tests/loops/main.rs
 site runs tools/release/README.md tools/collector/steps.tsv
 jobs "$ALL" changes/1251.md
-jobs "$ALL" tests/service/t4_service.rs
+jobs "$ALL" tests/loops/main.rs
 jobs "$ALL" tools/war-room/test_gather.py
 # The step mode leaves the jobs' own answers alone.
 jobs "$ALL" crates/core/src/lib.rs
-jobs "web-build web-test" apps/site/index.html
-if printf 'apps/site/index.html\n' | CLASSIFY_STEP=web sh "$HERE/classify.sh" > /dev/null 2>&1; then bad "CLASSIFY_STEP accepts an unknown step"; else ok "CLASSIFY_STEP refuses an unknown step"; fi
-if printf 'apps/site/index.html\n' | CLASSIFY_STEP=site sh "$HERE/classify.sh" --skips web-test > /dev/null 2>&1; then bad "CLASSIFY_STEP=site gives a prune list"; else ok "CLASSIFY_STEP=site refuses --skips"; fi
+if printf 'tools/release/test.py\n' | CLASSIFY_STEP=web sh "$HERE/classify.sh" > /dev/null 2>&1; then bad "CLASSIFY_STEP accepts an unknown step"; else ok "CLASSIFY_STEP refuses an unknown step"; fi
+if printf 'tools/release/test.py\n' | CLASSIFY_STEP=site sh "$HERE/classify.sh" --skips web-test > /dev/null 2>&1; then bad "CLASSIFY_STEP=site gives a prune list"; else ok "CLASSIFY_STEP=site refuses --skips"; fi
 # A deliberately empty reads list is valid. File order must not turn paths
 # into list entries: ordinary paths, skip mode and site mode keep their rules.
 mkdir -p "${TMPDIR:-/tmp}"
@@ -196,10 +181,10 @@ READS="$noreads" jobs "web-build rust" skills
 READS="$noreads" jobs "$ALL" unknown/synthetic.rs
 READS="$noreads" jobs none private/synthetic.md
 READS="$noreads" jobs "$ALL"
-got="$(printf '%s\n' skills/a.md apps/site/index.html private/synthetic.md | READS="$noreads" sh "$HERE/classify.sh" --skips rust 2>&1)" || got="error: $got"
-want="$(printf '%s\n' apps/site/index.html private/synthetic.md)"
+got="$(printf '%s\n' skills/a.md STATUS.md private/synthetic.md | READS="$noreads" sh "$HERE/classify.sh" --skips rust 2>&1)" || got="error: $got"
+want="$(printf '%s\n' STATUS.md private/synthetic.md)"
 if [ "$got" = "$want" ]; then ok "empty reads: skip mode preserves path classification"; else bad "empty reads: skip mode got [$got]"; fi
-got="$(printf 'apps/site/index.html\n' | READS="$noreads" CLASSIFY_STEP=site sh "$HERE/classify.sh" 2>&1)" || got="error: $got"
+got="$(printf 'tools/release/test.py\n' | READS="$noreads" CLASSIFY_STEP=site sh "$HERE/classify.sh" 2>&1)" || got="error: $got"
 if [ "$got" = "web-build web-test" ]; then ok "empty reads: site path still runs with its build prerequisite"; else bad "empty reads: site path got [$got]"; fi
 # Missing, non-file and unreadable inputs are errors, never empty lists.
 for invalid in "$noreads.missing" "$(dirname "$noreads")"; do
@@ -229,7 +214,7 @@ done < "$HERE/ci-reads.txt"
 
 # Every quoted path under private/ in what CI runs is listed (a static
 # check; the prune is the enforcement). Comments quote paths in backticks.
-for path in $(grep -rhoE "[\"']private/[^\"' ]+[\"']" "$ROOT/crates" "$ROOT/tests" "$ROOT/apps/web/src" "$ROOT/apps/web/pages" "$ROOT/apps/web/test" "$ROOT/apps/web/scripts" --exclude-dir=fixtures --exclude-dir=node_modules 2>/dev/null | tr -d "\"'" | sort -u); do
+for path in $(grep -rhoE "[\"']private/[^\"' ]+[\"']" "$ROOT/crates" "$ROOT/tests" --exclude-dir=fixtures --exclude-dir=node_modules 2>/dev/null | tr -d "\"'" | sort -u); do
   if grep -qxF "$path" "$HERE/ci-reads.txt"; then ok "read and listed: $path"; else bad "ci-reads.txt: $path is read but not listed"; fi
 done
 
@@ -297,13 +282,13 @@ checkouts="$(awk '
   inside && /^        / { print; next }
   { inside = 0 }
 ' "$WORKFLOW")"
-for job in changes always web-build rust rust-export web web-export site release skills launch-fleet select-map ci web-test main-light; do
+for job in changes always rust release skills launch-fleet ci web-test main-light owned-paths; do
   steps="$(printf '%s\n' "$checkouts" | grep -cxF "job $job")"
   with="$(printf '%s\n' "$checkouts" | awk -v j="job $job" '/^job / { on = ($0 == j); next } on')"
   if [ "$steps" = 1 ] && [ "$with" = "$want_with" ]; then ok "ci.yml: $job checks out blobless and sparse, private/ only as ci-reads.txt lists"; else bad "ci.yml: $job has $steps checkout steps, with [$(printf '%s\n' "$with" | sed 's/^ *//' | tr '\n' ';')]"; fi
 done
-if [ "$(printf '%s\n' "$checkouts" | grep -c '^job ')" = 15 ]; then ok "ci.yml: fifteen main checkout steps (X5, launch-fleet's shards and main-light)"; else bad "ci.yml: $(printf '%s\n' "$checkouts" | grep -c '^job ') checkout steps"; fi
-# The patterns as CI uses them: web-build's (the check above holds all three
+if [ "$(printf '%s\n' "$checkouts" | grep -c '^job ')" = 10 ]; then ok "ci.yml: ten main checkout steps (X5, launch-fleet's shards, main-light and owned-paths)"; else bad "ci.yml: $(printf '%s\n' "$checkouts" | grep -c '^job ') checkout steps"; fi
+# The patterns as CI uses them: the first job's (the check above holds all
 # to the same list). Keep this tied to the actual workflow: pending X5's
 # update must remain a failing checkout proof, never a substituted pattern.
 printf '%s\n' "$checkouts" | awk '/^job / { n++; on = 0; next } n == 1 && on { sub(/^ +/, ""); print } /^          sparse-checkout: \|$/ { on = 1 }' > "$tmp/sparse.txt"
@@ -359,9 +344,6 @@ tests/Cargo.toml
 tests/fake-room-cli/main.rs
 tests/fixtures/README.md
 crates/core/src/lib.rs
-apps/web/src/App.tsx
-apps/web/package.json
-apps/web/package-lock.json
 contracts/fleet.v1.md
 tests/checks/dependencies.md
 .github/workflows/ci.yml
@@ -379,9 +361,6 @@ tests/Cargo.toml
 tests/fake-room-cli/main.rs
 tests/fixtures/README.md
 crates/core/src/lib.rs
-apps/web/src/App.tsx
-apps/web/package.json
-apps/web/package-lock.json
 contracts/fleet.v1.md
 .github/workflows/ci.yml
 README.md
@@ -523,7 +502,7 @@ M2="$(head_from "$M1" crates/b.rs)"
 H3="$(head_from "$R0" STATUS.md)"
 H4="$(head_from "$M1" skills)"
 H5="$(head_from "$M1" tests/checks/skills.rs)"
-H6="$(head_from "$M1" apps/web/src/App.tsx)"
+H6="$(head_from "$M1" crates/core/src/app.rs)"
 H7="$(head_from "$M1" ci/runner/README.md)"
 UNKNOWN=0123456789abcdef0123456789abcdef01234567
 
@@ -558,7 +537,7 @@ decide "skills-only, reopened" "true true false" pull_request reopened 1 main "$
 pr false main "$M1" "$H5"
 decide "a Rust test against main: web-build and rust" "true true false" pull_request opened 1 main "$M1" "$H5"
 pr false main "$M1" "$H6"
-decide "the web app against main: every job" "true true true" pull_request synchronize 1 main "$M1" "$H6"
+decide "core code against main: every job" "true true true" pull_request synchronize 1 main "$M1" "$H6"
 pr false main "$M1" "$H7"
 decide "the runner kit's README against main: no job" "false false false" pull_request synchronize 1 main "$M1" "$H7"
 # Round 2: reruns, other bases, and an event that is not the live PR.
@@ -716,13 +695,12 @@ for job in nobody '' web; do
     fi
   done
 done
-# The site step (#1251): web-test's "Build and test the public static site"
-# runs only when a changed path is one it reads, asked as decide.sh asks for
+# The site step (#1251): the release proofs' step runs only when a changed path is one it reads, asked as decide.sh asks for
 # web-test, with classify.sh answering for the site's rows only
 # (CLASSIFY_STEP=site). Every edge decide.sh runs everything for (a push to
 # main, the nightly run, a merge group, a rerun, ready_for_review, another
 # base, a stale base or head) runs it too: one decision, one place.
-H8="$(head_from "$M1" apps/site/index.html)"
+H8="$(head_from "$M1" tests/fixtures/release/clean/README.md)"
 H9="$(head_from "$M1" tools/release/test.py)"
 H10="$(head_from "$M1" crates/c.rs)"
 site_decide() {
@@ -731,13 +709,13 @@ site_decide() {
   if [ "$got" = "$want" ]; then ok "site step: $name: $want"; else bad "site step: $name: want $want, got $got ($(tail -n 1 "$tmp/decide.err"))"; fi
 }
 pr false main "$M1" "$H8"
-site_decide "the site against main runs it" true pull_request synchronize 1 main "$M1" "$H8"
+site_decide "the release fixture against main runs it" true pull_request synchronize 1 main "$M1" "$H8"
 pr false main "$M1" "$H9"
 site_decide "the release proofs against main run it" true pull_request synchronize 1 main "$M1" "$H9"
 pr false main "$M1" "$H6"
-site_decide "the web app's code against main skips it" false pull_request synchronize 1 main "$M1" "$H6"
-site_decide "a rerun of the web app's code runs it" true pull_request synchronize 2 main "$M1" "$H6"
-site_decide "ready_for_review on the web app's code runs it" true pull_request ready_for_review 1 main "$M1" "$H6"
+site_decide "core code against main skips it" false pull_request synchronize 1 main "$M1" "$H6"
+site_decide "a rerun of core code runs it" true pull_request synchronize 2 main "$M1" "$H6"
+site_decide "ready_for_review on core code runs it" true pull_request ready_for_review 1 main "$M1" "$H6"
 pr false main "$M1" "$H10"
 site_decide "a crate against main skips it" false pull_request opened 1 main "$M1" "$H10"
 pr false main "$M2" "$H10"
@@ -755,7 +733,7 @@ site_decide "a draft fails" fail pull_request synchronize 1 main "$M1" "$H8"
 # answers as the full one.
 serve "$g"
 full_g="$g"
-for case in "docs-only:false false false:$M1:$H1" "skills-only:true true false:$M1:$H4" "the web app:true true true:$M1:$H6" "a code change:true true true:$R0:$H1"; do
+for case in "docs-only:false false false:$M1:$H1" "skills-only:true true false:$M1:$H4" "core code:true true true:$M1:$H6" "a code change:true true true:$R0:$H1"; do
   IFS=: read -r name want base head <<EOF
 $case
 EOF
@@ -796,7 +774,7 @@ for case in 'web-test skills' 'web-test docs/agents/fleet.md' 'web-test tests/ch
   run_on_main "$1" "$2"
   case $? in 1) ok "skip proof: $1 reading $2, which it may skip for, fails on main" ;; 0) bad "skip proof: $1 read $2, which it may skip for, and passed on main" ;; *) bad "skip proof: $1 on main: the checkout, decide or the prune failed" ;; esac
 done
-for case in 'web-test apps/web/src/App.tsx' 'web-test Cargo.lock' 'rust skills' 'web-build tests/checks/skills.rs' 'rust tests/checks/dependencies.md'; do
+for case in 'web-test crates/core/src/lib.rs' 'web-test Cargo.lock' 'rust skills' 'web-build tests/checks/skills.rs' 'rust tests/checks/dependencies.md'; do
   # shellcheck disable=SC2086 # two words, split on purpose
   set -- $case
   if run_on_main "$1" "$2"; then ok "control: $1 reading $2, which it reads, passes on main"; else bad "control: $1 reading $2, which it reads, failed on main"; fi
@@ -809,7 +787,7 @@ for case in 'web-test skills' 'rust STATUS.md' 'web-build GLOSSARY.md'; do
   run_on_main "$1" "$2" merge_group
   case $? in 1) ok "skip proof: $1 reading $2, which it may skip for, fails in a merge group" ;; 0) bad "skip proof: $1 read $2, which it may skip for, and passed in a merge group" ;; *) bad "skip proof: $1 in a merge group: the checkout, decide or the prune failed" ;; esac
 done
-for case in 'web-test apps/web/src/App.tsx' 'rust skills' 'web-build tests/checks/skills.rs'; do
+for case in 'web-test crates/core/src/lib.rs' 'rust skills' 'web-build tests/checks/skills.rs'; do
   # shellcheck disable=SC2086 # two words, split on purpose
   set -- $case
   if run_on_main "$1" "$2" merge_group; then ok "control: $1 reading $2, which it reads, passes in a merge group"; else bad "control: $1 reading $2, which it reads, failed in a merge group"; fi
@@ -844,13 +822,8 @@ if Path(sys.argv[0]).name == 'cargo':
         binary.parent.mkdir(parents=True, exist_ok=True)
         binary.write_text('#!/bin/sh\\nexit 0\\n')
         binary.chmod(0o755)
-elif 'ready' in args:
-    sys.exit(int(os.environ.get('READY_RC', '0')))
-elif '--can-run-at-once' in args:
-    sys.exit(int(os.environ.get('ROOM_RC', '0')))
 elif '--only' in args:
     if 'rust:test:loops' not in ' '.join(args): sys.exit(8)
-    if 'ci/select/trace.py' in args and os.environ.get('TRACE_RC'): sys.exit(3)
     binary = Path('target/debug/openwiz')
     if not binary.is_file():
         sys.exit('missing target/debug/openwiz before selected loop tests')
@@ -860,17 +833,13 @@ else:
     os.execv(sys.executable, [sys.executable, *args])
 '''.replace('PYTHON', sys.executable)
 
-for job in ('rust', 'rust-export'):
+for job in ('rust',):
     steps = [s for s in re.split(r'(?=^      - )', test_workflow.jobs()[job], flags=re.M)
              if s.startswith('      - name: Run cargo test --workspace\n')]
     assert len(steps) == 1, f'{job}: expected one test step'
     script = steps[0].split('        run: |\n', 1)[1]
     script = '\n'.join(line[10:] for line in script.splitlines())
-    for case, overrides in [('normal', {}), ('traced', {'TRACE': '1'}),
-                            ('trace fallback', {'TRACE': '1', 'TRACE_RC': '3'}),
-                            ('unavailable tracer', {'TRACE': '1', 'READY_RC': '1'}),
-                            ('limited runner', {'TRACE': '1', 'ROOM_RC': '1'}),
-                            ('failed build', {'BUILD_FAIL': '1'})]:
+    for case, overrides in [('normal', {}), ('failed build', {'BUILD_FAIL': '1'})]:
         fixture = test_lanes.Lanes('test_every_planned_job_and_skill_member_passed')
         fixture.setUp()
         try:
@@ -883,8 +852,7 @@ for job in ('rust', 'rust-export'):
             plan['lanes']['rust']['tests'] = ['rust:test:loops']
             raw = json.dumps(plan)
             (root/'ci-selection.json').write_text(raw)
-            fixture.dispatch.update(trace=overrides.get('TRACE') == '1',
-                                    **{'lint-rust': False},
+            fixture.dispatch.update(**{'lint-rust': False},
                                     plan_sha256=hashlib.sha256(raw.encode()).hexdigest())
             (root/'ci-dispatch.json').write_text(json.dumps(fixture.dispatch))
             (root/'.github').symlink_to(test_workflow.ROOT/'.github', target_is_directory=True)
@@ -921,8 +889,7 @@ fi
 
 # X5 moves workflow boundary coverage to executable plan/dispatch/gate proofs.
 # The classifier, prune/checkout, live-event decider and Rust-runner fixture
-# cases above retain their coverage. Legacy action output validation remains
-# in ci/select/test_steps.py; no lane re-runs the action's decision.
+# cases above retain their coverage; no lane re-runs the action's decision.
 for proof in test_gate.py test_plan.py test_lanes.py test_execution.py test_release_prune.py test_workflow.py; do
   if python3 -I "$HERE/$proof"; then ok "X5: $proof"; else bad "X5: $proof"; fi
 done

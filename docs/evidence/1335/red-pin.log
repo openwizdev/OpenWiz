@@ -1,0 +1,36 @@
+$ python3 -I ci/select/test_pick.py Synthetic   # at the red commit, pick.py unchanged
+........................FFF.............
+======================================================================
+FAIL: test_a_pin_move_or_a_changed_link_selects_the_tests_reading_through_it (__main__.Synthetic.test_a_pin_move_or_a_changed_link_selects_the_tests_reading_through_it) [('M', 'wizskills.lock')]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/ci/select/test_pick.py", line 215, in test_a_pin_move_or_a_changed_link_selects_the_tests_reading_through_it
+    self.picked(pick.select([change], mp, UNITS, read, nobody), has=has, lacks=lacks)
+  File "/code/openwiz/ci/select/test_pick.py", line 88, in picked
+    self.assertIn(u, result['tests'], result)
+AssertionError: 'rust:test:proof' not found in ['rust:test:checks', 'web:unit:brand-new'] : {'mode': 'selected', 'reasons': [], 'tests': ['rust:test:checks', 'web:unit:brand-new'], 'skipped': [{'test': 'rust:lib:openwiz-core', 'reason': 'no changed path reaches it'}, {'test': 'rust:test:proof', 'reason': 'no changed path reaches it'}, {'test': 'rust:test:web-api', 'reason': 'no changed path reaches it'}, {'test': 'web:browser:v1-faithful', 'reason': 'no changed path reaches it'}, {'test': 'web:unit:api', 'reason': 'no changed path reaches it'}], 'why': {'rust:test:checks': 'always runs', 'web:unit:brand-new': 'not in the map yet'}}
+
+======================================================================
+FAIL: test_a_pin_move_or_a_changed_link_selects_the_tests_reading_through_it (__main__.Synthetic.test_a_pin_move_or_a_changed_link_selects_the_tests_reading_through_it) [('M', 'skills')]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/ci/select/test_pick.py", line 215, in test_a_pin_move_or_a_changed_link_selects_the_tests_reading_through_it
+    self.picked(pick.select([change], mp, UNITS, read, nobody), has=has, lacks=lacks)
+  File "/code/openwiz/ci/select/test_pick.py", line 88, in picked
+    self.assertIn(u, result['tests'], result)
+AssertionError: 'rust:test:proof' not found in ['rust:test:checks', 'web:unit:brand-new'] : {'mode': 'selected', 'reasons': [], 'tests': ['rust:test:checks', 'web:unit:brand-new'], 'skipped': [{'test': 'rust:lib:openwiz-core', 'reason': 'no changed path reaches it'}, {'test': 'rust:test:proof', 'reason': 'no changed path reaches it'}, {'test': 'rust:test:web-api', 'reason': 'no changed path reaches it'}, {'test': 'web:browser:v1-faithful', 'reason': 'no changed path reaches it'}, {'test': 'web:unit:api', 'reason': 'no changed path reaches it'}], 'why': {'rust:test:checks': 'always runs', 'web:unit:brand-new': 'not in the map yet'}}
+
+======================================================================
+FAIL: test_a_pin_move_or_a_changed_link_selects_the_tests_reading_through_it (__main__.Synthetic.test_a_pin_move_or_a_changed_link_selects_the_tests_reading_through_it) [('M', '.claude/skills/grill')]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/ci/select/test_pick.py", line 215, in test_a_pin_move_or_a_changed_link_selects_the_tests_reading_through_it
+    self.picked(pick.select([change], mp, UNITS, read, nobody), has=has, lacks=lacks)
+  File "/code/openwiz/ci/select/test_pick.py", line 88, in picked
+    self.assertIn(u, result['tests'], result)
+AssertionError: 'rust:test:web-api' not found in ['rust:test:checks', 'web:unit:brand-new'] : {'mode': 'selected', 'reasons': [], 'tests': ['rust:test:checks', 'web:unit:brand-new'], 'skipped': [{'test': 'rust:lib:openwiz-core', 'reason': 'no changed path reaches it'}, {'test': 'rust:test:proof', 'reason': 'no changed path reaches it'}, {'test': 'rust:test:web-api', 'reason': 'no changed path reaches it'}, {'test': 'web:browser:v1-faithful', 'reason': 'no changed path reaches it'}, {'test': 'web:unit:api', 'reason': 'no changed path reaches it'}], 'why': {'rust:test:checks': 'always runs', 'web:unit:brand-new': 'not in the map yet'}}
+
+----------------------------------------------------------------------
+Ran 38 tests in 0.008s
+
+FAILED (failures=3)

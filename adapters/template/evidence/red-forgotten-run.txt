@@ -1,0 +1,27 @@
+$ python3 -I adapters/template/test_driver.py Template.test_save_failure_after_spawn_reports_unknown
+# against the fixed driver with its "forget the run" line (os.remove of the run file) replaced by `pass`
+test_save_failure_after_spawn_reports_unknown (__main__.Template.test_save_failure_after_spawn_reports_unknown) ... FAIL
+
+======================================================================
+FAIL: test_save_failure_after_spawn_reports_unknown (__main__.Template.test_save_failure_after_spawn_reports_unknown)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/template/test_driver.py", line 167, in test_save_failure_after_spawn_reports_unknown
+    self.assertEqual((code, len(self.logged()), self.marked()), (1, turns, []), 'a wake restarted the failed run')
+AssertionError: Tuples differ: (1, 2, [2922]) != (1, 1, [])
+
+First differing element 1:
+2
+1
+
+- (1, 2, [2922])
+?     ^   ----
+
++ (1, 1, [])
+?     ^
+ : a wake restarted the failed run
+
+----------------------------------------------------------------------
+Ran 1 test in 1.099s
+
+FAILED (failures=1)

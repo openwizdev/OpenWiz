@@ -14,7 +14,7 @@
      "labels": [
       "ready-for-agent"
      ],
-     "body": "## Owned paths\n\n`apps/web/footer/`\n"
+     "body": "## Owned paths\n\n`apps/portal/footer/`\n"
     }
    },
    "pulls": {}

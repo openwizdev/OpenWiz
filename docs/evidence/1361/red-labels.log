@@ -1,0 +1,27 @@
+test_init_sets_up_the_records_v1_labels_and_keeps_the_owners_own (__main__.Init.test_init_sets_up_the_records_v1_labels_and_keeps_the_owners_own) ... FAIL
+
+======================================================================
+FAIL: test_init_sets_up_the_records_v1_labels_and_keeps_the_owners_own (__main__.Init.test_init_sets_up_the_records_v1_labels_and_keeps_the_owners_own)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/tests/init/test_init.py", line 152, in test_init_sets_up_the_records_v1_labels_and_keeps_the_owners_own
+    self.assertEqual(code['labels'], ['needs-info', 'bug'] + made)
+AssertionError: Lists differ: ['nee[18 chars]openwiz'] != ['nee[18 chars]openwiz', 'spec', 'ready-for-agent', 'ready-for-human', 'held']
+
+Second list contains 4 additional elements.
+First extra element 3:
+'spec'
+
+- ['needs-info', 'bug', 'openwiz']
++ ['needs-info',
++  'bug',
++  'openwiz',
++  'spec',
++  'ready-for-agent',
++  'ready-for-human',
++  'held']
+
+----------------------------------------------------------------------
+Ran 1 test in 0.508s
+
+FAILED (failures=1)

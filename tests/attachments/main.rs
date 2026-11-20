@@ -1,29 +1,14 @@
-//! The OpenWiz 0.0.4 attachment proof cases (AP), ClosedWiz#14. Each case
-//! was written before the behaviour, and its first failing run is kept
-//! in B1's phase 1 and phase 2 evidence records.
+//! The kept OpenWiz 0.0.4 attachment proof cases (AP), ClosedWiz#14: the
+//! core attachment and prompt rules that the start record's prompt digest
+//! binds, and the allowlist's one `attachment_args` (D3 of
+//! `docs/cleanup/app-table.md`). AP1, AP2's model half, AP3 and the core's
+//! other rules are in its own `attachment` target
+//! (`crates/core/tests/attachment/`, #810). The attachment store and
+//! `openwiz attachment` went in #1264, with their cases.
 //!
-//! **Phase 1** (the model in the core, no I/O): AP10 and AP11's schema
-//! half. AP1, AP2's model half, AP3, the readiness, retention and
-//! free-disk rules and the streaming SHA-256 need only the core, so they
-//! are in its own `attachment` target (`crates/core/tests/attachment/`,
-//! #810). **Phase 2** (staging in the store, `openwiz attachment add, ls,
-//! rm`): AP4 to AP9, AP11's CLI half, AP12, AP2's store half and AP10
-//! again. The staging cases that need only the store are in its own
-//! `attachments` target (`crates/store/tests/attachments/`, #810).
-//!
-//! **Fixtures only.** The synthetic files are written at test time into a
-//! private directory outside the repository (never committed); nothing
-//! calls `room-cli`, and fixture tests never prove CloudRoom's behaviour:
-//! its limits and typing rules are source-read (#15's F4 to F7 and F26),
-//! rechecked at the live check (AL2). `bench` runs the store and the CLI on
-//! a private state directory, with a faked free-space measure and claim
-//! source; `child` is this test binary run again as its own process (AP4
-//! stops it at each staging step, AP6 measures its memory). `program` runs
-//! the release `openwiz attachment` with the real free-space measure
-//! (`/bin/df`, the one program the store may run: Jake, 2026-10-31, #14).
+//! **Fixtures only.** Nothing calls `room-cli`, and fixture tests never
+//! prove CloudRoom's behaviour.
 
-mod bench;
-mod child;
 mod support;
 
 #[allow(dead_code)]
@@ -44,21 +29,10 @@ mod forks;
 #[path = "../new-thread/pattern.rs"]
 mod pattern;
 
-mod ap02_limits;
-mod ap04_ready;
-mod ap05_originals;
-mod ap06_streaming;
-mod ap07_low_disk;
-mod ap08_removal_expiry;
-mod ap09_owner_only;
 mod ap10_no_dispatch;
-mod ap11_cli;
 mod ap11_schema;
-mod ap12_logs;
 mod parity;
-mod program;
 
 // B2 (ClosedWiz#15): the rules and static checks of attachments in send
-// and new_thread; their end-to-end proofs are in the messaging and
-// new-thread targets, which share `staging`.
+// and new_thread.
 mod ad_static;

@@ -5,8 +5,9 @@ over a synthetic GitHub world.
 Test-only: copied into a scratch bin directory as `gh`. The world is JSON at
 $FAKE_GH_WORLD (else `../world.json` beside its bin directory); every call is appended to its `log` (method, path), so tests
 count provider effects. `faults` rows `{method, path, mode, times}` plant
-`lose` (the effect happens, the reply is lost), `drop` (no effect, no reply)
-or a status number (refused, no effect). Synthetic values only.
+`lose` (the effect happens, the reply is lost), `drop` (no effect, no reply),
+`taken` (someone else makes it first with the row's `body` fields, then the
+call gets 422) or a status number (refused, no effect). Synthetic values only.
 """
 import base64
 import json
@@ -49,6 +50,10 @@ def main(argv):
                   and f['times'] > 0), None)
     if fault is not None:
         fault['times'] -= 1
+    if fault is not None and fault['mode'] == 'taken':
+        handle_call(world, method, target, dict(body, **fault.get('body', {})))
+        save(world)
+        return reply(422, {'message': 'already_exists'})
     if fault is not None and fault['mode'] != 'lose':
         save(world)
         if fault['mode'] == 'drop':
@@ -106,13 +111,17 @@ def handle_call(world, method, target, body):
             repo.update(body)
             return 200, repo_view(repo)
     if rest[:1] == ['labels']:
+        details = repo.setdefault('label_details', {})  # name -> colour and description, as created
         if method == 'GET' and len(rest) == 2:
-            return (200, {'name': rest[1]}) if rest[1] in repo['labels'] else (404, {'message': 'Not Found'})
+            if rest[1] not in repo['labels']:
+                return 404, {'message': 'Not Found'}
+            return 200, dict(details.get(rest[1], {}), name=rest[1])
         if method == 'POST' and len(rest) == 1:
             if body['name'] in repo['labels']:
                 return 422, {'message': 'already_exists'}
             repo['labels'].append(body['name'])
-            return 201, {'name': body['name']}
+            details[body['name']] = {k: body[k] for k in ('color', 'description') if k in body}
+            return 201, dict(details[body['name']], name=body['name'])
     if rest[:1] == ['pulls']:
         if method == 'GET':
             head = query.get('head', '').split(':', 1)[-1]

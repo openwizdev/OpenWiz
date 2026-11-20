@@ -12,14 +12,6 @@
 # 2. prune.sh, on a code run: deletes private/ except ci-reads.txt's files,
 #    then every tracked file this job never reads (the skip proof), so no
 #    later step can read a path whose change alone lets it skip.
-# 3. With `select: 'true'` (web-build only, #432), on a code run and before
-#    the prune, the test selector (ci/select/job.py): whether this run
-#    traces its tests to make the next map (a push or the nightly run on
-#    main, or a PR that changes the tracer), and which tests each job runs.
-#    It narrows them only on decide.sh's plain case (DECIDE_PLAIN), with a
-#    map from GitHub's cache whose OIDC signature proves it came from a push
-#    or the nightly run of ci.yml on main, at an ancestor of this commit;
-#    anything else, or any failure, runs every test (`all`).
 # Renames count as a removal plus an addition. test.sh checks all of it.
 name: docs-only
 description: Refuses drafts; whether this PR or push changes a file this job reads
@@ -27,57 +19,10 @@ inputs:
   job:
     description: "The job asking: web-build, rust or web-test (its check's name)"
     required: true
-  select:
-    description: "'true' to also pick each job's tests (#432): web-build only"
-    required: false
-    default: 'false'
 outputs:
   code:
     description: "'false' when this job may skip, else 'true'"
     value: ${{ steps.decide.outputs.code }}
-  trace:
-    description: "'true' when this run traces its tests to make the next map (#432)"
-    value: ${{ steps.trace.outputs.trace }}
-  planted:
-    description: "'true' when this run plants ci/select/planted.py's edits (a PR that changes it, #432)"
-    value: ${{ steps.trace.outputs.planted }}
-  selection:
-    description: "'selected', or 'full' when every test runs (#432)"
-    value: ${{ steps.select.outputs.selection }}
-  rust-tests:
-    description: "The Rust tests to run: test ids, space-separated, or 'all' (#432)"
-    value: ${{ steps.select.outputs.rust-tests }}
-  web-files:
-    description: "The web tests to run: files under apps/web, 'none' or 'all' (#432)"
-    value: ${{ steps.select.outputs.web-files }}
-  skill-tests:
-    description: "K16: skill suite folders, all or none; missing means run"
-    value: ${{ steps.select.outputs.skill-tests }}
-
-  build-web:
-    description: "K16: web build, lint and export upload; missing means run"
-    value: ${{ steps.select.outputs.build-web }}
-
-  lint-rust:
-    description: "K16: Rust fmt, clippy and explicit builds; missing means run"
-    value: ${{ steps.select.outputs.lint-rust }}
-
-  export-rust:
-    description: "K16: Rust web-export download; missing means run"
-    value: ${{ steps.select.outputs.export-rust }}
-
-  export-web:
-    description: "K16: web-test web-export download; missing means run"
-    value: ${{ steps.select.outputs.export-web }}
-
-  build-site:
-    description: "K16: static site build; missing means run"
-    value: ${{ steps.select.outputs.build-site }}
-
-  image-skills:
-    description: "K16: image skill browser dependencies; missing means run"
-    value: ${{ steps.select.outputs.image-skills }}
-
 runs:
   using: composite
   steps:
@@ -94,51 +39,10 @@ runs:
         EVENT_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
         EVENT_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         GH_TOKEN: ${{ github.token }}
-        DECIDE_PLAIN: ${{ runner.temp }}/ci-select-plain
       run: |
         set -euo pipefail
         code="$(sh "$GITHUB_ACTION_PATH/decide.sh")"
         echo "code=$code" | tee -a "$GITHUB_OUTPUT"
-    - id: trace
-      if: inputs.select == 'true' && steps.decide.outputs.code != 'false'
-      shell: bash
-      working-directory: ${{ github.workspace }}
-      env:
-        EVENT: ${{ github.event_name }}
-        REF: ${{ github.ref }}
-        EVENT_BASE: ${{ github.event.pull_request.base.sha }}
-        EVENT_HEAD: ${{ github.event.pull_request.head.sha }}
-      run: |
-        out="$(python3 -I ci/select/job.py traces --event "$EVENT" --ref "$REF" --base "$EVENT_BASE" --head "$EVENT_HEAD")" || out=
-        trace=false planted=false
-        ! printf '%s\n' "$out" | grep -qx 'trace=true' || trace=true
-        ! printf '%s\n' "$out" | grep -qx 'planted=true' || planted=true
-        printf 'trace=%s\nplanted=%s\n' "$trace" "$planted" | tee -a "$GITHUB_OUTPUT"
-    - name: Restore the select-map cache
-      if: inputs.select == 'true' && steps.decide.outputs.code != 'false'
-      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-      with:
-        path: ~/.cache/closedwiz-ci-select
-        key: ci-select-map-none
-        restore-keys: ci-select-map-
-    - id: select
-      if: inputs.select == 'true' && steps.decide.outputs.code != 'false'
-      shell: bash
-      working-directory: ${{ github.workspace }}
-      env:
-        PLAIN: ${{ runner.temp }}/ci-select-plain
-        REPO: ${{ github.repository }}
-      run: |
-        out="$(mktemp)"
-        if ! python3 -I ci/select/job.py select --plain "$PLAIN" --map-dir "$HOME/.cache/closedwiz-ci-select" \
-            --repo "$REPO" --github-output "$out" --summary "$GITHUB_STEP_SUMMARY"; then
-          echo "test selection: no answer from the selector: every test and step runs"
-          : > "$out"
-        fi
-        # A complete, typed bundle only. Missing, duplicate or malformed
-        # fields restore every test AND every prerequisite (#433).
-        python3 -I ci/select/job.py validate "$out" >> "$GITHUB_OUTPUT"
-
     - id: prune
       if: steps.decide.outputs.code != 'false'
       shell: bash

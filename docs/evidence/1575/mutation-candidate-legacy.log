@@ -1,0 +1,18 @@
+# #1575 mutation: the candidate check in pull.stage given selected=True (the legacy layout leaking into new packages).
+F.
+======================================================================
+FAIL: test_pre_ap11_selected_build_reports_status_and_upgrades_to_a_cli_only_candidate (__main__.Pull.test_pre_ap11_selected_build_reports_status_and_upgrades_to_a_cli_only_candidate)
+----------------------------------------------------------------------
+install.Refused: runtime build identity mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "<repo>/tools/install/test_pull.py", line 102, in test_pre_ap11_selected_build_reports_status_and_upgrades_to_a_cli_only_candidate
+    with self.assertRaisesRegex(pull.Refused, 'unknown asset role'):
+AssertionError: "unknown asset role" does not match "runtime build identity mismatch"
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.456s
+
+FAILED (failures=1)

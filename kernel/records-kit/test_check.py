@@ -22,9 +22,12 @@ BREAKS = {
     'spec-lacks-label': ['#2 L3: its spec #1 lacks spec', '#4 L3: its spec #1 lacks spec'],
     'two-live-notes': ['#2 S1: 2 live builder notes: 202, 208'],
     'unreadable-note': ['#2 S2: note 208 does not read as openwiz:status v1'],
+    'malformed-beside-live-note': ['#2 S2: note 208 does not read as openwiz:status v1'],
     'missing-template-part': ['#2 T1: ticket lacks ## Proof', '#2 T1: ticket lacks **Relies on:**'],
     'spec-missing-section': ['#1 T1: spec lacks ## Out of Scope'],
     'human-missing-done-by': ['#4 T1: ticket lacks ## Done by'],
+    'commented-out-heading': ['#2 T1: ticket lacks ## Proof'],
+    'blocker-without-reason': ['#2 B1: #3 has no reason line'],
     'blocker-not-completed': ['#2 B2: blocker #9 is closed as not_planned, not completed',
                               '#2 B2: blocker #10 is closed as duplicate, not completed'],
 }
@@ -56,6 +59,55 @@ class Kit(unittest.TestCase):
             with self.subTest(name):
                 code, out, err = run(os.path.join(FIXTURES, 'broken-%s.json' % name))
                 self.assertEqual((code, out), (1, want), err)
+
+    def test_links_section_read_as_plan_links_reads_it(self):
+        # catches: a B1 check that counts a repeated, malformed or hidden reason line as the blocker's one reason
+        links = '## Links\n\n- #3 real: the example shape\n'
+        planted = {
+            'two lines': ('- #3 real: the example shape\n- #3 real: the example shape again\n',
+                          ['#2 B1: #3 has more than one line']),
+            'not a link line': ('- #3: the example shape\n',
+                                ['#2 B1: malformed section: a line is not a link line or none']),
+            'heading in a comment': ('<!--\n## Links\n-->\n- #3 real: the example shape\n',
+                                     ['#2 T1: ticket lacks ## Links', '#2 B1: #3 has no reason line']),
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            for name, (section, want) in planted.items():
+                with self.subTest(name):
+                    d = valid()
+                    body = d['issues'][1]['body']
+                    self.assertIn(links, body)
+                    if not section.startswith('<!--'):
+                        section = '## Links\n\n' + section
+                    d['issues'][1]['body'] = body.replace(links, section)
+                    path = os.path.join(tmp, 'links.json')
+                    with open(path, 'w') as f:
+                        json.dump(d, f)
+                    code, out, err = run(path)
+                    self.assertEqual((code, out), (1, want), err)
+
+    def test_fences_and_comments_hide_only_what_github_hides(self):
+        # catches: comment syntax inside a fence or fence syntax inside a comment changing what is hidden,
+        # or a line's delimiters read out of order (an opener after a closer hides nothing)
+        what, proof = 'A synthetic change.\n', '\n## Proof\n\nA fixture test.\n'
+        planted = {
+            'comment opener in a fence': (what, what + '\n```html\n<!--\n```\n', []),
+            'fence in a comment': (proof, '\n<!--\n```\n-->\n' + proof, []),
+            'opener after a closer': (proof, '\n<!-- a note --> <!--' + proof + '-->\n',
+                                      ['#2 T1: ticket lacks ## Proof']),
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            for name, (old, new, want) in planted.items():
+                with self.subTest(name):
+                    d = valid()
+                    body = d['issues'][1]['body']
+                    self.assertEqual(body.count(old), 1)
+                    d['issues'][1]['body'] = body.replace(old, new)
+                    path = os.path.join(tmp, 'hidden.json')
+                    with open(path, 'w') as f:
+                        json.dump(d, f)
+                    code, out, err = run(path)
+                    self.assertEqual((code, out), (1 if want else 0, want), err)
 
     def test_reader_refuses_any_other_shape(self):
         # catches: a reader that guesses at a malformed tracker and reports it clean (exit 0)

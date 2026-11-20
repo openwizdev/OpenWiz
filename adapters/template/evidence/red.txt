@@ -1,0 +1,73 @@
+$ python3 -I adapters/template/test_driver.py   # the new tests against the template at main 9be224a
+test_save_failure_after_spawn_reports_unknown (__main__.Template.test_save_failure_after_spawn_reports_unknown) ... FAIL
+test_start_with_nowhere_to_save_starts_nothing (__main__.Template.test_start_with_nowhere_to_save_starts_nothing) ... 
+  test_start_with_nowhere_to_save_starts_nothing (__main__.Template.test_start_with_nowhere_to_save_starts_nothing) (state='<tmp>/a-file') ... FAIL
+  test_start_with_nowhere_to_save_starts_nothing (__main__.Template.test_start_with_nowhere_to_save_starts_nothing) (state='<tmp>/a-file/state') ... FAIL
+test_stop_ends_what_the_turn_left_behind_after_it_exits (__main__.Template.test_stop_ends_what_the_turn_left_behind_after_it_exits) ... FAIL
+test_wake_while_a_turn_runs_starts_no_second_turn (__main__.Template.test_wake_while_a_turn_runs_starts_no_second_turn) ... FAIL
+
+======================================================================
+FAIL: test_save_failure_after_spawn_reports_unknown (__main__.Template.test_save_failure_after_spawn_reports_unknown)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/template/test_driver.py", line 151, in test_save_failure_after_spawn_reports_unknown
+    self.assertIn('unknown', out['error'])
+AssertionError: 'unknown' not found in 'the driver failed: FileNotFoundError'
+
+======================================================================
+FAIL: test_start_with_nowhere_to_save_starts_nothing (__main__.Template.test_start_with_nowhere_to_save_starts_nothing) (state='<tmp>/a-file')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/template/test_driver.py", line 139, in test_start_with_nowhere_to_save_starts_nothing
+    self.assertEqual((self.logged(), self.marked()), ([], []), 'it started a turn with nowhere to save')
+AssertionError: Tuples differ: ([(1666, 1667, 'first')], [1667]) != ([], [])
+
+First differing element 0:
+[(1666, 1667, 'first')]
+[]
+
+- ([(1666, 1667, 'first')], [1667])
++ ([], []) : it started a turn with nowhere to save
+
+======================================================================
+FAIL: test_start_with_nowhere_to_save_starts_nothing (__main__.Template.test_start_with_nowhere_to_save_starts_nothing) (state='<tmp>/a-file/state')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/template/test_driver.py", line 139, in test_start_with_nowhere_to_save_starts_nothing
+    self.assertEqual((self.logged(), self.marked()), ([], []), 'it started a turn with nowhere to save')
+AssertionError: Tuples differ: ([(1666, 1667, 'first'), (1669, 1670, 'first')], [1667, 1670]) != ([], [])
+
+First differing element 0:
+[(1666, 1667, 'first'), (1669, 1670, 'first')]
+[]
+
+- ([(1666, 1667, 'first'), (1669, 1670, 'first')], [1667, 1670])
++ ([], []) : it started a turn with nowhere to save
+
+======================================================================
+FAIL: test_stop_ends_what_the_turn_left_behind_after_it_exits (__main__.Template.test_stop_ends_what_the_turn_left_behind_after_it_exits)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/template/test_driver.py", line 111, in test_stop_ends_what_the_turn_left_behind_after_it_exits
+    self.assertEqual(self.marked(), [], 'a process the run started still runs after stop')
+AssertionError: Lists differ: [1673] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+1673
+
+- [1673]
++ [] : a process the run started still runs after stop
+
+======================================================================
+FAIL: test_wake_while_a_turn_runs_starts_no_second_turn (__main__.Template.test_wake_while_a_turn_runs_starts_no_second_turn)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/template/test_driver.py", line 123, in test_wake_while_a_turn_runs_starts_no_second_turn
+    self.assertEqual(len(self.logged()), 1, 'a wake during a running turn started a second turn')
+AssertionError: 2 != 1 : a wake during a running turn started a second turn
+
+----------------------------------------------------------------------
+Ran 4 tests in 1.821s
+
+FAILED (failures=5)

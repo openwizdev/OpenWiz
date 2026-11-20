@@ -25,7 +25,7 @@ ROOT = HERE.parent.parent
 SHARD = HERE / 'shard.py'
 FULL = ROOT / 'ci' / 'selection' / 'valid' / 'full-push-main.json'
 SKIPPED = ROOT / 'ci' / 'selection' / 'valid' / 'selected-skill-only.json'
-INVALID = ROOT / 'ci' / 'selection' / 'invalid'
+INVALID = ROOT / 'ci' / 'selection' / 'invalid' / 'expand.py'  # the invalid plans' table
 PC = 'closedwiz-pc'
 NAMESPACE = 'namespace-profile-closedwiz-rust'
 GITHUB = 'ubuntu-24.04'
@@ -52,6 +52,12 @@ class Case(unittest.TestCase):
         p.write_text(text)
         return p
 
+    def invalid(self, name):
+        """One of the contract's invalid plans (ci/selection/invalid/cases.json), as a file."""
+        sys.path.insert(0, str(INVALID.parent))
+        import expand
+        return self.file(name, expand.plan(name))
+
     def plan(self, tests):
         """full-push-main.json, its Rust lane running exactly these ids."""
         plan = json.loads(FULL.read_text())
@@ -76,15 +82,15 @@ class Case(unittest.TestCase):
 
 class Balance(Case):
     def test_every_planned_test_in_exactly_one_shard_with_libs(self):
-        tests = [rid(n) for n in FIVE] + ['rust:lib:openwiz-core', 'rust:lib:openwiz-service']
-        times = {rid(n): s for n, s in FIVE.items()} | {'rust:lib:openwiz-core': 0.02, 'rust:lib:openwiz-service': 62.1}
+        tests = [rid(n) for n in FIVE] + ['rust:lib:openwiz-core', 'rust:lib:openwiz-adapter-github']
+        times = {rid(n): s for n, s in FIVE.items()} | {'rust:lib:openwiz-core': 0.02, 'rust:lib:openwiz-adapter-github': 62.1}
         out = self.balance(tests, times, 3)
         placed = [t for s in out['shards'] for t in s['tests']]
         self.assertEqual(sorted(placed), sorted(tests))
         self.assertEqual(len(placed), len(set(placed)))
-        # openwiz-service alone outlasts the rest together (32.02 s).
+        # openwiz-adapter-github alone outlasts the rest together (32.02 s).
         self.assertEqual(self.split(out), [
-            (['rust:lib:openwiz-service'], 62.1),
+            (['rust:lib:openwiz-adapter-github'], 62.1),
             ([rid(n) for n in FIVE] + ['rust:lib:openwiz-core'], 32.02),
         ])
 
@@ -100,7 +106,7 @@ class Refuse(Case):
         for name, words in [('test-twice.json', 'rule 6'), ('duplicate-key.json', 'rule 1'),
                             ('rust-test-unknown-kind.json', 'rule 7')]:
             with self.subTest(name=name):
-                self.refused(self.run_shard('plan', INVALID / name, '--shards', 2,
+                self.refused(self.run_shard('plan', self.invalid(name), '--shards', 2,
                                             '--times', times), words)
 
     def test_a_plan_that_is_not_there(self):
@@ -163,7 +169,7 @@ class Check(Case):
         self.assertIn('none.txt', r.stderr)
 
     def test_a_refused_plan_fails(self):
-        r = self.run_shard('check', INVALID / 'test-twice.json', *self.ran([rid('a')]))
+        r = self.run_shard('check', self.invalid('test-twice.json'), *self.ran([rid('a')]))
         self.assertEqual(r.returncode, 1)
         self.assertIn('rule 6', r.stderr)
 
@@ -177,7 +183,7 @@ class Share(Case):
                               '--times', self.times(times or {rid(x): t for x, t in FIVE.items()}))
 
     def test_a_refused_plan_shares_nothing(self):
-        r = self.run_shard('share', INVALID / 'test-twice.json', '--shards', 1, '--shard', 1,
+        r = self.run_shard('share', self.invalid('test-twice.json'), '--shards', 1, '--shard', 1,
                            '--times', self.times({rid('a'): 1}))
         self.assertEqual((r.returncode, r.stdout), (1, ''))
 
@@ -222,10 +228,10 @@ MATRIX = re.compile(r"^        shard: \$\{\{ fromJSON\(\(needs\.changes\.outputs
 class Workflow(Case):
     """ci.yml's Rust lanes: shards by runner kind, and the ci check counting them."""
 
-    def test_both_rust_jobs_fan_out_by_runner_kind_and_only_on_free_runners(self):
+    def test_the_rust_job_fans_out_by_runner_kind_and_only_on_free_runners(self):
         blocks = jobs()
         found = []
-        for name in ('rust', 'rust-export'):
+        for name in ('rust',):
             with self.subTest(job=name):
                 block = blocks[name]
                 self.assertIn('    strategy:\n      fail-fast: false\n      matrix:\n', block)
@@ -242,7 +248,7 @@ class Workflow(Case):
                 for kind, members in kinds.items():
                     n = len(json.loads(members))
                     self.assertEqual(json.loads(members), list(range(1, n + 1)), kind)
-        self.assertEqual(found[0], found[1])
+        self.assertEqual(len(found), 1)
 
     def plan_dir(self, tests):
         folder = self.dir / 'ci-plan'
@@ -252,7 +258,7 @@ class Workflow(Case):
 
     def test_each_member_records_its_share_and_the_shares_cover_the_plan(self):
         tests = [rid(n) for n in FIVE]
-        for name in ('rust', 'rust-export'):
+        for name in ('rust',):
             for n in (1, 2, 3):
                 with self.subTest(job=name, shards=n):
                     self.plan_dir(tests)
@@ -312,10 +318,10 @@ class Workflow(Case):
                 finish = fixture.run_finish()
                 self.assertEqual(finish.returncode, 0 if ok else 1, finish.stderr)
 
-    def test_the_ci_check_runs_when_either_rust_job_passed_and_before_the_verdict(self):
+    def test_the_ci_check_runs_when_the_rust_job_passed_and_before_the_verdict(self):
         block = jobs()['ci']
         text, _ = step(block, 'Every Rust test ran exactly once')
-        self.assertIn("        if: needs.rust.result == 'success' || needs.rust-export.result == 'success'\n", text)
+        self.assertIn("        if: needs.rust.result == 'success'\n", text)
         self.assertLess(block.index('name: Every Rust test ran exactly once'), block.index('name: Every planned lane passed'))
         self.assertIn('pattern: rust-ran-${{ github.run_attempt }}-*', block)
 

@@ -1,0 +1,132 @@
+{
+ "pr": {
+  "body": "Closes #7",
+  "baseRefOid": "0000000000000000000000000000000000000000",
+  "closingIssuesReferences": {
+   "nodes": [
+    {
+     "number": 7,
+     "repository": {
+      "nameWithOwner": "example/project"
+     }
+    }
+   ]
+  },
+  "files": [
+   {
+    "pageInfo": {
+     "hasNextPage": false,
+     "endCursor": null
+    },
+    "nodes": [
+     {
+      "path": "tools/widget/check.py"
+     },
+     {
+      "path": "build.mjs"
+     },
+     {
+      "path": "docs/guide.md"
+     },
+     {
+      "path": "scripts/a.sh"
+     },
+     {
+      "path": "lib/x.py"
+     },
+     {
+      "path": "notes/pr-grant.md"
+     },
+     {
+      "path": "notes/bot-grant.md"
+     },
+     {
+      "path": "notes/stranger.md"
+     }
+    ]
+   }
+  ],
+  "comments": {
+   "pageInfo": {
+    "hasNextPage": false,
+    "endCursor": null
+   },
+   "nodes": [
+    {
+     "author": {
+      "__typename": "User",
+      "login": "owner-one"
+     },
+     "body": "**F4 supporting edit granted:** `notes/pr-grant.md`, as ruled here."
+    },
+    {
+     "author": {
+      "__typename": "User",
+      "login": "stranger-two"
+     },
+     "body": "**F4 supporting edit granted:** `notes/stranger.md`."
+    }
+   ]
+  }
+ },
+ "issues": {
+  "7": {
+   "__typename": "Issue",
+   "body": "## What to build\n\nSynthetic ticket.\n\n## Owned paths\n\n- `tools/widget/` in `example/project` (new: the widget and its tests)\n- `.github/workflows/` in `example/project` (shared: one new job)\n- `crates/*/src/widget.rs` and `docs/**/widget.md`\n- `apps/gadget` (a folder named without its slash)\n- `README.md` in `example/other` (the other repository's half)\n- the widget's icon files in `example/project`\n\n**Relies on:** nothing\n\n## Acceptance criteria\n\n- [ ] `outside/mentioned.txt` is only mentioned here, never owned\n",
+   "comments": {
+    "pageInfo": {
+     "hasNextPage": false,
+     "endCursor": null
+    },
+    "nodes": [
+     {
+      "author": {
+       "__typename": "User",
+       "login": "owner-one"
+      },
+      "body": "**Planner record.**\n\n**F4 supporting edits granted (planner):** in `example/project`, (1) one line in `build.mjs`; (2) one row for `docs/guide.md` in `scripts/a.sh`. Why: synthetic."
+     },
+     {
+      "author": {
+       "__typename": "Bot",
+       "login": "fleet-app"
+      },
+      "body": "**F4 supporting edit granted:** `notes/bot-grant.md`."
+     },
+     {
+      "author": {
+       "__typename": "User",
+       "login": "owner-one"
+      },
+      "body": "**F4 supporting edit granted:** `lib/x.py` in `example/other`, only there."
+     },
+     {
+      "author": {
+       "__typename": "User",
+       "login": "stranger-two"
+      },
+      "body": "**F4 supporting edit granted:** `notes/stranger.md`."
+     },
+     {
+      "author": {
+       "__typename": "User",
+       "login": "owner-one"
+      },
+      "body": "A note that names `lib/x.py` without granting it."
+     }
+    ]
+   }
+  }
+ },
+ "exit": 1,
+ "out": [
+  "granted: build.mjs",
+  "granted: docs/guide.md",
+  "granted: scripts/a.sh",
+  "granted: notes/pr-grant.md",
+  "granted: notes/bot-grant.md",
+  "OUT: lib/x.py (ticket #7)",
+  "OUT: notes/stranger.md (ticket #7)",
+  "owned-paths: 2 file(s) outside"
+ ]
+}

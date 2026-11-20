@@ -93,7 +93,6 @@ class Port(FixtureCase):
         python = sys.executable
         self.kit['artifacts'][python] = self.sha(Path(python))
         http_probe = str(HERE / 'http.py')
-        browser = str(HERE / 'browser.mjs')
         rows = {
             'legacy default port key': lambda: self.kit.update(default_terminal_port='7370'),
             'explicit ui port': lambda: self.terminal([self.kit['openwiz'], 'ui', '--port', '7370']),
@@ -102,9 +101,6 @@ class Port(FixtureCase):
                 [str(self.fake), 'terminal', self.kit['openwiz']]),
             'http probe': lambda: (self.kit['artifacts'].update({http_probe: self.sha(Path(http_probe))}),
                                    self.terminal([python, '-I', http_probe, '7370', '/api/v1/loops'])),
-            'browser origin': lambda: (self.kit['artifacts'].update({browser: self.sha(Path(browser))}),
-                                       self.terminal([str(self.fake), browser, self.pinned(
-                                           'browser.json', json.dumps({'origin': 'http://127.0.0.1:7370/'}))])),
         }
         clean = json.loads(json.dumps(self.kit))
         for name, change in rows.items():

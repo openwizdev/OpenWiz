@@ -13,7 +13,7 @@ class ReleaseInputs(unittest.TestCase):
     def test_prune_keeps_rust_and_web_readers_but_no_unlisted_private_file(self):
         with tempfile.TemporaryDirectory() as folder:
             root=Path(folder)/'repo';root.mkdir()
-            paths=['tools/github-app/test.py','apps/site/index.html','docs/agents/fleet.md',
+            paths=['tools/github-app/test.py','tools/release/test.py','docs/agents/fleet.md',
                    'ci/escapes/escapes.py','STATUS.md','private/keep.txt','private/unlisted.txt']
             for name in paths:
                 path=root/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_text('synthetic\n')
@@ -24,8 +24,8 @@ class ReleaseInputs(unittest.TestCase):
                                   env=os.environ,capture_output=True,text=True)
             self.assertEqual(result.returncode,0,result.stderr)
             left=sorted(str(p.relative_to(root)) for p in root.rglob('*') if p.is_file() and '.git' not in p.parts)
-            self.assertEqual(left,['apps/site/index.html','ci/escapes/escapes.py','docs/agents/fleet.md',
-                                   'private/keep.txt','tools/github-app/test.py'])
+            self.assertEqual(left,['ci/escapes/escapes.py','docs/agents/fleet.md',
+                                   'private/keep.txt','tools/github-app/test.py','tools/release/test.py'])
 
 
 if __name__=='__main__':unittest.main()
