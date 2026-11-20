@@ -50,10 +50,22 @@ def update(change):
 
 def checkout(number, full):
     path = os.path.join(STATE + '.repos', '%d-%s' % (number, full.split('/')[1]))
-    os.makedirs(os.path.join(path, '.git'))
-    with open(os.path.join(path, '.git', 'config'), 'w') as f:
-        f.write('[core]\n\tbare = false\n[remote "origin"]\n\turl = https://github.com/%s.git\n'
-                '\tfetch = +refs/heads/*:refs/remotes/origin/*\n' % full)
+    git = os.path.join(path, '.git')
+    for folder in ('objects', 'refs'):
+        os.makedirs(os.path.join(git, folder))
+    with open(os.path.join(git, 'HEAD'), 'w') as f:
+        f.write('ref: refs/heads/main\n')
+    # FAKE_PANE_GIT points the checkout's effective origin at other/site behind an inline example/site line.
+    other = {'include': '[include]\n\tpath = other.config\n',
+             'insteadof': '[url "https://github.com/other/"]\n\tinsteadOf = https://github.com/%s/\n'
+                          % full.split('/')[0]}.get(os.environ.get('FAKE_PANE_GIT'), '')
+    with open(os.path.join(git, 'other.config'), 'w') as f:
+        f.write('[remote "origin"]\n\turl = https://github.com/other/site.git\n')
+    with open(os.path.join(git, 'config'), 'w') as f:
+        f.write('[core]\n\tbare = false\n%s[remote "origin"]\n\turl = https://github.com/%s.git\n'
+                '\tfetch = +refs/heads/*:refs/remotes/origin/*\n' % (other, full))
+        if os.environ.get('FAKE_PANE_GIT') == 'pushurl':
+            f.write('\tpushurl = https://github.com/other/site.git\n')
     return {'id': number, 'name': full.split('/')[1], 'path': path, 'active': number == 1, 'sessionCount': 0}
 
 

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import glob
+import importlib.machinery
+import importlib.util
 import json
 import os
 import shutil
@@ -14,7 +16,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DRIVER = os.path.join(HERE, 'driver')
 KIT = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'kit.py')
 TOKEN = 'gh' + 'p_' + 'Synthetic0Pane0Value' * 2 + '00'
-REAL = ('claude', 'codex', 'cursor-agent', 'agent', 'opencode', 'pi', 'boat', 'gh', 'git', 'npm', 'node')
+# git is on the test PATH only to read the synthetic checkouts' own config (their effective origin); nothing else.
+REAL = ('claude', 'codex', 'cursor-agent', 'agent', 'opencode', 'pi', 'boat', 'gh', 'npm', 'node')
 REQUEST = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude',
            'model': 'claude-opus-5-5'}
 
@@ -37,7 +40,7 @@ class Pane(unittest.TestCase):
     def tools(self):
         folder = os.path.join(self.folder, 'tools')
         os.mkdir(folder)
-        for name, found in (('python3', sys.executable), ('sleep', shutil.which('sleep'))):
+        for name, found in (('python3', sys.executable), ('sleep', shutil.which('sleep')), ('git', shutil.which('git'))):
             os.symlink(found, os.path.join(folder, name))
         return folder
 
@@ -120,9 +123,12 @@ class Pane(unittest.TestCase):
                  ({'FAKE_PANE_REPOS': 'example/other'}, REQUEST, 'runpane repos add'),
                  ({'FAKE_PANE_REPOS': 'other/site'}, REQUEST, 'runpane repos add'),
                  ({'FAKE_PANE_REPOS': 'example/site,example/site'}, REQUEST, 'saved more than once'),
+                 ({'FAKE_PANE_GIT': 'include'}, REQUEST, 'runpane repos add'),
+                 ({'FAKE_PANE_GIT': 'insteadof'}, REQUEST, 'runpane repos add'),
+                 ({'FAKE_PANE_GIT': 'pushurl'}, REQUEST, 'runpane repos add'),
                  ({'FAKE_PANE_DOWN': '1'}, REQUEST, 'open the Pane app'))
         for i, (env, request, words) in enumerate(cases):
-            with self.subTest(env=env, harness=request['harness']):
+            with self.subTest(case=i, env=env, harness=request['harness']):
                 env = dict(env, FAKE_PANE_STATE=os.path.join(self.folder, 'pane-%d.json' % i))
                 code, out = self.driver('start', request, **env)
                 self.assertEqual(code, 1, out)
@@ -176,6 +182,24 @@ class Pane(unittest.TestCase):
             with self.subTest(shape=value[:4]):
                 code, out = self.driver('start', dict(REQUEST, model=value))
                 self.assertEqual(code, 1, out)
+                self.assertNotIn(value, json.dumps(out))
+                self.assertEqual([c for c in self.called() if value in json.dumps(c)], [])
+        self.assertFalse([c for c in self.called() if c[:2] == ['panes', 'create']])
+
+    def test_start_refuses_each_credential_the_kit_recognises_inside_a_field(self):
+        spec = importlib.util.spec_from_loader('kit', importlib.machinery.SourceFileLoader('kit', KIT))
+        kit = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(kit)
+        known = (('model', 'x' + 'sk-' + 'Synthetic0Value0Synth'), ('model', 'x' + 'AKIA' + 'SYNTHETIC0VALUE0'),
+                 ('model', 'x' + 'xoxb-' + 'synthetic0value'), ('model', 'claude password: ' + 'synthetic'),
+                 ('repository', 'example/x' + 'ghp_' + 'Synthetic0Value0Synth0'))
+        google = ('model', 'AIza' + 'Synthetic0Value0' * 2 + 'Syn')
+        for field, value in known + (google,):
+            with self.subTest(field=field, shape=value[:5]):
+                self.assertTrue((field, value) == google or kit.SHAPES.search(value), value[:5])
+                code, out = self.driver('start', dict(REQUEST, **{field: value}))
+                self.assertEqual(code, 1, out)
+                self.assertIn('looks like a login', out['error'])
                 self.assertNotIn(value, json.dumps(out))
                 self.assertEqual([c for c in self.called() if value in json.dumps(c)], [])
         self.assertFalse([c for c in self.called() if c[:2] == ['panes', 'create']])
