@@ -119,3 +119,15 @@ pass token: no login or token passed through the driver
 Ran 9 tests in <n>s
 
 FAILED (failures=10, errors=1)
+
+# plants of the R3 wrapper's two guards, run on the fixed driver at 4eb014a7 plus the R1/R2/R4 changes; each plant was reverted
+
+$ # planted in SCOPED_KIT: the /proc scoping line removed
+$ python3 -I adapters/conductor/test_driver.py Conductor.test_the_kit_passes_all_five
+AssertionError: <pid> unexpectedly found in <the opened pids> : the kit read a process outside its run
+FAILED (failures=1)
+
+$ # planted in SCOPED_KIT: the subreaper removed
+$ python3 -I adapters/conductor/test_driver.py Conductor.test_the_scoped_kit_still_sees_a_process_the_run_leaves
+AssertionError: 'fail stop: a process the run started still runs after stop' not found in 'pass version: openwiz:records v1, and the schema is driver v1\npass s
+FAILED (failures=1)

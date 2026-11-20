@@ -15,7 +15,7 @@ A [driver v1](../../kernel/driver.v1.md) that runs each builder in its own [Cond
 ## Where your logins live
 
 - **Your Claude, Codex or Cursor login is held by Conductor.** Conductor Cloud runs the agent with the subscription token or API key you added to Conductor (Settings, Agents); the driver never sees it.
-- **Your Conductor API key stays in your environment.** Every call is `curl --variable %CONDUCTOR_API_KEY --expand-oauth2-bearer '{{CONDUCTOR_API_KEY}}' ...`: curl reads the key from the environment it inherits and sends it only to Conductor. The driver checks only that `CONDUCTOR_API_KEY` is set, and never reads, prints or passes on its value (driver v1, N1 to N3).
+- **Your Conductor API key stays in your environment.** Every call is `curl --disable --variable %CONDUCTOR_API_KEY --expand-oauth2-bearer '{{CONDUCTOR_API_KEY}}' ...`: curl reads the key from the environment it inherits and sends it only to Conductor. The driver checks only that the name `CONDUCTOR_API_KEY` is in the environment, and never reads, prints or passes on its value (driver v1, N1 to N3).
 
 ## Before the first run (yours to do)
 
@@ -28,10 +28,19 @@ Conductor bills nothing for model usage: each agent's own account does. Each wor
 
 ## The kit
 
+The fixture tests use only the synthetic Conductor. They touch no real host and cost nothing:
+
 ```sh
-python3 -I kernel/driver-kit/kit.py --driver adapters/conductor/driver \
-  --repo <owner>/<throwaway> --ticket <n> --harness claude --model <model>
-python3 -I adapters/conductor/test_driver.py      # the fixture tests, on a synthetic Conductor
+python3 -I adapters/conductor/test_driver.py      # the kit's five checks and the driver's tests, on a synthetic Conductor
 ```
 
-`fixtures/bin/curl` is a synthetic Conductor behind a synthetic `curl`: it takes only the driver's one call shape, and its request and answer shapes follow Conductor's API reference and OpenAPI document (read 2026-11-20). Nothing in it was observed on a live account; the live check records that. It keeps its state in the file `FAKE_CONDUCTOR_STATE` and logs each call's arguments to `FAKE_CONDUCTOR_LOG`; its agent posts and edits one builder note in the local tracker `KIT_TRACKER`; `FAKE_CONDUCTOR_FAIL=<METHOD> <route>=<status>` plants a refusal, and `FAKE_CONDUCTOR_LOSE=<METHOD> <route>` does the call, then loses its answer.
+**The live check is separate, and it costs money.** Running the kit straight on the driver starts a real Conductor cloud workspace and an agent turn billed to your agent's account. Run it only as the live check (#1993), on a throwaway repository and ticket:
+
+```sh
+python3 -I kernel/driver-kit/kit.py --driver adapters/conductor/driver \
+  --repo <owner>/<throwaway> --ticket <n> --harness claude --model <model>   # live: real workspace, real cost
+```
+
+The tests run the kit in a wrapper that lets it read only the processes of its own run (it is their subreaper), so it never reads another process's environment on the machine. They build each environment from scratch, with `PATH` limited to `fixtures/bin` and `python3`.
+
+`fixtures/bin/curl` is a synthetic Conductor behind a synthetic `curl`: it takes only the driver's one call shape, and its request and answer shapes follow Conductor's API reference and OpenAPI document (read 2026-11-20). Nothing in it was observed on a live account; the live check records that. It keeps its state in the file `FAKE_CONDUCTOR_STATE` and logs each call's arguments to `FAKE_CONDUCTOR_LOG`, and refuses any call that doesn't start with `--disable` (so curl reads no config file that could trace the key or retry a start); its agent posts and edits one builder note in the local tracker `KIT_TRACKER`; `FAKE_CONDUCTOR_FAIL=<METHOD> <route>=<status>` plants a refusal, and `FAKE_CONDUCTOR_LOSE=<METHOD> <route>` does the call, then loses its answer.

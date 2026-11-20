@@ -57,8 +57,8 @@ def read(fields):
 
 
 def signed_in(then):
-    # SECURITY: only whether CONDUCTOR_API_KEY is set is looked at, never its value.
-    if 'CONDUCTOR_API_KEY' not in os.environ:
+    # SECURITY: only the environment's names are compared. `name in os.environ` would fetch the value.
+    if not any(name == 'CONDUCTOR_API_KEY' for name in os.environ):
         raise Refused('CONDUCTOR_API_KEY is not set, so the driver cannot reach Conductor; ' + then,
                       'create a Conductor API key (www.conductor.build/docs/api says where) and export it as '
                       'CONDUCTOR_API_KEY in the shell that runs the driver')
@@ -66,7 +66,7 @@ def signed_in(then):
 
 def curl_ready(then):
     try:
-        p = subprocess.run(['curl', '--version'], capture_output=True, text=True, timeout=30)
+        p = subprocess.run(['curl', '--disable', '--version'], capture_output=True, text=True, timeout=30)
     except FileNotFoundError:
         raise Refused('curl is not installed; ' + then, 'install curl 8.3 or later, then try again')
     except subprocess.TimeoutExpired:
@@ -82,7 +82,8 @@ def curl_ready(then):
 
 
 def api(method, path, body=None):
-    args = ['curl', '-sS', '--max-time', str(TIMEOUT), '-X', method] + KEY_ARGS + [
+    # SECURITY: --disable first, so no curl config can trace the key or retry a start.
+    args = ['curl', '--disable', '-sS', '--max-time', str(TIMEOUT), '-X', method] + KEY_ARGS + [
         '-H', 'Content-Type: application/json', '-H', 'Accept: application/json'] + (
         ['--data-binary', '@-'] if body is not None else []) + ['-w', '\n%{http_code}', API + path]
     try:
