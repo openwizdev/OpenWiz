@@ -2,6 +2,7 @@
 import json
 import os
 import secrets
+import shutil
 import signal
 import subprocess
 import sys
@@ -13,6 +14,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DRIVER = os.path.join(HERE, 'driver')
 KIT = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'kit.py')
 TOKEN = 'gh' + 'p_' + 'Synthetic0Pane0Value' * 2 + '00'
+REAL = ('claude', 'codex', 'cursor-agent', 'agent', 'opencode', 'pi', 'boat', 'gh', 'git', 'npm', 'node')
 REQUEST = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude',
            'model': 'claude-opus-5-5'}
 
@@ -54,6 +56,11 @@ class Pane(unittest.TestCase):
     def pane(self):
         with open(self.env['FAKE_PANE_STATE']) as f:
             return json.load(f)
+
+    def test_no_real_harness_or_host_cli_is_on_the_path(self):
+        found = {name: shutil.which(name, path=self.env['PATH']) for name in REAL}
+        self.assertEqual({k: v for k, v in found.items() if v}, {})
+        self.assertEqual(shutil.which('runpane', path=self.env['PATH']), os.path.join(HERE, 'fixtures', 'bin', 'runpane'))
 
     def test_kit_passes_all_five(self):
         p = subprocess.run([sys.executable, '-I', KIT, '--driver', DRIVER, '--repo', 'example/site',
