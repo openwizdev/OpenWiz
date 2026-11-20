@@ -35,7 +35,7 @@ Live-checked on Linux before this release was cut, against real hosts: the local
 - A fresh install starts its service and serves the web view, with no activation step.
 - The always-on engine is gone: no scheduled fleet tick, health checks and takeover, push notifications or engine step in Setup; your fleets run as fleet threads with their own loops.
 
-Live-checked in the 0.0.17 candidate's smoke test, run by agents on Linux: a fresh install of that candidate, its service starting and serving the web view, `openwiz help --agent`, `ls --json` and `show --json`, one send to a throwaway thread, and one new thread in a throwaway project; the loop commands are tested on synthetic fixtures and [one read-only replay of real loops](https://github.com/openwizdev/OpenWiz/blob/release-0.0.17/docs/evidence/794/README.md), `openwiz loop apply` was never run live, and nothing was checked on a Mac.
+Checked live in the 0.0.17 candidate's own smoke test, run by agents on Linux: a fresh install of that candidate, its service starting and serving the web view, `openwiz help --agent`, `ls --json` and `show --json`, one send to a throwaway thread, and one new thread in a throwaway project; the loop commands are tested on synthetic fixtures and [one read-only replay of real loops](https://github.com/openwizdev/OpenWiz/blob/release-0.0.17/docs/evidence/794/README.md), `openwiz loop apply` was never run live, and nothing was checked on a Mac.
 
 **Under the hood**
 
