@@ -1,0 +1,36 @@
+test_cli_refuses_without_literals_and_writes_nothing (__main__.Sanitize.test_cli_refuses_without_literals_and_writes_nothing) ... ok
+test_cli_removes_output_when_the_privacy_check_refuses (__main__.Sanitize.test_cli_removes_output_when_the_privacy_check_refuses) ... FAIL
+test_live_identifiers_and_credentials_are_replaced (__main__.Sanitize.test_live_identifiers_and_credentials_are_replaced) ... FAIL
+test_same_run_id_maps_to_the_same_placeholder (__main__.Sanitize.test_same_run_id_maps_to_the_same_placeholder) ... FAIL
+
+======================================================================
+FAIL: test_cli_removes_output_when_the_privacy_check_refuses (__main__.Sanitize.test_cli_removes_output_when_the_privacy_check_refuses)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/proofs/hermes/test_sanitize.py", line 63, in test_cli_removes_output_when_the_privacy_check_refuses
+    self.assertEqual(r.returncode, 1, r.stderr)
+AssertionError: 2 != 1 : 
+
+======================================================================
+FAIL: test_live_identifiers_and_credentials_are_replaced (__main__.Sanitize.test_live_identifiers_and_credentials_are_replaced)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/proofs/hermes/test_sanitize.py", line 33, in test_live_identifiers_and_credentials_are_replaced
+    self.assertFalse(leaked in out, f'live value {i} still present')
+AssertionError: True is not false : live value 0 still present
+
+======================================================================
+FAIL: test_same_run_id_maps_to_the_same_placeholder (__main__.Sanitize.test_same_run_id_maps_to_the_same_placeholder)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/proofs/hermes/test_sanitize.py", line 42, in test_same_run_id_maps_to_the_same_placeholder
+    self.assertEqual(out, 'run-000000000001 run-000000000002 run-000000000001')
+AssertionError: 'run-aaaaaaaaaaaa run-bbbbbbbbbbbb run-aaaaaaaaaaaa' != 'run-000000000001 run-000000000002 run-000000000001'
+- run-aaaaaaaaaaaa run-bbbbbbbbbbbb run-aaaaaaaaaaaa
++ run-000000000001 run-000000000002 run-000000000001
+
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.018s
+
+FAILED (failures=3)
