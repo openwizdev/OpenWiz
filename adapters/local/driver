@@ -5,7 +5,7 @@ Each turn of a run is one local process of a harness the person has already sign
 supervisor, which keeps every process the turn starts: `start` runs the first turn, `wake` another once the
 last one has ended, `stop` ends everything the turns started. A run is saved before its first turn starts,
 and a wake or a stop holds the run's lock throughout. Several runs at once are independent. It never reads,
-passes or prints a login. Linux; Python 3.11 or later; standard library only. Built on adapters/template.
+passes or prints a login. Linux or macOS; Python 3.9 or later; standard library only. Built on adapters/template.
 """
 import ctypes, fcntl, json, os, re, secrets, shutil, signal, subprocess, sys, time
 

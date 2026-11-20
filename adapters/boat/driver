@@ -7,7 +7,7 @@ prompts that conversation again once the last turn has ended, only while boat sh
 keeps its disk). Each turn is a local `boat prompt` under its own supervisor, which keeps every process the
 turn starts. A run is saved before anything is started for it, stays `starting` until its first turn is
 saved, and a wake or a stop holds the run's lock throughout. It calls only the user's own signed-in `boat`
-CLI and never reads a login. Linux; standard library only.
+CLI and never reads a login. Linux or macOS; Python 3.9 or later; standard library only.
 """
 import ctypes, fcntl, json, os, re, secrets, shutil, signal, subprocess, sys, time
 

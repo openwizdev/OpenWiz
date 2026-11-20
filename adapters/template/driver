@@ -4,7 +4,7 @@
 Each turn of a run is a local process under its own supervisor, which keeps every process the turn starts:
 `start` runs the first turn, `wake` another once the last one has ended, `stop` ends everything the turns
 started. A run is saved before its first turn starts, and a wake or a stop holds the run's lock throughout.
-Adapt `command` to your harness, and `launch`, `running` and `end` to your host. Linux; standard library only.
+Adapt `command` to your harness, and `launch`, `running` and `end` to your host. Linux or macOS; standard library only.
 """
 import ctypes, fcntl, json, os, re, secrets, shutil, signal, subprocess, sys, time
 
