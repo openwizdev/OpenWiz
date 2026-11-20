@@ -1,0 +1,19 @@
+# dry run: collect.sh against a fake gh serving an empty demo repository; it must exit 1 naming the stages check
+$ PATH=<fake gh>:$PATH sh kernel/proofs/grok-bot/collect.sh example-owner/demo <private raw file>
+collect.sh: stages: exit 1, expected 0
+exit 1
+--- checks.txt
+## stages
+$ python3 -I kernel/proofs/grok-bot/sanitize.py build <private raw file> --out kernel/proofs/grok-bot/run.md
+stages missing: spec, grill pointer, plan approved, started, builder, reviewer, approved, merged
+exit 1 (expected 0)
+
+## privacy
+$ python3 -I tools/privacy-check/check.py --tree kernel/proofs/grok-bot
+literals: not used
+exit 0 (expected 0)
+
+## no-special-case
+$ git grep -n -i grok -- adapters kernel/driver.v1.md kernel/records.v1.md kernel/driver-kit kernel/records-kit crates
+exit 1 (expected 1)
+

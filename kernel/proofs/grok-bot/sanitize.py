@@ -28,6 +28,13 @@ MACHINE = re.compile(r'\*\*(Machine plan approval, \d{4}-\d\d-\d\d, revision \d+
                      r'(links, relies, sizes, width and owned paths passed\.)')
 HUMAN = re.compile(r'\*\*(Plan graph approved|Spec confirmed) by [^,*]+, (\d{4}-\d\d-\d\d)(, revision \d+)?:\*\*')
 KEPT = re.compile(rf'(?:Grill confirmed|Private record): {URL}|Checks: [\w ,;:]+\.|Fingerprint: `[0-9a-f]{{64}}`')
+PULL = re.compile(r'https://github\.com/[\w.-]+/[\w.-]+/pull/\d+')
+SHAPE = {
+    'run': {'repo', 'record_authors', 'items'},
+    'item': {'number', 'pr', 'title', 'state', 'state_reason', 'labels', 'body', 'merged_at', 'merge_sha',
+             'head_sha', 'comments', 'reviews'},
+    'comment': {'id', 'author', 'time', 'body'},
+}
 STAGES = ('spec', 'grill pointer', 'plan approved', 'started', 'builder', 'reviewer', 'approved', 'merged')
 
 
@@ -41,7 +48,7 @@ def note(body):
     fields = {k: v for k, _, v in pairs}
     if len(fields) != len(pairs) or not set(fields) <= set(FIELDS) or not set(FIELDS[:7]) <= set(fields):
         return 'status note withheld: unreadable', None
-    if not all(clean(v) or k == 'pr' and v.startswith('https://github.com/') for k, v in fields.items()):
+    if not all(PULL.fullmatch(v) if k == 'pr' else clean(v) for k, v in fields.items()):
         return 'status note withheld: private value', None
     text = f"{fields['agent']} {fields['state']}, {fields['harness']}, {fields['model']}, {fields['skills']}: {fields['step']}"
     return text + (f" ({fields['pr']})" if 'pr' in fields else ''), fields['agent']
@@ -49,6 +56,7 @@ def note(body):
 
 def record(body, author, authors, seen):
     """One public line for a comment, and the stage it shows."""
+    body = body.replace('\r\n', '\n')
     first = body.strip().split('\n', 1)[0].strip()
     if author.lower() not in authors:
         return 'comment, body dropped'
@@ -78,7 +86,19 @@ def record(body, author, authors, seen):
     return '\n'.join([text] + [f'  - {line}' for line in kept])
 
 
+def shape(raw):
+    """Refuse raw records whose keys are not exactly fetch's."""
+    ok = isinstance(raw, dict) and set(raw) == SHAPE['run'] and isinstance(raw['items'], list)
+    for item in raw.get('items', []) if ok else []:
+        ok = ok and isinstance(item, dict) and set(item) == SHAPE['item']
+        for c in (item.get('comments', []) + item.get('reviews', [])) if ok else []:
+            ok = ok and isinstance(c, dict) and set(c) == SHAPE['comment']
+    if not ok:
+        raise SystemExit('sanitize.py: raw records are not in fetch\'s shape; fetch them again')
+
+
 def build(raw):
+    shape(raw)
     authors = {a.lower() for a in raw['record_authors']}
     seen, out = set(), [f"# Recorded run on {raw['repo']}", '']
     for item in sorted(raw['items'], key=lambda i: i['number']):
@@ -93,7 +113,7 @@ def build(raw):
             seen.add('merged')
             out.append(f"- merged at {item['merged_at']} as {item['merge_sha']} (head {item['head_sha']})")
         events = [(c['time'], c['id'], c['author'], c['body']) for c in item['comments']]
-        events += [(r['time'], r['id'], r['author'], r['body'] or '') for r in item.get('reviews', [])]
+        events += [(r['time'], r['id'], r['author'], r['body']) for r in item['reviews']]
         for time, _, author, body in sorted(events):
             who = author if author.lower() in authors else 'someone else'
             out.append(f'- {time} {who}: {record(body, author, authors, seen)}')
@@ -125,7 +145,7 @@ def fetch(repo):
             p = gh(f'repos/{repo}/pulls/{n}')[0]
             item.update(merged_at=p['merged_at'], merge_sha=p['merge_commit_sha'] if p['merged_at'] else None,
                         head_sha=p['head']['sha'])
-            item['reviews'] = [{'id': r['id'], 'author': r['user']['login'], 'time': r['submitted_at'], 'body': r['body']}
+            item['reviews'] = [{'id': r['id'], 'author': r['user']['login'], 'time': r['submitted_at'], 'body': r['body'] or ''}
                                for r in gh(f'repos/{repo}/pulls/{n}/reviews?per_page=100')]
         items.append(item)
     return {'repo': repo, 'record_authors': authors, 'items': items}
@@ -145,7 +165,11 @@ def main(argv=None):
         args.out.write_text(json.dumps(fetch(args.repo), indent=1))
         print(f'fetched {args.repo} to {args.out}; keep it private')
         return 0
-    text, missing = build(json.loads(args.raw.read_text()))
+    try:
+        text, missing = build(json.loads(args.raw.read_text()))
+    except SystemExit as refusal:
+        print(refusal, file=sys.stderr)
+        return 2
     args.out.write_text(text)
     print('stages: ok' if not missing else 'stages missing: ' + ', '.join(missing))
     return 1 if missing else 0
