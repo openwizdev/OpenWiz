@@ -2,6 +2,8 @@
 
 A driver is how a place that runs agents (a laptop, a VPS, a cloud sandbox) plugs into OpenWiz. It is one small program, in any language, kept in OpenWiz as `adapters/<host>/driver`. It starts, wakes and stops agents there; the agents then keep their own records on GitHub under [records v1](records.v1.md). The interface is versioned: a later version adds commands or fields beside these and never changes a v1 rule's meaning.
 
+**Supported platforms:** each driver's README names the platforms it runs on; the kit and the local, boat.dev and template drivers run on Linux and macOS, with Python 3.9 or later.
+
 Its schemas are [`driver-kit/schema.json`](driver-kit/schema.json). Its test kit is [`driver-kit/`](driver-kit/README.md). A copyable minimal driver is [`adapters/template/`](../adapters/template/README.md).
 
 ## 1. Commands

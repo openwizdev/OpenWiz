@@ -22,6 +22,7 @@ DRIVER = os.path.join(HERE, 'driver')
 KIT = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit')
 sys.path.insert(0, KIT)
 import kit  # noqa: E402
+NO_PROC = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'fixtures', 'no-proc')
 
 # A synthetic value in a GitHub token's shape, built here so no file holds one.
 TOKEN = 'gh' + 'p_' + 'Synthetic0Local0Value' * 2 + '00'
@@ -381,6 +382,28 @@ class Local(unittest.TestCase):
                 self.assertIn(says, out['next'])
         self.assertEqual([f for f in os.listdir(self.env['OPENWIZ_LOCAL_STATE']) if f.startswith('run-')], [])
 
+
+    def test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild(self):
+        macos = {'PATH': NO_PROC + os.pathsep + self.env['PATH'], 'NO_PROC_PYTHON': sys.executable}
+        for worker in ({}, {'FAKE_CLEAN': '1', 'FAKE_SAME_GROUP': '1'}):
+            with self.subTest(**worker):
+                self.tearDown()
+                self.setUp()
+                macos['PATH'] = NO_PROC + os.pathsep + self.env['PATH']
+                out, turn, child = self.first_turn(**macos, **worker)
+                self.until(lambda: not alive(turn))
+                self.assertTrue(alive(child))
+                self.assertEqual(self.driver('stop', out, dict(self.env, **macos)), (0, dict(out, stopped=True)))
+                self.assertFalse(alive(child), 'a grandchild of the harness still runs after stop')
+
+        self.tearDown()
+        self.setUp()
+        macos['PATH'] = NO_PROC + os.pathsep + self.env['PATH']
+        p = subprocess.run([os.path.join(NO_PROC, 'python3'), '-I', os.path.join(KIT, 'kit.py'), '--driver', DRIVER,
+                            '--repo', 'example/site', '--ticket', '7', '--harness', 'claude',
+                            '--model', 'synthetic-1', '--tracker', self.tracker, '--wait', '15'],
+                           env=dict(self.env, **macos), capture_output=True, text=True, timeout=180)
+        self.assertEqual((p.returncode, p.stdout.splitlines()), (0, PASS), p.stderr)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -1,0 +1,14 @@
+$ python3.11 -I adapters/template/test_driver.py -k without_proc
+test_without_proc_as_on_macos_stop_ends_each_grandchild (__main__.Template.test_without_proc_as_on_macos_stop_ends_each_grandchild) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.768s
+
+OK
+$ python3.9 -I adapters/template/test_driver.py -k without_proc
+test_without_proc_as_on_macos_stop_ends_each_grandchild (__main__.Template) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.791s
+
+OK

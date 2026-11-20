@@ -1,0 +1,57 @@
+$ python3.11 -I kernel/driver-kit/test_kit.py Kit.test_without_proc_as_on_macos_the_template_passes_all_five
+test_without_proc_as_on_macos_the_template_passes_all_five (__main__.Kit.test_without_proc_as_on_macos_the_template_passes_all_five) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 10.170s
+
+OK
+$ python3.9 -I kernel/driver-kit/test_kit.py Kit.test_without_proc_as_on_macos_the_template_passes_all_five
+test_without_proc_as_on_macos_the_template_passes_all_five (__main__.Kit) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 10.246s
+
+OK
+# Every Linux suite this change touches, unchanged tests included, at the fix (python3.11):
+$ python3 -I kernel/driver-kit/test_kit.py
+test_a_refusal_holding_a_credential_never_reaches_the_output (__main__.Kit.test_a_refusal_holding_a_credential_never_reaches_the_output) ... ok
+test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) ... ok
+test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) ... ok
+test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) ... ok
+test_template_passes_all_five (__main__.Kit.test_template_passes_all_five) ... ok
+test_without_proc_as_on_macos_the_template_passes_all_five (__main__.Kit.test_without_proc_as_on_macos_the_template_passes_all_five) ... ok
+Ran 6 tests in 40.367s
+OK
+$ python3 -I adapters/template/test_driver.py
+test_save_failure_after_spawn_reports_unknown (__main__.Template.test_save_failure_after_spawn_reports_unknown) ... ok
+test_simultaneous_wakes_start_one_turn (__main__.Template.test_simultaneous_wakes_start_one_turn) ... /usr/lib/python3.11/unittest/case.py:579: ResourceWarning: unclosed file <_io.BufferedReader name=5>
+test_start_record_is_not_wakeable_before_it_is_confirmed (__main__.Template.test_start_record_is_not_wakeable_before_it_is_confirmed) ... ok
+test_start_with_nowhere_to_save_starts_nothing (__main__.Template.test_start_with_nowhere_to_save_starts_nothing) ... ok
+test_stop_ends_a_worker_with_a_clean_environment (__main__.Template.test_stop_ends_a_worker_with_a_clean_environment) ... ok
+test_stop_ends_the_run_when_it_cannot_save (__main__.Template.test_stop_ends_the_run_when_it_cannot_save) ... ok
+test_stop_ends_what_the_turn_left_behind_after_it_exits (__main__.Template.test_stop_ends_what_the_turn_left_behind_after_it_exits) ... ok
+test_wake_checks_its_save_before_and_after_spawn (__main__.Template.test_wake_checks_its_save_before_and_after_spawn) ... ok
+test_wake_while_a_turn_runs_starts_no_second_turn (__main__.Template.test_wake_while_a_turn_runs_starts_no_second_turn) ... ok
+test_without_proc_as_on_macos_stop_ends_each_grandchild (__main__.Template.test_without_proc_as_on_macos_stop_ends_each_grandchild) ... ok
+Ran 10 tests in 9.894s
+OK
+$ python3 -I adapters/local/test_driver.py
+test_a_first_turn_that_ends_at_once_fails_start_with_its_reason (__main__.Local.test_a_first_turn_that_ends_at_once_fails_start_with_its_reason) ... ok
+test_each_run_works_in_its_own_clone_of_its_repository (__main__.Local.test_each_run_works_in_its_own_clone_of_its_repository) ... ok
+test_kit_passes_all_five_with_each_harness (__main__.Local.test_kit_passes_all_five_with_each_harness) ... ok
+test_missing_or_unknown_harness_is_an_error_with_next (__main__.Local.test_missing_or_unknown_harness_is_an_error_with_next) ... ok
+test_permission_mode_is_the_repositorys_own_or_start_refuses (__main__.Local.test_permission_mode_is_the_repositorys_own_or_start_refuses) ... ok
+test_permission_mode_needs_this_machines_approval (__main__.Local.test_permission_mode_needs_this_machines_approval) ... ok
+test_several_runs_at_once_stop_only_their_own (__main__.Local.test_several_runs_at_once_stop_only_their_own) ... ok
+test_start_record_is_not_wakeable_before_it_is_confirmed (__main__.Local.test_start_record_is_not_wakeable_before_it_is_confirmed) ... ok
+test_start_with_nowhere_to_save_starts_nothing (__main__.Local.test_start_with_nowhere_to_save_starts_nothing) ... ok
+test_stop_ends_a_worker_with_a_clean_environment (__main__.Local.test_stop_ends_a_worker_with_a_clean_environment) ... ok
+test_stop_ends_the_run_when_it_cannot_save (__main__.Local.test_stop_ends_the_run_when_it_cannot_save) ... ok
+test_wake_checks_its_save_before_and_after_spawn (__main__.Local.test_wake_checks_its_save_before_and_after_spawn) ... ok
+test_wake_while_a_turn_runs_starts_no_second_turn (__main__.Local.test_wake_while_a_turn_runs_starts_no_second_turn) ... ok
+test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild (__main__.Local.test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild) ... ok
+Ran 14 tests in 40.858s
+OK
+$ python3 -I adapters/boat/test_driver.py
+Ran 13 tests in 25.843s
+OK

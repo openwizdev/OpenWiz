@@ -1,0 +1,9 @@
+#!/bin/sh
+for a; do
+    shift
+    if [ "$a" != -E ]; then set -- "$@" "$a"
+    elif [ -z "$NO_PROC_HIDE_ENV" ]; then set -- "$@" e
+    fi
+done
+for ps in /bin/ps /usr/bin/ps; do [ -x "$ps" ] && exec "$ps" "$@"; done
+exit 127
