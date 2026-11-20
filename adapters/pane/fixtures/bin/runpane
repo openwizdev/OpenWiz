@@ -196,8 +196,6 @@ def main():
         sys.exit(2)
     if os.environ.get('FAKE_PANE_DOWN'):
         fail('daemon-unavailable', 'synthetic: Pane is not running', 'open the Pane app, then run it again')
-    if name in os.environ.get('FAKE_PANE_FAIL', '').split(','):
-        fail('internal', 'synthetic: runpane %s failed' % name)
     verb(ARGS[2:])
 
 

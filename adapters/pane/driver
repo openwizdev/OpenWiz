@@ -147,7 +147,7 @@ def archive(run, state):
         blocked = (e.out or {}).get('blocked')
         code = blocked.get('code') if isinstance(blocked, dict) else None
         if code == 'unpushed-commits':
-            # DATA LOSS: only commits Pane keeps on the local branch are archived with --force; uncommitted work never is.
+            # DATA LOSS: --force only for commits Pane keeps on the local branch; uncommitted work is never forced.
             runpane(then, 'panes', 'archive', '--pane', state['pane'], '--remove-worktree', '--force', '--yes')
         elif code in ('uncommitted-changes', 'uncommitted-and-unpushed'):
             raise Refused(line('run %s is stopped and its agent has ended, but Pane kept its worktree %s: it holds '
