@@ -12,6 +12,24 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DRIVER = os.path.join(HERE, 'driver')
 KIT = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'kit.py')
 KEY = 'sk-' + 'Synthetic0Conductor0Value' * 2
+NEVER_READS_THE_KEY = '''import importlib.machinery, importlib.util, os, sys
+sys.dont_write_bytecode = True
+class Guarded(dict):
+    def __getitem__(self, k):
+        if k == 'CONDUCTOR_API_KEY':
+            raise AssertionError('the driver read the key')
+        return dict.__getitem__(self, k)
+    def get(self, k, default=None):
+        return self[k] if k in self else default
+    def items(self):
+        raise AssertionError('the driver read every value')
+    values = copy = items
+os.environ = Guarded(os.environ)
+spec = importlib.util.spec_from_loader('conductor', importlib.machinery.SourceFileLoader('conductor', %r))
+t = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(t)
+t.main()
+'''
 REQUEST = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude',
            'model': 'opus-5-5-1m'}
 
@@ -44,12 +62,14 @@ class Conductor(unittest.TestCase):
     def calls(self):
         try:
             with open(self.log) as f:
-                args = [json.loads(line) for line in f]
+                logged = [json.loads(line) for line in f]
         except FileNotFoundError:
             return []
-        for a in args:
-            self.assertNotIn(KEY, ' '.join(a), 'the key was on a command line')
-        return [(a[4], a[-1].split('.build', 1)[1]) for a in args]
+        for c in logged:
+            self.assertNotIn(KEY, ' '.join(c['args']), 'the key was on a command line')
+            self.assertEqual(c['key_in'], ['CONDUCTOR_API_KEY', 'FAKE_CONDUCTOR_KEY'],
+                             'curl got the key in a variable the test never gave it')
+        return [(c['args'][4], c['args'][-1].split('.build', 1)[1]) for c in logged if c['args'] != ['--version']]
 
     def workspaces(self):
         with open(self.host) as f:
@@ -124,6 +144,30 @@ class Conductor(unittest.TestCase):
         self.assertEqual(code, 1, 'a run whose stop began was woken')
         self.assertEqual(self.driver('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
         self.assertEqual(self.workspaces()['ws_fake0001']['status'], 'archived')
+
+
+    def test_the_driver_never_reads_the_key(self):
+        guarded = os.path.join(self.folder, 'guarded')
+        with open(guarded, 'w') as f:
+            f.write(NEVER_READS_THE_KEY % DRIVER)
+        for cmd, request in (('start', REQUEST), ('wake', None), ('stop', None)):
+            p = subprocess.run([sys.executable, '-I', guarded, cmd],
+                               input=json.dumps(request or {'run': self.run_id}), env=self.env,
+                               capture_output=True, text=True, timeout=60)
+            self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+            if cmd == 'start':
+                self.run_id = json.loads(p.stdout)['run']
+        self.assertEqual(len(self.calls()), 4)
+
+    def test_an_old_curl_is_refused_by_its_version(self):
+        for version in ('7.88.1', '8.2.1'):
+            with self.subTest(version):
+                code, out = self.driver('start', REQUEST, FAKE_CURL_VERSION=version)
+                self.assertEqual(code, 1, out)
+                self.assertIn('curl %s is too old' % version, out['error'])
+                self.assertIn('8.3 or later', out['error'] + out['next'])
+        self.assertEqual(self.calls(), [], 'it called Conductor with a curl too old to send the key')
+        self.assertEqual(self.driver('start', REQUEST, FAKE_CURL_VERSION='8.3.0')[0], 0)
 
 
 if __name__ == '__main__':

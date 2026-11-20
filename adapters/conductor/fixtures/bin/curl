@@ -95,9 +95,14 @@ def call(method, path, body):
 
 def main():
     args = sys.argv[1:]
+    key = os.environ.get('CONDUCTOR_API_KEY')
+    holding = sorted(k for k, v in os.environ.items() if key and v == key)
     if LOG:
         with open(LOG, 'a') as f:
-            f.write(json.dumps(args) + '\n')
+            f.write(json.dumps({'args': args, 'key_in': holding}) + '\n')
+    if args == ['--version']:
+        print('curl %s (fake) libcurl/%s' % ((os.environ.get('FAKE_CURL_VERSION') or '8.11.1'),) * 2)
+        sys.exit(0)
     padded = args + [''] * 5
     shape = ['-sS', '--max-time', padded[2], '-X', padded[4]] + KEY_ARGS + [
         '-H', 'Content-Type: application/json', '-H', 'Accept: application/json'] + (
