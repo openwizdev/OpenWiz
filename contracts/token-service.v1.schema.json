@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openwiz.dev/contracts/token-service.v1.schema.json",
+  "title": "Token service v1 messages: a request, an answer, a refusal and a mint-log line",
+  "description": "Shapes only; contracts/token-service.v1.md holds the rules (scope, refusal order, exits, refresh and fallback). A mint-log line has no token field and refuses one, and logs only the App profile's permission names (a refusal logs none).",
+  "oneOf": [
+    {"$ref": "#/$defs/request"},
+    {"$ref": "#/$defs/answer"},
+    {"$ref": "#/$defs/refusal"},
+    {"$ref": "#/$defs/mint_log"}
+  ],
+  "$defs": {
+    "schema": {"const": "openwiz.token-service.v1"},
+    "repositories": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[A-Za-z0-9-]+/[A-Za-z0-9_.-]+$"}
+    },
+    "permissions": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {"type": "string", "pattern": "^[a-z][a-z_]*$"},
+      "additionalProperties": {"enum": ["read", "write"]}
+    },
+    "requester": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+    "unix": {"type": "integer", "minimum": 0},
+    "request": {
+      "type": "object",
+      "required": ["schema", "kind", "requester", "repositories", "permissions"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {"$ref": "#/$defs/schema"},
+        "kind": {"const": "request"},
+        "requester": {"$ref": "#/$defs/requester"},
+        "repositories": {"$ref": "#/$defs/repositories"},
+        "permissions": {"$ref": "#/$defs/permissions"}
+      }
+    },
+    "answer": {
+      "type": "object",
+      "required": ["schema", "kind", "token", "expires_at", "repositories", "permissions"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {"$ref": "#/$defs/schema"},
+        "kind": {"const": "answer"},
+        "token": {"type": "string", "pattern": "^[A-Za-z0-9._~+/-]+=*$"},
+        "expires_at": {"$ref": "#/$defs/unix"},
+        "repositories": {"$ref": "#/$defs/repositories"},
+        "permissions": {"$ref": "#/$defs/permissions"}
+      }
+    },
+    "refusal": {
+      "type": "object",
+      "required": ["schema", "kind", "refusal", "message"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {"$ref": "#/$defs/schema"},
+        "kind": {"const": "refusal"},
+        "refusal": {"enum": ["usage", "one-owner", "not-installed", "permission", "github", "expiry", "unavailable"]},
+        "message": {"type": "string", "pattern": "^Token refused: [^\\n]+\\.$"}
+      }
+    },
+    "mint_log": {
+      "type": "object",
+      "required": ["schema", "kind", "at", "requester", "outcome"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {"$ref": "#/$defs/schema"},
+        "kind": {"const": "mint-log"},
+        "at": {"$ref": "#/$defs/unix"},
+        "requester": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$|^-$"},
+        "repositories": {"type": "array", "items": {"type": "string", "pattern": "^[A-Za-z0-9-]+/[A-Za-z0-9_.-]+$"}},
+        "permissions": {
+          "type": "object",
+          "propertyNames": {"enum": ["metadata", "contents", "issues", "pull_requests", "checks", "actions"]},
+          "additionalProperties": {"enum": ["read", "write"]}
+        },
+        "outcome": {"enum": ["minted", "usage", "one-owner", "not-installed", "permission", "github", "expiry", "unavailable"]},
+        "expires_at": {"$ref": "#/$defs/unix"}
+      }
+    }
+  }
+}

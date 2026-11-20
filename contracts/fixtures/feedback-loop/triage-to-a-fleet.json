@@ -1,0 +1,40 @@
+{
+  "kind": "triage",
+  "about": "A small, clear bug: a brief in triage's own words, ready for an agent; no comment on the report.",
+  "input": {
+    "report": {
+      "number": 9101,
+      "author": "synthetic-user",
+      "pull_request": false,
+      "title": "Plan page hides the approve button on a narrow phone",
+      "body": "On a 360-pixel screen the approve button sits under the footer.\n\nOpenWiz feedback operation 3f2a9c4e1b7d40a6958e0c2d7b1a4f63",
+      "labels": [],
+      "milestone": null,
+      "comments": []
+    },
+    "criteria": {
+      "defect": true,
+      "reproducible": true,
+      "small": true,
+      "no_guarded_change": true,
+      "no_instructions": true,
+      "nothing_private": true
+    }
+  },
+  "expect": {
+    "outcome": "fleet",
+    "report_labels": [
+      "feedback"
+    ],
+    "report_milestone": "9.4.2",
+    "report_comments": [],
+    "brief": {
+      "title": "Keep the plan page's approve button above the footer on narrow screens",
+      "body": "On a screen 360 pixels wide, the approve button on the plan page sits under the footer. Keep it above the footer at every width.\n\nReport: #9101",
+      "labels": [
+        "ready-for-agent"
+      ],
+      "milestone": "9.4.2"
+    }
+  }
+}

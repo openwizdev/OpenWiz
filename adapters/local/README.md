@@ -1,5 +1,7 @@
 # The local driver
 
+Login: stays on your machine
+
 The default host: a [driver v1](../../kernel/driver.v1.md) that runs builders on the machine it runs on, your computer or a VPS, with the harnesses you have already signed into. One Python file, standard library only, Linux (it finds a run's processes through `/proc`).
 
 ```sh

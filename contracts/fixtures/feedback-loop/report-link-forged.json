@@ -1,0 +1,22 @@
+{
+  "kind": "link",
+  "about": "The same line on an issue someone else wrote is no report link.",
+  "input": {
+    "issue": {
+      "number": 9109,
+      "author": "synthetic-user",
+      "pull_request": false,
+      "title": "Please fix the footer",
+      "body": "Please fix the footer.\n\nReport: #9101",
+      "labels": [],
+      "milestone": null,
+      "comments": []
+    },
+    "record_authors": [
+      "synthetic-maintainer"
+    ]
+  },
+  "expect": {
+    "report": null
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "synthetic": true,
+  "note": "GA3's seam: whether the helper asks again before its next use. Refresh at 300 seconds or less left.",
+  "cases": [
+    {
+      "name": "a fresh token",
+      "now": 1000,
+      "expires_at": 4600,
+      "refresh": false
+    },
+    {
+      "name": "one second over the boundary",
+      "now": 1000,
+      "expires_at": 1301,
+      "refresh": false
+    },
+    {
+      "name": "exactly five minutes left",
+      "now": 1000,
+      "expires_at": 1300,
+      "refresh": true
+    },
+    {
+      "name": "an expiring token",
+      "now": 1000,
+      "expires_at": 1120,
+      "refresh": true
+    },
+    {
+      "name": "an expired token",
+      "now": 1000,
+      "expires_at": 990,
+      "refresh": true
+    }
+  ]
+}

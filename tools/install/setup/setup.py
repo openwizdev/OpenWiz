@@ -237,19 +237,66 @@ def table(lines):
 
 
 PLACEHOLDER = re.compile(r'<[A-Za-z][^<>\n]*>')
+# contracts/models.v1.md: the Models table's header, rows and one ids rule (#1807).
+MODELS_HEADER = ['Role', 'Harness', 'Model', 'Effort', '`room-cli thread spawn` flags']
+MODEL_ID = r'[A-Za-z0-9._-]+'
+MODEL_FLAGS = re.compile(r'`--provider %s --model %s(?:/%s)* --reasoning-level %s`' % ((MODEL_ID,) * 4))
+
+
+def models_usable(text, body):
+    """A whole, filled Models table, as contracts/models.v1.md defines it: one
+    `## Models` heading; the section's first table with the contract's header,
+    the Orchestrator, Builder and Reviewer rows each naming a harness, model
+    and effort with their exact flags, then an optional Small builder and Fixer
+    that follow the Builder or name their own choice; and a Source line."""
+    if sum(line.startswith('## ') and line[3:].strip() == 'Models' for line in text.split('\n')) != 1:
+        return False
+    rows = []
+    for line in body:
+        if line.startswith('|'):
+            rows.append([cell.strip() for cell in line.strip()[1:-1].split('|')] if line.strip().endswith('|') else None)
+        elif rows:
+            break
+    if len(rows) < 2 or rows[0] != MODELS_HEADER or rows[1] != ['---'] * 5 or None in rows:
+        return False
+    names = [row[0] if len(row) == 5 else None for row in rows[2:]]
+    if names[:3] != ['Orchestrator', 'Builder', 'Reviewer'] or names[3:] not in (
+            [], ['Small builder'], ['Fixer'], ['Small builder', 'Fixer']):
+        return False
+    for role, harness, model, effort, flags in rows[2:]:
+        # Review R1: the reserved value is never a choice; only an optional role may follow, with empty cells.
+        if harness == 'follows Builder':
+            if role not in ('Small builder', 'Fixer') or model or effort or flags:
+                return False
+            continue
+        if not (harness and model and effort) or not MODEL_FLAGS.fullmatch(flags):
+            return False
+    return True
 
 
 def fleet_settings_usable(text):
     """Review R2: the setup skill's fleet settings, filled in. The builder and a
     reviewer name a harness, model and effort; at least one test command and one
     CI check; a merge rule; each with its Source line; no unfilled template
-    placeholder. Empty headings or the bare template are not settings."""
+    placeholder. Empty headings or the bare template are not settings. A
+    `## Models` table (contracts/models.v1.md, #1807) stands for the builder and
+    reviewer tables; when present it must be whole, and older tables beside it
+    are ignored, as that contract's readers ignore them."""
     found = sections(text)
     reviewers = [name for name in found if name.startswith('Reviewer')]
     # Re-check R2: every builder table present counts, small-ticket builders included.
     builders = [name for name in found if name.startswith('Builder')]
-    needed = ['Builder', 'Test commands', 'CI checks', 'Standing merge rules']
-    if not reviewers or not all(name in found for name in needed):
+    needed = ['Test commands', 'CI checks', 'Standing merge rules']
+    if 'Models' in found:
+        if not models_usable(text, found['Models']):
+            return False
+        needed.insert(0, 'Models')
+        builders = reviewers = []  # Review R2 of #1947: readers ignore the older tables beside a Models table
+    elif not reviewers:
+        return False
+    else:
+        needed.insert(0, 'Builder')
+    if not all(name in found for name in needed):
         return False
     for name in needed + builders + reviewers:
         body = found[name]

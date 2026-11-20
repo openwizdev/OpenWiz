@@ -31,6 +31,15 @@ OpenWiz never touches a login.
 - **N2.** A driver uses the host's and the harness's own signed-in tools. It never reads a credential to pass it on: not in an argument, not into another variable of an environment, not in its output. An environment the agent inherits unchanged from the person who runs the driver is theirs, not the driver's.
 - **N3.** It holds no GitHub App key, and no token beyond its own run (GitHub identity G1).
 
+### The login line
+
+Each driver's `README.md` opens, right under its title, with one line saying where the user's login lives. It is exactly one of two forms:
+
+- `Login: stays on your machine`: a local driver. The host's own signed-in tools run on the user's machine, and the login never leaves it.
+- `Login: held by <host>`: a cloud driver, where `<host>` is the host's name. The user signs in to the host, and the host holds that login. When the host takes an API key, the README also names the environment variable the user sets for it.
+
+The line only says where the login lives; N1 to N3 apply to every driver unchanged.
+
 ## 3. The kit's five checks
 
 A driver merges into `adapters/` when it passes all five on its real host, with the run shown on its pull request, and a review.
