@@ -1,35 +1,111 @@
 {
-  "repo": "example-owner/demo",
-  "record_authors": ["example-owner"],
-  "items": [
-    {"number": 1, "pr": false, "title": "Spec: a tiny greeting page", "state": "closed", "state_reason": "completed",
-     "labels": ["spec"], "merged_at": null, "merge_sha": null, "head_sha": null,
-     "body": "## Problem\nPLANTED-SPEC-PROSE stays out.\n\nGrill: [private record](https://github.com/example-owner/demo-private/issues/3#issuecomment-111)\n",
-     "comments": [
-       {"id": 201, "author": "example-owner", "time": "2030-01-02T03:00:00Z",
-        "body": "**Plan graph approved by Robin, 2030-01-02, revision 1:**\n> PLANTED-EXACT-WORDS go ahead"}
-     ], "reviews": []},
-    {"number": 2, "pr": false, "title": "Show the greeting", "state": "closed", "state_reason": "completed",
-     "labels": ["ready-for-agent"], "merged_at": null, "merge_sha": null, "head_sha": null,
-     "body": "## Parent\n#1\nPLANTED-TICKET-PROSE",
-     "comments": [
-       {"id": 301, "author": "example-owner", "time": "2030-01-02T03:05:00Z", "body": "launch-fleet: started\n\nPLANTED-LAUNCH-DETAIL"},
-       {"id": 302, "author": "example-owner", "time": "2030-01-02T03:06:00Z",
-        "body": "<!-- openwiz:status v1 -->\nagent: builder\nstate: done\nharness: Claude Code\nmodel: Opus 5.5 Medium\nskills: build-ticket@0.2.0\nstep: handed back the pull request\ntime: 2030-01-02T03:40:00Z\npr: https://github.com/example-owner/demo/pull/3"},
-       {"id": 303, "author": "example-owner", "time": "2030-01-02T03:07:00Z",
-        "body": "<!-- openwiz:status v1 -->\nagent: builder\nstate: working\nharness: Claude Code\nmodel: Opus 5.5 Medium\nskills: build-ticket@0.2.0\nstep: resumed THREAD on the box\ntime: 2030-01-02T03:07:00Z"},
-       {"id": 304, "author": "someone-else", "time": "2030-01-02T03:08:00Z",
-        "body": "<!-- openwiz:status v1 -->\nagent: builder\nstate: working\nharness: Claude Code\nmodel: Opus 5.5 Medium\nskills: build-ticket@0.2.0\nstep: PLANTED-STRANGER-NOTE\ntime: 2030-01-02T03:08:00Z"},
-       {"id": 305, "author": "example-owner", "time": "2030-01-02T03:09:00Z", "body": "PLANTED-ANSWER-WORDS from the owner"}
-     ], "reviews": []},
-    {"number": 3, "pr": true, "title": "#2: Show the greeting", "state": "closed", "state_reason": null,
-     "labels": [], "merged_at": "2030-01-02T04:00:00Z", "merge_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-     "body": "Closes #2\nPLANTED-PR-PROSE",
-     "comments": [
-       {"id": 401, "author": "example-owner", "time": "2030-01-02T03:50:00Z",
-        "body": "VERDICT: APPROVE at bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n\nPLANTED-REVIEW-FINDINGS"},
-       {"id": 402, "author": "example-owner", "time": "2030-01-02T03:45:00Z",
-        "body": "<!-- openwiz:status v1 -->\nagent: reviewer\nstate: done\nharness: Codex\nmodel: Sol 6.2 Medium\nskills: review-ticket@0.2.0\nstep: approved the exact head\ntime: 2030-01-02T03:50:00Z"}
-     ], "reviews": []}
-  ]
+ "repo": "example-owner/demo",
+ "record_authors": [
+  "example-owner"
+ ],
+ "items": [
+  {
+   "number": 1,
+   "pr": false,
+   "title": "Spec: a tiny greeting page",
+   "state": "closed",
+   "state_reason": "completed",
+   "labels": [
+    "spec"
+   ],
+   "merged_at": null,
+   "merge_sha": null,
+   "head_sha": null,
+   "body": "## Problem\nPLANTED-SPEC-PROSE stays out.\n",
+   "comments": [
+    {
+     "id": 200,
+     "author": "example-owner",
+     "time": "2030-01-02T02:59:00Z",
+     "body": "**Spec confirmed by Robin, 2030-01-02:** PLANTED-DECISION-WORDS\nPrivate record: https://github.com/example-owner/demo-private/issues/3#issuecomment-110"
+    },
+    {
+     "id": 201,
+     "author": "example-owner",
+     "time": "2030-01-02T03:00:00Z",
+     "body": "**Machine plan approval, 2030-01-02, revision 1:** links, relies, sizes, width and owned paths passed.\nGrill confirmed: https://github.com/example-owner/demo-private/issues/3#issuecomment-111\n\nChecks: 1 tickets; links 0; relies 0; sizes S 1, M 0, L 0; width: chain 1, widest 1; owned paths 1.\n\n| Ticket | Title | Blocked by | Label |\n| --- | --- | --- | --- |\n| #2 | PLANTED-TABLE-TITLE | none | ready-for-agent |\n\nFingerprint: `cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc`\n"
+    }
+   ],
+   "reviews": []
+  },
+  {
+   "number": 2,
+   "pr": false,
+   "title": "Show the greeting",
+   "state": "closed",
+   "state_reason": "completed",
+   "labels": [
+    "ready-for-agent"
+   ],
+   "merged_at": null,
+   "merge_sha": null,
+   "head_sha": null,
+   "body": "## Parent\n#1\nPLANTED-TICKET-PROSE",
+   "comments": [
+    {
+     "id": 301,
+     "author": "example-owner",
+     "time": "2030-01-02T03:05:00Z",
+     "body": "launch-fleet: started\n\nPLANTED-LAUNCH-DETAIL"
+    },
+    {
+     "id": 302,
+     "author": "example-owner",
+     "time": "2030-01-02T03:06:00Z",
+     "body": "<!-- openwiz:status v1 -->\nagent: builder\nstate: done\nharness: Claude Code\nmodel: Opus 5.5 Medium\nskills: build-ticket@0.2.0\nstep: handed back the pull request\ntime: 2030-01-02T03:40:00Z\npr: https://github.com/example-owner/demo/pull/3"
+    },
+    {
+     "id": 303,
+     "author": "example-owner",
+     "time": "2030-01-02T03:07:00Z",
+     "body": "<!-- openwiz:status v1 -->\nagent: builder\nstate: working\nharness: Claude Code\nmodel: Opus 5.5 Medium\nskills: build-ticket@0.2.0\nstep: resumed THREAD on the box\ntime: 2030-01-02T03:07:00Z"
+    },
+    {
+     "id": 304,
+     "author": "someone-else",
+     "time": "2030-01-02T03:08:00Z",
+     "body": "<!-- openwiz:status v1 -->\nagent: builder\nstate: working\nharness: Claude Code\nmodel: Opus 5.5 Medium\nskills: build-ticket@0.2.0\nstep: PLANTED-STRANGER-NOTE\ntime: 2030-01-02T03:08:00Z"
+    },
+    {
+     "id": 305,
+     "author": "example-owner",
+     "time": "2030-01-02T03:09:00Z",
+     "body": "PLANTED-ANSWER-WORDS from the owner"
+    }
+   ],
+   "reviews": []
+  },
+  {
+   "number": 3,
+   "pr": true,
+   "title": "#2: Show the greeting",
+   "state": "closed",
+   "state_reason": null,
+   "labels": [],
+   "merged_at": "2030-01-02T04:00:00Z",
+   "merge_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+   "body": "Closes #2\nPLANTED-PR-PROSE",
+   "comments": [
+    {
+     "id": 401,
+     "author": "example-owner",
+     "time": "2030-01-02T03:50:00Z",
+     "body": "VERDICT: APPROVE at bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n\nPLANTED-REVIEW-FINDINGS"
+    },
+    {
+     "id": 402,
+     "author": "example-owner",
+     "time": "2030-01-02T03:45:00Z",
+     "body": "<!-- openwiz:status v1 -->\nagent: reviewer\nstate: done\nharness: Codex\nmodel: Sol 6.2 Medium\nskills: review-ticket@0.2.0\nstep: approved the exact head\ntime: 2030-01-02T03:50:00Z"
+    }
+   ],
+   "reviews": []
+  }
+ ]
 }

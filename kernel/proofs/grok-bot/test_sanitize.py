@@ -31,9 +31,14 @@ class Sanitize(unittest.TestCase):
                      'reviewer done, Codex, Sol 6.2 Medium, review-ticket@0.2.0: approved the exact head',
                      'VERDICT: APPROVE at bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
                      'launch-fleet: started',
-                     'plan graph approved, 2030-01-02, revision 1',
+                     'Machine plan approval, 2030-01-02, revision 1: links, relies, sizes, width and owned paths passed.',
+                     'Checks: 1 tickets; links 0; relies 0; sizes S 1, M 0, L 0; width: chain 1, widest 1; owned paths 1.',
+                     'Fingerprint: `' + 'c' * 64 + '`',
+                     'spec confirmed, 2030-01-02',
+                     'Private record: https://github.com/example-owner/demo-private/issues/3#issuecomment-110',
+                     'Grill confirmed: https://github.com/example-owner/demo-private/issues/3#issuecomment-111',
                      'merged at 2030-01-02T04:00:00Z as aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-                     '[private record](https://github.com/example-owner/demo-private/issues/3#issuecomment-111)'):
+                     ):
             self.assertIn(kept, run)
 
     def test_prose_and_exact_words_never_reach_the_evidence(self):
@@ -57,6 +62,15 @@ class Sanitize(unittest.TestCase):
         done, run = build(RAW)
         self.assertNotIn('STRANGER', run)
         self.assertEqual(run.count('builder done'), 1)
+
+    def test_a_human_plan_approval_keeps_its_header_without_the_name(self):
+        # catches: the older human approval form dropped, or kept with the decider's name and words
+        raw = copy.deepcopy(RAW)
+        raw['items'][0]['comments'][1]['body'] = '**Plan graph approved by Robin, 2030-01-02, revision 1:** PLANTED words'
+        done, run = build(raw)
+        self.assertIn('plan graph approved, 2030-01-02, revision 1', run)
+        self.assertNotIn('Robin', run)
+        self.assertIn('stages missing: grill pointer', done.stdout)
 
     def test_a_missing_stage_fails_and_is_named(self):
         # catches: a run that never merged being reported as end to end

@@ -1,0 +1,12 @@
+# red r1: python3 -I kernel/proofs/grok-bot/test_sanitize.py with the machine plan approval and spec confirmation forms (assertion lines cut at 160 characters)
+FAIL: test_a_human_plan_approval_keeps_its_header_without_the_name (__main__.Sanitize.test_a_human_plan_approval_keeps_its_header_without_the_name)
+  File "kernel/proofs/grok-bot/test_sanitize.py", line 71, in test_a_human_plan_approval_keeps_its_header_without_the_name
+AssertionError: 'plan graph approved, 2030-01-02, revision 1' not found in '# Recorded run on example-owner/demo\n\n## Issue #1: Spec: a tiny greeting page\nclo
+FAIL: test_a_missing_stage_fails_and_is_named (__main__.Sanitize.test_a_missing_stage_fails_and_is_named)
+  File "kernel/proofs/grok-bot/test_sanitize.py", line 81, in test_a_missing_stage_fails_and_is_named
+AssertionError: 'stages missing: merged' not found in 'stages missing: grill pointer, plan approved, merged\n'
+FAIL: test_full_run_keeps_every_record_form_and_covers_every_stage (__main__.Sanitize.test_full_run_keeps_every_record_form_and_covers_every_stage)
+  File "kernel/proofs/grok-bot/test_sanitize.py", line 28, in test_full_run_keeps_every_record_form_and_covers_every_stage
+AssertionError: 1 != 0 : stages missing: grill pointer, plan approved
+Ran 7 tests in 0.256s
+FAILED (failures=3)
