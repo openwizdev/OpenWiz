@@ -1,0 +1,8 @@
+# Red run: the kit against adapters/devin/driver as a copy of adapters/template/driver (only its name changed), before the Devin code. Synthetic tracker, harness devin, no devin CLI on PATH.
+$ python3 -I kernel/driver-kit/kit.py --driver adapters/devin/driver --repo example/site --ticket 7 --harness devin --model synthetic --tracker <tmp>/tracker.json --wait 5
+pass version: openwiz:records v1, and the schema is driver v1
+fail start: no builder status note appeared within 5 seconds
+fail wake: not run: start failed
+fail stop: not run: start failed
+pass token: no login or token passed through the driver
+exit 1
