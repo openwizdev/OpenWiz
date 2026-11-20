@@ -1,0 +1,12 @@
+# python3 -I kernel/proofs/openclaw/test_sanitize.py against sanitize.py (exit 0).
+test_a_credential_refuses_the_whole_run_and_is_never_printed (__main__.Sanitize.test_a_credential_refuses_the_whole_run_and_is_never_printed) ... ok
+test_an_existing_output_folder_is_never_overwritten (__main__.Sanitize.test_an_existing_output_folder_is_never_overwritten) ... ok
+test_literals_are_required_and_must_be_readable (__main__.Sanitize.test_literals_are_required_and_must_be_readable) ... ok
+test_private_forms_are_rewritten_and_public_ones_kept (__main__.Sanitize.test_private_forms_are_rewritten_and_public_ones_kept) ... ok
+test_the_privacy_check_gates_what_rewriting_misses (__main__.Sanitize.test_the_privacy_check_gates_what_rewriting_misses) ... ok
+test_unknown_files_refuse (__main__.Sanitize.test_unknown_files_refuse) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.613s
+
+OK
