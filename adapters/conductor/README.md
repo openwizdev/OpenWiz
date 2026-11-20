@@ -2,7 +2,7 @@
 
 Login: held by Conductor
 
-A [driver v1](../../kernel/driver.v1.md) that runs each builder in its own [Conductor](https://www.conductor.build) cloud workspace, through Conductor's API (beta, `https://api.conductor.build/v0`). One Python file, standard library only, plus `curl` 8.3 or later. Runs are saved in `$OPENWIZ_CONDUCTOR_STATE` (default `~/.local/state/openwiz-conductor`), owner-only.
+A [driver v1](../../kernel/driver.v1.md) that runs each builder in its own [Conductor](https://www.conductor.build) cloud workspace, through Conductor's API (beta, `https://api.conductor.build/v0`). One Python file, standard library only, plus `curl` 8.3 or later. **Platforms:** Linux and macOS, Python 3.9 or later. Runs are saved in `$OPENWIZ_CONDUCTOR_STATE` (default `~/.local/state/openwiz-conductor`), owner-only.
 
 | Command | What it does on Conductor |
 | --- | --- |
