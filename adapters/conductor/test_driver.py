@@ -90,7 +90,7 @@ class Conductor(unittest.TestCase):
         self.assertEqual(len(self.workspaces()), 1)
 
     def test_a_refused_start_starts_nothing_and_says_what_to_do(self):
-        for env, word in (({'FAKE_CONDUCTOR_FAIL': 'POST /v0/workspaces=400'}, 'Invalid'),
+        for env, word in (({'FAKE_CONDUCTOR_FAIL': 'POST /v0/workspaces=400'}, 'planted failure'),
                           ({'CONDUCTOR_API_KEY': 'sk-' + 'Another0Synthetic0Value0'}, 'CONDUCTOR_API_KEY')):
             with self.subTest(env=sorted(env)):
                 code, out = self.driver('start', REQUEST, **env)

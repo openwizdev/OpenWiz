@@ -1,25 +1,45 @@
 #!/usr/bin/env python3
-"""A minimal OpenWiz driver (kernel/driver.v1.md). Copy this folder to adapters/<host>/ and adapt it.
+"""The Conductor driver (kernel/driver.v1.md): each run is one Conductor cloud workspace and its first session.
 
-Each turn of a run is a local process under its own supervisor, which keeps every process the turn starts:
-`start` runs the first turn, `wake` another once the last one has ended, `stop` ends everything the turns
-started. A run is saved before its first turn starts, and a wake or a stop holds the run's lock throughout.
-Adapt `command` to your harness, and `launch`, `running` and `end` to your host. Linux; standard library only.
+`start` creates the workspace with the agent's first message, `wake` sends its session another message, and `stop`
+cancels the session, then archives the workspace, which stops its machine. Every call is one `curl` to Conductor's
+API (beta, https://api.conductor.build/v0). curl itself reads your key from `CONDUCTOR_API_KEY` in the environment
+it inherits: the driver only names the variable, and never reads, prints or passes on its value. A start is never
+retried, because Conductor would make a second workspace. Linux or macOS; standard library and curl 8.3 or later.
 """
-import ctypes, fcntl, json, os, re, secrets, shutil, signal, subprocess, sys, time
+import fcntl, json, os, re, secrets, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-STATE = os.environ.get('OPENWIZ_TEMPLATE_STATE') or os.path.expanduser('~/.local/state/openwiz-template')
-VERSION = {'driver': 'template', 'records': ['openwiz:records v1'], 'can': ['start', 'wake', 'stop']}
+STATE = os.environ.get('OPENWIZ_CONDUCTOR_STATE') or os.path.expanduser('~/.local/state/openwiz-conductor')
+API = 'https://api.conductor.build'
+VERSION = {'driver': 'conductor', 'records': ['openwiz:records v1'],
+           'can': ['start', 'wake', 'stop', 'many-at-once', 'own-sandbox']}
 START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
          'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
          'model': r'[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}'}
 RUN = {'run': r'run-[0-9a-f]{12}'}
-GRACE = 10  # seconds a stopped process has to exit before it is killed
+HARNESSES = ('claude', 'codex', 'cursor')  # Conductor's `agent` values the driver runs
+# curl reads the key from its own environment and sends it as the bearer token; only the name is on the command line.
+KEY_ARGS = ['--variable', '%CONDUCTOR_API_KEY', '--expand-oauth2-bearer', '{{CONDUCTOR_API_KEY}}']
+UNSENT = {2, 5, 6, 7, 35, 60}  # curl exit codes for a request that never reached Conductor
+TIMEOUT = 60
+SAVE_NEXT = 'make OPENWIZ_CONDUCTOR_STATE (or ~/.local/state/openwiz-conductor) a folder you can write'
 
 
 class Refused(Exception):
     pass
+
+
+class Unsent(Exception):
+    """The request never reached Conductor."""
+
+
+class Lost(Exception):
+    """The request may have reached Conductor, but its answer is unknown."""
+
+
+def line(text, limit=150):
+    return ' '.join(str(text).split())[:limit] or 'no detail'
 
 
 def unique(pairs):
@@ -43,122 +63,53 @@ def read(fields):
     return req
 
 
-def command(req, woken):
-    """Adapt: your harness's own signed-in command. Never add a login or a token."""
-    what = 'You were woken: read the ticket again and carry on' if woken else 'Build the ticket'
-    prompt = '%s: %s#%d, with the %s skill.' % (what, req['repository'], req['ticket'], req['skill'])
-    return [req['harness'], '--model', req['model'], '-p', prompt]
+def signed_in(then):
+    """Refused unless CONDUCTOR_API_KEY is set: only whether it is there is looked at, never its value."""
+    if 'CONDUCTOR_API_KEY' not in os.environ:
+        raise Refused('CONDUCTOR_API_KEY is not set, so the driver cannot reach Conductor; ' + then,
+                      'create a Conductor API key (www.conductor.build/docs/api says where) and export it as CONDUCTOR_API_KEY '
+                      'in the shell that runs the driver')
 
 
-def since(pid):
-    """When process pid started, or None once it has exited: with its pid, this names one process."""
+def api(method, path, body=None):
+    """One call to Conductor's API through curl: (status, answer), or Unsent or Lost."""
+    args = ['curl', '-sS', '--max-time', str(TIMEOUT), '-X', method] + KEY_ARGS + [
+        '-H', 'Content-Type: application/json', '-H', 'Accept: application/json'] + (
+        ['--data-binary', '@-'] if body is not None else []) + ['-w', '\n%{http_code}', API + path]
     try:
-        with open('/proc/%d/stat' % pid) as f:
-            fields = f.read().rpartition(')')[2].split()
-    except OSError:
-        return None
-    return None if fields[0] == 'Z' else int(fields[19])
-
-
-def descendants(pid):
-    """Every live process under pid."""
-    children = {}
-    for p in filter(str.isdigit, os.listdir('/proc')):
-        try:
-            with open('/proc/%s/stat' % p) as f:
-                fields = f.read().rpartition(')')[2].split()
-        except OSError:
-            continue
-        if fields[0] != 'Z':
-            children.setdefault(int(fields[1]), []).append(int(p))
-    found, todo = set(), [pid]
-    while todo:
-        for c in children.get(todo.pop(), []):
-            if c not in found:
-                found.add(c)
-                todo.append(c)
-    return found
-
-
-def supervise(cmd):
-    """One turn, as `driver --turn <command>`: run the harness, and keep every process it starts as this turn's
-    (an orphan comes back here, whatever its session or environment) until none is left; then exit."""
-    if ctypes.CDLL(None, use_errno=True).prctl(36, 1, 0, 0, 0) != 0:  # PR_SET_CHILD_SUBREAPER
-        print(json.dumps({'error': 'this host cannot keep a turn\'s processes together'}), flush=True)
-        return
+        p = subprocess.run(args, input='' if body is None else json.dumps(body), capture_output=True, text=True,
+                           timeout=TIMEOUT + 10)
+    except FileNotFoundError:
+        raise Unsent('curl is not installed')
+    except subprocess.TimeoutExpired:
+        raise Lost('curl did not finish')
+    if p.returncode in UNSENT:
+        raise Unsent('curl exit %d: %s' % (p.returncode, line(p.stderr, 80)))
+    if p.returncode != 0:
+        raise Lost('curl exit %d' % p.returncode)
+    text, _, code = p.stdout.rpartition('\n')
     try:
-        harness = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                                   stderr=subprocess.DEVNULL)
-    except OSError as e:
-        print(json.dumps({'error': e.strerror}), flush=True)
-        return
-    signal.signal(signal.SIGTERM, signal.SIG_IGN)  # only `end` stops a turn, and it never orphans one
-    print(json.dumps({'pid': harness.pid, 'since': since(harness.pid)}), flush=True)
-    os.dup2(os.open(os.devnull, os.O_WRONLY), 1)
-    while True:
-        try:
-            os.wait()
-        except ChildProcessError:
-            return
-
-
-def launch(req, run, woken):
-    """Start one turn under its supervisor; return what `running` and `end` need."""
-    if not shutil.which(req['harness']):
-        raise Refused('harness %s is not installed here' % req['harness'],
-                      'install %s and sign in to it yourself, then start again' % req['harness'])
-    try:
-        sup = subprocess.Popen([sys.executable, '-I', os.path.abspath(__file__), '--turn'] + command(req, woken),
-                               env=dict(os.environ, OPENWIZ_RUN=run), start_new_session=True,
-                               stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
-        with sup.stdout:
-            line = sup.stdout.readline()
-    except OSError as e:
-        raise Refused('harness %s did not start: %s' % (req['harness'], e.strerror), 'check that it runs by hand')
-    try:
-        turn = json.loads(line)
+        status, out = int(code), json.loads(text) if text.strip() else {}
     except ValueError:
-        turn = {'error': 'its supervisor did not answer'}
-    if 'pid' not in turn:
-        raise Refused('harness %s did not start: %s' % (req['harness'], turn['error']), 'check that it runs by hand')
-    return {'pid': turn['pid'], 'since': turn['since'], 'supervisor': sup.pid, 'supervisor_since': since(sup.pid)}
+        raise Lost('an unreadable answer')
+    return status, out if isinstance(out, dict) else {}
 
 
-def running(turn, run):
-    """Whether the turn `launch` returned still runs its harness."""
-    return bool(turn) and turn['since'] is not None and since(turn['pid']) == turn['since']
+def said(status, out):
+    """What Conductor said about a refusal, in a few words."""
+    return '%d: %s' % (status, line(out.get('userMessage') or out.get('code') or 'no message', 100))
 
 
-def end(turns, run):
-    """Stop the run: every process its turns' supervisors still keep, whatever its session or environment.
-    A supervisor exits only once none of its processes is left, so answer once every supervisor has exited."""
-    kept = [(t['supervisor'], t['supervisor_since']) for t in turns if t and t['supervisor_since'] is not None]
-    for sig, wait in ((signal.SIGTERM, GRACE), (signal.SIGKILL, 2)):
-        sent, deadline = set(), time.monotonic() + wait
-        while time.monotonic() < deadline:
-            kept = [(p, t) for p, t in kept if since(p) == t]
-            if not kept:
-                return
-            pinned = {}
-            for p in set().union(*(descendants(s) for s, _ in kept)) - sent:
-                try:  # pin each pid first, then check it is still under a supervisor, so no reused pid is hit
-                    pinned[p] = os.pidfd_open(p)
-                except OSError:
-                    pass
-            under = set().union(*(descendants(s) for s, _ in kept))
-            for p, fd in pinned.items():
-                try:
-                    if p in under:
-                        sent.add(p)
-                        signal.pidfd_send_signal(fd, sig)
-                except OSError:
-                    pass
-                finally:
-                    os.close(fd)
-            time.sleep(0.1)
-    raise Refused('run %s still has processes after stop' % run,
-                  'stop it again, or end its processes by hand: they run under process %s'
-                  % ', '.join(str(p) for p, _ in kept))
+def key_refused(status, then):
+    if status in (401, 403):
+        raise Refused('Conductor refused the API key in CONDUCTOR_API_KEY (%d); %s' % (status, then),
+                      'set CONDUCTOR_API_KEY to a current Conductor API key (www.conductor.build/docs/api says where)')
+
+
+def message(req, woken):
+    what = 'You were woken: read the ticket again and carry on' if woken else 'Build the ticket'
+    return ('%s: GitHub repository %s, ticket #%d, with the %s skill. Follow the repository\'s instructions.'
+            % (what, req['repository'], req['ticket'], req['skill']))
 
 
 def lock(run):
@@ -168,15 +119,14 @@ def lock(run):
     try:
         fcntl.flock(os.open(os.path.join(STATE, run + '.lock'), os.O_RDONLY | os.O_CREAT, 0o600), fcntl.LOCK_EX)
     except OSError:
-        raise Refused('the driver cannot lock run %s in its state folder' % run,
-                      'make OPENWIZ_TEMPLATE_STATE (or ~/.local/state/openwiz-template) a folder you can write')
+        raise Refused('the driver cannot lock run %s in its state folder' % run, SAVE_NEXT)
 
 
 def saved(run, state=None):
     path = os.path.join(STATE, run + '.json')
     if state is not None:
         os.makedirs(STATE, mode=0o700, exist_ok=True)
-        with open(path + '.new', 'w') as f:
+        with open(os.open(path + '.new', os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), 'w') as f:
             json.dump(state, f)
         os.replace(path + '.new', path)
         return state
@@ -187,16 +137,119 @@ def saved(run, state=None):
         raise Refused('no run ' + run, 'check the run id that `driver start` printed')
 
 
-def unsaved(run, turn, cmd):
-    """A turn began but could not be saved: end it, and say the outcome is unknown, never retry."""
+def forget(run, state):
+    """Save that a refused start made nothing, if the folder lets it; the answer is the refusal either way."""
     try:
-        end([turn], run)
-    except Refused:
-        raise Refused('run %s began a turn it could not save, and could not confirm the turn ended; its outcome is '
-                      'unknown' % run, 'end process %d and everything under it by hand, and read the ticket for '
-                      'what its agent did, before you %s it again' % (turn['supervisor'], cmd))
-    raise Refused('run %s began a turn it could not save, so the driver ended it; its outcome is unknown' % run,
-                  'read the ticket for what its agent did before you %s it again' % cmd)
+        saved(run, state)
+    except OSError:
+        pass
+
+
+def archive(state):
+    """Cancel the session's turn, then archive the workspace, which stops its machine. Whether it is archived."""
+    for path in ('/v0/sessions/%s/cancel' % state['session'], '/v0/workspaces/%s/archive' % state['workspace']):
+        try:
+            status, out = api('POST', path)
+        except (Unsent, Lost):
+            status = 0
+    return 200 <= status < 300
+
+
+def start():
+    req, run = read(START), 'run-' + secrets.token_hex(6)
+    name = 'openwiz-' + run  # the workspace's name in Conductor (it names its branch too)
+    if req['harness'] not in HARNESSES:
+        raise Refused('Conductor runs no harness %s; nothing was started' % req['harness'],
+                      'use one of: ' + ', '.join(HARNESSES))
+    signed_in('nothing was started')
+    state = {'request': req, 'name': name, 'workspace': None, 'session': None, 'starting': True, 'stopped': False,
+             'archived': False}
+    try:  # save the run before Conductor makes anything: nowhere to keep it, nothing starts
+        saved(run, state)
+    except OSError:
+        raise Refused('the driver cannot save runs in its state folder; nothing was started', SAVE_NEXT)
+    nothing = dict(state, starting=False, stopped=True, archived=True)
+    body = {'repositoryUrl': 'https://github.com/' + req['repository'], 'name': name, 'agent': req['harness'],
+            'model': req['model'], 'message': message(req, False)}
+    unknown = Refused('Conductor may have made workspace %s for run %s, but its answer was lost; its outcome is '
+                      'unknown' % (name, run), 'look for workspace %s in Conductor and archive it if it is there, '
+                      'before you start again: a second start makes a second workspace' % name)
+    try:  # never retried: Conductor makes a new workspace for every start
+        status, out = api('POST', '/v0/workspaces', body)
+    except Unsent as e:
+        forget(run, nothing)
+        raise Refused('Conductor was not reached (%s); nothing was started' % e,
+                      'check the network and that curl is version 8.3 or later, then start again')
+    except Lost:
+        raise unknown
+    if status >= 500:
+        raise unknown
+    if not 200 <= status < 300:
+        forget(run, nothing)
+        key_refused(status, 'nothing was started')
+        raise Refused('Conductor refused the start (%s); nothing was started' % said(status, out),
+                      'fix what Conductor names (the repository must be one of its projects, and the model one '
+                      'its harness takes), then start again')
+    ids = out.get('workspaceId'), out.get('sessionId')
+    if not all(isinstance(i, str) and re.fullmatch(r'[A-Za-z0-9_.:-]{1,200}', i) for i in ids):
+        raise unknown
+    started = dict(state, workspace=ids[0], session=ids[1], starting=False)
+    try:
+        saved(run, started)
+    except OSError:  # the workspace runs but its run is not saved: archive it, and never say retry
+        if archive(started):
+            raise Refused('run %s made workspace %s but could not save it, so the driver archived it; its outcome is '
+                          'unknown' % (run, ids[0]), 'read the ticket for what its agent did before you start again')
+        raise Refused('run %s made workspace %s but could not save it, and could not archive it; its outcome is '
+                      'unknown' % (run, ids[0]), 'archive workspace %s in Conductor yourself, and read the ticket '
+                      'for what its agent did, before you start again' % ids[0])
+    return {'run': run}
+
+
+def wake(run, state):
+    if state['stopped']:
+        raise Refused('run %s is stopped' % run, 'start a new run')
+    if state['starting']:
+        raise Refused('run %s never finished starting' % run, 'stop it, then start a new run')
+    signed_in('nothing was sent')
+    try:  # sent while the agent works, Conductor steers it into the running turn: still one agent
+        status, out = api('POST', '/v0/sessions/%s/messages' % state['session'], {'message': message(state['request'], True)})
+    except Unsent as e:
+        raise Refused('Conductor was not reached (%s); nothing was sent' % e, 'check the network, then wake it again')
+    except Lost:
+        raise Refused('the wake for run %s reached Conductor but its answer was lost' % run,
+                      'read the ticket: if the agent\'s status note did not change, wake it again')
+    if not 200 <= status < 300:
+        key_refused(status, 'nothing was sent')
+        raise Refused('Conductor refused the wake for run %s (%s)' % (run, said(status, out)),
+                      'check workspace %s in Conductor; if it is gone, stop this run and start a new one'
+                      % state['workspace'])
+    return {'run': run, 'woke': True}
+
+
+def stop(run, state):
+    if state['archived']:
+        return {'run': run, 'stopped': True}
+    if state['workspace'] is None:
+        raise Refused('run %s never got its workspace id from Conductor, so the driver cannot stop it' % run,
+                      'look for workspace %s in Conductor and archive it' % state['name'])
+    try:  # first, so no wake reaches the workspace meanwhile
+        saved(run, dict(state, stopped=True))
+        kept = True
+    except OSError:
+        kept = False
+    signed_in('workspace %s still runs' % state['workspace'])
+    if not archive(state):
+        raise Refused('run %s is stopped, but Conductor did not archive workspace %s' % (run, state['workspace']),
+                      'stop it again, or archive workspace %s in Conductor yourself' % state['workspace'])
+    try:
+        saved(run, dict(state, stopped=True, archived=True))
+    except OSError:
+        kept = False
+    if not kept:
+        raise Refused('workspace %s is archived, but the driver could not save that run %s is stopped'
+                      % (state['workspace'], run), SAVE_NEXT + ', then stop it again')
+    return {'run': run, 'stopped': True}
 
 
 def answer(cmd):
@@ -206,71 +259,19 @@ def answer(cmd):
         with open(os.path.join(HERE, 'schema.json')) as f:
             return json.load(f)
     if cmd == 'start':
-        req, run = read(START), 'run-' + secrets.token_hex(6)
-        state = {'request': req, 'turns': [], 'stopped': False, 'starting': True}  # never woken while starting
-        try:  # save the run before its turn starts: nowhere to keep it, nothing starts
-            saved(run, state)
-            os.close(os.open(os.path.join(STATE, run + '.lock'), os.O_WRONLY | os.O_CREAT, 0o600))
-        except OSError:
-            raise Refused('the driver cannot save runs in its state folder; nothing was started',
-                          'make OPENWIZ_TEMPLATE_STATE (or ~/.local/state/openwiz-template) a folder you can write')
-        try:
-            turn = launch(req, run, False)
-        except Refused:
-            try:
-                saved(run, dict(state, stopped=True))
-            except OSError:
-                pass
-            raise
-        try:
-            saved(run, dict(state, turns=[turn], starting=False))
-        except OSError:  # the turn began but its run is not saved: end it, and never say retry
-            unsaved(run, turn, 'start')
-        return {'run': run}
+        return start()
     if cmd in ('wake', 'stop'):
         run = read(RUN)['run']
         lock(run)
-        state = saved(run)
-        if cmd == 'stop':
-            try:  # first, so no wake starts a turn meanwhile
-                saved(run, dict(state, stopped=True))
-                kept = True
-            except OSError:
-                kept = False
-            end(state['turns'], run)  # whether or not that save worked
-            if not kept:
-                raise Refused('run %s has ended, but the driver could not save that it is stopped' % run,
-                              'make OPENWIZ_TEMPLATE_STATE (or ~/.local/state/openwiz-template) a folder you can '
-                              'write, then stop it again')
-            return {'run': run, 'stopped': True}
-        if state['stopped']:
-            raise Refused('run %s is stopped' % run, 'start a new run')
-        if state.get('starting'):
-            raise Refused('run %s never finished starting' % run, 'stop it, then start a new run')
-        # One agent per run: while its last turn runs, that agent is awake and reads the ticket itself.
-        if state['turns'] and running(state['turns'][-1], run):
-            return {'run': run, 'woke': True}
-        try:  # a turn it could not save would be beyond a later wake's check: save first, or start nothing
-            saved(run, state)
-        except OSError:
-            raise Refused('the driver cannot save run %s; nothing was started' % run,
-                          'make OPENWIZ_TEMPLATE_STATE (or ~/.local/state/openwiz-template) a folder you can write')
-        turn = launch(state['request'], run, True)
-        try:
-            saved(run, dict(state, turns=state['turns'] + [turn]))
-        except OSError:
-            unsaved(run, turn, 'wake')
-        return {'run': run, 'woke': True}
+        return (wake if cmd == 'wake' else stop)(run, saved(run))
     raise Refused('unknown command', 'run one of: version, schema, start, wake, stop')
 
 
 def main():
-    if len(sys.argv) > 2 and sys.argv[1] == '--turn':
-        return supervise(sys.argv[2:])
     try:
         out, code = answer(sys.argv[1] if len(sys.argv) == 2 else ''), 0
     except Refused as e:
-        out, code = {'error': e.args[0], 'next': e.args[1]}, 1
+        out, code = {'error': e.args[0][:300], 'next': e.args[1][:300]}, 1
     except Exception as e:
         out, code = {'error': 'the driver failed: ' + type(e).__name__, 'next': 'read its code, fix it, retry'}, 1
     print(json.dumps(out))

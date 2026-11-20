@@ -1,24 +1,36 @@
-# Driver template
+Login: held by Conductor
 
-The smallest [driver v1](../../kernel/driver.v1.md): one Python file, standard library only, Linux. It passes the [kit](../../kernel/driver-kit/README.md). Each turn of a run is a local process: `start` runs the first turn, `wake` runs another once the last one has ended, and `stop` ends every process the run's turns started. Runs are saved in `$OPENWIZ_TEMPLATE_STATE` (default `~/.local/state/openwiz-template`), each one before its first turn starts.
+# Conductor driver
 
-## Make your own in an hour
+A [driver v1](../../kernel/driver.v1.md) that runs each builder in its own [Conductor](https://www.conductor.build) cloud workspace, through Conductor's API (beta, `https://api.conductor.build/v0`). One Python file, standard library only, plus `curl` 8.3 or later. Runs are saved in `$OPENWIZ_CONDUCTOR_STATE` (default `~/.local/state/openwiz-conductor`), owner-only.
 
-1. Copy this folder to `adapters/<host>/`. Rename `template` in `VERSION`, and the state folder's name.
-2. **`command`**: the command line your harness runs a turn with, using its own signed-in login. It must never add a login or a token. The template calls the program named by `harness` with `--model` and `-p`; map your harness names here.
-3. **`launch`, `running` and `end`**: how your host starts a turn, tells whether it still runs, and ends the run. For a remote host, call its own signed-in tool here, and return what `running` and `end` need. Keep the four rules they hold:
-   - **`stop` ends everything.** Each turn runs under its own supervisor (`driver --turn`), a Linux child subreaper, so every process the turn starts stays under it, whatever session or environment it moves to. `end` signals all of them, even after the harness itself has exited, and answers only once every supervisor has exited, which it does when none of its processes is left. It ends them even when it can't save that the run is stopped, and then says so.
-   - **One agent at a time.** A `wake` or a `stop` holds the run's lock from reading the run to saving it, and `wake` starts no turn while the last one runs: that agent is awake and reads the ticket itself.
-   - **No run, no agent.** `start` and `wake` each save before they launch anything. A run is not wakeable until its first turn is saved. If a save fails after a launch, the driver ends that turn and says the outcome is unknown, never "retry".
-4. Add `many-at-once` or `own-sandbox` to `can` only when your host does that.
-5. Run the kit against it on a throwaway ticket, on its real host, and put the output on the pull request.
+| Command | What it does on Conductor |
+| --- | --- |
+| `start` | `POST /v0/workspaces` with `repositoryUrl` (`https://github.com/<repository>`), `name` (`openwiz-<run>`, which also names the branch), `agent` (the `harness`), `model` and the first message: the ticket and the skill. It answers once Conductor has made the workspace and its session. **Never retried:** every start makes a new workspace, so when the answer is lost the driver says the outcome is unknown and names the workspace to look for. |
+| `wake` | `POST /v0/sessions/<session>/messages`: the same agent, in the same session, reads its ticket again and edits its own status note. Sent while the agent works, Conductor steers the message into the running turn, so there is never a second agent. |
+| `stop` | `POST /v0/sessions/<session>/cancel`, then `POST /v0/workspaces/<workspace>/archive`, which stops the workspace's machine (Conductor can restore it later). If Conductor doesn't confirm the archive, the run stays stopped and the answer names the workspace to archive yourself. |
 
-Keep `schema.json` byte for byte the kit's `kernel/driver-kit/schema.json`: the kit checks it.
+`harness` is one of Conductor's agents: `claude`, `codex` or `cursor`. `model` is one of Conductor's model ids for that agent (such as `opus-5-5-1m` or `gpt-6.2-sol`; the OpenAPI document at `/v0/openapi.json` lists them), passed on unchanged. `version` adds `many-at-once` and `own-sandbox` to `can`: every run gets its own cloud workspace.
 
-Its own tests: `python3 -I adapters/template/test_driver.py`.
+## Where your logins live
+
+- **Your Claude, Codex or Cursor login is held by Conductor.** Conductor Cloud runs the agent with the subscription token or API key you added to Conductor (Settings, Agents); the driver never sees it.
+- **Your Conductor API key stays in your environment.** Every call is `curl --variable %CONDUCTOR_API_KEY --expand-oauth2-bearer '{{CONDUCTOR_API_KEY}}' ...`: curl reads the key from the environment it inherits and sends it only to Conductor. The driver checks only that `CONDUCTOR_API_KEY` is set, and never reads, prints or passes on its value (driver v1, N1 to N3).
+
+## Before the first run (yours to do)
+
+1. A Conductor Pro account with Conductor Cloud, its GitHub App on your repositories, and each repository you run on added to your organization's Cloud Computer.
+2. In Conductor, add the subscription or API key of each agent you use (Settings, Agents), and install the WizSkills skills your fleet runs on the Cloud Computer, so the agent can follow its skill and post its status note.
+3. Create a Conductor API key (the [API docs](https://www.conductor.build/docs/api) say where) and export it as `CONDUCTOR_API_KEY` in the shell that runs the driver.
+
+Conductor bills nothing for model usage: each agent's own account does. Each workspace runs until it is stopped, sleeps or is archived.
+
+## The kit
 
 ```sh
-echo '{"repository":"example/site","ticket":7,"skill":"build-ticket","harness":"claude","model":"opus"}' \
-  | adapters/template/driver start          # {"run": "run-0123456789ab"}
-adapters/template/driver schema             # every command's JSON Schema
+python3 -I kernel/driver-kit/kit.py --driver adapters/conductor/driver \
+  --repo <owner>/<throwaway> --ticket <n> --harness claude --model <model>
+python3 -I adapters/conductor/test_driver.py      # the fixture tests, on a synthetic Conductor
 ```
+
+`fixtures/bin/curl` is a synthetic Conductor behind a synthetic `curl`: it takes only the driver's one call shape, and its request and answer shapes follow Conductor's API reference and OpenAPI document (read 2026-11-20). Nothing in it was observed on a live account; the live check records that.
