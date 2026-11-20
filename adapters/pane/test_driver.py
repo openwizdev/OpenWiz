@@ -94,11 +94,13 @@ class Pane(unittest.TestCase):
     def test_start_refuses_before_creating_anything(self):
         # catches: a start that creates a Pane for a harness Pane can't run, in a repository Pane hasn't saved or
         # saved twice, or whose failure hides Pane's own next step (open the app).
-        for env, request, words in (({}, dict(REQUEST, harness='gemini'), 'Pane runs no harness gemini'),
-                                    ({'FAKE_PANE_REPOS': 'other'}, REQUEST, 'runpane repos add'),
-                                    ({'FAKE_PANE_REPOS': 'site,site'}, REQUEST, 'saved more than once'),
-                                    ({'FAKE_PANE_DOWN': '1'}, REQUEST, 'open the Pane app')):
+        cases = (({}, dict(REQUEST, harness='gemini'), 'Pane runs no harness gemini'),
+                 ({'FAKE_PANE_REPOS': 'other'}, REQUEST, 'runpane repos add'),
+                 ({'FAKE_PANE_REPOS': 'site,site'}, REQUEST, 'saved more than once'),
+                 ({'FAKE_PANE_DOWN': '1'}, REQUEST, 'open the Pane app'))
+        for i, (env, request, words) in enumerate(cases):
             with self.subTest(env=env, harness=request['harness']):
+                env = dict(env, FAKE_PANE_STATE=os.path.join(self.folder, 'pane-%d.json' % i))
                 code, out = self.driver('start', request, **env)
                 self.assertEqual(code, 1, out)
                 self.assertIn(words, out['error'] + ' ' + out['next'])

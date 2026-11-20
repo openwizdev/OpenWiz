@@ -91,7 +91,7 @@ def note(panel, woken):
 
 def skill_in(text):
     words = text.split()
-    return words[words.index('skill') - 2] if 'skill' in words and words.index('skill') > 1 else None
+    return words[words.index('skill') - 1] if 'skill' in words and words.index('skill') > 0 else None
 
 
 def create(args):

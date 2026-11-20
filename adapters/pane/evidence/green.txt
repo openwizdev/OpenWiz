@@ -1,0 +1,12 @@
+$ python3 -I adapters/pane/test_driver.py   # the same tests against adapters/pane/driver
+test_a_start_whose_agent_never_gets_ready_closes_its_tab_and_archives_its_pane (__main__.Pane.test_a_start_whose_agent_never_gets_ready_closes_its_tab_and_archives_its_pane) ... ok
+test_kit_passes_all_five (__main__.Pane.test_kit_passes_all_five) ... ok
+test_start_opens_one_agent_tab_with_the_model_and_no_permission_flag (__main__.Pane.test_start_opens_one_agent_tab_with_the_model_and_no_permission_flag) ... ok
+test_start_refuses_before_creating_anything (__main__.Pane.test_start_refuses_before_creating_anything) ... ok
+test_stop_archives_unpushed_commits_and_answers_again (__main__.Pane.test_stop_archives_unpushed_commits_and_answers_again) ... ok
+test_stop_keeps_uncommitted_work_and_says_where (__main__.Pane.test_stop_keeps_uncommitted_work_and_says_where) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in <t>s
+
+OK

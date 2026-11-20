@@ -1,24 +1,40 @@
-# Driver template
+Login: stays on your machine
 
-The smallest [driver v1](../../kernel/driver.v1.md): one Python file, standard library only, Linux. It passes the [kit](../../kernel/driver-kit/README.md). Each turn of a run is a local process: `start` runs the first turn, `wake` runs another once the last one has ended, and `stop` ends every process the run's turns started. Runs are saved in `$OPENWIZ_TEMPLATE_STATE` (default `~/.local/state/openwiz-template`), each one before its first turn starts.
+# Pane driver
 
-## Make your own in an hour
+A [driver v1](../../kernel/driver.v1.md) that runs each builder in its own Pane, through your own `runpane` CLI and the [Pane](https://runpane.com) app on your computer. A Pane is a git worktree on its own branch, with tabs; each run is one Pane with one agent tab. One Python file, standard library only. Runs are saved in `$OPENWIZ_PANE_STATE` (default `~/.local/state/openwiz-pane`), owner-only.
 
-1. Copy this folder to `adapters/<host>/`. Rename `template` in `VERSION`, and the state folder's name.
-2. **`command`**: the command line your harness runs a turn with, using its own signed-in login. It must never add a login or a token. The template calls the program named by `harness` with `--model` and `-p`; map your harness names here.
-3. **`launch`, `running` and `end`**: how your host starts a turn, tells whether it still runs, and ends the run. For a remote host, call its own signed-in tool here, and return what `running` and `end` need. Keep the four rules they hold:
-   - **`stop` ends everything.** Each turn runs under its own supervisor (`driver --turn`), a Linux child subreaper, so every process the turn starts stays under it, whatever session or environment it moves to. `end` signals all of them, even after the harness itself has exited, and answers only once every supervisor has exited, which it does when none of its processes is left. It ends them even when it can't save that the run is stopped, and then says so.
-   - **One agent at a time.** A `wake` or a `stop` holds the run's lock from reading the run to saving it, and `wake` starts no turn while the last one runs: that agent is awake and reads the ticket itself.
-   - **No run, no agent.** `start` and `wake` each save before they launch anything. A run is not wakeable until its first turn is saved. If a save fails after a launch, the driver ends that turn and says the outcome is unknown, never "retry".
-4. Add `many-at-once` or `own-sandbox` to `can` only when your host does that.
-5. Run the kit against it on a throwaway ticket, on its real host, and put the output on the pull request.
+**Pane's desktop app, or its daemon (`runpane install daemon`), must be running.** The `runpane` CLI talks to it, and it runs the agents. Without it, every command refuses with Pane's own next step.
 
-Keep `schema.json` byte for byte the kit's `kernel/driver-kit/schema.json`: the kit checks it.
+| Command | What it does in Pane |
+| --- | --- |
+| `start` | Finds the repository you saved in Pane under the GitHub repository's name (`runpane repos list`). Then `runpane panes create --repo <its id> --name openwiz-<run> --agent <harness> --tool-command "<program> --model <model>" --prompt <the ticket and skill> --source agent --wait-ready`. It answers once Pane has seen the agent's input box and delivered the prompt. If the agent never gets ready, it closes the tab and archives the new Pane before refusing. |
+| `wake` | `runpane panels submit --panel <the run's tab>`: the same agent, in the same tab, reads its ticket again and edits its own status note. A stopped run is never woken. |
+| `stop` | `runpane panels close --force` closes the tab, which ends its agent even mid-turn. Then `runpane panes archive --remove-worktree` removes the Pane and its worktree. Pane always keeps the local branch. When Pane only reports commits not yet pushed, the driver archives anyway (`--force`), because those commits stay on that branch. When the worktree holds uncommitted work, the driver never forces it away. The run stays stopped, and the error names the worktree. Commit or discard that work, then stop again to archive it. |
 
-Its own tests: `python3 -I adapters/template/test_driver.py`.
+`version` adds `many-at-once` to `can`: Pane runs many Panes side by side.
+
+The tab is opened with `--source agent`, because Pane lets an agent close only a tab an agent opened.
+
+## Before the first run (yours to do)
+
+The driver never touches a login (driver v1, N1 to N3). It calls `runpane` with your environment unchanged, and passes no key, token or password anywhere. Your agents sign in on this machine, as they do in Pane itself.
+
+1. Install Pane and its `runpane` CLI, and open the app (or run `runpane install daemon`).
+2. Save your checkout of the repository in Pane under the GitHub repository's name: `runpane repos add --path <checkout> --name <name>`. A start refuses when no saved repository, or more than one, has that name.
+3. Sign in, yourself, to each agent you use, and to `gh`, so the agent can post its status note.
+4. `harness` is one of Pane's agents: `claude`, `codex`, `cursor` (it runs `cursor-agent`), `opencode` or `pi`. `model` goes to that program's `--model` flag, quoted. Pane's docs give a terminal agent its model this way.
+
+The driver adds no permission flag. Each agent runs with your own settings for it, and Pane shows you any permission prompt it asks.
+
+Pane is licensed AGPL-3.0. This driver only runs the `runpane` program you installed, as a separate program; it copies none of Pane's code.
+
+## The kit
 
 ```sh
-echo '{"repository":"example/site","ticket":7,"skill":"build-ticket","harness":"claude","model":"opus"}' \
-  | adapters/template/driver start          # {"run": "run-0123456789ab"}
-adapters/template/driver schema             # every command's JSON Schema
+python3 -I kernel/driver-kit/kit.py --driver adapters/pane/driver \
+  --repo <owner>/<throwaway> --ticket <n> --harness claude --model <model>
+python3 -I adapters/pane/test_driver.py      # the fixture tests, on a synthetic runpane CLI
 ```
+
+`fixtures/bin/runpane` is a synthetic `runpane` CLI, written for these tests. Its JSON answers follow the shapes `runpane help` and its published JSON schemas name (runpane 2.4.246). No answer in it was observed on a live Pane; the live check on the real host is the proof.

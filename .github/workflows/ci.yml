@@ -126,6 +126,7 @@ jobs:
           python3 -I kernel/records/model/test_model.py
           python3 -I adapters/template/test_driver.py
           python3 -I adapters/cloudroom/test_driver.py
+          python3 -I adapters/pane/test_driver.py
           python3 -I contracts/fixtures/write-driver/check.py
       # #555: fail on any carried contract that differs from the pinned
       # WizSkills release by one byte.

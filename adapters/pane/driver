@@ -1,25 +1,45 @@
 #!/usr/bin/env python3
-"""A minimal OpenWiz driver (kernel/driver.v1.md). Copy this folder to adapters/<host>/ and adapt it.
+"""The Pane driver (kernel/driver.v1.md): each run is one Pane, a git worktree on its own branch, with one agent tab.
 
-Each turn of a run is a local process under its own supervisor, which keeps every process the turn starts:
-`start` runs the first turn, `wake` another once the last one has ended, `stop` ends everything the turns
-started. A run is saved before its first turn starts, and a wake or a stop holds the run's lock throughout.
-Adapt `command` to your harness, and `launch`, `running` and `end` to your host. Linux; standard library only.
+`start` creates the Pane in the person's saved checkout with the agent's tab and the ticket as its first prompt
+(`runpane panes create --wait-ready`); `wake` submits a message to that tab (`runpane panels submit`); `stop`
+closes the tab, which ends its agent (`runpane panels close --force`), then archives the Pane with its worktree
+removed (`runpane panes archive --remove-worktree`); Pane keeps the local branch. Pane is AGPL-3.0: this driver
+only runs the person's own `runpane` CLI as a separate program, and the Pane app (or its daemon) runs the agents.
+It never reads a login. Standard library only.
 """
-import ctypes, fcntl, json, os, re, secrets, shutil, signal, subprocess, sys, time
+import fcntl, json, os, re, secrets, shlex, shutil, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-STATE = os.environ.get('OPENWIZ_TEMPLATE_STATE') or os.path.expanduser('~/.local/state/openwiz-template')
-VERSION = {'driver': 'template', 'records': ['openwiz:records v1'], 'can': ['start', 'wake', 'stop']}
+STATE = os.environ.get('OPENWIZ_PANE_STATE') or os.path.expanduser('~/.local/state/openwiz-pane')
+VERSION = {'driver': 'pane', 'records': ['openwiz:records v1'], 'can': ['start', 'wake', 'stop', 'many-at-once']}
+# Pane's agents (`runpane panes create --agent`, runpane 2.4.246) and the program each runs. Pane's docs give a
+# terminal agent its model through the agent's own flag in `--tool-command`; no other flag is added.
+PROGRAMS = {'claude': 'claude', 'codex': 'codex', 'cursor': 'cursor-agent', 'opencode': 'opencode', 'pi': 'pi'}
 START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
          'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
          'model': r'[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}'}
 RUN = {'run': r'run-[0-9a-f]{12}'}
-GRACE = 10  # seconds a stopped process has to exit before it is killed
+ID = re.compile(r'[A-Za-z0-9_.:-]{1,100}')
+READY_MS = 60000  # how long Pane waits for the agent's input box; the kit gives a command 120 seconds
+UNWRITABLE = 'make OPENWIZ_PANE_STATE (or ~/.local/state/openwiz-pane) a folder you can write'
 
 
 class Refused(Exception):
     pass
+
+
+class Failed(Refused):
+    """runpane answered a failure; `out` is its JSON answer, or None."""
+    def __init__(self, what, step, out):
+        super().__init__(what, step)
+        self.out = out
+
+
+def line(text):
+    """One line of at most 300 characters, as driver v1's errors need."""
+    text = ' '.join(str(text).split()) or 'no detail'
+    return text if len(text) <= 300 else text[:297] + '...'
 
 
 def unique(pairs):
@@ -43,160 +63,216 @@ def read(fields):
     return req
 
 
-def command(req, woken):
-    """Adapt: your harness's own signed-in command. Never add a login or a token."""
-    what = 'You were woken: read the ticket again and carry on' if woken else 'Build the ticket'
-    prompt = '%s: %s#%d, with the %s skill.' % (what, req['repository'], req['ticket'], req['skill'])
-    return [req['harness'], '--model', req['model'], '-p', prompt]
-
-
-def since(pid):
-    """When process pid started, or None once it has exited: with its pid, this names one process."""
-    try:
-        with open('/proc/%d/stat' % pid) as f:
-            fields = f.read().rpartition(')')[2].split()
-    except OSError:
-        return None
-    return None if fields[0] == 'Z' else int(fields[19])
-
-
-def descendants(pid):
-    """Every live process under pid."""
-    children = {}
-    for p in filter(str.isdigit, os.listdir('/proc')):
+def answer_of(text):
+    """runpane's JSON answer: the whole output, or its last line; None if neither is a JSON object."""
+    for candidate in (text, (text.strip().splitlines() or [''])[-1]):
         try:
-            with open('/proc/%s/stat' % p) as f:
-                fields = f.read().rpartition(')')[2].split()
-        except OSError:
+            out = json.loads(candidate)
+        except ValueError:
             continue
-        if fields[0] != 'Z':
-            children.setdefault(int(fields[1]), []).append(int(p))
-    found, todo = set(), [pid]
-    while todo:
-        for c in children.get(todo.pop(), []):
-            if c not in found:
-                found.add(c)
-                todo.append(c)
-    return found
+        if isinstance(out, dict):
+            return out
+    return None
 
 
-def supervise(cmd):
-    """One turn, as `driver --turn <command>`: run the harness, and keep every process it starts as this turn's
-    (an orphan comes back here, whatever its session or environment) until none is left; then exit."""
-    if ctypes.CDLL(None, use_errno=True).prctl(36, 1, 0, 0, 0) != 0:  # PR_SET_CHILD_SUBREAPER
-        print(json.dumps({'error': 'this host cannot keep a turn\'s processes together'}), flush=True)
-        return
+def runpane(then, *args, wait=100):
+    """Run one `runpane ... --json` to its end; its answer when it says ok, else Failed. `then` is the step
+    after the fix."""
+    program = shutil.which('runpane')
+    if not program:
+        raise Refused('the runpane CLI is not installed here',
+                      'install Pane and its runpane CLI, open the Pane app, then ' + then)
     try:
-        harness = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                                   stderr=subprocess.DEVNULL)
-    except OSError as e:
-        print(json.dumps({'error': e.strerror}), flush=True)
-        return
-    signal.signal(signal.SIGTERM, signal.SIG_IGN)  # only `end` stops a turn, and it never orphans one
-    print(json.dumps({'pid': harness.pid, 'since': since(harness.pid)}), flush=True)
-    os.dup2(os.open(os.devnull, os.O_WRONLY), 1)
-    while True:
-        try:
-            os.wait()
-        except ChildProcessError:
-            return
+        p = subprocess.run([program] + list(args) + ['--json'], stdin=subprocess.DEVNULL, capture_output=True,
+                           text=True, timeout=wait)
+    except subprocess.TimeoutExpired:
+        raise Refused('runpane %s %s took too long; its outcome is unknown' % args[:2],
+                      'check the Pane app, then ' + then)
+    out = answer_of(p.stdout)
+    if p.returncode == 0 and out and out.get('ok') is True:
+        return out
+    why = [x for x in ((out or {}).get(k) for k in ('error', 'blocked', 'refused')) if isinstance(x, dict)]
+    detail = '%s (%s)' % (why[0].get('message'), why[0].get('code')) if why else p.stderr.strip()[-200:] or 'no answer'
+    step = why[0].get('next') if why and isinstance(why[0].get('next'), str) else 'fix what Pane said'
+    raise Failed(line('runpane %s %s failed: %s' % (args[0], args[1], detail)), line('%s, then %s' % (step, then)), out)
 
 
-def launch(req, run, woken):
-    """Start one turn under its supervisor; return what `running` and `end` need."""
-    if not shutil.which(req['harness']):
-        raise Refused('harness %s is not installed here' % req['harness'],
-                      'install %s and sign in to it yourself, then start again' % req['harness'])
-    try:
-        sup = subprocess.Popen([sys.executable, '-I', os.path.abspath(__file__), '--turn'] + command(req, woken),
-                               env=dict(os.environ, OPENWIZ_RUN=run), start_new_session=True,
-                               stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
-        with sup.stdout:
-            line = sup.stdout.readline()
-    except OSError as e:
-        raise Refused('harness %s did not start: %s' % (req['harness'], e.strerror), 'check that it runs by hand')
-    try:
-        turn = json.loads(line)
-    except ValueError:
-        turn = {'error': 'its supervisor did not answer'}
-    if 'pid' not in turn:
-        raise Refused('harness %s did not start: %s' % (req['harness'], turn['error']), 'check that it runs by hand')
-    return {'pid': turn['pid'], 'since': turn['since'], 'supervisor': sup.pid, 'supervisor_since': since(sup.pid)}
+def text_id(value):
+    return value if isinstance(value, str) and ID.fullmatch(value) else None
 
 
-def running(turn, run):
-    """Whether the turn `launch` returned still runs its harness."""
-    return bool(turn) and turn['since'] is not None and since(turn['pid']) == turn['since']
+def saved_repository(repository):
+    """The id of the one repository saved in Pane under the GitHub repository's name, or Refused."""
+    name = repository.split('/')[1]
+    found = [r for r in runpane('start again', 'repos', 'list').get('repos') or []
+             if isinstance(r, dict) and r.get('name') == name and type(r.get('id')) is int]
+    add = 'runpane repos add --path <your checkout of %s> --name %s' % (repository, name)
+    if not found:
+        raise Refused('Pane has no saved repository named %s; nothing was started' % name,
+                      'save your checkout in Pane (%s), then start again' % add)
+    if len(found) > 1:
+        raise Refused('Pane has %s saved more than once; nothing was started' % name,
+                      'rename all but your checkout of %s in Pane (runpane repos rename), then start again' % repository)
+    return found[0]['id']
 
 
-def end(turns, run):
-    """Stop the run: every process its turns' supervisors still keep, whatever its session or environment.
-    A supervisor exits only once none of its processes is left, so answer once every supervisor has exited."""
-    kept = [(t['supervisor'], t['supervisor_since']) for t in turns if t and t['supervisor_since'] is not None]
-    for sig, wait in ((signal.SIGTERM, GRACE), (signal.SIGKILL, 2)):
-        sent, deadline = set(), time.monotonic() + wait
-        while time.monotonic() < deadline:
-            kept = [(p, t) for p, t in kept if since(p) == t]
-            if not kept:
-                return
-            pinned = {}
-            for p in set().union(*(descendants(s) for s, _ in kept)) - sent:
-                try:  # pin each pid first, then check it is still under a supervisor, so no reused pid is hit
-                    pinned[p] = os.pidfd_open(p)
-                except OSError:
-                    pass
-            under = set().union(*(descendants(s) for s, _ in kept))
-            for p, fd in pinned.items():
-                try:
-                    if p in under:
-                        sent.add(p)
-                        signal.pidfd_send_signal(fd, sig)
-                except OSError:
-                    pass
-                finally:
-                    os.close(fd)
-            time.sleep(0.1)
-    raise Refused('run %s still has processes after stop' % run,
-                  'stop it again, or end its processes by hand: they run under process %s'
-                  % ', '.join(str(p) for p, _ in kept))
+def prompt_text(req, woken):
+    where = '%s#%d' % (req['repository'], req['ticket'])
+    if woken:
+        return 'You were woken: read the ticket %s again and carry on with the %s skill and its status note.' % (
+            where, req['skill'])
+    return 'Build the ticket %s with the %s skill and keep one status note there.' % (where, req['skill'])
 
 
-def lock(run):
-    """Hold the run's lock until this command ends, so its wakes and stops take turns."""
-    if not os.path.exists(os.path.join(STATE, run + '.json')):
-        raise Refused('no run ' + run, 'check the run id that `driver start` printed')
-    try:
-        fcntl.flock(os.open(os.path.join(STATE, run + '.lock'), os.O_RDONLY | os.O_CREAT, 0o600), fcntl.LOCK_EX)
-    except OSError:
-        raise Refused('the driver cannot lock run %s in its state folder' % run,
-                      'make OPENWIZ_TEMPLATE_STATE (or ~/.local/state/openwiz-template) a folder you can write')
+def path(run, name):
+    return os.path.join(STATE, '%s.%s' % (run, name))
 
 
 def saved(run, state=None):
-    path = os.path.join(STATE, run + '.json')
     if state is not None:
         os.makedirs(STATE, mode=0o700, exist_ok=True)
-        with open(path + '.new', 'w') as f:
+        with open(path(run, 'json.new'), 'w') as f:
             json.dump(state, f)
-        os.replace(path + '.new', path)
+        os.replace(path(run, 'json.new'), path(run, 'json'))
         return state
     try:
-        with open(path) as f:
+        with open(path(run, 'json')) as f:
             return json.load(f)
     except FileNotFoundError:
         raise Refused('no run ' + run, 'check the run id that `driver start` printed')
 
 
-def unsaved(run, turn, cmd):
-    """A turn began but could not be saved: end it, and say the outcome is unknown, never retry."""
+def keep(run, state):
+    """Save state if the folder lets it, on a path that is already refusing: a stopped run that can't be saved
+    stays `starting`, which a wake refuses too."""
     try:
-        end([turn], run)
-    except Refused:
-        raise Refused('run %s began a turn it could not save, and could not confirm the turn ended; its outcome is '
-                      'unknown' % run, 'end process %d and everything under it by hand, and read the ticket for '
-                      'what its agent did, before you %s it again' % (turn['supervisor'], cmd))
-    raise Refused('run %s began a turn it could not save, so the driver ended it; its outcome is unknown' % run,
-                  'read the ticket for what its agent did before you %s it again' % cmd)
+        saved(run, state)
+    except OSError:
+        pass
+
+
+def lock(run):
+    """Hold the run's lock until this command ends, so its wakes and stops take turns."""
+    saved(run)
+    try:
+        fcntl.flock(os.open(path(run, 'lock'), os.O_RDONLY | os.O_CREAT, 0o600), fcntl.LOCK_EX)
+    except OSError:
+        raise Refused('the driver cannot lock run %s in its state folder' % run, UNWRITABLE)
+
+
+def archive(run, state):
+    """Archive the run's Pane with its worktree. Pane keeps the local branch, so commits it hasn't pushed stay
+    there; uncommitted work is never forced away: the run stays stopped and the person decides."""
+    then = 'stop the run again'
+    try:
+        runpane(then, 'panes', 'archive', '--pane', state['pane'], '--remove-worktree', '--yes')
+    except Failed as e:
+        blocked = (e.out or {}).get('blocked')
+        code = blocked.get('code') if isinstance(blocked, dict) else None
+        if code == 'unpushed-commits':
+            runpane(then, 'panes', 'archive', '--pane', state['pane'], '--remove-worktree', '--force', '--yes')
+        elif code in ('uncommitted-changes', 'uncommitted-and-unpushed'):
+            raise Refused(line('run %s is stopped and its agent has ended, but Pane kept its worktree %s: it holds '
+                               'uncommitted work' % (run, state['worktree'])),
+                          'commit and push that work, or discard it, yourself; then stop the run again to archive '
+                          'its Pane')
+        else:
+            raise Refused(line('run %s is stopped and its agent has ended, but its Pane was not archived: %s'
+                               % (run, e.args[0])), e.args[1])
+
+
+def close(state, then):
+    """Close the run's tab, which ends its agent, even mid-turn: an already closed tab is closed."""
+    runpane(then, 'panels', 'close', '--panel', state['panel'], '--force', '--source', 'agent', '--yes')
+
+
+def start(req):
+    if req['harness'] not in PROGRAMS:
+        raise Refused('Pane runs no harness %s' % req['harness'], 'use one of: ' + ', '.join(PROGRAMS))
+    repo = saved_repository(req['repository'])
+    run = 'run-' + secrets.token_hex(6)
+    state = {'request': req, 'pane': None, 'panel': None, 'worktree': None, 'starting': True, 'stopped': False,
+             'closed': False, 'archived': False}
+    try:  # save the run before anything starts: nowhere to keep it, nothing starts
+        saved(run, state)
+        os.close(os.open(path(run, 'lock'), os.O_WRONLY | os.O_CREAT, 0o600))
+    except OSError:
+        raise Refused('the driver cannot save runs in its state folder; nothing was started', UNWRITABLE)
+    command = ' '.join(shlex.quote(w) for w in (PROGRAMS[req['harness']], '--model', req['model']))
+    name = 'openwiz-' + run
+    try:
+        out = runpane('start again', 'panes', 'create', '--repo', str(repo), '--name', name, '--agent',
+                      req['harness'], '--tool-command', command, '--prompt', prompt_text(req, False),
+                      '--source', 'agent', '--no-focus', '--no-expect-report', '--wait-ready',
+                      '--ready-timeout-ms', str(READY_MS), '--yes')
+    except Refused as e:
+        keep(run, dict(state, stopped=True))
+        raise Refused(e.args[0], line(e.args[1] + '; if Pane shows a Pane named %s, archive it first' % name))
+    item = (out.get('items') or [None])[0]
+    item = item if isinstance(item, dict) else {}
+    state.update(pane=text_id(item.get('paneId')), panel=text_id(item.get('panelId')),
+                 worktree=item.get('worktreePath') if isinstance(item.get('worktreePath'), str) else 'unknown')
+    readiness = item.get('readiness') if isinstance(item.get('readiness'), dict) else {}
+    if state['pane'] and state['panel'] and item.get('ok') is True and readiness.get('ok') is True:
+        try:
+            saved(run, dict(state, starting=False))
+            return {'run': run}
+        except OSError:
+            why, step = 'the driver could not save run %s' % run, UNWRITABLE + ', then start again'
+    elif not (state['pane'] and state['panel']):
+        keep(run, dict(state, stopped=True))
+        raise Refused('Pane gave no Pane and tab id for %s; its outcome is unknown' % name,
+                      'archive the Pane named %s in Pane yourself, then start again' % name)
+    else:
+        reason = readiness.get('reason') if isinstance(readiness.get('reason'), dict) else {}
+        why = line('the %s agent in Pane %s did not get ready: %s (%s)' % (
+            req['harness'], name, reason.get('message', 'no detail'), reason.get('code', 'unknown')))
+        step = 'check that `%s` runs and is signed in on this machine, then start again' % PROGRAMS[req['harness']]
+    # The Pane exists but the run did not start: end its agent and put its Pane away before refusing.
+    state['stopped'] = True
+    failures = []
+    for undo in (lambda: close(state, 'start again'), lambda: archive(run, state)):
+        try:
+            undo()
+        except Refused as e:
+            failures.append(e)
+    keep(run, state)
+    if failures:
+        raise Refused(line('; '.join([why] + [f.args[0] for f in failures])),
+                      line('; '.join([f.args[1] for f in failures])))
+    raise Refused(why, step)
+
+
+def wake(run):
+    lock(run)
+    state = saved(run)
+    if state['stopped']:
+        raise Refused('run %s is stopped' % run, 'start a new run')
+    if state['starting']:
+        raise Refused('run %s never finished starting' % run, 'stop it, then start a new run')
+    runpane('wake it again', 'panels', 'submit', '--panel', state['panel'], '--text',
+            prompt_text(state['request'], True), '--no-expect-report', '--yes')
+    return {'run': run, 'woke': True}
+
+
+def stop(run):
+    lock(run)
+    state = saved(run)
+    try:  # first, so no wake reaches the tab once its stop has begun
+        saved(run, dict(state, stopped=True))
+    except OSError:
+        raise Refused('the driver cannot save that run %s is stopping; nothing was stopped' % run,
+                      UNWRITABLE + ', then stop it again')
+    state['stopped'] = True
+    if state['panel'] and not state['closed']:
+        close(state, 'stop the run again')
+        state['closed'] = True
+        saved(run, state)
+    if state['pane'] and not state['archived']:
+        archive(run, state)
+        state['archived'] = True
+        saved(run, state)
+    return {'run': run, 'stopped': True}
 
 
 def answer(cmd):
@@ -206,73 +282,21 @@ def answer(cmd):
         with open(os.path.join(HERE, 'schema.json')) as f:
             return json.load(f)
     if cmd == 'start':
-        req, run = read(START), 'run-' + secrets.token_hex(6)
-        state = {'request': req, 'turns': [], 'stopped': False, 'starting': True}  # never woken while starting
-        try:  # save the run before its turn starts: nowhere to keep it, nothing starts
-            saved(run, state)
-            os.close(os.open(os.path.join(STATE, run + '.lock'), os.O_WRONLY | os.O_CREAT, 0o600))
-        except OSError:
-            raise Refused('the driver cannot save runs in its state folder; nothing was started',
-                          'make OPENWIZ_TEMPLATE_STATE (or ~/.local/state/openwiz-template) a folder you can write')
-        try:
-            turn = launch(req, run, False)
-        except Refused:
-            try:
-                saved(run, dict(state, stopped=True))
-            except OSError:
-                pass
-            raise
-        try:
-            saved(run, dict(state, turns=[turn], starting=False))
-        except OSError:  # the turn began but its run is not saved: end it, and never say retry
-            unsaved(run, turn, 'start')
-        return {'run': run}
+        return start(read(START))
     if cmd in ('wake', 'stop'):
         run = read(RUN)['run']
-        lock(run)
-        state = saved(run)
-        if cmd == 'stop':
-            try:  # first, so no wake starts a turn meanwhile
-                saved(run, dict(state, stopped=True))
-                kept = True
-            except OSError:
-                kept = False
-            end(state['turns'], run)  # whether or not that save worked
-            if not kept:
-                raise Refused('run %s has ended, but the driver could not save that it is stopped' % run,
-                              'make OPENWIZ_TEMPLATE_STATE (or ~/.local/state/openwiz-template) a folder you can '
-                              'write, then stop it again')
-            return {'run': run, 'stopped': True}
-        if state['stopped']:
-            raise Refused('run %s is stopped' % run, 'start a new run')
-        if state.get('starting'):
-            raise Refused('run %s never finished starting' % run, 'stop it, then start a new run')
-        # One agent per run: while its last turn runs, that agent is awake and reads the ticket itself.
-        if state['turns'] and running(state['turns'][-1], run):
-            return {'run': run, 'woke': True}
-        try:  # a turn it could not save would be beyond a later wake's check: save first, or start nothing
-            saved(run, state)
-        except OSError:
-            raise Refused('the driver cannot save run %s; nothing was started' % run,
-                          'make OPENWIZ_TEMPLATE_STATE (or ~/.local/state/openwiz-template) a folder you can write')
-        turn = launch(state['request'], run, True)
-        try:
-            saved(run, dict(state, turns=state['turns'] + [turn]))
-        except OSError:
-            unsaved(run, turn, 'wake')
-        return {'run': run, 'woke': True}
+        return wake(run) if cmd == 'wake' else stop(run)
     raise Refused('unknown command', 'run one of: version, schema, start, wake, stop')
 
 
 def main():
-    if len(sys.argv) > 2 and sys.argv[1] == '--turn':
-        return supervise(sys.argv[2:])
     try:
         out, code = answer(sys.argv[1] if len(sys.argv) == 2 else ''), 0
     except Refused as e:
         out, code = {'error': e.args[0], 'next': e.args[1]}, 1
     except Exception as e:
-        out, code = {'error': 'the driver failed: ' + type(e).__name__, 'next': 'read its code, fix it, retry'}, 1
+        out, code = {'error': 'the driver failed: ' + type(e).__name__,
+                     'next': 'read its code and fix it; check the Pane app for a Pane named openwiz-<run>'}, 1
     print(json.dumps(out))
     sys.exit(code)
 
