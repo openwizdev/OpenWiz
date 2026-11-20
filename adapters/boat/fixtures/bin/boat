@@ -128,7 +128,7 @@ def prompt(args):
     # The turn leaves a detached worker in its own session behind, as a CLI that starts a helper might
     # (with FAKE_CLEAN, in a clean environment that carries no inherited mark), and logs
     # `<prompt pid> <worker pid> <conversation> first|woken` to FAKE_TURNS.
-    worker = subprocess.Popen(['sleep', '120'], start_new_session=True,
+    worker = subprocess.Popen(['sleep', '120'], start_new_session=not os.environ.get('FAKE_SAME_GROUP'),
                               env={'PATH': os.environ['PATH']} if os.environ.get('FAKE_CLEAN') else None,
                               stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     if os.environ.get('FAKE_TURNS'):

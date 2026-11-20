@@ -1,0 +1,53 @@
+$ python3 -I adapters/local/test_driver.py -k without_proc
+test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild (__main__.Local.test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild) ... 
+  test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild (__main__.Local.test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild) (<subtest>) ... FAIL
+  test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild (__main__.Local.test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild) (FAKE_CLEAN='1', FAKE_SAME_GROUP='1') ... FAIL
+test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild (__main__.Local.test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild) ... FAIL
+
+======================================================================
+FAIL: test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild (__main__.Local.test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild) (<subtest>)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./adapters/local/test_driver.py", line 396, in test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild
+    out, turn, child = self.first_turn(**macos, **worker)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "./adapters/local/test_driver.py", line 152, in first_turn
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'harness claude did not start: its supervisor did not answer', 'next': 'run claude by hand once to check it works, then start again'}
+
+======================================================================
+FAIL: test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild (__main__.Local.test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild) (FAKE_CLEAN='1', FAKE_SAME_GROUP='1')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./adapters/local/test_driver.py", line 396, in test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild
+    out, turn, child = self.first_turn(**macos, **worker)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "./adapters/local/test_driver.py", line 152, in first_turn
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'harness claude did not start: its supervisor did not answer', 'next': 'run claude by hand once to check it works, then start again'}
+
+======================================================================
+FAIL: test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild (__main__.Local.test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./adapters/local/test_driver.py", line 409, in test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild
+    self.assertEqual((p.returncode, p.stdout.splitlines()), (0, PASS), p.stderr)
+AssertionError: Tuples differ: (2, []) != (0, ['pass version: openwiz:records v1, an[245 chars]er'])
+
+First differing element 0:
+2
+0
+
+- (2, [])
++ (0,
++  ['pass version: openwiz:records v1, and the schema is driver v1',
++   'pass start: the run posted builder status note 1',
++   'pass wake: the run edited builder status note 1',
++   'pass stop: the run ended, and a wake after it is refused',
++   'pass token: no login or token passed through the driver']) : kit.py: the kit needs Linux's /proc to watch the processes a driver starts
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.258s
+
+FAILED (failures=3)
