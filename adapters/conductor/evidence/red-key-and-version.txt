@@ -3,7 +3,7 @@ $ python3 -I adapters/conductor/test_driver.py
 test_a_failed_archive_says_so_and_the_run_stays_stopped (__main__.Conductor.test_a_failed_archive_says_so_and_the_run_stays_stopped) ... ok
 test_a_lost_start_reply_is_never_retried (__main__.Conductor.test_a_lost_start_reply_is_never_retried) ... ok
 test_a_refused_start_starts_nothing_and_says_what_to_do (__main__.Conductor.test_a_refused_start_starts_nothing_and_says_what_to_do) ... ok
-test_an_old_curl_is_refused_by_its_version (__main__.Conductor.test_an_old_curl_is_refused_by_its_version) ... 
+test_an_old_curl_is_refused_by_its_version (__main__.Conductor.test_an_old_curl_is_refused_by_its_version) ...
   test_an_old_curl_is_refused_by_its_version (__main__.Conductor.test_an_old_curl_is_refused_by_its_version) [7.88.1] ... FAIL
   test_an_old_curl_is_refused_by_its_version (__main__.Conductor.test_an_old_curl_is_refused_by_its_version) [8.2.1] ... FAIL
 test_an_old_curl_is_refused_by_its_version (__main__.Conductor.test_an_old_curl_is_refused_by_its_version) ... FAIL

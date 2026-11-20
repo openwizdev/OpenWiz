@@ -14,23 +14,64 @@ KIT = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'kit.py')
 KEY = 'sk-' + 'Synthetic0Conductor0Value' * 2
 NEVER_READS_THE_KEY = '''import importlib.machinery, importlib.util, os, sys
 sys.dont_write_bytecode = True
-class Guarded(dict):
-    def __getitem__(self, k):
-        if k == 'CONDUCTOR_API_KEY':
-            raise AssertionError('the driver read the key')
-        return dict.__getitem__(self, k)
-    def get(self, k, default=None):
-        return self[k] if k in self else default
-    def items(self):
-        raise AssertionError('the driver read every value')
-    values = copy = items
-os.environ = Guarded(os.environ)
+fetch = os._Environ.__getitem__
+def guarded(self, name):
+    if name in ('CONDUCTOR_API_KEY', b'CONDUCTOR_API_KEY'):
+        raise AssertionError('the driver fetched the key')
+    return fetch(self, name)
+os._Environ.__getitem__ = guarded
 spec = importlib.util.spec_from_loader('conductor', importlib.machinery.SourceFileLoader('conductor', %r))
 t = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(t)
 t.main()
 '''
-KNOBS = {'OPENWIZ_KIT_RUN', 'FAKE_CONDUCTOR_FAIL', 'FAKE_CONDUCTOR_LOSE', 'FAKE_CURL_VERSION'}
+SCOPED_KIT = '''import builtins, ctypes, importlib.machinery, importlib.util, os, re, sys
+sys.dont_write_bytecode = True
+if ctypes.CDLL(None, use_errno=True).prctl(36, 1, 0, 0, 0) != 0:
+    sys.exit('the scoped kit cannot become a subreaper')
+listdir, real_open, opened = os.listdir, builtins.open, os.environ.get('SCOPED_KIT_OPENED')
+def ours():
+    children = {}
+    for p in filter(str.isdigit, listdir('/proc')):
+        try:
+            with real_open('/proc/%%s/stat' %% p) as f:
+                children.setdefault(int(f.read().rpartition(')')[2].split()[1]), []).append(p)
+        except (OSError, IndexError, ValueError):
+            pass
+    found, todo = [], [os.getpid()]
+    while todo:
+        for c in children.get(todo.pop(), []):
+            found.append(c)
+            todo.append(int(c))
+    return found
+os.listdir = lambda path='.': ours() if path == '/proc' else listdir(path)
+def logged_open(path, *args, **kwargs):
+    m = isinstance(path, str) and re.fullmatch(r'/proc/([0-9]+)/environ', path)
+    if m and opened:
+        with real_open(opened, 'a') as f:
+            f.write(m.group(1) + '\\n')
+    return real_open(path, *args, **kwargs)
+builtins.open = logged_open
+spec = importlib.util.spec_from_loader('kit', importlib.machinery.SourceFileLoader('kit', %r))
+kit = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(kit)
+sys.exit(kit.main(sys.argv[1:]))
+'''
+LEAVES_A_WORKER = '''#!%s -I
+import os, sys
+if sys.argv[1:] == ['start'] and os.fork() == 0:
+    os.setsid()
+    if os.fork() == 0:
+        null = os.open(os.devnull, os.O_RDWR)
+        for fd in (0, 1, 2):
+            os.dup2(null, fd)
+        with open(%r, 'w') as f:
+            f.write(str(os.getpid()))
+        os.execv(sys.executable, [sys.executable, '-c', 'import time; time.sleep(30)'])
+    os._exit(0)
+os.execv(%r, [%r] + sys.argv[1:])
+'''
+KNOBS = {'OPENWIZ_KIT_RUN', 'SCOPED_KIT_OPENED', 'FAKE_CONDUCTOR_FAIL', 'FAKE_CONDUCTOR_LOSE', 'FAKE_CURL_VERSION'}
 REQUEST = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude',
            'model': 'opus-5-5-1m'}
 
@@ -72,20 +113,52 @@ class Conductor(unittest.TestCase):
                              'curl got the key in a variable the test never gave it')
             self.assertLessEqual(set(c['env']), set(self.env) | KNOBS,
                                  'curl ran with a variable the test never gave it')
-        return [(c['args'][4], c['args'][-1].split('.build', 1)[1]) for c in logged if c['args'] != ['--version']]
+        return [(c['args'][5], c['args'][-1].split('.build', 1)[1]) for c in logged if c['args'][-1] != '--version']
 
     def workspaces(self):
         with open(self.host) as f:
             return json.load(f)['workspaces']
 
+    def kit(self, driver, wait, **env):
+        scoped = os.path.join(self.folder, 'scoped-kit')
+        with open(scoped, 'w') as f:
+            f.write(SCOPED_KIT % KIT)
+        return subprocess.run([sys.executable, '-I', scoped, '--driver', driver, '--repo', 'example/site',
+                               '--ticket', '7', '--harness', 'claude', '--model', 'opus-5-5-1m',
+                               '--tracker', self.tracker, '--wait', str(wait)],
+                              env=dict(self.env, **env), capture_output=True, text=True, timeout=300)
+
     def test_the_kit_passes_all_five(self):
-        p = subprocess.run([sys.executable, '-I', KIT, '--driver', DRIVER, '--repo', 'example/site', '--ticket', '7',
-                            '--harness', 'claude', '--model', 'opus-5-5-1m', '--tracker', self.tracker,
-                            '--wait', '20'], env=self.env, capture_output=True, text=True, timeout=300)
+        opened = os.path.join(self.folder, 'opened')
+        outside = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)'], env={'OUTSIDE': 'x'})
+        try:
+            p = self.kit(DRIVER, 20, SCOPED_KIT_OPENED=opened)
+        finally:
+            outside.kill()
+            outside.wait()
         self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
         self.assertEqual([line.split(':')[0] for line in p.stdout.splitlines()],
                          ['pass version', 'pass start', 'pass wake', 'pass stop', 'pass token'])
         self.calls()
+        with open(opened) if os.path.exists(opened) else open(os.devnull) as f:
+            self.assertNotIn(str(outside.pid), f.read().split(), 'the kit read a process outside its run')
+
+    def test_the_scoped_kit_still_sees_a_process_the_run_leaves(self):
+        worker = os.path.join(self.folder, 'worker')
+        leaves = os.path.join(self.folder, 'leaves-a-worker')
+        with open(leaves, 'w') as f:
+            f.write(LEAVES_A_WORKER % (sys.executable, worker, DRIVER, DRIVER))
+        os.chmod(leaves, 0o700)
+        try:
+            p = self.kit(leaves, 3)
+        finally:
+            with open(worker) as f:
+                pid = int(f.read())
+            try:
+                os.kill(pid, 9)
+            except ProcessLookupError:
+                pass
+        self.assertIn('fail stop: a process the run started still runs after stop', p.stdout, p.stdout + p.stderr)
 
     def test_start_wake_and_stop_reach_one_workspace(self):
         code, out = self.driver('start', REQUEST)

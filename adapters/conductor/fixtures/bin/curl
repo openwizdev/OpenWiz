@@ -100,20 +100,20 @@ def main():
     if LOG:
         with open(LOG, 'a') as f:
             f.write(json.dumps({'args': args, 'key_in': holding, 'env': sorted(os.environ)}) + '\n')
-    if args == ['--version']:
+    if args == ['--disable', '--version']:
         print('curl %s (fake)' % (os.environ.get('FAKE_CURL_VERSION') or '8.11.1'))
         sys.exit(0)
-    padded = args + [''] * 5
-    shape = ['-sS', '--max-time', padded[2], '-X', padded[4]] + KEY_ARGS + [
+    padded = args + [''] * 6
+    shape = ['--disable', '-sS', '--max-time', padded[3], '-X', padded[5]] + KEY_ARGS + [
         '-H', 'Content-Type: application/json', '-H', 'Accept: application/json'] + (
         ['--data-binary', '@-'] if '--data-binary' in args else []) + ['-w', '\n%{http_code}', (args or [''])[-1]]
-    if args != shape or not args[2].isdigit() or not args[-1].startswith(API + '/'):
+    if args != shape or not args[3].isdigit() or not args[-1].startswith(API + '/'):
         print('curl: (2) the fake takes only the driver\'s one call shape', file=sys.stderr)
         sys.exit(2)
     if 'CONDUCTOR_API_KEY' not in os.environ:
         print('curl: (2) Variable "CONDUCTOR_API_KEY" was not set', file=sys.stderr)
         sys.exit(2)
-    method, path = args[4], args[-1][len(API):]
+    method, path = args[5], args[-1][len(API):]
     try:
         body = json.loads(sys.stdin.read()) if '--data-binary' in args else {}
     except ValueError:
