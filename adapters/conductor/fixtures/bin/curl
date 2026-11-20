@@ -1,17 +1,4 @@
 #!/usr/bin/env python3
-"""A synthetic Conductor, behind a synthetic `curl`, for the Conductor driver's tests. Its request and answer
-shapes follow Conductor's public API reference and OpenAPI document (api.conductor.build/v0, beta, read
-2026-11-20); everything else (ids, the agent's behaviour, the refusals) is synthetic, never observed live.
-
-It takes only the one curl call shape the driver makes, and answers as `curl -w '\\n%{http_code}'` does: the
-response body, a newline and the status code. The caller's key is `CONDUCTOR_API_KEY` in curl's own environment,
-named on the command line only by `--variable`; a key other than FAKE_CONDUCTOR_KEY gets a 401.
-
-State is the JSON file FAKE_CONDUCTOR_STATE; each call's argv is a JSON line in FAKE_CONDUCTOR_LOG. The agent of a
-new workspace posts one builder status note in the local tracker KIT_TRACKER, naming the skill its first message
-names; each later message to that session edits the same note. FAKE_CONDUCTOR_FAIL=`<METHOD> <route>=<status>`
-answers that call with that error and changes nothing; FAKE_CONDUCTOR_LOSE=`<METHOD> <route>` does the call, then
-loses the reply (curl exit 52), as a dropped connection would. A route is the path with ids as `{id}`."""
 import fcntl, json, os, re, sys, time
 
 KEY_ARGS = ['--variable', '%CONDUCTOR_API_KEY', '--expand-oauth2-bearer', '{{CONDUCTOR_API_KEY}}']
@@ -29,7 +16,6 @@ def refuse(status, code, message):
 
 
 def update(change):
-    """Run change(state) under a lock and save the state."""
     with open(STATE + '.lock', 'w') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         try:
@@ -45,7 +31,6 @@ def update(change):
 
 
 def note(session, model, skill, woken):
-    """Post or edit this session's builder note, as the agent in the cloud workspace would."""
     path, now = os.environ['KIT_TRACKER'], time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
     body = '\n'.join(['<!-- openwiz:status v1 -->', 'agent: builder', 'state: working', 'harness: Fake',
                       'model: ' + model, 'skills: %s@0.1.2' % skill,
@@ -65,7 +50,6 @@ def note(session, model, skill, woken):
 
 
 def call(method, path, body):
-    """The API: (status, answer), changing the state under its lock."""
     def run(state):
         ws, ss = state['workspaces'], state['sessions']
         if method == 'POST' and path == '/v0/workspaces':
@@ -114,10 +98,10 @@ def main():
     if LOG:
         with open(LOG, 'a') as f:
             f.write(json.dumps(args) + '\n')
-    # curl -sS --max-time <s> -X <METHOD> <KEY_ARGS> -H <ct> -H <accept> [--data-binary @-] -w '\n%{http_code}' <url>
-    shape = ['-sS', '--max-time', args[2] if len(args) > 2 else '', '-X', args[4] if len(args) > 4 else ''] + KEY_ARGS + \
-        ['-H', 'Content-Type: application/json', '-H', 'Accept: application/json'] + \
-        (['--data-binary', '@-'] if '--data-binary' in args else []) + ['-w', '\n%{http_code}', args[-1] if args else '']
+    padded = args + [''] * 5
+    shape = ['-sS', '--max-time', padded[2], '-X', padded[4]] + KEY_ARGS + [
+        '-H', 'Content-Type: application/json', '-H', 'Accept: application/json'] + (
+        ['--data-binary', '@-'] if '--data-binary' in args else []) + ['-w', '\n%{http_code}', (args or [''])[-1]]
     if args != shape or not args[2].isdigit() or not args[-1].startswith(API + '/'):
         print('curl: (2) the fake takes only the driver\'s one call shape', file=sys.stderr)
         sys.exit(2)

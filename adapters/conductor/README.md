@@ -33,4 +33,4 @@ python3 -I kernel/driver-kit/kit.py --driver adapters/conductor/driver \
 python3 -I adapters/conductor/test_driver.py      # the fixture tests, on a synthetic Conductor
 ```
 
-`fixtures/bin/curl` is a synthetic Conductor behind a synthetic `curl`: it takes only the driver's one call shape, and its request and answer shapes follow Conductor's API reference and OpenAPI document (read 2026-11-20). Nothing in it was observed on a live account; the live check records that.
+`fixtures/bin/curl` is a synthetic Conductor behind a synthetic `curl`: it takes only the driver's one call shape, and its request and answer shapes follow Conductor's API reference and OpenAPI document (read 2026-11-20). Nothing in it was observed on a live account; the live check records that. It keeps its state in the file `FAKE_CONDUCTOR_STATE` and logs each call's arguments to `FAKE_CONDUCTOR_LOG`; its agent posts and edits one builder note in the local tracker `KIT_TRACKER`; `FAKE_CONDUCTOR_FAIL=<METHOD> <route>=<status>` plants a refusal, and `FAKE_CONDUCTOR_LOSE=<METHOD> <route>` does the call, then loses its answer.

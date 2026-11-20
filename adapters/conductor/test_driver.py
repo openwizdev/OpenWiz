@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-"""The Conductor driver on a synthetic Conductor (fixtures/bin/curl) and a local tracker: the kit's five checks,
-then what the kit can't see: the key never leaves curl's own environment, a start is never retried, and stop
-cancels the session and archives the workspace.
-
-Run: python3 -I adapters/conductor/test_driver.py   (Linux: the kit watches /proc)
-"""
 import json
 import os
 import subprocess
@@ -16,7 +10,6 @@ sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.abspath(__file__))
 DRIVER = os.path.join(HERE, 'driver')
 KIT = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'kit.py')
-# A synthetic value in an API key's shape, built here so no file holds one.
 KEY = 'sk-' + 'Synthetic0Conductor0Value' * 2
 REQUEST = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude',
            'model': 'opus-5-5-1m'}
@@ -41,7 +34,6 @@ class Conductor(unittest.TestCase):
         return p.returncode, json.loads(p.stdout)
 
     def calls(self):
-        """Each call the driver made: (method, route) from the fake's argv log."""
         try:
             with open(self.log) as f:
                 args = [json.loads(line) for line in f]
@@ -62,7 +54,7 @@ class Conductor(unittest.TestCase):
         self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
         self.assertEqual([line.split(':')[0] for line in p.stdout.splitlines()],
                          ['pass version', 'pass start', 'pass wake', 'pass stop', 'pass token'])
-        self.calls()  # the key on no command line, including the kit's token probe
+        self.calls()
 
     def test_start_wake_and_stop_reach_one_workspace(self):
         code, out = self.driver('start', REQUEST)
@@ -75,7 +67,6 @@ class Conductor(unittest.TestCase):
             ('POST', '/v0/sessions/se_fake0001/cancel'), ('POST', '/v0/workspaces/ws_fake0001/archive')])
         self.assertEqual(self.workspaces()['ws_fake0001']['status'], 'archived')
         self.assertEqual(self.workspaces()['ws_fake0001']['repositoryUrl'], 'https://github.com/example/site')
-        # D6: stopping a stopped run answers again; D5: a wake after stop is an error, and reaches nobody.
         self.assertEqual(self.driver('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
         code, out = self.driver('wake', {'run': run})
         self.assertEqual(code, 1, out)
