@@ -30,7 +30,14 @@ class Pane(unittest.TestCase):
         self.env = dict(os.environ, KIT_TRACKER=self.tracker, KIT_TEST=self.mark, GH_TOKEN=TOKEN,
                         FAKE_PANE_STATE=os.path.join(self.folder, 'pane.json'), FAKE_PANE_CALLS=self.calls,
                         OPENWIZ_PANE_STATE=os.path.join(self.folder, 'state'),
-                        PATH=os.path.join(HERE, 'fixtures', 'bin') + os.pathsep + os.environ.get('PATH', ''))
+                        PATH=os.path.join(HERE, 'fixtures', 'bin') + os.pathsep + self.tools())
+
+    def tools(self):
+        folder = os.path.join(self.folder, 'tools')
+        os.mkdir(folder)
+        for name, found in (('python3', sys.executable), ('sleep', shutil.which('sleep'))):
+            os.symlink(found, os.path.join(folder, name))
+        return folder
 
     def tearDown(self):
         for pid in filter(str.isdigit, os.listdir('/proc')):

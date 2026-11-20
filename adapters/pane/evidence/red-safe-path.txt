@@ -1,0 +1,116 @@
+$ python3 -I adapters/pane/test_driver.py   # the PATH-limited tests against the copied template (red commit 3baf8f90), in a scratch worktree: only fixtures/bin, python3 and sleep on PATH
+test_a_start_whose_agent_never_gets_ready_closes_its_tab_and_archives_its_pane (__main__.Pane.test_a_start_whose_agent_never_gets_ready_closes_its_tab_and_archives_its_pane) ... FAIL
+test_kit_passes_all_five (__main__.Pane.test_kit_passes_all_five) ... FAIL
+test_no_real_harness_or_host_cli_is_on_the_path (__main__.Pane.test_no_real_harness_or_host_cli_is_on_the_path) ... ok
+test_start_opens_one_agent_tab_with_the_model_and_no_permission_flag (__main__.Pane.test_start_opens_one_agent_tab_with_the_model_and_no_permission_flag) ... FAIL
+test_start_refuses_before_creating_anything (__main__.Pane.test_start_refuses_before_creating_anything) ... 
+  test_start_refuses_before_creating_anything (__main__.Pane.test_start_refuses_before_creating_anything) (env={}, harness='gemini') ... FAIL
+  test_start_refuses_before_creating_anything (__main__.Pane.test_start_refuses_before_creating_anything) (env={'FAKE_PANE_REPOS': 'other'}, harness='claude') ... FAIL
+  test_start_refuses_before_creating_anything (__main__.Pane.test_start_refuses_before_creating_anything) (env={'FAKE_PANE_REPOS': 'site,site'}, harness='claude') ... FAIL
+  test_start_refuses_before_creating_anything (__main__.Pane.test_start_refuses_before_creating_anything) (env={'FAKE_PANE_DOWN': '1'}, harness='claude') ... FAIL
+test_stop_archives_unpushed_commits_and_answers_again (__main__.Pane.test_stop_archives_unpushed_commits_and_answers_again) ... FAIL
+test_stop_keeps_uncommitted_work_and_says_where (__main__.Pane.test_stop_keeps_uncommitted_work_and_says_where) ... FAIL
+
+======================================================================
+FAIL: test_a_start_whose_agent_never_gets_ready_closes_its_tab_and_archives_its_pane (__main__.Pane.test_a_start_whose_agent_never_gets_ready_closes_its_tab_and_archives_its_pane)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/pane/test_driver.py", line 113, in test_a_start_whose_agent_never_gets_ready_closes_its_tab_and_archives_its_pane
+    self.assertIn('command-exited', out['error'])
+AssertionError: 'command-exited' not found in 'harness claude is not installed here'
+
+======================================================================
+FAIL: test_kit_passes_all_five (__main__.Pane.test_kit_passes_all_five)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/pane/test_driver.py", line 77, in test_kit_passes_all_five
+    self.assertEqual((p.returncode, p.stdout.splitlines()), (0, [
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[206 chars]er']) != (0, ['pass version: openwiz:records v1, an[245 chars]er'])
+
+First differing element 0:
+1
+0
+
+- (1,
++ (0,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+-   'fail start: harness claude is not installed here',
+-   'fail wake: not run: start failed',
+-   'fail stop: not run: start failed',
++   'pass start: the run posted builder status note 1',
++   'pass wake: the run edited builder status note 1',
++   'pass stop: the run ended, and a wake after it is refused',
+    'pass token: no login or token passed through the driver']) : 
+
+======================================================================
+FAIL: test_start_opens_one_agent_tab_with_the_model_and_no_permission_flag (__main__.Pane.test_start_opens_one_agent_tab_with_the_model_and_no_permission_flag)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/pane/test_driver.py", line 87, in test_start_opens_one_agent_tab_with_the_model_and_no_permission_flag
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'harness codex is not installed here', 'next': 'install codex and sign in to it yourself, then start again'}
+
+======================================================================
+FAIL: test_start_refuses_before_creating_anything (__main__.Pane.test_start_refuses_before_creating_anything) (env={}, harness='gemini')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/pane/test_driver.py", line 107, in test_start_refuses_before_creating_anything
+    self.assertIn(words, out['error'] + ' ' + out['next'])
+AssertionError: 'Pane runs no harness gemini' not found in 'harness gemini is not installed here install gemini and sign in to it yourself, then start again'
+
+======================================================================
+FAIL: test_start_refuses_before_creating_anything (__main__.Pane.test_start_refuses_before_creating_anything) (env={'FAKE_PANE_REPOS': 'other'}, harness='claude')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/pane/test_driver.py", line 107, in test_start_refuses_before_creating_anything
+    self.assertIn(words, out['error'] + ' ' + out['next'])
+AssertionError: 'runpane repos add' not found in 'harness claude is not installed here install claude and sign in to it yourself, then start again'
+
+======================================================================
+FAIL: test_start_refuses_before_creating_anything (__main__.Pane.test_start_refuses_before_creating_anything) (env={'FAKE_PANE_REPOS': 'site,site'}, harness='claude')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/pane/test_driver.py", line 107, in test_start_refuses_before_creating_anything
+    self.assertIn(words, out['error'] + ' ' + out['next'])
+AssertionError: 'saved more than once' not found in 'harness claude is not installed here install claude and sign in to it yourself, then start again'
+
+======================================================================
+FAIL: test_start_refuses_before_creating_anything (__main__.Pane.test_start_refuses_before_creating_anything) (env={'FAKE_PANE_DOWN': '1'}, harness='claude')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/pane/test_driver.py", line 107, in test_start_refuses_before_creating_anything
+    self.assertIn(words, out['error'] + ' ' + out['next'])
+AssertionError: 'open the Pane app' not found in 'harness claude is not installed here install claude and sign in to it yourself, then start again'
+
+======================================================================
+FAIL: test_stop_archives_unpushed_commits_and_answers_again (__main__.Pane.test_stop_archives_unpushed_commits_and_answers_again)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/pane/test_driver.py", line 132, in test_stop_archives_unpushed_commits_and_answers_again
+    self.assertEqual(self.driver('stop', run, FAKE_PANE_DIRTY='unpushed'), (0, dict(run, stopped=True)))
+AssertionError: Tuples differ: (1, {'error': 'the input needs exactly run[47 chars]in'}) != (0, {'error': 'harness claude is not insta[95 chars]rue})
+
+First differing element 0:
+1
+0
+
+- (1,
+-  {'error': 'the input needs exactly run',
+-   'next': 'send only those fields; never a login'})
++ (0,
++  {'error': 'harness claude is not installed here',
++   'next': 'install claude and sign in to it yourself, then start again',
++   'stopped': True})
+
+======================================================================
+FAIL: test_stop_keeps_uncommitted_work_and_says_where (__main__.Pane.test_stop_keeps_uncommitted_work_and_says_where)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/pane/test_driver.py", line 120, in test_stop_keeps_uncommitted_work_and_says_where
+    self.assertEqual(code, 0, run)
+AssertionError: 1 != 0 : {'error': 'harness claude is not installed here', 'next': 'install claude and sign in to it yourself, then start again'}
+
+----------------------------------------------------------------------
+Ran 7 tests in <t>s
+
+FAILED (failures=9)
