@@ -10,6 +10,6 @@ test_start_refuses_any_harness_but_cursor_and_creates_nothing (__main__.Cursor.t
 test_stop_cancels_the_active_run_then_archives_and_never_deletes (__main__.Cursor.test_stop_cancels_the_active_run_then_archives_and_never_deletes) ... ok
 
 ----------------------------------------------------------------------
-Ran 9 tests in 2.291s
+Ran 9 tests in 2.311s
 
 OK

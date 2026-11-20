@@ -40,6 +40,8 @@ def read(fields):
 
 
 def api(method, path, body=None):
+    # SECURITY: the Cursor key stays in the user's ~/.netrc, which curl reads; never put it in an argument,
+    # an environment or this program.
     cmd = ['curl', '-sS', '--netrc', '--max-time', '60', '-X', method, '-H', 'Accept: application/json']
     if body is not None:
         cmd += ['-H', 'Content-Type: application/json', '--data-binary', '@-']

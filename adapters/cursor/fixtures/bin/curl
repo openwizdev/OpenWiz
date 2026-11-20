@@ -78,6 +78,8 @@ def route(method, path, body, agents):
     if method == 'GET' and m.group(2) is None:
         return 200, public(agent)
     if method == 'POST' and m.group(2) == '/runs':
+        # External: Cursor's endpoint reference gives no error code for a follow-up on an archived agent, so
+        # this one is a guess, https://cursor.com/docs/cloud-agent/api/endpoints
         if agent['archived']:
             return 409, {'error': {'code': 'agent_archived', 'message': 'archived'}}
         if status(agent['runs'][-1]) in ACTIVE:
