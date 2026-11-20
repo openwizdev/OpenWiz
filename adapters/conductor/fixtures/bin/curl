@@ -101,7 +101,7 @@ def main():
         with open(LOG, 'a') as f:
             f.write(json.dumps({'args': args, 'key_in': holding}) + '\n')
     if args == ['--version']:
-        print('curl %s (fake) libcurl/%s' % ((os.environ.get('FAKE_CURL_VERSION') or '8.11.1'),) * 2)
+        print('curl %s (fake)' % (os.environ.get('FAKE_CURL_VERSION') or '8.11.1'))
         sys.exit(0)
     padded = args + [''] * 5
     shape = ['-sS', '--max-time', padded[2], '-X', padded[4]] + KEY_ARGS + [

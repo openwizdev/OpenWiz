@@ -15,6 +15,7 @@ HARNESSES = ('claude', 'codex', 'cursor')
 # token. The command line holds only the variable's name; the driver never reads, prints or passes on the key.
 KEY_ARGS = ['--variable', '%CONDUCTOR_API_KEY', '--expand-oauth2-bearer', '{{CONDUCTOR_API_KEY}}']
 UNSENT_CURL_EXITS = {2, 5, 6, 7, 35, 60}
+MIN_CURL = (8, 3)
 TIMEOUT = 60
 SAVE_NEXT = 'make OPENWIZ_CONDUCTOR_STATE (or ~/.local/state/openwiz-conductor) a folder you can write'
 
@@ -59,8 +60,25 @@ def signed_in(then):
     # SECURITY: only whether CONDUCTOR_API_KEY is set is looked at, never its value.
     if 'CONDUCTOR_API_KEY' not in os.environ:
         raise Refused('CONDUCTOR_API_KEY is not set, so the driver cannot reach Conductor; ' + then,
-                      'create a Conductor API key (www.conductor.build/docs/api says where) and export it as CONDUCTOR_API_KEY '
-                      'in the shell that runs the driver')
+                      'create a Conductor API key (www.conductor.build/docs/api says where) and export it as '
+                      'CONDUCTOR_API_KEY in the shell that runs the driver')
+
+
+def curl_ready(then):
+    try:
+        p = subprocess.run(['curl', '--version'], capture_output=True, text=True, timeout=30)
+    except FileNotFoundError:
+        raise Refused('curl is not installed; ' + then, 'install curl 8.3 or later, then try again')
+    except subprocess.TimeoutExpired:
+        raise Refused('curl --version did not finish; ' + then, 'check that curl runs by hand, then try again')
+    found = re.match(r'curl ([0-9]+)\.([0-9]+)\.([0-9]+)', p.stdout)
+    if not found:
+        raise Refused('the driver cannot read the version of curl; ' + then,
+                      'check that `curl --version` prints curl 8.3 or later, then try again')
+    if tuple(map(int, found.groups()[:2])) < MIN_CURL:
+        raise Refused('curl %s is too old: the driver needs curl 8.3 or later to send the key from the '
+                      'environment; %s' % ('.'.join(found.groups()), then),
+                      'install curl 8.3 or later (for --variable), then try again')
 
 
 def api(method, path, body=None):
@@ -149,6 +167,7 @@ def start():
         raise Refused('Conductor runs no harness %s; nothing was started' % req['harness'],
                       'use one of: ' + ', '.join(HARNESSES))
     signed_in('nothing was started')
+    curl_ready('nothing was started')
     state = {'request': req, 'name': name, 'workspace': None, 'session': None, 'starting': True, 'stopped': False,
              'archived': False}
     try:
@@ -168,7 +187,7 @@ def start():
     except Unsent as e:
         forget(run, nothing)
         raise Refused('Conductor was not reached (%s); nothing was started' % e,
-                      'check the network and that curl is version 8.3 or later, then start again')
+                      'check the network, then start again')
     except Lost:
         raise unknown
     if status >= 500:
@@ -201,6 +220,7 @@ def wake(run, state):
     if state['starting']:
         raise Refused('run %s never finished starting' % run, 'stop it, then start a new run')
     signed_in('nothing was sent')
+    curl_ready('nothing was sent')
     # External: a message sent while the agent works is steered into its running turn, so a wake never makes a
     # second agent, https://www.conductor.build/docs/api
     try:
@@ -231,6 +251,7 @@ def stop(run, state):
     except OSError:
         kept = False
     signed_in('workspace %s still runs' % state['workspace'])
+    curl_ready('workspace %s still runs' % state['workspace'])
     if not archive(state):
         raise Refused('run %s is stopped, but Conductor did not archive workspace %s' % (run, state['workspace']),
                       'stop it again, or archive workspace %s in Conductor yourself' % state['workspace'])

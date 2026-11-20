@@ -21,7 +21,8 @@ A [driver v1](../../kernel/driver.v1.md) that runs each builder in its own [Cond
 
 1. A Conductor Pro account with Conductor Cloud, its GitHub App on your repositories, and each repository you run on added to your organization's Cloud Computer.
 2. In Conductor, add the subscription or API key of each agent you use (Settings, Agents), and install the WizSkills skills your fleet runs on the Cloud Computer, so the agent can follow its skill and post its status note.
-3. Create a Conductor API key (the [API docs](https://www.conductor.build/docs/api) say where) and export it as `CONDUCTOR_API_KEY` in the shell that runs the driver.
+3. `curl` 8.3 or later (for `--variable`). Before each command the driver runs `curl --version` and refuses an older curl by name, such as `curl 7.88.1 is too old`, before it calls Conductor.
+4. Create a Conductor API key (the [API docs](https://www.conductor.build/docs/api) say where) and export it as `CONDUCTOR_API_KEY` in the shell that runs the driver.
 
 Conductor bills nothing for model usage: each agent's own account does. Each workspace runs until it is stopped, sleeps or is archived.
 
