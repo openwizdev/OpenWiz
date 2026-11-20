@@ -10,7 +10,7 @@ All OpenWiz versions, newest first. How versions work: [RELEASING.md](https://gi
 
 - Sign in with GitHub at openwiz.dev/app to see what needs you, every spec's live ticket graph and the agents at work, on a laptop or a phone.
 - Choose where your builders run, from Linux or macOS, with one `Host:` line in `docs/agents/host.md`: the computer or VPS you are on, with the `claude` or `codex` you already signed into, Cloudroom threads, or boat.dev cloud sandboxes.
-- Installing puts OpenWiz's skills into the agents you already use (Claude Code, Codex, Cursor, OpenCode and Grok) and leaves your own skills untouched; they are now WizSkills 0.2.0, 18 shorter skills.
+- Installing puts OpenWiz's skills into the agents you already use (Claude Code, Codex, Cursor, OpenCode and Grok) and leaves your own skills untouched; they are now WizSkills 0.2.1, 18 shorter skills.
 - The `send`, `new` and `attachment` commands, the local web view and its server and service are gone: OpenWiz is now the command, the drivers and the skills, and the app lives on the web.
 
 Live-checked against real hosts: the boat.dev driver passed all five driver-kit checks live from both Linux and a Mac, the local and Cloudroom drivers passed them on Linux with no login or token in their output, and a boat.dev builder woke again after its turn had ended; the owner checked the app on a laptop, and its tab bar on a phone is still to be confirmed; the local and template drivers were not run on a Mac, the kit's macOS process listing has a known edge, logged as [#2039](https://github.com/openwizdev/OpenWiz/issues/2039), a macOS package install was not checked live, and the skills install and `openwiz init` are tested on synthetic home folders and a synthetic GitHub only.
