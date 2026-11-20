@@ -6,9 +6,13 @@ A [driver v1](../../kernel/driver.v1.md) that runs each builder as one [Cursor c
 
 | Command | What it does on Cursor |
 | --- | --- |
-| `start` | Saves the run with a new agent id (`bc-<uuid>`), then `POST /v1/agents` with that `agentId`, the repository, the model and a prompt. The prompt names the ticket and the skill, and has the agent fetch the WizSkills release OpenWiz pins (`wizskills.lock`) and check its commit and tree before it follows the skill: Cursor's machine has none of your own skills. It answers once Cursor has created the agent. If Cursor gives no answer, the driver archives the agent by the id it saved and says the outcome is unknown. |
+| `start` | Saves the run with a new agent id (`bc-<uuid>`), then `POST /v1/agents` with that `agentId`, the repository, the model and a prompt. The prompt names the ticket and the skill, and has the agent fetch the WizSkills release OpenWiz pins (`wizskills.lock`) and check its commit and tree before it follows the skill: Cursor's machine has none of your own skills. It answers once Cursor has created the agent. If Cursor gives no answer, the driver archives the agent by the id it saved and says the outcome is unknown. If Cursor shows no such agent yet, a late create isn't ruled out: the driver says so, and a later `stop` of that run archives the agent once Cursor shows it. |
 | `wake` | While the agent's run is active, nothing: that agent is awake and reads the ticket itself. Otherwise `POST /v1/agents/{id}/runs`: a follow-up run on the same agent, with its conversation and workspace, which edits its own status note. A wake after `stop`, or on an archived agent, is refused. |
 | `stop` | Cancels the agent's latest run (`POST .../runs/{runId}/cancel`), then archives the agent (`POST /v1/agents/{id}/archive`). It never deletes an agent: archiving can be undone at cursor.com/agents. If Cursor doesn't confirm both, the answer says so and names the agent. |
+
+**Every curl call starts with `--disable`,** so a default curl config (`~/.curlrc`) can't add URLs, tracing or redirects.
+
+**The skills pin.** From a checkout, the prompt names the WizSkills release in `wizskills.lock`. From an install, which has no lock, it names the OpenWiz commit in the runtime's `openwiz-build.txt`, and the agent reads `wizskills.lock` at that commit before fetching the release and checking its commit and tree.
 
 **Cursor runs its own agent.** `harness` must be `cursor`: Cursor cloud agents run only Cursor's agent, not Claude Code or Codex, and the driver refuses any other harness. `model` is passed as Cursor's `model.id` unchanged; Cursor lists the ones you can use (`GET /v1/models`).
 
@@ -27,12 +31,19 @@ The driver never touches a login (driver v1, N1 to N3). Cursor's own CLI can't s
 
 Cursor bills cloud agents at its model rates, against your plan.
 
-## The kit
+## Fixture tests (offline)
+
+```sh
+python3 -I adapters/cursor/test_driver.py      # on a synthetic Cursor; nothing reaches the network
+```
+
+Each test builds its environment from scratch, with PATH limited to `fixtures/bin` and `python3`, so no real CLI is reachable. Cleanup ends only the fake agent runs the tests logged themselves.
+
+## The live check (on a real Cursor account; spends money)
 
 ```sh
 python3 -I kernel/driver-kit/kit.py --driver adapters/cursor/driver \
   --repo <owner>/<throwaway> --ticket <n> --harness cursor --model <model>
-python3 -I adapters/cursor/test_driver.py      # the fixture tests, on a synthetic Cursor
 ```
 
-`fixtures/bin/curl` is a synthetic Cursor cloud agents API behind a fake `curl`. It takes only the call the driver makes (`--version`, then the call with `--variable %CURSOR_API_KEY`), refuses any other argument, fails as real curl does when `CURSOR_API_KEY` is unset or empty, and follows the routes and answers of Cursor's endpoint reference: `POST /v1/agents` answers `{agent, run}`, `GET /v1/agents/{id}` gives `status` (`ACTIVE`, `IDLE` or `ARCHIVED`) and `latestRunId`, and a follow-up during an active run is `409 agent_busy`. Its run is `fixtures/fake-agent`, which posts or edits one builder note. The code Cursor answers to a follow-up on an archived agent is a guess; the driver refuses any code it doesn't expect.
+`fixtures/bin/curl` is a synthetic Cursor cloud agents API behind a fake `curl`. It takes only the calls the driver makes (`--disable --version`, then each API call with `--disable` first and `--variable %CURSOR_API_KEY`), refuses any other argument, fails as real curl does when `CURSOR_API_KEY` is unset or empty, and follows the routes and answers of Cursor's endpoint reference: `POST /v1/agents` answers `{agent, run}`, `GET /v1/agents/{id}` gives `status` (`ACTIVE`, `IDLE` or `ARCHIVED`) and `latestRunId`, and a follow-up during an active run is `409 agent_busy`. Its run is `fixtures/fake-agent`, which posts or edits one builder note. The code Cursor answers to a follow-up on an archived agent is a guess; the driver refuses any code it doesn't expect.
