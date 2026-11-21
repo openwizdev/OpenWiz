@@ -185,7 +185,8 @@ class Driver(unittest.TestCase):
         self.assertNotIn('tell', [c[1] for c in self.calls()], 'a wake reached the thread of a run never started')
         before = len(self.calls())
         self.assertEqual(self.call('stop', run), (0, dict(run, stopped=True)))
-        self.assertEqual(self.calls()[before:], [['thread', 'list'], ['thread', 'archive', 'thr_syn_0001']],
+        self.assertEqual(self.calls()[before:], [['thread', 'list', '--json', '--project', PROJECT],  # Cloud: refused
+                                                 ['thread', 'list', '--json'], ['thread', 'archive', 'thr_syn_0001']],
                          'stop did not find and end the thread by its title')
 
     def test_stop_that_cannot_save_ends_the_thread_and_leaves_nothing_to_wake(self):
