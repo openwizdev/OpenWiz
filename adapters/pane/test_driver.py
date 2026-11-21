@@ -39,8 +39,13 @@ class Pane(unittest.TestCase):
     def tools(self):
         folder = os.path.join(self.folder, 'tools')
         os.mkdir(folder)
-        for name, found in (('python3', sys.executable), ('sleep', shutil.which('sleep')), ('git', shutil.which('git'))):
+        for name, found in (('python3', sys.executable), ('sleep', shutil.which('sleep'))):
             os.symlink(found, os.path.join(folder, name))
+        self.git_seen = os.path.join(self.folder, 'git-seen')
+        with open(os.path.join(folder, 'git'), 'w') as f:
+            f.write('#!%s -I\nimport json, os, sys\nwith open(%r, "a") as f:\n    f.write(json.dumps(sorted(os.environ)) + "\\n")\n'
+                    'os.execv(%r, [%r] + sys.argv[1:])\n' % (sys.executable, self.git_seen, shutil.which('git'), 'git'))
+        os.chmod(os.path.join(folder, 'git'), 0o700)
         return folder
 
     def tearDown(self):
@@ -202,6 +207,17 @@ class Pane(unittest.TestCase):
                 self.assertNotIn(value, json.dumps(out))
                 self.assertEqual([c for c in self.called() if value in json.dumps(c)], [])
         self.assertFalse([c for c in self.called() if c[:2] == ['panes', 'create']])
+
+    def test_git_sees_only_non_secret_settings(self):
+        planted = dict(GITHUB_TOKEN='synthetic-github-value', EXAMPLE_API_KEY='synthetic-api-value', LANG='C.UTF-8',
+                       XDG_CONFIG_HOME=os.path.join(self.folder, 'xdg'), GIT_DIR=os.path.join(self.folder, 'elsewhere'))
+        code, out = self.driver('start', REQUEST, **planted)
+        self.assertEqual(code, 0, out)
+        with open(self.git_seen) as f:
+            seen = [json.loads(line) for line in f]
+        self.assertEqual(len(seen), 2)
+        for names in seen:
+            self.assertEqual(names, ['HOME', 'LANG', 'PATH', 'XDG_CONFIG_HOME'])
 
 
 if __name__ == '__main__':
