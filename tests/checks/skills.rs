@@ -64,38 +64,16 @@ fn setup_onboard_login_passes() {
 }
 
 #[test]
-fn setup_onboard_journey_passes() {
+fn install_journey_passes() {
     let result = std::process::Command::new("python3")
-        .args(["-I", "tools/install/tests/first-hour/test_first_merge.py"])
+        .args(["-I", "tools/install/tests/journey/test_journey.py"])
         .current_dir(ROOT)
         .output()
-        .expect("run the first-merge journey and kit proofs");
+        .expect("run the install journey");
     assert!(
         result.status.success(),
-        "first-merge journey and kit proofs failed: {}{}",
+        "install journey failed: {}{}",
         String::from_utf8_lossy(&result.stdout),
         String::from_utf8_lossy(&result.stderr)
     );
-}
-
-#[test]
-fn install_journey_and_live_kit_pass() {
-    for script in [
-        "tools/install/tests/journey/test_journey.py",
-        "tools/install/live-kit-test.py",
-        "tools/install/tests/first-hour/test_journey.py",
-        "tools/install/tests/first-hour/test_kit.py",
-    ] {
-        let result = std::process::Command::new("python3")
-            .args(["-I", script])
-            .current_dir(ROOT)
-            .output()
-            .expect("run python");
-        assert!(
-            result.status.success(),
-            "{script} failed: {}{}",
-            String::from_utf8_lossy(&result.stdout),
-            String::from_utf8_lossy(&result.stderr)
-        );
-    }
 }

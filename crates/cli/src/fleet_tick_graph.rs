@@ -273,7 +273,8 @@ impl World {
         }
         let branch = gh.branch(repository.default.as_str(), deadline)?;
         let text = gh.rules(&branch, deadline)?;
-        let rules = Rules::parse(&text).map_err(|_| "rules unread or invalid")?;
+        let flags = crate::models::spawn_flags().map_err(|_| "rules unread or invalid")?;
+        let rules = Rules::parse(&text, &flags).map_err(|_| "rules unread or invalid")?;
         let authors = records::record_authors(&text)?;
         let starts = if room.is_some() {
             start_records(state, &repository.name)?

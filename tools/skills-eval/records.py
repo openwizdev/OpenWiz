@@ -1,4 +1,3 @@
-"""Record validators (contract.md, section 5). Each returns a list of problems."""
 import json
 import re
 
@@ -23,7 +22,6 @@ def strict_json(text):
 
 
 def schema_errors(value, schema, root, path='$'):
-    """A JSON Schema subset: the keywords contracts/decisions.v1.schema.json uses."""
     if '$ref' in schema:
         ref = schema['$ref']
         if not ref.startswith('#/$defs/'):
@@ -95,7 +93,6 @@ def check_decisions(body, schema):
 
 
 def check(kind, body, ctx):
-    """ctx: {'head': <sha>, 'number': <ticket>, 'schema': <decisions schema>}."""
     body = body or ''
     first = body.split('\n', 1)[0].strip()
     if kind == 'decisions.v1':

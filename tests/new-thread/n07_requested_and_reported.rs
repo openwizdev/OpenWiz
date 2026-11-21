@@ -1,7 +1,3 @@
-//! N7: requested and reported stay separate. A reported harness, model or
-//! effort that differs from the request is shown as differing; the reported
-//! configuration is never shown as the serving model.
-
 use openwiz_adapter_cloudroom::new_thread::parse_shown_thread;
 use openwiz_core::model::Fact;
 use openwiz_core::new_thread::start::{REPORTED_LABEL, start_view};

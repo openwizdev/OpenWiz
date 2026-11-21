@@ -1,4 +1,3 @@
-"""Public-tree scans. Findings name paths and rule ids, never secret values."""
 from html import unescape
 from html.parser import HTMLParser
 from pathlib import PurePosixPath
@@ -32,11 +31,6 @@ POINTER = re.escape(PRIVATE_REPOSITORY) + r"/(?:issues|pull)/[1-9][0-9]*#issueco
 
 
 def record_spans(text, public_repo):
-    """Only complete O2 pointer/cross-link forms; return occurrence spans.
-
-    Exempting by URL value would also hide an unrelated occurrence of the same
-    URL elsewhere. Keeping spans preserves every other character for scanning.
-    """
     spans = []
     for match in re.finditer(r"(?<![!\\])\[private record\]\(("+POINTER+r")\)",text):
         spans.append((*match.span(),match[1]))
@@ -48,7 +42,7 @@ def record_spans(text, public_repo):
     public_names = {"https://github.com/"+public_repo,
                     PRIVATE_REPOSITORY.replace("ClosedWiz","OpenWiz"),
                     "https://github.com/openwizdev/OpenWiz",
-                    "https://github.com/openwizdev/openwiz"}  # RN6: links written before the capitals changed
+                    "https://github.com/openwizdev/openwiz"}
     targets = "(?:"+"|".join(re.escape(name) for name in sorted(public_names))+")"
     moved = r"^moved to \[OpenWiz #([1-9][0-9]*)\]\(("+targets+r"/(?:issues|pull)/\1)\)$"
     for match in re.finditer(moved,text,re.M):
@@ -67,8 +61,6 @@ def url_public(url, reviewed=False, record=False):
     require(parsed.scheme in {"http", "https"}, "private-link: unknown scheme")
     host = parsed.hostname or ""
     reserved = host.endswith((".example", ".invalid")) or host == "example.com"
-    # An exact review may approve a username-only URL on any host (a published
-    # rejection-list fixture); a password stays reserved-host-only.
     require((parsed.username is None and parsed.password is None)
             or (reviewed and (reserved or (bool(parsed.username) and parsed.password is None))),
             "private-link: URL credentials")
@@ -83,24 +75,17 @@ def decoded_url(url):
 
 
 def reviewed_url(check, path, url, used=None, record=False):
-    # Callers supply the once-decoded value used by the exact review.
     matches = [i for i,e in enumerate(check.plan.get("scan_exceptions",[]))
                if e["path"] == path and e["rule"] == "url" and e["value"] == url]
-    # Exact review may approve an unlisted host or a reserved-host credential
-    # fixture. Other credentials, schemes and private patterns still refuse.
-    # Preserve the deeper privacy check separately from exact review matching.
     url_public(decoded_url(url), reviewed=bool(matches), record=record)
     if used is not None:
         used.update(matches)
 
 
 def public_literal(path, text, match, rule):
-    """Recognise public code literals without exempting whole files or rules."""
     value = match.group()
     suffix = PurePosixPath(path).suffix.lower()
     if rule == "identifier" and suffix == ".rs":
-        # These short Rust names are not opaque IDs; other prefixes keep their
-        # original refusals, with no undocumented minimum identifier length.
         return value in {"env_host", "env_remove", "env_clear"}
     if rule == "personal" and value == "settings.local" and PurePosixPath(path).name == ".gitignore":
         line = text[text.rfind("\n", 0, match.start())+1:].split("\n", 1)[0].strip()
@@ -110,7 +95,6 @@ def public_literal(path, text, match, rule):
     if not re.match(r"(?:$|[\s;,\"')}>/])", text[match.end():]):
         return False
     prefix = text[:match.start()]
-    # Comments and SVG/HTML prose are not colour values, even when they quote CSS.
     if prefix.rfind("/*") > prefix.rfind("*/") or prefix.rfind("<!--") > prefix.rfind("-->"):
         return False
     if suffix in {".svg", ".html"}:
@@ -129,7 +113,6 @@ def public_literal(path, text, match, rule):
             prefix = style[1]
     if suffix in {".css", ".svg", ".html"}:
         return bool(re.search(r"(?:^|[;{])\s*(?:--[\w-]+|[\w-]*color|background|fill|stroke|border(?:-(?:top|right|bottom|left))?|outline|box-shadow|text-shadow)\s*:\s*[^;{}'\"<>]*$", prefix, re.I))
-    # JS/TS style values; prose in other files and line comments stays private.
     if suffix not in {".js", ".mjs", ".cjs", ".jsx", ".ts", ".tsx"}:
         return False
     if "//" in prefix.rsplit("\n", 1)[-1]:
@@ -137,8 +120,6 @@ def public_literal(path, text, match, rule):
     style = re.search(r"\b(?:[\w-]*color|background|fill|stroke)\s*[:=]\s*(['\"])$", prefix, re.I)
     if not style or not text[match.end():].startswith(style[1]):
         return False
-    # A property-looking phrase inside a string, template, comment or regexp
-    # is prose, not a style declaration. Incomplete tokens fail closed too.
     tokens = (
         r"//[^\n]*|/\*[\s\S]*?(?:\*/|$)"
         r"|\"(?:\\.|[^\"\\])*(?:\"|$)|'(?:\\.|[^'\\])*(?:'|$)"
@@ -173,7 +154,6 @@ def scan(check):
     for item in check.report["files"]:
         path = item["path"]
         if item["mode"] == "120000":
-            # An approved alias: its raw target bytes, never the folder it names.
             target = os.readlink(check.export/path).encode()
             require(sha(target) == item["sha256"], "staged hash changed")
             alias(path,target,paths)
@@ -194,8 +174,6 @@ def scan(check):
                         "release-asset: exact version/source/target review required")
                 used.update(assets)
                 continue
-            # An unchanged public binary has already been published. Unknown assets
-            # need a separate review; never silently skip an unreadable file.
             try:
                 old = blob(check.args.public_repo,check.plan["public_base"],path)
             except Refused:
@@ -208,15 +186,11 @@ def scan(check):
             reviewed_url(check,path,url,used,record=True)
         text = mask_records(text,spans)
         decoded = decoded_url(text)
-        # JSON may encode a secret or private identifier with unicode escapes.
         if path.endswith(".json"):
             import json
             try:
                 decoded += "\n"+str(json.loads(text))
             except ValueError as error:
-                # A deliberately malformed public fixture (e.g. a truncated
-                # response) needs one exact hash-bound review; its raw text is
-                # still scanned by every rule below.
                 reviewed = [i for i,e in enumerate(exceptions)
                             if e["path"] == path and e["rule"] == "invalid-json" and e["value"] == path]
                 if not reviewed:
@@ -226,14 +200,9 @@ def scan(check):
             "secret":r"gh[opsur]_[A-Za-z0-9]{10,}|github_pat_[A-Za-z0-9]+|\bsk-[A-Za-z0-9]{10,}|xox[abp]-|AKIA[0-9A-Z]{12,}|BEGIN [A-Z ]*PRIVATE KEY|(?:password|passwd|secret|token|api[_-]?key)\s*[:=]\s*[\"'][^\"']{6,}",
             "personal":r"/Users/[A-Za-z0-9._-]+|/home/[A-Za-z0-9._-]+|[A-Za-z0-9._%+-]+@(?![A-Za-z0-9.-]*\.(?:invalid|example)\b)[A-Za-z0-9.-]+\.[A-Za-z]{2,}|\b[A-Za-z0-9-]+\.local\b|[A-Z]:\\[A-Za-z]",
             "secret-hex":r"\b[0-9a-f]{32,}\b|\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b",
-            # Preserve non-environment ID refusals. Only env_ distinguishes Rust
-            # constants and underscore-separated code names, case-sensitively.
             "identifier":r"\b(?:(?i:(?:thr|prj|mch|evt|usr|acct|ses|org)_(?!(?:syn|web)(?:_|\b))[A-Za-z0-9][A-Za-z0-9_-]*)|env_(?!(?:syn|web)(?:_|\b))[A-Za-z0-9][A-Za-z0-9-]*(?![\w-]))",
             "internal":r"closedwiz|"+"|".join(re.escape(term) for term in check.literals)+r"|\b(?:Sol|Haiku)\s+(?:round|review|finding)|\bticket\s+\d+|\bPR\s*#?\d+|private/|\bWS-\d+|approval sheet|(?<![\w&])#\d+\b",
         }
-        # Parse Markdown before decoding: encoded delimiters are URL content.
-        # Mask only those destination spans, so bare URLs elsewhere are still
-        # scanned and no truncated prefix needs a second exception.
         _,_,destinations = markdown_links(text) if path.endswith((".md", ".html", ".svg")) else ({},[],[])
         urls = []
         masked = text
@@ -241,7 +210,6 @@ def scan(check):
             url = decoded_url(url)
             if urlsplit(url).scheme in {"http", "https"}:
                 urls.append(url)
-                # Masking the destination must not hide URLs inside its value.
                 urls.extend(match.group() for match in re.finditer(r"https?://[^\s<>\"'`)\]]+",url)
                             if match.start() > 0)
                 masked = masked[:start]+" "*(end-start)+masked[end:]
@@ -297,14 +265,11 @@ def historical_text(check):
     require(check.used_exceptions == set(range(len(exceptions))),"unused scan exception")
     changelog = docs.get("CHANGELOG.md","")
     if "historical" not in check.plan:
-        # Including older entries kept from the public base (the historical path
-        # refuses ranges through changelog_entry below).
         try:
             refuse_ranges(changelog)
         except Refused as error:
             raise Refused(f"0.0.1-R2: {error}") from error
     if "historical" in check.plan:
-        # An approved existing entry: bound by heading and bytes, never generated.
         approved = check.plan["historical"]
         try:
             heading, entry = changelog_entry(changelog,check.args.version)
@@ -336,8 +301,6 @@ def claims(check):
     seen = set()
     declared = {}
     for document in check.plan.get("evidence_documents",[]):
-        # A reviewed public summary (e.g. docs/testing.md) that may carry live
-        # evidence, bound to its exact bytes and the label it actually uses.
         path = document["path"]
         require(path in docs and sha(check.texts[path].encode()) == document["sha256"],
                 f"evidence document missing or stale: {path}")
@@ -362,15 +325,13 @@ def claims(check):
             if "label" in item:
                 reviewed_label(path,item)
             if status != "context":
-                # Markdown's public-label gate, in its plain form or one exact
-                # reviewed label form.
                 if "label" not in item:
                     require(item["text"].lower().startswith(status+":"),"claim needs its public status label")
                 require(item["evidence"],"claim evidence missing")
                 evidence = link_target(check,"README.md",item["evidence"])
                 require(evidence in docs,"claim evidence must be a public document")
                 if status == "live-observation" and evidence in declared:
-                    cited.add(evidence)  # a declared, hash-bound public summary
+                    cited.add(evidence)
                 elif status == "live-observation":
                     require("Live-observation:" in docs[evidence] and evidence.startswith("docs/evidence/"),
                             "0.0.1-R1: live capability needs published live evidence")
@@ -378,8 +339,6 @@ def claims(check):
                     require(not re.search(r"not published|unpublished|LIVE-PENDING",item["text"]),
                             "0.0.1-R1: live capability has unpublished evidence")
             covered.append(item["text"])
-        # Every prose line has an explicit disposition. Context rows may carry
-        # explanatory prose, but deciding that it is not a capability is a review.
         fenced = False
         for line in docs[path].splitlines():
             if re.match(r"\s*(```|~~~)",line):
@@ -392,7 +351,6 @@ def claims(check):
     require(set(declared) <= cited,"unused evidence document")
 
 
-# Reviewed label forms name the claim's own evidence class (#1191).
 LABEL_FORMS = {"fixture-tested": ("fixture-tested", "fixture-test"),
                "live-observation": ("live-observation",),
                "source-inspection": ("source-inspection",),
@@ -405,10 +363,7 @@ def reviewed_label(path, item):
     require(isinstance(label,str) and label.strip() == label,
             "label must be the exact reviewed label text")
     if not label:
-        # A reviewed unlabelled public line (Jake: public text carries no test
-        # labels). Its status, evidence and live checks still apply.
         return
-    # The label opens the claim, after at most a list marker.
     body = re.sub(r"^(?:\d+\.|[-*])\s+","",item["text"])
     require(body.startswith(label),"label must open its claim")
     form = re.sub(r"\s+","-",label.replace("*","").replace("_","").strip().lower())
@@ -458,7 +413,6 @@ def link_target(check, source, url):
         target = next((p for p in candidates if p in files),target)
     folder = target.rstrip("/")
     if target not in files and any(p.startswith(folder+"/") for p in files):
-        # A relative link to an exported folder, as GitHub renders it. It has no anchors.
         require(not parsed.fragment,"link fragment missing")
         return folder
     require(target in files,"link target missing")
@@ -468,14 +422,11 @@ def link_target(check, source, url):
 
 
 def prose(text):
-    """Markdown without its closed fenced code blocks, which GitHub never links.
-
-    An unclosed fence hides nothing: the whole text stays checked."""
     kept, fence = [], None
     for line in text.splitlines(keepends=True):
         marker = re.match(r"[ ]{0,3}(`{3,}|~{3,})",line)
         if marker and marker[1][0] == "`" and "`" in line.strip()[len(marker[1]):]:
-            marker = None  # inline code such as ```x```, never a fence (CommonMark)
+            marker = None
         if fence is None and marker:
             fence, held = marker[1], [line]
         elif fence is not None:
@@ -525,8 +476,6 @@ def links(check):
                 link_target(check,path,url)
 
 
-# The release's own public regression tests are executed again by name. Absence
-# or a renamed/filtered-out test is a failure, not a successful zero-test run.
 REGRESSIONS = [
     ("0.0.3-R3","crates/adapters/cloudroom/src/process.rs", "tests/messaging/environment.rs",
      ["every_read_runs_without_the_thread_context","every_call_of_a_send_runs_without_the_thread_context"]),
@@ -538,10 +487,6 @@ CHAR = re.compile(r"'(?:\\(?:x[0-9a-fA-F]{2}|u\{[0-9a-fA-F]{1,6}\}|.)|[^\\'\n])'
 
 
 def rust_code(text):
-    """Rust source with comments and string/char literals blanked, newlines kept.
-
-    Enough of Rust's lexer to find real items: nested block comments, raw and
-    byte strings, escapes. An unterminated comment or literal fails closed."""
     blank = lambda part: re.sub(r"[^\n]"," ",part)
     out, i, n = [], 0, len(text)
     while i < n:
@@ -589,7 +534,6 @@ PAIRS = {"(": ")", "[": "]", "{": "}"}
 
 
 def group_end(code, i):
-    """Index just after the delimiter group that opens at code[i]."""
     stack = []
     for j in range(i, len(code)):
         c = code[j]
@@ -603,13 +547,6 @@ def group_end(code, i):
 
 
 def items(code):
-    """Top-level items of comment- and literal-blanked Rust, from an allowlist.
-
-    Only attributes and mod, use, fn, const, static, struct, enum, impl, type
-    and trait items (with pub(...), unsafe, async, extern and const fn
-    qualifiers). Any item-level macro (`name!`, `macro_rules!`, `include!`) or
-    any other top-level form refuses: a macro could generate or redirect the
-    very items being checked. Bodies (depth > 0) are not inspected."""
     found, attrs, i, n = [], [], 0, len(code)
 
     def skip(k):
@@ -666,7 +603,7 @@ def items(code):
                 end = group_end(code, k)
                 body, k = (k, end), end
                 if kw in ("use", "const", "static", "type"):
-                    continue  # use a::{b, c}; and initializers end at their ';'
+                    continue
                 form = "{"
                 break
             if c in "([":
@@ -682,9 +619,6 @@ def items(code):
 
 
 def file_module(main, module, paths, folder):
-    """main.rs declares module once, at top level, as a plain `mod module;`, so
-    Rust resolves it to folder/module.rs and nothing else. Every top-level form
-    of main.rs must be on the items() allowlist: no item-level macro."""
     found = [i for i in items(rust_code(main)) if i["kind"] == "mod" and i["name"] == module]
     require(len(found) == 1 and found[0]["form"] == ";","successor proof is not a module of its test target")
     require(not found[0]["attrs"],"successor module declaration carries an attribute (path override refused)")
@@ -692,8 +626,6 @@ def file_module(main, module, paths, folder):
 
 
 def real_tests(proof, tests):
-    """Each named test is the proof file's one top-level fn of that name, and it
-    carries #[test]: two of the name would let cfg choose which one runs."""
     fns = [i for i in items(rust_code(proof)) if i["kind"] == "fn"]
     for test in tests:
         found = [i for i in fns if i["name"] == test]
@@ -702,8 +634,6 @@ def real_tests(proof, tests):
 
 
 def test_body(proof, test):
-    """The (start, end) offsets of the named top-level test fn's `{ ... }` body in
-    the proof text. Blanking keeps offsets, so they index the original source."""
     real_tests(proof, [test])
     found = [i for i in items(rust_code(proof)) if i["kind"] == "fn" and i["name"] == test]
     require(found[0]["form"] == "{","named regression has no body")
@@ -711,13 +641,8 @@ def test_body(proof, test):
 
 
 def test_target(texts, target):
-    """`cargo test -p openwiz-tests --test <target>` builds tests/<target>/main.rs,
-    as the manifests say, not as assumed. The package is the one exported
-    manifest of that name, listed by name in the root workspace's members, with
-    autotests = false and exactly one [[test]] of the target's name carrying only
-    name and path, the path resolving to that main.rs. Any other shape refuses."""
     try:
-        import tomllib  # Python 3.11+; the rest of the tool runs on 3.9+.
+        import tomllib
     except ImportError:
         require(False,"regression successors need Python 3.11+ (tomllib reads the Cargo manifests)")
 
@@ -749,13 +674,11 @@ def test_target(texts, target):
 
 def regression_presence(check):
     check.regressions = []
-    # An approved successor replaces a renamed proof; no table id is dropped.
     successors = {s["id"]:s for s in check.plan.get("regressions",[])}
     used = set()
     for name,feature,proof,tests in REGRESSIONS:
         if feature not in check.texts:
             continue
-        # The environment scrub's export-only proof applies once send exists.
         if name == "0.0.3-R3" and tuple(map(int,check.args.version.split("."))) < (0,0,3):
             continue
         exact = None
@@ -767,8 +690,6 @@ def regression_presence(check):
         for test in tests:
             require(re.search(r"\bfn\s+"+re.escape(test)+r"\s*\(",check.texts[proof]),f"{name}: missing named regression")
         if exact is not None:
-            # Bind each successor to one runnable test: a #[test] fn in a module
-            # its target's main.rs declares, run by full path with --exact.
             folder,module = proof.rsplit("/",1)[0],PurePosixPath(proof).stem
             main = folder+"/main.rs"
             try:

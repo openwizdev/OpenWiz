@@ -1,7 +1,3 @@
-//! P1 Coverage: every session from `thread list` appears exactly once, and
-//! the counts reconcile. The duplicate and conflicting-row cases with no
-//! adapter or client are in `crates/core/tests/inventory.rs` (#805).
-
 use openwiz_core::envelope::GapKind;
 use openwiz_core::limits::FIELD_MAX_CHARS;
 use openwiz_core::ops::ListRequest;

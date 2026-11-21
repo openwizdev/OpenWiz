@@ -1,0 +1,23 @@
+# Red run (#1907 orchestrator decision, R3 on macOS): python3 -I adapters/boat/test_driver.py -k never_asks_ps, against the driver at 9c979f46 (main merged in): a start and a stop on the no-/proc (macOS-style) fixture, with a ps that logs its arguments.
+F
+======================================================================
+FAIL: test_on_macos_the_driver_never_asks_ps_for_any_process_environment (__main__.Boat.test_on_macos_the_driver_never_asks_ps_for_any_process_environment)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/boat/test_driver.py", line 574, in test_on_macos_the_driver_never_asks_ps_for_any_process_environment
+    self.assertEqual([c for c in asked if '-E' in c.split() or 'e' in c.split()], [],
+AssertionError: Lists differ: ['-A -ww -o pid= -o ppid= -o pgid= -o stat[133 chars] -E'] != []
+
+First list contains 3 additional elements.
+First extra element 0:
+'-A -ww -o pid= -o ppid= -o pgid= -o stat= -o command= -E'
+
++ []
+- ['-A -ww -o pid= -o ppid= -o pgid= -o stat= -o command= -E',
+-  '-A -ww -o pid= -o ppid= -o pgid= -o stat= -o command= -E',
+-  '-A -ww -o pid= -o ppid= -o pgid= -o stat= -o command= -E'] : the driver asked ps for process environments
+
+----------------------------------------------------------------------
+Ran 1 test
+
+FAILED (failures=1)

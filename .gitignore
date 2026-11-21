@@ -3,6 +3,7 @@
 /target/
 /tools/**/__pycache__/
 /kernel/**/__pycache__/
+/contracts/**/__pycache__/
 
 # WizSkills, installed from wizskills.lock (#555); never tracked
 /.wizskills/

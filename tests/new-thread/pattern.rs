@@ -1,36 +1,7 @@
-//! Two keywords for the new-thread and prompt schemas (Sol round 1,
-//! finding 2), on top of the shared checker (`tests/support/schema.rs`,
-//! outside A1's paths, which has neither):
-//!
-//! - **`pattern`**, in one small form only, so no pattern can mean more here
-//!   than in a JSON Schema validator (ECMA-262, with or without the `u`
-//!   flag): `^`, then atoms, then `$`. An atom is a literal character, a
-//!   `\uXXXX` escape, or a class `[...]` or negated class `[^...]` of
-//!   literals, escapes and ranges (a `-` only last), optionally followed by
-//!   `*`. No `.`, no `\s`: each set is spelled out, so its meaning can't
-//!   differ between engines.
-//! - **`maxUtf8Bytes`**: OpenWiz's companion rule for the text cap, which
-//!   JSON Schema can't express (`maxLength` counts characters). A standard
-//!   validator ignores it; this checker and the Rust core enforce it.
-//!
-//! B2 (ClosedWiz#15) adds two array keywords, for the attachments lists:
-//!
-//! - **`uniqueItems`**, `true` only: no two items are equal JSON;
-//! - **`minItems`**, a count: at least that many items.
-//!
-//! Both only on a `"type": "array"` node.
-//!
-//! [`lint`] and [`validate`] run the shared checker on the schema with
-//! these keywords taken out, then check them here, walking the same `$ref`s,
-//! properties, items and the one `oneOf` branch the shared checker matched.
-//! A value that matches no branch, or several, already fails there, so
-//! this is never looser than full JSON Schema.
-
 use serde_json::Value;
 
 const KEYWORDS: &[&str] = &["pattern", "maxUtf8Bytes", "uniqueItems", "minItems"];
 
-/// The keywords that only an array node may carry (B2).
 const ARRAY_KEYWORDS: &[&str] = &["uniqueItems", "minItems"];
 
 #[derive(Debug)]
@@ -43,7 +14,6 @@ enum Atom {
 }
 
 fn escape(chars: &[char], i: &mut usize) -> Result<char, String> {
-    // At `\`: only `\uXXXX`.
     let hex: String = chars
         .get(*i + 2..*i + 6)
         .ok_or("a short escape")?
@@ -61,7 +31,6 @@ const SPECIAL: &[char] = &[
     '.', '|', '?', '*', '+', '(', ')', '{', '}', '^', '$', '[', ']',
 ];
 
-/// Parses a pattern of the supported form, or says why it isn't one.
 fn parse(pattern: &str) -> Result<Vec<Atom>, String> {
     let body = pattern
         .strip_prefix('^')
@@ -161,11 +130,9 @@ fn matches(atoms: &[Atom], text: &[char]) -> bool {
     }
 }
 
-/// A parsed pattern, to match many texts.
 pub struct Pattern(Vec<Atom>);
 
 impl Pattern {
-    /// `pattern`, which must be of the supported form.
     pub fn new(pattern: &str) -> Self {
         Self(parse(pattern).unwrap_or_else(|e| panic!("pattern {pattern:?}: {e}")))
     }
@@ -175,12 +142,10 @@ impl Pattern {
     }
 }
 
-/// Whether `text` matches `pattern`, which must be of the supported form.
 pub fn is_match(pattern: &str, text: &str) -> bool {
     Pattern::new(pattern).is_match(text)
 }
 
-/// `schema` without this module's keywords, for the shared checker.
 fn stripped(schema: &Value) -> Value {
     match schema {
         Value::Object(map) => Value::Object(
@@ -244,15 +209,12 @@ fn lint_node(node: &Value, path: &str, errors: &mut Vec<String>) {
     }
 }
 
-/// Every keyword the shared checker or this module would not enforce.
 pub fn lint(schema: &Value) -> Vec<String> {
     let mut errors = crate::schema::lint(&stripped(schema));
     lint_node(schema, "#", &mut errors);
     errors
 }
 
-/// `value` against `schema` (rooted at `root`, at JSON pointer `at`): the
-/// shared checker on the stripped schema, then this module's keywords.
 pub fn validate(schema: &Value, value: &Value) -> Vec<String> {
     let mut errors = crate::schema::validate(&stripped(schema), value);
     if errors.is_empty() {
@@ -261,8 +223,6 @@ pub fn validate(schema: &Value, value: &Value) -> Vec<String> {
     errors
 }
 
-/// Whether `value` matches the node at `pointer` structurally (the shared
-/// checker, keywords stripped, `$ref`s resolved against `root`).
 fn structurally(root: &Value, pointer: &str, value: &Value) -> bool {
     let mut probe = stripped(root);
     let object = probe.as_object_mut().expect("an object schema");

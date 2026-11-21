@@ -1,13 +1,3 @@
-//! The pending list: every future-behaviour proof test is explicitly
-//! pending, and none is skipped silently.
-//!
-//! Rules:
-//! - In P1 to P7 and P9 to P12, a test is either `#[ignore = "pending: ticket 2"]`
-//!   or runs. Ticket 2 removes each marker before the code that satisfies it.
-//! - P8(a) tests and the foundation checks are never ignored.
-//! - No other `#[ignore` exists in the repository's Rust sources.
-//! - `tests/pending-ticket-2.txt` lists the pending tests exactly.
-
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -26,7 +16,6 @@ fn rust_files(dir: &Path, out: &mut Vec<PathBuf>) {
     }
 }
 
-/// (test name, its attribute lines) for every `#[test]` in `text`.
 fn tests_in(text: &str) -> Vec<(String, Vec<String>)> {
     let lines: Vec<&str> = text.lines().map(str::trim).collect();
     let mut out = Vec::new();

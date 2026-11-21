@@ -1,16 +1,4 @@
 #!/usr/bin/env python3
-"""#2220 baseline: planted synthetic credentials at the existing App and access
-refusal, revocation and expiry boundaries (#1105, #1107). Assessment proof only.
-
-Each case runs the existing tool through its public entry point against a
-recording provider: `access.execute` with the #1107 recording fixture, and the
-#1105 `setup.py check` program against a loopback GitHub App API and a fake
-`gh`. It proves that a refused, revoked or expired case verifies nothing, makes
-no write, sends each planted credential only to its own provider, and leaves no
-credential in output, errors or state. Synthetic values only; no network.
-
-  python3 -I tools/install/tests/public-release-security/baseline/test_baseline.py
-"""
 import base64
 import binascii
 from contextlib import redirect_stderr, redirect_stdout
@@ -33,12 +21,11 @@ from urllib.parse import urlsplit
 sys.dont_write_bytecode = True
 ROOT = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(ROOT / 'tools/install/access'))
-import access  # noqa: E402
+import access
 sys.path.insert(0, str(ROOT / 'tools/install/access/fixtures'))
-from provider import Recording, credentials, jwt, selected  # noqa: E402
+from provider import Recording, credentials, jwt, selected
 
 OWNER_EMAIL = 'owner@example.invalid'
-# Planted values: unmistakable, synthetic, never a real credential.
 PLANTED_API = 'SyntheticPlantedProviderToken2220aaaaaaaaaaaaaaaa'
 PLANTED_INSTALLATION = 'ghs_SyntheticPlantedInstallation2220bbbbbbbbbb'
 PLANTED_PERSONAL = 'gho_SyntheticPlantedPersonal2220cccccccccccccccc'
@@ -49,14 +36,10 @@ VERIFIED = ('access_cloudflare_verified', 'access_tailscale_verified')
 
 
 def files_text(folder):
-    """Every byte under FOLDER, as text, so a planted value anywhere is found."""
     return ''.join(p.read_bytes().decode('utf-8', 'replace') for p in sorted(Path(folder).rglob('*')) if p.is_file())
 
 
 class Planted(Recording):
-    """The #1107 recording provider, also keeping each request's headers and
-    body, and answering 401 from the provider API once its token is revoked."""
-
     def __init__(self, p, secrets):
         super().__init__(p, secrets)
         self.seen = []
@@ -70,8 +53,6 @@ class Planted(Recording):
 
 
 class AccessBoundaries(unittest.TestCase):
-    """#1107: refused, revoked and expired phone-access checks."""
-
     def run_case(self, provider, change):
         with tempfile.TemporaryDirectory(prefix='openwiz-2220-access-') as folder:
             root = Path(folder)
@@ -95,21 +76,19 @@ class AccessBoundaries(unittest.TestCase):
                     result = access.execute(args + ['--yes', '--operation', operation['operation_id'],
                                                     '--secrets', str(root / 'secrets.json')],
                                             http=recording, local=recording.local)
-                except Exception:  # Capture streams even when either call raises.
+                except Exception:
                     error = traceback.format_exc()
             saved = access.store.Store(str(state)).read()
             leaked = json.dumps(result) + error + stdout.getvalue() + stderr.getvalue() + files_text(state)
             return p, secrets, recording, result, error, saved, leaked
 
     def assert_confined(self, p, secrets, recording, saved, leaked):
-        # Nothing verified, nothing applied: the operation stays uncertain.
         self.assertNotIn(saved['observations']['remote_access']['code'], VERIFIED)
         self.assertEqual([o['phase'] for o in saved['operations']], ['uncertain'])
         api_host = 'api.' + p['provider'] + '.com'
         validate = '/api/v2/tailnet/' + p.get('tailnet', '') + '/acl/validate'
         for method, url, headers, body in recording.seen:
             parts = urlsplit(url)
-            # No write: reads only, plus Tailscale's current-policy test.
             self.assertTrue(method == 'GET' or (method, parts.netloc, parts.path) == ('POST', api_host, validate),
                             f'{method} {url}')
             text = url + json.dumps(headers) + body.decode('utf-8', 'replace')
@@ -129,9 +108,6 @@ class AccessBoundaries(unittest.TestCase):
         past = '2020-01-01T00:00:00Z'
         foreign_open = [{'action': 'accept', 'src': ['*'], 'dst': ['100.100.100.10:443']}]
         cases = [
-            # (provider, case, change, code): codes from the setup report's table:
-            # refused = owner-only access or refusal
-            # not proved; expired = account, session or device authorization.
             ('cloudflare', 'API token revoked', lambda r, s: setattr(r, 'revoked', True), 'access_expired'),
             ('cloudflare', 'anonymous request reaches OpenWiz', lambda r, s: r.leak.add('anonymous'), 'access_refused'),
             ('cloudflare', 'expired session reaches OpenWiz', lambda r, s: r.leak.add('expired'), 'access_refused'),
@@ -156,9 +132,6 @@ class AccessBoundaries(unittest.TestCase):
                 self.assert_confined(p, secrets, recording, saved, leaked)
 
     def test_provider_answers_the_tool_cannot_parse_fail_closed_without_leaking(self):
-        # Unknown stays unknown even when the tool stops on an answer it cannot
-        # handle: no verification, no applied operation, no credential in the
-        # result, the error text or state. (Assessed as finding B-A3.)
         def deep(r, s):
             original = r.request
 
@@ -193,8 +166,6 @@ class AccessBoundaries(unittest.TestCase):
 
 
 class GitHub(BaseHTTPRequestHandler):
-    """A loopback GitHub App API recording every request. `server.app` steers it."""
-
     def log_message(self, *_args):
         pass
 
@@ -215,10 +186,9 @@ class GitHub(BaseHTTPRequestHandler):
         self.server.seen.append((method, self.path, dict(self.headers), body))
         if app['key_rejected']:
             return self.answer(401, {'message': 'synthetic: bad credentials'})
-        if method == 'GET' and self.path == '/app':  # the setup check's App-owner read (#606 review R3)
+        if method == 'GET' and self.path == '/app':
             return self.answer(200, {'id': 1001, 'owner': {'login': 'synthetic-owner'}})
         if method == 'GET' and self.path == '/app/installations':
-            # #2857: with a second page, GitHub's rel="next" link points to it.
             link = (f'<http://127.0.0.1:{self.server.server_port}/app/installations?page=2>; rel="next"'
                     if app['page_2'] is not None else None)
             return self.answer(200, app['installations'], link)
@@ -242,9 +212,6 @@ class GitHub(BaseHTTPRequestHandler):
         self.handle_one('POST')
 
 
-# The agents' own login, separate from the App: reads `gh api user|repos/...`,
-# and records its arguments and whether it was handed anything but the planted
-# personal token.
 FAKE_GH = r'''#!PYTHON
 import json, os, re, sys
 material = json.dumps(dict(os.environ)) + json.dumps(sys.argv[1:])
@@ -268,8 +235,6 @@ else:
 
 
 class AppBoundaries(unittest.TestCase):
-    """#1105: the setup check's App connection, beside the agents' own login."""
-
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix='openwiz-2220-app-')
         self.root = Path(self.temp.name)
@@ -365,12 +330,10 @@ class AppBoundaries(unittest.TestCase):
             return app['installations'][0]
 
         def owner_on_page_2(app):
-            # #2857 (C-G2): a full first page of other accounts' installations.
             others = [dict(first(app), id=3000 + n, account={'login': f'synthetic-other-{n}'}) for n in range(30)]
             expiry = datetime.fromtimestamp(time.time() + 1800, timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
             app.update(page_2=[first(app)], installations=others, expires_at=expiry)
         cases = [
-            # (case, change to the API, expected App code, token requests)
             ('installation removed after it was recorded',
              lambda app: app.update(installations=[]), 'app_revoked', 0),
             ('App key rejected or expired', lambda app: app.update(key_rejected=True), 'app_key_rejected', 0),
@@ -389,7 +352,7 @@ class AppBoundaries(unittest.TestCase):
         for name, change, code, mints in cases:
             with self.subTest(case=name):
                 value = json.loads(state_file.read_text())
-                value['app'] = {'app_id': 1001, 'installation_id': 2002}  # recorded by an earlier check
+                value['app'] = {'app_id': 1001, 'installation_id': 2002}
                 state_file.write_text(json.dumps(value))
                 self.scenario()
                 change(self.server.app)
@@ -409,8 +372,6 @@ class AppBoundaries(unittest.TestCase):
                 seen = list(self.server.seen)
                 self.assertEqual(len([s for s in seen if s[0] == 'POST']), mints, [s[:2] for s in seen])
                 for method, path, headers, body in seen:
-                    # App reads and at most one token request, for exactly the
-                    # chosen repository, signed by the App's key alone.
                     self.assertIn((method, path), [('GET', '/app'), ('GET', '/app/installations'),
                                                    ('GET', '/app/installations?page=2'),
                                                    ('POST', '/app/installations/2002/access_tokens')])
@@ -421,7 +382,6 @@ class AppBoundaries(unittest.TestCase):
                     self.assertFalse(PLANTED_PERSONAL in json.dumps(headers) + body + path, 'personal token sent to the App API')
                 for planted in (PLANTED_INSTALLATION, 'Bearer', 'BEGIN'):
                     self.assertFalse(planted in json.dumps(gh_calls), 'an App credential handed to gh')
-                # gh gets the agents' own login and no other credential variable.
                 self.assertEqual([c['env'] for c in gh_calls], [['GH_TOKEN'], ['GH_TOKEN']])
         stored = files_text(self.state / 'setup')
         key_lines = [line for line in self.key.splitlines() if len(line) > 20 and not line.startswith('-----')]

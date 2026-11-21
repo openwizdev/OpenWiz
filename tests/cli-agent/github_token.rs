@@ -1,8 +1,3 @@
-//! GI-P6 (#2547): `openwiz github token` mints an installation token, read-only
-//! with `--read`, and leaks nothing. Synthetic fixtures and a fake exchange
-//! (the adapter's `Exchange` seam) only: no network, no real key or token.
-//! The key is generated per run by `/usr/bin/openssl`, as the adapter's tests do.
-//! The program cases run cli-agent's fixture `openwiz` with an empty environment.
 #![cfg(target_os = "linux")]
 
 use std::ffi::OsString;
@@ -16,12 +11,9 @@ use serde_json::{Value, json};
 
 const APP_ID: &str = "1001";
 const FIXTURE: &str = include_str!("../../contracts/fixtures/github-identity/token-exchange.json");
-/// The contract's read profile (contracts/github-identity.v1.md), a literal.
 const READ: &str = r#"{"metadata":"read","contents":"read","issues":"read","pull_requests":"read","checks":"read","actions":"read"}"#;
-/// The App's profile, a literal from the same contract.
 const WRITE: &str = r#"{"metadata":"read","contents":"write","issues":"write","pull_requests":"write","checks":"read","actions":"read"}"#;
 
-/// A synthetic RSA key, and its secret form (base64 of the PEM, one line).
 fn key() -> &'static (String, String) {
     static KEY: OnceLock<(String, String)> = OnceLock::new();
     KEY.get_or_init(|| {
@@ -61,7 +53,6 @@ fn base64(bytes: &[u8]) -> String {
     out
 }
 
-/// `1970-01-01Thh:mm:ssZ` for the fixture's controlled clock (under a day).
 fn iso(seconds: u64) -> String {
     assert!(seconds < 86_400);
     format!(
@@ -79,7 +70,6 @@ impl Clock for Fixed {
     }
 }
 
-/// One recorded call: what the seam received, as text.
 #[derive(Debug, Clone)]
 struct Seen {
     call: String,
@@ -87,11 +77,8 @@ struct Seen {
     body: Option<Value>,
 }
 
-/// One scripted GitHub answer: status and body; `None` is a lost reply.
 type Answer = Option<(u16, Vec<u8>)>;
 
-/// GitHub's answers, scripted; `None` is a lost reply. `app` answers the
-/// user App's owner lookup (J48, #606).
 struct Fake {
     app: Answer,
     lookup: Option<(u16, Vec<u8>)>,
@@ -123,7 +110,6 @@ impl Exchange for Fake {
     }
 }
 
-/// GitHub's App object, owned by `owner`.
 fn app_owned_by(owner: &str) -> Answer {
     Some((
         200,
@@ -134,12 +120,10 @@ fn app_owned_by(owner: &str) -> Answer {
     ))
 }
 
-/// The seam calls made, by name.
 fn calls(run: &Run) -> Vec<&str> {
     run.seen.iter().map(|s| s.call.as_str()).collect()
 }
 
-/// What the mint asked for.
 fn mint_body(run: &Run) -> &Value {
     let seen = run
         .seen
@@ -222,7 +206,6 @@ fn run(args: &[&str], lookup: Option<(u16, Vec<u8>)>, mint: Option<(u16, Vec<u8>
 const WORK: [&str; 3] = ["token", "--repository", "synthetic-owner/work"];
 const WORK_READ: [&str; 4] = ["token", "--repository", "synthetic-owner/work", "--read"];
 
-/// No key material, in any form, and no token except a success's stdout.
 fn assert_secret_free(run: &Run, tokens: &[&str]) {
     let (pem, encoded) = key();
     let body: String = pem.lines().filter(|l| !l.starts_with("-----")).collect();
@@ -258,8 +241,6 @@ fn assert_secret_free(run: &Run, tokens: &[&str]) {
         }
     }
 }
-
-// --- With a fake exchange: the fixture's cases (contracts/fixtures/github-identity) ---
 
 #[test]
 fn gi_p6_each_fixture_case_gives_its_exit_stdout_stderr_and_exact_request() {
@@ -308,9 +289,6 @@ fn gi_p6_each_fixture_case_gives_its_exit_stdout_stderr_and_exact_request() {
         if let Some(stderr) = case["stderr"].as_str() {
             assert_eq!(result.stderr, stderr, "{argv:?}");
         }
-        // Exactly three calls: the user App's owner, the lookup for that
-        // repository, then the mint for the installation found, asking
-        // exactly the fixture's request.
         assert_eq!(
             calls(&result),
             [
@@ -354,7 +332,6 @@ fn gi_p6_read_asks_for_exactly_the_read_profile_and_write_for_the_apps() {
         assert_eq!(asked["repositories"], json!(["work"]));
         assert_eq!(asked.as_object().unwrap().len(), 2, "nothing else is asked");
     }
-    // --read granted write (or any other profile) is refused: exactly what was asked.
     let result = run(
         &WORK_READ,
         Some((200, installation(2002, "synthetic-owner", "selected"))),
@@ -388,7 +365,6 @@ fn gi_p6_the_jwt_authenticates_as_the_app_for_an_installation_token() {
         )),
     );
     assert_eq!(result.code, 0, "{}", result.stderr);
-    // One App JWT, used for every call; issued by this App id, at the clock.
     assert_eq!(result.seen.len(), 3);
     assert!(result.seen.iter().all(|s| s.jwt == result.seen[0].jwt));
     let parts: Vec<&str> = result.seen[0].jwt.split('.').collect();
@@ -397,7 +373,6 @@ fn gi_p6_the_jwt_authenticates_as_the_app_for_an_installation_token() {
     assert_eq!(claims, json!({"iss": "1001", "iat": 940, "exp": 1540}));
     let header: Value = serde_json::from_slice(&base64url_decode(parts[0])).unwrap();
     assert_eq!(header, json!({"alg": "RS256", "typ": "JWT"}));
-    // The signature verifies against the synthetic key's public half.
     let dir = std::env::temp_dir().join(format!("ow-gi5-{}", std::process::id()));
     super::dirs::private_dir_all(&dir).unwrap();
     let public = Command::new("/usr/bin/openssl")
@@ -452,7 +427,6 @@ fn base64url_decode(text: &str) -> Vec<u8> {
 
 #[test]
 fn gi_p6_an_expired_near_expiry_or_overlong_token_is_refused() {
-    // now 1000: 300 s or less left, already expired, or more than 3900 s away.
     for expires_at in [1000, 900, 1300, 1299, 4901, 9000] {
         let result = run(
             &WORK,
@@ -475,7 +449,6 @@ fn gi_p6_an_expired_near_expiry_or_overlong_token_is_refused() {
         );
         assert_secret_free(&result, &["synthetic-guarded-token"]);
     }
-    // The boundaries just inside: 301 s left, and exactly 3900 s.
     for expires_at in [1301, 4900] {
         let result = run(
             &WORK,
@@ -496,8 +469,6 @@ fn gi_p6_an_expired_near_expiry_or_overlong_token_is_refused() {
     }
 }
 
-// --- Missing secret, unknown repository, refused exchange: the contract's exits ---
-
 const CONTEXT: &str = "openwiz: github token: the App key, App id or App mode is missing or unreadable; no token was minted\n";
 const UNREACHABLE: &str =
     "openwiz: github token: GitHub gave no complete answer; no token was minted\n";
@@ -511,7 +482,6 @@ fn gi_p6_a_missing_or_unreadable_secret_or_app_id_exits_1_before_any_call() {
     let encoded = key().1.clone();
     let not_pem = base64(b"synthetic, not a key\n");
     let wrapped = format!("{}\n{}", &encoded[..64], &encoded[64..]);
-    // Cut inside the END line, whatever the key's length: never a whole PEM.
     let pem = key().0.trim_end();
     let truncated = base64(&pem.as_bytes()[..pem.len() - 6]);
     let cases: [(Option<&str>, Option<&str>); 10] = [
@@ -621,9 +591,6 @@ fn gi_p6_a_lost_reply_is_a_failure_exit_1_never_a_token() {
     }
 }
 
-// --- C-G1/J48 (#606): a user App mints only on its owner's account ---
-
-/// The identity contract's pinned factory installations: (account, repository).
 fn factory_installations() -> Vec<(String, String)> {
     let text = include_str!("../../contracts/github-identity.v1.md");
     let start = text.find("```json\n").unwrap() + 8;
@@ -641,7 +608,6 @@ fn factory_installations() -> Vec<(String, String)> {
     found
 }
 
-/// (mode, App owner, installation account, repository, exit, calls)
 type Bound<'a> = (Option<&'a str>, &'a str, String, String, i32, Vec<&'a str>);
 
 #[test]
@@ -654,7 +620,6 @@ fn j48_a_user_app_mints_only_on_its_owners_account_and_the_factory_only_when_exp
         .unwrap()
         .clone();
     let token = "synthetic-bound-token";
-    // (mode, App owner, installation account, repository, exit, calls)
     let mut cases: Vec<Bound> = vec![
         (
             None,
@@ -672,7 +637,6 @@ fn j48_a_user_app_mints_only_on_its_owners_account_and_the_factory_only_when_exp
             0,
             vec!["app", "installation", "access_tokens"],
         ),
-        // The repository's owner installed it, but the App is another account's.
         (
             None,
             "synthetic-elsewhere",
@@ -689,7 +653,6 @@ fn j48_a_user_app_mints_only_on_its_owners_account_and_the_factory_only_when_exp
             5,
             vec!["app", "installation"],
         ),
-        // The factory's cross-account installation without the explicit setting.
         (
             None,
             &factory_owner,
@@ -698,7 +661,6 @@ fn j48_a_user_app_mints_only_on_its_owners_account_and_the_factory_only_when_exp
             5,
             vec!["app", "installation"],
         ),
-        // Factory mode: an unnamed repository on a named account, or an unnamed account.
         (
             Some("factory"),
             &factory_owner,
@@ -771,7 +733,6 @@ fn j48_an_unreadable_mode_or_a_revoked_or_foreign_app_key_mints_nothing() {
         )),
         seen: Mutex::new(Vec::new()),
     };
-    // Only "user" or "factory" is a setting: anything else is never guessed.
     for mode in ["", "public", "Factory", "factory "] {
         let result = run_mode(
             &WORK,
@@ -788,7 +749,6 @@ fn j48_an_unreadable_mode_or_a_revoked_or_foreign_app_key_mints_nothing() {
         );
         assert!(result.seen.is_empty(), "{mode:?}");
     }
-    // A revoked key (401), or an App object for another App id or with no owner.
     for app in [
         Some((401, br#"{"message":"Bad credentials"}"#.to_vec())),
         Some((
@@ -803,8 +763,6 @@ fn j48_an_unreadable_mode_or_a_revoked_or_foreign_app_key_mints_nothing() {
         assert_eq!(calls(&result), ["app"]);
     }
 }
-
-// --- Usage and help ---
 
 #[test]
 fn gi_p6_usage_errors_exit_2_naming_no_value_and_calling_nothing() {
@@ -883,12 +841,9 @@ fn gi_p6_help_prints_usage_and_reads_nothing() {
     assert!(openwiz_cli::help().contains(github_token::HELP));
 }
 
-// --- The real program: routing, the environment, and secrecy on stderr ---
-
 #[test]
 fn gi_p6_the_openwiz_program_routes_github_token_and_refuses_without_the_secret() {
     let program = super::fixture_cli();
-    // No secret in the environment: exit 1 before any GitHub call (curl never runs).
     let out = Command::new(program)
         .args(["github", "token", "--repository", "synthetic-owner/work"])
         .env_clear()
@@ -898,7 +853,6 @@ fn gi_p6_the_openwiz_program_routes_github_token_and_refuses_without_the_secret(
     assert_eq!(out.status.code(), Some(1));
     assert!(out.stdout.is_empty());
     assert_eq!(String::from_utf8(out.stderr).unwrap(), CONTEXT);
-    // A malformed secret: also exit 1, and stderr holds none of it.
     let out = Command::new(program)
         .args([
             "github",
@@ -916,7 +870,6 @@ fn gi_p6_the_openwiz_program_routes_github_token_and_refuses_without_the_secret(
     assert!(out.stdout.is_empty());
     let stderr = String::from_utf8(out.stderr).unwrap();
     assert_eq!(stderr, CONTEXT);
-    // Usage reaches the command's own parser, not the inventory's.
     let out = Command::new(program)
         .args(["github", "token"])
         .env_clear()
@@ -930,9 +883,6 @@ fn gi_p6_the_openwiz_program_routes_github_token_and_refuses_without_the_secret(
     );
 }
 
-// --- #606 review R3: the service's App mints only for its owner's installation ---
-
-/// The service's key exchanges, recorded; the owner-bound reads are scripted.
 struct ServiceFake {
     repository: String,
     app: Answer,
@@ -973,7 +923,6 @@ fn r3_the_service_app_never_exchanges_for_another_owners_or_another_installation
     )
     .unwrap();
     let foreign_app = br#"{"id":2002,"app_id":1002,"account":{"login":"synthetic-owner"},"repository_selection":"selected"}"#;
-    // (why, App lookup, installation lookup, exchanged)
     let cases: Vec<(&str, Answer, Answer, u32)> = vec![
         (
             "its owner's own installation",
@@ -1030,7 +979,6 @@ fn r3_the_service_app_never_exchanges_for_another_owners_or_another_installation
             installation_id: 2002,
             repository: "synthetic-owner/work".into(),
         };
-        // A gh that never succeeds: only the mint before it is under test.
         let client = App::open_mode(
             &root,
             identity,
@@ -1049,8 +997,6 @@ fn r3_the_service_app_never_exchanges_for_another_owners_or_another_installation
         );
         assert_eq!(*fake.exchanges.lock().unwrap(), exchanged, "{why}");
     }
-    // Factory mode, only by the explicit setting: the identity contract's named
-    // installations, including the factory App's cross-account one, and nothing else.
     let named = factory_installations();
     let factory_owner = named.last().unwrap().0.clone();
     let (cross_account, cross_repository) = named

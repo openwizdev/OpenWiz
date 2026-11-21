@@ -1,28 +1,4 @@
 #!/usr/bin/env python3
-"""`openwiz init`: place the factory's private brain from GitHub's visibility (#635).
-
-  init.py [--repository OWNER/NAME] [--state-dir DIR] [--json]
-      Reads the repository's canonical identity and visibility from GitHub,
-      plans where the brain goes and persists one `prepare_project` proposal
-      (operation id and fingerprint, contracts/setup.v1.md). Writes nothing on
-      GitHub.
-  init.py --yes --operation ID [--repository OWNER/NAME] [--state-dir DIR] [--json]
-      Applies exactly that current proposal: each disclosed GitHub write once.
-
-Private code keeps the brain in its own `.openwiz/brain`; public code gets a
-private companion `<owner>/<name>-brain`, linked back to the code. There is no
-placement option or question. Output is one `openwiz.setup-onboard.v1`
-`init_result` (contracts/setup-onboard.v1.md) or an `openwiz.cli-error.v1`
-document. GitHub is reached only through the existing verified `gh` login.
-
-Every write is journalled before it is made, in owner-only
-`<state>/setup/init.json`. A lost reply leaves the effect uncertain; the next
-apply reads the exact resource back before any other call, so a resumed or
-repeated init never duplicates a repository, label, branch, file or pull
-request, and never overwrites the owner's work. Repository content holds only
-the human-readable brain records: never a credential, machine detail, runtime
-state or thread identifier.
-"""
 import base64
 import hashlib
 import json
@@ -36,16 +12,12 @@ import urllib.parse
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import store  # noqa: E402
+import store
 
 SCHEMA = 'openwiz.setup-onboard.v1'
 FOLDER = '.openwiz/brain'
 BRANCH = 'openwiz/brain'
 LABEL = 'openwiz'
-# #1361: the labels a first fleet needs: init's own, then the five people set in
-# records v1 (kernel/records.v1.md, section 1), with the descriptions the setup
-# skill writes. Colours are fixed so every factory looks the same. A label that
-# already exists is the owner's and is never changed or deleted.
 LABELS = ((LABEL, '5319e7', 'OpenWiz specs and tickets'),
           ('spec', 'c5def5', 'The issue is a spec'),
           ('ready-for-agent', '0e8a16', 'Fully specified, ready for an agent to take unattended'),
@@ -59,13 +31,10 @@ JOURNAL = 'openwiz.init-journal.v1'
 MAX_JOURNAL = 16
 ASSUMPTIONS = ['A command outcome is not a live proof; live brain creation is observed only under its own kit.']
 HEX32 = re.compile('[0-9a-f]{32}')
-# The kinds in the order an apply makes them.
 ORDER = ('create_companion', 'link_companion', 'create_label', 'open_pull_request')
 
 
 class Exit(Exception):
-    """A finished command: exit code and its one JSON document."""
-
     def __init__(self, code, document):
         super().__init__(code)
         self.code, self.document = code, document
@@ -76,12 +45,7 @@ def error(code, kind, message):
                        'error': {'kind': kind, 'message': message}})
 
 
-# --- GitHub, through gh ---------------------------------------------------
-
 class GitHub:
-    """`gh api --include` calls. (status or None, JSON or None); None status is
-    a lost or unreadable reply. Bodies go on stdin, never in arguments."""
-
     def __init__(self):
         self.program = shutil.which('gh')
         if self.program is None:
@@ -118,7 +82,6 @@ def same(a, b):
 
 
 def visibility_of(repository, value):
-    """'private', 'public' or None: only GitHub's own consistent answer."""
     if type(value) is not dict or not same(value.get('full_name'), repository):
         return None
     visibility, private = value.get('visibility'), value.get('private')
@@ -126,13 +89,10 @@ def visibility_of(repository, value):
         return 'private'
     if visibility == 'public' and private is False:
         return 'public'
-    return None  # internal, missing or contradictory: ambiguous
+    return None
 
-
-# --- The brain's human-readable records ---------------------------------
 
 def files(brain):
-    """The only content init proposes: plain records, no state or secrets."""
     settings = {'schema': 'openwiz.brain-settings.v1', 'brain_location': brain['location'],
                 'code_repository': brain['code_repository'], 'brain_repository': brain['brain_repository'],
                 'folder': FOLDER, 'factory_label': LABEL,
@@ -178,15 +138,11 @@ def link(code):
     return f'https://github.com/{code}'
 
 
-# --- Reading what is there ----------------------------------------------
-
 class Plan:
-    """What GitHub shows now, and the request this init is bound to."""
-
     def __init__(self, gh, repository):
         self.gh = gh
         self.requested = repository
-        self.missing = []  # factory labels not on the code repository, from the last read
+        self.missing = []
         self.visibility = None
         self.reason = 'GitHub did not answer the visibility read.'
         self.brain = None
@@ -215,21 +171,17 @@ class Plan:
         elif self.visibility == 'public' and self.owner_type not in ('User', 'Organization'):
             self.refusal = ('companion_owner_unknown', 'The repository owner could not be read; nothing was written.')
         elif self.visibility == 'public' and self.owner_type == 'User':
-            # A personal companion is created under the signed-in login, so it
-            # must be the code's owner; never someone else's account.
             status, user = gh.call('GET', 'user')
             if status != 200 or type(user) is not dict or not same(user.get('login'), owner):
                 self.refusal = ('companion_owner_mismatch', 'Only the repository owner can create its private '
                                 'companion; nothing was written.')
 
     def request(self):
-        """The fingerprinted request: stable across this init's own effects."""
         return {'repository': self.repository, 'visibility': self.visibility,
                 'location': self.brain['location'], 'brain_repository': self.brain['brain_repository'],
                 'labels': [list(label) for label in LABELS], 'branch': BRANCH,
                 'files': {p: hashlib.sha256(t.encode()).hexdigest() for p, t in sorted(self.content.items())}}
 
-    # Each read returns True (present and ours), False (absent) or raises a refusal.
     def companion(self):
         status, value = self.gh.call('GET', f"repos/{self.brain['brain_repository']}")
         if status == 404:
@@ -250,10 +202,6 @@ class Plan:
         return self.companion_repo.get('homepage') == link(self.repository)
 
     def destination(self):
-        """R1: the brain repository as GitHub shows it now, read before any
-        content write and before success: its canonical name, private
-        visibility and, for a companion, this project's marker. Anything else
-        refuses; a lost read stays uncertain."""
         b = self.brain['brain_repository']
         status, value = self.gh.call('GET', f'repos/{b}')
         if status is None:
@@ -266,8 +214,6 @@ class Plan:
         return value
 
     def proposal(self):
-        """R2: the brain proposal read now. Only an open or merged one counts;
-        a closed one is the owner's decision and is never reopened or replaced."""
         found = self.pull()
         if found is None:
             raise Unread()
@@ -277,7 +223,6 @@ class Plan:
         return found
 
     def missing_labels(self):
-        """The factory labels GitHub doesn't show on the code repository now."""
         missing = []
         for name, _, _ in LABELS:
             status, _ = self.gh.call('GET', f'repos/{self.repository}/labels/{quote(name)}')
@@ -291,12 +236,11 @@ class Plan:
         return not self.missing_labels()
 
     def pull(self):
-        """The brain proposal, read back: dict with number and state, or None."""
         owner = self.brain['brain_repository'].split('/')[0]
         status, value = self.gh.call(
             'GET', f"repos/{self.brain['brain_repository']}/pulls?state=all&head={owner}:{BRANCH}")
         if status == 404 and self.brain['location'] == 'companion':
-            return None  # not created yet
+            return None
         if status != 200 or type(value) is not list:
             raise Unread()
         for item in value:
@@ -315,8 +259,6 @@ class Refusal(Exception):
         super().__init__(code)
         self.code, self.line = code, line
 
-
-# --- The journal: write-ahead effect rows per operation -------------------
 
 def journal_read(setup):
     path = setup.dir / 'init.json'
@@ -350,8 +292,6 @@ def journal_write(setup, value):
         operations.pop(next(iter(operations)))
     setup._write(setup.dir / 'init.json', value)
 
-
-# --- Results -------------------------------------------------------------
 
 def result(plan, operation, outcome, reason_code, line, entry=None):
     entry = entry or {'rows': [], 'pull': None, 'wrote': False}
@@ -389,7 +329,6 @@ def disclosed(plan, rows):
 
 
 def needed(plan):
-    """The rows this init must still make, from what GitHub shows now."""
     rows = []
     b, code = plan.brain['brain_repository'], plan.repository
 
@@ -414,10 +353,7 @@ def needed(plan):
     return rows, existing
 
 
-# --- Commands ------------------------------------------------------------
-
 def refuse(setup, plan, code, line, fingerprint_request):
-    """A durable refused operation: nothing was written on GitHub."""
     operation = setup.propose('prepare_project', fingerprint_request, ['Write nothing: ' + line[:280]],
                               'Refused before any effect.')
     if operation['phase'] == 'proposed':
@@ -453,8 +389,6 @@ def preview(setup, plan):
 
 
 def current(plan, operation, entry):
-    """An applied operation's result stands only while its destination and
-    proposal still read back (R1, R2); otherwise it is refused, never cached."""
     try:
         plan.destination()
         entry['pull'] = plan.proposal()
@@ -490,7 +424,7 @@ def apply(setup, plan, operation_id):
                 value['brain'] = plan.brain
                 value['revision'] += 1
             store.validate(value)
-            journal_write(setup, journal)  # the fence first, as PC activation does
+            journal_write(setup, journal)
             setup._write(setup.file, value)
 
         def stop(code, outcome, reason_code, line):
@@ -514,7 +448,7 @@ def apply(setup, plan, operation_id):
             if done is None:
                 stop(6, 'uncertain', 'effect_uncertain',
                      'A GitHub reply was lost; apply the same operation to reconcile it before anything else.')
-        try:  # success only on what GitHub shows now (R1, R2)
+        try:
             plan.destination()
             entry['pull'] = plan.proposal()
         except Refusal as refusal:
@@ -527,7 +461,6 @@ def apply(setup, plan, operation_id):
 
 
 def proposed(plan):
-    """Whether the proposal exists; a closed one refuses (R2)."""
     found = plan.pull()
     if found is not None and found['state'] == 'closed':
         plan.proposal()
@@ -535,8 +468,6 @@ def proposed(plan):
 
 
 def effect(plan, row, entry, journal, save):
-    """Make one row's effect once. True when done, None when uncertain.
-    Reads the exact resource back first; a retry follows only a read-back."""
     present = {'create_companion': plan.companion, 'link_companion': plan.linked,
                'create_label': plan.label, 'open_pull_request': lambda: proposed(plan)}[row['kind']]
     if row['attempts'] > 0:
@@ -545,14 +476,14 @@ def effect(plan, row, entry, journal, save):
         if row['kind'] == 'open_pull_request':
             entry['pull'] = plan.pull()
         if row['attempts'] == 0:
-            entry['rows'].remove(row)  # someone else made it since the preview: no effect of ours
+            entry['rows'].remove(row)
         else:
             row['phase'], row['effect_count'] = 'applied', 1
         save()
         return True
     row['attempts'] += 1
     row['phase'] = 'uncertain'
-    save()  # write-ahead: a crash from here on stays uncertain
+    save()
     try:
         status = write(plan, row, entry, save)
     except Refusal:
@@ -576,14 +507,11 @@ def write(plan, row, entry, save):
     if kind == 'create_companion':
         owner, name = b.split('/')
         path = 'user/repos' if plan.owner_type == 'User' else f'orgs/{owner}/repos'
-        # GitHub's initial-commit field; spelled in two parts only because the
-        # public privacy check reads `auto_` plus letters as a CloudRoom id.
         return gh.call('POST', path, {'name': name, 'private': True, 'description': marker(code),
                                       'auto' '_init': True, 'has_issues': False, 'has_wiki': False})[0]
     if kind == 'link_companion':
         return gh.call('PATCH', f'repos/{b}', {'homepage': link(code)})[0]
     if kind == 'create_label':
-        # Read just before the writes: a label already there is the owner's.
         missing = plan.missing_labels()
         for name, color, description in LABELS:
             if name not in missing:
@@ -592,19 +520,17 @@ def write(plan, row, entry, save):
                              {'name': name, 'color': color, 'description': description})[0]
             if status is None or status >= 500:
                 return None
-            if status == 422:  # made by someone else since that read only if it is there now
+            if status == 422:
                 status, _ = gh.call('GET', f'repos/{code}/labels/{quote(name)}')
                 if status == 200:
-                    continue  # theirs, kept as it is
+                    continue
                 if status != 404:
                     return None
                 return 422
             if status not in range(200, 300):
                 return status
         return 201
-    # open_pull_request: branch, the brain's files, then the pull request. Each
-    # step is read first; an existing file with other content is owner work.
-    base = plan.destination()['default_branch']  # R1: before any content write
+    base = plan.destination()['default_branch']
     status, ref = gh.call('GET', f'repos/{b}/git/ref/heads/{quote(BRANCH)}')
     if status == 404:
         status, head = gh.call('GET', f'repos/{b}/git/ref/heads/{quote(base)}')
@@ -650,8 +576,6 @@ def write(plan, row, entry, save):
         return None
     return status
 
-
-# --- Entry ---------------------------------------------------------------
 
 def parse(argv):
     options, flags = {}, set()

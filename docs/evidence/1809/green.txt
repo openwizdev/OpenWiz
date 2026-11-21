@@ -1,0 +1,35 @@
+# python3 -I tools/install/tests/journey/test_journey.py (after: OwnSettings and the both-forms journey fixture)
+Ran 16 tests in 50.604s
+
+OK
+
+# cargo test -p openwiz-tests --test fleet b2 (the fleet tick's Rules::parse on docs/agents/fleet.md)
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 171 filtered out; finished in 0.42s
+
+# cargo test -p openwiz-tests --test cli-agent models (models contract fixtures and openwiz models forms)
+test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 82 filtered out; finished in 4.46s
+
+# openwiz models show, from the repository root
+Orchestrator: Opus 5.5 Medium on Claude Code (claude-code claude-opus-5-5 medium)
+Builder: Opus 5.5 Medium on Claude Code (claude-code claude-opus-5-5 medium)
+Reviewer: Sol 6.2 Medium on Codex (codex gpt-6.2-sol medium)
+Small builder: follows Builder: Opus 5.5 Medium on Claude Code (claude-code claude-opus-5-5 medium)
+Fixer: follows Builder: Opus 5.5 Medium on Claude Code (claude-code claude-opus-5-5 medium)
+Review of Claude-built work: Reviewer: Sol 6.2 Medium on Codex (codex gpt-6.2-sol medium)
+Fix round for a Claude builder: Fixer: Opus 5.5 Medium on Claude Code (claude-code claude-opus-5-5 medium)
+Review of GPT-built work: Builder: Opus 5.5 Medium on Claude Code (claude-code claude-opus-5-5 medium)
+Fix round for a GPT builder: Reviewer: Sol 6.2 Medium on Codex (codex gpt-6.2-sol medium)
+exit 0
+
+# openwiz models show --json: read, older_tables_present, warnings
+models_table True []
+
+# WizSkills main's launch-fleet read_models (MD4, WizSkills#125; not yet in the pinned 0.2.0)
+read: models_table
+orchestrator  claude-code claude-opus-5-5 medium
+builder  claude-code claude-opus-5-5 medium
+reviewer  codex gpt-6.2-sol medium
+small_builder follows builder claude-code claude-opus-5-5 medium
+fixer follows builder claude-code claude-opus-5-5 medium
+review of claude -built: codex gpt-6.2-sol medium | fix round: claude-code claude-opus-5-5 medium
+review of gpt -built: claude-code claude-opus-5-5 medium | fix round: codex gpt-6.2-sol medium

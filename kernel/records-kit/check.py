@@ -1,13 +1,4 @@
 #!/usr/bin/env python3
-"""The records v1 test kit: read a tracker and report every record that breaks a rule.
-
-    check.py --fixture <tracker.json>
-    check.py --repo <owner>/<name>
-
-Prints one line per break, `#<issue> <rule>: <what>`. Exit 0: no break; 1: breaks
-printed; 2: the tracker could not be read (nothing is guessed). It never writes.
-The rules are kernel/records.v1.md's.
-"""
 import argparse
 import calendar
 import json
@@ -67,7 +58,6 @@ def _list(value, where):
 
 
 def read_tracker(data):
-    """The tracker, in exactly the shape records-kit/README.md gives, or Unreadable."""
     _object(data, ('tracker', 'repo', 'now', 'record_authors', 'issues'), 'the tracker')
     if data['tracker'] != TRACKER:
         _refuse('tracker is not %r' % TRACKER)
@@ -122,7 +112,6 @@ READY = ('ready-for-agent', 'ready-for-human')
 MARKER = '<!-- openwiz:status v1 -->'
 NOTE_KEYS = ('agent', 'state', 'harness', 'model', 'skills', 'step', 'time', 'pr', 'preview')
 NOTE_REQUIRED = NOTE_KEYS[:7]
-# The pinned agent-status.v1.schema.json's value shapes; a note failing one is unknown (S2), never live.
 TEXT = r'^[^\x00-\x1f\x7f"\u201c\u201d>][^\x00-\x1f\x7f"\u201c\u201d]{0,%d}$'
 SKILL = r'[a-z0-9]+(-[a-z0-9]+)*@[0-9]+\.[0-9]+\.[0-9]+'
 NOTE_VALUES = {
@@ -147,7 +136,6 @@ RELIES = '**Relies on:**'
 
 
 def read_note(body):
-    """A v1 note's fields, or None when it doesn't read as openwiz:status v1."""
     lines = body.replace('\r\n', '\n').split('\n')
     while lines and lines[-1] == '':
         lines.pop()
@@ -166,10 +154,6 @@ def read_note(body):
 
 
 def read_lines(body):
-    """The body's lines, each without trailing spaces and tabs, and whether it is outside every fenced
-    code block and HTML comment, as the pinned plan-links contract's "Reading a section" reads them.
-    Comment syntax inside a fence and fence syntax inside a comment change nothing, and a line's
-    comment delimiters are read in order, so an opener after a closer opens a comment."""
     out, fence, comment = [], None, False
     for line in body.replace('\r\n', '\n').split('\n'):
         line = line.rstrip(' \t')
@@ -194,8 +178,6 @@ def read_lines(body):
 
 
 def links(lines, blockers):
-    """B1: each native blocker's missing or repeated reason line, or a malformed ## Links section,
-    with the plan-links contract's messages; every native blocker of a ticket needs one line."""
     heads = [at for at, (line, shown) in enumerate(lines) if shown and line == '## Links']
     if len(heads) > 1:
         return ['malformed section: more than one ## Links section']
@@ -222,7 +204,6 @@ def links(lines, blockers):
 
 
 def breaks(tracker):
-    """Every break, in issue order, then the order of the rules in records.v1.md."""
     issues = {i['number']: i for i in tracker['issues']}
     parents = {i['parent'] for i in tracker['issues'] if i['parent'] is not None}
     authors = {a.lower() for a in tracker['record_authors']}
@@ -327,7 +308,6 @@ def _comment(c):
 
 
 def record_authors(repo):
-    """The Record authors row of the repository's docs/agents/fleet.md, exactly one."""
     text = _gh('api', 'repos/%s/contents/docs/agents/fleet.md' % repo, '-H', 'Accept: application/vnd.github.raw')
     rows = [line for line in text.splitlines() if re.match(r'^\| Record authors \|', line)]
     names = re.findall(r'`([^`]+)`', rows[0]) if len(rows) == 1 else []
@@ -337,7 +317,6 @@ def record_authors(repo):
 
 
 def read_repo(repo):
-    """A real repository's open issues as a tracker. Reads only; any gap refuses."""
     owner, _, name = repo.partition('/')
     tracker = {'tracker': TRACKER, 'repo': repo, 'now': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
                'record_authors': record_authors(repo), 'issues': []}

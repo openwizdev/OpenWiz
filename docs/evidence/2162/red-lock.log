@@ -1,0 +1,20 @@
+....F....
+======================================================================
+FAIL: test_remove_refuses_while_an_install_or_update_holds_the_lock (__main__.Remove.test_remove_refuses_while_an_install_or_update_holds_the_lock)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/tests/installer/test_root_safety.py", line 151, in test_remove_refuses_while_an_install_or_update_holds_the_lock
+    self.assertEqual((code, value['outcome']), (5, 'refused'), value)
+AssertionError: Tuples differ: (0, 'preview') != (5, 'refused')
+
+First differing element 0:
+0
+5
+
+- (0, 'preview')
++ (5, 'refused') : {'schema': 'openwiz.install-remove.v1', 'root': '<home>/.local/lib/openwiz', 'state_root': '<home>/.local/lib/openwiz/state', 'delete': ['<home>/.local/lib/openwiz/current', '<home>/.local/lib/openwiz/install.lock', '<home>/.local/lib/openwiz/channel.json', '<home>/.local/lib/openwiz/skills/grill', '<home>/.local/lib/openwiz/skills/launch-fleet', '<home>/.local/lib/openwiz/skills/setup', '<home>/.local/lib/openwiz/skills/to-tickets', '<home>/.local/lib/openwiz/state/service/builds/1111111111111111111111111111111111111111', '<home>/.local/lib/openwiz/state/setup', '<home>/.local/lib/openwiz/state/cloudroom', '<home>/.local/lib/openwiz/state/service/config.json', '<home>/.local/lib/openwiz/state/service/app', '<home>/.local/lib/openwiz/state/service/state.json', '<home>/.local/lib/openwiz/state/service/loops', '<home>/.local/lib/openwiz/state/service/clone'], 'skills': [{'id': 'claude-code', 'path': '<home>/.claude/skills', 'names': ['grill', 'launch-fleet', 'setup', 'to-tickets']}], 'outcome': 'preview', 'next': "Run install remove --root <home>/.local/lib/openwiz --yes to delete exactly these; anything else stays. Your agents still hold OpenWiz's skill copies: delete the listed folders by name from each path in skills; other skills there are yours."}
+
+----------------------------------------------------------------------
+Ran 9 tests in 4.520s
+
+FAILED (failures=1)

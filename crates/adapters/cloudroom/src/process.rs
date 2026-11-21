@@ -153,24 +153,34 @@ fn execute_with_read_timeout(
     if started >= stop_at {
         return Err(Failure::Source(SourceError::TimedOut { after_ms: 0 }));
     }
-    let resolved = crate::locate::program(program).map_err(Failure::Source)?;
-    let program = resolved.as_path();
+    let resolved = crate::locate::programs(program).map_err(Failure::Source)?;
     if Instant::now() >= stop_at {
         return Err(Failure::Source(SourceError::TimedOut {
             after_ms: u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX),
         }));
     }
-    let mut child = scrub(&mut Command::new(program))
-        .args(invocation.argv())
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|_| {
-            Failure::Source(SourceError::Unavailable {
-                detail: "room-cli could not be started".to_owned(),
-            })
-        })?;
+    let mut spawned = None;
+    for program in &resolved {
+        match scrub(&mut Command::new(program))
+            .args(invocation.argv())
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+        {
+            Ok(child) => {
+                spawned = Some(child);
+                break;
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied => continue,
+            Err(_) => break,
+        }
+    }
+    let mut child = spawned.ok_or_else(|| {
+        Failure::Source(SourceError::Unavailable {
+            detail: "room-cli could not be started".to_owned(),
+        })
+    })?;
     let stdout = collect(child.stdout.take(), MAX_STDOUT_BYTES);
     let stderr = collect(child.stderr.take(), MAX_STDERR_BYTES);
     let timed_out = || {

@@ -1,7 +1,3 @@
-//! P4 Partial failures: errors, timeouts, malformed responses and a missing
-//! session give an honest partial result or an explicit error, never
-//! invented data.
-
 use std::process::Command;
 use std::time::{Duration, Instant};
 
@@ -15,7 +11,6 @@ use crate::support::*;
 #[path = "../support/real_time.rs"]
 mod real_time;
 
-/// Slack on top of a budget for process start-up and clean-up.
 const SLACK: Duration = Duration::from_secs(3);
 
 fn still_running(pid: &str) -> bool {
@@ -44,8 +39,6 @@ fn thread_list_error_is_an_explicit_error() {
 #[test]
 fn thread_list_timeout_is_explicit_bounded_and_cleaned_up() {
     let fake = Fake::new("p04_thread_list_timeout", "thread-list-timeout");
-    // Keep the synthetic run budget below the real per-read timeout, but
-    // leave room for healthy prerequisite reads on a busy runner (#2779).
     let budget = real_time::scaled(
         "p04_list_timeout",
         Duration::from_secs(1),
@@ -115,7 +108,6 @@ fn project_list_failure_gives_a_partial_ungrouped_result() {
     }
 }
 
-/// Synthetic assumptions: a machine ID is repeated, with the supplied names.
 fn machine_name_rows(test: &str, names: &[String]) -> Fake {
     use serde_json::{Value, json};
     let fake = Fake::new(test, "normal");
@@ -212,7 +204,6 @@ fn conflicting_machine_names_are_unknown_in_the_fixture_cli_in_either_order() {
 
 #[test]
 fn consistent_machine_names_resolve_normally_in_the_fixture_cli() {
-    // Worked example of the 200-character cap: 199 x's and one cut marker.
     for (case, (name, expected)) in [
         (
             "Synthetic machine one".to_owned(),
@@ -311,7 +302,6 @@ fn wrong_types_become_unknowns_not_invented_values() {
     unknown_reason(&session(&env, "thr_syn_0006").location);
 }
 
-/// Is `argv` a detail read (`thread show` or `thread output`) of `id`?
 fn is_detail_read_of(argv: &[String], id: &str) -> bool {
     argv.len() == 4
         && argv[0] == "thread"
@@ -319,7 +309,6 @@ fn is_detail_read_of(argv: &[String], id: &str) -> bool {
         && argv[2] == id
 }
 
-/// The not-found detail read is the last read, and the only one of `id`.
 fn assert_stops_at_not_found(label: &str, calls: &[Vec<String>], id: &str) {
     let detail_reads = calls.iter().filter(|a| is_detail_read_of(a, id)).count();
     assert_eq!(
@@ -332,10 +321,6 @@ fn assert_stops_at_not_found(label: &str, calls: &[Vec<String>], id: &str) {
     );
 }
 
-/// Changed in ticket 1's correction round 1 (Sol S8): issue #3 says no
-/// further read is made after not-found, so the invocation log is checked.
-/// Changed after the internal Haiku review (H7): `--json` prints nothing, or
-/// a JSON value with no `data`.
 #[test]
 fn show_of_a_nonexistent_session_is_not_found() {
     let fake = Fake::new("p04_show_nonexistent", "normal");
@@ -449,13 +434,6 @@ fn final_output_read_timeout_gives_a_partial_show_within_the_budget() {
     );
 }
 
-/// Whether this run is the first attempt of a pull request to `main` on
-/// GitHub Actions: exactly `GITHUB_ACTIONS=true`, `GITHUB_EVENT_NAME=
-/// pull_request`, `GITHUB_BASE_REF=main` and `GITHUB_RUN_ATTEMPT=1`. The one
-/// context the real 15-second proof below is moved out of (#1260, Q2): it
-/// still runs on every push to `main`, the nightly run, every rerun, every
-/// pull request to `release-*`, a merge group and every local run, and on any
-/// missing or odd value.
 fn first_pull_request_run_to_main(var: impl Fn(&str) -> Option<String>) -> bool {
     [
         ("GITHUB_ACTIONS", "true"),
@@ -467,15 +445,6 @@ fn first_pull_request_run_to_main(var: impl Fn(&str) -> Option<String>) -> bool 
     .all(|(key, value)| var(key).as_deref() == Some(*value))
 }
 
-/// New in ticket 2. Issue #3: each read has a 15-second timeout, and there
-/// are no retries; a timeout becomes a gap. With the default 30-second
-/// budget, a read that never answers is stopped after 15 seconds, once.
-///
-/// Moved off a first pull request run to `main` (#1260, Q2): it waits on the
-/// adapter's fixed `READ_TIMEOUT`, which no test can shorten, so it alone
-/// would hold this binary over its 10-second budget. It runs, unchanged,
-/// everywhere else (`first_pull_request_run_to_main`), and its moved-case
-/// ledger records that move in X3's evidence.
 #[test]
 fn a_read_that_never_answers_is_stopped_after_15_seconds_and_not_retried() {
     if first_pull_request_run_to_main(|key| std::env::var(key).ok()) {
@@ -491,8 +460,6 @@ fn a_read_that_never_answers_is_stopped_after_15_seconds_and_not_retried() {
     );
     let fifteen = Duration::from_secs(15);
 
-    // Both halves wait for the real 15-second timeout: they run at once,
-    // with the same assertions, so the test waits once, not twice.
     std::thread::scope(|scope| {
         scope.spawn(|| {
             let fake = Fake::new("p04_read_timeout_thread_list", "thread-list-timeout");
@@ -555,11 +522,6 @@ fn a_read_that_never_answers_is_stopped_after_15_seconds_and_not_retried() {
     });
 }
 
-/// New in ticket 2. The exit codes `openwiz --help` documents: 0 a result
-/// (complete or partial), 1 a failed read, 2 a usage error or out-of-bounds
-/// request, 3 not found. Since #37 an untested `room-cli` version is never an
-/// error (exit 0, marked untested). For read and usage errors, stdout is
-/// empty and stderr has one `openwiz: ` message; a usage error reads nothing.
 #[test]
 fn exit_codes_are_documented_and_errors_go_to_stderr() {
     let cases: &[(&str, &[&str], i32)] = &[
@@ -611,8 +573,6 @@ fn exit_codes_are_documented_and_errors_go_to_stderr() {
     }
 }
 
-/// New in ticket 2. `openwiz --help` documents the commands, the sort key
-/// and the exit codes, and reads nothing.
 #[test]
 fn help_documents_the_commands_the_order_and_the_exit_codes() {
     for flag in ["--help", "-h"] {
@@ -639,7 +599,6 @@ fn help_documents_the_commands_the_order_and_the_exit_codes() {
                 "{flag}: help should contain {wanted:?}:\n{out}"
             );
         }
-        // #37: the version is never a gate, for the reads and for send.
         assert!(
             !out.lines().any(|l| l.starts_with("  4  ")),
             "{flag}: no exit code 4 since #37:\n{out}"
@@ -648,8 +607,6 @@ fn help_documents_the_commands_the_order_and_the_exit_codes() {
     }
 }
 
-/// New in ticket 2, after the internal Haiku review (A, R2): a switch takes
-/// no value, so `--hidden=no` is a usage error, not `--hidden`.
 #[test]
 fn switches_take_no_value() {
     for (i, args) in [
@@ -669,14 +626,8 @@ fn switches_take_no_value() {
     }
 }
 
-/// New in ticket 2, after the internal Haiku review (A, R5): a response over
-/// the size bound fails as malformed, also when the program stops with an
-/// error once its output is no longer read. The native fake writes one
-/// preallocated buffer beyond the 32 MiB bound (#2831).
 #[test]
 fn an_oversized_response_fails_as_malformed() {
-    // Measurements repeat in this same libtest slot: CI still has eight
-    // proof threads and 24 web-api threads, with no extra test processes.
     let rounds = match std::env::var_os("OPENWIZ_OVERSIZED_ROUNDS") {
         None => 1,
         Some(value) if value == "5" => 5,
@@ -690,8 +641,6 @@ fn an_oversized_response_fails_as_malformed() {
 
 fn oversized_response_round() {
     let fake = Fake::new("p04_oversized_response", "normal");
-    // Just over 32 MiB + a 1 MiB pipe: even a full pipe cannot
-    // hold the trailing bytes once the reader stops at the bound plus one.
     let scenario = fake.dir.join("oversized.json");
     std::fs::write(
         &scenario,
@@ -722,8 +671,6 @@ fn oversized_response_round() {
         other => panic!("expected an explicit malformed error, got {other:?}"),
     }
 
-    // Independently check the fixture still exercises an unsuccessful
-    // writer when its reader stops at the size bound, not just invalid JSON.
     use std::io::Read;
     use std::process::Stdio;
     let mut child = Command::new(fake.program())
@@ -747,9 +694,6 @@ fn oversized_response_round() {
     );
 }
 
-/// #2831: the shared runner's size error on a completed write is an
-/// uncertain receipt at the adapter boundary, never a confirmed refusal.
-/// The held-write process proof separately rejects early stopping of writes.
 #[test]
 fn over_cap_send_and_new_receipts_stay_uncertain() {
     use openwiz_core::messaging::Mode;

@@ -1,0 +1,13 @@
+$ cargo clippy -p openwiz-tests -p openwiz-core --all-targets -- -D warnings
+# exit 0
+$ cargo clippy -p openwiz-cli -p openwiz-adapter-github -p openwiz-adapter-cloudroom --all-targets -- -D warnings
+# exit 0
+$ cargo fmt --check
+# exit 0
+$ cargo test -p openwiz-tests --test messaging --test attachments; cargo test -p openwiz-core --test attachment
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+$ python3 -I tools/comment-check/check.py diff --base origin/main
+# exit 0
+# reasonless allow attributes in crates/ and tests/: 34 at origin/main, 0 here (20 allows remain, each with a reason; 14 removed)

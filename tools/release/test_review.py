@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""R1-R4: synthetic public trees and isolated public-history policy anchors."""
 import hashlib
 import json
 import shlex
@@ -59,7 +58,7 @@ class ReviewFixes(OpenRelease):
                 path.parent.mkdir(parents=True,exist_ok=True)
                 path.write_text('')
                 self.commit(self.repo)
-                result = self.check()  # unlisted plants must reach the tree guard
+                result = self.check()
                 self.assertEqual(result.returncode,1,result.stderr)
                 self.assertIn('F1 ',(self.evidence/'open-development-privacy.log').read_text())
 
@@ -112,8 +111,6 @@ class ReviewFixes(OpenRelease):
                  f'was [ClosedWiz #9001]({PRIVATE}issues/9001) extra',
                  f'Context: [private record]({PRIVATE}issues/9001#issuecomment-9000001). Other {PRIVATE}issues/9001#issuecomment-9000001',
                  f'was [ClosedWiz #09001]({PRIVATE}issues/9001)']
-        # Legacy scan seams are intentional here: O3 does not reject legal-looking
-        # GitHub URLs. Each case gets an isolated policy anchor at its own parent.
         for text in forms:
             with self.subTest(text=text):
                 self.outputs_clear()
@@ -137,8 +134,6 @@ class ReviewFixes(OpenRelease):
 
 class ReviewEntries(EntryCheck):
     def test_r3_generated_entry_commit_identity_is_checked(self):
-        # The fake delegates all Git behavior but plants an invalid author only
-        # on the real generated-entry commit in the staged clone.
         delegate = self.bin/'recorded-git'
         (self.bin/'git').rename(delegate)
         real = shlex.quote(str(delegate))

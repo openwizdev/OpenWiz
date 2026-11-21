@@ -1,6 +1,3 @@
-//! P10 JSON matches the text: both outputs come from the same envelope and
-//! say the same thing.
-
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::{self, Write};
 
@@ -68,7 +65,6 @@ fn check_output_failure(fail_after: Option<usize>, fail_flush: bool) {
         );
         outcomes.push((args, code, String::from_utf8(stderr).expect("UTF-8 stderr")));
     }
-    // Check every command before asserting, so a red run records the whole matrix.
     assert!(
         outcomes.iter().all(|(_, code, stderr)| {
             *code == 1 && stderr == "openwiz: could not write output\n"
@@ -77,9 +73,6 @@ fn check_output_failure(fail_after: Option<usize>, fail_flush: bool) {
     );
 }
 
-/// #805: the normal writer first, the control that keeps the failure cases
-/// from passing because the writer itself is broken; then a write that
-/// fails at once, one that fails part-way and a flush that fails.
 #[test]
 fn inventory_output_write_and_flush_failures_are_not_success() {
     for args in OUTPUT_COMMANDS {
@@ -200,9 +193,6 @@ fn json_output_matches_the_schema() {
     }
 }
 
-/// The header, counts, gaps, freshness, location, grouping and parent in the
-/// text say what the JSON says (text contract in `support.rs`). New in
-/// ticket 1's correction round 1 (Sol S3).
 fn assert_envelope_text_matches(label: &str, json: &Value, text: &str) {
     let header = text.lines().next().unwrap_or_default();
     let source = format!(
@@ -348,12 +338,6 @@ fn show_text_matches_the_json_envelope() {
     }
 }
 
-/// New in ticket 2. Issue #3: `cargo build --release` produces `openwiz`,
-/// and its `--json` output passes the schema check. The test builds the
-/// release binary into this workspace's target directory, runs it with the
-/// fake `room-cli` first on `PATH`, and checks every envelope against the
-/// schema. It also shows the program's own wiring: the system clock for the
-/// snapshot, and the exit code of an untested version.
 #[test]
 fn the_release_build_prints_schema_valid_json() {
     use std::path::Path;
@@ -383,8 +367,6 @@ fn the_release_build_prints_schema_valid_json() {
 
     let fake = Fake::new("p10_release_build", "normal");
     let run = |args: &[&str]| {
-        // The verified fixture launcher executes the absolute fake path,
-        // preserving its scenario and log directory.
         let out = Command::new(&program)
             .args(args)
             .env("OPENWIZ_FIXTURE_PROGRAM", fake.program())
@@ -436,8 +418,6 @@ fn the_release_build_prints_schema_valid_json() {
         "{text}"
     );
 
-    // #37: an untested version is never a gate; the release binary lists and
-    // marks it untested.
     fake.set_scenario("version-0.43.1");
     let (code, out, err) = run(&["ls", "--json"]);
     assert_eq!(code, Some(0), "{err}");

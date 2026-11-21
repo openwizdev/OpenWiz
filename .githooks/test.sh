@@ -1,6 +1,4 @@
 #!/bin/sh
-# Run real Git pushes against an isolated bare repository. Keep the
-# --fixtures-only entry point used by privacy CI.
 set -eu
 case "$#:${1:-}" in
   0:|1:--fixtures-only) ;;
@@ -29,7 +27,6 @@ git -C "$work" commit --allow-empty -qm 'Synthetic anchor'
 base="$(git -C "$work" rev-parse HEAD)"
 git -C "$remote" fetch -q "$work" 'HEAD:refs/heads/topic' 'HEAD:refs/heads/keep'
 
-# The fixture uses its own anchor and root. The scanner and hook are real.
 mkdir -p "$tmp/.githooks" "$tmp/tools/privacy-check"
 cp "${PRE_PUSH_HOOK:-$root/.githooks/pre-push}" "$tmp/.githooks/pre-push"
 chmod +x "$tmp/.githooks/pre-push"
@@ -39,8 +36,6 @@ sed -e "s/^PUBLIC_ROOT = .*/PUBLIC_ROOT = '$public_root'/" \
     "$root/tools/privacy-check/check.py" > "$tmp/tools/privacy-check/check.py"
 git -C "$work" config core.hooksPath "$tmp/.githooks"
 
-# An SSH-shaped destination exercises the network privacy policy, while its
-# transport runs receive-pack locally, with no network access.
 cat > "$tmp/fixture-ssh" <<'SSH'
 #!/bin/sh
 exec git receive-pack "$FIXTURE_REMOTE"
@@ -53,7 +48,6 @@ export OPENWIZ_PRIVACY_LITERALS="$tmp/literals"
 literal='synthetic confidential sample for hook proof'
 printf '%s\n' "$literal" > "$OPENWIZ_PRIVACY_LITERALS"
 
-# No build dependencies are installed in this fixture.
 mkdir -p "$work/docs"
 printf '%s\n' 'Synthetic clean change' > "$work/docs/change.txt"
 git -C "$work" add docs/change.txt
@@ -78,8 +72,6 @@ grep -q '^T3 ' "$tmp/refusal" || { cat "$tmp/refusal" >&2; fail 'expected a priv
   fail 'the refused push changed topic'
 echo 'ok: a private literal stops both ref updates'
 
-# A deletion sends no objects, even when the working commit is private and
-# the configured literals file cannot be read.
 OPENWIZ_PRIVACY_LITERALS="$tmp/missing" git -C "$work" push fixture :refs/heads/topic ||
   fail 'deleting a ref must succeed without scanning'
 status=0

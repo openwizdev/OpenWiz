@@ -1,0 +1,28 @@
+# Red run (#2044, option 1): python3 -I adapters/local/test_driver.py -k without_proc, at 51287f93 plus this commit's test change (no workaround for the orphaned worker): a worker in a new session whose turn exits at once is never recorded, so stop leaves it.
+test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild (__main__.Local.test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild) ... FAIL
+
+======================================================================
+FAIL: test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild (__main__.Local.test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 381, in test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild
+    self.assertEqual((p.returncode, p.stdout.splitlines()), (0, PASS), p.stderr)
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[247 chars]er']) != (0, ['pass version: openwiz:records v1, an[245 chars]er'])
+
+First differing element 0:
+1
+0
+
+- (1,
++ (0,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 1',
+    'pass wake: the run edited builder status note 1',
+-   'fail stop: a process the run started still runs after stop',
++   'pass stop: the run ended, and a wake after it is refused',
+    'pass token: no login or token passed through the driver']) : 
+
+----------------------------------------------------------------------
+Ran 1 test in 22.874s
+
+FAILED (failures=1)

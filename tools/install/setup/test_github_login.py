@@ -1,12 +1,4 @@
 #!/usr/bin/env python3
-"""#633: GitHub browser sign-in and the explicit App skip, on a recording gh.
-
-A synthetic `gh` answers from a scenario file and logs each call, so the
-proofs count real provider effects (browser sign-ins) instead of helper calls.
-Nothing is signed in, sent or created; every login and repository is synthetic.
-
-  python3 -I tools/install/setup/test_github_login.py
-"""
 import fcntl
 import signal
 import time
@@ -22,7 +14,7 @@ from unittest import mock
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.dont_write_bytecode = True
-import store  # noqa: E402
+import store
 
 TOOL = HERE / 'github_login.py'
 REPOSITORY = 'synthetic-owner/synthetic-consumer'
@@ -32,11 +24,6 @@ PROJECT = {'repository': REPOSITORY, 'project': 'prj_synthetic', 'operator': 'sy
 SKIP = {'selected': 'personal_login', 'app_choice': 'skip', 'acting_login': 'synthetic-owner',
         'repository': REPOSITORY}
 
-# The recording gh: `api user`, `api repos/<r>` and `auth login`, from scenario.json.
-# Like gh, a read goes to GH_HOST when set; otherwise to github.com, unless the
-# only login on the host is another server's (`enterprise_account`), which gh
-# then uses as its default host. `auth login --hostname github.com` signs in
-# `account`. The `pending` sign-in waits for the owner until it is killed.
 FAKE_GH = r'''
 import json, os, sys, time
 from pathlib import Path
@@ -89,7 +76,6 @@ sys.exit(2)
 
 
 def stop_pending(gh_dir):
-    """Kill the recording `gh auth login` child this test started, if any."""
     marker = gh_dir / 'auth.pid'
     if marker.exists():
         try:
@@ -122,7 +108,7 @@ class Recording(unittest.TestCase):
                       push={'synthetic-owner': {REPOSITORY: True}})
 
     def tearDown(self):
-        stop_pending(self.gh_dir)  # own synthetic child only, by its recorded pid
+        stop_pending(self.gh_dir)
         subprocess.run(['rm', '-rf', str(self.base)], check=True)
 
     def scenario(self, **values):
@@ -157,10 +143,6 @@ class Recording(unittest.TestCase):
 
 
 class SavedIdentity(unittest.TestCase):
-    """catches: a saved state that selects the personal login without the
-    owner's explicit skip, names no acting login, or smuggles a token-shaped
-    value in, being accepted by the store the server reads."""
-
     def state(self, identity, omit=False):
         value = store.empty()
         value['project'] = dict(PROJECT)
@@ -169,20 +151,20 @@ class SavedIdentity(unittest.TestCase):
         return value
 
     def test_old_and_new_saved_states(self):
-        store.validate(self.state(None, omit=True))  # an old state: no selection
+        store.validate(self.state(None, omit=True))
         store.validate(self.state(None))
         store.validate(self.state(dict(SKIP)))
         store.validate(self.state({'selected': 'unselected', 'app_choice': 'undecided', 'acting_login': None,
                                    'repository': REPOSITORY}))
-        for wrong in ({**SKIP, 'app_choice': 'create'},          # personal login without the skip
-                      {**SKIP, 'selected': 'unselected'},        # a skip that selects nothing
-                      {**SKIP, 'selected': 'app'},               # a skip that keeps the App
-                      {**SKIP, 'acting_login': None},            # the acting login unnamed
+        for wrong in ({**SKIP, 'app_choice': 'create'},
+                      {**SKIP, 'selected': 'unselected'},
+                      {**SKIP, 'selected': 'app'},
+                      {**SKIP, 'acting_login': None},
                       {**SKIP, 'acting_login': 'ghp_' + 'A' * 36},
                       {**SKIP, 'acting_login': 'synthetic/owner'},
                       {**SKIP, 'acting_login': 'x' * 40},
                       {'selected': 'app', 'app_choice': 'reuse', 'acting_login': 'synthetic-owner',
-                       'repository': REPOSITORY},                # an App selection naming a login
+                       'repository': REPOSITORY},
                       {**SKIP, 'repository': 'synthetic-owner/..'},
                       {**SKIP, 'token': 'x'},
                       {k: v for k, v in SKIP.items() if k != 'repository'},
@@ -194,10 +176,6 @@ class SavedIdentity(unittest.TestCase):
 
 
 class SignIn(Recording):
-    """catches: a browser launch or callback reported as a usable login; a
-    second browser flow for a repeated or resumed request; a sign-in that
-    ignores an existing verified login or silently uses an environment token."""
-
     def test_signed_out_preview_opens_nothing_then_one_browser_sign_in_reads_back(self):
         preview = self.tool('sign-in')
         self.assertEqual(preview['code'], 'login_needed')
@@ -223,16 +201,12 @@ class SignIn(Recording):
                 self.assertEqual((result['code'], result['login']), (code, None))
 
     def test_restart_after_an_interrupted_approval_reuses_it(self):
-        # The owner approved in the browser, then the process was interrupted.
         self.update_scenario(login='approve_then_interrupt')
         self.assertEqual(self.tool('sign-in', '--yes')['code'], 'login_verified')
         self.assertEqual(self.tool('sign-in', '--yes')['code'], 'login_reused')
         self.assertEqual(len(self.sign_ins()), 1, 'a restart opens no second browser sign-in')
 
     def test_a_restart_while_approval_is_pending_starts_no_second_browser(self):
-        # R2: the wrapper dies while the owner has not yet approved; its gh
-        # sign-in child lives on. A resumed request reports that pending flow
-        # until it ends, then a new request may start one.
         self.prepare()
         self.update_scenario(login='pending')
         wrapper = subprocess.Popen([sys.executable, '-I', '-B', str(TOOL), 'sign-in', '--yes'],
@@ -246,21 +220,14 @@ class SignIn(Recording):
                 return False
             return str(json.loads(record.read_text())['pid']) == marker.read_text()
 
-        # The child's marker precedes the wrapper's durable PID write. Killing
-        # at the marker alone can leave pid=null; ageing that record would
-        # legitimately expire it and start a second, pending browser flow.
-        # catches: a restart starting another sign-in despite a durably recorded
-        # living child, even when that child's record is older than the limit.
         try:
             wait_for(recorded_child, 'the durably recorded pending gh sign-in')
         finally:
             wrapper.kill()
             wrapper.wait()
         child = int(marker.read_text())
-        os.kill(child, 0)  # the browser sign-in is still waiting for the owner
+        os.kill(child, 0)
         self.assertEqual(self.tool('sign-in', '--yes')['code'], 'login_in_progress')
-        # Final check R2: the record's age never outweighs a positively living
-        # sign-in child; only an unprovable record ages out.
         old = record.stat().st_mtime - 3 * 3600
         os.utime(record, (old, old))
         self.assertEqual(self.tool('sign-in', '--yes')['code'], 'login_in_progress')
@@ -271,7 +238,7 @@ class SignIn(Recording):
         self.assertEqual(len(self.sign_ins()), 2, 'once the pending flow ended, one new sign-in')
 
     def test_a_repeated_request_while_one_is_open_starts_no_second_browser(self):
-        self.prepare()  # creates the owner-only setup directory the lock lives in
+        self.prepare()
         lock = os.open(self.state / 'setup/.github-login.lock', os.O_RDWR | os.O_CREAT, 0o600)
         try:
             fcntl.flock(lock, fcntl.LOCK_EX)
@@ -294,9 +261,6 @@ class SignIn(Recording):
 
 
 class Packaged(Recording):
-    """catches: the installed helper needing a file the package does not ship
-    (the runtime's setup/ holds only setup.py, store.py and github_login.py)."""
-
     def test_the_helper_runs_from_the_packaged_setup_files_alone(self):
         runtime = self.base / 'runtime/setup'
         runtime.mkdir(parents=True)
@@ -312,10 +276,6 @@ class Packaged(Recording):
 
 
 class ForeignHost(Recording):
-    """R1, catches: a login on another GitHub server (GH_HOST, or gh's
-    default host when it is the only login) reused as the github.com login,
-    authorizing the App skip or verifying the acting identity."""
-
     def test_another_servers_login_never_reuses_selects_or_verifies(self):
         self.prepare()
         for env in ({'GH_HOST': 'enterprise.example'}, {}):
@@ -328,13 +288,11 @@ class ForeignHost(Recording):
                 with mock.patch.dict(os.environ, {**self.env, **env}):
                     import setup
                     self.assertEqual(setup.check_identity(PROJECT, None), 'identity_signed_out')
-                # The browser sign-in is github.com's; its read-back is too.
                 done = self.tool('sign-in', '--yes', env=env)
                 self.assertEqual((done['code'], done['login']), ('login_verified', 'synthetic-owner'))
         self.assertNotIn('identity', store.Store(str(self.state)).read())
 
     def test_only_githubs_own_authentication_answer_opens_the_browser_sign_in(self):
-        # Final check R3: other failed reads stay refused and open nothing.
         self.prepare()
         for failure in ('gh: Server Error (HTTP 500)', 'gh: Not Found (HTTP 404)',
                         'error connecting to api.github.com', 'gh: Requires authentication (HTTP 401) via proxy'):
@@ -345,10 +303,6 @@ class ForeignHost(Recording):
 
 
 class SkipApp(Recording):
-    """catches: an App skip saved without preview/confirmation, for an
-    unverified or changed account, or lost on reload; and a check that keeps
-    reporting a different signed-in account as the chosen acting login."""
-
     def setUp(self):
         super().setUp()
         self.setup = self.prepare()
@@ -363,7 +317,7 @@ class SkipApp(Recording):
         self.assertNotIn('identity', before)
         applied = self.tool('skip-app', '--yes', '--operation', preview['operation_id'])
         self.assertEqual(applied['phase'], 'applied')
-        after = store.Store(str(self.state)).read()  # a reload reads the same choice
+        after = store.Store(str(self.state)).read()
         self.assertEqual(after['identity'], SKIP)
         self.assertEqual(after['revision'], before['revision'] + 1, 'a new selection outdates old checks')
         again = self.tool('skip-app', '--yes', '--operation', preview['operation_id'])
@@ -402,6 +356,9 @@ class SkipApp(Recording):
         self.update_scenario(push={'synthetic-owner': {'synthetic-owner/another': True}})
         self.assertEqual(setup.check_identity(other, identity), 'identity_verified',
                          'a choice for another repository binds nothing here')
+
+
+from test_check import EveryCodeHasANextStep, GitHubStepsFromTheReview, IntelMac
 
 
 if __name__ == '__main__':

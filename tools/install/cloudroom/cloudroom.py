@@ -1,5 +1,28 @@
 #!/usr/bin/env python3
-"""OpenWiz setup's CloudRoom step: install, reuse and sign in (#2201).
+import argparse
+import ctypes
+import fcntl
+import hashlib
+import http.client
+import json
+import os
+from pathlib import Path
+import platform
+import re
+import secrets
+import shutil
+import stat
+import subprocess
+import sys
+import time
+import urllib.parse
+import urllib.request
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'setup'))
+import store
+from store import Refused, require
+
+DESCRIPTION = """OpenWiz setup's CloudRoom step: install, reuse and sign in (#2201).
 
   cloudroom.py status
       Reads only: is CloudRoom installed here, and does CloudRoom report a
@@ -21,33 +44,10 @@ Contract: contracts/public-cloudroom-setup.v1.md. Records go to owner-only
 a sign-in link, account detail, password or token. Python 3.9+, standard
 library only.
 """
-import argparse
-import ctypes
-import fcntl
-import hashlib
-import http.client
-import json
-import os
-from pathlib import Path
-import platform
-import re
-import secrets
-import shutil
-import stat
-import subprocess
-import sys
-import time
-import urllib.parse
-import urllib.request
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'setup'))
-import store  # noqa: E402
-from store import Refused, require  # noqa: E402
 
 SCHEMA = 'openwiz.cloudroom-setup.v1'
 RECORD = 'openwiz.cloudroom-install.v1'
 KIND = 'install_cloudroom'
-# CloudRoom's supported interfaces, observed and cited in the contract.
 GUIDE = 'https://www.cloudroom.dev/setup.md'
 RELEASES = 'https://github.com/davidondrej/cloudroom/releases/download/'
 API = 'https://api.github.com/repos/davidondrej/cloudroom/releases/tags/'
@@ -57,22 +57,14 @@ LINK = re.compile(r'https://github\.com/davidondrej/cloudroom/releases/download/
 SIGN_IN_HOSTS = ('www.cloudroom.dev', 'cloudroom.dev')
 FETCH_HOSTS = ('www.cloudroom.dev', 'api.github.com', 'github.com',
                'objects.githubusercontent.com', 'release-assets.githubusercontent.com')
-# (system, machine) -> (target, the guide's architecture and file kind).
 TARGETS = {('Darwin', 'arm64'): ('macos-arm64', 'arm64', 'dmg'),
            ('Linux', 'x86_64'): ('linux-x64', 'x86_64', 'AppImage')}
 DESTINATIONS = {'macos-arm64': '/Applications/Cloudroom.app', 'linux-x64': '~/Applications/Cloudroom.AppImage'}
-LAUNCHER = '.local/bin/room-cli'  # created by CloudRoom the first time it opens
-# J30: the only room-cli calls this tool can make, exactly the Rust allowlist's
-# SETUP_CALLS (crates/adapters/cloudroom/src/allowlist.rs) and the contract's pin.
+LAUNCHER = '.local/bin/room-cli'
 ROOM_CLI_CALLS = (('cloud', 'status', '--json'), ('cloud', 'sign-in', '--json'))
 PHASES = ('proposed', 'installing', 'applied', 'failed', 'refused', 'uncertain')
 REASONS = ('proposed', 'installed', 'existing', 'declined', 'checksum_mismatch', 'download_failed',
            'install_failed', 'unverified', 'lost_reply')
-# C-C2 (#2859): a valid signature is not enough; the app must be signed with a
-# Developer ID by CloudRoom's own team. 4AJ9HF33Z5 is the team the Developer ID
-# Application certificate names in CloudRoom's published release gui-v153
-# (Cloudroom-v153-arm64.zip, sha256 e0da001acf412183a2381cdc3dcd47696e23064259ecc70912baf13a78300766,
-# as its SHA256SUMS.txt lists).
 TEAM_ID = '4AJ9HF33Z5'
 REQUIREMENT = ('=anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] exists'
                ' and certificate leaf[field.1.2.840.113635.100.6.1.13] exists'
@@ -83,8 +75,6 @@ EFFECT_TIMEOUT = 900
 RUNNING_MS = 30 * 60 * 1000
 
 
-# --- The host: every program, URL and open goes through here --------------
-
 class Redirects(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, request, fp, code, message, headers, url):
         parts = urllib.parse.urlsplit(url)
@@ -94,8 +84,6 @@ class Redirects(urllib.request.HTTPRedirectHandler):
 
 
 class Host:
-    """This computer. Tests pass a recording subclass; nothing else is a seam."""
-
     def __init__(self, system=None, machine=None, home=None, root=None):
         self.system = system or platform.system()
         self.machine = machine or platform.machine()
@@ -134,7 +122,6 @@ class Host:
             os.fsync(handle.fileno())
 
     def run(self, argv, timeout):
-        """(exit code, stdout); (None, b'') when no answer came in time."""
         try:
             result = subprocess.run(argv, stdin=subprocess.DEVNULL, capture_output=True, timeout=timeout,
                                     env={'PATH': '/usr/bin:/bin', 'HOME': str(self.home), 'LC_ALL': 'C'})
@@ -159,7 +146,6 @@ class Host:
 
 
 def room_cli(host, call):
-    """The one place that runs room-cli: one of ROOM_CLI_CALLS, from the fixed launcher."""
     require(type(call) is tuple and call in ROOM_CLI_CALLS, 'not an allowlisted room-cli call')
     return host.run([str(host.home / LAUNCHER), *call], TIMEOUT)
 
@@ -169,10 +155,6 @@ def target(host):
 
 
 def checked_appimage(host, operation):
-    """The checked install location, only while it holds the copy the checked
-    install produced and verified: the saved operation is applied, and the file
-    there is regular (never a link), executable and has its SHA-256. None
-    otherwise. Reads only."""
     if operation is None or operation['phase'] != 'applied' or operation['request']['target'] != 'linux-x64':
         return None
     path = destination(host, 'linux-x64')
@@ -186,10 +168,6 @@ def checked_appimage(host, operation):
 
 
 def installation(host, operation):
-    """Existing CloudRoom on this host, by the places CloudRoom installs to. On
-    Linux an AppImage counts only as the checked install's own verified copy at
-    its checked location; no other AppImage counts, anywhere. A blocked
-    destination wins: then nothing counts, not even CloudRoom's launcher."""
     if blocked(host, operation):
         return []
     found = [host.home / LAUNCHER] if os.path.lexists(host.home / LAUNCHER) else []
@@ -202,8 +180,6 @@ def installation(host, operation):
 
 
 def blocked(host, operation):
-    """Something other than the checked install's verified copy occupies the
-    Linux destination: OpenWiz neither installs over it nor changes it."""
     path = destination(host, 'linux-x64')
     return host.system == 'Linux' and os.path.lexists(path) and checked_appimage(host, operation) is None
 
@@ -212,8 +188,6 @@ def destination(host, name):
     return host.root / 'Applications/Cloudroom.app' if name == 'macos-arm64' else host.home / 'Applications/Cloudroom.AppImage'
 
 
-# --- The install record: owner-only, exact, saved before any effect ---------
-
 class Records:
     def __init__(self, state_dir):
         self.state = store.state_path(state_dir)
@@ -221,7 +195,6 @@ class Records:
         self.file = self.dir / 'install.json'
 
     def read(self):
-        """The saved operation, or None. Writes nothing."""
         if not os.path.lexists(self.dir):
             return None
         store.private_directory(self.state, False)
@@ -249,15 +222,10 @@ class Records:
         return value['operation']
 
     def locked(self):
-        # First use creates the state folder, any missing ancestors and the
-        # record's folder, each synced into its parent before any effect.
         durable_directory(self.state)
         store.private_directory(self.state, False)
         durable_directory(self.dir)
         store.private_directory(self.dir, False)
-        # Existence is not durability: a sync that failed on an earlier attempt
-        # left its folder behind, so every attempt syncs the record's folder and
-        # the chain again before any effect.
         sync_directory(self.dir)
         sync_chain(self.dir)
         return Lock(self.dir / '.lock')
@@ -275,14 +243,10 @@ class Records:
             os.replace(temporary, self.file)
         finally:
             temporary.unlink(missing_ok=True)
-        sync_directory(self.dir)  # durable before any effect: a failure here stops the install
+        sync_directory(self.dir)
 
 
 def durable_directory(path):
-    """Creates path and its missing ancestors one at a time, top down, syncing
-    the parent that holds each new entry; a failed sync stops here. The new
-    folder itself is owner-only; ancestors get the default mode, as the
-    setup store creates them."""
     missing, probe = [], path
     while not os.path.lexists(probe):
         missing.append(probe)
@@ -293,9 +257,6 @@ def durable_directory(path):
 
 
 def sync_chain(path):
-    """Syncs the parent holding each folder from path upwards that this user
-    owns, so could have created. It stops at the first folder owned by
-    someone else: that one, and every folder above it, existed already."""
     for folder in (path, *path.parents):
         if folder == folder.parent or os.lstat(folder).st_uid != os.getuid():
             return
@@ -352,12 +313,7 @@ def check(operation):
             'invalid CloudRoom install attempt')
 
 
-# --- CloudRoom's published installer and its published checksum -----------
-
 def resolve(host, name):
-    """The request for this target from CloudRoom's guide and its GitHub
-    release, or None when no installer with an agreeing published checksum is
-    found. Reads only."""
     _, arch, kind = name
     try:
         guide = host.fetch(GUIDE, 256 * 1024).decode('utf-8')
@@ -401,14 +357,11 @@ def file_sha256(path):
 
 
 def signed_by_cloudroom(host, path):
-    """Apple's check: a valid signature, from CloudRoom's team only."""
     code, _ = host.run(['/usr/bin/codesign', '--verify', '--deep', '--strict', '-R', REQUIREMENT, str(path)], 300)
     return code == 0
 
 
 def copy_verifies(host, request):
-    """True: CloudRoom's checked copy is installed; False: nothing there;
-    None: something is there that does not verify."""
     path = destination(host, request['target'])
     if not os.path.lexists(path):
         return False
@@ -421,8 +374,6 @@ def copy_verifies(host, request):
 
 
 def place(host, records, operation, download):
-    """Puts the checked installer in place, never over anything.
-    'ok', 'failed', or 'lost' when no answer came back."""
     request = operation['request']
     path = destination(host, request['target'])
     if os.path.lexists(path):
@@ -439,17 +390,15 @@ def place(host, records, operation, download):
                 out.flush()
                 os.fsync(out.fileno())
             os.chmod(temporary, 0o755)
-            os.link(temporary, path)  # never replaces an existing file
+            os.link(temporary, path)
             return 'ok'
         except OSError:
             return 'failed'
         finally:
             temporary.unlink(missing_ok=True)
-    # macOS: copy into a staging folder beside the destination, verify it there,
-    # then publish it with a rename that never replaces anything.
     path.parent.mkdir(parents=True, exist_ok=True)
     staging = path.parent / f'.Cloudroom.app.openwiz-{operation["operation_id"][:12]}'
-    shutil.rmtree(staging, ignore_errors=True)  # only this operation's own leftover
+    shutil.rmtree(staging, ignore_errors=True)
     mount = records.dir / f'mount-{operation["operation_id"][:12]}'
     mount.mkdir(mode=0o700, exist_ok=True)
     try:
@@ -478,9 +427,6 @@ def place(host, records, operation, download):
 
 
 def publish(source, target):
-    """Renames source to target only if target does not exist (macOS
-    renamex_np RENAME_EXCL, Linux renameat2 RENAME_NOREPLACE). Never falls
-    back to a rename that could replace an existing app."""
     try:
         libc = ctypes.CDLL(None, use_errno=True)
         if sys.platform == 'darwin':
@@ -492,8 +438,6 @@ def publish(source, target):
         return False
     return result == 0
 
-
-# --- Status: install state first, then the login read ----------------------
 
 def running(host, operation):
     attempt = operation['attempt']
@@ -512,7 +456,7 @@ def install_code(host, operation):
         if phase == 'failed':
             return 'cloudroom_install_failed'
     if blocked(host, operation):
-        return 'cloudroom_destination_blocked'  # before any reuse or login read
+        return 'cloudroom_destination_blocked'
     if operation is not None:
         phase = operation['phase']
         if phase == 'refused' and not present and operation['reason'] in ('declined', 'checksum_mismatch'):
@@ -525,8 +469,6 @@ def install_code(host, operation):
 
 
 def login_code(host):
-    """From `room-cli cloud status --json` only: verified needs an exact,
-    positive account now. None when CloudRoom has never opened here."""
     launcher = host.home / LAUNCHER
     if not launcher.is_file():
         return None
@@ -566,8 +508,6 @@ def status(host, state_dir):
     return answer(code_for(host, Records(state_dir).read()))
 
 
-# --- Install ----------------------------------------------------------------
-
 def effects(request):
     return [f"Download CloudRoom {request['tag']} ({request['name']}) from CloudRoom's GitHub release.",
             f"Check it against the SHA-256 CloudRoom publishes ({request['sha256'][:12]}...); install nothing if it differs.",
@@ -581,7 +521,6 @@ def install(host, state_dir, yes=False, decline=False, operation=None):
     with records.locked():
         saved = records.read()
         if saved is not None and saved['phase'] in ('installing', 'uncertain'):
-            # A pending install is reconciled before anything else; same id.
             if saved['phase'] == 'installing' and running(host, saved):
                 require(not yes and not decline, 'that install is still running')
                 return answer('cloudroom_installing', saved)
@@ -599,11 +538,10 @@ def install(host, state_dir, yes=False, decline=False, operation=None):
         if yes and operation is not None:
             require(saved is not None and operation == saved['operation_id'], 'no such install operation; preview again')
             if saved['phase'] == 'applied':
-                return answer(code_for(host, saved), saved)  # a retry applies nothing twice
+                return answer(code_for(host, saved), saved)
             require(saved['phase'] in ('proposed', 'failed'), 'that install operation was refused; preview again')
             return apply(host, records, saved, reconcile=saved['phase'] == 'failed')
         if saved is not None and saved['phase'] == 'failed':
-            # A resuming agent gets the failed operation back, to retry it with the same id.
             return answer(code_for(host, saved), saved)
         if installation(host, saved):
             return answer('cloudroom_reused')
@@ -614,14 +552,13 @@ def install(host, state_dir, yes=False, decline=False, operation=None):
         if source is None:
             code = 'cloudroom_source_unchecked' if name else 'cloudroom_unsupported'
             if yes:
-                # No checkable installer: install nothing, open CloudRoom's own page.
                 host.open(opener(host) + [DOWNLOAD_PAGE])
                 return answer(code, opened='download_page')
             return answer(code)
         require(not yes, '--yes needs --operation from the preview')
         digest = store.fingerprint(KIND, source)
         if saved is not None and saved['fingerprint'] == digest and saved['phase'] in ('proposed', 'failed'):
-            return answer('cloudroom_not_installed', saved)  # a repeated preview reuses the id
+            return answer('cloudroom_not_installed', saved)
         proposal = {'operation_id': secrets.token_hex(16), 'kind': KIND, 'phase': 'proposed', 'fingerprint': digest,
                     'request': source, 'effects': effects(source), 'reason': 'proposed', 'attempt': None}
         records.save(proposal)
@@ -637,8 +574,6 @@ def apply(host, records, operation, reconcile):
             records.save(operation)
             return answer(code_for(host, operation), operation)
         if verdict is None:
-            # Something is there that does not verify: never copy over it.
-            # Uncertain stays uncertain; a failure stays failed.
             operation.update(phase='uncertain' if operation['phase'] != 'failed' else 'failed', attempt=None)
             records.save(operation)
             return answer(code_for(host, operation), operation)
@@ -647,9 +582,9 @@ def apply(host, records, operation, reconcile):
         records.save(operation)
         return answer(code_for(host, operation), operation)
     if blocked(host, operation):
-        return answer('cloudroom_destination_blocked', operation)  # nothing done, nothing changed
+        return answer('cloudroom_destination_blocked', operation)
     operation.update(phase='installing', attempt={'pid': os.getpid(), 'started': int(time.time() * 1000)})
-    records.save(operation)  # saved before any effect: a lost process reads as uncertain
+    records.save(operation)
     download = records.dir / 'download.part'
     download.unlink(missing_ok=True)
     try:
@@ -671,14 +606,12 @@ def apply(host, records, operation, reconcile):
     elif outcome == 'failed':
         operation.update(phase='failed', reason='install_failed', attempt=None)
     elif copy_verifies(host, request) is True:
-        operation.update(phase='applied', reason='installed', attempt=None)  # never on launch alone
+        operation.update(phase='applied', reason='installed', attempt=None)
     else:
         operation.update(phase='failed', reason='unverified', attempt=None)
     records.save(operation)
     return answer(code_for(host, operation), operation)
 
-
-# --- Sign-in ----------------------------------------------------------------
 
 def opener(host):
     return ['/usr/bin/open'] if host.system == 'Darwin' else ['/usr/bin/xdg-open']
@@ -700,8 +633,6 @@ def sign_in_link(raw):
 
 
 def sign_in(host, state_dir):
-    """Opens CloudRoom's own sign-in once and reads the login back. A current
-    login is reused: no second sign-in."""
     records = Records(state_dir)
     code = code_for(host, records.read())
     require(code in ('cloudroom_installed', 'cloudroom_reused') or code.startswith('cloudroom_login_'),
@@ -717,7 +648,6 @@ def sign_in(host, state_dir):
             host.open(opener(host) + [url])
             opened = 'sign_in'
     else:
-        # CloudRoom has never opened here: its own first-run setup starts with sign-in.
         app = next((p for p in installation(host, records.read()) if p.name != 'room-cli'), None)
         if app is not None:
             host.open((['/usr/bin/open'] if host.system == 'Darwin' else []) + [str(app)])
@@ -725,10 +655,8 @@ def sign_in(host, state_dir):
     return answer(code_for(host, records.read()), opened=opened)
 
 
-# --- Command line -------------------------------------------------------------
-
 def main(argv=None, host=None):
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(description=DESCRIPTION, formatter_class=argparse.RawDescriptionHelpFormatter)
     commands = parser.add_subparsers(dest='command', required=True)
     commands.add_parser('status', description='Read whether CloudRoom is installed and signed in. Reads only.')
     p = commands.add_parser('install', description='Preview, confirm or decline installing CloudRoom.')

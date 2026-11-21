@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""PS6: release-check CLI proofs on invented GitHub data and local repositories."""
 import hashlib
 import json
 import sys
@@ -100,7 +99,6 @@ sys.exit(subprocess.run(["/usr/bin/jq", "-cr", args[args.index("--jq")+1]],
         self.world_path.write_text(json.dumps(self.world))
 
     def approve(self, changelog=CHANGELOG, roadmap=ROADMAP):
-        # changes/ is now part of the release tree, so its rows stay reviewed too.
         self.data["files"] = [f for f in self.data["files"] if not f["path"].startswith("changes/")]
         self.data["claim_reviews"] = [f for f in self.data["claim_reviews"] if not f["path"].startswith("changes/")]
         for file in sorted((self.repo/"changes").glob("*.md")):
@@ -117,8 +115,6 @@ sys.exit(subprocess.run(["/usr/bin/jq", "-cr", args[args.index("--jq")+1]],
             self.data["claim_reviews"] = [r for r in self.data["claim_reviews"] if r["path"] != path]
             digest = hashlib.sha256(text.encode()).hexdigest()
             self.data["files"].append({"path": path, "source": "generated/"+path, "sha256": digest})
-            # One labelled capability block covers the headline, bullets and tested
-            # line. The roadmap describes future work, not shipped capabilities.
             block = ""
             if path == "CHANGELOG.md":
                 block = text[text.index("Fixture-tested:"):text.index("\n\n[Full release on GitHub]")]
@@ -437,13 +433,7 @@ sys.exit(subprocess.run(["/usr/bin/jq", "-cr", args[args.index("--jq")+1]],
         self.assertEqual((self.stage / "export/CHANGELOG.md").read_bytes(), expected.encode())
 
 
-    # RL2-N (#2215), P7 preparation: the settled combined 0.0.6-0.0.12 shape and
-    # the ordinary one-version path, through the unchanged entry format. Every
-    # ticket, spec, sentence and date is synthetic; ticket numbers interleave the
-    # versions and milestone numbers are out of version order, so a section is
-    # chosen only by its ticket's milestone.
     def prepare(self, version, specs, lines, milestones, published):
-        """Synthetic GitHub, changes/ and public base for one preparation run."""
         for path in (self.repo/"changes").glob("*.md"):
             path.unlink()
         for number, kind, milestone in lines:
@@ -481,7 +471,6 @@ sys.exit(subprocess.run(["/usr/bin/jq", "-cr", args[args.index("--jq")+1]],
         self.data["version"] = version
         self.data["entry"] = entry
         review = next(r for r in self.data["claim_reviews"] if r["path"] == "CHANGELOG.md")
-        # One labelled block per generated section, as for a single entry.
         for section in changelog.split("\n## ")[1:]:
             if "[Full release on GitHub]" in section:
                 review["claims"].append({"text": section[section.index("Fixture-tested:"):
@@ -667,7 +656,6 @@ What is being built now, and what comes next.
 """
 
 def load_tests(loader, tests, pattern):
-    # Run this ticket's proofs only; test.py runs the inherited R5 suite separately.
     return unittest.TestSuite(EntryCheck(name) for name in EntryCheck.__dict__ if name.startswith("test_"))
 
 

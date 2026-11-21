@@ -1,0 +1,85 @@
+.FFFFFF..FFFF..
+======================================================================
+FAIL: test_each_code_prints_a_one_line_next_naming_its_command_or_step (__main__.EveryCodeHasANextStep.test_each_code_prints_a_one_line_next_naming_its_command_or_step) (project=False, component='personal_github', code='identity_account_mismatch')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/setup/test_check.py", line 144, in test_each_code_prints_a_one_line_next_naming_its_command_or_step
+    self.assertIn(names, tools_by_folder_without_state(step))
+AssertionError: 'setup/github_login.py skip-app' not found in 'gh is signed in as another account than the one you chose: switch with gh auth switch, or choose again with setup/github_login.py sign-in.'
+
+======================================================================
+FAIL: test_each_code_prints_a_one_line_next_naming_its_command_or_step (__main__.EveryCodeHasANextStep.test_each_code_prints_a_one_line_next_naming_its_command_or_step) (project=False, component='github_app', code='app_files_unusable')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/setup/test_check.py", line 144, in test_each_code_prints_a_one_line_next_naming_its_command_or_step
+    self.assertIn(names, tools_by_folder_without_state(step))
+AssertionError: 'setup/github_login.py skip-app' not found in "The App's files in the state's service/app folder must be yours and private (mode 0600): fix them, or connect the App again with github-app/setup.py --repo OWNER/NAME."
+
+======================================================================
+FAIL: test_each_code_prints_a_one_line_next_naming_its_command_or_step (__main__.EveryCodeHasANextStep.test_each_code_prints_a_one_line_next_naming_its_command_or_step) (project=False, component='github_app', code='app_key_rejected')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/setup/test_check.py", line 144, in test_each_code_prints_a_one_line_next_naming_its_command_or_step
+    self.assertIn(names, tools_by_folder_without_state(step))
+AssertionError: 'private-key.pem' not found in "GitHub rejected the App's key: connect the App again with github-app/setup.py --repo OWNER/NAME."
+
+======================================================================
+FAIL: test_each_code_prints_a_one_line_next_naming_its_command_or_step (__main__.EveryCodeHasANextStep.test_each_code_prints_a_one_line_next_naming_its_command_or_step) (project=True, component='personal_github', code='identity_account_mismatch')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/setup/test_check.py", line 144, in test_each_code_prints_a_one_line_next_naming_its_command_or_step
+    self.assertIn(names, tools_by_folder_without_state(step))
+AssertionError: 'setup/github_login.py skip-app' not found in 'gh is signed in as another account than the one you chose: switch with gh auth switch, or choose again with setup/github_login.py sign-in.'
+
+======================================================================
+FAIL: test_each_code_prints_a_one_line_next_naming_its_command_or_step (__main__.EveryCodeHasANextStep.test_each_code_prints_a_one_line_next_naming_its_command_or_step) (project=True, component='github_app', code='app_files_unusable')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/setup/test_check.py", line 144, in test_each_code_prints_a_one_line_next_naming_its_command_or_step
+    self.assertIn(names, tools_by_folder_without_state(step))
+AssertionError: 'setup/github_login.py skip-app' not found in "The App's files in the state's service/app folder must be yours and private (mode 0600): fix them, or connect the App again with github-app/setup.py --repo synthetic-owner/synthetic-consumer."
+
+======================================================================
+FAIL: test_each_code_prints_a_one_line_next_naming_its_command_or_step (__main__.EveryCodeHasANextStep.test_each_code_prints_a_one_line_next_naming_its_command_or_step) (project=True, component='github_app', code='app_key_rejected')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/setup/test_check.py", line 144, in test_each_code_prints_a_one_line_next_naming_its_command_or_step
+    self.assertIn(names, tools_by_folder_without_state(step))
+AssertionError: 'private-key.pem' not found in "GitHub rejected the App's key: connect the App again with github-app/setup.py --repo synthetic-owner/synthetic-consumer."
+
+======================================================================
+FAIL: test_r1_signed_out_without_gh_installs_gh_before_signing_in (__main__.GitHubStepsFromTheReview.test_r1_signed_out_without_gh_installs_gh_before_signing_in)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/setup/test_check.py", line 198, in test_r1_signed_out_without_gh_installs_gh_before_signing_in
+    self.assertIn('https://cli.github.com', step)
+AssertionError: 'https://cli.github.com' not found in "Preview GitHub's browser sign-in with setup/github_login.py sign-in, then run it again with --yes."
+
+======================================================================
+FAIL: test_r2_a_skipped_app_stays_skipped (__main__.GitHubStepsFromTheReview.test_r2_a_skipped_app_stays_skipped)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/setup/test_check.py", line 205, in test_r2_a_skipped_app_stays_skipped
+    self.assertTrue(step.startswith('None:'), step)
+AssertionError: False is not true : Connect OpenWiz's GitHub App with github-app/setup.py --repo synthetic-owner/synthetic-consumer, then confirm with --yes --operation and the id it prints; or skip the App with setup/github_login.py skip-app.
+
+======================================================================
+FAIL: test_r3_a_newly_chosen_account_is_recorded_by_skip_app (__main__.GitHubStepsFromTheReview.test_r3_a_newly_chosen_account_is_recorded_by_skip_app)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/setup/test_check.py", line 214, in test_r3_a_newly_chosen_account_is_recorded_by_skip_app
+    self.assertIn('setup/github_login.py skip-app', step)
+AssertionError: 'setup/github_login.py skip-app' not found in 'gh is signed in as another account than the one you chose: switch with gh auth switch, or choose again with setup/github_login.py sign-in.'
+
+======================================================================
+FAIL: test_r4_a_rejected_app_key_is_replaced_not_reconnected (__main__.GitHubStepsFromTheReview.test_r4_a_rejected_app_key_is_replaced_not_reconnected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/setup/test_check.py", line 219, in test_r4_a_rejected_app_key_is_replaced_not_reconnected
+    self.assertNotIn('github-app/setup.py', step)
+AssertionError: 'github-app/setup.py' unexpectedly found in "GitHub rejected the App's key: connect the App again with github-app/setup.py --repo synthetic-owner/synthetic-consumer."
+
+----------------------------------------------------------------------
+Ran 10 tests in 1.901s
+
+FAILED (failures=10)

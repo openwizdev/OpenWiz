@@ -2,6 +2,22 @@
 
 The fleet skills read this file. Keep every table's headings, columns and rows unchanged: scripts parse them. When a value changes, run the `setup` skill again or edit the row, and name the source.
 
+## Models
+
+Each role's model, under the [models contract](../../contracts/models.v1.md). The Builder starts each ticket and the Small builder each ticket with an exact `polish`, `huntr` or `proposal` label; the Orchestrator starts a spec's fleet thread. A pull request is reviewed by the Reviewer, or by the Builder when the Reviewer is of the pull request's builder's family (ADR 0008); otherwise the review waits. Change a role with `openwiz models set` and commit it: agents started after it reaches `main` use it; an agent already started keeps its model.
+
+| Role | Harness | Model | Effort | `room-cli thread spawn` flags |
+| --- | --- | --- | --- | --- |
+| Orchestrator | Claude Code | Opus 5.5 | Medium | `--provider claude-code --model claude-opus-5-5 --reasoning-level medium` |
+| Builder | Claude Code | Opus 5.5 | Medium | `--provider claude-code --model claude-opus-5-5 --reasoning-level medium` |
+| Reviewer | Codex | Sol 6.2 | Medium | `--provider codex --model gpt-6.2-sol --reasoning-level medium` |
+| Small builder | follows Builder | | | |
+| Fixer | follows Builder | | | |
+
+Source: Jake, 2026-11-19 (J255: builders Opus 5.5 Medium, reviewers Codex Sol 6.2 Medium; [private record](https://github.com/jparker2006/ClosedWiz/issues/3065#issuecomment-7031528626)); the Fixer as J119 (2026-11-15; [private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6906276883)); the Orchestrator as the Builder, which starts the fleet thread today.
+
+**Kept for older skills:** the five tables below, from `## Builder` to `## Fixer`, are what the pinned WizSkills release reads. Keep them equal to this table (`openwiz models set` does; `openwiz models show` warns when they differ) until they go in #2205.
+
 ## Builder
 
 One per ticket, on its own branch. It never reviews or merges. Tickets without an exact `polish`, `huntr` or `proposal` label use this table.
@@ -70,7 +86,7 @@ Every ticket may make these edits beside its owned paths without asking:
 
 1. **Its own rows in shared registries:** `tools/open-import/paths.json` and the CLI test catalogue in `tests/cli-agent/main.rs`.
 2. **Its changelog line** as `changes/<ticket>.md`, whatever its owned paths name.
-3. **Its own evidence folder** under `docs/evidence/`.
+3. **Its own evidence folder,** `docs/evidence/<ticket>/`.
 4. **Synthetic answers to test fakes its change breaks,** with no assertion change.
 5. **Updates to byte-identical carried copies** of a file it owns.
 
@@ -88,7 +104,7 @@ The skill that holds a ticket first creates `held`, once, with the description "
 
 ## Test commands
 
-- **Test budget:** at most 400 net new test lines per pull request in `tests/**`, `crates/*/tests/**`, `**/test_*.py`, `**/*_test.py`, `**/*.test.mjs`, `**/*.test.ts(x)` and `**/__tests__/**`. Offset the excess with deletions, or write `Test budget allowance: <N> lines. Why: <reason>` in the description.
+- **Test budget:** at most 400 net new test lines per pull request in `tests/**`, `crates/*/tests/**`, `**/test_*.py`, `**/*_test.py`, `**/*.test.mjs`, `**/*.test.ts(x)` and `**/__tests__/**`. Offset the excess with deletions, or write `Test budget allowance: <N> lines. Why: <reason>` in the description. No CI step counts these lines: the reviewer checks the limit and any recorded allowance during review, on the exact head, and a pull request over the limit without an allowance gets a finding.
 - **Locally,** run the red/green proof and only the tests your change can affect, plus `cargo fmt --check` and `cargo clippy -p <touched-crate> --all-targets -- -D warnings`. Never run the full workspace locally. CI runs the full set; its green result at the exact head is the hand-back gate. Source: Jake, 2026-11-03 ([private record](https://github.com/jparker2006/ClosedWiz/issues/1724#issuecomment-6697900652)).
 - **One `cargo` command per checkout at a time.** A build can replace `target/debug/fake-room-cli` or `target/release/openwiz` under running tests. Run anything alongside in a separate worktree with its own `target/` (#195).
 

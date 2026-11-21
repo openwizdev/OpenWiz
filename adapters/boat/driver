@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-import ctypes, fcntl, json, os, re, secrets, shutil, signal, subprocess, sys, time
+import ctypes, fcntl, importlib.machinery, importlib.util, json, os, re, secrets, shutil, signal, subprocess, sys, time
+
+sys.dont_write_bytecode = True
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATE = os.environ.get('OPENWIZ_BOAT_STATE') or os.path.expanduser('~/.local/state/openwiz-boat')
@@ -13,10 +15,30 @@ START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket':
 RUN = {'run': r'run-[0-9a-f]{12}'}
 ID = re.compile(r'[A-Za-z0-9_.:-]{1,100}')
 UP = ('running', 'ready', 'idle')  # the sandbox states a wake may prompt in; any other refuses it
+STATES = UP + ('stopped', 'archived')
 QUEUED_WAIT = 45  # seconds for boat to queue a turn; the kit gives a command 120
 INSTALL_WAIT = 60  # seconds for the sandbox to install the pinned skills
+DEFAULT_SETTLE_SECONDS, MAX_SETTLE_SECONDS = 20, 60
+SHOWN_LIMIT_TYPES = {'auth_expiry': 'auth_expiry', 'rate_limit': 'rate_limit'}
+MACOS_SECONDS_BETWEEN_LOOKS = 0.2
+LOOKS_PER_OUTPUT_CHECK = 5
 GRACE = 10  # seconds a stopped process has to exit before it is killed
 UNWRITABLE = 'make OPENWIZ_BOAT_STATE (or ~/.local/state/openwiz-boat) a folder you can write'
+KIT = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'kit.py')
+# PRIVACY: boat's own words (an error's text, an unknown code, its stderr) are only classified, never repeated:
+# an auth diagnostic may hold a credential.
+HOST_ERRORS = {'provider_not_configured': "connect that harness's key or subscription in boat's dashboard (Agents & "
+                                          'Proxying) yourself',
+               'sandbox_not_found': 'check that the sandbox is still in `boat list --all`',
+               'sandbox_not_ready': 'check that the sandbox runs in `boat list --all`',
+               'conversation_not_found': 'check `boat conversations <sandbox>` for the conversation'}
+SIGNED_OUT = re.compile(r'sign|login|auth|401|unauthori[sz]ed|expired', re.I)
+SIGN_IN = 'sign in to boat yourself with `boat login`'
+INSTALL_REFUSALS = ((r'refused: tag v\S+ is not the pinned commit', 'its tag is not the pinned commit'),
+                    (r'refused: commit \S+ is not the pinned tree', 'its commit is not the pinned tree'),
+                    (r'refused: the installed release is not the pinned (?:commit|tree)',
+                     'the installed release is not the pinned one'),
+                    (r'refused: \S+ exists', 'another skill of that name is installed there'))
 
 
 class Refused(Exception):
@@ -50,6 +72,29 @@ def read(fields):
     return req
 
 
+def credential_check():
+    try:
+        spec = importlib.util.spec_from_loader('openwiz_driver_kit', importlib.machinery.SourceFileLoader(
+            'openwiz_driver_kit', KIT))
+        kit = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(kit)
+        return kit.holds_credential
+    except Exception:
+        raise Refused("the driver kit's credential check is missing, so no start field can be checked; nothing "
+                      'was started', 'run the driver from an OpenWiz checkout or release that carries '
+                      'kernel/driver-kit/kit.py')
+
+
+def no_credentials(req):
+    # PRIVACY: runs before anything is saved or started, and the refusal names the field, never its value.
+    holds_credential = credential_check()
+    for key in START:
+        if isinstance(req[key], str) and holds_credential(req[key]):
+            raise Refused('%s looks like a credential, so nothing was saved or started' % key,
+                          'send the %s itself in %s; never a login, key or token' % (key, key))
+    return req
+
+
 def boat_program():
     found = shutil.which('boat')
     if not found:
@@ -58,17 +103,22 @@ def boat_program():
     return found
 
 
-def boat_error(what, lines, stderr, then):
-    """Refused, from boat's last `{"event": "error"}` line or its output; `then` is the step after the fix."""
+def host_said(lines, stderr):
     errors = [x for x in lines if x.get('event') == 'error']
-    detail = '%s (%s)' % (errors[-1].get('error'), errors[-1].get('code')) if errors else stderr or 'no answer'
-    if 'provider_not_configured' in detail:
-        step = "connect that harness's key or subscription in boat's dashboard (Agents & Proxying) yourself"
-    elif re.search(r'sign|login|auth|401', detail, re.I):
-        step = 'sign in to boat yourself with `boat login`'
-    else:
-        step = 'fix what boat said'
-    return Refused(line('boat %s failed: %s' % (what, detail)), line('%s, then %s' % (step, then)))
+    code = errors[-1].get('code') if errors else None
+    if isinstance(code, str) and code in HOST_ERRORS:
+        return code, HOST_ERRORS[code]
+    told = ' '.join(str(errors[-1].get(k)) for k in ('error', 'code')) if errors else stderr
+    if SIGNED_OUT.search(told):
+        return 'boat is not signed in', SIGN_IN
+    return ('boat gave an error the driver does not repeat' if told.strip() else 'boat gave no answer'), None
+
+
+def boat_error(what, lines, stderr, then, log=None):
+    why, step = host_said(lines, stderr)
+    if step is None:
+        step = 'read %s for what boat said' % log if log else 'run `boat %s` by hand to read what it says' % what
+    return Refused(line('boat %s failed: %s' % (what, why)), line('%s, then %s' % (step, then)))
 
 
 def parse(text):
@@ -100,7 +150,9 @@ def boat(then, *args):
 def prompt_text(req, woken):
     what = 'You were woken: read the ticket again and carry on' if woken else 'Build the ticket'
     return ('%s: GitHub repository %s, ticket #%d, with the %s skill (~/wizskills/skills/%s/SKILL.md). Clone '
-            'the repository if it is not here yet, and follow its instructions.'
+            'the repository if it is not here yet, and follow its instructions. This run uses the host\'s default '
+            'effort (driver v1 passes none), so your status note\'s model field is `<your model> default effort`, '
+            'such as `Opus 5.5 default effort`, never a configured effort.'
             % (what, req['repository'], req['ticket'], req['skill'], req['skill']))
 
 
@@ -163,11 +215,12 @@ def install_skills(sandbox, lock):
         raise Refused('the pinned WizSkills skills were not installed in sandbox %s in time' % sandbox,
                       'check that the sandbox reaches github.com, then start again')
     if p.returncode != 0 or ('openwiz-skills-ok ' + lock['version']) not in p.stdout:
-        why = re.findall(r'refused: [^"\\\n]+', p.stdout + p.stderr) or [(p.stderr or p.stdout).strip()[-150:] or 'no answer']
+        refused = [why for pattern, why in INSTALL_REFUSALS if re.search(pattern, p.stdout + p.stderr)]
+        why, step = (refused[0], None) if refused else host_said(parse(p.stdout), p.stderr.strip()[-200:])
         raise Refused(line('the pinned WizSkills skills (%s) could not be installed in sandbox %s: %s'
-                           % (lock['version'], sandbox, why[0])),
-                      'check that the sandbox reaches github.com and that no other skill of that name is installed '
-                      'there, then start again')
+                           % (lock['version'], sandbox, why)),
+                      line(('%s, then ' % step if step else '') + 'check that the sandbox reaches github.com and '
+                           'that no other skill of that name is installed there, then start again'))
 
 
 def path(run, name):
@@ -176,9 +229,6 @@ def path(run, name):
 
 LINUX = os.path.isdir('/proc/self') and hasattr(os, 'pidfd_open')
 PR_SET_CHILD_SUBREAPER = 36
-
-
-TURN = re.compile(r'\s--turn\s')
 
 
 def ps(*args):
@@ -193,17 +243,18 @@ def ps(*args):
     return out.splitlines(), p.pid
 
 
-def members(roots, run):
-    rows, me = ps('-A', '-ww', '-o', 'pid=', '-o', 'ppid=', '-o', 'pgid=', '-o', 'stat=', '-o', 'command=', '-E')
-    mark = re.compile(r'(?:^|\s)OPENWIZ_RUN=%s(?:\s|$)' % re.escape(run))
-    found, children = set(), {}
+# PRIVACY: reads only ps's process table (pid, parent, group, state, start time), never any environment.
+def members(roots, recorded, writers=()):
+    rows, me = ps('-A', '-o', 'pid=', '-o', 'ppid=', '-o', 'pgid=', '-o', 'stat=', '-o', 'lstart=')
+    started, children, found = {}, {}, set()
     for row in rows:
         f = row.split(None, 4)
-        if len(f) < 4 or f[3].startswith('Z'):
+        if len(f) < 5 or f[3].startswith('Z'):
             continue
         pid, ppid, group = int(f[0]), int(f[1]), int(f[2])
+        started[pid] = f[4].strip()
         children.setdefault(ppid, []).append(pid)
-        if group in roots or len(f) > 4 and mark.search(f[4]) and not TURN.search(f[4]):
+        if group in roots or recorded.get(pid) == started[pid] or pid in writers:
             found.add(pid)
     todo = list(roots) + list(found)
     while todo:
@@ -211,7 +262,33 @@ def members(roots, run):
             if c not in found:
                 found.add(c)
                 todo.append(c)
-    return found - set(roots) - {os.getpid(), me}
+    return {p: started[p] for p in found - set(roots) - {os.getpid(), me}}
+
+
+# PRIVACY: asks lsof only which processes hold this run's own turn logs open for writing, never any environment.
+def writing_to(paths):
+    if not paths:
+        return set()
+    try:
+        out = subprocess.run(['lsof', '-F', 'pa', '--'] + list(paths), stdin=subprocess.DEVNULL,
+                             capture_output=True, text=True, timeout=30).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return set()
+    found, pid = set(), None
+    for field in out.splitlines():
+        if field[:1] == 'p' and field[1:].isdigit():
+            pid = int(field[1:])
+        elif field[:1] == 'a' and field[1:2] in ('w', 'u') and pid is not None:
+            found.add(pid)
+    return found
+
+
+def turn_logs(run):
+    try:
+        names = os.listdir(STATE)
+    except FileNotFoundError:
+        return []
+    return sorted(os.path.join(STATE, n) for n in names if n.startswith(run + '.') and n.endswith('.log'))
 
 
 def since(pid):
@@ -247,6 +324,13 @@ def descendants(pid):
     return found
 
 
+def record_this_supervisor(log, kept=None):
+    record = '%s.%d.sup' % (log[:-len('.log')], os.getpid())
+    with open(record + '.new', 'w') as f:
+        json.dump({'supervisor': os.getpid(), 'supervisor_since': since(os.getpid()), 'kept': kept or {}}, f)
+    os.replace(record + '.new', record)
+
+
 def supervise(log, cmd):
     """One turn, as `driver --turn <log> <boat prompt ...>`: run it with its output in log, and keep every
     process it starts as this turn's (an orphan comes back here, whatever its session or environment) until
@@ -255,6 +339,7 @@ def supervise(log, cmd):
         print(json.dumps({'error': "this host cannot keep a turn's processes together"}), flush=True)
         return
     try:
+        record_this_supervisor(log)
         with open(log, 'a') as out:
             turn = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=out, stderr=subprocess.STDOUT)
     except OSError as e:
@@ -263,13 +348,38 @@ def supervise(log, cmd):
     signal.signal(signal.SIGTERM, signal.SIG_IGN)  # only `end` stops a turn, and it never orphans one
     print(json.dumps({'pid': turn.pid, 'since': since(turn.pid)}), flush=True)
     os.dup2(os.open(os.devnull, os.O_WRONLY), 1)
+    if LINUX:
+        while True:
+            try:
+                os.wait()
+            except ChildProcessError:
+                return
+    kept, looks = {}, 0
+    while True:
+        children_left = any_child_running_after_reaping()
+        scanned = looks % LOOKS_PER_OUTPUT_CHECK == 0
+        now = members({os.getpid()}, kept, writing_to([log]) if scanned else ())
+        if not children_left and not now and not scanned:
+            now = members({os.getpid()}, kept, writing_to([log]))
+        looks += 1
+        if now != kept:
+            kept = now
+            try:
+                record_this_supervisor(log, {str(p): t for p, t in kept.items()})
+            except OSError:
+                pass
+        if not children_left and not kept:
+            return
+        time.sleep(MACOS_SECONDS_BETWEEN_LOOKS)
+
+
+def any_child_running_after_reaping():
     while True:
         try:
-            os.wait()
+            if os.waitpid(-1, os.WNOHANG)[0] == 0:
+                return True
         except ChildProcessError:
-            if LINUX or not members({os.getpid()}, os.environ['OPENWIZ_RUN']):
-                return
-            time.sleep(0.2)
+            return False
 
 
 def running(turn):
@@ -277,18 +387,21 @@ def running(turn):
     return bool(turn) and turn['since'] is not None and since(turn['pid']) == turn['since']
 
 
-def end(turns, run):
+def end(turns, run, logs):
     """End every process the turns' supervisors still keep, whatever its session or environment.
     A supervisor exits only once none of its processes is left, so this returns once every one has exited."""
     kept = [(t['supervisor'], t['supervisor_since']) for t in turns if t and t['supervisor_since'] is not None]
+    left = set()
     for sig, wait in ((signal.SIGTERM, GRACE), (signal.SIGKILL, 2)):
         sent, deadline = set(), time.monotonic() + wait
         while time.monotonic() < deadline:
             kept = [(p, t) for p, t in kept if since(p) == t]
-            if not kept:
-                return
             if not LINUX:
-                for p in members({s for s, _ in kept}, run) - sent:
+                supervisors = {s for s, _ in kept}
+                left = set(members(supervisors, recorded_by(run, supervisors), writing_to(logs)))
+                if not kept and not left:
+                    return
+                for p in left - sent:
                     try:
                         os.kill(p, sig)
                         sent.add(p)
@@ -296,6 +409,8 @@ def end(turns, run):
                         pass
                 time.sleep(0.1)
                 continue
+            if not kept:
+                return
             pinned = {}
             for p in set().union(*(descendants(s) for s, _ in kept)) - sent:
                 try:  # pin each pid first, then check it is still under a supervisor, so no reused pid is hit
@@ -315,7 +430,7 @@ def end(turns, run):
             time.sleep(0.1)
     raise Refused('run %s still has local processes after stop' % run,
                   'stop it again, or end its processes by hand: they run under process %s'
-                  % ', '.join(str(p) for p, _ in kept))
+                  % ', '.join(str(p) for p in [p for p, _ in kept] or sorted(left)))
 
 
 def prompt(state, run):
@@ -354,13 +469,55 @@ def prompt(state, run):
         if queued:
             return turn, queued[0]
         if ended:  # boat refused the prompt: nothing was queued
-            end([turn], run)
-            raise boat_error('prompt', lines, text.strip()[-200:], then)
+            end([turn], run, [log])
+            raise boat_error('prompt', lines, text.strip()[-200:], then, log)
         if time.monotonic() > deadline:
-            end([turn], run)
+            end([turn], run, [log])
             raise Refused('boat did not queue the turn within %d seconds; its outcome is unknown' % QUEUED_WAIT,
                           'check `boat conversations %s` for it, then stop the run' % state['sandbox'])
         time.sleep(0.1)
+
+
+def settle_seconds():
+    raw = os.environ.get('OPENWIZ_BOAT_SETTLE') or str(DEFAULT_SETTLE_SECONDS)
+    try:
+        seconds = float(raw)
+    except ValueError:
+        seconds = float('nan')
+    if not 0 < seconds <= MAX_SETTLE_SECONDS:
+        raise Refused('OPENWIZ_BOAT_SETTLE is not a number of seconds above 0 and at most %d; nothing was started'
+                      % MAX_SETTLE_SECONDS, 'unset it, or set it to a number of seconds up to %d, then start again'
+                      % MAX_SETTLE_SECONDS)
+    return seconds
+
+
+def refuse_a_dead_first_turn(run, turn, settle):
+    log, deadline = path(run, '0.log'), time.monotonic() + settle
+    while True:
+        ended_before_this_read = not running(turn)
+        try:
+            with open(log, errors='replace') as f:
+                lines = parse(f.read())
+        except OSError:
+            lines = []
+        limits = [x.get('data') if isinstance(x.get('data'), dict) else x
+                  for x in lines if x.get('event') == 'usage_limit']
+        if limits:
+            kind = limits[0].get('limitType')
+            why = 'hit a usage limit (%s)' % (SHOWN_LIMIT_TYPES.get(kind, 'unknown') if isinstance(kind, str) else 'unknown')
+            break
+        if ended_before_this_read:
+            if any(isinstance(x.get('data'), dict) and x['data'].get('tools') for x in lines):
+                return
+            why = 'finished with no tool call'
+            break
+        if time.monotonic() > deadline:
+            return
+        time.sleep(0.1)
+    end([turn], run, [log])
+    raise Refused('run %s: the first turn %s, so the run did not start' % (run, why),
+                  line('read %s for why; for an expired login, sign that harness in again in boat\'s dashboard (Agents '
+                       '& Proxying) yourself; for a rate limit, wait for it to reset; then start again' % log))
 
 
 def text_id(value):
@@ -381,7 +538,7 @@ def sandbox_state(sandbox):
     for x in boat('stop the run', 'info', sandbox):
         box = x.get('sandbox') if isinstance(x.get('sandbox'), dict) else x
         if 'state' in box:
-            found = str(box['state'])
+            found = box['state'] if box['state'] in STATES else 'unknown'
     return found
 
 
@@ -465,37 +622,49 @@ def stopping(run):
         return True
 
 
-def strays(run, known):
-    """This run's turn supervisors on this machine that its record doesn't name: a turn begun by a command
-    that then failed before it could save it. Found by the run's mark and the `--turn` argument."""
-    found = []
-    if not LINUX:
-        mark = re.compile(r'(?:^|\s)OPENWIZ_RUN=%s(?:\s|$)' % re.escape(run))
-        for row in ps('-A', '-ww', '-o', 'pid=', '-o', 'command=', '-E')[0]:
-            p, _, command = row.strip().partition(' ')
-            if re.search(r'\s--turn\s', command) and mark.search(command) and int(p) not in known \
-                    and since(int(p)) is not None:
-                found.append({'supervisor': int(p), 'supervisor_since': since(int(p))})
-        return found
-    for p in filter(str.isdigit, os.listdir('/proc')):
+def supervisor_records(run):
+    try:
+        names = os.listdir(STATE)
+    except FileNotFoundError:
+        return []
+    return sorted(os.path.join(STATE, n) for n in names if n.startswith(run + '.') and n.endswith('.sup'))
+
+
+def recorded_by(run, supervisors):
+    recorded = {}
+    for name in supervisor_records(run):
         try:
-            with open('/proc/%s/environ' % p, 'rb') as f:
-                mine = ('OPENWIZ_RUN=' + run).encode() in f.read().split(b'\0')
-            with open('/proc/%s/cmdline' % p, 'rb') as f:
-                turn = f.read().split(b'\0')[3:4] == [b'--turn']
-        except OSError:
+            with open(name) as f:
+                kept = json.load(f)
+            if kept['supervisor'] in supervisors:
+                recorded.update({int(p): t for p, t in kept['kept'].items() if isinstance(t, str)})
+        except (OSError, ValueError, KeyError, TypeError, AttributeError):
             continue
-        if mine and turn and int(p) not in known and since(int(p)) is not None:
-            found.append({'supervisor': int(p), 'supervisor_since': since(int(p))})
+    return recorded
+
+
+# PRIVACY: finds a run's unsaved turns only by the records their supervisors wrote in its state folder, never
+# by reading another process's environment.
+def strays(run, known):
+    found = []
+    for name in supervisor_records(run):
+        try:
+            with open(name) as f:
+                kept = json.load(f)
+            p, t = kept['supervisor'], kept['supervisor_since']
+        except (OSError, ValueError, KeyError, TypeError):
+            continue
+        if type(p) is int and p > 0 and p not in known and t is not None and since(p) == t:
+            found.append({'supervisor': p, 'supervisor_since': t})
     return found
 
 
-def shutdown(run, turns, sandbox, conversation, stop_sandbox):
+def shutdown(run, turns, sandbox, conversation, stop_sandbox, logs=None):
     """End the run's local turns, then always stop its sandbox (or only interrupt the conversation), whatever
     the first step did: a failure of one never skips the other. Returns each failure, as Refused."""
     failures = []
     try:
-        end(turns + strays(run, {t['supervisor'] for t in turns}), run)
+        end(turns + strays(run, {t['supervisor'] for t in turns}), run, turn_logs(run) if logs is None else logs)
     except Refused as e:
         failures.append(e)
     except Exception as e:  # even a /proc this driver may not read (L2): the sandbox's stop below still runs
@@ -527,7 +696,8 @@ def abandon(run, state, cmd, error):
     (a wake interrupts its conversation instead). Returns None if that worked, else what to answer instead
     of error: no failure here goes unreported."""
     what = error.args[0] if isinstance(error, Refused) else 'the driver failed: ' + type(error).__name__
-    failures = shutdown(run, [], state['sandbox'], state['conversation'], cmd == 'start')
+    failures = shutdown(run, [], state['sandbox'], state['conversation'], cmd == 'start',
+                        [path(run, '%d.log' % len(state['turns']))])
     if cmd == 'start':
         try:
             saved(run, dict(state, stopped=True))
@@ -536,10 +706,10 @@ def abandon(run, state, cmd, error):
     return reported(what, failures, '') if failures else None
 
 
-def unsaved(run, sandbox, turn, conversation, cmd):
+def unsaved(run, sandbox, turn, conversation, cmd, log):
     """A turn began but could not be saved: end it here and in the sandbox, and say the outcome is unknown,
     never to do it again. After a start, the sandbox is stopped too: the run never finished starting."""
-    failures = shutdown(run, [turn], sandbox, conversation, cmd == 'start')
+    failures = shutdown(run, [turn], sandbox, conversation, cmd == 'start', [log])
     if failures:
         raise reported('run %s began a turn it could not save, and could not confirm everything ended; its '
                        'outcome is unknown' % run, failures, 'read the ticket for what its agent did')
@@ -552,6 +722,7 @@ def start(req):
     if req['harness'] not in HARNESSES:
         raise Refused('boat has no harness %s' % req['harness'], 'use one of: ' + ', '.join(HARNESSES))
     boat_program()
+    settle = settle_seconds()
     lock = pinned_skills()
     run = 'run-' + secrets.token_hex(6)
     state = {'request': req, 'sandbox': None, 'conversation': None, 'turns': [],
@@ -566,7 +737,7 @@ def start(req):
     except Refused as e:
         raise Refused(e.args[0], line(e.args[1] + '; if `boat list` shows a sandbox named openwiz-%s, stop it '
                                                   'first' % run))
-    if not ready or not text_id(ready[-1].get('id')):
+    if not ready or not text_id(ready[-1].get('id')) or credential_check()(ready[-1]['id']):
         raise Refused('boat new gave no sandbox id', 'stop the sandbox named openwiz-%s in `boat list` yourself, '
                                                      'then start again' % run)
     state['sandbox'] = ready[-1]['id']
@@ -578,10 +749,12 @@ def start(req):
                           UNWRITABLE + ', then start again')  # the cleanup below stops it, or reports why not
         install_skills(state['sandbox'], lock)
         turn, talk = prompt(state, run)
+        state['conversation'] = talk
+        refuse_a_dead_first_turn(run, turn, settle)
         try:
             saved(run, dict(state, turns=[turn], conversation=talk, starting=False))
         except OSError:  # the turn began but its run is not saved: end it, and never say do it again
-            unsaved(run, state['sandbox'], turn, talk, 'start')
+            unsaved(run, state['sandbox'], turn, talk, 'start', path(run, '0.log'))
     except Exception as e:
         instead = abandon(run, state, 'start', e)
         if instead:
@@ -617,7 +790,7 @@ def wake(run):
         try:
             saved(run, dict(state, turns=state['turns'] + [turn]))
         except OSError:
-            unsaved(run, state['sandbox'], turn, state['conversation'], 'wake')
+            unsaved(run, state['sandbox'], turn, state['conversation'], 'wake', path(run, '%d.log' % len(state['turns'])))
     except Refused:
         raise  # prompt and unsaved have already ended what they began
     except Exception as e:
@@ -638,8 +811,9 @@ def stop(run):
     except OSError:
         kept = False
     failures = shutdown(run, state['turns'], state['sandbox'], state['conversation'], True)  # whatever the save did
+    every_process_ended = not failures
     for name in os.listdir(STATE):
-        if name.startswith(run + '.') and name.endswith('.log'):
+        if name.startswith(run + '.') and (name.endswith('.log') or name.endswith('.sup') and every_process_ended):
             try:
                 os.remove(os.path.join(STATE, name))
             except OSError:
@@ -660,7 +834,7 @@ def answer(cmd):
         with open(os.path.join(HERE, 'schema.json')) as f:
             return json.load(f)
     if cmd == 'start':
-        return start(read(START))
+        return start(no_credentials(read(START)))
     if cmd in ('wake', 'stop'):
         run = read(RUN)['run']
         return wake(run) if cmd == 'wake' else stop(run)

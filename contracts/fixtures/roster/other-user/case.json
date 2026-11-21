@@ -30,6 +30,10 @@
     {
       "ticket": 7,
       "role": "builder",
+      "start": {
+        "kind": "build",
+        "labels": []
+      },
       "choice": {
         "harness": "Codex",
         "provider": "codex",
@@ -64,6 +68,10 @@
     {
       "ticket": 8,
       "role": "builder",
+      "start": {
+        "kind": "fix",
+        "builder_family": "claude"
+      },
       "choice": {
         "harness": "Claude Code",
         "provider": "claude-code",
@@ -98,6 +106,10 @@
     {
       "ticket": 9,
       "role": "reviewer",
+      "start": {
+        "kind": "review",
+        "builder_family": "gpt"
+      },
       "choice": {
         "harness": "Claude Code",
         "provider": "claude-code",
@@ -132,6 +144,9 @@
     {
       "ticket": 10,
       "role": "orchestrator",
+      "start": {
+        "kind": "spec"
+      },
       "choice": {
         "harness": "Codex",
         "provider": "codex",

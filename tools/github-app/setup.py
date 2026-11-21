@@ -1,5 +1,18 @@
 #!/usr/bin/env python3
-"""Connect OpenWiz's GitHub App on this host (#1105): register it through GitHub's
+import base64
+import html
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import json
+import os
+from pathlib import Path
+import re
+import secrets
+import subprocess
+import sys
+import time
+import urllib.parse
+
+DESCRIPTION = """Connect OpenWiz's GitHub App on this host (#1105): register it through GitHub's
 manifest flow, save its key, and capture its installation on selected repositories.
 
 Without --yes: records the proposed `connect_app` operation in the setup state
@@ -22,30 +35,14 @@ installs only on its owner's account; a conversion owned by another account is
 refused before its key goes anywhere. --factory is the explicit, separate
 setting for the factory's public multi-account App and its named installations.
 """
-import base64
-import html
-from http.server import BaseHTTPRequestHandler, HTTPServer
-import json
-import os
-from pathlib import Path
-import re
-import secrets
-import subprocess
-import sys
-import time
-import urllib.parse
 
 HERE = Path(__file__).resolve().parent
-# Its own helpers even under `python3 -I`, and the setup store: `../setup` in an
-# installed runtime/, `../install/setup` in the repository (#1105).
 sys.path[:0] = [str(HERE), str(HERE.parent / "setup"), str(HERE.parent / "install" / "setup")]
-import app  # noqa: E402
-import store  # noqa: E402  (the durable setup operation store)
+import app
+import store
 
 INSTALL = re.compile(r"[1-9][0-9]{0,15}")
-# A GitHub login: letters, digits and single inner hyphens, at most 39.
 LOGIN = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}")
-# contracts/github-identity.v1.md: the secret and the App id beside it.
 SECRET, APP_ID = "OPENWIZ_GITHUB_APP_KEY", "OPENWIZ_GITHUB_APP_ID"
 
 
@@ -61,7 +58,6 @@ def effects(repo, saved, after):
 
 
 def newest_uncertain(value, besides=None):
-    """The newest uncertain App registration, host or agent: it may exist on GitHub."""
     found = [o["operation_id"] for o in value["operations"] if o["kind"] == "connect_app"
              and o["phase"] == "uncertain" and o["operation_id"] != besides]
     return found[-1] if found else None
@@ -75,9 +71,6 @@ def refuse_uncertain(newest):
 
 
 def still_newest(operation, after):
-    """Re-check R3: under the claim's own lock, the acknowledged newest uncertain
-    registration must still be the newest; a registration that became uncertain
-    after this was authorized blocks the claim."""
     def check(value):
         if newest_uncertain(value, operation["operation_id"]) != after:
             raise store.Refused("a newer registration became uncertain; reconcile it first")
@@ -109,13 +102,11 @@ def agent_effects(account, organization, app_id, store, factory):
 
 
 def sign(pem, app_id):
-    """An App JWT from a key held only in memory: openssl reads it from a pipe,
-    never an argument or a file."""
     app.require(type(app_id) is int and app_id > 0 and 0 < len(pem) <= 16384)
     read, write = os.pipe()
     try:
         with os.fdopen(write, "wb") as pipe:
-            pipe.write(pem)  # within the pipe's buffer: 16 KiB at most
+            pipe.write(pem)
         now = int(time.time())
         message = (app.encode(b'{"alg":"RS256","typ":"JWT"}') + b"." + app.encode(json.dumps(
             {"iat": now - 60, "exp": now + 540, "iss": str(app_id)}, separators=(",", ":")).encode()))
@@ -126,25 +117,17 @@ def sign(pem, app_id):
 
 
 def installable(factory, owner, account):
-    """J48: a user App installs only on its owner's account; the factory's App
-    (the explicit setting) only on an account the identity contract names."""
     if factory:
         return account.lower() in app.factory_installations()
     return isinstance(owner, str) and owner.lower() == account.lower()
 
 
 def store_secret(program, name, value):
-    """The one secret seam. Assumption A1: Cloudroom's agent-side store takes
-    the secret's NAME as its only argument and its value on stdin. It runs with
-    no environment, and nothing it prints is shown."""
     result = subprocess.run([str(program), name], input=value, capture_output=True, timeout=60, env={}, cwd="/")
     app.require(result.returncode == 0)
 
 
 def delivered(registered):
-    """(App id, key, id delivered) as Cloudroom delivers the secret, or None
-    without a key. A key alone takes its id from the registration recorded here
-    (a partial delivery); a delivered id must agree with that record."""
     key, ident = os.environ.get(SECRET), os.environ.get(APP_ID)
     if key is None:
         return None
@@ -155,24 +138,17 @@ def delivered(registered):
     return app_id, pem, ident is not None
 
 
-# setup-onboard.v1's protected-paste route: the owner's own steps, each counted.
 FALLBACK_STEPS = ("open_app_settings", "generate_key", "download_key", "encode_key",
                   "paste_protected_prompt", "delete_download")
 
 
 def capability(registered, store, revision):
-    """setup-onboard.v1's `secret_capability` document for this host, from local
-    facts only: no network and no write. The no-paste route needs the CloudRoom
-    agent-side save-secret contribution observed; a --secret-store program is a
-    seam, never that observation, so its upstream stays `unknown` (and the
-    contract's checker reports it unavailable). The owner's steps and their
-    download's deletion are the documented route's, never observed here."""
     key, ident = os.environ.get(SECRET), os.environ.get(APP_ID)
     evidence = []
     if key is None:
         state = "missing"
     elif ident is None or registered is None:
-        state = "uncertain"  # a partial delivery, or no registration recorded here to agree with
+        state = "uncertain"
     else:
         try:
             pem = base64.b64decode(key.encode("ascii"), validate=True)
@@ -207,8 +183,6 @@ def capability(registered, store, revision):
 
 
 def reply(handler, status, text, script=None, location=None):
-    """A no-store page. SCRIPT is the nonce of its one inline script; LOCATION
-    sends the browser on (303) so the person's only clicks are GitHub's."""
     data = text.encode()
     policy = ("default-src 'none'; form-action https://github.com; base-uri 'none'; frame-ancestors 'none'"
               + (f"; script-src 'nonce-{script}'" if script else ""))
@@ -223,8 +197,6 @@ def reply(handler, status, text, script=None, location=None):
 
 
 def agent(args):
-    """GI4's agent mode: one App, its public id recorded here, its key only in
-    the Cloudroom secret (or, with no store, discarded)."""
     account = args.agent_for
     app.require(LOGIN.fullmatch(account) is not None and args.repo is None)
     program = None
@@ -232,7 +204,6 @@ def agent(args):
         program = Path(args.secret_store)
         app.require(program.is_absolute() and program.is_file() and os.access(program, os.X_OK))
     home = "https://github.com/" + account
-    # GitHub's manifest schema requires url whenever hook_attributes is present.
     template = dict(app.manifest(factory=args.factory, account=account), url=home,
                     hook_attributes={"url": home, "active": False})
     state = app.state_path(args.state_dir)
@@ -249,13 +220,9 @@ def agent(args):
 
 
 def agent_run(args, account, program, template, setup, directory):
-    # Review R2: the one registered App's public id, recorded before its key is
-    # provisioned. While it exists, nothing is ever registered again, for any account.
     registered = saved_app(directory)
     if os.environ.get(SECRET) is None and os.environ.get(APP_ID) is not None:
-        # Review R6: a delivered id names an existing App (a fresh sandbox, J27's
-        # path): never offer Create; wait for its key.
-        shown = os.environ[APP_ID] if INSTALL.fullmatch(os.environ[APP_ID]) else "(not an id)"  # never echo a value
+        shown = os.environ[APP_ID] if INSTALL.fullmatch(os.environ[APP_ID]) else "(not an id)"
         print(f"App connection refused: App {shown} is delivered without its key. Deliver "
               f"the Cloudroom secret {SECRET} to reconcile it; if the key is lost, generate a new one on GitHub "
               "as docs/agents/github-app.md says.", file=sys.stderr)
@@ -275,11 +242,6 @@ def agent_run(args, account, program, template, setup, directory):
                "permissions": app.SERVICE,
                "reconcile": existing[0] if reconcile else None, "store": program is not None,
                "after": None if reconcile else args.after_uncertain}
-    # Review R1: a registration, once applied, stands while its App id is
-    # recorded here (#606 review R2: after the documented cleanup of a refused
-    # registration it no longer does, so only a fresh proposal can register);
-    # a reconciliation never stands, so every run reads GitHub again and offers
-    # the install again.
     stands = (lambda value: False) if reconcile else (lambda value: saved_app(directory) is not None)
     if not args.yes:
         operation = setup.propose("connect_app", request, agent_effects(
@@ -299,16 +261,12 @@ def agent_run(args, account, program, template, setup, directory):
     if reconcile:
         app_id, pem, id_delivered = existing
         status, found = app.get(args.api_base, "/app", sign(pem, app_id))
-        # Signed with the delivered key, so it is this App. A user App must be
-        # LOGIN's own (J48); only the factory's App installs on its other named accounts.
         app.require(status == 200 and found.get("id") == app_id and isinstance(found.get("slug"), str))
         app.service_permissions(found.get("permissions"))
         app.require(installable(args.factory, (found.get("owner") or {}).get("login"), account))
         if registered is None:
             app.save_file(directory, "app.json", json.dumps({"app_id": app_id}).encode())
         if not id_delivered and program is not None:
-            # Review R5: a partial delivery is repaired with the public id only;
-            # the delivered key is never converted, stored or replaced again.
             store_secret(program, APP_ID, f"{app_id}\n".encode())
         outcome.update(slug=found["slug"], app_id=app_id, pem=pem)
     if args.organization:
@@ -322,19 +280,17 @@ def agent_run(args, account, program, template, setup, directory):
                 + urllib.parse.urlencode({"state": nonce}))
 
     def install_page(handler, lead):
-        # Straight on to GitHub's install page: the person's second click is GitHub's Install.
         reply(handler, 303, f'<!doctype html><title>OpenWiz GitHub App</title><p>{lead} '
               f'<a href="{html.escape(install_link(), quote=True)}">Install it</a> on {html.escape(account)}, '
               'selecting only the repositories you were given.</p>', location=install_link())
 
     def unregistered(value):
-        # Under the claim's lock: still no App recorded here, and no newer uncertain registration.
         still_newest(operation, request["after"])(value)
         if saved_app(directory) is not None:
             raise store.Refused("an App is already registered here; reconcile it")
 
     class Handler(BaseHTTPRequestHandler):
-        # Request paths carry GitHub's temporary code: never log them.
+        # SECURITY: request paths carry GitHub's temporary code; never log them.
         def log_message(self, *_args):
             pass
 
@@ -356,8 +312,6 @@ def agent_run(args, account, program, template, setup, directory):
                     install_page(self, f"The App is registered and its key is in the Cloudroom secret {SECRET}.")
                     return
                 if not outcome["claimed"]:
-                    # Review R4: GitHub creates the App at Create, before any callback,
-                    # so the registration is uncertain before the form is released.
                     try:
                         setup.settle(operation["operation_id"], "uncertain",
                                      "The creation form was released; the App may exist on GitHub.",
@@ -372,7 +326,6 @@ def agent_run(args, account, program, template, setup, directory):
                              setup_on_update=True)
                 action = target + urllib.parse.urlencode({"state": nonce})
                 script = secrets.token_urlsafe(16)
-                # The form submits itself, so the person's first click is GitHub's Create.
                 reply(self, 200, '<!doctype html><title>OpenWiz GitHub App</title><h1>OpenWiz GitHub App</h1>'
                       f'<p>Create {"the factory&#39;s public App" if args.factory else "your private App"} for '
                       f'{html.escape(account)} with Metadata read, Contents, Issues and Pull '
@@ -396,21 +349,15 @@ def agent_run(args, account, program, template, setup, directory):
                     or re.fullmatch(r"[A-Za-z0-9_-]{1,256}", query["code"][0]) is None):
                 reply(self, 400, "Invalid setup callback.")
                 return
-            # This instance's own claim converts once; a lost reply or a failed
-            # store leaves the registration uncertain, never repeated.
             outcome.update(converted=True, done=True)
             result = app.post(args.api_base, "/app-manifests/" + query["code"][0] + "/conversions")
             app.service_permissions(result.get("permissions"))
             new_id, slug = result["id"], result.get("slug")
             app.require(type(new_id) is int and new_id > 0)
             app.require(isinstance(slug, str) and re.fullmatch(r"[a-z0-9-]{1,64}", slug) is not None)
-            # The public identity first (review R5), so a partial delivery is repairable.
             app.save_file(directory, "app.json", json.dumps({"app_id": new_id}).encode())
             owner = (result.get("owner") or {}).get("login")
             if not isinstance(owner, str) or owner.lower() != account.lower():
-                # J48: the browser's account created it, not the named one. It
-                # exists on GitHub, so its id stays recorded (never registered
-                # again); its key goes nowhere and nothing is offered for install.
                 result = None
                 shown = owner if isinstance(owner, str) and LOGIN.fullmatch(owner) else "another account"
                 setup.settle(operation["operation_id"], "applied",
@@ -448,14 +395,12 @@ def agent_run(args, account, program, template, setup, directory):
                 reply(self, 400, "Invalid installation callback.")
                 return
             if outcome["pem"] is None:
-                # No key here (J27): the next run, with the pasted key, reads it back.
                 outcome["done"] = True
                 print("Installed on GitHub; it is read back once the key is in the Cloudroom secret.", flush=True)
                 reply(self, 200, '<!doctype html><title>App installed</title><p>Installed. Return to the agent '
                       'to paste the App key into Cloudroom.</p>')
                 return
             installation = int(query["installation_id"][0])
-            # Read back: this App's installation, on the named account, selected repositories only.
             status, found = app.get(args.api_base, f"/app/installations/{installation}",
                                     sign(outcome["pem"], outcome["app_id"]))
             login = ((found or {}).get("account") or {}).get("login")
@@ -483,7 +428,7 @@ def agent_run(args, account, program, template, setup, directory):
 
 
 def main():
-    parser = app.arguments(__doc__)
+    parser = app.arguments(DESCRIPTION)
     parser.add_argument("--port", type=int, default=8765, help="loopback port (default 8765); keep it for reconnects")
     parser.add_argument("--repo", help="OWNER/NAME to select (default: this clone's GitHub origin)")
     parser.add_argument("--yes", action="store_true", help="carry out the previewed operation")
@@ -505,7 +450,6 @@ def main():
     app.require(not args.organization and args.secret_store is None and not args.factory
                 and not args.capability)
     repo = app.repository(args.repo)
-    # The product's App is the user's own (J48): private, named for the repository's owner.
     template = app.manifest(repo, account=repo.split("/")[0])
     setup = store.Store(str(app.state_path(args.state_dir)))
     directory = app.app_directory(app.state_path(args.state_dir), create=True)
@@ -514,17 +458,9 @@ def main():
         if app_id is None:
             app.absent(directory, "private-key.pem")
         current = setup.read()
-        # An uncertain registration without a saved App may exist on GitHub:
-        # never register again until the owner names the newest one as checked
-        # (review R3: an older acknowledgment never covers a later attempt).
         newest = newest_uncertain(current)
         if app_id is None and args.after_uncertain != newest:
             refuse_uncertain(newest)
-        # Review R8: the request's identity stays the same across its own
-        # completion; an applied connection stands while an installation is
-        # recorded (the check clears it after a removal or revocation).
-        # Re-check R8: the acknowledgment given is part of the identity whether
-        # or not an App has been saved since, so a completed recovery reloads.
         request = {"repository": repo, "permissions": app.SERVICE, "after": args.after_uncertain}
 
         def connected(value):
@@ -544,7 +480,6 @@ def main():
         nonce = secrets.token_urlsafe(32)
         outcome = {"done": False, "success": False, "slug": None, "app_id": app_id, "owner": None}
         if app_id is not None:
-            # Reconcile the exact resource before anything else.
             status, found = app.get(args.api_base, "/app", app.jwt(directory, app_id))
             app.require(status == 200 and found.get("id") == app_id and isinstance(found.get("slug"), str))
             outcome.update(slug=found["slug"], owner=(found.get("owner") or {}).get("login"))
@@ -555,7 +490,6 @@ def main():
                     + urllib.parse.urlencode({"state": nonce}))
 
         class Handler(BaseHTTPRequestHandler):
-            # Includes request paths: GitHub's temporary code must never be logged.
             def log_message(self, *_args):
                 pass
 
@@ -617,9 +551,6 @@ def main():
                         or re.fullmatch(r"[A-Za-z0-9_-]{1,256}", query["code"][0]) is None):
                     self.reply(400, "Invalid setup callback.")
                     return
-                # Write-ahead, and the one claim (review R3): only a proposed
-                # operation may ask GitHub to create an App, exactly once. If the
-                # reply is lost, the App may exist on GitHub.
                 outcome["done"] = True
                 try:
                     setup.settle(operation["operation_id"], "uncertain",
@@ -638,7 +569,6 @@ def main():
                 pem = result["pem"].encode("ascii")
                 app.require(0 < len(pem) <= 16384)
                 app.openssl(["rsa", "-check", "-noout"], pem)
-                # Never overwrite. A partial save leaves the key on this host for recovery.
                 app.save_file(directory, "private-key.pem", pem)
                 app.save_file(directory, "app.json", json.dumps({"app_id": new_id}).encode())
                 os.fsync(directory)
@@ -649,7 +579,6 @@ def main():
                            'on only the repositories you select.</p>')
 
             def installed(self, query):
-                # GitHub's setup URL: installation_id and setup_action, with our state.
                 if (outcome["app_id"] is None or set(query) - {"installation_id", "setup_action", "state"}
                         or any(len(v) != 1 for v in query.values())
                         or not secrets.compare_digest(query.get("state", [""])[0], nonce)
@@ -658,12 +587,9 @@ def main():
                     self.reply(400, "Invalid installation callback.")
                     return
                 installation = int(query["installation_id"][0])
-                # The id is captured only when GitHub confirms it is this App's,
-                # for the selected repository's owner.
                 status, found = app.get(args.api_base, f"/app/installations/{installation}",
                                         app.jwt(directory, outcome["app_id"]))
                 login = ((found or {}).get("account") or {}).get("login")
-                # J48: also the App owner's account, never another account's private App.
                 if (status != 200 or found.get("id") != installation or found.get("app_id") != outcome["app_id"]
                         or not isinstance(login, str) or login.lower() != owner
                         or not isinstance(outcome["owner"], str) or outcome["owner"].lower() != owner):

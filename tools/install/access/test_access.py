@@ -1,7 +1,3 @@
-"""IF7 tool, privacy, recovery and packaging proofs: python3 -I tools/install/access/test_access.py.
-All providers are recording fixtures; no real accounts or external network.
-Signature verification uses production OpenSSL; transport checks use loopback.
-"""
 import importlib.util
 from copy import deepcopy
 import json
@@ -78,8 +74,6 @@ class Access(unittest.TestCase):
         def interleaved(store):
             generation = start_check(store)
             if generation == 1:
-                # Pause the first caller after its durable generation, before
-                # its claim. A second real-store caller completes meanwhile.
                 newer.append(self.apply(operation))
                 saved.append((self.state / 'setup/state.json').read_bytes())
             return generation
@@ -119,15 +113,12 @@ class Access(unittest.TestCase):
         self.assertEqual(self.apply(operation)['observation']['code'], 'access_refused')
         self.provider.apps.pop()
         self.assertEqual(self.apply(operation)['observation']['code'], 'access_cloudflare_verified')
-        # Token/cookie bodies and provider errors never enter durable public state.
         saved = (self.state / 'setup/state.json').read_text()
         for secret in self.secrets.values():
             self.assertNotIn(secret, saved)
         self.assertTrue(all(call[0] == 'GET' for call in self.provider.calls))
 
     def check_untrusted_context(self, **claims):
-        # IF7/R1: each negative context must authenticate the selected app and
-        # team before its denial can count. Old tests supplied only labels.
         operation = self.preview()
         original = dict(self.secrets)
         for label in ('expired', 'foreign'):
@@ -162,16 +153,12 @@ class Access(unittest.TestCase):
                 self.assertEqual(result['operation']['phase'], 'uncertain')
 
     def test_cloudflare_hostname_routed_to_another_tunnel_stays_unknown(self):
-        # IF7/R2: a different tunnel can reach this same process/witness while
-        # lacking the selected tunnel's origin guard. Prior tests missed DNS.
         self.provider.dns[0]['content'] = '88888888-8888-8888-8888-888888888888.cfargotunnel.com'
         result = self.apply(self.preview())
         self.assertEqual(result['observation']['code'], 'access_unavailable')
         self.assertEqual(result['operation']['phase'], 'uncertain')
 
     def test_cloudflare_serving_connector_with_stale_config_stays_unknown(self):
-        # IF7/R2: a stored guard says nothing about a connector still serving an
-        # earlier configuration. Keep the public witness and edge probes valid.
         self.provider.clients[0]['config_version'] = 6
         result = self.apply(self.preview())
         self.assertEqual(result['observation']['code'], 'access_unavailable')
@@ -253,7 +240,6 @@ class Access(unittest.TestCase):
         saved = access.store.Store(str(self.state)).read()
         self.assertEqual(saved['operations'][0]['phase'], 'uncertain')
         self.assertEqual(saved['observations']['remote_access']['code'], 'access_checking')
-        # Even a new selection cannot change resource while the old effect is uncertain.
         self.p['host'] = 'another.synthetic.invalid'
         self.save()
         with self.assertRaises(access.store.Refused):
@@ -314,8 +300,8 @@ class Access(unittest.TestCase):
         self.assertEqual(result['operation']['phase'], 'applied')
         self.assertEqual([c[0] for c in self.provider.calls if c[0] != 'local-read'].count('POST'), 2)
         self.assertTrue(all(c[0] in ('GET', 'local-read') or c[-1].endswith('/acl/validate') for c in self.provider.calls))
-        del self.provider.status['Self']['Expired']  # The real CLI omits false.
-        del self.provider.serve['AllowFunnel']  # Serve omits the map when Funnel is off.
+        del self.provider.status['Self']['Expired']
+        del self.provider.serve['AllowFunnel']
         self.assertEqual(self.apply(operation)['observation']['code'], 'access_tailscale_verified')
 
     def test_expired_owner_cookie_invalidates_previously_applied_readiness(self):
@@ -394,8 +380,6 @@ class Access(unittest.TestCase):
         for name in ('setup.py', 'app.py', 'manifest.json'):
             target = source / 'tools/github-app' / name
             target.parent.mkdir(parents=True, exist_ok=True)
-            # App behavior is outside this fixture; the lane prunes its real
-            # sources. Supply explicit unused bytes for those collector slots.
             target.write_text('{"name":"Synthetic App fixture"}\n' if name.endswith('.json')
                               else '# Synthetic unused App resource.\n')
         for args in (['init', '-q'], ['add', 'tools'],
@@ -403,7 +387,6 @@ class Access(unittest.TestCase):
                       '-c', 'commit.gpgsign=false', 'commit', '-q', '-m', 'Synthetic runtime fixture']):
             subprocess.run(['git', '-C', str(source), *args], check=True, capture_output=True)
         source_commit = subprocess.check_output(['git', '-C', str(source), 'rev-parse', 'HEAD'], text=True).strip()
-        # #1148: the program built with this identity, plus that job's receipt.
         sys.path.insert(0, str(ROOT / 'tools/release'))
         from test_product_identity import build
         receipts = build(binaries, source_commit, 'x86_64-unknown-linux-gnu', self.root, '0.0.13')
@@ -415,7 +398,6 @@ class Access(unittest.TestCase):
         slots = [row for row in manifest['assets'] if row['path'].startswith('runtime/access/')]
         self.assertEqual([row['path'] for row in slots], ['runtime/access/access.py'])
         self.assertEqual(slots[0]['mode'], '0600')
-        # Actual CLI from collected runtime, outside the repository. No API calls.
         result = subprocess.run([sys.executable, '-I', '-B', str(products / 'runtime/access/access.py'),
                                  'configure', '--plan', str(self.plan_file), '--state-dir', str(self.state)],
                                 cwd=self.root, env={'PATH': '/usr/bin:/bin'}, capture_output=True, text=True)

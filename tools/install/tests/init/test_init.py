@@ -1,11 +1,4 @@
 #!/usr/bin/env python3
-"""#635: `openwiz init`'s packaged runtime, outside in, on a recording fake gh.
-
-Each case runs tools/install/setup/init.py as the installed CLI does and counts
-the provider writes the fake GitHub recorded, compares retained content, and
-holds every result to the T1 contract checker (setup-onboard-contract/check.py).
-Fixture proof only: no real GitHub repository is created or read here.
-"""
 import base64
 import copy
 import importlib.util
@@ -30,7 +23,6 @@ spec.loader.exec_module(contract)
 
 CODE = 'synthetic-owner/synthetic-app'
 COMPANION = 'synthetic-owner/synthetic-app-brain'
-# #1361: the five labels people set, read from records v1 itself (section 1's table), plus init's own.
 RECORDS_LABELS = re.findall(r'^\| `([a-z-]+)` \|', (ROOT / 'kernel/records.v1.md').read_text()
                             .split('## 1. Labels', 1)[1].split('\n## ', 1)[0], re.M)
 FACTORY_LABELS = ['openwiz'] + RECORDS_LABELS
@@ -57,11 +49,6 @@ class Init(unittest.TestCase):
         shutil.copy(HERE / 'fake_gh.py', self.bin / 'gh')
         os.chmod(self.bin / 'gh', 0o700)
         self.world_file = self.base / 'world.json'
-        # This suite owns provider reconciliation, not power-loss durability.
-        # Hundreds of real journal fsyncs otherwise inherit the host disk's
-        # unrelated flush queue and can exhaust a CLI subprocess's budget.
-        # Keep real files, locks, fsync and process reloads on Linux tmpfs;
-        # keep executable fakes in base (tmpfs may be mounted noexec).
         memory = Path('/dev/shm')
         self.state_root = Path(tempfile.mkdtemp(
             prefix='openwiz-init-state-',
@@ -115,8 +102,6 @@ class Init(unittest.TestCase):
     def saved(self):
         return json.loads((self.state / 'setup/state.json').read_text())
 
-    # Catches: a preview that writes, a private repository given a companion,
-    # or a brain that carries runtime state, ids or other content.
     def test_private_code_keeps_the_brain_in_repository_through_one_visible_proposal(self):
         preview = self.init()
         self.assertEqual((preview['outcome'], preview['brain']['location']), ('proposed', 'in_repository'))
@@ -138,8 +123,6 @@ class Init(unittest.TestCase):
                          {'README.md': 'Synthetic app.\n'}, 'only proposed, never pushed to main')
         self.assertEqual(self.saved()['brain'], applied['brain'])
 
-    # Catches (#1361): a first fleet's records v1 labels missing after init; a label made without its
-    # colour or description; the owner's own label changed or deleted; a second run writing again.
     def test_init_sets_up_the_records_v1_labels_and_keeps_the_owners_own(self):
         self.assertEqual(RECORDS_LABELS, ['spec', 'ready-for-agent', 'ready-for-human', 'needs-info', 'held'])
         owners = {'color': '000000', 'description': 'The owner meaning'}
@@ -164,8 +147,6 @@ class Init(unittest.TestCase):
         after = self.read()
         self.assertEqual((after['repos'], self.writes()), (before['repos'], [c for c in before['log'] if c[0] != 'GET']))
 
-    # Catches (#1595): a label POST refused with 422 that created nothing, taken as "made
-    # concurrently", so init reports applied and opens the proposal with the label missing.
     def test_a_refused_label_fails_the_effect_and_opens_no_proposal(self):
         for existing, refused in (([], 'openwiz'), (['openwiz'], 'spec')):
             with self.subTest(label=refused):
@@ -179,8 +160,6 @@ class Init(unittest.TestCase):
                 self.assertEqual(code['pulls'], [])
                 self.assertNotIn('openwiz/brain', code['branches'])
 
-    # Catches (#1595): a label someone else made between init's read and its POST (a 422 that
-    # is really there) counted as failed, changed to init's colours, or written again next run.
     def test_a_label_made_concurrently_counts_as_applied_and_stays_theirs(self):
         theirs = {'color': '000000', 'description': 'Made by someone else'}
         self.world(faults=[{'method': 'POST', 'path': f'repos/{CODE}/labels', 'mode': 'taken', 'times': 1,
@@ -194,8 +173,6 @@ class Init(unittest.TestCase):
         self.assertEqual(self.read()['repos'], before['repos'])
         self.assertEqual(self.writes(), [c for c in before['log'] if c[0] != 'GET'])
 
-    # Catches: private records written into public code, or a companion that is
-    # public or unlinked.
     def test_public_code_gets_a_linked_private_companion_and_no_private_content(self):
         self.world({CODE.lower(): repository(CODE, 'public')})
         preview = self.init()
@@ -214,8 +191,6 @@ class Init(unittest.TestCase):
                          'only the labels are written on public code')
         self.assertEqual(applied['private_content_written'], 'brain_repository')
 
-    # Catches: visibility inferred from a missing, internal, contradictory,
-    # unread or renamed read, and any write before it is positively known.
     def test_unknown_or_ambiguous_visibility_refuses_before_any_write(self):
         cases = {'internal': repository(CODE, 'internal'),
                  'contradictory': dict(repository(CODE, 'public'), private=True),
@@ -235,8 +210,6 @@ class Init(unittest.TestCase):
         self.assertEqual(self.init(expect=5)['reason_code'], 'visibility_unknown')
         self.assertEqual(self.writes(), [])
 
-    # Catches: reusing a foreign or public repository as the brain, a name GitHub
-    # would truncate, or a companion created under another user's account.
     def test_unsafe_or_conflicting_companions_refuse_with_nothing_written(self):
         long = 'synthetic-owner/' + 'a' * 95
         cases = {
@@ -258,8 +231,6 @@ class Init(unittest.TestCase):
                 self.assertEqual(self.writes(), [])
                 self.assertEqual(self.read()['repos'], before)
 
-    # Catches: a denied companion creation reported as done, or followed by
-    # writes that publish the brain somewhere else.
     def test_denied_companion_creation_stops_before_any_private_content(self):
         self.world({CODE.lower(): repository(CODE, 'public')},
                    faults=[{'method': 'POST', 'path': 'user/repos', 'mode': 403, 'times': 9}])
@@ -270,8 +241,6 @@ class Init(unittest.TestCase):
         self.assertNotIn(COMPANION.lower(), self.read()['repos'])
         self.assertNotIn('brain', self.saved())
 
-    # Catches: a lost reply retried blindly (a duplicate repository, label,
-    # file or pull request), or uncertainty erased by a later preview.
     def test_lost_replies_stay_uncertain_until_read_back_then_complete_once(self):
         steps = ['user/repos', f'repos/{COMPANION}', f'repos/{CODE}/labels', f'repos/{COMPANION}/contents/',
                  f'repos/{COMPANION}/pulls']
@@ -302,15 +271,12 @@ class Init(unittest.TestCase):
                     self.assertTrue(all(e['reconciliation'] == 'provider_read_back' for e in retried))
                     self.assertTrue(all(e['effect_count'] == 1 for e in done['effects']))
 
-    # Catches: repeat init duplicating a pull request, overwriting the owner's
-    # edits, or ignoring the owner's closed proposal.
     def test_repeat_init_reconciles_existing_work_and_never_overwrites_it(self):
         first = self.apply(self.init())
         calls = len(self.writes())
         again = self.init()
         self.assertEqual((again['outcome'], again['operation_id']), ('applied', first['operation_id']))
         self.assertEqual(len(self.writes()), calls)
-        # Lost local state, owner edits on the open proposal: reuse, write nothing.
         shutil.rmtree(self.state)
         self.edit(lambda w: w['repos'][CODE.lower()]['branches']['openwiz/brain'].update(
             {'.openwiz/brain/README.md': 'Owner edit.\n'}))
@@ -319,20 +285,16 @@ class Init(unittest.TestCase):
         self.assertEqual(self.apply(fresh)['pull_requests'][0]['number'], 1)
         self.assertEqual(len(self.writes()), calls)
         self.assertEqual(self.files(CODE)['.openwiz/brain/README.md'], 'Owner edit.\n')
-        # Owner work on the branch without a proposal is never overwritten.
         shutil.rmtree(self.state)
         self.edit(lambda w: w['repos'][CODE.lower()].update(pulls=[]))
         conflict = self.apply(self.init(), expect=5)
         self.assertEqual(conflict['reason_code'], 'owner_work_conflict')
         self.assertEqual(self.files(CODE)['.openwiz/brain/README.md'], 'Owner edit.\n')
-        # A proposal the owner closed is not reopened or replaced.
         shutil.rmtree(self.state)
         self.edit(lambda w: w['repos'][CODE.lower()].update(
             pulls=[{'number': 1, 'state': 'closed', 'head': 'openwiz/brain'}]))
         self.assertEqual(self.init(expect=5)['reason_code'], 'proposal_closed')
 
-    # Catches: an apply that acts on an unknown operation or on a preview whose
-    # GitHub facts changed since.
     def test_apply_acts_only_on_the_exact_current_preview(self):
         self.assertEqual(self.init('--yes', '--operation', '0' * 32, expect=8)['reason_code'], 'operation_stale')
         preview = self.init()
@@ -342,8 +304,6 @@ class Init(unittest.TestCase):
         usage = self.init('--yes', expect=2)
         self.assertEqual((usage['schema'], usage['error']['kind']), ('openwiz.cli-error.v1', 'usage'))
 
-    # Catches: a setting that cannot move the brain later, or a move that skips
-    # the preview, authorization and visible proposal.
     def test_the_brain_location_setting_moves_through_the_same_proposal_rules(self):
         self.apply(self.init())
         self.edit(lambda w: w['repos'][CODE.lower()].update(private=False, visibility='public'))
@@ -357,8 +317,6 @@ class Init(unittest.TestCase):
         settings = json.loads(self.files(COMPANION)['.openwiz/brain/settings.json'])
         self.assertEqual((settings['brain_location'], settings['code_repository']), ('companion', CODE))
 
-    # R1. Catches: an apply that writes brain files into, and reports as private,
-    # a companion that became public or unreadable after the preview.
     def test_apply_revalidates_the_destination_before_any_content_write(self):
         companion = repository(COMPANION, 'private', description=f'OpenWiz private brain for {CODE}',
                                homepage=f'https://github.com/{CODE}')
@@ -376,8 +334,6 @@ class Init(unittest.TestCase):
                 self.assertEqual(self.read()['repos'][COMPANION.lower()]['pulls'], [])
                 self.assertNotIn('brain', self.saved())
 
-    # R2. Catches: success reported, and the brain saved, for a proposal the
-    # owner closed: after a lost creation reply, or on a cached repeat.
     def test_only_an_open_or_merged_proposal_counts_as_success(self):
         self.world(faults=[{'method': 'POST', 'path': f'repos/{CODE}/pulls', 'mode': 'lose', 'times': 1}])
         preview = self.init()
@@ -388,7 +344,6 @@ class Init(unittest.TestCase):
         self.assertEqual(resumed['reason_code'], 'proposal_closed')
         self.assertEqual(len(self.read()['repos'][CODE.lower()]['pulls']), 1, 'never replaced')
         self.assertNotIn('brain', self.saved())
-        # A completed apply whose proposal the owner then closed.
         shutil.rmtree(self.state)
         self.world({CODE.lower(): repository(CODE, 'private')})
         done = self.apply(self.init())
@@ -397,15 +352,12 @@ class Init(unittest.TestCase):
         repeat = self.apply(done, expect=5)
         self.assertEqual(repeat['reason_code'], 'proposal_closed')
         self.assertEqual(len(self.read()['repos'][CODE.lower()]['pulls']), 1)
-        # A merged proposal still counts.
         self.edit(lambda w: w['repos'][CODE.lower()]['pulls'][0].update(merged_at='2026-01-01T00:00:00Z'))
         merged = self.apply(done)
         self.assertEqual(merged['pull_requests'][0]['state'], 'merged')
 
 
 class BrainReference(unittest.TestCase):
-    """The store's optional `brain` field and setup's project check of it."""
-
     def setUp(self):
         sys.path.insert(0, str(ROOT / 'tools/install/setup'))
         import store
@@ -426,8 +378,6 @@ class BrainReference(unittest.TestCase):
         value.update(change)
         return value
 
-    # Catches: an existing project refused, or an unsafe reference (a companion
-    # that is the code itself, a mismatched pair, a public brain) accepted.
     def test_existing_projects_and_valid_references_pass_unsafe_ones_refuse(self):
         state = self.store.empty()
         self.store.validate(state)
@@ -446,8 +396,6 @@ class BrainReference(unittest.TestCase):
                 with self.assertRaises(self.store.Refused):
                     self.store.validate(dict(state, brain=bad))
 
-    # Catches: the project check passing on a brain that is public, missing or
-    # only proposed, or failing an existing project that has no brain.
     def test_the_project_check_resolves_the_brain_reference(self):
         spec = importlib.util.spec_from_file_location('openwiz_setup', ROOT / 'tools/install/setup/setup.py')
         setup = importlib.util.module_from_spec(spec)
@@ -472,7 +420,6 @@ class BrainReference(unittest.TestCase):
                 os.environ.update(saved)
         merged = repository(COMPANION, 'private', branches={'main': {'.openwiz/brain/settings.json': record}})
         self.assertEqual(setup.check_brain(None, CODE), 'project_verified')
-        # R3: another repository's retained brain never gates the selected one.
         self.assertEqual(resolve(dict(merged, hidden=True), selected='synthetic-owner/other-app'),
                          'project_verified')
         self.assertEqual(resolve(merged), 'project_verified')
@@ -483,7 +430,6 @@ class BrainReference(unittest.TestCase):
 
 
 
-# The Models section of WizSkills' setup template (#1807), filled with synthetic choices.
 MODELS = """## Models
 
 One table for every agent the fleet starts, in the models contract's form (`openwiz.models.v1`).
@@ -502,8 +448,6 @@ Source: synthetic owner, 2026-11-20.
 
 
 class ConnectSettings(unittest.TestCase):
-    """#1807: Connect's settings check reads the one Models table and still the older tables."""
-
     def setUp(self):
         spec = importlib.util.spec_from_file_location('openwiz_setup', ROOT / 'tools/install/setup/setup.py')
         self.setup = importlib.util.module_from_spec(spec)
@@ -512,21 +456,16 @@ class ConnectSettings(unittest.TestCase):
         start, end = self.older.index('## Builder\n'), self.older.index('## Test commands')
         self.models = self.older[:start] + MODELS + self.older[end:]
 
-    # Catches: a project whose setup wrote only the Models table refused at
-    # Connect as project_settings_missing, so the user never reaches Choose the agents.
     def test_a_filled_models_table_is_usable_settings(self):
         self.assertTrue(self.setup.fleet_settings_usable(self.older), 'the older tables still pass')
         self.assertTrue(self.setup.fleet_settings_usable(self.models))
         self.assertTrue(self.setup.fleet_settings_usable(self.models.replace('| Fixer | follows Builder | | | |\n', '')))
-        # Review R2 of #1947: beside a whole Models table, a half-migrated older section is ignored, as the contract reads it.
         start = self.models.index('## Test commands')
         for older in ('## Builder\n\nMoving to the Models table.\n\n', self.older[self.older.index('## Reviewer\n'):
                       self.older.index('## Test commands')].replace('Source: synthetic owner, 2026-11-06.\n', '')):
             with self.subTest(older=older[:12]):
                 self.assertTrue(self.setup.fleet_settings_usable(self.models[:start] + older + self.models[start:]))
 
-    # Catches: a Models table Connect counts as settings although the models
-    # contract's readers refuse it, or the bare template counted as filled.
     def test_an_unfilled_or_broken_models_table_is_not_settings(self):
         builder = '| Builder | Claude Code | Synthetic | High | `--provider claude-code --model syn-claude --reasoning-level high` |'
         reviewer = '| Reviewer | Codex | Synthetic | Medium | `--provider codex --model vendor/syn-codex --reasoning-level medium` |'
@@ -539,7 +478,6 @@ class ConnectSettings(unittest.TestCase):
                 ('flags broken', self.models.replace(builder, builder.replace('--model syn-claude', '--model  syn-claude'))),
                 ('model id broken', self.models.replace(reviewer, reviewer.replace('vendor/syn-codex', 'vendor//syn'))),
                 ('reviewer follows', self.models.replace(reviewer, '| Reviewer | follows Builder | | | |')),
-                # Review R1 of #1947: the reserved Harness value is no choice, even with its other cells filled.
                 ('reviewer follows, filled', self.models.replace(reviewer, reviewer.replace('| Codex |', '| follows Builder |'))),
                 ('fixer follows, leftover cells', self.models.replace(
                     '| Fixer | follows Builder | | | |',

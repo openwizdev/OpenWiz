@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Check and stage a public release branch in isolation; never publish."""
 import argparse
 import datetime
 import hashlib
@@ -11,6 +10,8 @@ import secrets
 import shutil
 import subprocess
 import sys
+
+DESCRIPTION = """Check and stage a public release branch in isolation; never publish."""
 
 
 class Refused(Exception):
@@ -46,11 +47,7 @@ def safe_path(value):
     return value
 
 
-# The hash-bound plan approves each public file. O2 keeps only private/ and
-# grills other than their README private by class; public guidance, design and
-# release-proof documents are no longer excluded as private process files.
 ALIAS = re.compile(r"\.(?:agents|claude)/skills/([a-z0-9][a-z0-9-]*)")
-# #555: the tracked `skills` link to the gitignored WizSkills install.
 WIZSKILLS = ("skills", b".wizskills/skills")
 MODES = ("100644", "100755", "120000")
 
@@ -92,7 +89,6 @@ def git(repo, *args):
 
 
 def tree(repo, ref, paths=None, links=False):
-    """Blob entries only. With links, also mode 120000, for later alias review."""
     entries = {}
     args = ["ls-tree", "-rz", ref]+(["--", *paths] if paths is not None else [])
     for row in git(repo, *args).split(b"\0"):
@@ -113,12 +109,6 @@ def linkable(path):
 
 
 def alias(path, target, paths):
-    """Approved links: .agents or .claude skills/<name> -> ../../skills/<name>,
-    and (#555) `skills` -> exactly .wizskills/skills, the pinned WizSkills install.
-
-    The raw link bytes are compared, never dereferenced, so absolute, escaping,
-    cyclic and differently spelt targets all refuse. An alias resolves through
-    an exported skills folder, or through the exported WizSkills link."""
     if path == WIZSKILLS[0]:
         require(target == WIZSKILLS[1], "link: skills must point to .wizskills/skills")
         return
@@ -130,14 +120,12 @@ def alias(path, target, paths):
 
 
 def refuse_ranges(text):
-    """A combined release has one entry per version: no ## A–B heading anywhere."""
     require(not any(re.match(r"[ ]{0,3}##[ \t]+\[?[0-9]+\.[0-9]+\.[0-9]+\]?\s*[–—-]\s*\[?[0-9]+\.[0-9]+\.[0-9]+", h.group())
                     for h in re.finditer(r"^[ ]{0,3}##[ \t].*$", text, re.M)),
             "combined version-range changelog heading refused")
 
 
 def changelog_entry(text, version):
-    """The one dated single-version entry for version, exactly as published."""
     headers = list(re.finditer(r"^## .+$", text, re.M))
     refuse_ranges(text)
     pattern = re.compile(r"## (?:"+re.escape(version)+r"|\["+re.escape(version)
@@ -305,17 +293,8 @@ class Check:
         self.fresh = a.staging/"fresh"
 
     def open_privacy(self, repo=None, head=None, log="open-development-privacy.log"):
-        """O3's command scans the entire immutable release tree, not plan rows.
-
-        The approved O3 root/anchor policy checks all newly reachable commit
-        trees, messages and identities, including material deleted at the tip.
-        PR text stays with CI. The operator supplies the approved private
-        named-terms file; a whole private checkout is unnecessary.
-        """
         repo = repo or self.args.repo
         head = head or self.args.historical or git(repo,"rev-parse","HEAD").decode().strip()
-        # Only persist O3's redacted finding records and required-input receipt.
-        # Python startup errors and tracebacks can reveal private tool paths.
         file_place = r'(?:tree|staged|commit-tree-[1-9][0-9]*):"(?:[^"\\\x00-\x1f]|\\(?:["\\bfnrt/]|u[0-9a-fA-F]{4}))*"(?:-path)?'
         place = rf'(?:{file_place}|history|literals|input|tree|title|body|pr-(?:title|body)|commit-[1-9][0-9]*(?:-(?:author|committer))?)'
         finding = rf'(?:T[123]|F[12]|C[123]|READ) {place}:[1-9][0-9]*\n'
@@ -334,7 +313,7 @@ class Check:
                 diagnostics = result.stdout
                 passed = result.returncode == 0
         except (OSError, subprocess.TimeoutExpired, UnicodeError):
-            pass  # Keep the fixed refusal; never persist raw exception/output text.
+            pass
         (self.args.evidence/log).write_bytes(diagnostics)
         require(passed,"privacy checker failed")
 
@@ -415,10 +394,6 @@ class Check:
                     "public license must be retained unmodified")
 
     def stage_historical(self):
-        """Bind an exact, already-published public commit; write nothing public.
-
-        The published commit is its own source: every approved row names its
-        published path, mode and hash, and nothing is restaged over it."""
         a = self.args
         plan = self.plan
         head = plan["historical"]["export_head"]
@@ -480,7 +455,6 @@ class Check:
         for name,proof,tests,exact in self.regressions:
             try:
                 if exact:
-                    # An approved successor runs as its one exact test identity.
                     target = re.fullmatch(r"tests/([a-z0-9-]+)/[^/]+\.rs",proof)[1]
                     for test,identity in zip(tests,exact):
                         self.nonce_run(name,proof,target,test,identity,env)
@@ -505,12 +479,6 @@ class Check:
         require(not git(self.fresh,"status","--porcelain","--untracked-files=no"), "fresh clone changed tracked files")
 
     def nonce_run(self, name, proof, target, test, identity, env):
-        """Bind the approved test's body through the compiler (R3, Jake's ruling (a)).
-
-        In a scratch clone of the export, that body becomes a panic with a random
-        nonce, and the same --exact identity must fail, printing the nonce. A
-        macro, build script or Cargo config that swaps or drops the body cannot
-        print it. The scratch clone has its own target directory and is removed."""
         from scans import test_body
         scratch = self.args.staging/"nonce"
         command(["git","-c","core.hooksPath=/dev/null","clone","--no-local","--single-branch",self.export,scratch],
@@ -543,7 +511,6 @@ class Check:
         if not a.evidence.is_dir():
             return
         if "publishable" in self.report:
-            # Only a passing report can be publishable, whichever step failed.
             self.report["publishable"] = self.report["publishable"] is True and self.report["status"] == "pass"
         files = sorted(self.report["files"],key=lambda i:i["path"])
         self.report["files"] = files
@@ -568,7 +535,6 @@ class Check:
     def load(self):
         a = self.args
         if a.historical:
-            # Historical verification uses only the exact plan bytes Jake approved.
             require(a.approved_plan_sha256 is not None and sha(a.plan.read_bytes()) == a.approved_plan_sha256,
                     "historical verification needs the approved plan's exact SHA-256")
         plan = load_plan(a.plan,a.version)
@@ -595,7 +561,7 @@ class Check:
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=DESCRIPTION)
     sub = parser.add_subparsers(dest="command",required=True)
     check = sub.add_parser("check",help="stage and check; never push, tag or publish")
     check.add_argument("version")

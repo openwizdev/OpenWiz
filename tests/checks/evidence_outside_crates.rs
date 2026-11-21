@@ -1,7 +1,3 @@
-//! #780 and #1277: product crates carry no build evidence into a public
-//! tree. Private archival completeness belongs to the private record, so
-//! these public checks require only the product tree and its Git index.
-
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -12,9 +8,6 @@ fn root() -> PathBuf {
     Path::new(ROOT).to_path_buf()
 }
 
-/// The Git-tracked files, one relative path each. The pre-push hook supplies
-/// the pushed commit's NUL-delimited manifest before cutting off Git access.
-/// A supplied manifest must be readable; never fall back to another tree.
 fn tracked() -> BTreeSet<String> {
     let bytes = if let Some(manifest) = std::env::var_os("OPENWIZ_TRACKED_FILES") {
         let bytes = fs::read(manifest).expect("read tracked-file manifest");

@@ -1,10 +1,3 @@
-//! The fakes for the fleet tests (A3, ClosedWiz#111), for every ticket's
-//! tests to use: the fake `gh`, a directory with both fakes first on
-//! `PATH`, the release `openwiz`, and a command's `run` in-process. A
-//! ticket that needs more writes it in its own file, never here.
-
-#![allow(dead_code)]
-
 use std::ffi::OsString;
 use std::fs;
 use std::fs::DirBuilder;
@@ -16,19 +9,13 @@ use std::sync::{Mutex, OnceLock};
 
 const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/..");
 
-/// The GitHub fixtures: one folder per ticket (`fleets/` for A4,
-/// `tickets/` for A5), one scenario folder in each.
 pub const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/github");
 
-/// A private directory with the fake `gh` (`tests/fake-gh/main.rs`) set to
-/// one scenario file.
 pub struct FakeGh {
     pub dir: PathBuf,
 }
 
 impl FakeGh {
-    /// `test` names the directory, so each test has its own; `scenario` is
-    /// the scenario file's path.
     pub fn new(test: &str, scenario: &Path) -> Self {
         let dir = Path::new(env!("CARGO_TARGET_TMPDIR"))
             .join("fake-gh")
@@ -46,7 +33,6 @@ impl FakeGh {
         fake
     }
 
-    /// Points this fake at another scenario file.
     pub fn set_scenario(&self, scenario: &Path) {
         fs::write(
             self.dir.join("fake-gh.scenario"),
@@ -55,23 +41,14 @@ impl FakeGh {
         .expect("write the scenario pointer");
     }
 
-    /// The fake, by its absolute path.
     pub fn program(&self) -> PathBuf {
         self.dir.join("gh")
     }
 
-    /// Every argument list the fake received, in order.
     pub fn invocations(&self) -> Vec<Vec<String>> {
         lines(&self.dir.join("gh-invocations.log"))
     }
 
-    /// For each call, in order, the names of its `GH_*` and `GITHUB_*`
-    /// variables, sorted.
-    pub fn environments(&self) -> Vec<Vec<String>> {
-        lines(&self.dir.join("gh-environment.log"))
-    }
-
-    /// The process id of a fake that hung, once it has written it.
     pub fn hung_pid(&self) -> Option<String> {
         fs::read_to_string(self.dir.join("gh-hang.pid")).ok()
     }
@@ -86,11 +63,8 @@ fn lines(path: &Path) -> Vec<Vec<String>> {
         .collect()
 }
 
-/// What `main.rs` calls for a command: its arguments after the command
-/// name, stdout and stderr; its exit code.
 pub type Run = fn(&[OsString], &mut dyn Write, &mut dyn Write) -> i32;
 
-/// Runs a command's `run` in-process: (exit code, stdout, stderr).
 pub fn in_process(run: Run, args: &[&str]) -> (i32, String, String) {
     let args: Vec<OsString> = args.iter().map(OsString::from).collect();
     let (mut out, mut err) = (Vec::new(), Vec::new());
@@ -102,7 +76,6 @@ pub fn in_process(run: Run, args: &[&str]) -> (i32, String, String) {
     )
 }
 
-/// Builds the release `openwiz` once per test run, as P10 does.
 pub fn openwiz_release() -> PathBuf {
     static BUILT: OnceLock<PathBuf> = OnceLock::new();
     static LOCK: Mutex<()> = Mutex::new(());
@@ -131,9 +104,6 @@ pub fn openwiz_release() -> PathBuf {
         .clone()
 }
 
-/// A private directory for `test` holding `room-cli` and `gh`, linked to
-/// the two fakes with no scenario, so any call either gets is logged and
-/// refused; and a `PATH` with it first.
 pub fn fakes_on_path(test: &str) -> (PathBuf, String) {
     let dir = Path::new(env!("CARGO_TARGET_TMPDIR"))
         .join("fakes-on-path")
@@ -156,8 +126,6 @@ pub fn fakes_on_path(test: &str) -> (PathBuf, String) {
     (dir, path)
 }
 
-/// What a run left in a [`fakes_on_path`] directory besides the two links:
-/// the fakes' logs, if either was called.
 pub fn left_behind(dir: &Path) -> Vec<String> {
     let mut left: Vec<String> = fs::read_dir(dir)
         .expect("read the test directory")

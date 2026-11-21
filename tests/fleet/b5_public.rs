@@ -1,6 +1,3 @@
-//! O4/P4: public GitHub records contain no CloudRoom thread identifiers.
-//! Existing B5 lifecycle proofs checked dispatch, but allowed ids in comments.
-//! These synthetic endpoints exercise the same CLI boundary, including retries.
 use super::fake::{self, World};
 use serde_json::{Value, json};
 
@@ -14,8 +11,6 @@ fn dry(w: &World) -> Value {
     serde_json::from_slice(&out.stdout).unwrap()
 }
 
-/// 2141: legacy acceptance follows a positively read privacy fact, including
-/// its canonical identity, rather than a repository's fixed spelling.
 #[test]
 fn p4_legacy_compatibility_requires_verified_repository_privacy() {
     for (case, repo, metadata, legacy) in [
@@ -84,7 +79,6 @@ fn p4_public_approval_keeps_the_same_fingerprint_and_requires_a_pointer() {
     ] {
         let w = World::new(&format!("p4-approval-{case}"));
         w.change(|s| {
-            // Unknown repository identity takes the public rules too.
             s["repository"] = "synthetic/public-repository".into();
             s["comments"]["9"][0]["body"] = body.into();
         });
@@ -113,10 +107,6 @@ fn p4_public_approval_refuses_quoted_words_below_the_heading() {
     assert_eq!(dry(&w)["actions"][0]["rule"], "look");
 }
 
-/// The setting is read as launch-fleet reads it: the whole row, or nothing.
-/// A missing, empty, malformed or doubled row stops the tick; it never trusts
-/// everyone, nor only the logins that did parse.
-/// Catches: a tick that runs without, or with a partial, Record authors setting.
 #[test]
 fn p4_718_a_missing_or_malformed_record_authors_row_stops_the_tick() {
     let row = "| Record authors | `openwiz[bot]`, `syn-owner` |\n";

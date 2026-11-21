@@ -1,14 +1,3 @@
-//! B4 (ClosedWiz#120): archiving a finished agent's thread with `thread
-//! archive <id> --json`, the CloudRoom allowlist's third write (spec #116,
-//! "New writes: CloudRoom `thread archive`"; observed in help, 0.43.1, the
-//! call never run).
-//!
-//! The recording fake shows exactly the calls each case makes and nothing
-//! else: a `thread show` first, the one archive only when the thread is
-//! there and not archived yet, and a `thread show` after it, whose
-//! `archivedAt` alone says it was archived. The fake answers that second
-//! read from `after_archive` only once a call with `"archives": true` took.
-
 use std::fs;
 use std::time::{Duration, Instant};
 
@@ -18,8 +7,6 @@ use serde_json::{Value, json};
 
 use super::fake::*;
 
-/// The thread every archive here is of: the 0.43.1 fixture's, not
-/// archived.
 const ID: &str = "thr_syn_0001";
 
 const SHOW_0001: &str = concat!(
@@ -31,8 +18,6 @@ fn id() -> ThreadId {
     ThreadId::parse(ID).expect("an id")
 }
 
-/// The fixture's `thread show`, with `archivedAt` set to `at`, written into
-/// the fake's directory; its absolute path.
 fn show_file(fake: &Fake, at: Value) -> String {
     let text = fs::read_to_string(SHOW_0001).expect("the fixture");
     let mut show: Value = serde_json::from_str(&text).expect("JSON");
@@ -56,7 +41,6 @@ fn archive() -> Vec<String> {
         .to_vec()
 }
 
-/// `thread show`, not archived; archived once a call took.
 fn show_before_and_after(fake: &Fake) -> Value {
     json!({
         "argv": show(),
@@ -74,7 +58,6 @@ fn archive_with(fake: &Fake, responses: Vec<Value>) -> ArchiveOutcome {
 #[test]
 fn the_archive_is_built_in_exactly_its_one_shape() {
     assert_eq!(Invocation::ThreadArchive(id()).argv(), archive());
-    // The id is one argument and never a flag: `ThreadId` can't hold one.
     for bad in ["", "-x", "--self", "thr syn", "thr;syn"] {
         assert!(ThreadId::parse(bad).is_err(), "{bad:?}");
     }
@@ -151,7 +134,6 @@ fn a_thread_that_cant_be_read_is_never_archived_blind() {
 #[test]
 fn an_archive_that_did_not_take_says_so() {
     let fake = Fake::new("b4_archive_not_taken", vec![]);
-    // Exit 0, but CloudRoom did not archive it.
     let outcome = archive_with(
         &fake,
         vec![
@@ -163,7 +145,6 @@ fn an_archive_that_did_not_take_says_so() {
         matches!(outcome, ArchiveOutcome::NotArchived { .. }),
         "{outcome:?}"
     );
-    // Refused.
     let outcome = archive_with(
         &fake,
         vec![

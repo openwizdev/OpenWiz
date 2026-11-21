@@ -1,4 +1,5 @@
 use super::RULES;
+use crate::md3_models::{fixture, flags};
 use openwiz_core::fleet::model::{
     Check, CheckResult, Commit, Issue, IssueState, MergedPr, NonEmpty, Number, PrFields, Review,
     Verdict,
@@ -187,8 +188,12 @@ fn run(s: &Snapshot) -> Value {
     run_at(s, NOW)
 }
 fn run_at(s: &Snapshot, now: u64) -> Value {
+    run_with(s, RULES, now)
+}
+fn run_with(s: &Snapshot, source: &str, now: u64) -> Value {
     let value =
-        serde_json::to_value(plan(s, &Rules::parse(RULES).unwrap(), now).expect("plan")).unwrap();
+        serde_json::to_value(plan(s, &Rules::parse(source, &flags()).unwrap(), now).expect("plan"))
+            .unwrap();
     let schema: Value =
         serde_json::from_str(include_str!("../../contracts/fleet-tick.v1.schema.json")).unwrap();
     assert_eq!(crate::schema::lint(&schema), Vec::<String>::new());
@@ -291,9 +296,8 @@ fn b2_frontier_exact_facts_and_idle() {
     expect(&s, &[]);
 }
 
-/// #1662: NonEmpty alone does not make a default branch safe for planning.
 fn b2_default_branch_validation_refuses_malformed_nonempty_snapshots() {
-    let rules = Rules::parse(RULES).unwrap();
+    let rules = Rules::parse(RULES, &flags()).unwrap();
     for branch in [
         " ",
         "syn branch",
@@ -312,7 +316,6 @@ fn b2_default_branch_validation_refuses_malformed_nonempty_snapshots() {
             "{branch:?}"
         );
     }
-    // These are the current validator's rules, not a stricter Git ref grammar.
     for branch in ["main", "syn/topic", "syn..topic", &"a".repeat(255)] {
         let mut s = snapshot(ready());
         s.default_branch = Observed::Complete(text(branch));
@@ -426,10 +429,10 @@ fn b2_every_missing_merge_condition_gives_zero_merges() {
         RULES.replace("`main`, `release-*`", "`scratch`"),
     ] {
         let v =
-            serde_json::to_value(plan(&s, &Rules::parse(&source).unwrap(), NOW).unwrap()).unwrap();
+            serde_json::to_value(plan(&s, &Rules::parse(&source, &flags()).unwrap(), NOW).unwrap())
+                .unwrap();
         assert!(!rules(&v).contains(&"adr_0008"));
     }
-    // A merge does not require a hand-back; approval, not its subject, is authority.
     let mut t = approved();
     pr(&mut t).subject = "Synthetic fix".into();
     expect(&snapshot(t), &["adr_0008"]);
@@ -487,7 +490,6 @@ fn b2_frontier_gates_and_verified_cross_version_blockers() {
     let mut s = snapshot(ready());
     fleet(&mut s).approval.as_mut().unwrap().rows.clear();
     expect(&s, &[]);
-    // Fleet order and versions don't constrain the frontier.
     let mut s = snapshot(ready());
     let mut f = fleet(&mut s).clone();
     f.tickets[0].number = n(911);
@@ -768,7 +770,6 @@ fn b2_doubtful_contract_placement_prevents_merge() {
     t.builder = None;
     t.relies_on = vec![text("contracts/synthetic.md")];
     let mut s = snapshot(t);
-    // A verified builder is not required for an ordinary eligible merge.
     expect(&s, &["adr_0008"]);
     fleet(&mut s)
         .changes
@@ -779,7 +780,6 @@ fn b2_doubtful_contract_placement_prevents_merge() {
     ticket(&mut s).records.looked.push(reason.into());
     expect(&s, &[]);
 
-    // Recording the look cannot authorize a merge; questions still relay.
     ticket(&mut s).issue.labels = vec![text("needs-info")];
     ticket(&mut s).question = Some(n(5100));
     expect(&s, &["needs_info"]);
@@ -810,8 +810,6 @@ fn b2_doubtful_contract_placement_withholds_review_starts() {
             _ => {}
         }
         let mut s = snapshot(t);
-        // Without a builder, a new reviewer already waits on the builder
-        // family (#1196); only the re-check, which needs none, starts.
         if rule == "re_check" {
             expect(&s, &[rule]);
         } else {
@@ -977,11 +975,9 @@ fn b2_close_archive_summary_and_unlock_only_after_readback() {
     assert_eq!(v["actions"][0]["facts"]["follow_ups"], json!([999]));
     fleet(&mut s).records.summary_written = true;
     expect(&s, &[]);
-    // An empty graph is never treated as a finished fleet.
     fleet(&mut s).tickets.clear();
     fleet(&mut s).approval.as_mut().unwrap().rows.clear();
     expect(&s, &[]);
-    // Closing a ticket is not a speculative unlock in the same snapshot.
     let mut s = snapshot(ready());
     ticket(&mut s).blockers.push(BlockerInput {
         number: n(800),
@@ -1054,13 +1050,13 @@ fn b2_unknown_and_duplicate_inputs_fail_closed() {
     let mut s = snapshot(ready());
     let t = fleet(&mut s).tickets[0].clone();
     fleet(&mut s).tickets.push(t);
-    assert!(plan(&s, &Rules::parse(RULES).unwrap(), NOW).is_err());
+    assert!(plan(&s, &Rules::parse(RULES, &flags()).unwrap(), NOW).is_err());
     let mut s = snapshot(ready());
     s.fleets = Observed::Unread(vec![Problem::Graph]);
-    assert!(plan(&s, &Rules::parse(RULES).unwrap(), NOW).is_err());
+    assert!(plan(&s, &Rules::parse(RULES, &flags()).unwrap(), NOW).is_err());
     let mut s = snapshot(ready());
     s.default_branch = Observed::Unread(vec![Problem::Issue]);
-    assert!(plan(&s, &Rules::parse(RULES).unwrap(), NOW).is_err());
+    assert!(plan(&s, &Rules::parse(RULES, &flags()).unwrap(), NOW).is_err());
 }
 
 fn b2_release_default_starts_nothing() {
@@ -1368,7 +1364,7 @@ fn b2_manual_merge_row_means_none() {
         "The loop, as soon as the reviewer's APPROVE names that exact commit and all checks pass",
         "The user only",
     );
-    let rules = Rules::parse(&manual).expect("manual merge policy is valid");
+    let rules = Rules::parse(&manual, &flags()).expect("manual merge policy is valid");
     assert_eq!(serde_json::to_value(rules).unwrap()["merge"], "none");
 }
 
@@ -1404,8 +1400,6 @@ fn b2_archived_reviewers_are_never_quiet_reviewers() {
     expect(&s, &["all_closed"]);
 }
 
-/// The orchestrator's authority clarification on #118: relays remain due
-/// after a row is dropped; none of them grants authority to start or merge.
 fn b2_relays_do_not_grant_start_or_merge_authority() {
     fn authority(s: &mut Snapshot, case: &str) {
         match case {
@@ -1538,14 +1532,12 @@ fn b2_r1_unrecognised_round_status_still_relays_findings() {
             &["review_findings"]
         };
         expect(&snapshot(t.clone()), expected);
-        // An earlier recorded look must not suppress the findings relay.
         t.records.looked.push("malformed finding rounds".into());
         expect(&snapshot(t), expected);
     }
 }
 
 fn b2_r2_quiet_reviewers_follow_their_own_head() {
-    // The first two rows reproduce the old-head stall. All clocks are supplied.
     for (name, earlier, elapsed, given_up, evidence, other_pr, expected) in [
         (
             "earlier head at deadline",
@@ -1813,4 +1805,73 @@ fn b2_summary_waits_for_ambiguous_pull_requests() {
         v["actions"][1]["facts"]["threads"],
         json!([{"thread": "syn-independent-builder", "role": "builder"}])
     );
+}
+
+#[test]
+fn md3_models_table_reviews_wait_or_fall_back_to_the_builder() {
+    let agent = |harness: &str, model: &str, effort: &str| json!({"harness": harness, "model": model, "effort": effort});
+    let opus = agent("claude-code", "claude-opus-5-5", "medium");
+    let sol = agent("codex", "gpt-6.2-sol", "medium");
+    let high = agent("claude-code", "claude-opus-5-5", "high");
+    for (case, family, given_up, rule, settings) in [
+        (
+            "one-table",
+            BuilderFamily::Claude,
+            false,
+            "first_review",
+            Some(&sol),
+        ),
+        (
+            "one-table",
+            BuilderFamily::Gpt,
+            false,
+            "first_review",
+            Some(&opus),
+        ),
+        (
+            "one-table",
+            BuilderFamily::Gpt,
+            true,
+            "fresh_review",
+            Some(&opus),
+        ),
+        (
+            "same-family",
+            BuilderFamily::Gpt,
+            false,
+            "first_review",
+            Some(&high),
+        ),
+        ("same-family", BuilderFamily::Claude, false, "look", None),
+        ("same-family", BuilderFamily::Claude, true, "look", None),
+    ] {
+        let mut t = reviewing();
+        if let Some(source) = t.builder_source.as_mut() {
+            source.family = family;
+        }
+        if given_up {
+            let mut r = reviewer();
+            r.given_up = true;
+            t.reviewers.push(r);
+        }
+        let v = run_with(&snapshot(t), &fixture(case), NOW);
+        let name = format!("{case} {family:?} given up {given_up}");
+        assert_eq!(rules(&v), [rule], "{name}");
+        let facts = &v["actions"][0]["facts"];
+        match settings {
+            Some(want) => assert_eq!(&facts["settings"], want, "{name}"),
+            None => assert_eq!(
+                facts["reason"], "review waits: no other-family reviewer",
+                "{name}"
+            ),
+        }
+    }
+    let namespaced = fixture("one-table").replacen("--model gpt-6.2-sol", "--model vendor/demo", 1);
+    assert!(Rules::parse(&namespaced, &flags()).is_ok());
+    let mut t = reviewing();
+    if let Some(source) = t.builder_source.as_mut() {
+        source.family = BuilderFamily::Claude;
+    }
+    let v = run_with(&snapshot(t), &namespaced, NOW);
+    assert_eq!(v["actions"][0]["facts"]["settings"]["model"], "vendor/demo");
 }

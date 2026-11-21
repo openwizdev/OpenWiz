@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Assemble the kit's owner-only inputs file on the PC, offline (#772).
+import argparse
+import json
+from pathlib import Path
+import runpy
+
+DESCRIPTION = """Assemble the kit's owner-only inputs file on the PC, offline (#772).
 
 Each --records file is an owner-only JSON object of named inputs that the Local
 PC agent copied from the existing private records (never from Git). Records
@@ -7,10 +12,6 @@ merge; one name with two different values refuses. The result is one new
 owner-only file outside any checkout, for prepare.py, which checks the names.
 It prints only counts, never a value.
 """
-import argparse
-import json
-from pathlib import Path
-import runpy
 
 HERE = Path(__file__).resolve().parent
 prepare = runpy.run_path(str(HERE / 'prepare.py'))
@@ -33,7 +34,7 @@ def assemble(records, out):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument('--records', action='append', required=True, type=Path,
                         help='absolute owner-only records file (repeatable)')
     parser.add_argument('--out', required=True, type=Path, help='absolute new inputs file, outside any checkout')

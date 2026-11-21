@@ -1,4 +1,3 @@
-//! B5 CLI proofs. Every value and external response is synthetic.
 use std::fs;
 use std::process::Command;
 
@@ -47,7 +46,6 @@ mod fake;
 #[path = "b5_public.rs"]
 mod public;
 
-// Preserve the pre-cut-over fixtures explicitly now that the writer is public.
 fn legacy_records(w: &fake::World) {
     w.change(|s| {
         for cs in s["comments"].as_object_mut().unwrap().values_mut() {
@@ -78,8 +76,6 @@ fn legacy_records(w: &fake::World) {
     });
 }
 
-/// One created start record in this world's state, as a start writes it
-/// (`openwiz.start-record.v1`), attempted now. The core names its file.
 fn start_record(w: &fake::World, key: StartKey, settings: [&str; 3], op: &str, thread: &str) {
     use std::os::unix::fs::{DirBuilderExt, OpenOptionsExt};
     let starts = w.dir.join("state/starts");
@@ -116,16 +112,12 @@ fn start_record(w: &fake::World, key: StartKey, settings: [&str; 3], op: &str, t
     std::io::Write::write_all(&mut file, &serde_json::to_vec_pretty(&record).unwrap()).unwrap();
 }
 
-/// The world's repository, as a start record keys it.
 fn repository(w: &fake::World) -> Repository {
     let s = w.load();
     let name = s["repository"].as_str().unwrap_or("jparker2006/ClosedWiz");
     Repository::parse(name).unwrap()
 }
 
-/// The records a builder start on #10 leaves: its two GitHub start records,
-/// its start record and its running thread. The retired executing tick wrote
-/// them (#800); the `fleet due` keepers seed them directly.
 fn builder_started(w: &fake::World) {
     let at = 1_793_400_010_000_u64;
     w.change(|s| {
@@ -150,7 +142,6 @@ fn builder_started(w: &fake::World) {
     );
 }
 
-/// The records a review start on pull request #110 leaves, as above.
 fn review_started(w: &fake::World) {
     let at = 1_793_400_010_000_u64;
     w.change(|s| {
@@ -213,12 +204,10 @@ fn b5_additional_readers_and_allowlist_refuse_shape_drift() {
     }
     let row = json!({"id":1,"author":"syn-author","body":"Synthetic","created":100,"updated":100});
     assert!(comments(&json!([[row.clone()]])).is_ok());
-    // #718: an author GitHub names nobody for is read as none, never refused.
     let ghost = json!({"id":1,"author":null,"body":"Synthetic","created":100,"updated":100});
     assert_eq!(comments(&json!([[ghost]])).unwrap()[0].author, None);
     for bad in [
         json!([row.clone()]),
-        // #718: the author is always projected, and only as a login or null.
         json!([[{"id":1,"body":"Synthetic","created":100,"updated":100}]]),
         json!([[{"id":1,"author":7,"body":"Synthetic","created":100,"updated":100}]]),
         json!([[row.clone(), row.clone()]]),
@@ -260,8 +249,6 @@ fn b5_additional_readers_and_allowlist_refuse_shape_drift() {
 #[path = "b5_edges.rs"]
 mod edges;
 
-// #852 (R13 on #121): `due` adds a candidate only for the latest VERDICT:
-// report, as tick does; a superseded APPROVE at an unmoved head wakes nothing.
 #[test]
 fn b5_r13_due_ignores_a_superseded_approval_at_the_same_head() {
     let w = fake::World::new("r13_superseded");
@@ -280,7 +267,6 @@ fn b5_r13_due_ignores_a_superseded_approval_at_the_same_head() {
             "created": 1_793_400_020_000_u64,
             "updated": 1_793_400_020_000_u64
         }));
-        // The finding was already dispatched: the record tick writes on send.
         let id = id + 1;
         s["next"] = id.into();
         s["comments"][key].as_array_mut().unwrap().push(json!({
@@ -290,7 +276,6 @@ fn b5_r13_due_ignores_a_superseded_approval_at_the_same_head() {
             "updated": 1_793_400_030_000_u64
         }));
     });
-    // The planner still answers with no actions (only the latest report counts).
     let dry = w.run(&["fleet", "tick", "--dry-run", "--json"]);
     assert!(
         dry.status.success(),
@@ -299,9 +284,7 @@ fn b5_r13_due_ignores_a_superseded_approval_at_the_same_head() {
     );
     let doc: serde_json::Value = serde_json::from_slice(&dry.stdout).unwrap();
     assert_eq!(doc["actions"], json!([]), "{doc}");
-    // Legacy records still let GitHub-only due identify this older review.
     legacy_records(&w);
-    // So `due` must wake nothing, as tick already does.
     let due = w.run(&["fleet", "due", "--github-only"]);
     assert!(
         due.status.success(),
@@ -313,7 +296,6 @@ fn b5_r13_due_ignores_a_superseded_approval_at_the_same_head() {
         "a superseded approval woke the loop: {}",
         String::from_utf8_lossy(&due.stdout)
     );
-    // And a latest APPROVE still wakes it: the fix must not silence due.
     w.approve(10);
     let due = w.run(&["fleet", "due", "--github-only"]);
     assert!(
@@ -340,8 +322,6 @@ fn b5_531_ambiguous_hierarchies_only_stop_the_affected_fleets() {
         ("ready_shared", vec![(19, vec![10])], vec![9, 19]),
     ] {
         let w = fake::World::new(&format!("531-{case}"));
-        // synthetic_assumptions: unrelated nested and multiply placed issue
-        // links are complete, with the existing approved fleet left intact.
         w.change(|s| {
             for (number, subs) in &links {
                 s["issues"].as_array_mut().unwrap().push(json!({

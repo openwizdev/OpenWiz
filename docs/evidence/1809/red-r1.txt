@@ -1,0 +1,22 @@
+# python3 -I tools/install/tests/journey/test_journey.py OwnSettings, at a6cd72e2's check (R1): a Small builder set to High in both forms
+F.
+======================================================================
+FAIL: test_a_role_set_in_both_forms_still_agrees (__main__.OwnSettings.test_a_role_set_in_both_forms_still_agrees)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/install/tests/journey/test_journey.py", line 814, in test_a_role_set_in_both_forms_still_agrees
+    self.agree(text)
+  File "tools/install/tests/journey/test_journey.py", line 825, in agree
+    self.assertEqual(rows[2:], [['Orchestrator', *opus], ['Builder', *opus], ['Reviewer', *sol],
+AssertionError: Lists differ: [['Or[380 chars]r', 'Claude Code', 'Opus 5.5', 'High', '`--pro[105 chars] '']] != [['Or[380 chars]r', 'follows Builder', '', '', ''], ['Fixer', [26 chars] '']]
+
+First differing element 3:
+['Small builder', 'Claude Code', 'Opus 5.5', 'High', '`--pro[62 chars]gh`']
+['Small builder', 'follows Builder', '', '', '']
+
+Diff is 673 characters long. Set self.maxDiff to None to see it.
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.014s
+
+FAILED (failures=1)

@@ -1,13 +1,7 @@
-//! A4 (ClosedWiz#112): the edges the fixture scenarios don't reach, each a
-//! changed answer the test writes over `complete/`: several pull requests,
-//! two merged ones, a closing reference to another repository's issue,
-//! lists cut short at 1000 rows, a verdict line not in `review-ticket`'s
-//! form, two checks with one name, and the run budget running out.
-//!
-//! These came after the code. Each one's red is a planted break of the
-//! rule it proves, recorded in the pull request.
-
-#[allow(dead_code)]
+#[allow(
+    dead_code,
+    reason = "shared with other test targets; this one uses only part of it"
+)]
 #[path = "../support/dirs.rs"]
 mod dirs;
 
@@ -29,8 +23,6 @@ use super::{
 use crate::schema::{load_schema, validate};
 use crate::support::FakeGh;
 
-/// `complete/`'s pull request list, changed by `edit`, as the answer to
-/// `gh pr list`.
 fn pr_list(edit: impl FnOnce(&mut Vec<Value>)) -> Value {
     let path = Path::new(FIXTURES).join("fleets/complete/prs.json");
     let mut prs: Vec<Value> = serde_json::from_str(&fs::read_to_string(path).unwrap()).unwrap();
@@ -38,8 +30,6 @@ fn pr_list(edit: impl FnOnce(&mut Vec<Value>)) -> Value {
     json!({"argv": PR_LIST, "stdout": serde_json::to_string(&prs).unwrap()})
 }
 
-/// `complete/`'s issue list, changed by `edit`, as the answer to `gh issue
-/// list`.
 fn issue_list(edit: impl FnOnce(&mut Vec<Value>)) -> Value {
     let path = Path::new(FIXTURES).join("fleets/complete/issues.json");
     let mut rows: Vec<Value> = serde_json::from_str(&fs::read_to_string(path).unwrap()).unwrap();
@@ -47,7 +37,6 @@ fn issue_list(edit: impl FnOnce(&mut Vec<Value>)) -> Value {
     json!({"argv": ISSUE_LIST, "stdout": serde_json::to_string(&rows).unwrap()})
 }
 
-/// A pull request row closing `closes`, as `gh pr list` prints one.
 fn pr_row(number: u64, state: &str, head: char, closes: &[u64], merge: Option<char>) -> Value {
     let refs: Vec<Value> = closes
         .iter()
@@ -66,8 +55,6 @@ fn pr_row(number: u64, state: &str, head: char, closes: &[u64], merge: Option<ch
            "number": number, "state": state, "title": format!("Synthetic PR {number}")})
 }
 
-/// #665: any merge fact on CLOSED invalidates the whole discovery list.
-/// Each case is synthetic and runs through the public fixture CLI.
 fn closed_merge_facts_fail(test: &str, with_commit: bool, with_time: bool) {
     let list = pr_list(|prs| {
         let mut row = pr_row(958, "CLOSED", '8', &[903], Some('8'));
@@ -147,8 +134,6 @@ fn closed_merge_legitimate_rows_preserve_discovery_and_readback() {
     assert_eq!(ticket(&doc, 902)["state"], json!({"known": "merged"}));
 }
 
-/// Two open pull requests close #903: neither is its, so it has no CI or
-/// review read, and its state is unknown with the reason.
 #[test]
 fn several_open_pull_requests_are_none_of_them_its() {
     let list = pr_list(|prs| prs.push(pr_row(958, "OPEN", '8', &[903], None)));
@@ -170,12 +155,9 @@ fn several_open_pull_requests_are_none_of_them_its() {
         !ran.gh.contains(&checks_argv(952)) && !ran.gh.contains(&comments_argv(952)),
         "a pull request that isn't its was read"
     );
-    // As a blocker, #903 isn't merged: #908 stays blocked.
     assert_eq!(ticket(&doc, 908)["state"], json!({"known": "blocked"}));
 }
 
-/// Every matching candidate must have a consistent issue identity before
-/// the discovery read can claim there are several open pull requests.
 #[test]
 fn several_open_pull_requests_validate_closing_reference_identity() {
     for invalid_pr in [952, 958] {
@@ -207,8 +189,6 @@ fn several_open_pull_requests_validate_closing_reference_identity() {
     }
 }
 
-/// Selecting a merged pull request precedes considering open candidates,
-/// even when two open candidates have inconsistent closing references.
 #[test]
 fn a_merged_pull_request_precedes_inconsistent_open_candidates() {
     let list = pr_list(|prs| {
@@ -230,8 +210,6 @@ fn a_merged_pull_request_precedes_inconsistent_open_candidates() {
     }
 }
 
-/// Two merged pull requests close #902: which is its can't be told, so the
-/// read fails and nothing that requires it is known (#112, question 3).
 #[test]
 fn two_merged_pull_requests_are_never_a_guess() {
     let list = pr_list(|prs| prs.push(pr_row(959, "MERGED", '9', &[902], Some('8'))));
@@ -243,16 +221,12 @@ fn two_merged_pull_requests_are_never_a_guess() {
     );
     assert_eq!(read(&doc, "pr_discovery", "issue", json!(902))["id"], "r8");
     assert_eq!(ticket(&doc, 902)["state"], json!({"unread": ["r8"]}));
-    // #903's and #906's blocker, and #932's in the other fleet: the one
-    // read their states lack.
     for t in [903, 906] {
         assert_eq!(ticket(&doc, t)["state"], json!({"unread": ["r8"]}), "#{t}");
     }
     assert_eq!(fleet(&doc, 930)["progress"]["unread"], json!(["r8"]));
 }
 
-/// A pull request that also closes an issue of another repository, with a
-/// number this one has: what it closes can't be told, so the read fails.
 #[test]
 fn a_closing_reference_to_another_repository_fails_the_read() {
     let list = pr_list(|prs| {
@@ -271,16 +245,12 @@ fn a_closing_reference_to_another_repository_fails_the_read() {
         json!({"state": "failed", "gap": "malformed",
                "reason": "pull request #952 closes an issue that can't be told to be this repository's"})
     );
-    // #904's own pull request is still its: the other repository's #904
-    // is never this one's.
     assert_eq!(
         read(&doc, "pr_discovery", "issue", json!(904))["outcome"]["value"]["number"],
         953
     );
 }
 
-/// 1000 issues is the most one read asks for: the spec list is partial,
-/// so "needs you" and every blocker's fleet are unread.
 #[test]
 fn an_issue_list_of_1000_rows_is_cut_short() {
     let list = issue_list(|rows| {
@@ -305,12 +275,9 @@ fn an_issue_list_of_1000_rows_is_cut_short() {
     for b in doc["data"]["blockers"].as_array().unwrap() {
         assert_eq!(b["fleet"], json!({"unread": ["r3"]}), "{b}");
     }
-    // The fleets themselves are still shown, with what was read.
     assert_eq!(fleet(&doc, 901)["progress"]["known"]["tickets"], 9);
 }
 
-/// 1000 pull requests is the most one read asks for: one that closes a
-/// ticket may be missing, so no `pr_discovery` read is complete.
 #[test]
 fn a_pull_request_list_of_1000_rows_is_cut_short() {
     let list = pr_list(|prs| {
@@ -339,8 +306,6 @@ fn a_pull_request_list_of_1000_rows_is_cut_short() {
     assert_eq!(ran.gh.len(), 4, "no per-pull-request read");
 }
 
-/// The latest verdict comment isn't in `review-ticket`'s form: the read
-/// fails, and an older verdict is never used instead.
 #[test]
 fn a_malformed_latest_verdict_is_never_replaced_by_an_older_one() {
     let bodies = [
@@ -370,8 +335,6 @@ fn two_checks_with_one_name_fail_the_read() {
     );
 }
 
-/// GitHub listing a ticket as its own blocker, or a spec as its own
-/// sub-issue, fails that read.
 #[test]
 fn a_ticket_never_blocks_itself_and_a_spec_is_never_its_own_sub_issue() {
     let list = issue_list(|rows| {
@@ -409,10 +372,6 @@ fn a_ticket_never_blocks_itself_and_a_spec_is_never_its_own_sub_issue() {
     assert_eq!(fleet(&doc, 930)["progress"]["unread"], json!(["r49"]));
 }
 
-/// A clock whose budget runs out once the fake `gh` has started `starts`
-/// calls: an explicit state, never a measured time. Until then it is the
-/// real monotonic time, so a read in flight still stops at the run's
-/// real deadline. Its wall-clock time is fixed.
 struct OutOfBudgetAfter {
     log: std::path::PathBuf,
     starts: usize,
@@ -434,11 +393,6 @@ impl Clock for OutOfBudgetAfter {
     }
 }
 
-/// The run budget: per-pull-request reads still running at the deadline
-/// are stopped there (`timed_out`), and none starts after it: each is
-/// recorded as not read (`budget_exhausted`), never left out. The first
-/// four, in the contract's order, answer only after a minute; each of the four workers
-/// takes one, and the budget is out once all four have started.
 #[test]
 fn reads_the_budget_leaves_are_recorded_as_not_read() {
     let slow = |argv: Vec<String>| json!({"argv": argv, "stdout": "[]", "delay_ms": 60000});
@@ -501,7 +455,6 @@ fn reads_the_budget_leaves_are_recorded_as_not_read() {
             .unwrap();
         assert_eq!(r["outcome"]["reason"], "not read: budget");
     }
-    // Exactly the four slow reads and the four lists were started.
     let started: Vec<Vec<String>> = fake.invocations();
     assert_eq!(started.len(), 8, "{started:?}");
     for argv in &started {
@@ -515,9 +468,6 @@ fn reads_the_budget_leaves_are_recorded_as_not_read() {
     assert_eq!(doc["freshness"]["snapshot_at"], 1_793_437_200_000_i64);
 }
 
-/// A version read that fails at all is `untested_version`, as the
-/// inventory's is: "could not be read, or is not a recognised version
-/// text" (`GapKind::UntestedVersion`). Never a gate: the rest still runs.
 #[test]
 fn a_failed_version_read_is_an_untested_version() {
     let fails = json!({"argv": ["--version"], "stderr": "Synthetic failure\n", "exit": 1});
@@ -531,9 +481,6 @@ fn a_failed_version_read_is_an_untested_version() {
     assert_eq!(ran.gh.len(), 13, "every other read still runs");
 }
 
-/// When the issue list is cut short, a link it doesn't hold can't be told
-/// to be this repository's issue: the read that names it fails, so no
-/// value is worked out from another repository's issue with that number.
 #[test]
 fn a_link_a_cut_short_list_does_not_hold_fails_its_read() {
     let list = issue_list(|rows| {
@@ -556,8 +503,6 @@ fn a_link_a_cut_short_list_does_not_hold_fails_its_read() {
     assert_eq!(ticket(&doc, 908)["state"], json!({"unread": ["r32"]}));
 }
 
-/// Each reading guard, given the violation it exists for: the read it
-/// guards fails with its reason, and no value is taken from it.
 #[test]
 fn each_guard_refuses_the_violation_it_exists_for() {
     let node = |n: u64| {
@@ -570,8 +515,6 @@ fn each_guard_refuses_the_violation_it_exists_for() {
             r["blockedBy"] = json!({"nodes": nodes, "totalCount": total});
         })
     };
-    /// A guard's case: its name, the changed answer, the read it guards
-    /// (kind, subject key, subject), and that read's outcome.
     type Case = (
         &'static str,
         Value,
@@ -646,10 +589,6 @@ fn each_guard_refuses_the_violation_it_exists_for() {
     }
 }
 
-/// R1 on #297: "needs you" is by spec, ticket, then kind, the kind
-/// compared as its contract word, so `held` comes before `needs_info` on
-/// one ticket (`contracts/fleet.v1.md`, "Needs you"; A2's checker sorts
-/// the same way).
 #[test]
 fn needs_you_is_by_spec_ticket_then_kind() {
     let list = issue_list(|rows| {
@@ -670,9 +609,6 @@ fn needs_you_is_by_spec_ticket_then_kind() {
     );
 }
 
-/// R2 on #297: a pull request list that names one pull request twice,
-/// whether as the same row or as two different ones, isn't taken: every
-/// `pr_discovery` read fails, and no per-pull-request read is made.
 #[test]
 fn a_pull_request_list_naming_one_twice_is_never_taken() {
     let identical = pr_list(|prs| {
@@ -706,8 +642,6 @@ fn a_pull_request_list_naming_one_twice_is_never_taken() {
     }
 }
 
-// #1009: synthetic A7 scale, through CLI -> core -> production adapter ->
-// recording fake gh. Raw-SHA headRef acceptance is assumed, never observed.
 pub(super) fn batch_argv(pairs: &[(String, String)]) -> Vec<String> {
     let mut vars = String::new();
     let mut body = String::new();
@@ -803,8 +737,6 @@ fn scale_scenario(name: &str, latency: u64) -> std::path::PathBuf {
         prs.push(pr);
     }
     responses.push(json!({"argv":PR_LIST,"stdout":serde_json::to_string(&prs).unwrap()}));
-    // The walk visits tickets by spec, then ticket. Expected alias ordering
-    // is independently enumerated, not obtained from production query code.
     pairs.sort_by_key(|(_, sha)| {
         let n = u64::from_str_radix(sha, 16).unwrap();
         (n % 16, n)
@@ -835,14 +767,9 @@ fn scale_run_at(
     scale_run_paced(name, path, budget, records, Pace::default())
 }
 
-/// How a scale run keeps time (#1487).
 #[derive(Default)]
 struct Pace {
-    /// The run's budget on a [`TransportClock`] charging this latency per
-    /// source call, instead of the host's clock.
     transport: Option<Duration>,
-    /// The host stalled for `.1` once `.0` source calls have answered: a
-    /// busy runner's scheduling delay, made exact.
     stall: Option<(usize, Duration)>,
 }
 
@@ -881,7 +808,6 @@ fn scale_run_paced(
     assert_eq!(validate(&load_schema(), &doc), Vec::<String>::new());
     let calls = fake.invocations().len();
     if transport.is_some() {
-        // The clock charges each source call: each is one transport call.
         assert_eq!(source.answered.load(Ordering::SeqCst), calls);
     }
     let peak = source.peak.load(std::sync::atomic::Ordering::SeqCst);
@@ -899,10 +825,6 @@ fn scale_run_paced(
 
 #[test]
 fn a7_scale_completes_with_twenty_calls_inside_the_scaled_budget() {
-    // The scaled budget is spent by transport calls, 50 ms each on the
-    // transport clock, never by host scheduling (#1487): a host stall
-    // longer than the whole budget, after the four sequential calls,
-    // changes nothing.
     let path = scale_scenario("scaled", 50);
     let pace = Pace {
         transport: Some(Duration::from_millis(50)),
@@ -925,10 +847,6 @@ fn a7_scale_completes_with_twenty_calls_inside_the_scaled_budget() {
     }
 }
 
-/// The transport clock still spends its budget (#1487): with 350 ms, the
-/// four sequential calls take 200 ms and each of the four readers starts
-/// at most three of the sixteen detail calls (the first one to start, all
-/// three), so some are never read.
 #[test]
 fn a7_scale_transport_clock_spends_its_budget() {
     let path = scale_scenario("transport-spent", 50);
@@ -956,11 +874,6 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, ThreadId};
 
-/// The scaled budget's clock (#1487): an explicit state, never a measured
-/// time. Each lane (the run's thread, then each detail reader, which starts
-/// at the run's time) moves on only by `latency` for each source call it
-/// makes, so a busy host can't spend the budget. A read in flight still
-/// stops at a real deadline: the real run budget, from the clock's start.
 struct TransportClock {
     origin: Instant,
     run: ThreadId,
@@ -1084,8 +997,6 @@ fn merged_pr(n: u64, base: &str, sha: &str) -> MergedPr {
     }
 }
 
-// Leave room for fake-gh startup under parallel targets. The runner still
-// enforces its unchanged per-read timeout (#1841).
 const BATCH_PROBE_BUDGET: Duration = Duration::from_secs(30);
 
 fn batch_probe(
@@ -1249,9 +1160,6 @@ fn a7_bad_batch_members_never_prove_a_merge() {
             );
         }
     }
-    // Start the real fake and let it record the call before timing it out.
-    // Its response stays unavailable far beyond this generous startup window;
-    // a tight 100 ms deadline could kill it before it logged anything (#1841).
     let answers = batch_probe(
         "timeout",
         &good.to_string(),
@@ -1347,8 +1255,6 @@ fn a7_failed_batches_and_exhausted_budget_retain_all_required_records() {
             Duration::from_secs(5)
         };
         if budget.is_zero() {
-            // Zero before list discovery cannot know the required records.
-            // Advance only after lists have answered, at the core's clock seam.
             let fake = FakeGh::new("a7-exhausted", &path);
             let source = GitHubFleets::with_program(fake.program());
             let clock = OutOfBudgetAfter {

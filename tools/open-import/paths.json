@@ -56,7 +56,6 @@
     "loops/**",
     "release/**",
     "tests/**",
-    "tools/fleet-load/**",
     "tools/github-app/**",
     "tools/install/**",
     "tools/live-smoke/README.md",
@@ -141,13 +140,7 @@
     "tools/notifications/live-kit-result.schema.json",
     "tools/notifications/live-kit.md",
     "tools/notifications/test_discovery_kit.py",
-    "tools/notifications/test_live_kit.py",
-    "tools/test-value/README.md",
-    "tools/test-value/evidence/**",
-    "tools/test-value/measure.py",
-    "tools/test-value/test_measure.py",
-    "tools/test-value/test_unread_fixtures.py",
-    "tools/test-value/unread_fixtures.py"
+    "tools/notifications/test_live_kit.py"
   ],
   "keep": [
     "docs/grills/README.md",

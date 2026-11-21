@@ -27,6 +27,12 @@
     {
       "ticket": 5001,
       "role": "builder",
+      "start": {
+        "kind": "build",
+        "labels": [
+          "polish"
+        ]
+      },
       "choice": {
         "harness": "Claude Code",
         "provider": "claude-code",
@@ -61,6 +67,10 @@
     {
       "ticket": 5001,
       "role": "reviewer",
+      "start": {
+        "kind": "review",
+        "builder_family": "claude"
+      },
       "choice": {
         "harness": "Codex",
         "provider": "codex",

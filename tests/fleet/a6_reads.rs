@@ -1,20 +1,3 @@
-//! A6 (ClosedWiz#114): the CloudRoom reads behind the chain
-//! (`openwiz_adapter_cloudroom::fleet`), on the fake `room-cli` and inline
-//! synthetic answers. Fixture tests only.
-//!
-//! - **Only allowlisted reads run,** each once, in order: `--version`,
-//!   `project list --json --include-personal`, `thread list --json
-//!   --include-hidden`, then
-//!   `cloud thread-workspace <id> --json` for each listed Cloud thread. A
-//!   thread id that could become a flag is never passed.
-//! - **The readers are strict:** a table of good and bad answers for each
-//!   read, with the gap each bad one gets. A key given twice, a positional
-//!   array, a tagged object, a missing or extra key or a wrong type fails
-//!   the read; nothing is guessed.
-//! - **A failed read says so in OpenWiz's words,** never `room-cli`'s; a
-//!   read the deadline leaves no time for is not made, and is failed with
-//!   `budget_exhausted`.
-
 use std::fs;
 use std::fs::DirBuilder;
 use std::os::unix::fs::DirBuilderExt;
@@ -293,7 +276,6 @@ fn the_project_reader_keeps_this_repositorys_projects_strictly() {
         project_row("prj_syn_0002", Some("https://github.com/synthetic-owner/other-repo")),
         project_row("prj_syn_0003", None),
         project_row("prj_syn_0004", Some("git@github.com:synthetic-owner/synthetic-repo.git")),
-        // Not this repository's, so its fields aren't read.
         {"gitRemoteUrl": null, "id": 4, "name": null},
     ]);
     assert_eq!(
@@ -390,8 +372,6 @@ fn the_project_reader_keeps_this_repositorys_projects_strictly() {
             ),
         ),
         (
-            // A key given twice, even in a project that isn't this
-            // repository's, refuses the whole list.
             format!(
                 r#"[{{"id": "prj_syn_0001", "name": "Synthetic", "gitRemoteUrl": "{OURS}"}}, {{"id": "prj_syn_0002", "name": "Synthetic", "gitRemoteUrl": null, "gitRemoteUrl": "{OURS}"}}]"#
             ),
@@ -461,7 +441,6 @@ fn the_thread_reader_keeps_these_projects_threads_strictly() {
         local_row("thr_syn_0003", "prj_syn_0001", None),
         archived,
         cloud_row("thr_syn_0006", "prj_syn_0099"),
-        // Another project's, so nothing else of it is read.
         {"projectId": "prj_syn_0099", "id": 6, "executionTarget": "elsewhere"},
     ]);
     assert_eq!(
@@ -617,11 +596,6 @@ fn the_thread_reader_keeps_these_projects_threads_strictly() {
     }
 }
 
-// The reads end to end, on the fake `room-cli`.
-
-/// A private directory with the fake `room-cli` and one scenario, written
-/// here: `responses`, each `{"argv": [...], "stdout"?, "stderr"?, "exit"?,
-/// "hang"?}`.
 struct Fake {
     dir: PathBuf,
 }
@@ -655,7 +629,6 @@ impl Fake {
         CloudRoomSource::new(self.dir.join("room-cli"))
     }
 
-    /// Every argument list the fake received, in order.
     fn calls(&self) -> Vec<Vec<String>> {
         let Ok(text) = fs::read_to_string(self.dir.join("invocations.log")) else {
             return vec![];
@@ -683,8 +656,6 @@ fn soon() -> Instant {
 
 const VERSION: &[&str] = &["--version"];
 const PROJECT_LIST: &[&str] = &["project", "list", "--json", "--include-personal"];
-/// Hidden threads too: the contract leaves out only archived ones
-/// (orchestrator, #114, 2026-11-01: "(a)").
 const THREAD_LIST: &[&str] = &["thread", "list", "--json", "--include-hidden"];
 
 fn words(calls: &[&[&str]]) -> Vec<Vec<String>> {
@@ -698,7 +669,6 @@ fn words(calls: &[&[&str]]) -> Vec<Vec<String>> {
 fn every_read_runs_once_in_order_and_only_from_the_allowlist() {
     let mut archived = cloud_row("thr_syn_0013", "prj_syn_0001");
     archived["archivedAt"] = json!(1_793_000_000_000_i64);
-    // A hidden thread is one of the projects' threads: it is read.
     let mut hidden = cloud_row("thr_syn_0016", "prj_syn_0001");
     hidden["visibility"] = json!("hidden");
     let fake = Fake::new(
@@ -811,7 +781,6 @@ fn a_failed_workspace_read_says_so_in_openwizs_words() {
             "room-cli cloud thread-workspace: a workspace's head has an unexpected type"
         ))
     );
-    // A thread with no answer: the fake's "no fixture", exit 98.
     assert_eq!(
         fleet::workspace(&source, &ne("thr_syn_0023"), soon()),
         Outcome::Failed(failed(
@@ -876,8 +845,6 @@ fn a_hung_read_is_stopped_at_the_deadline() {
     let outcome = fleet::workspace(
         &fake.source(),
         &ne("thr_syn_0041"),
-        // P4's budget: long enough that the fake has started and written
-        // its pid before it is stopped (helper auditor 1, item 3).
         Instant::now() + Duration::from_secs(2),
     );
     let Outcome::Failed(Failed { gap, reason }) = outcome else {
@@ -899,8 +866,6 @@ fn a_hung_read_is_stopped_at_the_deadline() {
 
 #[test]
 fn when_the_projects_fail_or_are_none_no_thread_is_read() {
-    // The project list failed: its threads can't be told, so the thread
-    // list isn't run, and no branch is read.
     let fake = Fake::new(
         "the_projects_failed",
         json!([
@@ -923,8 +888,6 @@ fn when_the_projects_fail_or_are_none_no_thread_is_read() {
     assert_eq!(reads.workspaces, vec![]);
     assert_eq!(fake.calls(), words(&[VERSION, PROJECT_LIST]));
 
-    // No project has this repository's remote: it has no threads, and the
-    // thread list isn't run.
     let fake = Fake::new(
         "no_project_is_ours",
         json!([
@@ -983,7 +946,6 @@ fn safe_bundle_failure_categories_survive_version_sanitizing() {
             )
         );
     }
-    // An allowlisted phrase embedded in private/OS text is not allowlisted.
     for detail in [
         "/synthetic/private/path: no bundled launcher",
         "CloudRoom not running: room-cli could not be started (no bundled launcher) /synthetic/private",
@@ -1080,7 +1042,6 @@ fn discovery_failure_categories_survive_to_fleet_json() {
         "unexpected bundle",
         "unreadable bundle",
     ] {
-        // One configured discovery per process, as in the real entrypoint.
         let out = std::process::Command::new(std::env::current_exe().unwrap())
             .args([
                 "--exact",
@@ -1162,7 +1123,7 @@ fn discovery_failure_fixture() {
                 fs::write(dist.join(sibling), "synthetic").unwrap();
             }
             if category == "no running app identified" {
-                continue; // Mounted, valid bundles, with no process evidence.
+                continue;
             }
             let app = mount.join("synthetic-app");
             fs::write(&app, "synthetic executable, never run").unwrap();
@@ -1256,7 +1217,6 @@ fn discovery_failure_fixture() {
 fn every_read_record_the_adapter_gives_matches_the_schema() {
     use openwiz_core::fleet::model::{Read, ReadId, ReadKind, SourceName};
     let schema = crate::a6_agents::sub_schema("#/$defs/read");
-    // A planted bad record: the sub-schema really checks.
     for bad in [
         json!({"id": "r1", "kind": "workspace", "thread": "thr_syn_0001", "outcome": {"state": "complete", "value": ""}}),
         json!({"id": "r1", "kind": "threads", "outcome": {"state": "complete", "value": [{"thread": "thr_syn_0001", "project": "prj_syn_0001", "kind": "local"}]}}),
@@ -1265,7 +1225,6 @@ fn every_read_record_the_adapter_gives_matches_the_schema() {
         assert!(!crate::schema::validate(&schema, &bad).is_empty(), "{bad}");
     }
 
-    // Complete reads, then failed ones of every kind the adapter gives.
     let mut runs: Vec<Reads> = Vec::new();
     let complete = Fake::new(
         "schema_complete",

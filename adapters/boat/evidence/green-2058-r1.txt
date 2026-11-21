@@ -1,0 +1,10 @@
+# #2058 R1 green, with the fix on the R1 red commit: python3 -I adapters/boat/test_driver.py -v -k boat_output_never
+test_boat_output_never_reaches_a_wake_or_stop_answer (__main__.Boat.test_boat_output_never_reaches_a_wake_or_stop_answer) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 1.327s
+
+OK
+
+# at 87909cf5: python3 -I adapters/boat/test_driver.py: Ran 23 tests in 45.785s, OK; comment-check: ok (an earlier commit, c8963815, moved UP's comment onto a new line and failed the comment check; fixed here)
+# python3 -I kernel/driver-kit/test_kit.py at c8963815: Ran 8 tests, OK (this commit only restores a comment's line)

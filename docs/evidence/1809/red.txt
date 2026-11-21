@@ -1,0 +1,14 @@
+# python3 -I tools/install/tests/journey/test_journey.py OwnSettings, before docs/agents/fleet.md gains the Models table
+F
+======================================================================
+FAIL: test_the_models_table_holds_j255_and_the_older_tables_the_pinned_skills_read_agree (__main__.OwnSettings.test_the_models_table_holds_j255_and_the_older_tables_the_pinned_skills_read_agree)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/install/tests/journey/test_journey.py", line 796, in test_the_models_table_holds_j255_and_the_older_tables_the_pinned_skills_read_agree
+    self.assertEqual(text.count('\n## Models\n'), 1, 'one Models section')
+AssertionError: 0 != 1 : one Models section
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+FAILED (failures=1)

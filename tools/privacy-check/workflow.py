@@ -1,9 +1,3 @@
-"""A deliberately restricted YAML reader for runner policy, using only the stdlib.
-
-Block mappings/sequences, flow lists, quoted/plain scalars and opaque block
-scalars are supported. Aliases, tags, directives, flow mappings and multiline
-plain/quoted scalars are refused, never guessed. Duplicate keys are refused.
-"""
 import json
 import re
 
@@ -105,8 +99,6 @@ def parse(source):
             continue
         if text == '---' and not rows:
             continue
-        # Block contents cannot affect runner keys. A block-valued runs-on is
-        # opaque too and will be refused as a runner below.
         if re.search(r':\s*[|>][+-]?[1-9]?$', text):
             text = re.sub(r'[|>][+-]?[1-9]?$', 'OPAQUE_BLOCK', text)
             block = indent + (2 if text.startswith('- ') else 0)
@@ -184,9 +176,6 @@ def allowed_runner(value, job):
     fallback = re.fullmatch(r"\$\{\{\s*vars\.(CI_RUNS_ON|CI_RUST_RUNS_ON)\s*\|\|\s*'([^']+)'\s*\}\}", value)
     if fallback:
         return fallback[2] in HOSTED
-    # Only the permanent private repository can enter the private pool branch.
-    # Forks select hosted first; every public copy selects the literal last arm.
-    # Recognise only these three reviewed routes, not general expressions.
     private_route = re.fullmatch(
         r"\$\{\{\s*github\.event_name == 'pull_request' && "
         r"github\.event\.pull_request\.head\.repo\.full_name != github\.repository "
@@ -207,8 +196,6 @@ def allowed_runner(value, job):
     if not isinstance(values, list):
         return False
     values = list(values)
-    # Include entries can override the selected runner, even when a clean
-    # axis exists. Exclude entries only remove combinations.
     include = matrix.get('include', [])
     if not isinstance(include, list):
         return False

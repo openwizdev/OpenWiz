@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Synthetic fixtures only. Run: python3 tools/github-app/test.py."""
 import base64
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
@@ -26,29 +25,19 @@ from unittest import mock
 HERE = Path(__file__).resolve().parent
 PERMISSIONS = {name: "read" for name in (
     "metadata", "contents", "issues", "pull_requests", "checks", "actions")}
-# The service App profile the App is registered with (#1105).
 SERVICE = dict(PERMISSIONS, contents="write", issues="write", pull_requests="write")
 
 
 ROOT = HERE.parents[1]
-# #1279's owned paths: each loop and tool here follows the repository it runs
-# in (its clone, or one setting), so none may name ClosedWiz's as a fixed
-# target. This file is the one test CI runs in those paths, so the check is here.
 FOLLOWING_PATHS = ("loops", "tools/github-app",
                    "tools/roadmap", "docs/ROADMAP.md")
-# Built in pieces so this file is not a hit itself.
 FIXED_TARGET = re.compile(re.escape("jparker2006" + "/" + "ClosedWiz").encode(), re.IGNORECASE)
-# A pointer to the private record (a ClosedWiz issue comment, as #1257 has it)
-# names a record, not a target.
 POINTER = re.compile(rb"https://github\.com/" + FIXED_TARGET.pattern + rb"/issues/[1-9][0-9]*#issuecomment-[1-9][0-9]*",
                      re.IGNORECASE)
-# tools/roadmap writes these regions from the milestones GitHub returns for
-# the clone it runs in: their links follow the repository when regenerated.
 GENERATED = re.compile(rb"<!-- roadmap:([a-z-]+):begin -->.*?<!-- roadmap:\1:end -->", re.DOTALL)
 
 
 def fixed_targets(root, paths=FOLLOWING_PATHS):
-    """Each `path:line` under PATHS that names ClosedWiz's repository."""
     hits = []
     for top in paths:
         start = root / top
@@ -93,7 +82,6 @@ class RepositoryTargetTests(unittest.TestCase):
 
 class ManifestTests(unittest.TestCase):
     def test_template_names_no_repository(self):
-        # setup.py adds the repository it runs for: its --repo, or its clone's origin.
         manifest = json.loads((HERE / "manifest.json").read_text())
         self.assertNotIn("url", manifest)
         self.assertEqual(manifest["hook_attributes"], {"active": False})
@@ -102,8 +90,6 @@ class ManifestTests(unittest.TestCase):
         manifest = json.loads((HERE / "manifest.json").read_text())
         self.assertEqual(manifest["default_permissions"], SERVICE)
         self.assertEqual(manifest["default_events"], [])
-        # J48 (#606): each user's own App is private by default; only the explicit
-        # factory setting registers the factory's public multi-account App.
         self.assertIs(manifest["public"], False)
 
 
@@ -125,12 +111,10 @@ def fake_github(pem):
             calls.append((self.path, dict(self.headers), b""))
             found = re.fullmatch(r"/app/installations/([0-9]+)", self.path)
             if self.path == "/app":
-                # GI4 (#2546): the agent mode reconciles the App's owner and profile.
                 status, result = 200, {"id": 1001, "slug": "synthetic-app",
                                        "owner": {"login": behavior.get("app_owner", "synthetic-owner")},
                                        "permissions": behavior.get("app_permissions", SERVICE)}
             elif self.path == "/app/installations":
-                # The setup check's installation list (tools/install/setup/setup.py).
                 status, result = 200, [{"id": i, "app_id": 1001, "account": {"login": login},
                                         "repository_selection": behavior.get("selection", "selected"),
                                         "permissions": SERVICE}
@@ -150,7 +134,6 @@ def fake_github(pem):
             calls.append((self.path, dict(self.headers), body))
             if self.path == "/app-manifests/synthetic-code/conversions":
                 if behavior["drop"]:
-                    # A lost reply: GitHub may have created the App.
                     self.connection.shutdown(2)
                     return
                 result = {"id": 1001, "pem": pem.decode(), "slug": "synthetic-app",
@@ -161,7 +144,6 @@ def fake_github(pem):
                 result = {"token": behavior["token"],
                           "expires_at": behavior["expires_at"],
                           "permissions": behavior["permissions"]}
-                # C8: a read token downscoped to selected repositories names them.
                 result.update(behavior.get("read_profile", {}))
             else:
                 result = {"message": pem.decode()}
@@ -183,11 +165,9 @@ def fake_github(pem):
 
 
 def mints(calls):
-    """The token requests among the recorded calls: one per mint."""
     return [c for c in calls if c[0].endswith("/access_tokens")]
 
 
-# J48 (#606): the owner-bound reads a mint makes before asking for a token.
 OWNER_READS = ["/app", "/app/installations/2002"]
 
 
@@ -211,8 +191,7 @@ class KeyFixture(unittest.TestCase):
         self.config.chmod(0o600)
 
     def assert_no_key(self, *outputs):
-        # Include the full PEM and each body line, not just its banner.
-        # A failure names the output, never prints it: it may hold a runner's secrets (R5, #1480).
+        # SECURITY: a failure names the output, never prints it; it may hold a runner's secrets.
         needles = [self.pem] + self.pem.splitlines()[1:-1]
         for number, output in enumerate(outputs, 1):
             if isinstance(output, str):
@@ -224,7 +203,6 @@ class KeyFixture(unittest.TestCase):
         self.assertTrue((HERE / "mint-token.py").is_file())
         command = ["python3", str(HERE / "mint-token.py")]
         if device_now is not None:
-            # Run the real CLI with a controlled device clock, never a wall-clock race.
             bootstrap = """
 import datetime
 from pathlib import Path
@@ -252,7 +230,6 @@ with patch("datetime.datetime", DeviceClock), patch("time.time", return_value=fi
 
 class TokenTests(KeyFixture):
     def test_fresh_token_allows_clock_skew_but_expired_or_far_future_refused(self):
-        # Known UTC literals: one-hour token + up to five minutes of device drift.
         cases = [
             ("2026-01-01T00:59:59Z", 1767229199),
             ("2026-01-01T01:00:00Z", 1767229200),
@@ -357,7 +334,6 @@ class TokenTests(KeyFixture):
 
 
 class ReadProfileTests(KeyFixture):
-    """C8 (#2315): agent read tokens, downscoped to the selected repositories."""
     SELECTED = {"repository_selection": "selected", "repositories": [
         {"full_name": "synthetic-owner/other"}, {"full_name": "Synthetic-Owner/Work"}]}
 
@@ -410,23 +386,19 @@ class ReadProfileTests(KeyFixture):
                     self.assertEqual(result.stdout, b"")
                     self.assertEqual(result.stderr,
                                      b"App token refused: check PC state permissions, App installation and GitHub availability.\n")
-            # Mixed owners and duplicates refuse before any call.
             self.assertEqual(len(calls), 3 * (len(cases) - 2))
 
     def test_read_token_is_bound_to_the_app_owner_or_the_named_factory_installations(self):
-        """C-G1/J48 (#606): a user App mints only for an installation on its owner's
-        account; only the explicit factory setting accepts the identity contract's
-        named installations, and nothing else."""
         text = (HERE.parent.parent / "contracts/github-identity.v1.md").read_text()
         pin = json.loads(re.search(r"```json\n(.*?)\n```", text, re.S).group(1))
         named = [(i["account"], r) for i in pin["installations"] for r in i["repositories"]]
-        cross = next((a, r) for a, r in named if a != named[-1][0])  # another account than the last
+        cross = next((a, r) for a, r in named if a != named[-1][0])
         owner = named[-1][0]
-        cases = [  # (mode, App owner, installation account, repository, minted)
+        cases = [
             (None, "synthetic-owner", "synthetic-owner", "synthetic-owner/work", True),
             (None, "synthetic-elsewhere", "synthetic-owner", "synthetic-owner/work", False),
             ("user", "synthetic-elsewhere", "synthetic-owner", "synthetic-owner/work", False),
-            (None, owner, cross[0], cross[1], False),  # the factory's cross-account install, no setting
+            (None, owner, cross[0], cross[1], False),
             ("factory", owner, cross[0], cross[1], True),
             ("factory", owner, owner, named[-1][1], True),
             ("factory", owner, cross[0], cross[0] + "/synthetic-unnamed", False),
@@ -450,7 +422,6 @@ class ReadProfileTests(KeyFixture):
                         self.assertEqual((result.returncode, result.stdout), (1, b""))
                         self.assertEqual(result.stderr, b"App token refused: check PC state permissions, "
                                                         b"App installation and GitHub availability.\n")
-                        # Refused before any token exists: nothing to discard.
                         self.assertEqual(len(mints(calls)), before)
 
 
@@ -509,9 +480,6 @@ class GuardTests(KeyFixture):
 
 
 class SetupCheckOwnerBoundary(KeyFixture):
-    """#606 review R3: the setup check verifies an App only on its owner's own
-    installation, never another account's App installed by the repository owner."""
-
     def check(self, endpoint):
         spec = importlib.util.spec_from_file_location("install_setup_606", HERE.parent / "install/setup/setup.py")
         setup = importlib.util.module_from_spec(spec)
@@ -530,7 +498,7 @@ class SetupCheckOwnerBoundary(KeyFixture):
                     self.assertEqual((code, ids), ("app_verified", {"app_id": 1001, "installation_id": 2002}))
                 else:
                     self.assertEqual(code, "app_not_installed")
-                    self.assertEqual(mints(calls), [])  # refused before any token exists
+                    self.assertEqual(mints(calls), [])
 
 
 class Form(HTMLParser):
@@ -590,7 +558,6 @@ class SetupTests(KeyFixture):
         return process, line, page, form, manifest
 
     def clone(self, origin):
-        """A copy of the tool in a synthetic clone whose origin is ORIGIN (None: no origin)."""
         clone = Path(self.tmp.name) / "clone"
         shutil.rmtree(clone, ignore_errors=True)
         tool = clone / "tools/github-app"
@@ -636,7 +603,6 @@ class SetupTests(KeyFixture):
             None, "https://example.invalid/synthetic-owner/repo.git",
             "https://github.com/synthetic-owner", "https://github.com/synthetic-owner/repo/extra",
             "/srv/synthetic/repo.git")]
-        # With no key saved, only the repository can stop setup before it announces its page.
         self.key.unlink()
         self.config.unlink()
         for flag, value in cases:
@@ -687,9 +653,6 @@ class SetupTests(KeyFixture):
                            (self.state / "setup/state.json").read_bytes())
 
     def test_installation_on_the_repository_owner_must_also_be_the_app_owner(self):
-        """C-G1/J48 (#606): the product's App is a user App; an installation is
-        captured only on its owner's account, even when that account owns the
-        repository and the App was created by someone else."""
         with fake_github(self.pem) as (endpoint, calls, behavior):
             behavior["app_owner"] = "synthetic-elsewhere"
             process, line, page, form, manifest = self.start(endpoint)
@@ -754,7 +717,6 @@ class SetupTests(KeyFixture):
                 "python3", str(HERE / "setup.py"), "--state-dir", str(bare / "state"),
                 "--api-base", endpoint, "--port", "0", "--repo", "synthetic-owner/synthetic-repo"],
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            # Exit or an announced URL distinguishes refusal from starting setup.
             selector = selectors.DefaultSelector()
             selector.register(process.stdout, selectors.EVENT_READ)
             try:
@@ -779,7 +741,7 @@ class SetupTests(KeyFixture):
         self.assertIn("nothing new is registered", " ".join(json.loads(result.stdout)["effects"]))
         self.assertEqual(self.key.read_bytes(), self.pem)
         self.assert_no_key(result.stdout, result.stderr)
-        self.config.unlink()  # a key without app.json: a partial save stays untouched
+        self.config.unlink()
         result = subprocess.run(["python3", str(HERE / "setup.py"), "--state-dir", str(self.state),
                                  "--repo", "synthetic-owner/synthetic-repo"], capture_output=True, timeout=10)
         self.assertNotEqual(result.returncode, 0)
@@ -812,7 +774,6 @@ class SetupTests(KeyFixture):
             self.assertNotEqual(process.returncode, 0)
             self.assertEqual([(o["phase"]) for o in self.setup_state()["operations"]], ["uncertain"])
             self.assertFalse(self.key.exists())
-            # Retry, reload or a new preview: refused before any server or call.
             for extra in ((), ("--yes", "--operation", self.operation)):
                 result = subprocess.run(["python3", str(HERE / "setup.py"), "--state-dir", str(self.state),
                                          "--api-base", endpoint, "--port", "0",
@@ -822,8 +783,6 @@ class SetupTests(KeyFixture):
                 self.assertIn(self.operation.encode(), result.stderr)
                 self.assertEqual(result.stdout, b"")
             self.assertEqual(len(calls), 1)
-            # Only the owner's explicit check of GitHub allows a new proposal;
-            # the uncertain record stays.
             after = self.preview(endpoint, extra=("--after-uncertain", self.operation))
             self.assertNotEqual(after["operation_id"], self.operation)
             self.assertIn(self.operation, " ".join(after["effects"]))
@@ -836,12 +795,10 @@ class SetupTests(KeyFixture):
             state = urllib.parse.parse_qs(urllib.parse.urlsplit(form.action).query)["state"][0]
             urllib.request.urlopen(manifest["redirect_url"] + "?" + urllib.parse.urlencode(
                 {"code": "synthetic-code", "state": state})).read()
-            process.kill()  # interrupted before the installation callback
+            process.kill()
             process.communicate(timeout=10)
             self.assertEqual(self.setup_state()["operations"][0]["phase"], "uncertain")
             self.assertTrue(self.key.exists())
-            # Review R8: the same request reloads the same operation, which now
-            # reconciles the saved App instead of registering one.
             again = self.preview(endpoint, phase="uncertain")
             self.assertEqual(again["operation_id"], self.operation)
             resumed = self.run_yes(endpoint, again["operation_id"])
@@ -875,7 +832,6 @@ class SetupTests(KeyFixture):
         self.assert_no_key(stdout, stderr, repr(calls), (self.state / "setup/state.json").read_bytes())
 
     def lose_registration(self, endpoint, behavior, extra=()):
-        """Confirms a proposal whose conversion reply is lost: returns its id."""
         behavior["drop"] = True
         operation = self.preview(endpoint, extra=extra)["operation_id"]
         process = self.run_yes(endpoint, operation, extra)
@@ -892,7 +848,6 @@ class SetupTests(KeyFixture):
         return operation
 
     def test_one_proposal_asks_github_to_register_at_most_once(self):
-        # Review R3: two confirmations of one proposal; only the first claim converts.
         self.key.unlink()
         self.config.unlink()
         with fake_github(self.pem) as (endpoint, calls, behavior):
@@ -919,7 +874,6 @@ class SetupTests(KeyFixture):
             self.assertEqual([o["phase"] for o in self.setup_state()["operations"]], ["uncertain"])
 
     def test_only_the_newest_uncertain_registration_can_be_acknowledged(self):
-        # Review R3: acknowledging A never covers a later lost attempt B.
         self.key.unlink()
         self.config.unlink()
         with fake_github(self.pem) as (endpoint, calls, behavior):
@@ -943,8 +897,6 @@ class SetupTests(KeyFixture):
                              ["uncertain", "uncertain", "proposed"])
 
     def test_a_claim_rechecks_the_newest_uncertain_registration_under_the_lock(self):
-        # Review R3 (re-check): C acknowledged only A and was authorized; B then
-        # became uncertain. C's claim must see B and send nothing.
         self.key.unlink()
         self.config.unlink()
         other = ("--repo", "synthetic-owner/other-repo")
@@ -970,8 +922,6 @@ class SetupTests(KeyFixture):
             self.assertEqual(phases, {first: "uncertain", second: "uncertain", later: "proposed"})
 
     def test_an_acknowledged_recovery_keeps_its_identity_after_completing(self):
-        # Review R8 (re-check): B (after uncertain A) completes; its retry and
-        # reload with the same acknowledgment return B's applied result.
         self.key.unlink()
         self.config.unlink()
         with fake_github(self.pem) as (endpoint, calls, behavior):
@@ -1002,7 +952,6 @@ class SetupTests(KeyFixture):
             self.assertEqual(len(calls), done)
 
     def test_the_operation_bound_never_drops_an_uncertain_registration(self):
-        # Review R4: later proposals evict settled or proposed records, never uncertain ones.
         sys.path.insert(0, str(HERE.parent / "install/setup"))
         import store
         self.key.unlink()
@@ -1019,7 +968,6 @@ class SetupTests(KeyFixture):
                                      "--api-base", endpoint, "--port", "0",
                                      "--repo", "synthetic-owner/synthetic-repo"], capture_output=True, timeout=10)
             self.assertEqual(result.returncode, 6, result.stderr)
-            # With only uncertain records left, nothing new is proposed.
             def fill(value):
                 value["operations"] = [dict(o, phase="uncertain", operation_id=f"{n:032x}")
                                        for n, o in enumerate([value["operations"][0]] * 64)]
@@ -1029,7 +977,6 @@ class SetupTests(KeyFixture):
             self.assertEqual(len(self.setup_state()["operations"]), 64)
 
     def test_the_packaged_app_tool_runs_from_an_installed_runtime(self):
-        # #1105 R9: the collector's runtime/ layout, outside any repository.
         runtime = Path(self.tmp.name) / "installed/current/runtime"
         for source, name in ((HERE / "setup.py", "github-app/setup.py"), (HERE / "app.py", "github-app/app.py"),
                              (HERE / "manifest.json", "github-app/manifest.json"),
@@ -1048,7 +995,6 @@ class SetupTests(KeyFixture):
         self.assertEqual(calls, [])
 
     def test_a_completed_connection_reloads_its_own_result(self):
-        # Review R8: retry and reload of a completed connection reuse its id and do nothing.
         with fake_github(self.pem) as (endpoint, calls, _behavior):
             process, line, page, form, manifest = self.start(endpoint)
             state = urllib.parse.parse_qs(urllib.parse.urlsplit(form.action).query)["state"][0]
@@ -1068,10 +1014,6 @@ class SetupTests(KeyFixture):
             self.assertEqual(len(self.setup_state()["operations"]), 1)
 
 
-# GI4 (#2546): a stand-in for Cloudroom's agent-side secret store (assumption
-# A1). It records its arguments, environment and stdin, the only place the key
-# may go, in a file outside the state directory. It fails a write whose name is
-# in the fail file ("*": every write).
 STORE_SCRIPT = """import json, os, sys
 value = sys.stdin.read()
 # Python sets LC_CTYPE itself in a C locale (PEP 538): that is this process, not the caller.
@@ -1091,8 +1033,6 @@ class NoFollow(urllib.request.HTTPRedirectHandler):
 
 
 def fetch(url):
-    """(status, headers, body) of one local request; a redirect is never followed,
-    so no test reaches GitHub."""
     try:
         with urllib.request.build_opener(NoFollow()).open(url, timeout=10) as response:
             return response.status, response.headers, response.read()
@@ -1101,12 +1041,8 @@ def fetch(url):
 
 
 class AgentSetupTests(KeyFixture):
-    """GI4 (#2546): the agent mode prepares the one App for a named account and
-    puts the converted key only into the Cloudroom secret seam."""
-
     def setUp(self):
         super().setUp()
-        # The agent mode never uses the host's saved App: start with none.
         self.key.unlink()
         self.config.unlink()
         root = Path(self.tmp.name)
@@ -1116,7 +1052,6 @@ class AgentSetupTests(KeyFixture):
         self.store.write_text(f"#!{sys.executable} -I\n" + STORE_SCRIPT.format(sink=str(self.sink),
                                                                                fail=str(self.failing)))
         self.store.chmod(0o700)
-        # Every openssl the setup runs logs its arguments: the key never rides in one.
         shim = root / "bin"
         shim.mkdir()
         self.openssl_log = root / "openssl-argv.log"
@@ -1134,8 +1069,6 @@ class AgentSetupTests(KeyFixture):
                 "--port", "0", *account, *(("--secret-store", str(self.store)) if store else ()), *extra]
 
     def stored(self, delivered, app_id="1001"):
-        """The environment, with the secret as Cloudroom delivers it when DELIVERED
-        (APP_ID None: the key alone, a partial delivery)."""
         if not delivered:
             return self.env
         env = dict(self.env, OPENWIZ_GITHUB_APP_KEY=self.secret)
@@ -1153,7 +1086,6 @@ class AgentSetupTests(KeyFixture):
         return operation
 
     def agent_start(self, endpoint, account=("--agent-for", "synthetic-owner"), env=None, store=True, open=True):
-        """Preview, confirm, and (with OPEN) open the announced page: (process, line, start, form, base)."""
         self.operation = self.agent_preview(endpoint, account, env, store)["operation_id"]
         process = subprocess.Popen(self.command(endpoint, ("--yes", "--operation", self.operation), account, store),
                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env or self.env)
@@ -1174,7 +1106,6 @@ class AgentSetupTests(KeyFixture):
         return process, line, start, form, url.split("/start/")[0]
 
     def register(self, endpoint, account=("--agent-for", "synthetic-owner")):
-        """A completed registration and installation, with the store."""
         process, _line, _start, form, base = self.agent_start(endpoint, account)
         state, _answer = self.callback(base, form)
         self.installed(base, state)
@@ -1198,8 +1129,6 @@ class AgentSetupTests(KeyFixture):
         return json.loads(path.read_text()) if path.exists() else None
 
     def assert_nothing_left(self, *outputs):
-        """No key, base64 key or conversion code in any output, argument or file
-        left behind: only the secret store's own record holds the key."""
         needles = [self.pem, self.secret.encode(), b"synthetic-code"] + self.pem.splitlines()[1:-1]
         leftovers = [p.read_bytes() for p in Path(self.tmp.name).rglob("*") if p.is_file() and p != self.sink]
         argv = [json.dumps(r["argv"]).encode() for r in self.records()]
@@ -1211,7 +1140,6 @@ class AgentSetupTests(KeyFixture):
         self.assertFalse(self.key.exists())
 
     def assert_calls_hold_no_key(self, calls):
-        # The code rides only in GitHub's own conversion path; no key in any request.
         self.assert_no_key(repr(calls))
         self.assertNotIn(self.secret, repr(calls))
 
@@ -1231,7 +1159,6 @@ class AgentSetupTests(KeyFixture):
         return body + str(headers).encode()
 
     def reconcile_start(self, endpoint, account=("--agent-for", "synthetic-owner"), env=None, store=True):
-        """A delivered-key run: (process, line, page, base, install state)."""
         process, line, (status, headers, page), form, base = self.agent_start(
             endpoint, account, env or self.stored(True), store)
         self.assertEqual((status, form.values), (303, {}))
@@ -1240,11 +1167,8 @@ class AgentSetupTests(KeyFixture):
         return process, line, page, base, state
 
     def test_agent_page_carries_exactly_the_contract_profile(self):
-        """J48 (#606): a user's own App is registered private, under a name of its
-        own (the factory's name is taken on GitHub, and Create must need no edit);
-        only the explicit factory setting carries the pin's public App."""
         app = self.pin["app"]
-        long = "synthetic-" + "x" * 29  # a 39-character login
+        long = "synthetic-" + "x" * 29
         for account, target, name, public in (
                 (("--agent-for", "synthetic-owner"), "https://github.com/settings/apps/new?state=",
                  "OpenWiz synthetic-owner", False),
@@ -1262,7 +1186,7 @@ class AgentSetupTests(KeyFixture):
                 stdout, stderr = process.communicate(timeout=10)
                 self.assertEqual(status, 200)
                 self.assertTrue(form.action.startswith(target), form.action)
-                self.assertLessEqual(len(name), 34)  # GitHub's App name limit
+                self.assertLessEqual(len(name), 34)
                 home = "https://github.com/" + account[1]
                 self.assertEqual(json.loads(form.values["manifest"]), {
                     "name": name, "public": public,
@@ -1270,7 +1194,6 @@ class AgentSetupTests(KeyFixture):
                     "url": home, "hook_attributes": {"url": home, "active": app["webhook"]},
                     "redirect_url": base + "/callback", "setup_url": base + "/installed",
                     "setup_on_update": True})
-                # The page goes on to GitHub by itself: Create on GitHub is the first click.
                 nonce = re.search(r"script-src 'nonce-([A-Za-z0-9_-]+)'", headers["Content-Security-Policy"])
                 self.assertIn(f'<script nonce="{nonce.group(1)}">document.forms[0].submit()</script>'.encode(),
                               page)
@@ -1288,20 +1211,17 @@ class AgentSetupTests(KeyFixture):
         self.assertEqual(process.returncode, 0, stderr)
         self.assertEqual([c[0] for c in calls], ["/app-manifests/synthetic-code/conversions",
                                                  "/app/installations/2002"])
-        # The key, base64 on one line, and the public App id: nothing else, no environment.
         self.assertEqual(self.records(), [
             {"argv": ["OPENWIZ_GITHUB_APP_KEY"], "env": {}, "stdin": self.secret + "\n"},
             {"argv": ["OPENWIZ_GITHUB_APP_ID"], "env": {}, "stdin": "1001\n"}])
         self.assertEqual(self.phases(), ["applied"])
-        self.assertEqual(self.recorded_app(), {"app_id": 1001})  # the public id, recorded here
-        self.assertIsNone(self.setup_state()["app"])  # the host's App record stays the host's
+        self.assertEqual(self.recorded_app(), {"app_id": 1001})
+        self.assertIsNone(self.setup_state()["app"])
         self.assertIn(b"Installation 2002 read back", stdout)
         self.assert_nothing_left(line, page, answer, stdout, stderr)
         self.assert_calls_hold_no_key(calls)
 
     def test_agent_without_a_store_discards_the_converted_key_cleanly(self):
-        # J27 (a): with no agent-side store, the key is discarded and the person
-        # pastes a fresh one from GitHub; the App id stays recorded.
         with fake_github(self.pem) as (endpoint, calls, _behavior):
             process, line, (_status, _headers, page), form, base = self.agent_start(endpoint, store=False)
             state, answer = self.callback(base, form)
@@ -1314,9 +1234,8 @@ class AgentSetupTests(KeyFixture):
             self.assertEqual(self.records(), [])
             self.assertEqual(self.recorded_app(), {"app_id": 1001})
             self.assertEqual(self.phases(), ["applied"])
-            self.assertFalse(self.openssl_log.exists())  # the discarded key was never handled
+            self.assertFalse(self.openssl_log.exists())
             self.assert_nothing_left(line, page, answer, stdout, stderr)
-            # The pasted key alone (no id delivered) reconciles the same App: no Create, no store.
             again, _line, _page, base, state = self.reconcile_start(endpoint, env=self.stored(True, None),
                                                                     store=False)
             self.installed(base, state)
@@ -1341,7 +1260,6 @@ class AgentSetupTests(KeyFixture):
                 self.assertNotEqual(process.returncode, 0)
                 self.assertEqual(self.phases(), ["uncertain"])
                 self.assertEqual(len(self.records()), 0 if case == "lost reply" else 1)
-                # A lost reply: nothing recorded, the operation blocks. A stored-nothing App: its id blocks.
                 self.assertEqual(self.recorded_app(), None if case == "lost reply" else {"app_id": 1001})
                 blocker = self.operation if case == "lost reply" else "App 1001"
                 for extra in ((), ("--yes", "--operation", self.operation)):
@@ -1353,23 +1271,21 @@ class AgentSetupTests(KeyFixture):
                 self.assert_nothing_left(line, page, answer, stdout, stderr, again.stderr)
 
     def test_agent_registration_is_uncertain_before_the_form_is_released(self):
-        # Review R4: GitHub creates the App at Create, before any callback.
         with fake_github(self.pem) as (endpoint, calls, _behavior):
             process, line, url, _form, base = self.agent_start(endpoint, open=False)
             self.assertEqual(self.phases(), ["proposed"])
             first = fetch(url)
             self.assertEqual(self.phases(), ["uncertain"])
-            again = fetch(url)  # a reload serves the same claim, never a second one
+            again = fetch(url)
             self.assertEqual((first[0], again[0]), (200, 200))
             self.assertEqual(self.phases(), ["uncertain"])
-            process.kill()  # stopped after Create, before the callback
+            process.kill()
             process.communicate(timeout=10)
             for extra in ((), ("--yes", "--operation", self.operation)):
                 result = self.agent_run(endpoint, extra)
                 self.assertEqual(result.returncode, 6, result.stderr)
                 self.assertIn(self.operation.encode(), result.stderr)
             self.assertEqual(calls, [])
-            # One running instance converts once: a second callback is refused.
             shutil.rmtree(self.state / "setup")
             process, line, (_s, _h, page), form, base = self.agent_start(endpoint)
             state, _answer = self.callback(base, form)
@@ -1380,8 +1296,6 @@ class AgentSetupTests(KeyFixture):
                                                      "/app/installations/2002"])
 
     def test_agent_claim_rechecks_the_newest_uncertain_registration_under_the_lock(self):
-        # Authorized while nothing was uncertain; another registration then became
-        # uncertain. This claim must see it and release no form.
         with fake_github(self.pem) as (endpoint, calls, behavior):
             waiting, _line, url, _form, _base = self.agent_start(endpoint, open=False)
             first = self.operation
@@ -1402,7 +1316,6 @@ class AgentSetupTests(KeyFixture):
             self.assert_nothing_left(answer, stdout, stderr)
 
     def test_agent_registered_app_blocks_any_new_registration(self):
-        # Review R2: one App. Another account, without the key delivered, never gets Create.
         with fake_github(self.pem) as (endpoint, calls, _behavior):
             self.register(endpoint)
             for account in (ORG, ("--agent-for", "synthetic-owner")):
@@ -1415,14 +1328,11 @@ class AgentSetupTests(KeyFixture):
             self.assertEqual(len(calls), 2)
             self.assertEqual(len(self.records()), 2)
             self.assertEqual(self.phases(), ["applied"])
-            # A delivered id that is not the recorded App's is refused before any call.
             result = self.agent_run(endpoint, env=self.stored(True, "1002"))
             self.assertNotEqual(result.returncode, 0)
             self.assertEqual(len(calls), 2)
 
     def test_agent_id_without_its_key_refuses_registration(self):
-        # Review R6: an App id delivered without its key names an existing App (a fresh
-        # sandbox on the J27 path): refuse until the key arrives; never offer Create.
         env = dict(self.env, OPENWIZ_GITHUB_APP_ID="1001")
         for account in (("--agent-for", "synthetic-owner"), ORG):
             for store in (True, False):
@@ -1438,7 +1348,6 @@ class AgentSetupTests(KeyFixture):
                     self.assertIsNone(self.recorded_app())
                     self.assertFalse((self.state / "setup/state.json").exists()
                                      and self.setup_state()["operations"])
-        # A misplaced value in the id variable is refused without being echoed.
         with fake_github(self.pem) as (endpoint, calls, _b):
             result = self.agent_run(endpoint, env=dict(self.env, OPENWIZ_GITHUB_APP_ID=self.secret[:64]))
             self.assertEqual(result.returncode, 6, result.stderr)
@@ -1449,9 +1358,6 @@ class AgentSetupTests(KeyFixture):
     def test_agent_second_run_reconciles_instead_of_registering(self):
         with fake_github(self.pem) as (endpoint, calls, behavior):
             self.register(endpoint)
-            # With the secret delivered, the one App is reconciled and only its install is
-            # offered again, on its owner's account (J48: a user App installs nowhere else;
-            # test_agent_reconcile_is_bound_to_the_owner_unless_the_factory_setting_is_explicit).
             outputs = []
             for login, account in (("synthetic-owner", ("--agent-for", "synthetic-owner")),):
                 behavior["installations"] = {2002: login}
@@ -1462,30 +1368,28 @@ class AgentSetupTests(KeyFixture):
                 self.assertIn(f"Installation 2002 read back: {login}".encode(), stdout)
                 outputs += [line, page, answer, stdout, stderr]
         self.assertEqual([c[0] for c in calls][2:], ["/app", "/app/installations/2002"])
-        self.assertEqual(len(self.records()), 2)  # the store was not called again
+        self.assertEqual(len(self.records()), 2)
         self.assertEqual(self.phases(), ["applied"] * 2)
         self.assert_nothing_left(*outputs)
         self.assert_calls_hold_no_key(calls)
 
     def test_agent_completed_reconciliation_is_checked_again_every_run(self):
-        # Review R1: after an uninstall the install is offered again; after a profile change, refused.
         with fake_github(self.pem) as (endpoint, calls, behavior):
             self.register(endpoint)
             process, _line, _page, base, state = self.reconcile_start(endpoint)
             self.installed(base, state)
             process.communicate(timeout=10)
             done = self.operation
-            # The completed operation is not replayed as done: it must be previewed again.
             replay = self.agent_run(endpoint, ("--yes", "--operation", done), env=self.stored(True))
             self.assertNotEqual(replay.returncode, 0)
             self.assertNotIn(b'"applied"', replay.stdout)
-            behavior["installations"] = {}  # uninstalled on GitHub
+            behavior["installations"] = {}
             process, _line, _page, base, state = self.reconcile_start(endpoint)
             self.assertNotEqual(self.operation, done)
             self.installed(base, state, expect=400)
             process.kill()
             process.communicate(timeout=10)
-            behavior["app_permissions"] = PERMISSIONS  # the profile changed on GitHub
+            behavior["app_permissions"] = PERMISSIONS
             operation = self.agent_preview(endpoint, env=self.stored(True))["operation_id"]
             result = self.agent_run(endpoint, ("--yes", "--operation", operation), env=self.stored(True))
             self.assertNotEqual(result.returncode, 0)
@@ -1495,7 +1399,6 @@ class AgentSetupTests(KeyFixture):
         self.assertEqual(len(self.records()), 2)
 
     def test_agent_partial_delivery_is_repaired_without_another_conversion(self):
-        # Review R5: the key was stored, the id write failed (or setup stopped between them).
         with fake_github(self.pem) as (endpoint, calls, _behavior):
             self.failing.write_text("OPENWIZ_GITHUB_APP_ID")
             process, line, (_s, _h, page), form, base = self.agent_start(endpoint)
@@ -1506,7 +1409,6 @@ class AgentSetupTests(KeyFixture):
             self.assertEqual(self.recorded_app(), {"app_id": 1001})
             self.assertEqual([r["argv"] for r in self.records()], [["OPENWIZ_GITHUB_APP_KEY"],
                                                                    ["OPENWIZ_GITHUB_APP_ID"]])
-            # The delivered key alone: authenticated, the id is written, the key never again.
             process, line2, page2, base, state = self.reconcile_start(endpoint, env=self.stored(True, None))
             answer += self.installed(base, state)
             out, err = process.communicate(timeout=10)
@@ -1544,15 +1446,11 @@ class AgentSetupTests(KeyFixture):
                 answer += self.installed(base, state, expect=400)
                 process.kill()
                 stdout, stderr = process.communicate(timeout=10)
-                self.assertEqual(self.phases(), ["applied"])  # registered and stored; not installed
+                self.assertEqual(self.phases(), ["applied"])
                 self.assertNotIn(b"read back", stdout)
                 self.assert_nothing_left(line, page, answer, stdout, stderr)
 
     def test_agent_app_created_by_another_account_is_refused_and_never_installed(self):
-        """C-G1/J48 (#606): the browser's signed-in account, not the named one,
-        owns a created App. A user App owned elsewhere is refused at conversion:
-        its key goes nowhere, nothing is offered for install, and its recorded id
-        blocks another registration."""
         with fake_github(self.pem) as (endpoint, calls, behavior):
             behavior["app_owner"] = "synthetic-elsewhere"
             process, line, (_status, _headers, page), form, base = self.agent_start(endpoint)
@@ -1568,9 +1466,6 @@ class AgentSetupTests(KeyFixture):
             self.assertEqual(again.returncode, 6, again.stderr)
             self.assertEqual([c[0] for c in calls], ["/app-manifests/synthetic-code/conversions"])
             self.assert_nothing_left(line, page, answer, stdout, stderr, again.stderr)
-            # Review R2: after the documented cleanup (the foreign App deleted on
-            # GitHub, its recorded id removed), a fresh proposal and confirmation
-            # offer Create again; the refused registration's old id authorizes nothing.
             refused = self.operation
             (self.app / "app.json").unlink()
             fresh = self.agent_preview(endpoint)
@@ -1586,10 +1481,8 @@ class AgentSetupTests(KeyFixture):
             process.communicate(timeout=10)
 
     def test_agent_reconcile_is_bound_to_the_owner_unless_the_factory_setting_is_explicit(self):
-        """C-G1/J48 (#606): a delivered key's App must be the named account's own;
-        only --factory reconciles the pin's App on one of its named accounts."""
         named = [i["account"] for i in self.pin["installations"]]
-        cases = [  # (account flags, App owner, installation account, read back)
+        cases = [
             (("--agent-for", "synthetic-owner"), "synthetic-elsewhere", "synthetic-owner", False),
             (("--agent-for", named[0]), named[-1], named[0], False),
             (("--agent-for", named[0], "--factory"), named[-1], named[0], True),
@@ -1617,15 +1510,11 @@ class AgentSetupTests(KeyFixture):
                 self.assertIn(f"Installation 2002 read back: {named[0]}".encode(), stdout)
 
     def test_agent_capability_reports_only_what_this_host_shows(self):
-        """setup-onboard.v1's secret_capability producer (#606), judged by the
-        contract's own checker: verified delivery only when the delivered id agrees,
-        no success without it, and a --secret-store seam never counts as the
-        CloudRoom save-secret contribution."""
         spec = importlib.util.spec_from_file_location(
             "setup_onboard_check", HERE.parent / "install/tests/setup-onboard-contract/check.py")
         checker = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(checker)
-        cases = [  # (registered, env, store, outcome, delivery, problems, failures, unproven)
+        cases = [
             (True, self.stored(False), False, "uncertain", "missing", [], [],
              ["delivery_unverified", "key_download_unknown", "not_live"]),
             (True, self.stored(True), False, "stored", "verified", [], [], ["key_download_unknown", "not_live"]),
@@ -1650,14 +1539,10 @@ class AgentSetupTests(KeyFixture):
                 self.assertEqual((report.problems, report.failures, report.unproven),
                                  (problems, failures, unproven))
                 self.assertEqual(document["app_registrations"], 1 if registered else 0)
-                self.assertEqual(self.records(), [])  # reads only: no store call
+                self.assertEqual(self.records(), [])
                 self.assert_nothing_left(result.stdout, result.stderr)
 
     def test_agent_factory_reconcile_works_from_the_installed_runtime(self):
-        """Review R1 (#606): the installed runtime ships no contracts/ folder, so
-        the factory's named installations must travel with the tool itself; the
-        same --factory reconciliation works there as from the checkout, and an
-        unnamed account is still refused."""
         runtime = Path(self.tmp.name) / "installed/current/runtime"
         for source, name in ((HERE / "setup.py", "github-app/setup.py"), (HERE / "app.py", "github-app/app.py"),
                              (HERE / "manifest.json", "github-app/manifest.json"),
@@ -1685,11 +1570,8 @@ class AgentSetupTests(KeyFixture):
                 self.assertIn(f"Installation 2002 read back: {account}".encode(), stdout)
 
     def test_factory_installations_are_exactly_the_identity_contracts_pin(self):
-        """Review R1 (#606): the tool's own factory allowlist is the reviewed pin,
-        so factory mode accepts no installation the contract dropped and refuses
-        none it added."""
         sys.path.insert(0, str(HERE))
-        import app as tool  # noqa: E402
+        import app as tool
         pinned = {i["account"].lower(): {r.lower() for r in i["repositories"]} for i in self.pin["installations"]}
         self.assertEqual(tool.factory_installations(), pinned)
 
@@ -1708,19 +1590,15 @@ class AgentSetupTests(KeyFixture):
                 self.assertFalse((self.state / "setup").exists())
 
 
-# Every variable gh reads a token from, as a caller (a switched loop's runner) may export it.
 CALLER_TOKENS = {name: f"synthetic-caller-{name.lower()}" for name in (
     "GH_TOKEN", "GITHUB_TOKEN", "GH_ENTERPRISE_TOKEN", "GITHUB_ENTERPRISE_TOKEN")}
 
 
 class AgentTokenTests(KeyFixture):
-    """G2 (#1402): agents' GH_TOKEN from App installation tokens: the write
-    profile, the secret key route and the refresh helper. Synthetic only."""
     REFUSED = b"App token refused: check PC state permissions, App installation and GitHub availability.\n"
 
     def setUp(self):
         super().setUp()
-        # A logging openssl ahead on PATH: it sees every argument and its environment.
         self.bin = Path(self.tmp.name) / "bin"
         self.bin.mkdir()
         self.openssl_log = Path(self.tmp.name) / "openssl.log"
@@ -1731,13 +1609,11 @@ class AgentTokenTests(KeyFixture):
         self.secret = base64.b64encode(self.pem).decode()
 
     def run_tool(self, script, endpoint, *extra, now=None, env=None, repositories=("synthetic-owner/work",)):
-        # A minimal environment, never the runner's (its API keys would reach the fake's log) (R5, #1480).
         base = {"PATH": f"{self.bin}{os.pathsep}{os.environ.get('PATH', os.defpath)}",
                 **{k: os.environ[k] for k in ("HOME", "LANG") if k in os.environ}, **(env or {})}
         args = ["--state-dir", str(self.state), "--installation-id", "2002", "--api-base", endpoint,
                 *[a for r in repositories for a in ("--repository", r)], *extra]
         if now is None:
-            # Exactly as docs/github-app.md runs it: isolated mode (R1, #1403).
             command = ["python3", "-I", str(HERE / script), *args]
         else:
             command = ["python3", "-c", """
@@ -1758,9 +1634,6 @@ with patch("datetime.datetime", DeviceClock), patch("time.time", return_value=fi
         return subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=15, env=base)
 
     def assert_hidden(self, token, *outputs):
-        """Neither the key (PEM, its lines or its base64) nor TOKEN reached
-        OpenSSL's arguments or environment (its log, output 1) or any of OUTPUTS;
-        a failure names the output, never its content."""
         log = self.openssl_log.read_bytes() if self.openssl_log.exists() else b""
         self.assert_no_key(log, *outputs)
         for needle in (self.secret.encode(), self.secret[:40].encode(), token.encode()):
@@ -1769,7 +1642,6 @@ with patch("datetime.datetime", DeviceClock), patch("time.time", return_value=fi
                 self.assertFalse(needle in output, f"a secret reached output {number}")
 
     def test_write_token_asks_for_and_accepts_exactly_the_apps_profile(self):
-        """catches: a write token that loses a write, or gains workflows or administration."""
         with fake_github(self.pem) as (endpoint, calls, behavior):
             original = behavior.copy()
             for granted, ok in ((SERVICE, True), (PERMISSIONS, False),
@@ -1779,10 +1651,10 @@ with patch("datetime.datetime", DeviceClock), patch("time.time", return_value=fi
                 with self.subTest(granted=granted):
                     behavior.clear()
                     behavior.update(original, permissions=granted)
-                    shutil.rmtree(self.state / "tokens", ignore_errors=True)  # mint every time
+                    shutil.rmtree(self.state / "tokens", ignore_errors=True)
                     result = self.run_tool("refresh-token.py", endpoint, "--write", env=CALLER_TOKENS)
                     for caller in CALLER_TOKENS.values():
-                        self.assert_hidden(caller)  # never inherited by OpenSSL (R2, #1456)
+                        self.assert_hidden(caller)
                     if ok:
                         self.assertEqual((result.returncode, result.stdout, result.stderr),
                                          (0, b"synthetic-installation-token\n", b""))
@@ -1794,7 +1666,6 @@ with patch("datetime.datetime", DeviceClock), patch("time.time", return_value=fi
             self.assert_hidden("synthetic-installation-token", repr(calls))
 
     def test_secret_key_mints_with_no_key_file_and_never_reaches_the_signer_environment(self):
-        """catches: the cloud route needing a key file, or the key leaking into openssl's argv or environment."""
         shutil.rmtree(self.app)
         secret = {"OPENWIZ_GITHUB_APP_KEY": self.secret, "OPENWIZ_GITHUB_APP_ID": "1001"}
         with fake_github(self.pem) as (endpoint, calls, behavior):
@@ -1813,11 +1684,10 @@ with patch("datetime.datetime", DeviceClock), patch("time.time", return_value=fi
                     shutil.rmtree(self.state / "tokens", ignore_errors=True)
                     result = self.run_tool("refresh-token.py", endpoint, "--write", "--from-secret", env=bad)
                     self.assertEqual((result.returncode, result.stdout, result.stderr), (1, b"", self.REFUSED))
-            self.assertEqual(len(calls), before)  # refused before any request
+            self.assertEqual(len(calls), before)
 
     def test_refresh_reuses_a_token_until_five_minutes_are_left_then_mints_anew(self):
-        """catches: a mint per call (drains the App's budget) or a token handed out with 300 seconds or less."""
-        start = 1767225600  # 2026-01-01T00:00:00Z
+        start = 1767225600
         cache = self.state / "tokens"
         with fake_github(self.pem) as (endpoint, calls, behavior):
             behavior.update(permissions=SERVICE, expires_at="2026-01-01T01:00:00Z", token="synthetic-token-one")
@@ -1831,12 +1701,10 @@ with patch("datetime.datetime", DeviceClock), patch("time.time", return_value=fi
                     self.assertEqual((result.returncode, result.stdout, result.stderr),
                                      (0, expected.encode() + b"\n", b""))
                     self.assertEqual(len(mints(calls)), minted)
-            # Another scope never reuses this token: read-only, or another repository.
             behavior.update(permissions=PERMISSIONS, token="synthetic-token-read")
             result = self.run_tool("refresh-token.py", endpoint, now=start + 3301)
             self.assertEqual((result.returncode, result.stdout), (0, b"synthetic-token-read\n"))
             self.assertEqual(len(mints(calls)), 3)
-            # A fresh answer with 300 seconds or less is refused, never cached.
             behavior.update(permissions=SERVICE, token="synthetic-token-short", expires_at="2026-01-01T02:00:00Z")
             behavior["read_profile"] = {"repository_selection": "selected",
                                         "repositories": [{"full_name": "synthetic-owner/other"}]}
@@ -1854,7 +1722,6 @@ with patch("datetime.datetime", DeviceClock), patch("time.time", return_value=fi
         self.assert_hidden("synthetic-token-two", repr(calls))
 
     def test_refresh_refuses_an_unsafe_cache_without_using_it(self):
-        """catches: a planted or widened cache file handing out a token."""
         start = 1767225600
         with fake_github(self.pem) as (endpoint, calls, behavior):
             behavior.update(permissions=SERVICE, expires_at="2026-01-01T01:00:00Z")
@@ -1878,7 +1745,6 @@ with patch("datetime.datetime", DeviceClock), patch("time.time", return_value=fi
             self.assertEqual(len(mints(calls)), 1)
 
     def test_a_failing_check_names_the_output_never_its_content(self):
-        """catches: a failure printing the runner's environment (an agent's API keys) into a log (R5, #1480)."""
         with mock.patch.dict(os.environ, {"SYNTHETIC_RUNNER_KEY": "synthetic-runner-value"}), \
                 fake_github(self.pem) as (endpoint, calls, behavior):
             behavior["permissions"] = SERVICE
@@ -1886,7 +1752,6 @@ with patch("datetime.datetime", DeviceClock), patch("time.time", return_value=fi
         log = self.openssl_log.read_bytes()
         self.assertIn(b"/dev/fd/", log)
         self.assertFalse(b"synthetic-runner-value" in log, "the runner's environment reached the tool")
-        # One output holding the key, one holding only the token: each check fails on its own needle.
         for check in (lambda: self.assert_no_key("synthetic-context " + self.pem.decode()),
                       lambda: self.assert_hidden("synthetic-leaked-token", "synthetic-context synthetic-leaked-token")):
             with self.assertRaises(AssertionError) as caught:

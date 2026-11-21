@@ -1,11 +1,3 @@
-"""The durable setup store: owner-only `<state>/setup/state.json` (#1105).
-
-One file, replaced atomically under `setup/.lock`. It holds the explicitly
-selected project settings, the App's public ids, the latest observation code of
-each checked component and the setup operations of contracts/setup.v1.md.
-It never holds a credential: tokens, keys and provider bodies are refused by
-shape before a write. Its schema is `openwiz.setup-state.v1`.
-"""
 from contextlib import contextmanager
 import fcntl
 import hashlib
@@ -21,32 +13,26 @@ import time
 SCHEMA = 'openwiz.setup-state.v1'
 KINDS = ('connect_app', 'prepare_project', 'activate_engine', 'configure_access')
 PHASES = ('proposed', 'applied', 'refused', 'uncertain')
-# T3's components. T4 adds `engine` and T5 `remote_access` (their own lines).
 COMPONENTS = ('cloudroom', 'harness', 'personal_github', 'github_app', 'project', 'engine', 'remote_access')
 MAX_OPERATIONS = 64
 MAX_BYTES = 256 * 1024
-# No C0 or C1 control, no edge space.
 TEXT = re.compile(r'[^\x00-\x1f\x7f-\x9f]{1,300}')
 CODE = re.compile(r'[a-z][a-z_]{0,39}')
 REPOSITORY = re.compile(r'[A-Za-z0-9-]{1,39}/[A-Za-z0-9_.-]{1,100}')
 CLOUD_ID = re.compile(r'[A-Za-z0-9_-]{1,128}')
 SETTING = re.compile(r'[A-Za-z0-9_.:/-]{1,128}')
-# C-S1 (#2865): a credential shape at a word start in a harness, model or effort
-# refuses it; setup.rs's `credential_shaped` mirrors this list exactly.
 CREDENTIAL = re.compile(r'(?<![A-Za-z0-9])(?:gh[pousr]_|github_pat_|sk-|xox[abprs]-|AKIA|eyJ)')
-# #633 (setup.v1's 0.0.16 expansion): the owner's identity choice. Only the
-# owner's explicit App skip selects the personal login, and names it.
 LOGIN = re.compile(r'[A-Za-z0-9-]{1,39}')
 SELECTED = ('app', 'personal_login', 'unselected')
 APP_CHOICES = ('create', 'reuse', 'skip', 'undecided')
 
 
 class Refused(Exception):
-    """A fixed, public reason. Never a provider body or credential."""
+    pass
 
 
 class Superseded(Exception):
-    """A newer setup check already saved its results; this one saves nothing."""
+    pass
 
 
 def require(value, reason):
@@ -90,9 +76,6 @@ def check_project(value):
 
 
 def check_identity(value):
-    """#633: the saved identity choice for one repository. `personal_login`
-    exactly when the owner skipped the App, naming the acting login; it never
-    holds a credential, and an App failure has no way to write it."""
     if value is None:
         return
     require(type(value) is dict and set(value) == {'selected', 'app_choice', 'acting_login', 'repository'},
@@ -111,9 +94,6 @@ BRAIN = {'location', 'code_repository', 'code_visibility', 'brain_repository', '
 
 
 def check_brain(value):
-    """#635: the optional brain reference (setup-onboard.v1's `brain`). Absent or
-    null is an existing project: no brain is inferred. Placement follows the
-    positively read visibility; a companion is never the code repository."""
     if value is None:
         return
     require(type(value) is dict and set(value) == BRAIN, 'invalid brain reference')
@@ -209,14 +189,7 @@ def empty():
 
 
 def retained(operations, protected_engine=None):
-    """Room for one more operation within the bound (review R4). The oldest
-    settled (applied or refused) operation goes first, then the oldest
-    proposal, which had no effect. Uncertain operations are never dropped:
-    with no room left, nothing new is proposed. The selected engine is protected;
-    without a supplied selection, all engine identities are protected."""
     operations = list(operations)
-    # Without the selection, no engine identity can safely be inferred from
-    # list order: preview can reselect an older proposal. Preserve all of them.
     protected = ({protected_engine} if protected_engine is not None else
                  {o['operation_id'] for o in operations if o['kind'] == 'activate_engine'})
     while len(operations) >= MAX_OPERATIONS:
@@ -232,13 +205,11 @@ def retained(operations, protected_engine=None):
 
 
 def fingerprint(kind, request):
-    """Binds an operation to its exact request: kind and canonical JSON."""
     data = json.dumps({'kind': kind, 'request': request}, sort_keys=True, separators=(',', ':'))
     return hashlib.sha256(data.encode()).hexdigest()
 
 
 def state_path(explicit):
-    """--state-dir, else $OPENWIZ_STATE_DIR, else the store's own default."""
     if explicit is not None:
         path = Path(explicit)
     elif os.environ.get('OPENWIZ_STATE_DIR'):
@@ -301,7 +272,6 @@ class Store:
 
     @contextmanager
     def locked(self):
-        """One validated lock for setup and its PC activation extension."""
         private_directory(self.state, True)
         private_directory(self.dir, True)
         lock = os.open(self.dir / '.lock', os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_NONBLOCK, 0o600)
@@ -338,7 +308,6 @@ class Store:
             os.close(directory)
 
     def update(self, change):
-        """Runs change(state) under the lock and replaces the file atomically."""
         with self.locked():
             value = self._read()
             result = change(value)
@@ -347,12 +316,6 @@ class Store:
             return result
 
     def activation_transaction(self, change, validator):
-        """Extend an existing six-field operation in a private companion journal.
-
-        The journal is the activation fence. Save it before its ordinary setup
-        projection, so a crash between replacements cannot permit another effect.
-        Callers re-establish current resource evidence on every execute.
-        """
         with self.locked():
             value = self._read()
             path = self.dir / 'pc-activation.json'
@@ -390,11 +353,7 @@ class Store:
 
             return change(value, journal, save)
 
-    # Operations: persist the id, fingerprint and proposal before any effect.
     def propose(self, kind, request, effects, reason, current=lambda value: True):
-        """The operation for this exact request. Retry and reload reuse a proposed
-        or uncertain one; an applied one only while `current(state)` says its
-        result still stands (review R1, R8), else this is a new proposal."""
         digest = fingerprint(kind, request)
 
         def change(value):
@@ -407,15 +366,11 @@ class Store:
                     return dict(operation)
             operation = {'operation_id': secrets.token_hex(16), 'kind': kind, 'phase': 'proposed',
                          'fingerprint': digest, 'effects': list(effects), 'reason': reason}
-            # Preserve the selected engine's identity when another setup effect
-            # needs space; its proposal/outcome remains the status binding.
             value['operations'] = retained(value['operations'], (value.get('engine') or {}).get('operation_id')) + [operation]
             return dict(operation)
         return self.update(change)
 
     def authorized(self, value, operation_id, kind, request, current=lambda value: True):
-        """The one operation an explicit --yes --operation may act on. An applied
-        operation whose result no longer stands is refused, never reported as done."""
         digest = fingerprint(kind, request)
         matches = [o for o in value['operations'] if o['operation_id'] == operation_id]
         require(len(matches) == 1, 'unknown setup operation; preview it first')
@@ -428,9 +383,6 @@ class Store:
         return operation
 
     def settle(self, operation_id, phase, reason, also=None, claim=False):
-        """applied, refused or uncertain. Applied and refused are final; a
-        later refusal never erases uncertainty. With `claim`, only a proposed
-        operation may move: its one external effect is claimed exactly once (R3)."""
         require(phase in ('applied', 'refused', 'uncertain'), 'invalid phase')
 
         def change(value):
@@ -446,8 +398,6 @@ class Store:
             return dict(operation)
         return self.update(change)
 
-    # Security R3: each check takes a generation when it starts, and saves only
-    # if no later-started check has saved already.
     def start_check(self):
         def change(value):
             value['checks']['started'] += 1
@@ -455,7 +405,6 @@ class Store:
         return self.update(change)
 
     def observe(self, results, revision, at=None):
-        """Records one code per component, bound to the selection's revision."""
         now = at if at is not None else int(time.time() * 1000)
 
         def change(value):

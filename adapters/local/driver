@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-import ctypes, fcntl, json, os, re, secrets, shutil, signal, subprocess, sys, time
+import ctypes, fcntl, importlib.machinery, importlib.util, json, os, re, secrets, shutil, signal, subprocess, sys, time
+
+sys.dont_write_bytecode = True
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+KIT = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'kit.py')
 STATE = os.environ.get('OPENWIZ_LOCAL_STATE') or os.path.expanduser('~/.local/state/openwiz-local')
-# The host owner's approved permission mode per repository and harness, saved by setup on this machine,
-# outside any repository: {"<owner>/<name>": {"<harness>": "<mode>"}}. A repository's own row must match it.
 APPROVALS = os.path.join(STATE, 'approvals.json')
 MODE = r'[A-Za-z][A-Za-z0-9_-]{0,39}'
 WRITABLE = 'make OPENWIZ_LOCAL_STATE (or ~/.local/state/openwiz-local) a folder you can write'
@@ -13,16 +14,11 @@ START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket':
          'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
          'model': r'[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}'}
 RUN = {'run': r'run-[0-9a-f]{12}'}
-# Each harness's own non-interactive command, with the permission mode the owner saved for the repository
-# (docs/agents/fleet.md, `| Harness permission mode | `<mode>` |`), passed unchanged as that harness's own
-# option. The driver adds no login or token, and never chooses or widens a permission itself.
 HARNESSES = {'claude': lambda model, mode, prompt: ['-p', prompt, '--model', model, '--permission-mode', mode],
              'codex': lambda model, mode, prompt: ['exec', '--model', model, '--sandbox', mode, prompt]}
 MODE_ROW = '| Harness permission mode |'
-GRACE = 10  # seconds a stopped process has to exit before it is killed
-SETTLE = float(os.environ.get('OPENWIZ_LOCAL_SETTLE') or 30)  # seconds start watches the first turn
-# First-turn log lines that say the harness isn't signed in, or was refused a tool. The driver only classifies
-# them: raw harness and tool output stays in the run's owner-only log, never in its JSON (N2).
+GRACE = 10
+SETTLE = float(os.environ.get('OPENWIZ_LOCAL_SETTLE') or 30)
 SIGNED_OUT = re.compile(r'(?i)oauth|log ?in\b|sign ?in\b|authenticat|unauthori[sz]ed|expired|credential')
 REFUSAL = re.compile(r'(?i)denied|refused|not allowed|permission')
 
@@ -38,7 +34,6 @@ def unique(pairs):
 
 
 def read(fields):
-    """The request on stdin, with exactly these fields, each valid, or Refused."""
     try:
         req = json.loads(sys.stdin.read(), object_pairs_hook=unique)
     except ValueError:
@@ -52,8 +47,26 @@ def read(fields):
     return req
 
 
+def no_credentials(req):
+    # PRIVACY: runs before anything is saved or started, and the refusal names the field, never its value.
+    try:
+        spec = importlib.util.spec_from_loader('openwiz_driver_kit', importlib.machinery.SourceFileLoader(
+            'openwiz_driver_kit', KIT))
+        kit = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(kit)
+        holds_credential = kit.holds_credential
+    except Exception:
+        raise Refused("the driver kit's credential check is missing, so no start field can be checked; nothing "
+                      'was started', 'run the driver from an OpenWiz checkout or release that carries '
+                      'kernel/driver-kit/kit.py')
+    for key in START:
+        if isinstance(req[key], str) and holds_credential(req[key]):
+            raise Refused('%s looks like a credential, so nothing was saved or started' % key,
+                          'send the %s itself in %s; never a login, key or token' % (key, key))
+    return req
+
+
 def program(harness):
-    """The harness's absolute path on this machine, or Refused."""
     if harness not in HARNESSES:
         raise Refused('harness %s is not one this driver runs' % harness, 'use one of: ' + ', '.join(HARNESSES))
     path = shutil.which(harness)
@@ -64,7 +77,6 @@ def program(harness):
 
 
 def log_path(run):
-    """The run's owner-only log: the clone's and every turn's raw output."""
     return os.path.join(STATE, run + '.log')
 
 
@@ -73,7 +85,6 @@ def open_log(run):
 
 
 def workspace(run, repository):
-    """A fresh clone of the repository for this run alone, by the person's own signed-in `gh`."""
     gh = shutil.which('gh')
     if not gh:
         raise Refused('gh is not installed here, so the driver cannot clone %s' % repository,
@@ -97,7 +108,6 @@ def workspace(run, repository):
 
 
 def permission_mode(folder, repository, harness):
-    """The one permission mode the owner saved in the repository's docs/agents/fleet.md, or Refused."""
     try:
         with open(os.path.join(folder, 'docs', 'agents', 'fleet.md')) as f:
             rows = [line for line in f.read().splitlines() if line.startswith(MODE_ROW)]
@@ -112,8 +122,6 @@ def permission_mode(folder, repository, harness):
 
 
 def approved_mode(repository, harness):
-    """The mode this machine's owner approved for the repository and harness (APPROVALS), or Refused. Only the
-    owner may be able to change that file; the driver never uses a mode it read only from a repository (R6)."""
     setup = ('approve a mode on this machine: in %s, set "%s": {"%s": "<mode>"} (owner-only), then start again'
              % (APPROVALS, repository, harness))
     try:
@@ -149,9 +157,6 @@ LINUX = os.path.isdir('/proc/self') and hasattr(os, 'pidfd_open')
 PR_SET_CHILD_SUBREAPER = 36
 
 
-TURN = re.compile(r'\s--turn\s')
-
-
 def ps(*args):
     try:
         p = subprocess.Popen(['ps'] + list(args), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
@@ -164,17 +169,22 @@ def ps(*args):
     return out.splitlines(), p.pid
 
 
-def members(roots, run):
-    rows, me = ps('-A', '-ww', '-o', 'pid=', '-o', 'ppid=', '-o', 'pgid=', '-o', 'stat=', '-o', 'command=', '-E')
-    mark = re.compile(r'(?:^|\s)OPENWIZ_RUN=%s(?:\s|$)' % re.escape(run))
-    found, children = set(), {}
+MACOS_SECONDS_BETWEEN_LOOKS = 0.2
+LOOKS_PER_OUTPUT_CHECK = 5
+
+
+# PRIVACY: reads only ps's process table (pid, parent, group, state, start time), never any environment.
+def members(roots, recorded, writers=()):
+    rows, me = ps('-A', '-o', 'pid=', '-o', 'ppid=', '-o', 'pgid=', '-o', 'stat=', '-o', 'lstart=')
+    started, children, found = {}, {}, set()
     for row in rows:
         f = row.split(None, 4)
-        if len(f) < 4 or f[3].startswith('Z'):
+        if len(f) < 5 or f[3].startswith('Z'):
             continue
         pid, ppid, group = int(f[0]), int(f[1]), int(f[2])
+        started[pid] = f[4].strip()
         children.setdefault(ppid, []).append(pid)
-        if group in roots or len(f) > 4 and mark.search(f[4]) and not TURN.search(f[4]):
+        if group in roots or recorded.get(pid) == started[pid] or pid in writers:
             found.add(pid)
     todo = list(roots) + list(found)
     while todo:
@@ -182,11 +192,74 @@ def members(roots, run):
             if c not in found:
                 found.add(c)
                 todo.append(c)
-    return found - set(roots) - {os.getpid(), me}
+    return {p: started[p] for p in found - set(roots) - {os.getpid(), me}}
+
+
+# PRIVACY: asks lsof only which processes hold this run's own output file open for writing, never any environment.
+def writing_to(path):
+    try:
+        out = subprocess.run(['lsof', '-F', 'pa', '--', path], stdin=subprocess.DEVNULL, capture_output=True,
+                             text=True, timeout=30).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return set()
+    found, pid = set(), None
+    for field in out.splitlines():
+        if field[:1] == 'p' and field[1:].isdigit():
+            pid = int(field[1:])
+        elif field[:1] == 'a' and field[1:2] in ('w', 'u') and pid is not None:
+            found.add(pid)
+    return found
+
+
+def supervisor_record(run, supervisor):
+    return os.path.join(STATE, '%s.%d.sup' % (run, supervisor))
+
+
+def record_kept(run, kept):
+    record = supervisor_record(run, os.getpid())
+    try:
+        with open(record + '.new', 'w') as f:
+            json.dump({'supervisor_since': since(os.getpid()), 'kept': {str(p): t for p, t in kept.items()}}, f)
+        os.replace(record + '.new', record)
+    except OSError:
+        pass
+
+
+def recorded_by(run, supervisors):
+    recorded = {}
+    for pid, started in supervisors:
+        try:
+            with open(supervisor_record(run, pid)) as f:
+                record = json.load(f)
+            if record['supervisor_since'] == started:
+                recorded.update({int(p): t for p, t in record['kept'].items() if isinstance(t, str)})
+        except (OSError, ValueError, KeyError, TypeError, AttributeError):
+            continue
+    return recorded
+
+
+def look_after_the_turn_on_macos(run, harness, output):
+    kept, looks = {}, 0
+    while True:
+        children_left = any_child_running_after_reaping(harness)
+        scanned = looks % LOOKS_PER_OUTPUT_CHECK == 0
+        now = members({os.getpid()}, kept, writing_to(output) if scanned else ())
+        if not children_left and not now and not scanned:
+            now = members({os.getpid()}, kept, writing_to(output))
+        looks += 1
+        if now != kept:
+            kept = now
+            record_kept(run, kept)
+        if not children_left and not kept:
+            try:
+                os.remove(supervisor_record(run, os.getpid()))
+            except OSError:
+                pass
+            return
+        time.sleep(MACOS_SECONDS_BETWEEN_LOOKS)
 
 
 def since(pid):
-    """When process pid started, or None once it has exited: with its pid, this names one process."""
     if not LINUX:
         row = ps('-o', 'stat=', '-o', 'lstart=', '-p', str(pid))[0]
         return row[0].split(None, 1)[1].strip() if row and not row[0].lstrip().startswith('Z') else None
@@ -199,7 +272,6 @@ def since(pid):
 
 
 def descendants(pid):
-    """Every live process under pid."""
     children = {}
     for p in filter(str.isdigit, os.listdir('/proc')):
         try:
@@ -219,9 +291,6 @@ def descendants(pid):
 
 
 def supervise(cmd):
-    """One turn, as `driver --turn <command>`: run the harness, its output going to the run's log, and keep
-    every process it starts as this turn's (an orphan comes back here, whatever its session or environment)
-    until none is left; then exit."""
     if LINUX and ctypes.CDLL(None, use_errno=True).prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0) != 0:
         print(json.dumps({'error': 'this host cannot keep a turn\'s processes together'}), flush=True)
         return
@@ -230,23 +299,38 @@ def supervise(cmd):
     except OSError as e:
         print(json.dumps({'error': e.strerror}), flush=True)
         return
-    signal.signal(signal.SIGTERM, signal.SIG_IGN)  # only `end` stops a turn, and it never orphans one
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
     print(json.dumps({'pid': harness.pid, 'since': since(harness.pid)}), flush=True)
     os.dup2(os.open(os.devnull, os.O_WRONLY), 1)
+    if not LINUX:
+        os.dup2(os.open(os.devnull, os.O_WRONLY), 2)
+        return look_after_the_turn_on_macos(os.environ['OPENWIZ_RUN'], harness.pid, log_path(os.environ['OPENWIZ_RUN']))
     while True:
         try:
             pid, status = os.wait()
         except ChildProcessError:
-            if LINUX or not members({os.getpid()}, os.environ['OPENWIZ_RUN']):
-                return
-            time.sleep(0.2)
-            continue
-        if pid == harness.pid:  # its exit code, for `start` to read (`exited`)
-            try:
-                with open(exit_file(os.environ['OPENWIZ_RUN'], pid), 'w') as f:
-                    f.write(str(os.waitstatus_to_exitcode(status)))
-            except OSError:
-                pass
+            return
+        saved_exit(pid, status, harness.pid)
+
+
+def saved_exit(pid, status, harness):
+    if pid == harness:
+        try:
+            with open(exit_file(os.environ['OPENWIZ_RUN'], pid), 'w') as f:
+                f.write(str(os.waitstatus_to_exitcode(status)))
+        except OSError:
+            pass
+
+
+def any_child_running_after_reaping(harness):
+    while True:
+        try:
+            pid, status = os.waitpid(-1, os.WNOHANG)
+        except ChildProcessError:
+            return False
+        if pid == 0:
+            return True
+        saved_exit(pid, status, harness)
 
 
 def exit_file(run, pid):
@@ -254,7 +338,6 @@ def exit_file(run, pid):
 
 
 def exited(run, turn):
-    """The ended harness's exit code, as its supervisor saved it, or None if unknown."""
     deadline = time.monotonic() + 2
     while True:
         try:
@@ -267,14 +350,12 @@ def exited(run, turn):
 
 
 def launch(state, run, woken):
-    """Start one turn under its supervisor, with the person's environment and this run's mark; return what
-    `running` and `end` need."""
     req = state['request']
     cmd = [state['program']] + HARNESSES[req['harness']](req['model'], state['mode'], prompt(req, woken))
     try:
         log = open_log(run)
     except OSError:
-        log = subprocess.DEVNULL  # the run is saved; a log it can't open never stops its turn
+        log = subprocess.DEVNULL
     try:
         sup = subprocess.Popen([sys.executable, '-I', os.path.abspath(__file__), '--turn'] + cmd,
                                env=dict(os.environ, OPENWIZ_RUN=run), start_new_session=True, cwd=state['workspace'],
@@ -298,13 +379,10 @@ def launch(state, run, woken):
 
 
 def running(turn):
-    """Whether the turn `launch` returned still runs its harness."""
     return bool(turn) and turn['since'] is not None and since(turn['pid']) == turn['since']
 
 
 def end(turns, run):
-    """Stop the run: every process its turns' supervisors still keep, whatever its session or environment.
-    A supervisor exits only once none of its processes is left, so answer once every supervisor has exited."""
     kept = [(t['supervisor'], t['supervisor_since']) for t in turns if t and t['supervisor_since'] is not None]
     for sig, wait in ((signal.SIGTERM, GRACE), (signal.SIGKILL, 2)):
         sent, deadline = set(), time.monotonic() + wait
@@ -313,7 +391,7 @@ def end(turns, run):
             if not kept:
                 return
             if not LINUX:
-                for p in members({s for s, _ in kept}, run) - sent:
+                for p in set(members({s for s, _ in kept}, recorded_by(run, kept), writing_to(log_path(run)))) - sent:
                     try:
                         os.kill(p, sig)
                         sent.add(p)
@@ -323,7 +401,7 @@ def end(turns, run):
                 continue
             pinned = {}
             for p in set().union(*(descendants(s) for s, _ in kept)) - sent:
-                try:  # pin each pid first, then check it is still under a supervisor, so no reused pid is hit
+                try:
                     pinned[p] = os.pidfd_open(p)
                 except OSError:
                     pass
@@ -344,7 +422,6 @@ def end(turns, run):
 
 
 def lock(run):
-    """Hold the run's lock until this command ends, so its wakes and stops take turns."""
     if not os.path.exists(os.path.join(STATE, run + '.json')):
         raise Refused('no run ' + run, 'check the run id that `driver start` printed')
     try:
@@ -369,9 +446,6 @@ def saved(run, state=None):
 
 
 def ended_at_once(run, turn):
-    """Watch a first turn for SETTLE seconds. One that has already ended with a non-zero (or unknown) exit, or
-    with a refusal or sign-in line in its log (a harness whose permissions refuse every tool still exits 0),
-    has failed: end what is left and say why. One that ended cleanly simply finished: the run started."""
     deadline = time.monotonic() + SETTLE
     while running(turn) and time.monotonic() < deadline:
         time.sleep(0.1)
@@ -393,7 +467,6 @@ def ended_at_once(run, turn):
 
 
 def stopped(run, state):
-    """Save the run as stopped, if the state folder still lets it: it never runs again."""
     try:
         saved(run, dict(state, stopped=True))
     except OSError:
@@ -401,7 +474,6 @@ def stopped(run, state):
 
 
 def unsaved(run, turn, cmd):
-    """A turn began but could not be saved: end it, and say the outcome is unknown, never retry."""
     try:
         end([turn], run)
     except Refused:
@@ -419,23 +491,23 @@ def answer(cmd):
         with open(os.path.join(HERE, 'schema.json')) as f:
             return json.load(f)
     if cmd == 'start':
-        req, run = read(START), 'run-' + secrets.token_hex(6)
+        req, run = no_credentials(read(START)), 'run-' + secrets.token_hex(6)
         state = {'request': req, 'program': program(req['harness']), 'turns': [], 'stopped': False,
-                 'starting': True, 'workspace': None, 'mode': None}  # never woken while starting
-        try:  # save the run before its turn starts: nowhere to keep it, nothing starts
+                 'starting': True, 'workspace': None, 'mode': None}
+        try:
             saved(run, state)
             os.close(os.open(os.path.join(STATE, run + '.lock'), os.O_WRONLY | os.O_CREAT, 0o600))
         except OSError:
             raise Refused('the driver cannot save runs in its state folder; nothing was started', WRITABLE)
-        try:  # its own clone, and the owner's saved permission mode, before anything runs
-            approved = approved_mode(req['repository'], req['harness'])  # before anything is cloned
+        try:
+            approved = approved_mode(req['repository'], req['harness'])
             state['workspace'] = workspace(run, req['repository'])
             if permission_mode(state['workspace'], req['repository'], req['harness']) != approved:
                 raise Refused('the Harness permission mode row in %s does not match the mode approved on this '
                               'machine; nothing was started' % req['repository'],
                               'save the one mode you approve in both its docs/agents/fleet.md and %s, then start '
                               'again' % APPROVALS)
-            state['mode'] = approved  # never a mode read only from the repository
+            state['mode'] = approved
             saved(run, state)
         except OSError:
             raise Refused('the driver cannot save run %s in its state folder; nothing was started' % run, WRITABLE)
@@ -448,8 +520,8 @@ def answer(cmd):
             stopped(run, state)
             raise
         try:
-            saved(run, dict(state, turns=[turn]))  # still starting: stop reaches the turn, wake refuses it
-        except OSError:  # the turn began but its run is not saved: end it, and never say retry
+            saved(run, dict(state, turns=[turn]))
+        except OSError:
             unsaved(run, turn, 'start')
         try:
             ended_at_once(run, turn)
@@ -466,12 +538,12 @@ def answer(cmd):
         lock(run)
         state = saved(run)
         if cmd == 'stop':
-            try:  # first, so no wake starts a turn meanwhile
+            try:
                 saved(run, dict(state, stopped=True))
                 kept = True
             except OSError:
                 kept = False
-            end(state['turns'], run)  # whether or not that save worked
+            end(state['turns'], run)
             if not kept:
                 raise Refused('run %s has ended, but the driver could not save that it is stopped' % run,
                               WRITABLE + ', then stop it again')
@@ -480,10 +552,9 @@ def answer(cmd):
             raise Refused('run %s is stopped' % run, 'start a new run')
         if state.get('starting'):
             raise Refused('run %s never finished starting' % run, 'stop it, then start a new run')
-        # One agent per ticket: while its last turn runs, that agent is awake and reads the ticket itself (#1469).
         if state['turns'] and running(state['turns'][-1]):
             return {'run': run, 'woke': True}
-        try:  # a turn it could not save would be beyond a later wake's check: save first, or start nothing
+        try:
             saved(run, state)
         except OSError:
             raise Refused('the driver cannot save run %s; nothing was started' % run, WRITABLE)

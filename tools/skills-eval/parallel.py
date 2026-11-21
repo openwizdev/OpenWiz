@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-"""Resume a frozen results set with four independent in-process driver runs.
-
-This scheduler never changes prompts, settings, scoring or run_case. Every
-request still passes the driver's durable checkpoint before transport. The
-checkpoint serializes the *whole set's* cost plus in-flight reservations.
-"""
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 import fcntl
@@ -15,6 +9,13 @@ import os
 from pathlib import Path
 import sys
 import threading
+
+DESCRIPTION = """Resume a frozen results set with four independent in-process driver runs.
+
+This scheduler never changes prompts, settings, scoring or run_case. Every
+request still passes the driver's durable checkpoint before transport. The
+checkpoint serializes the *whole set's* cost plus in-flight reservations.
+"""
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -96,7 +97,7 @@ def resume(out, env_file):
 
 
 if __name__ == '__main__':
-    p = argparse.ArgumentParser(description=__doc__)
+    p = argparse.ArgumentParser(description=DESCRIPTION)
     p.add_argument('--out', required=True)
     p.add_argument('--env-file', required=True)
     a = p.parse_args()

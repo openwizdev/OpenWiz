@@ -1,14 +1,4 @@
 #!/usr/bin/env python3
-"""RL2 (#1843): the checked public release command, outside in.
-
-Every repository, decision, comment, receipt, product and timestamp here is
-synthetic. git and gh reach only local fakes: the public remote is a local
-bare repository and GitHub is a JSON world file. The combined smoke is a real
-live-mode run of RL3's runner against its synthetic `openwiz`, so the release
-command consumes RL3's actual receipt contract rather than a copied shape.
-These are fixture proofs of what can publish and what is refused; they prove
-no live gate, publication or timing.
-"""
 import datetime
 import hashlib
 import importlib.util
@@ -40,7 +30,6 @@ NOTES = ('## 0.0.99 · 2026-11-20\n\nFixture-tested: You can preview a synthetic
          'Live-checked: Synthetic export smoke passes; a real export remains unverified.\n\n'
          '[Full release on GitHub](https://github.com/openwizdev/OpenWiz/releases/tag/v0.0.99)\n')
 
-# RL6 (#739): a curated notes section in VS9's three parts (synthetic wording).
 CURATED = ("## 0.0.99 · 2026-11-20\n\n**Preview an export**\n\n**What's new for you**\n\n"
            "- You can preview a synthetic export.\n- You can cancel a preview.\n\n"
            "Live-checked: a synthetic export smoke; a real export is still unverified.\n\n"
@@ -55,29 +44,23 @@ def load(name, path):
     return module
 
 
-# RL3's own receipt fixture: its synthetic openwiz, kit and live runner.
 receipts_fixture = load('release_candidate_receipt_fixture', ROOT / 'tools/live-smoke/test_receipt.py')
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(ROOT / 'tools/install'))
-import package  # noqa: E402
-import build_products  # noqa: E402
-# RL4's own fixture: synthetic compiled programs and their receipts.
+import package
+import build_products
 rl4 = load('release_candidate_rl4_fixture', HERE / 'test_product_identity.py')
-# The tracked runtime the collector packages: RL4's files plus the skills the
-# install contract requires.
 RUNTIME = dict(rl4.RUNTIME, **{f'skills/{name}': f'Synthetic {name}.\n'.encode() for name in (
     'setup/SKILL.md', 'grill/SKILL.md', 'to-tickets/SKILL.md', 'launch-fleet/SKILL.md')},
     **{'skills/launch-fleet/scripts/fleet.sh': b'#!/bin/sh\necho synthetic\n'})
-# #2201: setup's CloudRoom tool, which the installer requires, and its packaged path.
 RUNTIME['tools/install/cloudroom/cloudroom.py'] = b'# Synthetic CloudRoom setup tool.\n'
 rl4.PACKAGED['tools/install/cloudroom/cloudroom.py'] = 'runtime/cloudroom/cloudroom.py'
-# #635: installed openwiz init's runtime, which the installer requires, and its packaged path.
 RUNTIME['tools/install/setup/init.py'] = b'# Synthetic init runtime.\n'
 rl4.PACKAGED['tools/install/setup/init.py'] = 'runtime/setup/init.py'
-# #633: setup's GitHub sign-in helper, which the installer requires, and its packaged path.
 RUNTIME['tools/install/setup/github_login.py'] = b'# Synthetic GitHub sign-in helper.\n'
 rl4.PACKAGED['tools/install/setup/github_login.py'] = 'runtime/setup/github_login.py'
 LINUX = 'x86_64-unknown-linux-gnu'
+SCHEMA = json.loads((ROOT / 'contracts/release-candidate.v1.schema.json').read_text())
 
 
 def canonical(value):
@@ -99,26 +82,19 @@ def section_sha(text, version):
     return sha(text[start:(rest + 1 if rest >= 0 else len(text))].rstrip('\n').encode())
 
 
-# The command under test, with only its fixed public anchor pointed at this
-# fixture's root commit (the real anchor cannot exist in a synthetic repository).
 LAUNCH = ('import os, sys; sys.path.insert(0, sys.argv.pop(1)); import candidate; '
           'candidate.ANCHOR = sys.argv.pop(1); '
-          # RL6: a test may give the moved-number map its own synthetic rows.
           'import json; m = os.environ.get("MOVED"); '
           'm and setattr(candidate.entry, "MOVED", candidate.entry.moved(json.loads(m))); '
-          # and fix the publication day the notes' dates must equal (RL6).
           'candidate.today = (lambda: os.environ["TODAY"]) if "TODAY" in os.environ else candidate.today; '
-          # A test may fix the tool's clock for one invocation, so interval assertions never race it.
           'candidate.now = (lambda: int(os.environ["AT"])) if "AT" in os.environ else candidate.now; '
-          # APP-1: a test may scope the one-release waiver table to its fixture version.
-          # The receipt tool checks the same table again, so the test scopes both.
           'w = os.environ.get("WAIVABLE"); w = w and {tuple(x) for x in json.loads(w)}; '
           'w and setattr(candidate, "WAIVABLE", w); load = candidate.smoke_module; '
           'w and setattr(candidate, "smoke_module", lambda: (lambda m: (setattr(m, "WAIVABLE", w), m)[1])(load())); '
-          # #555: a lock-mode test supplies its local WizSkills install (the
-          # network install has its own test); the install is still verified.
           'i = os.environ.get("WIZSKILLS_INSTALL"); import product_identity, pathlib; '
           'i and setattr(product_identity, "install_locked", lambda root, source, scratch: pathlib.Path(i)); '
+          'f = os.environ.get("FETCH"); f and exec(f, vars(candidate)); '
+          'h = os.environ.get("HOLD"); h and exec(h, vars(candidate)); '
           'sys.exit(candidate.main(sys.argv[1:]))')
 
 FAKE_GIT = r'''#!/usr/bin/env python3
@@ -145,6 +121,46 @@ if network and any(a.startswith(("https://", "http://", "ssh://", "git@")) for a
     sys.exit(97)
 sys.exit(subprocess.run([REAL] + mapped).returncode)
 '''.replace('@REAL@', repr(REAL_GIT)).replace('@URL@', repr(PUBLIC_URL))
+
+FAKE_FETCH = r'''
+def fetch_release(url, limit):
+    import json, os, pathlib, urllib.error
+    base = "https://github.com/openwizdev/OpenWiz/releases/"
+    assert url.startswith(base), url
+    with open(os.environ["CALLS"], "a") as log:
+        log.write(json.dumps({"tool": "https", "action": "download", "args": [url]}) + "\n")
+    if os.environ.get("FETCH_STATUS"):
+        raise urllib.error.HTTPError(url, int(os.environ["FETCH_STATUS"]), "Synthetic", None, None)
+    store, rest = pathlib.Path(os.environ["RELEASES"]), url[len(base):]
+    if rest.startswith("latest/download/"):
+        shown = [m.parent.name for m in store.glob("*/meta.json") if not json.loads(m.read_text())["prerelease"]]
+        tag = max(shown, key=lambda t: tuple(map(int, t[1:].split("."))), default="")
+        name = rest[len("latest/download/"):]
+    else:
+        tag, name = rest[len("download/"):].split("/", 1)
+    file = store / tag / "assets" / name
+    if not tag or not file.is_file():
+        raise urllib.error.HTTPError(url, 404, "Not Found", None, None)
+    return file.read_bytes()[:limit + 1]
+'''
+
+HOLD_INDEX = r'''
+def _hold(write):
+    def held(self, name, value):
+        import os, pathlib, time
+        if name != "install-attempts.json":
+            return write(self, name, value)
+        hold, me, end = pathlib.Path(os.environ["HOLD_DIR"]), os.environ["HOLD_ME"], time.time() + 60
+        (hold / ("read-" + me)).touch()
+        while len(list(hold.glob("read-*"))) < 2 and time.time() < end:
+            time.sleep(0.05)
+        while me != "first" and not (hold / "done-first").exists() and time.time() < end:
+            time.sleep(0.05)
+        write(self, name, value)
+        (hold / ("done-" + me)).touch()
+    return held
+State.write = _hold(State.write)
+'''
 
 FAKE_GH = r'''#!/usr/bin/env python3
 import json, os, pathlib, shutil, sys
@@ -203,8 +219,6 @@ print(json.dumps(value))
 
 
 class World(unittest.TestCase):
-    """The synthetic public repository, GitHub world and agent-path helpers."""
-
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(prefix='release-candidate-proof-')
         self.addCleanup(self.tmp.cleanup)
@@ -225,12 +239,12 @@ class World(unittest.TestCase):
                         GIT_AUTHOR_EMAIL=NOREPLY, GIT_COMMITTER_EMAIL=NOREPLY,
                         PATH=str(self.bin) + os.pathsep + os.environ['PATH'],
                         CALLS=str(self.root / 'calls.jsonl'), PUBLIC_FAKE=str(self.remote),
-                        GH_WORLD=str(self.world_path), RELEASES=str(self.releases), TODAY='2026-11-20')
+                        GH_WORLD=str(self.world_path), RELEASES=str(self.releases), TODAY='2026-11-20',
+                        FETCH=FAKE_FETCH)
         self.now = int(time.time())
         self.world = {f'repos/{PUBLIC}': {'full_name': PUBLIC, 'visibility': 'public', 'archived': False,
                                           'default_branch': 'main'},
                       f'repos/{PUBLIC}/immutable-releases': {'enabled': True, 'enforced_by_owner': False},
-                      # D3: O17 completed, no hold on O16/O17, main protected by ci and privacy.
                       f'repos/{PRIVATE}/issues/1285': {'state': 'closed', 'state_reason': 'completed', 'labels': []},
                       f'repos/{PRIVATE}/issues/1284': {'state': 'closed', 'state_reason': 'completed', 'labels': []},
                       f'repos/{PUBLIC}/rulesets?per_page=100': [[{'id': 71}]],
@@ -240,12 +254,10 @@ class World(unittest.TestCase):
                           'rules': [{'type': 'required_status_checks', 'parameters': {'required_status_checks': [
                               {'context': 'ci'}, {'context': 'privacy'}]}}]}}
         self.comments = {}
-        # D2: the operator's private named-terms file (synthetic terms, absent from the bundles).
         self.literals = self.root / 'literals.txt'
         self.literals.write_text('synthetic-private-term-zq\n')
         self.history()
 
-    # ------------------------------------------------------------ fixture world
     def git(self, cwd, *args):
         result = subprocess.run([REAL_GIT, '-C', str(cwd), *map(str, args)], env=self.env,
                                 capture_output=True, text=True)
@@ -258,7 +270,6 @@ class World(unittest.TestCase):
         return self.git(self.repo, 'rev-parse', 'HEAD')
 
     def history(self, notes=NOTES, published=PUBLISHED, published_version='0.0.98'):
-        """Anchor, a published tagged version and the candidate commit on public main."""
         self.repo.mkdir()
         self.git(self.repo, 'init', '-q', '-b', 'main')
         (self.repo / 'README.md').write_text('# Synthetic public repository\n')
@@ -278,7 +289,6 @@ class World(unittest.TestCase):
         self.git(self.repo, 'remote', 'add', 'origin', PUBLIC_URL)
 
     def sources(self, notes):
-        """changes/ files, specs and milestones (D4) from which the generator makes `notes`."""
         (self.repo / 'changes').mkdir(exist_ok=True)
         self.entry = {'versions': [], 'excluded': []}
         for index, part in enumerate(notes.split('\n## ') if notes else []):
@@ -304,14 +314,11 @@ class World(unittest.TestCase):
         self.world_path.write_text(json.dumps(self.world))
 
     def classification(self, **overrides):
-        """D6: every changed path since the published tag, each category `no` unless overridden."""
         changed = self.git(self.repo, 'diff', '--name-only', '--no-renames', self.published, self.head).splitlines()
         return [dict({'path': p, 'send': 'no', 'new': 'no', 'app_permissions': 'no', 'spending': 'no'},
                      **overrides.get(p, {})) for p in changed]
 
     def artifacts(self, version=VERSION, folder=None):
-        """Real bundles through RL4's pipeline: each target's native build job
-        (RL4's fixture), the real collector, then the real packager."""
         folder = folder or self.root / 'artifacts'
         folder.mkdir()
         sums, self.product_rows, self.product_receipts = [], [], []
@@ -373,8 +380,6 @@ class World(unittest.TestCase):
                                  'spending': {'required': 'no', 'reason': 'Synthetic: no spending change.'}}}
 
     def smoke_kit(self, coverage=None, version=VERSION):
-        """RL3's live fixture kit, bound to this candidate's promises. It pins the
-        Linux CLI it tests: RL4's synthetic program for this source and version."""
         helper = receipts_fixture.Receipts('test_live_run_yields_candidate_bound_smoke_and_risk_receipts')
         helper.setUp()
         self.addCleanup(helper.tmp.cleanup)
@@ -387,7 +392,6 @@ class World(unittest.TestCase):
         self.helper = helper
         self.kit_sha = receipts_fixture.smoke.digest(helper.kit)
         self.scope_sha = canonical(helper.kit['release']['scope'])
-        # D5: the orchestrator's one-time restatement of the kit's existing approval.
         self.comment(9900, 'Private record: Jake, 2026-11-20, synthetic kit approval restated.\n'
                      f'Release kit authority: scope {self.scope_sha}\n', self.now - 3600)
 
@@ -431,7 +435,6 @@ class World(unittest.TestCase):
             self.assertIn(reason, out['reasons'])
         return out
 
-    # ------------------------------------------------------------ the agent path
     def prepare(self, body=None, rows=None, **extra):
         path = self.root / 'body.json'
         path.write_text(json.dumps(body if body is not None else self.made))
@@ -457,7 +460,6 @@ class World(unittest.TestCase):
         self.assertEqual(self.cli('decide', '--state', self.state, '--changelog', self.approval)[0], 0)
 
     def checks(self, runs=None, workflows=None):
-        """D1: GitHub Actions check runs, each in its trusted workflow's latest run."""
         actions = {'slug': 'github-actions'}
         self.world[f'repos/{PUBLIC}/commits/{self.head}/check-runs?per_page=100'] = [{'check_runs': runs or [
             {'id': 11, 'name': 'ci', 'head_sha': self.head, 'status': 'completed', 'conclusion': 'success',
@@ -496,12 +498,10 @@ class World(unittest.TestCase):
                         '--repo', self.repo, '--artifacts', self.root / 'artifacts')
 
     def gates(self):
-        """The public check runs the command reads, and RL4's products inputs."""
         self.checks()
         self.assertEqual(self.receipt('products', 'ci'), (0, {'status': 'recorded', 'gate': 'products'}))
 
     def smoke(self, *mode):
-        """One real RL3 runner sitting bound to the prepared candidate, then its receipts."""
         self.helper.candidate = self.record()
         if mode:
             self.helper.execute(*mode)
@@ -535,28 +535,25 @@ class World(unittest.TestCase):
         return self.cli('publish', '--state', self.state, '--repo', self.repo,
                         '--artifacts', self.root / 'artifacts', '--literals', self.literals, **extra)
 
-    def install_receipt(self, at=None, target='x86_64-unknown-linux-gnu'):
-        record = self.record()
-        rows = {(a['role'], a['target']): a['sha256'] for a in record['candidate']['artifacts']}
-        body = 'Synthetic installed read-back.\n'
-        pointer = self.comment(9401, body, self.now)
-        receipt = {'route': 'update', 'version': VERSION, 'source': self.head, 'target': target,
-                   'manifest_sha256': rows[('manifest', target)], 'archive_sha256': rows[('archive', target)],
-                   'verified_at': at or int(time.time()) + 5,
-                   'evidence': {'record': pointer, 'sha256': sha(body.encode())}}
-        (self.root / 'install.json').write_text(json.dumps(receipt))
-        return self.cli('install', '--state', self.state, '--receipt', self.root / 'install.json')
+    def latest(self, version=VERSION, latest=True):
+        meta = self.releases / ('v' + version) / 'meta.json'
+        meta.write_text(json.dumps(dict(json.loads(meta.read_text()), prerelease=not latest)))
+
+    def install_check(self, target=LINUX, **extra):
+        return self.cli('install', '--state', self.state, '--target', target, **extra)
+
+    def downloads(self):
+        return [c['args'][0] for c in self.calls() if c['tool'] == 'https']
 
 
 class Candidate(World):
-    # ------------------------------------------------------------ P1/P3/P5: one checked candidate publishes
     def test_one_checked_candidate_publishes_without_a_third_human_action(self):
         self.ready()
         self.assertEqual(self.evaluate(), (0, {'status': 'ready', 'candidate_sha256': self.record()['candidate_sha256']}))
         before = self.git(self.remote, 'rev-parse', 'main')
         code, out = self.publish()
         self.assertEqual((code, out['status']), (0, 'published'), out)
-        self.assertEqual(self.writes(), ['tag', 'tag-push', 'release'])  # never main
+        self.assertEqual(self.writes(), ['tag', 'tag-push', 'release'])
         self.assertEqual(self.git(self.remote, 'rev-parse', 'main'), before)
         self.assertEqual(self.git(self.remote, 'cat-file', '-t', 'refs/tags/v' + VERSION), 'tag')
         self.assertEqual(self.git(self.remote, 'rev-parse', f'refs/tags/v{VERSION}^{{}}'), self.head)
@@ -573,11 +570,97 @@ class Candidate(World):
                          ('complete', self.head, True, True, sha(NOTES.encode())))
         self.assertEqual(publication['tag_object'], self.git(self.remote, 'rev-parse', 'refs/tags/v' + VERSION))
         self.assertEqual(self.publish(), (0, {'status': 'published', 'tag': 'v' + VERSION}))
-        self.assertEqual(self.writes(), ['tag', 'tag-push', 'release'])  # resume repeats nothing
-        code, out = self.install_receipt()
+        self.assertEqual(self.writes(), ['tag', 'tag-push', 'release'])
+        self.latest()
+        code, out = self.install_check()
         self.assertEqual((code, out['status'], out['target_met']), (0, 'complete', True), out)
 
-    # ------------------------------------------------------------ P1: two actual decisions, refused red first
+    def test_install_check_takes_the_strangers_latest_route_and_refuses_a_prerelease(self):
+        self.ready()
+        self.assertEqual(self.publish()[0], 0)
+        base = 'https://github.com/openwizdev/OpenWiz/releases/'
+        name = 'openwiz-' + LINUX
+        self.assertEqual(self.install_check(), (1, {'status': 'blocked', 'reasons': ['install_latest_unresolved']}))
+        self.assertEqual(self.downloads(), [base + f'latest/download/{name}.sha256'])
+        self.assertIsNone(self.record()['install'])
+        other = self.artifacts('0.0.100', self.root / 'other')
+        (self.releases / 'v0.0.100' / 'assets').mkdir(parents=True)
+        for item in other.iterdir():
+            shutil.copy(item, self.releases / 'v0.0.100' / 'assets' / item.name)
+        (self.releases / 'v0.0.100' / 'meta.json').write_text(json.dumps({'prerelease': False}))
+        self.assertEqual(self.install_check(), (1, {'status': 'blocked', 'reasons': ['install_latest_not_candidate']}))
+        self.assertIsNone(self.record()['install'])
+        shutil.rmtree(self.releases / 'v0.0.100')
+        self.latest()
+        archive = self.releases / ('v' + VERSION) / 'assets' / f'openwiz-{VERSION}-{LINUX}.tar.gz'
+        good = archive.read_bytes()
+        for planted, reason in ((good + b'x', 'install_download_refused'),
+                                (good[:-1] + bytes([good[-1] ^ 1]), 'install_download_refused')):
+            archive.write_bytes(planted)
+            self.assertEqual(self.install_check(), (1, {'status': 'blocked', 'reasons': [reason]}))
+            self.assertIsNone(self.record()['install'])
+        archive.write_bytes(good)
+        sealed = (self.state / 'record.json').read_bytes()
+        other = self.record()
+        row = next(a for a in other['candidate']['artifacts'] if (a['role'], a['target']) == ('archive', LINUX))
+        row['sha256'] = sha(b'x')
+        (self.state / 'record.json').write_text(json.dumps(other))
+        self.assertEqual(self.install_check(), (1, {'status': 'blocked', 'reasons': ['install_mismatch']}))
+        (self.state / 'record.json').write_bytes(sealed)
+        (self.root / 'calls.jsonl').unlink()
+        code, out = self.install_check()
+        self.assertEqual((code, out['status']), (0, 'complete'), out)
+        self.assertEqual(self.downloads(), [base + f'latest/download/{name}.sha256',
+                                            base + f'latest/download/{name}.manifest.json',
+                                            base + f'download/v{VERSION}/openwiz-{VERSION}-{LINUX}.tar.gz',
+                                            base + f'download/v{VERSION}/SHA256SUMS'])
+        self.assertNotIn(['release', 'download'], [c['args'][:2] for c in self.calls()])
+        installed = self.record()['install']
+        self.assertEqual(sorted(installed), sorted(SCHEMA['$defs']['install']['required']))
+        saved = self.state / installed['evidence']['record']
+        self.assertEqual(sha(saved.read_bytes()), installed['evidence']['sha256'])
+        self.assertEqual([d['url'] for d in json.loads(saved.read_text())['downloads']], self.downloads())
+        passed = self.cli('status', '--state', self.state)[1]
+        self.assertEqual(self.install_check(FETCH_STATUS='503'),
+                         (1, {'status': 'blocked', 'reasons': ['install_download_refused']}))
+        self.assertEqual(self.record()['install'], installed)
+        self.assertEqual(sha(saved.read_bytes()), installed['evidence']['sha256'])
+        status = self.cli('status', '--state', self.state)[1]
+        [attempt] = status.pop('install_attempts')
+        self.assertEqual((status['status'], status['finished_at']), ('incomplete', passed['finished_at']))
+        self.assertEqual({k: attempt[k] for k in ('target', 'status', 'reasons')},
+                         {'target': LINUX, 'status': 'blocked', 'reasons': ['install_download_refused']})
+        failed = self.state / attempt['evidence']['record']
+        self.assertNotEqual(failed, saved)
+        self.assertEqual(sha(failed.read_bytes()), attempt['evidence']['sha256'])
+        self.assertEqual(json.loads(failed.read_text())['downloads'][0]['status'], 503)
+        rows = {(a['role'], a['target']): a['sha256'] for a in self.record()['candidate']['artifacts']}
+        self.assertEqual({k: installed[k] for k in ('route', 'version', 'source', 'target', 'manifest_sha256',
+                                                    'archive_sha256')},
+                         {'route': 'install', 'version': VERSION, 'source': self.head, 'target': LINUX,
+                          'manifest_sha256': rows[('manifest', LINUX)], 'archive_sha256': rows[('archive', LINUX)]})
+
+    def test_overlapping_install_checks_for_two_targets_keep_both_attempts(self):
+        self.ready()
+        self.assertEqual(self.publish()[0], 0)
+        hold = self.root / 'hold'
+        hold.mkdir()
+        mac = 'aarch64-apple-darwin'
+        runs = [subprocess.Popen([sys.executable, '-c', LAUNCH, str(HERE), self.anchor, 'install', '--state',
+                                  str(self.state), '--target', target], stdout=subprocess.PIPE, text=True,
+                                 env=dict(self.env, HOLD=HOLD_INDEX, HOLD_DIR=str(hold), HOLD_ME=me))
+                for target, me in ((LINUX, 'first'), (mac, 'second'))]
+        for run in runs:
+            out, _ = run.communicate(timeout=120)
+            self.assertEqual((run.returncode, json.loads(out)),
+                             (1, {'status': 'blocked', 'reasons': ['install_latest_unresolved']}))
+        status = self.cli('status', '--state', self.state)[1]
+        self.assertEqual(sorted((a['target'], a['status']) for a in status.get('install_attempts', [])),
+                         [(mac, 'blocked'), (LINUX, 'blocked')])
+        for attempt in status['install_attempts']:
+            saved = self.state / attempt['evidence']['record']
+            self.assertEqual(sha(saved.read_bytes()), attempt['evidence']['sha256'])
+
     def test_missing_ship_or_exact_changelog_approval_refuses_before_any_write(self):
         self.smoke_kit()
         self.artifacts()
@@ -599,8 +682,6 @@ class Candidate(World):
         self.ready()
         record = self.record()
         sealed = record['candidate_sha256']
-        # A caller flag is not an interface; an agent's own comment or an edited,
-        # foreign or revoked record never establishes Jake's decision.
         flag = subprocess.run([sys.executable, '-c', LAUNCH, str(HERE), self.anchor, 'publish', '--state',
                                str(self.state), '--repo', str(self.repo), '--artifacts', str(self.root / 'artifacts'),
                                '--literals', str(self.literals), '--approval', 'publish ' + VERSION],
@@ -622,12 +703,10 @@ class Candidate(World):
                 self.blocked(self.cli('decide', '--state', self.state, '--ship', pointer), 'ship_not_a_decision')
         foreign = f'https://github.com/example-owner/example-repo/issues/1#issuecomment-1'
         self.blocked(self.cli('decide', '--state', self.state, '--ship', foreign), 'pointer_invalid')
-        # Only the operative line revokes; a quotation of it does not.
         self.comment(9160, 'Synthetic note quoting `Release decision revoked: 9101` for review.\n', self.now - 10)
         self.assertEqual(self.evaluate()[0], 0)
         self.comment(9160, 'Release decision revoked: 9101\n', self.now - 10)
         self.blocked(self.publish(), 'ship_revoked')
-        # A decision copied into the state by hand is re-read from its record.
         del self.comments[f'repos/{PRIVATE}/issues/comments/9160']
         self.world.pop(f'repos/{PRIVATE}/issues/comments/9160')
         self.save()
@@ -639,8 +718,6 @@ class Candidate(World):
     def test_changed_notes_or_candidate_refuse_until_their_decisions_match(self):
         self.ready()
         first = self.record()
-        # Changed artifact bytes: a new candidate. Identical notes keep their
-        # approval; the ship binding and every candidate-bound receipt stop applying.
         shutil.rmtree(self.root / 'artifacts')
         self.artifacts()
         (self.root / 'artifacts' / 'SHA256SUMS').write_text((self.root / 'artifacts' / 'SHA256SUMS').read_text())
@@ -651,7 +728,6 @@ class Candidate(World):
         second = self.record()
         self.assertNotEqual(second['candidate_sha256'], first['candidate_sha256'])
         self.assertEqual(second['timing']['original_ship_at'], first['timing']['original_ship_at'])
-        # The read gates are re-established for the new bytes; candidate-bound inputs are not.
         out = self.blocked(self.publish(), 'ship_stale', 'products_missing', 'smoke_missing')
         self.assertFalse([r for r in out['reasons'] if r.startswith('changelog')], out)
         self.assertEqual(self.writes(), [])
@@ -659,7 +735,6 @@ class Candidate(World):
     def test_changed_notes_after_approval_refuse(self):
         self.ready()
         self.assertEqual(self.evaluate()[0], 0)
-        # The same notes, one sentence changed after Jake approved the exact bytes.
         changed = NOTES.replace('You can save a preview.', 'You can save every preview.')
         self.notes = changed
         self.helper.tmp.cleanup()
@@ -678,14 +753,12 @@ class Candidate(World):
         old = self.approval
         self.assertEqual(self.cli('decide', '--state', self.state, '--changelog', old)[1]['reasons'],
                          ['changelog_binding_mismatch'])
-        # The tampered body cannot claim the approved hash for changed bytes.
         tampered = self.body()
         tampered['changelog']['sha256'] = sha(NOTES.encode())
         shutil.rmtree(self.state)
         self.blocked(self.prepare(tampered), 'changelog_changed')
         self.assertEqual(self.writes(), [])
 
-    # ------------------------------------------------------------ P2: public source only
     def test_private_or_unrelated_source_and_absent_cutover_refuse(self):
         self.smoke_kit()
         self.artifacts()
@@ -700,7 +773,6 @@ class Candidate(World):
                              '--artifacts', self.root / 'artifacts', '--entry', self.root / 'entry.json',
                              '--classification', self.root / 'classification.json', anchor='e' * 40)
         self.assertEqual((code, out['reasons']), (1, ['unrelated_history']))
-        # A commit with the same tree that only exists outside public main.
         self.git(self.repo, 'commit', '--amend', '--no-edit', '-q', '--date', '2001-01-01T00:00:00')
         local = json.loads(json.dumps(good))
         local['source']['commit'] = self.git(self.repo, 'rev-parse', 'HEAD')
@@ -710,7 +782,6 @@ class Candidate(World):
         self.blocked(self.prepare(good), 'private_source')
         self.git(self.repo, 'remote', 'set-url', 'origin', 'https://github.com/openwizdev/openwiz2.git')
         self.blocked(self.prepare(good), 'private_source')
-        # RN6: the public origin in other capitals is the same repository.
         self.git(self.repo, 'remote', 'set-url', 'origin', 'https://github.com/OpenWizDev/OPENWIZ.git')
         self.made = good
         prepared = self.prepare()
@@ -721,15 +792,12 @@ class Candidate(World):
         self.assertEqual(self.evaluate()[0], 0)
         self.d3_cutover_read_backs_refuse()
 
-    # ------------------------------------------------------------ #964: a protected public release branch
     def release_branch(self, name='release-' + VERSION, ruleset=None):
-        """Main has moved on; the candidate is one cherry-picked commit on a public
-        release branch, protected by its own ruleset unless `ruleset` replaces it."""
         self.git(self.repo, 'checkout', '-q', '-b', 'release')
         (self.repo / 'README.md').write_text('# Synthetic public repository\n\nSynthetic cherry-picked fix.\n')
         self.head = self.commit('Synthetic cherry-picked fix')
         self.git(self.repo, 'push', '-q', self.remote, f'HEAD:refs/heads/{name}')
-        self.git(self.root / 'public.git', 'update-ref', 'refs/heads/main', self.published)  # main moved elsewhere
+        self.git(self.root / 'public.git', 'update-ref', 'refs/heads/main', self.published)
         self.world[f'repos/{PUBLIC}/rulesets?per_page=100'] = [[{'id': 71}, {'id': 72}]]
         self.world[f'repos/{PUBLIC}/rulesets/72'] = ruleset or {
             'id': 72, 'enforcement': 'active', 'target': 'branch', 'bypass_actors': [],
@@ -748,6 +816,19 @@ class Candidate(World):
         self.assertEqual(self.writes(), ['tag', 'tag-push', 'release'])
         self.assertEqual(self.git(self.remote, 'rev-parse', f'refs/tags/v{VERSION}^{{}}'), self.head)
         self.assertEqual(self.git(self.remote, 'rev-parse', 'main'), self.published)
+
+    def test_2127_an_unreadable_release_branch_gives_evaluate_publishs_reasons(self):
+        self.release_branch()
+        self.ready()
+
+        def checked():
+            return [p['name'] for p in self.record()['timing']['phases']].count('checks')
+        before = checked()
+        evaluated = self.blocked(self.evaluate(FAIL_ACTION='fetch'), 'release_branch_unreadable')
+        self.assertEqual(checked(), before + 1)
+        refused = self.blocked(self.publish(FAIL_ACTION='fetch'), 'release_branch_unreadable')
+        self.assertEqual((evaluated['status'], evaluated['reasons']), ('blocked', refused['reasons']))
+        self.assertEqual(self.writes(), [])
 
     def test_964_each_unproven_release_branch_refuses_with_its_reason(self):
         self.release_branch()
@@ -799,10 +880,9 @@ class Candidate(World):
         self.assertEqual(self.writes(), [])
 
     def d3_cutover_read_backs_refuse(self):
-        """R1/D3: only the command's own cut-over read-backs count."""
         public = f'repos/{PUBLIC}'
         for name in ('openwizdev/openwiz', 'openwizdev/OpenWiz', 'OpenWizDev/OPENWIZ'):
-            with self.subTest(full_name=name):  # RN6: GitHub's reply in any capitals
+            with self.subTest(full_name=name):
                 self.world[public]['full_name'] = name
                 self.save()
                 code, out = self.evaluate()
@@ -824,7 +904,6 @@ class Candidate(World):
                 ('ruleset disabled', rules, {'enforcement': 'disabled'}),
                 ('privacy not required', rules, {'rules': [{'type': 'required_status_checks', 'parameters': {
                     'required_status_checks': [{'context': 'ci'}]}}]}),
-                # R1 re-check: an excluded default branch is outside the ruleset, whatever include says.
                 ('main excluded', rules, {'conditions': {'ref_name': {'include': ['~ALL'],
                                                                       'exclude': ['refs/heads/main']}}}),
                 ('default branch excluded', rules, {'conditions': {'ref_name': {'include': ['~DEFAULT_BRANCH'],
@@ -840,7 +919,6 @@ class Candidate(World):
                 self.assertEqual(self.blocked(self.publish(), 'cutover_unverified')['reasons'], ['cutover_unverified'])
                 self.world[path] = before
                 self.save()
-        # The reviewer's R1 probe: a hashed comment recording a failed inspection.
         raw = 'FAIL: verification failed, no valid evidence.\n'
         self.comment(9200, raw, self.now)
         (self.root / 'cutover-receipt.json').write_text(json.dumps({'status': 'pass', 'evidence': {
@@ -851,7 +929,6 @@ class Candidate(World):
                      'cutover_read_by_the_command')
         self.assertEqual(self.writes(), [])
 
-    # ------------------------------------------------------------ P3: CI, privacy and smoke gates
     def test_missing_failed_unreadable_or_untrusted_ci_and_privacy_refuse(self):
         self.ready()
         self.assertEqual(self.evaluate()[0], 0)
@@ -871,18 +948,16 @@ class Candidate(World):
                  workflows + [retried], ['ci_failed']),
                 ('run from an older suite', runs, [dict(retried, conclusion='success'), workflows[1]], ['ci_failed'])):
             with self.subTest(case=name):
-                # A run on a later page counts too.
                 self.world[path] = [{'check_runs': []}, {'check_runs': check}]
                 self.world[flows] = [{'workflow_runs': []}, {'workflow_runs': flow}]
                 self.save()
-                self.assertEqual(self.blocked(self.publish(), *reasons)['reasons'], reasons)  # only that gate
+                self.assertEqual(self.blocked(self.publish(), *reasons)['reasons'], reasons)
         self.world[path], self.world[flows] = [{'check_runs': runs}], [{'workflow_runs': workflows}]
         self.world['_fail'] = [flows]
         self.save()
         self.blocked(self.publish(), 'ci_unreadable', 'privacy_unreadable')
         self.world['_fail'] = []
         self.save()
-        # The reviewer's R1 probe: a hashed failed inspection submitted as a receipt.
         for gate in ('ci', 'privacy', 'claims'):
             with self.subTest(gate=gate):
                 self.blocked(self.cli('gate', '--state', self.state, '--gate', gate, '--receipt', self.root / 'x.json',
@@ -891,8 +966,6 @@ class Candidate(World):
         self.assertEqual(self.writes(), [])
 
     def test_a_run_whose_ci_job_was_skipped_is_not_evidence(self):
-        """#18: since main pushes run only main-light, the newest ci.yml run at a
-        main commit skips its `ci` job; the older merge-queue run is the evidence."""
         self.ready()
         path = f'repos/{PUBLIC}/commits/{self.head}/check-runs?per_page=100'
         flows = f'repos/{PUBLIC}/actions/runs?head_sha={self.head}&per_page=100'
@@ -904,7 +977,6 @@ class Candidate(World):
         self.world[flows] = [{'workflow_runs': [queued, pushed, workflows[1]]}]
         self.save()
         self.assertEqual(self.evaluate()[0], 0)
-        # Every run skipped its ci job: no run concluded ci, so nothing is evidence.
         self.world[path] = [{'check_runs': [dict(runs[0], conclusion='skipped'), skipped, runs[1]]}]
         self.save()
         self.assertEqual(self.blocked(self.publish(), 'ci_missing')['reasons'], ['ci_missing'])
@@ -921,14 +993,11 @@ class Candidate(World):
         for name, receipts in (('no receipts', []), ('another target\'s program receipt', swapped),
                                ('partial runtime selection', stale)):
             with self.subTest(case=name):
-                # The reviewer's R1 shape: a correctly hashed but unsupported products record.
                 self.blocked(self.receipt('products', 'ci', receipts=receipts), 'products_unverified')
         self.assertEqual(self.receipt('products', 'ci'), (0, {'status': 'recorded', 'gate': 'products'}))
         self.assertEqual(self.writes(), [])
 
     def lock_mode(self):
-        """#555: the candidate commit tracks `skills` as the WizSkills link; its
-        install holds the same skill bytes, pinned by wizskills.lock."""
         install = self.repo / '.wizskills'
         install.mkdir()
         for path, data in RUNTIME.items():
@@ -951,9 +1020,6 @@ class Candidate(World):
         return install
 
     def test_wz12_products_from_the_pinned_install_pass_and_a_tampered_install_is_refused(self):
-        # catches (#555 R1): the collector's receipt naming .wizskills/skills/...
-        # while the candidate verifies skills/..., so correct packages built
-        # from the pinned install are refused at the products gate.
         install = self.lock_mode()
         self.ready()
         self.assertEqual(self.evaluate()[0], 0)
@@ -966,7 +1032,6 @@ class Candidate(World):
     def test_d2_a_private_term_in_any_staged_runtime_file_refuses(self):
         self.ready()
         self.assertEqual(self.evaluate()[0], 0)
-        # A named term that occurs in one packaged runtime file (synthetic).
         self.literals.write_text('synthetic-private-term-zq\nSynthetic installer\n')
         self.assertEqual(self.blocked(self.publish(), 'privacy_finding')['reasons'], ['privacy_finding'])
         self.literals.unlink()
@@ -975,9 +1040,8 @@ class Candidate(World):
         self.assertEqual(self.writes(), [])
 
     def curate(self, curated, released=None):
-        """RL6: the candidate commit carries a curated notes file and its CHANGELOG.md."""
         at = PUBLISHED.index('## ')
-        whole = PUBLISHED[:at] + curated + '\n' + PUBLISHED[at:]  # the curated changelog keeps 0.0.98
+        whole = PUBLISHED[:at] + curated + '\n' + PUBLISHED[at:]
         (self.repo / 'changes/notes').mkdir(exist_ok=True)
         (self.repo / 'changes/notes/0.0.99.md').write_text(whole)
         (self.repo / 'CHANGELOG.md').write_text(whole)
@@ -988,9 +1052,6 @@ class Candidate(World):
                       'notes_sha256': sha(curated.encode()), 'included': [VERSION]}
 
     def test_rl6_curated_notes_pass_every_gate_and_publish_exactly(self):
-        # catches: the command refusing the curated file as unverified claims,
-        # publishing anything but its included sections, or publishing on a day
-        # other than the one its approved dates name (it refuses; it never edits them).
         self.curate(CURATED)
         self.ready()
         self.assertEqual(self.evaluate(), (0, {'status': 'ready', 'candidate_sha256': self.record()['candidate_sha256']}))
@@ -1000,15 +1061,12 @@ class Candidate(World):
         self.assertEqual(json.loads((self.releases / ('v' + VERSION) / 'meta.json').read_text())['notes'], CURATED)
 
     def test_rl6_approved_notes_that_are_not_the_curated_sections_refuse(self):
-        # catches: approved bytes publishing although they differ from the curated
-        # file at the candidate commit (the approval and the file must be one text).
         self.curate(CURATED, released=CURATED.replace('cancel a preview', 'cancel any preview'))
         self.ready()
         self.assertEqual(self.blocked(self.publish(), 'claims_mismatch')['reasons'], ['claims_mismatch'])
         self.assertEqual(self.writes(), [])
 
     def test_d4_notes_must_be_exactly_what_changes_generates_at_the_candidate(self):
-        # A source sentence changes after the notes were written: hashes still agree.
         (self.repo / 'changes/19901.md').write_text('kind: added\n\nFixture-tested: You can cancel every preview.\n')
         self.head = self.commit('Synthetic changed source line')
         self.git(self.repo, 'push', '-q', self.remote, 'HEAD:main')
@@ -1017,7 +1075,6 @@ class Candidate(World):
         self.assertEqual(self.writes(), [])
 
     def test_r12_preparing_the_same_candidate_refreshes_its_supporting_inputs(self):
-        # Mistaken tested metadata seals a candidate that the claims gate refuses.
         right = json.loads(json.dumps(self.entry))
         wrong = json.loads(json.dumps(right))
         wrong['versions']['tested'] = 'Fixture-tested: A mistaken tested line.'
@@ -1025,7 +1082,6 @@ class Candidate(World):
         self.ready()
         self.assertEqual(self.blocked(self.evaluate(), 'claims_mismatch')['reasons'], ['claims_mismatch'])
         first = self.record()
-        # The corrected entry and a revised valid classification, for the same candidate.
         self.entry = right
         rows = self.classification()
         rows[0]['new'] = 'yes'
@@ -1038,7 +1094,6 @@ class Candidate(World):
         self.assertEqual(second['gates']['products'], first['gates']['products'])
         self.assertEqual(self.evaluate(), (0, {'status': 'ready', 'candidate_sha256': first['candidate_sha256']}))
         self.assertIsNotNone(self.record()['gates']['claims'])
-        # Repeating it changes nothing; a mistaken entry again drops only the claims receipt.
         self.assertEqual(self.prepare(rows=rows), (0, {'status': 'prepared', 'candidate_sha256':
                                                        first['candidate_sha256'], 'unchanged': True}))
         before = self.record()
@@ -1049,7 +1104,6 @@ class Candidate(World):
         before['gates']['claims'] = None
         self.assertEqual(after, before)
         self.blocked(self.evaluate(), 'claims_mismatch')
-        # Once a publication write has started, changed inputs refuse and its attempt stays.
         self.entry = right
         self.assertEqual(self.prepare(rows=rows)[0], 0)
         self.assertEqual(self.publish(FAIL_ACTION='tag-push')[0], 1)
@@ -1064,13 +1118,12 @@ class Candidate(World):
         self.assertEqual(self.writes(), ['tag', 'tag-push'])
 
     def test_r11_only_a_revocation_posted_after_its_record_revokes_it(self):
-        self.ready()  # ship record 9101 at now - 900; kit authority 9900 at now - 3600
+        self.ready()
         for target, number, decided, reason in ((9101, 9160, self.now - 900, 'ship'),
                                                 (9900, 9161, self.now - 3600, 'kit_authority')):
             path = f'repos/{PRIVATE}/issues/comments/{number}'
             for name, created, expected in (
                     ('earlier', iso(decided - 60), None),
-                    # #816 R1: an earlier comment edited to carry the line fails closed.
                     ('earlier, then edited', iso(decided - 60), f'{reason}_revoked'),
                     ('later', iso(decided + 60), f'{reason}_revoked'),
                     ('same second', iso(decided), f'{reason}_unreadable'),
@@ -1078,7 +1131,6 @@ class Candidate(World):
                     ('no time', None, f'{reason}_unreadable')):
                 with self.subTest(record=reason, case=name):
                     self.comment(number, f'Release decision revoked: {target}\n', decided)
-                    # Unedited unless the case says so: its update time is its creation time.
                     self.comments[path].update(created_at=created,
                                                updated_at=iso(decided) if 'edited' in name else created)
                     self.save()
@@ -1097,7 +1149,7 @@ class Candidate(World):
         grant = f'repos/{PRIVATE}/issues/comments/9900'
         original = json.loads(json.dumps(self.comments[grant]))
         for name, change, reason in (
-                ('missing', None, 'kit_authority_unreadable'),   # the reviewer's R3 probe
+                ('missing', None, 'kit_authority_unreadable'),
                 ('another scope', {'body': original['body'].replace(self.scope_sha, 'e' * 64)}, 'kit_authority_scope'),
                 ('edited', {'updated_at': iso(self.now)}, 'kit_authority_not_a_grant'),
                 ('not a private record', {'body': 'Agent note.\nRelease kit authority: scope ' + self.scope_sha + '\n'},
@@ -1126,7 +1178,6 @@ class Candidate(World):
         self.artifacts()
         self.made = self.body()
         self.made['risk']['spending'] = {'required': 'no', 'reason': 'No change, without diff evidence.'}
-        # The reviewer's R4 probe: no classification record at all.
         (self.root / 'body.json').write_text(json.dumps(self.made))
         (self.root / 'entry.json').write_text(json.dumps(self.entry))
         self.blocked(self.cli('prepare', '--state', self.state, '--repo', self.repo, '--body', self.root / 'body.json',
@@ -1154,7 +1205,7 @@ class Candidate(World):
         self.decisions()
         self.gates()
         self.blocked(self.publish(), 'smoke_missing', 'send_live_missing', 'new_live_missing')
-        self.assertEqual(self.smoke('--fixture')[0], 0)  # fixture run: receipts exist, never live
+        self.assertEqual(self.smoke('--fixture')[0], 0)
         self.blocked(self.publish(), 'smoke_not_live', 'send_not_live', 'new_not_live')
         self.assertEqual(self.writes(), [])
 
@@ -1172,7 +1223,6 @@ class Candidate(World):
         self.blocked(self.publish(), 'smoke_not_live')
         self.assertEqual(self.writes(), [])
 
-    # ------------------------------------------------------------ P4: every risk category needs its live result
     def test_each_risk_category_without_its_live_result_refuses(self):
         for risk in ('send', 'new'):
             with self.subTest(risk=risk):
@@ -1196,7 +1246,7 @@ class Candidate(World):
                 self.decisions()
                 self.gates()
                 result = self.smoke()
-                if risk == 'spending':  # this approved kit has no spending check
+                if risk == 'spending':
                     self.blocked(result, 'smoke_risk_missing')
                     self.blocked(self.publish(), 'spending_live_missing')
                 else:
@@ -1219,9 +1269,7 @@ class Candidate(World):
         self.blocked(self.prepare(body), 'risk_missing')
         self.assertEqual(self.writes(), [])
 
-    # ------------------------------------------------------------ P5: read-backs must match the candidate
     def test_any_mismatched_readback_blocks_success_and_is_never_retried(self):
-        # #2552: the notes read back as the exact approved bytes, never CRLF-normalized or trimmed.
         for plant, reason in (('notes', 'readback_notes'), ('crlf', 'readback_notes'), ('trimmed', 'readback_notes'),
                               ('asset', 'readback_asset_bytes'), ('mutable', 'readback_immutable')):
             with self.subTest(plant=plant):
@@ -1231,16 +1279,13 @@ class Candidate(World):
                 self.assertEqual((code, out['status']), (1, 'incomplete'), out)
                 self.assertIn(reason, out['reasons'])
                 self.assertEqual(self.record()['publication']['status'], 'incomplete')
-                self.assertEqual(self.cli('install', '--state', self.state, '--receipt', self.root / 'none.json'),
+                self.assertEqual(self.install_check(),
                                  (1, {'status': 'blocked', 'reasons': ['publication_incomplete']}))
-                # A resume re-reads only: the same mismatch stays incomplete, with no write.
                 self.assertEqual(self.publish(PLANT=plant, AT=str(self.now - 200))[1]['reasons'], out['reasons'])
                 self.assertEqual(self.writes(), ['tag', 'tag-push', 'release'])
-                # Once the remote reads back exactly (a transient read), it completes, still unwritten.
                 self.assertEqual(self.publish(AT=str(self.now - 100)), (0, {'status': 'published', 'tag': 'v' + VERSION,
                                                                        'tag_object': self.git(self.remote, 'rev-parse',
                                                                                               'refs/tags/v' + VERSION)}))
-                # R10: each re-read extends the publish time from the last; none overlaps another.
                 self.assertEqual([(p['started_at'], p['finished_at']) for p in self.record()['timing']['phases']
                                   if p['name'] == 'publish'],
                                  [(self.now - 300, self.now - 300), (self.now - 300, self.now - 200),
@@ -1257,9 +1302,7 @@ class Candidate(World):
                          ('incomplete', False, False))
         self.assertEqual(self.writes(), ['tag', 'tag-push', 'release'])
 
-    # ------------------------------------------------------------ #1836: J264's public name for 0.1.0
     def ready_public(self, version='0.1.0'):
-        """A ready candidate for `version`, published history 0.0.98."""
         shutil.rmtree(self.repo)
         shutil.rmtree(self.remote)
         self.history(notes=NOTES.replace(VERSION, version))
@@ -1282,19 +1325,16 @@ class Candidate(World):
         self.assertEqual(created[created.index('--title') + 1], 'OpenWiz 0.01')
         self.assertEqual(json.loads((self.releases / 'v0.1.0' / 'meta.json').read_text())['title'], 'OpenWiz 0.01')
         self.assertEqual(self.record()['publication']['status'], 'complete')
-        # The tag and its annotation stay semver.
         self.assertEqual(self.git(self.remote, 'tag', '-l', '--format=%(contents:subject)', 'v0.1.0'), 'OpenWiz 0.1.0')
 
     def test_1836_a_0_1_0_release_read_back_under_another_name_is_incomplete(self):
         self.ready_public()
-        # The remote release reads back under the name in RENAME, whatever --title the tool sent.
         fake = self.bin / 'gh'
         fake.write_text(fake.read_text().replace('"title": args[args.index("--title") + 1]',
                                                  '"title": os.environ["RENAME"]'))
         meta = self.releases / 'v0.1.0' / 'meta.json'
         self.assertEqual(self.publish(RENAME='OpenWiz 0.1.0'),
                          (1, {'status': 'incomplete', 'reasons': ['readback_release_identity']}))
-        # A resume re-reads only: each other name stays incomplete.
         for name in ('OpenWiz 0.01 ', 'openwiz 0.01', 'OpenWiz 0.1', 'OpenWiz 0.01.0'):
             with self.subTest(name=name):
                 meta.write_text(json.dumps(dict(json.loads(meta.read_text()), title=name)))
@@ -1312,20 +1352,17 @@ class Candidate(World):
                          'OpenWiz 0.0.99')
 
     def swap_tag(self):
-        """Python lines replacing the remote tag with another annotated tag on the same commit."""
         return ('    subprocess.run([REAL, "-C", os.environ["PUBLIC_FAKE"], "-c", "user.name=Synthetic",\n'
                 f'                    "-c", "user.email={NOREPLY}", "tag", "-f", "-a", "-m", "Synthetic other",\n'
                 f'                    "v{VERSION}", "v{VERSION}^{{}}"], check=True, capture_output=True)')
 
     def test_2552_the_tag_reads_back_as_the_intended_annotated_object(self):
         tag = 'v' + VERSION
-        # A different annotated tag on the same commit after the push never settles the tag step.
         self.ready()
         self.after_push(self.swap_tag())
         self.assertEqual(self.publish(), (1, {'status': 'uncertain', 'reasons': ['uncertain_tag']}))
         self.assertEqual(self.writes(), ['tag', 'tag-push'])
         self.assertFalse((self.releases / tag).exists())
-        # After the release, a swapped tag object keeps the read-back incomplete.
         self.setUp()
         self.ready()
         self.assertEqual(self.publish(PLANT='notes')[1]['reasons'], ['readback_notes'])
@@ -1352,14 +1389,12 @@ class Candidate(World):
                 self.blocked(self.prepare(body), reason)
         self.assertEqual(self.writes(), [])
 
-    # ------------------------------------------------------------ P6: original ship time across resumes
     def test_timer_counts_waits_after_ship_and_survives_resume(self):
         self.ready()
         ship = self.record()['timing']['original_ship_at']
         self.assertEqual(ship, self.now - 900)
         self.assertIn({'name': 'changelog_wait', 'started_at': self.now - 900, 'finished_at': self.now - 780},
                       self.record()['timing']['phases'])
-        # An interrupted release write stays uncertain and is never repeated.
         code, out = self.publish(FAIL_ACTION='release')
         self.assertEqual(code, 1, out)
         self.assertEqual(self.writes(), ['tag', 'tag-push', 'release'])
@@ -1374,7 +1409,6 @@ class Candidate(World):
         self.assertEqual(self.writes(), ['tag', 'tag-push'])
 
     def after_push(self, extra):
-        """The fake git runs `extra` once its tag push has really reached the remote."""
         fake = self.bin / 'git'
         fake.write_text(fake.read_text().replace(
             'sys.exit(subprocess.run([REAL] + mapped).returncode)',
@@ -1384,7 +1418,6 @@ class Candidate(World):
 
     def test_r5_a_revocation_after_the_tag_push_stops_before_release_creation(self):
         self.ready()
-        # The reviewer's R5 probe: a valid later revocation lands during the push.
         self.after_push(
             '    path = os.environ["GH_WORLD"]\n'
             '    world = json.load(open(path))\n'
@@ -1395,50 +1428,44 @@ class Candidate(World):
         self.blocked(self.publish(), 'ship_revoked')
         self.assertEqual(self.writes(), ['tag', 'tag-push'])
         self.assertFalse((self.releases / ('v' + VERSION)).exists())
-        self.blocked(self.publish(), 'ship_revoked')  # a resume still stops there
+        self.blocked(self.publish(), 'ship_revoked')
         self.assertEqual(self.writes(), ['tag', 'tag-push'])
 
     def test_r6_a_lost_tag_push_response_settles_and_creates_the_release_once(self):
         self.ready()
-        # The reviewer's R6 probe: the push lands, then its response is lost.
         self.after_push('    sys.exit(42)')
         self.assertEqual(self.publish()[0], 1)
         self.assertEqual(self.git(self.remote, 'rev-parse', f'refs/tags/v{VERSION}^{{}}'), self.head)
         code, out = self.publish()
         self.assertEqual((code, out['status']), (0, 'published'), out)
-        self.assertEqual(self.writes(), ['tag', 'tag-push', 'release'])  # never a second push
+        self.assertEqual(self.writes(), ['tag', 'tag-push', 'release'])
         self.assertEqual(self.record()['publication']['status'], 'complete')
 
     def test_rl6_a_next_day_resume_after_a_lost_tag_push_refuses_before_creating_the_release(self):
-        # catches PR #746 R1: the publication-date guard ran only on a fresh attempt,
-        # so resuming the next day created the release with yesterday's dates.
         self.curate(CURATED)
         self.ready()
         self.after_push('    sys.exit(42)')
         self.assertEqual(self.publish(TODAY='2026-11-20')[0], 1)
         self.assertEqual(self.writes(), ['tag', 'tag-push'])
         self.assertEqual(self.blocked(self.publish(TODAY='2026-11-21'), 'changelog_date')['reasons'], ['changelog_date'])
-        self.assertEqual(self.writes(), ['tag', 'tag-push'])  # no release, and never a second push
+        self.assertEqual(self.writes(), ['tag', 'tag-push'])
         code, out = self.publish(TODAY='2026-11-20')
         self.assertEqual((code, out['status']), (0, 'published'), out)
         self.assertEqual(self.writes(), ['tag', 'tag-push', 'release'])
 
     def test_r7_a_lost_release_response_settles_published_on_the_first_recovery(self):
         self.ready()
-        # The reviewer's R7 probe: the release is created remotely, then its response is lost.
         self.assertEqual(self.publish(FAIL_ACTION='release-response', AT=str(self.now - 300))[0], 1)
         self.assertTrue((self.releases / ('v' + VERSION) / 'meta.json').exists())
         self.assertEqual(self.publish(AT=str(self.now - 200)), (0, {'status': 'published', 'tag': 'v' + VERSION,
                                                                'tag_object': self.git(self.remote, 'rev-parse',
                                                                                       'refs/tags/v' + VERSION)}))
-        self.assertEqual(self.writes(), ['tag', 'tag-push', 'release'])  # never a second create
+        self.assertEqual(self.writes(), ['tag', 'tag-push', 'release'])
         self.assertEqual(self.record()['publication']['status'], 'complete')
-        # R10: the publish phase keeps the failed attempt and the wait before its recovery.
         self.assertEqual([p for p in self.record()['timing']['phases'] if p['name'] == 'publish'],
                          [{'name': 'publish', 'started_at': self.now - 300, 'finished_at': self.now - 200}])
 
     def corrupt(self, target, data):
-        """Replace one target's archive and rebind its manifest, alias, checksum and sums."""
         folder = self.root / 'artifacts'
         archive = folder / f'openwiz-{VERSION}-{target}.tar.gz'
         archive.write_bytes(data)
@@ -1461,7 +1488,7 @@ class Candidate(World):
             info = tarfile.TarInfo('openwiz')
             info.size, info.mode = 5, 0o700
             tar.addfile(info, io.BytesIO(b'other'))
-        for name, data in (('not a gzip archive', b'not a gzip archive\n'),   # the reviewer's R2 probe
+        for name, data in (('not a gzip archive', b'not a gzip archive\n'),
                            ('wrong members', gzip.compress(member.getvalue(), mtime=0))):
             with self.subTest(case=name):
                 self.setUp()
@@ -1477,7 +1504,8 @@ class Candidate(World):
         self.assertEqual(self.evaluate()[0], 0)
         self.assertEqual(self.publish()[0], 0)
         late = self.now - 900 + 1800
-        code, out = self.install_receipt(at=max(late, self.record()['publication']['verified_at']))
+        self.latest()
+        code, out = self.install_check(AT=str(max(late, self.record()['publication']['verified_at'])))
         self.assertEqual(code, 0, out)
         self.assertEqual(out['original_ship_at'], self.now - 900)
         self.assertEqual(out['elapsed_seconds'], out['finished_at'] - (self.now - 900))
@@ -1488,16 +1516,13 @@ class Candidate(World):
         status = self.cli('status', '--state', self.state)[1]
         self.assertEqual(status, out)
 
-    # ------------------------------------------------------------ P7: order and immutable history
     def test_publication_order_and_published_history_are_kept(self):
         self.smoke_kit()
         self.artifacts()
-        # A version not newer than the published one refuses.
         old = self.body()
         old['release_version'] = '0.0.97'
         old['included_versions'][0]['version'] = '0.0.97'
         self.blocked(self.prepare(old), 'version_order')
-        # The candidate's CHANGELOG.md must be published history plus these notes.
         (self.repo / 'CHANGELOG.md').write_text(
             (self.repo / 'CHANGELOG.md').read_text().replace('Earlier public entry.', 'Rewritten entry.'))
         self.head = self.commit('Synthetic history rewrite')
@@ -1507,7 +1532,6 @@ class Candidate(World):
 
     def test_combined_release_keeps_every_section_in_order(self):
         versions = ['0.0.12', '0.0.11', '0.0.10', '0.0.9', '0.0.8', '0.0.7', '0.0.6']
-        # The generator's combined form: HL1's headline-only 0.0.7, J14's v0.0.12 footers.
         sections = '\n'.join(
             f'## {v} · 2026-11-20\n\nFixture-tested: Version {v} headline.\n'
             + ('' if v == '0.0.7' else f'\n- Fixture-tested: Synthetic {v} entry.\n\n'
@@ -1518,7 +1542,6 @@ class Candidate(World):
         shutil.rmtree(self.repo)
         shutil.rmtree(self.remote)
         self.history(notes=sections, published=published, published_version='0.0.5')
-        # #18: headline-only 0.0.7 has no live-checked line, so it is a named not-live gap.
         coverage = [{'version': v, 'promise': f'synthetic_{v}', 'steps': receipts_fixture.FLEET_ROW + ['send_once', 'new_once']}
                     for v in versions if v != '0.0.7']
         self.smoke_kit(coverage=coverage, version='0.0.12')
@@ -1582,12 +1605,54 @@ class Candidate(World):
         self.assertEqual(self.smoke()[0], 0)
         self.world[f'repos/{PUBLIC}/immutable-releases'] = {'enabled': False}
         self.save()
-        self.blocked(self.publish(), 'cutover_unverified')  # D3 reads the setting too
+        self.blocked(self.publish(), 'cutover_unverified')
         self.world[f'repos/{PUBLIC}/immutable-releases'] = {'enabled': True}
         self.save()
         self.git(self.remote, 'tag', 'v' + VERSION, self.published)
-        self.blocked(self.publish(), 'version_order')  # an existing tag is a published version
+        self.blocked(self.publish(), 'version_order')
         self.assertEqual(self.writes(), [])
+
+    def author(self, name, email):
+        shutil.rmtree(self.repo)
+        shutil.rmtree(self.remote)
+        saved = self.env['GIT_AUTHOR_NAME'], self.env['GIT_AUTHOR_EMAIL']
+        self.env['GIT_AUTHOR_NAME'], self.env['GIT_AUTHOR_EMAIL'] = name, email
+        self.history()
+        self.env['GIT_AUTHOR_NAME'], self.env['GIT_AUTHOR_EMAIL'] = saved
+
+    def unprotected(self):
+        self.world[f'repos/{PUBLIC}/immutable-releases'] = {'enabled': False}
+        self.save()
+        return {}
+
+    def test_2127_evaluate_gives_each_publish_precondition_publish_refuses_before_its_first_write(self):
+        def changed():
+            alias = self.root / 'artifacts' / 'openwiz-x86_64-apple-darwin.sha256'
+            alias.write_bytes(alias.read_bytes() + b'synthetic change\n')
+            return {}
+
+        def tagged():
+            self.git(self.remote, 'tag', 'v' + VERSION, self.published)
+            return {}
+        for name, before, after, reason, same in (
+                ('notes dated the day before', None, lambda: {'TODAY': '2026-11-21'}, 'changelog_date', True),
+                ('asset bytes changed after the gates', None, changed, 'artifact_changed', True),
+                ('author name with a digit', lambda: self.author('Synthetic Maintainer 2', NOREPLY), None,
+                 'tagger_identity', True),
+                ('author email not a noreply address',
+                 lambda: self.author('Synthetic Maintainer', 'fixture@example.invalid'), None, 'tagger_identity', True),
+                ('immutable releases off', None, self.unprotected, 'immutable_releases_off', False),
+                ('tag already present', None, tagged, 'tag_exists', False)):
+            with self.subTest(case=name):
+                self.setUp()
+                before and before()
+                self.ready()
+                extra = after() if after else {}
+                out = self.blocked(self.evaluate(**extra), reason)
+                refused = self.blocked(self.publish(**extra))
+                if same:
+                    self.assertEqual((out['reasons'], refused['reasons']), ([reason], [reason]))
+                self.assertEqual(self.writes(), [])
 
     def test_dispatcher_exposes_the_candidate_command(self):
         result = subprocess.run([sys.executable, str(HERE / 'release'), 'candidate', '--help'],
@@ -1599,18 +1664,14 @@ class Candidate(World):
 
 
 COMBINED = ('0.0.12', '0.0.11', '0.0.10', '0.0.9', '0.0.8', '0.0.7', '0.0.6')
-# J6's recorded per-section counts for the settled combined release (synthetic lines).
 SETTLED = {'0.0.12': 6, '0.0.11': 6, '0.0.10': 4, '0.0.9': 11, '0.0.8': 7, '0.0.7': 0, '0.0.6': 17}
 BASE_05 = '# Changelog\n\n## 0.0.5 · 2026-01-05\n\nContext: Earlier public entry.  \n'
 
 
 class Waiver(World):
-    """APP-1 (a): a recorded App-permission waiver for one release (#18)."""
     FIXTURE = json.dumps([['app_permissions', VERSION]])
 
     def app_yes(self, drop=True):
-        """A candidate whose App permissions changed, run with no App receipt
-        (or, with drop=False, with its genuine live App receipt)."""
         self.smoke_kit()
         self.artifacts()
         body = self.body()
@@ -1635,9 +1696,6 @@ class Waiver(World):
         return self.cli('decide', '--state', self.state, '--waiver', pointer, WAIVABLE=table or self.FIXTURE)
 
     def test_app_permissions_waiver_stands_in_for_only_that_live_receipt_as_waived(self):
-        """catches: app_permissions=yes publishing with neither its live receipt
-        nor a waiver, a waiver that is not accepted in its place, or one
-        recorded as a pass instead of a waiver."""
         self.app_yes()
         self.assertEqual(self.blocked(self.evaluate(WAIVABLE=self.FIXTURE), 'app_permissions_live_missing')['reasons'],
                          ['app_permissions_live_missing'])
@@ -1651,7 +1709,6 @@ class Waiver(World):
         self.assertEqual(gate['status'], 'waived')
         self.assertEqual(gate['waiver']['pointer'], pointer)
         self.assertNotIn('pass', json.dumps(gate))
-        # The live receipts made after the waiver record the App gate as waived too.
         run = f'https://github.com/{PRIVATE}/issues/9000#issuecomment-9301'
         self.assertEqual(self.cli('live', '--state', self.state, '--kit', self.helper.kit_path,
                                   '--smoke-state', self.helper.state, '--record', run, WAIVABLE=self.FIXTURE),
@@ -1660,7 +1717,6 @@ class Waiver(World):
         self.assertEqual(self.evaluate(WAIVABLE=self.FIXTURE)[0], 0)
 
     def test_a_waiver_never_stands_in_for_another_risks_receipt(self):
-        """catches: the App waiver excusing send's (or any other risk's) missing live receipt."""
         self.app_yes()
         self.assertEqual(self.waive(self.waiver(f'Release waiver: app_permissions v{VERSION}'))[0], 0)
         self.drop('send')
@@ -1668,8 +1724,6 @@ class Waiver(World):
         self.assertEqual(self.writes(), [])
 
     def test_no_waiver_line_or_an_unrecorded_one_is_never_a_waiver(self):
-        """catches: a comment without the waiver line, or a waiver line outside
-        the orchestrator's private-record form (no record line, another author)."""
         self.app_yes()
         for name, pointer, change in (
                 ('no line', self.waiver('Synthetic: no waiver here.', 9501), {}),
@@ -1684,8 +1738,6 @@ class Waiver(World):
         self.blocked(self.evaluate(WAIVABLE=self.FIXTURE), 'app_permissions_live_missing')
 
     def test_an_edited_waiver_refuses(self):
-        """catches: a waiver whose text was changed after it was recorded,
-        before or after the command saved it."""
         self.app_yes()
         pointer = self.waiver(f'Release waiver: app_permissions v{VERSION}')
         path = f'repos/{PRIVATE}/issues/comments/9500'
@@ -1700,8 +1752,6 @@ class Waiver(World):
         self.blocked(self.evaluate(WAIVABLE=self.FIXTURE), 'waiver_not_a_record', 'app_permissions_live_missing')
 
     def test_a_revoked_waiver_refuses(self):
-        """catches: a waiver still standing in after a later
-        `Release waiver revoked: <comment id>` line."""
         self.app_yes()
         pointer = self.waiver(f'Release waiver: app_permissions v{VERSION}')
         self.assertEqual(self.waive(pointer)[0], 0)
@@ -1710,10 +1760,6 @@ class Waiver(World):
         self.blocked(self.waive(pointer), 'waiver_revoked')
 
     def test_a_revocation_added_by_editing_an_older_comment_refuses(self):
-        """catches (#816 R1): an existing comment, created before the waiver,
-        edited afterwards to carry `Release waiver revoked: <id>`, ignored
-        because only its creation time was ordered, so publication goes ahead
-        with no App receipt. Any edited comment carrying the line fails closed."""
         for name, edited_at in (('edited after the waiver', self.now - 60),
                                 ('edited, even before the waiver', self.now - 350)):
             with self.subTest(name):
@@ -1730,9 +1776,6 @@ class Waiver(World):
                 self.assertEqual(self.writes(), [])
 
     def test_direct_publication_records_the_applied_waiver(self):
-        """catches (#816 R2): publish applying the waiver in its checks but
-        leaving the saved App gate as the earlier live `pass`, when no
-        separate evaluate ran first."""
         self.app_yes(drop=False)
         self.assertEqual(self.record()['gates']['app_permissions']['status'], 'pass')
         self.assertEqual(self.waive(self.waiver(f'Release waiver: app_permissions v{VERSION}'))[0], 0)
@@ -1743,17 +1786,13 @@ class Waiver(World):
                          ('waived', f'https://github.com/{PRIVATE}/issues/9000#issuecomment-9500'))
 
     def test_a_waiver_for_another_version_refuses(self):
-        """catches: a waiver applied to a release other than the one it names,
-        or to any release but 0.0.12 (the real table, not the fixture's)."""
         self.app_yes()
         self.blocked(self.waive(self.waiver('Release waiver: app_permissions v0.0.98', 9520)), 'waiver_wrong_version')
-        # The shipped table waives 0.0.12 only; this candidate is 0.0.99.
         real = self.waiver(f'Release waiver: app_permissions v{VERSION}', 9521)
         self.blocked(self.cli('decide', '--state', self.state, '--waiver', real), 'waiver_wrong_version')
         self.blocked(self.waive(self.waiver('Release waiver: app_permissions v0.0.12', 9522)), 'waiver_wrong_version')
 
     def test_a_waiver_for_another_risk_refuses(self):
-        """catches: the one-release waiver used for send, new or spending."""
         self.app_yes()
         for number, risk in enumerate(('send', 'new', 'spending')):
             with self.subTest(risk):
@@ -1761,7 +1800,6 @@ class Waiver(World):
                 self.blocked(self.waive(pointer), 'waiver_wrong_risk')
 
     def test_a_waiver_naming_several_risks_or_a_range_refuses(self):
-        """catches: one line read as waiving several risks or versions."""
         self.app_yes()
         for number, line in enumerate((f'Release waiver: app_permissions,send v{VERSION}',
                                        f'Release waiver: app_permissions send v{VERSION}',
@@ -1775,8 +1813,6 @@ class Waiver(World):
 
 
 class Notes(World):
-    """The proposed-notes generator: every original entry, J6 caps, J7 exclusions, HL1."""
-
     def setUp(self):
         super().setUp()
         shutil.rmtree(self.repo)
@@ -1797,7 +1833,7 @@ class Notes(World):
 
     def line(self, number, version, text=None, raw=None):
         if version is None:
-            milestone = {'number': None, 'title': None}  # gh's jq filter on a null milestone
+            milestone = {'number': None, 'title': None}
         else:
             self.milestones.setdefault(version, 100 + len(self.milestones))
             milestone = {'number': self.milestones[version], 'title': version}
@@ -1812,7 +1848,7 @@ class Notes(World):
         for version in release:
             self.spec(version)
             for _ in range(counts.get(version, 1)):
-                number += 7  # interleave tickets across versions
+                number += 7
                 self.line(number, version)
         return number
 
@@ -1832,7 +1868,7 @@ class Notes(World):
     def test_combined_notes_keep_every_original_entry_under_the_recorded_caps(self):
         self.settle(SETTLED)
         unassigned = [self.line(7001, None), self.line(7002, None, raw=b'kind: fixed\n\nNo final newline.'),
-                      self.line(7003, 'Design')]  # a non-version milestone assigns no version
+                      self.line(7003, 'Design')]
         (code, out), folder = self.generate(COMBINED, excluded=unassigned)
         self.assertEqual(code, 0, out)
         text = (folder / 'notes.md').read_text()
@@ -1846,7 +1882,6 @@ class Notes(World):
             self.assertEqual(bullets, [r['sentence'] for r in sources[version]])
             self.assertEqual([r['path'] for r in sources[version]],
                              sorted((r['path'] for r in sources[version]), key=lambda p: int(p[8:-3])))
-        # HL1: the headline-only 0.0.7 section is its dated heading and headline alone.
         self.assertIn('## 0.0.7 · 2026-11-20\n\nFixture-tested: Version 0.0.7 headline.\n\n## 0.0.6', text)
         self.assertNotIn('releases/tag/v0.0.7', text)
         self.assertNotIn('Synthetic 0.0.7 checks pass.', text)
@@ -1854,8 +1889,6 @@ class Notes(World):
                          + BASE_05.removeprefix('# Changelog\n\n'))
         self.assertEqual(out['notes_sha256'], sha(text.encode()))
         self.assertEqual([s['entries'] for s in out['sections']], [SETTLED[v] for v in COMBINED])
-        # J14 (b): in the settled combined release every footer links to the one
-        # published v0.0.12 release; headline-only 0.0.7 has none.
         footers = re.findall(r'releases/tag/v([0-9.]+)\)', text)
         self.assertEqual(footers, ['0.0.12'] * 6)
 
@@ -1909,10 +1942,6 @@ class Notes(World):
         self.assertNotIn('7001', (folder / 'notes.md').read_text())
 
     def test_a_moved_closedwiz_line_is_never_assigned_by_the_colliding_openwiz_ticket(self):
-        # #735: changes/closedwiz-<N>.md is old ClosedWiz #N, renamed because the
-        # new OpenWiz #N owns changes/<N>.md. OpenWiz #N's milestone must never
-        # place the moved line; until its version is mapped it needs an exclusion.
-        # RL6: ClosedWiz #718's ticket did not move, so its line has no OpenWiz milestone.
         self.env['MOVED'] = json.dumps({'schema': 'openwiz.moved-changes.v1', 'moved': [
             {'closedwiz': 718, 'openwiz': None, 'sha256': 'a' * 64}]})
         self.spec('0.0.13')
@@ -1934,9 +1963,7 @@ class Notes(World):
         (code, out), _ = self.generate(('0.0.13',))
         self.assertEqual((code, out['reasons']), (1, ['entry: invalid changelog filename changes/closedwiz-0718.md']))
 
-    # ------------------------------------------------------------ RL6 (#739)
     def untagged(self, base):
-        """Nothing published yet: the fixed anchor carries the unpublished history."""
         shutil.rmtree(self.repo)
         shutil.rmtree(self.remote)
         self.repo.mkdir()
@@ -1963,8 +1990,6 @@ class Notes(World):
                         '--out', out), out
 
     def test_rl6_with_nothing_published_the_changelog_keeps_the_unpublished_history(self):
-        # catches B4: with no tag, CHANGELOG.md dropped the preamble and every
-        # 0.0.0-0.0.5 entry already on main. A curated file beside changes/ is ignored.
         self.untagged(HISTORY)
         (self.repo / 'changes/notes').mkdir()
         (self.repo / 'changes/notes/release.md').write_text(section('0.0.13'))
@@ -1977,9 +2002,6 @@ class Notes(World):
         self.assertEqual((folder / 'CHANGELOG.md').read_text(), HISTORY[:at] + text + '\n' + HISTORY[at:])
 
     def test_rl6_curated_notes_release_their_leading_sections_over_the_kept_history(self):
-        # catches: the release notes not being exactly the included sections cut
-        # from the curated file, CHANGELOG.md not being that file byte for byte,
-        # or either one passing although it is not the approved bytes.
         self.untagged(HISTORY)
         text = PREAMBLE + section('0.0.14') + '\n' + section('0.0.13') + '\n' + section('0.0.5')
         released = section('0.0.14') + '\n' + section('0.0.13')
@@ -1998,8 +2020,6 @@ class Notes(World):
                 self.assertEqual((code, out['reasons']), (1, [reason]))
 
     def test_rl6_the_approved_changelog_passes_as_is(self):
-        # catches: a structure check that refuses the approved VS9 bytes, or a cut
-        # that is not the approved 0.0.6-0.0.12 release notes.
         raw = (ROOT / 'changes/notes/0.0.12.md').read_bytes()
         self.assertEqual(sha(raw), 'e690a1652787865d67cb557fc1a2a59588b87a21a067b2e547b90a709f5e6e3d')
         current, cut = (ROOT / 'CHANGELOG.md').read_bytes(), raw.index(b'\n\n', raw.index(b'All OpenWiz versions')) + 2
@@ -2055,8 +2075,6 @@ class Notes(World):
                 self.assertEqual((code, out['reasons']), (1, [reason]))
 
     def test_rl6_moved_lines_take_their_version_from_the_ticket_they_moved_to(self):
-        # catches G6: a moved line placed by the unrelated OpenWiz ticket that shares
-        # its old ClosedWiz number, and an unmapped or overwritten moved line passing.
         moved = b'kind: fixed\n\nFixture-tested: The moved line.\n'
         self.env['MOVED'] = json.dumps({'schema': 'openwiz.moved-changes.v1', 'moved': [
             {'closedwiz': 718, 'openwiz': 31, 'sha256': sha(moved)},
@@ -2074,7 +2092,6 @@ class Notes(World):
         self.assertIn('## 0.0.13 · 2026-11-20\n\nFixture-tested: Version 0.0.13 headline.\n\n'
                       '- Fixture-tested: The moved line.\n', text)
         self.assertNotIn('unrelated', text)
-        # #735's prefix: the moved line renamed, OpenWiz #718 writes its own line.
         (self.repo / 'changes/718.md').rename(self.repo / 'changes/closedwiz-718.md')
         self.line(718, '0.0.14', 'Fixture-tested: The new OpenWiz 718 line.')
         (code, out), folder = self.generate(('0.0.14', '0.0.13'))
@@ -2104,14 +2121,12 @@ class Notes(World):
                 for p, data in state.items():
                     p.write_bytes(data)
                 self.world = world
-        # A moved line whose ticket did not move passes only as a recorded exclusion.
         (self.repo / 'changes/2201.md').write_bytes(moved)
         (code, out), _ = self.generate(('0.0.14', '0.0.13'), excluded=[('changes/2201.md', sha(moved))])
         self.assertEqual(code, 0, out)
 
 
 def section(version):
-    """One synthetic curated section in VS9's three parts."""
     return (f"## {version} · 2026-11-20\n\n**Use {version}**\n\n**What's new for you**\n\n"
             f"- You can use {version} part one.\n- You can use {version} part two.\n\n"
             f"Tested on synthetic {version} checks.\n\n"

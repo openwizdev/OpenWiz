@@ -1,22 +1,4 @@
 #!/usr/bin/env python3
-"""OpenWiz setup: prepare one project and check each connection independently (#1105).
-
-  setup.py prepare --repository OWNER/NAME --project PRJ --operator NAME \\
-      --service-issue N --answer-thread THR --harness H --model M --effort E
-      Without --yes: records the proposed settings and prints their effects,
-      operation id and fingerprint; nothing else is saved. With
-      --yes --operation ID: saves exactly that preview's settings.
-  setup.py check
-      Reads CloudRoom through the installed openwiz CLI, the agents' own
-      GitHub login through gh, and OpenWiz's App through GitHub's App API, and
-      records one result code per component. Reads only: the App's
-      installation token is minted to prove access, then discarded.
-
-Results go to owner-only `<state>/setup/state.json` (store.py), which the
-setup page reads. Output is JSON with fixed public codes: never a token, key,
-provider body or URL with credentials. No personal-token fallback for the App.
-Python 3.9+, standard library and /usr/bin/openssl only.
-"""
 import argparse
 import base64
 from datetime import datetime, timezone
@@ -25,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
 import shutil
 import stat
 import subprocess
@@ -35,10 +18,11 @@ import urllib.parse
 import urllib.request
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import store  # noqa: E402
+import store
+
+DESCRIPTION = "OpenWiz setup: prepare one project and check each connection independently (#1105).\n\n  setup.py prepare --repository OWNER/NAME --project PRJ --operator NAME \\\n      --service-issue N --answer-thread THR --harness H --model M --effort E\n      Without --yes: records the proposed settings and prints their effects,\n      operation id and fingerprint; nothing else is saved. With\n      --yes --operation ID: saves exactly that preview's settings.\n  setup.py check\n      Reads CloudRoom through the installed openwiz CLI, the agents' own\n      GitHub login through gh, and OpenWiz's App through GitHub's App API, and\n      records one result code per component. Reads only: the App's\n      installation token is minted to prove access, then discarded. Beside\n      each code it prints one `next` line: the exact command to run, or the\n      person's step (#2143).\n\nResults go to owner-only `<state>/setup/state.json` (store.py). Output is JSON with fixed public codes: never a token, key,\nprovider body or URL with credentials. No personal-token fallback for the App.\nPython 3.9+, standard library and /usr/bin/openssl only.\n"
 
 HERE = Path(__file__).resolve().parent
-# OpenWiz's established service App profile (crates/adapters/github/src/app.rs).
 PROFILE = {'metadata': 'read', 'contents': 'write', 'issues': 'write',
            'pull_requests': 'write', 'checks': 'read', 'actions': 'read'}
 WRITES = ('contents', 'issues', 'pull_requests')
@@ -48,7 +32,6 @@ TIMEOUT = 30
 
 
 def run(argv, limit=4 * 1024 * 1024, env=None):
-    """One read. Returns (exit code, parsed JSON or None). Never echoes output."""
     try:
         result = subprocess.run(argv, stdin=subprocess.DEVNULL, capture_output=True, timeout=TIMEOUT, env=env)
     except (OSError, subprocess.TimeoutExpired):
@@ -61,13 +44,7 @@ def run(argv, limit=4 * 1024 * 1024, env=None):
         return result.returncode, None
 
 
-# --- CloudRoom and the harness, through the installed openwiz CLI ---------
-
 def check_cloudroom(openwiz, state=None):
-    # #2201: with setup's CloudRoom tool beside it (runtime/cloudroom/), the
-    # result is that tool's install and login code (contracts/
-    # public-cloudroom-setup.v1.md): signed in only on CloudRoom's positive,
-    # current account read. A runtime without the tool keeps the read below.
     tool = HERE.parent / 'cloudroom/cloudroom.py'
     if state is not None and tool.is_file():
         spec = importlib.util.spec_from_file_location('openwiz_cloudroom', tool)
@@ -79,13 +56,8 @@ def check_cloudroom(openwiz, state=None):
     code, value = run([str(openwiz), 'ls', '--json', '--limit', '1'])
     if code != 0 or type(value) is not dict or value.get('schema') != 'openwiz.inventory.v1':
         return 'cloudroom_unreadable'
-    # Review R5: only a complete live read with no gap is evidence; a partial
-    # read (a supporting read failed or timed out) proves nothing.
     if (value.get('coverage') or {}).get('state') != 'complete' or value.get('gaps') != []:
         return 'cloudroom_partial'
-    # Re-check R5: contracts/setup.v1.md: a successful inventory read alone
-    # never verifies. No authorized read proves a current login yet, so a
-    # complete read stays unknown (#1105, orchestrator question 6686776256).
     return 'cloudroom_reachable'
 
 
@@ -104,13 +76,9 @@ def check_harness(openwiz, project):
             for model in harness.get('models', []):
                 if (type(model) is dict and model.get('model') == project['model']
                         and project['effort'] in model.get('efforts', [])):
-                    # Review R5: the catalogue may be a saved copy and proves no
-                    # current harness login, so it never verifies the harness.
                     return 'harness_listed'
     return 'harness_unavailable'
 
-
-# --- The agents' own GitHub identity, through gh --------------------------
 
 def gh(path):
     program = shutil.which('gh')
@@ -120,21 +88,13 @@ def gh(path):
 
 
 def github_com(path):
-    """#633 R1: one gh read bound to github.com, where the browser sign-in
-    happens. gh otherwise follows GH_HOST, or defaults to another server when
-    that server holds its only login: neither may stand in for github.com."""
     return github_com_read(path)[:2]
 
 
-# Final check R3: gh's own line for GitHub's 401 answer, exactly. With a
-# credential only for another server, gh still asks github.com, which answers
-# 401, and gh exits 1 (exit 4 means no credential anywhere).
 UNAUTHENTICATED = re.compile(rb'gh: [^\n]* \(HTTP 401\)\n?')
 
 
 def github_com_read(path):
-    """(exit code, parsed JSON or None, whether gh's whole stderr is GitHub's 401
-    line) for one github.com read; anything else is not an authentication answer."""
     program = shutil.which('gh')
     if program is None:
         return None, None, False
@@ -151,11 +111,8 @@ def github_com_read(path):
 
 
 def account():
-    """(failure code or None, login): the signed-in account read from GitHub
-    now (#633). Only a person's own account is a login; a bot, an unreadable
-    answer or a browser that merely returned is not."""
     code, user, unauthenticated = github_com_read('user')
-    if code is None or code == 4 or unauthenticated:  # no answer, no credential, or GitHub's 401
+    if code is None or code == 4 or unauthenticated:
         return 'identity_signed_out', None
     if code != 0 or type(user) is not dict:
         return 'identity_unreadable', None
@@ -168,8 +125,6 @@ def account():
 
 
 def read_back(repository):
-    """(code, login or None): the account and its push access to REPOSITORY,
-    both read from GitHub now. github_login.py reports the same read."""
     failure, login = account()
     if failure is not None:
         return failure, None
@@ -183,8 +138,6 @@ def read_back(repository):
 
 
 def check_identity(project, identity=None):
-    """When the owner skipped the App for this repository (#633), the signed-in
-    account must also be the login they chose to act; any other is refused."""
     if project is None:
         return 'identity_unselected'
     code, login = read_back(project['repository'])
@@ -195,10 +148,7 @@ def check_identity(project, identity=None):
     return code
 
 
-# --- Project settings: explicit, checked, never invented ------------------
-
 def runtime_pin(runtime):
-    """`<version> <source>` of the installed package's runtime, with its skills."""
     if runtime is None:
         return None
     try:
@@ -215,7 +165,6 @@ def runtime_pin(runtime):
 
 
 def sections(text):
-    """`## Heading` -> its lines, up to the next `## ` heading."""
     found, name = {}, None
     for line in text.split('\n'):
         if line.startswith('## '):
@@ -227,7 +176,6 @@ def sections(text):
 
 
 def table(lines):
-    """The first Markdown table in LINES as rows of {header: cell}; [] if none."""
     rows = [line.strip() for line in lines if line.strip().startswith('|')]
     if len(rows) < 2 or not re.fullmatch(r'\|(\s*:?-{3,}:?\s*\|)+', rows[1]):
         return []
@@ -237,18 +185,12 @@ def table(lines):
 
 
 PLACEHOLDER = re.compile(r'<[A-Za-z][^<>\n]*>')
-# contracts/models.v1.md: the Models table's header, rows and one ids rule (#1807).
 MODELS_HEADER = ['Role', 'Harness', 'Model', 'Effort', '`room-cli thread spawn` flags']
 MODEL_ID = r'[A-Za-z0-9._-]+'
 MODEL_FLAGS = re.compile(r'`--provider %s --model %s(?:/%s)* --reasoning-level %s`' % ((MODEL_ID,) * 4))
 
 
 def models_usable(text, body):
-    """A whole, filled Models table, as contracts/models.v1.md defines it: one
-    `## Models` heading; the section's first table with the contract's header,
-    the Orchestrator, Builder and Reviewer rows each naming a harness, model
-    and effort with their exact flags, then an optional Small builder and Fixer
-    that follow the Builder or name their own choice; and a Source line."""
     if sum(line.startswith('## ') and line[3:].strip() == 'Models' for line in text.split('\n')) != 1:
         return False
     rows = []
@@ -264,7 +206,6 @@ def models_usable(text, body):
             [], ['Small builder'], ['Fixer'], ['Small builder', 'Fixer']):
         return False
     for role, harness, model, effort, flags in rows[2:]:
-        # Review R1: the reserved value is never a choice; only an optional role may follow, with empty cells.
         if harness == 'follows Builder':
             if role not in ('Small builder', 'Fixer') or model or effort or flags:
                 return False
@@ -275,23 +216,15 @@ def models_usable(text, body):
 
 
 def fleet_settings_usable(text):
-    """Review R2: the setup skill's fleet settings, filled in. The builder and a
-    reviewer name a harness, model and effort; at least one test command and one
-    CI check; a merge rule; each with its Source line; no unfilled template
-    placeholder. Empty headings or the bare template are not settings. A
-    `## Models` table (contracts/models.v1.md, #1807) stands for the builder and
-    reviewer tables; when present it must be whole, and older tables beside it
-    are ignored, as that contract's readers ignore them."""
     found = sections(text)
     reviewers = [name for name in found if name.startswith('Reviewer')]
-    # Re-check R2: every builder table present counts, small-ticket builders included.
     builders = [name for name in found if name.startswith('Builder')]
     needed = ['Test commands', 'CI checks', 'Standing merge rules']
     if 'Models' in found:
         if not models_usable(text, found['Models']):
             return False
         needed.insert(0, 'Models')
-        builders = reviewers = []  # Review R2 of #1947: readers ignore the older tables beside a Models table
+        builders = reviewers = []
     elif not reviewers:
         return False
     else:
@@ -312,8 +245,6 @@ def fleet_settings_usable(text):
         return False
     if not any(row.get('Check', '').strip('`') for row in table(found['CI checks'])):
         return False
-    # Re-check R2: a rule is a filled table row, or the template's explicit
-    # owner-waits line. Table headers and separators are scaffolding, not a rule.
     merge = found['Standing merge rules']
     rows = [row for row in table(merge) if all(cell.strip() for cell in row.values())]
     waits = any(line.strip() == 'None yet: every merge waits for the user.' for line in merge)
@@ -321,13 +252,6 @@ def fleet_settings_usable(text):
 
 
 def check_brain(brain, repository):
-    """#635: the saved brain reference, resolved on GitHub. None, or a brain
-    for another repository (kept as it is), is an existing project: nothing is
-    inferred and the check is unchanged. Otherwise the brain
-    repository must read back private and hold its merged settings record
-    naming this placement; a proposal that is not merged yet is still missing."""
-    # R3: a brain retained for another repository is not this project's: the
-    # selected repository is an existing project and its check is unchanged.
     if brain is None or brain['code_repository'].lower() != repository.lower():
         return 'project_verified'
     home = brain['brain_repository']
@@ -385,8 +309,6 @@ def check_project(openwiz, project, runtime, brain=None):
     return check_brain(brain, project['repository'])
 
 
-# --- OpenWiz's App, through GitHub's App API ------------------------------
-
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, *_args, **_kwargs):
         return None
@@ -403,12 +325,10 @@ def api_base(value):
 
 
 def request(base, method, path, jwt, body=None):
-    """(status, JSON or None). Never follows redirects or echoes a body."""
     return linked_request(base, method, path, jwt, body)[:2]
 
 
 def linked_request(base, method, path, jwt, body=None):
-    """(status, JSON or None, Link header or None), as request() reads it."""
     headers = {'Accept': 'application/vnd.github+json', 'User-Agent': 'OpenWiz-setup',
                'X-GitHub-Api-Version': '2022-11-28', 'Authorization': 'Bearer ' + jwt}
     data = None
@@ -435,9 +355,6 @@ PAGES = 100
 
 
 def read_installations(base, jwt):
-    """(status, every page's installations or None). C-G2: follows GitHub's
-    rel="next" pages, on the same origin and path only and at most PAGES of
-    them, so an installation past the first page is never read as revoked."""
     found, path = [], '/app/installations'
     origin = urllib.parse.urlsplit(base)[:2]
     for _ in range(PAGES):
@@ -447,9 +364,6 @@ def read_installations(base, jwt):
         found.extend(page)
         following = NEXT.search(link or '')
         if following is None:
-            # #2955: any other `next` outside a URI is an unsupported
-            # pagination form (RFC 8288's rel=next, rel="next last", ...):
-            # unreadable, never the end of the list.
             if re.search(r'\bnext\b', re.sub(r'<[^<>]*>', '', link or ''), re.IGNORECASE):
                 return None, None
             return status, found
@@ -471,7 +385,6 @@ def private_file(directory, name, limit):
 
 
 def app_directory(state):
-    """service/app, as tools/github-app/setup.py saves it, or None."""
     fd = None
     try:
         fd = os.open(state, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
@@ -493,7 +406,6 @@ def b64(data):
 
 
 def sign_jwt(directory, app_id):
-    """RS256 JWT; OpenSSL reads the key through an inherited descriptor."""
     fd = private_file(directory, 'private-key.pem', 16384)
     try:
         now = int(time.time())
@@ -509,7 +421,6 @@ def sign_jwt(directory, app_id):
 
 
 def check_app(state_path, project, recorded, base):
-    """(code, captured App ids or None). Never reads GH_TOKEN or gh's login."""
     try:
         directory = app_directory(state_path)
     except (store.Refused, OSError):
@@ -530,7 +441,6 @@ def check_app(state_path, project, recorded, base):
             return 'app_not_installed', {'app_id': app_id, 'installation_id': None}
         jwt = sign_jwt(directory, app_id)
     except (store.Refused, OSError, ValueError, subprocess.SubprocessError):
-        # Security R2: an unsafe, missing or unusable key or ID, or failed signing.
         return 'app_files_unusable', None
     finally:
         os.close(directory)
@@ -544,8 +454,6 @@ def check_app(state_path, project, recorded, base):
             and isinstance((i.get('account') or {}).get('login'), str)
             and i['account']['login'].lower() == owner.lower()]
     if len(mine) == 1:
-        # C-G1/J48 (#606 review R3): the user's own App is verified only on its owner's
-        # account; another account's App installed by the repository owner is not.
         status, found = request(base, 'GET', '/app', jwt)
         if status == 401:
             return 'app_key_rejected', None
@@ -568,7 +476,6 @@ def check_app(state_path, project, recorded, base):
         if type(granted) is dict and any(granted.get(k) != 'write' for k in WRITES):
             return 'app_read_only', ids
         return 'app_permissions_mismatch', ids
-    # Proof of access: a token for exactly the selected repository and profile.
     status, token = request(base, 'POST', f"/app/installations/{installation['id']}/access_tokens", jwt,
                             {'repositories': [name], 'permissions': PROFILE})
     if status == 404:
@@ -587,7 +494,7 @@ def check_app(state_path, project, recorded, base):
         return 'app_wrong_repository', ids
     if not usable_token(token, time.time()):
         return 'app_token_unusable', ids
-    del token  # held in memory only for this check, never written or printed
+    del token
     return 'app_verified', ids
 
 
@@ -595,8 +502,6 @@ TOKEN = re.compile(r'[A-Za-z0-9._~+/-]{1,16384}=*')
 
 
 def usable_token(answer, now):
-    """Security R1: a bounded token and a valid expiry in the future, at most an
-    hour (plus five minutes of clock drift) away, as the existing minters check."""
     token, expiry = answer.get('token'), answer.get('expires_at')
     if not isinstance(token, str) or TOKEN.fullmatch(token) is None or len(token) > 16384:
         return False
@@ -609,12 +514,10 @@ def usable_token(answer, now):
     return 0 < at - now <= 3600 + 300
 
 
-# --- Commands -------------------------------------------------------------
-
 def default_openwiz(explicit):
     if explicit is not None:
         return Path(explicit) if Path(explicit).is_file() else None
-    packaged = HERE.parent.parent / 'openwiz'  # <build>/runtime/setup/setup.py
+    packaged = HERE.parent.parent / 'openwiz'
     return packaged if packaged.is_file() else None
 
 
@@ -622,6 +525,100 @@ def default_runtime(explicit):
     if explicit is not None:
         return Path(explicit)
     return HERE.parent if (HERE.parent / 'openwiz-build.txt').is_file() else None
+
+
+DOWNLOAD_PAGE = 'https://www.cloudroom.dev/download'
+INSTALLATIONS = 'https://github.com/settings/installations'
+
+
+def next_steps(results, state, project, openwiz, identity=None):
+    where = ['--state-dir', shlex.quote(str(state))]
+    app_tool = HERE.parent / 'github-app/setup.py'
+    if not app_tool.is_file():
+        app_tool = HERE.parent.parent / 'github-app/setup.py'
+
+    def tool(path, *words):
+        return '`' + ' '.join(['python3', '-I', shlex.quote(str(path)), *words, *where]) + '`'
+
+    def prepare(**changed):
+        values = {'repository': 'OWNER/NAME', 'project': 'PRJ', 'operator': 'LOGIN', 'service_issue': 'N',
+                  'answer_thread': 'THR', 'harness': 'HARNESS', 'model': 'MODEL', 'effort': 'EFFORT'}
+        if project is not None:
+            values.update({key: str(project[key]) for key in values})
+        values.update(changed)
+        return tool(HERE / 'setup.py', 'prepare', *[word for key, value in values.items() for word in (
+            '--' + key.replace('_', '-'), shlex.quote(value))])
+
+    repository = project['repository'] if project is not None else 'OWNER/NAME'
+    again = tool(HERE / 'setup.py', 'check')
+    cloudroom = HERE.parent / 'cloudroom/cloudroom.py'
+    sign_in = f"Sign in to CloudRoom in its own window with {tool(cloudroom, 'sign-in')}, then run {again} again."
+    preview = tool(cloudroom, 'install')
+    app = tool(app_tool, '--repo', shlex.quote(repository))
+    gh_login = "Sign in to GitHub as yourself with `gh auth login --web`"
+    skip_app = tool(HERE / 'github_login.py', 'skip-app')
+    choose_personal = f'or act as your personal GitHub login instead: preview {skip_app}, then confirm with --yes --operation and the id it prints'
+    skipped = (project is not None and type(identity) is dict and identity.get('app_choice') == 'skip'
+               and identity.get('repository') == project['repository'])
+    models = '`' + (shlex.quote(str(openwiz)) if openwiz is not None else 'openwiz') + ' models --json`'
+    steps = {
+        'cloudroom_not_installed': f'Preview installing CloudRoom with {preview}, then confirm with --yes --operation and the id it prints.',
+        'cloudroom_installing': f'A CloudRoom install is running: when it ends, run {again} again.',
+        'cloudroom_installed': sign_in,
+        'cloudroom_reused': sign_in,
+        'cloudroom_install_failed': f'The install failed: run {preview} for its operation id, then retry it with --yes --operation and that id.',
+        'cloudroom_install_uncertain': f'An earlier install may have finished: run {preview} for its operation id, then reconcile it with --yes --operation and that id.',
+        'cloudroom_install_declined': f'You declined the install: to install CloudRoom after all, run {preview} for a new preview.',
+        'cloudroom_checksum_mismatch': f"Nothing was installed: the download did not match CloudRoom's published checksum. Run {preview} later for a new preview, or install CloudRoom yourself from {DOWNLOAD_PAGE}.",
+        'cloudroom_unsupported': f"CloudRoom publishes no installer OpenWiz can check for this computer (an Intel Mac, for example): install CloudRoom yourself from {DOWNLOAD_PAGE} if it offers one here ({tool(cloudroom, 'install', '--yes')} opens that page), open it once, sign in, then run {again} again.",
+        'cloudroom_destination_blocked': f'Something else is at ~/Applications/Cloudroom.AppImage: move it away yourself, then run {preview} again.',
+        'cloudroom_login_missing': sign_in,
+        'cloudroom_login_unknown': sign_in,
+        'cloudroom_login_verified': 'None: CloudRoom is installed and signed in.',
+        'cloudroom_missing': f'This build has no CloudRoom tool or openwiz CLI: install CloudRoom yourself from {DOWNLOAD_PAGE}, open it once, sign in, then run {again} again.',
+        'cloudroom_unreadable': f'CloudRoom could not be read: open the CloudRoom app, sign in, then run {again} again.',
+        'cloudroom_partial': f'CloudRoom answered only in part: wait a minute, then run {again} again.',
+        'cloudroom_reachable': 'None: CloudRoom is reachable.',
+        'harness_unselected': f'Choose the harness, model and effort when you prepare the project: {prepare()}.',
+        'harness_unreadable': f"CloudRoom's models could not be read: sign in to CloudRoom with {tool(cloudroom, 'sign-in')}, then run {again} again.",
+        'harness_unavailable': f'CloudRoom does not offer that harness, model and effort now: list what it offers with {models}, then prepare again with one of them: {prepare(harness="HARNESS", model="MODEL", effort="EFFORT")}.',
+        'harness_listed': 'None: CloudRoom offers the chosen harness, model and effort.',
+        'identity_unselected': f"Prepare the project first: {prepare()}. Then this check reads your agents' GitHub login.",
+        'identity_signed_out': f"Preview GitHub's browser sign-in with {tool(HERE / 'github_login.py', 'sign-in')}, then run it again with --yes.",
+        'identity_unreadable': f'GitHub could not be read: check `gh auth status`, then run {again} again.',
+        'identity_bot': f'{gh_login}, not as a bot or organisation, then run {again} again.',
+        'identity_no_push': f'The signed-in GitHub account cannot push to {repository}: {gh_login[0].lower() + gh_login[1:]} with an account that can, or ask its owner for write access.',
+        'identity_account_mismatch': f"gh is signed in as another account than the one you chose: switch back with `gh auth switch`, or record this account instead: preview {skip_app}, then confirm with --yes --operation and the id it prints.",
+        'identity_verified': 'None: your agents can push with this GitHub login.',
+        'project_unprepared': f'Choose the project for your first fleet: {prepare()}, then confirm with --yes --operation and the id it prints.',
+        'project_runtime_missing': f'The project is pinned to another OpenWiz build: prepare it again from this build with {prepare()}.',
+        'project_unreadable': f'GitHub or CloudRoom could not be read for the project: check `gh auth status` and the CloudRoom sign-in, then run {again} again.',
+        'project_issue_refused': f'That issue is not an open issue in {repository}: open one for service records, then prepare again with its number: {prepare(service_issue="N")}.',
+        'project_settings_missing': f"{repository} has no usable fleet settings (docs/agents/fleet.md, and the brain's settings after init): ask your agent to run the setup skill there, then run {again} again.",
+        'project_answer_refused': f"That answer thread is not in the project's CloudRoom project: pick one that is, then prepare again: {prepare(answer_thread='THR')}.",
+        'project_verified': 'None: the project is ready.',
+        'app_missing': (f'None: you skipped the App for {repository}, so your personal GitHub login acts instead.' if skipped else
+                        f"Connect OpenWiz's GitHub App with {app}, then confirm with --yes --operation and the id it prints; or skip the App with {skip_app}."),
+        'app_files_unusable': f"The App's files in the state's service/app folder (app.json and private-key.pem) must be yours and private (mode 0600): fix them, then run {again} again; {choose_personal}.",
+        'app_not_installed': f'Install the App on {repository}: run {app} and follow Install the App.',
+        'app_key_rejected': f"GitHub rejected the App's key: generate a new private key in your App's settings at https://github.com/settings/apps, save it as service/app/private-key.pem in the state (yours, mode 0600), then run {again} again; {choose_personal}.",
+        'app_unreadable': f"GitHub's App API could not be read: wait a minute, then run {again} again.",
+        'app_revoked': f'The App is no longer installed for {repository}: install it again with {app}.',
+        'app_suspended': f'The App is suspended: unsuspend it at {INSTALLATIONS}, then run {again} again.',
+        'app_all_repositories': f'The App can reach every repository: at {INSTALLATIONS} choose Only select repositories and pick {repository}, then run {again} again.',
+        'app_read_only': f"The App lacks write access: accept OpenWiz's requested permissions at {INSTALLATIONS}, then run {again} again.",
+        'app_permissions_mismatch': f"The App's permissions differ from OpenWiz's profile: accept the requested permissions at {INSTALLATIONS}, then run {again} again.",
+        'app_wrong_repository': f"The App can't reach {repository}: add it to the App's selected repositories at {INSTALLATIONS}, then run {again} again.",
+        'app_token_unusable': f'GitHub returned an unusable App token: run {again} again; if it repeats, {choose_personal}.',
+        'app_verified': 'None: the App can act on the project.',
+    }
+    unknown = f'This build does not know that code: run {again} again; if it repeats, reinstall OpenWiz.'
+    found = {component: steps.get(code, unknown) for component, code in results.items()}
+    if shutil.which('gh') is None:
+        for component in ('personal_github', 'project'):
+            if '`gh ' in found[component] or 'github_login.py' in found[component]:
+                found[component] = f'Install the GitHub CLI from https://cli.github.com first, then: {found[component]}'
+    return found
 
 
 def check(args):
@@ -633,8 +630,6 @@ def check(args):
     openwiz = default_openwiz(args.openwiz)
 
     def guarded(check_one, failed):
-        # Security R2: a check that fails is still a result. Its fixed code is
-        # saved, so it replaces this component's earlier positive evidence.
         try:
             return check_one()
         except Exception:
@@ -645,8 +640,6 @@ def check(args):
                                           'identity_unreadable'),
                'project': guarded(lambda: check_project(openwiz, project, default_runtime(args.runtime),
                                                         before.get('brain')), 'project_unreadable')}
-    # Local App files (key, ID, their directory or signing) that cannot be used
-    # safely are a refusal of this component, never an abort.
     results['github_app'], ids = guarded(lambda: check_app(setup.state, project, before['app'], base),
                                          ('app_unreadable', None))
 
@@ -656,14 +649,14 @@ def check(args):
         value['checks']['committed'] = generation
         bound = revision
         if value['revision'] == revision and ids is not None and value['app'] != ids:
-            # A captured or changed installation is a new selection.
             value['app'] = ids
             value['revision'] = bound = revision + 1
         now = int(time.time() * 1000)
         for component, code in results.items():
             value['observations'][component] = {'code': code, 'revision': bound, 'at': now}
     setup.update(change)
-    print(json.dumps({'schema': 'openwiz.setup-check.v1', 'results': results}, sort_keys=True))
+    print(json.dumps({'schema': 'openwiz.setup-check.v1', 'results': results,
+                      'next': next_steps(results, setup.state, project, openwiz, before.get('identity'))}, sort_keys=True))
 
 
 def prepare(args):
@@ -680,7 +673,6 @@ def prepare(args):
                (f"Pin packaged runtime {pin.split()[0]} (source {pin.split()[1][:12]})." if pin
                 else "No packaged runtime found; project stays unverified."),
                "Save these settings in this host's owner-only OpenWiz state. Nothing is sent or created."]
-    # Review R1: an applied preparation stands only while it is the saved selection.
     def current(value):
         return value['project'] == project
     if not args.yes:
@@ -692,7 +684,7 @@ def prepare(args):
         def change(value):
             operation = setup.authorized(value, args.operation, 'prepare_project', project, current)
             if operation['phase'] == 'applied':
-                return dict(operation)  # A retry applies nothing twice.
+                return dict(operation)
             store.require(operation['phase'] == 'proposed', 'that operation is not awaiting confirmation')
             if value['project'] != project:
                 value['project'] = project
@@ -705,7 +697,7 @@ def prepare(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(description=DESCRIPTION, formatter_class=argparse.RawDescriptionHelpFormatter)
     commands = parser.add_subparsers(dest='command', required=True)
     for name in ('prepare', 'check'):
         command = commands.add_parser(name)

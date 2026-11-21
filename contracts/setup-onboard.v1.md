@@ -21,7 +21,7 @@ evidence show; a fixture or recording pass shows the shape is consistent, never
 that an absent runtime works. It changes no once-only, authorization,
 public-record or token rule of [setup.v1](setup.v1.md),
 [github-identity.v1](github-identity.v1.md), [cli.v1](cli.v1.md),
-[first-hour.v1](../tools/install/tests/first-hour/README.md#evidence-and-validation), [install.v1](install.v1.md),
+[install.v1](install.v1.md),
 [decisions.v1](decisions.v1.md) or [open-development.v1](open-development.v1.md),
 which stay authoritative where they apply. Each of those contracts names its
 compatible expansion and points here.

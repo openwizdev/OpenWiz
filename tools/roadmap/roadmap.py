@@ -1,11 +1,4 @@
 #!/usr/bin/env python3
-"""The roadmap generator (ClosedWiz#277, spec #276, R1).
-
-Reads GitHub's milestones over REST and writes the short public roadmap to
-the --public FILE. See README.md beside this file.
-
-    python3 tools/roadmap/roadmap.py --public FILE [--root DIR] [--public-repo OWNER/NAME]
-"""
 import argparse
 import json
 import os
@@ -15,11 +8,12 @@ import sys
 import tempfile
 from pathlib import Path
 
-# Where release publish tags each version, unless --public-repo says otherwise.
-# Every other read is of the clone the tool runs in ({owner}/{repo}).
+DESCRIPTION = """Reads GitHub's milestones over REST and writes the short public roadmap to
+the --public FILE. See README.md beside this file."""
+
 PUBLIC_REPO = "jparker2006/OpenWiz"
 REPO = re.compile(r"[A-Za-z0-9-]+/[A-Za-z0-9_.-]+")
-LANES = ("Infra", "0.0.X")  # milestones that are never versions
+LANES = ("Infra", "0.0.X")
 VERSION = re.compile(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)")
 NOW = ("building", "built", "live-checked")
 NEXT = ("being grilled",)
@@ -33,23 +27,19 @@ ISSUES_JQ = (".[] | select(.pull_request == null)"
 REFS_JQ = ".[].ref"
 TICKET_JQ = "{number, state, state_reason, pull: (.pull_request != null), html_url}"
 
-# The public roadmap's lines: only these characters, no token that mixes
-# letters and digits, and no word with a capital letter in it but these. Anything else stops
-# --public: a guard that can't tell a name from a word refuses both.
 PUBLIC_CHARS = re.compile(r"[A-Za-z0-9 .,;:!?'\"()\-’“”—–…]")
 PUBLIC_WORDS = ("You", "OpenWiz", "CloudRoom", "GitHub", "Mac", "PC")
 
 
 class Fail(Exception):
-    """Something could not be read or written: stop, and write nothing."""
+    pass
 
 
 class HalfWritten(Fail):
-    """A page could not be put in place after others were: say which."""
+    pass
 
 
 def gh(root, path, jq, paginate=True):
-    """One read through `gh api`; its standard output."""
     args = ["gh", "api", *(["--paginate"] if paginate else []), path, "--jq", jq]
     try:
         proc = subprocess.run(args, cwd=root, capture_output=True, timeout=120)
@@ -65,7 +55,6 @@ def gh(root, path, jq, paginate=True):
 
 
 def lines_of(text, what):
-    """The answer's lines; an empty answer has none, and a blank line is refused."""
     if text == "":
         return []
     if not text.endswith("\n"):
@@ -84,7 +73,6 @@ def no_repeats(pairs):
 
 
 def objects(text, what, shape):
-    """One JSON object per line, each with exactly SHAPE's keys, each of its type."""
     out = []
     for line in lines_of(text, what):
         try:
@@ -158,7 +146,6 @@ def read_github(root, public_repo=PUBLIC_REPO):
 
 
 def live_check(root, title, n, problems):
-    """The ticket #N, read by number wherever it is; None if it's a pull request."""
     found = objects(gh(root, f"repos/{{owner}}/{{repo}}/issues/{n}", TICKET_JQ, paginate=False),
                     f"{title}'s live-check ticket #{n}",
                     {"number": lambda v: number(v) and v == n, "state": lambda v: v in ISSUE_STATES,
@@ -173,7 +160,6 @@ def live_check(root, title, n, problems):
 
 
 def version(m, issues, heads, tags, read_ticket, problems):
-    """One version: its state and "You can …" lines, as GitHub says."""
     title = m["title"]
     desc = (m["description"] or "").replace("\r\n", "\n").replace("\r", "\n")
     lines = [line.strip() for line in desc.split("\n")]
@@ -206,7 +192,6 @@ def version(m, issues, heads, tags, read_ticket, problems):
 
 
 def public_holds(line):
-    """What in LINE can't go public, or None."""
     for ch in line:
         if not PUBLIC_CHARS.fullmatch(ch):
             return f'the character "{ch}"'
@@ -220,8 +205,6 @@ def public_holds(line):
 
 
 def public_page(versions):
-    """The short public roadmap: Now and Next, one line each, from each
-    version's number, state and "You can …" line only."""
     out = ["# OpenWiz roadmap", "", "What is being built now, and what comes next."]
     for horizon, states in (("Now", NOW), ("Next", NEXT)):
         out += ["", f"## {horizon}", ""]
@@ -247,7 +230,6 @@ def read_page(path):
 
 
 def stage(path, text):
-    """TEXT in a new file beside PATH, with PATH's mode; None if PATH holds TEXT already."""
     tmp = None
     try:
         exists = path.exists()
@@ -271,8 +253,6 @@ def stage(path, text):
 
 
 def write_pages(targets, new):
-    """Every page staged first, then each put in place: one that can't be
-    staged leaves every page as it was."""
     staged = []
     try:
         for name, path in targets.items():
@@ -304,7 +284,7 @@ def repo_arg(value):
 
 
 def main(argv):
-    parser = argparse.ArgumentParser(prog="roadmap.py", description=__doc__.split("\n\n")[1])
+    parser = argparse.ArgumentParser(prog="roadmap.py", description=DESCRIPTION)
     parser.add_argument("--root", default=str(Path(__file__).resolve().parents[2]),
                         help="the repository's root (default: the one holding this script)")
     parser.add_argument("--public", metavar="FILE", required=True,

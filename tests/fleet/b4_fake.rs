@@ -1,15 +1,3 @@
-//! B4's fakes (ClosedWiz#120): a private copy of the repository's fake
-//! `room-cli` per test, a scenario the test writes, and a private state
-//! directory for the new-thread and start records.
-//!
-//! **The scenario is written by the test**, not committed, as the
-//! new-thread proofs do (`tests/new-thread/fake.rs`): a create needs a
-//! project with a GitHub remote, which no committed fixture may hold. Every
-//! value is synthetic. The committed stdout files of
-//! `room-cli-v127/new-thread/` are served by absolute path; the catalogue
-//! is that file with two of its synthetic model names changed to the
-//! builder and reviewer models these tests start.
-
 use std::fs;
 use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
 use std::path::{Path, PathBuf};
@@ -23,31 +11,23 @@ use openwiz_core::messaging::OpId;
 use openwiz_core::new_thread::Settings;
 use serde_json::{Value, json};
 
-/// The new-thread fixtures, served by absolute path.
 pub const NEW_THREAD: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/fixtures/room-cli-v127/new-thread"
 );
 
-/// The 0.43.1 inventory scenario every B4 scenario extends (the thread
-/// list a status read of an uncertain start reads).
 pub const NORMAL: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/fixtures/room-cli-0.43.1/normal"
 );
 
-/// The project every start here is in, and the thread the default create
-/// makes (the committed receipt's).
 pub const PROJECT: &str = "prj_syn_0001";
 pub const THREAD: &str = "thr_syn_0021";
 
-/// A synthetic repository.
 pub const REPOSITORY: &str = "synthetic-owner/synthetic-repo-0001";
 
-/// A synthetic head commit.
 pub const COMMIT: &str = "0123456789abcdef0123456789abcdef01234567";
 
-/// A synthetic timestamp, in milliseconds.
 pub const T0: i64 = 1_700_000_000_000;
 
 pub fn repository() -> Repository {
@@ -70,20 +50,14 @@ pub fn settings(harness: &str, model: &str, effort: &str) -> Settings {
     }
 }
 
-/// A builder's settings here: Claude Code, Opus 5.5, XHigh (fleet.md's
-/// builder row when #120 was planned). A start passes on whatever settings
-/// its caller gives; nothing here depends on these.
 pub fn builder_settings() -> Settings {
     settings("claude-code", "claude-opus-5-5", "xhigh")
 }
 
-/// A reviewer's settings here: Codex, Sol 6.1, High (fleet.md's reviewer
-/// row when #120 was planned).
 pub fn reviewer_settings() -> Settings {
     settings("codex", "gpt-6.1-sol", "high")
 }
 
-/// The builder of ticket `ticket`, in [`PROJECT`].
 pub fn builder(ticket: u64) -> StartRequest {
     StartRequest::new(
         StartKey::builder(repository(), number(ticket)),
@@ -92,7 +66,6 @@ pub fn builder(ticket: u64) -> StartRequest {
     )
 }
 
-/// The reviewer of pull request `pr` at [`COMMIT`], in [`PROJECT`].
 pub fn reviewer(pr: u64) -> StartRequest {
     StartRequest::new(
         StartKey::reviewer(
@@ -105,14 +78,12 @@ pub fn reviewer(pr: u64) -> StartRequest {
     )
 }
 
-/// A committed new-thread stdout file, by absolute path.
 pub fn file(name: &str) -> String {
     let path = Path::new(NEW_THREAD).join(name);
     assert!(path.is_file(), "no fixture {path:?}");
     path.to_str().expect("utf-8").to_owned()
 }
 
-/// A create that makes [`THREAD`].
 pub fn created() -> Value {
     json!({"any_spawn": true, "stdout_file": file("spawn-receipt-created.json"), "creates": true})
 }
@@ -129,9 +100,6 @@ fn project_row(id: &str, name: &str, remote: Value) -> Value {
     })
 }
 
-/// The responses every B4 scenario starts from: the version, the project
-/// lists (one project, with a synthetic GitHub remote), the catalogue, one
-/// create, and the new thread's `thread show`.
 fn defaults(catalogue: &Path) -> Vec<Value> {
     let projects = json!([project_row(
         PROJECT,
@@ -157,9 +125,6 @@ fn defaults(catalogue: &Path) -> Vec<Value> {
     ]
 }
 
-/// The committed catalogue, with the first model of `codex` and of
-/// `claude-code` renamed to the reviewer and builder models above. Their
-/// effort lists are the fixture's.
 fn catalogue() -> Value {
     let text = fs::read_to_string(file("cloud-status.json")).expect("the catalogue");
     let mut catalogue: Value = serde_json::from_str(&text).expect("JSON");
@@ -174,8 +139,6 @@ fn catalogue() -> Value {
     catalogue
 }
 
-/// This test run's own directory under the system temp directory: records
-/// must be outside every repository.
 fn run_root() -> &'static Path {
     static ROOT: OnceLock<PathBuf> = OnceLock::new();
     ROOT.get_or_init(|| {
@@ -199,15 +162,12 @@ fn private_dir(dir: &Path) {
     fs::set_permissions(dir, fs::Permissions::from_mode(0o700)).expect("private");
 }
 
-/// A private fake `room-cli` and state directory for one test.
 pub struct Fake {
     pub dir: PathBuf,
     pub state: PathBuf,
 }
 
 impl Fake {
-    /// `responses` tried first, then the defaults, then the 0.43.1
-    /// inventory.
     pub fn new(test: &str, responses: Vec<Value>) -> Self {
         let dir = Path::new(env!("CARGO_TARGET_TMPDIR"))
             .join("b4-fake")
@@ -225,7 +185,6 @@ impl Fake {
         fake
     }
 
-    /// Replaces the scenario: `responses` first, then the defaults.
     pub fn respond(&self, mut responses: Vec<Value>) {
         responses.extend(defaults(&self.dir.join("catalogue.json")));
         let scenario = json!({
@@ -258,7 +217,6 @@ impl Fake {
         StartFileStore::open(&self.state).expect("open the start record")
     }
 
-    /// Every argument list the fake received, in order.
     pub fn invocations(&self) -> Vec<Vec<String>> {
         let Ok(text) = fs::read_to_string(self.dir.join("invocations.log")) else {
             return vec![];
@@ -283,7 +241,6 @@ impl Fake {
         }
     }
 
-    /// The archive calls the fake accepted.
     pub fn archive_count(&self) -> u64 {
         self.counter("archive-calls.count")
     }

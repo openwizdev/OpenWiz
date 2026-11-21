@@ -1,0 +1,125 @@
+FFFFFFFF..
+======================================================================
+FAIL: test_remove_never_deletes_a_shared_state_root_or_follows_a_link (__main__.Remove.test_remove_never_deletes_a_shared_state_root_or_follows_a_link)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/tests/installer/test_root_safety.py", line 128, in test_remove_never_deletes_a_shared_state_root_or_follows_a_link
+    self.assertEqual((code, value['outcome']), (0, 'removed'), value)
+AssertionError: Tuples differ: (2, 'usage') != (0, 'removed')
+
+First differing element 0:
+2
+0
+
+- (2, 'usage')
++ (0, 'removed') : {'schema': 'openwiz.install-error.v1', 'outcome': 'usage', 'reason': "argument command: invalid choice: 'remove' (choose from 'preflight', 'download', 'install', 'link', 'status', 'skills')"}
+
+======================================================================
+FAIL: test_remove_of_a_dedicated_install_leaves_no_root_and_lists_agent_skills_to_clean (__main__.Remove.test_remove_of_a_dedicated_install_leaves_no_root_and_lists_agent_skills_to_clean)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/tests/installer/test_root_safety.py", line 109, in test_remove_of_a_dedicated_install_leaves_no_root_and_lists_agent_skills_to_clean
+    self.assertEqual((code, value['outcome']), (0, 'removed'), value)
+AssertionError: Tuples differ: (2, 'usage') != (0, 'removed')
+
+First differing element 0:
+2
+0
+
+- (2, 'usage')
++ (0, 'removed') : {'schema': 'openwiz.install-error.v1', 'outcome': 'usage', 'reason': "argument command: invalid choice: 'remove' (choose from 'preflight', 'download', 'install', 'link', 'status', 'skills')"}
+
+======================================================================
+FAIL: test_remove_on_a_root_with_nothing_installed_changes_nothing (__main__.Remove.test_remove_on_a_root_with_nothing_installed_changes_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/tests/installer/test_root_safety.py", line 139, in test_remove_on_a_root_with_nothing_installed_changes_nothing
+    self.assertEqual((code, value['outcome']), (1, 'not installed'), value)
+AssertionError: Tuples differ: (2, 'usage') != (1, 'not installed')
+
+First differing element 0:
+2
+1
+
+- (2, 'usage')
++ (1, 'not installed') : {'schema': 'openwiz.install-error.v1', 'outcome': 'usage', 'reason': "argument command: invalid choice: 'remove' (choose from 'preflight', 'download', 'install', 'link', 'status', 'skills')"}
+
+======================================================================
+FAIL: test_remove_previews_then_deletes_only_openwiz_entries_and_keeps_unrelated_files (__main__.Remove.test_remove_previews_then_deletes_only_openwiz_entries_and_keeps_unrelated_files)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/tests/installer/test_root_safety.py", line 95, in test_remove_previews_then_deletes_only_openwiz_entries_and_keeps_unrelated_files
+    self.assertEqual((code, value['outcome']), (0, 'preview'), value)
+AssertionError: Tuples differ: (2, 'usage') != (0, 'preview')
+
+First differing element 0:
+2
+0
+
+- (2, 'usage')
++ (0, 'preview') : {'schema': 'openwiz.install-error.v1', 'outcome': 'usage', 'reason': "argument command: invalid choice: 'remove' (choose from 'preflight', 'download', 'install', 'link', 'status', 'skills')"}
+
+======================================================================
+FAIL: test_a_root_with_an_unrelated_entry_is_refused_by_name_and_left_as_it_was (__main__.RootSafety.test_a_root_with_an_unrelated_entry_is_refused_by_name_and_left_as_it_was)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/tests/installer/test_root_safety.py", line 39, in test_a_root_with_an_unrelated_entry_is_refused_by_name_and_left_as_it_was
+    self.assertEqual((code, value['outcome']), (5, 'refused'), value)
+AssertionError: Tuples differ: (0, 'installed') != (5, 'refused')
+
+First differing element 0:
+0
+5
+
+- (0, 'installed')
++ (5, 'refused') : {'schema': 'openwiz.install-result.v1', 'version': '0.1.0', 'source': '1111111111111111111111111111111111111111', 'target': 'x86_64-unknown-linux-gnu', 'build': '<home>/.local/lib/openwiz/state/service/builds/1111111111111111111111111111111111111111', 'state_root': '<home>/.local/lib/openwiz/state', 'activated': True, 'repaired': False, 'outcome': 'installed', 'openwiz': '<home>/.local/lib/openwiz/current/openwiz', 'next': 'openwiz is at <home>/.local/lib/openwiz/current/openwiz; it is not on PATH. For a link at <home>/.local/bin/openwiz, run install link --root <home>/.local/lib/openwiz to preview it, then again with --yes.'}
+
+======================================================================
+FAIL: test_a_state_root_with_another_apps_entries_is_refused_by_name (__main__.RootSafety.test_a_state_root_with_another_apps_entries_is_refused_by_name) (entry='other.txt')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/tests/installer/test_root_safety.py", line 60, in test_a_state_root_with_another_apps_entries_is_refused_by_name
+    self.assertEqual((code, value['outcome']), (5, 'refused'), value)
+AssertionError: Tuples differ: (0, 'installed') != (5, 'refused')
+
+First differing element 0:
+0
+5
+
+- (0, 'installed')
++ (5, 'refused') : {'schema': 'openwiz.install-result.v1', 'version': '0.1.0', 'source': '1111111111111111111111111111111111111111', 'target': 'x86_64-unknown-linux-gnu', 'build': '<tmp>/state-0/service/builds/1111111111111111111111111111111111111111', 'state_root': '<tmp>/state-0', 'activated': True, 'repaired': False, 'outcome': 'installed', 'openwiz': '<home>/root-0/current/openwiz', 'next': 'openwiz is at <home>/root-0/current/openwiz; it is not on PATH. For a link at <home>/.local/bin/openwiz, run install link --root <home>/root-0 --state-root <tmp>/state-0 to preview it, then again with --yes.'}
+
+======================================================================
+FAIL: test_a_state_root_with_another_apps_entries_is_refused_by_name (__main__.RootSafety.test_a_state_root_with_another_apps_entries_is_refused_by_name) (entry='service/other-service.txt')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/tests/installer/test_root_safety.py", line 60, in test_a_state_root_with_another_apps_entries_is_refused_by_name
+    self.assertEqual((code, value['outcome']), (5, 'refused'), value)
+AssertionError: Tuples differ: (0, 'installed') != (5, 'refused')
+
+First differing element 0:
+0
+5
+
+- (0, 'installed')
++ (5, 'refused') : {'schema': 'openwiz.install-result.v1', 'version': '0.1.0', 'source': '1111111111111111111111111111111111111111', 'target': 'x86_64-unknown-linux-gnu', 'build': '<tmp>/state-1/service/builds/1111111111111111111111111111111111111111', 'state_root': '<tmp>/state-1', 'activated': True, 'repaired': False, 'outcome': 'installed', 'openwiz': '<home>/root-1/current/openwiz', 'next': 'openwiz is at <home>/root-1/current/openwiz; it is not on PATH. For a link at <home>/.local/bin/openwiz, run install link --root <home>/root-1 --state-root <tmp>/state-1 to preview it, then again with --yes.'}
+
+======================================================================
+FAIL: test_a_state_root_with_another_apps_entries_is_refused_by_name (__main__.RootSafety.test_a_state_root_with_another_apps_entries_is_refused_by_name) (entry='service/builds/other')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/tests/installer/test_root_safety.py", line 60, in test_a_state_root_with_another_apps_entries_is_refused_by_name
+    self.assertEqual((code, value['outcome']), (5, 'refused'), value)
+AssertionError: Tuples differ: (0, 'installed') != (5, 'refused')
+
+First differing element 0:
+0
+5
+
+- (0, 'installed')
++ (5, 'refused') : {'schema': 'openwiz.install-result.v1', 'version': '0.1.0', 'source': '1111111111111111111111111111111111111111', 'target': 'x86_64-unknown-linux-gnu', 'build': '<tmp>/state-2/service/builds/1111111111111111111111111111111111111111', 'state_root': '<tmp>/state-2', 'activated': True, 'repaired': False, 'outcome': 'installed', 'openwiz': '<home>/root-2/current/openwiz', 'next': 'openwiz is at <home>/root-2/current/openwiz; it is not on PATH. For a link at <home>/.local/bin/openwiz, run install link --root <home>/root-2 --state-root <tmp>/state-2 to preview it, then again with --yes.'}
+
+----------------------------------------------------------------------
+Ran 8 tests in 4.030s
+
+FAILED (failures=8)

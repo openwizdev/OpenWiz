@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Read-only privacy check for openwiz.open-development.v1."""
 import argparse
 from contextlib import closing
 import hashlib
@@ -13,6 +12,8 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from workflow import Unknown, refused_jobs, parse
 
+DESCRIPTION = """Read-only privacy check for openwiz.open-development.v1."""
+
 DECIDERS = ('Jake',)
 PUBLIC_ROOT = 'f099f9e0cbd3fc2a8ce3edf981235c953ee2dec7'
 PUBLIC_ANCHOR = '5d069b025c6eacb4123ca8241ba21345f1eae9dd'
@@ -20,10 +21,6 @@ THREAD = re.compile(r'\bthr_[A-Za-z0-9][A-Za-z0-9_-]*')
 CLOUD_ID = re.compile(r'\b(?:(?:proj|prj|mch|usr|acct|auto)_[A-Za-z0-9]+|cr_(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}|(?:syn|web)[A-Za-z0-9]*))')
 HOME = re.compile(r'/(?:Users|home)/([^/\s"\'`<>:;,()\[\]{}]+)')
 EMAIL = re.compile(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?\.[A-Za-z]{2,}')
-# WZ2 (#2630), the two forms #1409's export review found: a concrete helper
-# snapshot/window location with its per-run suffix (an all-X mktemp template,
-# `*` or `<run>` is generic), and an owner machine's CPU facts, even wrapped
-# over two comment lines, unless the text says the example is invented.
 HELPER_STATE = re.compile(r'\b(?:snapshot|window)\.([A-Za-z0-9]+)/state\.json\b'
                           r'|helper-checks/\S*?\b(?:snapshot|window)\.([A-Za-z0-9]+)')
 CPU_FACT = re.compile(r'\b[0-9]+(?:\.[0-9]+)?[\s-]*(?:v?CPUs?|cores?)\b'
@@ -31,7 +28,6 @@ CPU_FACT = re.compile(r'\b[0-9]+(?:\.[0-9]+)?[\s-]*(?:v?CPUs?|cores?)\b'
 OWNER_MACHINE = re.compile(r"\b(?:the PC|PC's|the Mac|Mac's|owner's|owner machine|host's|"
                            + '|'.join(re.escape(x) + "'s" for x in DECIDERS) + r')(?![A-Za-z0-9])', re.IGNORECASE)
 INVENTED = re.compile(r'\b(?:for example|e\.g\.|invented|hypothetical|synthetic|imagine)', re.IGNORECASE)
-# Abbreviations whose dot does not end a sentence, masked before splitting.
 ABBREVIATION = re.compile(r'\b(?:e\.g|i\.e|etc|vs|cf)\.', re.IGNORECASE)
 SENTENCE_END = re.compile(r'[.!?](?=\s|$)')
 COMMENT = re.compile(r'^\s*(?:#+|//+|/?\*+|>+|--)?\s*')
@@ -43,7 +39,6 @@ class Unreadable(Exception):
 
 
 def source_version():
-    """The checker's code, for #761's verdict cache key; None disables it."""
     try:
         here = Path(__file__).resolve().parent
         return hashlib.sha256(b''.join((here / x).read_bytes() for x in ('check.py', 'workflow.py'))).hexdigest()
@@ -59,14 +54,10 @@ class Checker:
         self.literals = literals
         self.findings = 0
         self.references = []
-        # #761: one run's blob verdicts, so a commit range checks each file
-        # version once. In memory only, never across runs.
         self.verdicts = {}
         self.recording = None
 
     def refuse(self, rule, place, line=1):
-        # No source snippets, paths, job names, Git stderr or exception text:
-        # even a file name or an error can itself contain a private value.
         print(f'{rule} {place}:{line}')
         self.findings += 1
         if self.recording is not None:
@@ -89,7 +80,6 @@ class Checker:
                 continue
             if any(not m[0].startswith(('thr_syn', 'thr_web')) for m in THREAD.finditer(line)):
                 self.refuse('T1', place, n)
-            # Only names outside double quoted spans can introduce a record.
             name_positions = []
             quoted = False
             names = '|'.join(re.escape(x) for x in DECIDERS)
@@ -115,14 +105,9 @@ class Checker:
             self.refuse('READ', place)
 
     def file(self, name, data, place, blob=None):
-        """Check one path. DATA is its bytes, or a function returning them.
-        BLOB is its Git object id: a blob whose contents were already checked
-        under the same rules, checker code, policy and literals in this run
-        replays that verdict at this place instead of being read again."""
         if name == 'private' or name.startswith('private/') or (name.startswith('docs/grills/') and name != 'docs/grills/README.md'):
             self.refuse('F1', place)
         self.text(name, place + '-path')
-        # Contents are checked under one of three rule sets, chosen by path.
         rules = 'workflow' if is_workflow(name) else 'contract' if name == 'contracts/open-development.v1.md' else 'text'
         key = None
         if SOURCE_VERSION and isinstance(blob, str) and re.fullmatch(r'[0-9a-f]{40}', blob):
@@ -142,7 +127,6 @@ class Checker:
             self.contents(name, data, place)
         finally:
             self.recording = None
-        # Only a check that finished is kept; an error leaves nothing behind.
         if key:
             self.verdicts[key] = (tuple(refusals), tuple(x for x, _ in self.references[start:]))
 
@@ -150,11 +134,10 @@ class Checker:
         if b'\0' in data:
             if is_workflow(name):
                 self.refuse('F2', place)
-            return  # Binary contents require review.
+            return
         try:
             text = data.decode('utf-8')
         except UnicodeDecodeError:
-            # Known binary signatures only; unknown encodings fail closed.
             if data.startswith((b'\x89PNG', b'\xff\xd8\xff', b'GIF8', b'%PDF-', b'RIFF', b'\x00\x00')) and not is_workflow(name):
                 return
             self.refuse('READ', place)
@@ -176,11 +159,6 @@ def helper_state(line):
 
 
 def machine_fact(lines, n):
-    # A CPU fact ending on line n (it may start on the line before), with the
-    # owner machine named nearby (this line or its neighbours, any sentence).
-    # Only the fact's own statement can say it is invented: its sentence,
-    # within the lines the fact itself spans, so a separate comment line never
-    # qualifies it. Comment marks are removed first.
     previous = COMMENT.sub('', lines[n - 2]) if n > 1 else ''
     current = COMMENT.sub('', lines[n - 1])
     following = COMMENT.sub('', lines[n]) if n < len(lines) else ''
@@ -206,8 +184,6 @@ def safe_place(name, literals):
 
 
 def redact(name, literals=()):
-    """A location with every private form this check refuses replaced, for
-    any report that must name a file without printing a private value."""
     redacted = THREAD.sub('<thread>', name)
     redacted = CLOUD_ID.sub('<id>', redacted)
     redacted = HOME.sub('<home>', redacted)
@@ -248,8 +224,6 @@ def git(repo, *args):
 
 
 class BlobReader:
-    """One lazy child per scan; every path still receives its own check."""
-
     def __init__(self, repo):
         self.repo, self.process = repo, None
 
@@ -317,11 +291,6 @@ def history(checker, repo, base, head, upstream=None):
     if roots != [PUBLIC_ROOT] or not anchored:
         checker.refuse('C1', 'history')
         return []
-    # No base means a new remote ref. With --upstream (a commit the push
-    # destination itself already publishes, as its main), only commits after
-    # their merge-bases with it are new there. A missing upstream or no
-    # merge-base fails closed: check everything after the approved public
-    # anchor. Old public history is explicitly exempt from C2/C3.
     exclude = [PUBLIC_ANCHOR]
     if base is not None:
         exclude.append(base)
@@ -344,7 +313,6 @@ def history(checker, repo, base, head, upstream=None):
 
 
 def merge_bases(repo, head, upstream):
-    """Every merge-base of HEAD and UPSTREAM, or none when either is missing."""
     try:
         bases = git(repo, 'merge-base', '--all', head, commit(repo, upstream)).decode().split()
     except Unreadable:
@@ -391,7 +359,7 @@ def git_files(repo, ref, blobs):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument('--tree', type=Path, help='explicit staged public directory; symlinks are not followed')
     parser.add_argument('--repo', type=Path)
     parser.add_argument('--git-tree', help='Git tree/ref to scan without checkout')
@@ -429,8 +397,6 @@ def main(argv=None):
             trees.append(('staged', ((name, data, None) for name, data in directory_files(args.tree))))
         if args.git_tree:
             trees.append(('tree', git_files(args.repo, args.git_tree, blobs)))
-        # A later deletion does not remove material from published history.
-        # Scan every newly reachable commit tree as well as the proposed tip.
         refs = list(dict.fromkeys(([commit(args.repo, args.head)] if args.head else []) + (commits or [])))
         for index, ref in enumerate(refs, 1):
             trees.append((f'commit-tree-{index}', git_files(args.repo, ref, blobs)))

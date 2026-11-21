@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Fixed published-release transport. No source checkout, build, push or shell."""
 import argparse
+import http.client
 import json
 from pathlib import Path
 import re
 import sys
 import tempfile
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -13,7 +14,15 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from install import Refused, TARGETS, install, manifest_at, private, require, sha, unique
 
+DESCRIPTION = """Fixed published-release transport. No source checkout, build, push or shell."""
+
 BASE = 'https://github.com/openwizdev/OpenWiz/releases/'
+FEED = 'https://github.com/openwizdev/OpenWiz/releases.atom'
+TAG_LINK = re.compile(r'href="https://github\.com/openwizdev/OpenWiz/releases/tag/v(0\.[0-9]+\.[0-9]+)"')
+
+
+class NotFound(Refused):
+    pass
 
 
 class Redirects(urllib.request.HTTPRedirectHandler):
@@ -26,12 +35,21 @@ class Redirects(urllib.request.HTTPRedirectHandler):
 
 
 def fetch_bytes(url, limit):
-    require(url.startswith(BASE), 'unapproved release endpoint')
+    require(url.startswith(BASE) or url == FEED, 'unapproved release endpoint')
     opener = urllib.request.build_opener(Redirects())
-    with opener.open(urllib.request.Request(url, headers={'User-Agent': 'OpenWiz-package-v1'}), timeout=60) as response:
-        data = response.read(limit + 1)
-        require(len(data) <= limit, 'artifact exceeds its declared byte bound')
-        return data
+    try:
+        with opener.open(urllib.request.Request(url, headers={'User-Agent': 'OpenWiz-package-v1'}), timeout=60) as response:
+            data = response.read(limit + 1)
+    except urllib.error.HTTPError as error:
+        if error.code == 404:
+            raise NotFound('release asset 404 at ' + url)
+        raise Refused('release asset HTTP %d at %s' % (error.code, url))
+    except http.client.HTTPException:
+        raise Refused('interrupted transfer at ' + url)
+    except OSError as error:
+        raise Refused('network error at %s: %s' % (url, getattr(error, 'reason', None) or error))
+    require(len(data) <= limit, 'artifact exceeds its declared byte bound at ' + url)
+    return data
 
 
 def load(raw, checksum, target, selected=False):
@@ -41,15 +59,33 @@ def load(raw, checksum, target, selected=False):
         return manifest_at(file, checksum, target, selected)[0]
 
 
-def discover(target, fetch=fetch_bytes):
+def published(target, fetch=fetch_bytes, version=None):
     require(target in TARGETS, 'unsupported package target')
+    if version is None:
+        try:
+            return manifest_from(BASE + 'latest/download/', target, fetch)
+        except NotFound as missing:
+            tags = TAG_LINK.findall(fetch(FEED, 1024 * 1024).decode('utf-8', 'replace'))
+            require(tags, '%s; no published release tag found at %s' % (missing, FEED))
+            version = max(tags, key=lambda tag: tuple(map(int, tag.split('.'))))
+    require(re.fullmatch(r'0\.[0-9]+\.[0-9]+', version), 'invalid release version')
+    found = manifest_from(BASE + 'download/v' + version + '/', target, fetch)
+    require(found[2]['version'] == version, 'published version does not match its tag v' + version)
+    return found
+
+
+def manifest_from(prefix, target, fetch):
     name = 'openwiz-' + target
-    sums = fetch(BASE + 'latest/download/' + name + '.sha256', 256)
+    sums = fetch(prefix + name + '.sha256', 256)
     match = re.fullmatch(rb'([0-9a-f]{64})  ' + re.escape((name + '.manifest.json').encode()) + rb'\n', sums)
     require(match, 'invalid published manifest checksum')
     checksum = match[1].decode('ascii')
-    raw = fetch(BASE + 'latest/download/' + name + '.manifest.json', 4 * 1024 * 1024)
-    manifest = load(raw, checksum, target)
+    raw = fetch(prefix + name + '.manifest.json', 4 * 1024 * 1024)
+    return sums, raw, load(raw, checksum, target), checksum
+
+
+def discover(target, fetch=fetch_bytes):
+    manifest, checksum = published(target, fetch)[2:]
     return {'schema': 'openwiz.package-candidate.v1', 'version': manifest['version'],
             'source': manifest['source'], 'target': target, 'manifest_sha256': checksum}
 
@@ -66,28 +102,35 @@ def stage(target, version, source, checksum, root, state_root, fetch=fetch_bytes
     private(selected)
     private(selected / 'install-manifest.json', False)
     old_raw = (selected / 'install-manifest.json').read_bytes()
-    old = load(old_raw, sha(old_raw), target, selected=True)  # #1575: may be pre-AP11
+    old = load(old_raw, sha(old_raw), target, selected=True)
     require(tuple(map(int, version.split('.'))) > tuple(map(int, old['version'].split('.'))), 'published version must advance')
     name = f'openwiz-{version}-{target}.manifest.json'
     prefix = BASE + 'download/v' + version + '/'
     raw = fetch(prefix + name, 4 * 1024 * 1024)
     manifest = load(raw, checksum, target)
     require(manifest['version'] == version and manifest['source'] == source, 'published identity changed')
-    # Files are stored privately; the installer verifies compressed integrity
-    # before parsing and every asset before staging. Nothing selects current.
+    bundle = fetch(prefix + manifest['archive'], manifest['archive_bytes'])
+    listed = {}
+    for line in fetch(prefix + 'SHA256SUMS', 64 * 1024).decode('ascii', 'replace').splitlines():
+        match = re.fullmatch(r'([0-9a-f]{64})  ([A-Za-z0-9_.-]+)', line)
+        require(match and match[2] not in listed, 'invalid SHA256SUMS line')
+        listed[match[2]] = match[1]
+    for file, data in ((name, raw), (manifest['archive'], bundle)):
+        require(file in listed, 'SHA256SUMS does not list ' + file)
+        require(listed[file] == sha(data), 'SHA256SUMS does not match ' + file)
     with tempfile.TemporaryDirectory(prefix='.package-download-', dir=state_root / 'service') as temporary:
         directory = Path(temporary)
         manifest_file = directory / 'manifest.json'
         archive = directory / 'bundle.tar.gz'
         manifest_file.write_bytes(raw)
         manifest_file.chmod(0o600)
-        archive.write_bytes(fetch(prefix + manifest['archive'], manifest['archive_bytes']))
+        archive.write_bytes(bundle)
         archive.chmod(0o600)
         return install(manifest_file, archive, checksum, root, target, state_root=state_root, stage_only=True)
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=DESCRIPTION)
     commands = parser.add_subparsers(dest='action', required=True)
     discover_parser = commands.add_parser('discover')
     discover_parser.add_argument('target', choices=TARGETS)

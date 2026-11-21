@@ -1,4 +1,3 @@
-"""Command-boundary proofs. All executable responses and identifiers are synthetic."""
 import hashlib
 import json
 import os
@@ -10,8 +9,6 @@ import tempfile
 import unittest
 
 RUNNER = Path(__file__).with_name('smoke.py')
-# The runner's own journal/replay code, loaded by path (this folder's http.py
-# must not shadow the standard library), to set state as an interruption would.
 import importlib.util
 _SPEC = importlib.util.spec_from_file_location('live_smoke_runner_for_tests', RUNNER.resolve())
 SMOKE = importlib.util.module_from_spec(_SPEC)
@@ -76,9 +73,6 @@ sys.exit(reply['exit'])
         return self.run_tool('--fixture')
 
     def fleet_block(self):
-        """The fleet claim as launch-fleet leaves it to the runner: a CLI read,
-        an event (launch-fleet acts between sittings) and a readback that
-        repeats the block until the fleet's merges show."""
         self.kit['steps'][0].update(kind='read', argv=[str(self.fake), 'fleet', '9001', '--json'])
         wait = {'id': 'fleet_done', 'claim': 'fleet', 'kind': 'await',
                 'argv': [str(self.fake), 'done'], 'exit': 0,
@@ -92,8 +86,6 @@ sys.exit(reply['exit'])
         return self.call_list().count(['fleet', '9001', '--json'])
 
     def rewrite_journal(self, edit, events=None):
-        """Rewrite the journal's events (re-chained) and save their replay as the
-        checkpoint: a consistent synthetic state, never a bare checkpoint edit."""
         if events is None:
             _, events = SMOKE.read_journal(self.state)
         events = [edit(dict(e)) for e in events]
@@ -187,7 +179,6 @@ class Smoke(FixtureCase):
         step = self.kit['steps'][1]
         step['checks'].append({'path': '/id', 'same_as': {'step': 'fleet', 'path': '/id'}})
         self.report(self.invoke(), 0)
-        # A fresh run with mismatched independent values must fail.
         self.state = self.root / 'other-state'
         self.replies['swarms']['out'] = '{"count":1,"known":true,"id":"different"}'
         self.report(self.invoke(), 1)
@@ -217,9 +208,6 @@ class Smoke(FixtureCase):
 
 
     def test_retired_engine_commands_refuse_before_any_step(self):
-        """catches: a kit that still runs `openwiz fleet tick` (any form, the
-        reviewed-plan one included) or `openwiz engine`, which the engine
-        retirement removes: the runner must refuse it before any step runs."""
         forms = {'tick': ['fleet', 'tick', '--json'],
                  'pinned tick': ['fleet', 'tick', '--expect-plan', '/synthetic/plan.json', '--json'],
                  'tick preview': ['fleet', 'tick', '--dry-run', '--json'],
@@ -235,9 +223,6 @@ class Smoke(FixtureCase):
                     self.assertEqual(self.call_list(), [])
 
     def test_retired_commands_refuse_through_any_alias_of_the_pinned_program(self):
-        """catches (review R2): a symlink, hardlink or pinned copy of the pinned
-        `openwiz` running `fleet tick` or `engine` as a block read or as the
-        terminating await, repeating a retired write with no attempt record."""
         aliases = {'symlink': lambda a: a.symlink_to(self.fake),
                    'hardlink': lambda a: os.link(self.fake, a),
                    'copy': lambda a: (a.write_bytes(self.fake.read_bytes()), a.chmod(0o700))}
@@ -256,7 +241,6 @@ class Smoke(FixtureCase):
                         self.state = self.root / ('alias-%s-%s-%s' % (name, form, place.replace(' ', '-')))
                         self.assertEqual(self.report(self.invoke(), 2)['reason'], 'retired_command')
                         self.assertEqual(self.call_list(), [])
-        # An identity that cannot be read is refused as the same program.
         self.kit = json.loads(json.dumps(self.base_kit))
         missing = str(self.root / 'missing-program')
         self.kit['artifacts'][missing] = '0' * 64
@@ -266,8 +250,6 @@ class Smoke(FixtureCase):
         self.assertEqual(self.call_list(), [])
 
     def test_fleet_block_rereads_once_per_event_until_readback(self):
-        """catches: the fleet claim needing a runner write to progress, or a
-        block re-running anything but its reads between launch-fleet's events."""
         self.fleet_block()
         self.assertEqual(self.report(self.invoke(), 3)['reason'], 'next_event')
         self.assertEqual(self.report(self.invoke(), 3)['reason'], 'pending')
@@ -281,8 +263,6 @@ class Smoke(FixtureCase):
         self.assertFalse(any(c[:2] == ['fleet', 'tick'] for c in self.call_list()))
 
     def test_no_write_can_be_repeated(self):
-        """catches: a repeat block that would re-send a message or re-run a
-        fleet write (a cleanup, a reply) on a later event."""
         self.kit['steps'].append({'id': 'repeat_send', 'claim': 'send', 'kind': 'await',
                                  'argv': [str(self.fake), 'send'], 'exit': 0,
                                  'checks': [{'path': '/count', 'equals': 2}],
@@ -298,13 +278,11 @@ class Smoke(FixtureCase):
     def test_attempting_checkpoint_refuses_without_any_execution(self):
         self.kit['steps'].insert(0, {'id': 'event', 'claim': 'fleet', 'kind': 'event'})
         self.report(self.invoke(), 3)
-        # Interrupted after the fsynced attempt, before anything else was saved.
         SMOKE.journal(self.state, {'kind': 'attempt', 'id': 'fleet', 'claim': 'fleet'})
         before = self.call_list()
         self.assertEqual(self.report(self.invoke(), 3)['reason'], 'uncertain_write')
         self.assertEqual(self.report(self.invoke(), 3)['reason'], 'uncertain_write')
         self.assertEqual(self.call_list(), before)
-        # A checkpoint edited without its journal is refused, not trusted.
         checkpoint = self.state / 'checkpoint.json'
         state = json.loads(checkpoint.read_text())
         state['steps'][1]['state'] = 'pass'
@@ -363,8 +341,6 @@ class Smoke(FixtureCase):
                 self.assertFalse(thread.is_alive())
 
     def test_fleet_sitting_and_time_caps_allow_no_more_sittings(self):
-        """catches: a fleet block re-reading past AC6's 60 sittings or three
-        hours, or a final readback accepted after the cap expired."""
         self.fleet_block()
         for field in ('sittings', 'started'):
             with self.subTest(field=field):
@@ -372,7 +348,6 @@ class Smoke(FixtureCase):
                 for reason in ('next_event', 'pending', 'next_event'):
                     self.assertEqual(self.report(self.invoke(), 3)['reason'], reason)
                 if field == 'sittings':
-                    # Journal 58 more real sittings: readback, repeat, read, event.
                     self.rewrite_journal(lambda e: e)
                     _, events = SMOKE.read_journal(self.state)
                     events = events + events[3:7] * 58
@@ -383,29 +358,23 @@ class Smoke(FixtureCase):
                     self.rewrite_journal(lambda e: dict(e, at=1) if e.get('id') == 'fleet_event' else e)
                 before = self.fleet_reads()
                 if field == 'sittings':
-                    # The sixtieth sitting's own readback still runs; no repeat follows it.
                     self.assertEqual(self.report(self.invoke(), 3)['reason'], 'pending')
                 self.assertEqual(self.report(self.invoke(), 3)['reason'], 'fleet_limit')
                 self.assertEqual(self.report(self.invoke(), 3)['reason'], 'fleet_limit')
                 self.assertEqual(self.fleet_reads(), before)
 
-        # Expiry also bounds the final observation, not only the next sitting.
         self.state = self.root / 'expired-but-merged'
         self.report(self.invoke(), 3)
         self.rewrite_journal(lambda e: dict(e, at=1) if e.get('id') == 'fleet_event' else e)
         self.replies['done']['out'] = '{"merged":2,"safe":true}'
         self.assertEqual(self.report(self.invoke(), 3)['reason'], 'fleet_limit')
 
-        # A journal claiming a 61st sitting is not one the runner could write.
         self.state = self.root / 'capped-sittings'
         _, events = SMOKE.read_journal(self.state)
         with self.assertRaises(SMOKE.Refusal):
             SMOKE.replay(json.loads(self.kit_path.read_text()), events + events[3:7])
 
     def test_only_a_write_step_may_wait_longer_up_to_130_seconds(self):
-        """catches: a slow driver start (room-cli may take 100 seconds) killed at
-        the kit-wide cap and left an uncertain write, or a per-step timeout that
-        lifts the cap for reads or beyond 130 seconds."""
         text = self.fake.read_text().replace("case = sys.argv[1]", "case = sys.argv[1]\nif case == 'new':\n    import time\n    time.sleep(3)")
         self.fake.write_text(text)
         self.kit['artifacts'][str(self.fake)] = self.sha(self.fake)
@@ -445,9 +414,6 @@ class Smoke(FixtureCase):
 
 
 class ShippedCommands(unittest.TestCase):
-    """#776: a kit step that runs a command the CLI no longer ships passes
-    every fixture test (the fake answers anything) and fails only live."""
-
     def test_every_openwiz_step_in_the_template_is_a_shipped_command(self):
         root = RUNNER.resolve().parents[2]
         catalogue = json.loads((root / 'crates/cli/src/agent-catalogue.json').read_text())
@@ -465,11 +431,6 @@ class ShippedCommands(unittest.TestCase):
                             f"{step['id']}: openwiz {' '.join(argv[1:])} is not a shipped command")
 
 
-# The 0.1.0 sheet's synthetic programs (#1727). The driver is a stand-in for
-# KN4's Cloudroom driver at its contract (kernel/driver.v1.md): JSON in on stdin,
-# one JSON answer out, its runs kept in OPENWIZ_CLOUDROOM_STATE (saved before the
-# thread is made), `room-cli` taken from PATH, and a thread only room-cli reads.
-# Flag files in its folder make it lose a start's answer or never deliver a wake.
 FAKE_DRIVER = """#!/usr/bin/env python3
 import json, os, pathlib, shutil, sys
 root = pathlib.Path(__file__).parent
@@ -489,6 +450,9 @@ elif cmd == 'start':
     if (root / 'lose-start').exists():
         sys.exit(1)
     out = {'run': 'run-0123456789ab'}
+elif cmd == 'wake' and (root / 'refuse-wake').exists():
+    print(json.dumps({'error': 'Cloudroom did not take the wake: synthetic refusal', 'next': 'leave the run'}))
+    sys.exit(1)
 elif cmd == 'wake':
     if not (root / 'no-delivery').exists():
         with (root / 'room-log').open('a') as log:
@@ -507,10 +471,22 @@ root = pathlib.Path(__file__).parent
 assert sys.argv[1:3] in (['thread', 'show'], ['thread', 'log']) and sys.argv[3] == 'synthetic-child-thread', sys.argv
 with (root / 'room-calls').open('a') as log:
     log.write(json.dumps(sys.argv[1:3]) + '\\n')
+state = dict(json.loads((root / 'room-state').read_text()), id='synthetic-child-thread')
 if sys.argv[2] == 'log':
-    print((root / 'room-log').read_text() if (root / 'room-log').exists() else '')
+    text = (root / 'room-log').read_text() if (root / 'room-log').exists() else ''
+    if text and (root / 'host-local').exists():
+        text = '[message from thread:synthetic-parent]\\n\\n%s\\n── Worked for (1ms) ──\\n' % text
+    print(text)
+elif not (root / 'host-local').exists():
+    print(json.dumps(state))
+elif '--json' not in sys.argv:
+    print('ID  TITLE  STATUS\\n%s  synthetic  idle' % state['id'])
 else:
-    print(json.dumps(dict(json.loads((root / 'room-state').read_text()), id='synthetic-child-thread')))
+    print(json.dumps({'thread': {'id': state['id'], 'title': 'synthetic', 'projectId': state['projectId'],
+                                 'parentThreadId': None, 'providerId': 'claude-code', 'status': 'idle',
+                                 'createdAt': 1700000000000, 'updatedAt': 1700000000000, 'deletedAt': None,
+                                 'archivedAt': 1700000000000 if state['archived'] else None},
+                      'environment': {}, 'execution': {}, 'pendingTodos': []}))
 """
 FAKE_CLI = """#!/usr/bin/env python3
 import json, sys
@@ -537,8 +513,6 @@ def template():
 
 
 class Sheet(unittest.TestCase):
-    """#1727: the 0.1.0 kit sheet, its driver steps and its release section."""
-
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
@@ -552,7 +526,6 @@ class Sheet(unittest.TestCase):
         return str(path)
 
     def bound(self):
-        """The template bound to synthetic inputs, as prepare.py would."""
         cli = self.program('openwiz', FAKE_CLI)
         programs = {'openwiz': cli, 'gh': cli, 'install_entry': cli,
                     'driver': self.program('driver', FAKE_DRIVER), 'room_cli': self.program('room-cli', FAKE_ROOM)}
@@ -592,8 +565,6 @@ class Sheet(unittest.TestCase):
         return json.loads((self.root / 'room-state').read_text())['archived']
 
     def test_bound_sheet_loads_and_its_release_section_is_accepted(self):
-        """catches: a 0.1.0 sheet the runner or the receipt refuses only when the
-        PC prepares it on the candidate's hashes (Saturday), not here."""
         kit = self.bound()
         path = self.root / 'kit.json'
         path.write_text(json.dumps(kit))
@@ -602,11 +573,30 @@ class Sheet(unittest.TestCase):
         self.assertEqual(section['scope']['writes'], {'send': 1, 'new': 1})
         self.assertEqual(section['scope']['spending_cents'], 0)
 
+    def test_every_step_passes_on_a_local_and_a_cloud_room_cli(self):
+        for host in ('local', 'cloud'):
+            with self.subTest(host):
+                self.setUp()
+                if host == 'local':
+                    (self.root / 'host-local').write_text('')
+                doc = self.run_sheet()
+                self.assertEqual(doc['claims'], {c: 'pass' for c in template()['claims']})
+                self.assertEqual([c[0] for c in self.driver_calls()], ['version', 'start', 'wake', 'stop'])
+                self.assertTrue(self.archived())
+
+    def test_a_refused_wake_fails_send_on_both_room_clis_and_still_tears_down(self):
+        for host in ('local', 'cloud'):
+            with self.subTest(host):
+                self.setUp()
+                (self.root / 'refuse-wake').write_text('')
+                if host == 'local':
+                    (self.root / 'host-local').write_text('')
+                doc = self.run_sheet(code=3)
+                self.assertEqual((doc['reason'], doc['claims']['send']), ('uncertain_write', 'incomplete'))
+                self.assertEqual([c[0] for c in self.driver_calls()], ['version', 'start', 'wake', 'stop'])
+                self.assertTrue(self.archived())
+
     def test_driver_steps_start_wake_and_stop_one_run_through_the_runner(self):
-        """catches: a driver step the runner can't feed (the driver reads its
-        request on stdin; the runner gives none), a wake or stop that doesn't
-        reach the run start made, a second start, a wake never read back from the
-        thread, or a sheet that leaves the run's thread unarchived."""
         doc = self.run_sheet()
         self.assertEqual(doc['claims'], {c: 'pass' for c in template()['claims']})
         calls = self.driver_calls()
@@ -618,9 +608,6 @@ class Sheet(unittest.TestCase):
         self.assertTrue(self.archived())
 
     def test_the_driver_starts_only_in_the_approved_project_with_the_pinned_room_cli(self):
-        """catches (#1732 R1, R5): an agent started in a stale ROOM_PROJECT_ID, or
-        the driver's spawn, tell and archive going to an older room-cli earlier on
-        PATH while the read-backs use the pinned one."""
         decoy = self.root / 'decoy'
         decoy.mkdir()
         self.program('room-cli', FAKE_ROOM, decoy)
@@ -628,7 +615,6 @@ class Sheet(unittest.TestCase):
         self.run_sheet()
         pinned = str(self.root / 'room-cli')
         self.assertEqual({(c[2], c[3]) for c in self.driver_calls()}, {('proj_synthetic', pinned)})
-        # A stale project in the environment refuses before any start.
         (self.root / 'checkpoint').rename(self.root / 'first-checkpoint')
         (self.root / 'driver-calls').unlink()
         (self.root / 'driver-run.json').unlink()
@@ -639,8 +625,6 @@ class Sheet(unittest.TestCase):
         self.assertEqual(self.driver_calls(), [])
 
     def test_a_wake_the_thread_never_shows_fails_send_and_still_tears_down(self):
-        """catches (#1732 R4): a send claim passed on the queue's acceptance alone,
-        though the agent never got the wake, and its thread archived unread."""
         (self.root / 'no-delivery').write_text('')
         kit = self.bound()
         ack = next(s for s in kit['steps'] if s['id'] == 'send_ack')
@@ -651,9 +635,6 @@ class Sheet(unittest.TestCase):
         self.assertTrue(self.archived())
 
     def test_teardown_stops_a_start_whose_answer_was_lost_and_runs_once(self):
-        """catches (#1732 R2): a start Cloudroom made but whose answer the runner
-        lost (no run pointer), or a failure after start, leaving the agent running;
-        and a resume that runs any step again after teardown."""
         (self.root / 'lose-start').write_text('')
         doc = self.run_sheet(code=3)
         self.assertEqual(doc['reason'], 'uncertain_write')
@@ -665,9 +646,6 @@ class Sheet(unittest.TestCase):
         self.assertEqual(len(self.driver_calls()), 3)
 
     def test_a_reused_driver_folder_refuses_before_any_write_and_stops_nothing(self):
-        """catches (#1732 R6): a smoke bound to a driver folder that already holds
-        someone else's run, which journals its start, then lets teardown stop and
-        archive that other agent outside the approved throwaways."""
         (self.root / 'state').mkdir()
         other = {'thread': 'synthetic-other-thread', 'archived': False,
                  'request': {'repository': 'example/other', 'ticket': 9, 'skill': 'synthetic-skill',
@@ -682,10 +660,7 @@ class Sheet(unittest.TestCase):
         self.assertNotIn('attempt', events)
 
     def test_teardown_stops_only_the_runs_this_kit_started(self):
-        """catches (#1732 R6): a teardown that stops every run in the driver folder,
-        so a run another caller made there after the smoke's start is archived too."""
         kit = self.bound()
-        # Another caller's run appears in the folder after this kit's start, and the wake then fails.
         (self.root / 'no-delivery').write_text('')
         ack = next(s for s in kit['steps'] if s['id'] == 'send_ack')
         ack['argv'][-1] = '1'
@@ -709,10 +684,6 @@ class Sheet(unittest.TestCase):
         self.assertEqual(json.loads(late.read_text()), other)
 
     def test_driver_steps_call_only_driver_v1_commands_on_the_pinned_driver(self):
-        """catches: a driver step naming a command the driver contract doesn't
-        have, a driver write run outside the pinned `@driver`, a stop that isn't
-        an always-run teardown, or a start the runner kills before the driver's
-        own 100 seconds for room-cli."""
         contract = (RUNNER.resolve().parents[2] / 'kernel/driver.v1.md').read_text()
         commands = set(re.findall(r'^\| `([a-z]+)` \|', contract, re.M))
         self.assertTrue({'version', 'start', 'wake', 'stop'} <= commands, commands)
@@ -725,14 +696,10 @@ class Sheet(unittest.TestCase):
         self.assertEqual(sorted(s['id'] for s in steps.values() if s['kind'] == 'write'), ['new_once', 'send_once'])
         self.assertEqual([s['id'] for s in template()['steps'] if s.get('teardown')], TEARDOWN)
         self.assertEqual([s['id'] for s in template()['steps']][-2:], TEARDOWN)
-        # The driver gives room-cli 100 seconds per call; the runner must not kill it first.
         self.assertGreater(steps['new_once']['timeout_seconds'], 100)
         self.assertGreater(steps['driver_stop']['timeout_seconds'], 100)
 
     def test_every_risk_step_has_a_coverage_row(self):
-        """catches: 0.0.17's blocker, a risk step in no `release.coverage` row,
-        so the risk receipt's expected coverage is empty and the gate refuses
-        `coverage_mismatch` only after the live run."""
         release = template()['release']
         covered = {step for row in release['coverage'] for step in row['steps']}
         for category in ('send', 'new', 'app_permissions'):
@@ -742,8 +709,6 @@ class Sheet(unittest.TestCase):
 
 
 class Teardown(FixtureCase):
-    """#1732 R2: teardown steps run after any ending once a write was tried."""
-
     def setUp(self):
         super().setUp()
         claims = ['json', 'new', 'loops', 'service']
@@ -753,9 +718,6 @@ class Teardown(FixtureCase):
         self.kit['claims'] = claims
 
     def test_teardown_runs_after_a_failure_and_closes_the_run(self):
-        """catches: a failure after a live write that skips the stop, a teardown
-        before any write (nothing to undo), or a resume that carries on with
-        normal steps once teardown ran."""
         self.replies['loops'] = {'exit': 9, 'out': '{}'}
         self.assertEqual(self.report(self.invoke(), 3)['reason'], 'command_failed')
         self.assertEqual(self.call_list(), [['ls', '--json'], ['json'], ['new'], ['loops'], ['service']])
@@ -764,15 +726,12 @@ class Teardown(FixtureCase):
         self.assertEqual((doc['claims']['service'], doc['claims']['loops']), ('pass', 'incomplete'))
         self.assertEqual(self.call_list().count(['loops']), 1)
         self.assertEqual(self.call_list().count(['service']), 1)
-        # Before any write, a failure has nothing to tear down.
         self.state = self.root / 'no-write'
         self.replies['json'] = {'exit': 9, 'out': '{}'}
         self.report(self.invoke(), 3)
         self.assertEqual(self.call_list().count(['service']), 1)
 
     def test_a_teardown_must_be_a_read_at_the_end_within_130_seconds(self):
-        """catches: a teardown that writes (it could repeat a live effect), one
-        placed before normal steps, or one with an unbounded wait."""
         rows = {'a write': lambda s: s[1].update(teardown=True), 'not at the end': lambda s: s[0].update(teardown=True),
                 'above 130': lambda s: s[3].update(timeout_seconds=131),
                 'not true': lambda s: s[3].update(teardown='yes')}

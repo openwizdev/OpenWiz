@@ -1,0 +1,10 @@
+# python3 -I tools/install/tests/journey/test_journey.py (R1 fixed: OwnSettings compares the resolved Models table with the pinned readers; J255 as shown in green.txt)
+Ran 18 tests in 50.451s
+
+OK
+
+# python3 -I tools/install/tests/journey/test_journey.py OwnSettings -v
+test_a_role_changed_in_one_form_only_or_a_second_fixer_row_is_refused (__main__.OwnSettings.test_a_role_changed_in_one_form_only_or_a_second_fixer_row_is_refused) ... ok
+test_a_role_set_in_both_forms_still_agrees (__main__.OwnSettings.test_a_role_set_in_both_forms_still_agrees) ... ok
+test_openwizs_own_models_table_and_the_older_tables_the_pinned_skills_read_agree (__main__.OwnSettings.test_openwizs_own_models_table_and_the_older_tables_the_pinned_skills_read_agree) ... ok
+Ran 3 tests in 0.065s

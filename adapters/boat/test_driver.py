@@ -3,10 +3,12 @@
 
 Run: python3 -I adapters/boat/test_driver.py   (Linux: the kit watches /proc)
 """
+import ctypes
 import json
 import os
 import re
 import secrets
+import shutil
 import signal
 import subprocess
 import sys
@@ -57,6 +59,14 @@ if os.environ.get('DENY_SIGNALS'):  # Linux refuses every signal the driver send
     def denied(*args):
         raise PermissionError(1, 'Operation not permitted')
     t.signal.pidfd_send_signal, t.GRACE = denied, 0.2
+if os.environ.get('AUDIT'):  # write down every open of a process's environment, and refuse it
+    import re
+    def audit(event, args, seen=os.environ['AUDIT']):
+        if event == 'open' and isinstance(args[0], (str, bytes)) and re.search(r'^/proc/[0-9]+/environ$', os.fsdecode(args[0])):
+            with open(seen, 'a') as f:
+                f.write(os.fsdecode(args[0]) + '\\n')
+            raise PermissionError(13, 'denied by the test')
+    sys.addaudithook(audit)
 if os.environ.get('READ_ONLY'):  # a read-only filesystem: no mark and no save can be written
     def unsaved(run, state=None):
         if state is not None:
@@ -81,6 +91,34 @@ def paused(*args):
 t.sandbox_state = paused
 t.main()
 '''
+ENVIRON_OPENS, WATCHING = [], []
+
+
+def watch(event, args):
+    if WATCHING and event == 'open' and isinstance(args[0], (str, bytes)) \
+            and re.search(r'^/proc/[0-9]+/environ$', os.fsdecode(args[0])):
+        ENVIRON_OPENS.append(os.fsdecode(args[0]))
+
+
+sys.addaudithook(watch)
+PR_SET_CHILD_SUBREAPER = 36
+
+
+def adopt_every_orphan_of_these_tests():
+    if ctypes.CDLL(None, use_errno=True).prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0) != 0:
+        raise SystemExit('these tests need Linux, to keep the processes they start under them')
+
+
+def reap_adopted_orphans():
+    while True:
+        try:
+            if os.waitpid(-1, os.WNOHANG)[0] == 0:
+                return
+        except ChildProcessError:
+            return
+
+
+adopt_every_orphan_of_these_tests()
 REQUEST = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude',
            'model': 'claude-opus-5-5'}
 
@@ -101,29 +139,61 @@ class Boat(unittest.TestCase):
         with open(self.tracker, 'w') as f:
             json.dump({'record_authors': ['example-bot[bot]'], 'comments': []}, f)
         self.turns, self.hold = os.path.join(self.folder, 'turns'), os.path.join(self.folder, 'hold')
-        self.env = dict(os.environ, KIT_TRACKER=self.tracker, KIT_TEST=self.mark, GH_TOKEN=TOKEN,
+        self.env = dict(HOME=self.folder, KIT_TRACKER=self.tracker, KIT_TEST=self.mark, GH_TOKEN=TOKEN,
                         FAKE_TURNS=self.turns, FAKE_HOLD=self.hold,
                         FAKE_BOAT_STATE=os.path.join(self.folder, 'boat.json'),
-                        OPENWIZ_BOAT_STATE=os.path.join(self.folder, 'state'),
-                        PATH=os.path.join(HERE, 'fixtures', 'bin') + os.pathsep + os.environ.get('PATH', ''))
+                        OPENWIZ_BOAT_STATE=os.path.join(self.folder, 'state'), OPENWIZ_BOAT_SETTLE='2',
+                        PATH=os.path.join(HERE, 'fixtures', 'bin') + os.pathsep + self.only_these_tools())
+        for real in ('claude', 'codex', 'gh', 'git'):
+            self.assertIsNone(shutil.which(real, path=self.env['PATH']), 'a real %s is on the tests\' PATH' % real)
+        self.assertEqual(shutil.which('boat', path=self.env['PATH']), os.path.join(HERE, 'fixtures', 'bin', 'boat'))
+        self.assertNotIn('BASH_ENV', self.env)
+        found = subprocess.run(['sh', '-c', 'command -v claude codex gh git; echo "$PATH"'], env=self.env,
+                               capture_output=True, text=True).stdout.splitlines()
+        self.assertEqual(found, [self.env['PATH']], 'the tests\' shell reaches a real binary')
+
+    def only_these_tools(self):
+        tools = os.path.join(self.folder, 'tools')
+        os.mkdir(tools)
+        for name in ('python3', 'sh', 'sleep', 'mktemp', 'rm', 'readlink', 'ln', 'mkdir', 'dirname', 'lsof'):
+            os.symlink(shutil.which(name), os.path.join(tools, name))
+        return tools
 
     def tearDown(self):
-        for pid in self.marked() + [w for _, w, _, _ in self.logged() if alive(w)]:
+        for pid in self.live_descendants_of_this_test():
             try:
                 os.kill(pid, signal.SIGKILL)
             except OSError:
                 pass
+        self.until(lambda: not self.live_descendants_of_this_test())
+        reap_adopted_orphans()
 
-    def marked(self):
-        """Every live process this test started that still carries its mark."""
-        found = []
+    def live_descendants_of_this_test(self):
+        children = {}
         for pid in filter(str.isdigit, os.listdir('/proc')):
             try:
-                with open('/proc/%s/environ' % pid, 'rb') as f:
-                    if ('KIT_TEST=' + self.mark).encode() in f.read().split(b'\0') and alive(int(pid)):
-                        found.append(int(pid))
+                with open('/proc/%s/stat' % pid) as f:
+                    fields = f.read().rpartition(')')[2].split()
             except OSError:
-                pass
+                continue
+            if fields[0] != 'Z':
+                children.setdefault(int(fields[1]), []).append(int(pid))
+        found, todo = [], [os.getpid()]
+        while todo:
+            for c in children.get(todo.pop(), []):
+                found.append(c)
+                todo.append(c)
+        return found
+
+    def recorded_by_supervisors(self, run):
+        state, found = self.env['OPENWIZ_BOAT_STATE'], set()
+        for name in os.listdir(state):
+            if name.startswith(run + '.') and name.endswith('.sup'):
+                try:
+                    with open(os.path.join(state, name)) as f:
+                        found.update(int(p) for p in json.load(f)['kept'])
+                except (OSError, ValueError):
+                    pass
         return found
 
     def logged(self):
@@ -197,6 +267,20 @@ class Boat(unittest.TestCase):
         self.assertEqual((code, len(self.logged())), (1, 8), err)
         self.assertIn('is archived, not running', err['error'])
 
+    def test_every_turn_tells_the_agent_its_note_says_default_effort(self):
+        prompts = os.path.join(self.folder, 'prompts')
+        code, out = self.driver('start', REQUEST, FAKE_PROMPTS=prompts)
+        self.assertEqual(code, 0, out)
+        self.assertTrue(self.until(lambda: not alive(self.logged()[-1][0])), 'the first turn never ended')
+        self.set_state('idle')
+        self.assertEqual(self.driver('wake', out, FAKE_PROMPTS=prompts), (0, dict(out, woke=True)))
+        with open(prompts) as f:
+            texts = [json.loads(line) for line in f]
+        self.assertEqual(len(texts), 2)
+        for text in texts:
+            self.assertRegex(text, r"host's default effort")
+            self.assertRegex(text, r'status note.* model field .*`<your model> default effort`')
+
     def set_state(self, now):
         """Set the newest synthetic sandbox's state, as boat would once the agent's turn has ended."""
         with open(self.env['FAKE_BOAT_STATE']) as f:
@@ -222,6 +306,68 @@ class Boat(unittest.TestCase):
             self.assertEqual(self.driver('stop', started), (0, dict(started, stopped=True)))
             self.assertEqual(self.sandboxes(), {sid: 'stopped'})
 
+    def files_holding(self, marker):
+        found = []
+        for root, _, names in os.walk(self.folder):
+            for name in names:
+                try:
+                    with open(os.path.join(root, name), errors='replace') as f:
+                        if marker in f.read():
+                            found.append(os.path.join(root, name))
+                except OSError:
+                    pass
+        return found
+
+    def test_a_credential_shaped_start_field_is_refused_before_anything_starts(self):
+        args = os.path.join(self.folder, 'boat-args')
+        for field, value in (('model', 'sk-' + 'Synthetic0Marker' * 2), ('model', 'token: synthetic0marker'),
+                             ('model', 'AKIA' + 'SYNTHETIC0MARK00'), ('repository', TOKEN + '/site'),
+                             ('skill', 'sk-synthetic0marker0value00'), ('harness', 'sk-synthetic0marker0value00')):
+            with self.subTest(field=field, value=value):
+                code, err = self.driver('start', dict(REQUEST, **{field: value}), FAKE_BOAT_ARGS=args)
+                self.assertEqual(code, 1, err)
+                self.assertIn(field, err['error'])
+                self.assertIn('credential', err['error'])
+                self.assertNotIn(value, json.dumps(err))
+                self.assertFalse(os.path.exists(args), 'boat ran')
+                self.assertEqual((self.sandboxes(), self.notes()), ({}, []))
+                self.assertEqual(self.files_holding(value), [])
+
+    def test_boat_diagnostics_never_reach_the_drivers_answer(self):
+        marker = 'sk-' + 'Synthetic0Host0Marker' + self.mark
+        cases = (('new', 'json', 'sign in to boat'), ('new', 'code', 'boat new failed'),
+                 ('new', 'stderr', 'sign in to boat'), ('exec', 'json', 'sign in to boat'),
+                 ('exec', 'stderr', 'skills'), ('prompt', 'json', 'sign in to boat'),
+                 ('prompt', 'stderr', 'sign in to boat'), ('prompt', 'code', 'boat prompt failed'))
+        for cmd, how, says in cases:
+            with self.subTest(cmd=cmd, how=how):
+                code, err = self.driver('start', REQUEST, FAKE_BOAT_LEAK=cmd + ':' + how, FAKE_MARKER=marker)
+                self.assertEqual(code, 1, err)
+                self.assertNotIn(marker, json.dumps(err))
+                self.assertNotIn('Synthetic', json.dumps(err))
+                self.assertIn(says, json.dumps(err))
+                self.assertNotIn('running', self.sandboxes().values())
+        self.assertEqual(self.notes(), [])
+
+    def test_boat_output_never_reaches_a_wake_or_stop_answer(self):
+        marker = 'sk-' + 'Synthetic0Host0Marker' + self.mark
+        for shape in ('nested', 'flat'):
+            with self.subTest(shape=shape):
+                code, out = self.driver('start', REQUEST)
+                self.assertEqual(code, 0, out)
+                self.assertTrue(self.until(lambda: not alive(self.logged()[-1][0])), 'the first turn never ended')
+                self.set_state('<b>Synthetic diagnostic</b> ' + marker)
+                code, err = self.driver('wake', out, FAKE_BOAT_INFO=shape)
+                self.assertEqual(code, 1, err)
+                self.assertIn('is unknown, not running', err['error'])
+                self.assertNotIn(marker, json.dumps(err))
+                self.assertNotIn('Synthetic', json.dumps(err))
+                self.assertEqual(self.driver('stop', out), (0, dict(out, stopped=True)))
+        code, err = self.driver('start', REQUEST, FAKE_BOAT_ID=marker)
+        self.assertEqual(code, 1, err)
+        self.assertNotIn(marker, json.dumps(err))
+        self.assertIn('sandbox id', err['error'])
+
     def test_a_start_that_fails_leaves_no_sandbox_running(self):
         # catches: a sandbox left running (and billing) when the agent can't start, or created for a
         # harness boat doesn't have.
@@ -233,6 +379,47 @@ class Boat(unittest.TestCase):
         self.assertEqual((code, list(self.sandboxes().values())), (1, ['stopped']), error)
         self.assertIn('provider_not_configured', error['error'])
         self.assertIn('dashboard', error['next'])
+
+    def test_a_first_turn_that_hits_a_usage_limit_or_does_nothing_fails_start(self):
+        cases = (('usage_limit:auth_expiry', False, 'hit a usage limit (auth_expiry)'),
+                 ('usage_limit_flat:rate_limit', False, 'hit a usage limit (rate_limit)'),
+                 ('usage_limit:auth_expiry', True, 'hit a usage limit (auth_expiry)'),
+                 ('usage_limit:<b>raw text</b>', False, 'hit a usage limit (unknown)'),
+                 ('usage_limit:private_diagnostic', False, 'hit a usage limit (unknown)'),
+                 ('no_tools', False, 'finished with no tool call'))
+        for turn, held, why in cases:
+            with self.subTest(turn=turn, held=held):
+                open(self.hold, 'w').close() if held else None
+                code, err = self.driver('start', REQUEST, FAKE_TURN=turn)
+                self.assertEqual((code, list(self.sandboxes().values())[-1]), (1, 'stopped'), err)
+                self.assertIn(why, err['error'])
+                run = re.search(r'run-[0-9a-f]{12}', err['error']).group()
+                self.assertIn(os.path.join(self.folder, 'state', run + '.0.log'), err['next'])
+                for raw in ('Synthetic', 'OAuth', 'raw text', 'private_diagnostic', TOKEN):
+                    self.assertNotIn(raw, json.dumps(err))
+                self.assertTrue(self.until(lambda: not any(alive(p) or alive(w) for p, w, _, _ in self.logged())),
+                                'its turn still runs')
+                self.assertEqual(self.driver('wake', {'run': run})[0], 1, 'a wake reopened the failed run')
+                os.remove(self.hold) if held else None
+        self.assertEqual(self.notes(), [])
+
+    def test_a_working_first_turn_answers_within_the_settle_time(self):
+        open(self.hold, 'w').close()
+        code, out = self.driver('start', REQUEST)
+        self.assertEqual((code, list(self.sandboxes().values())), (0, ['running']), out)
+        self.assertTrue(alive(self.logged()[0][0]), 'the first turn was ended')
+        self.assertEqual(self.driver('stop', out), (0, dict(out, stopped=True)))
+
+    def test_a_bad_settle_setting_refuses_start_and_never_blocks_stop(self):
+        code, out = self.driver('start', REQUEST)
+        self.assertEqual(code, 0, out)
+        for bad in ('two', 'nan', 'inf', '-1', '0', '61'):
+            with self.subTest(settle=bad):
+                code, err = self.driver('start', REQUEST, OPENWIZ_BOAT_SETTLE=bad)
+                self.assertEqual((code, len(self.sandboxes())), (1, 1), err)
+                self.assertIn('OPENWIZ_BOAT_SETTLE', err['error'])
+        self.assertEqual(self.driver('stop', out, OPENWIZ_BOAT_SETTLE='two'), (0, dict(out, stopped=True)))
+        self.assertEqual(list(self.sandboxes().values()), ['stopped'])
 
     def test_stop_ends_a_worker_the_prompt_left_in_a_clean_environment(self):
         # catches: a stop that signals only the `boat prompt` process group, or finds processes only by the
@@ -281,9 +468,9 @@ class Boat(unittest.TestCase):
         code, err = self.driver('stop', out)
         self.assertEqual(code, 1, err)
         self.assertNotIn('retry', json.dumps(err))
-        self.assertEqual((self.marked(), list(self.sandboxes().values())), ([], ['stopped']), 'stop left it working')
+        self.assertEqual((self.live_descendants_of_this_test(), list(self.sandboxes().values())), ([], ['stopped']), 'stop left it working')
         code, err = self.driver('wake', out)
-        self.assertEqual((code, len(self.logged()), self.marked()), (1, 1, []), 'a wake ran it again')
+        self.assertEqual((code, len(self.logged()), self.live_descendants_of_this_test()), (1, 1, []), 'a wake ran it again')
 
     def test_wake_checks_its_save_before_and_after_spawn(self):
         # catches: a wake that runs `boat prompt` before it knows it can save the turn, and a save failure
@@ -299,12 +486,12 @@ class Boat(unittest.TestCase):
         self.assertNotIn('retry', json.dumps(err))
         os.rmdir(blocked)
         open(self.hold, 'w').close()
-        before = set(self.marked())  # the first turn's worker still runs
+        before = set(self.live_descendants_of_this_test())
         code, err = self.driver('wake', out, program=self.wrapper('breaks', BREAKS_AFTER_SPAWN))
         self.assertEqual(code, 1, err)
         self.assertIn('unknown', err['error'])
         self.assertNotIn('retry', json.dumps(err))
-        self.assertTrue(self.until(lambda: set(self.marked()) <= before), 'the unsaved turn still runs')
+        self.assertTrue(self.until(lambda: set(self.live_descendants_of_this_test()) <= before), 'the unsaved turn still runs')
 
     def test_a_start_not_fully_saved_is_never_woken(self):
         # catches: a start whose last save fails after its turn began answering "retry", leaving the turn and
@@ -313,7 +500,7 @@ class Boat(unittest.TestCase):
         self.assertEqual(code, 1, out)
         self.assertIn('unknown', out['error'])
         self.assertNotIn('retry', json.dumps(out))
-        self.assertTrue(self.until(lambda: not self.marked()), 'the turn it could not save still runs')
+        self.assertTrue(self.until(lambda: not self.live_descendants_of_this_test()), 'the turn it could not save still runs')
         self.assertEqual(list(self.sandboxes().values()), ['stopped'])
         run = re.search(r'run-[0-9a-f]{12}', out['error']).group()
         os.rmdir(os.path.join(self.folder, 'state', run + '.json.new'))
@@ -373,7 +560,7 @@ class Boat(unittest.TestCase):
             with self.subTest(command='start', when=when, fails=fails):
                 code, err = self.driver('start', REQUEST, program=program, RAISE=when, FAKE_BOAT_FAIL=fails)
                 self.assertEqual((code, err['error']), (1, 'the driver failed: KeyError'), err)
-                self.assertTrue(self.until(lambda: not self.marked()), 'its turn still runs')
+                self.assertTrue(self.until(lambda: not self.live_descendants_of_this_test()), 'its turn still runs')
                 self.assertEqual(set(self.sandboxes().values()), {'stopped'}, 'its sandbox still runs')
         # catches: cleanup that gives up on `boat stop` when Linux denies the driver's signals, or its listing of
         # /proc (L2), in a failed start and in a stop; each failure is reported.
@@ -394,10 +581,41 @@ class Boat(unittest.TestCase):
         self.assertEqual(code, 0, out)
         self.assertTrue(self.until(lambda: not alive(self.logged()[-1][0])))
         open(self.hold, 'w').close()
-        before = set(self.marked())  # the first turn's worker still runs
+        before = set(self.live_descendants_of_this_test())
         code, err = self.driver('wake', out, program=program, RAISE='after')
         self.assertEqual((code, err['error']), (1, 'the driver failed: KeyError'), err)
-        self.assertTrue(self.until(lambda: set(self.marked()) <= before), 'the woken turn still runs')
+        self.assertTrue(self.until(lambda: set(self.live_descendants_of_this_test()) <= before), 'the woken turn still runs')
+
+    def test_stop_and_failure_cleanup_never_open_another_process_environment(self):
+        seen = os.path.join(self.folder, 'environ-opens')
+        program = self.wrapper('audited', RAISES)
+        code, out = self.driver('start', REQUEST)
+        self.assertEqual(code, 0, out)
+        self.assertTrue(self.until(lambda: len(self.logged()) == 1 and not alive(self.logged()[0][0])))
+        first_turn_worker = set(self.live_descendants_of_this_test())
+        code, err = self.driver('start', REQUEST, program=program, RAISE='after', AUDIT=seen)
+        self.assertEqual((code, err['error']), (1, 'the driver failed: KeyError'), err)
+        self.assertFalse(os.path.exists(seen), 'a failed start opened another process\'s environment')
+        self.assertEqual(list(self.sandboxes().values())[-1], 'stopped')
+        self.assertTrue(self.until(lambda: set(self.live_descendants_of_this_test()) <= first_turn_worker),
+                        'the failed start\'s turn still runs')
+        self.assertEqual(self.driver('stop', out, program=program, AUDIT=seen), (0, dict(out, stopped=True)))
+        self.assertFalse(os.path.exists(seen), 'a stop opened another process\'s environment')
+        self.assertTrue(self.until(lambda: not self.live_descendants_of_this_test()), 'a turn still runs')
+
+    def test_the_tests_track_only_their_own_processes(self):
+        code, out = self.driver('start', REQUEST)
+        self.assertEqual(code, 0, out)
+        self.assertTrue(self.until(lambda: len(self.logged()) == 1))
+        del ENVIRON_OPENS[:]
+        WATCHING.append(1)
+        try:
+            self.assertTrue(self.live_descendants_of_this_test(), 'the run\'s turn was not found')
+            self.tearDown()
+            self.assertTrue(self.until(lambda: not self.live_descendants_of_this_test()), 'teardown left a process running')
+        finally:
+            WATCHING.pop()
+        self.assertEqual(ENVIRON_OPENS, [], 'the tests opened another process\'s environment')
 
     def test_start_installs_the_pinned_skills_or_refuses(self):
         # catches: a sandbox without the pinned WizSkills skills, so its agent can't follow the skill or post
@@ -426,17 +644,84 @@ class Boat(unittest.TestCase):
             self.assertEqual((code, json.load(g)['commit']), (0, json.load(f)['commit']), out)
 
 
+    def test_on_macos_the_driver_never_asks_ps_for_any_process_environment(self):
+        calls = os.path.join(self.folder, 'ps-calls')
+        logging_ps = os.path.join(self.folder, 'logging-ps')
+        os.mkdir(logging_ps)
+        with open(os.path.join(logging_ps, 'ps'), 'w') as f:
+            f.write('#!/bin/sh\nprintf \'%%s\\n\' "$*" >> %s\nexec %s "$@"\n' % (calls, os.path.join(NO_PROC, 'ps')))
+        os.chmod(os.path.join(logging_ps, 'ps'), 0o700)
+        macos = {'PATH': logging_ps + os.pathsep + NO_PROC + os.pathsep + self.env['PATH'], 'NO_PROC_PYTHON': sys.executable}
+        code, out = self.driver('start', REQUEST, **macos)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.driver('stop', out, **macos), (0, dict(out, stopped=True)))
+        with open(calls) as f:
+            asked = f.read().splitlines()
+        self.assertTrue(any(' -A ' in ' %s ' % c for c in asked), 'the driver never listed processes through ps')
+        self.assertEqual([c for c in asked if '-E' in c.split() or 'e' in c.split()], [],
+                         'the driver asked ps for process environments')
+
+    def test_without_proc_as_on_macos_stop_ends_a_worker_writing_the_log_after_its_supervisor_is_gone(self):
+        macos = {'PATH': NO_PROC + os.pathsep + self.env['PATH'], 'NO_PROC_PYTHON': sys.executable}
+        code, out = self.driver('start', REQUEST, **macos)
+        self.assertEqual(code, 0, out)
+        self.assertTrue(self.until(lambda: len(self.logged()) == 1))
+        prompt_pid, worker_pid = self.logged()[0][:2]
+        self.assertTrue(self.until(lambda: not alive(prompt_pid)))
+        with open(os.path.join(self.env['OPENWIZ_BOAT_STATE'], out['run'] + '.json')) as f:
+            supervisor = json.load(f)['turns'][0]['supervisor']
+        os.kill(supervisor, signal.SIGKILL)
+        self.assertTrue(self.until(lambda: not alive(supervisor)))
+        self.assertTrue(alive(worker_pid))
+        self.assertEqual(self.driver('stop', out, **macos), (0, dict(out, stopped=True)))
+        self.assertFalse(alive(worker_pid), 'a worker writing the turn log still runs after stop')
+
+    def test_without_proc_as_on_macos_a_failed_wake_ends_only_its_own_turn(self):
+        macos = {'PATH': NO_PROC + os.pathsep + self.env['PATH'], 'NO_PROC_PYTHON': sys.executable}
+        code, out = self.driver('start', REQUEST, **macos)
+        self.assertEqual(code, 0, out)
+        self.assertTrue(self.until(lambda: len(self.logged()) == 1))
+        prompt_pid, earlier = self.logged()[0][:2]
+        self.assertTrue(self.until(lambda: not alive(prompt_pid)))
+        code, woke = self.driver('wake', out, FAKE_RESUME_FAILS='1', **macos)
+        self.assertEqual(code, 1, woke)
+        failed = self.logged()[1][1]
+        self.assertFalse(alive(failed), "the failed wake's worker still runs")
+        self.assertTrue(alive(earlier), "the failed wake ended an earlier turn's worker")
+        self.assertEqual(self.driver('stop', out, **macos), (0, dict(out, stopped=True)))
+        self.assertFalse(alive(earlier))
+
+    def test_without_proc_as_on_macos_stop_ends_a_worker_the_turn_hands_off_as_it_exits(self):
+        macos = {'PATH': NO_PROC + os.pathsep + self.env['PATH'], 'NO_PROC_PYTHON': sys.executable}
+        code, out = self.driver('start', REQUEST, FAKE_LATE_WORKER='0.7', **macos)
+        self.assertEqual(code, 0, out)
+        self.assertTrue(self.until(lambda: len(self.logged()) == 1))
+        prompt_pid, worker_pid = self.logged()[0][:2]
+        self.assertTrue(self.until(lambda: not alive(prompt_pid)))
+        time.sleep(1)
+        self.assertTrue(alive(worker_pid))
+        self.assertEqual(self.driver('stop', out, **macos), (0, dict(out, stopped=True)))
+        self.assertFalse(alive(worker_pid), 'a worker the turn handed off as it exited still runs after stop')
+
     def test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild(self):
         macos = {'PATH': NO_PROC + os.pathsep + self.env['PATH'], 'NO_PROC_PYTHON': sys.executable}
-        for worker in ({}, {'FAKE_CLEAN': '1', 'FAKE_SAME_GROUP': '1'}):
+        for worker in ({'FAKE_DAEMON': '1'}, {'FAKE_CLEAN': '1', 'FAKE_SAME_GROUP': '1'}):
             with self.subTest(**worker):
                 self.tearDown()
                 self.setUp()
                 macos['PATH'] = NO_PROC + os.pathsep + self.env['PATH']
+                detached = 'FAKE_DAEMON' in worker
+                if detached:
+                    open(self.hold, 'w').close()
                 code, out = self.driver('start', REQUEST, **macos, **worker)
                 self.assertEqual(code, 0, out)
-                self.assertTrue(self.until(lambda: len(self.logged()) == 1 and not alive(self.logged()[0][0])))
+                self.assertTrue(self.until(lambda: len(self.logged()) == 1))
                 worker_pid = self.logged()[0][1]
+                if detached:
+                    self.assertTrue(self.until(lambda: worker_pid in self.recorded_by_supervisors(out['run'])),
+                                    'the supervisor never recorded the detached worker')
+                    os.remove(self.hold)
+                self.assertTrue(self.until(lambda: not alive(self.logged()[0][0])))
                 self.assertTrue(alive(worker_pid))
                 self.assertEqual(self.driver('stop', out, **macos), (0, dict(out, stopped=True)))
                 self.assertFalse(alive(worker_pid), 'a worker the prompt left still runs after stop')

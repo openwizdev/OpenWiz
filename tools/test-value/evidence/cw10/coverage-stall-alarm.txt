@@ -1,8 +1,0 @@
-# tools/stall-alarm/alarm.py statement-line coverage under tools/stall-alarm/test.py
-# Python stdlib trace, alarm.py run through STALL_ALARM_SCRIPT=wrapper; Python 3.11.2
-before (e817c9a, 38 tests):
-tools/stall-alarm/alarm.py: 258/264 statement lines (97.7%)
-after (8b66e33, 3 tests):
-tools/stall-alarm/alarm.py: 217/264 statement lines (82.2%)
-lines covered before and not after:
-96,97,98,99,100,118,124,125,126,139,147,148,153,156,159,161,163,173,174,175,264,265,266,268,269,272,273,274,275,276,277,278,279,280,281,282,338,342,343,348,349,350,364,365

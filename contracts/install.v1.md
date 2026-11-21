@@ -87,7 +87,8 @@ build `status` verifies: every file under its `runtime/skills/`, with its
 installed mode. It copies each skill folder into one canonical folder,
 `<ROOT>/skills/`, and then into each harness below that is present. A harness is
 present when its folder is a real directory this user owns. An absent harness
-is reported `absent` with what to do next, and nothing is created for it.
+is reported `absent`, naming its folder and what to do next, and nothing is
+created for it (#2168).
 
 | Harness | Present when this is a directory | Skills copy |
 | --- | --- | --- |
@@ -98,14 +99,24 @@ is reported `absent` with what to do next, and nothing is created for it.
 | `grok` | `~/.grok` | `~/.grok/skills/<skill>/` |
 
 Each copy is marked with an `.openwiz-skill` file and is replaced only when
-that mark is there. A same-named skill without it is the user's own and is
-never touched. Before any write, the step checks every destination. A link, a
-folder that isn't the user's, or an unmarked same-named skill refuses the
-whole step (exit 5) and changes nothing. A repeated run gives the same files.
-Other skills in those folders, and skills a newer build no longer ships, stay.
-The result is one `openwiz.skills-install.v1` JSON object: version, source,
-canonical folder, skill names and one row per harness (`installed`, `absent`
-or `refused`, its folder and a plain `next`).
+that mark is there. Each harness and each skill stands alone (#2183). Before
+any write, the step checks every destination. A same-named skill without the
+mark is the user's own. It is never touched: that skill is skipped in that
+harness only, and listed in the row's `skipped` with its folder and the next
+step. A stray staging or backup folder for a skill is handled the same way. A
+link or a folder that isn't the user's refuses that harness's row only. Other
+skills and harnesses still install. When no harness can take any skill (none is
+present, or every one is refused), nothing is written, not even the canonical
+folder, and the step exits 5 with `outcome: refused`. A repeated run gives the
+same files. Other skills in those folders, and skills a newer build no longer
+ships, stay. The result is one `openwiz.skills-install.v1` JSON object:
+version, source, canonical folder, skill names and one row per
+harness (`installed`, `partial`, `absent` or `refused`, its folder, a plain
+`next`, and `skipped` when a skill was skipped), plus `canonical_skipped` for
+a skill skipped in the canonical folder. `outcome` is `installed`
+(exit 0) only when every present harness got every skill, `partial` (exit 0)
+when something was skipped or refused, and `refused` (exit 5) when nothing was
+written.
 
 The step needs no Rust, Cargo, Node or npm. It doesn't put anything on `PATH`.
 The installed command is the build's own `openwiz`, beside its `runtime/`,

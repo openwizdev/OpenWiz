@@ -69,8 +69,19 @@ def settings_table(title, provider, model):
             '| Effort | High | `--reasoning-level high` |\n\nSource: synthetic owner, 2026-11-01.\n\n' % (title, provider, model))
 
 
+def models_row(role, provider, model):
+    return '| %s | Synthetic | Synthetic | High | `--provider %s --model %s --reasoning-level high` |\n' % (
+        role, provider, model)
+
+
 # The fleet settings the setup skill writes from the owner's recorded choice (#636).
-FLEET_SETTINGS = ('# Fleet settings\n\nSynthetic settings.\n\n'
+FLEET_SETTINGS = ('# Fleet settings\n\nSynthetic settings.\n\n## Models\n\n'
+                  '| Role | Harness | Model | Effort | `room-cli thread spawn` flags |\n| --- | --- | --- | --- | --- |\n'
+                  + models_row('Orchestrator', 'codex', 'syn-codex-model-01')
+                  + models_row('Builder', 'codex', 'syn-codex-model-01')
+                  + models_row('Reviewer', 'claude-code', 'syn-claude-model-01')
+                  + '| Small builder | follows Builder | | | |\n| Fixer | follows Builder | | | |\n\n'
+                  'Source: synthetic owner, 2026-11-01.\n\n'
                   + settings_table('Builder', 'codex', 'syn-codex-model-01')
                   + settings_table('Builder for small tickets', 'codex', 'syn-codex-model-01')
                   + settings_table('Reviewer for GPT-built', 'claude-code', 'syn-claude-model-01')
@@ -150,10 +161,11 @@ def release(folder, source='1' * 40, tamper=False):
                            'target': TARGET, 'setup_api': 1, 'archive': archive_name,
                            'archive_sha256': sha(archive), 'archive_bytes': len(archive),
                            'assets': rows}).encode()
+    sums = f'{sha(manifest)}  openwiz-{VERSION}-{TARGET}.manifest.json\n{sha(archive)}  {archive_name}\n'.encode()
     if tamper:
         archive = archive[:-1] + bytes([archive[-1] ^ 1])
     files = {NAME + '.sha256': f'{sha(manifest)}  {NAME}.manifest.json\n'.encode(),
-             NAME + '.manifest.json': manifest, archive_name: archive}
+             NAME + '.manifest.json': manifest, archive_name: archive, 'SHA256SUMS': sums}
     for name, data in files.items():
         (folder / name).write_bytes(data)
     return {'assets': assets, 'archive': archive_name, 'files': files}
@@ -398,7 +410,7 @@ class InstallJourney(unittest.TestCase):
             self.assertEqual(report['target'], TARGET)
             self.assertTrue(report['ready'])
             ids = [check['id'] for check in report['checks']]
-            self.assertEqual(ids, ['python', 'target', 'disk', 'room-cli', 'gh', 'git'])
+            self.assertEqual(ids, ['python', 'target', 'disk', 'glibc', 'room-cli', 'gh', 'git'])
             self.assertNotIn('cargo', result.stdout)
 
         def verified_install():
@@ -406,7 +418,8 @@ class InstallJourney(unittest.TestCase):
             self.assertEqual((result['version'], result['target'], result['activated']), (VERSION, TARGET, True))
             self.assertEqual(transport.urls, [BASE + f'latest/download/{NAME}.sha256',
                                               BASE + f'latest/download/{NAME}.manifest.json',
-                                              BASE + f'download/v{VERSION}/{published["archive"]}'])
+                                              BASE + f'download/v{VERSION}/{published["archive"]}',
+                                              BASE + f'download/v{VERSION}/SHA256SUMS'])
             self.build = Path(result['build'])
             self.state = Path(result['state_root'])
             self.assertEqual(Path(os.readlink(c.root / 'current')), self.build)
@@ -495,9 +508,9 @@ class InstallJourney(unittest.TestCase):
         shutil.rmtree(c.downloads)
         out = io.StringIO()
         self.assertEqual(entry().main(['download', '--target', TARGET, '--dir', str(c.downloads)],
-                                      fetch=Transport(bad), stdout=out), 0, out.getvalue())
-        refused = c.entry('install', '--assets', str(c.downloads), '--target', TARGET, '--root', str(c.root), check=5)
-        self.assertEqual(json.loads(refused.stdout)['outcome'], 'refused')
+                                      fetch=Transport(bad), stdout=out), 5, out.getvalue())
+        self.assertIn('archive checksum mismatch', json.loads(out.getvalue())['reason'])
+        self.assertFalse(c.downloads.exists())
         self.assertEqual(os.readlink(c.root / 'current'), first['build'], 'the last good build stays selected')
         self.assertFalse((c.root / 'state/service/builds' / ('2' * 40)).exists())
 
@@ -777,6 +790,76 @@ class InstallJourney(unittest.TestCase):
                 self.assertEqual(check['state'], 'refused')
                 self.assertIn('macOS', check['next'])
 
+
+def own_settings():
+    return (ROOT / 'docs/agents/fleet.md').read_text()
+
+
+def in_section(text, title, old, new):
+    head, sep, rest = text.partition('\n## %s\n' % title)
+    body, more, tail = rest.partition('\n## ')
+    assert sep and body.count(old) == 1, (title, old)
+    return head + sep + body.replace(old, new) + more + tail
+
+
+def table_rows(text, title):
+    body = text.split('\n## %s\n' % title, 1)[1].split('\n## ', 1)[0]
+    return [[cell.strip() for cell in line.strip()[1:-1].split('|')]
+            for line in body.splitlines() if line.startswith('|')][2:]
+
+
+class OwnSettings(unittest.TestCase):
+    def test_openwizs_own_models_table_and_the_older_tables_the_pinned_skills_read_agree(self):
+        self.agree(own_settings())
+
+    def test_a_role_set_in_both_forms_still_agrees(self):
+        high = '| Claude Code | Opus 5.5 | High | `--provider claude-code --model claude-opus-5-5 --reasoning-level high` |'
+        text = in_section(own_settings(), 'Models', '| Small builder | follows Builder | | | |', '| Small builder %s' % high)
+        text = in_section(text, 'Builder for small tickets', '| Effort | Medium | `--reasoning-level medium` |',
+                          '| Effort | High | `--reasoning-level high` |')
+        self.agree(text)
+
+    def test_a_role_changed_in_one_form_only_or_a_second_fixer_row_is_refused(self):
+        for name, text in (
+                ('older small only', in_section(own_settings(), 'Builder for small tickets',
+                                                '| Effort | Medium | `--reasoning-level medium` |',
+                                                '| Effort | High | `--reasoning-level high` |')),
+                ('models reviewer only', in_section(own_settings(), 'Models', '--model gpt-6.2-sol --reasoning-level medium',
+                                                    '--model gpt-6.2-sol --reasoning-level high')),
+                ('older GPT fixer only', in_section(own_settings(), 'Fixer', '--model gpt-6.2-sol --reasoning-level medium',
+                                                    '--model gpt-6.2-sol --reasoning-level high')),
+                ('second GPT fixer row', in_section(own_settings(), 'Fixer', '\n\nSource:',
+                                                    '\n| GPT | Codex | Sol 6.2 | High | `--provider codex --model '
+                                                    'gpt-6.2-sol --reasoning-level high` |\n\nSource:'))):
+            with self.subTest(name), self.assertRaises(AssertionError):
+                self.agree(text)
+
+    def agree(self, text):
+        setup = module('own_setup', TOOLS / 'setup/setup.py')
+        self.assertTrue(setup.models_usable(text, setup.sections(text)['Models']), 'the install setup reader')
+        skills = ROOT / '.wizskills/skills'
+        problems = []
+        module('own_settings', skills / 'setup/scripts/settings.py').fleet(text, problems)
+        self.assertEqual(problems, [], 'the pinned setup check')
+        flags = re.compile(r'`--provider (\S+) --model (\S+) --reasoning-level (\S+)`')
+        choice = lambda cell: dict(zip(('provider', 'model', 'effort'), flags.fullmatch(cell).groups()))
+        rows = {row[0]: row for row in table_rows(text, 'Models')}
+        role = {name: choice((rows['Builder'] if rows.get(name, [0, 'follows Builder'])[1] == 'follows Builder'
+                              else rows[name])[4]) for name in ('Builder', 'Reviewer', 'Small builder', 'Fixer')}
+        family = {'claude-code': 'claude', 'codex': 'gpt'}
+        models = dict(builder=role['Builder'], small=role['Small builder'])
+        for f in ('claude', 'gpt'):
+            models['review ' + f] = next((c for c in (role['Reviewer'], role['Builder'])
+                                          if family.get(c['provider']) not in (None, f)), 'waits')
+            models['fix ' + f] = next((c for c in (role['Fixer'], role['Reviewer'])
+                                       if family.get(c['provider']) == f), 'waits')
+        older = module('own_starts', skills / 'launch-fleet/scripts/ops-starts.py').read_settings(text)
+        fixers = table_rows(text, 'Fixer')
+        self.assertEqual([row[0] for row in fixers], ['Claude', 'GPT'], 'one older Fixer row per family')
+        self.assertEqual(dict(builder=older['builder'], small=older['small'], **{
+            'review claude': older['claude-code'], 'review gpt': older['codex'],
+            'fix claude': choice(fixers[0][4]), 'fix gpt': choice(fixers[1][4])}), models,
+            'the older tables start what the Models table resolves to')
 
 if __name__ == '__main__':
     unittest.main()

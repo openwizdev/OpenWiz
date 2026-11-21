@@ -1,6 +1,3 @@
-//! N8: start stages for every status row, separate from creation, within
-//! the follow bound (sheet A-9). Unknowns stay unknown.
-
 use std::time::Duration;
 
 use openwiz_adapter_cloudroom::new_thread::parse_shown_thread;

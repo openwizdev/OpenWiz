@@ -1,0 +1,49 @@
+$ python3 -I tools/release/test_help.py   # at f647d3c5c01ac7b95fc8508bbe1af1cf830a8f1d
+Ran 1 test in 1.391s
+
+OK
+
+# --help (owned-paths: its usage error) of all 32 runnable readers, stdout, stderr and exit status, compared with main 507e6b8d: identical
+
+$ python3 -I tools/comment-check/check.py diff --base 507e6b8dca456181c5a757740455ac94a664455d
+comment-check: ok
+
+$ python3 -I tools/comment-check/check.py count --before 507e6b8dca456181c5a757740455ac94a664455d <the 240 cut files>
+before 507e6b8dca456181c5a757740455ac94a664455d files 240 comment_lines 6521 disallowed_lines 6377
+after f647d3c5c01ac7b95fc8508bbe1af1cf830a8f1d files 240 comment_lines 29 disallowed_lines 0
+
+# The area's suites (exit status, test file), run at 3906ed35; later commits change only comments, plus cargo test --test proof --test messaging -- p08a m12 at 22f6fb07 (adapters/cloudroom/ since restored to main, so its suite is main's): 7 and 2 passed
+0 .github/actions/changelog/test_check.py
+0 adapters/boat/test_driver.py
+0 adapters/local/test_driver.py
+0 adapters/template/test_driver.py
+0 kernel/driver-kit/test_kit.py
+0 kernel/records-kit/test_check.py
+0 kernel/records/model/test_model.py
+0 tools/ci-overload/test.py
+0 tools/comment-check/test_check.py
+0 tools/github-app/test.py
+0 tools/install/access/test_access.py
+0 tools/install/cloudroom/test_cloudroom.py
+0 tools/install/platform/test_security.py
+0 tools/install/setup/test_github_login.py
+0 tools/install/test_install.py
+0 tools/install/test_pull.py
+0 tools/install/tests/init/test_init.py
+0 tools/install/tests/journey/test_journey.py
+0 tools/install/tests/onboard/test_journey.py
+0 tools/install/tests/public-release-security/baseline/test_baseline.py
+0 tools/install/tests/public-release-security/test_candidate.py
+0 tools/install/tests/setup-onboard-contract/test_contract.py
+0 tools/install/tests/skills-linked-config/test_linked_config.py
+0 tools/live-smoke/test_kit.py
+0 tools/live-smoke/test_receipt.py
+0 tools/live-smoke/test_review.py
+0 tools/live-smoke/test_smoke.py
+0 tools/owned-paths/test_check.py
+0 tools/privacy-check/test_check.py
+0 tools/release/test.py   (as CI runs it: python3 tools/release/test.py; Ran 271 tests, OK)
+0 tools/release/test_backfill.py   (python3 tools/release/test_backfill.py)
+1 tools/open-import/test_import.py   (the same 48 failures on main 507e6b8d: paths wave 3 removed; CI does not run it)
+0 cargo fmt --check; cargo clippy -p openwiz-tests --all-targets --locked -- -D warnings
+0 cargo test -p openwiz-tests --locked --test proof --test checks   (36 and 104 passed)

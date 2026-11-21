@@ -1,18 +1,3 @@
-//! B3 (ClosedWiz#119) on the recording fake `gh`: each write makes exactly
-//! its own call, then the read that confirms it, and nothing else; a close
-//! first reads the number's URL, and closes only an issue; a merge first
-//! reads whether the base has a merge queue, and merges only when it
-//! explicitly hasn't (R1 of the review at `9aae308`). A write that
-//! fails or is stopped is never read back, and its effect is unknown. A
-//! write is confirmed only when its read back, read strictly, shows it.
-//!
-//! Each test writes its own synthetic scenario in its own directory. The
-//! fake answers only a call its scenario answers with exactly those
-//! arguments, and refuses anything else (exit 97) after logging it, so the
-//! log is every call, expected or not. The fake logs a call before it
-//! answers, and `perform` returns only once each call has exited or been
-//! stopped, so the log is whole when it returns.
-
 use std::fs;
 use std::fs::DirBuilder;
 use std::num::NonZeroU64;
@@ -34,7 +19,6 @@ const ISSUE: &str = "https://github.invalid/synthetic/repo/issues/7";
 const ISSUE_URL: &str = "https://github.invalid/synthetic/repo/issues/7#issuecomment-1001";
 const PR_URL: &str = "https://github.invalid/synthetic/repo/pull/8#issuecomment-1002";
 
-/// The one GraphQL read: whether pull request 8's base has a merge queue.
 const QUEUE_QUERY: &str = "query=query($owner:String!,$repo:String!,$number:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$number){isMergeQueueEnabled}}}";
 
 fn queue_check() -> Vec<String> {
@@ -52,13 +36,10 @@ fn queue_check() -> Vec<String> {
     ])
 }
 
-/// The GraphQL answer about the merge queue, with `enabled` as its value.
 fn queue(enabled: Value) -> String {
     json!({"data": {"repository": {"pullRequest": {"isMergeQueueEnabled": enabled}}}}).to_string()
 }
 
-/// Text with every awkward thing send's rules let through: a leading dash,
-/// line breaks, quotes, shell words and non-ASCII.
 const TEXT: &str = "-x --help\nline two 'a' \"b\" $HOME `c` \\ Ünïcødé ✓\n";
 
 fn n(number: u64) -> NonZeroU64 {
@@ -131,9 +112,6 @@ fn words(w: &[&str]) -> Vec<String> {
     w.iter().map(|w| (*w).to_owned()).collect()
 }
 
-/// The calls, written out by hand, that each write of [`every_write`]
-/// makes when all goes well: a close's or a merge's check, then the write,
-/// then its read back.
 fn expected_calls(write: &Write) -> Vec<Vec<String>> {
     match write {
         Write::IssueComment { .. } => vec![
@@ -174,15 +152,12 @@ fn expected_calls(write: &Write) -> Vec<Vec<String>> {
     }
 }
 
-/// The write's own call, and its read back: the last two calls.
 fn write_and_read(write: &Write) -> (Vec<String>, Vec<String>) {
     let mut calls = expected_calls(write);
     let read = calls.pop().unwrap();
     (calls.pop().unwrap(), read)
 }
 
-/// The answers to the calls before the write: a close's check, showing
-/// issue 7's own URL; a merge's, showing no merge queue.
 fn before(write: &Write) -> Vec<Value> {
     match write {
         Write::CloseIssue { .. } => vec![answer(
@@ -194,8 +169,6 @@ fn before(write: &Write) -> Vec<Value> {
     }
 }
 
-/// One synthetic comment as `gh … --json comments` prints it: every key
-/// A1 observed (`shapes.md`), with synthetic values.
 fn comment(url: &str, body: &str) -> Value {
     json!({
         "id": "IC_synthetic",
@@ -212,7 +185,6 @@ fn comment(url: &str, body: &str) -> Value {
     })
 }
 
-/// One synthetic label as `gh issue view --json labels` prints it.
 fn label(name: &str) -> Value {
     json!({"id": "LA_synthetic", "name": name, "description": "Synthetic", "color": "ededed"})
 }
@@ -229,9 +201,6 @@ fn pr_state(state: &str, merge_commit: Value, head: &str) -> String {
     json!({"headRefOid": head, "mergeCommit": merge_commit, "state": state}).to_string()
 }
 
-/// What each write's call prints when it works: the comment's URL for a
-/// comment (gh 2.100.0's source, `commentable.go`; unobserved live), and
-/// nothing that is read for the others.
 fn printed(write: &Write) -> String {
     match write {
         Write::IssueComment { .. } => format!("{ISSUE_URL}\n"),
@@ -240,7 +209,6 @@ fn printed(write: &Write) -> String {
     }
 }
 
-/// The read back that shows each write done.
 fn shown(write: &Write) -> String {
     match write {
         Write::IssueComment { .. } => comments(&[
@@ -275,8 +243,6 @@ fn confirmed(write: &Write) -> Confirmed {
     }
 }
 
-/// Every answer for `write` going well, but the write's call printing
-/// `printed` and its read back answering `read_back`.
 fn answers(write: &Write, printed: &str, read_back: &str) -> Vec<Value> {
     let (call, read) = write_and_read(write);
     let mut all = before(write);
@@ -285,8 +251,6 @@ fn answers(write: &Write, printed: &str, read_back: &str) -> Vec<Value> {
     all
 }
 
-/// Writes a scenario answering exactly `responses`, in a directory of its
-/// own, and returns its path.
 fn scenario(test: &str, responses: Vec<Value>) -> PathBuf {
     let dir = Path::new(env!("CARGO_TARGET_TMPDIR"))
         .join("b3-scenarios")
@@ -310,7 +274,6 @@ fn scenario(test: &str, responses: Vec<Value>) -> PathBuf {
     path
 }
 
-/// A response to exactly `argv`.
 fn answer(argv: &[String], stdout: &str) -> Value {
     json!({"argv": argv, "stdout": stdout})
 }
@@ -319,8 +282,6 @@ fn soon() -> Instant {
     Instant::now() + Duration::from_secs(10)
 }
 
-/// Runs `write` on a fake answering `responses`, and returns its result and
-/// every call the fake received.
 fn run(
     test: &str,
     write: &Write,
@@ -378,8 +339,6 @@ fn a_write_that_fails_is_never_read_back_and_its_effect_is_unknown() {
             );
             assert_eq!(log, until_the_write, "{write:?}: no read back");
         }
-        // A call the fake has no answer for: refused with 97, after it is
-        // logged.
         let mut responses = before(&write);
         responses.push(answer(&read, &shown(&write)));
         let (result, log) = run(&format!("unanswered-{}", kind(&write)), &write, responses);
@@ -453,8 +412,6 @@ fn a_deadline_already_passed_runs_nothing() {
             Vec::<Vec<String>>::new(),
             "{write:?}: no call"
         );
-        // The same fake records calls: the empty log above is not a fake
-        // that never ran.
         assert_eq!(
             writes::perform(&fake.program(), &write, soon()),
             Ok(confirmed(&write))
@@ -463,17 +420,12 @@ fn a_deadline_already_passed_runs_nothing() {
     }
 }
 
-/// Read backs that are well formed but don't show the write: never
-/// confirmed. Each case: a name, the write, what its call printed, and the
-/// read back.
 fn not_shown_cases() -> Vec<(&'static str, Write, String, String)> {
     let issue_line = format!("{ISSUE_URL}\n");
     let pr_line = format!("{PR_URL}\n");
     let hundred: Vec<String> = (0..100).map(|i| format!("synthetic-{i}")).collect();
     let hundred: Vec<&str> = hundred.iter().map(String::as_str).collect();
     vec![
-        // A comment: the URL gh printed must name exactly one comment in
-        // the read back, with exactly the text.
         (
             "comment-absent",
             issue_comment(),
@@ -567,7 +519,6 @@ fn not_shown_cases() -> Vec<(&'static str, Write, String, String)> {
             pr_line,
             comments(&[comment(PR_URL, "Synthetic, not the text sent")]),
         ),
-        // A label: added means there, by its exact name.
         (
             "label-absent",
             add_label(),
@@ -581,8 +532,6 @@ fn not_shown_cases() -> Vec<(&'static str, Write, String, String)> {
             String::new(),
             labels(&["Held"]),
         ),
-        // Removed means not there, in any case, and not cut off: gh reads
-        // at most 100 labels.
         (
             "label-still-there",
             remove_label(),
@@ -601,14 +550,12 @@ fn not_shown_cases() -> Vec<(&'static str, Write, String, String)> {
             String::new(),
             labels(&hundred),
         ),
-        // Closed means CLOSED.
         (
             "close-still-open",
             close_issue(),
             String::new(),
             json!({"state": "OPEN"}).to_string(),
         ),
-        // Merged means MERGED, at the head asked for, with a merge commit.
         (
             "merge-still-open",
             merge(),
@@ -652,8 +599,6 @@ fn a_read_back_that_does_not_show_the_write_never_confirms_it() {
     }
 }
 
-/// Read backs that are not the exact shape: refused as malformed, so never
-/// confirmed. Each case: a name, the write, and the read back's text.
 fn malformed_cases() -> Vec<(&'static str, Write, String)> {
     let changed = |f: &dyn Fn(&mut Value)| {
         let mut v = comment(ISSUE_URL, TEXT);
@@ -839,8 +784,6 @@ fn a_read_back_that_fails_never_confirms_the_write() {
     }
 }
 
-/// Nothing a write sent, or `gh` printed, shows in why it is not
-/// confirmed: not the text, a URL, a label or a commit.
 #[test]
 fn an_error_shows_nothing_gh_printed() {
     let mut errors = Vec::new();
@@ -876,7 +819,6 @@ fn an_error_shows_nothing_gh_printed() {
     }
     for (case, error) in errors {
         assert!(error.starts_with("Err("), "{case}: {error}");
-        // OpenWiz's own word for what it doesn't show holds a label's name.
         let error = error.replace("(withheld)", "");
         for leak in [
             "github.invalid",

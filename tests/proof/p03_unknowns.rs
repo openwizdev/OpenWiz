@@ -1,6 +1,3 @@
-//! P3 Unknowns: a missing status, model, parent or freshness prints as
-//! `unknown (reason)`.
-
 use openwiz_core::model::Fact;
 use openwiz_core::ops::ListRequest;
 
@@ -24,13 +21,11 @@ fn missing_parent_is_unknown_not_top_level() {
         .list(&ListRequest::default())
         .expect("honest partial list");
     unknown_reason(&session(&env, "thr_syn_0003").parent);
-    // A null parent is a known top-level session, not an unknown.
     let normal = Fake::new("p03_missing_parent_normal", "normal");
     let env = normal.list(&ListRequest::default()).expect("normal list");
     assert_eq!(session(&env, "thr_syn_0001").parent, Fact::Known(None));
 }
 
-/// Finds `id`'s row in `ls --json` output.
 fn json_row<'a>(json: &'a serde_json::Value, id: &str) -> &'a serde_json::Value {
     json["data"]["sessions"]
         .as_array()
@@ -40,7 +35,6 @@ fn json_row<'a>(json: &'a serde_json::Value, id: &str) -> &'a serde_json::Value 
         .unwrap_or_else(|| panic!("{id} missing from JSON"))
 }
 
-/// The `unknown (reason)` text for an unknown at `pointer` in `value`.
 fn unknown_text(value: &serde_json::Value, pointer: &str) -> String {
     let reason = value
         .pointer(pointer)

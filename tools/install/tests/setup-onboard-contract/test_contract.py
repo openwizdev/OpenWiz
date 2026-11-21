@@ -1,13 +1,4 @@
 #!/usr/bin/env python3
-"""#632 (P1-P7 at the shared interface only): contracts/setup-onboard.v1 refuses what it says.
-
-Every expected code comes from fixtures/cases.json beside this test, written by
-hand from the contract's rules. The values are synthetic. These tests prove interface
-consistency only: never an installation, a usable account, a saved secret, a timing,
-an action count or a merge.
-
-Run: python3 -I tools/install/tests/setup-onboard-contract/test_contract.py
-"""
 import copy
 import importlib.util
 import json
@@ -32,21 +23,16 @@ check = _load('setup_onboard_check', HERE / 'check.py')
 CONTRACT = (ROOT / 'contracts/setup-onboard.v1.md').read_text()
 SCHEMA = json.loads((ROOT / 'contracts/setup-onboard.v1.schema.json').read_text())
 SETUP_SCHEMA = json.loads((ROOT / 'contracts/setup.v1.schema.json').read_text())
-FIRST_HOUR_SCHEMA = json.loads((ROOT / 'tools/install/tests/first-hour-contract/first-hour.schema.json').read_text())
 IDENTITY = (ROOT / 'contracts/github-identity.v1.md').read_text()
 CASES_PATH = HERE / 'fixtures/cases.json'
 CASES = json.loads(CASES_PATH.read_text())
 EXAMPLES, VARIANTS, VIEWS = CASES['examples'], CASES['variants'], CASES['setup_views']
-# A synthetic pointer in the open-development contract's good form. In memory only.
 POINTER = 'https://github.com/jparker2006/ClosedWiz/issues/9001#issuecomment-9000000001'
 RECEIPT = 'receipt-skip-app-under-limit'
-# The keywords check.schema_errors evaluates. A schema using any other keyword would
-# be silently half-checked, so both schemas are held to this set.
 EVALUATED = {'$schema', '$defs', '$ref', 'title', 'description', 'type', 'const', 'enum',
              'minLength', 'maxLength', 'pattern', 'minimum', 'exclusiveMinimum', 'minItems',
              'maxItems', 'items', 'contains', 'required', 'properties', 'additionalProperties',
              'oneOf', 'anyOf', 'allOf', 'not', 'if', 'then'}
-# Planted credential shapes, built in memory so no file in the tree carries one.
 PLANTED = ['ghs_' + 'S' * 36, 'github_pat_' + 'S' * 30, '-----BEGIN RSA PRIVATE KEY-----',
            'eyJ' + 'a' * 12 + '.' + 'b' * 12 + '.' + 'c' * 12, 'OPENWIZ_GITHUB_APP_KEY=' + 'c3ludGhldGlj']
 
@@ -76,7 +62,6 @@ def document(name):
 
 
 def live(doc):
-    """A document made live in memory: never a fixture, a record or evidence of anything."""
     doc = copy.deepcopy(doc)
     doc.update(proof_class='live', synthetic_assumptions=[], private_record=POINTER)
     if doc['kind'] == 'first_merge_receipt':
@@ -115,7 +100,6 @@ def table_codes():
 
 
 def generic(code):
-    """`stale_evidence:app` -> `stale_evidence:<...>`-style table key."""
     head, _, rest = code.partition(':')
     return head if not rest else head + ':<' + ('kind>' if head in ('duplicate_effect', 'blind_retry', 'effect_uncertain', 'phase_effect_mismatch') else
                                                'kind>:<repository>' if head == 'duplicate_effect_row' else
@@ -152,7 +136,6 @@ class Fixtures(unittest.TestCase):
 
 
     def test_patterns_end_at_the_end_of_the_string(self):
-        # JSON Schema's `$` does not match before a trailing newline; neither may the checker's.
         for name, path in (('init-request-preview', ['repository']), ('identity-user-app', ['app', 'owner_account']),
                            ('init-request-apply', ['operation_id'])):
             with self.subTest(example=name):
@@ -162,8 +145,6 @@ class Fixtures(unittest.TestCase):
 
 
 class Limits(unittest.TestCase):
-    """AC4: 29:59.999 with five actions can qualify; 30:00, a sixth action or an unknown count cannot."""
-
     def receipt(self, **change):
         doc = live(document(RECEIPT))
         for key, value in change.items():
@@ -201,15 +182,6 @@ class Limits(unittest.TestCase):
         del doc['actions']['count']
         self.assertEqual(report(doc)['problems'], ['schema'])
 
-    def test_the_first_hour_keeps_its_own_measures(self):
-        text = json.dumps(FIRST_HOUR_SCHEMA)
-        self.assertIn('"const": 3600000', text, 'first-hour keeps its one-hour limit')
-        self.assertNotIn('1800000', text, 'the 0.0.16 limit is not folded into first-hour.v1')
-        clock = SCHEMA['$defs']['first_merge_receipt']['properties']['clock']['properties']
-        self.assertEqual((clock['limit_ms'], clock['rule']), ({'const': 1800000}, {'const': 'strictly_less_than'}))
-        self.assertEqual(SCHEMA['$defs']['first_merge_receipt']['properties']['actions']['properties']['limit'], {'const': 5})
-        self.assertNotIn('ten_minute', json.dumps(SCHEMA), 'the ten-minute measure stays first-hour.v1 only')
-
 
 class Credentials(unittest.TestCase):
     def test_planted_credentials_are_refused_wherever_they_appear(self):
@@ -225,8 +197,6 @@ class Credentials(unittest.TestCase):
                     self.assertIn('leaked_credential', report(doc)['problems'])
 
     def test_app_key_assignments_are_refused_with_any_horizontal_spacing(self):
-        # R3: a nonempty dotenv assignment of the App key is a credential, spaced or
-        # compact; an empty one holds no value. Synthetic value only, built in memory.
         name, value = 'OPENWIZ_GITHUB_APP_KEY', 'c3ludGhldGlj'
         nonempty = [f'{name}={value}', f'{name} = {value}', f'{name} ={value}', f'{name}= {value}',
                     f'{name}   =   {value}', f'export {name} = {value}']
@@ -306,7 +276,7 @@ class CodeTable(unittest.TestCase):
                 for code in r[key]:
                     self.assertEqual(table.get(generic(code)), kind, code)
                     seen.add(generic(code))
-        seen |= {'not_strict_json', 'leaked_credential'}  # Strict-text and in-memory credential tests.
+        seen |= {'not_strict_json', 'leaked_credential'}
         self.assertEqual(set(table) - seen, set())
 
 

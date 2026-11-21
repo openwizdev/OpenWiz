@@ -2,10 +2,6 @@ name: Privacy
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review, edited]
-  # #714, #725: main only, as in ci.yml. pull_request and merge_group cover PR
-  # branches and queue groups; a duplicate push run there (a new branch's first
-  # push scans every commit tree since the anchor and times out) reports
-  # cancelled and blocks the queue. The pre-push hook checks every push.
   push:
     branches: [main]
   merge_group:
@@ -14,8 +10,6 @@ permissions:
   contents: read
 jobs:
   privacy:
-    # Fixed ruleset status name: privacy. Never a variable.
-    # Trusted ClosedWiz events follow CI's small-runner route; fork PRs and other copies stay hosted.
     name: privacy
     runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-24.04' || github.repository == 'jparker2006/ClosedWiz' && (vars.CI_SMALL_RUNS_ON || vars.CI_WEB_RUNS_ON || 'namespace-profile-closedwiz-rust') || 'ubuntu-24.04' }}
     timeout-minutes: 5

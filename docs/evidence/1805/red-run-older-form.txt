@@ -1,0 +1,7 @@
+test md3_models::md3_five_tables_keep_the_older_lowercase_setting_form ... FAILED
+thread 'md3_models::md3_five_tables_keep_the_older_lowercase_setting_form' panicked at tests/fleet/md3_models.rs:199:9:
+assertion `left == right` failed: `--reasoning-level Medium`
+  left: None
+ right: Some("invalid agent setting")
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 174 filtered out; finished in 0.00s
+error: test failed, to rerun pass `-p openwiz-tests --test fleet`

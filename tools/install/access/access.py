@@ -1,5 +1,28 @@
 #!/usr/bin/env python3
-"""Verify an owner-configured phone route; never create or activate one.
+import argparse
+import base64
+from datetime import datetime, timezone
+import ipaddress
+import json
+import os
+from pathlib import Path
+import re
+import secrets as random
+import shutil
+import stat
+import subprocess
+import sys
+import tempfile
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'setup'))
+import store
+
+DESCRIPTION = """Verify an owner-configured phone route; never create or activate one.
 
 configure --plan PRIVATE_JSON [--yes --operation ID --secrets PRIVATE_JSON]
 status --operation ID
@@ -27,30 +50,8 @@ owner-only IPv4:443 ACL; current-policy validation tests owner accept/foreign
 deny, never a hypothetical replacement policy. Unsupported shapes stay unknown
 or refused. Native network enforcement remains a separately authorized check.
 """
-import argparse
-import base64
-from datetime import datetime, timezone
-import ipaddress
-import json
-import os
-from pathlib import Path
-import re
-import secrets as random
-import shutil
-import stat
-import subprocess
-import sys
-import tempfile
-import time
-import urllib.error
-import urllib.parse
-import urllib.request
 
-sys.dont_write_bytecode = True
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'setup'))
-import store
-
-HOUR_MS = 3_600_000  # The setup report's existing evidence lifetime.
+HOUR_MS = 3_600_000
 MAX_BYTES = 4 * 1024 * 1024
 EMAIL = re.compile(r'[A-Za-z0-9.!#$%&\x27*+/=?^_`{|}~-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,63}')
 UUID = re.compile(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}')
@@ -74,7 +75,7 @@ def decode(data):
 def private_json(name):
     path = Path(name)
     store.require(path.is_absolute(), 'configuration file must be absolute')
-    store.state_path(str(path.parent))  # No repository or symlink ancestor.
+    store.state_path(str(path.parent))
     store.private_directory(path.parent, False)
     fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     with os.fdopen(fd, 'rb') as handle:
@@ -129,7 +130,6 @@ class Http:
         self.opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
 
     def request(self, method, url, headers, body=None):
-        # URLs are constructed only by the verified provider/hostname paths below.
         request = urllib.request.Request(url, data=body, headers=headers, method=method)
         try:
             response = self.opener.open(request, timeout=30)
@@ -149,9 +149,6 @@ def api(http, url, token):
 
 
 def owner_report(body, witness):
-    """The private per-check witness must come back through the chosen route.
-    It is not sent in a probe: another host or a stale state copy cannot echo it.
-    """
     value = decode(body)
     need(type(value) is dict and value.get('schema') == 'openwiz.setup.v1', 'access_unavailable')
     operations = value.get('operations')
@@ -168,7 +165,6 @@ def unbase64(value):
 
 
 def rsa_key(key):
-    """Encode a supported public JWK as PKCS#1 PEM; OpenSSL verifies it."""
     need(key.get('kty') == 'RSA' and key.get('alg') == 'RS256' and key.get('use') == 'sig'
          and key.get('e') == 'AQAB', 'access_unavailable')
     modulus = unbase64(key['n'])
@@ -183,8 +179,6 @@ def rsa_key(key):
 
 def cloudflare_contexts(http, p, secrets, audience, now):
     issuer = 'https://' + p['team'] + '.cloudflareaccess.com'
-    # Never follow a token's issuer, jku or embedded key. Trust only the selected
-    # team's TLS endpoint, freshly read; no cookie or API token is sent there.
     status, body = http.request('GET', issuer + '/cdn-cgi/access/certs', {})
     need(status == 200, 'access_unavailable')
     keys = decode(body)['keys']
@@ -202,8 +196,6 @@ def cloudflare_contexts(http, p, secrets, audience, now):
         public = rsa_key(matching[0])
         signature = unbase64(pieces[2])
         need(len(signature) in (256, 384, 512), 'access_unavailable')
-        # Existing setup OpenSSL prerequisite, fixed executable and no inherited
-        # environment or shell. Only public key/signature bytes reach disk.
         with tempfile.TemporaryDirectory(prefix='openwiz-access-signature-') as directory:
             key_path, signature_path = Path(directory) / 'public.pem', Path(directory) / 'signature'
             key_path.write_bytes(public)
@@ -245,9 +237,6 @@ def cloudflare(http, p, secrets, now, witness):
         return result
 
     def inspect():
-        # DNS routing is independent of the tunnel's stored ingress. Only an
-        # exact proxied CNAME in one readable full zone is supported; aliases,
-        # partial zone inventories and alternate tunnels cannot establish it.
         zones = read('/zones?account.id=' + p['account'], account=False)
         need(type(zones) is list, 'access_unavailable')
         covering = [z for z in zones if type(z) is dict and isinstance(z.get('name'), str)
@@ -266,7 +255,6 @@ def cloudflare(http, p, secrets, now, witness):
         need(tunnel['id'] == p['tunnel'] and tunnel.get('deleted_at') is None
              and tunnel.get('config_src') == 'cloudflare' and store.text(tunnel.get('name'))
              and tunnel.get('status') == 'healthy')
-        # More-specific applications must not bypass this application's policy.
         apps = read('/access/apps')
         need(type(apps) is list, 'access_unavailable')
         covering = []
@@ -321,8 +309,6 @@ def cloudflare(http, p, secrets, now, witness):
 
     before = inspect()
     expiries = cloudflare_contexts(http, p, secrets, before[1], now)
-    # GET on setup and the two write paths: authentication must stop requests
-    # before OpenWiz. GET cannot dispatch either allowed write, even on failure.
     paths = ['/api/v1/setup', '/api/v1/sessions/access-probe/messages', '/api/v1/projects/access-probe/threads']
     for label in ('anonymous', 'expired', 'foreign', 'owner'):
         headers = {'X-Requested-With': 'XMLHttpRequest'}
@@ -334,8 +320,7 @@ def cloudflare(http, p, secrets, now, witness):
                 need(status == 200, 'access_expired' if status in (401, 403) else 'access_unavailable')
                 owner_report(body, witness)
             else:
-                need(status in (401, 403))  # A redirect alone is not verified refusal.
-                # An OpenWiz JSON refusal means the request reached the origin.
+                need(status in (401, 403))
                 need(b'openwiz.' not in body and b'"error"' not in body)
     need(inspect() == before, 'access_unavailable')
     need(expiries['foreign'] > time.time(), 'access_unavailable')
@@ -393,14 +378,12 @@ def tailscale(http, p, secrets, now, local, witness):
         return (ip, expiry, serve, policy)
 
     before = inspect()
-    # This endpoint tests the CURRENT policy, without changing it. A JSON array
-    # is essential: an object would test a hypothetical policy instead.
     tests = [{'src': p['owner'], 'accept': [before[0] + ':443']},
              {'src': p['foreign'], 'deny': [before[0] + ':443']}]
     status, body = http.request('POST', base + 'tailnet/' + tailnet + '/acl/validate',
                                 {'Authorization': 'Bearer ' + secrets['api_token'], 'Content-Type': 'application/json'},
                                 json.dumps(tests).encode())
-    need(status == 200 and body == b'')  # 200 with a body can contain test errors.
+    need(status == 200 and body == b'')
     status, body = http.request('GET', 'https://' + p['host'] + '/api/v1/setup', {})
     need(status == 200, 'access_unavailable')
     owner_report(body, witness)
@@ -415,8 +398,6 @@ def verify(http, p, secret_path, now, local, witness):
              'access_unavailable')
         expiry = (cloudflare(http, p, secrets, now, witness) if p['provider'] == 'cloudflare'
                   else tailscale(http, p, secrets, now, local, witness))
-        # Anchor the existing one-hour freshness rule to the earlier credential
-        # expiry. No positive observation can outlive the authorization checked.
         at = int(min(now, expiry - HOUR_MS / 1000) * 1000)
         return 'access_' + p['provider'] + '_verified', at
     except Unverified as error:
@@ -426,7 +407,7 @@ def verify(http, p, secret_path, now, local, witness):
 
 
 def execute(argv=None, *, http=None, local=local_tailscale):
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(description=DESCRIPTION, formatter_class=argparse.RawDescriptionHelpFormatter)
     commands = parser.add_subparsers(dest='command', required=True)
     for name in ('configure', 'reconcile', 'status'):
         command = commands.add_parser(name)
@@ -441,7 +422,7 @@ def execute(argv=None, *, http=None, local=local_tailscale):
     args = parser.parse_args(argv)
     setup = store.Store(args.state_dir)
     if args.command == 'status':
-        value = setup.read()  # Read-only: does not create a state directory.
+        value = setup.read()
         operation = next((o for o in value['operations'] if o['operation_id'] == args.operation
                           and o['kind'] == 'configure_access'), None)
         store.require(operation is not None, 'unknown access operation')
@@ -514,7 +495,6 @@ def execute(argv=None, *, http=None, local=local_tailscale):
             operation['reason'] = ('Previous verification is recorded; current access needs attention.'
                                    if operation['phase'] == 'applied'
                                    else 'Verification remains uncertain; recheck this exact route before changing it.')
-        # A later refusal does not erase a lost reply or an applied setup effect.
         return {'operation': dict(operation), 'observation': observation}
     return setup.update(finish)
 

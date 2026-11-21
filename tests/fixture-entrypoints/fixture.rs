@@ -1,11 +1,8 @@
-//! Only these test executables read fixture settings. Production has none.
 use openwiz_adapter_cloudroom::locate::{Discovery, LauncherMetadata};
 use std::fs;
 use std::os::unix::fs::{DirBuilderExt, MetadataExt, PermissionsExt};
 use std::path::PathBuf;
 
-// Keep these executable targets self-contained: web-test's CI prune removes
-// tests/support/, while retaining the fixture entrypoints it actually builds.
 mod dirs {
     use super::*;
     pub fn private_dir_all(path: &std::path::Path) -> std::io::Result<()> {
@@ -24,10 +21,6 @@ pub struct Bundle {
     cleanup: bool,
 }
 
-/// `OPENWIZ_FIXTURE_READ_TIMEOUT_MS` (#1259): a lower `room-cli` read
-/// timeout for this fixture process, a whole number of milliseconds from 1
-/// to 15000 written in plain digits. Anything else stops the fixture before
-/// it reads or runs anything. Unset: the production `READ_TIMEOUT`.
 fn lower_read_timeout_from_environment() {
     let Some(value) = std::env::var_os("OPENWIZ_FIXTURE_READ_TIMEOUT_MS") else {
         return;
@@ -91,8 +84,6 @@ impl Bundle {
             for name in ["daemon-bundle.mjs", "index.js"] {
                 fs::write(dist.join(name), "synthetic sibling\n").unwrap();
             }
-            // Synthetic assumptions, NOT an observation of the PC's running
-            // app. Only fixture entrypoints inject these private proc links.
             let app = root.join(".mount_synthetic/synthetic-app");
             fs::write(&app, "synthetic process executable, never run\n").unwrap();
             fs::set_permissions(&app, fs::Permissions::from_mode(0o555)).unwrap();

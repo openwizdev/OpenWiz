@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-"""CP1 verifier and an offline recording boundary. Python standard library only.
-
-A trusted composition supplies the immutable pin and fresh independent reads.
-The command accepts synthetic recordings only and has no effect transport.
-"""
 import hashlib
 import json
 from pathlib import Path
@@ -48,7 +43,6 @@ def digest(text):
 
 
 def validate(value, rule):
-    """Validate the closed subset of JSON Schema used by the bundled contract."""
     if not rule:
         return True
     if '$ref' in rule:
@@ -103,7 +97,6 @@ def items(feed, definition, key, reason):
 def candidate_comment(body):
     if PREFIX in body:
         return True
-    # Identify escaped schema tokens before strict parsing can reject a record.
     for token in re.findall(r'"(?:[^"\\]|\\.)*"', body):
         try:
             if PREFIX in json.loads(token):
@@ -135,7 +128,6 @@ def checkpoint(pin, observation):
 def planned_tickets(plan, spec):
     text = plan['revision_text']
     require(digest(text) == plan['fingerprint'], 'CP1_plan')
-    # Revision records use literal LF; Unicode separators belong to titles.
     require(text.endswith('\n'), 'CP1_plan')
     lines = [line + '\n' for line in text[:-1].split('\n')]
     require(len(lines) >= 2 and lines[0] == 'plan-graph revision v2\n'
@@ -208,11 +200,6 @@ def verify_read(pin, observation, effect):
 
 
 def verify_completion(reader, pin, effect):
-    """Re-read all bindings twice inside this call. A returned result is advisory.
-
-    reader(nonce) must freshly read independent authoritative sources and return
-    strict JSON with that nonce. T12 owns trusted production composition.
-    """
     try:
         require(effect in EFFECTS, 'CP1_effect_scope')
         require(SCHEMA is not None, 'CP1_unreadable')
@@ -235,7 +222,6 @@ def verify_completion(reader, pin, effect):
 
 
 def record_completion(reader, pin, effects):
-    """An in-memory recording sink with no external executor or cached permit."""
     recorded = []
     reason = 'CP1_effect_scope'
     for effect in effects:

@@ -1,5 +1,20 @@
 #!/usr/bin/env python3
-"""Print an installation token for GH_TOKEN, minting only when needed (G2, #1402).
+import base64
+from datetime import datetime, timezone
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+import time
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import app
+
+DESCRIPTION = """Print an installation token for GH_TOKEN, minting only when needed (G2, #1402).
 
 Options are mint-token.py's, plus --write and --from-secret. Stdout is the
 token alone, so `GH_TOKEN="$(python3 -I refresh-token.py ...)"` works as is;
@@ -19,30 +34,14 @@ nothing else is printed on success.
 mint-token.py stays byte-identical to the copy WizSkills' launch-fleet carries;
 this tool uses the same guards from app.py and the same installation checks.
 """
-import base64
-from datetime import datetime, timezone
-import fcntl
-import hashlib
-import json
-import os
-from pathlib import Path
-import re
-import subprocess
-import sys
-import time
 
-# The documented `python3 -I` drops this folder from sys.path: add exactly it.
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import app  # noqa: E402
-
-# Refresh with five minutes or less left (contracts/github-identity.v1.md's boundary).
 REFRESH = 300
 TOKEN = re.compile(r"[A-Za-z0-9._~+/-]+=*")
 SECRET_KEY, SECRET_ID = "OPENWIZ_GITHUB_APP_KEY", "OPENWIZ_GITHUB_APP_ID"
 
 
 def parser():
-    result = app.arguments(__doc__)
+    result = app.arguments(DESCRIPTION)
     result.add_argument("--installation-id", required=True)
     result.add_argument("--repository", action="append", default=[],
                         help="OWNER/NAME (required, repeatable): downscope the token to this selected repository")
@@ -54,14 +53,12 @@ def parser():
 
 
 def secret_jwt(key, app_id):
-    """An App JWT from the secret's key, which reaches OpenSSL only through a pipe,
-    with no environment but PATH."""
     now = int(time.time())
     message = app.encode(b'{"alg":"RS256","typ":"JWT"}') + b"." + app.encode(json.dumps(
         {"iat": now - 60, "exp": now + 540, "iss": str(app_id)}, separators=(",", ":")).encode())
     read, write = os.pipe()
     try:
-        os.write(write, key)  # at most 4096 bytes: one atomic pipe write
+        os.write(write, key)
         os.close(write)
         write = None
         signed = subprocess.run(["openssl", "dgst", "-sha256", "-sign", f"/dev/fd/{read}"],
@@ -76,7 +73,6 @@ def secret_jwt(key, app_id):
 
 
 def credentials(args, secret):
-    """(app_id, JWT) from the secret or the PC state."""
     if args.from_secret:
         app_id = int(app.positive_id(os.environ.get(SECRET_ID, "")))
         app.require(0 < len(secret) <= 8192)
@@ -93,7 +89,6 @@ def credentials(args, secret):
 
 
 def mint(args, selected, secret):
-    """(token, expiry in Unix seconds) after mint-token.py's checks, or an exception."""
     profile = app.SERVICE if args.write else app.PERMISSIONS
     body = {"permissions": profile, "repositories": [name.split("/")[1] for name in selected]}
     app.api_base(args.api_base)
@@ -101,7 +96,6 @@ def mint(args, selected, secret):
     setting = app.mode()
     installation = app.positive_id(args.installation_id)
     app_id, jwt = credentials(args, secret)
-    # The App's owner and the installation's account, before any token exists.
     status, found = app.get(args.api_base, "/app", jwt)
     app.require(status == 200 and found.get("id") == app_id)
     status, held = app.get(args.api_base, f"/app/installations/{installation}", jwt)
@@ -111,13 +105,11 @@ def mint(args, selected, secret):
     app.require(app.bound(setting, (found.get("owner") or {}).get("login"),
                           (held.get("account") or {}).get("login"), selected))
     result = app.post(args.api_base, f"/app/installations/{installation}/access_tokens", body, jwt)
-    # Exactly the profile asked for: never a lost write, never workflows or administration.
     app.require(result.get("permissions") == profile)
     token = result.get("token")
     app.require(isinstance(token, str) and TOKEN.fullmatch(token) is not None)
     expiry = datetime.fromisoformat(result["expires_at"].replace("Z", "+00:00"))
     remaining = (expiry - datetime.now(timezone.utc)).total_seconds()
-    # More than the refresh margin left; GitHub's hour plus five minutes of drift at most.
     app.require(REFRESH < remaining <= 3600 + 300)
     listed = result.get("repositories")
     app.require(result.get("repository_selection") == "selected" and isinstance(listed, list))
@@ -146,7 +138,6 @@ def tokens_directory(state):
 
 
 def cached(directory, name):
-    """The cached (token, expiry); None when absent or not ours. An unsafe file raises."""
     try:
         content = app.read_file(directory, name, 4096)
     except FileNotFoundError:
@@ -173,9 +164,7 @@ def save(directory, name, token, expiry):
 
 
 def main():
-    # No child process inherits the key: it is read once, then dropped from the environment.
     secret = os.environ.pop(SECRET_KEY, "")
-    # Nor a caller's token, in any variable gh reads one from (R2, #1456).
     for name in ("GH_TOKEN", "GITHUB_TOKEN", "GH_ENTERPRISE_TOKEN", "GITHUB_ENTERPRISE_TOKEN"):
         os.environ.pop(name, None)
     args = parser().parse_args()
@@ -193,8 +182,8 @@ def main():
         lock = os.open(".lock", os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600, dir_fd=directory)
         try:
             app.checked(lock)
-            fcntl.flock(lock, fcntl.LOCK_EX)  # one mint at a time per state
-            found = cached(directory, name)  # read again under the lock
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            found = cached(directory, name)
             if found is None or not REFRESH < found[1] - time.time() <= 3600 + 300:
                 found = mint(args, selected, secret)
                 save(directory, name, *found)

@@ -1,9 +1,3 @@
-"""The fake-tool boundary (contract.md, section 2).
-
-One `shell` tool, run in process against a case's synthetic world. It starts no
-process, opens no socket and reads no environment variable. Repository files
-come from a read-only snapshot callable; file writes go to an in-memory overlay.
-"""
 import copy
 import fnmatch
 import json
@@ -26,9 +20,6 @@ CWD = '/repo'
 
 
 class Result:
-    """A command's output and exit code; `error` marks a failed command (not found, refused,
-    unsupported), as against a real result that exits nonzero, such as failed checks."""
-
     def __init__(self, out='', code=0, error=False):
         self.out, self.code, self.error = out, code, error
 
@@ -38,11 +29,9 @@ def _err(msg, code=1):
 
 
 class World:
-    """A case's fake GitHub, CloudRoom, processes, git and files."""
-
     def __init__(self, world, snapshot):
         self.w = copy.deepcopy(world)
-        self.snapshot = snapshot  # (read(path) -> str | None, list(prefix) -> [paths])
+        self.snapshot = snapshot
         self.overlay = dict(self.w.get('files', {}))
         self.events = []
         gh = self.w.setdefault('github', {})
@@ -71,15 +60,12 @@ class World:
         self._next_comment = 9000001
         self._next_thread = 1
 
-    # ---- events -------------------------------------------------------
     def _event(self, kind, argv, body=None):
         self.events.append({'seq': len(self.events) + 1, 'kind': kind, 'argv': list(argv), 'body': body,
                             'code': {'escape': 126, 'local': 0}.get(kind),
                             'error': {'escape': True, 'local': False, 'refused': True}.get(kind)})
 
-    # ---- the tool -----------------------------------------------------
     def shell(self, command):
-        """Run one command string; return its combined output and exit code."""
         try:
             text, heredocs = _extract_heredocs(command)
         except ValueError as e:
@@ -90,7 +76,7 @@ class World:
             return _err('fake shell: backticks and process substitution are not available here', 126)
         try:
             stmts = _split_raw(text)
-            for _, raw in stmts:  # static check first: nothing runs if any part escapes
+            for _, raw in stmts:
                 self._check(self._assign(_tokens(self._expand(raw, static=True)), record=False), command)
         except _Escaped:
             return _err('fake shell: not available in this sandbox', 126)
@@ -140,7 +126,6 @@ class World:
         return Result(''.join(out), code)
 
     def _check(self, seg, command):
-        """The boundary: raise _Escaped (after recording it) for an escape."""
         argv = [t for t in seg if t]
         if not argv or self._script_argv(argv) is not None or self._canned(argv) is not None:
             return
@@ -154,7 +139,6 @@ class World:
                 raise _Escaped()
 
     def _expand(self, text, static=False):
-        """`$(cmd)` runs cmd in this fake shell; `$NAME` and `${NAME}` expand; single quotes protect."""
         out, i, quote = [], 0, None
         while i < len(text):
             ch = text[i]
@@ -204,7 +188,6 @@ class World:
         return ''.join(out)
 
     def _assign(self, seg, record=True):
-        """Drop leading NAME=VALUE words (and `export`), keeping their values."""
         seg = list(seg)
         if seg and seg[0] == 'export':
             seg = seg[1:]
@@ -215,7 +198,6 @@ class World:
                 self._event('local', ['assign', k])
         return seg
 
-    # ---- files --------------------------------------------------------
     def _norm(self, path):
         if path.startswith(CWD + '/'):
             path = path[len(CWD) + 1:]
@@ -252,9 +234,7 @@ class World:
             names.add(f[len(pre):].split('/')[0])
         return sorted(names)
 
-    # ---- dispatch -----------------------------------------------------
     def _script_argv(self, argv):
-        """`[path, *args]` when argv runs a repository script, else None."""
         i = 0
         if argv[0] in ('sh', 'bash', 'python3', 'python'):
             i = 1
@@ -273,7 +253,6 @@ class World:
         return [p] + argv[i + 1:]
 
     def _canned(self, argv):
-        """The world's canned answer for this argv (a script or a tool such as cargo)."""
         sargv = self._script_argv(argv)
         key = ['script'] + sargv if sargv is not None else argv
         for s in self.w.get('scripts', []):
@@ -477,7 +456,6 @@ class World:
                 break
         return Result('\n'.join(out) + ('\n' if out else ''), 0 if hit else 1)
 
-    # ---- gh -----------------------------------------------------------
     def _gh(self, argv, stdin):
         args = _Args(argv[1:])
         top = args.pos(0)
@@ -695,7 +673,6 @@ class World:
         raise _NotFound('no pull request found for the current branch')
 
     def _bind(self, path):
-        """The path with `{owner}/{repo}` expanded; None for a `repos/` path of another repository."""
         repo = self.w['github']['repo']
         p = re.sub(r'^repos/\{owner\}/\{repo\}(?=/|$)', f'repos/{repo}', path)
         if p.startswith('repos/') and not (p + '/').startswith(f'repos/{repo}/'):
@@ -720,7 +697,7 @@ class World:
             for g in self.w.get('graphql', []):
                 want = {k: str(v) for k, v in g['variables'].items()}
                 if ('owner' in want or 'name' in want) and f"{want.get('owner')}/{want.get('name')}" != repo:
-                    continue  # an answer is only ever about this repository
+                    continue
                 if tokens is not None and tokens == _graphql_tokens(g['document']) and given == want:
                     return Result(json.dumps(g['out']) + '\n')
             return _err('fake gh: this GraphQL query has no synthetic answer in this case')
@@ -801,7 +778,6 @@ class World:
             return args.get('--comment')
         return None
 
-    # ---- room-cli -----------------------------------------------------
     def _room(self, argv, stdin):
         args = _Args(argv[1:])
         top, sub = args.pos(0), args.pos(1)
@@ -852,7 +828,6 @@ class World:
     def _thread(self, tid):
         return next((t for t in self.w['cloudroom']['threads'] if t['id'] == tid), None)
 
-    # ---- git ----------------------------------------------------------
     def _git(self, argv):
         args = _Args([a for a in argv[1:] if a not in ('-C',)])
         sub = args.pos(0)
@@ -930,7 +905,6 @@ class _NotFound(Exception):
 
 
 class _Args:
-    """Positional arguments and flags, gh style (`--flag value`, `--flag=value`)."""
     BOOL = {'--comments', '--include-archived', '--draft', '--merge', '--squash', '--rebase',
             '--paginate', '--short', '-s', '--hard', '--name-only', '--all', '--json-all',
             '--shared-sandbox', '--top-level', '--web', '--admin', '--auto', '--yes', '--force',
@@ -992,12 +966,10 @@ def _blob_id(text):
 
 
 def _bre(p):
-    # grep's basic syntax: \| is alternation, | is literal.
     return p.replace('\\|', '\0').replace('|', '\\|').replace('\0', '|').replace('\\(', '(').replace('\\)', ')')
 
 
 def _extract_heredocs(command):
-    """Replace each heredoc with a NUL-prefixed placeholder; return (text, bodies)."""
     m = re.compile(r'''"\$\(cat <<-?\s*(['"]?)(\w+)\1\n(.*?)\n\2\n\)"''', re.S)
     bodies = []
 
@@ -1029,9 +1001,6 @@ def _extract_heredocs(command):
 
 
 def _graphql_tokens(doc):
-    """A GraphQL document's lexical tokens, dropping only what GraphQL ignores (whitespace, commas,
-    comments). Names, punctuation, numbers and quoted strings stay exactly, so argument values,
-    string contents and nesting all count. None for text that is not GraphQL."""
     out, i, n = [], 0, len(doc)
     while i < n:
         c = doc[i]
@@ -1070,7 +1039,6 @@ def _graphql_tokens(doc):
 
 
 def _graphql_definitions(query):
-    """How many top-level definitions (operations or fragments) a GraphQL document holds."""
     depth, count, q = 0, 0, False
     for i, c in enumerate(query):
         if c == '"' and query[i - 1:i] != '\\':
@@ -1086,9 +1054,6 @@ def _graphql_definitions(query):
 
 
 def _executable_substitution(text):
-    """A backtick outside single quotes, or `<(` / `>(` outside any quotes. A backslash outside
-    single quotes escapes the next character: it never opens or closes a quote, and an escaped
-    backtick is literal."""
     q, i, n = None, 0, len(text)
     while i < n:
         c = text[i]
@@ -1112,7 +1077,6 @@ def _executable_substitution(text):
 
 
 def _printf(args):
-    """Shell printf: %s %d %i %b %%, \\n \\t \\\\; the format repeats while arguments remain."""
     if not args:
         return ''
     fmt, rest, out = args[0], list(args[1:]), []
@@ -1153,7 +1117,6 @@ def _tokens(text):
 
 
 def _split_raw(text):
-    """Statements split at unquoted ; newline && || | &, as (operator before it, text)."""
     stmts, cur, pending, q, depth, i, n = [], [], None, None, 0, 0, len(text)
 
     def push(op):
@@ -1252,7 +1215,6 @@ def _redirects(seg, heredocs):
 
 
 def _paths(argv):
-    """Arguments that look like filesystem paths, for the boundary check."""
     out = []
     for a in argv[1:]:
         v = a.split('=', 1)[1] if a.startswith('--') and '=' in a else a

@@ -1,18 +1,9 @@
-//! A4 (ClosedWiz#112), S1-1's static check: `openwiz fleets`' part of the
-//! GitHub allowlist (`crates/adapters/github/src/fleets.rs`) allows exactly
-//! its pinned read forms, and refuses every write `gh` has for issues, pull
-//! requests, labels and the repository, `gh api` with a method, a field or
-//! arbitrary GraphQL, and near misses of each read form. The shared registry also
-//! refuses each case unless another module intentionally allows it; those
-//! cases name and check their owning module separately below.
-
 use openwiz_adapter_github::allowlist::allowed;
 use openwiz_adapter_github::{fleets, writes};
 
 const ISSUE_FIELDS: &str = "blockedBy,body,id,labels,milestone,number,state,subIssues,title";
 const PR_FIELDS: &str = "baseRefName,closingIssuesReferences,headRefName,headRefOid,isDraft,mergeCommit,mergedAt,number,state,title";
 
-/// The seven forms, as `fleets` builds them.
 const GOOD: &[&[&str]] = &[
     &["--version"],
     &["repo", "view", "--json", "nameWithOwner"],
@@ -88,10 +79,6 @@ fn it_allows_its_existing_read_forms() {
     }
 }
 
-/// Every write `gh` has for issues, pull requests, labels and the
-/// repository, `gh api` with a method or a field (a POST), GraphQL, and
-/// near misses of each read form: none is allowed by `fleets`. The shared
-/// registry refuses all except the explicitly owned forms below.
 fn it_refuses_every_write_and_every_near_miss() {
     let compare = "repos/{owner}/{repo}/compare/2222222222222222222222222222222222222222...main";
     let jq = "{status: .status, behind_by: .behind_by}";
@@ -261,14 +248,12 @@ fn it_refuses_every_write_and_every_near_miss() {
         assert!(!allowed(argv), "{argv:?}");
     }
 
-    // These remain forbidden to the read-only fleets command. B3 owns
-    // their exact forms, so the shared registry must allow them.
     for argv in [
-        &["issue", "comment", "1", "--body", "synthetic"][..], // B3: writes::ALLOWLIST
-        &["issue", "edit", "1", "--add-label", "held"],        // B3: writes::ALLOWLIST
-        &["issue", "close", "1"],                              // B3: writes::ALLOWLIST
-        &["pr", "view", "952", "--json", "comments"],          // B3: writes::ALLOWLIST
-        &["pr", "comment", "952", "--body", "synthetic"],      // B3: writes::ALLOWLIST
+        &["issue", "comment", "1", "--body", "synthetic"][..],
+        &["issue", "edit", "1", "--add-label", "held"],
+        &["issue", "close", "1"],
+        &["pr", "view", "952", "--json", "comments"],
+        &["pr", "comment", "952", "--body", "synthetic"],
     ] {
         assert!(!(fleets::ALLOWLIST.allows)(argv), "{argv:?}");
         assert!((writes::ALLOWLIST.allows)(argv), "{argv:?}");

@@ -1,15 +1,4 @@
 #!/usr/bin/env python3
-"""roadmap.py on a synthetic GitHub (ClosedWiz#277, spec #276, PS1).
-
-Run from anywhere:  python3 tools/roadmap/test.py
-
-Each case puts the fake `gh` (fixtures/gh) first on PATH with a synthetic
-GitHub (fixtures/world.json, changed by the case), runs roadmap.py --public in
-an empty root, and checks what it does from the outside: the exact public page
-it writes, what it prints, its exit status and the exact reads it makes. Every expected value is written out by
-hand from the fixtures, never computed the way roadmap.py computes it.
-ROADMAP_PY=<file> runs the same cases against another script.
-"""
 import json
 import os
 import resource
@@ -42,11 +31,6 @@ def ticket(number):
             " --jq {number, state, state_reason, pull: (.pull_request != null), html_url}")
 
 
-# The reads for the sample world, in order: the milestones, the release
-# branches, the public tags, then each version's issues and the ticket its
-# "Done when …" line names, oldest version first (0.0.1, 0.0.2, 0.0.3, 0.0.4,
-# 0.0.10 are milestones 1, 3, 4, 6, 7; 0.0.10's line names none). Never the
-# lanes' (Infra is 2, 0.0.X is 5).
 CALLS = [MILESTONES, HEADS, TAGS, issues(1), ticket(11), issues(3), ticket(21), issues(4), ticket(31),
          issues(6), ticket(43), issues(7)]
 
@@ -80,7 +64,6 @@ What is being built now, and what comes next.
 
 
 def public_world():
-    """The sample world, with 0.0.4's outcome public-safe (no "|")."""
     w = world()
     m = milestone(w, "0.0.4")
     m["description"] = m["description"].replace("threads | and", "threads and")
@@ -89,7 +72,6 @@ def public_world():
 
 
 def page(**states):
-    """PUBLIC with each named version's state changed (title with dots as _)."""
     text = PUBLIC
     for key, (old, new) in states.items():
         title = key[1:].replace("_", ".")
@@ -123,7 +105,6 @@ class Case(unittest.TestCase):
         (self.bin / "gh").symlink_to(FIX / "gh")
 
     def fresh(self):
-        """No public page, for each subtest: subtests share nothing."""
         if self.public.exists():
             self.public.unlink()
 
@@ -160,9 +141,6 @@ class Case(unittest.TestCase):
 
 
 class OnlyPublic(Case):
-    """#1302: docs/ROADMAP.md moved to the private records, so --public is the
-    only page; a run without it is a usage mistake that reads nothing."""
-
     def test_without_public_it_is_a_usage_error_and_reads_nothing(self):
         r = self.run_roadmap(public=False)
         self.assertEqual((r.code, r.out, r.calls), (2, "", []))
@@ -170,8 +148,6 @@ class OnlyPublic(Case):
         self.assert_root_untouched()
 
     def test_no_page_in_the_repository_is_read_or_written(self):
-        # #1724: the legacy path holds a directory, which no user (root
-        # included) can open as a page, so any read of it fails the run.
         (self.root / "docs" / "ROADMAP.md").mkdir(parents=True)
         r = self.run_roadmap()
         self.assertEqual((r.code, r.err), (0, ""))
@@ -181,9 +157,6 @@ class OnlyPublic(Case):
 
 
 class RepositorySettings(Case):
-    """#1279: the reads follow the clone ({owner}/{repo}) and the one public
-    repository setting."""
-
     def test_tags_come_from_the_public_repo_setting(self):
         r = self.run_roadmap(None, "--public-repo", "synthetic-owner/public-repo",
                              env={"FAKE_GH_PUBLIC": "synthetic-owner/public-repo"})
@@ -208,14 +181,9 @@ class RepositorySettings(Case):
 
 
 class States(Case):
-    """A version's state comes from its tag, its live-check ticket, its
-    release branch and its spec's tickets, each matched exactly."""
-
     def states(self, w):
         r = self.run_roadmap(w)
         self.assertEqual(r.code, 0, r.err)
-        # The public page shows every state but published, so a sample
-        # version missing from it is published.
         found = {"0.0.1": "published", "0.0.2": "published", "0.0.3": "published",
                  "0.0.4": "published", "0.0.10": "published"}
         for line in self.read(self.public).splitlines():
@@ -225,8 +193,6 @@ class States(Case):
         return found
 
     def test_each_state_from_the_sample_world(self):
-        # v0.0.20 doesn't publish 0.0.2; release-0.0.4-no-send doesn't build
-        # 0.0.4; 0.0.10's spec has no ticket, so it is still being grilled.
         self.assertEqual(self.states(public_world()), {
             "0.0.1": "published", "0.0.2": "live-checked", "0.0.3": "built",
             "0.0.4": "building", "0.0.10": "being grilled"})
@@ -251,8 +217,6 @@ class States(Case):
 
 
 class MissingLines(Case):
-    """AC2: a milestone missing its outcome or done line is listed, not guessed."""
-
     def test_two_done_lines_are_listed_and_neither_is_read(self):
         w = public_world()
         milestone(w, "0.0.2")["description"] += "\nDone when a second line says so (#20)."
@@ -317,9 +281,6 @@ class MissingLines(Case):
 
 
 class LiveCheckTicket(Case):
-    """The first #N on the "Done when …" line names the live-check ticket,
-    wherever it is; with no #N, the version can't read as live-checked."""
-
     def test_the_ticket_is_read_wherever_it_is(self):
         w = public_world()
         m = milestone(w, "0.0.3")
@@ -371,9 +332,6 @@ class LiveCheckTicket(Case):
 
 
 class Public(Case):
-    """AC3: --public writes the short public roadmap, Now and Next only, one
-    line each, with no private path, issue number, name or Later idea."""
-
     def run_public(self, w):
         return self.run_roadmap(w)
 
@@ -388,9 +346,6 @@ class Public(Case):
 
     def test_nothing_private_reaches_it(self):
         w = public_world()
-        # Private words everywhere but a Now or Next "You can …" line: a
-        # published version, a lane, the done lines and the links. The sample
-        # pages' Later ideas are there too.
         milestone(w, "0.0.1")["description"] = (
             "You can ask Robin about private/notes.md (#11).\nDone when Robin says so (#11).")
         milestone(w, "Infra")["description"] = "You can read docs/grills/2026-01-01-first-steps.md and ask Robin."
@@ -522,7 +477,6 @@ class Public(Case):
 
 
 def raw(w, title, text):
-    """W with milestone TITLE's answer line replaced by TEXT, exactly."""
     w["milestones"] = [{"__raw__": text} if isinstance(m, dict) and m.get("title") == title else m
                        for m in w["milestones"]]
     return w
@@ -533,8 +487,6 @@ GOOD_LINE = ('{"description":null,"html_url":"https://github.com/example-owner/e
 
 
 class FailsClosed(Case):
-    """Anything it can't read, or read exactly, stops it before it writes."""
-
     def assert_stopped(self, r, err=None, prefix=None):
         self.assertEqual(r.code, 1, r.err)
         self.assertEqual(r.out, "")
@@ -666,7 +618,6 @@ class FailsClosed(Case):
         self.assert_stopped(self.run_roadmap(w), err="roadmap: two milestones are called 0.0.3; nothing written\n")
 
     def test_a_write_that_fails_writes_nothing(self):
-        # The public page grows past a file size limit the run can't exceed.
         w = public_world()
         m = milestone(w, "0.0.10")
         m["description"] = m["description"].replace("lid shut.", "lid shut" + ", and keep going" * 600 + ".")
@@ -683,8 +634,6 @@ class FailsClosed(Case):
         self.assert_root_untouched()
 
     def test_a_page_that_cant_be_put_in_place_says_what_was_written(self):
-        # The run's os.replace fails, as on a full disk: nothing is in place,
-        # the message says so, and the staged copy is gone.
         env, _ = self.env(None)
         driver = (
             "import os, runpy, sys\n"

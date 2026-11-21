@@ -1,4 +1,3 @@
-"""PS2: public command tests, synthetic GitHub responses only."""
 import copy
 import json
 import os
@@ -149,7 +148,6 @@ sys.exit(reply.get("exit", 0))
 
     def test_workflow_wakes_on_label_changes_and_merge_groups(self):
         workflow = (HERE.parents[1] / "workflows/changelog.yml").read_text()
-        # Check the operative trigger block, never a word in a comment.
         triggers = workflow.split("\non:\n", 1)[1].split("\npermissions:", 1)[0]
         self.assertIn("  pull_request:\n", triggers)
         self.assertIn("    types: [opened, synchronize, reopened, labeled, unlabeled, ready_for_review, edited]", triggers)

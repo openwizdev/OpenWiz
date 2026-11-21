@@ -1,0 +1,18 @@
+# #2058 green, with the fix on the red commit: python3 -I adapters/boat/test_driver.py -v -k credential_shaped -k diagnostics_never
+test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Boat.test_a_credential_shaped_start_field_is_refused_before_anything_starts) ... ok
+test_boat_diagnostics_never_reach_the_drivers_answer (__main__.Boat.test_boat_diagnostics_never_reach_the_drivers_answer) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 2.370s
+
+OK
+
+# full suites: python3 -I adapters/boat/test_driver.py; python3 -I kernel/driver-kit/test_kit.py
+Ran 22 tests in 44.030s
+
+OK
+Ran 8 tests in 43.646s
+
+OK
+
+# re-run at 3c249f6a after the comment-contract fix: full boat and local suites pass; comment-check: ok

@@ -1,9 +1,3 @@
-//! P5 Paging and budget: stable ordering, `--limit` and `--offset`,
-//! enrichment of the requested page only, at most 4 concurrent detail reads,
-//! and a 30-second budget. The cases with no adapter or client (the page
-//! counts, detail reads, concurrency and budget) are in
-//! `crates/core/tests/inventory.rs` (#805).
-
 use std::collections::BTreeSet;
 
 use openwiz_core::ops::{Detail, ListRequest};
@@ -76,9 +70,6 @@ fn the_cli_passes_limit_and_offset() {
     }
 }
 
-/// New in ticket 1's correction round 1 (Sol S2). Issue #3: `--limit`
-/// defaults to 100. With more than 100 sessions and no limit given, exactly
-/// the first 100 in the stable order are shown, whatever the source order.
 #[test]
 fn the_default_page_is_the_first_100_in_stable_order() {
     let source = ScriptedSource::new(150);
@@ -104,7 +95,6 @@ fn the_default_page_is_the_first_100_in_stable_order() {
         "the source's row order does not change the default page"
     );
 
-    // The same through `openwiz ls` with no --limit.
     let json = cli_json_with(&source, &["ls", "--json"]);
     let shown: Vec<&str> = json["data"]["sessions"]
         .as_array()
@@ -124,10 +114,6 @@ fn the_default_page_is_the_first_100_in_stable_order() {
     );
 }
 
-/// New in ticket 2. The sort key, documented in `openwiz --help`: most
-/// recently updated first; ties by session id; sessions whose update time is
-/// unknown last, by session id. The same through `openwiz ls --json` and in
-/// the text rows.
 #[test]
 fn the_order_is_most_recently_updated_first_then_by_id() {
     use openwiz_core::model::{Fact, Timestamp};

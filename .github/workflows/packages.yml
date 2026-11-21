@@ -1,4 +1,3 @@
-# Manual artifact assembly only. No release, tag, push, credentials or publication.
 name: Packages
 on:
   workflow_dispatch:
@@ -62,9 +61,6 @@ jobs:
           cargo build --release --locked --target "$TARGET" -p openwiz-cli
       - name: Query the native programs' compiled identity
         run: python3 tools/release/product_identity.py query --binaries "target/$TARGET/release" --target "$TARGET" --output program-receipt.json
-      # #555: `skills` links to the gitignored .wizskills/skills; install the
-      # release wizskills.lock pins. build_products.py refuses unless the
-      # install is exactly the lock's tree.
       - name: The pinned WizSkills
         run: python3 -I tools/wizskills/install.py
       - name: Record and assemble exact products

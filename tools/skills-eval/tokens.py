@@ -1,4 +1,3 @@
-"""Required-text token accounting (contract.md, section 7)."""
 import hashlib
 import json
 import posixpath
@@ -16,9 +15,6 @@ def load_map(path):
 
 
 def mentions(skill, text, exists, lst=lambda p: []):
-    """Every existing file or folder a SKILL.md names, found independently of the map: backticked
-    paths, Markdown links (from the root or the skill's folder), folders by the snapshot's listing,
-    and the project's instructions, glossary and ADRs named in words. A folder ends in `/`."""
     found = set()
     folder = f'skills/{skill}'
     for tok in re.findall(r'`([^`\n]+)`', text) + re.findall(r'\]\(([^)#\s]+)', text):
@@ -44,8 +40,6 @@ def mentions(skill, text, exists, lst=lambda p: []):
 
 
 def linked_files(path, text, exists):
-    """Files one file links to: its Markdown links, resolved from its own folder, and its
-    backticked repository paths. Only existing files; no folders, no web links."""
     out = set()
     here = posixpath.dirname(path)
     for target in re.findall(r'\]\(([^)\s]+)\)', text):
@@ -63,7 +57,6 @@ def linked_files(path, text, exists):
 
 
 def expand_links(entries, read, lst):
-    """Every file linked from the files of each `linked` entry, in a stable order."""
     out = []
     for p in sorted(entries):
         for f in expand([p], lst):
@@ -74,7 +67,6 @@ def expand_links(entries, read, lst):
 
 
 def expand(paths, lst):
-    """Files, in order, with each folder entry (ending `/`) replaced by every file under it."""
     out = []
     for p in paths:
         for f in (sorted(lst(p)) if p.endswith('/') else [p]):
@@ -84,7 +76,6 @@ def expand(paths, lst):
 
 
 def map_problems(skills_map, shipped, read, lst):
-    """Every shipped skill mapped once, its SKILL.md first, every entry readable, every mention classified."""
     errs = []
     if sorted(skills_map) != sorted(shipped):
         errs.append(f'mapped {sorted(skills_map)} != shipped {sorted(shipped)}')
@@ -115,7 +106,6 @@ def map_problems(skills_map, shipped, read, lst):
 
 
 def report(skills_map, read, count, tokenizer, revision, lst=lambda p: []):
-    """count(text) -> tokens, or None offline. Each required file counts once per skill load."""
     files, cache = {}, {}
     overhead = count(PROBE) - 1 if count else None
     sets = {}
@@ -170,7 +160,6 @@ def diff(before, after):
 
 
 def usage_report(folder):
-    """Provider counts per run, actor and judge included. No API or token estimate."""
     folder = Path(folder)
     manifest = json.loads((folder / 'manifest.json').read_text())
     if manifest['settings'].get('provider') != 'openrouter':

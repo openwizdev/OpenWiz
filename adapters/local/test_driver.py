@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-"""The local driver passes the driver kit's five checks, runs several at once, and refuses a missing harness.
-
-Run: python3 -I adapters/local/test_driver.py   (Linux: the driver and the kit read /proc)
-"""
 import json
 import os
 import re
@@ -21,19 +17,16 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DRIVER = os.path.join(HERE, 'driver')
 KIT = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit')
 sys.path.insert(0, KIT)
-import kit  # noqa: E402
+import kit
 NO_PROC = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'fixtures', 'no-proc')
 
-# A synthetic value in a GitHub token's shape, built here so no file holds one.
 TOKEN = 'gh' + 'p_' + 'Synthetic0Local0Value' * 2 + '00'
-OPAQUE = 'opaque-fixture-value-7Kq2Zr9w'  # what the fakes print in their failures, in no credential shape
+OPAQUE = 'opaque-fixture-value-7Kq2Zr9w'
 PASS = ['pass version: openwiz:records v1, and the schema is driver v1',
         'pass start: the run posted builder status note 1',
         'pass wake: the run edited builder status note 1',
         'pass stop: the run ended, and a wake after it is refused',
         'pass token: no login or token passed through the driver']
-# A driver whose next save fails once its turn has begun, as a full disk or a removed folder would make it
-# (KN16's): BREAK=write blocks the run's next write; BREAK=readonly makes the state folder read-only.
 BREAKS_AFTER_SPAWN = '''import importlib.machinery, importlib.util, os, sys
 sys.dont_write_bytecode = True
 spec = importlib.util.spec_from_loader('local', importlib.machinery.SourceFileLoader('local', %r))
@@ -60,6 +53,19 @@ def alive(pid):
         return False
 
 
+def read(path):
+    with open(path) as f:
+        return f.read()
+
+
+HANDS_OFF_AS_IT_EXITS = """#!%s
+import os, subprocess, time
+time.sleep(0.7)
+worker = subprocess.Popen(['sleep', '120'], start_new_session=True, stdin=subprocess.DEVNULL)
+with open(%r, 'w') as f:
+    f.write('%%d %%d' %% (os.getpid(), worker.pid))
+"""
+
 class Local(unittest.TestCase):
     def setUp(self):
         self.folder = tempfile.mkdtemp()
@@ -67,7 +73,7 @@ class Local(unittest.TestCase):
         os.mkdir(self.bin)
         for name, fake in (('claude', 'fake-harness'), ('codex', 'fake-harness'), ('gh', 'gh')):
             os.symlink(os.path.join(HERE, 'fixtures', fake), os.path.join(self.bin, name))
-        repos = os.path.join(self.folder, 'repos')  # what the fake gh clones: a mode row, none, a refusing mode
+        repos = os.path.join(self.folder, 'repos')
         for repo, row in (('site', '| Harness permission mode | `acceptEdits` |'), ('blog', '| Harness | x |'),
                           ('refuser', '| Harness permission mode | `refuse` |'),
                           ('expired', '| Harness permission mode | `expired` |'),
@@ -89,8 +95,6 @@ class Local(unittest.TestCase):
         self.approve(self.env['OPENWIZ_LOCAL_STATE'])
 
     def approve(self, state):
-        """The host owner's approvals on this machine, as setup saves them: one mode per repository and harness.
-        The repository `raiser` asks for more than its approval; `unapproved` has none."""
         os.makedirs(state, mode=0o700, exist_ok=True)
         modes = {'site': 'acceptEdits', 'blog': 'acceptEdits', 'refuser': 'refuse', 'expired': 'expired',
                  'broken': 'fail', 'quick': 'quick', 'raiser': 'acceptEdits', 'missing': 'acceptEdits'}
@@ -111,7 +115,6 @@ class Local(unittest.TestCase):
         shutil.rmtree(self.folder, ignore_errors=True)
 
     def marked(self, entry):
-        """The live processes whose environment holds this entry."""
         found = []
         for pid in filter(str.isdigit, os.listdir('/proc')):
             try:
@@ -123,7 +126,6 @@ class Local(unittest.TestCase):
         return found
 
     def logged(self):
-        """The turns the fake harness logged: [(turn pid, child pid, first|woken, working folder, mode)]."""
         try:
             with open(self.log) as f:
                 return [(int(a), int(b), c, d, e) for a, b, c, d, e in (line.split() for line in f)]
@@ -147,19 +149,16 @@ class Local(unittest.TestCase):
                                      'harness': harness, 'model': 'synthetic-1'}, env, program)
 
     def first_turn(self, **env):
-        """Start a run and wait for its first turn: (its answer, turn pid, child pid)."""
         code, out = self.start(env=dict(self.env, **env))
         self.assertEqual(code, 0, out)
         self.until(lambda: len(self.logged()) == 1)
         return out, self.logged()[0][0], self.logged()[0][1]
 
     def no_new_turn(self, count):
-        time.sleep(0.5)  # time for a turn to log itself, if one was started
+        time.sleep(0.5)
         self.assertEqual(len(self.logged()), count, 'a turn was started')
 
     def test_stop_ends_a_worker_with_a_clean_environment(self):
-        # catches: a stop that finds the run's processes only by the OPENWIZ_RUN mark they inherit, so a worker
-        # the harness started with a clean environment keeps working after stop answers stopped (R2).
         out, turn, child = self.first_turn(FAKE_CLEAN='1')
         self.until(lambda: not alive(turn))
         self.assertTrue(alive(child))
@@ -167,8 +166,6 @@ class Local(unittest.TestCase):
         self.assertFalse(alive(child), 'a worker without the mark still runs after stop')
 
     def test_stop_ends_the_run_when_it_cannot_save(self):
-        # catches: a stop whose save fails before it signals anything, leaving the agent working with an error
-        # that says retry, and a wake that then launches it again (R3).
         open(os.path.join(self.folder, 'hold'), 'w').close()
         out, turn, child = self.first_turn(FAKE_HOLD=os.path.join(self.folder, 'hold'))
         os.mkdir(os.path.join(self.folder, 'state', out['run'] + '.json.new'))
@@ -180,8 +177,6 @@ class Local(unittest.TestCase):
         self.no_new_turn(1)
 
     def test_wake_checks_its_save_before_and_after_spawn(self):
-        # catches: a wake that launches before it knows it can save the turn, and a save failure after the
-        # launch answering "retry", whose retry starts a second turn beside the first (R4).
         out, turn, _ = self.first_turn()
         self.until(lambda: not alive(turn))
         blocked = os.path.join(self.folder, 'state', out['run'] + '.json.new')
@@ -192,7 +187,7 @@ class Local(unittest.TestCase):
         self.assertIn('nothing was started', err['error'])
         self.assertNotIn('retry', json.dumps(err))
         os.rmdir(blocked)
-        before = set(self.marked('OPENWIZ_RUN=' + out['run']))  # the first turn's worker still runs
+        before = set(self.marked('OPENWIZ_RUN=' + out['run']))
         code, err = self.driver('wake', out, dict(self.env, BREAK='write'), self.wrapper())
         self.assertEqual(code, 1, err)
         self.assertIn('unknown', err['error'])
@@ -200,8 +195,6 @@ class Local(unittest.TestCase):
         self.assertLessEqual(set(self.marked('OPENWIZ_RUN=' + out['run'])), before, 'the unsaved turn still runs')
 
     def test_start_with_nowhere_to_save_starts_nothing(self):
-        # catches: a start that launches before it saves the run, so a failed save leaves an agent running
-        # with no run id to stop it, under an error that says retry.
         blocker = os.path.join(self.folder, 'a-file')
         open(blocker, 'w').close()
         code, err = self.start(env=dict(self.env, OPENWIZ_LOCAL_STATE=os.path.join(blocker, 'state')))
@@ -210,8 +203,6 @@ class Local(unittest.TestCase):
         self.no_new_turn(0)
 
     def test_start_record_is_not_wakeable_before_it_is_confirmed(self):
-        # catches: a start whose save fails once its turn has begun answering "retry" and leaving the turn
-        # running, and its first record staying wakeable, so a wake on the run id in the error starts it (R5).
         for mode in ('write', 'readonly'):
             with self.subTest(mode=mode):
                 if mode == 'readonly' and os.geteuid() == 0:
@@ -234,8 +225,6 @@ class Local(unittest.TestCase):
                 self.no_new_turn(count)
 
     def test_kit_passes_all_five_with_each_harness(self):
-        # catches: a check the driver fails on its host (a stop that leaves the harness's detached child,
-        # a wake that starts nothing, a token taken), or a command line a real harness would not accept.
         for harness in ('claude', 'codex'):
             with self.subTest(harness):
                 self.tearDown()
@@ -247,7 +236,6 @@ class Local(unittest.TestCase):
                 self.assertEqual((p.returncode, p.stdout.splitlines()), (0, PASS), p.stderr)
 
     def test_several_runs_at_once_stop_only_their_own(self):
-        # catches: runs started together sharing an id or state, and a stop that ends another run's agent.
         answers = []
         threads = [threading.Thread(target=lambda: answers.append(self.start())) for _ in range(3)]
         for t in threads:
@@ -274,8 +262,6 @@ class Local(unittest.TestCase):
         self.assertTrue(ready())
 
     def test_wake_while_a_turn_runs_starts_no_second_turn(self):
-        # catches: a wake during a long turn starting a second agent on the same ticket (#1469), and a
-        # wake after the turn ends starting nothing.
         hold = os.path.join(self.folder, 'hold')
         open(hold, 'w').close()
         out, turn, _ = self.first_turn(FAKE_HOLD=hold)
@@ -287,8 +273,6 @@ class Local(unittest.TestCase):
         self.until(lambda: [t[2] for t in self.logged()] == ['first', 'woken'])
 
     def test_each_run_works_in_its_own_clone_of_its_repository(self):
-        # catches: a turn working in whatever folder called the driver, a clone of another repository, two
-        # runs sharing one checkout, and a wake working somewhere other than its run's clone (L3).
         first, _, _ = self.first_turn()
         second = self.start()[1]
         self.until(lambda: len(self.logged()) == 2)
@@ -305,8 +289,6 @@ class Local(unittest.TestCase):
         self.assertTrue(second['run'])
 
     def test_permission_mode_is_the_repositorys_own_or_start_refuses(self):
-        # catches: the driver choosing, widening or dropping the owner's saved permission mode, and a start
-        # with no saved mode running a harness whose default refuses every tool (L2).
         for harness in ('claude', 'codex'):
             with self.subTest(harness):
                 self.assertEqual(self.start(harness)[0], 0)
@@ -319,10 +301,6 @@ class Local(unittest.TestCase):
         self.no_new_turn(count)
 
     def test_permission_mode_needs_this_machines_approval(self):
-        # catches: a mode read only from the repository reaching the harness, so whoever controls the target's
-        # default branch can raise the builder's permissions on the owner's computer without the owner (R6):
-        # a repository asking for more than this machine approved, one this machine never approved, and an
-        # approvals file others can change all refuse before anything runs; a matching pair starts.
         approvals = os.path.join(self.env['OPENWIZ_LOCAL_STATE'], 'approvals.json')
         for repo, says in (('raiser', 'does not match'), ('unapproved', 'no permission mode is approved')):
             with self.subTest(repo):
@@ -341,10 +319,6 @@ class Local(unittest.TestCase):
         self.until(lambda: [t[4] for t in self.logged()] == ['acceptEdits'])
 
     def test_a_first_turn_that_ends_at_once_fails_start_with_its_reason(self):
-        # catches: a harness that refuses, or whose sign-in expired, or that fails, ending its first turn at
-        # once while start answers a run id and the kit waits 15 minutes in silence (L1); a first turn that
-        # simply finished cleanly being reported as a failure; and the harness's or gh's raw output, which can
-        # hold a credential in a shape no pattern knows, reaching the caller's JSON instead of the owner's log (R5).
         for repo, says in (('refuser', 'refused'), ('expired', 'not signed in'), ('broken', 'exit 3'),
                            ('missing', 'could not clone')):
             with self.subTest(repo):
@@ -365,10 +339,32 @@ class Local(unittest.TestCase):
         self.assertEqual(code, 0, out)
         self.assertEqual(self.driver('wake', out), (0, dict(out, woke=True)))
 
+    def test_a_credential_shaped_start_field_is_refused_before_anything_starts(self):
+        calls, logging = os.path.join(self.folder, 'calls'), os.path.join(self.folder, 'logging-bin')
+        os.mkdir(logging)
+        for name in ('claude', 'codex', 'gh'):
+            with open(os.path.join(logging, name), 'w') as f:
+                f.write('#!/bin/sh\nprintf \'%%s\\n\' "$*" >> %s\nexec %s "$@"\n' % (calls, os.path.join(self.bin, name)))
+            os.chmod(os.path.join(logging, name), 0o700)
+        env = dict(self.env, PATH=logging + os.pathsep + self.env['PATH'])
+        request = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude',
+                   'model': 'synthetic-1'}
+        for field, value in (('model', 'sk-' + 'Synthetic0Marker' * 2), ('model', 'token: synthetic0marker'),
+                             ('model', 'AKIA' + 'SYNTHETIC0MARK00'), ('repository', TOKEN + '/site'),
+                             ('skill', 'sk-synthetic0marker0value00'), ('harness', 'sk-synthetic0marker0value00')):
+            with self.subTest(field=field, value=value):
+                code, out = self.driver('start', dict(request, **{field: value}), env)
+                self.assertEqual(code, 1, out)
+                self.assertIn(field, out['error'])
+                self.assertIn('credential', out['error'])
+                self.assertNotIn(value, json.dumps(out))
+                self.assertFalse(os.path.exists(calls), 'a harness or gh ran')
+                state = self.env['OPENWIZ_LOCAL_STATE']
+                self.assertEqual(sorted(os.listdir(state)), ['approvals.json'])
+        self.assertEqual(self.logged(), [])
+
     def test_missing_or_unknown_harness_is_an_error_with_next(self):
-        # catches: a missing harness crashing, answering a run id that never runs, or an error an agent
-        # can't act on; and a harness name outside the allowlist being run from PATH.
-        python = os.path.join(self.folder, 'python')  # a PATH with only python3: no harness on it
+        python = os.path.join(self.folder, 'python')
         os.mkdir(python)
         os.symlink(sys.executable, os.path.join(python, 'python3'))
         bare = dict(self.env, PATH=python)
@@ -383,18 +379,63 @@ class Local(unittest.TestCase):
         self.assertEqual([f for f in os.listdir(self.env['OPENWIZ_LOCAL_STATE']) if f.startswith('run-')], [])
 
 
+    def harness_handing_off_as_it_exits(self, name):
+        folder, pids = os.path.join(self.folder, 'hands-off'), os.path.join(self.folder, 'handed-off')
+        os.makedirs(folder, exist_ok=True)
+        with open(os.path.join(folder, name), 'w') as f:
+            f.write(HANDS_OFF_AS_IT_EXITS % (sys.executable, pids))
+        os.chmod(os.path.join(folder, name), 0o700)
+        return folder, pids
+
+    def handed_off(self, pids):
+        written = lambda: os.path.exists(pids) and len(read(pids).split()) == 2
+        self.until(written)
+        self.assertTrue(written(), 'the turn never handed off')
+        with open(pids) as f:
+            turn, worker = map(int, f.read().split())
+        self.until(lambda: not alive(turn))
+        self.assertFalse(alive(turn), 'the turn did not exit')
+        time.sleep(1)
+        self.assertTrue(alive(worker))
+        return worker
+
+    def test_without_proc_as_on_macos_stop_ends_a_worker_handed_off_as_the_turn_exits(self):
+        folder, pids = self.harness_handing_off_as_it_exits('claude')
+        macos = {'PATH': folder + os.pathsep + NO_PROC + os.pathsep + self.env['PATH'], 'NO_PROC_PYTHON': sys.executable}
+        code, out = self.start(env=dict(self.env, **macos))
+        self.assertEqual(code, 0, out)
+        worker = self.handed_off(pids)
+        self.assertEqual(self.driver('stop', out, dict(self.env, **macos)), (0, dict(out, stopped=True)))
+        self.assertFalse(alive(worker), 'a worker the turn handed off as it exited still runs after stop')
+
+    def asked_ps_for_environments(self, calls):
+        with open(calls) as f:
+            asked = f.read().splitlines()
+        self.assertTrue(any(' -A ' in ' %s ' % c for c in asked), 'the driver never listed processes through ps')
+        return [c for c in asked if '-E' in c.split() or 'e' in c.split()]
+
+    def logging_ps(self, calls):
+        folder = os.path.join(self.folder, 'logging-ps')
+        os.makedirs(folder, exist_ok=True)
+        with open(os.path.join(folder, 'ps'), 'w') as f:
+            f.write('#!/bin/sh\nprintf \'%%s\\n\' "$*" >> %s\nexec %s "$@"\n' % (calls, os.path.join(NO_PROC, 'ps')))
+        os.chmod(os.path.join(folder, 'ps'), 0o700)
+        return folder
+
     def test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild(self):
         macos = {'PATH': NO_PROC + os.pathsep + self.env['PATH'], 'NO_PROC_PYTHON': sys.executable}
         for worker in ({}, {'FAKE_CLEAN': '1', 'FAKE_SAME_GROUP': '1'}):
             with self.subTest(**worker):
                 self.tearDown()
                 self.setUp()
-                macos['PATH'] = NO_PROC + os.pathsep + self.env['PATH']
+                calls = os.path.join(self.folder, 'ps-calls')
+                macos['PATH'] = self.logging_ps(calls) + os.pathsep + NO_PROC + os.pathsep + self.env['PATH']
                 out, turn, child = self.first_turn(**macos, **worker)
                 self.until(lambda: not alive(turn))
                 self.assertTrue(alive(child))
                 self.assertEqual(self.driver('stop', out, dict(self.env, **macos)), (0, dict(out, stopped=True)))
                 self.assertFalse(alive(child), 'a grandchild of the harness still runs after stop')
+                self.assertEqual(self.asked_ps_for_environments(calls), [], 'the driver asked ps for process environments')
 
         self.tearDown()
         self.setUp()

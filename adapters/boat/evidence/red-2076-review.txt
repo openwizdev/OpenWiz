@@ -1,0 +1,22 @@
+$ python3 -I adapters/boat/test_driver.py -k supervisor_is_gone -k failed_wake   (review R1 and R2, driver at 70ca896a)
+FF
+======================================================================
+FAIL: test_without_proc_as_on_macos_a_failed_wake_ends_only_its_own_turn (__main__.Boat.test_without_proc_as_on_macos_a_failed_wake_ends_only_its_own_turn)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/boat/test_driver.py", line 690, in test_without_proc_as_on_macos_a_failed_wake_ends_only_its_own_turn
+    self.assertTrue(alive(earlier), "the failed wake ended an earlier turn's worker")
+AssertionError: False is not true : the failed wake ended an earlier turn's worker
+
+======================================================================
+FAIL: test_without_proc_as_on_macos_stop_ends_a_worker_writing_the_log_after_its_supervisor_is_gone (__main__.Boat.test_without_proc_as_on_macos_stop_ends_a_worker_writing_the_log_after_its_supervisor_is_gone)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/boat/test_driver.py", line 677, in test_without_proc_as_on_macos_stop_ends_a_worker_writing_the_log_after_its_supervisor_is_gone
+    self.assertFalse(alive(worker_pid), 'a worker writing the turn log still runs after stop')
+AssertionError: True is not false : a worker writing the turn log still runs after stop
+
+----------------------------------------------------------------------
+Ran 2 tests in <time>
+
+FAILED (failures=2)

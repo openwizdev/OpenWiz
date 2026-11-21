@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""One loopback API GET; no proxy, redirect, retry, server startup or write."""
 import http.client
 import json
 import sys
@@ -16,8 +15,6 @@ try:
         if len(raw) > 32 * 1024 * 1024:
             raise ValueError()
         body = raw.decode('utf-8')
-        # Preserve the wire document verbatim so the runner's strict reader
-        # catches duplicate keys too. A non-200 response cannot pass a read.
         if response.status != 200:
             raise ValueError()
         sys.stdout.write(body)

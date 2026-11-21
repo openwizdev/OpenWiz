@@ -1,4 +1,3 @@
-//! CP2: exercise the same dispatcher as production through a real process.
 use super::{ROOT, Sandbox, schema};
 use serde_json::Value;
 use std::{ffi::OsString, fs, os::unix::ffi::OsStringExt, path::Path};

@@ -6,6 +6,7 @@ import json
 import os
 import re
 import secrets
+import select
 import subprocess
 import sys
 import time
@@ -17,9 +18,6 @@ _spec = importlib.util.spec_from_loader('records_kit', importlib.machinery.Sourc
 records_kit = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(records_kit)
 
-# Known credential shapes: the pinned status contract's credential rules, as its writer
-# (skills/launch-fleet/scripts/status.py at that commit) recognises them, then the kit's earlier shapes; and any
-# value of the kit's own environment whose name says it is a secret.
 SHAPES = re.compile(r'\b(?:[a-z_]*token|[a-z_]*key|secret|password|passwd|pwd|sig|signature|auth|credentials?)\s*='
                     r'|\b(?:password|passwd|secret|token)\s*:\s*\S|\bbearer\s+\S'
                     r'|\bgh[pousr]_[A-Za-z0-9]{8,}|\bgithub_pat_|\bAKIA[0-9A-Z]{16}\b'
@@ -32,6 +30,7 @@ KEYWORDS = {'$schema', 'type', 'required', 'additionalProperties', 'properties',
             'maxLength', 'minimum', 'items', 'minItems', 'uniqueItems', 'enum', 'const', 'allOf', 'contains'}
 TYPES = {'object': dict, 'array': list, 'string': str, 'boolean': bool}
 PROC = os.path.isdir('/proc/self')
+PROBE = ['-I', '-c', "import sys; sys.stdout.write('.'); sys.stdout.flush(); sys.stdin.read()"]
 
 
 class Unusable(Exception):
@@ -45,7 +44,6 @@ def _unique(pairs):
 
 
 def parse(text):
-    """One JSON object or value, refusing a repeated key (ValueError)."""
     return json.loads(text, object_pairs_hook=_unique)
 
 
@@ -73,7 +71,6 @@ def _same(a, b):
 
 
 def invalid(value, s, at='the answer'):
-    """Why value breaks the JSON Schema s, or None. It reads only KEYWORDS, as JSON Schema means them."""
     if 'const' in s and not _same(value, s['const']):
         return '%s is not %s' % (at, json.dumps(s['const']))
     if 'enum' in s and not any(_same(value, e) for e in s['enum']):
@@ -118,7 +115,6 @@ def invalid(value, s, at='the answer'):
 
 
 def records_version():
-    """The records version this kernel implements, from records.v1.md's title."""
     with open(os.path.join(HERE, '..', 'records.v1.md')) as f:
         m = re.search(r'\(`(openwiz:records v[0-9]+)`\)', f.readline())
     if not m:
@@ -127,7 +123,6 @@ def records_version():
 
 
 def texts(value):
-    """Every string and object key inside a decoded JSON value."""
     stack = [value]
     while stack:
         v = stack.pop()
@@ -149,8 +144,6 @@ FLEET = """query($owner: String!, $name: String!) { repository(owner: $owner, na
 
 
 class Ticket:
-    """The throwaway ticket's comments, from a local tracker file or from GitHub. Reads only."""
-
     def __init__(self, repo, number, tracker):
         self.repo, self.number, self.tracker = repo, number, tracker
         self.poll = 0.05 if tracker else 10
@@ -198,7 +191,6 @@ class Ticket:
             after = page['pageInfo']['endCursor']
 
     def builder_notes(self):
-        """{comment id: (updated_at, body, fields)} for every record author's v1 builder note."""
         notes = {}
         for c in self.comments():
             if c['author'].lower() in self.authors and c['body'].split('\n', 1)[0].rstrip('\r') == records_kit.MARKER:
@@ -215,6 +207,7 @@ class Kit:
         self.env = dict(os.environ, OPENWIZ_KIT_RUN=self.mark.partition('=')[2])
         self.leaks = []
         self.groups = set()
+        self.seen = PROC
         self.blind = None if PROC else self.unseen()
 
     def leak(self, what):
@@ -222,7 +215,6 @@ class Kit:
             self.leaks.append(what)
 
     def call(self, cmd, request=None):
-        """('ok', answer), ('refused', error) or ('bad', why), each checked against schema.json."""
         try:
             p = subprocess.run([self.args.driver, cmd], input='' if request is None else json.dumps(request),
                                env=self.env, capture_output=True, text=True, timeout=120)
@@ -232,14 +224,13 @@ class Kit:
             self.leak('the driver printed a credential')
         held = 'bad', 'its %s output held a credential, which the kit does not show' % cmd
         if holds_credential(p.stdout):
-            # Nothing of it is parsed or shown: any part could carry the credential into the kit's output.
+            # SECURITY: nothing of it is parsed or shown; any part could carry the credential into the kit's output.
             return held
         try:
             out = parse(p.stdout)
         except ValueError:
             return 'bad', '%s printed no single JSON value' % cmd
         if any(holds_credential(text) for text in texts(out)):
-            # Decoding can restore what the JSON text escaped (a \u escape): check every decoded string and key too.
             self.leak('the driver printed a credential')
             return held
         if p.returncode not in (0, 1):
@@ -249,7 +240,6 @@ class Kit:
         return ('bad', why) if why else (kind, out)
 
     def started(self):
-        """(command line, environment) of every live process the driver started (they carry the kit's mark)."""
         if not PROC:
             yield from self.listed()
             return
@@ -277,16 +267,18 @@ class Kit:
 
     def unseen(self):
         probe = 'OPENWIZ_KIT_PROBE=' + self.mark.partition('=')[2]
-        p = subprocess.Popen([sys.executable, '-I', '-c', 'import time; time.sleep(60)'], stdin=subprocess.DEVNULL,
+        p = subprocess.Popen([sys.executable] + PROBE, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                              env=dict(os.environ, OPENWIZ_KIT_PROBE=probe.partition('=')[2]))
         try:
-            for _ in range(50):
-                if re.search(r'(?:^|\s)%s(?:\s|$)' % re.escape(probe), self.ps('-o', 'command=', '-E').get(p.pid, '')):
-                    return None
-                time.sleep(0.1)
+            ready = select.select([p.stdout], [], [], 30)[0] and os.read(p.stdout.fileno(), 1) == b'.'
+            if ready and re.search(r'(?:^|\s)%s(?:\s|$)' % re.escape(probe),
+                                   self.ps('-o', 'command=', '-E').get(p.pid, '')):
+                return None
         finally:
+            p.stdin.close()
             p.kill()
             p.wait()
+            p.stdout.close()
         return "ps shows no process's environment here, so the kit cannot tell which processes the driver started"
 
     def listed(self):
@@ -302,6 +294,7 @@ class Kit:
             words = full.get(pid, '').strip()
             text = ' ' + (words[len(cmd):] if words.startswith(cmd) else words)
             marked = bool(mark.search(text))
+            self.seen = self.seen or marked
             if marked and group != os.getpgrp():
                 self.groups.add(group)
             found.append((group, cmd, text, marked))
@@ -310,6 +303,11 @@ class Kit:
                 for k, v in self.env.items():
                     text = re.sub(r'(?<=\s)%s(?=\s|$)' % re.escape('%s=%s' % (k, v)), '', text)
                 yield [cmd], [e.strip() for e in re.split(r'\s(?=[A-Za-z_][A-Za-z0-9_]*=)', text) if e.strip()]
+
+    def unverified(self):
+        if self.blind or self.seen:
+            return self.blind
+        return 'ps -E never showed a process of this run, so the kit cannot tell which processes the driver started'
 
     def scan(self):
         for cmd, env in self.started():
@@ -321,7 +319,6 @@ class Kit:
                     self.leak('a process the driver started holds a credential in %s, which the kit never gave it' % name)
 
     def wait(self, ready):
-        """ready()'s first true value within --wait seconds, scanning the driver's processes meanwhile."""
         end = time.monotonic() + self.args.wait
         while True:
             self.scan()
@@ -382,6 +379,8 @@ class Kit:
 
     def stop(self):
         kind, v = self.call('stop', {'run': self.run})
+        if self.unverified():
+            return 'fail', self.unverified()
         if kind != 'ok':
             return 'fail', v['error'] if kind == 'refused' else v
         if v['run'] != self.run:
@@ -391,8 +390,6 @@ class Kit:
             return 'fail', 'a wake after stop was taken'
         if kind == 'bad':
             return 'fail', v
-        if self.blind:
-            return 'fail', self.blind
         if not self.wait(lambda: not any(True for _ in self.started())):
             return 'fail', 'a process the run started still runs after stop'
         return 'pass', 'the run ended, and a wake after it is refused'
@@ -407,8 +404,8 @@ class Kit:
         elif kind == 'bad':
             self.leak('its answer to a token field: ' + v)
         self.scan()
-        if self.blind:
-            self.leak(self.blind)
+        if self.unverified():
+            self.leak(self.unverified())
         if self.leaks:
             return 'fail', '; '.join(self.leaks)
         return 'pass', 'no login or token passed through the driver'

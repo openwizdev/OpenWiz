@@ -1,11 +1,4 @@
 #!/usr/bin/env python3
-"""#1954 (#1423): `install skills` when a harness's parent folder is a link.
-
-A common dotfiles home links ~/.config elsewhere. An absent harness under it
-must be reported `absent` and block nothing; a present one behind the link is
-refused on its own row with a plain next step. Synthetic homes only, through
-the real `tools/install/install skills`, reusing test_install.py's helpers.
-"""
 import importlib.util
 import os
 from pathlib import Path
@@ -17,6 +10,12 @@ INSTALL = Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location('test_install', INSTALL / 'test_install.py')
 base = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(base)
+sys.path.insert(0, str(INSTALL / 'tests' / 'installer'))
+from test_installer import Download, Path_, Preflight, Repair
+from test_root_safety import Remove, RootSafety
+per_agent = importlib.util.spec_from_file_location('test_skills', INSTALL / 'tests/skills-per-agent/test_skills.py')
+skills = importlib.util.module_from_spec(per_agent)
+per_agent.loader.exec_module(skills)
 
 
 class LinkedConfig(base.HarnessSkills):
@@ -28,8 +27,6 @@ class LinkedConfig(base.HarnessSkills):
         return dotfiles
 
     def test_an_absent_harness_under_a_linked_config_blocks_nothing(self):
-        # catches (#1423): an absent OpenCode under a linked ~/.config refusing the whole step (exit 5),
-        # so a Claude-Code-only user gets no skills anywhere
         dotfiles = self.linked_config(opencode=False)
         code, result = self.skills()
         self.assertEqual((code, result.get('outcome')), (0, 'installed'), result)
@@ -42,16 +39,14 @@ class LinkedConfig(base.HarnessSkills):
 
     @unittest.skipIf(os.getuid() == 0, 'root ignores search permission')
     def test_a_linked_config_without_search_permission_is_refused_on_its_own_row(self):
-        # catches (#1956 R1): a lookup that can't tell whether OpenCode is there (PermissionError) escaping the
-        # row, so every row is lost and nothing names the folder to fix; or a write despite the unknown
         dotfiles = self.linked_config(opencode=True)
         dotfiles.chmod(0o600)
         self.addCleanup(dotfiles.chmod, 0o700)
-        before = base.snapshot(self.home)
         code, result = self.skills()
         self.assertEqual((code, result.get('schema'), result.get('outcome')),
-                         (5, 'openwiz.skills-install.v1', 'refused'), result)
-        self.assertEqual(base.snapshot(self.home), before)
+                         (0, 'openwiz.skills-install.v1', 'partial'), result)
+        self.assertEqual(base.skill_files(self.home / '.claude/skills'),
+                         base.skill_files(self.root / 'current/runtime/skills'))
         rows = {r['id']: r for r in result['harnesses']}
         self.assertEqual({h: r['state'] for h, r in rows.items()},
                          {'claude-code': 'installed', 'codex': 'absent', 'cursor': 'absent',
@@ -63,8 +58,6 @@ class LinkedConfig(base.HarnessSkills):
         self.assertEqual(base.snapshot(dotfiles), {'opencode': 'dir'})
 
     def test_a_config_file_in_place_of_the_folder_means_opencode_is_absent(self):
-        # catches: a plain file at ~/.config crashing the step (lstat's NotADirectoryError) or refusing it,
-        # when it only means OpenCode is not set up
         (self.home / '.config').write_bytes(b'Synthetic dotfile.\n')
         (self.home / '.claude').mkdir()
         code, result = self.skills()
@@ -73,13 +66,13 @@ class LinkedConfig(base.HarnessSkills):
         self.assertEqual((self.home / '.config').read_bytes(), b'Synthetic dotfile.\n')
 
     def test_a_present_harness_behind_a_linked_config_is_refused_on_its_own_row(self):
-        # catches: a write through a linked ~/.config into the link's target; a refusal whose next is the bare
-        # installer text with no folder or step; the refusal spilling onto the other harnesses' rows
         dotfiles = self.linked_config(opencode=True)
-        before = base.snapshot(self.home), base.snapshot(dotfiles)
+        before = base.snapshot(dotfiles)
         code, result = self.skills()
-        self.assertEqual((code, result.get('outcome')), (5, 'refused'), result)
-        self.assertEqual((base.snapshot(self.home), base.snapshot(dotfiles)), before)
+        self.assertEqual((code, result.get('outcome')), (0, 'partial'), result)
+        self.assertEqual(base.snapshot(dotfiles), before)
+        self.assertEqual(base.skill_files(self.home / '.claude/skills'),
+                         base.skill_files(self.root / 'current/runtime/skills'))
         rows = {r['id']: r for r in result['harnesses']}
         self.assertEqual({h: r['state'] for h, r in rows.items()},
                          {'claude-code': 'installed', 'codex': 'absent', 'cursor': 'absent',
@@ -90,9 +83,12 @@ class LinkedConfig(base.HarnessSkills):
 
 
 def load_tests(loader, tests, pattern):
-    """Only this file's cases; the inherited ones run in test_install.py."""
-    return loader.loadTestsFromNames(sorted(name for name in LinkedConfig.__dict__ if name.startswith('test_')),
-                                     LinkedConfig)
+    suite = loader.loadTestsFromNames(sorted(name for name in LinkedConfig.__dict__ if name.startswith('test_')),
+                                      LinkedConfig)
+    suite.addTests(loader.loadTestsFromTestCase(case)
+                   for case in (Download, Path_, Preflight, Repair, RootSafety, Remove,
+                                skills.Report, skills.PerSkill, skills.Truthful, skills.Isolation))
+    return suite
 
 
 if __name__ == '__main__':

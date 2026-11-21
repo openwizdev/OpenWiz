@@ -3,7 +3,10 @@
 //! cases in `tests/proof`, which include this file (#805). It uses only
 //! `openwiz-core` and the standard library.
 
-#![allow(dead_code)]
+#![allow(
+    dead_code,
+    reason = "included by more than one test target, and each uses only part of it"
+)]
 
 use std::collections::BTreeSet;
 use std::sync::Mutex;

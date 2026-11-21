@@ -1,10 +1,10 @@
-//! Foundation checks that pass in ticket 1: the approved dependency set, the
-//! fixture scan, schema conformance and the pending list.
-
 #[path = "../support/schema.rs"]
 mod schema;
 
-#[allow(dead_code)]
+#[allow(
+    dead_code,
+    reason = "shared with other test targets; this one uses only part of it"
+)]
 #[path = "../support/dirs.rs"]
 mod dirs;
 
@@ -17,11 +17,13 @@ mod schema_conformance;
 mod skills;
 mod strict_json;
 
-#[allow(dead_code)]
+#[allow(
+    dead_code,
+    reason = "shared with other test targets; this one uses only part of it"
+)]
 #[path = "../support/place.rs"]
 mod place;
 
-// LP1 contract conformance (ClosedWiz#543), using the existing extensions.
 mod loops_schema;
 #[path = "../new-thread/pattern.rs"]
 mod pattern;

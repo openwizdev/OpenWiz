@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Prove the R3/R4/R7 corrections detect narrowly targeted breaks in temporary copies."""
 import argparse
 import importlib.util
 import os
@@ -11,6 +10,8 @@ import unittest
 from unittest.mock import patch
 
 sys.dont_write_bytecode = True
+
+DESCRIPTION = """Prove the R3/R4/R7 corrections detect narrowly targeted breaks in temporary copies."""
 ROOT = Path(__file__).resolve().parents[2]
 PASS = '            self.report["status"] = "pass"\n'
 FILES = '        files = sorted(self.report["files"],key=lambda i:i["path"])\n'
@@ -50,7 +51,7 @@ MUTANTS = {
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument("--only",choices=list(MUTANTS),nargs="+")
     args = parser.parse_args()
     spec = importlib.util.spec_from_file_location("release_proofs",ROOT/"tools/release/test.py")
@@ -75,8 +76,6 @@ def main():
             temp = scratch/"tmp"
             home.mkdir()
             temp.mkdir()
-            # The original test also runs safely: its unobserved HOME/TMPDIR
-            # writes go into this disposable sandbox, never the actual home.
             with patch.dict(os.environ,{"HOME":str(home),"TMPDIR":str(temp)}), patch.object(proofs,"CLI",runner/"release"):
                 result = unittest.TestResult()
                 proofs.ReleaseCheck(test).run(result)

@@ -1,8 +1,3 @@
-//! N18, the core's half (the CLI's is phase 2's): the report, the record
-//! and the preview match `contracts/new-thread.v1.schema.json`, and the
-//! effects are worked out, and recorded, before anything is created. A
-//! preview claims nothing and calls nothing.
-
 use openwiz_core::messaging::send::UncertainReason;
 use openwiz_core::new_thread::effects::EffectKind;
 use openwiz_core::new_thread::operation::{PreviewVerdict, preview_new_thread};
@@ -119,8 +114,6 @@ fn the_schema_uses_only_checked_keywords() {
         "op_id": "op-1",
     });
     valid("request", &request);
-    // B2 (ClosedWiz#15), with this recorded reason: the request may carry
-    // staged attachment ids (B-1 to B-10), each at most once.
     let mut attached = request.clone();
     attached["prompt"]["attachments"] = serde_json::json!(["att-syn-0001"]);
     valid("request", &attached);

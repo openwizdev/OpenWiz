@@ -1,9 +1,3 @@
-//! Synthetic file bytes for the attachment proofs, built in memory at test
-//! time (never committed). The same bytes as `tests/attachments/support.rs`,
-//! which the store and CLI proofs keep.
-
-#![allow(dead_code)]
-
 use openwiz_core::attachment::SafeName;
 
 pub const MIB: u64 = 1024 * 1024;

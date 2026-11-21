@@ -1,6 +1,3 @@
-//! AL1: real adapter/recording fake boundary, synthetic title evidence only.
-//! The old fleet fixture predates title and cannot prove it is retained by the
-//! stock source independently of closing references or a PR's own number.
 use crate::support::{FIXTURES, FakeGh};
 use openwiz_adapter_github::fleets::GitHubFleets;
 use openwiz_core::fleet::fleets::FleetsSource;
@@ -19,7 +16,6 @@ fn al1_recorded_pr_list_retains_title_as_stock_evidence_without_closing_referenc
         "al1-title-evidence",
         &Path::new(FIXTURES).join("fleets/complete/scenario.json"),
     );
-    // Literal approved form, independent of the implementation constant.
     let argv = [
         "pr",
         "list",

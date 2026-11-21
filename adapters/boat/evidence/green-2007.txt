@@ -1,0 +1,12 @@
+$ python3 -I adapters/boat/test_driver.py
+............/usr/lib/python3.11/unittest/case.py:579: ResourceWarning: unclosed file <_io.BufferedReader name=5>
+  if method() is not None:
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/usr/lib/python3.11/unittest/case.py:579: ResourceWarning: unclosed file <_io.BufferedReader name=6>
+  if method() is not None:
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+........
+----------------------------------------------------------------------
+Ran 20 tests in 38.775s
+
+OK

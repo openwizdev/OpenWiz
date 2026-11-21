@@ -1,0 +1,20 @@
+F........
+======================================================================
+FAIL: test_remove_never_deletes_a_shared_state_root_or_follows_a_link (__main__.Remove.test_remove_never_deletes_a_shared_state_root_or_follows_a_link)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/tests/installer/test_root_safety.py", line 133, in test_remove_never_deletes_a_shared_state_root_or_follows_a_link
+    self.assertEqual((code, value['outcome']), (5, 'refused'), value)
+AssertionError: Tuples differ: (0, 'removed') != (5, 'refused')
+
+First differing element 0:
+0
+5
+
+- (0, 'removed')
++ (5, 'refused') : {'schema': 'openwiz.install-remove.v1', 'root': '<home>/.local/lib/openwiz', 'state_root': '<tmp>/shared state', 'delete': ['<home>/.local/lib/openwiz/current', '<home>/.local/lib/openwiz/install.lock', '<home>/.local/lib/openwiz/channel.json', '<home>/.local/lib/openwiz/skills/grill', '<home>/.local/lib/openwiz/skills/launch-fleet', '<home>/.local/lib/openwiz/skills/setup', '<home>/.local/lib/openwiz/skills/to-tickets', '<tmp>/shared state/setup', '<tmp>/shared state/cloudroom', '<tmp>/shared state/service/config.json', '<tmp>/shared state/service/app'], 'skills': [{'id': 'claude-code', 'path': '<home>/.claude/skills', 'names': ['grill', 'launch-fleet', 'setup', 'to-tickets']}], 'outcome': 'removed', 'kept': ['<tmp>/shared state/service', '<tmp>/shared state'], 'next': "Deleted exactly the listed entries; <tmp>/shared state/service, <tmp>/shared state still hold other files and stay. Your agents still hold OpenWiz's skill copies: delete the listed folders by name from each path in skills; other skills there are yours."}
+
+----------------------------------------------------------------------
+Ran 9 tests in 4.521s
+
+FAILED (failures=1)

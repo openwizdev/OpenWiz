@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Pre-push adapter: guard network destinations except the private repository."""
 import argparse
 import os
 from pathlib import Path
@@ -12,9 +11,10 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import check
 
+DESCRIPTION = """Pre-push adapter: guard network destinations except the private repository."""
+
 
 def private_or_local(url):
-    # Local fixture/removable-disk remotes cannot publish to a network service.
     if url.startswith(('/', './', '../', 'file://')):
         return True
     if '://' in url:
@@ -23,14 +23,12 @@ def private_or_local(url):
     else:
         match = re.fullmatch(r'(?:[^/@:]+@)?([^/:]+):(.+)', url)
         if not match:
-            # Plain paths without a colon are also Git's local transport.
             return bool(url) and ':' not in url
         host, path = match.groups()
     path = path.strip('/').removesuffix('.git').lower()
     return host and host.lower() == 'github.com' and path == 'jparker2006/closedwiz'
 
 
-# The only push URLs whose main may narrow a new ref's scan (#727).
 PUBLIC_URLS = (
     'https://github.com/openwizdev/OpenWiz',
     'https://github.com/openwizdev/OpenWiz.git',
@@ -41,16 +39,10 @@ PUBLIC_URLS = (
     'git@github.com:openwizdev/openwiz',
     'git@github.com:openwizdev/openwiz.git',
 )
-# GIT_* variables Git itself sets for a hook, none of which picks a
-# repository or a transport. Any other one (GIT_DIR, GIT_SSH, GIT_SSH_COMMAND,
-# GIT_CONFIG_PARAMETERS from git -c, ...) could make the lookup below reach a
-# different repository than the push. The one exception: a complete
-# GIT_CONFIG_COUNT/KEY_<i>/VALUE_<i> set whose every key starts 'hook.'.
 HOOK_GIT_VARIABLES = ('GIT_EXEC_PATH', 'GIT_PREFIX', 'GIT_EDITOR')
 
 
 def narrowable(url, env):
-    """Whether a push to URL with environment ENV may ask URL for its main."""
     if url not in PUBLIC_URLS:
         return False
     extra = {k for k in env if k.startswith('GIT_') and k not in HOOK_GIT_VARIABLES}
@@ -67,25 +59,6 @@ def narrowable(url, env):
 
 
 def destination_main(repo, url):
-    """The commit the push destination itself names as its main, or None.
-
-    A new ref's scan may skip only history already published where the push
-    goes. A local tracking ref proves nothing (a separate push URL, or a URL
-    retargeted without a fetch), so ask the exact push URL, and only when all
-    of these hold: the URL is on PUBLIC_URLS; the push carries no
-    command-scoped Git setting or override variable, so the lookup runs with
-    the push's own configuration; Git would not rewrite the URL (insteadOf);
-    and the destination names exactly one main. Anything else, or any
-    failure, returns None: scan from the anchor. When that commit is not in
-    this clone yet (main moved on since its last fetch, #872), fetch main's
-    objects from the same URL, writing no ref; a failed fetch returns None.
-
-    Every command here reaches the push URL and nothing else: no lazy fetch
-    from a promisor remote, no bundle source (configured or advertised), no
-    promisor remote a server offers, and no remote.<URL>.* setting (Git
-    applies those to the URL itself: its upload-pack, helper, promisor,
-    filter or proxy), which returns None.
-    """
     if not narrowable(url, os.environ):
         return None
     env = {**os.environ, 'GIT_TERMINAL_PROMPT': '0', 'GIT_NO_LAZY_FETCH': '1'}
@@ -115,7 +88,7 @@ def destination_main(repo, url):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument('--url', required=True)
     parser.add_argument('--repo', required=True, type=Path)
     parser.add_argument('--head', required=True)

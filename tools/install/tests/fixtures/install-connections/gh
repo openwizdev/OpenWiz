@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-"""Test-only fake `gh` (the agent's own GitHub login) for #1105. Synthetic data only.
-Serves `gh api <path>` from $SYNTHETIC_SCENARIO and the consumer fixture."""
 import base64
 import json
 import os
@@ -27,7 +25,6 @@ elif path == f'repos/{repo}':
 elif path == f'repos/{repo}/issues/{scenario["issue"]["number"]}':
     print(json.dumps({'number': scenario['issue']['number'], 'state': scenario['issue']['state']}))
 elif path == f'repos/{repo}/contents/docs/agents/fleet.md' and scenario['settings']:
-    # true: the consumer's filled settings; 'empty' or 'template': unusable ones.
     name = {True: 'consumer/docs/agents/fleet.md', 'empty': 'fleet-empty.md',
             'template': 'fleet-template.md', 'merge-scaffold': 'fleet-merge-scaffold.md',
             'small-builder': 'fleet-small-builder-placeholder.md'}[scenario['settings']]

@@ -259,7 +259,7 @@ fn read(fleet: &str) -> Result<Option<Vec<Entry>>, String> {
     Ok(Some(entries))
 }
 
-fn model_choices(fleet: &str) -> Vec<Value> {
+fn models_rows(fleet: &str) -> Vec<(String, Option<Value>)> {
     let mut out = Vec::new();
     let mut inside = false;
     for line in fleet.lines() {
@@ -270,6 +270,10 @@ fn model_choices(fleet: &str) -> Vec<Value> {
         let Some(c) = cells(line).filter(|c| inside && c.len() == 5) else {
             continue;
         };
+        if c[1] == "follows Builder" && c[2..].iter().all(String::is_empty) {
+            out.push((c[0].clone(), None));
+            continue;
+        }
         let flags: Vec<&str> = c[4].trim_matches('`').split(' ').collect();
         if let [
             "--provider",
@@ -280,13 +284,99 @@ fn model_choices(fleet: &str) -> Vec<Value> {
             effort,
         ] = flags.as_slice()
         {
-            out.push(json!({
-                "harness": c[1], "provider": provider, "model": model, "effort": effort,
-                "model_name": c[2],
-            }));
+            out.push((
+                c[0].clone(),
+                Some(json!({
+                    "harness": c[1], "provider": provider, "model": model, "effort": effort,
+                    "model_name": c[2],
+                })),
+            ));
         }
     }
     out
+}
+
+fn family(choice: &Value) -> Option<&'static str> {
+    match choice["provider"].as_str() {
+        Some("claude-code") => Some("claude"),
+        Some("codex") => Some("gpt"),
+        _ => None,
+    }
+}
+
+fn models_v1_choice_or_wait(
+    rows: &[(String, Option<Value>)],
+    start: &Value,
+) -> Result<Value, String> {
+    let own = |role: &str| {
+        rows.iter()
+            .find(|(r, _)| r == role)
+            .and_then(|(_, c)| c.clone())
+    };
+    let row_or_followed_builder = |role: &str| match (own(role), role) {
+        (Some(c), _) => c,
+        (None, "Small builder" | "Fixer") => own("Builder").unwrap_or(Value::Null),
+        _ => Value::Null,
+    };
+    let keys: BTreeSet<&str> = start
+        .as_object()
+        .map(|o| o.keys().map(String::as_str).collect())
+        .unwrap_or_default();
+    let kind = start["kind"].as_str().unwrap_or("");
+    let want: &[&str] = match kind {
+        "spec" | "helper" => &["kind"],
+        "build" => &["kind", "labels"],
+        "fix" | "review" => &["kind", "builder_family"],
+        _ => return Err(format!("unknown start {start}")),
+    };
+    if keys != want.iter().copied().collect() {
+        return Err(format!(
+            "a {kind} start has exactly the keys {want:?}: {start}"
+        ));
+    }
+    let builder_family = || match start["builder_family"].as_str() {
+        Some(f @ ("claude" | "gpt")) => Ok(Some(f)),
+        _ if start["builder_family"].is_null() => Ok(None),
+        _ => Err(format!("builder_family is claude, gpt or null: {start}")),
+    };
+    let first = |roles: &[&str], ok: &dyn Fn(Option<&str>) -> bool| {
+        roles
+            .iter()
+            .map(|r| row_or_followed_builder(r))
+            .find(|c| !c.is_null() && ok(family(c)))
+            .unwrap_or(Value::Null)
+    };
+    Ok(match kind {
+        "spec" => row_or_followed_builder("Orchestrator"),
+        "helper" => row_or_followed_builder("Builder"),
+        "build" => {
+            let labels = start["labels"]
+                .as_array()
+                .ok_or(format!("labels is a list: {start}"))?;
+            let small = labels
+                .iter()
+                .any(|l| matches!(l.as_str(), Some("polish" | "huntr" | "proposal")));
+            row_or_followed_builder(if small { "Small builder" } else { "Builder" })
+        }
+        "fix" => match builder_family()? {
+            Some(f) => first(&["Fixer", "Reviewer"], &|x| x == Some(f)),
+            None => Value::Null,
+        },
+        _ => match builder_family()? {
+            Some(f) => first(&["Reviewer", "Builder"], &|x| x.is_some_and(|x| x != f)),
+            None => Value::Null,
+        },
+    })
+}
+
+fn start_role(start: &Value) -> &str {
+    match start["kind"].as_str() {
+        Some("spec") => "orchestrator",
+        Some("build" | "fix") => "builder",
+        Some("review") => "reviewer",
+        Some("helper") => "helper",
+        _ => "",
+    }
 }
 
 fn harness_name(provider: &str) -> &str {
@@ -401,13 +491,14 @@ fn every_case_reads_and_picks_as_its_fixture_says() {
         let picks = want["picks"].as_array().unwrap();
         assert!(!picks.is_empty(), "{case}: no picks");
         for p in picks {
-            let got = pick(
+            let mut got = pick(
                 &entries,
                 repository,
                 p["ticket"].as_u64().unwrap(),
                 p["role"].as_str().unwrap(),
                 &p["choice"],
             );
+            got["start"] = p["start"].clone();
             if &got != p {
                 let keys = ["pick", "waits", "look"];
                 let diff: Vec<String> = keys
@@ -456,22 +547,36 @@ fn a_malformed_roster_is_refused_by_name() {
 }
 
 #[test]
-fn every_choice_is_a_row_of_its_cases_models_table() {
+fn every_choice_is_what_models_v1_resolves_for_its_start() {
+    let mut wrong = Vec::new();
     for case in CASES {
         if !listing(case).contains("case.json") {
             continue;
         }
-        let rows = model_choices(&text(&format!("{case}/fleet.md")));
+        let rows = models_rows(&text(&format!("{case}/fleet.md")));
         assert!(!rows.is_empty(), "{case}: no Models table");
         let want = load(&format!("{case}/case.json"));
         for p in want["picks"].as_array().into_iter().flatten() {
-            let c = &p["choice"];
-            assert!(
-                c.is_null() || rows.contains(c),
-                "{case}: {c} is no Models row"
-            );
+            let at = format!("{case}: ticket {} {}", p["ticket"], p["role"]);
+            if start_role(&p["start"]) != p["role"] {
+                wrong.push(format!("{at}: a {} start takes another role", p["start"]));
+                continue;
+            }
+            match models_v1_choice_or_wait(&rows, &p["start"]) {
+                Ok(c) if c == p["choice"] => {}
+                Ok(c) => wrong.push(format!(
+                    "{at}: models.v1 resolves {c}, the case says {}",
+                    p["choice"]
+                )),
+                Err(e) => wrong.push(format!("{at}: {e}")),
+            }
         }
     }
+    assert!(
+        wrong.is_empty(),
+        "choices that differ:\n{}",
+        wrong.join("\n")
+    );
 }
 
 #[test]

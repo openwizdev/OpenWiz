@@ -1,0 +1,362 @@
+# #2067 red, before the fix: python3 -I adapters/cloudroom/test_driver.py -k credential_shaped -k diagnostics_never
+# Synthetic markers are replaced with <synthetic-marker> or <synthetic-token> here.
+test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Driver.test_a_credential_shaped_start_field_is_refused_before_anything_starts) ... 
+  test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Driver.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (host='local', field='model', value='<synthetic-marker>') ... FAIL
+  test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Driver.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (host='local', field='model', value='<synthetic-marker>') ... FAIL
+  test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Driver.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (host='local', field='model', value='<synthetic-marker>') ... FAIL
+  test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Driver.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (host='local', field='repository', value='<synthetic-token>/site') ... FAIL
+  test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Driver.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (host='local', field='skill', value='<synthetic-marker>') ... FAIL
+  test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Driver.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (host='local', field='harness', value='<synthetic-marker>') ... FAIL
+  test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Driver.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (host='cloud', field='model', value='<synthetic-marker>') ... FAIL
+  test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Driver.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (host='cloud', field='model', value='<synthetic-marker>') ... FAIL
+  test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Driver.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (host='cloud', field='model', value='<synthetic-marker>') ... FAIL
+  test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Driver.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (host='cloud', field='repository', value='<synthetic-token>/site') ... FAIL
+  test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Driver.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (host='cloud', field='skill', value='<synthetic-marker>') ... FAIL
+  test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Driver.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (host='cloud', field='harness', value='<synthetic-marker>') ... FAIL
+test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Driver.test_a_credential_shaped_start_field_is_refused_before_anything_starts) ... FAIL
+test_a_credential_shaped_thread_id_is_never_kept_or_passed (__main__.Driver.test_a_credential_shaped_thread_id_is_never_kept_or_passed) ... 
+  test_a_credential_shaped_thread_id_is_never_kept_or_passed (__main__.Driver.test_a_credential_shaped_thread_id_is_never_kept_or_passed) [local] ... FAIL
+  test_a_credential_shaped_thread_id_is_never_kept_or_passed (__main__.Driver.test_a_credential_shaped_thread_id_is_never_kept_or_passed) [cloud] ... FAIL
+test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) ... 
+  test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='local', refuse='spawn', say='does not repeat') ... FAIL
+  test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='local', refuse='spawn', say='not signed in') ... FAIL
+  test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='local', refuse='spawn', say='gave no answer') ... FAIL
+  test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='local', refuse='tell', say='does not repeat') ... FAIL
+  test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='local', refuse='tell', say='not signed in') ... FAIL
+  test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='local', refuse='tell', say='gave no answer') ... FAIL
+  test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='local', refuse='archive', say='does not repeat') ... FAIL
+  test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='local', refuse='archive', say='not signed in') ... FAIL
+  test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='local', refuse='archive', say='gave no answer') ... FAIL
+  test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='local', refuse='list', say='does not repeat') ... FAIL
+  test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='local', refuse='list', say='not signed in') ... FAIL
+  test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='local', refuse='list', say='gave no answer') ... FAIL
+  test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='cloud', refuse='spawn', say='does not repeat') ... FAIL
+  test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='cloud', refuse='spawn', say='not signed in') ... FAIL
+  test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='cloud', refuse='spawn', say='gave no answer') ... FAIL
+  test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='cloud', refuse='tell', say='does not repeat') ... FAIL
+  test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='cloud', refuse='tell', say='not signed in') ... FAIL
+  test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='cloud', refuse='tell', say='gave no answer') ... FAIL
+  test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='cloud', refuse='archive', say='does not repeat') ... FAIL
+  test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='cloud', refuse='archive', say='not signed in') ... FAIL
+  test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='cloud', refuse='archive', say='gave no answer') ... FAIL
+  test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='cloud', refuse='list', say='does not repeat') ... FAIL
+  test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='cloud', refuse='list', say='not signed in') ... FAIL
+  test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='cloud', refuse='list', say='gave no answer') ... FAIL
+
+======================================================================
+FAIL: test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Driver.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (host='local', field='model', value='<synthetic-marker>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 208, in test_a_credential_shaped_start_field_is_refused_before_anything_starts
+    self.assertEqual(code, 1, err)
+AssertionError: 0 != 1 : {'run': 'run-b9047b6ac1f6'}
+
+======================================================================
+FAIL: test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Driver.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (host='local', field='model', value='<synthetic-marker>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 208, in test_a_credential_shaped_start_field_is_refused_before_anything_starts
+    self.assertEqual(code, 1, err)
+AssertionError: 0 != 1 : {'run': 'run-d2094e785652'}
+
+======================================================================
+FAIL: test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Driver.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (host='local', field='model', value='<synthetic-marker>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 208, in test_a_credential_shaped_start_field_is_refused_before_anything_starts
+    self.assertEqual(code, 1, err)
+AssertionError: 0 != 1 : {'run': 'run-7afc4804e043'}
+
+======================================================================
+FAIL: test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Driver.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (host='local', field='repository', value='<synthetic-token>/site')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 208, in test_a_credential_shaped_start_field_is_refused_before_anything_starts
+    self.assertEqual(code, 1, err)
+AssertionError: 0 != 1 : {'run': 'run-204bfc9f358a'}
+
+======================================================================
+FAIL: test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Driver.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (host='local', field='skill', value='<synthetic-marker>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 208, in test_a_credential_shaped_start_field_is_refused_before_anything_starts
+    self.assertEqual(code, 1, err)
+AssertionError: 0 != 1 : {'run': 'run-352716b661a3'}
+
+======================================================================
+FAIL: test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Driver.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (host='local', field='harness', value='<synthetic-marker>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 208, in test_a_credential_shaped_start_field_is_refused_before_anything_starts
+    self.assertEqual(code, 1, err)
+AssertionError: 0 != 1 : {'run': 'run-3efc48a759e8'}
+
+======================================================================
+FAIL: test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Driver.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (host='cloud', field='model', value='<synthetic-marker>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 208, in test_a_credential_shaped_start_field_is_refused_before_anything_starts
+    self.assertEqual(code, 1, err)
+AssertionError: 0 != 1 : {'run': 'run-242dc3b575c5'}
+
+======================================================================
+FAIL: test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Driver.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (host='cloud', field='model', value='<synthetic-marker>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 208, in test_a_credential_shaped_start_field_is_refused_before_anything_starts
+    self.assertEqual(code, 1, err)
+AssertionError: 0 != 1 : {'run': 'run-e905d401e60a'}
+
+======================================================================
+FAIL: test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Driver.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (host='cloud', field='model', value='<synthetic-marker>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 208, in test_a_credential_shaped_start_field_is_refused_before_anything_starts
+    self.assertEqual(code, 1, err)
+AssertionError: 0 != 1 : {'run': 'run-745bff892e48'}
+
+======================================================================
+FAIL: test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Driver.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (host='cloud', field='repository', value='<synthetic-token>/site')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 208, in test_a_credential_shaped_start_field_is_refused_before_anything_starts
+    self.assertEqual(code, 1, err)
+AssertionError: 0 != 1 : {'run': 'run-6a537299cb52'}
+
+======================================================================
+FAIL: test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Driver.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (host='cloud', field='skill', value='<synthetic-marker>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 208, in test_a_credential_shaped_start_field_is_refused_before_anything_starts
+    self.assertEqual(code, 1, err)
+AssertionError: 0 != 1 : {'run': 'run-ffa3ace6cf48'}
+
+======================================================================
+FAIL: test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Driver.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (host='cloud', field='harness', value='<synthetic-marker>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 208, in test_a_credential_shaped_start_field_is_refused_before_anything_starts
+    self.assertEqual(code, 1, err)
+AssertionError: 0 != 1 : {'run': 'run-ad10b33f1054'}
+
+======================================================================
+FAIL: test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Driver.test_a_credential_shaped_start_field_is_refused_before_anything_starts)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 219, in test_a_credential_shaped_start_field_is_refused_before_anything_starts
+    self.assertEqual(p.returncode, 1, p.stdout)
+AssertionError: 0 != 1 : {"run": "run-b37855f1f3da"}
+
+
+======================================================================
+FAIL: test_a_credential_shaped_thread_id_is_never_kept_or_passed (__main__.Driver.test_a_credential_shaped_thread_id_is_never_kept_or_passed) [local]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 252, in test_a_credential_shaped_thread_id_is_never_kept_or_passed
+    self.assertEqual(code, 1, err)
+AssertionError: 0 != 1 : {'run': 'run-8885d4064c36'}
+
+======================================================================
+FAIL: test_a_credential_shaped_thread_id_is_never_kept_or_passed (__main__.Driver.test_a_credential_shaped_thread_id_is_never_kept_or_passed) [cloud]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 252, in test_a_credential_shaped_thread_id_is_never_kept_or_passed
+    self.assertEqual(code, 1, err)
+AssertionError: 0 != 1 : {'run': 'run-f28b1f8bc0bb'}
+
+======================================================================
+FAIL: test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='local', refuse='spawn', say='does not repeat')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 242, in test_room_cli_diagnostics_never_reach_the_drivers_answer
+    self.assertNotIn(marker, json.dumps(err))
+AssertionError: '<synthetic-marker>' unexpectedly found in '{"error": "Cloudroom refused the start: Synthetic diagnostic <synthetic-marker>", "next": "check the harness and model with `room-cli provider list`, then start again"}'
+
+======================================================================
+FAIL: test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='local', refuse='spawn', say='not signed in')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 242, in test_room_cli_diagnostics_never_reach_the_drivers_answer
+    self.assertNotIn(marker, json.dumps(err))
+AssertionError: '<synthetic-marker>' unexpectedly found in '{"error": "Cloudroom refused the start: Synthetic: not signed in, token: <synthetic-marker>", "next": "check the harness and model with `room-cli provider list`, then start again"}'
+
+======================================================================
+FAIL: test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='local', refuse='spawn', say='gave no answer')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 244, in test_room_cli_diagnostics_never_reach_the_drivers_answer
+    self.assertIn(words, err['error'])
+AssertionError: 'gave no answer' not found in 'Cloudroom refused the start: no reason given'
+
+======================================================================
+FAIL: test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='local', refuse='tell', say='does not repeat')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 242, in test_room_cli_diagnostics_never_reach_the_drivers_answer
+    self.assertNotIn(marker, json.dumps(err))
+AssertionError: '<synthetic-marker>' unexpectedly found in '{"error": "Cloudroom did not take the wake: Synthetic diagnostic <synthetic-marker>", "next": "leave the run as it is; the next GitHub event or safety-net check wakes it again"}'
+
+======================================================================
+FAIL: test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='local', refuse='tell', say='not signed in')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 242, in test_room_cli_diagnostics_never_reach_the_drivers_answer
+    self.assertNotIn(marker, json.dumps(err))
+AssertionError: '<synthetic-marker>' unexpectedly found in '{"error": "Cloudroom did not take the wake: Synthetic: not signed in, token: <synthetic-marker>", "next": "leave the run as it is; the next GitHub event or safety-net check wakes it again"}'
+
+======================================================================
+FAIL: test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='local', refuse='tell', say='gave no answer')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 244, in test_room_cli_diagnostics_never_reach_the_drivers_answer
+    self.assertIn(words, err['error'])
+AssertionError: 'gave no answer' not found in 'Cloudroom did not take the wake: no reason given'
+
+======================================================================
+FAIL: test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='local', refuse='archive', say='does not repeat')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 242, in test_room_cli_diagnostics_never_reach_the_drivers_answer
+    self.assertNotIn(marker, json.dumps(err))
+AssertionError: '<synthetic-marker>' unexpectedly found in '{"error": "Cloudroom did not stop run run-00cce4c376df: Synthetic diagnostic <synthetic-marker>", "next": "stop it again: its thread still runs"}'
+
+======================================================================
+FAIL: test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='local', refuse='archive', say='not signed in')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 242, in test_room_cli_diagnostics_never_reach_the_drivers_answer
+    self.assertNotIn(marker, json.dumps(err))
+AssertionError: '<synthetic-marker>' unexpectedly found in '{"error": "Cloudroom did not stop run run-9576eb3003c7: Synthetic: not signed in, token: <synthetic-marker>", "next": "stop it again: its thread still runs"}'
+
+======================================================================
+FAIL: test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='local', refuse='archive', say='gave no answer')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 244, in test_room_cli_diagnostics_never_reach_the_drivers_answer
+    self.assertIn(words, err['error'])
+AssertionError: 'gave no answer' not found in 'Cloudroom did not stop run run-6a60fe890192: no reason given'
+
+======================================================================
+FAIL: test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='local', refuse='list', say='does not repeat')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 242, in test_room_cli_diagnostics_never_reach_the_drivers_answer
+    self.assertNotIn(marker, json.dumps(err))
+AssertionError: '<synthetic-marker>' unexpectedly found in '{"error": "Cloudroom did not list its threads, so whether this run still runs is unknown: Synthetic diagnostic <synthetic-marker>", "next": "stop it again later, or archive its thread by hand: the one whose title ends \\"(run-ac31d284ce61)\\""}'
+
+======================================================================
+FAIL: test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='local', refuse='list', say='not signed in')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 242, in test_room_cli_diagnostics_never_reach_the_drivers_answer
+    self.assertNotIn(marker, json.dumps(err))
+AssertionError: '<synthetic-marker>' unexpectedly found in '{"error": "Cloudroom did not list its threads, so whether this run still runs is unknown: Synthetic: not signed in, token: <synthetic-marker>", "next": "stop it again later, or archive its thread by hand: the one whose title ends \\"(run-57a31a5800be)\\""}'
+
+======================================================================
+FAIL: test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='local', refuse='list', say='gave no answer')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 244, in test_room_cli_diagnostics_never_reach_the_drivers_answer
+    self.assertIn(words, err['error'])
+AssertionError: 'gave no answer' not found in 'Cloudroom did not list its threads, so whether this run still runs is unknown: no reason given'
+
+======================================================================
+FAIL: test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='cloud', refuse='spawn', say='does not repeat')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 242, in test_room_cli_diagnostics_never_reach_the_drivers_answer
+    self.assertNotIn(marker, json.dumps(err))
+AssertionError: '<synthetic-marker>' unexpectedly found in '{"error": "Cloudroom refused the start: Synthetic diagnostic <synthetic-marker>", "next": "check the harness and model with `room-cli provider list`, then start again"}'
+
+======================================================================
+FAIL: test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='cloud', refuse='spawn', say='not signed in')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 242, in test_room_cli_diagnostics_never_reach_the_drivers_answer
+    self.assertNotIn(marker, json.dumps(err))
+AssertionError: '<synthetic-marker>' unexpectedly found in '{"error": "Cloudroom refused the start: Synthetic: not signed in, token: <synthetic-marker>", "next": "check the harness and model with `room-cli provider list`, then start again"}'
+
+======================================================================
+FAIL: test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='cloud', refuse='spawn', say='gave no answer')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 244, in test_room_cli_diagnostics_never_reach_the_drivers_answer
+    self.assertIn(words, err['error'])
+AssertionError: 'gave no answer' not found in 'Cloudroom refused the start: no reason given'
+
+======================================================================
+FAIL: test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='cloud', refuse='tell', say='does not repeat')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 242, in test_room_cli_diagnostics_never_reach_the_drivers_answer
+    self.assertNotIn(marker, json.dumps(err))
+AssertionError: '<synthetic-marker>' unexpectedly found in '{"error": "Cloudroom did not take the wake: Synthetic diagnostic <synthetic-marker>", "next": "leave the run as it is; the next GitHub event or safety-net check wakes it again"}'
+
+======================================================================
+FAIL: test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='cloud', refuse='tell', say='not signed in')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 242, in test_room_cli_diagnostics_never_reach_the_drivers_answer
+    self.assertNotIn(marker, json.dumps(err))
+AssertionError: '<synthetic-marker>' unexpectedly found in '{"error": "Cloudroom did not take the wake: Synthetic: not signed in, token: <synthetic-marker>", "next": "leave the run as it is; the next GitHub event or safety-net check wakes it again"}'
+
+======================================================================
+FAIL: test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='cloud', refuse='tell', say='gave no answer')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 244, in test_room_cli_diagnostics_never_reach_the_drivers_answer
+    self.assertIn(words, err['error'])
+AssertionError: 'gave no answer' not found in 'Cloudroom did not take the wake: no reason given'
+
+======================================================================
+FAIL: test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='cloud', refuse='archive', say='does not repeat')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 242, in test_room_cli_diagnostics_never_reach_the_drivers_answer
+    self.assertNotIn(marker, json.dumps(err))
+AssertionError: '<synthetic-marker>' unexpectedly found in '{"error": "Cloudroom did not stop run run-4c7e8ecc5375: Synthetic diagnostic <synthetic-marker>", "next": "stop it again: its thread still runs"}'
+
+======================================================================
+FAIL: test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='cloud', refuse='archive', say='not signed in')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 242, in test_room_cli_diagnostics_never_reach_the_drivers_answer
+    self.assertNotIn(marker, json.dumps(err))
+AssertionError: '<synthetic-marker>' unexpectedly found in '{"error": "Cloudroom did not stop run run-2d84e05b4c4d: Synthetic: not signed in, token: <synthetic-marker>", "next": "stop it again: its thread still runs"}'
+
+======================================================================
+FAIL: test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='cloud', refuse='archive', say='gave no answer')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 244, in test_room_cli_diagnostics_never_reach_the_drivers_answer
+    self.assertIn(words, err['error'])
+AssertionError: 'gave no answer' not found in 'Cloudroom did not stop run run-2d0f01b7411a: no reason given'
+
+======================================================================
+FAIL: test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='cloud', refuse='list', say='does not repeat')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 242, in test_room_cli_diagnostics_never_reach_the_drivers_answer
+    self.assertNotIn(marker, json.dumps(err))
+AssertionError: '<synthetic-marker>' unexpectedly found in '{"error": "Cloudroom did not list its threads, so whether this run still runs is unknown: Synthetic diagnostic <synthetic-marker>", "next": "stop it again later, or archive its thread by hand: the one whose title ends \\"(run-60a8d560c0d0)\\""}'
+
+======================================================================
+FAIL: test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='cloud', refuse='list', say='not signed in')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 242, in test_room_cli_diagnostics_never_reach_the_drivers_answer
+    self.assertNotIn(marker, json.dumps(err))
+AssertionError: '<synthetic-marker>' unexpectedly found in '{"error": "Cloudroom did not list its threads, so whether this run still runs is unknown: Synthetic: not signed in, token: <synthetic-marker>", "next": "stop it again later, or archive its thread by hand: the one whose title ends \\"(run-ffcfd8cfccba)\\""}'
+
+======================================================================
+FAIL: test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) (host='cloud', refuse='list', say='gave no answer')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 244, in test_room_cli_diagnostics_never_reach_the_drivers_answer
+    self.assertIn(words, err['error'])
+AssertionError: 'gave no answer' not found in 'Cloudroom did not list its threads, so whether this run still runs is unknown: no reason given'
+
+----------------------------------------------------------------------
+Ran 3 tests in 3.088s
+
+FAILED (failures=39)

@@ -1,0 +1,97 @@
+# #2058 red, before the fix: python3 -I adapters/local/test_driver.py -k credential_shaped
+# Synthetic markers are replaced with <synthetic-marker> here.
+test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Local.test_a_credential_shaped_start_field_is_refused_before_anything_starts) ... 
+  test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Local.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (field='model', value='<synthetic-marker>') ... FAIL
+  test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Local.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (field='model', value='<synthetic-marker>') ... FAIL
+  test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Local.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (field='model', value='<synthetic-marker>') ... FAIL
+  test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Local.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (field='repository', value='<synthetic-token>/site') ... FAIL
+  test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Local.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (field='skill', value='<synthetic-marker>') ... FAIL
+  test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Local.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (field='harness', value='<synthetic-marker>') ... FAIL
+test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Local.test_a_credential_shaped_start_field_is_refused_before_anything_starts) ... FAIL
+
+======================================================================
+FAIL: test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Local.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (field='model', value='<synthetic-marker>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<tmp>/adapters/local/test_driver.py", line 385, in test_a_credential_shaped_start_field_is_refused_before_anything_starts
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'run-cda19ab0a10e'}
+
+======================================================================
+FAIL: test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Local.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (field='model', value='<synthetic-marker>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<tmp>/adapters/local/test_driver.py", line 385, in test_a_credential_shaped_start_field_is_refused_before_anything_starts
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'run-1ce0ec569917'}
+
+======================================================================
+FAIL: test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Local.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (field='model', value='<synthetic-marker>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<tmp>/adapters/local/test_driver.py", line 385, in test_a_credential_shaped_start_field_is_refused_before_anything_starts
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'run-b09e7bb1de7d'}
+
+======================================================================
+FAIL: test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Local.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (field='repository', value='<synthetic-token>/site')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<tmp>/adapters/local/test_driver.py", line 386, in test_a_credential_shaped_start_field_is_refused_before_anything_starts
+    self.assertIn(field, out['error'])
+AssertionError: 'repository' not found in 'no permission mode is approved on this machine for <synthetic-token>/site with claude; nothing was started'
+
+======================================================================
+FAIL: test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Local.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (field='skill', value='<synthetic-marker>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<tmp>/adapters/local/test_driver.py", line 385, in test_a_credential_shaped_start_field_is_refused_before_anything_starts
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'run-671a93818e7e'}
+
+======================================================================
+FAIL: test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Local.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (field='harness', value='<synthetic-marker>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<tmp>/adapters/local/test_driver.py", line 387, in test_a_credential_shaped_start_field_is_refused_before_anything_starts
+    self.assertIn('credential', out['error'])
+AssertionError: 'credential' not found in 'harness <synthetic-marker> is not one this driver runs'
+
+======================================================================
+FAIL: test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Local.test_a_credential_shaped_start_field_is_refused_before_anything_starts)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<tmp>/adapters/local/test_driver.py", line 392, in test_a_credential_shaped_start_field_is_refused_before_anything_starts
+    self.assertEqual(self.logged(), [])
+AssertionError: Lists differ: [(1851, 1852, 'first', '<tmp>/s[297 chars]ts')] != []
+
+First list contains 4 additional elements.
+First extra element 0:
+(1851, 1852, 'first', '<tmp>/state/work/run-cda19ab0a10e', 'acceptEdits')
+
++ []
+- [(1851,
+-   1852,
+-   'first',
+-   '<tmp>/state/work/run-cda19ab0a10e',
+-   'acceptEdits'),
+-  (1857,
+-   1858,
+-   'first',
+-   '<tmp>/state/work/run-1ce0ec569917',
+-   'acceptEdits'),
+-  (1863,
+-   1864,
+-   'first',
+-   '<tmp>/state/work/run-b09e7bb1de7d',
+-   'acceptEdits'),
+-  (1871,
+-   1872,
+-   'first',
+-   '<tmp>/state/work/run-671a93818e7e',
+-   'acceptEdits')]
+
+----------------------------------------------------------------------
+Ran 1 test in 8.488s
+
+FAILED (failures=7)

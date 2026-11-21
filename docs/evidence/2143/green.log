@@ -1,0 +1,23 @@
+At 7e83fccf811a5031b18b8578d4d479460cdcca37:
+$ python3 -I -B tools/install/setup/test_check.py
+Ran 10 tests in 2.673s
+
+OK
+$ python3 -I -B tools/install/setup/test_github_login.py
+Ran 25 tests in 5.353s
+
+OK
+$ python3 -I -B tools/install/cloudroom/test_cloudroom.py
+Ran 45 tests in 2.157s
+
+OK
+$ python3 -I -B tools/install/tests/setup-onboard-contract/test_contract.py
+Ran 19 tests in 0.108s
+
+OK
+$ python3 -I -B tools/install/tests/init/test_init.py
+Ran 18 tests in 30.485s
+
+OK
+$ python3 -I tools/comment-check/check.py diff --base origin/main
+comment-check: ok

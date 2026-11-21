@@ -1,22 +1,10 @@
 #!/usr/bin/env python3
-"""A recording stand-in for `gh api --include` (and setup.py's plain `gh api PATH`)
-over a synthetic GitHub world.
-
-Test-only: copied into a scratch bin directory as `gh`. The world is JSON at
-$FAKE_GH_WORLD (else `../world.json` beside its bin directory); every call is appended to its `log` (method, path), so tests
-count provider effects. `faults` rows `{method, path, mode, times}` plant
-`lose` (the effect happens, the reply is lost), `drop` (no effect, no reply),
-`taken` (someone else makes it first with the row's `body` fields, then the
-call gets 422) or a status number (refused, no effect). Synthetic values only.
-"""
 import base64
 import json
 import os
 import sys
 import urllib.parse
 
-# The installed CLI forwards no test variable, so the fake also finds the
-# world beside its own bin directory.
 WORLD = os.environ.get('FAKE_GH_WORLD') or os.path.join(os.path.dirname(os.path.abspath(__file__)), '..',
                                                          'world.json')
 
@@ -25,7 +13,7 @@ INCLUDE = True
 
 
 def reply(status, body=None):
-    if not INCLUDE:  # setup.py's plain `gh api PATH` read: the body only
+    if not INCLUDE:
         sys.stdout.write(json.dumps(body))
         return 0 if status < 400 else 1
     reason = {200: 'OK', 201: 'Created', 404: 'Not Found'}.get(status, 'Status')
@@ -62,7 +50,7 @@ def main(argv):
         return reply(fault['mode'], {'message': 'synthetic refusal'})
     status, value = handle_call(world, method, target, body)
     save(world)
-    if fault is not None:  # lose: the effect stands, its reply never arrives
+    if fault is not None:
         sys.stderr.write('connection reset\n')
         return 1
     return reply(status, value)
@@ -111,7 +99,7 @@ def handle_call(world, method, target, body):
             repo.update(body)
             return 200, repo_view(repo)
     if rest[:1] == ['labels']:
-        details = repo.setdefault('label_details', {})  # name -> colour and description, as created
+        details = repo.setdefault('label_details', {})
         if method == 'GET' and len(rest) == 2:
             if rest[1] not in repo['labels']:
                 return 404, {'message': 'Not Found'}

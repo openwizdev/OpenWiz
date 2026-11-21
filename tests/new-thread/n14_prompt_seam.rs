@@ -1,14 +1,3 @@
-//! N14: the prompt seam. A file path in the text is sent as text; the empty
-//! list has its fixed digest on every record.
-//!
-//! **Updated for B2 (ClosedWiz#15)**, with this recorded reason: B2 relaxes
-//! the seam A1 left (sheet B-1 to B-10, Jake, 2026-10-30). So: without an
-//! attachment store (`new_thread`, as the server calls it until B3) any
-//! attachment is still refused, now by the one gate, naming it, with zero
-//! calls and no claim; an attachment reaches the argument builder only as
-//! a staged copy (AD1 proves the tail); and the prompt schema allows
-//! attachment ids, each once. AD1 to AD13 prove the rest.
-
 use openwiz_adapter_cloudroom::new_thread::spawn_argv;
 use openwiz_core::messaging::sha256_hex;
 use openwiz_core::new_thread::operation::{NewThreadError, SpawnRequest, preview_new_thread};
@@ -77,8 +66,6 @@ fn a_text_only_prompt_passes_no_attachment_flag() {
         request_id: "ow1-synthetic".to_owned(),
         prompt: ReadyPrompt::text("Synthetic"),
     };
-    // The request id must be a derived one (A1 phase 2): any other is
-    // refused, and nothing is built.
     assert!(spawn_argv(&spawn).is_err());
     let spawn = SpawnRequest {
         request_id: openwiz_core::new_thread::request_id(&op("op-n14-seam")),

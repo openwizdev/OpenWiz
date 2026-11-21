@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-"""The template driver never leaves an agent running or starts two (#1530, #1549, #1570).
-
-Run: python3 -I adapters/template/test_driver.py   (Linux: it reads /proc)
-The kit's five checks against the template are kernel/driver-kit/test_kit.py.
-"""
 import json
 import os
 import re
@@ -22,9 +17,6 @@ DRIVER = os.path.join(HERE, 'driver')
 NO_PROC = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'fixtures', 'no-proc')
 START = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'fake-harness',
          'model': 'Synthetic 1'}
-# A driver whose next save fails once its turn has begun, as a full disk or a removed folder would make it:
-# BREAK=folder replaces the state folder with a file; BREAK=write blocks only the run's next write;
-# BREAK=readonly makes the state folder read-only.
 BREAKS_AFTER_SPAWN = '''import importlib.machinery, importlib.util, os, shutil, sys
 sys.dont_write_bytecode = True
 spec = importlib.util.spec_from_loader('template', importlib.machinery.SourceFileLoader('template', %r))
@@ -44,7 +36,6 @@ def broken(req, run, woken):
 t.launch = broken
 t.main()
 '''
-# A driver that pauses right after its wake's liveness check, until the file named by RELEASE exists.
 PAUSES_AFTER_CHECK = '''import importlib.machinery, importlib.util, os, sys, time
 sys.dont_write_bytecode = True
 spec = importlib.util.spec_from_loader('template', importlib.machinery.SourceFileLoader('template', %r))
@@ -70,6 +61,19 @@ def alive(pid):
         return False
 
 
+def read(path):
+    with open(path) as f:
+        return f.read()
+
+
+HANDS_OFF_AS_IT_EXITS = """#!%s
+import os, subprocess, time
+time.sleep(0.7)
+worker = subprocess.Popen(['sleep', '120'], start_new_session=True, stdin=subprocess.DEVNULL)
+with open(%r, 'w') as f:
+    f.write('%%d %%d' %% (os.getpid(), worker.pid))
+"""
+
 class Template(unittest.TestCase):
     def setUp(self):
         self.folder = tempfile.mkdtemp()
@@ -92,7 +96,6 @@ class Template(unittest.TestCase):
         shutil.rmtree(self.folder, ignore_errors=True)
 
     def marked(self):
-        """Every live process this test started, through the driver or not."""
         found = []
         for pid in filter(str.isdigit, os.listdir('/proc')):
             try:
@@ -104,7 +107,6 @@ class Template(unittest.TestCase):
         return found
 
     def sleeps(self, pid):
-        """Whether pid is still one of the fake harness's `sleep 120` children."""
         try:
             with open('/proc/%d/cmdline' % pid, 'rb') as f:
                 return f.read() == b'sleep\x00120\x00' and alive(pid)
@@ -124,7 +126,6 @@ class Template(unittest.TestCase):
         return p.returncode, json.loads(p.stdout)
 
     def logged(self, count=None):
-        """The turns the fake harness logged: [(turn pid, child pid, first|woken)], waiting for `count`."""
         deadline = time.monotonic() + 10
         while True:
             try:
@@ -143,9 +144,6 @@ class Template(unittest.TestCase):
         return ready()
 
     def test_stop_ends_what_the_turn_left_behind_after_it_exits(self):
-        # catches: a stop that signals only the turn's own process group, after checking only the turn's
-        # leader, so a worker the harness started in its own session keeps running once the leader exits
-        # while stop still answers stopped (#1530).
         code, out = self.call('start', START)
         self.assertEqual(code, 0, out)
         [(turn, child, _)] = self.logged(1)
@@ -156,14 +154,12 @@ class Template(unittest.TestCase):
         self.assertEqual(self.call('stop', out), (0, dict(out, stopped=True)), 'stopping again answers again')
 
     def test_wake_while_a_turn_runs_starts_no_second_turn(self):
-        # catches: a wake during a long turn starting a second agent on the same ticket beside the first
-        # (#1549), and a wake after that turn ends starting nothing.
         open(self.hold, 'w').close()
         code, out = self.call('start', START)
         self.assertEqual(code, 0, out)
         [(turn, _, _)] = self.logged(1)
         self.assertEqual(self.call('wake', out), (0, dict(out, woke=True)))
-        time.sleep(0.5)  # time for a second turn to log itself, if one was started
+        time.sleep(0.5)
         self.assertEqual(len(self.logged()), 1, 'a wake during a running turn started a second turn')
         os.remove(self.hold)
         self.assertTrue(self.until(lambda: not alive(turn)), 'the fake turn did not end')
@@ -171,21 +167,17 @@ class Template(unittest.TestCase):
         self.assertEqual([t[2] for t in self.logged(2)], ['first', 'woken'], 'a wake after the turn started none')
 
     def test_start_with_nowhere_to_save_starts_nothing(self):
-        # catches: a start that launches its turn before it saves the run, then fails to save it, leaving
-        # an agent running with no run id to stop it, and an error that says to retry (#1570).
         blocker = os.path.join(self.folder, 'a-file')
         open(blocker, 'w').close()
         for state in (blocker, os.path.join(blocker, 'state')):
             with self.subTest(state=state):
                 code, out = self.call('start', START, OPENWIZ_TEMPLATE_STATE=state)
                 self.assertEqual(code, 1, out)
-                time.sleep(0.5)  # time for a turn to log itself, if one was started
+                time.sleep(0.5)
                 self.assertEqual((self.logged(), self.marked()), ([], []), 'it started a turn with nowhere to save')
                 self.assertNotIn('retry', json.dumps(out))
 
     def test_save_failure_after_spawn_reports_unknown(self):
-        # catches: a start whose save fails once its turn has begun answering the generic "retry", which
-        # starts a second agent while the first runs on with no run id (#1570).
         driver = self.wrapper('breaks-after-spawn', BREAKS_AFTER_SPAWN)
         for mode in ('folder', 'write'):
             with self.subTest(mode=mode):
@@ -195,18 +187,14 @@ class Template(unittest.TestCase):
                 self.assertIn('unknown', out['error'])
                 self.assertNotIn('retry', json.dumps(out))
                 self.assertTrue(self.until(lambda: not self.marked()), 'the turn it could not save still runs')
-        # catches: the run's first save, still on disk, letting a wake on the run id in the error start it again.
         run = re.search(r'run-[0-9a-f]{12}', out['error']).group()
         turns = len(self.logged())
         code, _ = self.call('wake', {'run': run}, OPENWIZ_TEMPLATE_STATE=state)
-        time.sleep(0.5)  # time for a turn to log itself, if one was started
+        time.sleep(0.5)
         self.assertEqual((code, len(self.logged()), self.marked()), (1, turns, []), 'a wake restarted the failed run')
 
 
     def test_start_record_is_not_wakeable_before_it_is_confirmed(self):
-        # catches: a start whose final save fails leaving its first record on disk as a wakeable run (the
-        # folder was read-only, so it could not be removed); once the folder is writable again, a wake on the
-        # run id from the error starts the failed run (R5).
         if os.geteuid() == 0:
             self.skipTest('root ignores a read-only folder')
         driver, state = self.wrapper('breaks-after-spawn', BREAKS_AFTER_SPAWN), os.path.join(self.folder, 'state')
@@ -217,12 +205,10 @@ class Template(unittest.TestCase):
         os.chmod(state, 0o700)
         turns = len(self.logged())
         code, _ = self.call('wake', {'run': re.search(r'run-[0-9a-f]{12}', out['error']).group()})
-        time.sleep(0.5)  # time for a turn to log itself, if one was started
+        time.sleep(0.5)
         self.assertEqual((code, len(self.logged()), self.marked()), (1, turns, []), 'a wake started the failed run')
 
     def test_stop_ends_a_worker_with_a_clean_environment(self):
-        # catches: a stop that finds the run's processes only by the OPENWIZ_RUN mark they inherit, so a worker
-        # the harness started with a clean environment keeps working after stop answers stopped (R2).
         code, out = self.call('start', START, FAKE_CLEAN='1')
         self.assertEqual(code, 0, out)
         [(turn, child, _)] = self.logged(1)
@@ -232,8 +218,6 @@ class Template(unittest.TestCase):
         self.assertFalse(alive(child), 'a worker without the mark still runs after stop')
 
     def test_simultaneous_wakes_start_one_turn(self):
-        # catches: two wakes that both pass the liveness check before either saves its turn, so both launch
-        # and two agents work on the ticket (R1).
         code, out = self.call('start', START)
         self.assertEqual(code, 0, out)
         [(turn, _, _)] = self.logged(1)
@@ -248,7 +232,7 @@ class Template(unittest.TestCase):
         second = subprocess.Popen([DRIVER, 'wake'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=self.env)
         second.stdin.write(json.dumps(out).encode())
         second.stdin.close()
-        try:  # without a lock the second wake finishes now; with one it waits for the first
+        try:
             second.wait(3)
         except subprocess.TimeoutExpired:
             pass
@@ -256,12 +240,10 @@ class Template(unittest.TestCase):
         answers = [json.loads(p.stdout.read()) for p in (first, second)]
         self.assertEqual([p.wait(30) for p in (first, second)], [0, 0])
         self.assertEqual(answers, [dict(out, woke=True)] * 2)
-        time.sleep(0.5)  # time for a second turn to log itself, if one was started
+        time.sleep(0.5)
         self.assertEqual([t[2] for t in self.logged()], ['first', 'woken'], 'two wakes started two turns')
 
     def test_stop_ends_the_run_when_it_cannot_save(self):
-        # catches: a stop whose save fails before it signals anything, leaving the agent working, and a wake
-        # that then launches against state it cannot update (R3).
         open(self.hold, 'w').close()
         code, out = self.call('start', START)
         self.assertEqual(code, 0, out)
@@ -272,12 +254,10 @@ class Template(unittest.TestCase):
         self.assertNotIn('retry', json.dumps(err))
         self.assertEqual((alive(turn), alive(child), self.marked()), (False, False, []), 'stop left the run working')
         code, err = self.call('wake', out)
-        time.sleep(0.5)  # time for a turn to log itself, if one was started
+        time.sleep(0.5)
         self.assertEqual((code, len(self.logged()), self.marked()), (1, 1, []), 'a wake launched it again')
 
     def test_wake_checks_its_save_before_and_after_spawn(self):
-        # catches: a wake that launches before it knows it can save the turn, and a save failure after the
-        # launch answering the generic "retry", whose retry starts a second turn beside the first (R4).
         code, out = self.call('start', START)
         self.assertEqual(code, 0, out)
         [(turn, _, _)] = self.logged(1)
@@ -285,13 +265,13 @@ class Template(unittest.TestCase):
         blocked = os.path.join(self.folder, 'state', out['run'] + '.json.new')
         os.mkdir(blocked)
         code, err = self.call('wake', out)
-        time.sleep(0.5)  # time for a turn to log itself, if one was started
+        time.sleep(0.5)
         self.assertEqual((code, len(self.logged())), (1, 1), 'a wake launched with nowhere to save its turn')
-        self.assertIn('nothing was started', err['error'])  # not ended after a launch: never launched at all
+        self.assertIn('nothing was started', err['error'])
         self.assertNotIn('retry', json.dumps(err))
         os.rmdir(blocked)
         open(self.hold, 'w').close()
-        before = set(self.marked())  # the first turn's worker still runs
+        before = set(self.marked())
         code, err = self.call('wake', out, driver=self.wrapper('breaks-after-spawn', BREAKS_AFTER_SPAWN),
                               BREAK='write')
         self.assertEqual(code, 1, err)
@@ -300,20 +280,84 @@ class Template(unittest.TestCase):
         self.assertTrue(self.until(lambda: set(self.marked()) <= before), 'the unsaved turn still runs')
 
 
+    def recorded_by_supervisors(self, run):
+        state, found = self.env['OPENWIZ_TEMPLATE_STATE'], set()
+        for name in os.listdir(state):
+            if name.startswith(run + '.') and name.endswith('.sup'):
+                try:
+                    with open(os.path.join(state, name)) as f:
+                        found.update(int(p) for p in json.load(f)['kept'])
+                except (OSError, ValueError):
+                    pass
+        return found
+
+    def harness_handing_off_as_it_exits(self, name):
+        folder, pids = os.path.join(self.folder, 'hands-off'), os.path.join(self.folder, 'handed-off')
+        os.makedirs(folder, exist_ok=True)
+        with open(os.path.join(folder, name), 'w') as f:
+            f.write(HANDS_OFF_AS_IT_EXITS % (sys.executable, pids))
+        os.chmod(os.path.join(folder, name), 0o700)
+        return folder, pids
+
+    def handed_off(self, pids):
+        written = lambda: os.path.exists(pids) and len(read(pids).split()) == 2
+        self.until(written)
+        self.assertTrue(written(), 'the turn never handed off')
+        with open(pids) as f:
+            turn, worker = map(int, f.read().split())
+        self.until(lambda: not alive(turn))
+        self.assertFalse(alive(turn), 'the turn did not exit')
+        time.sleep(1)
+        self.assertTrue(alive(worker))
+        return worker
+
+    def test_without_proc_as_on_macos_stop_ends_a_worker_handed_off_as_the_turn_exits(self):
+        folder, pids = self.harness_handing_off_as_it_exits('fake-harness')
+        macos = {'PATH': folder + os.pathsep + NO_PROC + os.pathsep + self.env['PATH'], 'NO_PROC_PYTHON': sys.executable}
+        code, out = self.call('start', START, **macos)
+        self.assertEqual(code, 0, out)
+        worker = self.handed_off(pids)
+        self.assertEqual(self.call('stop', out, **macos), (0, dict(out, stopped=True)))
+        self.assertFalse(alive(worker), 'a worker the turn handed off as it exited still runs after stop')
+
+    def asked_ps_for_environments(self, calls):
+        with open(calls) as f:
+            asked = f.read().splitlines()
+        self.assertTrue(any(' -A ' in ' %s ' % c for c in asked), 'the driver never listed processes through ps')
+        return [c for c in asked if '-E' in c.split() or 'e' in c.split()]
+
+    def logging_ps(self, calls):
+        folder = os.path.join(self.folder, 'logging-ps')
+        os.makedirs(folder, exist_ok=True)
+        with open(os.path.join(folder, 'ps'), 'w') as f:
+            f.write('#!/bin/sh\nprintf \'%%s\\n\' "$*" >> %s\nexec %s "$@"\n' % (calls, os.path.join(NO_PROC, 'ps')))
+        os.chmod(os.path.join(folder, 'ps'), 0o700)
+        return folder
+
     def test_without_proc_as_on_macos_stop_ends_each_grandchild(self):
         for worker in ({}, {'FAKE_CLEAN': '1', 'FAKE_SAME_GROUP': '1'}):
             with self.subTest(**worker):
                 self.tearDown()
                 self.setUp()
-                macos = dict(worker, PATH=NO_PROC + os.pathsep + self.env['PATH'], NO_PROC_PYTHON=sys.executable)
+                calls = os.path.join(self.folder, 'ps-calls')
+                macos = dict(worker, PATH=self.logging_ps(calls) + os.pathsep + NO_PROC + os.pathsep + self.env['PATH'],
+                             NO_PROC_PYTHON=sys.executable)
+                closes_its_output = not worker
+                if closes_its_output:
+                    open(self.hold, 'w').close()
                 code, out = self.call('start', START, **macos)
                 self.assertEqual(code, 0, out)
                 [(turn, child, _)] = self.logged(1)
+                if closes_its_output:
+                    self.assertTrue(self.until(lambda: child in self.recorded_by_supervisors(out['run'])),
+                                    'the supervisor never recorded the detached child')
+                    os.remove(self.hold)
                 self.assertTrue(self.until(lambda: not alive(turn)), 'the fake turn did not end')
                 self.assertTrue(alive(child))
                 self.assertEqual(self.call('stop', out, **macos), (0, dict(out, stopped=True)))
                 self.assertFalse(alive(child), 'a grandchild of the harness still runs after stop')
                 self.assertEqual(self.marked(), [], 'a process the run started still runs after stop')
+                self.assertEqual(self.asked_ps_for_environments(calls), [], 'the driver asked ps for process environments')
 
 
 if __name__ == '__main__':

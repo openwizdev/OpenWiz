@@ -1,5 +1,3 @@
-//! Boundary and interruption proofs suggested by the independent helpers;
-//! verified and written by the builder. All data is synthetic.
 use super::fake::{self, World};
 use serde_json::{Value, json};
 use std::fs;
@@ -50,9 +48,6 @@ fn b5_approval_v1_is_stale_and_aligned_table_is_valid() {
     }
 }
 
-// synthetic_assumptions: Markdown serialization variants of the approved
-// fixture; the issue and hashed revision use the raw title, while only the
-// table cell contains Markdown pipe escapes.
 fn r1_approval_world(name: &str, title: &str, table_title: &str) -> World {
     use openwiz_core::messaging::sha256_hex;
     let w = World::new(name);
@@ -486,8 +481,6 @@ fn b5_review_r3b_due_reads_one_inventory_and_one_repository_comment_snapshot() {
             "{pair:?}: {calls:?}"
         );
     }
-    // The two repo reads have distinct contracts: one inventory identity and
-    // one freshly verified privacy fact. Neither may be repeated or omitted.
     for fields in [
         "defaultBranchRef,nameWithOwner,url",
         "nameWithOwner,isPrivate",

@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-"""WZ-P9 (installer part): ClosedWiz's WizSkills installer and contract-copy check.
-
-Offline only. Every test builds a local fake WizSkills repository with tags and
-redirects the release URL to it through Git's environment configuration; the
-file transport is the only one allowed, so any other network read fails.
-"""
 import hashlib
 import json
 import os
@@ -22,7 +16,6 @@ URL = 'https://github.com/openwizdev/WizSkills.git'
 
 
 def contract_carried():
-    """The carried list, read from the contract's own block, never copied here."""
     text = (ROOT / 'contracts/wizskills.v1.md').read_text(encoding='utf-8')
     block = text.split('```wizskills-v1\n', 1)[1].split('```', 1)[0]
     return json.loads(block)['carried_contracts']
@@ -30,9 +23,6 @@ def contract_carried():
 
 CARRIED = contract_carried()
 
-# A synthetic release installer that follows the contract's interface closely
-# enough for the wrapper: it fetches only the explicit tag from the release URL,
-# refuses an existing destination and publishes a detached checkout.
 FAKE_INSTALLER = r'''#!/bin/sh
 set -eu
 version= dest=
@@ -63,7 +53,6 @@ def git(*args, cwd=None, env=None, check=True):
 
 
 def snapshot(path):
-    """Every path under `path` with its type, mode and bytes (or link target)."""
     path = Path(path)
     if not os.path.lexists(path):
         return None
@@ -99,8 +88,6 @@ class Fixture(unittest.TestCase):
             'GIT_ALLOW_PROTOCOL': 'file',
             'LC_ALL': 'C',
         }
-        # The consumer checkout: its contract (for the normative lists) and
-        # its own copies of the carried contracts.
         self.root = self.tmp / 'closedwiz'
         for rel in ['contracts/wizskills.v1.md', *CARRIED]:
             (self.root / rel).parent.mkdir(parents=True, exist_ok=True)
@@ -117,7 +104,6 @@ class Fixture(unittest.TestCase):
 
     def release(self, version, extra_files=None, installer_extra=':',
                 record=None, annotated=True, mode=0o755, before_fetch=':'):
-        """Commit a synthetic release to the fake remote and tag it v<version>."""
         work = self.tmp / f'src-{version}'
         if work.exists():
             shutil.rmtree(work)
@@ -155,7 +141,6 @@ class Fixture(unittest.TestCase):
         return {'version': version, 'commit': commit, 'tree': tree}
 
     def use_global(self, config, where):
-        """The caller's global Git config: `where` names its file; None puts it in ~/.gitconfig."""
         home_config = self.home / '.gitconfig'
         home_config.unlink(missing_ok=True)
         if where is None:
@@ -182,7 +167,6 @@ class Fixture(unittest.TestCase):
         return result
 
     def refused(self, code, reason, before=None):
-        """Run the installer; it must exit `code`, name `reason`, change nothing."""
         before = snapshot(self.dest) if before is None else before
         lock_before = snapshot(self.root)
         result = self.install()
@@ -208,7 +192,7 @@ class Install(Fixture):
         pin = self.release('0.1.0')
         self.installed(pin)
         before = snapshot(self.dest)
-        self.redirect(self.tmp / 'nowhere.git')  # any fetch now fails
+        self.redirect(self.tmp / 'nowhere.git')
         result = self.install()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(snapshot(self.dest), before)
@@ -242,7 +226,6 @@ class Install(Fixture):
                 self.refused(1, 'wizskills: refused:')
 
     def test_crlf_script_is_refused_whatever_the_attributes(self):
-        """Raw bytes, not Git's cleaned form: CRLF breaks a shebang."""
         global_attrs = self.tmp / 'attributes'
         global_attrs.write_text('*.sh text\n')
         global_config = self.tmp / 'gitconfig'
@@ -341,12 +324,9 @@ class Install(Fixture):
         self.assertIn('does not match the lock', result.stderr)
 
     def test_release_installer_reads_only_the_verified_copy(self):
-        """A caller's exact-URL rewrite must not reach the release installer."""
         other = self.release('0.3.0', {'skills/alpha/SKILL.md': 'other\n'})
         global_config = self.tmp / 'gitconfig'
         global_config.write_text(f'[url "{self.remote}"]\n\tinsteadOf = {URL}\n')
-        # The upstream tag moves after the wrapper verified it, before the
-        # release installer would fetch: only a second upstream read sees it.
         move = (f"git -C '{self.remote}' tag -f -a v0.1.0 -m moved {other['commit']} "
                 ">/dev/null 2>&1")
         for name, where in {'GIT_CONFIG_GLOBAL': str(global_config),
@@ -365,7 +345,7 @@ class Install(Fixture):
                                  pin['commit'])
                 self.assertNotEqual(git('--git-dir', str(self.remote), 'rev-parse',
                                         'v0.1.0^{commit}', env=self.env),
-                                    pin['commit'])  # the move really happened
+                                    pin['commit'])
 
     def test_installer_refusal_is_passed_on(self):
         pin = self.release('0.1.0', installer_extra='exit 1')
@@ -403,7 +383,7 @@ class Install(Fixture):
     def test_only_the_file_transport_is_used(self):
         pin = self.release('0.1.0')
         self.lock(pin)
-        del self.env['GIT_CONFIG_COUNT']  # no redirect: the real URL is refused offline
+        del self.env['GIT_CONFIG_COUNT']
         self.refused(3, 'wizskills: fetch failed')
 
 

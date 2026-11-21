@@ -1,14 +1,4 @@
 #!/usr/bin/env python3
-"""Skills eval command line (contract.md). Standard library only.
-
-  eval.py check                          cases, coverage, provenance, required text, controls (offline)
-  eval.py coverage                       the skill-to-case map (offline)
-  eval.py run --out DIR [--rev REV]      paid role runs; resumable; needs OPENROUTER_API_KEY
-  eval.py score DIR                      score a results set; exit 0 only if every case passed every repeat
-  eval.py compare A B                    compare two scored sets with equal settings and cases hashes
-  eval.py tokens --out FILE [--rev REV] [--offline]
-  eval.py token-diff BEFORE AFTER
-"""
 import argparse
 import fcntl
 import hashlib
@@ -18,12 +8,23 @@ import subprocess
 import sys
 from pathlib import Path
 
+DESCRIPTION = """Skills eval command line (contract.md). Standard library only.
+
+  eval.py check                          cases, coverage, provenance, required text, controls (offline)
+  eval.py coverage                       the skill-to-case map (offline)
+  eval.py run --out DIR [--rev REV]      paid role runs; resumable; needs OPENROUTER_API_KEY
+  eval.py score DIR                      score a results set; exit 0 only if every case passed every repeat
+  eval.py compare A B                    compare two scored sets with equal settings and cases hashes
+  eval.py tokens --out FILE [--rev REV] [--offline]
+  eval.py token-diff BEFORE AFTER
+"""
+
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-import cases as C  # noqa: E402
-import driver  # noqa: E402
-import score as S  # noqa: E402
-import tokens as T  # noqa: E402
+import cases as C
+import driver
+import score as S
+import tokens as T
 
 REPO = HERE.parent.parent
 CODE = ['contract.md', 'fakeworld.py', 'score.py', 'records.py', 'cases.py', 'driver.py', 'tokens.py', 'eval.py']
@@ -34,7 +35,6 @@ def git(*args):
 
 
 def snapshot(rev):
-    """Read-only (read, list) over one commit; harness side, never the agent's."""
     names = git('ls-tree', '-r', '--name-only', rev).decode().splitlines()
     cache = {}
     nameset = set(names)
@@ -157,7 +157,7 @@ def cmd_coverage(a):
 def _key(a, settings=None):
     if settings is None:
         settings = json.loads((HERE / 'settings.json').read_text())
-    if settings.get('provider') == 'hermes':  # no API key: the machine's Hermes Nous login, checked offline
+    if settings.get('provider') == 'hermes':
         problem = driver.hermes_login_problem(settings)
         if problem:
             sys.exit(f'Hermes runs are recorded as not run: {problem}')
@@ -174,7 +174,7 @@ def _key(a, settings=None):
 
 def cmd_run(a):
     settings = json.loads((HERE / 'settings.json').read_text())
-    _key(a, settings)  # fail before creating results when the key is absent
+    _key(a, settings)
     snap = snapshot(a.rev)
     errs, all_cases, _ = check(*snap)
     if errs:
@@ -193,7 +193,6 @@ def cmd_run(a):
 
 
 def write_json(path, value):
-    """Durable replacement: the reservation must reach disk before a paid attempt."""
     tmp = path.with_suffix(path.suffix + '.tmp')
     with tmp.open('w') as f:
         f.write(json.dumps(value, indent=1) + '\n')
@@ -243,7 +242,6 @@ def run_locked(a, settings, snap, all_cases, out):
 
 
 def manifest_problems(man):
-    """A results set's manifest must describe exactly the current suite, settings and code."""
     errs = []
     if not isinstance(man, dict):
         return ['the manifest is not an object']
@@ -263,7 +261,6 @@ def manifest_problems(man):
 
 
 def score_set(folder):
-    """Score a results set with the cases, code, settings and schema it ran with, or refuse."""
     folder = Path(folder)
     man = json.loads((folder / 'manifest.json').read_text())
     errs = manifest_problems(man)
@@ -368,7 +365,7 @@ def cmd_token_diff(a):
 
 
 def main(argv=None):
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p = argparse.ArgumentParser(description=DESCRIPTION, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest='cmd', required=True)
     for name in ('check', 'coverage', 'run', 'score', 'tokens'):
         q = sub.add_parser(name)

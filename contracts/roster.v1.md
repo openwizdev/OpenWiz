@@ -237,8 +237,13 @@ replaced.
 `fleet.md` (a Models table and, but for `no-roster/`, a Roster) and a
 `case.json`: the `repository`, the `person`, the `roster` as read (each
 entry's `name`, `kind`, `driver`, `roles`, `writes_as` and `label`; null with
-no roster), and its `picks`. Each pick gives the `ticket`, the `role`, the
-`choice` (C as models.v1 resolves it from that `fleet.md`, with its
+no roster), and its `picks`. Each pick gives the `ticket`, the `role`, its
+`start` (what started it, from the table in "Who may take which role":
+`{"kind": "spec"}`, `{"kind": "build", "labels": [...]}` with the ticket's
+labels, `{"kind": "fix", "builder_family": ...}` or
+`{"kind": "review", "builder_family": ...}` with the original builder's
+family, `claude`, `gpt` or null when unknown, or `{"kind": "helper"}`), the
+`choice` (C as models.v1 resolves it for that start from that `fleet.md`, with its
 `harness`, `provider`, `model`, `effort` and `model_name`, or null when it
 waits), and either the `pick` (the entry's `name`, `kind`, `driver`, its
 driver `start` harness and model, its status `note`'s `harness` and `model`,
@@ -263,8 +268,9 @@ person, and the request's `requester` and `repositories`), or `waits`:
 [`fixtures/roster/roster_contract.rs`](fixtures/roster/roster_contract.rs)
 is the contract's reference reader, registered in `tests/cli-agent/main.rs`:
 `cargo test -p openwiz-tests --test cli-agent roster_contract`. It is
-offline and checks every reading, pick and refusal, that every choice is a
-row of its case's Models table, and that every entry writes the same way.
+offline and checks every reading, pick and refusal, that every choice is
+what models.v1 resolves for its start from its case's Models table (a wait
+included), and that every entry writes the same way.
 
 ## Gaps
 

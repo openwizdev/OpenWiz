@@ -1,4 +1,3 @@
-//! LP1's contract half: synthetic definitions and run records at the schema seam.
 use serde_json::{Value, json};
 use std::fs;
 
@@ -51,11 +50,6 @@ fn results() -> Vec<Value> {
     ]
 }
 
-// The shared checker treats serde's representation as the integer type.
-// This contract has integer numeric slots only. Use its existing number
-// check for structure/minimum, then reject fractional values explicitly.
-// This preserves JSON Schema's mathematical integer meaning (5000.0 and
-// 5e3 included) without changing the shared checker or another ticket.
 fn validate(schema: &Value, value: &Value) -> Vec<String> {
     fn number_types(node: &mut Value) {
         match node {
@@ -116,7 +110,6 @@ fn loops_schema_definitions_and_records() {
     assert_eq!(crate::pattern::lint(&schema), Vec::<String>::new());
     let good = definition();
     verdict(&schema, &good, true, "interval definition");
-    // Merged (CW4): the brief's 8 KiB byte cap, at its boundary.
     let mut v = good.clone();
     v["action"]["brief"] = json!("é".repeat(8193));
     verdict(&schema, &v, false, "brief byte cap");

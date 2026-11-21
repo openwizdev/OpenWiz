@@ -1,9 +1,3 @@
-"""Durable weekly collection/checkpoint and injected fake-eval core (#2236).
-
-The core has no CLI, scheduler, real tool implementation or eval runner.
-#1363's weekly process, real GitHub reader, loop definition and CLI follow it,
-below the marked line; they start, merge and pay for nothing.
-"""
 import copy
 import fcntl
 import hashlib
@@ -37,12 +31,10 @@ def loads(text):
 
 
 def write_json(path, value):
-    """One atomic durable state file contains preparation, publication and receipts."""
     E1.write_json(path, value)
 
 
 def files_hash(files):
-    """E1 cases_hash's sorted filenames and exact UTF-8 bytes, including NULs."""
     h = hashlib.sha256()
     for name, text in sorted(files.items()):
         h.update(name.encode() + b'\0' + text.encode() + b'\0')
@@ -81,7 +73,6 @@ def provenance_valid(prov, known):
 
 
 def score_valid(score, cases_hash, ids, settings, mode='fake'):
-    """Injected E1 scores must cover each case and repeat, without a skipped row."""
     required = {'schema', 'settings_hash', 'cases_hash', 'code_hash', 'schema_hash',
                 'revision', 'suite_pass', 'runs', 'passed', 'cost_usd', 'rows'}
     if not isinstance(score, dict) or set(score) != required:
@@ -121,8 +112,6 @@ def score_valid(score, cases_hash, ids, settings, mode='fake'):
     if (type(score['passed']) is not int or score['passed'] != passed or
             type(score['suite_pass']) is not bool or score['suite_pass'] != (passed == len(rows))):
         raise ValueError('inconsistent fake score')
-    # Fixture evidence can never be presented as paid measurement (J29: measured
-    # evidence keeps its real finite, non-negative cost and its own label).
     if not cost_ok(score['cost_usd'], mode):
         raise ValueError('only zero-cost fake or finite non-negative measured costs are accepted')
 
@@ -175,7 +164,6 @@ def load_state(path):
 
 
 def validate_state(state, skills):
-    """A saved success is a receipt, never authority supplied by one status word."""
     known = case_objects(state['case_files'], skills)
     prov = state['provenance']
     provenance_valid(prov, known)
@@ -243,12 +231,6 @@ def validate_state(state, skills):
 
 
 def tick(directory, week, *, cases_dir=None, provenance=None, skills=None, read_page=None, synthesize=None, evidence=None):
-    """Defaults do nothing. Explicit fake-tool injections enable only local state.
-
-    Call once to prepare, then supply matching fake evidence. A crash resumes the
-    same prepared collection; no source callback or candidate is repeated. The
-    final atomic replacement commits files, provenance and success together.
-    """
     if read_page is None or synthesize is None or cases_dir is None or skills is None:
         return reply('not run', week, gaps=['fake tools and case snapshot not supplied'])
     directory = Path(directory)
@@ -297,8 +279,6 @@ def tick_locked(path, week, cases_dir, skills, read_page, synthesize, evidence, 
                                    known_cases=known, incidents=state['incidents'])
         except ValueError as err:
             return reply('gap', week, gaps=[str(err)])
-        # The first snapshot is the seed suite; later snapshot additions belong
-        # to that week's checkpoint just as collected candidates do.
         added = set(base_cases) - {name[:-5] for name in state['case_files']} if state['successful_week'] else set()
         for cid, case in collection['cases'].items():
             if cid not in known:
@@ -323,7 +303,6 @@ def tick_locked(path, week, cases_dir, skills, read_page, synthesize, evidence, 
         pending = {'week': week, 'base_hash': base_hash, 'files': files,
                    'collection': collection, 'provenance': prepared_provenance,
                    'case_ids': sorted(added), 'result': None}
-        # A crash after this write resumes without fetching or synthesizing twice.
         state['pending'] = pending
         write_json(path, state)
     cases_hash = files_hash(pending['files'])
@@ -353,33 +332,23 @@ def tick_locked(path, week, cases_dir, skills, read_page, synthesize, evidence, 
     return result
 
 
-# ---------------------------------------------------------------------------
-# #1363: the one weekly process around the core above. It binds owner stage
-# references, routes eval -> fix -> cut work once, honours the credit-aware
-# start rule and writes a sanitized report. It starts, merges and pays nothing:
-# every effect is an injected callback. The CLI's tick queues each action in the
-# durable ledger; `handoff` then posts it once as a marked GitHub comment, after
-# reading the issue for an earlier one.
-
 import os
 import subprocess
 import tempfile
 import datetime as dt
 
 sys.path.insert(2, str(HERE.parents[1] / 'collector'))
-sys.dont_write_bytecode = True  # leave no cache in the war-room checkout
+sys.dont_write_bytecode = True
 import experiment_contract as X
 
 STAGE_NAMES = ('research', 'cf4', 'replay', 'live')
 PREDECESSORS = {'replay': ('research', 'cf4'), 'live': ('research', 'cf4', 'replay')}
 TERMINAL = ('pass', 'fail', 'stopped', 'inconclusive')
-GATED = ('fix', 'cut')  # builder work; a stage-ready proposal only informs the orchestrator
+GATED = ('fix', 'cut')
 LEDGER = 'openwiz.skills-eval.weekly-ledger.v1'
-# deferred: waiting for the start gate. unresolved: outcome unknown, never resent.
-# queued: kept in the ledger for the loop agent to hand off. routed: handed off.
 STATUSES = ('deferred', 'unresolved', 'queued', 'routed')
 OUTSTANDING = ('deferred', 'unresolved', 'queued')
-RECEIPT = re.compile(r'[1-9][0-9]*')  # the GitHub comment id of a verified handoff
+RECEIPT = re.compile(r'[1-9][0-9]*')
 IDENTIFIERS = re.compile(r'thr_|prj_|https?://')
 
 
@@ -388,7 +357,6 @@ def shown(status):
 
 
 def summary_valid(summary):
-    """An owner's import summary: EB5 stage shapes, sources apart from facts."""
     X.fields(summary, 'tag experiment_hash stages sources', 'experiment summary')
     X.require(isinstance(summary['tag'], str) and re.fullmatch(r'[a-z0-9][a-z0-9-]*', summary['tag']), 'invalid tag')
     X.hex_value(summary['experiment_hash'], 64, 'experiment hash')
@@ -415,7 +383,6 @@ def summary_valid(summary):
 
 
 def bind_experiments(prior, summaries):
-    """Retain every known experiment; a running one is frozen (EB5 transition rules)."""
     bound = copy.deepcopy(prior)
     for summary in summaries:
         summary_valid(summary)
@@ -433,7 +400,6 @@ def bind_experiments(prior, summaries):
 
 
 def stage_plan(experiments):
-    """Proposals for stages whose predecessors all passed; everything else is blocked."""
     proposals, blocked = [], []
     for tag, e in sorted(experiments.items()):
         for target, needs in PREDECESSORS.items():
@@ -479,16 +445,6 @@ def load_ledger(path):
 def weekly(directory, week, *, cases_dir=None, provenance=None, skills=None, read_page=None, synthesize=None,
            evidence=None, baseline=None, cuts=None, experiments=None, start_gate=None, route=None,
            token_report=None):
-    """The one weekly process. Defaults do nothing; every effect is injected.
-
-    baseline: {settings, score}, the old skills on this week's prepared cases.
-    evidence: the core's fake envelope once the fixed skills pass.
-    cuts: {skill: score} for single-skill cut attempts after a passing week.
-    experiments: owner import summaries (tag, experiment_hash, stages, sources).
-    start_gate() -> 'allowed' for builder work now; anything else defers it.
-    route(action) hands one action to the orchestrator, once per key: it returns
-    None once handed off, or 'queued' when it stays in the ledger for `handoff`.
-    """
     if None in (cases_dir, skills, read_page, synthesize, start_gate, route):
         return report_of('not run', week, gaps=['fake tools, gate and router not supplied'])
     directory = Path(directory)
@@ -527,8 +483,6 @@ def weekly_locked(directory, week, cases_dir, provenance, skills, read_page, syn
     score = settings = None
     label = ''
     if done:
-        # An unchanged week carries the last compatible result forward; only a
-        # week completed with its own eval can route that eval's fixes.
         last = state['last_evidence']
         settings = last['settings']
         label = ' (measured run)' if last['mode'] == 'measured' else ''
@@ -550,8 +504,6 @@ def weekly_locked(directory, week, cases_dir, provenance, skills, read_page, syn
     if cuts and not done:
         gaps.append('cuts wait for a passing result at this cases hash')
     elif cuts:
-        # Every cut is checked before any is recorded: same cases, settings,
-        # eval code and record schema as the carried result (E1.compare).
         for skill, cut in sorted(cuts.items()):
             X.require(skill in skills, 'unknown skill')
             score_valid(cut, core['cases_hash'], ids, settings, last['mode'])
@@ -569,7 +521,6 @@ def weekly_locked(directory, week, cases_dir, provenance, skills, read_page, syn
     proposals, blocked = stage_plan(bound)
     planned += proposals
     ledger['experiments'] = bound
-    # Retained deferred work is reconsidered every tick, without fresh inputs.
     planned += [a for k, a in sorted(ledger['actions'].items()) if a['status'] == 'deferred']
     gate, touched = [], set()
     for action in planned:
@@ -586,7 +537,6 @@ def weekly_locked(directory, week, cases_dir, provenance, skills, read_page, syn
             if not gate[0]:
                 ledger['actions'][action['key']] = dict(action, status='deferred')
                 continue
-        # Durable before the effect: a lost reply is never sent twice.
         ledger['actions'][action['key']] = dict(action, status='unresolved')
         write_json(path, ledger)
         try:
@@ -618,16 +568,14 @@ def weekly_locked(directory, week, cases_dir, provenance, skills, read_page, syn
 
 
 def pending(directory):
-    """Queued and unresolved actions, for the loop agent's handoff. Reads only."""
     ledger = load_ledger(Path(directory) / 'weekly.json')
     return [dict(a) for k, a in sorted(ledger['actions'].items()) if a['status'] in ('queued', 'unresolved')]
 
 
-MARK = 'weekly-handoff: '  # then the action's key and the sha256 of its canonical payload
+MARK = 'weekly-handoff: '
 
 
 def payload(action):
-    """The canonical pending-work payload: the action without its ledger status."""
     fields = {k: v for k, v in action.items() if k not in ('status', 'receipt')}
     return json.dumps(fields, sort_keys=True, separators=(',', ':'), ensure_ascii=True)
 
@@ -642,27 +590,12 @@ def handoff_body(action):
 
 
 def is_handoff(body, action):
-    """The same key and the same payload hash, with the payload itself present.
-
-    Any line may carry them, so a prepended progress note does not hide a real
-    handoff. A bare or stale marker, or a copied marker without its payload,
-    is not this handoff: new pending work is posted, never dropped.
-    """
     lines = body.split('\n')
     return (f"{MARK}{action['key']} {payload_hash(action)}" in lines and
             f"payload: {payload(action)}" in lines)
 
 
 def handoff(directory, key, read_comments, post):
-    """Hand one queued or unresolved action to the orchestrator exactly once.
-
-    read_comments() -> every comment on the target issue as {id, body}, or raise.
-    post(body) -> the new comment's id. The source is read first: a comment with
-    this key's marker, the same payload hash and the payload itself is the
-    earlier handoff, recorded without a post. The action is marked unresolved
-    before posting, so a lost reply is settled by the next read, never by a
-    second post.
-    """
     directory = Path(directory)
     with (directory / 'weekly.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -693,8 +626,7 @@ def handoff(directory, key, read_comments, post):
 
 
 def gh_issue(repo, issue, run):
-    """REST reads/posts of one issue's comments through gh, for handoff()."""
-    gh_reader(repo, run)  # the same OWNER/NAME check
+    gh_reader(repo, run)
     X.require(isinstance(issue, str) and re.fullmatch(r'[1-9][0-9]*', issue), 'issue must be a number')
     path = f'repos/{repo}/issues/{issue}/comments'
 
@@ -713,7 +645,6 @@ def gh_issue(repo, issue, run):
 
 
 def token_summary(report):
-    """Required-text tokens per skill and total, before/after; unknown stays unobserved."""
     if report is None:
         return 'unobserved'
     X.fields(report, 'tokenizer skills', 'token report')
@@ -741,7 +672,6 @@ def report_of(status, week, *, cases_hash=None, cases_added=None, gaps=None, act
 
 
 def write_report(out, report):
-    """Render (and refuse) before writing; then replace each artifact atomically."""
     text = render(report)
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
@@ -756,7 +686,6 @@ def write_report(out, report):
 
 
 def render(report):
-    """The short weekly GitHub result. Refuses links, thread or project ids."""
     text = json.dumps(report)
     if IDENTIFIERS.search(text):
         raise ValueError('report contains a link or operational identifier')
@@ -783,11 +712,7 @@ def render(report):
     return '\n'.join(lines) + '\n'
 
 
-# The real read_page: GitHub REST through `gh api --paginate --slurp`, which
-# follows every Link page or exits nonzero. Any failure refuses the collection.
-
 def gh_reader(repo, run):
-    """run(argv) -> (exit code, stdout). One page per source holds every record."""
     if not isinstance(repo, str) or not re.fullmatch(r'[\w.-]+/[\w.-]+', repo) or '..' in repo:
         raise ValueError('repository must be OWNER/NAME')
 
@@ -813,7 +738,6 @@ def gh_reader(repo, run):
             raws = pages(f'repos/{repo}/pulls/comments?since={since}&sort=updated&direction=asc&per_page=100')
             items = [item(r, 'updated_at') for r in raws]
         elif source == 'reviews':
-            # A review submitted this week updates its PR, so older PRs hold none.
             pulls = [p for p in pages(f'repos/{repo}/pulls?state=all&sort=updated&direction=desc&per_page=100')
                      if p['updated_at'] >= since]
             items = []
@@ -832,8 +756,6 @@ def run_gh(argv):
     return done.returncode, done.stdout
 
 
-# The one weekly CloudRoom loop. The orchestrator registers it once, after this
-# ticket's verified merge, and reads its schedule back; no id is kept here.
 LOOP = {
     'name': 'Skills-eval weekly mistakes (CF4 E3)',
     'cron': '0 15 * * 1',
@@ -854,9 +776,6 @@ def loop_argv(prompt_file):
     return ['room-cli', 'loop', 'create', '--name', LOOP['name'], '--prompt-file', str(prompt_file),
             '--cron', LOOP['cron'], '--timezone', LOOP['timezone'], '--new-thread', '--secrets', 'none']
 
-
-# A synthetic dry-run week: the same eval -> fix -> cut path as the first pass,
-# with fake sources, outcomes, gate and router only.
 
 def dry_run(out):
     from types import SimpleNamespace
@@ -891,7 +810,7 @@ def dry_run(out):
     previous = os.environ.get('OPENWIZ_PRIVACY_LITERALS')
     with tempfile.TemporaryDirectory() as tmp:
         literals = Path(tmp, 'literals.txt')
-        literals.write_text('synthetic-dry-run-literal\n')  # E1's offline-control convention
+        literals.write_text('synthetic-dry-run-literal\n')
         os.environ['OPENWIZ_PRIVACY_LITERALS'] = str(literals)
         try:
             Path(tmp, 'cases').mkdir()

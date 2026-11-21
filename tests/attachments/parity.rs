@@ -1,14 +1,3 @@
-//! AP11, the schema half: **one table of JSON**, each row read by the core
-//! and checked by the schema, and both must agree (Sol rounds 1 and 2,
-//! findings 3 and 4). The core reads only the exact shapes the schema
-//! allows: a kind, a reason or a state is a string from a fixed list; a
-//! readiness or an attachment is an object with exactly its keys.
-//!
-//! Each row is read from text (`serde_json::from_str`) and from a parsed
-//! value (`serde_json::from_value`), so both of serde_json's readers are
-//! covered. Every disagreement is collected before the test fails, so a
-//! red run lists them all.
-
 use openwiz_core::attachment::{AttachmentRef, FailReason, Kind, Readiness};
 use serde_json::{Value, json};
 
@@ -40,10 +29,8 @@ fn without(field: &str) -> Value {
     v
 }
 
-/// (schema `$defs` entry, the JSON, whether it is valid).
 fn table() -> Vec<(&'static str, Value, bool)> {
     let mut rows = vec![
-        // kind: a string from the list, nothing else.
         ("kind", json!("image"), true),
         ("kind", json!("file"), true),
         ("kind", json!("File"), false),
@@ -53,7 +40,6 @@ fn table() -> Vec<(&'static str, Value, bool)> {
         ("kind", json!(0), false),
         ("kind", json!(null), false),
         ("kind", json!(true), false),
-        // fail_reason: the same.
         ("fail_reason", json!("low_disk"), true),
         ("fail_reason", json!("type_unclear"), true),
         ("fail_reason", json!("LowDisk"), false),
@@ -62,8 +48,6 @@ fn table() -> Vec<(&'static str, Value, bool)> {
         ("fail_reason", json!(["low_disk"]), false),
         ("fail_reason", json!(1), false),
         ("fail_reason", json!(null), false),
-        // readiness: an object; state a string from the list; reason only
-        // on failed, and there required.
         ("readiness", json!({"state": "ready"}), true),
         ("readiness", json!({"state": "selected"}), true),
         ("readiness", json!({"state": "expired"}), true),
@@ -130,7 +114,6 @@ fn table() -> Vec<(&'static str, Value, bool)> {
             false,
         ),
         ("readiness", json!({"reason": "low_disk"}), false),
-        // attachment: an object with exactly its six keys.
         ("attachment", attachment(), true),
         ("attachment", with("kind", json!("image")), true),
         ("attachment", with("size_bytes", json!(0)), true),
@@ -196,7 +179,6 @@ fn table() -> Vec<(&'static str, Value, bool)> {
     rows
 }
 
-/// Every way the core reads `json` as `$t`: from text and from a value.
 macro_rules! core_reads {
     ($t:ty, $json:expr) => {
         (
@@ -261,8 +243,6 @@ fn verdict(ok: bool) -> &'static str {
     if ok { "accepts" } else { "refuses" }
 }
 
-/// Text the schema can't see (a parsed value has one entry per key): a key
-/// given twice is refused by the core.
 fn a_key_given_twice_is_refused() {
     let mut accepted = Vec::new();
     for text in [
@@ -282,8 +262,6 @@ fn a_key_given_twice_is_refused() {
     assert!(accepted.is_empty(), "accepted: {accepted:#?}");
 }
 
-/// The core's label lists are the schema's enums, in the same order, so
-/// the strings each side accepts are one list.
 fn the_label_lists_are_the_schemas_enums() {
     let schema = crate::support::attachment_schema();
     let enum_of = |pointer: &str| -> Vec<String> {
@@ -305,7 +283,6 @@ fn the_label_lists_are_the_schemas_enums() {
         .map(|(l, _)| (*l).to_owned())
         .collect();
     assert_eq!(reasons, enum_of("/$defs/fail_reason/enum"));
-    // And each label writes back as itself.
     for (label, kind) in Kind::labels() {
         assert_eq!(serde_json::to_value(kind).unwrap(), json!(label));
     }

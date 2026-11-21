@@ -1,5 +1,4 @@
 #!/bin/sh
-# The pinned CPython, first on PATH for the rest of a CI job (ci.yml).
 set -eu
 case "$(uname -m)" in
   x86_64) sum=df15fe60d3ff55bf9dcf25824b5572756bb8816ff93865a273d3301d7066a8b7 ;;

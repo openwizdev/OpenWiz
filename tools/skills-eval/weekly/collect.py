@@ -1,7 +1,3 @@
-"""Collection core for #2236. All source reads and synthesis are injected.
-
-No subprocess, API client, model client or action executor belongs here.
-"""
 import copy
 import datetime as dt
 import hashlib
@@ -32,11 +28,9 @@ def week_start(week):
 
 
 def validate_case(case, skills):
-    """Reuse E1's structural/privacy guards and historical wrong-action controls."""
     try:
         if not isinstance(case, dict) or E1.problems(case, skills):
             raise ValueError('invalid synthetic candidate')
-        # The same pinned schema E1's offline scorer uses; never a live read.
         schema = json.loads((Path(__file__).resolve().parents[3] /
                              'contracts/decisions.v1.schema.json').read_text())
         for kind in ('pass', 'fail'):
@@ -49,13 +43,6 @@ def validate_case(case, skills):
 
 
 def collect(week, read_page, synthesize, skills, *, known_cases=None, incidents=None):
-    """Read every normalized page of all three source families, or raise.
-
-    read_page(source, week, page) -> {items: [id, updated_at, body, url objects],
-                                    next_page: next integer | None}.
-    synthesize(item) -> None | {incident: stable synthetic key, case: E1 case}.
-    Raw bodies are transient. No partial collection is returned on failure.
-    """
     start = week_start(week)
     end = start + dt.timedelta(days=7)
     known_cases = known_cases or {}
@@ -122,7 +109,6 @@ def collect(week, read_page, synthesize, skills, *, known_cases=None, incidents=
                         links.append(item['url'])
                 page = nxt
             except Exception:
-                # A remote error can contain credentials, transcripts or identifiers.
                 raise ValueError(f'{source}: incomplete read or invalid synthetic candidate') from None
         sources[source] = {'week': week, 'records': records}
     return {'cases': candidates, 'incidents': incidents, 'provenance': provenance, 'sources': sources}

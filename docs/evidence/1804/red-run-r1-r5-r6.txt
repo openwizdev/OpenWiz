@@ -1,0 +1,16 @@
+#1804 R1, R5 and R6 (final check 7044590853, decision 7064555959) red, at 1f0455716d4e028455eb1dcbc6a3a83bb843e318's code (b891212 with main merged and the added comments cut): cargo test -p openwiz-tests --test cli-agent models_forms.
+models_forms::a_replaced_file_keeps_its_group_and_access_acl_and_gains_none --- FAILED
+models_forms::list_save_writes_into_the_checkout_it_started_in_even_when_moved --- FAILED
+models_forms::list_save_never_takes_its_recommendation_from_a_linked_fleet_md --- FAILED
+thread 'models_forms::a_replaced_file_keeps_its_group_and_access_acl_and_gains_none' panicked at tests/cli-agent/models_forms.rs:854:5:
+assertion `left == right` failed: the snapshot gained an ACL
+  left: "0200000001000600ffffffff02000400feff000004000000ffffffff10000400ffffffff20000000ffffffff"
+ right: "none"
+thread 'models_forms::list_save_writes_into_the_checkout_it_started_in_even_when_moved' panicked at tests/cli-agent/models_forms.rs:747:5:
+assertion `left == right` failed: (moved checkout, path's new checkout)
+  left: (false, true)
+ right: (true, false)
+thread 'models_forms::list_save_never_takes_its_recommendation_from_a_linked_fleet_md' panicked at tests/cli-agent/models_forms.rs:776:5:
+  left: (the saved snapshot) "recommended.orchestrator": {"choice": codex gpt-6.2-sol high, "source": "your current Orchestrator row"}, read through the linked fleet.md
+ right: (the snapshot saved with no fleet.md) "recommended.orchestrator": {"choice": null, "offered": false, "source": "no fleet.md read"}
+test result: FAILED. 14 passed; 3 failed; 0 ignored; 0 measured; 97 filtered out; finished in <t>

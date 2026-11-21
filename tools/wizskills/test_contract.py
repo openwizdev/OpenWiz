@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""WZ-P1: offline examples of the WizSkills contract, not its future scanner/installer."""
 import copy
 import datetime
 import fnmatch
@@ -37,7 +36,6 @@ def identity(value, fields, rules):
 
 
 def package_errors(package, rules):
-    """Validate explicit package examples; never execute their contents."""
     errors = set()
     files = package['files']
     for path in rules['required_files'] + rules['carried_contracts']:
@@ -89,7 +87,6 @@ def package_errors(package, rules):
 
 
 def reference_result(case, files, rules):
-    """Worked path-resolution examples, not discovery of references in source."""
     kind, target = case['kind'], case['target']
     if kind == 'data':
         return None
@@ -115,7 +112,6 @@ def reference_result(case, files, rules):
 
 class ContractTests(unittest.TestCase):
     def rules(self):
-        # The missing contract is itself WZ-P1's red assertion, not setup failure.
         self.assertTrue(CONTRACT.is_file(), 'WZ-P1 requires the WizSkills contract')
         blocks = re.findall(r'^```wizskills-v1\n(.*?)^```',
                             CONTRACT.read_text(), re.M | re.S)

@@ -1,14 +1,3 @@
-"""The cross-field checks of contracts/setup-onboard.v1.md (#632).
-
-`check(document)` and `check_text(text)` return a Report of three sorted lists of codes:
-problems (the document is refused), failures (the attempt failed) and unproven (not
-proven yet). The contract's code table names every code. Stdlib only. This is the
-contract-level seam that T2 #633, T3 #606, T5 #635 and T7 #637 load by path; it
-implements no runtime and observes nothing.
-
-`schema_errors` evaluates the JSON Schema keywords both setup schemas use (the test
-holds them to that set), so no keyword is silently ignored.
-"""
 import json
 from pathlib import Path
 import re
@@ -18,7 +7,7 @@ sys.dont_write_bytecode = True
 ROOT = Path(__file__).resolve().parents[4]
 SCHEMA_TEXT = (ROOT / 'contracts/setup-onboard.v1.schema.json').read_text()
 
-LIMIT_MS = 1800000  # Strictly less than: 1,799,999 ms can qualify.
+LIMIT_MS = 1800000
 ACTION_LIMIT = 5
 LOGIN_BASES = ('github_account_read_back', 'repository_access_read_back')
 APP_BASIS = 'installation_token_read_back'
@@ -33,7 +22,6 @@ CREDENTIALS = [re.compile(p) for p in (
     r'\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}',
     r'\bgithub_pat_[A-Za-z0-9_]{20,}',
     r'\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.',
-    # A nonempty dotenv assignment, compact or with horizontal spacing (R3).
     r'OPENWIZ_GITHUB_APP_KEY[ \t]*=[ \t]*\S',
 )]
 
@@ -101,19 +89,16 @@ def _is(value, kind):
 
 
 def _equal(a, b):
-    """JSON equality: true is not 1."""
     if isinstance(a, bool) or isinstance(b, bool):
         return type(a) is type(b) and a == b
     return a == b
 
 
 def _anchored(pattern):
-    """JSON Schema's `$` is the end of the string; Python's also matches before a final newline."""
     return pattern[:-1] + r'\Z' if pattern.endswith('$') and not pattern.endswith('\\$') else pattern
 
 
 def schema_errors(value, schema, root, path='$'):
-    """The keywords contracts/setup.v1 and setup-onboard.v1 use, and only those."""
     if schema is True:
         return []
     if '$ref' in schema:
@@ -176,7 +161,6 @@ def credential_shapes(text):
 
 
 def _strings(value):
-    """Every decoded string and key: the scan sees values as written, never JSON escapes."""
     if isinstance(value, str):
         yield value
     elif isinstance(value, dict):
@@ -230,7 +214,6 @@ def _owner(repository):
 
 
 def _established(evidence, bases, revision, name, weak, p):
-    """Every basis must be present, at the current check generation."""
     if not all(any(e['basis'] == b for e in evidence) for b in bases):
         p.append(weak)
     elif not all(any(e['basis'] == b and e['revision'] == revision for e in evidence) for b in bases):
@@ -239,8 +222,6 @@ def _established(evidence, bases, revision, name, weak, p):
 
 def _identity(doc, p, f, u):
     revision, login, app = doc['check_revision'], doc['personal_login'], doc['app']
-    # Readiness follows the reported states; weak or stale evidence for a reported
-    # `verified` is its own refusal, not a second readiness code.
     if login['state'] == 'verified':
         _established(login['evidence'], LOGIN_BASES, revision, 'personal_login', 'login_weak_evidence', p)
     if app is not None:

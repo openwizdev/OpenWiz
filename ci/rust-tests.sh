@@ -1,37 +1,4 @@
 #!/bin/sh
-# The rust job's tests (#429, spec #330, K12): exactly the tests
-# `cargo test --workspace` runs, but every test target at once instead of one
-# after another. On a pull request it skips the few main-only proofs
-# named below (#1253). They mostly wait (servers, fakes, child processes, the
-# 15-second timeout proofs), so the step lasts about as long as its longest
-# target, not the sum: 133.9 to 44.5 s, peak about 320 MiB extra
-# (private/evidence/infra-ci-scale/rust-tests/REPORT.md).
-#
-# It builds every test first (`--no-run`), then starts at once: the unit and
-# doc tests of every other crate, in one cargo call, and one cargo call for
-# each openwiz-tests target, read from `cargo metadata`, so a new target is
-# never missed. 8 test threads each. Each call
-# writes its own log; once all have finished, each log is printed whole, one
-# after another, then one line per call and the peak memory. Any failure, or
-# a call that leaves no exit status, fails the step.
-#
-# Only where it has room: at least 4 CPUs by `nproc`, and a container whose
-# limits (cgroup v2, at its own level and every level above) allow at least 4
-# CPUs (`cpu.max`) and 6 GiB (`memory.max`), or set none. On GitHub's 2-CPU
-# runners the targets at once took 706 s against about 250 s one after
-# another; on constrained runners where `nproc` exceeds the CPU limit,
-# the tests' own release builds ran out of memory (#429, ruling A,
-# 2026-11-05). Otherwise, or if a limit can't be read or understood, it runs
-# `cargo test --workspace --locked` once instead, with 8 test threads (#1260),
-# and exits with its status.
-#
-# Run from the repository's root, as ci.yml's rust job does:
-#   sh ci/rust-tests.sh [--targets-only]
-# With --targets-only, only the openwiz-tests targets run (`cargo test -p
-# openwiz-tests`): ci.yml's lint job runs the other crates' tests, so they
-# never compete with the targets for the CPUs (#1777: a 3-second read in the
-# cloudroom adapter's tests timed out with every test at once on 4 CPUs).
-# By hand, `cargo test --workspace` runs the same tests (AGENTS.md).
 set -eu
 scope=--workspace
 case "$#:${1:-}" in
@@ -39,14 +6,11 @@ case "$#:${1:-}" in
   1:--targets-only) scope="-p openwiz-tests" ;;
   *) echo "usage: sh ci/rust-tests.sh [--targets-only]" >&2; exit 2 ;;
 esac
-# Tests only: a fake /sys/fs/cgroup and /proc/self/cgroup under this folder.
 root="${RUST_TESTS_ROOT:-}"
 cg="$root/sys/fs/cgroup"
-# num VALUE: a plain whole number the shell's arithmetic can hold.
 num() {
   case "$1" in '' | *[!0-9]* | ???????????????????*) return 1 ;; esac
 }
-# Why the container's limits rule out the targets at once, or nothing.
 limits() {
   [ -f "$cg/cgroup.controllers" ] || { echo "no cgroup v2 at /sys/fs/cgroup"; return; }
   rel="$(sed -n 's/^0:://p' "$root/proc/self/cgroup" 2> /dev/null)" || rel=
@@ -81,7 +45,6 @@ limits() {
     dir="${dir%/*}"
   done
 }
-# Why the targets can't all run at once here, or nothing.
 room() {
   cpus="$(nproc 2> /dev/null || true)"
   if ! num "$cpus"; then
@@ -99,13 +62,10 @@ cleanup() {
   rm -rf "$out"
 }
 trap cleanup EXIT
-# A signal stops every test this started too: the whole process group.
 trap 'cleanup; trap - EXIT HUP INT TERM; kill 0' HUP INT TERM
 
-# Private framing for the escape finder. Never export this nonce or pass it
-# to a command under test. Payloads can print our public labels, but cannot
-# authenticate a control line. A leading newline keeps unterminated output
-# from swallowing the next boundary. Missing/foreign frames fail closed.
+# SECURITY: never export this nonce or pass it to a command under test; a
+# payload can print our public labels but cannot authenticate a control line.
 unset rust_tests_nonce
 rust_tests_nonce="$(od -An -N32 -tx1 /dev/urandom | tr -d ' \n')"
 case "$rust_tests_nonce" in '' | *[!0-9a-f]*) exit 1 ;; esac
@@ -113,9 +73,6 @@ case "$rust_tests_nonce" in '' | *[!0-9a-f]*) exit 1 ;; esac
 frame() { printf '\nrust-tests-frame:%s %s\n' "$rust_tests_nonce" "$*"; }
 frame begin
 
-# Peak memory, for the record (#429): the cgroup's anonymous memory, sampled
-# every 0.2 s from here to the end (so the builds too, either way), above
-# where it started. Not every runner has it to read; then it says so.
 stat="$cg/memory.stat"
 anon() { awk '$1 == "anon" { print $2; exit }' "$stat" 2> /dev/null; }
 start="$(anon || true)"
@@ -135,12 +92,6 @@ case "$start" in
     ;;
 esac
 
-# The fixture release `openwiz` several test binaries run (P10's, and the
-# subprocess proofs'), built once here before any test starts, on either
-# path (#1260): each test's own `cargo build --release` of it is then a
-# no-op, so no test binary's time includes the build. It comes before the
-# other suite starts, so a failed build starts no test at all. Its memory is
-# in the peak below. Its lines are plain output, not control frames.
 echo "rust-tests: the fixture release openwiz, built once before the tests"
 prebuild_began="$(date +%s)"
 rc=0
@@ -151,7 +102,6 @@ if [ "$rc" != 0 ]; then
 fi
 echo "rust-tests: the fixture release build took $(($(date +%s) - prebuild_began)) s"
 
-# finish RC: the peak memory line, then exit with RC.
 finish() {
   rc="$1"
   peak_line
@@ -159,7 +109,6 @@ finish() {
   exit "$rc"
 }
 
-# The peak memory line, both ways (#429: AC2 records it on every run).
 peak_line() {
   if [ -n "$start" ] && peak="$(cat "$out/peak")"; then
     frame "rust-tests: peak memory $(((peak - start) / 1048576)) MiB above the start (the cgroup's anon memory, sampled every 0.2 s)"
@@ -167,15 +116,6 @@ peak_line() {
     frame "rust-tests: peak memory not measured ($stat has no anon line to read)"
   fi
 }
-# Main-only proofs (#1253): each runs the whole fixed update gate (fmt,
-# clippy, build, test and a release build) on a fresh clone of a synthetic
-# product, 40 to 112 s each on constrained runners, about 300 s of t6_update's 372
-# (private/evidence/ci-hotspot-t6-update/). Only a pull request to main skips
-# them, by exact name; every push to main, a merge group, a
-# pull request to release-*, any other event and a run by hand run every
-# test. Every cargo test call gets the same skips, both ways (#1410); no
-# running test checks this list or its skips (#1152). A renamed one just runs
-# on pull requests again.
 main_only="a_candidate_that_exits_without_readiness_rolls_back_to_the_running_old_build
 a_failing_merge_is_kept_and_recorded_once_without_retrying_the_gate
 a_passing_main_merge_is_staged_but_not_reported_as_running
@@ -194,11 +134,6 @@ if [ -n "$why" ]; then
   frame "== rust-tests: cargo test $scope"
   rc=0
   began="$(date +%s)"
-  # The test binaries still run one after another, but each with 8 test
-  # threads instead of one per CPU (#1260, Q3): their cases mostly wait on
-  # child processes, polls and fsyncs, so on constrained runners 8 at once
-  # finish about twice as fast; the at-once path below already gives each
-  # target 8.
   # shellcheck disable=SC2086 # the skip arguments, split
   cargo test $scope --locked -- --test-threads=8 $skip || rc=$?
   frame "rust-tests: cargo test $scope exited $rc after $(($(date +%s) - began)) s"
@@ -206,13 +141,10 @@ if [ -n "$why" ]; then
 fi
 frame "rust-tests: every target at once: $cpus CPUs by nproc, and the container allows 4 CPUs and 6 GiB or more"
 threads=8
-# From here on a failure goes through finish (R1 on #1291).
 prep() { echo "rust-tests: $*" >&2; finish 1; }
 # shellcheck disable=SC2086 # the scope, split
 cargo test $scope --no-run --locked || prep "building the tests failed"
 cargo metadata --no-deps --format-version 1 --locked > "$out/metadata.json" || prep "cargo metadata failed"
-# openwiz-tests holds only integration tests; any other target of it that
-# tests would run is one this script doesn't know (fail closed).
 odd="$(jq -r '.packages[] | select(.name == "openwiz-tests") | .targets[] | select(.test and .kind != ["test"]) | .name' "$out/metadata.json")" || prep "cargo metadata's answer can't be read"
 [ -z "$odd" ] || prep "openwiz-tests has a target this script doesn't run: $odd"
 targets="$(jq -r '.packages[] | select(.name == "openwiz-tests") | .targets[] | select(.test and .kind == ["test"]) | .name' "$out/metadata.json")" || prep "cargo metadata's answer can't be read"
@@ -223,8 +155,6 @@ for t in $targets; do
   esac
 done
 
-# run NAME COMMAND...: in the background, its output to NAME.log and its exit
-# status to NAME.rc.
 pids=
 run() {
   name="$1"

@@ -20,6 +20,9 @@
     {
       "ticket": 3001,
       "role": "orchestrator",
+      "start": {
+        "kind": "spec"
+      },
       "choice": {
         "harness": "Claude Code",
         "provider": "claude-code",
@@ -54,6 +57,10 @@
     {
       "ticket": 3002,
       "role": "builder",
+      "start": {
+        "kind": "build",
+        "labels": []
+      },
       "choice": {
         "harness": "Claude Code",
         "provider": "claude-code",
@@ -88,6 +95,10 @@
     {
       "ticket": 3003,
       "role": "reviewer",
+      "start": {
+        "kind": "review",
+        "builder_family": "gpt"
+      },
       "choice": {
         "harness": "Claude Code",
         "provider": "claude-code",
@@ -122,6 +133,10 @@
     {
       "ticket": 3004,
       "role": "reviewer",
+      "start": {
+        "kind": "review",
+        "builder_family": "claude"
+      },
       "choice": null,
       "pick": null,
       "waits": "models",
@@ -130,6 +145,9 @@
     {
       "ticket": 3005,
       "role": "helper",
+      "start": {
+        "kind": "helper"
+      },
       "choice": {
         "harness": "Claude Code",
         "provider": "claude-code",

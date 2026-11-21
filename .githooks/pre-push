@@ -1,7 +1,4 @@
 #!/bin/sh
-# Install once per clone: git config core.hooksPath .githooks
-# Check the Git objects being pushed for privacy violations. CI runs the
-# format, lint and test checks.
 set -u
 privacy_url="$2"
 privacy_tool="$(cd "$(dirname "$0")/.." && pwd -P)/tools/privacy-check/hook.py"
@@ -9,13 +6,11 @@ say() { printf 'pre-push: %s\n' "$*" >&2; }
 top="$(git rev-parse --show-toplevel)" || exit 1
 
 while read -r local_ref local_sha remote_ref remote_sha; do
-  case "$local_sha" in *[!0]*) ;; *) continue ;; esac # a deletion
+  case "$local_sha" in *[!0]*) ;; *) continue ;; esac
   commit="$(git rev-parse --verify --quiet "$local_sha^{commit}")" || {
     say "$local_ref is not a commit: push stopped"
     exit 1
   }
-  # Privacy includes ancestry and messages even when no file changed.
-  # It reads Git objects for the pushed commit, never uncommitted files.
   if ! python3 -I "$privacy_tool" --url "$privacy_url" --repo "$top" --head "$commit" --base "$remote_sha"; then
     say "privacy check refused $remote_ref: push stopped"
     exit 1

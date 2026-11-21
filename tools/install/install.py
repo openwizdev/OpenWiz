@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-"""Verified, offline package installation. Python 3.9+; no Cargo, npm or network.
-
-Transport supplies a manifest, its separately checked checksum, and an archive.
-Checksums establish integrity, not a signed publisher identity. No program from
-an archive is run while validating or installing it.
-"""
 import argparse
 import fcntl
 import hashlib
@@ -18,23 +12,26 @@ import sys
 import tarfile
 import tempfile
 
+DESCRIPTION = """Verified, offline package installation. Python 3.9+; no Cargo, npm or network.
+
+Transport supplies a manifest, its separately checked checksum, and an archive.
+Checksums establish integrity, not a signed publisher identity. No program from
+an archive is run while validating or installing it.
+"""
+
 TARGETS = ('aarch64-apple-darwin', 'x86_64-apple-darwin', 'x86_64-unknown-linux-gnu')
 PROGRAMS = {'openwiz'}
 REQUIRED = PROGRAMS | {'runtime/openwiz-build.txt', 'runtime/install.py', 'runtime/pull.py',
     'runtime/skills/setup/SKILL.md', 'runtime/skills/grill/SKILL.md',
     'runtime/skills/to-tickets/SKILL.md', 'runtime/skills/launch-fleet/SKILL.md',
     'runtime/skills/launch-fleet/scripts/fleet.sh',
-    'runtime/setup/setup.py', 'runtime/setup/store.py', 'runtime/setup/github_login.py',  # #633
+    'runtime/setup/setup.py', 'runtime/setup/store.py', 'runtime/setup/github_login.py',
     'runtime/github-app/setup.py',
     'runtime/github-app/app.py', 'runtime/github-app/manifest.json',
-    'runtime/cloudroom/cloudroom.py',  # #2201: setup's CloudRoom install, reuse and sign-in tool
-    'runtime/setup/init.py'}  # #635: installed openwiz init's packaged runtime
-# #1575: the pre-AP11 layout (#1264 removed its server, service and web/), accepted
-# only when verifying the build already selected, never for a new package.
+    'runtime/cloudroom/cloudroom.py',
+    'runtime/setup/init.py'}
 LEGACY_PROGRAMS = PROGRAMS | {'openwiz-service', 'openwiz-server'}
 LEGACY_REQUIRED = REQUIRED | LEGACY_PROGRAMS | {'web/openwiz-build.txt', 'web/index.html', 'web/setup.html'}
-# #1187: the pre-0.2.0 skill layout (plan-graph where WizSkills 0.2.0 has to-tickets),
-# likewise accepted only when verifying the build already selected.
 PREVIOUS_SKILLS = {'runtime/skills/to-tickets/SKILL.md': 'runtime/skills/plan-graph/SKILL.md'}
 
 
@@ -81,8 +78,6 @@ def safe(path, legacy=False):
 
 
 def manifest_at(path, checksum, target, selected=False):
-    """A new package's manifest, or with selected=True the already-selected
-    build's, which may instead be a complete pre-AP11 layout (read-only)."""
     data = path.read_bytes()
     require(len(data) <= 4 * 1024 * 1024 and sha(data) == checksum, 'manifest checksum mismatch')
     value = json.loads(data, object_pairs_hook=unique)
@@ -106,7 +101,7 @@ def manifest_at(path, checksum, target, selected=False):
         require(path not in assets and not any(path.startswith(p + '/') or p.startswith(path + '/') for p in assets),
                 'duplicate or overlapping asset')
         require(digest(item['sha256']) and type(item['bytes']) is int and item['bytes'] >= 0, 'invalid asset identity')
-        require(item['mode'] == ('0700' if path in programs or path.endswith('.sh')  # #1699: and a host driver
+        require(item['mode'] == ('0700' if path in programs or path.endswith('.sh')
                                  or re.fullmatch(r'runtime/adapters/[a-z0-9-]+/driver', path) else '0600'),
                 'invalid asset mode')
         assets[path] = item
@@ -180,6 +175,70 @@ def verify_installed(build, assets, raw):
     require(actual == set(assets), 'installed asset set mismatch')
 
 
+def damaged(build, assets, raw):
+    try:
+        verify_installed(build, assets, raw)
+        return False
+    except (Refused, OSError):
+        meta = build.lstat()
+        require(stat.S_ISDIR(meta.st_mode) and meta.st_uid == os.getuid(), 'a foreign build is in the way')
+        os.chmod(build, 0o700)
+        stored = build / 'install-manifest.json'
+        try:
+            require(not (stored.exists() or stored.is_symlink())
+                    or (stored.is_file() and not stored.is_symlink() and stored.read_bytes() == raw),
+                    'existing source has a different manifest')
+        except BaseException:
+            os.chmod(build, stat.S_IMODE(meta.st_mode))
+            raise
+        return True
+
+
+def repair_backups(builds, source, raw):
+    found = sorted(builds.glob('.damaged-*-' + source))
+    for backup in found:
+        meta = backup.lstat()
+        require(stat.S_ISDIR(meta.st_mode) and meta.st_uid == os.getuid(), 'a foreign repair backup is in the way')
+        stored = backup / 'install-manifest.json'
+        require(stored.is_file() and not stored.is_symlink() and stored.read_bytes() == raw,
+                'existing source has a different manifest in its repair backup ' + backup.name)
+    return found
+
+
+ROOT_ENTRIES = re.compile(r'current|channel\.json|install\.lock|skills|state|\.current-[0-9]+')
+STATE_ENTRIES = (('', re.compile(r'setup|cloudroom|service')),
+                 ('service', re.compile(r'config\.json|app|state\.json|loops|clone|builds')),
+                 ('service/builds', re.compile(r'[0-9a-f]{40}|\.stage-[A-Za-z0-9_]+|\.damaged-[0-9]+-[0-9a-f]{40}')))
+
+
+def entries(folder):
+    return sorted(os.listdir(folder)) if folder.is_dir() and not folder.is_symlink() else []
+
+
+def previous_state(root, state_root):
+    builds = state_root / 'service/builds'
+    if (root / 'current').is_symlink() and Path(os.readlink(root / 'current')).parent == builds:
+        return True
+    for name in entries(builds):
+        try:
+            if digest(name, 40) and (builds / name / 'install-manifest.json').is_file():
+                return True
+        except OSError:
+            pass
+    return False
+
+
+def only_ours(root, state_root):
+    unexpected = 'it is not OpenWiz\'s, so nothing was changed. Give install a new or empty folder'
+    if not (os.path.lexists(root / 'current') or os.path.lexists(root / 'channel.json')):
+        for name in entries(root):
+            require(ROOT_ENTRIES.fullmatch(name), '%s is already there and %s' % (root / name, unexpected))
+    if not previous_state(root, state_root):
+        for folder, names in STATE_ENTRIES:
+            for name in entries(state_root / folder if folder else state_root):
+                require(names.fullmatch(name), '%s is already there and %s' % (state_root / folder / name, unexpected))
+
+
 def activate_link(build, root):
     temporary = root / ('.current-' + str(os.getpid()))
     os.symlink(build, temporary)
@@ -195,7 +254,6 @@ def install(manifest, archive, manifest_sha256, root, target, state_root=None,
     manifest, archive, root = Path(manifest), Path(archive), Path(root)
     value, assets, raw = manifest_at(manifest, manifest_sha256, target)
     require(archive.stat().st_size == value['archive_bytes'], 'archive size mismatch')
-    # Verify the compressed bytes before parsing any archive headers.
     hasher = hashlib.sha256()
     with archive.open('rb') as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b''):
@@ -203,6 +261,7 @@ def install(manifest, archive, manifest_sha256, root, target, state_root=None,
     require(hasher.hexdigest() == value['archive_sha256'], 'archive checksum mismatch')
     path_guard(root)
     require(root.parent.is_dir(), 'installation parent must exist')
+    only_ours(root, Path(state_root) if state_root else root / 'state')
     directory(root)
     lock_path = root / 'install.lock'
     if lock_path.exists() or lock_path.is_symlink():
@@ -222,7 +281,8 @@ def install(manifest, archive, manifest_sha256, root, target, state_root=None,
             require(link.is_symlink() and link.lstat().st_uid == os.getuid(), 'foreign current selection')
             selected = Path(os.readlink(link))
             require(selected.is_absolute() and selected.parent == builds and digest(selected.name, 40), 'foreign current selection')
-            private(selected)
+            if selected != builds / value['source']:
+                private(selected)
         channel = root / 'channel.json'
         require(channel.exists() or not link.is_symlink(), 'source installation requires an explicit channel migration')
         channel_bytes = b'{"schema":"openwiz.update-channel.v1","channel":"packaged"}\n'
@@ -230,8 +290,6 @@ def install(manifest, archive, manifest_sha256, root, target, state_root=None,
             private(channel, False)
             require(channel.read_bytes() == channel_bytes, 'existing update channel requires explicit migration')
         build = builds / value['source']
-        # All archive members must be ordinary, unique, allowlisted files. Never
-        # use extractall: links, devices, directories and metadata are refused.
         with tarfile.open(archive, 'r:gz') as tar:
             members = []
             seen = set()
@@ -245,9 +303,9 @@ def install(manifest, archive, manifest_sha256, root, target, state_root=None,
                 require(member.size == item['bytes'] and member.mode == int(item['mode'], 8), 'archive asset metadata mismatch')
                 seen.add(path)
             require(seen == set(assets), 'incomplete archive')
-            if build.exists() or build.is_symlink():
-                verify_installed(build, assets, raw)
-            else:
+            repair = (build.exists() or build.is_symlink()) and damaged(build, assets, raw)
+            if repair or not (build.exists() or build.is_symlink()):
+                backups = repair_backups(builds, value['source'], raw)
                 needed = sum(item['bytes'] for item in assets.values()) + len(raw)
                 require(free_bytes(builds) >= needed, 'insufficient disk space')
                 temporary = Path(tempfile.mkdtemp(prefix='.stage-', dir=builds))
@@ -272,8 +330,21 @@ def install(manifest, archive, manifest_sha256, root, target, state_root=None,
                     verify_installed(temporary, assets, raw)
                     for parent, _, _ in os.walk(temporary, topdown=False):
                         sync(Path(parent))
-                    os.rename(temporary, build)
+                    if repair:
+                        aside = builds / ('.damaged-%d-%s' % (os.getpid(), value['source']))
+                        os.rename(build, aside)
+                        try:
+                            os.rename(temporary, build)
+                        except BaseException:
+                            os.rename(aside, build)
+                            raise
+                        backups.append(aside)
+                    else:
+                        os.rename(temporary, build)
                     sync(builds)
+                    verify_installed(build, assets, raw)
+                    for backup in backups:
+                        shutil.rmtree(backup, ignore_errors=True)
                 finally:
                     if temporary.exists():
                         shutil.rmtree(temporary)
@@ -284,11 +355,11 @@ def install(manifest, archive, manifest_sha256, root, target, state_root=None,
             activate(build, root)
         return {'schema': 'openwiz.install-result.v1', 'version': value['version'], 'source': value['source'],
                 'target': target, 'build': str(build), 'state_root': str(state_root),
-                'activated': not stage_only}
+                'activated': not stage_only, 'repaired': repair}
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=DESCRIPTION)
     for flag in ('manifest', 'archive', 'manifest-sha256', 'root', 'target'):
         parser.add_argument('--' + flag, required=True)
     parser.add_argument('--state-root')

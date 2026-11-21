@@ -948,25 +948,38 @@ fn open_actions(
                 );
                 return;
             }
-            if reviewers.is_empty() {
+            let review = source
+                .and_then(|s| out.rules.reviewer_for(s.family))
+                .cloned();
+            if new_reviewer && review.is_none() {
+                look(
+                    out,
+                    spec,
+                    Some(id),
+                    vec!["review waits: no other-family reviewer".into()],
+                    &t.records.looked,
+                );
+                return;
+            }
+            if let (true, Some(settings)) = (reviewers.is_empty(), review.clone()) {
                 emit(
                     out,
                     spec,
                     Some(id),
                     Detail::FirstReview {
-                        settings: out.rules.reviewer_for(source.unwrap().family).clone(),
+                        settings,
                         pr: fact.clone(),
                         subject: p.subject.clone(),
                         checks: checks.clone(),
                     },
                 );
-            } else if reviewers.iter().all(|r| r.given_up) {
+            } else if let (true, Some(settings)) = (reviewers.iter().all(|r| r.given_up), review) {
                 emit(
                     out,
                     spec,
                     Some(id),
                     Detail::FreshReview {
-                        settings: out.rules.reviewer_for(source.unwrap().family).clone(),
+                        settings,
                         pr: fact.clone(),
                         subject: p.subject.clone(),
                         checks: checks.clone(),

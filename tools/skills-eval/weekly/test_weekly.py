@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""The weekly loop's privacy and fail-closed read proofs; fake sources, no API key."""
 import copy
 import json
 import sys
@@ -71,8 +70,6 @@ class CollectionCore(unittest.TestCase):
                     'items': [record(), record(9002)], 'next_page': None}}).read, bad, SKILLS)
 
 
-# ---- #1363 integration proofs: the one weekly process around #2236's core. ----
-
 
 class Router:
     def __init__(self, fail=()):
@@ -85,8 +82,6 @@ class Router:
 
 
 class WeeklyFixture(unittest.TestCase):
-    """Shared state for the weekly-process proofs; holds no test of its own."""
-
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
@@ -99,8 +94,6 @@ class WeeklyFixture(unittest.TestCase):
 
 
 class WeeklyProcess(WeeklyFixture):
-    """Claims C1-C8 in private/evidence/skills-eval/e3/proof-plan.md."""
-
 
     def test_render_refuses_identifiers(self):
         report = W.dry_run(self.root / 'out')
@@ -110,7 +103,6 @@ class WeeklyProcess(WeeklyFixture):
 
 
 def experiment(tag):
-    """A synthetic owner import summary whose research and CF4 stages passed."""
     stages = {k: {'status': 'not_run', 'artifact_hash': None, 'source': None, 'at': None}
               for k in ('research', 'cf4', 'replay', 'live')}
     for n, k in enumerate(('research', 'cf4'), 1):
@@ -120,11 +112,7 @@ def experiment(tag):
 
 
 class HandoffCommand(WeeklyFixture):
-    """The handoff command reads the target issue before it writes anything."""
-
     def test_unreadable_issue_posts_nothing_and_stays_pending(self):
-        # catches: a handoff that treats a failed or partial issue read as "no earlier
-        # handoff" and posts the routing instruction again.
         W.weekly(self.state, WEEK, cases_dir=self.cases, provenance=None, skills=SKILLS,
                  read_page=FakeSources().read, synthesize=lambda item: None,
                  start_gate=lambda: 'allowed', route=lambda action: 'queued',
@@ -151,7 +139,6 @@ class HandoffCommand(WeeklyFixture):
 
 
 def measured(ev):
-    """A synthetic measured envelope: the same rows with real recorded costs."""
     ev = copy.deepcopy(ev)
     ev['mode'] = 'measured'
     for key in ('baseline', 'result'):
@@ -162,8 +149,6 @@ def measured(ev):
 
 
 class GitHubReader(unittest.TestCase):
-    """C10: the real read_page adapter, through an injected fake gh runner."""
-
     def runner(self, answers):
         calls = []
 
