@@ -49,7 +49,7 @@ VERSION = '0.0.99'
 NAME = 'openwiz-' + TARGET
 BASE = 'https://github.com/openwizdev/OpenWiz/releases/'
 LINE = 'Install OpenWiz from github.com/openwizdev/OpenWiz'
-ORDER = ['Preflight', 'Verified install', 'Setup and connections', 'Explain', 'First fleet']
+ORDER = ['Preflight', 'Verified install', 'Setup and connections', 'Teach', 'The onboarding road']
 # #2293 (PR6, copy only): independent literals for the free-only release copy.
 FREE_ONLY = ('OpenWiz is free now. Paid plans come later. '
              'CloudRoom and model charges are separate and not included.')
@@ -125,7 +125,10 @@ def bundle_assets(source):
     assets['runtime/access/access.py'] = (TOOLS / 'access/access.py').read_bytes()
     for skill in ('setup', 'grill', 'to-spec', 'to-tickets', 'launch-fleet', 'install'):  # the 0.2.0 catalog (#1187)
         assets.update(tracked(ROOT / 'skills' / skill, f'runtime/skills/{skill}/'))
-    assets = {k: v for k, v in assets.items() if not re.search(r'(^|/)test[^/]*$|/tests?/', k)}
+    runtime_test = 'runtime/skills/launch-fleet/test/ops-protocol/'
+    assets = {k: v for k, v in assets.items()
+              if k.startswith(runtime_test) or not re.search(r'(^|/)test[^/]*$|/tests?/', k)}
+    assets.update(tracked(ROOT / '.wizskills/contracts', 'runtime/contracts/'))
     identity = f'openwiz.package.v1\n{VERSION}\n{source}\n{TARGET}\n'.encode()
     assets['runtime/openwiz-build.txt'] = identity
     return assets
@@ -427,12 +430,13 @@ class InstallJourney(unittest.TestCase):
                              ('cloudroom_login_verified', 'app_missing', 'project_unprepared'))
             self.assertEqual(api.requests, [], 'no App API call before an App is connected')
 
-        def explain():
-            installed = self.build / 'runtime/skills'
-            said = section(installed / 'install/SKILL.md', 'Explain')
-            quote = [line for line in said.splitlines() if line.startswith('> ')]
-            for concept in ('**idea**', '**grill**', '**spec**', '**tickets**', '**builder**', '**reviewer**', '**merges**'):
-                self.assertIn(concept, quote[0])
+        def teach():
+            installed = self.build / 'runtime/skills/install'
+            self.assertIn('[teach.md](teach.md)', section(installed / 'SKILL.md', 'Teach'))
+            up_front = (installed / 'teach.md').read_text().split('## Up front\n', 1)[1].split('\n## ', 1)[0]
+            said = ' '.join(line for line in up_front.splitlines() if line.startswith('> '))
+            for concept in ('factory of coding agents', 'tickets', 'review', 'merge', 'your yes'):
+                self.assertIn(concept, said)
 
         def first_fleet():
             j = self.onboarding(c)
@@ -447,13 +451,14 @@ class InstallJourney(unittest.TestCase):
                          'Private brain: %s (in repository).' % self.repository,
                          'Next: the grill (the explanation is done)'):
                 self.assertIn(line, carried)
-            self.assertEqual(len(j.spawns()), 1, 'one fleet thread starts the approved frontier')
+            self.assertEqual(j.spawns(), [], "the start is launch-fleet's own path, never a one-off thread")
+            self.assertIn("Spec #%d has its fleet record: launch-fleet's loop runs the spec." % j.spec, results[-2][1].stdout)
             self.assertEqual([call['form'] for call in j.logged()], ['fleet'], 'the installed openwiz only reads progress')
             self.assertIn('5 tickets: 3 building, 2 blocked', results[-1][1].stdout)
             self.assertNotEqual(Path(self.onboard.HELPER).resolve().parents[3], ROOT.resolve())
 
         runners = {'Preflight': preflight, 'Verified install': verified_install,
-                   'Setup and connections': setup_and_connections, 'Explain': explain, 'First fleet': first_fleet}
+                   'Setup and connections': setup_and_connections, 'Teach': teach, 'The onboarding road': first_fleet}
         skill = ROOT / 'skills/install/SKILL.md'
         self.assertEqual(steps(skill), ORDER)
         for title in steps(skill):
