@@ -1,0 +1,57 @@
+# Pane driver
+
+Login: stays on your machine
+
+A [driver v1](../../kernel/driver.v1.md) that runs each builder in its own Pane, through your own `runpane` CLI and the [Pane](https://runpane.com) app on your computer. A Pane is a git worktree on its own branch, with tabs; each run is one Pane with one agent tab. One Python file, standard library only. **Platforms:** Linux and macOS, Python 3.9 or later, wherever Pane runs; its fixture tests run on Linux (they check their own fake agents through `/proc`). Runs are saved in `$OPENWIZ_PANE_STATE` (default `~/.local/state/openwiz-pane`), owner-only.
+
+**Pane's desktop app, or its daemon (`runpane install daemon`), must be running for `start`, `wake` and `stop`.** The `runpane` CLI talks to it, and it runs the agents. Without it, those commands refuse and say to open the Pane app. `version` and `schema` need nothing.
+
+| Command | What it does in Pane |
+| --- | --- |
+| `start` | Finds the one checkout saved in Pane (`runpane repos list`) whose `origin` remote is exactly that GitHub repository: every fetch and push URL, as your own `git remote get-url --all [--push] origin` resolves them (includes, `insteadOf` and `pushurl` applied, nothing contacted, the caller's `GIT_*` variables left out). A fork of another owner, or a checkout whose URLs disagree, never matches. Then `runpane panes create --repo <its id> --name openwiz-<run> --agent <harness> --tool-command "<program> --model <model>" --prompt <the ticket and skill> --source agent --wait-ready`. It answers once Pane has seen the agent's input box and delivered the prompt. If the agent never gets ready, it closes the tab and archives the new Pane before refusing, also when Pane answers that failure with `ok: false`. |
+| `wake` | `runpane panels submit --panel <the run's tab>`: the same agent, in the same tab, reads its ticket again and edits its own status note. A stopped run is never woken. |
+| `stop` | `runpane panels close --force` closes the tab, which ends its agent even mid-turn. Then `runpane panes archive --remove-worktree` removes the Pane and its worktree; Pane keeps the local branch. The driver never forces an archive. When Pane refuses it, for example because the worktree holds work not yet committed or pushed, the driver keeps the Pane `openwiz-<run>` and its worktree on disk and still answers `stopped`: the agent has ended. Push or discard that work; a later stop of the same run tries the archive again, and also answers `stopped`. Only a tab Pane could not close makes stop answer an error. |
+
+`version` adds `many-at-once` to `can`: Pane runs many Panes side by side.
+
+The tab is opened with `--source agent`, because Pane lets an agent close only a tab an agent opened.
+
+## Before the first run (yours to do)
+
+The driver never touches a login (driver v1, N1 to N3). It calls `runpane` with your environment unchanged, and passes no key, token or password anywhere. Your agents sign in on this machine, as they do in Pane itself.
+
+1. Install Pane and its `runpane` CLI, and open the app (or run `runpane install daemon`).
+2. Save your checkout of the repository in Pane: `runpane repos add --path <checkout>`. Its `origin` remote must be the GitHub repository (`https://github.com/<owner>/<name>` or `git@github.com:<owner>/<name>`). A start refuses when no saved checkout, or more than one, has that origin.
+3. Sign in, yourself, to each agent you use, and to `gh`, so the agent can post its status note.
+4. `harness` is one of Pane's agents: `claude`, `codex`, `cursor` (it runs `cursor-agent`), `opencode` or `pi`. `model` goes to that program's `--model` flag, quoted. Pane's docs give a terminal agent its model this way. A field holding a login, token or key shape (every shape the driver kit knows, and Google API keys, anywhere in the field) is refused before anything starts, and never echoed.
+
+The driver adds no permission flag. Each agent runs with your own settings for it, and Pane shows you any permission prompt it asks.
+
+Pane is licensed AGPL-3.0. This driver only runs the `runpane` program you installed, as a separate program; it copies none of Pane's code.
+
+## The kit
+
+The fixture tests run only on the synthetic `runpane`, with nothing real on their PATH, and cost nothing:
+
+```sh
+python3 -I adapters/pane/test_driver.py
+```
+
+**Live check only.** The kit command below starts a real agent in your real Pane, on your real agent account. Each run is one start and one wake of that agent, so it uses that agent's paid model usage or subscription allowance. It also creates and then archives a Pane and its worktree in the repository you name. Run it only for the live check, by hand, on a throwaway repository and ticket:
+
+```sh
+python3 -I kernel/driver-kit/kit.py --driver adapters/pane/driver \
+  --repo <owner>/<throwaway> --ticket <n> --harness claude --model <model>
+```
+
+`fixtures/bin/runpane` is a synthetic `runpane` CLI, written for these tests. Its JSON answers follow the shapes `runpane help` and its published JSON schemas name (runpane 2.4.246). No answer in it was observed on a live Pane; the live check on the real host is the proof.
+
+It plays Pane and its agents. It keeps its Panes in the JSON file `FAKE_PANE_STATE`. `panes create` starts the tab's agent, a `sleep` that inherits the caller's environment and ends when its tab closes, and, when the prompt names a skill, posts one builder status note in the kit's local tracker (`KIT_TRACKER`); each `panels submit` edits that note. It takes only the flags the driver passes and exits 2 on any other. Its failure texts carry the word `synthetic`, so a test can show that the driver's errors keep only Pane's error code and its own fixed text. Its settings:
+
+| Variable | What it plants |
+| --- | --- |
+| `FAKE_PANE_REPOS` | Comma-separated `owner/name` checkouts Pane has saved, each saved under its name with that GitHub repository as its `origin` (default `example/site`) |
+| `FAKE_PANE_DOWN` | Set: the Pane app and its daemon are not running, so every command fails |
+| `FAKE_PANE_READY` | `no`: the tab's command exits before its agent's input box is ready |
+| `FAKE_PANE_DIRTY` | `uncommitted` or `unpushed`: what archive's safety check finds in the worktree |
+| `FAKE_PANE_CALLS` | A file each call's arguments are appended to, one JSON array per line |
