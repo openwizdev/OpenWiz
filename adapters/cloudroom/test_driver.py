@@ -23,7 +23,7 @@ sys.path.insert(0, KIT)
 import kit  # noqa: E402
 
 TOKEN = 'gh' + 'p_' + 'Synthetic0Kit0Value' * 2 + '00'  # a token's shape, built here so no file holds one
-PROJECT = 'prj_syn_0001'
+PROJECT, PARENT = 'prj_syn_0001', 'thr_syn_parent'
 START = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude', 'model': 'Opus 5.5'}
 
 
@@ -34,7 +34,7 @@ class Driver(unittest.TestCase):
         tracker = os.path.join(self.folder, 'tracker.json')
         with open(tracker, 'w') as f:
             json.dump({'record_authors': ['example-bot[bot]'], 'comments': []}, f)
-        self.env = dict(os.environ, KIT_TRACKER=tracker, KIT_TEST=self.mark, GH_TOKEN=TOKEN, ROOM_PROJECT_ID=PROJECT,
+        self.env = dict(os.environ, KIT_TRACKER=tracker, KIT_TEST=self.mark, GH_TOKEN=TOKEN, ROOM_PROJECT_ID=PROJECT, ROOM_THREAD_ID=PARENT,
                         FAKE_ROOM_LOG=self.log, OPENWIZ_CLOUDROOM_STATE=os.path.join(self.folder, 'state'),
                         PATH=os.pathsep.join([os.path.join(HERE, 'fixtures'), os.path.join(KIT, 'fixtures'),
                                               os.environ.get('PATH', '')]))
@@ -127,6 +127,33 @@ class Driver(unittest.TestCase):
                 lists = [c for c in self.calls() if c[1] == 'list']
                 if host == 'local':
                     self.assertEqual(lists, [['thread', 'list', '--json', '--project', PROJECT]])
+
+    def test_stop_by_title_ends_only_its_own_thread(self):
+        cases = [('other project', {'FAKE_ROOM_EXTRA': {'projectId': 'prj_syn_0002', 'parentThreadId': PARENT}}),
+                 ('other parent', {'FAKE_ROOM_EXTRA': {'projectId': PROJECT, 'parentThreadId': 'thr_syn_else'}})]
+        cases += [('reply ' + reply, {'FAKE_ROOM_LIST': reply}) for reply in
+                  ('""', 'null', '{}', '{"children": {}}', '{"children": ""}', '{"children": [{}]}', '[1]')]
+        cases += [('another caller', {'ROOM_THREAD_ID': 'thr_syn_else'})]
+        for host in ('local', 'cloud'):
+            for name, case in cases:
+                with self.subTest(host=host, case=name):
+                    self.fresh()
+                    env = {'FAKE_ROOM_HOST': host}
+                    code, lost = self.call('start', START, FAKE_ROOM_RECEIPT='Synthetic lost receipt', **env)
+                    run = {'run': re.search(r'run-[0-9a-f]{12}', json.dumps(lost)).group()}
+                    if 'FAKE_ROOM_EXTRA' in case:
+                        twin = dict(case['FAKE_ROOM_EXTRA'], id='thr_syn_twin',
+                                    title='#7: example/site builder (%s)' % run['run'])
+                        case = {'FAKE_ROOM_EXTRA': json.dumps([twin])}
+                    code, err = self.call('stop', run, **dict(env, **case))
+                    archived = [c for c in self.calls() if c[1] == 'archive']
+                    if name == 'another caller' and host == 'local':
+                        self.assertEqual((code, archived), (0, [['thread', 'archive', 'thr_syn_0001']]), err)
+                        continue
+                    self.assertEqual((code, archived), (1, []), err)
+                    self.assertEqual(self.call('stop', run, **env), (0, dict(run, stopped=True)))
+                    self.assertEqual([c for c in self.calls() if c[1] == 'archive'],
+                                     [['thread', 'archive', 'thr_syn_0001']])
 
     def test_start_refuses_a_run_cloudroom_did_not_make(self):
         # catches: a run id answered for a thread that doesn't exist, isn't safe to address, or is in another
