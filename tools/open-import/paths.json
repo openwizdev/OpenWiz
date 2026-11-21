@@ -15,6 +15,7 @@
     "STATUS.md",
     "adapters/boat/**",
     "adapters/cloudroom/**",
+    "adapters/factory/**",
     "adapters/local/**",
     "adapters/template/**",
     "apps/**",
