@@ -78,8 +78,7 @@ elif sub == 'list':
     if local and '--project' in args:
         rows = [r for r in rows if r['projectId'] == flag('--project')]
     if not local:
-        rows = [{'id': r['id'], 'title': r['title'], 'status': r['status']} for r in rows
-                if r['parentThreadId'] == os.environ.get('ROOM_THREAD_ID')]
+        rows = [r for r in rows if r['parentThreadId'] == os.environ.get('ROOM_THREAD_ID')]
     rows += json.loads(os.environ.get('FAKE_ROOM_EXTRA') or '[]')
     if not local and set(args[2:]) - {'--json', '--include-archived'}:
         sys.exit(print('Unknown option %s.' % sorted(set(args[2:]) - {'--json', '--include-archived'})[0],
