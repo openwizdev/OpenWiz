@@ -1,0 +1,5 @@
+#1804 R1, R5 and R6 green: cargo test -p openwiz-tests --test cli-agent models_forms (run twice), then the cli-agent, messaging and checks targets, openwiz-cli's unit tests, and clippy for both macOS targets.
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 97 filtered out; finished in <t>
+cli-agent: 114 passed; messaging: 7 passed; openwiz-cli unit tests: 23 passed; checks: 34 passed, 2 failed (skills::onboard_journey_fixtures_pass and skills::install_journey_passes need the WizSkills install CI does; not this change).
+cargo clippy -p openwiz-cli --target aarch64-apple-darwin and --target x86_64-apple-darwin with -D warnings: clean.
+R5's group half, run as the same user with a synthetic supplementary group (id -G: <uid's group> <synthetic group>): a_replaced_file_keeps_its_group_and_access_acl_and_gains_none passes; with only the fchown step removed it fails at "the snapshot's group" (left: <uid's group>, right: <synthetic group>); restored, it passes. Not committed. Where the process has no second group the test checks the ACL halves only.
