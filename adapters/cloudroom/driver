@@ -192,26 +192,41 @@ def threads(state):
     """The run's live threads: its saved thread, or, if its id was never saved, those titled with its run id."""
     if state['thread']:
         return [state['thread']]
-    project = state.get('project')
-    code, out, said = room('thread', 'list', '--json', '--project', project) if project else (2, '', '')
+    project, parent = state.get('project'), state.get('parent')
+    by_hand = 'stop it again later, or archive its thread by hand: the one whose title ends "%s"' % (
+        state['title'][state['title'].rfind('('):])
+    if not (project and parent):
+        raise Unknown('this run saved no project and parent, so the driver cannot tell its thread from another', by_hand)
+    code, out, said = room('thread', 'list', '--json', '--project', project)
+    scope = {'projectId': project}
     if code == 2:
+        if (os.environ.get('ROOM_PROJECT_ID'), os.environ.get('ROOM_THREAD_ID')) != (project, parent):
+            raise Unknown('this room-cli lists only its own thread\'s children, and this is not the thread that '
+                          'started the run', 'stop it from the thread that started it, or ' + by_hand[len('stop it '):])
         code, out, said = room('thread', 'list', '--json')
+        scope = {'projectId': project, 'parentThreadId': parent}
     try:
         rows = json.loads(out)
         rows = rows['children'] if isinstance(rows, dict) else rows
-        found = [t['id'] for t in rows if t.get('title') == state['title']]
-    except (ValueError, KeyError, TypeError, AttributeError):
-        found = None
-    if code != 0 or found is None or not all(isinstance(t, str) and re.fullmatch(THREAD, t) for t in found):
-        raise Unknown('Cloudroom did not list its threads, so whether this run still runs is unknown: ' + said,
-                      'stop it again later, or archive the thread titled "%s" by hand' % state['title'])
+    except (ValueError, KeyError):
+        rows = None
+    if code != 0 or not isinstance(rows, list) or not all(
+            isinstance(t, dict) and isinstance(t.get('id'), str) and re.fullmatch(THREAD, t['id'])
+            and isinstance(t.get('title'), str) for t in rows):
+        raise Unknown('Cloudroom did not list its threads, so whether this run still runs is unknown: ' + said, by_hand)
+    titled = [t for t in rows if t['title'] == state['title']]
+    found = [t['id'] for t in titled if all(t.get(k, scope.get(k)) == v for k, v in
+                                            (('projectId', project), ('parentThreadId', parent)))]
+    if titled and len(found) != 1:
+        raise Unknown('Cloudroom lists %d threads with this run\'s title, and %d of them in its project under its '
+                      'parent, so the driver cannot tell which is its own' % (len(titled), len(found)), by_hand)
     return found
 
 
 def start(req, run):
     title = '#%d: %s builder (%s)' % (req['ticket'], req['repository'], run)
     state = {'request': req, 'title': title, 'thread': None, 'starting': True, 'stopped': False, 'archived': False,
-             'project': os.environ.get('ROOM_PROJECT_ID', '')}
+             'project': os.environ.get('ROOM_PROJECT_ID', ''), 'parent': os.environ.get('ROOM_THREAD_ID', '')}
     try:  # save the run before its thread is made: nowhere to keep it, nothing starts
         saved(run, state)
         fd = os.open(os.path.join(STATE, run + '.lock'), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)

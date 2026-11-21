@@ -130,7 +130,10 @@ class Driver(unittest.TestCase):
 
     def test_stop_by_title_ends_only_its_own_thread(self):
         cases = [('other project', {'FAKE_ROOM_EXTRA': {'projectId': 'prj_syn_0002', 'parentThreadId': PARENT}}),
-                 ('other parent', {'FAKE_ROOM_EXTRA': {'projectId': PROJECT, 'parentThreadId': 'thr_syn_else'}})]
+                 ('other parent', {'FAKE_ROOM_EXTRA': {'projectId': PROJECT, 'parentThreadId': 'thr_syn_else'}}),
+                 ('two in scope', {'FAKE_ROOM_EXTRA': {'projectId': PROJECT, 'parentThreadId': PARENT}}),
+                 ('only a twin', {'FAKE_ROOM_EXTRA': {'projectId': 'prj_syn_0002', 'parentThreadId': PARENT},
+                                  'ARCHIVED_FIRST': True})]
         cases += [('reply ' + reply, {'FAKE_ROOM_LIST': reply}) for reply in
                   ('""', 'null', '{}', '{"children": {}}', '{"children": ""}', '{"children": [{}]}', '[1]')]
         cases += [('another caller', {'ROOM_THREAD_ID': 'thr_syn_else'})]
@@ -141,19 +144,30 @@ class Driver(unittest.TestCase):
                     env = {'FAKE_ROOM_HOST': host}
                     code, lost = self.call('start', START, FAKE_ROOM_RECEIPT='Synthetic lost receipt', **env)
                     run = {'run': re.search(r'run-[0-9a-f]{12}', json.dumps(lost)).group()}
+                    if case.get('ARCHIVED_FIRST'):
+                        self.archive_by_hand('thr_syn_0001')
                     if 'FAKE_ROOM_EXTRA' in case:
                         twin = dict(case['FAKE_ROOM_EXTRA'], id='thr_syn_twin',
                                     title='#7: example/site builder (%s)' % run['run'])
                         case = {'FAKE_ROOM_EXTRA': json.dumps([twin])}
                     code, err = self.call('stop', run, **dict(env, **case))
                     archived = [c for c in self.calls() if c[1] == 'archive']
-                    if name == 'another caller' and host == 'local':
+                    if name in ('other project', 'other parent') or (name, host) == ('another caller', 'local'):
                         self.assertEqual((code, archived), (0, [['thread', 'archive', 'thr_syn_0001']]), err)
                         continue
                     self.assertEqual((code, archived), (1, []), err)
+                    if name == 'only a twin':
+                        continue
                     self.assertEqual(self.call('stop', run, **env), (0, dict(run, stopped=True)))
                     self.assertEqual([c for c in self.calls() if c[1] == 'archive'],
                                      [['thread', 'archive', 'thr_syn_0001']])
+
+    def archive_by_hand(self, thread):
+        with open(self.log + '.threads') as f:
+            threads = json.load(f)
+        threads[thread]['archived'] = True
+        with open(self.log + '.threads', 'w') as f:
+            json.dump(threads, f)
 
     def test_start_refuses_a_run_cloudroom_did_not_make(self):
         # catches: a run id answered for a thread that doesn't exist, isn't safe to address, or is in another
