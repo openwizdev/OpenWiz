@@ -136,7 +136,11 @@ class Driver(unittest.TestCase):
                                   'ARCHIVED_FIRST': True})]
         cases += [('reply ' + reply, {'FAKE_ROOM_LIST': reply}) for reply in
                   ('""', 'null', '{}', '{"children": {}}', '{"children": ""}', '{"children": [{}]}', '[1]')]
-        cases += [('another caller', {'ROOM_THREAD_ID': 'thr_syn_else'})]
+        cases += [('another caller', {'ROOM_THREAD_ID': 'thr_syn_else'}),
+                  ('own row without parent', {'ROWS': [{'id': 'thr_syn_0001', 'projectId': PROJECT},
+                                                       {'id': 'thr_syn_twin', 'projectId': PROJECT,
+                                                        'parentThreadId': PARENT}]}),
+                  ('row without scope', {'ROWS': [{'id': 'thr_syn_0001'}]})]
         for host in ('local', 'cloud'):
             for name, case in cases:
                 with self.subTest(host=host, case=name):
@@ -144,6 +148,9 @@ class Driver(unittest.TestCase):
                     env = {'FAKE_ROOM_HOST': host}
                     code, lost = self.call('start', START, FAKE_ROOM_RECEIPT='Synthetic lost receipt', **env)
                     run = {'run': re.search(r'run-[0-9a-f]{12}', json.dumps(lost)).group()}
+                    if 'ROWS' in case:
+                        title = '#7: example/site builder (%s)' % run['run']
+                        case = {'FAKE_ROOM_LIST': json.dumps([dict(row, title=title) for row in case['ROWS']])}
                     if case.get('ARCHIVED_FIRST'):
                         self.archive_by_hand('thr_syn_0001')
                     if 'FAKE_ROOM_EXTRA' in case:
