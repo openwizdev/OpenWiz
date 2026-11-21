@@ -1,0 +1,4 @@
+$ python3 -I -c "<validate against contracts/plan-links.v1.schema.json>" docs/evidence/2112/graph.json docs/evidence/2112/report.json   # after the fix
+docs/evidence/2112/graph.json: valid
+docs/evidence/2112/report.json: valid
+exit 0
