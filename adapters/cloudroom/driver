@@ -212,20 +212,15 @@ def threads(state):
             and isinstance(t.get('title'), str) for t in rows):
         raise Unknown('Cloudroom did not list its threads, so whether this run still runs is unknown: ' + said, by_hand)
     titled = [t for t in rows if t['title'] == state['title']]
-    scope = [{'projectId': t['projectId']} if 'projectId' in t else {} for t in titled]
-    for t, known in zip(titled, scope):
-        if 'parentThreadId' in t or 'parent' in t:
-            known['parent'] = t['parentThreadId'] if 'parentThreadId' in t else t['parent']
-    found = [t['id'] for t, known in zip(titled, scope) if known == {'projectId': project, 'parent': parent}]
-    unknown = [t for t, known in zip(titled, scope) if t['id'] not in found and
-               known.get('projectId', project) == project and known.get('parent', parent) == parent]
     if not titled and not complete:
         raise Unknown('this room-cli lists only its own thread\'s children, and this is not the thread that '
                       'started the run', 'stop it from the thread that started it, or ' + by_hand[len('stop it '):])
-    if unknown or (titled and len(found) != 1):
-        raise Unknown('Cloudroom lists %d threads with this run\'s title, %d of them in its project under its '
-                      'parent and %d it cannot place, so the driver cannot tell which is its own'
-                      % (len(titled), len(found), len(unknown)), by_hand)
+    parents = [t.get(k) for t in titled[:1] for k in ('parentThreadId', 'parent') if k in t]
+    if titled and not (len(titled) == 1 and titled[0].get('projectId') == project and parents
+                       and all(isinstance(p, str) and p == parent for p in parents)):
+        raise Unknown('Cloudroom lists %d threads with this run\'s title, and the driver cannot prove one of them is '
+                      'its own, in its project under its parent' % len(titled), by_hand)
+    found = [t['id'] for t in titled]
     return found
 
 
