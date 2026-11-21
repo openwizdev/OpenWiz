@@ -1,0 +1,112 @@
+# Red run: python3 -I adapters/openclaw/test_driver.py, against adapters/openclaw/driver as a copy of adapters/template/driver (only its name and state folder changed), before the acpx code. PATH holds only the fake acpx, python3 and sleep.
+test_a_harness_acpx_would_run_as_a_command_is_refused (__main__.OpenClaw.test_a_harness_acpx_would_run_as_a_command_is_refused) ... 
+  test_a_harness_acpx_would_run_as_a_command_is_refused (__main__.OpenClaw.test_a_harness_acpx_would_run_as_a_command_is_refused) (harness='./evil') ... FAIL
+  test_a_harness_acpx_would_run_as_a_command_is_refused (__main__.OpenClaw.test_a_harness_acpx_would_run_as_a_command_is_refused) (harness='sh') ... FAIL
+  test_a_harness_acpx_would_run_as_a_command_is_refused (__main__.OpenClaw.test_a_harness_acpx_would_run_as_a_command_is_refused) (harness='openclaw') ... FAIL
+test_a_missing_acpx_is_refused_with_how_to_install_it (__main__.OpenClaw.test_a_missing_acpx_is_refused_with_how_to_install_it) ... FAIL
+test_a_start_whose_session_fails_leaves_nothing_and_repeats_no_output (__main__.OpenClaw.test_a_start_whose_session_fails_leaves_nothing_and_repeats_no_output) ... FAIL
+test_acpx_runs_with_a_permission_policy_and_a_short_queue_owner (__main__.OpenClaw.test_acpx_runs_with_a_permission_policy_and_a_short_queue_owner) ... FAIL
+test_kit_passes_all_five (__main__.OpenClaw.test_kit_passes_all_five) ... FAIL
+test_save_failure_after_the_prompt_reports_unknown (__main__.OpenClaw.test_save_failure_after_the_prompt_reports_unknown) ... FAIL
+test_stop_ends_a_queue_owner_with_a_clean_environment (__main__.OpenClaw.test_stop_ends_a_queue_owner_with_a_clean_environment) ... FAIL
+test_wake_while_a_prompt_runs_sends_no_second_one (__main__.OpenClaw.test_wake_while_a_prompt_runs_sends_no_second_one) ... FAIL
+
+======================================================================
+FAIL: test_a_harness_acpx_would_run_as_a_command_is_refused (__main__.OpenClaw.test_a_harness_acpx_would_run_as_a_command_is_refused) (harness='./evil')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/openclaw/test_driver.py", line 171, in test_a_harness_acpx_would_run_as_a_command_is_refused
+    self.assertIn('claude, codex', out['next'])
+AssertionError: 'claude, codex' not found in 'fix harness as `driver schema` shows'
+
+======================================================================
+FAIL: test_a_harness_acpx_would_run_as_a_command_is_refused (__main__.OpenClaw.test_a_harness_acpx_would_run_as_a_command_is_refused) (harness='sh')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/openclaw/test_driver.py", line 171, in test_a_harness_acpx_would_run_as_a_command_is_refused
+    self.assertIn('claude, codex', out['next'])
+AssertionError: 'claude, codex' not found in 'install sh and sign in to it yourself, then start again'
+
+======================================================================
+FAIL: test_a_harness_acpx_would_run_as_a_command_is_refused (__main__.OpenClaw.test_a_harness_acpx_would_run_as_a_command_is_refused) (harness='openclaw')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/openclaw/test_driver.py", line 171, in test_a_harness_acpx_would_run_as_a_command_is_refused
+    self.assertIn('claude, codex', out['next'])
+AssertionError: 'claude, codex' not found in 'install openclaw and sign in to it yourself, then start again'
+
+======================================================================
+FAIL: test_a_missing_acpx_is_refused_with_how_to_install_it (__main__.OpenClaw.test_a_missing_acpx_is_refused_with_how_to_install_it)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/openclaw/test_driver.py", line 190, in test_a_missing_acpx_is_refused_with_how_to_install_it
+    self.assertIn('npm install -g acpx', out['next'])
+AssertionError: 'npm install -g acpx' not found in 'install claude and sign in to it yourself, then start again'
+
+======================================================================
+FAIL: test_a_start_whose_session_fails_leaves_nothing_and_repeats_no_output (__main__.OpenClaw.test_a_start_whose_session_fails_leaves_nothing_and_repeats_no_output)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/openclaw/test_driver.py", line 180, in test_a_start_whose_session_fails_leaves_nothing_and_repeats_no_output
+    self.assertIn('signed in', out['next'])
+AssertionError: 'signed in' not found in 'install claude and sign in to it yourself, then start again'
+
+======================================================================
+FAIL: test_acpx_runs_with_a_permission_policy_and_a_short_queue_owner (__main__.OpenClaw.test_acpx_runs_with_a_permission_policy_and_a_short_queue_owner)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/openclaw/test_driver.py", line 138, in test_acpx_runs_with_a_permission_policy_and_a_short_queue_owner
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'harness claude is not installed here', 'next': 'install claude and sign in to it yourself, then start again'}
+
+======================================================================
+FAIL: test_kit_passes_all_five (__main__.OpenClaw.test_kit_passes_all_five)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/openclaw/test_driver.py", line 126, in test_kit_passes_all_five
+    self.assertEqual((p.returncode, p.stdout.splitlines()), (0, [
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[206 chars]er']) != (0, ['pass version: openwiz:records v1, an[245 chars]er'])
+
+First differing element 0:
+1
+0
+
+- (1,
++ (0,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+-   'fail start: harness claude is not installed here',
+-   'fail wake: not run: start failed',
+-   'fail stop: not run: start failed',
++   'pass start: the run posted builder status note 1',
++   'pass wake: the run edited builder status note 1',
++   'pass stop: the run ended, and a wake after it is refused',
+    'pass token: no login or token passed through the driver']) : 
+
+======================================================================
+FAIL: test_save_failure_after_the_prompt_reports_unknown (__main__.OpenClaw.test_save_failure_after_the_prompt_reports_unknown)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/openclaw/test_driver.py", line 228, in test_save_failure_after_the_prompt_reports_unknown
+    self.assertIn('unknown', out['error'])
+AssertionError: 'unknown' not found in 'harness claude is not installed here'
+
+======================================================================
+FAIL: test_stop_ends_a_queue_owner_with_a_clean_environment (__main__.OpenClaw.test_stop_ends_a_queue_owner_with_a_clean_environment)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/openclaw/test_driver.py", line 197, in test_stop_ends_a_queue_owner_with_a_clean_environment
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'harness claude is not installed here', 'next': 'install claude and sign in to it yourself, then start again'}
+
+======================================================================
+FAIL: test_wake_while_a_prompt_runs_sends_no_second_one (__main__.OpenClaw.test_wake_while_a_prompt_runs_sends_no_second_one)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/openclaw/test_driver.py", line 209, in test_wake_while_a_prompt_runs_sends_no_second_one
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'harness claude is not installed here', 'next': 'install claude and sign in to it yourself, then start again'}
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.415s
+
+FAILED (failures=10)
