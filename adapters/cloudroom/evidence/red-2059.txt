@@ -1,0 +1,53 @@
+$ python3 -I adapters/cloudroom/test_driver.py   # #2059: a Local room-cli (table without --json, bare list with it) and the Cloud one (red)
+test_a_start_it_could_not_finish_stays_starting (__main__.Driver.test_a_start_it_could_not_finish_stays_starting) ... ok
+test_a_stop_that_could_not_save_keeps_the_run_unwakeable_once_writes_recover (__main__.Driver.test_a_stop_that_could_not_save_keeps_the_run_unwakeable_once_writes_recover) ... ok
+test_a_stop_that_could_write_nothing_still_keeps_the_run_unwakeable (__main__.Driver.test_a_stop_that_could_write_nothing_still_keeps_the_run_unwakeable) ... ok
+test_a_stop_waits_for_a_wake_in_progress (__main__.Driver.test_a_stop_waits_for_a_wake_in_progress) ... ok
+test_a_wake_refuses_a_run_whose_lock_file_was_lost (__main__.Driver.test_a_wake_refuses_a_run_whose_lock_file_was_lost) ... ok
+test_kit_passes_all_five (__main__.Driver.test_kit_passes_all_five) ... 
+  test_kit_passes_all_five (__main__.Driver.test_kit_passes_all_five) [local] ... FAIL
+test_reads_a_local_and_a_cloud_room_cli (__main__.Driver.test_reads_a_local_and_a_cloud_room_cli) ... 
+  test_reads_a_local_and_a_cloud_room_cli (__main__.Driver.test_reads_a_local_and_a_cloud_room_cli) [local] ... FAIL
+test_start_refuses_a_run_cloudroom_did_not_make (__main__.Driver.test_start_refuses_a_run_cloudroom_did_not_make) ... ok
+test_start_that_cannot_save_its_run_never_says_retry (__main__.Driver.test_start_that_cannot_save_its_run_never_says_retry) ... ok
+test_stop_that_cannot_save_ends_the_thread_and_leaves_nothing_to_wake (__main__.Driver.test_stop_that_cannot_save_ends_the_thread_and_leaves_nothing_to_wake) ... ok
+test_wake_is_the_fleet_routes_queued_delivery (__main__.Driver.test_wake_is_the_fleet_routes_queued_delivery) ... ok
+
+======================================================================
+FAIL: test_kit_passes_all_five (__main__.Driver.test_kit_passes_all_five) [local]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cloudroom/test_driver.py", line 73, in test_kit_passes_all_five
+    self.kit(dict(self.env, FAKE_ROOM_HOST=host))
+  File "adapters/cloudroom/test_driver.py", line 80, in kit
+    self.assertEqual((p.returncode, p.stdout.splitlines()), (0, [
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[255 chars]er']) != (0, ['pass version: openwiz:records v1, an[245 chars]er'])
+
+First differing element 0:
+1
+0
+
+- (1,
++ (0,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
++   'pass start: the run posted builder status note 1',
++   'pass wake: the run edited builder status note 1',
++   'pass stop: the run ended, and a wake after it is refused',
+-   "fail start: run run-<12 hex>: Cloudroom's answer to the start names no "
+-   'thread of this project',
+-   'fail wake: not run: start failed',
+-   'fail stop: not run: start failed',
+    'pass token: no login or token passed through the driver']) : 
+
+======================================================================
+FAIL: test_reads_a_local_and_a_cloud_room_cli (__main__.Driver.test_reads_a_local_and_a_cloud_room_cli) [local]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cloudroom/test_driver.py", line 122, in test_reads_a_local_and_a_cloud_room_cli
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': "run run-<12 hex>: Cloudroom's answer to the start names no thread of this project", 'next': 'stop run-<12 hex>, which ends any thread it started, then start a new run'}
+
+----------------------------------------------------------------------
+Ran 11 tests in 6.616s
+
+FAILED (failures=2)
