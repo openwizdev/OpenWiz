@@ -1,0 +1,16 @@
+# Red run: python3 -I adapters/cursor/test_driver.py Cursor.test_runs_reach_only_the_fake_cursor_and_python, before the tests built their environment from scratch: it carries the shell's whole environment, BASH_ENV included.
+test_runs_reach_only_the_fake_cursor_and_python (__main__.Cursor.test_runs_reach_only_the_fake_cursor_and_python) ... FAIL
+
+======================================================================
+FAIL: test_runs_reach_only_the_fake_cursor_and_python (__main__.Cursor.test_runs_reach_only_the_fake_cursor_and_python)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cursor/test_driver.py", line 111, in test_runs_reach_only_the_fake_cursor_and_python
+    self.assertEqual(sorted(self.env), sorted(ENV_KEYS))
+AssertionError: Lists differ: [<this shell's variable names, BASH_ENV among them>] != ['CURSOR_API_KEY', 'FAKE_CURSOR_LOG', 'FAKE[96 chars]ATH']
+
+<the itemised diff of this shell's variable names is left out>
+----------------------------------------------------------------------
+Ran 1 test in 0.002s
+
+FAILED (failures=1)
