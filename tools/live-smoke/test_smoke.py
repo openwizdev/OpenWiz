@@ -507,10 +507,17 @@ root = pathlib.Path(__file__).parent
 assert sys.argv[1:3] in (['thread', 'show'], ['thread', 'log']) and sys.argv[3] == 'synthetic-child-thread', sys.argv
 with (root / 'room-calls').open('a') as log:
     log.write(json.dumps(sys.argv[1:3]) + '\\n')
+state = dict(json.loads((root / 'room-state').read_text()), id='synthetic-child-thread')
 if sys.argv[2] == 'log':
     print((root / 'room-log').read_text() if (root / 'room-log').exists() else '')
+elif not (root / 'host-local').exists():
+    print(json.dumps(state))
+elif '--json' not in sys.argv:
+    print('ID  TITLE  STATUS\\n%s  synthetic  idle' % state['id'])
 else:
-    print(json.dumps(dict(json.loads((root / 'room-state').read_text()), id='synthetic-child-thread')))
+    print(json.dumps({'thread': {'id': state['id'], 'title': 'synthetic', 'projectId': state['projectId'],
+                                 'parentThreadId': None, 'status': 'idle',
+                                 'archivedAt': 1700000000000 if state['archived'] else None}}))
 """
 FAKE_CLI = """#!/usr/bin/env python3
 import json, sys
@@ -601,6 +608,17 @@ class Sheet(unittest.TestCase):
         section = runpy_path('receipt.py')['release_section'](kit)
         self.assertEqual(section['scope']['writes'], {'send': 1, 'new': 1})
         self.assertEqual(section['scope']['spending_cents'], 0)
+
+    def test_every_step_passes_on_a_local_and_a_cloud_room_cli(self):
+        for host in ('local', 'cloud'):
+            with self.subTest(host):
+                self.setUp()
+                if host == 'local':
+                    (self.root / 'host-local').write_text('')
+                doc = self.run_sheet()
+                self.assertEqual(doc['claims'], {c: 'pass' for c in template()['claims']})
+                self.assertEqual([c[0] for c in self.driver_calls()], ['version', 'start', 'wake', 'stop'])
+                self.assertTrue(self.archived())
 
     def test_driver_steps_start_wake_and_stop_one_run_through_the_runner(self):
         """catches: a driver step the runner can't feed (the driver reads its
