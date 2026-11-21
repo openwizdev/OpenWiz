@@ -16,6 +16,7 @@ CREDENTIAL = re.compile(r'\b(?:[a-z_]*token|[a-z_]*key|secret|password|passwd|pw
                         r'|gh[pousr]_[A-Za-z0-9]{8,}|github_pat_|AKIA[0-9A-Z]{16}|xox[abposr]-|sk-[A-Za-z0-9_-]{16,}'
                         r'|AIza[0-9A-Za-z_-]{30,}', re.I)
 ORIGIN = re.compile(r'^(?:[a-z+]+://)?(?:[^@/]+@)?github\.com[:/]+([A-Za-z0-9_.-]{1,100})/([A-Za-z0-9_.-]{1,100}?)(?:\.git)?/*$')
+GIT_SETTINGS = ('PATH', 'HOME', 'XDG_CONFIG_HOME', 'LANG', 'LC_ALL')
 READY_MS = 60000
 UNWRITABLE = 'make OPENWIZ_PANE_STATE (or ~/.local/state/openwiz-pane) a folder you can write'
 
@@ -104,7 +105,7 @@ def origin(checkout):
     git = shutil.which('git')
     if not git:
         raise Refused('git is not installed here; nothing was started', 'install git, then start again')
-    env = {k: v for k, v in os.environ.items() if not k.startswith('GIT_')}
+    env = {k: os.environ[k] for k in GIT_SETTINGS if k in os.environ}
     names = set()
     for push in ([], ['--push']):
         try:
