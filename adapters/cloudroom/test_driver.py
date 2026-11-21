@@ -144,7 +144,15 @@ class Driver(unittest.TestCase):
                   ('own row without parent', {'ROWS': [{'id': 'thr_syn_0001', 'projectId': PROJECT},
                                                        {'id': 'thr_syn_twin', 'projectId': PROJECT,
                                                         'parentThreadId': PARENT}]}),
-                  ('row without scope', {'ROWS': [{'id': 'thr_syn_0001'}]})]
+                  ('row without scope', {'ROWS': [{'id': 'thr_syn_0001'}]}),
+                  ('malformed parent', {'ROWS': [{'id': 'thr_syn_0001', 'projectId': PROJECT,
+                                                  'parentThreadId': {'id': PARENT}},
+                                                 {'id': 'thr_syn_twin', 'projectId': PROJECT,
+                                                  'parentThreadId': PARENT}]}),
+                  ('conflicting parents', {'ROWS': [{'id': 'thr_syn_0001', 'projectId': PROJECT,
+                                                     'parentThreadId': PARENT, 'parent': 'thr_syn_else'}]}),
+                  ('project not a string', {'ROWS': [{'id': 'thr_syn_0001', 'projectId': 7,
+                                                      'parentThreadId': PARENT}]})]
         for host in ('local', 'cloud'):
             for name, case in cases:
                 with self.subTest(host=host, case=name):
@@ -166,7 +174,7 @@ class Driver(unittest.TestCase):
                     if host == 'cloud':
                         self.assertEqual((code, archived), (1, []), err)
                         continue
-                    if name in ('other project', 'other parent', 'another caller'):
+                    if name == 'another caller':
                         self.assertEqual((code, archived), (0, [['thread', 'archive', 'thr_syn_0001']]), err)
                         continue
                     self.assertEqual((code, archived), (1, []), err)
