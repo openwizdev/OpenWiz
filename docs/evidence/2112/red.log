@@ -1,0 +1,5 @@
+$ python3 -I -c "<validate against contracts/plan-links.v1.schema.json>" docs/evidence/2112/graph.json docs/evidence/2112/report.json   # at main, before the fix
+docs/evidence/2112/graph.json: valid
+docs/evidence/2112/report.json: invalid
+  at refusals/0: {'ticket': 9104, 'number': None, 'code': 'malformed', 'message': 'malformed section: line `- other-owner/other-repo#9101 real: the export record shape, which the command reads` names other-owner/other-repo#9101, not this repository'} is not valid under any of the given schemas
+exit 1
