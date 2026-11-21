@@ -1,0 +1,296 @@
+#!/usr/bin/env python3
+import fcntl, json, os, re, secrets, subprocess, sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+STATE = os.environ.get('OPENWIZ_CONDUCTOR_STATE') or os.path.expanduser('~/.local/state/openwiz-conductor')
+API = 'https://api.conductor.build'
+VERSION = {'driver': 'conductor', 'records': ['openwiz:records v1'],
+           'can': ['start', 'wake', 'stop', 'many-at-once', 'own-sandbox']}
+START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
+         'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
+         'model': r'[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}'}
+RUN = {'run': r'run-[0-9a-f]{12}'}
+HARNESSES = ('claude', 'codex', 'cursor')
+# SECURITY: curl reads the key from the environment it inherits and sends it only to Conductor, as the bearer
+# token. The command line holds only the variable's name; the driver never reads, prints or passes on the key.
+KEY_ARGS = ['--variable', '%CONDUCTOR_API_KEY', '--expand-oauth2-bearer', '{{CONDUCTOR_API_KEY}}']
+UNSENT_CURL_EXITS = {2, 5, 6, 7, 35, 60}
+MIN_CURL = (8, 3)
+TIMEOUT = 60
+SAVE_NEXT = 'make OPENWIZ_CONDUCTOR_STATE (or ~/.local/state/openwiz-conductor) a folder you can write'
+
+
+class Refused(Exception):
+    pass
+
+
+class Unsent(Exception):
+    pass
+
+
+class Lost(Exception):
+    pass
+
+
+def line(text, limit=150):
+    return ' '.join(str(text).split())[:limit] or 'no detail'
+
+
+def unique(pairs):
+    if len({k for k, _ in pairs}) != len(pairs):
+        raise Refused('a key is repeated', 'send each key once')
+    return dict(pairs)
+
+
+def read(fields):
+    try:
+        req = json.loads(sys.stdin.read(), object_pairs_hook=unique)
+    except ValueError:
+        raise Refused('the input is not JSON', 'send one JSON object on stdin, as `driver schema` shows')
+    if not isinstance(req, dict) or set(req) != set(fields):
+        raise Refused('the input needs exactly ' + ', '.join(fields), 'send only those fields; never a login')
+    for key, pattern in fields.items():
+        v = req[key]
+        if not (type(v) is int and v > 0 if pattern is None else isinstance(v, str) and re.fullmatch(pattern, v)):
+            raise Refused(key + ' is not valid', 'fix ' + key + ' as `driver schema` shows')
+    return req
+
+
+def signed_in(then):
+    # SECURITY: only the environment's names are compared. `name in os.environ` would fetch the value.
+    if not any(name == 'CONDUCTOR_API_KEY' for name in os.environ):
+        raise Refused('CONDUCTOR_API_KEY is not set, so the driver cannot reach Conductor; ' + then,
+                      'create a Conductor API key (www.conductor.build/docs/api says where) and export it as '
+                      'CONDUCTOR_API_KEY in the shell that runs the driver')
+
+
+def curl_ready(then):
+    try:
+        p = subprocess.run(['curl', '--disable', '--version'], capture_output=True, text=True, timeout=30)
+    except FileNotFoundError:
+        raise Refused('curl is not installed; ' + then, 'install curl 8.3 or later, then try again')
+    except subprocess.TimeoutExpired:
+        raise Refused('curl --version did not finish; ' + then, 'check that curl runs by hand, then try again')
+    found = re.match(r'curl ([0-9]+)\.([0-9]+)\.([0-9]+)', p.stdout)
+    if not found:
+        raise Refused('the driver cannot read the version of curl; ' + then,
+                      'check that `curl --version` prints curl 8.3 or later, then try again')
+    if tuple(map(int, found.groups()[:2])) < MIN_CURL:
+        raise Refused('curl %s is too old: the driver needs curl 8.3 or later to send the key from the '
+                      'environment; %s' % ('.'.join(found.groups()), then),
+                      'install curl 8.3 or later (for --variable), then try again')
+
+
+def api(method, path, body=None):
+    # SECURITY: --disable first, so no curl config can trace the key or retry a start.
+    args = ['curl', '--disable', '-sS', '--max-time', str(TIMEOUT), '-X', method] + KEY_ARGS + [
+        '-H', 'Content-Type: application/json', '-H', 'Accept: application/json'] + (
+        ['--data-binary', '@-'] if body is not None else []) + ['-w', '\n%{http_code}', API + path]
+    try:
+        p = subprocess.run(args, input='' if body is None else json.dumps(body), capture_output=True, text=True,
+                           timeout=TIMEOUT + 10)
+    except FileNotFoundError:
+        raise Unsent('curl is not installed')
+    except subprocess.TimeoutExpired:
+        raise Lost('curl did not finish')
+    if p.returncode in UNSENT_CURL_EXITS:
+        raise Unsent('curl exit %d: %s' % (p.returncode, line(p.stderr, 80)))
+    if p.returncode != 0:
+        raise Lost('curl exit %d' % p.returncode)
+    text, _, code = p.stdout.rpartition('\n')
+    try:
+        status, out = int(code), json.loads(text) if text.strip() else {}
+    except ValueError:
+        raise Lost('an unreadable answer')
+    return status, out if isinstance(out, dict) else {}
+
+
+def said(status, out):
+    return '%d: %s' % (status, line(out.get('userMessage') or out.get('code') or 'no message', 100))
+
+
+def key_refused(status, then):
+    if status in (401, 403):
+        raise Refused('Conductor refused the API key in CONDUCTOR_API_KEY (%d); %s' % (status, then),
+                      'set CONDUCTOR_API_KEY to a current Conductor API key (www.conductor.build/docs/api says where)')
+
+
+def message(req, woken):
+    what = 'You were woken: read the ticket again and carry on' if woken else 'Build the ticket'
+    return ('%s: GitHub repository %s, ticket #%d, with the %s skill. Follow the repository\'s instructions.'
+            % (what, req['repository'], req['ticket'], req['skill']))
+
+
+def lock(run):
+    if not os.path.exists(os.path.join(STATE, run + '.json')):
+        raise Refused('no run ' + run, 'check the run id that `driver start` printed')
+    try:
+        fcntl.flock(os.open(os.path.join(STATE, run + '.lock'), os.O_RDONLY | os.O_CREAT, 0o600), fcntl.LOCK_EX)
+    except OSError:
+        raise Refused('the driver cannot lock run %s in its state folder' % run, SAVE_NEXT)
+
+
+def saved(run, state=None):
+    path = os.path.join(STATE, run + '.json')
+    if state is not None:
+        os.makedirs(STATE, mode=0o700, exist_ok=True)
+        with open(os.open(path + '.new', os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), 'w') as f:
+            json.dump(state, f)
+        os.replace(path + '.new', path)
+        return state
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except FileNotFoundError:
+        raise Refused('no run ' + run, 'check the run id that `driver start` printed')
+
+
+def forget(run, state):
+    try:
+        saved(run, state)
+    except OSError:
+        pass
+
+
+def archive(state):
+    for path in ('/v0/sessions/%s/cancel' % state['session'], '/v0/workspaces/%s/archive' % state['workspace']):
+        try:
+            status, out = api('POST', path)
+        except (Unsent, Lost):
+            status = 0
+    return 200 <= status < 300
+
+
+def start():
+    req, run = read(START), 'run-' + secrets.token_hex(6)
+    name = 'openwiz-' + run
+    if req['harness'] not in HARNESSES:
+        raise Refused('Conductor runs no harness %s; nothing was started' % req['harness'],
+                      'use one of: ' + ', '.join(HARNESSES))
+    signed_in('nothing was started')
+    curl_ready('nothing was started')
+    state = {'request': req, 'name': name, 'workspace': None, 'session': None, 'starting': True, 'stopped': False,
+             'archived': False}
+    try:
+        saved(run, state)
+    except OSError:
+        raise Refused('the driver cannot save runs in its state folder; nothing was started', SAVE_NEXT)
+    nothing = dict(state, starting=False, stopped=True, archived=True)
+    body = {'repositoryUrl': 'https://github.com/' + req['repository'], 'name': name, 'agent': req['harness'],
+            'model': req['model'], 'message': message(req, False)}
+    unknown = Refused('Conductor may have made workspace %s for run %s, but its answer was lost; its outcome is '
+                      'unknown' % (name, run), 'look for workspace %s in Conductor and archive it if it is there, '
+                      'before you start again: a second start makes a second workspace' % name)
+    # External: a start is never retried, because every POST /v0/workspaces makes a new workspace,
+    # https://www.conductor.build/docs/api
+    try:
+        status, out = api('POST', '/v0/workspaces', body)
+    except Unsent as e:
+        forget(run, nothing)
+        raise Refused('Conductor was not reached (%s); nothing was started' % e,
+                      'check the network, then start again')
+    except Lost:
+        raise unknown
+    if status >= 500:
+        raise unknown
+    if not 200 <= status < 300:
+        forget(run, nothing)
+        key_refused(status, 'nothing was started')
+        raise Refused('Conductor refused the start (%s); nothing was started' % said(status, out),
+                      'fix what Conductor names (the repository must be one of its projects, and the model one '
+                      'its harness takes), then start again')
+    ids = out.get('workspaceId'), out.get('sessionId')
+    if not all(isinstance(i, str) and re.fullmatch(r'[A-Za-z0-9_.:-]{1,200}', i) for i in ids):
+        raise unknown
+    started = dict(state, workspace=ids[0], session=ids[1], starting=False)
+    try:
+        saved(run, started)
+    except OSError:
+        if archive(started):
+            raise Refused('run %s made workspace %s but could not save it, so the driver archived it; its outcome is '
+                          'unknown' % (run, ids[0]), 'read the ticket for what its agent did before you start again')
+        raise Refused('run %s made workspace %s but could not save it, and could not archive it; its outcome is '
+                      'unknown' % (run, ids[0]), 'archive workspace %s in Conductor yourself, and read the ticket '
+                      'for what its agent did, before you start again' % ids[0])
+    return {'run': run}
+
+
+def wake(run, state):
+    if state['stopped']:
+        raise Refused('run %s is stopped' % run, 'start a new run')
+    if state['starting']:
+        raise Refused('run %s never finished starting' % run, 'stop it, then start a new run')
+    signed_in('nothing was sent')
+    curl_ready('nothing was sent')
+    # External: a message sent while the agent works is steered into its running turn, so a wake never makes a
+    # second agent, https://www.conductor.build/docs/api
+    try:
+        status, out = api('POST', '/v0/sessions/%s/messages' % state['session'],
+                          {'message': message(state['request'], True)})
+    except Unsent as e:
+        raise Refused('Conductor was not reached (%s); nothing was sent' % e, 'check the network, then wake it again')
+    except Lost:
+        raise Refused('the wake for run %s reached Conductor but its answer was lost' % run,
+                      'read the ticket: if the agent\'s status note did not change, wake it again')
+    if not 200 <= status < 300:
+        key_refused(status, 'nothing was sent')
+        raise Refused('Conductor refused the wake for run %s (%s)' % (run, said(status, out)),
+                      'check workspace %s in Conductor; if it is gone, stop this run and start a new one'
+                      % state['workspace'])
+    return {'run': run, 'woke': True}
+
+
+def stop(run, state):
+    if state['archived']:
+        return {'run': run, 'stopped': True}
+    if state['workspace'] is None:
+        raise Refused('run %s never got its workspace id from Conductor, so the driver cannot stop it' % run,
+                      'look for workspace %s in Conductor and archive it' % state['name'])
+    try:
+        saved(run, dict(state, stopped=True))
+        kept = True
+    except OSError:
+        kept = False
+    signed_in('workspace %s still runs' % state['workspace'])
+    curl_ready('workspace %s still runs' % state['workspace'])
+    if not archive(state):
+        raise Refused('run %s is stopped, but Conductor did not archive workspace %s' % (run, state['workspace']),
+                      'stop it again, or archive workspace %s in Conductor yourself' % state['workspace'])
+    try:
+        saved(run, dict(state, stopped=True, archived=True))
+    except OSError:
+        kept = False
+    if not kept:
+        raise Refused('workspace %s is archived, but the driver could not save that run %s is stopped'
+                      % (state['workspace'], run), SAVE_NEXT + ', then stop it again')
+    return {'run': run, 'stopped': True}
+
+
+def answer(cmd):
+    if cmd == 'version':
+        return VERSION
+    if cmd == 'schema':
+        with open(os.path.join(HERE, 'schema.json')) as f:
+            return json.load(f)
+    if cmd == 'start':
+        return start()
+    if cmd in ('wake', 'stop'):
+        run = read(RUN)['run']
+        lock(run)
+        return (wake if cmd == 'wake' else stop)(run, saved(run))
+    raise Refused('unknown command', 'run one of: version, schema, start, wake, stop')
+
+
+def main():
+    try:
+        out, code = answer(sys.argv[1] if len(sys.argv) == 2 else ''), 0
+    except Refused as e:
+        out, code = {'error': e.args[0][:300], 'next': e.args[1][:300]}, 1
+    except Exception as e:
+        out, code = {'error': 'the driver failed: ' + type(e).__name__, 'next': 'read its code, fix it, retry'}, 1
+    print(json.dumps(out))
+    sys.exit(code)
+
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,104 @@
+$ python3 -I adapters/conductor/test_driver.py   # the new tests against the copied template (adapters/template/driver) at main fc10ee12
+test_a_failed_archive_says_so_and_the_run_stays_stopped (__main__.Conductor.test_a_failed_archive_says_so_and_the_run_stays_stopped) ... FAIL
+test_a_lost_start_reply_is_never_retried (__main__.Conductor.test_a_lost_start_reply_is_never_retried) ... FAIL
+test_a_refused_start_starts_nothing_and_says_what_to_do (__main__.Conductor.test_a_refused_start_starts_nothing_and_says_what_to_do) ...
+  test_a_refused_start_starts_nothing_and_says_what_to_do (__main__.Conductor.test_a_refused_start_starts_nothing_and_says_what_to_do) (env=['FAKE_CONDUCTOR_FAIL']) ... FAIL
+  test_a_refused_start_starts_nothing_and_says_what_to_do (__main__.Conductor.test_a_refused_start_starts_nothing_and_says_what_to_do) (env=['CONDUCTOR_API_KEY']) ... FAIL
+test_nothing_is_called_without_a_key_a_harness_or_a_state_folder (__main__.Conductor.test_nothing_is_called_without_a_key_a_harness_or_a_state_folder) ...
+  test_nothing_is_called_without_a_key_a_harness_or_a_state_folder (__main__.Conductor.test_nothing_is_called_without_a_key_a_harness_or_a_state_folder) [no key] ... FAIL
+  test_nothing_is_called_without_a_key_a_harness_or_a_state_folder (__main__.Conductor.test_nothing_is_called_without_a_key_a_harness_or_a_state_folder) [unknown harness] ... FAIL
+  test_nothing_is_called_without_a_key_a_harness_or_a_state_folder (__main__.Conductor.test_nothing_is_called_without_a_key_a_harness_or_a_state_folder) [no state folder] ... FAIL
+test_start_wake_and_stop_reach_one_workspace (__main__.Conductor.test_start_wake_and_stop_reach_one_workspace) ... FAIL
+test_the_kit_passes_all_five (__main__.Conductor.test_the_kit_passes_all_five) ... FAIL
+
+======================================================================
+FAIL: test_a_failed_archive_says_so_and_the_run_stays_stopped (__main__.Conductor.test_a_failed_archive_says_so_and_the_run_stays_stopped)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/conductor/test_driver.py", line 121, in test_a_failed_archive_says_so_and_the_run_stays_stopped
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'run-904238ba746c', 'stopped': True}
+
+======================================================================
+FAIL: test_a_lost_start_reply_is_never_retried (__main__.Conductor.test_a_lost_start_reply_is_never_retried)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/conductor/test_driver.py", line 86, in test_a_lost_start_reply_is_never_retried
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'run-edf96a8b278e'}
+
+======================================================================
+FAIL: test_a_refused_start_starts_nothing_and_says_what_to_do (__main__.Conductor.test_a_refused_start_starts_nothing_and_says_what_to_do) (env=['FAKE_CONDUCTOR_FAIL'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/conductor/test_driver.py", line 97, in test_a_refused_start_starts_nothing_and_says_what_to_do
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'run-654955efc004'}
+
+======================================================================
+FAIL: test_a_refused_start_starts_nothing_and_says_what_to_do (__main__.Conductor.test_a_refused_start_starts_nothing_and_says_what_to_do) (env=['CONDUCTOR_API_KEY'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/conductor/test_driver.py", line 97, in test_a_refused_start_starts_nothing_and_says_what_to_do
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'run-6e2f7355c387'}
+
+======================================================================
+FAIL: test_nothing_is_called_without_a_key_a_harness_or_a_state_folder (__main__.Conductor.test_nothing_is_called_without_a_key_a_harness_or_a_state_folder) [no key]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/conductor/test_driver.py", line 113, in test_nothing_is_called_without_a_key_a_harness_or_a_state_folder
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'run-cc7c64305e46'}
+
+======================================================================
+FAIL: test_nothing_is_called_without_a_key_a_harness_or_a_state_folder (__main__.Conductor.test_nothing_is_called_without_a_key_a_harness_or_a_state_folder) [unknown harness]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/conductor/test_driver.py", line 114, in test_nothing_is_called_without_a_key_a_harness_or_a_state_folder
+    self.assertIn('nothing was started', out['error'])
+AssertionError: 'nothing was started' not found in 'harness pi is not installed here'
+
+======================================================================
+FAIL: test_nothing_is_called_without_a_key_a_harness_or_a_state_folder (__main__.Conductor.test_nothing_is_called_without_a_key_a_harness_or_a_state_folder) [no state folder]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/conductor/test_driver.py", line 113, in test_nothing_is_called_without_a_key_a_harness_or_a_state_folder
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'run-ab21893bdb35'}
+
+======================================================================
+FAIL: test_start_wake_and_stop_reach_one_workspace (__main__.Conductor.test_start_wake_and_stop_reach_one_workspace)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/conductor/test_driver.py", line 73, in test_start_wake_and_stop_reach_one_workspace
+    self.assertEqual([c for c in self.calls()], [
+AssertionError: Lists differ: [] != [('POST', '/v0/workspaces'), ('POST', '/v0[121 chars]ve')]
+
+Second list contains 4 additional elements.
+First extra element 0:
+('POST', '/v0/workspaces')
+
+- []
++ [('POST', '/v0/workspaces'),
++  ('POST', '/v0/sessions/se_fake0001/messages'),
++  ('POST', '/v0/sessions/se_fake0001/cancel'),
++  ('POST', '/v0/workspaces/ws_fake0001/archive')]
+
+======================================================================
+FAIL: test_the_kit_passes_all_five (__main__.Conductor.test_the_kit_passes_all_five)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/conductor/test_driver.py", line 62, in test_the_kit_passes_all_five
+    self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+AssertionError: 1 != 0 : pass version: openwiz:records v1, and the schema is driver v1
+fail start: no builder status note appeared within 20 seconds
+fail wake: not run: start failed
+fail stop: not run: start failed
+pass token: no login or token passed through the driver
+
+
+----------------------------------------------------------------------
+Ran 6 tests in <n>s
+
+FAILED (failures=9)

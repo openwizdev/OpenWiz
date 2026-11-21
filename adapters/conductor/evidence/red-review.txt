@@ -1,0 +1,133 @@
+# red at f049be89 for review findings R1-R3: driver unchanged; the new tests, and the fake requiring --disable first
+$ python3 -I adapters/conductor/test_driver.py
+test_a_failed_archive_says_so_and_the_run_stays_stopped (__main__.Conductor.test_a_failed_archive_says_so_and_the_run_stays_stopped) ... ERROR
+test_a_lost_start_reply_is_never_retried (__main__.Conductor.test_a_lost_start_reply_is_never_retried) ... FAIL
+test_a_refused_start_starts_nothing_and_says_what_to_do (__main__.Conductor.test_a_refused_start_starts_nothing_and_says_what_to_do) ...
+  test_a_refused_start_starts_nothing_and_says_what_to_do (__main__.Conductor.test_a_refused_start_starts_nothing_and_says_what_to_do) (env=['FAKE_CONDUCTOR_FAIL']) ... FAIL
+  test_a_refused_start_starts_nothing_and_says_what_to_do (__main__.Conductor.test_a_refused_start_starts_nothing_and_says_what_to_do) (env=['CONDUCTOR_API_KEY']) ... FAIL
+test_an_old_curl_is_refused_by_its_version (__main__.Conductor.test_an_old_curl_is_refused_by_its_version) ...
+  test_an_old_curl_is_refused_by_its_version (__main__.Conductor.test_an_old_curl_is_refused_by_its_version) [7.88.1] ... FAIL
+  test_an_old_curl_is_refused_by_its_version (__main__.Conductor.test_an_old_curl_is_refused_by_its_version) [8.2.1] ... FAIL
+test_an_old_curl_is_refused_by_its_version (__main__.Conductor.test_an_old_curl_is_refused_by_its_version) ... FAIL
+test_nothing_is_called_without_a_key_a_harness_or_a_state_folder (__main__.Conductor.test_nothing_is_called_without_a_key_a_harness_or_a_state_folder) ... ok
+test_start_wake_and_stop_reach_one_workspace (__main__.Conductor.test_start_wake_and_stop_reach_one_workspace) ... FAIL
+test_the_driver_never_reads_the_key (__main__.Conductor.test_the_driver_never_reads_the_key) ... FAIL
+test_the_kit_passes_all_five (__main__.Conductor.test_the_kit_passes_all_five) ... FAIL
+test_the_scoped_kit_still_sees_a_process_the_run_leaves (__main__.Conductor.test_the_scoped_kit_still_sees_a_process_the_run_leaves) ... FAIL
+
+======================================================================
+ERROR: test_a_failed_archive_says_so_and_the_run_stays_stopped (__main__.Conductor.test_a_failed_archive_says_so_and_the_run_stays_stopped)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/conductor/test_driver.py", line 214, in test_a_failed_archive_says_so_and_the_run_stays_stopped
+    run = out['run']
+          ~~~^^^^^^^
+KeyError: 'run'
+
+======================================================================
+FAIL: test_a_lost_start_reply_is_never_retried (__main__.Conductor.test_a_lost_start_reply_is_never_retried)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/conductor/test_driver.py", line 182, in test_a_lost_start_reply_is_never_retried
+    self.assertIn('unknown', out['error'])
+AssertionError: 'unknown' not found in 'the driver cannot read the version of curl; nothing was started'
+
+======================================================================
+FAIL: test_a_refused_start_starts_nothing_and_says_what_to_do (__main__.Conductor.test_a_refused_start_starts_nothing_and_says_what_to_do) (env=['FAKE_CONDUCTOR_FAIL'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/conductor/test_driver.py", line 194, in test_a_refused_start_starts_nothing_and_says_what_to_do
+    self.assertIn(word, out['error'] + out['next'])
+AssertionError: 'planted failure' not found in 'the driver cannot read the version of curl; nothing was startedcheck that `curl --version` prints curl 8.3 or later, then try again'
+
+======================================================================
+FAIL: test_a_refused_start_starts_nothing_and_says_what_to_do (__main__.Conductor.test_a_refused_start_starts_nothing_and_says_what_to_do) (env=['CONDUCTOR_API_KEY'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/conductor/test_driver.py", line 194, in test_a_refused_start_starts_nothing_and_says_what_to_do
+    self.assertIn(word, out['error'] + out['next'])
+AssertionError: 'CONDUCTOR_API_KEY' not found in 'the driver cannot read the version of curl; nothing was startedcheck that `curl --version` prints curl 8.3 or later, then try again'
+
+======================================================================
+FAIL: test_an_old_curl_is_refused_by_its_version (__main__.Conductor.test_an_old_curl_is_refused_by_its_version) [7.88.1]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/conductor/test_driver.py", line 243, in test_an_old_curl_is_refused_by_its_version
+    self.assertIn('curl %s is too old' % version, out['error'])
+AssertionError: 'curl 7.88.1 is too old' not found in 'the driver cannot read the version of curl; nothing was started'
+
+======================================================================
+FAIL: test_an_old_curl_is_refused_by_its_version (__main__.Conductor.test_an_old_curl_is_refused_by_its_version) [8.2.1]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/conductor/test_driver.py", line 243, in test_an_old_curl_is_refused_by_its_version
+    self.assertIn('curl %s is too old' % version, out['error'])
+AssertionError: 'curl 8.2.1 is too old' not found in 'the driver cannot read the version of curl; nothing was started'
+
+======================================================================
+FAIL: test_an_old_curl_is_refused_by_its_version (__main__.Conductor.test_an_old_curl_is_refused_by_its_version)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/conductor/test_driver.py", line 246, in test_an_old_curl_is_refused_by_its_version
+    self.assertEqual(self.driver('start', REQUEST, FAKE_CURL_VERSION='8.3.0')[0], 0)
+AssertionError: 1 != 0
+
+======================================================================
+FAIL: test_start_wake_and_stop_reach_one_workspace (__main__.Conductor.test_start_wake_and_stop_reach_one_workspace)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/conductor/test_driver.py", line 165, in test_start_wake_and_stop_reach_one_workspace
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'the driver cannot read the version of curl; nothing was started', 'next': 'check that `curl --version` prints curl 8.3 or later, then try again'}
+
+======================================================================
+FAIL: test_the_driver_never_reads_the_key (__main__.Conductor.test_the_driver_never_reads_the_key)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/conductor/test_driver.py", line 233, in test_the_driver_never_reads_the_key
+    self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+AssertionError: 1 != 0 : {"error": "the driver failed: AssertionError", "next": "read its code, fix it, retry"}
+
+
+======================================================================
+FAIL: test_the_kit_passes_all_five (__main__.Conductor.test_the_kit_passes_all_five)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/conductor/test_driver.py", line 139, in test_the_kit_passes_all_five
+    self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+AssertionError: 1 != 0 : pass version: openwiz:records v1, and the schema is driver v1
+fail start: the driver cannot read the version of curl; nothing was started
+fail wake: not run: start failed
+fail stop: not run: start failed
+pass token: no login or token passed through the driver
+
+
+======================================================================
+FAIL: test_the_scoped_kit_still_sees_a_process_the_run_leaves (__main__.Conductor.test_the_scoped_kit_still_sees_a_process_the_run_leaves)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/conductor/test_driver.py", line 161, in test_the_scoped_kit_still_sees_a_process_the_run_leaves
+    self.assertIn('fail stop: a process the run started still runs after stop', p.stdout, p.stdout + p.stderr)
+AssertionError: 'fail stop: a process the run started still runs after stop' not found in 'pass version: openwiz:records v1, and the schema is driver v1\nfail start: the driver cannot read the version of curl; nothing was started\nfail wake: not run: start failed\nfail stop: not run: start failed\npass token: no login or token passed through the driver\n' : pass version: openwiz:records v1, and the schema is driver v1
+fail start: the driver cannot read the version of curl; nothing was started
+fail wake: not run: start failed
+fail stop: not run: start failed
+pass token: no login or token passed through the driver
+
+
+----------------------------------------------------------------------
+Ran 9 tests in <n>s
+
+FAILED (failures=10, errors=1)
+
+# plants of the R3 wrapper's two guards, run on the fixed driver at 4eb014a7 plus the R1/R2/R4 changes; each plant was reverted
+
+$ # planted in SCOPED_KIT: the /proc scoping line removed
+$ python3 -I adapters/conductor/test_driver.py Conductor.test_the_kit_passes_all_five
+AssertionError: <pid> unexpectedly found in <the opened pids> : the kit read a process outside its run
+FAILED (failures=1)
+
+$ # planted in SCOPED_KIT: the subreaper removed
+$ python3 -I adapters/conductor/test_driver.py Conductor.test_the_scoped_kit_still_sees_a_process_the_run_leaves
+AssertionError: 'fail stop: a process the run started still runs after stop' not found in 'pass version: openwiz:records v1, and the schema is driver v1\npass s
+FAILED (failures=1)
