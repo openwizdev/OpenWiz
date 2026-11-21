@@ -122,6 +122,10 @@ class Driver(unittest.TestCase):
                 code, lost = self.call('start', START, FAKE_ROOM_RECEIPT='Synthetic lost receipt', **env)
                 self.assertEqual(code, 1, lost)
                 run = {'run': re.search(r'run-[0-9a-f]{12}', json.dumps(lost)).group()}
+                if host == 'cloud':
+                    self.assertEqual(self.call('stop', run, **env)[0], 1)
+                    self.assertEqual(self.calls()[-1][1], 'list', 'a Cloud row names no project')
+                    continue
                 self.assertEqual(self.call('stop', run, **env), (0, dict(run, stopped=True)))
                 self.assertEqual(self.calls()[-1][:3], ['thread', 'archive', 'thr_syn_0002'])
                 lists = [c for c in self.calls() if c[1] == 'list']
@@ -159,7 +163,10 @@ class Driver(unittest.TestCase):
                         case = {'FAKE_ROOM_EXTRA': json.dumps([twin])}
                     code, err = self.call('stop', run, **dict(env, **case))
                     archived = [c for c in self.calls() if c[1] == 'archive']
-                    if name in ('other project', 'other parent') or (name, host) == ('another caller', 'local'):
+                    if host == 'cloud':
+                        self.assertEqual((code, archived), (1, []), err)
+                        continue
+                    if name in ('other project', 'other parent', 'another caller'):
                         self.assertEqual((code, archived), (0, [['thread', 'archive', 'thr_syn_0001']]), err)
                         continue
                     self.assertEqual((code, archived), (1, []), err)
@@ -215,6 +222,7 @@ class Driver(unittest.TestCase):
         if os.geteuid() == 0:
             self.skipTest('root ignores a read-only folder')
         state = self.env['OPENWIZ_CLOUDROOM_STATE']
+        self.env['FAKE_ROOM_HOST'] = 'local'
         code, out = self.call('start', START, FAKE_ROOM_READONLY=state, FAKE_ROOM_REFUSE='archive')
         os.chmod(state, 0o700)
         self.assertEqual(code, 1, out)
@@ -229,7 +237,7 @@ class Driver(unittest.TestCase):
         before = len(self.calls())
         self.assertEqual(self.call('stop', run), (0, dict(run, stopped=True)))
         self.assertEqual(self.calls()[before:], [['thread', 'list', '--json', '--project', PROJECT],
-                                                 ['thread', 'list', '--json'], ['thread', 'archive', 'thr_syn_0001']],
+                                                 ['thread', 'archive', 'thr_syn_0001']],
                          'stop did not find and end the thread by its title')
 
     def test_stop_that_cannot_save_ends_the_thread_and_leaves_nothing_to_wake(self):

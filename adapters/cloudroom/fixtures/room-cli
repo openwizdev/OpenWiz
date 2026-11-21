@@ -78,7 +78,9 @@ elif sub == 'list':
     if local and '--project' in args:
         rows = [r for r in rows if r['projectId'] == flag('--project')]
     if not local:
-        rows = [r for r in rows if r['parentThreadId'] == os.environ.get('ROOM_THREAD_ID')]
+        rows = [{'id': r['id'], 'parent': r['parentThreadId'], 'sandbox': 'sbx_syn', 'state': 'idle', 'status': r['status'],
+                 'threadId': r['id'], 'title': r['title']} for r in rows
+                if r['parentThreadId'] == os.environ.get('ROOM_THREAD_ID')]
     rows += json.loads(os.environ.get('FAKE_ROOM_EXTRA') or '[]')
     if not local and set(args[2:]) - {'--json', '--include-archived'}:
         sys.exit(print('Unknown option %s.' % sorted(set(args[2:]) - {'--json', '--include-archived'})[0],
