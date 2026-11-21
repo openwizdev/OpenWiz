@@ -18,6 +18,7 @@ UP = ('running', 'ready', 'idle')  # the sandbox states a wake may prompt in; an
 STATES = UP + ('stopped', 'archived')
 QUEUED_WAIT = 45  # seconds for boat to queue a turn; the kit gives a command 120
 INSTALL_WAIT = 60  # seconds for the sandbox to install the pinned skills
+PUSH_CHECK_WAIT = 30
 DEFAULT_SETTLE_SECONDS, MAX_SETTLE_SECONDS = 20, 60
 SHOWN_LIMIT_TYPES = {'auth_expiry': 'auth_expiry', 'rate_limit': 'rate_limit'}
 MACOS_SECONDS_BETWEEN_LOOKS = 0.2
@@ -221,6 +222,32 @@ def install_skills(sandbox, lock):
                            % (lock['version'], sandbox, why)),
                       line(('%s, then ' % step if step else '') + 'check that the sandbox reaches github.com and '
                            'that no other skill of that name is installed there, then start again'))
+
+
+PUSH_CHECK = r'''set -eu
+d=$(mktemp -d)
+trap 'rm -rf "$d"' EXIT
+git init -q "$d/r"
+GIT_AUTHOR_NAME=openwiz GIT_AUTHOR_EMAIL=openwiz@invalid GIT_COMMITTER_NAME=openwiz \
+  GIT_COMMITTER_EMAIL=openwiz@invalid git -C "$d/r" commit -q --allow-empty -m 'push check'
+git -C "$d/r" push -q --dry-run '%(url)s' HEAD:refs/heads/openwiz-push-check-%(run)s
+echo openwiz-push-ok
+'''
+
+
+def has_write_access_or_refuse(sandbox, repository, run):
+    url = 'https://github.com/%s.git' % repository
+    try:
+        p = subprocess.run([boat_program(), 'exec', sandbox, '--timeout', str(PUSH_CHECK_WAIT), '--', 'sh', '-c',
+                            PUSH_CHECK % {'url': url, 'run': run}], stdin=subprocess.DEVNULL, capture_output=True, text=True,
+                           timeout=PUSH_CHECK_WAIT + 15)
+        pushed = p.returncode == 0 and 'openwiz-push-ok' in p.stdout
+    except subprocess.TimeoutExpired:
+        pushed = False
+    if not pushed:
+        raise Refused("the sandbox cannot push to %s: install boat.dev's GitHub App on this repository, with write "
+                      "access" % repository,
+                      "install boat.dev's GitHub App on %s with write access, then start again" % repository)
 
 
 def path(run, name):
@@ -748,6 +775,7 @@ def start(req):
             raise Refused('the driver cannot save run %s; its new sandbox is stopped' % run,
                           UNWRITABLE + ', then start again')  # the cleanup below stops it, or reports why not
         install_skills(state['sandbox'], lock)
+        has_write_access_or_refuse(state['sandbox'], req['repository'], run)
         turn, talk = prompt(state, run)
         state['conversation'] = talk
         refuse_a_dead_first_turn(run, turn, settle)

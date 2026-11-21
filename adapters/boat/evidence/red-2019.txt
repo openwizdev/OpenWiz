@@ -1,0 +1,58 @@
+# Red run (#2019): python3 -I adapters/boat/test_driver.py -k cannot_push -k pushable -k push_fix, against the driver at cc2df3e9 (#2024's approved head f5d6bac2 with main merged in), the fake boat able to play a read-only GitHub App (FAKE_BOAT_PUSH=denied).
+FFF
+======================================================================
+FAIL: test_a_pushable_repository_starts_after_one_dry_run_push (__main__.Boat.test_a_pushable_repository_starts_after_one_dry_run_push)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/boat/test_driver.py", line 560, in test_a_pushable_repository_starts_after_one_dry_run_push
+    self.assertEqual(f.read().splitlines(),
+AssertionError: Lists differ: [] != ['dry-run https://github.com/example/site.[35 chars]eck']
+
+Second list contains 1 additional elements.
+First extra element 0:
+'dry-run https://github.com/example/site.git HEAD:refs/heads/openwiz-push-check'
+
+- []
++ ['dry-run https://github.com/example/site.git '
++  'HEAD:refs/heads/openwiz-push-check']
+
+======================================================================
+FAIL: test_a_start_that_cannot_push_fails_fast_naming_the_fix (__main__.Boat.test_a_start_that_cannot_push_fails_fast_naming_the_fix)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/boat/test_driver.py", line 546, in test_a_start_that_cannot_push_fails_fast_naming_the_fix
+    self.assertEqual((code, err), (1, {
+AssertionError: Tuples differ: (0, {'run': 'run-<id>'}) != (1, {'error': "the sandbox cannot push to [172 chars]in"})
+
+First differing element 0:
+0
+1
+
+- (0, {'run': 'run-<id>'})
++ (1,
++  {'error': "the sandbox cannot push to example/site: install boat.dev's GitHub "
++            'App on this repository, with write access',
++   'next': "install boat.dev's GitHub App on example/site with write access, "
++           'then start again'})
+
+======================================================================
+FAIL: test_the_kits_start_check_names_the_push_fix (__main__.Boat.test_the_kits_start_check_names_the_push_fix)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/boat/test_driver.py", line 569, in test_the_kits_start_check_names_the_push_fix
+    self.assertEqual((p.returncode, p.stdout.splitlines()[1]), (1, "fail start: the sandbox cannot push to "
+AssertionError: Tuples differ: (0, 'pass start: the run posted builder status note 1') != (1, "fail start: the sandbox cannot push t[80 chars]ess")
+
+First differing element 0:
+0
+1
+
+- (0, 'pass start: the run posted builder status note 1')
++ (1,
++  "fail start: the sandbox cannot push to example/site: install boat.dev's "
++  'GitHub App on this repository, with write access') : 
+
+----------------------------------------------------------------------
+Ran 3 tests
+
+FAILED (failures=3)

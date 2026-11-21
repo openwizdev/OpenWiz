@@ -617,6 +617,48 @@ class Boat(unittest.TestCase):
             WATCHING.pop()
         self.assertEqual(ENVIRON_OPENS, [], 'the tests opened another process\'s environment')
 
+    def test_a_start_that_cannot_push_fails_fast_naming_the_fix(self):
+        code, err = self.driver('start', REQUEST, FAKE_BOAT_PUSH='denied')
+        self.assertEqual((code, err), (1, {
+            'error': "the sandbox cannot push to example/site: install boat.dev's GitHub App on this repository, "
+                     "with write access",
+            'next': "install boat.dev's GitHub App on example/site with write access, then start again"}))
+        self.assertEqual((self.logged(), list(self.sandboxes().values())), ([], ['stopped']),
+                         'a start that cannot push ran a turn or left its sandbox running')
+        for detail in ('synthetic-app', '403', 'Permission', TOKEN, 'bx_fake'):
+            self.assertNotIn(detail, json.dumps(err))
+
+    def test_the_push_refusal_fits_driver_v1_for_the_longest_repository_name(self):
+        longest = 'o' * 100 + '/' + 'r' * 100
+        code, err = self.driver('start', dict(REQUEST, repository=longest), FAKE_BOAT_PUSH='denied')
+        self.assertEqual(code, 1, err)
+        for key in ('error', 'next'):
+            self.assertLessEqual(len(err[key]), 300, err[key])
+            self.assertIn(longest, err[key])
+            self.assertIn('write access', err[key])
+
+    def test_a_pushable_repository_starts_after_one_dry_run_push(self):
+        code, out = self.driver('start', REQUEST)
+        self.assertEqual(code, 0, out)
+        pushes = self.env['FAKE_BOAT_STATE'] + '.homes/bx_fake0001/.fake-github-pushes'
+        with open(pushes) if os.path.exists(pushes) else open(os.devnull) as f:
+            self.assertEqual(f.read().splitlines(), ['dry-run https://github.com/example/site.git '
+                                                     'HEAD:refs/heads/openwiz-push-check-' + out['run']])
+        self.assertEqual(self.driver('stop', out), (0, dict(out, stopped=True)))
+
+    def test_a_writable_repository_that_has_an_old_probe_branch_starts(self):
+        code, out = self.driver('start', REQUEST, FAKE_GITHUB_BRANCHES='openwiz-push-check')
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.driver('stop', out), (0, dict(out, stopped=True)))
+
+    def test_the_kits_start_check_names_the_push_fix(self):
+        p = subprocess.run([sys.executable, '-I', KIT, '--driver', DRIVER, '--repo', 'example/site',
+                            '--ticket', '7', '--harness', 'claude', '--model', 'claude-opus-5-5',
+                            '--tracker', self.tracker, '--wait', '8'],
+                           env=dict(self.env, FAKE_BOAT_PUSH='denied'), capture_output=True, text=True, timeout=300)
+        self.assertEqual((p.returncode, p.stdout.splitlines()[1]), (1, "fail start: the sandbox cannot push to "
+                         "example/site: install boat.dev's GitHub App on this repository, with write access"), p.stderr)
+
     def test_start_installs_the_pinned_skills_or_refuses(self):
         # catches: a sandbox without the pinned WizSkills skills, so its agent can't follow the skill or post
         # its note (L4, live run 3); a release whose commit isn't the lock's installed anyway; an existing
