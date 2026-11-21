@@ -9,8 +9,6 @@ stop:  `room-cli thread archive <thread>`, which stops the thread and archives i
 A run is saved, as `starting`, before its thread is made, and the thread's title carries the run id, so `stop`
 always reaches the thread (by title, if its id was never saved) and `wake` never uses a run that did not finish
 starting. A wake or a stop holds the run's lock throughout. No answer after a spawn says retry.
-Every read it parses passes --json: a Local room-cli (on the user's own machine) prints a table without it, and
-lists threads as a bare list; the Cloud one lists them as {"children": [...]} and refuses list's --project (#2059).
 It never reads, adds or passes a login: room-cli runs with the caller's environment, unchanged.
 Linux or macOS; standard library only.
 """
@@ -196,7 +194,7 @@ def threads(state):
         return [state['thread']]
     project = state.get('project')
     code, out, said = room('thread', 'list', '--json', '--project', project) if project else (2, '', '')
-    if code == 2:  # a usage error: the Cloud room-cli lists only this thread's children, and takes no --project
+    if code == 2:
         code, out, said = room('thread', 'list', '--json')
     try:
         rows = json.loads(out)

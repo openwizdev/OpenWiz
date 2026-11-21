@@ -48,7 +48,7 @@ class Driver(unittest.TestCase):
             except OSError:
                 pass
 
-    def fresh(self):  # a new fake host and state for each subtest
+    def fresh(self):
         self.tearDown()
         self.setUp()
 
@@ -65,8 +65,7 @@ class Driver(unittest.TestCase):
             return [json.loads(line) for line in f]
 
     def test_kit_passes_all_five(self):
-        # catches: a driver whose start, wake or stop doesn't reach the run's thread, or that passes a login through,
-        # on a Local room-cli (the user's own machine) or the Cloud one (#2059).
+        # catches: a driver whose start, wake or stop doesn't reach the run's thread, or that passes a login through.
         for host in ('local', 'cloud'):
             with self.subTest(host):
                 self.fresh()
@@ -111,9 +110,6 @@ class Driver(unittest.TestCase):
         self.assertEqual(len(self.calls()), before, 'a stopped run reached Cloudroom again')
 
     def test_reads_a_local_and_a_cloud_room_cli(self):
-        # catches (#2059): a driver that reads room-cli as only the Cloud CLI prints it. A Local room-cli prints a
-        # table unless --json is passed, and with it a bare list of rows; the Cloud one prints {"children": [...]}
-        # and refuses --project on list. Start, wake, stop and the archive by title must work on both.
         for host in ('local', 'cloud'):
             with self.subTest(host):
                 self.fresh()
@@ -123,14 +119,13 @@ class Driver(unittest.TestCase):
                 self.assertEqual(self.call('wake', out, **env), (0, dict(out, woke=True)))
                 self.assertEqual(self.call('stop', out, **env), (0, dict(out, stopped=True)))
                 self.assertEqual(self.calls()[-1][:3], ['thread', 'archive', 'thr_syn_0001'])
-                # a start whose receipt was lost: stop finds the thread by its title in the list, and archives it
                 code, lost = self.call('start', START, FAKE_ROOM_RECEIPT='Synthetic lost receipt', **env)
                 self.assertEqual(code, 1, lost)
                 run = {'run': re.search(r'run-[0-9a-f]{12}', json.dumps(lost)).group()}
                 self.assertEqual(self.call('stop', run, **env), (0, dict(run, stopped=True)))
                 self.assertEqual(self.calls()[-1][:3], ['thread', 'archive', 'thr_syn_0002'])
                 lists = [c for c in self.calls() if c[1] == 'list']
-                if host == 'local':  # the Local list is the project's, not the whole account's
+                if host == 'local':
                     self.assertEqual(lists, [['thread', 'list', '--json', '--project', PROJECT]])
 
     def test_start_refuses_a_run_cloudroom_did_not_make(self):
@@ -185,7 +180,7 @@ class Driver(unittest.TestCase):
         self.assertNotIn('tell', [c[1] for c in self.calls()], 'a wake reached the thread of a run never started')
         before = len(self.calls())
         self.assertEqual(self.call('stop', run), (0, dict(run, stopped=True)))
-        self.assertEqual(self.calls()[before:], [['thread', 'list', '--json', '--project', PROJECT],  # Cloud: refused
+        self.assertEqual(self.calls()[before:], [['thread', 'list', '--json', '--project', PROJECT],
                                                  ['thread', 'list', '--json'], ['thread', 'archive', 'thr_syn_0001']],
                          'stop did not find and end the thread by its title')
 

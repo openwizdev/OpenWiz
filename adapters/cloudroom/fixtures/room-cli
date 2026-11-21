@@ -12,10 +12,6 @@ FAKE_ROOM_BREAK names a folder that spawn replaces with a regular file once the 
 FAKE_ROOM_READONLY one it makes read-only, as a full disk or a removed folder would break the caller's
 next write. FAKE_ROOM_HOLD names a file that `tell` waits for (it makes <file>.held first, and logs
 ["thread", "told"] once it is done). `thread list` answers the threads not archived, as Cloudroom does.
-FAKE_ROOM_HOST=local answers as a Local room-cli on the user's own machine: without --json, spawn and list print
-text (a table), and with it spawn prints the thread's row and list a bare list of rows (`--project` filters it).
-Otherwise it answers as the Cloud room-cli: JSON always, list as {"children": [...]}, and list refuses every
-option but --json and --include-archived (exit 2), as Cloud's does.
 """
 import json, os, shutil, signal, subprocess, sys, time
 
