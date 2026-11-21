@@ -2,7 +2,7 @@
 
 All OpenWiz versions, newest first. How versions work: [RELEASING.md](https://github.com/openwizdev/OpenWiz/blob/main/RELEASING.md).
 
-## 0.1.0 · 2026-11-20
+## 0.1.0 · 2026-11-21
 
 **OpenWiz 0.01: see your factory in the app, and run builders where you choose**
 
@@ -25,7 +25,7 @@ Live-checked against real hosts: the boat.dev driver passed all five driver-kit 
 
 [Full release on GitHub](https://github.com/openwizdev/OpenWiz/releases/tag/v0.1.0)
 
-## 0.0.17 · 2026-11-19
+## 0.0.17 · 2026-11-21
 
 **Keep your loops as files, with no always-on engine to run**
 
@@ -44,7 +44,7 @@ Checked live in the 0.0.17 candidate's own smoke test, run by agents on Linux: a
 
 [Full release on GitHub](https://github.com/openwizdev/OpenWiz/releases/tag/v0.1.0)
 
-## 0.0.16 · 2026-11-19
+## 0.0.16 · 2026-11-21
 
 **One install instruction, on to your first fleet**
 
