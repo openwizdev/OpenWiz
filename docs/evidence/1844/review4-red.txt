@@ -1,0 +1,115 @@
+# #1916 review R7 and R9: the new tests against the helper at a5169140 (red first).
+# Run: python3 -I tools/github-app/test_agent_token.py. Temporary and checkout paths replaced with <tmp> and <checkout>; lines cut at 240 characters.
+# a51a66bf... is sha256 of 'synthetic-owner:synthetic-owner-login', the fake owner helper's credential.
+......../usr/lib/python3.11/socket.py:777: ResourceWarning: unclosed <ssl.SSLSocket fd=4, family=2, type=1, proto=0, laddr=('127.0.0.1', 41261), raddr=('127.0.0.1', 42888)>
+  self._sock = None
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+................/usr/lib/python3.11/socket.py:777: ResourceWarning: unclosed <ssl.SSLSocket fd=5, family=2, type=1, proto=0, laddr=('127.0.0.1', 38035), raddr=('127.0.0.1', 33146)>
+  self._sock = None
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+F/usr/lib/python3.11/socket.py:777: ResourceWarning: unclosed <ssl.SSLSocket fd=5, family=2, type=1, proto=0, laddr=('127.0.0.1', 38035), raddr=('127.0.0.1', 33150)>
+  self._sock = None
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+F/usr/lib/python3.11/socket.py:777: ResourceWarning: unclosed <ssl.SSLSocket fd=5, family=2, type=1, proto=0, laddr=('127.0.0.1', 38035), raddr=('127.0.0.1', 33156)>
+  self._sock = None
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+F/usr/lib/python3.11/socket.py:777: ResourceWarning: unclosed <ssl.SSLSocket fd=5, family=2, type=1, proto=0, laddr=('127.0.0.1', 38035), raddr=('127.0.0.1', 33168)>
+  self._sock = None
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+F/usr/lib/python3.11/socket.py:777: ResourceWarning: unclosed <ssl.SSLSocket fd=5, family=2, type=1, proto=0, laddr=('127.0.0.1', 38819), raddr=('127.0.0.1', 45692)>
+  self._sock = None
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+./usr/lib/python3.11/socket.py:777: ResourceWarning: unclosed <ssl.SSLSocket fd=5, family=2, type=1, proto=0, laddr=('127.0.0.1', 36463), raddr=('127.0.0.1', 50560)>
+  self._sock = None
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+F
+======================================================================
+FAIL: test_r7_an_unguarded_git_never_signs_in_as_the_owner (__main__.Review.test_r7_an_unguarded_git_never_signs_in_as_the_owner) [lookup fails]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/github-app/test_agent_token.py", line 549, in test_r7_an_unguarded_git_never_signs_in_as_the_owner
+    self.assertEqual(github.seen, [], "git signs in as no one: not the owner, not the App")
+AssertionError: Lists differ: ['a51a66bfd438683608cb5a1090ecc44bd2a027b5[89 chars]540'] != []
+
+First list contains 2 additional elements.
+First extra element 0:
+'a51a66bfd438683608cb5a1090ecc44bd2a027b52877fb52a33e13b0a4fe9540'
+
++ []
+- ['a51a66bfd438683608cb5a1090ecc44bd2a027b52877fb52a33e13b0a4fe9540',
+-  'a51a66bfd438683608cb5a1090ecc44bd2a027b52877fb52a33e13b0a4fe9540'] : git signs in as no one: not the owner, not the App
+
+======================================================================
+FAIL: test_r7_an_unguarded_git_never_signs_in_as_the_owner (__main__.Review.test_r7_an_unguarded_git_never_signs_in_as_the_owner) [--exec-path]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/github-app/test_agent_token.py", line 549, in test_r7_an_unguarded_git_never_signs_in_as_the_owner
+    self.assertEqual(github.seen, [], "git signs in as no one: not the owner, not the App")
+AssertionError: Lists differ: ['a51a66bfd438683608cb5a1090ecc44bd2a027b5[225 chars]540'] != []
+
+First list contains 4 additional elements.
+First extra element 0:
+'a51a66bfd438683608cb5a1090ecc44bd2a027b52877fb52a33e13b0a4fe9540'
+
++ []
+- ['a51a66bfd438683608cb5a1090ecc44bd2a027b52877fb52a33e13b0a4fe9540',
+-  'a51a66bfd438683608cb5a1090ecc44bd2a027b52877fb52a33e13b0a4fe9540',
+-  'a51a66bfd438683608cb5a1090ecc44bd2a027b52877fb52a33e13b0a4fe9540',
+-  'a51a66bfd438683608cb5a1090ecc44bd2a027b52877fb52a33e13b0a4fe9540'] : git signs in as no one: not the owner, not the App
+
+======================================================================
+FAIL: test_r7_an_unguarded_git_never_signs_in_as_the_owner (__main__.Review.test_r7_an_unguarded_git_never_signs_in_as_the_owner) [GIT_EXEC_PATH]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/github-app/test_agent_token.py", line 549, in test_r7_an_unguarded_git_never_signs_in_as_the_owner
+    self.assertEqual(github.seen, [], "git signs in as no one: not the owner, not the App")
+AssertionError: Lists differ: ['a51a66bfd438683608cb5a1090ecc44bd2a027b5[361 chars]540'] != []
+
+First list contains 6 additional elements.
+First extra element 0:
+'a51a66bfd438683608cb5a1090ecc44bd2a027b52877fb52a33e13b0a4fe9540'
+
++ []
+- ['a51a66bfd438683608cb5a1090ecc44bd2a027b52877fb52a33e13b0a4fe9540',
+-  'a51a66bfd438683608cb5a1090ecc44bd2a027b52877fb52a33e13b0a4fe9540',
+-  'a51a66bfd438683608cb5a1090ecc44bd2a027b52877fb52a33e13b0a4fe9540',
+-  'a51a66bfd438683608cb5a1090ecc44bd2a027b52877fb52a33e13b0a4fe9540',
+-  'a51a66bfd438683608cb5a1090ecc44bd2a027b52877fb52a33e13b0a4fe9540',
+-  'a51a66bfd438683608cb5a1090ecc44bd2a027b52877fb52a33e13b0a4fe9540'] : git signs in as no one: not the owner, not the App
+
+======================================================================
+FAIL: test_r7_an_unguarded_git_never_signs_in_as_the_owner (__main__.Review.test_r7_an_unguarded_git_never_signs_in_as_the_owner) [unset]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/github-app/test_agent_token.py", line 549, in test_r7_an_unguarded_git_never_signs_in_as_the_owner
+    self.assertEqual(github.seen, [], "git signs in as no one: not the owner, not the App")
+AssertionError: Lists differ: ['a51a66bfd438683608cb5a1090ecc44bd2a027b5[497 chars]540'] != []
+
+First list contains 8 additional elements.
+First extra element 0:
+'a51a66bfd438683608cb5a1090ecc44bd2a027b52877fb52a33e13b0a4fe9540'
+
++ []
+- ['a51a66bfd438683608cb5a1090ecc44bd2a027b52877fb52a33e13b0a4fe9540',
+-  'a51a66bfd438683608cb5a1090ecc44bd2a027b52877fb52a33e13b0a4fe9540',
+-  'a51a66bfd438683608cb5a1090ecc44bd2a027b52877fb52a33e13b0a4fe9540',
+-  'a51a66bfd438683608cb5a1090ecc44bd2a027b52877fb52a33e13b0a4fe9540',
+-  'a51a66bfd438683608cb5a1090ecc44bd2a027b52877fb52a33e13b0a4fe9540',
+-  'a51a66bfd438683608cb5a1090ecc44bd2a027b52877fb52a33e13b0a4fe9540',
+-  'a51a66bfd438683608cb5a1090ecc44bd2a027b52877fb52a33e13b0a4fe9540',
+-  'a51a66bfd438683608cb5a1090ecc44bd2a027b52877fb52a33e13b0a4fe9540'] : git signs in as no one: not the owner, not the App
+
+======================================================================
+FAIL: test_r9_git_process_tracing_never_shows_the_token (__main__.Review.test_r9_git_process_tracing_never_shows_the_token)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/github-app/test_agent_token.py", line 565, in test_r9_git_process_tracing_never_shows_the_token
+    self.assert_never_exposed(ran)
+  File "<checkout>/tools/github-app/test_agent_token.py", line 206, in assert_never_exposed
+    self.assertNotIn(token.encode(), path.read_bytes(), path)
+AssertionError: b'synthetic-agent-token-1' unexpectedly found in b'{"event":"version","sid":"<sid>","thread":"main","time":"2026-11-20T17:08:02.662196Z","file":"common-main.c","line":50,"evt":"3","exe":
+
+----------------------------------------------------------------------
+Ran 27 tests in 10.168s
+
+FAILED (failures=5)

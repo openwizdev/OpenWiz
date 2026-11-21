@@ -1,0 +1,50 @@
+$ python3 -I tools/github-app/test_agent_token.py -v   (umask 022; also passes under 077 and 002, and with git 2.39 and 2.56)
+test_a_failed_refresh_leaves_no_service_credential (__main__.Fallback.test_a_failed_refresh_leaves_no_service_credential) ... ok
+test_a_path_that_cannot_be_quoted_is_never_run (__main__.Fallback.test_a_path_that_cannot_be_quoted_is_never_run) ... ok
+test_a_service_that_does_not_answer_in_time (__main__.Fallback.test_a_service_that_does_not_answer_in_time) ... ok
+test_each_fixture_fallback_reason (__main__.Fallback.test_each_fixture_fallback_reason) ... ok
+test_no_service_configured_is_exactly_as_today (__main__.Fallback.test_no_service_configured_is_exactly_as_today) ... ok
+test_unreachable_service_falls_back_with_one_note (__main__.Fallback.test_unreachable_service_falls_back_with_one_note) ... ok
+test_a_local_thread_runs_the_service_itself (__main__.MintedToken.test_a_local_thread_runs_the_service_itself) ... ok
+test_a_private_place_inside_a_git_tree_is_refused (__main__.MintedToken.test_a_private_place_inside_a_git_tree_is_refused) ... ok
+test_gh_and_git_use_the_minted_token (__main__.MintedToken.test_gh_and_git_use_the_minted_token) ... /usr/lib/python3.11/socket.py:777: ResourceWarning: unclosed <ssl.SSLSocket fd=4, family=2, type=1, proto=0, laddr=('127.0.0.1', 41613), raddr=('127.0.0.1', 52000)>
+  self._sock = None
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_refreshes_with_five_minutes_left_before_the_next_use (__main__.MintedToken.test_refreshes_with_five_minutes_left_before_the_next_use) ... ok
+test_the_request_names_repositories_and_permissions_only (__main__.MintedToken.test_the_request_names_repositories_and_permissions_only) ... ok
+test_token_crosses_the_pairing_only_as_piped_stdout_of_one_call (__main__.MintedToken.test_token_crosses_the_pairing_only_as_piped_stdout_of_one_call) ... ok
+test_the_contract_refresh_boundary (__main__.Refresh.test_the_contract_refresh_boundary) ... ok
+test_r10_ssh_never_signs_git_in_as_the_owner (__main__.Review.test_r10_ssh_never_signs_git_in_as_the_owner) ... ok
+test_r11_a_legacy_app_key_is_refused_by_name (__main__.Review.test_r11_a_legacy_app_key_is_refused_by_name) ... ok
+test_r11_the_legacy_app_key_value_is_never_read (__main__.Review.test_r11_the_legacy_app_key_value_is_never_read) ... openwiz: agent-token: OPENWIZ_GITHUB_APP_KEY is set: remove the old App-key secret from this agent's environment, since the token service holds the key
+openwiz: agent-token: OPENWIZ_GITHUB_APP_KEY is set: remove the old App-key secret from this agent's environment, since the token service holds the key
+ok
+test_r12_gh_gets_the_token_only_for_its_allowed_commands (__main__.Review.test_r12_gh_gets_the_token_only_for_its_allowed_commands) ... ok
+test_r12_only_gh_gets_the_app_token (__main__.Review.test_r12_only_gh_gets_the_app_token) ... ok
+test_r13_a_reply_that_crosses_the_refresh_boundary_in_flight_is_refused (__main__.Review.test_r13_a_reply_that_crosses_the_refresh_boundary_in_flight_is_refused) ... ok
+test_r1_a_git_credential_command_never_prints_the_token (__main__.Review.test_r1_a_git_credential_command_never_prints_the_token) ... ok
+test_r1_credential_answers_only_inside_git_exchange (__main__.Review.test_r1_credential_answers_only_inside_git_exchange) ... ok
+test_r2_a_symlinked_ancestor_into_a_git_tree_is_refused (__main__.Review.test_r2_a_symlinked_ancestor_into_a_git_tree_is_refused) ... ok
+test_r2_an_ancestor_its_group_can_change_is_refused (__main__.Review.test_r2_an_ancestor_its_group_can_change_is_refused) ... ok
+test_r2_an_ancestor_others_can_change_is_refused (__main__.Review.test_r2_an_ancestor_others_can_change_is_refused) ... ok
+test_r2_an_ancestor_swapped_before_the_open_never_redirects_the_token (__main__.Review.test_r2_an_ancestor_swapped_before_the_open_never_redirects_the_token) ... ok
+test_r3_two_agents_on_one_account_keep_their_own_scopes (__main__.Review.test_r3_two_agents_on_one_account_keep_their_own_scopes) ... ok
+test_r4_a_command_scope_helper_never_gets_the_token (__main__.Review.test_r4_a_command_scope_helper_never_gets_the_token) ... ok
+test_r6_a_failed_start_inside_a_run_hands_no_app_token_on (__main__.Review.test_r6_a_failed_start_inside_a_run_hands_no_app_token_on) ... ok
+test_r7_a_later_owner_helper_never_authenticates_git (__main__.Review.test_r7_a_later_owner_helper_never_authenticates_git) ... ok
+test_r7_a_replaced_helper_list_or_header_never_authenticates_git (__main__.Review.test_r7_a_replaced_helper_list_or_header_never_authenticates_git) ... ok
+test_r7_an_unguarded_git_never_signs_in_as_the_owner (__main__.Review.test_r7_an_unguarded_git_never_signs_in_as_the_owner) ... ok
+test_r8_git_http_tracing_never_shows_the_token (__main__.Review.test_r8_git_http_tracing_never_shows_the_token) ... /usr/lib/python3.11/socket.py:777: ResourceWarning: unclosed <ssl.SSLSocket fd=5, family=2, type=1, proto=0, laddr=('127.0.0.1', 33441), raddr=('127.0.0.1', 48278)>
+  self._sock = None
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_r9_git_process_tracing_never_shows_the_token (__main__.Review.test_r9_git_process_tracing_never_shows_the_token) ... /usr/lib/python3.11/socket.py:777: ResourceWarning: unclosed <ssl.SSLSocket fd=5, family=2, type=1, proto=0, laddr=('127.0.0.1', 38131), raddr=('127.0.0.1', 34566)>
+  self._sock = None
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+
+----------------------------------------------------------------------
+Ran 33 tests
+
+OK

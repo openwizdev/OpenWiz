@@ -1,0 +1,46 @@
+# #1916 Codex review R11, R12 and R13: the new tests against the helper at 67f6ffd1 (red first).
+# Run: python3 -I tools/github-app/test_agent_token.py. Temporary and checkout paths replaced with <tmp> and <checkout>; lines cut at 240 characters.
+......../usr/lib/python3.11/socket.py:777: ResourceWarning: unclosed <ssl.SSLSocket fd=4, family=2, type=1, proto=0, laddr=('127.0.0.1', 41835), raddr=('127.0.0.1', 39254)>
+  self._sock = None
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+......FFF............/usr/lib/python3.11/socket.py:777: ResourceWarning: unclosed <ssl.SSLSocket fd=5, family=2, type=1, proto=0, laddr=('127.0.0.1', 39271), raddr=('127.0.0.1', 40564)>
+  self._sock = None
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+./usr/lib/python3.11/socket.py:777: ResourceWarning: unclosed <ssl.SSLSocket fd=5, family=2, type=1, proto=0, laddr=('127.0.0.1', 40223), raddr=('127.0.0.1', 57806)>
+  self._sock = None
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+.
+======================================================================
+FAIL: test_r11_a_legacy_app_key_is_refused_by_name (__main__.Review.test_r11_a_legacy_app_key_is_refused_by_name)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/github-app/test_agent_token.py", line 561, in test_r11_a_legacy_app_key_is_refused_by_name
+    self.assertEqual(result.returncode, 2)
+AssertionError: 0 != 2
+
+======================================================================
+FAIL: test_r12_only_gh_gets_the_app_token (__main__.Review.test_r12_only_gh_gets_the_app_token)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/github-app/test_agent_token.py", line 572, in test_r12_only_gh_gets_the_app_token
+    self.assert_never_exposed(printed)
+  File "<checkout>/tools/github-app/test_agent_token.py", line 186, in assert_never_exposed
+    self.assertNotIn(token, result.stdout + result.stderr)
+AssertionError: 'synthetic-agent-token-1' unexpectedly found in 'PATH=<tmp>/private/exec-ad5acdac88ac725d11f988b64d0749db:<tmp>/bin:/usr/bin:/bin\nHOME=<tmp>/home\nGIT_CONFIG_NOSYSTEM=1\nGIT_TERMINAL_PROMPT=0\nFAKE_LOG=<tmp>/calls.log\nFAKE
+
+======================================================================
+FAIL: test_r13_a_reply_that_crosses_the_refresh_boundary_in_flight_is_refused (__main__.Review.test_r13_a_reply_that_crosses_the_refresh_boundary_in_flight_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/github-app/test_agent_token.py", line 583, in test_r13_a_reply_that_crosses_the_refresh_boundary_in_flight_is_refused
+    self.assert_fallback(started, "bad-answer")
+  File "<checkout>/tools/github-app/test_agent_token.py", line 203, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: '' != "openwiz: no openwiz[bot] token (bad-answ[35 chars]nt\n"
++ openwiz: no openwiz[bot] token (bad-answer); using the owner's GitHub account
+
+
+----------------------------------------------------------------------
+Ran 31 tests in 13.842s
+
+FAILED (failures=3)

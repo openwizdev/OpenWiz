@@ -1,0 +1,158 @@
+# #1916 re-check R11 and R12: the new tests against the helper at 70cd5baa (red first).
+# Run: python3 -I tools/github-app/test_agent_token.py. Temporary and checkout paths replaced with <tmp> and <checkout>; lines cut at 240 characters.
+# The gh_token values are sha256 hashes of the synthetic token, never the token; R11 lists environment names only.
+......../usr/lib/python3.11/socket.py:777: ResourceWarning: unclosed <ssl.SSLSocket fd=4, family=2, type=1, proto=0, laddr=('127.0.0.1', 36411), raddr=('127.0.0.1', 35518)>
+  self._sock = None
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+.......openwiz: agent-token: OPENWIZ_GITHUB_APP_KEY is set: remove the old App-key secret from this agent's environment, since the token service holds the key
+openwiz: agent-token: OPENWIZ_GITHUB_APP_KEY is set: remove the old App-key secret from this agent's environment, since the token service holds the key
+FFFFFFFFFF............../usr/lib/python3.11/socket.py:777: ResourceWarning: unclosed <ssl.SSLSocket fd=5, family=2, type=1, proto=0, laddr=('127.0.0.1', 43141), raddr=('127.0.0.1', 40680)>
+  self._sock = None
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+./usr/lib/python3.11/socket.py:777: ResourceWarning: unclosed <ssl.SSLSocket fd=5, family=2, type=1, proto=0, laddr=('127.0.0.1', 40851), raddr=('127.0.0.1', 51008)>
+  self._sock = None
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+.
+======================================================================
+FAIL: test_r11_the_legacy_app_key_value_is_never_read (__main__.Review.test_r11_the_legacy_app_key_value_is_never_read)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/github-app/test_agent_token.py", line 611, in test_r11_the_legacy_app_key_value_is_never_read
+    self.assertNotIn("OPENWIZ_GITHUB_APP_KEY", environment.read, "the legacy value is never fetched")
+AssertionError: 'OPENWIZ_GITHUB_APP_KEY' unexpectedly found in ['PATH', 'HOME', 'GIT_CONFIG_NOSYSTEM', 'GIT_TERMINAL_PROMPT', 'FAKE_LOG', 'FAKE_ANSWERS', 'OPENWIZ_AGENT_TOKEN_DIR', 'OPENWIZ_TOKEN_SERVICE', 'OPENWIZ_TOKEN_SERVICE_ROUTE', 'OP
+
+======================================================================
+FAIL: test_r12_gh_gets_the_token_only_for_its_allowed_commands (__main__.Review.test_r12_gh_gets_the_token_only_for_its_allowed_commands) [['auth', 'token']]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/github-app/test_agent_token.py", line 624, in test_r12_gh_gets_the_token_only_for_its_allowed_commands
+    self.assertEqual([c["gh_token"] for c in self.calls("gh")], [], "authenticated gh never starts")
+AssertionError: Lists differ: ['14757da90d5e926e420c0394bd652787874b0225a40132ee937dff161eeddf27'] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+'14757da90d5e926e420c0394bd652787874b0225a40132ee937dff161eeddf27'
+
+- ['14757da90d5e926e420c0394bd652787874b0225a40132ee937dff161eeddf27']
++ [] : authenticated gh never starts
+
+======================================================================
+FAIL: test_r12_gh_gets_the_token_only_for_its_allowed_commands (__main__.Review.test_r12_gh_gets_the_token_only_for_its_allowed_commands) [['auth', 'status', '--show-token']]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/github-app/test_agent_token.py", line 624, in test_r12_gh_gets_the_token_only_for_its_allowed_commands
+    self.assertEqual([c["gh_token"] for c in self.calls("gh")], [], "authenticated gh never starts")
+AssertionError: Lists differ: ['14757da90d5e926e420c0394bd652787874b0225a40132ee937dff161eeddf27'] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+'14757da90d5e926e420c0394bd652787874b0225a40132ee937dff161eeddf27'
+
+- ['14757da90d5e926e420c0394bd652787874b0225a40132ee937dff161eeddf27']
++ [] : authenticated gh never starts
+
+======================================================================
+FAIL: test_r12_gh_gets_the_token_only_for_its_allowed_commands (__main__.Review.test_r12_gh_gets_the_token_only_for_its_allowed_commands) [['config', 'get', 'editor']]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/github-app/test_agent_token.py", line 624, in test_r12_gh_gets_the_token_only_for_its_allowed_commands
+    self.assertEqual([c["gh_token"] for c in self.calls("gh")], [], "authenticated gh never starts")
+AssertionError: Lists differ: ['14757da90d5e926e420c0394bd652787874b0225a40132ee937dff161eeddf27'] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+'14757da90d5e926e420c0394bd652787874b0225a40132ee937dff161eeddf27'
+
+- ['14757da90d5e926e420c0394bd652787874b0225a40132ee937dff161eeddf27']
++ [] : authenticated gh never starts
+
+======================================================================
+FAIL: test_r12_gh_gets_the_token_only_for_its_allowed_commands (__main__.Review.test_r12_gh_gets_the_token_only_for_its_allowed_commands) [['alias', 'set', 'co', '!sh -c env']]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/github-app/test_agent_token.py", line 624, in test_r12_gh_gets_the_token_only_for_its_allowed_commands
+    self.assertEqual([c["gh_token"] for c in self.calls("gh")], [], "authenticated gh never starts")
+AssertionError: Lists differ: ['14757da90d5e926e420c0394bd652787874b0225a40132ee937dff161eeddf27'] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+'14757da90d5e926e420c0394bd652787874b0225a40132ee937dff161eeddf27'
+
+- ['14757da90d5e926e420c0394bd652787874b0225a40132ee937dff161eeddf27']
++ [] : authenticated gh never starts
+
+======================================================================
+FAIL: test_r12_gh_gets_the_token_only_for_its_allowed_commands (__main__.Review.test_r12_gh_gets_the_token_only_for_its_allowed_commands) [['co']]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/github-app/test_agent_token.py", line 624, in test_r12_gh_gets_the_token_only_for_its_allowed_commands
+    self.assertEqual([c["gh_token"] for c in self.calls("gh")], [], "authenticated gh never starts")
+AssertionError: Lists differ: ['14757da90d5e926e420c0394bd652787874b0225a40132ee937dff161eeddf27'] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+'14757da90d5e926e420c0394bd652787874b0225a40132ee937dff161eeddf27'
+
+- ['14757da90d5e926e420c0394bd652787874b0225a40132ee937dff161eeddf27']
++ [] : authenticated gh never starts
+
+======================================================================
+FAIL: test_r12_gh_gets_the_token_only_for_its_allowed_commands (__main__.Review.test_r12_gh_gets_the_token_only_for_its_allowed_commands) [['extension', 'exec', 'synthetic']]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/github-app/test_agent_token.py", line 624, in test_r12_gh_gets_the_token_only_for_its_allowed_commands
+    self.assertEqual([c["gh_token"] for c in self.calls("gh")], [], "authenticated gh never starts")
+AssertionError: Lists differ: ['14757da90d5e926e420c0394bd652787874b0225a40132ee937dff161eeddf27'] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+'14757da90d5e926e420c0394bd652787874b0225a40132ee937dff161eeddf27'
+
+- ['14757da90d5e926e420c0394bd652787874b0225a40132ee937dff161eeddf27']
++ [] : authenticated gh never starts
+
+======================================================================
+FAIL: test_r12_gh_gets_the_token_only_for_its_allowed_commands (__main__.Review.test_r12_gh_gets_the_token_only_for_its_allowed_commands) [['synthetic-extension']]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/github-app/test_agent_token.py", line 624, in test_r12_gh_gets_the_token_only_for_its_allowed_commands
+    self.assertEqual([c["gh_token"] for c in self.calls("gh")], [], "authenticated gh never starts")
+AssertionError: Lists differ: ['14757da90d5e926e420c0394bd652787874b0225a40132ee937dff161eeddf27'] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+'14757da90d5e926e420c0394bd652787874b0225a40132ee937dff161eeddf27'
+
+- ['14757da90d5e926e420c0394bd652787874b0225a40132ee937dff161eeddf27']
++ [] : authenticated gh never starts
+
+======================================================================
+FAIL: test_r12_gh_gets_the_token_only_for_its_allowed_commands (__main__.Review.test_r12_gh_gets_the_token_only_for_its_allowed_commands) [[]]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/github-app/test_agent_token.py", line 624, in test_r12_gh_gets_the_token_only_for_its_allowed_commands
+    self.assertEqual([c["gh_token"] for c in self.calls("gh")], [], "authenticated gh never starts")
+AssertionError: Lists differ: ['14757da90d5e926e420c0394bd652787874b0225a40132ee937dff161eeddf27'] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+'14757da90d5e926e420c0394bd652787874b0225a40132ee937dff161eeddf27'
+
+- ['14757da90d5e926e420c0394bd652787874b0225a40132ee937dff161eeddf27']
++ [] : authenticated gh never starts
+
+======================================================================
+FAIL: test_r12_gh_gets_the_token_only_for_its_allowed_commands (__main__.Review.test_r12_gh_gets_the_token_only_for_its_allowed_commands)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/github-app/test_agent_token.py", line 634, in test_r12_gh_gets_the_token_only_for_its_allowed_commands
+    self.assertEqual(pager, "cat", "no pager child gets the token")
+AssertionError: 'synthetic-owner-pager' != 'cat'
+- synthetic-owner-pager
++ cat
+ : no pager child gets the token
+
+----------------------------------------------------------------------
+Ran 33 tests in 14.166s
+
+FAILED (failures=10)

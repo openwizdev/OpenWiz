@@ -1,0 +1,283 @@
+FFFFFFFFFFFFFFF.FFFFFFFFFF
+======================================================================
+FAIL: test_a_failed_refresh_leaves_no_service_credential (__main__.Fallback.test_a_failed_refresh_leaves_no_service_credential)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 266, in test_a_failed_refresh_leaves_no_service_credential
+    self.assert_fallback(ran, "unreachable")
+  File "tools/github-app/test_agent_token.py", line 154, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: '' != "openwiz: no openwiz[bot] token (unreacha[36 chars]nt\n"
++ openwiz: no openwiz[bot] token (unreachable); using the owner's GitHub account
+
+
+======================================================================
+FAIL: test_a_path_that_cannot_be_quoted_is_never_run (__main__.Fallback.test_a_path_that_cannot_be_quoted_is_never_run) (path="/synthetic/it's.py")
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 306, in test_a_path_that_cannot_be_quoted_is_never_run
+    self.assert_fallback(result, "unreachable")
+  File "tools/github-app/test_agent_token.py", line 154, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: '' != "openwiz: no openwiz[bot] token (unreacha[36 chars]nt\n"
++ openwiz: no openwiz[bot] token (unreachable); using the owner's GitHub account
+
+
+======================================================================
+FAIL: test_a_path_that_cannot_be_quoted_is_never_run (__main__.Fallback.test_a_path_that_cannot_be_quoted_is_never_run) (path='/synthetic/a\nb.py')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 306, in test_a_path_that_cannot_be_quoted_is_never_run
+    self.assert_fallback(result, "unreachable")
+  File "tools/github-app/test_agent_token.py", line 154, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: '' != "openwiz: no openwiz[bot] token (unreacha[36 chars]nt\n"
++ openwiz: no openwiz[bot] token (unreachable); using the owner's GitHub account
+
+
+======================================================================
+FAIL: test_a_path_that_cannot_be_quoted_is_never_run (__main__.Fallback.test_a_path_that_cannot_be_quoted_is_never_run) (path='relative/token-service.py')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 306, in test_a_path_that_cannot_be_quoted_is_never_run
+    self.assert_fallback(result, "unreachable")
+  File "tools/github-app/test_agent_token.py", line 154, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: '' != "openwiz: no openwiz[bot] token (unreacha[36 chars]nt\n"
++ openwiz: no openwiz[bot] token (unreachable); using the owner's GitHub account
+
+
+======================================================================
+FAIL: test_a_service_that_does_not_answer_in_time (__main__.Fallback.test_a_service_that_does_not_answer_in_time)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 314, in test_a_service_that_does_not_answer_in_time
+    self.assertEqual(reason, "unreachable")
+AssertionError: 'ok' != 'unreachable'
+- ok
++ unreachable
+
+
+======================================================================
+FAIL: test_each_fixture_fallback_reason (__main__.Fallback.test_each_fixture_fallback_reason) (reason='not-installed', item='{"schema": "openwiz.token-service.v1", "kind": "refusal", "r')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 294, in test_each_fixture_fallback_reason
+    self.assert_fallback(result, reason)
+  File "tools/github-app/test_agent_token.py", line 154, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: '' != "openwiz: no openwiz[bot] token (not-inst[38 chars]nt\n"
++ openwiz: no openwiz[bot] token (not-installed); using the owner's GitHub account
+
+
+======================================================================
+FAIL: test_each_fixture_fallback_reason (__main__.Fallback.test_each_fixture_fallback_reason) (reason='unavailable', item='{"schema": "openwiz.token-service.v1", "kind": "refusal", "r')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 294, in test_each_fixture_fallback_reason
+    self.assert_fallback(result, reason)
+  File "tools/github-app/test_agent_token.py", line 154, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: '' != "openwiz: no openwiz[bot] token (unavaila[36 chars]nt\n"
++ openwiz: no openwiz[bot] token (unavailable); using the owner's GitHub account
+
+
+======================================================================
+FAIL: test_each_fixture_fallback_reason (__main__.Fallback.test_each_fixture_fallback_reason) (reason='permission', item='{"schema": "openwiz.token-service.v1", "kind": "refusal", "r')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 294, in test_each_fixture_fallback_reason
+    self.assert_fallback(result, reason)
+  File "tools/github-app/test_agent_token.py", line 154, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: '' != "openwiz: no openwiz[bot] token (permissi[35 chars]nt\n"
++ openwiz: no openwiz[bot] token (permission); using the owner's GitHub account
+
+
+======================================================================
+FAIL: test_each_fixture_fallback_reason (__main__.Fallback.test_each_fixture_fallback_reason) (reason='bad-answer', item='garbled')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 294, in test_each_fixture_fallback_reason
+    self.assert_fallback(result, reason)
+  File "tools/github-app/test_agent_token.py", line 154, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: '' != "openwiz: no openwiz[bot] token (bad-answ[35 chars]nt\n"
++ openwiz: no openwiz[bot] token (bad-answer); using the owner's GitHub account
+
+
+======================================================================
+FAIL: test_each_fixture_fallback_reason (__main__.Fallback.test_each_fixture_fallback_reason) (reason='bad-answer', item='{"schema": "openwiz.token-service.v1", "kind": "answer", "to')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 294, in test_each_fixture_fallback_reason
+    self.assert_fallback(result, reason)
+  File "tools/github-app/test_agent_token.py", line 154, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: '' != "openwiz: no openwiz[bot] token (bad-answ[35 chars]nt\n"
++ openwiz: no openwiz[bot] token (bad-answer); using the owner's GitHub account
+
+
+======================================================================
+FAIL: test_each_fixture_fallback_reason (__main__.Fallback.test_each_fixture_fallback_reason) (reason='bad-answer', item='{"schema": "openwiz.token-service.v1", "kind": "answer", "to')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 294, in test_each_fixture_fallback_reason
+    self.assert_fallback(result, reason)
+  File "tools/github-app/test_agent_token.py", line 154, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: '' != "openwiz: no openwiz[bot] token (bad-answ[35 chars]nt\n"
++ openwiz: no openwiz[bot] token (bad-answer); using the owner's GitHub account
+
+
+======================================================================
+FAIL: test_each_fixture_fallback_reason (__main__.Fallback.test_each_fixture_fallback_reason) (reason='bad-answer', item='{"schema": "openwiz.token-service.v1", "kind": "answer", "to')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 294, in test_each_fixture_fallback_reason
+    self.assert_fallback(result, reason)
+  File "tools/github-app/test_agent_token.py", line 154, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: '' != "openwiz: no openwiz[bot] token (bad-answ[35 chars]nt\n"
++ openwiz: no openwiz[bot] token (bad-answer); using the owner's GitHub account
+
+
+======================================================================
+FAIL: test_each_fixture_fallback_reason (__main__.Fallback.test_each_fixture_fallback_reason) (reason='bad-answer', item='{"schema": "openwiz.token-service.v1", "token": "x", "kind":')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 294, in test_each_fixture_fallback_reason
+    self.assert_fallback(result, reason)
+  File "tools/github-app/test_agent_token.py", line 154, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: '' != "openwiz: no openwiz[bot] token (bad-answ[35 chars]nt\n"
++ openwiz: no openwiz[bot] token (bad-answer); using the owner's GitHub account
+
+
+======================================================================
+FAIL: test_each_fixture_fallback_reason (__main__.Fallback.test_each_fixture_fallback_reason) (reason='bad-answer', item='{"schema": "openwiz.token-service.v1", "kind": "refusal", "r')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 294, in test_each_fixture_fallback_reason
+    self.assert_fallback(result, reason)
+  File "tools/github-app/test_agent_token.py", line 154, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: '' != "openwiz: no openwiz[bot] token (bad-answ[35 chars]nt\n"
++ openwiz: no openwiz[bot] token (bad-answer); using the owner's GitHub account
+
+
+======================================================================
+FAIL: test_each_fixture_fallback_reason (__main__.Fallback.test_each_fixture_fallback_reason) (reason='bad-answer', item='{"schema": "openwiz.token-service.v1", "kind": "answer", "to')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 294, in test_each_fixture_fallback_reason
+    self.assert_fallback(result, reason)
+  File "tools/github-app/test_agent_token.py", line 154, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: '' != "openwiz: no openwiz[bot] token (bad-answ[35 chars]nt\n"
++ openwiz: no openwiz[bot] token (bad-answer); using the owner's GitHub account
+
+
+======================================================================
+FAIL: test_unreachable_service_falls_back_with_one_note (__main__.Fallback.test_unreachable_service_falls_back_with_one_note)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 249, in test_unreachable_service_falls_back_with_one_note
+    self.assert_fallback(started, "unreachable")
+  File "tools/github-app/test_agent_token.py", line 154, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: '' != "openwiz: no openwiz[bot] token (unreacha[36 chars]nt\n"
++ openwiz: no openwiz[bot] token (unreachable); using the owner's GitHub account
+
+
+======================================================================
+FAIL: test_a_local_thread_runs_the_service_itself (__main__.MintedToken.test_a_local_thread_runs_the_service_itself)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 228, in test_a_local_thread_runs_the_service_itself
+    call = self.one_call()
+           ^^^^^^^^^^^^^^^
+  File "tools/github-app/test_agent_token.py", line 130, in one_call
+    self.assertEqual(len(calls), 1, "exactly one service call")
+AssertionError: 0 != 1 : exactly one service call
+
+======================================================================
+FAIL: test_a_private_place_inside_a_git_tree_is_refused (__main__.MintedToken.test_a_private_place_inside_a_git_tree_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 238, in test_a_private_place_inside_a_git_tree_is_refused
+    self.assertEqual(refused.returncode, 2)
+AssertionError: 0 != 2
+
+======================================================================
+FAIL: test_gh_and_git_use_the_minted_token (__main__.MintedToken.test_gh_and_git_use_the_minted_token)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 173, in test_gh_and_git_use_the_minted_token
+    self.assertEqual(self.held()["token"], TOKEN)
+                     ^^^^^^^^^^^
+  File "tools/github-app/test_agent_token.py", line 134, in held
+    self.assertTrue(self.token_file().is_file(), "the private token file holds the token")
+AssertionError: False is not true : the private token file holds the token
+
+======================================================================
+FAIL: test_refreshes_with_five_minutes_left_before_the_next_use (__main__.MintedToken.test_refreshes_with_five_minutes_left_before_the_next_use)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 197, in test_refreshes_with_five_minutes_left_before_the_next_use
+    held = self.held()
+           ^^^^^^^^^^^
+  File "tools/github-app/test_agent_token.py", line 134, in held
+    self.assertTrue(self.token_file().is_file(), "the private token file holds the token")
+AssertionError: False is not true : the private token file holds the token
+
+======================================================================
+FAIL: test_the_request_names_repositories_and_permissions_only (__main__.MintedToken.test_the_request_names_repositories_and_permissions_only)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 189, in test_the_request_names_repositories_and_permissions_only
+    request = json.loads(self.one_call()["stdin"])
+                         ^^^^^^^^^^^^^^^
+  File "tools/github-app/test_agent_token.py", line 130, in one_call
+    self.assertEqual(len(calls), 1, "exactly one service call")
+AssertionError: 0 != 1 : exactly one service call
+
+======================================================================
+FAIL: test_token_crosses_the_pairing_only_as_piped_stdout_of_one_call (__main__.MintedToken.test_token_crosses_the_pairing_only_as_piped_stdout_of_one_call)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 211, in test_token_crosses_the_pairing_only_as_piped_stdout_of_one_call
+    call = self.one_call()
+           ^^^^^^^^^^^^^^^
+  File "tools/github-app/test_agent_token.py", line 130, in one_call
+    self.assertEqual(len(calls), 1, "exactly one service call")
+AssertionError: 0 != 1 : exactly one service call
+
+======================================================================
+FAIL: test_the_contract_refresh_boundary (__main__.Refresh.test_the_contract_refresh_boundary) [exactly five minutes left]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 164, in test_the_contract_refresh_boundary
+    self.assertEqual(helper.needs_refresh(case["now"], case["expires_at"]), case["refresh"])
+AssertionError: False != True
+
+======================================================================
+FAIL: test_the_contract_refresh_boundary (__main__.Refresh.test_the_contract_refresh_boundary) [an expiring token]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 164, in test_the_contract_refresh_boundary
+    self.assertEqual(helper.needs_refresh(case["now"], case["expires_at"]), case["refresh"])
+AssertionError: False != True
+
+======================================================================
+FAIL: test_the_contract_refresh_boundary (__main__.Refresh.test_the_contract_refresh_boundary) [an expired token]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 164, in test_the_contract_refresh_boundary
+    self.assertEqual(helper.needs_refresh(case["now"], case["expires_at"]), case["refresh"])
+AssertionError: False != True
+
+----------------------------------------------------------------------
+Ran 13 tests in 0.338s
+
+FAILED (failures=25)
