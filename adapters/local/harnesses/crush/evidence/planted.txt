@@ -1,0 +1,7 @@
+# Planted breaks, each run once on a changed copy of the row and then put back (no-op agent CLI stubs first on PATH)
+== planted: row.json env without CRUSH_CLIENT_SERVER=0 (python3 -I test_row.py)
+fail crush row: a turn gets CRUSH_CLIENT_SERVER=0 over the user's own setting, and attaches to no outside server
+== planted: session pattern "Continuing session ..." that matches no line crush logs at start (test_harnesses.py --rows)
+fail crush: kit: fail wake: run run-7d89b73587be has no session id from its first turn yet; nothing was started
+== planted: fake logs "Created a session ...", not the line Crush logs (test_harnesses.py --rows)
+fail crush: kit: fail wake: run run-57bed89ba0a8 has no session id from its first turn yet; nothing was started

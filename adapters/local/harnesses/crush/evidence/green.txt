@@ -1,0 +1,27 @@
+# Green: the same proofs as red.txt, with the row's fake; then the full runner (HR1's planted rows, then every row)
+# No-op stubs for every known agent CLI were first on PATH. OPENWIZ_GITHUB_APP_KEY unset.
+pass crush: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+exit=0
+---
+pass crush row: not installed is a D3 error whose next says to install and sign in, and starts nothing
+pass crush row: not signed in is a D3 error whose next points at the log that says how to set up a provider
+pass crush row: a turn gets CRUSH_CLIENT_SERVER=0 over the user's own setting, and attaches to no outside server
+pass crush row: the wake gets the session id crush logged to stderr at start
+pass crush row: stop leaves no process of the run
+exit=0
+--- full runner: planted rows, then every row
+fail claude: row.json harness: claude is built in, and no row may use a built-in name
+fail credential-env: row.json env: a value looks like a credential; env holds only fixed settings that are not credentials
+fail daemon-survives: daemon: the background process the row declares still runs after stop
+fail effort-missing: row.json effort: it has no effort form; give an effort map or "none: <one line why>"
+fail effort-unpassed: row.json effort: it maps effort values to arguments, but start has no {effort} to pass them
+pass example: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+pass example-none: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+fail larger-argument: row.json start: a placeholder sits inside a larger argument; each fills a whole argument
+fail session-differs: session: the wake turn got a different session id from the start turn
+fail wake-no-session: row.json wake: it has no {session}
+pass driver: an unknown harness is a D3 error that lists the built-ins and the row folders, and starts nothing
+pass driver: a wake before the reported session id is known is a D3 error that starts nothing
+rows in adapters/local/harnesses: crush
+pass crush: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+exit=0
