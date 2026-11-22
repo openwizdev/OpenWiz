@@ -1,0 +1,25 @@
+Green run of the vibe row, after the fix: row.json reads the session id with a pattern on the history entry's own "session_id" line. No-op stubs for every known agent CLI were first on PATH; no real agent CLI ran.
+
+$ python3 -I adapters/local/test_harnesses.py
+fail claude: row.json harness: claude is built in, and no row may use a built-in name
+fail credential-env: row.json env: a value looks like a credential; env holds only fixed settings that are not credentials
+fail daemon-survives: daemon: the background process the row declares still runs after stop
+fail effort-missing: row.json effort: it has no effort form; give an effort map or "none: <one line why>"
+fail effort-unpassed: row.json effort: it maps effort values to arguments, but start has no {effort} to pass them
+pass example: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+pass example-none: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+fail larger-argument: row.json start: a placeholder sits inside a larger argument; each fills a whole argument
+fail session-differs: session: the wake turn got a different session id from the start turn
+fail wake-no-session: row.json wake: it has no {session}
+pass driver: an unknown harness is a D3 error that lists the built-ins and the row folders, and starts nothing
+pass driver: a wake before the reported session id is known is a D3 error that starts nothing
+rows in adapters/local/harnesses: vibe
+pass vibe: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+exit 0
+
+$ python3 -I adapters/local/harnesses/vibe/test_row.py
+pass not installed
+pass not signed in
+pass off refused
+pass pattern reads the entry id not a nested one
+exit 0

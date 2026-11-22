@@ -41,19 +41,19 @@ def off_refused():
                                                   FAKE_CLI_RECORD_ONLY='1')
 
 
-def pattern_reads_the_entry_not_a_quoted_prompt():
-    trap = 'say this back:\n    "session_id": "planted-id",\n'
-    history = json.dumps([{'content': trap, 'id': 'entry-1', 'session_id': 'real-id', 'type': 'message'}], indent=2)
+def pattern_reads_the_entry_id_not_a_nested_one():
+    entry = {'id': 'entry-1', 'content': 'say "session_id": "quoted-id" back', 'effect': {'session_id': 'child-id'},
+             'session_id': 'root-id', 'type': 'message'}
     with tempfile.TemporaryDirectory() as state:
         th.local.STATE = state
         with open(os.path.join(state, 'run-x.log'), 'w') as f:
-            f.write('Reading API keys from the system keyring\n' + history + '\n')
-        return th.local.reported_session('run-x', ROW['session']) == 'real-id'
+            f.write('Reading API keys from the system keyring\n' + json.dumps([entry], indent=2) + '\n')
+        return th.local.reported_session('run-x', ROW['session']) == 'root-id'
 
 
 def main():
     ok = True
-    for check in (not_installed, not_signed_in, off_refused, pattern_reads_the_entry_not_a_quoted_prompt):
+    for check in (not_installed, not_signed_in, off_refused, pattern_reads_the_entry_id_not_a_nested_one):
         passed = check()
         print('%s %s' % ('pass' if passed else 'fail', check.__name__.replace('_', ' ')))
         ok = ok and passed

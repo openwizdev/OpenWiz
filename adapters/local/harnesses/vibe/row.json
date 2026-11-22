@@ -3,7 +3,7 @@
   "program": "vibe",
   "start": ["--prompt", "{prompt}", "--output", "json", "--model", "{model}", "{mode}", "{effort}"],
   "wake": ["-p", "{prompt}", "--resume", "{session}", "{mode}"],
-  "session": {"json": ["session_id"]},
+  "session": {"pattern": "^    \"session_id\": \"([A-Za-z0-9._:-]{1,100})\",?$"},
   "modes": {
     "auto-approve": ["--auto-approve"],
     "accept-edits": ["--approval-policy", "accept-edits"],
