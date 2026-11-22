@@ -120,13 +120,12 @@ class LockedRemove(Remove):
                 except BlockingIOError:
                     seen.append('held')
             return real(*args)
+        code, value = self.run_entry('remove', '--root', str(self.root))
+        self.assertEqual((code, value['outcome']), (0, 'preview'), value)
+        self.assertFalse(os.path.lexists(self.root / 'install.lock'))
         with mock.patch.object(entry, 'remove_unlocked', probe):
-            code, value = self.run_entry('remove', '--root', str(self.root))
-            self.assertEqual((code, value['outcome'], seen), (0, 'preview', ['held']), value)
-            self.assertFalse(os.path.lexists(self.root / 'install.lock'))
             code, value = self.run_entry('remove', '--root', str(self.root), '--yes')
-        self.assertEqual((code, value['outcome']), (0, 'removed'), value)
-        self.assertEqual(seen, ['held', 'held'])
+        self.assertEqual((code, value['outcome'], seen), (0, 'removed', ['held']), value)
         self.assertIn(str(self.root / 'install.lock'), value['delete'])
         self.assertFalse(self.root.exists())
 

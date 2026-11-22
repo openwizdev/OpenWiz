@@ -57,8 +57,8 @@ DESCRIPTION = """OpenWiz's install entry (#1109): the commands the install skill
       (docs/install.md, "Remove it"); with --yes it deletes them, then removes
       each folder left empty. Anything else stays, links are never followed,
       and each agent's skill folder holding OpenWiz copies is listed to clean
-      by hand. It holds ROOT/install.lock while it works, making it if missing,
-      and refuses while an install or update holds it.
+      by hand. It holds ROOT/install.lock while it works (with --yes, making
+      it if missing) and refuses while an install or update holds it.
       Prints "not installed" and exits 1 when nothing is OpenWiz's.
 
 Every command prints one JSON object. Exit codes: 0 done, 1 failed,
@@ -364,9 +364,9 @@ def remove(root, state_root, yes, home, codex_home=None):
     installer.require(state.is_absolute(), 'the state root must be an absolute path')
     installer.path_guard(root)
     installer.path_guard(state)
-    if not owned(root, stat.S_ISDIR):
-        return remove_unlocked(root, state, state_root, yes, home, codex_home)
     path = root / 'install.lock'
+    if not owned(root, stat.S_ISDIR) or not (yes or os.path.lexists(path)):
+        return remove_unlocked(root, state, state_root, yes, home, codex_home)
     flags, made = os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK, True
     try:
         try:

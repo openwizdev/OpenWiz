@@ -42,7 +42,7 @@ test_a_read_only_agent_folder_fails_on_its_own_row_and_the_next_agent_installs (
 test_when_no_agent_can_be_written_the_canonical_folder_is_not_written_either (test_skills.Truthful.test_when_no_agent_can_be_written_the_canonical_folder_is_not_written_either) ... ok
 test_the_in_process_installer_suites_never_touch_an_agent_home_outside_their_synthetic_home (test_skills.Isolation.test_the_in_process_installer_suites_never_touch_an_agent_home_outside_their_synthetic_home) ... ok
 ----------------------------------------------------------------------
-Ran 41 tests in 31.463s
+Ran 41 tests in 29.801s
 OK
 
 # Roadmap --root probe (issue 406), synthetic fake gh
