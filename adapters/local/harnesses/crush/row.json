@@ -1,0 +1,40 @@
+{
+  "harness": "crush",
+  "program": "crush",
+  "start": [
+    "run",
+    "--quiet",
+    "--verbose",
+    "--model",
+    "{model}",
+    "{mode}",
+    "--",
+    "{prompt}"
+  ],
+  "wake": [
+    "run",
+    "--quiet",
+    "--verbose",
+    "--session",
+    "{session}",
+    "--model",
+    "{model}",
+    "{mode}",
+    "--",
+    "{prompt}"
+  ],
+  "session": {
+    "pattern": "Created session for non-interactive run session_id=([A-Za-z0-9._:-]{1,100})"
+  },
+  "modes": {
+    "yolo": [
+      "--yolo"
+    ]
+  },
+  "env": {
+    "CRUSH_CLIENT_SERVER": "0"
+  },
+  "effort": "none: crush run --reasoning-effort can be replaced or dropped without an error (internal/agent/coordinator.go getProviderOptions, charmbracelet/crush v0.102.0)",
+  "login": "Crush's own login: `crush login` saves it in ~/.local/share/crush/crush.json (or $XDG_DATA_HOME/crush/crush.json)",
+  "daemon": "none"
+}

@@ -1,0 +1,4 @@
+#!/usr/bin/env python3
+# Not built yet: refuses every command line.
+import sys
+sys.exit(2)
