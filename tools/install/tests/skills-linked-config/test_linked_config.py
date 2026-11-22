@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
+import fcntl
 import importlib.util
 import os
 from pathlib import Path
 import sys
 import unittest
+from unittest import mock
 
 sys.dont_write_bytecode = True
 INSTALL = Path(__file__).resolve().parents[2]
@@ -11,7 +13,7 @@ spec = importlib.util.spec_from_file_location('test_install', INSTALL / 'test_in
 base = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(base)
 sys.path.insert(0, str(INSTALL / 'tests' / 'installer'))
-from test_installer import Download, Path_, Preflight, Repair
+from test_installer import Download, Path_, Preflight, Repair, entry
 from test_root_safety import Remove, RootSafety
 per_agent = importlib.util.spec_from_file_location('test_skills', INSTALL / 'tests/skills-per-agent/test_skills.py')
 skills = importlib.util.module_from_spec(per_agent)
@@ -81,12 +83,67 @@ class LinkedConfig(base.HarnessSkills):
         self.assertIn('link', rows['opencode']['next'])
         self.assertIn('run this again', rows['opencode']['next'])
 
+    @unittest.skipIf(os.getuid() == 0, 'root ignores write permission')
+    def test_a_read_only_backup_still_counts_the_promoted_skill_and_the_rest_install(self):
+        (self.home / '.claude').mkdir()
+        self.assertEqual(self.skills()[0], 0)
+        folder, old = self.home / '.claude/skills', self.home / '.claude/skills/.openwiz-old-grill'
+        for name in ('launch-fleet', 'setup'):
+            base.shutil.rmtree(folder / name)
+        (folder / 'grill').chmod(0o500)
+        self.addCleanup(lambda: old.exists() and old.chmod(0o700))
+        code, result = self.skills()
+        self.assertEqual((code, result.get('outcome')), (0, 'installed'), result)
+        row = {r['id']: r for r in result['harnesses']}['claude-code']
+        self.assertEqual(row['state'], 'installed', row)
+        self.assertEqual(base.skill_files(folder, skip=('.openwiz-old-grill',)),
+                         base.skill_files(self.root / 'current/runtime/skills'))
+        self.assertIn(str(old), row['next'])
+        self.assertIn('run this again', row['next'])
+        code, result = self.skills()
+        row = {r['id']: r for r in result['harnesses']}['claude-code']
+        self.assertEqual((code, row['state']), (0, 'partial'), result)
+        self.assertIn(str(old), row['next'])
+
+
+class LockedRemove(Remove):
+    def test_remove_on_a_root_without_its_lock_holds_one_against_a_new_install(self):
+        self.installed()
+        (self.root / 'install.lock').unlink()
+        seen, real = [], entry.remove_unlocked
+
+        def probe(*args):
+            with open(self.root / 'install.lock', 'a+b') as other:  # as install.py takes it
+                try:
+                    fcntl.flock(other, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    seen.append('free')
+                except BlockingIOError:
+                    seen.append('held')
+            return real(*args)
+        with mock.patch.object(entry, 'remove_unlocked', probe):
+            code, value = self.run_entry('remove', '--root', str(self.root))
+            self.assertEqual((code, value['outcome'], seen), (0, 'preview', ['held']), value)
+            self.assertFalse(os.path.lexists(self.root / 'install.lock'))
+            code, value = self.run_entry('remove', '--root', str(self.root), '--yes')
+        self.assertEqual((code, value['outcome']), (0, 'removed'), value)
+        self.assertEqual(seen, ['held', 'held'])
+        self.assertIn(str(self.root / 'install.lock'), value['delete'])
+        self.assertFalse(self.root.exists())
+
+    def test_remove_refuses_a_lock_that_is_not_a_private_file(self):
+        self.installed()
+        (self.root / 'install.lock').chmod(0o644)
+        code, value = self.run_entry('remove', '--root', str(self.root), '--yes')
+        self.assertEqual((code, value['outcome']), (5, 'refused'), value)
+        self.assertIn(str(self.root / 'install.lock'), value['reason'])
+        self.assertTrue((self.root / 'current').is_symlink())
+
 
 def load_tests(loader, tests, pattern):
     suite = loader.loadTestsFromNames(sorted(name for name in LinkedConfig.__dict__ if name.startswith('test_')),
                                       LinkedConfig)
     suite.addTests(loader.loadTestsFromTestCase(case)
-                   for case in (Download, Path_, Preflight, Repair, RootSafety, Remove,
+                   for case in (Download, Path_, Preflight, Repair, RootSafety, LockedRemove,
                                 skills.Report, skills.PerSkill, skills.Truthful, skills.Isolation))
     return suite
 
