@@ -1,0 +1,4 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I docs/evidence/1856/roster_check.py <WizSkills at f327a282a55acf37e7b4b64c948bad139f8bb9d1> docs/agents/fleet.md
+# at OpenWiz main 7892eaf91f54b1cac9278ee794a21cbba0b5bc60
+roster: none
+exit 1
