@@ -1,0 +1,18 @@
+# Red: before the row exists (only test_row.py in the folder); agent-CLI stubs first on PATH, OPENWIZ_GITHUB_APP_KEY unset
+
+$ python3 -I adapters/local/harnesses/kiro/test_row.py
+fail kiro: not installed is a D3 error whose next says to install kiro-cli, and starts nothing
+fail kiro: not signed in is a D3 error that says so, and its log names kiro-cli login and KIRO_API_KEY
+pass kiro: not signed in leaves no turn of the run behind
+fail kiro: mode permissions-yaml starts `kiro-cli chat --v3 --no-interactive --output-format stream-json --model <m> <prompt>`
+fail kiro: mode trust-all-tools starts `kiro-cli chat --v3 --no-interactive --output-format stream-json --model <m> --trust-all-tools <prompt>`
+fail kiro: effort low is refused with the fixed next, starting nothing
+fail kiro: effort medium is refused with the fixed next, starting nothing
+fail kiro: effort high is refused with the fixed next, starting nothing
+fail kiro: effort xhigh is refused with the fixed next, starting nothing
+fail kiro: effort max is refused with the fixed next, starting nothing
+exit=1
+
+$ python3 -I adapters/local/test_harnesses.py --rows adapters/local/harnesses
+fail kiro: folder: it has no executable fake
+exit=1
