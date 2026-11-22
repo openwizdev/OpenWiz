@@ -13,7 +13,7 @@ All OpenWiz versions, newest first. How versions work: [RELEASING.md](https://gi
 - A scheduled job you approve once wakes your fleet every 10 minutes, "run the fleet now" ticks it at once, and one command each shows, pauses or removes it.
 - `openwiz models show`, `list` and `set` pick the models your orchestrator, builders and reviewers use, from what your installed Claude Code and Codex offer, with no CloudRoom needed.
 
-Live-checked by an agent on a clean Linux machine with no CloudRoom: a stranger's install of this release, this computer as the host with Claude Code, the heartbeat installed with one yes, and one throwaway ticket built, reviewed and merged; Codex, a Mac and a person's own clean-machine run are not yet checked live, and everything else is tested on synthetic fixtures only.
+Tested on synthetic fixtures, with fake harnesses, schedulers and GitHub only: nothing in this release has been checked live yet, including a stranger's install and first fleet on a clean machine with no CloudRoom, Claude Code or Codex, and a Mac.
 
 **Under the hood**
 

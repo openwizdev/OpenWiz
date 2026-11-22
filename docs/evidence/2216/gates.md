@@ -23,6 +23,6 @@
 | 17 | Tag | `tag_reasons` | `v0.1.1` absent |
 | 18 | Tagger | `tagger` | the candidate commit's author is a plain name with a `<id>+<login>@users.noreply.github.com` email |
 
-After publish, `install` takes the stranger's `releases/latest` route. It stays `blocked` (`install_latest_unresolved`) while v0.1.1 is a pre-release: `publish` always creates a pre-release, so "Latest is v0.1.1" needs the pre-release flag cleared after the read-back, as v0.1.0's was.
+After publish, `install` takes the stranger's `releases/latest` route. It stays `blocked` (`install_latest_unresolved`) while v0.1.1 is a pre-release: `publish` always creates a pre-release, so "Latest is v0.1.1" needs the pre-release flag cleared after the read-back, as v0.1.0's was. Planned: after `publish` reads back `published`, clear the flag (`gh release edit v0.1.1 --prerelease=false --latest`), read back `releases/latest` as v0.1.1 named `OpenWiz 0.02`, then run `install` for each target.
 
 The agent rehearsal ([rehearsal.md](rehearsal.md)) is #2265's ship condition. It isn't a release-tool gate, and it doesn't satisfy row 13.
