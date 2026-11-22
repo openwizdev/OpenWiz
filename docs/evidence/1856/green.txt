@@ -1,0 +1,49 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I docs/evidence/1856/roster_check.py <WizSkills at f327a282a55acf37e7b4b64c948bad139f8bb9d1> docs/agents/fleet.md
+# at 79fdc3070efcf43f7356235634c235de9abc120c
+entry: Claude Code via jparker2006 | harness | cloudroom | orchestrator, builder, reviewer, helper | jparker2006's App
+entry: Codex via jparker2006 | harness | cloudroom | orchestrator, builder, reviewer, helper | jparker2006's App
+entry: Cloudroom via jparker2006 | host | cloudroom | orchestrator, builder, reviewer, helper | jparker2006's App
+entry: Own computer via jparker2006 | host | local | orchestrator, builder, reviewer, helper | jparker2006's App
+entry: boat.dev via jparker2006 | host | boat | orchestrator, builder, reviewer, helper | jparker2006's App
+ok spec: today claude claude-opus-5-5 on cloudroom; roster claude claude-opus-5-5 on cloudroom as Claude Code via jparker2006, Opus 5.5 default effort; token orchestrator-1856 for openwizdev/OpenWiz
+ok build: today claude claude-opus-5-5 on cloudroom; roster claude claude-opus-5-5 on cloudroom as Claude Code via jparker2006, Opus 5.5 default effort; token builder-1856 for openwizdev/OpenWiz
+ok small build: today claude claude-opus-5-5 on cloudroom; roster claude claude-opus-5-5 on cloudroom as Claude Code via jparker2006, Opus 5.5 default effort; token builder-1856 for openwizdev/OpenWiz
+ok fix claude: today claude claude-opus-5-5 on cloudroom; roster claude claude-opus-5-5 on cloudroom as Claude Code via jparker2006, Opus 5.5 default effort; token builder-1856 for openwizdev/OpenWiz
+ok fix gpt: today codex gpt-6.2-sol on cloudroom; roster codex gpt-6.2-sol on cloudroom as Codex via jparker2006, Sol 6.2 default effort; token builder-1856 for openwizdev/OpenWiz
+ok review claude-built: today codex gpt-6.2-sol on cloudroom; roster codex gpt-6.2-sol on cloudroom as Codex via jparker2006, Sol 6.2 default effort; token reviewer-1856 for openwizdev/OpenWiz
+ok review gpt-built: today claude claude-opus-5-5 on cloudroom; roster claude claude-opus-5-5 on cloudroom as Claude Code via jparker2006, Opus 5.5 default effort; token reviewer-1856 for openwizdev/OpenWiz
+ok helper: Claude Code via jparker2006
+setup settings check exit 0: Settings: verified (4 files).
+result: green
+exit 0
+
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I <WizSkills>/skills/launch-fleet/scripts/host.py roster   # origin default branch at 79fdc3070efcf43f7356235634c235de9abc120c
+roster: each start goes to its picked entry's driver
+exit 0
+
+$ # planted (order): the Cloudroom host row moved above the harness rows
+FAIL spec: today claude claude-opus-5-5 on cloudroom; roster claude claude-opus-5-5 on cloudroom as Cloudroom via jparker2006, Opus 5.5 default effort; token orchestrator-1856 for openwizdev/OpenWiz
+FAIL build: today claude claude-opus-5-5 on cloudroom; roster claude claude-opus-5-5 on cloudroom as Cloudroom via jparker2006, Opus 5.5 default effort; token builder-1856 for openwizdev/OpenWiz
+FAIL small build: today claude claude-opus-5-5 on cloudroom; roster claude claude-opus-5-5 on cloudroom as Cloudroom via jparker2006, Opus 5.5 default effort; token builder-1856 for openwizdev/OpenWiz
+FAIL fix claude: today claude claude-opus-5-5 on cloudroom; roster claude claude-opus-5-5 on cloudroom as Cloudroom via jparker2006, Opus 5.5 default effort; token builder-1856 for openwizdev/OpenWiz
+FAIL fix gpt: today codex gpt-6.2-sol on cloudroom; roster codex gpt-6.2-sol on cloudroom as Cloudroom via jparker2006, Sol 6.2 default effort; token builder-1856 for openwizdev/OpenWiz
+FAIL review claude-built: today codex gpt-6.2-sol on cloudroom; roster codex gpt-6.2-sol on cloudroom as Cloudroom via jparker2006, Sol 6.2 default effort; token reviewer-1856 for openwizdev/OpenWiz
+FAIL review gpt-built: today claude claude-opus-5-5 on cloudroom; roster claude claude-opus-5-5 on cloudroom as Cloudroom via jparker2006, Opus 5.5 default effort; token reviewer-1856 for openwizdev/OpenWiz
+FAIL helper: Cloudroom via jparker2006
+setup settings check exit 0: Settings: verified (4 files).
+result: 8 failing
+exit 1
+
+$ # planted (bot): a bot row added first
+FAIL: bot entry Demo Bot, but no KN7 to KN9 run has passed
+FAIL spec: today claude claude-opus-5-5 on cloudroom; roster claude claude-opus-5-5 on demo-bot as Demo Bot via jparker2006, Opus 5.5 default effort; token orchestrator-1856 for openwizdev/OpenWiz
+ok build: today claude claude-opus-5-5 on cloudroom; roster claude claude-opus-5-5 on cloudroom as Claude Code via jparker2006, Opus 5.5 default effort; token builder-1856 for openwizdev/OpenWiz
+ok small build: today claude claude-opus-5-5 on cloudroom; roster claude claude-opus-5-5 on cloudroom as Claude Code via jparker2006, Opus 5.5 default effort; token builder-1856 for openwizdev/OpenWiz
+ok fix claude: today claude claude-opus-5-5 on cloudroom; roster claude claude-opus-5-5 on cloudroom as Claude Code via jparker2006, Opus 5.5 default effort; token builder-1856 for openwizdev/OpenWiz
+ok fix gpt: today codex gpt-6.2-sol on cloudroom; roster codex gpt-6.2-sol on cloudroom as Codex via jparker2006, Sol 6.2 default effort; token builder-1856 for openwizdev/OpenWiz
+ok review claude-built: today codex gpt-6.2-sol on cloudroom; roster codex gpt-6.2-sol on cloudroom as Codex via jparker2006, Sol 6.2 default effort; token reviewer-1856 for openwizdev/OpenWiz
+ok review gpt-built: today claude claude-opus-5-5 on cloudroom; roster claude claude-opus-5-5 on cloudroom as Claude Code via jparker2006, Opus 5.5 default effort; token reviewer-1856 for openwizdev/OpenWiz
+ok helper: Claude Code via jparker2006
+setup settings check exit 0: Settings: verified (4 files).
+result: 2 failing
+exit 1
