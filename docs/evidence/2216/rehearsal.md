@@ -12,7 +12,7 @@ The agent half of #2226, run by #2265's release agent on the sealed 0.1.1 candid
 ## Rules
 
 - **LV1:** one new private throwaway repository and its own tickets only. Archive it at the end (the signed-in token has no delete scope). Touch no other repository, project or thread.
-- Never run `openwiz github token` or anything that reads `OPENWIZ_GITHUB_APP_KEY`. Skip the GitHub App in the first fleet: the personal login acts, and setup says so.
+- Never run `openwiz github token` in any form, not even with `--help`, and never run `agent-token.py` or any helper that reads `OPENWIZ_GITHUB_APP_KEY`. Skip the GitHub App in the first fleet: the personal login acts, and setup says so.
 - Run every install, setup and fleet command through `rehearsal.sh run`, so it gets the clean environment: an allowlisted `PATH` with no `room-cli` or other CloudRoom program, and no CloudRoom or App variable.
 - Raw output stays in `$RH` and in the private record. Only the pass/fail summary below goes on GitHub. Don't write any thread id, path under `/home`, or session text into it.
 - Don't wait with `sleep` or a shell loop. To wait for the fleet, say "run the fleet now" (`heartbeat.py run`), or use a Monitor with an until-condition.
