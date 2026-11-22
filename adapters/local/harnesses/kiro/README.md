@@ -8,7 +8,7 @@ Effort: none
 
 - **Start:** `kiro-cli chat --v3 --no-interactive --output-format stream-json --model <model> <mode's arguments> <prompt>`.
 - **Wake (same run):** the same, with `--resume-id <session>` after `stream-json`, and the approved mode's arguments again, so a resumed turn keeps the approved permissions.
-- **Session:** reported. Kiro picks the session id (a UUID) and prints it as `"sessionId"` in the run's stream-json events; the row reads the first one with the pattern `"sessionId":"(...)"`. There is no flag to choose it.
+- **Session:** reported. Kiro picks the session id (a UUID; [Session management](https://kiro.dev/docs/cli/chat/session-management/)) and there is no flag to choose it. Kiro's stream-json records carry it as `"sessionId"` (documented for the `runError` record); the row reads the first non-null one with the pattern `"sessionId":"(...)"`. That a successful run's first records carry it is unverified until the live check (openwizdev/OpenWiz#2452).
 - **Stop:** the driver ends the run's process tree, the V3 engine subprocess included. The row never runs `--delete-session`, so the session stays on this machine.
 - **Effort:** none: a start that carries an effort is refused and starts nothing (see [the effort fact](#the-effort-fact)).
 - **Permission modes:** `trust-all-tools` passes `--trust-all-tools`. `permissions-yaml` passes nothing, so only your own `~/.kiro/settings/permissions.yaml` rules decide, and a headless run denies every tool call those rules don't allow. Approve one of these for `kiro` as for a built-in harness.

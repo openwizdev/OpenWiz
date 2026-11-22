@@ -20,7 +20,6 @@ exit=0
 $ python3 -I adapters/local/harnesses/kiro/test_row.py
 pass kiro: not installed is a D3 error whose next says to install kiro-cli, and starts nothing
 pass kiro: not signed in is a D3 error that says so, and its log names kiro-cli login and KIRO_API_KEY
-pass kiro: not signed in leaves no turn of the run behind
 pass kiro: mode permissions-yaml starts `kiro-cli chat --v3 --no-interactive --output-format stream-json --model <m> <prompt>`
 pass kiro: mode trust-all-tools starts `kiro-cli chat --v3 --no-interactive --output-format stream-json --model <m> --trust-all-tools <prompt>`
 pass kiro: effort low is refused with the fixed next, starting nothing

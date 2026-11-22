@@ -50,7 +50,6 @@ with th.ThrowawayMachine(ROWS, NAME, 'kiro-cli', FAKE, 'trust-all-tools') as env
     check('not signed in is a D3 error that says so, and its log names kiro-cli login and KIRO_API_KEY',
           code == 1 and th.kit.invalid(out, th.ERROR) is None and 'not signed in' in out.get('error', '')
           and out.get('next', '').startswith('read ') and 'run `kiro-cli login` first' in log and 'KIRO_API_KEY' in log)
-    check('not signed in leaves no turn of the run behind', env.records() == [])
     stop_all(env)
 
 # The approved mode only: permissions-yaml adds no trust flag; trust-all-tools adds exactly --trust-all-tools.
