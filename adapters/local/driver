@@ -313,18 +313,46 @@ def workspace(run, repository):
     return folder
 
 
+def row_label(line):
+    cells = line.strip().split('|')
+    return ' '.join(cells[1].split()) if len(cells) > 2 and not cells[0] else None
+
+
+def row_value(row):
+    values = re.findall(r'`([^`]*)`', row)
+    return values[0] if len(values) == 1 and re.fullmatch(MODE, values[0]) else None
+
+
 def permission_mode(folder, repository, harness):
+    single, own = MODE_ROW.strip('| '), 'Harness permission mode (%s)' % harness
     try:
         with open(os.path.join(folder, 'docs', 'agents', 'fleet.md')) as f:
-            rows = [line for line in f.read().splitlines() if line.startswith(MODE_ROW)]
+            lines = f.read().splitlines()
     except OSError:
-        rows = []
-    values = re.findall(r'`([^`]*)`', rows[0]) if len(rows) == 1 else []
-    if len(values) != 1 or not re.fullmatch(MODE, values[0]):
+        lines = []
+    labelled = [(row_label(line), line.strip().split('|', 2)[-1]) for line in lines]
+    if not any(label and label.startswith(single + ' (') for label, _ in labelled):
+        rows = [line for line in lines if line.startswith(MODE_ROW)]
+        mode = row_value(rows[0]) if len(rows) == 1 else None
+    else:
+        rows, mine = [rest for label, rest in labelled if label == single], [rest for label, rest in labelled if label == own]
+        if rows and mine:
+            raise Refused('%s saves both the single Harness permission mode row and a %s row in docs/agents/fleet.md; '
+                          'nothing was started' % (repository, own), 'keep one of them in docs/agents/fleet.md, with '
+                          'the mode approved for %s, then start again' % harness)
+        if not rows:
+            mode = row_value(mine[0]) if len(mine) == 1 else None
+            if mode is None:
+                raise Refused('%s has no harness permission mode for %s saved in docs/agents/fleet.md; nothing was '
+                              'started' % (repository, harness), 'choose the mode %s may run in and save it there as '
+                              'the row `| %s | `<mode>` |`, then start again' % (harness, own))
+            return mode, own
+        mode = row_value(rows[0]) if len(rows) == 1 else None
+    if mode is None:
         raise Refused('%s has no single harness permission mode saved in docs/agents/fleet.md; nothing was started'
                       % repository, 'choose the mode %s may run in and save it there as the row '
                       '`| Harness permission mode | `<mode>` |`, then start again' % harness)
-    return values[0]
+    return mode, None
 
 
 def approved_mode(repository, harness):
@@ -723,7 +751,13 @@ def answer(cmd):
                               'approve one of the modes in %s, in both places, then start again'
                               % row_file(req['harness']))
             state['workspace'] = workspace(run, req['repository'])
-            if permission_mode(state['workspace'], req['repository'], req['harness']) != approved:
+            mode, own = permission_mode(state['workspace'], req['repository'], req['harness'])
+            if own and mode != approved:
+                raise Refused('the %s row in %s does not match the mode approved on this machine for %s; nothing '
+                              'was started' % (own, req['repository'], req['harness']),
+                              'save the one mode you approve for %s in both its docs/agents/fleet.md and %s, then '
+                              'start again' % (req['harness'], APPROVALS))
+            if mode != approved:
                 raise Refused('the Harness permission mode row in %s does not match the mode approved on this '
                               'machine; nothing was started' % req['repository'],
                               'save the one mode you approve in both its docs/agents/fleet.md and %s, then start '

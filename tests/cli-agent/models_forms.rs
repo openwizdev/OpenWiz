@@ -864,6 +864,157 @@ fn a_replaced_file_keeps_its_group_and_access_acl_and_gains_none() {
     );
 }
 
+fn run_listing(fake: &Models, listing: &str, args: &[&str]) -> (i32, String, String) {
+    use std::os::unix::fs::PermissionsExt;
+    let lister = fake.0.0.join("bin/ls");
+    fs::write(
+        &lister,
+        format!("#!/bin/sh\necho \"$2\" >> \"$0.log\"\n{listing}"),
+    )
+    .unwrap();
+    fs::set_permissions(&lister, fs::Permissions::from_mode(0o755)).unwrap();
+    let args: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    let source = CloudRoomSource::new(fake.0.0.join("bin/room-cli"));
+    let (mut out, mut err) = (Vec::new(), Vec::new());
+    let code = openwiz_cli::models::run_models_listing_acls(
+        &args,
+        &fake.0.0,
+        &source,
+        &FixedClock,
+        Some(&|path: &Path| {
+            std::process::Command::new(&lister)
+                .arg("-lde")
+                .arg(path)
+                .output()
+        }),
+        &mut out,
+        &mut err,
+    );
+    let text = |b| String::from_utf8(b).unwrap();
+    (code, text(out), text(err))
+}
+
+fn agents_files(fake: &Models) -> Vec<(String, String)> {
+    let mut files: Vec<_> = fs::read_dir(fake.0.0.join("docs/agents"))
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .map(|p| {
+            let name = p.file_name().unwrap().to_string_lossy().into_owned();
+            (name, fs::read_to_string(&p).unwrap())
+        })
+        .collect();
+    files.sort();
+    files
+}
+
+const ACL_LISTED: &str =
+    "printf -- '-rw-r--r--+ 1 syn  staff  9 Nov 22 08:00 %s\\n 0: user:nobody deny read\\n' \"$2\"";
+
+#[test]
+fn a_file_with_a_macos_extended_acl_is_refused_and_left_as_it_was() {
+    let fake = project("one-table/fleet.md", catalogue());
+    let only_fleet = format!("case \"$2\" in */fleet.md) {ACL_LISTED};; *) exit 9;; esac");
+    let before = agents_files(&fake);
+    let (code, out, err) = run_listing(
+        &fake,
+        &only_fleet,
+        &["set", "reviewer", "codex", "gpt-6.2-sol", "high"],
+    );
+    assert_eq!((code, out.as_str()), (1, ""), "{err}");
+    assert!(
+        err.contains("cannot write docs/agents/fleet.md: it has a macOS extended ACL"),
+        "{err}"
+    );
+    assert!(err.contains("nothing was written"), "{err}");
+    assert_eq!(agents_files(&fake), before, "set wrote a file");
+
+    fs::write(fake.0.0.join(SNAPSHOT), "{}\n").unwrap();
+    let before = agents_files(&fake);
+    let (code, _, err) = run_listing(&fake, ACL_LISTED, &["list", "--save"]);
+    assert_eq!(code, 1, "{err}");
+    assert!(
+        err.contains("cannot write docs/agents/models-offered.json: it has a macOS extended ACL"),
+        "{err}"
+    );
+    assert_eq!(agents_files(&fake), before, "list --save wrote a file");
+}
+
+#[test]
+fn a_file_whose_macos_acl_cannot_be_checked_is_refused() {
+    for listing in [
+        "exit 1",
+        "true",
+        "echo 'ls: syn: Operation not permitted'",
+        "printf -- '-rw-r--r--+ 1 syn  staff  9 Nov 22 08:00 %s\\n' \"$2\"",
+        "printf -- '-rw-r--r--  1 syn  staff  9 Nov 22 08:00 %s\\nsyn extra\\n' \"$2\"",
+        "printf -- '-rw-r--r--  1 syn  staff  9 Nov 22 08:00 %s\\n' \"$2\"; echo 'ls: syn: Operation not permitted' >&2",
+    ] {
+        let fake = project("one-table/fleet.md", catalogue());
+        let before = agents_files(&fake);
+        let (code, _, err) = run_listing(
+            &fake,
+            listing,
+            &["set", "reviewer", "codex", "gpt-6.2-sol", "high"],
+        );
+        assert_eq!(code, 1, "{listing}: {err}");
+        assert!(
+            err.contains("cannot write docs/agents/fleet.md: cannot check its macOS extended ACL"),
+            "{listing}: {err}"
+        );
+        assert_eq!(agents_files(&fake), before, "{listing}");
+    }
+}
+
+#[test]
+fn an_acl_found_on_a_later_check_leaves_every_file_as_it_was() {
+    let fake = project("one-table/fleet.md", catalogue());
+    fs::write(fake.0.0.join(SNAPSHOT), "{}\n").unwrap();
+    let before = agents_files(&fake);
+    let later = format!(
+        "case \"$2\" in */fleet.md) [ -e \"$0.fleet\" ] && {{ {ACL_LISTED}; exit; }}; : > \"$0.fleet\";; esac\n\
+         printf -- '-rw-r--r--  1 syn  staff  9 Nov 22 08:00 %s\\n' \"$2\""
+    );
+    let (code, _, err) = run_listing(
+        &fake,
+        &later,
+        &["set", "reviewer", "codex", "gpt-6.2-sol", "high"],
+    );
+    assert_eq!(code, 1, "{err}");
+    assert!(
+        err.contains("cannot write docs/agents/fleet.md: it has a macOS extended ACL"),
+        "{err}"
+    );
+    assert_eq!(
+        agents_files(&fake),
+        before,
+        "a file was replaced before the refusal"
+    );
+}
+
+#[test]
+fn a_file_with_no_macos_extended_acl_is_checked_and_replaced() {
+    let fake = project("one-table/fleet.md", catalogue());
+    let plain = "printf -- '-rw-r--r--@ 1 syn  staff  9 Nov 22 08:00 %s\\n' \"$2\"";
+    let (code, _, err) = run_listing(
+        &fake,
+        plain,
+        &["set", "reviewer", "codex", "gpt-6.2-sol", "high"],
+    );
+    assert_eq!(code, 0, "{err}");
+    assert!(
+        fs::read_to_string(fake.0.0.join(FLEET))
+            .unwrap()
+            .contains("gpt-6.2-sol")
+    );
+    let checked = fs::read_to_string(fake.0.0.join("bin/ls.log")).unwrap();
+    assert!(
+        checked
+            .lines()
+            .any(|l| Path::new(l) == fake.0.0.join(FLEET)),
+        "{checked}"
+    );
+}
+
 fn connect_accepts(text: &str) -> bool {
     use std::io::Write;
     let script = "import importlib.util,sys\n\

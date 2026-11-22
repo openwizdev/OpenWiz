@@ -1,0 +1,34 @@
+Runs at 8a903d049af45118694929918cf3af0fa89d15f6 (this commit adds only this log)
+................................../usr/lib/python3.11/subprocess.py:1125: ResourceWarning: subprocess 7789 is still running
+  _warn("subprocess %s is still running" % self.pid,
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/usr/lib/python3.11/subprocess.py:1125: ResourceWarning: subprocess 7778 is still running
+  _warn("subprocess %s is still running" % self.pid,
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+..openwiz-cloudroom: CloudRoom's sign-in exited with status 0 and gave no usable link.
+openwiz-cloudroom: to see its full output, run: "$HOME"/.local/bin/room-cli cloud sign-in --json
+openwiz-cloudroom: CloudRoom's sign-in exited with status 0 and gave no usable link.
+openwiz-cloudroom: to see its full output, run: "$HOME"/.local/bin/room-cli cloud sign-in --json
+openwiz-cloudroom: CloudRoom's sign-in exited with status 0 and gave no usable link.
+openwiz-cloudroom: to see its full output, run: "$HOME"/.local/bin/room-cli cloud sign-in --json
+openwiz-cloudroom: CloudRoom's sign-in exited with status 0 and gave no usable link.
+openwiz-cloudroom: to see its full output, run: "$HOME"/.local/bin/room-cli cloud sign-in --json
+openwiz-cloudroom: CloudRoom's sign-in exited with status 0 and gave no usable link.
+openwiz-cloudroom: to see its full output, run: "$HOME"/.local/bin/room-cli cloud sign-in --json
+openwiz-cloudroom: CloudRoom's sign-in exited with status 0 and gave no usable link.
+openwiz-cloudroom: to see its full output, run: "$HOME"/.local/bin/room-cli cloud sign-in --json
+..............
+----------------------------------------------------------------------
+Ran 50 tests in 5.358s
+
+OK
+.
+----------------------------------------------------------------------
+Ran 1 test in 1.480s
+
+OK
+..................
+----------------------------------------------------------------------
+Ran 18 tests in 4.477s
+
+OK

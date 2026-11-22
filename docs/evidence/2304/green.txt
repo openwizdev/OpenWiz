@@ -1,0 +1,26 @@
+# Green run (#2304): python3 -I adapters/local/test_driver.py, the whole suite, at 2956053e.
+test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Local.test_a_credential_shaped_start_field_is_refused_before_anything_starts) ... ok
+test_a_first_turn_that_ends_at_once_fails_start_with_its_reason (__main__.Local.test_a_first_turn_that_ends_at_once_fails_start_with_its_reason) ... ok
+test_a_missing_or_mismatched_per_harness_row_refuses_naming_the_harness (__main__.Local.test_a_missing_or_mismatched_per_harness_row_refuses_naming_the_harness) ... ok
+test_a_single_row_and_a_per_harness_row_for_the_same_harness_refuse (__main__.Local.test_a_single_row_and_a_per_harness_row_for_the_same_harness_refuse) ... ok
+test_a_single_row_file_refuses_with_todays_exact_words (__main__.Local.test_a_single_row_file_refuses_with_todays_exact_words) ... ok
+test_each_run_works_in_its_own_clone_of_its_repository (__main__.Local.test_each_run_works_in_its_own_clone_of_its_repository) ... ok
+test_kit_passes_all_five_with_each_harness (__main__.Local.test_kit_passes_all_five_with_each_harness) ... ok
+test_missing_or_unknown_harness_is_an_error_with_next (__main__.Local.test_missing_or_unknown_harness_is_an_error_with_next) ... ok
+test_per_harness_rows_start_each_harness_with_its_own_mode (__main__.Local.test_per_harness_rows_start_each_harness_with_its_own_mode) ... ok
+test_permission_mode_is_the_repositorys_own_or_start_refuses (__main__.Local.test_permission_mode_is_the_repositorys_own_or_start_refuses) ... ok
+test_permission_mode_needs_this_machines_approval (__main__.Local.test_permission_mode_needs_this_machines_approval) ... ok
+test_several_runs_at_once_stop_only_their_own (__main__.Local.test_several_runs_at_once_stop_only_their_own) ... ok
+test_start_record_is_not_wakeable_before_it_is_confirmed (__main__.Local.test_start_record_is_not_wakeable_before_it_is_confirmed) ... ok
+test_start_with_nowhere_to_save_starts_nothing (__main__.Local.test_start_with_nowhere_to_save_starts_nothing) ... ok
+test_stop_ends_a_worker_with_a_clean_environment (__main__.Local.test_stop_ends_a_worker_with_a_clean_environment) ... ok
+test_stop_ends_the_run_when_it_cannot_save (__main__.Local.test_stop_ends_the_run_when_it_cannot_save) ... ok
+test_wake_checks_its_save_before_and_after_spawn (__main__.Local.test_wake_checks_its_save_before_and_after_spawn) ... ok
+test_wake_while_a_turn_runs_starts_no_second_turn (__main__.Local.test_wake_while_a_turn_runs_starts_no_second_turn) ... ok
+test_without_proc_as_on_macos_stop_ends_a_worker_handed_off_as_the_turn_exits (__main__.Local.test_without_proc_as_on_macos_stop_ends_a_worker_handed_off_as_the_turn_exits) ... ok
+test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild (__main__.Local.test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild) ... ok
+
+----------------------------------------------------------------------
+Ran 20 tests in 51.361s
+
+OK

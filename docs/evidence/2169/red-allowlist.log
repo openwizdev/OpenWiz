@@ -1,0 +1,134 @@
+................................FFFFFF./usr/lib/python3.11/subprocess.py:1125: ResourceWarning: subprocess 7508 is still running
+  _warn("subprocess %s is still running" % self.pid,
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/usr/lib/python3.11/subprocess.py:1125: ResourceWarning: subprocess 7497 is still running
+  _warn("subprocess %s is still running" % self.pid,
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+..openwiz-cloudroom: CloudRoom's sign-in gave no usable link and said nothing (status 0)
+openwiz-cloudroom: CloudRoom's sign-in gave no usable link and said nothing (status 0)
+openwiz-cloudroom: CloudRoom's sign-in gave no usable link and said nothing (status 0)
+openwiz-cloudroom: CloudRoom's sign-in gave no usable link and said nothing (status 0)
+openwiz-cloudroom: CloudRoom's sign-in gave no usable link and said nothing (status 0)
+openwiz-cloudroom: CloudRoom's sign-in gave no usable link and said nothing (status 0)
+.F.F..........
+======================================================================
+FAIL: test_a_failed_sign_in_never_prints_cloudrooms_raw_output (__main__.Login.test_a_failed_sign_in_never_prints_cloudrooms_raw_output) (code=1, reply=b'', said=b'Retry at https://www.cloudroom.dev/login?desktop=synthetic-nonce-0001 as owner@example.invalid\ntoken: synthetic-token-0123456789abcdefghij\n\x1b[31mpassword=hunter2\x1b[0m\n{\n  "error": "refresh failed",\n  "refresh_token":\n\n    "rt1"\n}\nYour refresh token for this session is\n  rt2\n{"message": "Your token is:\\n rt3", "refresh_token": {"detail": "rt4"}}\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1046, in test_a_failed_sign_in_never_prints_cloudrooms_raw_output
+    self.assertEqual(err, expected)
+AssertionError: 'open[19 chars]dRoom said: Retry at [link removed] as [addres[260 chars]t4\n' != 'open[19 chars]dRoom\'s sign-in exited with status 1 and gave[112 chars]on\n'
++ openwiz-cloudroom: CloudRoom's sign-in exited with status 1 and gave no usable link.
++ openwiz-cloudroom: to see its full output, run: "$HOME"/.local/bin/room-cli cloud sign-in --json
+- openwiz-cloudroom: CloudRoom said: Retry at [link removed] as [address removed]
+- openwiz-cloudroom: CloudRoom said: token [removed]
+- openwiz-cloudroom: CloudRoom said: password [removed]
+- openwiz-cloudroom: CloudRoom said: Your refresh token [removed]
+- openwiz-cloudroom: CloudRoom said: rt2
+- openwiz-cloudroom: CloudRoom said: rt4
+
+
+======================================================================
+FAIL: test_a_failed_sign_in_never_prints_cloudrooms_raw_output (__main__.Login.test_a_failed_sign_in_never_prints_cloudrooms_raw_output) (code=1, reply=b'Retry at https://www.cloudroom.dev/login?desktop=synthetic-nonce-0001 as owner@example.invalid\ntoken: synthetic-token-0123456789abcdefghij\n\x1b[31mpassword=hunter2\x1b[0m\n{\n  "error": "refresh failed",\n  "refresh_token":\n\n    "rt1"\n}\nYour refresh token for this session is\n  rt2\n{"message": "Your token is:\\n rt3", "refresh_token": {"detail": "rt4"}}\n', said=b'')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1046, in test_a_failed_sign_in_never_prints_cloudrooms_raw_output
+    self.assertEqual(err, expected)
+AssertionError: 'open[19 chars]dRoom said: Retry at [link removed] as [addres[260 chars]t4\n' != 'open[19 chars]dRoom\'s sign-in exited with status 1 and gave[112 chars]on\n'
++ openwiz-cloudroom: CloudRoom's sign-in exited with status 1 and gave no usable link.
++ openwiz-cloudroom: to see its full output, run: "$HOME"/.local/bin/room-cli cloud sign-in --json
+- openwiz-cloudroom: CloudRoom said: Retry at [link removed] as [address removed]
+- openwiz-cloudroom: CloudRoom said: token [removed]
+- openwiz-cloudroom: CloudRoom said: password [removed]
+- openwiz-cloudroom: CloudRoom said: Your refresh token [removed]
+- openwiz-cloudroom: CloudRoom said: rt2
+- openwiz-cloudroom: CloudRoom said: rt4
+
+
+======================================================================
+FAIL: test_a_failed_sign_in_never_prints_cloudrooms_raw_output (__main__.Login.test_a_failed_sign_in_never_prints_cloudrooms_raw_output) (code=0, reply=b'{"error": {"message": "rt5"}}', said=b'')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1046, in test_a_failed_sign_in_never_prints_cloudrooms_raw_output
+    self.assertEqual(err, expected)
+AssertionError: 'open[19 chars]dRoom said: rt5\n' != 'open[19 chars]dRoom\'s sign-in exited with status 0 and gave[112 chars]on\n'
+- openwiz-cloudroom: CloudRoom said: rt5
++ openwiz-cloudroom: CloudRoom's sign-in exited with status 0 and gave no usable link.
++ openwiz-cloudroom: to see its full output, run: "$HOME"/.local/bin/room-cli cloud sign-in --json
+
+
+======================================================================
+FAIL: test_a_failed_sign_in_never_prints_cloudrooms_raw_output (__main__.Login.test_a_failed_sign_in_never_prints_cloudrooms_raw_output) (code=None, reply=b'', said=b'Retry at https://www.cloudroom.dev/login?desktop=synthetic-nonce-0001 as owner@example.invalid\ntoken: synthetic-token-0123456789abcdefghij\n\x1b[31mpassword=hunter2\x1b[0m\n{\n  "error": "refresh failed",\n  "refresh_token":\n\n    "rt1"\n}\nYour refresh token for this session is\n  rt2\n{"message": "Your token is:\\n rt3", "refresh_token": {"detail": "rt4"}}\ngetaddrinfo ENOTFOUND www.cloudroom.dev')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1046, in test_a_failed_sign_in_never_prints_cloudrooms_raw_output
+    self.assertEqual(err, expected)
+AssertionError: "openwiz-cloudroom: CloudRoom's sign-in d[385 chars]t4\n" != 'openwiz-cloudroom: CloudRoom\'s sign-in [250 chars]on\n'
+  openwiz-cloudroom: CloudRoom's sign-in did not answer within 30 seconds; is CloudRoom running?
++ openwiz-cloudroom: CloudRoom reported: CloudRoom could not look up its server; check the network.
++ openwiz-cloudroom: to see its full output, run: "$HOME"/.local/bin/room-cli cloud sign-in --json
+- openwiz-cloudroom: CloudRoom said: Retry at [link removed] as [address removed]
+- openwiz-cloudroom: CloudRoom said: token [removed]
+- openwiz-cloudroom: CloudRoom said: password [removed]
+- openwiz-cloudroom: CloudRoom said: Your refresh token [removed]
+- openwiz-cloudroom: CloudRoom said: rt2
+- openwiz-cloudroom: CloudRoom said: rt4
+
+
+======================================================================
+FAIL: test_a_failed_sign_in_never_prints_cloudrooms_raw_output (__main__.Login.test_a_failed_sign_in_never_prints_cloudrooms_raw_output) (code=1, reply=b'', said=b'connect ECONNREFUSED 127.0.0.1:4100 rt6\nconnect ECONNREFUSED 127.0.0.1:4100 rt6\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1046, in test_a_failed_sign_in_never_prints_cloudrooms_raw_output
+    self.assertEqual(err, expected)
+AssertionError: 'open[19 chars]dRoom said: connect ECONNREFUSED 127.0.0.1:410[79 chars]t6\n' != 'open[19 chars]dRoom\'s sign-in exited with status 1 and gave[203 chars]on\n'
+- openwiz-cloudroom: CloudRoom said: connect ECONNREFUSED 127.0.0.1:4100 rt6
+- openwiz-cloudroom: CloudRoom said: connect ECONNREFUSED 127.0.0.1:4100 rt6
++ openwiz-cloudroom: CloudRoom's sign-in exited with status 1 and gave no usable link.
++ openwiz-cloudroom: CloudRoom reported: CloudRoom could not connect; is CloudRoom running?
++ openwiz-cloudroom: to see its full output, run: "$HOME"/.local/bin/room-cli cloud sign-in --json
+
+
+======================================================================
+FAIL: test_a_failed_sign_in_never_prints_cloudrooms_raw_output (__main__.Login.test_a_failed_sign_in_never_prints_cloudrooms_raw_output) (code=1, reply=b'', said=b'getaddrinfo enotfound www.cloudroom.dev\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1046, in test_a_failed_sign_in_never_prints_cloudrooms_raw_output
+    self.assertEqual(err, expected)
+AssertionError: 'open[19 chars]dRoom said: getaddrinfo enotfound www.cloudroom.dev\n' != 'open[19 chars]dRoom\'s sign-in exited with status 1 and gave[112 chars]on\n'
+- openwiz-cloudroom: CloudRoom said: getaddrinfo enotfound www.cloudroom.dev
++ openwiz-cloudroom: CloudRoom's sign-in exited with status 1 and gave no usable link.
++ openwiz-cloudroom: to see its full output, run: "$HOME"/.local/bin/room-cli cloud sign-in --json
+
+
+======================================================================
+FAIL: test_an_app_that_fails_at_launch_shows_its_status_and_known_errors_only (__main__.Login.test_an_app_that_fails_at_launch_shows_its_status_and_known_errors_only)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1070, in test_an_app_that_fails_at_launch_shows_its_status_and_known_errors_only
+    self.assertEqual(err, 'openwiz-cloudroom: CloudRoom exited with status 1 at launch.\n'
+AssertionError: 'open[20 chars]Room said: error while loading shared librarie[66 chars]d]\n' != 'open[20 chars]Room exited with status 1 at launch.\nopenwiz-[162 chars]ge\n'
+- openwiz-cloudroom: CloudRoom said: error while loading shared libraries: libnss3.so
+- openwiz-cloudroom: CloudRoom said: see [link removed]
++ openwiz-cloudroom: CloudRoom exited with status 1 at launch.
++ openwiz-cloudroom: CloudRoom reported: A system library CloudRoom needs is missing.
++ openwiz-cloudroom: to see its full output, run: "$HOME"/Applications/Cloudroom.AppImage
+
+
+======================================================================
+FAIL: test_an_opener_that_fails_is_shown_and_not_counted_as_opened (__main__.Login.test_an_opener_that_fails_is_shown_and_not_counted_as_opened)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1054, in test_an_opener_that_fails_is_shown_and_not_counted_as_opened
+    self.assertEqual(err, 'openwiz-cloudroom: xdg-open exited with status 4; the sign-in page did not open.\n'
+AssertionError: 'open[19 chars]open said: no method available for opening [link removed]\n' != 'open[19 chars]open exited with status 4; the sign-in page di[188 chars]ev\n'
+- openwiz-cloudroom: xdg-open said: no method available for opening [link removed]
++ openwiz-cloudroom: xdg-open exited with status 4; the sign-in page did not open.
++ openwiz-cloudroom: xdg-open reported: No browser is set up to open the sign-in page.
++ openwiz-cloudroom: to see its full output, run: /usr/bin/xdg-open https://www.cloudroom.dev
+
+
+----------------------------------------------------------------------
+Ran 50 tests in 3.611s
+
+FAILED (failures=8)

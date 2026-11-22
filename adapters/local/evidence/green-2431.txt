@@ -28,7 +28,7 @@ fail session-differs: session: the wake turn got a different session id from the
 fail wake-no-session: row.json wake: it has no {session}
 exit 1
 
-$ python3 -I adapters/local/test_driver.py
-Ran 18 tests in 53.062s
+$ python3 -I adapters/local/test_driver.py   # after merging main, which adds per-harness permission mode rows
+Ran 23 tests in 64.751s
 
 OK

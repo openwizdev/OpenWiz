@@ -1,0 +1,57 @@
+................................FFFFF../usr/lib/python3.11/subprocess.py:1125: ResourceWarning: subprocess 5369 is still running
+  _warn("subprocess %s is still running" % self.pid,
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/usr/lib/python3.11/subprocess.py:1125: ResourceWarning: subprocess 5358 is still running
+  _warn("subprocess %s is still running" % self.pid,
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+..openwiz-cloudroom: CloudRoom's sign-in gave no usable link and said nothing (status 0)
+openwiz-cloudroom: CloudRoom's sign-in gave no usable link and said nothing (status 0)
+openwiz-cloudroom: CloudRoom's sign-in gave no usable link and said nothing (status 0)
+openwiz-cloudroom: CloudRoom's sign-in gave no usable link and said nothing (status 0)
+openwiz-cloudroom: CloudRoom's sign-in gave no usable link and said nothing (status 0)
+openwiz-cloudroom: CloudRoom's sign-in gave no usable link and said nothing (status 0)
+..............
+======================================================================
+FAIL: test_a_credential_split_across_lines_never_reaches_stderr (__main__.Login.test_a_credential_split_across_lines_never_reaches_stderr) (said=b'Sign-in failed.\n{\n  "error": "refresh failed",\n  "refresh_token":\n    "rt1"\n}\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1065, in test_a_credential_split_across_lines_never_reaches_stderr
+    self.assertNotIn('rt1', err)
+AssertionError: 'rt1' unexpectedly found in 'openwiz-cloudroom: CloudRoom said: Sign-in failed.\nopenwiz-cloudroom: CloudRoom said: {\nopenwiz-cloudroom: CloudRoom said: "error": "refresh failed",\nopenwiz-cloudroom: CloudRoom said: "refresh_token [removed]\nopenwiz-cloudroom: CloudRoom said: "rt1"\nopenwiz-cloudroom: CloudRoom said: }\n'
+
+======================================================================
+FAIL: test_a_credential_split_across_lines_never_reaches_stderr (__main__.Login.test_a_credential_split_across_lines_never_reaches_stderr) (said=b'{\n  "message": "Sign-in failed.",\n  "session":\n    "rt1"\n}\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1064, in test_a_credential_split_across_lines_never_reaches_stderr
+    self.assertIn('openwiz-cloudroom: CloudRoom said: Sign-in failed.\n', err)
+AssertionError: 'openwiz-cloudroom: CloudRoom said: Sign-in failed.\n' not found in 'openwiz-cloudroom: CloudRoom said: {\nopenwiz-cloudroom: CloudRoom said: "message": "Sign-in failed.",\nopenwiz-cloudroom: CloudRoom said: "session [removed]\nopenwiz-cloudroom: CloudRoom said: "rt1"\nopenwiz-cloudroom: CloudRoom said: }\n'
+
+======================================================================
+FAIL: test_a_credential_split_across_lines_never_reaches_stderr (__main__.Login.test_a_credential_split_across_lines_never_reaches_stderr) (said=b'Sign-in failed.\ntoken:\n  rt1\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1065, in test_a_credential_split_across_lines_never_reaches_stderr
+    self.assertNotIn('rt1', err)
+AssertionError: 'rt1' unexpectedly found in 'openwiz-cloudroom: CloudRoom said: Sign-in failed.\nopenwiz-cloudroom: CloudRoom said: token [removed]\nopenwiz-cloudroom: CloudRoom said: rt1\n'
+
+======================================================================
+FAIL: test_a_credential_split_across_lines_never_reaches_stderr (__main__.Login.test_a_credential_split_across_lines_never_reaches_stderr) (said=b'Sign-in failed.\nrefresh_token =\n\trt1 rt1\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1065, in test_a_credential_split_across_lines_never_reaches_stderr
+    self.assertNotIn('rt1', err)
+AssertionError: 'rt1' unexpectedly found in 'openwiz-cloudroom: CloudRoom said: Sign-in failed.\nopenwiz-cloudroom: CloudRoom said: refresh_token [removed]\nopenwiz-cloudroom: CloudRoom said: rt1 rt1\n'
+
+======================================================================
+FAIL: test_a_credential_split_across_lines_never_reaches_stderr (__main__.Login.test_a_credential_split_across_lines_never_reaches_stderr) (said=b'Sign-in failed.\n[{"nested": {"cookie":\n"rt1"}}]\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1065, in test_a_credential_split_across_lines_never_reaches_stderr
+    self.assertNotIn('rt1', err)
+AssertionError: 'rt1' unexpectedly found in 'openwiz-cloudroom: CloudRoom said: Sign-in failed.\nopenwiz-cloudroom: CloudRoom said: [{"nested": {"cookie [removed]\nopenwiz-cloudroom: CloudRoom said: "rt1"}}]\n'
+
+----------------------------------------------------------------------
+Ran 51 tests in 4.576s
+
+FAILED (failures=5)
