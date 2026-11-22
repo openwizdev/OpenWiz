@@ -1,0 +1,22 @@
+{
+  "harness": "vibe",
+  "program": "vibe",
+  "start": ["--prompt", "{prompt}", "--output", "json", "--model", "{model}", "{mode}", "{effort}"],
+  "wake": ["-p", "{prompt}", "--resume", "{session}", "{mode}"],
+  "session": {"json": ["session_id"]},
+  "modes": {
+    "auto-approve": ["--auto-approve"],
+    "accept-edits": ["--approval-policy", "accept-edits"],
+    "ask": ["--approval-policy", "ask"]
+  },
+  "env": {},
+  "effort": {
+    "low": ["--thinking", "low"],
+    "medium": ["--thinking", "medium"],
+    "high": ["--thinking", "high"],
+    "xhigh": ["--thinking", "xhigh"],
+    "max": ["--thinking", "max"]
+  },
+  "login": "vibe's own sign-in: a Mistral account sign-in done once in vibe, or an API key you keep in the OS keyring or in your own MISTRAL_API_KEY; the row never reads, sets or stores a key",
+  "daemon": "vibe -p starts its app-server process under the turn and exits only after it has; stop ends it with the process tree"
+}

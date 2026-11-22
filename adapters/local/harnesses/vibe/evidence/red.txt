@@ -1,0 +1,12 @@
+Red run of the vibe row, before the fix: row.json reads the session id with {"json": ["session_id"]}, but vibe --output json prints one pretty-printed JSON array, so no line is a JSON object holding session_id. No-op stubs for every known agent CLI were first on PATH; no real agent CLI ran.
+
+$ python3 -I adapters/local/test_harnesses.py --rows adapters/local/harnesses
+fail vibe: kit: fail wake: run run-fd17f8ae4e5b has no session id from its first turn yet; nothing was started
+exit 1
+
+$ python3 -I adapters/local/harnesses/vibe/test_row.py
+pass not installed
+pass not signed in
+pass off refused
+fail pattern reads the entry not a quoted prompt
+exit 1
