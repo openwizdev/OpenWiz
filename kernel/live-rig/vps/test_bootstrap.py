@@ -415,16 +415,23 @@ class BootstrapTest(unittest.TestCase):
         self.assertEqual(self.fx.tree(), [])
         self.assertTrue(os.path.isfile(os.path.join(prefix, 'bin', 'gh')))
 
-    def test_existing_launcher_is_never_replaced(self):
-        launcher = os.path.join(self.fx.prefix, 'bin', 'fakeagent')
-        os.makedirs(os.path.dirname(launcher))
-        script(launcher, 'echo "fake 2.0.0 (synthetic)"\n')
-        working = sha256(launcher)
+    def test_existing_tools_it_did_not_install_are_kept_and_never_run(self):
+        pins = {'curl': '8.23.0', 'fakedroid': '1.17.2', 'runpane': '2.4.246', 'fakeagent': '3.2.1'}
+        os.makedirs(os.path.join(self.fx.prefix, 'bin'))
+        for name in pins:
+            script(os.path.join(self.fx.prefix, 'bin', name),
+                   'echo "%s ran $*" >> "%s"\necho "fake %s (synthetic)"\n' % (name, self.fx.calls, pins[name]))
+        before = {p: sha256(p) for p in self.fx.tree()}
         r = self.fx.run()
+        self.assertEqual(read(self.fx.calls).count(' ran '), 0, read(self.fx.calls))
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertIn('left out fakeagent: your existing %s is kept (it does not name 3.2.1); move it aside to '
-                      'install the pinned one' % launcher, self.summary(r.stdout)[1])
-        self.assertEqual(sha256(launcher), working)
+        line, rest = self.summary(r.stdout)
+        self.assertEqual(line, 'bootstrap: 2 installed, 2 already there, 5 left out')
+        for name, version in pins.items():
+            self.assertIn('left out %s: your existing %s was not installed by this bootstrap, so it is kept and never '
+                          'run; move it aside to install the pinned %s'
+                          % (name, os.path.join(self.fx.prefix, 'bin', name), version), rest)
+        self.assertEqual({p: sha256(p) for p in self.fx.tree() if p in before}, before)
         self.assertEqual(read(self.fx.installer_log), '')
 
     def test_too_old_system_tool_is_left_out_with_its_reason(self):
