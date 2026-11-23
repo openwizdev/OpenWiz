@@ -1,4 +1,4 @@
-Green run of the vibe row, after the fix: row.json reads the session id with a pattern on the history entry's own "session_id" line. No-op stubs for every known agent CLI were first on PATH; no real agent CLI ran.
+Green run of the vibe row at the hand-back: row.json reads the session id with a pattern on the history entry's own "session_id" line, and its signed_out patterns turn vibe's missing-key line into "the harness is not signed in", naming vibe --setup. No-op stubs for every known agent CLI were first on PATH; no real agent CLI ran.
 
 $ python3 -I adapters/local/test_harnesses.py
 fail claude: row.json harness: claude is built in, and no row may use a built-in name
@@ -9,7 +9,10 @@ fail effort-unpassed: row.json effort: it maps effort values to arguments, but s
 pass example: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
 pass example-none: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
 fail larger-argument: row.json start: a placeholder sits inside a larger argument; each fills a whole argument
+fail row-missing: row.json is missing
 fail session-differs: session: the wake turn got a different session id from the start turn
+fail signed-out-bad-pattern: row.json signed_out: a pattern does not compile
+pass signed-out-json: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
 fail wake-no-session: row.json wake: it has no {session}
 pass driver: an unknown harness is a D3 error that lists the built-ins and the row folders, and starts nothing
 pass driver: a wake before the reported session id is known is a D3 error that starts nothing

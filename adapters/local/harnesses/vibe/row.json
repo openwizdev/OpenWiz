@@ -18,5 +18,10 @@
     "max": ["--thinking", "max"]
   },
   "login": "vibe's own sign-in: a Mistral account sign-in done once in vibe, or an API key you keep in the OS keyring or in your own MISTRAL_API_KEY; the row never reads, sets or stores a key",
+  "signed_out": [
+    "missing \\w+ environment variable for \\w+ provider",
+    "can't read \\w+ from the system keyring for \\w+ provider"
+  ],
+  "login_command": "vibe --setup",
   "daemon": "vibe -p starts its app-server process under the turn and exits only after it has; stop ends it with the process tree"
 }
