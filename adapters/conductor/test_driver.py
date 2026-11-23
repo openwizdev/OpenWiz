@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import os
+import secrets
 import shutil
 import subprocess
 import sys
@@ -10,16 +11,22 @@ import unittest
 sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.abspath(__file__))
 DRIVER = os.path.join(HERE, 'driver')
-KIT = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'kit.py')
-KEY = 'sk-' + 'Synthetic0Conductor0Value' * 2
+KIT_DIR = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit')
+KIT = os.path.join(KIT_DIR, 'kit.py')
+with open(os.path.join(KIT_DIR, 'hosts.json')) as _f:
+    ENTRY = json.load(_f).get('conductor', {})
+# The key's variable, read from the registry: no file of this folder may name it (driver v1 N4).
+VARIABLE = ENTRY.get('variable', 'unregistered')
 NEVER_READS_THE_KEY = '''import importlib.machinery, importlib.util, os, sys
 sys.dont_write_bytecode = True
-fetch = os._Environ.__getitem__
-def guarded(self, name):
-    if name in ('CONDUCTOR_API_KEY', b'CONDUCTOR_API_KEY'):
-        raise AssertionError('the driver fetched the key')
-    return fetch(self, name)
-os._Environ.__getitem__ = guarded
+variable = os.environ.pop('GUARDED_VARIABLE')
+for name in ('__getitem__', 'get', '__contains__', 'pop', 'copy', 'items', 'values'):
+    real = getattr(os._Environ, name)
+    def guarded(self, *args, _real=real, _name=name):
+        if _name in ('items', 'values', 'copy') or (args and args[0] in (variable, variable.encode())):
+            raise AssertionError('the driver touched the key variable through os.environ.' + _name)
+        return _real(self, *args)
+    setattr(os._Environ, name, guarded)
 spec = importlib.util.spec_from_loader('conductor', importlib.machinery.SourceFileLoader('conductor', %r))
 t = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(t)
@@ -71,49 +78,57 @@ if sys.argv[1:] == ['start'] and os.fork() == 0:
     os._exit(0)
 os.execv(%r, [%r] + sys.argv[1:])
 '''
-KNOBS = {'OPENWIZ_KIT_RUN', 'SCOPED_KIT_OPENED', 'FAKE_CONDUCTOR_FAIL', 'FAKE_CONDUCTOR_LOSE', 'FAKE_CURL_VERSION'}
 REQUEST = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude',
            'model': 'opus-5-5-1m'}
+CANT_SET_EFFORT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster "
+                   "to run it at the host's default")
 
 
 class Conductor(unittest.TestCase):
+    maxDiff = None
+
     def setUp(self):
         self.folder = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.folder, True)
         self.tracker = os.path.join(self.folder, 'tracker.json')
         with open(self.tracker, 'w') as f:
             json.dump({'record_authors': ['example-bot[bot]'], 'comments': []}, f)
         self.log, self.host = os.path.join(self.folder, 'calls'), os.path.join(self.folder, 'conductor.json')
+        self.faults, self.key_file = os.path.join(self.folder, 'faults.json'), os.path.join(self.folder, 'key')
+        self.fault({})
+        open(self.log, 'w').close()
+        self.key = 'syn-test-key-' + secrets.token_hex(12)
+        with open(self.key_file, 'w') as f:
+            f.write(self.key)
         tools = os.path.join(self.folder, 'bin')
         os.mkdir(tools)
         os.symlink(sys.executable, os.path.join(tools, 'python3'))
-        path = os.path.join(HERE, 'fixtures', 'bin') + os.pathsep + tools
-        for real in ('claude', 'codex', 'cursor', 'conductor'):
-            self.assertIsNone(shutil.which(real, path=path), 'a real %s is reachable from the tests' % real)
-        self.assertEqual(shutil.which('curl', path=path), os.path.join(HERE, 'fixtures', 'bin', 'curl'))
-        self.env = dict(KIT_TRACKER=self.tracker, CONDUCTOR_API_KEY=KEY, FAKE_CONDUCTOR_KEY=KEY,
-                        FAKE_CONDUCTOR_STATE=self.host, FAKE_CONDUCTOR_LOG=self.log,
-                        OPENWIZ_CONDUCTOR_STATE=os.path.join(self.folder, 'state'),
-                        PATH=path, HOME=self.folder, LANG='C.UTF-8')
+        for real in ('claude', 'codex', 'cursor', 'cursor-agent', 'conductor', 'curl'):
+            self.assertIsNone(shutil.which(real, path=tools), 'a real %s is reachable from the tests' % real)
+        fake = subprocess.Popen([sys.executable, '-I', os.path.join(HERE, 'fixtures', 'fake-conductor'),
+                                 self.tracker, self.log, self.faults, self.key_file, self.host],
+                                stdout=subprocess.PIPE, text=True, env={'PATH': tools, 'LANG': 'C.UTF-8'})
+        self.addCleanup(fake.stdout.close)
+        self.addCleanup(fake.wait)
+        self.addCleanup(fake.kill)
+        self.env = dict(KIT_TRACKER=self.tracker, OPENWIZ_CONDUCTOR_STATE=os.path.join(self.folder, 'state'),
+                        OPENWIZ_HOSTKEY_TEST_ORIGIN=fake.stdout.readline().strip(),
+                        PATH=tools, HOME=self.folder, LANG='C.UTF-8')
+
+    def fault(self, faults):
+        with open(self.faults, 'w') as f:
+            json.dump(faults, f)
 
     def driver(self, cmd, request=None, **env):
         p = subprocess.run([DRIVER, cmd], input=json.dumps(request) if request is not None else '',
-                           env=dict(self.env, **env), capture_output=True, text=True, timeout=60)
-        self.assertNotIn(KEY, p.stdout + p.stderr, 'the driver printed the key')
+                           env=dict(self.env, **env), capture_output=True, text=True, timeout=120)
+        self.assertNotIn(self.key, p.stdout + p.stderr, 'the driver printed the key')
         return p.returncode, json.loads(p.stdout)
 
     def calls(self):
-        try:
-            with open(self.log) as f:
-                logged = [json.loads(line) for line in f]
-        except FileNotFoundError:
-            return []
-        for c in logged:
-            self.assertNotIn(KEY, ' '.join(c['args']), 'the key was on a command line')
-            self.assertEqual(c['key_in'], ['CONDUCTOR_API_KEY', 'FAKE_CONDUCTOR_KEY'],
-                             'curl got the key in a variable the test never gave it')
-            self.assertLessEqual(set(c['env']), set(self.env) | KNOBS,
-                                 'curl ran with a variable the test never gave it')
-        return [(c['args'][5], c['args'][-1].split('.build', 1)[1]) for c in logged if c['args'][-1] != '--version']
+        with open(self.log) as f:
+            logged = [json.loads(line) for line in f]
+        return [(c['method'], c['path']) for c in logged], {c['authorization'] for c in logged}
 
     def workspaces(self):
         with open(self.host) as f:
@@ -128,6 +143,40 @@ class Conductor(unittest.TestCase):
                                '--tracker', self.tracker, '--wait', str(wait)],
                               env=dict(self.env, **env), capture_output=True, text=True, timeout=300)
 
+    def test_the_key_reaches_conductor_only_through_the_helper(self):
+        self.assertEqual((ENTRY.get('origin'), ENTRY.get('keychain')),
+                         ('https://api.conductor.build', 'openwiz-conductor'), 'conductor is not in hosts.json')
+        named = []
+        for folder, _, names in os.walk(HERE):
+            for n in names:
+                path = os.path.join(folder, n)
+                with open(path, 'rb') as f:
+                    lines = f.read().split(b'\n')
+                for line in lines:
+                    exempt = n == 'README.md' and folder == HERE and ENTRY['keychain'].encode() in line
+                    if VARIABLE.encode() in line and not exempt:
+                        named.append(os.path.relpath(path, HERE))
+        self.assertEqual(sorted(set(named)), [], 'these files name the key variable')
+        with open(DRIVER) as f:
+            self.assertNotIn('conductor.build', f.read(), 'the driver picks the address itself')
+        guarded = os.path.join(self.folder, 'guarded')
+        with open(guarded, 'w') as f:
+            f.write(NEVER_READS_THE_KEY % DRIVER)
+        other = 'syn-other-key-' + secrets.token_hex(12)
+        run = None
+        for cmd in ('start', 'wake', 'stop'):
+            p = subprocess.run([sys.executable, '-I', guarded, cmd], input=json.dumps(
+                REQUEST if cmd == 'start' else {'run': run}), capture_output=True, text=True, timeout=120,
+                env=dict(self.env, GUARDED_VARIABLE=VARIABLE, **{VARIABLE: other}))
+            self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+            self.assertNotIn(other, p.stdout + p.stderr)
+            run = run or json.loads(p.stdout)['run']
+        calls, bearers = self.calls()
+        self.assertEqual(len(calls), 4)
+        self.assertEqual(bearers, {'Bearer ' + self.key}, 'a call did not carry the helper\'s key')
+        with open(self.log) as f:
+            self.assertNotIn(other, f.read())
+
     def test_the_kit_passes_all_five(self):
         opened = os.path.join(self.folder, 'opened')
         outside = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)'], env={'OUTSIDE': 'x'})
@@ -136,10 +185,13 @@ class Conductor(unittest.TestCase):
         finally:
             outside.kill()
             outside.wait()
-        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
-        self.assertEqual([line.split(':')[0] for line in p.stdout.splitlines()],
-                         ['pass version', 'pass start', 'pass wake', 'pass stop', 'pass token'])
-        self.calls()
+        self.assertEqual((p.returncode, p.stdout.splitlines()), (0, [
+            'pass version: openwiz:records v1, and the schema is driver v1',
+            'pass start: the run posted builder status note 1',
+            'pass wake: the run edited builder status note 1',
+            'pass stop: the run ended, and a wake after it is refused',
+            'pass token: no login or token passed through the driver, and on start, wake and stop the conductor key '
+            'reached its host only from the key helper, in its header']), p.stderr)
         with open(opened) if os.path.exists(opened) else open(os.devnull) as f:
             self.assertNotIn(str(outside.pid), f.read().split(), 'the kit read a process outside its run')
 
@@ -167,84 +219,77 @@ class Conductor(unittest.TestCase):
         run = out['run']
         self.assertEqual(self.driver('wake', {'run': run}), (0, {'run': run, 'woke': True}))
         self.assertEqual(self.driver('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
-        self.assertEqual([c for c in self.calls()], [
+        self.assertEqual(self.calls()[0], [
             ('POST', '/v0/workspaces'), ('POST', '/v0/sessions/se_fake0001/messages'),
             ('POST', '/v0/sessions/se_fake0001/cancel'), ('POST', '/v0/workspaces/ws_fake0001/archive')])
-        self.assertEqual(self.workspaces()['ws_fake0001']['status'], 'archived')
-        self.assertEqual(self.workspaces()['ws_fake0001']['repositoryUrl'], 'https://github.com/example/site')
+        self.assertEqual(self.workspaces()['ws_fake0001'], {
+            'name': 'openwiz-' + run, 'repositoryUrl': 'https://github.com/example/site', 'agent': 'claude',
+            'status': 'archived'})
         self.assertEqual(self.driver('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
         code, out = self.driver('wake', {'run': run})
         self.assertEqual(code, 1, out)
-        self.assertEqual(len(self.calls()), 4, 'a stopped run called Conductor again')
+        self.assertEqual(len(self.calls()[0]), 4, 'a stopped run called Conductor again')
 
     def test_a_lost_start_reply_is_never_retried(self):
-        code, out = self.driver('start', REQUEST, FAKE_CONDUCTOR_LOSE='POST /v0/workspaces')
-        self.assertEqual(code, 1, out)
-        self.assertIn('unknown', out['error'])
-        self.assertIn('openwiz-', out['next'], 'it names no workspace to look for')
-        self.assertEqual(self.calls(), [('POST', '/v0/workspaces')], 'a start that may have worked was sent again')
-        self.assertEqual(len(self.workspaces()), 1)
+        for n, fault in enumerate(({'lose': True}, {'status': 503}, {'status': 408}), 1):
+            with self.subTest(fault=fault):
+                self.fault({'POST /v0/workspaces': fault})
+                code, out = self.driver('start', REQUEST)
+                self.assertEqual(code, 1, out)
+                self.assertIn('outcome is unknown', out['error'])
+                self.assertIn('openwiz-run-', out['next'], 'it names no workspace to look for')
+                self.assertEqual(self.calls()[0], [('POST', '/v0/workspaces')] * n, 'a start was sent again')
 
     def test_a_refused_start_starts_nothing_and_says_what_to_do(self):
-        for env, word in (({'FAKE_CONDUCTOR_FAIL': 'POST /v0/workspaces=400'}, 'planted failure'),
-                          ({'CONDUCTOR_API_KEY': 'sk-' + 'Another0Synthetic0Value0'}, 'CONDUCTOR_API_KEY')):
-            with self.subTest(env=sorted(env)):
-                code, out = self.driver('start', REQUEST, **env)
-                self.assertEqual(code, 1, out)
-                self.assertIn('nothing was started', out['error'] + out['next'])
-                self.assertIn(word, out['error'] + out['next'])
-        self.assertFalse(os.path.exists(self.host) and self.workspaces(), 'a refused start made a workspace')
-
-    def test_nothing_is_called_without_a_key_a_harness_or_a_state_folder(self):
-        unset = dict(self.env)
-        del unset['CONDUCTOR_API_KEY']
-        blocker = os.path.join(self.folder, 'a-file')
-        open(blocker, 'w').close()
-        for name, env, request in (('no key', {}, REQUEST), ('unknown harness', {}, dict(REQUEST, harness='pi')),
-                                   ('no state folder', {'OPENWIZ_CONDUCTOR_STATE': blocker}, REQUEST)):
-            with self.subTest(name):
-                saved, self.env = self.env, unset if name == 'no key' else self.env
-                code, out = self.driver('start', request, **env)
-                self.env = saved
+        for faults, word in (({'POST /v0/workspaces': {'status': 400}}, 'planted failure'),
+                             ({'serve': 'syn-wrong-key-' + secrets.token_hex(8)}, 'refused the key (401)')):
+            with self.subTest(word):
+                self.fault(faults)
+                code, out = self.driver('start', REQUEST)
                 self.assertEqual(code, 1, out)
                 self.assertIn('nothing was started', out['error'])
-        self.assertEqual(self.calls(), [])
+                self.assertIn(word, out['error'])
+                self.assertNotIn('outcome is unknown', out['error'])
+        self.assertFalse(os.path.exists(self.host) and self.workspaces(), 'a refused start made a workspace')
+        self.fault({'serve': ''})
+        code, out = self.driver('start', REQUEST)
+        self.assertEqual(code, 1, out)
+        self.assertTrue(out['error'].startswith("the key helper refused: the kit's fake host gave no test key"), out)
+        self.assertIn('nothing was started', out['error'])
+        self.assertEqual(len(self.calls()[0]), 2, 'a start without a key reached Conductor')
+
+    def test_nothing_is_called_without_a_harness_a_state_folder_or_with_an_effort(self):
+        blocker = os.path.join(self.folder, 'a-file')
+        open(blocker, 'w').close()
+        for name, env, request in (('unknown harness', {}, dict(REQUEST, harness='pi')),
+                                   ('no state folder', {'OPENWIZ_CONDUCTOR_STATE': blocker}, REQUEST),
+                                   ('an effort', {}, dict(REQUEST, effort='high'))):
+            with self.subTest(name):
+                code, out = self.driver('start', request, **env)
+                self.assertEqual(code, 1, out)
+                self.assertIn('nothing was started' if name != 'an effort' else 'claude at effort high',
+                              out['error'])
+                if name == 'an effort':
+                    self.assertEqual(out['next'], CANT_SET_EFFORT)
+        self.assertEqual(self.calls()[0], [])
+        self.assertNotIn('effort', self.driver('version')[1]['can'])
+        with open(os.path.join(HERE, 'README.md')) as f:
+            lines = f.read().splitlines()
+        login = lines.index('Login: held by Conductor')
+        self.assertEqual((lines[login + 1], lines[login + 2][:30]), ('', "Effort: the host can't set it"))
 
     def test_a_failed_archive_says_so_and_the_run_stays_stopped(self):
-        code, out = self.driver('start', REQUEST)
-        run = out['run']
-        code, out = self.driver('stop', {'run': run}, FAKE_CONDUCTOR_FAIL='POST /v0/workspaces/{id}/archive=500')
+        run = self.driver('start', REQUEST)[1]['run']
+        self.fault({'POST /v0/workspaces/{id}/archive': {'status': 500}})
+        code, out = self.driver('stop', {'run': run})
         self.assertEqual(code, 1, out)
         self.assertIn('ws_fake0001', out['next'], 'it names no workspace to archive by hand')
         self.assertEqual(self.workspaces()['ws_fake0001']['status'], 'ready')
+        self.fault({})
         code, out = self.driver('wake', {'run': run})
         self.assertEqual(code, 1, 'a run whose stop began was woken')
         self.assertEqual(self.driver('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
         self.assertEqual(self.workspaces()['ws_fake0001']['status'], 'archived')
-
-
-    def test_the_driver_never_reads_the_key(self):
-        guarded = os.path.join(self.folder, 'guarded')
-        with open(guarded, 'w') as f:
-            f.write(NEVER_READS_THE_KEY % DRIVER)
-        for cmd, request in (('start', REQUEST), ('wake', None), ('stop', None)):
-            p = subprocess.run([sys.executable, '-I', guarded, cmd],
-                               input=json.dumps(request or {'run': self.run_id}), env=self.env,
-                               capture_output=True, text=True, timeout=60)
-            self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
-            if cmd == 'start':
-                self.run_id = json.loads(p.stdout)['run']
-        self.assertEqual(len(self.calls()), 4)
-
-    def test_an_old_curl_is_refused_by_its_version(self):
-        for version in ('7.88.1', '8.2.1'):
-            with self.subTest(version):
-                code, out = self.driver('start', REQUEST, FAKE_CURL_VERSION=version)
-                self.assertEqual(code, 1, out)
-                self.assertIn('curl %s is too old' % version, out['error'])
-                self.assertIn('8.3 or later', out['error'] + out['next'])
-        self.assertEqual(self.calls(), [], 'it called Conductor with a curl too old to send the key')
-        self.assertEqual(self.driver('start', REQUEST, FAKE_CURL_VERSION='8.3.0')[0], 0)
 
 
 if __name__ == '__main__':

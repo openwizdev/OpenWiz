@@ -1,0 +1,125 @@
+#!/usr/bin/env python3
+# A synthetic Conductor API on 127.0.0.1, for the tests only. Its shapes follow Conductor's API reference and OpenAPI
+# document (read 2026-11-20); nothing here was observed on a live account.
+# Arguments: tracker log faults key-file state. It prints its origin, then serves until killed.
+# It serves the key helper's test key at /.openwiz/hostkey-test-key (the key file's text, or faults["serve"]), and
+# answers 401 to any other call whose bearer is not the key file's text. faults["<METHOD> <route>"] is
+# {"status": n} (a planted refusal) or {"lose": true} (do the call, then drop the answer); <route> has {id} for an id.
+import http.server, json, os, re, sys, time
+
+TRACKER, LOG, FAULTS, KEY_FILE, STATE = sys.argv[1:6]
+KEY_PATH = '/.openwiz/hostkey-test-key'
+state = {'workspaces': {}, 'sessions': {}}
+
+
+def note(session, skill, woken):
+    now = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+    body = '\n'.join(['<!-- openwiz:status v1 -->', 'agent: builder', 'state: working', 'harness: Fake',
+                      'model: ' + session['model'], 'skills: %s@0.1.2' % skill,
+                      'step: ' + ('woke and read the ticket again' if woken else 'started the throwaway ticket'),
+                      'time: ' + now]) + '\n'
+    with open(TRACKER) as f:
+        tracker = json.load(f)
+    if session['note'] is None:
+        session['note'] = 1 + max([c['id'] for c in tracker['comments']], default=0)
+        tracker['comments'].append({'id': session['note'], 'author': 'example-bot[bot]', 'updated_at': now,
+                                    'body': body})
+    else:
+        [c for c in tracker['comments'] if c['id'] == session['note']][0].update(body=body, updated_at=now)
+    with open(TRACKER + '.new', 'w') as f:
+        json.dump(tracker, f)
+    os.replace(TRACKER + '.new', TRACKER)
+
+
+def call(method, path, body):
+    ws, ss = state['workspaces'], state['sessions']
+    if method == 'POST' and path == '/v0/workspaces':
+        if not isinstance(body, dict) or set(body) != {'repositoryUrl', 'name', 'agent', 'model', 'message'} or \
+                body['agent'] not in ('claude', 'codex', 'cursor'):
+            return 400, {'code': 'invalid_request', 'userMessage': 'Invalid request body.'}
+        wid, sid = 'ws_fake%04d' % (len(ws) + 1), 'se_fake%04d' % (len(ss) + 1)
+        ws[wid] = {'name': body['name'], 'repositoryUrl': body['repositoryUrl'], 'agent': body['agent'],
+                   'status': 'ready'}
+        ss[sid] = {'workspace': wid, 'model': body['model'], 'status': 'working', 'note': None, 'messages': 1}
+        skill = re.search(r'with the ([a-z0-9-]+) skill', body['message'])
+        if skill:
+            note(ss[sid], skill.group(1), False)
+        return 201, {'workspaceId': wid, 'sessionId': sid, 'deepLink': 'conductor://workspace/' + wid}
+    m = re.fullmatch(r'/v0/(sessions|workspaces)/([^/]+)/(messages|cancel|archive)', path)
+    if method != 'POST' or not m or (m.group(1) == 'sessions') == (m.group(3) == 'archive'):
+        return 404, {'code': 'not_found', 'userMessage': 'Not found.'}
+    kind, id_, act = m.groups()
+    if id_ not in (ss if kind == 'sessions' else ws):
+        return 404, {'code': 'not_found', 'userMessage': 'No such %s.' % kind[:-1]}
+    if act == 'archive':
+        ws[id_]['status'] = 'archived'
+        for s in ss.values():
+            if s['workspace'] == id_:
+                s['status'] = 'idle'
+        return 200, {'workspaceId': id_, 'status': 'archived'}
+    session = ss[id_]
+    if act == 'cancel':
+        session['status'] = 'idle'
+        return 200, {'workspaceId': session['workspace'], 'sessionId': id_, 'status': 'idle',
+                     'canceledQueuedMessages': 0}
+    if not isinstance(body, dict) or set(body) != {'message'} or not body['message']:
+        return 400, {'code': 'invalid_request', 'userMessage': 'Invalid request body.'}
+    if ws[session['workspace']]['status'] == 'archived':
+        return 409, {'code': 'workspace_archived', 'userMessage': 'This workspace is archived.'}
+    session['status'], session['messages'] = 'working', session['messages'] + 1
+    skill = re.search(r'with the ([a-z0-9-]+) skill', body['message'])
+    if skill:
+        note(session, skill.group(1), True)
+    return 201, {'messageId': '00000000-0000-4000-8000-%012d' % session['messages'], 'state': 'sent',
+                 'deepLink': 'conductor://session/' + id_}
+
+
+class Conductor(http.server.BaseHTTPRequestHandler):
+    def log_message(self, *args):
+        pass
+
+    def reply(self, status, body):
+        data = json.dumps(body).encode()
+        self.send_response(status)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Content-Length', str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def handle_one(self):
+        raw = self.rfile.read(int(self.headers.get('Content-Length') or 0))
+        with open(FAULTS) as f:
+            faults = json.load(f)
+        with open(KEY_FILE) as f:
+            key = f.read()
+        if self.command == 'GET' and self.path == KEY_PATH:
+            return self.reply(200, {'key': faults.get('serve', key)})
+        try:
+            body = json.loads(raw) if raw else None
+        except ValueError:
+            return self.reply(400, {'code': 'invalid_json', 'userMessage': 'Malformed JSON body.'})
+        with open(LOG, 'a') as f:
+            f.write(json.dumps({'method': self.command, 'path': self.path, 'body': body,
+                                'authorization': self.headers.get('Authorization')}) + '\n')
+        if self.headers.get('Authorization') != 'Bearer ' + key:
+            return self.reply(401, {'code': 'unauthorized', 'userMessage': 'Invalid API key.'})
+        fault = faults.get('%s %s' % (self.command, re.sub(r'/(ws|se)_[^/]+', '/{id}', self.path)))
+        if fault and 'status' in fault:
+            return self.reply(fault['status'], {'code': 'planted', 'userMessage': 'A planted failure.'})
+        with LOCK:
+            status, out = call(self.command, self.path, body)
+            with open(STATE + '.new', 'w') as f:
+                json.dump(state, f)
+            os.replace(STATE + '.new', STATE)
+        if fault and fault.get('lose'):
+            self.close_connection = True
+            return
+        return self.reply(status, out)
+
+    do_GET = do_POST = do_DELETE = handle_one
+
+
+LOCK = __import__('threading').Lock()
+server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Conductor)
+print('http://127.0.0.1:%d' % server.server_address[1], flush=True)
+server.serve_forever()

@@ -1,0 +1,28 @@
+# Red (N4 port), run at dc59b040 plus the new test and fake host, on the old driver.
+# Command: env -u OPENWIZ_GITHUB_APP_KEY env -i PATH=<33 safety stubs>:/usr/bin:/bin HOME=<temp> LANG=C.UTF-8 python3 -I adapters/conductor/test_driver.py Conductor.test_the_key_reaches_conductor_only_through_the_helper
+
+test_the_key_reaches_conductor_only_through_the_helper (__main__.Conductor.test_the_key_reaches_conductor_only_through_the_helper) ... FAIL
+
+======================================================================
+FAIL: test_the_key_reaches_conductor_only_through_the_helper (__main__.Conductor.test_the_key_reaches_conductor_only_through_the_helper)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/conductor/test_driver.py", line 159, in test_the_key_reaches_conductor_only_through_the_helper
+    self.assertEqual(sorted(set(named)), [], 'these files name the key variable')
+AssertionError: Lists differ: ['README.md', 'driver', 'evidence/red-key-[59 chars]txt'] != []
+
+First list contains 5 additional elements.
+First extra element 0:
+'README.md'
+
++ []
+- ['README.md',
+-  'driver',
+-  'evidence/red-key-and-version.txt',
+-  'evidence/red-review.txt',
+-  'evidence/red.txt'] : these files name the key variable
+
+----------------------------------------------------------------------
+Ran 1 test in 0.039s
+
+FAILED (failures=1)
