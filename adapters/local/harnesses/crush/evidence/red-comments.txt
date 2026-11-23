@@ -1,0 +1,8 @@
+# Red (CI owned-paths job at aff63295, reproduced locally): python3 -I tools/comment-check/check.py diff --base origin/room/2431-harness-rows
+comment-check: 5 disallowed comment(s) in added lines
+adapters/local/harnesses/crush/fake:27: comment: a comment outside the allowed kinds: delete it, or turn what it meant into a name, a test or a check
+adapters/local/harnesses/crush/test_row.py:2: comment: a comment outside the allowed kinds: delete it, or turn what it meant into a name, a test or a check
+adapters/local/harnesses/crush/test_row.py:37: comment: a comment outside the allowed kinds: delete it, or turn what it meant into a name, a test or a check
+adapters/local/harnesses/crush/test_row.py:46: comment: a comment outside the allowed kinds: delete it, or turn what it meant into a name, a test or a check
+adapters/local/harnesses/crush/test_row.py:61: comment: a comment outside the allowed kinds: delete it, or turn what it meant into a name, a test or a check
+exit=1

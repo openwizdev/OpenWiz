@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# The crush row's own checks, beyond the runner's: not installed, not signed in, the CRUSH_CLIENT_SERVER override,
-# and that stop leaves no process of the run. Only this folder's fake runs; the runner's stubs stay on PATH.
 import os, subprocess, sys, tempfile
 
 sys.dont_write_bytecode = True
@@ -34,7 +32,7 @@ def machine(program='crush'):
                                    ['CRUSH_CLIENT_SERVER'])
 
 
-# Not installed: a PATH that holds no crush at all, neither the fake nor a stub, so nothing named crush can run.
+# SAFETY: this PATH holds no crush at all, neither the fake nor a stub, so nothing named crush can run.
 with machine(None) as env, tempfile.TemporaryDirectory() as bare:
     os.symlink(sys.executable, os.path.join(bare, 'python3'))
     before = env.runs()
@@ -43,7 +41,6 @@ with machine(None) as env, tempfile.TemporaryDirectory() as bare:
           d3(code, out) and out.get('next') == NOT_INSTALLED and 'not installed' in out.get('error', '')
           and env.runs() == before and env.records() == [])
 
-# Not signed in: Crush's own "No providers configured" exit; the row's signed_out turns it into the signed-out D3.
 with machine() as env:
     code, out = env.start(FAKE_CLI_SIGNED_OUT='1')
     log = out.get('next', '').partition('; ')[2].partition(' has the turn')[0]
@@ -58,7 +55,6 @@ with machine() as env:
           and "No providers configured - please run 'crush' to set up a provider interactively." in said
           and env.records() == [] and processes_under(env.folder) == [])
 
-# The user's own CRUSH_CLIENT_SERVER=1 would attach the turn to a server outside the run; the row's env wins.
 with machine() as env:
     code, out = env.start(CRUSH_CLIENT_SERVER='1')
     started = code == 0 and 'run' in out

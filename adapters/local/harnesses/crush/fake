@@ -24,8 +24,8 @@ if a[:1] == ['--session'] and len(a) > 1:
     session, a = a[1], a[2:]
 if len(a) != 5 or a[0] != '--model' or a[2:4] != ['--yolo', '--']:
     fake_cli.refuse()
-# Go's strconv.ParseBool, as internal/cmd/root.go useClientServer reads it.
-attach = os.environ.get('CRUSH_CLIENT_SERVER') in ('1', 't', 'T', 'TRUE', 'true', 'True')
+GO_PARSEBOOL_TRUE = ('1', 't', 'T', 'TRUE', 'true', 'True')
+attach = os.environ.get('CRUSH_CLIENT_SERVER') in GO_PARSEBOOL_TRUE
 sys.stdout = sys.stderr
 fake_cli.turn(a[4], a[1], session, lambda sid: 'INFO  Created session for non-interactive run session_id=' + sid,
               daemon='via-running-hub' if attach else None, signed_out=SIGNED_OUT)
