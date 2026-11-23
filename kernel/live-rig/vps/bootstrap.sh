@@ -189,7 +189,6 @@ def install(tool, file, prefix, work):
     if kind == 'installer':
         return run_installer(tool, path, prefix, work)
     staged = os.path.join(prefix, 'lib', 'openwiz-vps', 'staged', name)
-    # A wheel lives at a path named by its sha256, so a repin never rewrites the one a working launcher imports.
     wheels = os.path.join(prefix, 'lib', 'openwiz-vps', 'wheels', name)
     wheel = os.path.join(wheels, file['sha256'] + '.whl')
     new_wheel = False
