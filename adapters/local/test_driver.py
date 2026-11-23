@@ -89,9 +89,11 @@ class Local(unittest.TestCase):
         self.mark = secrets.token_hex(8)
         self.log = os.path.join(self.folder, 'turns')
         self.env = dict(os.environ, KIT_TRACKER=self.tracker, LOCAL_TEST=self.mark, GH_TOKEN=TOKEN, FAKE_TURNS=self.log,
+                        FAKE_ARGS=os.path.join(self.folder, 'argv'),
                         FAKE_REPOS=repos, OPENWIZ_LOCAL_SETTLE='2',
                         OPENWIZ_LOCAL_STATE=os.path.join(self.folder, 'state'),
                         PATH=self.bin + os.pathsep + os.environ.get('PATH', ''))
+        self.env.pop('CLAUDE_CODE_EFFORT_LEVEL', None)
         self.approve(self.env['OPENWIZ_LOCAL_STATE'])
 
     def approve(self, state):
@@ -144,9 +146,10 @@ class Local(unittest.TestCase):
                            env=env or self.env, capture_output=True, text=True, timeout=60)
         return p.returncode, json.loads(p.stdout)
 
-    def start(self, harness='claude', env=None, program=DRIVER, repository='example/site'):
-        return self.driver('start', {'repository': repository, 'ticket': 7, 'skill': 'build-ticket',
-                                     'harness': harness, 'model': 'synthetic-1'}, env, program)
+    def start(self, harness='claude', env=None, program=DRIVER, repository='example/site', effort=None):
+        request = {'repository': repository, 'ticket': 7, 'skill': 'build-ticket', 'harness': harness,
+                   'model': 'synthetic-1'}
+        return self.driver('start', request if effort is None else dict(request, effort=effort), env, program)
 
     def first_turn(self, **env):
         code, out = self.start(env=dict(self.env, **env))
@@ -592,6 +595,106 @@ class Local(unittest.TestCase):
                 self.assertEqual(self.start(harness, repository=aligned)[0], 0)
                 self.until(lambda: len(self.logged()) and self.logged()[-1][4] == mode)
         self.assertEqual([t[4] for t in self.logged()], ['acceptEdits', 'workspace-write'])
+    def argv_seen(self):
+        try:
+            with open(self.env['FAKE_ARGS']) as f:
+                return [json.loads(line) for line in f]
+        except FileNotFoundError:
+            return []
+
+    def test_version_lists_effort(self):
+        code, out = self.driver('version')
+        self.assertEqual(code, 0, out)
+        self.assertIn('effort', out['can'])
+        self.assertIsNone(kit.invalid(out, kit.load_schema()['version']), out)
+
+    def test_each_built_in_gets_the_effort_flag_at_start_and_at_wake(self):
+        expected = {'claude': lambda argv: argv[-2:] == ['--effort', 'medium'],
+                    'codex': lambda argv: argv[:3] == ['exec', '-c', 'model_reasoning_effort=medium']}
+        for harness, flagged in expected.items():
+            with self.subTest(harness):
+                self.tearDown()
+                self.setUp()
+                env = dict(self.env, CLAUDE_CODE_EFFORT_LEVEL='low')
+                code, out = self.start(harness, env, effort='medium')
+                self.assertEqual(code, 0, out)
+                self.until(lambda: len(self.logged()) == 1 and not alive(self.logged()[0][0]))
+                self.assertEqual(self.driver('wake', out, env), (0, dict(out, woke=True)))
+                self.until(lambda: len(self.argv_seen()) == 2)
+                seen = self.argv_seen()
+                self.assertEqual([r['woken'] for r in seen], [False, True])
+                for record in seen:
+                    self.assertTrue(flagged(record['argv']), record['argv'])
+                    self.assertEqual(record['effort'], 'medium')
+                if harness == 'claude':
+                    self.assertEqual([r['CLAUDE_CODE_EFFORT_LEVEL'] for r in seen], ['medium', 'medium'],
+                                     'an exported CLAUDE_CODE_EFFORT_LEVEL outranks --effort, so it must match')
+
+    def test_a_start_without_effort_adds_no_effort_flag_or_setting(self):
+        for harness in ('claude', 'codex'):
+            with self.subTest(harness):
+                self.assertEqual(self.start(harness, repository='example/quick')[0], 0)
+        seen = self.argv_seen()
+        self.assertEqual(len(seen), 2)
+        for record in seen:
+            self.assertIsNone(record['effort'], record['argv'])
+            self.assertIsNone(record['CLAUDE_CODE_EFFORT_LEVEL'])
+
+    def documented(self, help_file, listed):
+        with open(os.path.join(HERE, 'fixtures', 'help', help_file)) as f:
+            return re.split(r',\s*(?:or\s+)?', re.search(listed, f.read()).group(1))
+
+    def test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused(self):
+        claude = self.documented('claude.txt', r'--effort: .*?Options: (.*?)\. ')
+        codex = self.documented('codex-exec.txt', r'model_reasoning_effort: .*?such as (.*?)\. ')
+        self.assertEqual((claude, codex), (['low', 'medium', 'high', 'xhigh', 'max', 'ultracode'],
+                                           ['low', 'medium', 'high', 'xhigh', 'max', 'ultra']))
+        passed = [('claude', level) for level in claude if level != 'ultracode'] + [('codex', l) for l in codex]
+        for harness, level in passed:
+            with self.subTest(harness=harness, level=level):
+                code, out = self.start(harness, repository='example/quick', effort=level)
+                self.assertEqual(code, 0, out)
+                self.assertEqual((self.argv_seen()[-1]['cli'], self.argv_seen()[-1]['effort']), (harness, level))
+        self.assertEqual(len(self.argv_seen()), len(passed))
+
+    def test_an_effort_the_driver_cant_set_is_refused_before_anything_runs(self):
+        calls, logging = os.path.join(self.folder, 'calls'), os.path.join(self.folder, 'logging-bin')
+        os.mkdir(logging)
+        for name in ('claude', 'codex', 'gh'):
+            with open(os.path.join(logging, name), 'w') as f:
+                f.write('#!/bin/sh\nprintf \'%%s\\n\' "$*" >> %s\nexec %s "$@"\n' % (calls, os.path.join(self.bin, name)))
+            os.chmod(os.path.join(logging, name), 0o700)
+        env = dict(self.env, PATH=logging + os.pathsep + self.env['PATH'])
+        schema = kit.load_schema()['error']
+        for harness, effort in (('claude', 'ultracode'), ('claude', 'minimal'), ('claude', 'ultra'),
+                                ('codex', 'minimal'), ('codex', 'none'), ('codex', 'ultracode'),
+                                ('fake-harness', 'medium'), ('no-such-cli', 'high')):
+            with self.subTest(harness=harness, effort=effort):
+                code, out = self.start(harness, env, effort=effort)
+                self.assertEqual(code, 1, out)
+                self.assertIsNone(kit.invalid(out, schema), out)
+                self.assertEqual(out['next'], "this host can't set effort: remove the effort for this harness in "
+                                              "your Models table or Roster to run it at the host's default")
+                self.assertIn(harness, out['error'])
+                self.assertIn(effort, out['error'])
+                self.assertFalse(os.path.exists(calls), 'a harness or gh ran')
+                self.assertEqual(sorted(os.listdir(self.env['OPENWIZ_LOCAL_STATE'])), ['approvals.json'])
+        self.assertEqual((self.logged(), self.argv_seen()), ([], []))
+
+    def test_readme_has_the_effort_line_and_table_under_its_login_line(self):
+        lines = read(os.path.join(HERE, 'README.md')).splitlines()
+        login = lines.index('Login: stays on your machine')
+        self.assertTrue(lines[login + 1].startswith('Effort: passed as '), lines[login + 1])
+        table = [line for line in lines[login + 2:login + 12] if line.startswith('| ')]
+        rows = {re.search(r'`([a-z-]+)`', r).group(1): r for r in table[2:]}
+        self.assertIn('`--effort <level>`', rows['claude'])
+        self.assertIn('`CLAUDE_CODE_EFFORT_LEVEL`', rows['claude'])
+        self.assertIn('`-c model_reasoning_effort=<level>`', rows['codex'])
+        for harness, levels in (('claude', ['low', 'medium', 'high', 'xhigh', 'max']),
+                                ('codex', ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'])):
+            self.assertEqual(re.findall(r'`([a-z]+)`', rows[harness].split('|')[2].partition('for ')[2]), levels)
+        self.assertIn('harness-row.md', ' '.join(table))
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

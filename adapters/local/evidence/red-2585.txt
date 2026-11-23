@@ -1,0 +1,141 @@
+red at ecf6ed51 plus the uncommitted tests: env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/local/test_driver.py -k effort -k readme, no-op stubs for every known agent CLI first on PATH
+test_a_start_without_effort_adds_no_effort_flag_or_setting (__main__.Local.test_a_start_without_effort_adds_no_effort_flag_or_setting) ... ok
+test_an_effort_the_driver_cant_set_is_refused_before_anything_runs (__main__.Local.test_an_effort_the_driver_cant_set_is_refused_before_anything_runs) ... 
+  test_an_effort_the_driver_cant_set_is_refused_before_anything_runs (__main__.Local.test_an_effort_the_driver_cant_set_is_refused_before_anything_runs) (harness='claude', effort='ultracode') ... FAIL
+  test_an_effort_the_driver_cant_set_is_refused_before_anything_runs (__main__.Local.test_an_effort_the_driver_cant_set_is_refused_before_anything_runs) (harness='claude', effort='minimal') ... FAIL
+  test_an_effort_the_driver_cant_set_is_refused_before_anything_runs (__main__.Local.test_an_effort_the_driver_cant_set_is_refused_before_anything_runs) (harness='claude', effort='ultra') ... FAIL
+  test_an_effort_the_driver_cant_set_is_refused_before_anything_runs (__main__.Local.test_an_effort_the_driver_cant_set_is_refused_before_anything_runs) (harness='codex', effort='minimal') ... FAIL
+  test_an_effort_the_driver_cant_set_is_refused_before_anything_runs (__main__.Local.test_an_effort_the_driver_cant_set_is_refused_before_anything_runs) (harness='codex', effort='none') ... FAIL
+  test_an_effort_the_driver_cant_set_is_refused_before_anything_runs (__main__.Local.test_an_effort_the_driver_cant_set_is_refused_before_anything_runs) (harness='codex', effort='ultracode') ... FAIL
+  test_an_effort_the_driver_cant_set_is_refused_before_anything_runs (__main__.Local.test_an_effort_the_driver_cant_set_is_refused_before_anything_runs) (harness='fake-harness', effort='medium') ... FAIL
+  test_an_effort_the_driver_cant_set_is_refused_before_anything_runs (__main__.Local.test_an_effort_the_driver_cant_set_is_refused_before_anything_runs) (harness='no-such-cli', effort='high') ... FAIL
+test_each_built_in_gets_the_effort_flag_at_start_and_at_wake (__main__.Local.test_each_built_in_gets_the_effort_flag_at_start_and_at_wake) ... 
+  test_each_built_in_gets_the_effort_flag_at_start_and_at_wake (__main__.Local.test_each_built_in_gets_the_effort_flag_at_start_and_at_wake) [claude] ... FAIL
+  test_each_built_in_gets_the_effort_flag_at_start_and_at_wake (__main__.Local.test_each_built_in_gets_the_effort_flag_at_start_and_at_wake) [codex] ... FAIL
+test_readme_has_the_effort_line_and_table_under_its_login_line (__main__.Local.test_readme_has_the_effort_line_and_table_under_its_login_line) ... FAIL
+test_version_lists_effort (__main__.Local.test_version_lists_effort) ... FAIL
+
+======================================================================
+FAIL: test_an_effort_the_driver_cant_set_is_refused_before_anything_runs (__main__.Local.test_an_effort_the_driver_cant_set_is_refused_before_anything_runs) (harness='claude', effort='ultracode')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 676, in test_an_effort_the_driver_cant_set_is_refused_before_anything_runs
+    self.assertEqual(out['next'], "this host can't set effort: remove the effort for this harness in "
+AssertionError: 'send only those fields; never a login' != "this host can't set effort: remove the e[81 chars]ault"
+- send only those fields; never a login
++ this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default
+
+
+======================================================================
+FAIL: test_an_effort_the_driver_cant_set_is_refused_before_anything_runs (__main__.Local.test_an_effort_the_driver_cant_set_is_refused_before_anything_runs) (harness='claude', effort='minimal')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 676, in test_an_effort_the_driver_cant_set_is_refused_before_anything_runs
+    self.assertEqual(out['next'], "this host can't set effort: remove the effort for this harness in "
+AssertionError: 'send only those fields; never a login' != "this host can't set effort: remove the e[81 chars]ault"
+- send only those fields; never a login
++ this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default
+
+
+======================================================================
+FAIL: test_an_effort_the_driver_cant_set_is_refused_before_anything_runs (__main__.Local.test_an_effort_the_driver_cant_set_is_refused_before_anything_runs) (harness='claude', effort='ultra')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 676, in test_an_effort_the_driver_cant_set_is_refused_before_anything_runs
+    self.assertEqual(out['next'], "this host can't set effort: remove the effort for this harness in "
+AssertionError: 'send only those fields; never a login' != "this host can't set effort: remove the e[81 chars]ault"
+- send only those fields; never a login
++ this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default
+
+
+======================================================================
+FAIL: test_an_effort_the_driver_cant_set_is_refused_before_anything_runs (__main__.Local.test_an_effort_the_driver_cant_set_is_refused_before_anything_runs) (harness='codex', effort='minimal')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 676, in test_an_effort_the_driver_cant_set_is_refused_before_anything_runs
+    self.assertEqual(out['next'], "this host can't set effort: remove the effort for this harness in "
+AssertionError: 'send only those fields; never a login' != "this host can't set effort: remove the e[81 chars]ault"
+- send only those fields; never a login
++ this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default
+
+
+======================================================================
+FAIL: test_an_effort_the_driver_cant_set_is_refused_before_anything_runs (__main__.Local.test_an_effort_the_driver_cant_set_is_refused_before_anything_runs) (harness='codex', effort='none')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 676, in test_an_effort_the_driver_cant_set_is_refused_before_anything_runs
+    self.assertEqual(out['next'], "this host can't set effort: remove the effort for this harness in "
+AssertionError: 'send only those fields; never a login' != "this host can't set effort: remove the e[81 chars]ault"
+- send only those fields; never a login
++ this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default
+
+
+======================================================================
+FAIL: test_an_effort_the_driver_cant_set_is_refused_before_anything_runs (__main__.Local.test_an_effort_the_driver_cant_set_is_refused_before_anything_runs) (harness='codex', effort='ultracode')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 676, in test_an_effort_the_driver_cant_set_is_refused_before_anything_runs
+    self.assertEqual(out['next'], "this host can't set effort: remove the effort for this harness in "
+AssertionError: 'send only those fields; never a login' != "this host can't set effort: remove the e[81 chars]ault"
+- send only those fields; never a login
++ this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default
+
+
+======================================================================
+FAIL: test_an_effort_the_driver_cant_set_is_refused_before_anything_runs (__main__.Local.test_an_effort_the_driver_cant_set_is_refused_before_anything_runs) (harness='fake-harness', effort='medium')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 676, in test_an_effort_the_driver_cant_set_is_refused_before_anything_runs
+    self.assertEqual(out['next'], "this host can't set effort: remove the effort for this harness in "
+AssertionError: 'send only those fields; never a login' != "this host can't set effort: remove the e[81 chars]ault"
+- send only those fields; never a login
++ this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default
+
+
+======================================================================
+FAIL: test_an_effort_the_driver_cant_set_is_refused_before_anything_runs (__main__.Local.test_an_effort_the_driver_cant_set_is_refused_before_anything_runs) (harness='no-such-cli', effort='high')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 676, in test_an_effort_the_driver_cant_set_is_refused_before_anything_runs
+    self.assertEqual(out['next'], "this host can't set effort: remove the effort for this harness in "
+AssertionError: 'send only those fields; never a login' != "this host can't set effort: remove the e[81 chars]ault"
+- send only those fields; never a login
++ this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default
+
+
+======================================================================
+FAIL: test_each_built_in_gets_the_effort_flag_at_start_and_at_wake (__main__.Local.test_each_built_in_gets_the_effort_flag_at_start_and_at_wake) [claude]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 620, in test_each_built_in_gets_the_effort_flag_at_start_and_at_wake
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+
+======================================================================
+FAIL: test_each_built_in_gets_the_effort_flag_at_start_and_at_wake (__main__.Local.test_each_built_in_gets_the_effort_flag_at_start_and_at_wake) [codex]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 620, in test_each_built_in_gets_the_effort_flag_at_start_and_at_wake
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+
+======================================================================
+FAIL: test_readme_has_the_effort_line_and_table_under_its_login_line (__main__.Local.test_readme_has_the_effort_line_and_table_under_its_login_line)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 687, in test_readme_has_the_effort_line_and_table_under_its_login_line
+    self.assertTrue(lines[login + 1].startswith('Effort: passed as '), lines[login + 1])
+AssertionError: False is not true : 
+
+======================================================================
+FAIL: test_version_lists_effort (__main__.Local.test_version_lists_effort)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 608, in test_version_lists_effort
+    self.assertIn('effort', out['can'])
+AssertionError: 'effort' not found in ['start', 'wake', 'stop', 'many-at-once']
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.917s
+
+FAILED (failures=12)

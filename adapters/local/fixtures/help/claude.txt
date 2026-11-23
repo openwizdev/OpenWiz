@@ -1,0 +1,4 @@
+Claude Code's documented options, copied from its CLI reference (https://code.claude.com/docs/en/cli-reference) and model configuration page (https://code.claude.com/docs/en/model-config), read 2026-11-23. No claude binary was run.
+--effort: Set the effort level for the current session. Options: low, medium, high, xhigh, max, or ultracode. Available levels depend on the model. ultracode requests xhigh effort with ultracode turned on, and requires Claude Code v2.1.203 or later.
+CLAUDE_CODE_EFFORT_LEVEL: first in the order Claude Code resolves the session's effort level, ahead of --effort.
+If you set a level the active model does not support, Claude Code falls back to the highest supported level at or below the one you set.
