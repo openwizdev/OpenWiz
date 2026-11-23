@@ -65,9 +65,9 @@ When a start carries an effort, the effort reaches the CLI. When the row's effor
 
 `this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default`
 
-A start with an effort never falls back to a default. Built-in `claude` and `codex` refuse an effort the same way until their flags are added.
+A start with an effort never falls back to a default. Built-in `claude` and `codex` take an effort through their own flags, and refuse any level they don't list the same way.
 
-**Hooks for driver v1's `effort` start field (#2471).** That ticket adds the field to driver v1, the schema and `version`'s `can` list (the local driver lists `effort` there, because `claude` and `codex` take it); `version` carries no per-row note, since its schema is fixed, and each row's README `Effort:` line says what the row takes. Until then the driver is wired below the field: `command(state, woken)` turns a run's row and request into the turn's command line and environment, `effort_of(harness, row, effort)` gives an effort's arguments and environment or the refusal above, and `start` reads `request.get('effort')` before it saves anything. Turning the field on is adding `effort` to the driver's `START` fields as an optional field: `read` takes exactly `START`'s fields today, so it must also accept a start without `effort`, and an ordinary start stays valid. Its field name and values are matched once its contract is posted.
+**Driver v1's `effort` start field (#2471) is on.** `effort` is an optional `start` field, and `version`'s `can` lists `effort`; `version` carries no per-row note, since its schema is fixed. The [local README](README.md)'s Effort table lists what each built-in and row takes, and each row's README `Effort:` line says what that row takes. `command(state, woken)` turns a run's row and request into each turn's command line and environment, and `effort_of(harness, row, effort)` gives an effort's arguments and environment or the refusal above, before `start` saves anything.
 
 ## 5. The kit check for rows
 

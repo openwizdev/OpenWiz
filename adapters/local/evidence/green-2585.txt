@@ -58,3 +58,5 @@ pass driver: an unknown harness is a D3 error that lists the built-ins and the r
 pass driver: a wake before the reported session id is known is a D3 error that starts nothing, whether the first turn has ended or still runs
 pass driver: a wake while the first turn runs saves its newly reported session id, and once it is saved answers woke with no state write and starts nothing
 rows in adapters/local/harnesses: none yet
+
+After the granted adapters/local/harness-row.md section 4 edit (docs only): env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/local/test_driver.py printed Ran 29 tests OK.
