@@ -55,8 +55,7 @@ def read(fields):
     if fields is START and isinstance(req, dict) and 'effort' in req:
         word = req['effort'] if isinstance(req['effort'], str) and EFFORT.fullmatch(req['effort']) else \
             '(not one plain word)'
-        harness = req.get('harness') if isinstance(req.get('harness'), str) and re.fullmatch(
-            START['harness'], req['harness']) else '(not valid)'
+        harness = req.get('harness') if req.get('harness') in HARNESSES else '(not a Conductor harness)'
         raise Refused('Conductor can\'t run harness %s at effort %s: the driver sends Conductor no effort; '
                       'nothing was started' % (harness, word), CANT_SET_EFFORT)
     if not isinstance(req, dict) or set(req) != set(fields):
@@ -156,9 +155,9 @@ def start():
     req, run = read(START), 'run-' + secrets.token_hex(6)
     name = 'openwiz-' + run
     if req['harness'] not in HARNESSES:
-        raise Refused('Conductor runs no harness %s; nothing was started' % req['harness'],
+        raise Refused('Conductor runs no such harness; nothing was started',
                       'use one of: ' + ', '.join(HARNESSES))
-    state = {'request': req, 'name': name, 'workspace': None, 'session': None, 'starting': True, 'stopped': False,
+    state = {'name': name, 'workspace': None, 'session': None, 'starting': True, 'stopped': False,
              'archived': False}
     try:
         saved(run, state)
@@ -190,7 +189,7 @@ def start():
     ids = out.get('workspaceId'), out.get('sessionId')
     if not all(isinstance(i, str) and re.fullmatch(r'[A-Za-z0-9_.:-]{1,200}', i) for i in ids):
         raise unknown
-    started = dict(state, workspace=ids[0], session=ids[1], starting=False)
+    started = dict(state, request=req, workspace=ids[0], session=ids[1], starting=False)
     try:
         saved(run, started)
     except OSError:
