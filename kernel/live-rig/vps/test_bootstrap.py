@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import time
 import unittest
 import zipfile
 
@@ -91,17 +92,34 @@ class Fixture:
                 t.addfile(info, io.BytesIO(body))
         return path
 
-    def wheel(self, name, version):
+    def wheel(self, name, version, tag='', gate=None):
         path = os.path.join(self.dl, name)
+        wait = ''
+        if gate:
+            wait = ('    import os, time\n'
+                    '    open(%r, "w").close()\n'
+                    '    while not os.path.exists(%r):\n'
+                    '        time.sleep(0.02)\n' % (gate + '.probing', gate + '.go'))
         with zipfile.ZipFile(path, 'w') as z:
             z.writestr('fakewheel/__init__.py', '')
             z.writestr('fakewheel/cli.py', 'import sys\n'
-                       'def main():\n'
+                       'def main():\n' + wait +
                        '    with open(%r, "a") as f:\n'
-                       '        f.write("runpane " + " ".join(sys.argv[1:]) + "\\n")\n'
+                       '        f.write("runpane%s " + " ".join(sys.argv[1:]) + "\\n")\n'
                        '    print("fake %s (synthetic)")\n'
-                       '    return 0\n' % (self.calls, version))
+                       '    return 0\n' % (self.calls, tag and ':' + tag, version))
         return path
+
+    def repin(self, tag, gate=None):
+        with open(self.tools) as f:
+            manifest = json.load(f)
+        path = self.wheel('fake-2.4.246-%s.whl' % tag, '2.4.246', tag=tag, gate=gate)
+        pane = [t for t in manifest['tools'] if t['name'] == 'runpane'][0]
+        pane['files'] = {'any': {'url': 'file://' + path, 'sha256': sha256(path)}}
+        tools = os.path.join(self.root, 'tools-%s.json' % tag)
+        with open(tools, 'w') as f:
+            json.dump(manifest, f)
+        return tools, sha256(path)
 
     def installer_that_tries_sudo(self, name):
         payload = self.raw('fakeagent.payload', '3.2.1')
@@ -154,12 +172,20 @@ class Fixture:
             json.dump({'tools': tools}, f)
         return path
 
-    def run(self, *args, tools=None):
-        env = dict(PLANTED, HOME=self.home, LANG='C', TMPDIR=self.tmp, PATH=os.pathsep.join(
+    def env(self):
+        return dict(PLANTED, HOME=self.home, LANG='C', TMPDIR=self.tmp, PATH=os.pathsep.join(
             [self.stubs, self.bin, '/usr/bin', '/bin']), http_proxy=DEAD_PROXY, https_proxy=DEAD_PROXY,
             HTTP_PROXY=DEAD_PROXY, HTTPS_PROXY=DEAD_PROXY, ALL_PROXY=DEAD_PROXY, no_proxy='', NO_PROXY='')
-        return subprocess.run(['bash', BOOTSTRAP, '--tools', tools or self.tools] + list(args), env=env,
+
+    def run(self, *args, tools=None):
+        return subprocess.run(['bash', BOOTSTRAP, '--tools', tools or self.tools] + list(args), env=self.env(),
                               cwd=self.root, capture_output=True, text=True, timeout=120)
+
+    def start(self, tag, tools):
+        out, err = (open(os.path.join(self.root, '%s.%s' % (tag, x)), 'w+') for x in ('out', 'err'))
+        proc = subprocess.Popen(['bash', BOOTSTRAP, '--tools', tools], env=self.env(), cwd=self.root,
+                                stdout=out, stderr=err, text=True)
+        return proc, out.name, err.name
 
     def remove_downloads(self):
         for name in os.listdir(self.dl):
@@ -170,6 +196,14 @@ class Fixture:
         for d, _, files in os.walk(self.home):
             found += [os.path.join(d, f) for f in files]
         return sorted(found)
+
+
+def wait_for(check):
+    for _ in range(3000):
+        if check():
+            return
+        time.sleep(0.02)
+    raise AssertionError('timed out waiting for the fixture')
 
 
 class BootstrapTest(unittest.TestCase):
@@ -302,6 +336,53 @@ class BootstrapTest(unittest.TestCase):
         self.assertEqual({p: sha256(p) for p in self.fx.tree()}, before)
         self.assertEqual(subprocess.run([launcher, '--version'], capture_output=True, text=True).stdout,
                          'fake 2.4.246 (synthetic)\n')
+
+    def assert_runpane_at(self, pin):
+        lib = os.path.join(self.fx.prefix, 'lib', 'openwiz-vps')
+        with open(os.path.join(lib, 'runpane.json')) as f:
+            self.assertEqual(json.load(f), {'version': '2.4.246', 'sha256': pin})
+        launcher = os.path.join(self.fx.prefix, 'bin', 'runpane')
+        wheel = os.path.join(lib, 'wheels', 'runpane', pin + '.whl')
+        self.assertEqual(re.findall(r"(%s/[^' ]+\.whl)" % re.escape(lib), read(launcher)), [wheel])
+        self.assertEqual(os.listdir(os.path.dirname(wheel)), [pin + '.whl'])
+        self.assertEqual(sha256(wheel), pin)
+        self.assertEqual(subprocess.run([launcher, '--version'], capture_output=True, text=True).stdout,
+                         'fake 2.4.246 (synthetic)\n')
+
+    def plant_corrupt_cache(self, pin):
+        cache = os.path.join(self.fx.prefix, 'lib', 'openwiz-vps', 'wheels', 'runpane', pin + '.whl')
+        shutil.copy(self.fx.wheel('corrupt.whl', '2.4.246', tag='corrupt'), cache)
+        self.assertNotEqual(sha256(cache), pin)
+        return cache
+
+    def test_corrupt_cached_wheel_is_never_imported(self):
+        self.assertEqual(self.fx.run().returncode, 0)
+        tools, pin = self.fx.repin('valid')
+        cache = self.plant_corrupt_cache(pin)
+        r = self.fx.run(tools=tools)
+        self.assertNotIn('runpane:corrupt', read(self.fx.calls))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertRegex(r.stdout, '(?m)^installed runpane 2.4.246$')
+        self.assertEqual(sha256(cache), pin)
+        self.assert_runpane_at(pin)
+
+    def test_failed_recovery_from_a_corrupt_cache_keeps_the_working_tool(self):
+        self.assertEqual(self.fx.run().returncode, 0)
+        with open(os.path.join(self.fx.prefix, 'lib', 'openwiz-vps', 'runpane.json')) as f:
+            working = json.load(f)['sha256']
+        tools, pin = self.fx.repin('valid')
+        cache = self.plant_corrupt_cache(pin)
+        os.makedirs(cache + '.part')
+        before = {p: sha256(p) for p in self.fx.tree()}
+        r = self.fx.run(tools=tools)
+        self.assertNotIn('runpane:corrupt', read(self.fx.calls))
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn('left out runpane: its cached wheel fails its checksum and cannot be replaced: '
+                      'IsADirectoryError (the existing one is kept)', self.summary(r.stdout)[1])
+        self.assertEqual({p: sha256(p) for p in self.fx.tree()}, before)
+        os.rmdir(cache + '.part')
+        os.remove(cache)
+        self.assert_runpane_at(working)
 
     def test_home_only_installer_is_refused_under_another_prefix(self):
         prefix = os.path.join(self.root, 'elsewhere')
