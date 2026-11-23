@@ -1,0 +1,7 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/driver-kit/kit.py --driver adapters/opencomputer/driver (the template, copied and renamed) --repo example/site --ticket 7 --harness claude-code --model "Synthetic 1" --tracker <synthetic tracker> --wait 8, with no-op agent CLI stubs first on PATH; no opencomputer entry in hosts.json yet, so the key check does not run
+pass version: openwiz:records v1, and the schema is driver v1
+fail start: harness claude-code is not installed here
+fail wake: not run: start failed
+fail stop: not run: start failed
+pass token: no login or token passed through the driver
+exit 1
