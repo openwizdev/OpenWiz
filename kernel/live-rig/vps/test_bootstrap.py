@@ -384,6 +384,25 @@ class BootstrapTest(unittest.TestCase):
         os.remove(cache)
         self.assert_runpane_at(working)
 
+    def test_overlapping_repins_leave_one_verified_install(self):
+        self.assertEqual(self.fx.run().returncode, 0)
+        gate = os.path.join(self.root, 'gate')
+        tools_a, _ = self.fx.repin('a', gate=gate)
+        tools_b, pin_b = self.fx.repin('b')
+        a, a_out, a_err = self.fx.start('a', tools_a)
+        self.addCleanup(a.kill)
+        wait_for(lambda: os.path.exists(gate + '.probing') or a.poll() is not None)
+        self.assertIsNone(a.poll(), read(a_out) + read(a_err))
+        b, b_out, b_err = self.fx.start('b', tools_b)
+        self.addCleanup(b.kill)
+        wait_for(lambda: b.poll() is not None or 'waiting for another bootstrap' in read(b_err))
+        open(gate + '.go', 'w').close()
+        for proc, out, err in ((a, a_out, a_err), (b, b_out, b_err)):
+            self.assertEqual(proc.wait(timeout=120), 0, read(out) + read(err))
+            self.assertRegex(read(out), '(?m)^installed runpane 2.4.246$')
+        self.assertIn('bootstrap: waiting for another bootstrap on %s' % self.fx.prefix, read(b_err))
+        self.assert_runpane_at(pin_b)
+
     def test_home_only_installer_is_refused_under_another_prefix(self):
         prefix = os.path.join(self.root, 'elsewhere')
         r = self.fx.run('--prefix', prefix)

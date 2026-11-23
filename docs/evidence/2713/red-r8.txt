@@ -1,0 +1,39 @@
+# R8 red at the R7 fix (no lock yet), the new overlap test:
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/vps/test_bootstrap.py BootstrapTest.test_overlapping_repins_leave_one_verified_install   # 37 agent-CLI refusal stubs first on PATH
+test_overlapping_repins_leave_one_verified_install (__main__.BootstrapTest.test_overlapping_repins_leave_one_verified_install) ... <checkout>/kernel/live-rig/vps/test_bootstrap.py:392: ResourceWarning: unclosed file <_io.TextIOWrapper name='<tmp>/a.out' mode='w+' encoding='UTF-8'>
+  a, a_out, a_err = self.fx.start('a', tools_a)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+<checkout>/kernel/live-rig/vps/test_bootstrap.py:392: ResourceWarning: unclosed file <_io.TextIOWrapper name='<tmp>/a.err' mode='w+' encoding='UTF-8'>
+  a, a_out, a_err = self.fx.start('a', tools_a)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+<checkout>/kernel/live-rig/vps/test_bootstrap.py:396: ResourceWarning: unclosed file <_io.TextIOWrapper name='<tmp>/b.out' mode='w+' encoding='UTF-8'>
+  b, b_out, b_err = self.fx.start('b', tools_b)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+<checkout>/kernel/live-rig/vps/test_bootstrap.py:396: ResourceWarning: unclosed file <_io.TextIOWrapper name='<tmp>/b.err' mode='w+' encoding='UTF-8'>
+  b, b_out, b_err = self.fx.start('b', tools_b)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+FAIL
+
+======================================================================
+FAIL: test_overlapping_repins_leave_one_verified_install (__main__.BootstrapTest.test_overlapping_repins_leave_one_verified_install)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_bootstrap.py", line 401, in test_overlapping_repins_leave_one_verified_install
+    self.assertEqual(proc.wait(timeout=120), 0, read(out) + read(err))
+AssertionError: 1 != 0 : already there python3 <version>
+already there git 2.43.0
+already there curl 8.23.0
+already there gh 2.105.0
+already there fakedroid 1.17.2
+already there fakeapp 2.4.246
+Traceback (most recent call last):
+  File "<string>", line 333, in <module>
+  File "<string>", line 307, in main
+  File "<string>", line 212, in install
+FileNotFoundError: [Errno 2] No such file or directory: '<tmp>/home/.local/lib/openwiz-vps/staged/runpane' -> '<tmp>/home/.local/bin/runpane'
+
+
+----------------------------------------------------------------------
+Ran 1 tests in <t>s
+
+FAILED (failures=1)
