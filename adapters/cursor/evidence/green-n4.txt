@@ -18,6 +18,6 @@ test_the_key_never_passes_through_the_driver (__main__.Cursor.test_the_key_never
 test_the_tests_read_no_other_process_environment (__main__.Cursor.test_the_tests_read_no_other_process_environment) ... ok
 
 ----------------------------------------------------------------------
-Ran 15 tests in 5.339s
+Ran 15 tests in 5.120s
 
 OK
