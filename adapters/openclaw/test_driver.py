@@ -18,6 +18,9 @@ KIT = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'kit.py')
 TOKEN = 'gh' + 'p_' + 'Synthetic0Claw0Value' * 2 + '00'
 REAL = ('claude', 'codex', 'acpx', 'openclaw', 'gh', 'npx', 'node', 'bash', 'sh')
 DIAGNOSTIC = 'synthetic acpx diagnostic'
+CANT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at "
+        "the host's default")
+README = os.path.join(HERE, 'README.md')
 CLAUDE = ['npx', '-y', '--package=@agentclientprotocol/claude-agent-acp@^0.95.0', '--', 'claude-agent-acp']
 REQUEST = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude',
            'model': 'claude-opus-5-5'}
@@ -105,10 +108,14 @@ class OpenClaw(unittest.TestCase):
                 break
         shutil.rmtree(self.folder, ignore_errors=True)
 
+    def configs(self):
+        with open(self.turns) as f:
+            return [json.loads(line.split(None, 2)[2]) for line in f]
+
     def logged(self):
         try:
             with open(self.turns) as f:
-                return [(int(a), b) for a, b in (line.split() for line in f)]
+                return [(int(a), b) for a, b, _ in (line.split(None, 2) for line in f)]
         except FileNotFoundError:
             return []
 
@@ -188,6 +195,78 @@ class OpenClaw(unittest.TestCase):
         self.assertEqual(split[0][0]['--model'], 'claude-opus-5-5')
         for g, _ in split[1:3]:
             self.assertTrue(0 < int(g['--ttl']) <= 300, g)
+
+    def test_version_lists_effort_and_the_readme_says_how_it_is_passed(self):
+        self.assertEqual(self.driver('version', {}), (0, {'driver': 'openclaw', 'records': ['openwiz:records v1'],
+                                                          'can': ['start', 'wake', 'stop', 'effort']}))
+        with open(README) as f:
+            lines = [line for line in f.read().splitlines() if line.strip()]
+        login = lines.index('Login: stays on your machine')
+        self.assertTrue(lines[login + 1].startswith('Effort: passed as '), lines[login + 1])
+        rows = {r.split('|')[1].strip().strip('`'): r.split('|')[2].strip() for r in lines[login + 2:login + 8]
+                if r.startswith('| `')}
+        self.assertEqual(sorted(rows), ['claude', 'codex', 'droid', 'opencode'])
+        self.assertIn('`set -s <run> effort <effort>`', rows['claude'])
+        self.assertIn('`set -s <run> reasoning_effort <effort>`', rows['codex'])
+        self.assertTrue(rows['droid'].startswith("can't (") and rows['opencode'].startswith("can't ("), rows)
+
+    def test_the_effort_reaches_the_adapter_before_the_first_prompt_and_stays_on_a_wake(self):
+        for harness, key in (('claude', 'effort'), ('codex', 'reasoning_effort')):
+            with self.subTest(harness=harness):
+                start = len(self.seen())
+                code, out = self.driver('start', dict(REQUEST, harness=harness, effort='medium'))
+                self.assertEqual(code, 0, out)
+                calls = [c[next(i for i in range(0, len(c), 2) if not c[i].startswith('--')):]
+                         for c in self.acpx()[start:]]
+                self.assertEqual(calls[:3], [['sessions', 'new', '--name', out['run']],
+                                             ['set', '-s', out['run'], key, 'medium'],
+                                             ['prompt', '-s', out['run'], '--no-wait'] + calls[2][4:]])
+                self.assertTrue(self.until(lambda: len(self.logged()) == 1))
+                self.assertEqual(self.driver('wake', out), (0, dict(out, woke=True)))
+                self.assertTrue(self.until(lambda: len(self.logged()) == 2))
+                self.assertEqual(self.configs(), [{key: 'medium'}] * 2)
+                self.assertEqual(self.driver('stop', out), (0, dict(out, stopped=True)))
+                os.remove(self.turns)
+
+    def test_a_start_without_an_effort_sets_none(self):
+        code, out = self.driver('start', REQUEST)
+        self.assertEqual(code, 0, out)
+        self.assertTrue(self.until(lambda: len(self.logged()) == 1))
+        self.assertEqual(self.configs(), [{}])
+        self.assertFalse(any('set' in c for c in self.acpx()), self.acpx())
+
+    def test_an_effort_for_a_harness_it_cannot_set_it_for_is_refused_with_the_refusal_text(self):
+        for harness in ('droid', 'opencode', 'zz-unknown-agent', 'gemini'):
+            with self.subTest(harness=harness):
+                code, out = self.driver('start', dict(REQUEST, harness=harness, effort='medium'))
+                self.assertEqual((code, out['next']), (1, CANT), out)
+                self.assertIn(harness, out['error'])
+                self.assertIn('medium', out['error'])
+        self.assertEqual((self.acpx(), os.path.exists(self.state)), ([], False))
+
+    def test_an_effort_the_adapter_rejects_is_refused_and_starts_nothing(self):
+        code, out = self.driver('start', dict(REQUEST, effort='ultra'))
+        self.assertEqual((code, out['next']), (1, CANT), out)
+        self.assertIn('claude', out['error'])
+        self.assertIn('ultra', out['error'])
+        self.assertNotIn(DIAGNOSTIC, json.dumps(out))
+        self.assertFalse(any('prompt' in c for c in self.acpx()), self.acpx())
+        time.sleep(0.5)
+        self.assertEqual((self.logged(), owned()), ([], []))
+        run = re.search(r'run-[0-9a-f]{12}', out['error']).group()
+        self.assertEqual(self.driver('wake', {'run': run})[0], 1)
+
+    def test_the_effort_default_is_refused_before_acpx_runs(self):
+        code, out = self.driver('start', dict(REQUEST, effort='default'))
+        self.assertEqual((code, out['next']), (1, CANT), out)
+        self.assertEqual(self.acpx(), [])
+
+    def test_an_effort_out_of_shape_is_refused_before_acpx_runs(self):
+        for effort in ('Medium', 'a' * 21, 7):
+            with self.subTest(effort=effort):
+                code, out = self.driver('start', dict(REQUEST, effort=effort))
+                self.assertEqual((code, out['error']), (1, 'effort is not valid'), out)
+        self.assertEqual(self.acpx(), [])
 
     def test_a_harness_acpx_would_run_as_a_command_is_refused_without_echoing_it(self):
         for harness in ('sh', 'zz-unknown-agent', 'openclaw', 'gemini'):
