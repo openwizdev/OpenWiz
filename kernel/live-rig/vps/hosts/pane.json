@@ -1,0 +1,9 @@
+{
+  "host": "Pane",
+  "driver": "adapters/pane/driver",
+  "needs": ["runpane", "gh"],
+  "signed_in": [["runpane", "repos", "list", "--json"], ["gh", "auth", "status", "--hostname", "github.com", "--active", "--no-refresh"]],
+  "cost": "paid",
+  "runs": [{"harness": "claude", "model": "claude-opus-5-5"}],
+  "wait": 900
+}

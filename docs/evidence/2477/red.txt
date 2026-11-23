@@ -1,0 +1,155 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/test_rig.py   # before rig.py exists
+test_a_dirty_checkout_exits_2_and_runs_nothing (__main__.Rig.test_a_dirty_checkout_exits_2_and_runs_nothing) ... 
+  test_a_dirty_checkout_exits_2_and_runs_nothing (__main__.Rig.test_a_dirty_checkout_exits_2_and_runs_nothing) [adapters/template/schema.json] ... FAIL
+  test_a_dirty_checkout_exits_2_and_runs_nothing (__main__.Rig.test_a_dirty_checkout_exits_2_and_runs_nothing) [untracked.txt] ... FAIL
+test_a_held_lock_exits_0_and_runs_nothing (__main__.Rig.test_a_held_lock_exits_0_and_runs_nothing) ... FAIL
+<python>/unittest/case.py:622: ResourceWarning: unclosed file <_io.TextIOWrapper name=3 encoding='UTF-8'>
+  with outcome.testPartExecutor(self):
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+<python>/unittest/case.py:622: ResourceWarning: unclosed file <_io.TextIOWrapper name=5 encoding='UTF-8'>
+  with outcome.testPartExecutor(self):
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+test_a_missing_signed_out_or_possibly_paid_host_is_skipped_and_recorded_and_starts_no_kit (__main__.Rig.test_a_missing_signed_out_or_possibly_paid_host_is_skipped_and_recorded_and_starts_no_kit) ... 
+  test_a_missing_signed_out_or_possibly_paid_host_is_skipped_and_recorded_and_starts_no_kit (__main__.Rig.test_a_missing_signed_out_or_possibly_paid_host_is_skipped_and_recorded_and_starts_no_kit) [fixture-missing] ... FAIL
+  test_a_missing_signed_out_or_possibly_paid_host_is_skipped_and_recorded_and_starts_no_kit (__main__.Rig.test_a_missing_signed_out_or_possibly_paid_host_is_skipped_and_recorded_and_starts_no_kit) [fixture-signed-out] ... FAIL
+  test_a_missing_signed_out_or_possibly_paid_host_is_skipped_and_recorded_and_starts_no_kit (__main__.Rig.test_a_missing_signed_out_or_possibly_paid_host_is_skipped_and_recorded_and_starts_no_kit) [fixture-cost] ... FAIL
+test_a_planted_drivers_failing_kit_exits_1_with_its_count (__main__.Rig.test_a_planted_drivers_failing_kit_exits_1_with_its_count) ... FAIL
+test_a_signed_in_host_with_free_runs_runs_five_of_five_and_writes_its_record (__main__.Rig.test_a_signed_in_host_with_free_runs_runs_five_of_five_and_writes_its_record) ... FAIL
+test_an_unknown_host_or_a_bad_host_config_exits_2_and_only_json_files_are_hosts (__main__.Rig.test_an_unknown_host_or_a_bad_host_config_exits_2_and_only_json_files_are_hosts) ... FAIL
+test_every_host_in_one_run_keeps_paths_logins_the_repository_and_planted_secrets_out (__main__.Rig.test_every_host_in_one_run_keeps_paths_logins_the_repository_and_planted_secrets_out) ... FAIL
+
+======================================================================
+FAIL: test_a_dirty_checkout_exits_2_and_runs_nothing (__main__.Rig.test_a_dirty_checkout_exits_2_and_runs_nothing) [adapters/template/schema.json]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 139, in test_a_dirty_checkout_exits_2_and_runs_nothing
+    self.assertIn('rig.py: ', err)
+AssertionError: 'rig.py: ' not found in "/usr/bin/python3: can't open file '<tmp>/checkout/kernel/live-rig/rig.py': [Errno 2] No such file or directory\n"
+
+======================================================================
+FAIL: test_a_dirty_checkout_exits_2_and_runs_nothing (__main__.Rig.test_a_dirty_checkout_exits_2_and_runs_nothing) [untracked.txt]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 139, in test_a_dirty_checkout_exits_2_and_runs_nothing
+    self.assertIn('rig.py: ', err)
+AssertionError: 'rig.py: ' not found in "/usr/bin/python3: can't open file '<tmp>/checkout/kernel/live-rig/rig.py': [Errno 2] No such file or directory\n"
+
+======================================================================
+FAIL: test_a_held_lock_exits_0_and_runs_nothing (__main__.Rig.test_a_held_lock_exits_0_and_runs_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 150, in test_a_held_lock_exits_0_and_runs_nothing
+    self.assertTrue(self.kit_calls(), 'the first run never started its kit')
+AssertionError: [] is not true : the first run never started its kit
+
+======================================================================
+FAIL: test_a_missing_signed_out_or_possibly_paid_host_is_skipped_and_recorded_and_starts_no_kit (__main__.Rig.test_a_missing_signed_out_or_possibly_paid_host_is_skipped_and_recorded_and_starts_no_kit) [fixture-missing]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 125, in test_a_missing_signed_out_or_possibly_paid_host_is_skipped_and_recorded_and_starts_no_kit
+    self.assertEqual((code, out), (0, ['skipped %s fake-harness: %s' % (host, why)]), err)
+AssertionError: Tuples differ: (2, []) != (0, ['skipped fixture-missing fake-harness[40 chars]ed'])
+
+First differing element 0:
+2
+0
+
+- (2, [])
++ (0,
++  ['skipped fixture-missing fake-harness: not installed: '
++   'rig-fixture-not-installed']) : /usr/bin/python3: can't open file '<tmp>/checkout/kernel/live-rig/rig.py': [Errno 2] No such file or directory
+
+
+======================================================================
+FAIL: test_a_missing_signed_out_or_possibly_paid_host_is_skipped_and_recorded_and_starts_no_kit (__main__.Rig.test_a_missing_signed_out_or_possibly_paid_host_is_skipped_and_recorded_and_starts_no_kit) [fixture-signed-out]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 125, in test_a_missing_signed_out_or_possibly_paid_host_is_skipped_and_recorded_and_starts_no_kit
+    self.assertEqual((code, out), (0, ['skipped %s fake-harness: %s' % (host, why)]), err)
+AssertionError: Tuples differ: (2, []) != (0, ['skipped fixture-signed-out fake-harness: not signed in: fake-signed-out'])
+
+First differing element 0:
+2
+0
+
+- (2, [])
++ (0, ['skipped fixture-signed-out fake-harness: not signed in: fake-signed-out']) : /usr/bin/python3: can't open file '<tmp>/checkout/kernel/live-rig/rig.py': [Errno 2] No such file or directory
+
+
+======================================================================
+FAIL: test_a_missing_signed_out_or_possibly_paid_host_is_skipped_and_recorded_and_starts_no_kit (__main__.Rig.test_a_missing_signed_out_or_possibly_paid_host_is_skipped_and_recorded_and_starts_no_kit) [fixture-cost]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 125, in test_a_missing_signed_out_or_possibly_paid_host_is_skipped_and_recorded_and_starts_no_kit
+    self.assertEqual((code, out), (0, ['skipped %s fake-harness: %s' % (host, why)]), err)
+AssertionError: Tuples differ: (2, []) != (0, ['skipped fixture-cost fake-harness: cost'])
+
+First differing element 0:
+2
+0
+
+- (2, [])
++ (0, ['skipped fixture-cost fake-harness: cost']) : /usr/bin/python3: can't open file '<tmp>/checkout/kernel/live-rig/rig.py': [Errno 2] No such file or directory
+
+
+======================================================================
+FAIL: test_a_planted_drivers_failing_kit_exits_1_with_its_count (__main__.Rig.test_a_planted_drivers_failing_kit_exits_1_with_its_count)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 159, in test_a_planted_drivers_failing_kit_exits_1_with_its_count
+    self.assertEqual((code, out), (1, ['ran fixture-planted fake-harness: 4 of 5']), err)
+AssertionError: Tuples differ: (2, []) != (1, ['ran fixture-planted fake-harness: 4 of 5'])
+
+First differing element 0:
+2
+1
+
+- (2, [])
++ (1, ['ran fixture-planted fake-harness: 4 of 5']) : /usr/bin/python3: can't open file '<tmp>/checkout/kernel/live-rig/rig.py': [Errno 2] No such file or directory
+
+
+======================================================================
+FAIL: test_a_signed_in_host_with_free_runs_runs_five_of_five_and_writes_its_record (__main__.Rig.test_a_signed_in_host_with_free_runs_runs_five_of_five_and_writes_its_record)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 115, in test_a_signed_in_host_with_free_runs_runs_five_of_five_and_writes_its_record
+    self.assertEqual((code, out), (0, ['ran fixture-template fake-harness: 5 of 5']), err)
+AssertionError: Tuples differ: (2, []) != (0, ['ran fixture-template fake-harness: 5 of 5'])
+
+First differing element 0:
+2
+0
+
+- (2, [])
++ (0, ['ran fixture-template fake-harness: 5 of 5']) : /usr/bin/python3: can't open file '<tmp>/checkout/kernel/live-rig/rig.py': [Errno 2] No such file or directory
+
+
+======================================================================
+FAIL: test_an_unknown_host_or_a_bad_host_config_exits_2_and_only_json_files_are_hosts (__main__.Rig.test_an_unknown_host_or_a_bad_host_config_exits_2_and_only_json_files_are_hosts)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 184, in test_an_unknown_host_or_a_bad_host_config_exits_2_and_only_json_files_are_hosts
+    self.assertEqual((p.returncode, p.stdout), (0, 'skipped fixture-cost fake-harness: cost\n'), p.stderr)
+AssertionError: Tuples differ: (2, '') != (0, 'skipped fixture-cost fake-harness: cost\n')
+
+First differing element 0:
+2
+0
+
+- (2, '')
++ (0, 'skipped fixture-cost fake-harness: cost\n') : /usr/bin/python3: can't open file '<tmp>/checkout/kernel/live-rig/rig.py': [Errno 2] No such file or directory
+
+
+======================================================================
+FAIL: test_every_host_in_one_run_keeps_paths_logins_the_repository_and_planted_secrets_out (__main__.Rig.test_every_host_in_one_run_keeps_paths_logins_the_repository_and_planted_secrets_out)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 166, in test_every_host_in_one_run_keeps_paths_logins_the_repository_and_planted_secrets_out
+    self.assertEqual(code, 1, err)
+AssertionError: 2 != 1 : /usr/bin/python3: can't open file '<tmp>/checkout/kernel/live-rig/rig.py': [Errno 2] No such file or directory
+
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.329s
+
+FAILED (failures=10)

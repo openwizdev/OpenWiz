@@ -1,0 +1,6 @@
+Green run after the fix:
+python3 -I tools/install/tests/setup-onboard-contract/test_contract.py
+
+Ran 27 tests in <time>
+
+OK

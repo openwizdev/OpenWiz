@@ -1,0 +1,1619 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/test_receipt.py   (review R1-R4 and polish tests, against receipt.py at 03d252d)
+test_a_blocked_output_directory_leaves_no_receipt (__main__.Receipt.test_a_blocked_output_directory_leaves_no_receipt) ... FAIL
+test_a_credential_shape_in_a_token_writes_nothing (__main__.Receipt.test_a_credential_shape_in_a_token_writes_nothing) ... ok
+test_a_fail_line_with_exit_0_writes_nothing (__main__.Receipt.test_a_fail_line_with_exit_0_writes_nothing) ... ok
+test_a_failed_write_leaves_no_receipt (__main__.Receipt.test_a_failed_write_leaves_no_receipt) ... FAIL
+test_a_listing_that_is_not_this_runs_writes_nothing (__main__.Receipt.test_a_listing_that_is_not_this_runs_writes_nothing) ... FAIL
+test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) ... 
+  test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'date': '2026-11-1'}) ... FAIL
+  test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'date': '2026-02-30'}) ... FAIL
+  test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'date': '2026-13-01'}) ... FAIL
+  test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'date': '٢٠٢٦-11-01'}) ... FAIL
+  test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'date': 20261101}) ... FAIL
+  test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'host': 7}) ... FAIL
+  test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'kit_exit': False}) ... FAIL
+  test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'kit_exit': 0.0}) ... FAIL
+  test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'kit_exit': '0'}) ... FAIL
+  test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'kit_exit': None}) ... FAIL
+  test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'skipped': 'not signed in: example-tool'}) ... FAIL
+  test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'stdout': None}) ... FAIL
+  test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'outcome': 'passed'}) ... FAIL
+  test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'seconds': 1.5}) ... FAIL
+  test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'seconds': True}) ... FAIL
+  test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'seconds': -1}) ... FAIL
+  test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'seconds': '412'}) ... FAIL
+test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) ... FAIL
+test_a_missing_or_extra_line_writes_nothing (__main__.Receipt.test_a_missing_or_extra_line_writes_nothing) ... ok
+test_a_private_id_in_a_token_writes_nothing (__main__.Receipt.test_a_private_id_in_a_token_writes_nothing) ... 
+  test_a_private_id_in_a_token_writes_nothing (__main__.Receipt.test_a_private_id_in_a_token_writes_nothing) (key='harness', value='<thr id>') ... FAIL
+  test_a_private_id_in_a_token_writes_nothing (__main__.Receipt.test_a_private_id_in_a_token_writes_nothing) (key='harness', value='<proj id>') ... FAIL
+  test_a_private_id_in_a_token_writes_nothing (__main__.Receipt.test_a_private_id_in_a_token_writes_nothing) (key='harness', value='<mch id>') ... FAIL
+  test_a_private_id_in_a_token_writes_nothing (__main__.Receipt.test_a_private_id_in_a_token_writes_nothing) (key='harness', value='<usr id>') ... FAIL
+  test_a_private_id_in_a_token_writes_nothing (__main__.Receipt.test_a_private_id_in_a_token_writes_nothing) (key='harness', value='<acct id>') ... FAIL
+  test_a_private_id_in_a_token_writes_nothing (__main__.Receipt.test_a_private_id_in_a_token_writes_nothing) (key='harness', value='<cr id>') ... FAIL
+  test_a_private_id_in_a_token_writes_nothing (__main__.Receipt.test_a_private_id_in_a_token_writes_nothing) (key='model', value='<thr id>') ... FAIL
+  test_a_private_id_in_a_token_writes_nothing (__main__.Receipt.test_a_private_id_in_a_token_writes_nothing) (key='model', value='<proj id>') ... FAIL
+  test_a_private_id_in_a_token_writes_nothing (__main__.Receipt.test_a_private_id_in_a_token_writes_nothing) (key='model', value='<mch id>') ... FAIL
+  test_a_private_id_in_a_token_writes_nothing (__main__.Receipt.test_a_private_id_in_a_token_writes_nothing) (key='model', value='<usr id>') ... FAIL
+  test_a_private_id_in_a_token_writes_nothing (__main__.Receipt.test_a_private_id_in_a_token_writes_nothing) (key='model', value='<acct id>') ... FAIL
+  test_a_private_id_in_a_token_writes_nothing (__main__.Receipt.test_a_private_id_in_a_token_writes_nothing) (key='model', value='<cr id>') ... FAIL
+test_a_secret_from_the_environment_writes_nothing (__main__.Receipt.test_a_secret_from_the_environment_writes_nothing) ... ok
+test_a_usage_error_is_one_fixed_line (__main__.Receipt.test_a_usage_error_is_one_fixed_line) ... 
+  test_a_usage_error_is_one_fixed_line (__main__.Receipt.test_a_usage_error_is_one_fixed_line) (args=[]) ... FAIL
+  test_a_usage_error_is_one_fixed_line (__main__.Receipt.test_a_usage_error_is_one_fixed_line) (args=['--bogus\nsecond line=<token>']) ... FAIL
+  test_a_usage_error_is_one_fixed_line (__main__.Receipt.test_a_usage_error_is_one_fixed_line) (args=['record.json', '--listing=local']) ... FAIL
+test_a_withheld_line_writes_nothing (__main__.Receipt.test_a_withheld_line_writes_nothing) ... 
+  test_a_withheld_line_writes_nothing (__main__.Receipt.test_a_withheld_line_writes_nothing) (check='version', verdict='fail') ... FAIL
+  test_a_withheld_line_writes_nothing (__main__.Receipt.test_a_withheld_line_writes_nothing) (check='start', verdict='fail') ... FAIL
+  test_a_withheld_line_writes_nothing (__main__.Receipt.test_a_withheld_line_writes_nothing) (check='wake', verdict='fail') ... FAIL
+  test_a_withheld_line_writes_nothing (__main__.Receipt.test_a_withheld_line_writes_nothing) (check='stop', verdict='fail') ... FAIL
+  test_a_withheld_line_writes_nothing (__main__.Receipt.test_a_withheld_line_writes_nothing) (check='token', verdict='fail') ... FAIL
+test_an_unmapped_host_writes_nothing (__main__.Receipt.test_an_unmapped_host_writes_nothing) ... 
+  test_an_unmapped_host_writes_nothing (__main__.Receipt.test_an_unmapped_host_writes_nothing) (host='example-host') ... FAIL
+  test_an_unmapped_host_writes_nothing (__main__.Receipt.test_an_unmapped_host_writes_nothing) (host='local\nsecond line') ... FAIL
+  test_an_unmapped_host_writes_nothing (__main__.Receipt.test_an_unmapped_host_writes_nothing) (host='<token>') ... FAIL
+  test_an_unmapped_host_writes_nothing (__main__.Receipt.test_an_unmapped_host_writes_nothing) (host='Local') ... FAIL
+test_an_unreadable_record_writes_nothing (__main__.Receipt.test_an_unreadable_record_writes_nothing) ... 
+  test_an_unreadable_record_writes_nothing (__main__.Receipt.test_an_unreadable_record_writes_nothing) (raw=b'') ... FAIL
+  test_an_unreadable_record_writes_nothing (__main__.Receipt.test_an_unreadable_record_writes_nothing) (raw=b'{') ... FAIL
+  test_an_unreadable_record_writes_nothing (__main__.Receipt.test_an_unreadable_record_writes_nothing) (raw=b'\xff\xfe') ... FAIL
+  test_an_unreadable_record_writes_nothing (__main__.Receipt.test_an_unreadable_record_writes_nothing) (raw=b'{"host": "local", "h') ... FAIL
+  test_an_unreadable_record_writes_nothing (__main__.Receipt.test_an_unreadable_record_writes_nothing) (raw=b'{"a": NaN}') ... FAIL
+test_an_unreadable_record_writes_nothing (__main__.Receipt.test_an_unreadable_record_writes_nothing) ... FAIL
+test_every_mapped_host_names_its_listing (__main__.Receipt.test_every_mapped_host_names_its_listing) ... ok
+test_five_of_five_gives_the_byte_exact_receipt (__main__.Receipt.test_five_of_five_gives_the_byte_exact_receipt) ... ok
+test_four_of_five_writes_nothing (__main__.Receipt.test_four_of_five_writes_nothing) ... ok
+test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) ... 
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value='') ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value='Claude') ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value='Example Harness') ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value='someone@example.com') ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value='/tmp/example') ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value='C:\\example') ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value='two\nlines') ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value='tab\there') ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value='\ud800') ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value='café') ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value='١٢') ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value='-leading') ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value='.leading') ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa') ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value=1) ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value=None) ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value=['claude']) ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value='') ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value='Claude') ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value='Example Harness') ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value='someone@example.com') ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value='/tmp/example') ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value='C:\\example') ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value='two\nlines') ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value='tab\there') ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value='\ud800') ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value='café') ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value='١٢') ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value='-leading') ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value='.leading') ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa') ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value=1) ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value=None) ... FAIL
+  test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value=['claude']) ... FAIL
+test_lines_out_of_order_write_nothing (__main__.Receipt.test_lines_out_of_order_write_nothing) ... ok
+test_receipt_matches_wizmarkets_own_valid_fixture (__main__.Receipt.test_receipt_matches_wizmarkets_own_valid_fixture) ... ok
+test_run_by_must_be_a_login (__main__.Receipt.test_run_by_must_be_a_login) ... ok
+test_skipped_record_writes_nothing (__main__.Receipt.test_skipped_record_writes_nothing) ... FAIL
+test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying (__main__.Receipt.test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying) ... 
+  test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying (__main__.Receipt.test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying) (new='posted note') ... FAIL
+  test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying (__main__.Receipt.test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying) (new='posted builder status note 10a') ... FAIL
+  test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying (__main__.Receipt.test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying) (new='posted builder status note ١٢') ... FAIL
+  test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying (__main__.Receipt.test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying) (new='posted builder status note ') ... FAIL
+  test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying (__main__.Receipt.test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying) (new='note <note>\npass stop') ... FAIL
+  test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying (__main__.Receipt.test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying) (new='note 1000000001 <thr id>\npass stop') ... FAIL
+test_the_first_receipt_is_kept (__main__.Receipt.test_the_first_receipt_is_kept) ... FAIL
+test_the_kits_own_tested_pass_lines_make_a_receipt (__main__.Receipt.test_the_kits_own_tested_pass_lines_make_a_receipt) ... ok
+test_version_stop_and_token_must_be_kits_exact_pass_lines (__main__.Receipt.test_version_stop_and_token_must_be_kits_exact_pass_lines) ... 
+  test_version_stop_and_token_must_be_kits_exact_pass_lines (__main__.Receipt.test_version_stop_and_token_must_be_kits_exact_pass_lines) (check='version', new='openwiz:records v2') ... FAIL
+  test_version_stop_and_token_must_be_kits_exact_pass_lines (__main__.Receipt.test_version_stop_and_token_must_be_kits_exact_pass_lines) (check='version', new='and the schema is driver v1 <token>') ... FAIL
+  test_version_stop_and_token_must_be_kits_exact_pass_lines (__main__.Receipt.test_version_stop_and_token_must_be_kits_exact_pass_lines) (check='stop', new='is refused <thr id>') ... FAIL
+  test_version_stop_and_token_must_be_kits_exact_pass_lines (__main__.Receipt.test_version_stop_and_token_must_be_kits_exact_pass_lines) (check='stop', new='a wake after it is refused, at /tmp/example') ... FAIL
+  test_version_stop_and_token_must_be_kits_exact_pass_lines (__main__.Receipt.test_version_stop_and_token_must_be_kits_exact_pass_lines) (check='token', new='nothing passed') ... FAIL
+  test_version_stop_and_token_must_be_kits_exact_pass_lines (__main__.Receipt.test_version_stop_and_token_must_be_kits_exact_pass_lines) (check='token', new='the driver \n') ... FAIL
+test_our_copy_of_the_fixture_is_wizmarkets (__main__.WizMarket.test_our_copy_of_the_fixture_is_wizmarkets) ... skipped 'skipped: no WizMarket checkout reachable (set WIZMARKET to one)'
+test_wizmarkets_checker_accepts_the_receipt (__main__.WizMarket.test_wizmarkets_checker_accepts_the_receipt) ... skipped 'skipped: no WizMarket checkout reachable (set WIZMARKET to one)'
+
+======================================================================
+FAIL: test_a_blocked_output_directory_leaves_no_receipt (__main__.Receipt.test_a_blocked_output_directory_leaves_no_receipt)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 321, in test_a_blocked_output_directory_leaves_no_receipt
+    self.one_line(p, 1, 'the receipt could not be written')
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'Traceback (most recent call last):\n  Fil[443 chars]\'\n' != 'receipt.py: the receipt could not be written\n'
++ receipt.py: the receipt could not be written
+- Traceback (most recent call last):
+-   File "kernel/live-rig/receipt.py", line 167, in <module>
+-     sys.exit(main(sys.argv[1:]))
+-              ^^^^^^^^^^^^^^^^^^
+-   File "kernel/live-rig/receipt.py", line 152, in main
+-     os.makedirs(os.path.dirname(path), exist_ok=True)
+-   File "<frozen os>", line 225, in makedirs
+- NotADirectoryError: [Errno 20] Not a directory: '<tmp>/out/receipts/local'
+
+
+======================================================================
+FAIL: test_a_failed_write_leaves_no_receipt (__main__.Receipt.test_a_failed_write_leaves_no_receipt)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 314, in test_a_failed_write_leaves_no_receipt
+    self.one_line(p, 1, 'the receipt could not be written')
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'OSError: [Errno 27] File too large\n\nDur[460 chars]ge\n' != 'receipt.py: the receipt could not be written\n'
++ receipt.py: the receipt could not be written
+- OSError: [Errno 27] File too large
+- 
+- During handling of the above exception, another exception occurred:
+- 
+- Traceback (most recent call last):
+-   File "kernel/live-rig/receipt.py", line 167, in <module>
+-     sys.exit(main(sys.argv[1:]))
+-              ^^^^^^^^^^^^^^^^^^
+-   File "kernel/live-rig/receipt.py", line 157, in main
+-     with os.fdopen(fd, 'w', encoding='utf-8', newline='') as f:
+- OSError: [Errno 27] File too large
+
+
+======================================================================
+FAIL: test_a_listing_that_is_not_this_runs_writes_nothing (__main__.Receipt.test_a_listing_that_is_not_this_runs_writes_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 271, in test_a_listing_that_is_not_this_runs_writes_nothing
+    self.refused(record('5-of-5.json'), "--listing is not this run's driver listing, and its harness has no "
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: "receipt.py: claude is not local's driver listing, and[43 chars]on\n" != "receipt.py: --listing is not this run's driver listin[48 chars]on\n"
+- receipt.py: claude is not local's driver listing, and harness local/claude is not in listings.json
++ receipt.py: --listing is not this run's driver listing, and its harness has no listing in listings.json
+
+
+======================================================================
+FAIL: test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'date': '2026-11-1'})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 235, in test_a_malformed_record_writes_nothing
+    self.refused(record('5-of-5.json', **changes), why)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: the run record date is not YYYY-MM-DD\n' != 'receipt.py: the run record date is not a real YYYY-MM-DD date\n'
+- receipt.py: the run record date is not YYYY-MM-DD
++ receipt.py: the run record date is not a real YYYY-MM-DD date
+?                                       +++++++           +++++
+
+
+======================================================================
+FAIL: test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'date': '2026-02-30'})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 235, in test_a_malformed_record_writes_nothing
+    self.refused(record('5-of-5.json', **changes), why)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 98, in one_line
+    self.assertEqual(p.returncode, code, p.stderr)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'date': '2026-13-01'})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 235, in test_a_malformed_record_writes_nothing
+    self.refused(record('5-of-5.json', **changes), why)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 98, in one_line
+    self.assertEqual(p.returncode, code, p.stderr)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'date': '٢٠٢٦-11-01'})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 235, in test_a_malformed_record_writes_nothing
+    self.refused(record('5-of-5.json', **changes), why)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 98, in one_line
+    self.assertEqual(p.returncode, code, p.stderr)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'date': 20261101})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 235, in test_a_malformed_record_writes_nothing
+    self.refused(record('5-of-5.json', **changes), why)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: the run record date is not YYYY-MM-DD\n' != 'receipt.py: the run record date is not a real YYYY-MM-DD date\n'
+- receipt.py: the run record date is not YYYY-MM-DD
++ receipt.py: the run record date is not a real YYYY-MM-DD date
+?                                       +++++++           +++++
+
+
+======================================================================
+FAIL: test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'host': 7})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 235, in test_a_malformed_record_writes_nothing
+    self.refused(record('5-of-5.json', **changes), why)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: the run record host is not one line\n' != 'receipt.py: the run record host is not in listings.json\n'
+- receipt.py: the run record host is not one line
+?                                          ------
++ receipt.py: the run record host is not in listings.json
+?                                        ++++++++++++++
+
+
+======================================================================
+FAIL: test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'kit_exit': False})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 235, in test_a_malformed_record_writes_nothing
+    self.refused(record('5-of-5.json', **changes), why)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 98, in one_line
+    self.assertEqual(p.returncode, code, p.stderr)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'kit_exit': 0.0})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 235, in test_a_malformed_record_writes_nothing
+    self.refused(record('5-of-5.json', **changes), why)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: a receipt is already at receipts/local/20[46 chars]pt\n' != 'receipt.py: the run record is not a consistent ran or[13 chars]rd\n'
+- receipt.py: a receipt is already at receipts/local/2026-11-01-aaaaaaaaaaaa.txt; the first one is kept
++ receipt.py: the run record is not a consistent ran or skipped record
+
+
+======================================================================
+FAIL: test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'kit_exit': '0'})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 235, in test_a_malformed_record_writes_nothing
+    self.refused(record('5-of-5.json', **changes), why)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: kit.py exited 0, not 0\n' != 'receipt.py: the run record is not a consistent ran or skipped record\n'
+- receipt.py: kit.py exited 0, not 0
++ receipt.py: the run record is not a consistent ran or skipped record
+
+
+======================================================================
+FAIL: test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'kit_exit': None})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 235, in test_a_malformed_record_writes_nothing
+    self.refused(record('5-of-5.json', **changes), why)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: kit.py exited None, not 0\n' != 'receipt.py: the run record is not a consistent ran or skipped record\n'
+- receipt.py: kit.py exited None, not 0
++ receipt.py: the run record is not a consistent ran or skipped record
+
+
+======================================================================
+FAIL: test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'skipped': 'not signed in: example-tool'})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 235, in test_a_malformed_record_writes_nothing
+    self.refused(record('5-of-5.json', **changes), why)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: a receipt is already at receipts/local/20[46 chars]pt\n' != 'receipt.py: the run record is not a consistent ran or[13 chars]rd\n'
+- receipt.py: a receipt is already at receipts/local/2026-11-01-aaaaaaaaaaaa.txt; the first one is kept
++ receipt.py: the run record is not a consistent ran or skipped record
+
+
+======================================================================
+FAIL: test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'stdout': None})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 235, in test_a_malformed_record_writes_nothing
+    self.refused(record('5-of-5.json', **changes), why)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: the run record has no kit stdout\n' != 'receipt.py: the run record is not a consistent ran or skipped record\n'
+- receipt.py: the run record has no kit stdout
++ receipt.py: the run record is not a consistent ran or skipped record
+
+
+======================================================================
+FAIL: test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'outcome': 'passed'})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 235, in test_a_malformed_record_writes_nothing
+    self.refused(record('5-of-5.json', **changes), why)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: the run record outcome is not ran\n' != 'receipt.py: the run record is not a consistent ran or skipped record\n'
+- receipt.py: the run record outcome is not ran
++ receipt.py: the run record is not a consistent ran or skipped record
+
+
+======================================================================
+FAIL: test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'seconds': 1.5})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 235, in test_a_malformed_record_writes_nothing
+    self.refused(record('5-of-5.json', **changes), why)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: a receipt is already at receipts/local/20[46 chars]pt\n' != 'receipt.py: the run record seconds is not a whole number of seconds\n'
+- receipt.py: a receipt is already at receipts/local/2026-11-01-aaaaaaaaaaaa.txt; the first one is kept
++ receipt.py: the run record seconds is not a whole number of seconds
+
+
+======================================================================
+FAIL: test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'seconds': True})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 235, in test_a_malformed_record_writes_nothing
+    self.refused(record('5-of-5.json', **changes), why)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: a receipt is already at receipts/local/20[46 chars]pt\n' != 'receipt.py: the run record seconds is not a whole number of seconds\n'
+- receipt.py: a receipt is already at receipts/local/2026-11-01-aaaaaaaaaaaa.txt; the first one is kept
++ receipt.py: the run record seconds is not a whole number of seconds
+
+
+======================================================================
+FAIL: test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'seconds': -1})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 235, in test_a_malformed_record_writes_nothing
+    self.refused(record('5-of-5.json', **changes), why)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: a receipt is already at receipts/local/20[46 chars]pt\n' != 'receipt.py: the run record seconds is not a whole number of seconds\n'
+- receipt.py: a receipt is already at receipts/local/2026-11-01-aaaaaaaaaaaa.txt; the first one is kept
++ receipt.py: the run record seconds is not a whole number of seconds
+
+
+======================================================================
+FAIL: test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) (changes={'seconds': '412'})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 235, in test_a_malformed_record_writes_nothing
+    self.refused(record('5-of-5.json', **changes), why)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: a receipt is already at receipts/local/20[46 chars]pt\n' != 'receipt.py: the run record seconds is not a whole number of seconds\n'
+- receipt.py: a receipt is already at receipts/local/2026-11-01-aaaaaaaaaaaa.txt; the first one is kept
++ receipt.py: the run record seconds is not a whole number of seconds
+
+
+======================================================================
+FAIL: test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 238, in test_a_malformed_record_writes_nothing
+    self.refused(rec, 'the run record does not have exactly the run record keys')
+  File "kernel/live-rig/test_receipt.py", line 105, in refused
+    self.assertEqual(files(self.out), [], 'a refused record wrote a file')
+AssertionError: Lists differ: ['receipts/local/2026-02-30-aaaaaaaaaaaa.t[137 chars]txt'] != []
+
+First list contains 4 additional elements.
+First extra element 0:
+'receipts/local/2026-02-30-aaaaaaaaaaaa.txt'
+
++ []
+- ['receipts/local/2026-02-30-aaaaaaaaaaaa.txt',
+-  'receipts/local/2026-11-01-aaaaaaaaaaaa.txt',
+-  'receipts/local/2026-13-01-aaaaaaaaaaaa.txt',
+-  'receipts/local/٢٠٢٦-11-01-aaaaaaaaaaaa.txt'] : a refused record wrote a file
+
+======================================================================
+FAIL: test_a_private_id_in_a_token_writes_nothing (__main__.Receipt.test_a_private_id_in_a_token_writes_nothing) (key='harness', value='<thr id>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 182, in test_a_private_id_in_a_token_writes_nothing
+    self.refused(record('5-of-5.json', **{key: value}), 'line %d holds a private id' % line)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 98, in one_line
+    self.assertEqual(p.returncode, code, p.stderr)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_a_private_id_in_a_token_writes_nothing (__main__.Receipt.test_a_private_id_in_a_token_writes_nothing) (key='harness', value='<proj id>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 182, in test_a_private_id_in_a_token_writes_nothing
+    self.refused(record('5-of-5.json', **{key: value}), 'line %d holds a private id' % line)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: a receipt is already at receipts/local/20[46 chars]pt\n' != 'receipt.py: line 5 holds a private id\n'
+- receipt.py: a receipt is already at receipts/local/2026-11-01-aaaaaaaaaaaa.txt; the first one is kept
++ receipt.py: line 5 holds a private id
+
+
+======================================================================
+FAIL: test_a_private_id_in_a_token_writes_nothing (__main__.Receipt.test_a_private_id_in_a_token_writes_nothing) (key='harness', value='<mch id>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 182, in test_a_private_id_in_a_token_writes_nothing
+    self.refused(record('5-of-5.json', **{key: value}), 'line %d holds a private id' % line)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: a receipt is already at receipts/local/20[46 chars]pt\n' != 'receipt.py: line 5 holds a private id\n'
+- receipt.py: a receipt is already at receipts/local/2026-11-01-aaaaaaaaaaaa.txt; the first one is kept
++ receipt.py: line 5 holds a private id
+
+
+======================================================================
+FAIL: test_a_private_id_in_a_token_writes_nothing (__main__.Receipt.test_a_private_id_in_a_token_writes_nothing) (key='harness', value='<usr id>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 182, in test_a_private_id_in_a_token_writes_nothing
+    self.refused(record('5-of-5.json', **{key: value}), 'line %d holds a private id' % line)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: a receipt is already at receipts/local/20[46 chars]pt\n' != 'receipt.py: line 5 holds a private id\n'
+- receipt.py: a receipt is already at receipts/local/2026-11-01-aaaaaaaaaaaa.txt; the first one is kept
++ receipt.py: line 5 holds a private id
+
+
+======================================================================
+FAIL: test_a_private_id_in_a_token_writes_nothing (__main__.Receipt.test_a_private_id_in_a_token_writes_nothing) (key='harness', value='<acct id>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 182, in test_a_private_id_in_a_token_writes_nothing
+    self.refused(record('5-of-5.json', **{key: value}), 'line %d holds a private id' % line)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: a receipt is already at receipts/local/20[46 chars]pt\n' != 'receipt.py: line 5 holds a private id\n'
+- receipt.py: a receipt is already at receipts/local/2026-11-01-aaaaaaaaaaaa.txt; the first one is kept
++ receipt.py: line 5 holds a private id
+
+
+======================================================================
+FAIL: test_a_private_id_in_a_token_writes_nothing (__main__.Receipt.test_a_private_id_in_a_token_writes_nothing) (key='harness', value='<cr id>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 182, in test_a_private_id_in_a_token_writes_nothing
+    self.refused(record('5-of-5.json', **{key: value}), 'line %d holds a private id' % line)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: a receipt is already at receipts/local/20[46 chars]pt\n' != 'receipt.py: line 5 holds a private id\n'
+- receipt.py: a receipt is already at receipts/local/2026-11-01-aaaaaaaaaaaa.txt; the first one is kept
++ receipt.py: line 5 holds a private id
+
+
+======================================================================
+FAIL: test_a_private_id_in_a_token_writes_nothing (__main__.Receipt.test_a_private_id_in_a_token_writes_nothing) (key='model', value='<thr id>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 182, in test_a_private_id_in_a_token_writes_nothing
+    self.refused(record('5-of-5.json', **{key: value}), 'line %d holds a private id' % line)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: a receipt is already at receipts/local/20[46 chars]pt\n' != 'receipt.py: line 6 holds a private id\n'
+- receipt.py: a receipt is already at receipts/local/2026-11-01-aaaaaaaaaaaa.txt; the first one is kept
++ receipt.py: line 6 holds a private id
+
+
+======================================================================
+FAIL: test_a_private_id_in_a_token_writes_nothing (__main__.Receipt.test_a_private_id_in_a_token_writes_nothing) (key='model', value='<proj id>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 182, in test_a_private_id_in_a_token_writes_nothing
+    self.refused(record('5-of-5.json', **{key: value}), 'line %d holds a private id' % line)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: a receipt is already at receipts/local/20[46 chars]pt\n' != 'receipt.py: line 6 holds a private id\n'
+- receipt.py: a receipt is already at receipts/local/2026-11-01-aaaaaaaaaaaa.txt; the first one is kept
++ receipt.py: line 6 holds a private id
+
+
+======================================================================
+FAIL: test_a_private_id_in_a_token_writes_nothing (__main__.Receipt.test_a_private_id_in_a_token_writes_nothing) (key='model', value='<mch id>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 182, in test_a_private_id_in_a_token_writes_nothing
+    self.refused(record('5-of-5.json', **{key: value}), 'line %d holds a private id' % line)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: a receipt is already at receipts/local/20[46 chars]pt\n' != 'receipt.py: line 6 holds a private id\n'
+- receipt.py: a receipt is already at receipts/local/2026-11-01-aaaaaaaaaaaa.txt; the first one is kept
++ receipt.py: line 6 holds a private id
+
+
+======================================================================
+FAIL: test_a_private_id_in_a_token_writes_nothing (__main__.Receipt.test_a_private_id_in_a_token_writes_nothing) (key='model', value='<usr id>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 182, in test_a_private_id_in_a_token_writes_nothing
+    self.refused(record('5-of-5.json', **{key: value}), 'line %d holds a private id' % line)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: a receipt is already at receipts/local/20[46 chars]pt\n' != 'receipt.py: line 6 holds a private id\n'
+- receipt.py: a receipt is already at receipts/local/2026-11-01-aaaaaaaaaaaa.txt; the first one is kept
++ receipt.py: line 6 holds a private id
+
+
+======================================================================
+FAIL: test_a_private_id_in_a_token_writes_nothing (__main__.Receipt.test_a_private_id_in_a_token_writes_nothing) (key='model', value='<acct id>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 182, in test_a_private_id_in_a_token_writes_nothing
+    self.refused(record('5-of-5.json', **{key: value}), 'line %d holds a private id' % line)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: a receipt is already at receipts/local/20[46 chars]pt\n' != 'receipt.py: line 6 holds a private id\n'
+- receipt.py: a receipt is already at receipts/local/2026-11-01-aaaaaaaaaaaa.txt; the first one is kept
++ receipt.py: line 6 holds a private id
+
+
+======================================================================
+FAIL: test_a_private_id_in_a_token_writes_nothing (__main__.Receipt.test_a_private_id_in_a_token_writes_nothing) (key='model', value='<cr id>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 182, in test_a_private_id_in_a_token_writes_nothing
+    self.refused(record('5-of-5.json', **{key: value}), 'line %d holds a private id' % line)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: a receipt is already at receipts/local/20[46 chars]pt\n' != 'receipt.py: line 6 holds a private id\n'
+- receipt.py: a receipt is already at receipts/local/2026-11-01-aaaaaaaaaaaa.txt; the first one is kept
++ receipt.py: line 6 holds a private id
+
+
+======================================================================
+FAIL: test_a_usage_error_is_one_fixed_line (__main__.Receipt.test_a_usage_error_is_one_fixed_line) (args=[])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 298, in test_a_usage_error_is_one_fixed_line
+    self.one_line(p, 2, usage)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'usage: receipt.py [-h] --listing LISTING [117 chars]-o\n' != 'receipt.py: usage: receipt.py <run record[40 chars]r>\n'
++ receipt.py: usage: receipt.py <run record> --listing <id> --run-by <login> -o <dir>
+- usage: receipt.py [-h] --listing LISTING --run-by RUN_BY -o OUT record
+- receipt.py: error: the following arguments are required: record, --listing, --run-by, -o
+
+
+======================================================================
+FAIL: test_a_usage_error_is_one_fixed_line (__main__.Receipt.test_a_usage_error_is_one_fixed_line) (args=['--bogus\nsecond line=<token>'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 298, in test_a_usage_error_is_one_fixed_line
+    self.one_line(p, 2, usage)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'usage: receipt.py [-h] --listing LISTING [109 chars]-o\n' != 'receipt.py: usage: receipt.py <run record[40 chars]r>\n'
++ receipt.py: usage: receipt.py <run record> --listing <id> --run-by <login> -o <dir>
+- usage: receipt.py [-h] --listing LISTING --run-by RUN_BY -o OUT record
+- receipt.py: error: the following arguments are required: --listing, --run-by, -o
+
+
+======================================================================
+FAIL: test_a_usage_error_is_one_fixed_line (__main__.Receipt.test_a_usage_error_is_one_fixed_line) (args=['record.json', '--listing=local'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 298, in test_a_usage_error_is_one_fixed_line
+    self.one_line(p, 2, usage)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'usage: receipt.py [-h] --listing LISTING [98 chars]-o\n' != 'receipt.py: usage: receipt.py <run record[40 chars]r>\n'
++ receipt.py: usage: receipt.py <run record> --listing <id> --run-by <login> -o <dir>
+- usage: receipt.py [-h] --listing LISTING --run-by RUN_BY -o OUT record
+- receipt.py: error: the following arguments are required: --run-by, -o
+
+
+======================================================================
+FAIL: test_a_withheld_line_writes_nothing (__main__.Receipt.test_a_withheld_line_writes_nothing) (check='version', verdict='fail')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 261, in test_a_withheld_line_writes_nothing
+    self.refused(record('5-of-5.json', stdout='\n'.join(withheld) + '\n'),
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: the run is 4 of 5 pass, not 5 of 5\n' != "receipt.py: the version line is withheld[47 chars]ne\n"
+- receipt.py: the run is 4 of 5 pass, not 5 of 5
++ receipt.py: the version line is withheld in the run record; a receipt needs kit.py's line
+
+
+======================================================================
+FAIL: test_a_withheld_line_writes_nothing (__main__.Receipt.test_a_withheld_line_writes_nothing) (check='start', verdict='fail')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 261, in test_a_withheld_line_writes_nothing
+    self.refused(record('5-of-5.json', stdout='\n'.join(withheld) + '\n'),
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: the run is 4 of 5 pass, not 5 of 5\n' != "receipt.py: the start line is withheld i[45 chars]ne\n"
+- receipt.py: the run is 4 of 5 pass, not 5 of 5
++ receipt.py: the start line is withheld in the run record; a receipt needs kit.py's line
+
+
+======================================================================
+FAIL: test_a_withheld_line_writes_nothing (__main__.Receipt.test_a_withheld_line_writes_nothing) (check='wake', verdict='fail')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 261, in test_a_withheld_line_writes_nothing
+    self.refused(record('5-of-5.json', stdout='\n'.join(withheld) + '\n'),
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: the run is 4 of 5 pass, not 5 of 5\n' != "receipt.py: the wake line is withheld in[44 chars]ne\n"
+- receipt.py: the run is 4 of 5 pass, not 5 of 5
++ receipt.py: the wake line is withheld in the run record; a receipt needs kit.py's line
+
+
+======================================================================
+FAIL: test_a_withheld_line_writes_nothing (__main__.Receipt.test_a_withheld_line_writes_nothing) (check='stop', verdict='fail')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 261, in test_a_withheld_line_writes_nothing
+    self.refused(record('5-of-5.json', stdout='\n'.join(withheld) + '\n'),
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: the run is 4 of 5 pass, not 5 of 5\n' != "receipt.py: the stop line is withheld in[44 chars]ne\n"
+- receipt.py: the run is 4 of 5 pass, not 5 of 5
++ receipt.py: the stop line is withheld in the run record; a receipt needs kit.py's line
+
+
+======================================================================
+FAIL: test_a_withheld_line_writes_nothing (__main__.Receipt.test_a_withheld_line_writes_nothing) (check='token', verdict='fail')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 261, in test_a_withheld_line_writes_nothing
+    self.refused(record('5-of-5.json', stdout='\n'.join(withheld) + '\n'),
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: the run is 4 of 5 pass, not 5 of 5\n' != "receipt.py: the token line is withheld i[45 chars]ne\n"
+- receipt.py: the run is 4 of 5 pass, not 5 of 5
++ receipt.py: the token line is withheld in the run record; a receipt needs kit.py's line
+
+
+======================================================================
+FAIL: test_an_unmapped_host_writes_nothing (__main__.Receipt.test_an_unmapped_host_writes_nothing) (host='example-host')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 267, in test_an_unmapped_host_writes_nothing
+    err = self.refused(record('5-of-5.json', host=host), 'the run record host is not in listings.json')
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: host example-host is not in listings.json\n' != 'receipt.py: the run record host is not in listings.json\n'
+- receipt.py: host example-host is not in listings.json
++ receipt.py: the run record host is not in listings.json
+
+
+======================================================================
+FAIL: test_an_unmapped_host_writes_nothing (__main__.Receipt.test_an_unmapped_host_writes_nothing) (host='local\nsecond line')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 267, in test_an_unmapped_host_writes_nothing
+    err = self.refused(record('5-of-5.json', host=host), 'the run record host is not in listings.json')
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: the run record host is not one line\n' != 'receipt.py: the run record host is not in listings.json\n'
+- receipt.py: the run record host is not one line
+?                                          ------
++ receipt.py: the run record host is not in listings.json
+?                                        ++++++++++++++
+
+
+======================================================================
+FAIL: test_an_unmapped_host_writes_nothing (__main__.Receipt.test_an_unmapped_host_writes_nothing) (host='<token>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 267, in test_an_unmapped_host_writes_nothing
+    err = self.refused(record('5-of-5.json', host=host), 'the run record host is not in listings.json')
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: host <token>[36 chars]on\n' != 'receipt.py: the run record host is not in listings.json\n'
+- receipt.py: host <token> is not in listings.json
++ receipt.py: the run record host is not in listings.json
+
+
+======================================================================
+FAIL: test_an_unmapped_host_writes_nothing (__main__.Receipt.test_an_unmapped_host_writes_nothing) (host='Local')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 267, in test_an_unmapped_host_writes_nothing
+    err = self.refused(record('5-of-5.json', host=host), 'the run record host is not in listings.json')
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: host Local is not in listings.json\n' != 'receipt.py: the run record host is not in listings.json\n'
+- receipt.py: host Local is not in listings.json
+?                  ------
++ receipt.py: the run record host is not in listings.json
+?             +++++++++++++++
+
+
+======================================================================
+FAIL: test_an_unreadable_record_writes_nothing (__main__.Receipt.test_an_unreadable_record_writes_nothing) (raw=b'')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 249, in test_an_unreadable_record_writes_nothing
+    self.refused(None, why if raw != b'[]' else 'the run record does not have exactly the run record keys',
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: the run record is not readable JSON\n' != 'receipt.py: the run record is not readable JSON with each key once\n'
+- receipt.py: the run record is not readable JSON
++ receipt.py: the run record is not readable JSON with each key once
+?                                                +++++++++++++++++++
+
+
+======================================================================
+FAIL: test_an_unreadable_record_writes_nothing (__main__.Receipt.test_an_unreadable_record_writes_nothing) (raw=b'{')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 249, in test_an_unreadable_record_writes_nothing
+    self.refused(None, why if raw != b'[]' else 'the run record does not have exactly the run record keys',
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: the run record is not readable JSON\n' != 'receipt.py: the run record is not readable JSON with each key once\n'
+- receipt.py: the run record is not readable JSON
++ receipt.py: the run record is not readable JSON with each key once
+?                                                +++++++++++++++++++
+
+
+======================================================================
+FAIL: test_an_unreadable_record_writes_nothing (__main__.Receipt.test_an_unreadable_record_writes_nothing) (raw=b'\xff\xfe')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 249, in test_an_unreadable_record_writes_nothing
+    self.refused(None, why if raw != b'[]' else 'the run record does not have exactly the run record keys',
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: the run record is not readable JSON\n' != 'receipt.py: the run record is not readable JSON with each key once\n'
+- receipt.py: the run record is not readable JSON
++ receipt.py: the run record is not readable JSON with each key once
+?                                                +++++++++++++++++++
+
+
+======================================================================
+FAIL: test_an_unreadable_record_writes_nothing (__main__.Receipt.test_an_unreadable_record_writes_nothing) (raw=b'{"host": "local", "h')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 249, in test_an_unreadable_record_writes_nothing
+    self.refused(None, why if raw != b'[]' else 'the run record does not have exactly the run record keys',
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 98, in one_line
+    self.assertEqual(p.returncode, code, p.stderr)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_an_unreadable_record_writes_nothing (__main__.Receipt.test_an_unreadable_record_writes_nothing) (raw=b'{"a": NaN}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 249, in test_an_unreadable_record_writes_nothing
+    self.refused(None, why if raw != b'[]' else 'the run record does not have exactly the run record keys',
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: the run record does not have exactly the run record keys\n' != 'receipt.py: the run record is not readable JSON with each key once\n'
+- receipt.py: the run record does not have exactly the run record keys
++ receipt.py: the run record is not readable JSON with each key once
+
+
+======================================================================
+FAIL: test_an_unreadable_record_writes_nothing (__main__.Receipt.test_an_unreadable_record_writes_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 253, in test_an_unreadable_record_writes_nothing
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: the run record is not readable JSON\n' != 'receipt.py: the run record is not readable JSON with each key once\n'
+- receipt.py: the run record is not readable JSON
++ receipt.py: the run record is not readable JSON with each key once
+?                                                +++++++++++++++++++
+
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value='')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: the run record harness is not one line\n' != 'receipt.py: the run record harness is not a public token\n'
+- receipt.py: the run record harness is not one line
+?                                           ^^^^   -
++ receipt.py: the run record harness is not a public token
+?                                           ^^^^^  ++++++
+
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value='Claude')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 98, in one_line
+    self.assertEqual(p.returncode, code, p.stderr)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value='Example Harness')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 98, in one_line
+    self.assertEqual(p.returncode, code, p.stderr)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value='someone@example.com')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 98, in one_line
+    self.assertEqual(p.returncode, code, p.stderr)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value='/tmp/example')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 98, in one_line
+    self.assertEqual(p.returncode, code, p.stderr)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value='C:\\example')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: line 5 holds a machine path\n' != 'receipt.py: the run record harness is not a public token\n'
+- receipt.py: line 5 holds a machine path
++ receipt.py: the run record harness is not a public token
+
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value='two\nlines')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: the run record harness is not one line\n' != 'receipt.py: the run record harness is not a public token\n'
+- receipt.py: the run record harness is not one line
+?                                           ^^^^   -
++ receipt.py: the run record harness is not a public token
+?                                           ^^^^^  ++++++
+
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value='tab\there')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: the run record harness is not one line\n' != 'receipt.py: the run record harness is not a public token\n'
+- receipt.py: the run record harness is not one line
+?                                           ^^^^   -
++ receipt.py: the run record harness is not a public token
+?                                           ^^^^^  ++++++
+
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value='\ud800')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'Traceback (most recent call last):\n  Fil[376 chars]ed\n' != 'receipt.py: the run record harness is not[13 chars]en\n'
++ receipt.py: the run record harness is not a public token
+- Traceback (most recent call last):
+-   File "kernel/live-rig/receipt.py", line 167, in <module>
+-     sys.exit(main(sys.argv[1:]))
+-              ^^^^^^^^^^^^^^^^^^
+-   File "kernel/live-rig/receipt.py", line 158, in main
+-     f.write(text)
+- UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 179: surrogates not allowed
+
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value='café')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 98, in one_line
+    self.assertEqual(p.returncode, code, p.stderr)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value='١٢')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 98, in one_line
+    self.assertEqual(p.returncode, code, p.stderr)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value='-leading')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 98, in one_line
+    self.assertEqual(p.returncode, code, p.stderr)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value='.leading')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 98, in one_line
+    self.assertEqual(p.returncode, code, p.stderr)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 98, in one_line
+    self.assertEqual(p.returncode, code, p.stderr)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value=1)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: the run record harness is not one line\n' != 'receipt.py: the run record harness is not a public token\n'
+- receipt.py: the run record harness is not one line
+?                                           ^^^^   -
++ receipt.py: the run record harness is not a public token
+?                                           ^^^^^  ++++++
+
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value=None)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: the run record harness is not one line\n' != 'receipt.py: the run record harness is not a public token\n'
+- receipt.py: the run record harness is not one line
+?                                           ^^^^   -
++ receipt.py: the run record harness is not a public token
+?                                           ^^^^^  ++++++
+
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='harness', value=['claude'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: the run record harness is not one line\n' != 'receipt.py: the run record harness is not a public token\n'
+- receipt.py: the run record harness is not one line
+?                                           ^^^^   -
++ receipt.py: the run record harness is not a public token
+?                                           ^^^^^  ++++++
+
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value='')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: the run record model is not one line\n' != 'receipt.py: the run record model is not a public token\n'
+- receipt.py: the run record model is not one line
+?                                         ^^^^   -
++ receipt.py: the run record model is not a public token
+?                                         ^^^^^  ++++++
+
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value='Claude')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 98, in one_line
+    self.assertEqual(p.returncode, code, p.stderr)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value='Example Harness')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 98, in one_line
+    self.assertEqual(p.returncode, code, p.stderr)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value='someone@example.com')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 98, in one_line
+    self.assertEqual(p.returncode, code, p.stderr)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value='/tmp/example')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 98, in one_line
+    self.assertEqual(p.returncode, code, p.stderr)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value='C:\\example')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: line 6 holds a machine path\n' != 'receipt.py: the run record model is not a public token\n'
+- receipt.py: line 6 holds a machine path
++ receipt.py: the run record model is not a public token
+
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value='two\nlines')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: the run record model is not one line\n' != 'receipt.py: the run record model is not a public token\n'
+- receipt.py: the run record model is not one line
+?                                         ^^^^   -
++ receipt.py: the run record model is not a public token
+?                                         ^^^^^  ++++++
+
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value='tab\there')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: the run record model is not one line\n' != 'receipt.py: the run record model is not a public token\n'
+- receipt.py: the run record model is not one line
+?                                         ^^^^   -
++ receipt.py: the run record model is not a public token
+?                                         ^^^^^  ++++++
+
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value='\ud800')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'Traceback (most recent call last):\n  Fil[376 chars]ed\n' != 'receipt.py: the run record model is not a public token\n'
++ receipt.py: the run record model is not a public token
+- Traceback (most recent call last):
+-   File "kernel/live-rig/receipt.py", line 167, in <module>
+-     sys.exit(main(sys.argv[1:]))
+-              ^^^^^^^^^^^^^^^^^^
+-   File "kernel/live-rig/receipt.py", line 158, in main
+-     f.write(text)
+- UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 195: surrogates not allowed
+
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value='café')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 98, in one_line
+    self.assertEqual(p.returncode, code, p.stderr)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value='١٢')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 98, in one_line
+    self.assertEqual(p.returncode, code, p.stderr)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value='-leading')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 98, in one_line
+    self.assertEqual(p.returncode, code, p.stderr)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value='.leading')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 98, in one_line
+    self.assertEqual(p.returncode, code, p.stderr)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 98, in one_line
+    self.assertEqual(p.returncode, code, p.stderr)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value=1)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: the run record model is not one line\n' != 'receipt.py: the run record model is not a public token\n'
+- receipt.py: the run record model is not one line
+?                                         ^^^^   -
++ receipt.py: the run record model is not a public token
+?                                         ^^^^^  ++++++
+
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value=None)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: the run record model is not one line\n' != 'receipt.py: the run record model is not a public token\n'
+- receipt.py: the run record model is not one line
+?                                         ^^^^   -
++ receipt.py: the run record model is not a public token
+?                                         ^^^^^  ++++++
+
+
+======================================================================
+FAIL: test_harness_and_model_must_be_public_tokens (__main__.Receipt.test_harness_and_model_must_be_public_tokens) (key='model', value=['claude'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 169, in test_harness_and_model_must_be_public_tokens
+    self.refused(record('5-of-5.json', **{key: value}), 'the run record %s is not a public token' % key)
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: the run record model is not one line\n' != 'receipt.py: the run record model is not a public token\n'
+- receipt.py: the run record model is not one line
+?                                         ^^^^   -
++ receipt.py: the run record model is not a public token
+?                                         ^^^^^  ++++++
+
+
+======================================================================
+FAIL: test_skipped_record_writes_nothing (__main__.Receipt.test_skipped_record_writes_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 142, in test_skipped_record_writes_nothing
+    self.refused(record('skipped.json'), 'the run record is a skipped run')
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: the run was skipped: not signed in: example-tool\n' != 'receipt.py: the run record is a skipped run\n'
+- receipt.py: the run was skipped: not signed in: example-tool
++ receipt.py: the run record is a skipped run
+
+
+======================================================================
+FAIL: test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying (__main__.Receipt.test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying) (new='posted note')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 208, in test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying
+    self.refused(record('5-of-5.json', stdout=base.replace(old, new, 1)),
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: "receipt.py: the start line is not kit.py's, ending in its status note's id\n" != "receipt.py: the start line is not kit.py's passing start line\n"
+- receipt.py: the start line is not kit.py's, ending in its status note's id
+?                                           ^^^^^    -------    ^^^ -- -----
++ receipt.py: the start line is not kit.py's passing start line
+?                                           ^^^^^       + ^^^
+
+
+======================================================================
+FAIL: test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying (__main__.Receipt.test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying) (new='posted builder status note 10a')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 208, in test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying
+    self.refused(record('5-of-5.json', stdout=base.replace(old, new, 1)),
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: "receipt.py: the start line is not kit.py's, ending in its status note's id\n" != "receipt.py: the start line is not kit.py's passing start line\n"
+- receipt.py: the start line is not kit.py's, ending in its status note's id
+?                                           ^^^^^    -------    ^^^ -- -----
++ receipt.py: the start line is not kit.py's passing start line
+?                                           ^^^^^       + ^^^
+
+
+======================================================================
+FAIL: test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying (__main__.Receipt.test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying) (new='posted builder status note ١٢')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 208, in test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying
+    self.refused(record('5-of-5.json', stdout=base.replace(old, new, 1)),
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: "receipt.py: the start line is not kit.py's, ending in its status note's id\n" != "receipt.py: the start line is not kit.py's passing start line\n"
+- receipt.py: the start line is not kit.py's, ending in its status note's id
+?                                           ^^^^^    -------    ^^^ -- -----
++ receipt.py: the start line is not kit.py's passing start line
+?                                           ^^^^^       + ^^^
+
+
+======================================================================
+FAIL: test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying (__main__.Receipt.test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying) (new='posted builder status note ')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 208, in test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying
+    self.refused(record('5-of-5.json', stdout=base.replace(old, new, 1)),
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: "receipt.py: the start line is not kit.py's, ending in its status note's id\n" != "receipt.py: the start line is not kit.py's passing start line\n"
+- receipt.py: the start line is not kit.py's, ending in its status note's id
+?                                           ^^^^^    -------    ^^^ -- -----
++ receipt.py: the start line is not kit.py's passing start line
+?                                           ^^^^^       + ^^^
+
+
+======================================================================
+FAIL: test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying (__main__.Receipt.test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying) (new='note <note>\npass stop')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 208, in test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying
+    self.refused(record('5-of-5.json', stdout=base.replace(old, new, 1)),
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: "receipt.py: the wake line is not kit.py's, ending in its status note's id\n" != "receipt.py: the wake line is not kit.py's passing wake line\n"
+- receipt.py: the wake line is not kit.py's, ending in its status note's id
++ receipt.py: the wake line is not kit.py's passing wake line
+
+
+======================================================================
+FAIL: test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying (__main__.Receipt.test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying) (new='note 1000000001 <thr id>\npass stop')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 208, in test_start_and_wake_must_be_kits_text_with_only_the_note_id_varying
+    self.refused(record('5-of-5.json', stdout=base.replace(old, new, 1)),
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: "receipt.py: the wake line is not kit.py's, ending in its status note's id\n" != "receipt.py: the wake line is not kit.py's passing wake line\n"
+- receipt.py: the wake line is not kit.py's, ending in its status note's id
++ receipt.py: the wake line is not kit.py's passing wake line
+
+
+======================================================================
+FAIL: test_the_first_receipt_is_kept (__main__.Receipt.test_the_first_receipt_is_kept)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 306, in test_the_first_receipt_is_kept
+    self.one_line(p, 1, 'a receipt is already at its path; the first one is kept')
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'rece[27 chars]y at receipts/local/2026-11-01-aaaaaaaaaaaa.tx[22 chars]pt\n' != 'rece[27 chars]y at its path; the first one is kept\n'
+- receipt.py: a receipt is already at receipts/local/2026-11-01-aaaaaaaaaaaa.txt; the first one is kept
+?                                     ---- -  ^^^^ -------------------------- ^^
++ receipt.py: a receipt is already at its path; the first one is kept
+?                                        ^^  ^
+
+
+======================================================================
+FAIL: test_version_stop_and_token_must_be_kits_exact_pass_lines (__main__.Receipt.test_version_stop_and_token_must_be_kits_exact_pass_lines) (check='version', new='openwiz:records v2')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 194, in test_version_stop_and_token_must_be_kits_exact_pass_lines
+    err = self.refused(record('5-of-5.json', stdout=base.replace(old, new)),
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 98, in one_line
+    self.assertEqual(p.returncode, code, p.stderr)
+AssertionError: 0 != 1 : 
+
+======================================================================
+FAIL: test_version_stop_and_token_must_be_kits_exact_pass_lines (__main__.Receipt.test_version_stop_and_token_must_be_kits_exact_pass_lines) (check='version', new='and the schema is driver v1 <token>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 194, in test_version_stop_and_token_must_be_kits_exact_pass_lines
+    err = self.refused(record('5-of-5.json', stdout=base.replace(old, new)),
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: line 9 holds a credential shape\n' != "receipt.py: the version line is not kit.py's passing version line\n"
+- receipt.py: line 9 holds a credential shape
++ receipt.py: the version line is not kit.py's passing version line
+
+
+======================================================================
+FAIL: test_version_stop_and_token_must_be_kits_exact_pass_lines (__main__.Receipt.test_version_stop_and_token_must_be_kits_exact_pass_lines) (check='stop', new='is refused <thr id>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 194, in test_version_stop_and_token_must_be_kits_exact_pass_lines
+    err = self.refused(record('5-of-5.json', stdout=base.replace(old, new)),
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: a receipt is already at rece[59 chars]pt\n' != "receipt.py: the stop line is not kit.py'[17 chars]ne\n"
+- receipt.py: a receipt is already at receipts/local/2026-11-01-aaaaaaaaaaaa.txt; the first one is kept
++ receipt.py: the stop line is not kit.py's passing stop line
+
+
+======================================================================
+FAIL: test_version_stop_and_token_must_be_kits_exact_pass_lines (__main__.Receipt.test_version_stop_and_token_must_be_kits_exact_pass_lines) (check='stop', new='a wake after it is refused, at /tmp/example')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 194, in test_version_stop_and_token_must_be_kits_exact_pass_lines
+    err = self.refused(record('5-of-5.json', stdout=base.replace(old, new)),
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: 'receipt.py: a receipt is already at rece[59 chars]pt\n' != "receipt.py: the stop line is not kit.py'[17 chars]ne\n"
+- receipt.py: a receipt is already at receipts/local/2026-11-01-aaaaaaaaaaaa.txt; the first one is kept
++ receipt.py: the stop line is not kit.py's passing stop line
+
+
+======================================================================
+FAIL: test_version_stop_and_token_must_be_kits_exact_pass_lines (__main__.Receipt.test_version_stop_and_token_must_be_kits_exact_pass_lines) (check='token', new='nothing passed')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 194, in test_version_stop_and_token_must_be_kits_exact_pass_lines
+    err = self.refused(record('5-of-5.json', stdout=base.replace(old, new)),
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: "receipt.py: the token line is not kit.py's only passing token line\n" != "receipt.py: the token line is not kit.py's passing token line\n"
+- receipt.py: the token line is not kit.py's only passing token line
+?                                            -----
++ receipt.py: the token line is not kit.py's passing token line
+
+
+======================================================================
+FAIL: test_version_stop_and_token_must_be_kits_exact_pass_lines (__main__.Receipt.test_version_stop_and_token_must_be_kits_exact_pass_lines) (check='token', new='the driver \n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 194, in test_version_stop_and_token_must_be_kits_exact_pass_lines
+    err = self.refused(record('5-of-5.json', stdout=base.replace(old, new)),
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "kernel/live-rig/test_receipt.py", line 104, in refused
+    self.one_line(p, 1, why)
+  File "kernel/live-rig/test_receipt.py", line 100, in one_line
+    self.assertEqual(p.stderr, 'receipt.py: %s\n' % why)
+AssertionError: "receipt.py: the token line is not kit.py's only passing token line\n" != "receipt.py: the token line is not kit.py's passing token line\n"
+- receipt.py: the token line is not kit.py's only passing token line
+?                                            -----
++ receipt.py: the token line is not kit.py's passing token line
+
+
+----------------------------------------------------------------------
+Ran 27 tests in <seconds>s
+
+FAILED (failures=99, skipped=2)
+exit 1

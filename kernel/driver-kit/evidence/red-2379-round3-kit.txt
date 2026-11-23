@@ -1,0 +1,783 @@
+# #2379 second fix round: the kit's tests for R3, R4, R5, R16 and R17 against the kit before its fix. The old key check passes FakeHost a tag it no longer takes, so most planted runs end after stop with no token line; the process-watch test shows the old sampler letting its error escape.
+test_a_failed_process_watch_fails_the_key_check (__main__.Kit.test_a_failed_process_watch_fails_the_key_check) ... Exception in thread Thread-1 (sample):
+Traceback (most recent call last):
+  File "/usr/lib/python3.11/threading.py", line 1038, in _bootstrap_inner
+    self.run()
+  File "/usr/lib/python3.11/threading.py", line 975, in run
+    self._target(*self._args, **self._kwargs)
+  File "/tmp/openwiz/kernel/driver-kit/kit.py", line 655, in sample
+    self.scan(canary)
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 186, in broken
+    raise OSError('synthetic')
+OSError: synthetic
+ERROR
+test_a_host_that_answers_a_redirect_fails_start_and_the_redirect_is_never_followed (__main__.Kit.test_a_host_that_answers_a_redirect_fails_start_and_the_redirect_is_never_followed) ... FAIL
+test_a_key_host_driver_that_uses_only_the_helper_passes_all_five (__main__.Kit.test_a_key_host_driver_that_uses_only_the_helper_passes_all_five) ...
+  test_a_key_host_driver_that_uses_only_the_helper_passes_all_five (__main__.Kit.test_a_key_host_driver_that_uses_only_the_helper_passes_all_five) [/usr/bin/python3] ... FAIL
+  test_a_key_host_driver_that_uses_only_the_helper_passes_all_five (__main__.Kit.test_a_key_host_driver_that_uses_only_the_helper_passes_all_five) [/tmp/openwiz/kernel/driver-kit/../../kernel/driver-kit/fixtures/no-proc/python3] ... FAIL
+test_a_refusal_holding_a_credential_never_reaches_the_output (__main__.Kit.test_a_refusal_holding_a_credential_never_reaches_the_output) ... ok
+test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) ... ok
+test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) ...
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-reads-itself] ... FAIL
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-in-args] ... FAIL
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-unregistered-host] ... FAIL
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-host-in-path] ... FAIL
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-in-env] ... FAIL
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-echoed] ... FAIL
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-in-body] ... FAIL
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-calls-keychain] ... FAIL
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-env-name] ... FAIL
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-sent-directly] ... FAIL
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-fake-helper] ... FAIL
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-start-refused] ... FAIL
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-hidden-in-test-file] ... FAIL
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-readme-names-variable] ... FAIL
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-readme-twice] ... FAIL
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-symlinked-dir] ... FAIL
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-runtime-script] ... FAIL
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-runtime-relative] ... FAIL
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-runtime-credential-path] ... FAIL
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-local-login] ... FAIL
+test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) ... ok
+test_on_macos_a_key_in_an_argument_or_another_variable_is_caught (__main__.Kit.test_on_macos_a_key_in_an_argument_or_another_variable_is_caught) ...
+  test_on_macos_a_key_in_an_argument_or_another_variable_is_caught (__main__.Kit.test_on_macos_a_key_in_an_argument_or_another_variable_is_caught) [key-in-args] ... FAIL
+  test_on_macos_a_key_in_an_argument_or_another_variable_is_caught (__main__.Kit.test_on_macos_a_key_in_an_argument_or_another_variable_is_caught) [key-in-env] ... FAIL
+  test_on_macos_a_key_in_an_argument_or_another_variable_is_caught (__main__.Kit.test_on_macos_a_key_in_an_argument_or_another_variable_is_caught) [key-runtime-script] ... FAIL
+  test_on_macos_a_key_in_an_argument_or_another_variable_is_caught (__main__.Kit.test_on_macos_a_key_in_an_argument_or_another_variable_is_caught) [key-runtime-relative] ... FAIL
+test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) ... ok
+test_template_passes_all_five (__main__.Kit.test_template_passes_all_five) ... ok
+test_the_canary_never_reaches_the_driver (__main__.Kit.test_the_canary_never_reaches_the_driver) ... FAIL
+test_the_kits_visibility_probe_signals_ready_through_the_macos_shim_and_runs_until_its_stdin_closes (__main__.Kit.test_the_kits_visibility_probe_signals_ready_through_the_macos_shim_and_runs_until_its_stdin_closes) ... ok
+test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) ... ok
+test_without_proc_as_on_macos_a_driver_whose_run_stays_in_the_kits_group_passes_all_five (__main__.Kit.test_without_proc_as_on_macos_a_driver_whose_run_stays_in_the_kits_group_passes_all_five) ... ok
+test_without_proc_as_on_macos_the_template_passes_all_five (__main__.Kit.test_without_proc_as_on_macos_the_template_passes_all_five) ... ok
+test_without_proc_or_the_runs_visible_environment_stop_and_token_fail_unverified (__main__.Kit.test_without_proc_or_the_runs_visible_environment_stop_and_token_fail_unverified) ... ok
+test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without (__main__.Kit.test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without) ...
+  test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without (__main__.Kit.test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without) [/tmp/openwiz/kernel/driver-kit/../../adapters/template/driver] ... FAIL
+
+======================================================================
+ERROR: test_a_failed_process_watch_fails_the_key_check (__main__.Kit.test_a_failed_process_watch_fails_the_key_check)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 188, in test_a_failed_process_watch_fails_the_key_check
+    self.assertEqual(k.sampled('start', {}, {}, ('devin', 'kit-canary-0', 'DEVIN_API_KEY')), ('ok', {}))
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/kit.py", line 663, in sampled
+    self.scan(canary)
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 186, in broken
+    raise OSError('synthetic')
+OSError: synthetic
+
+======================================================================
+FAIL: test_a_host_that_answers_a_redirect_fails_start_and_the_redirect_is_never_followed (__main__.Kit.test_a_host_that_answers_a_redirect_fails_start_and_the_redirect_is_never_followed)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 236, in test_a_host_that_answers_a_redirect_fails_start_and_the_redirect_is_never_followed
+    self.assertEqual((code, out), (1, [PASS[0], 'fail start: the host answered 302'] + NOT_RUN + [KEY_PASS]))
+AssertionError: Tuples differ: (1, [[167 chars]iled']) != (1, [[167 chars]iled', 'pass token: no login or token passed t[115 chars]er'])
+
+First differing element 1:
+['pas[163 chars]iled']
+['pas[163 chars]iled', 'pass token: no login or token passed t[114 chars]der']
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'fail start: the host answered 302',
+    'fail wake: not run: start failed',
+-   'fail stop: not run: start failed'])
+?                                     ^^
+
++   'fail stop: not run: start failed',
+?                                     ^
+
++   'pass token: no login or token passed through the driver, and on start, wake '
++   'and stop the devin key reached its host only from the key helper, in its '
++   'header'])
+
+======================================================================
+FAIL: test_a_key_host_driver_that_uses_only_the_helper_passes_all_five (__main__.Kit.test_a_key_host_driver_that_uses_only_the_helper_passes_all_five) [/usr/bin/python3]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 163, in test_a_key_host_driver_that_uses_only_the_helper_passes_all_five
+    self.assertEqual((code, out), (0, PASS[:4] + [KEY_PASS]))
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[186 chars]ed']) != (0, ['pass version: openwiz:records v1, an[345 chars]er'])
+
+First differing element 0:
+1
+0
+
+- (1,
++ (0,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+-   'pass stop: the run ended, and a wake after it is refused'])
+?                                                             ^^
+
++   'pass stop: the run ended, and a wake after it is refused',
+?                                                             ^
+
++   'pass token: no login or token passed through the driver, and on start, wake '
++   'and stop the devin key reached its host only from the key helper, in its '
++   'header'])
+
+======================================================================
+FAIL: test_a_key_host_driver_that_uses_only_the_helper_passes_all_five (__main__.Kit.test_a_key_host_driver_that_uses_only_the_helper_passes_all_five) [/tmp/openwiz/kernel/driver-kit/../../kernel/driver-kit/fixtures/no-proc/python3]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 163, in test_a_key_host_driver_that_uses_only_the_helper_passes_all_five
+    self.assertEqual((code, out), (0, PASS[:4] + [KEY_PASS]))
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[186 chars]ed']) != (0, ['pass version: openwiz:records v1, an[345 chars]er'])
+
+First differing element 0:
+1
+0
+
+- (1,
++ (0,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+-   'pass stop: the run ended, and a wake after it is refused'])
+?                                                             ^^
+
++   'pass stop: the run ended, and a wake after it is refused',
+?                                                             ^
+
++   'pass token: no login or token passed through the driver, and on start, wake '
++   'and stop the devin key reached its host only from the key helper, in its '
++   'header'])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-reads-itself]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 197, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (1, lines))
+AssertionError: Tuples differ: (1, [[221 chars]used']) != (1, [[221 chars]used', "fail token: the driver's file driver n[36 chars]le"])
+
+First differing element 1:
+['pas[217 chars]used']
+['pas[217 chars]used', "fail token: the driver's file driver n[35 chars]ble"]
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+-   'pass stop: the run ended, and a wake after it is refused'])
+?                                                             ^^
+
++   'pass stop: the run ended, and a wake after it is refused',
+?                                                             ^
+
++   "fail token: the driver's file driver names DEVIN_API_KEY, the key's "
++   'variable'])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-in-args]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 197, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (1, lines))
+AssertionError: Tuples differ: (1, [[221 chars]used']) != (1, [[221 chars]used', 'fail token: a process the driver start[39 chars]ne'])
+
+First differing element 1:
+['pas[217 chars]used']
+['pas[217 chars]used', 'fail token: a process the driver start[38 chars]ine']
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+-   'pass stop: the run ended, and a wake after it is refused'])
+?                                                             ^^
+
++   'pass stop: the run ended, and a wake after it is refused',
+?                                                             ^
+
++   'fail token: a process the driver started holds a credential on its command '
++   'line'])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-unregistered-host]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 197, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (1, lines))
+AssertionError: Tuples differ: (1, [[213 chars]iled']) != (1, [[213 chars]iled', "fail token: the devin key never reache[19 chars]st"])
+
+First differing element 1:
+['pas[209 chars]iled']
+['pas[209 chars]iled', "fail token: the devin key never reache[18 chars]ost"]
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'fail start: the key helper refused: host is not in '
+    'kernel/driver-kit/hosts.json',
+    'fail wake: not run: start failed',
+-   'fail stop: not run: start failed'])
+?                                     ^^
+
++   'fail stop: not run: start failed',
+?                                     ^
+
++   "fail token: the devin key never reached the kit's fake host"])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-host-in-path]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 197, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (1, lines))
+AssertionError: Tuples differ: (1, [[190 chars]iled']) != (1, [[190 chars]iled', "fail token: the devin key never reache[19 chars]st"])
+
+First differing element 1:
+['pas[186 chars]iled']
+['pas[186 chars]iled', "fail token: the devin key never reache[18 chars]ost"]
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'fail start: the key helper refused: path has // (a host)',
+    'fail wake: not run: start failed',
+-   'fail stop: not run: start failed'])
+?                                     ^^
+
++   'fail stop: not run: start failed',
+?                                     ^
+
++   "fail token: the devin key never reached the kit's fake host"])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-in-env]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 197, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (1, lines))
+AssertionError: Tuples differ: (1, [[221 chars]used']) != (1, [[221 chars]used', 'fail token: a process the driver start[64 chars]it'])
+
+First differing element 1:
+['pas[217 chars]used']
+['pas[217 chars]used', 'fail token: a process the driver start[63 chars] it']
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+-   'pass stop: the run ended, and a wake after it is refused'])
+?                                                             ^^
+
++   'pass stop: the run ended, and a wake after it is refused',
+?                                                             ^
+
++   'fail token: a process the driver started holds a credential in '
++   'OPENWIZ_COPY, which the kit never gave it'])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-echoed]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 197, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (1, lines))
+AssertionError: Tuples differ: (1, [[212 chars]it is refused']) != (1, [[212 chars]it is refused', 'fail token: the driver printed a credential'])
+
+First differing element 1:
+['pas[207 chars] it is refused']
+['pas[207 chars] it is refused', 'fail token: the driver printed a credential']
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+-   'pass stop: the run ended, and a wake after it is refused'])
+?                                                             ^^
+
++   'pass stop: the run ended, and a wake after it is refused',
+?                                                             ^
+
++   'fail token: the driver printed a credential'])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-in-body]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 197, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (1, lines))
+AssertionError: Tuples differ: (1, [[226 chars]iled']) != (1, [[226 chars]iled', 'pass token: no login or token passed t[115 chars]er'])
+
+First differing element 1:
+['pas[222 chars]iled']
+['pas[222 chars]iled', 'pass token: no login or token passed t[114 chars]der']
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'fail start: the key helper refused: the request holds the key, so the '
+    'helper did not send it',
+    'fail wake: not run: start failed',
+-   'fail stop: not run: start failed'])
+?                                     ^^
+
++   'fail stop: not run: start failed',
+?                                     ^
+
++   'pass token: no login or token passed through the driver, and on start, wake '
++   'and stop the devin key reached its host only from the key helper, in its '
++   'header'])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-calls-keychain]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 197, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (1, lines))
+AssertionError: Tuples differ: (1, [[221 chars]used']) != (1, [[221 chars]used', "fail token: the driver's file driver c[32 chars]ol"])
+
+First differing element 1:
+['pas[217 chars]used']
+['pas[217 chars]used', "fail token: the driver's file driver c[31 chars]ool"]
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+-   'pass stop: the run ended, and a wake after it is refused'])
+?                                                             ^^
+
++   'pass stop: the run ended, and a wake after it is refused',
+?                                                             ^
+
++   "fail token: the driver's file driver calls the keychain tool secret-tool"])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-env-name]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 197, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (1, lines))
+AssertionError: Tuples differ: (1, [[221 chars]used']) != (1, [[221 chars]used', 'fail token: a process the driver start[84 chars]it'])
+
+First differing element 1:
+['pas[217 chars]used']
+['pas[217 chars]used', 'fail token: a process the driver start[83 chars] it']
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+-   'pass stop: the run ended, and a wake after it is refused'])
+?                                                             ^^
+
++   'pass stop: the run ended, and a wake after it is refused',
+?                                                             ^
+
++   'fail token: a process the driver started holds a credential in a variable '
++   'the kit does not name, which the kit never gave it'])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-sent-directly]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 197, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (1, lines))
+AssertionError: Tuples differ: (1, [[221 chars]used']) != (1, [[221 chars]used', "fail token: a request reached the kit'[54 chars]er"])
+
+First differing element 1:
+['pas[217 chars]used']
+['pas[217 chars]used', "fail token: a request reached the kit'[53 chars]der"]
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+-   'pass stop: the run ended, and a wake after it is refused'])
+?                                                             ^^
+
++   'pass stop: the run ended, and a wake after it is refused',
+?                                                             ^
+
++   "fail token: a request reached the kit's fake host without the devin key in "
++   "the helper's header"])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-fake-helper]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 197, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (1, lines))
+AssertionError: Tuples differ: (1, [[221 chars]used']) != (1, [[221 chars]used', "fail token: a process that is not the [130 chars]er"])
+
+First differing element 1:
+['pas[217 chars]used']
+['pas[217 chars]used', "fail token: a process that is not the [129 chars]der"]
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+-   'pass stop: the run ended, and a wake after it is refused'])
+?                                                             ^^
+
++   'pass stop: the run ended, and a wake after it is refused',
+?                                                             ^
+
++   "fail token: a process that is not the key helper asked the kit's fake host "
++   "for the key; a request reached the kit's fake host without the devin key in "
++   "the helper's header"])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-start-refused]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 197, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (1, lines))
+AssertionError: Tuples differ: (1, [[221 chars]used']) != (1, [[221 chars]used', "fail token: start failed against the k[54 chars]op"])
+
+First differing element 1:
+['pas[217 chars]used']
+['pas[217 chars]used', "fail token: start failed against the k[53 chars]top"]
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+-   'pass stop: the run ended, and a wake after it is refused'])
+?                                                             ^^
+
++   'pass stop: the run ended, and a wake after it is refused',
+?                                                             ^
+
++   "fail token: start failed against the kit's fake host, so the kit could not "
++   'check wake and stop'])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-hidden-in-test-file]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 197, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (1, lines))
+AssertionError: Tuples differ: (1, [[221 chars]used']) != (1, [[221 chars]used', "fail token: the driver's file test_rea[44 chars]le"])
+
+First differing element 1:
+['pas[217 chars]used']
+['pas[217 chars]used', "fail token: the driver's file test_rea[43 chars]ble"]
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+-   'pass stop: the run ended, and a wake after it is refused'])
+?                                                             ^^
+
++   'pass stop: the run ended, and a wake after it is refused',
+?                                                             ^
+
++   "fail token: the driver's file test_reader.py names DEVIN_API_KEY, the key's "
++   'variable'])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-readme-names-variable]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 197, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (1, lines))
+AssertionError: Tuples differ: (1, [[221 chars]used']) != (1, [[221 chars]used', "fail token: the driver's file README.m[39 chars]le"])
+
+First differing element 1:
+['pas[217 chars]used']
+['pas[217 chars]used', "fail token: the driver's file README.m[38 chars]ble"]
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+-   'pass stop: the run ended, and a wake after it is refused'])
+?                                                             ^^
+
++   'pass stop: the run ended, and a wake after it is refused',
+?                                                             ^
+
++   "fail token: the driver's file README.md names DEVIN_API_KEY, the key's "
++   'variable'])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-readme-twice]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 197, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (1, lines))
+AssertionError: Tuples differ: (1, [[221 chars]used']) != (1, [[221 chars]used', "fail token: the driver's file README.m[39 chars]le"])
+
+First differing element 1:
+['pas[217 chars]used']
+['pas[217 chars]used', "fail token: the driver's file README.m[38 chars]ble"]
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+-   'pass stop: the run ended, and a wake after it is refused'])
+?                                                             ^^
+
++   'pass stop: the run ended, and a wake after it is refused',
+?                                                             ^
+
++   "fail token: the driver's file README.md names DEVIN_API_KEY, the key's "
++   'variable'])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-symlinked-dir]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 197, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (1, lines))
+AssertionError: Tuples differ: (1, [[221 chars]used']) != (1, [[221 chars]used', "fail token: the driver's file lib/read[43 chars]le"])
+
+First differing element 1:
+['pas[217 chars]used']
+['pas[217 chars]used', "fail token: the driver's file lib/read[42 chars]ble"]
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+-   'pass stop: the run ended, and a wake after it is refused'])
+?                                                             ^^
+
++   'pass stop: the run ended, and a wake after it is refused',
+?                                                             ^
+
++   "fail token: the driver's file lib/reader.py names DEVIN_API_KEY, the key's "
++   'variable'])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-runtime-script]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 197, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (1, lines))
+AssertionError: Tuples differ: (1, [[221 chars]used']) != (1, [[221 chars]used', "fail token: the file ../../runtime-rea[77 chars]le"])
+
+First differing element 1:
+['pas[217 chars]used']
+['pas[217 chars]used', "fail token: the file ../../runtime-rea[76 chars]ble"]
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+-   'pass stop: the run ended, and a wake after it is refused'])
+?                                                             ^^
+
++   'pass stop: the run ended, and a wake after it is refused',
+?                                                             ^
+
++   'fail token: the file ../../runtime-reader, which a process of the driver '
++   "ran, names DEVIN_API_KEY, the key's variable"])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-runtime-relative]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 197, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (1, lines))
+AssertionError: Tuples differ: (1, [[221 chars]used']) != (1, [[221 chars]used', "fail token: the file ../../runtime-rea[77 chars]le"])
+
+First differing element 1:
+['pas[217 chars]used']
+['pas[217 chars]used', "fail token: the file ../../runtime-rea[76 chars]ble"]
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+-   'pass stop: the run ended, and a wake after it is refused'])
+?                                                             ^^
+
++   'pass stop: the run ended, and a wake after it is refused',
+?                                                             ^
+
++   'fail token: the file ../../runtime-reader, which a process of the driver '
++   "ran, names DEVIN_API_KEY, the key's variable"])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-runtime-credential-path]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 197, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (1, lines))
+AssertionError: Tuples differ: (1, [[221 chars]used']) != (1, [[221 chars]used', "fail token: a file a process of the dr[76 chars]le"])
+
+First differing element 1:
+['pas[217 chars]used']
+['pas[217 chars]used', "fail token: a file a process of the dr[75 chars]ble"]
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+-   'pass stop: the run ended, and a wake after it is refused'])
+?                                                             ^^
+
++   'pass stop: the run ended, and a wake after it is refused',
+?                                                             ^
+
++   'fail token: a file a process of the driver ran, which the kit does not '
++   "name, names DEVIN_API_KEY, the key's variable"])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-local-login]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 197, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (1, lines))
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[245 chars]er']) != (1, ['pass version: openwiz:records v1, an[345 chars]er'])
+
+First differing element 0:
+0
+1
+
+Diff is 646 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_on_macos_a_key_in_an_argument_or_another_variable_is_caught (__main__.Kit.test_on_macos_a_key_in_an_argument_or_another_variable_is_caught) [key-in-args]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 207, in test_on_macos_a_key_in_an_argument_or_another_variable_is_caught
+    self.assertEqual((code, out), (1, PLANTED_KEY[name]))
+AssertionError: Tuples differ: (1, [[221 chars]used']) != (1, [[221 chars]used', 'fail token: a process the driver start[39 chars]ne'])
+
+First differing element 1:
+['pas[217 chars]used']
+['pas[217 chars]used', 'fail token: a process the driver start[38 chars]ine']
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+-   'pass stop: the run ended, and a wake after it is refused'])
+?                                                             ^^
+
++   'pass stop: the run ended, and a wake after it is refused',
+?                                                             ^
+
++   'fail token: a process the driver started holds a credential on its command '
++   'line'])
+
+======================================================================
+FAIL: test_on_macos_a_key_in_an_argument_or_another_variable_is_caught (__main__.Kit.test_on_macos_a_key_in_an_argument_or_another_variable_is_caught) [key-in-env]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 207, in test_on_macos_a_key_in_an_argument_or_another_variable_is_caught
+    self.assertEqual((code, out), (1, PLANTED_KEY[name]))
+AssertionError: Tuples differ: (1, [[221 chars]used']) != (1, [[221 chars]used', 'fail token: a process the driver start[64 chars]it'])
+
+First differing element 1:
+['pas[217 chars]used']
+['pas[217 chars]used', 'fail token: a process the driver start[63 chars] it']
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+-   'pass stop: the run ended, and a wake after it is refused'])
+?                                                             ^^
+
++   'pass stop: the run ended, and a wake after it is refused',
+?                                                             ^
+
++   'fail token: a process the driver started holds a credential in '
++   'OPENWIZ_COPY, which the kit never gave it'])
+
+======================================================================
+FAIL: test_on_macos_a_key_in_an_argument_or_another_variable_is_caught (__main__.Kit.test_on_macos_a_key_in_an_argument_or_another_variable_is_caught) [key-runtime-script]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 207, in test_on_macos_a_key_in_an_argument_or_another_variable_is_caught
+    self.assertEqual((code, out), (1, PLANTED_KEY[name]))
+AssertionError: Tuples differ: (1, [[221 chars]used']) != (1, [[221 chars]used', "fail token: the file ../../runtime-rea[77 chars]le"])
+
+First differing element 1:
+['pas[217 chars]used']
+['pas[217 chars]used', "fail token: the file ../../runtime-rea[76 chars]ble"]
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+-   'pass stop: the run ended, and a wake after it is refused'])
+?                                                             ^^
+
++   'pass stop: the run ended, and a wake after it is refused',
+?                                                             ^
+
++   'fail token: the file ../../runtime-reader, which a process of the driver '
++   "ran, names DEVIN_API_KEY, the key's variable"])
+
+======================================================================
+FAIL: test_on_macos_a_key_in_an_argument_or_another_variable_is_caught (__main__.Kit.test_on_macos_a_key_in_an_argument_or_another_variable_is_caught) [key-runtime-relative]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 207, in test_on_macos_a_key_in_an_argument_or_another_variable_is_caught
+    self.assertEqual((code, out), (1, PLANTED_KEY[name]))
+AssertionError: Tuples differ: (1, [[221 chars]used']) != (1, [[221 chars]used', "fail token: the file ../../runtime-rea[77 chars]le"])
+
+First differing element 1:
+['pas[217 chars]used']
+['pas[217 chars]used', "fail token: the file ../../runtime-rea[76 chars]ble"]
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+-   'pass stop: the run ended, and a wake after it is refused'])
+?                                                             ^^
+
++   'pass stop: the run ended, and a wake after it is refused',
+?                                                             ^
+
++   'fail token: the file ../../runtime-reader, which a process of the driver '
++   "ran, names DEVIN_API_KEY, the key's variable"])
+
+======================================================================
+FAIL: test_the_canary_never_reaches_the_driver (__main__.Kit.test_the_canary_never_reaches_the_driver)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 172, in test_the_canary_never_reaches_the_driver
+    self.assertEqual((code, out), (0, PASS[:4] + [KEY_PASS]))
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[186 chars]ed']) != (0, ['pass version: openwiz:records v1, an[345 chars]er'])
+
+First differing element 0:
+1
+0
+
+- (1,
++ (0,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+-   'pass stop: the run ended, and a wake after it is refused'])
+?                                                             ^^
+
++   'pass stop: the run ended, and a wake after it is refused',
+?                                                             ^
+
++   'pass token: no login or token passed through the driver, and on start, wake '
++   'and stop the devin key reached its host only from the key helper, in its '
++   'header'])
+
+======================================================================
+FAIL: test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without (__main__.Kit.test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without) [/tmp/openwiz/kernel/driver-kit/../../adapters/template/driver]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 226, in test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without
+    self.assertEqual(p.returncode, want, p.stdout + p.stderr)
+AssertionError: 0 != 2 : pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 2
+pass wake: the run edited builder status note 2
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+
+
+----------------------------------------------------------------------
+Ran 17 tests in 118.010s
+
+FAILED (failures=29, errors=1)

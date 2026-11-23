@@ -1,8 +1,0 @@
-# #2014 R1 green run: the same candidate refusal test with the candidate.py fix
-$ python3 -I tools/release/test_candidate.py Candidate.test_r1_a_locked_contract_packaged_at_another_contracts_path_is_refused
-ok
-
-----------------------------------------------------------------------
-Ran 1 test in 2.534s
-
-OK

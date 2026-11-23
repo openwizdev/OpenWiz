@@ -1,0 +1,14 @@
+| Step | Start | Length | Waits on | Failure |
+| --- | --- | --- | --- | --- |
+| install | 0:00 | 3:00 | agent | - |
+| build | 3:00 | - | agent | the builder stopped on a red CI |
+
+| GitHub | At |
+| --- | --- |
+| spec #49 created | 1:00 |
+| ticket #50 created | 2:00 |
+| pull request #51 created | 6:00 |
+
+Clock: 2026-11-22T08:00:00Z (the install line) to none
+Total: none: no fleet pull request has merged
+Timer waits: none

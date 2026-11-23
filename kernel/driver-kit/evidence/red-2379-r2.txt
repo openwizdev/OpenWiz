@@ -1,0 +1,78 @@
+# The synthetic test key after "Bearer" is shown as <synthetic key>.
+# #2379: the decoded non-ASCII path escape cases against the helper before that check.
+test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) ... 
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/%EF%BC%8F%EF%BC%8F] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/%C3%A9] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/%ff] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa] ... FAIL
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/%EF%BC%8F%EF%BC%8F]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/%C3%A9]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/%ff]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 82, in refused
+    self.assertEqual(self.host.requests, [], 'a refused request reached the host')
+AssertionError: Lists differ: [('POST /v1/%EF%BC%8F%EF%BC%8F HTTP/1.1', [613 chars]"}')] != []
+
+First list contains 2 additional elements.
+First extra element 0:
+('POST /v1/%EF%BC%8F%EF%BC%8F HTTP/1.1', [('Host', '127.0.0.1:36423'), ('Accept-Encoding', 'identity'), ('Content-Length', '16'), ('Authorization', 'Bearer <synthetic key>'), ('Accept', 'application/json'), ('User-Agent', 'openwiz-hostkey/1'), ('Content-Type', 'application/json')], b'{"prompt": "hi"}')
+
+Diff is 747 characters long. Set self.maxDiff to None to see it. : a refused request reached the host
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 82, in refused
+    self.assertEqual(self.host.requests, [], 'a refused request reached the host')
+AssertionError: Lists differ: [('POST /v1/%EF%BC%8F%EF%BC%8F HTTP/1.1', [613 chars]"}')] != []
+
+First list contains 2 additional elements.
+First extra element 0:
+('POST /v1/%EF%BC%8F%EF%BC%8F HTTP/1.1', [('Host', '127.0.0.1:36423'), ('Accept-Encoding', 'identity'), ('Content-Length', '16'), ('Authorization', 'Bearer <synthetic key>'), ('Accept', 'application/json'), ('User-Agent', 'openwiz-hostkey/1'), ('Content-Type', 'application/json')], b'{"prompt": "hi"}')
+
+Diff is 747 characters long. Set self.maxDiff to None to see it. : a refused request reached the host
+
+----------------------------------------------------------------------
+Ran 1 test in 1.219s
+
+FAILED (failures=4)

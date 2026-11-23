@@ -1,0 +1,39 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/test_heads.py -k quoting -k hosts_outside   # agent-CLI refusal stubs first on PATH; red: heads.py at 62b6c4c, before rulings R2 and R9
+test_a_kit_line_quoting_a_path_the_repository_or_the_login_is_withheld_from_the_record_and_comment (__main__.Heads.test_a_kit_line_quoting_a_path_the_repository_or_the_login_is_withheld_from_the_record_and_comment) ... FAIL
+test_hosts_outside_the_checkout_or_untracked_in_it_exit_2_and_run_nothing (__main__.Heads.test_hosts_outside_the_checkout_or_untracked_in_it_exit_2_and_run_nothing) ... FAIL
+
+======================================================================
+FAIL: test_a_kit_line_quoting_a_path_the_repository_or_the_login_is_withheld_from_the_record_and_comment (__main__.Heads.test_a_kit_line_quoting_a_path_the_repository_or_the_login_is_withheld_from_the_record_and_comment)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_heads.py", line 322, in test_a_kit_line_quoting_a_path_the_repository_or_the_login_is_withheld_from_the_record_and_comment
+    self.assertEqual(record['stdout'].splitlines()[:2], [
+AssertionError: Lists differ: ['pas[69 chars]art: cannot start <repository> in <worktree>/adapters/quoting'] != ['pas[69 chars]art: withheld']
+
+First differing element 1:
+'fail start: cannot start <repository> in <worktree>/adapters/quoting'
+'fail start: withheld'
+
+  ['pass version: openwiz:records v1, and the schema is driver v1',
+-  'fail start: cannot start <repository> in <worktree>/adapters/quoting']
++  'fail start: withheld']
+
+======================================================================
+FAIL: test_hosts_outside_the_checkout_or_untracked_in_it_exit_2_and_run_nothing (__main__.Heads.test_hosts_outside_the_checkout_or_untracked_in_it_exit_2_and_run_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_heads.py", line 333, in test_hosts_outside_the_checkout_or_untracked_in_it_exit_2_and_run_nothing
+    self.assertEqual(self.heads(['fixture-paid'], folder=os.path.join(FIX, 'hosts'))[:2], (2, ''))
+AssertionError: Tuples differ: (0, 'skipped fixture-paid: cost\n') != (2, '')
+
+First differing element 0:
+0
+2
+
+- (0, 'skipped fixture-paid: cost\n')
++ (2, '')
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.653s
+
+FAILED (failures=2)

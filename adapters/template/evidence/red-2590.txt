@@ -1,0 +1,53 @@
+# Red run (#2590): env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/template/test_driver.py, the new effort tests before the driver change; stubs for every agent CLI first on PATH, the tests' own pinned PATH inside.
+test_an_effort_it_does_not_pass_is_refused_and_nothing_starts (__main__.Template.test_an_effort_it_does_not_pass_is_refused_and_nothing_starts) ... 
+test_an_effort_that_is_not_a_word_is_refused_as_input (__main__.Template.test_an_effort_that_is_not_a_word_is_refused_as_input) ... 
+test_no_harness_outside_the_fixtures_is_on_the_tests_path (__main__.Template.test_no_harness_outside_the_fixtures_is_on_the_tests_path) ... ok
+test_save_failure_after_spawn_reports_unknown (__main__.Template.test_save_failure_after_spawn_reports_unknown) ... ok
+test_start_passes_its_effort_to_the_harness_and_wake_passes_it_again (__main__.Template.test_start_passes_its_effort_to_the_harness_and_wake_passes_it_again) ... 
+test_start_record_is_not_wakeable_before_it_is_confirmed (__main__.Template.test_start_record_is_not_wakeable_before_it_is_confirmed) ... ok
+test_start_with_nowhere_to_save_starts_nothing (__main__.Template.test_start_with_nowhere_to_save_starts_nothing) ... ok
+test_start_without_effort_passes_none (__main__.Template.test_start_without_effort_passes_none) ... ok
+test_stop_ends_a_worker_with_a_clean_environment (__main__.Template.test_stop_ends_a_worker_with_a_clean_environment) ... ok
+test_stop_ends_the_run_when_it_cannot_save (__main__.Template.test_stop_ends_the_run_when_it_cannot_save) ... ok
+test_stop_ends_what_the_turn_left_behind_after_it_exits (__main__.Template.test_stop_ends_what_the_turn_left_behind_after_it_exits) ... ok
+test_the_cant_form_leaves_effort_out_of_can_and_refuses_it_as_input (__main__.Template.test_the_cant_form_leaves_effort_out_of_can_and_refuses_it_as_input) ... FAIL
+test_version_lists_effort_and_the_readme_says_how_under_its_login_line (__main__.Template.test_version_lists_effort_and_the_readme_says_how_under_its_login_line) ... FAIL
+test_wake_checks_its_save_before_and_after_spawn (__main__.Template.test_wake_checks_its_save_before_and_after_spawn) ... ok
+test_wake_while_a_turn_runs_starts_no_second_turn (__main__.Template.test_wake_while_a_turn_runs_starts_no_second_turn) ... ok
+test_without_proc_as_on_macos_stop_ends_a_worker_handed_off_as_the_turn_exits (__main__.Template.test_without_proc_as_on_macos_stop_ends_a_worker_handed_off_as_the_turn_exits) ... ok
+test_without_proc_as_on_macos_stop_ends_each_grandchild (__main__.Template.test_without_proc_as_on_macos_stop_ends_each_grandchild) ... ok
+test_without_proc_as_on_macos_stop_says_when_lsof_cannot_check_the_output_file (__main__.Template.test_without_proc_as_on_macos_stop_says_when_lsof_cannot_check_the_output_file) ... ok
+FAIL: test_an_effort_it_does_not_pass_is_refused_and_nothing_starts (__main__.Template.test_an_effort_it_does_not_pass_is_refused_and_nothing_starts) (effort='turbo')
+AssertionError: 'send only those fields; never a login' != "this host can't set effort: remove the e[81 chars]ault"
+FAIL: test_an_effort_it_does_not_pass_is_refused_and_nothing_starts (__main__.Template.test_an_effort_it_does_not_pass_is_refused_and_nothing_starts) (effort='minimal')
+AssertionError: 'send only those fields; never a login' != "this host can't set effort: remove the e[81 chars]ault"
+FAIL: test_an_effort_it_does_not_pass_is_refused_and_nothing_starts (__main__.Template.test_an_effort_it_does_not_pass_is_refused_and_nothing_starts) (effort='none')
+AssertionError: 'send only those fields; never a login' != "this host can't set effort: remove the e[81 chars]ault"
+FAIL: test_an_effort_it_does_not_pass_is_refused_and_nothing_starts (__main__.Template.test_an_effort_it_does_not_pass_is_refused_and_nothing_starts) (effort='medium-high')
+AssertionError: 'send only those fields; never a login' != "this host can't set effort: remove the e[81 chars]ault"
+FAIL: test_an_effort_that_is_not_a_word_is_refused_as_input (__main__.Template.test_an_effort_that_is_not_a_word_is_refused_as_input) (effort='Medium')
+AssertionError: {'error': 'the input needs exactly repository, ticke[70 chars]gin'} != {'error': 'effort is not valid', 'next': 'fix effort[22 chars]ows'}
+FAIL: test_an_effort_that_is_not_a_word_is_refused_as_input (__main__.Template.test_an_effort_that_is_not_a_word_is_refused_as_input) (effort='')
+AssertionError: {'error': 'the input needs exactly repository, ticke[70 chars]gin'} != {'error': 'effort is not valid', 'next': 'fix effort[22 chars]ows'}
+FAIL: test_an_effort_that_is_not_a_word_is_refused_as_input (__main__.Template.test_an_effort_that_is_not_a_word_is_refused_as_input) (effort='xxxxxxxxxxxxxxxxxxxxx')
+AssertionError: {'error': 'the input needs exactly repository, ticke[70 chars]gin'} != {'error': 'effort is not valid', 'next': 'fix effort[22 chars]ows'}
+FAIL: test_an_effort_that_is_not_a_word_is_refused_as_input (__main__.Template.test_an_effort_that_is_not_a_word_is_refused_as_input) (effort=7)
+AssertionError: {'error': 'the input needs exactly repository, ticke[70 chars]gin'} != {'error': 'effort is not valid', 'next': 'fix effort[22 chars]ows'}
+FAIL: test_an_effort_that_is_not_a_word_is_refused_as_input (__main__.Template.test_an_effort_that_is_not_a_word_is_refused_as_input) (effort=None)
+AssertionError: {'error': 'the input needs exactly repository, ticke[70 chars]gin'} != {'error': 'effort is not valid', 'next': 'fix effort[22 chars]ows'}
+FAIL: test_start_passes_its_effort_to_the_harness_and_wake_passes_it_again (__main__.Template.test_start_passes_its_effort_to_the_harness_and_wake_passes_it_again) (effort='low')
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+FAIL: test_start_passes_its_effort_to_the_harness_and_wake_passes_it_again (__main__.Template.test_start_passes_its_effort_to_the_harness_and_wake_passes_it_again) (effort='medium')
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+FAIL: test_start_passes_its_effort_to_the_harness_and_wake_passes_it_again (__main__.Template.test_start_passes_its_effort_to_the_harness_and_wake_passes_it_again) (effort='high')
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+FAIL: test_start_passes_its_effort_to_the_harness_and_wake_passes_it_again (__main__.Template.test_start_passes_its_effort_to_the_harness_and_wake_passes_it_again) (effort='xhigh')
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+FAIL: test_start_passes_its_effort_to_the_harness_and_wake_passes_it_again (__main__.Template.test_start_passes_its_effort_to_the_harness_and_wake_passes_it_again) (effort='max')
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+FAIL: test_the_cant_form_leaves_effort_out_of_can_and_refuses_it_as_input (__main__.Template.test_the_cant_form_leaves_effort_out_of_can_and_refuses_it_as_input)
+AssertionError: 'drop `effort` from `can`' not found in '# Driver template\n\nLogin: stays on your machine\n\nThe smallest [driver v1](../../kernel/driver.v1.md): one Python file, standard library only. **Platforms:** Linux and macOS, Pytho
+FAIL: test_version_lists_effort_and_the_readme_says_how_under_its_login_line (__main__.Template.test_version_lists_effort_and_the_readme_says_how_under_its_login_line)
+AssertionError: 'effort' not found in ['start', 'wake', 'stop']
+Ran 19 tests in 17.506s
+FAILED (failures=16)

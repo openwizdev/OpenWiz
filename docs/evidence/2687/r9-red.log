@@ -1,0 +1,26 @@
+F
+======================================================================
+FAIL: test_a_system_gh_whose_copy_is_written_before_it_is_sealed_gets_nothing (__main__.SystemGh.test_a_system_gh_whose_copy_is_written_before_it_is_sealed_gets_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/github-app/test_agent_token.py", line 1055, in test_a_system_gh_whose_copy_is_written_before_it_is_sealed_gets_nothing
+    self.assert_withheld(*self.run_gh(self.table(), at_seal=write_copy), "the gh this run chose was changed",
+  File "<checkout>/tools/github-app/test_agent_token.py", line 932, in assert_withheld
+    self.assertEqual((code, ran), (128, []), "no gh runs with the token")
+AssertionError: Tuples differ: ('exec intercepted', [('/proc/self/fd/7', [118 chars]ue)]) != (128, [])
+
+First differing element 0:
+'exec intercepted'
+128
+
++ (128, [])
+- ('exec intercepted',
+-  [('/proc/self/fd/7',
+-    '#!/bin/sh\n# synthetic rogue gh\nexit 0\n#',
+-    ['/home/synthetic-agent/tmpSYNTH/usr-local-bin/gh', 'pr', 'list'],
+-    True)]) : no gh runs with the token
+
+----------------------------------------------------------------------
+Ran 1 test in Ns
+
+FAILED (failures=1)

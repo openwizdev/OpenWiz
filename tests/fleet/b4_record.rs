@@ -349,7 +349,7 @@ fn record(value: &Value) -> StartRecord {
 
 #[test]
 fn the_store_keeps_records_owner_only_and_writes_only_under_the_lock() {
-    let fake = Fake::new("b4_store", vec![]);
+    let fake = Fake::new("b4_store");
     let (first, second) = (fake.starts(), fake.starts());
     let request = builder(7);
     let pending = record(&good());

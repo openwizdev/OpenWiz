@@ -1,1 +1,0 @@
-{"fleet": "ticket/fleet.md", "ticket": "ticket/ticket.json", "comments": [{"author": "example-user", "file": "ticket/start-record.md"}], "caller": {"global": {"commit.gpgsign": "true", "tag.gpgsign": "true", "gpg.program": "<signer>", "core.hooksPath": "<hooks>"}, "env": {"commit.gpgsign": "true", "gpg.program": "<signer>", "core.hooksPath": "<hooks>"}}}

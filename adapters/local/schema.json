@@ -36,7 +36,8 @@
         "wake",
         "stop",
         "many-at-once",
-        "own-sandbox"
+        "own-sandbox",
+        "effort"
        ]
       },
       "allOf": [
@@ -100,6 +101,10 @@
      "model": {
       "type": "string",
       "pattern": "^[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}$"
+     },
+     "effort": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,19}$"
      }
     }
    },

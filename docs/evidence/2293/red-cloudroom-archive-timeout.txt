@@ -1,0 +1,14 @@
+test_a_start_whose_cleanup_archive_times_out_still_names_its_run (__main__.Driver.test_a_start_whose_cleanup_archive_times_out_still_names_its_run) ... FAIL
+
+======================================================================
+FAIL: test_a_start_whose_cleanup_archive_times_out_still_names_its_run (__main__.Driver.test_a_start_whose_cleanup_archive_times_out_still_names_its_run)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 542, in test_a_start_whose_cleanup_archive_times_out_still_names_its_run
+    self.assertIn(run, e.exception.args[0])
+AssertionError: 'run-0123456789ab' not found in 'room-cli thread archive did not answer within 100 seconds; its outcome is unknown'
+
+----------------------------------------------------------------------
+Ran 1 test in 0.001s
+
+FAILED (failures=1)

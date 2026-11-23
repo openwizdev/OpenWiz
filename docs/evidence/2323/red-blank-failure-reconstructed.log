@@ -1,0 +1,20 @@
+Reconstructed pre-fix evidence for #2323 (recorded after the fix).
+
+Current test from 88187a0d574d19b635f8393a91b0cca50b2bc51f, using only bench.py from bb7e62907e331e544a9dacdb860320cd6e7fdfcd in a scratch copy.
+The reader accepts a whitespace-only --failure and exits 0, which triggers the assertion below.
+
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I tools/bench/first-fleet/test_bench.py Mark.test_mark_refuses_an_unknown_step_or_wait
+
+F
+======================================================================
+FAIL: test_mark_refuses_an_unknown_step_or_wait (__main__.Mark.test_mark_refuses_an_unknown_step_or_wait) (args=('grill', 'user', '--failure', ' '))
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/bench/first-fleet/test_bench.py", line 194, in test_mark_refuses_an_unknown_step_or_wait
+    self.assertNotEqual(r.returncode, 0)
+AssertionError: 0 == 0
+
+----------------------------------------------------------------------
+Ran 1 test in 0.111s
+
+FAILED (failures=1)

@@ -1,0 +1,15 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/vps/test_hosts.py -v   # green after review R1-R7; agent-CLI refusal stubs first on PATH
+test_the_five_configs_load_through_rig_load_host (__main__.Configs.test_the_five_configs_load_through_rig_load_host) ... ok
+test_every_row_cites_the_driver_readme_and_the_tools_docs_and_says_whether_it_bills (__main__.Page.test_every_row_cites_the_driver_readme_and_the_tools_docs_and_says_whether_it_bills) ... ok
+test_the_page_has_exactly_one_row_per_host_in_hosts (__main__.Page.test_the_page_has_exactly_one_row_per_host_in_hosts) ... ok
+test_the_page_holds_names_never_values (__main__.Page.test_the_page_holds_names_never_values) ... ok
+test_the_page_names_each_hand_check_the_probes_cannot_make (__main__.Page.test_the_page_names_each_hand_check_the_probes_cannot_make) ... ok
+test_the_paid_command_is_given_once_with_post_and_no_shell_placeholder (__main__.Page.test_the_paid_command_is_given_once_with_post_and_no_shell_placeholder) ... ok
+test_the_session_is_written_out_in_order (__main__.Page.test_the_session_is_written_out_in_order) ... ok
+test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) ... ok
+test_status_checks_call_only_read_only_status_commands (__main__.Skips.test_status_checks_call_only_read_only_status_commands) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 1.801s
+
+OK

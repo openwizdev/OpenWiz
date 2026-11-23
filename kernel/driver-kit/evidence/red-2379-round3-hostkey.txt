@@ -1,0 +1,693 @@
+# #2379 second fix round: the helper's tests for R7 (no fallback may hold a candidate key) and for the fetched test key (R4: the canary never enters the driver), against 17cb430's helper, with the kit's FakeHost now serving the test key.
+test_a_body_strict_json_cannot_hold_comes_back_null_with_its_status (__main__.Helper.test_a_body_strict_json_cannot_hold_comes_back_null_with_its_status) ...
+  test_a_body_strict_json_cannot_hold_comes_back_null_with_its_status (__main__.Helper.test_a_body_strict_json_cannot_hold_comes_back_null_with_its_status) [b'{"n": 1e400}'] ... FAIL
+  test_a_body_strict_json_cannot_hold_comes_back_null_with_its_status (__main__.Helper.test_a_body_strict_json_cannot_hold_comes_back_null_with_its_status) [b'[-1e999]'] ... FAIL
+test_a_good_request_reaches_the_registered_host_with_the_key_only_in_its_header (__main__.Helper.test_a_good_request_reaches_the_registered_host_with_the_key_only_in_its_header) ... FAIL
+test_a_host_not_in_the_registry_is_refused (__main__.Helper.test_a_host_not_in_the_registry_is_refused) ... ok
+test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ...
+  test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value\n'] ... FAIL
+  test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value x'] ... FAIL
+  test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['a\rb'] ... FAIL
+  test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value\t'] ... FAIL
+  test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Valueé'] ... FAIL
+  test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['short-key-15chr'] ... FAIL
+  test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value"q'] ... FAIL
+  test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value\\'] ... FAIL
+  test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value:'] ... FAIL
+  test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'] ... FAIL
+test_a_key_that_fits_inside_the_helpers_own_texts_is_never_printed (__main__.Helper.test_a_key_that_fits_inside_the_helpers_own_texts_is_never_printed) ...
+  test_a_key_that_fits_inside_the_helpers_own_texts_is_never_printed (__main__.Helper.test_a_key_that_fits_inside_the_helpers_own_texts_is_never_printed) [the] ... FAIL
+test_a_method_outside_the_three_is_refused (__main__.Helper.test_a_method_outside_the_three_is_refused) ... ok
+test_a_non_json_answer_comes_back_as_a_null_body (__main__.Helper.test_a_non_json_answer_comes_back_as_a_null_body) ...
+  test_a_non_json_answer_comes_back_as_a_null_body (__main__.Helper.test_a_non_json_answer_comes_back_as_a_null_body) [b''] ... FAIL
+  test_a_non_json_answer_comes_back_as_a_null_body (__main__.Helper.test_a_non_json_answer_comes_back_as_a_null_body) [b'not json'] ... FAIL
+  test_a_non_json_answer_comes_back_as_a_null_body (__main__.Helper.test_a_non_json_answer_comes_back_as_a_null_body) [b'{"n": NaN}'] ... FAIL
+  test_a_non_json_answer_comes_back_as_a_null_body (__main__.Helper.test_a_non_json_answer_comes_back_as_a_null_body) [b'\xff'] ... FAIL
+test_a_redirect_comes_back_as_its_status_and_is_never_followed (__main__.Helper.test_a_redirect_comes_back_as_its_status_and_is_never_followed) ...
+  test_a_redirect_comes_back_as_its_status_and_is_never_followed (__main__.Helper.test_a_redirect_comes_back_as_its_status_and_is_never_followed) [301] ... FAIL
+  test_a_redirect_comes_back_as_its_status_and_is_never_followed (__main__.Helper.test_a_redirect_comes_back_as_its_status_and_is_never_followed) [302] ... FAIL
+  test_a_redirect_comes_back_as_its_status_and_is_never_followed (__main__.Helper.test_a_redirect_comes_back_as_its_status_and_is_never_followed) [303] ... FAIL
+  test_a_redirect_comes_back_as_its_status_and_is_never_followed (__main__.Helper.test_a_redirect_comes_back_as_its_status_and_is_never_followed) [307] ... FAIL
+  test_a_redirect_comes_back_as_its_status_and_is_never_followed (__main__.Helper.test_a_redirect_comes_back_as_its_status_and_is_never_followed) [308] ... FAIL
+test_a_request_that_holds_the_key_is_refused_before_it_is_sent (__main__.Helper.test_a_request_that_holds_the_key_is_refused_before_it_is_sent) ...
+  test_a_request_that_holds_the_key_is_refused_before_it_is_sent (__main__.Helper.test_a_request_that_holds_the_key_is_refused_before_it_is_sent) [{'host': 'devin', 'method': 'POST', 'path': '/v1/synthetic-host-key-Kit0ValueKit0ValueKit0Value', 'body': {'prompt': 'hi'}}] ... FAIL
+  test_a_request_that_holds_the_key_is_refused_before_it_is_sent (__main__.Helper.test_a_request_that_holds_the_key_is_refused_before_it_is_sent) [{'host': 'devin', 'method': 'POST', 'path': '/v1?k=synthetic-host-key-Kit0ValueKit0ValueKit0Value', 'body': {'prompt': 'hi'}}] ... FAIL
+  test_a_request_that_holds_the_key_is_refused_before_it_is_sent (__main__.Helper.test_a_request_that_holds_the_key_is_refused_before_it_is_sent) [{'host': 'devin', 'method': 'POST', 'path': '/v1/%73ynthetic-ho%73t-key-Kit0ValueKit0ValueKit0Value', 'body': {'prompt': 'hi'}}] ... FAIL
+  test_a_request_that_holds_the_key_is_refused_before_it_is_sent (__main__.Helper.test_a_request_that_holds_the_key_is_refused_before_it_is_sent) [{'host': 'devin', 'method': 'POST', 'path': '/v3/organizations/org-syn1/sessions', 'body': {'k': 'synthetic-host-key-Kit0ValueKit0ValueKit0Value'}}] ... FAIL
+  test_a_request_that_holds_the_key_is_refused_before_it_is_sent (__main__.Helper.test_a_request_that_holds_the_key_is_refused_before_it_is_sent) [{'host': 'devin', 'method': 'POST', 'path': '/v3/organizations/org-syn1/sessions', 'body': {'synthetic-host-key-Kit0ValueKit0ValueKit0Value': 1}}] ... FAIL
+  test_a_request_that_holds_the_key_is_refused_before_it_is_sent (__main__.Helper.test_a_request_that_holds_the_key_is_refused_before_it_is_sent) [{'host': 'devin', 'method': 'POST', 'path': '/v3/organizations/org-syn1/sessions', 'body': {'k': ['xsynthetic-host-key-Kit0ValueKit0ValueKit0Valuey']}}] ... FAIL
+test_an_answer_that_holds_the_key_is_dropped (__main__.Helper.test_an_answer_that_holds_the_key_is_dropped) ...
+  test_an_answer_that_holds_the_key_is_dropped (__main__.Helper.test_an_answer_that_holds_the_key_is_dropped) [b'{"echo": "Bearer <synthetic key>"}'] ... FAIL
+  test_an_answer_that_holds_the_key_is_dropped (__main__.Helper.test_an_answer_that_holds_the_key_is_dropped) [b'<p>synthetic-host-key-Kit0ValueKit0ValueKit0Value</p>'] ... FAIL
+  test_an_answer_that_holds_the_key_is_dropped (__main__.Helper.test_an_answer_that_holds_the_key_is_dropped) [b'{"k": "\\u0073ynthetic-ho\\u0073t-key-Kit0ValueKit0ValueKit0Value"}'] ... FAIL
+  test_an_answer_that_holds_the_key_is_dropped (__main__.Helper.test_an_answer_that_holds_the_key_is_dropped) [b'{"synthetic-host-key-Kit0ValueKit0ValueKit0Value": 1}'] ... FAIL
+test_an_unreachable_host_is_an_error_without_the_key (__main__.Helper.test_an_unreachable_host_is_an_error_without_the_key) ... FAIL
+test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) ... ok
+test_every_output_path_including_its_fallbacks_holds_no_key (__main__.Helper.test_every_output_path_including_its_fallbacks_holds_no_key) ...
+  test_every_output_path_including_its_fallbacks_holds_no_key (__main__.Helper.test_every_output_path_including_its_fallbacks_holds_no_key) [['{']] ... FAIL
+  test_every_output_path_including_its_fallbacks_holds_no_key (__main__.Helper.test_every_output_path_including_its_fallbacks_holds_no_key) [['e']] ... FAIL
+  test_every_output_path_including_its_fallbacks_holds_no_key (__main__.Helper.test_every_output_path_including_its_fallbacks_holds_no_key) [['"']] ... FAIL
+test_get_and_delete_with_no_body_and_a_query (__main__.Helper.test_get_and_delete_with_no_body_and_a_query) ...
+  test_get_and_delete_with_no_body_and_a_query (__main__.Helper.test_get_and_delete_with_no_body_and_a_query) [GET] ... FAIL
+  test_get_and_delete_with_no_body_and_a_query (__main__.Helper.test_get_and_delete_with_no_body_and_a_query) [DELETE] ... FAIL
+test_input_that_is_not_exactly_the_request_is_refused (__main__.Helper.test_input_that_is_not_exactly_the_request_is_refused) ... ok
+test_native_tls_configuration_from_the_environment_never_reaches_the_helper (__main__.Helper.test_native_tls_configuration_from_the_environment_never_reaches_the_helper) ... ok
+test_the_helper_ignores_proxy_variables (__main__.Helper.test_the_helper_ignores_proxy_variables) ... FAIL
+test_the_helper_runs_only_in_isolated_mode (__main__.Helper.test_the_helper_runs_only_in_isolated_mode) ... ok
+test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) ... ok
+test_under_the_override_no_production_key_is_ever_read (__main__.Helper.test_under_the_override_no_production_key_is_ever_read) ...
+  test_under_the_override_no_production_key_is_ever_read (__main__.Helper.test_under_the_override_no_production_key_is_ever_read) [{}] ... FAIL
+  test_under_the_override_no_production_key_is_ever_read (__main__.Helper.test_under_the_override_no_production_key_is_ever_read) [{'DEVIN_API_KEY': None}] ... FAIL
+  test_under_the_override_no_production_key_is_ever_read (__main__.Helper.test_under_the_override_no_production_key_is_ever_read) [{'OPENWIZ_HOSTKEY_TEST_KEY': 'synthetic-host-key-Kit0ValueKit0ValueKit0Value'}] ... FAIL
+test_under_the_override_no_production_key_is_ever_read (__main__.Helper.test_under_the_override_no_production_key_is_ever_read) ... ERROR
+test_a_failed_or_empty_keychain_is_a_missing_key (__main__.Keychain.test_a_failed_or_empty_keychain_is_a_missing_key) ... ok
+test_an_empty_variable_reads_the_keychain_from_its_trusted_path_with_a_minimal_environment (__main__.Keychain.test_an_empty_variable_reads_the_keychain_from_its_trusted_path_with_a_minimal_environment) ... ok
+test_the_variable_wins_and_no_tool_runs (__main__.Keychain.test_the_variable_wins_and_no_tool_runs) ... ok
+test_tls_is_verified_with_the_system_defaults_and_ignores_cert_variables (__main__.Keychain.test_tls_is_verified_with_the_system_defaults_and_ignores_cert_variables) ... ok
+test_under_the_test_override_neither_production_source_is_read (__main__.Keychain.test_under_the_test_override_neither_production_source_is_read) ...
+  test_under_the_test_override_neither_production_source_is_read (__main__.Keychain.test_under_the_test_override_neither_production_source_is_read) [{}] ... FAIL
+  test_under_the_test_override_neither_production_source_is_read (__main__.Keychain.test_under_the_test_override_neither_production_source_is_read) [{'DEVIN_API_KEY': 'synthetic-production-key-Kit0ValueKit0ValueKit0Value'}] ... FAIL
+  test_under_the_test_override_neither_production_source_is_read (__main__.Keychain.test_under_the_test_override_neither_production_source_is_read) [{'OPENWIZ_HOSTKEY_TEST_KEY': 'synthetic-host-key-Kit0ValueKit0ValueKit0Value'}] ... FAIL
+test_under_the_test_override_neither_production_source_is_read (__main__.Keychain.test_under_the_test_override_neither_production_source_is_read) ... ERROR
+
+======================================================================
+ERROR: test_under_the_override_no_production_key_is_ever_read (__main__.Helper.test_under_the_override_no_production_key_is_ever_read)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 197, in test_under_the_override_no_production_key_is_ever_read
+    self.assertEqual([v for k, v in self.host.requests[0][1] if k == 'Authorization'], ['Bearer ' + KEY])
+                                    ~~~~~~~~~~~~~~~~~~^^^
+IndexError: list index out of range
+
+======================================================================
+ERROR: test_under_the_test_override_neither_production_source_is_read (__main__.Keychain.test_under_the_test_override_neither_production_source_is_read)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 371, in test_under_the_test_override_neither_production_source_is_read
+    self.assertEqual(self.lookup(OPENWIZ_HOSTKEY_TEST_ORIGIN=serving.origin, DEVIN_API_KEY=PRODUCTION), KEY)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 314, in lookup
+    return self.hostkey.find_key(self.entry, {k: v for k, v in environ.items() if v is not None})
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/hostkey.py", line 153, in find_key
+    raise Refused('no test key in %s; under %s the helper never reads %s' % (TEST_KEY, OVERRIDE, names),
+hostkey.Refused: ('no test key in OPENWIZ_HOSTKEY_TEST_KEY; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY or the keychain entry openwiz-devin', "set OPENWIZ_HOSTKEY_TEST_KEY to a synthetic key; it and the override are only for the kit's tests")
+
+======================================================================
+FAIL: test_a_body_strict_json_cannot_hold_comes_back_null_with_its_status (__main__.Helper.test_a_body_strict_json_cannot_hold_comes_back_null_with_its_status) [b'{"n": 1e400}']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 211, in test_a_body_strict_json_cannot_hold_comes_back_null_with_its_status
+    self.assertEqual(self.run_helper(GOOD, OPENWIZ_HOSTKEY_TEST_ORIGIN=host.origin),
+AssertionError: Tuples differ: (1, {'error': 'no test key in OPENWIZ_HOST[227 chars]ts"}) != (0, {'status': 200, 'body': None})
+
+First differing element 0:
+1
+0
+
++ (0, {'body': None, 'status': 200})
+- (1,
+-  {'error': 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under '
+-            'OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY '
+-            'or the keychain entry openwiz-devin',
+-   'next': 'set OPENWIZ_HOSTKEY_TEST_KEY to a synthetic key; it and the '
+-           "override are only for the kit's tests"})
+
+======================================================================
+FAIL: test_a_body_strict_json_cannot_hold_comes_back_null_with_its_status (__main__.Helper.test_a_body_strict_json_cannot_hold_comes_back_null_with_its_status) [b'[-1e999]']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 211, in test_a_body_strict_json_cannot_hold_comes_back_null_with_its_status
+    self.assertEqual(self.run_helper(GOOD, OPENWIZ_HOSTKEY_TEST_ORIGIN=host.origin),
+AssertionError: Tuples differ: (1, {'error': 'no test key in OPENWIZ_HOST[227 chars]ts"}) != (0, {'status': 200, 'body': None})
+
+First differing element 0:
+1
+0
+
++ (0, {'body': None, 'status': 200})
+- (1,
+-  {'error': 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under '
+-            'OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY '
+-            'or the keychain entry openwiz-devin',
+-   'next': 'set OPENWIZ_HOSTKEY_TEST_KEY to a synthetic key; it and the '
+-           "override are only for the kit's tests"})
+
+======================================================================
+FAIL: test_a_good_request_reaches_the_registered_host_with_the_key_only_in_its_header (__main__.Helper.test_a_good_request_reaches_the_registered_host_with_the_key_only_in_its_header)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 95, in test_a_good_request_reaches_the_registered_host_with_the_key_only_in_its_header
+    self.assertEqual((code, out), (0, {'status': 200, 'body': {}}))
+AssertionError: Tuples differ: (1, {'error': 'no test key in OPENWIZ_HOST[227 chars]ts"}) != (0, {'status': 200, 'body': {}})
+
+First differing element 0:
+1
+0
+
++ (0, {'body': {}, 'status': 200})
+- (1,
+-  {'error': 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under '
+-            'OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY '
+-            'or the keychain entry openwiz-devin',
+-   'next': 'set OPENWIZ_HOSTKEY_TEST_KEY to a synthetic key; it and the '
+-           "override are only for the kit's tests"})
+
+======================================================================
+FAIL: test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value\n']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 254, in test_a_key_outside_the_supported_format_is_refused_without_its_value
+    self.assertIn('is not a key of 16 to 4096 letters, digits or ._~+/=-', out['error'])
+AssertionError: 'is not a key of 16 to 4096 letters, digits or ._~+/=-' not found in 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY or the keychain entry openwiz-devin'
+
+======================================================================
+FAIL: test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value x']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 254, in test_a_key_outside_the_supported_format_is_refused_without_its_value
+    self.assertIn('is not a key of 16 to 4096 letters, digits or ._~+/=-', out['error'])
+AssertionError: 'is not a key of 16 to 4096 letters, digits or ._~+/=-' not found in 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY or the keychain entry openwiz-devin'
+
+======================================================================
+FAIL: test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['a\rb']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 254, in test_a_key_outside_the_supported_format_is_refused_without_its_value
+    self.assertIn('is not a key of 16 to 4096 letters, digits or ._~+/=-', out['error'])
+AssertionError: 'is not a key of 16 to 4096 letters, digits or ._~+/=-' not found in 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY or the keychain entry openwiz-devin'
+
+======================================================================
+FAIL: test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value\t']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 254, in test_a_key_outside_the_supported_format_is_refused_without_its_value
+    self.assertIn('is not a key of 16 to 4096 letters, digits or ._~+/=-', out['error'])
+AssertionError: 'is not a key of 16 to 4096 letters, digits or ._~+/=-' not found in 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY or the keychain entry openwiz-devin'
+
+======================================================================
+FAIL: test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Valueé']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 254, in test_a_key_outside_the_supported_format_is_refused_without_its_value
+    self.assertIn('is not a key of 16 to 4096 letters, digits or ._~+/=-', out['error'])
+AssertionError: 'is not a key of 16 to 4096 letters, digits or ._~+/=-' not found in 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY or the keychain entry openwiz-devin'
+
+======================================================================
+FAIL: test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['short-key-15chr']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 254, in test_a_key_outside_the_supported_format_is_refused_without_its_value
+    self.assertIn('is not a key of 16 to 4096 letters, digits or ._~+/=-', out['error'])
+AssertionError: 'is not a key of 16 to 4096 letters, digits or ._~+/=-' not found in 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY or the keychain entry openwiz-devin'
+
+======================================================================
+FAIL: test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value"q']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 254, in test_a_key_outside_the_supported_format_is_refused_without_its_value
+    self.assertIn('is not a key of 16 to 4096 letters, digits or ._~+/=-', out['error'])
+AssertionError: 'is not a key of 16 to 4096 letters, digits or ._~+/=-' not found in 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY or the keychain entry openwiz-devin'
+
+======================================================================
+FAIL: test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value\\']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 254, in test_a_key_outside_the_supported_format_is_refused_without_its_value
+    self.assertIn('is not a key of 16 to 4096 letters, digits or ._~+/=-', out['error'])
+AssertionError: 'is not a key of 16 to 4096 letters, digits or ._~+/=-' not found in 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY or the keychain entry openwiz-devin'
+
+======================================================================
+FAIL: test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value:']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 254, in test_a_key_outside_the_supported_format_is_refused_without_its_value
+    self.assertIn('is not a key of 16 to 4096 letters, digits or ._~+/=-', out['error'])
+AssertionError: 'is not a key of 16 to 4096 letters, digits or ._~+/=-' not found in 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY or the keychain entry openwiz-devin'
+
+======================================================================
+FAIL: test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 254, in test_a_key_outside_the_supported_format_is_refused_without_its_value
+    self.assertIn('is not a key of 16 to 4096 letters, digits or ._~+/=-', out['error'])
+AssertionError: 'is not a key of 16 to 4096 letters, digits or ._~+/=-' not found in 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY or the keychain entry openwiz-devin'
+
+======================================================================
+FAIL: test_a_key_that_fits_inside_the_helpers_own_texts_is_never_printed (__main__.Helper.test_a_key_that_fits_inside_the_helpers_own_texts_is_never_printed) [the]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 266, in test_a_key_that_fits_inside_the_helpers_own_texts_is_never_printed
+    self.assertNotIn(key, p.stdout)
+AssertionError: 'the' unexpectedly found in '{"error": "no test key in OPENWIZ_HOSTKEY_TEST_KEY; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY or the keychain entry openwiz-devin", "next": "set OPENWIZ_HOSTKEY_TEST_KEY to a synthetic key; it and the override are only for the kit\'s tests"}\n'
+
+======================================================================
+FAIL: test_a_non_json_answer_comes_back_as_a_null_body (__main__.Helper.test_a_non_json_answer_comes_back_as_a_null_body) [b'']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 239, in test_a_non_json_answer_comes_back_as_a_null_body
+    self.assertEqual(self.run_helper(GOOD, OPENWIZ_HOSTKEY_TEST_ORIGIN=host.origin),
+AssertionError: Tuples differ: (1, {'error': 'no test key in OPENWIZ_HOST[227 chars]ts"}) != (0, {'status': 404, 'body': None})
+
+First differing element 0:
+1
+0
+
++ (0, {'body': None, 'status': 404})
+- (1,
+-  {'error': 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under '
+-            'OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY '
+-            'or the keychain entry openwiz-devin',
+-   'next': 'set OPENWIZ_HOSTKEY_TEST_KEY to a synthetic key; it and the '
+-           "override are only for the kit's tests"})
+
+======================================================================
+FAIL: test_a_non_json_answer_comes_back_as_a_null_body (__main__.Helper.test_a_non_json_answer_comes_back_as_a_null_body) [b'not json']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 239, in test_a_non_json_answer_comes_back_as_a_null_body
+    self.assertEqual(self.run_helper(GOOD, OPENWIZ_HOSTKEY_TEST_ORIGIN=host.origin),
+AssertionError: Tuples differ: (1, {'error': 'no test key in OPENWIZ_HOST[227 chars]ts"}) != (0, {'status': 404, 'body': None})
+
+First differing element 0:
+1
+0
+
++ (0, {'body': None, 'status': 404})
+- (1,
+-  {'error': 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under '
+-            'OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY '
+-            'or the keychain entry openwiz-devin',
+-   'next': 'set OPENWIZ_HOSTKEY_TEST_KEY to a synthetic key; it and the '
+-           "override are only for the kit's tests"})
+
+======================================================================
+FAIL: test_a_non_json_answer_comes_back_as_a_null_body (__main__.Helper.test_a_non_json_answer_comes_back_as_a_null_body) [b'{"n": NaN}']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 239, in test_a_non_json_answer_comes_back_as_a_null_body
+    self.assertEqual(self.run_helper(GOOD, OPENWIZ_HOSTKEY_TEST_ORIGIN=host.origin),
+AssertionError: Tuples differ: (1, {'error': 'no test key in OPENWIZ_HOST[227 chars]ts"}) != (0, {'status': 404, 'body': None})
+
+First differing element 0:
+1
+0
+
++ (0, {'body': None, 'status': 404})
+- (1,
+-  {'error': 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under '
+-            'OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY '
+-            'or the keychain entry openwiz-devin',
+-   'next': 'set OPENWIZ_HOSTKEY_TEST_KEY to a synthetic key; it and the '
+-           "override are only for the kit's tests"})
+
+======================================================================
+FAIL: test_a_non_json_answer_comes_back_as_a_null_body (__main__.Helper.test_a_non_json_answer_comes_back_as_a_null_body) [b'\xff']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 239, in test_a_non_json_answer_comes_back_as_a_null_body
+    self.assertEqual(self.run_helper(GOOD, OPENWIZ_HOSTKEY_TEST_ORIGIN=host.origin),
+AssertionError: Tuples differ: (1, {'error': 'no test key in OPENWIZ_HOST[227 chars]ts"}) != (0, {'status': 404, 'body': None})
+
+First differing element 0:
+1
+0
+
++ (0, {'body': None, 'status': 404})
+- (1,
+-  {'error': 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under '
+-            'OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY '
+-            'or the keychain entry openwiz-devin',
+-   'next': 'set OPENWIZ_HOSTKEY_TEST_KEY to a synthetic key; it and the '
+-           "override are only for the kit's tests"})
+
+======================================================================
+FAIL: test_a_redirect_comes_back_as_its_status_and_is_never_followed (__main__.Helper.test_a_redirect_comes_back_as_its_status_and_is_never_followed) [301]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 168, in test_a_redirect_comes_back_as_its_status_and_is_never_followed
+    self.assertEqual((code, out), (0, {'status': status, 'body': None}))
+AssertionError: Tuples differ: (1, {'error': 'no test key in OPENWIZ_HOST[227 chars]ts"}) != (0, {'status': 301, 'body': None})
+
+First differing element 0:
+1
+0
+
++ (0, {'body': None, 'status': 301})
+- (1,
+-  {'error': 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under '
+-            'OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY '
+-            'or the keychain entry openwiz-devin',
+-   'next': 'set OPENWIZ_HOSTKEY_TEST_KEY to a synthetic key; it and the '
+-           "override are only for the kit's tests"})
+
+======================================================================
+FAIL: test_a_redirect_comes_back_as_its_status_and_is_never_followed (__main__.Helper.test_a_redirect_comes_back_as_its_status_and_is_never_followed) [302]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 168, in test_a_redirect_comes_back_as_its_status_and_is_never_followed
+    self.assertEqual((code, out), (0, {'status': status, 'body': None}))
+AssertionError: Tuples differ: (1, {'error': 'no test key in OPENWIZ_HOST[227 chars]ts"}) != (0, {'status': 302, 'body': None})
+
+First differing element 0:
+1
+0
+
++ (0, {'body': None, 'status': 302})
+- (1,
+-  {'error': 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under '
+-            'OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY '
+-            'or the keychain entry openwiz-devin',
+-   'next': 'set OPENWIZ_HOSTKEY_TEST_KEY to a synthetic key; it and the '
+-           "override are only for the kit's tests"})
+
+======================================================================
+FAIL: test_a_redirect_comes_back_as_its_status_and_is_never_followed (__main__.Helper.test_a_redirect_comes_back_as_its_status_and_is_never_followed) [303]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 168, in test_a_redirect_comes_back_as_its_status_and_is_never_followed
+    self.assertEqual((code, out), (0, {'status': status, 'body': None}))
+AssertionError: Tuples differ: (1, {'error': 'no test key in OPENWIZ_HOST[227 chars]ts"}) != (0, {'status': 303, 'body': None})
+
+First differing element 0:
+1
+0
+
++ (0, {'body': None, 'status': 303})
+- (1,
+-  {'error': 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under '
+-            'OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY '
+-            'or the keychain entry openwiz-devin',
+-   'next': 'set OPENWIZ_HOSTKEY_TEST_KEY to a synthetic key; it and the '
+-           "override are only for the kit's tests"})
+
+======================================================================
+FAIL: test_a_redirect_comes_back_as_its_status_and_is_never_followed (__main__.Helper.test_a_redirect_comes_back_as_its_status_and_is_never_followed) [307]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 168, in test_a_redirect_comes_back_as_its_status_and_is_never_followed
+    self.assertEqual((code, out), (0, {'status': status, 'body': None}))
+AssertionError: Tuples differ: (1, {'error': 'no test key in OPENWIZ_HOST[227 chars]ts"}) != (0, {'status': 307, 'body': None})
+
+First differing element 0:
+1
+0
+
++ (0, {'body': None, 'status': 307})
+- (1,
+-  {'error': 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under '
+-            'OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY '
+-            'or the keychain entry openwiz-devin',
+-   'next': 'set OPENWIZ_HOSTKEY_TEST_KEY to a synthetic key; it and the '
+-           "override are only for the kit's tests"})
+
+======================================================================
+FAIL: test_a_redirect_comes_back_as_its_status_and_is_never_followed (__main__.Helper.test_a_redirect_comes_back_as_its_status_and_is_never_followed) [308]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 168, in test_a_redirect_comes_back_as_its_status_and_is_never_followed
+    self.assertEqual((code, out), (0, {'status': status, 'body': None}))
+AssertionError: Tuples differ: (1, {'error': 'no test key in OPENWIZ_HOST[227 chars]ts"}) != (0, {'status': 308, 'body': None})
+
+First differing element 0:
+1
+0
+
++ (0, {'body': None, 'status': 308})
+- (1,
+-  {'error': 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under '
+-            'OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY '
+-            'or the keychain entry openwiz-devin',
+-   'next': 'set OPENWIZ_HOSTKEY_TEST_KEY to a synthetic key; it and the '
+-           "override are only for the kit's tests"})
+
+======================================================================
+FAIL: test_a_request_that_holds_the_key_is_refused_before_it_is_sent (__main__.Helper.test_a_request_that_holds_the_key_is_refused_before_it_is_sent) [{'host': 'devin', 'method': 'POST', 'path': '/v1/synthetic-host-key-Kit0ValueKit0ValueKit0Value', 'body': {'prompt': 'hi'}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 205, in test_a_request_that_holds_the_key_is_refused_before_it_is_sent
+    self.refused(request, 'the request holds the key')
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 89, in refused
+    self.assertIn(why, out['error'])
+AssertionError: 'the request holds the key' not found in 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY or the keychain entry openwiz-devin'
+
+======================================================================
+FAIL: test_a_request_that_holds_the_key_is_refused_before_it_is_sent (__main__.Helper.test_a_request_that_holds_the_key_is_refused_before_it_is_sent) [{'host': 'devin', 'method': 'POST', 'path': '/v1?k=synthetic-host-key-Kit0ValueKit0ValueKit0Value', 'body': {'prompt': 'hi'}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 205, in test_a_request_that_holds_the_key_is_refused_before_it_is_sent
+    self.refused(request, 'the request holds the key')
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 89, in refused
+    self.assertIn(why, out['error'])
+AssertionError: 'the request holds the key' not found in 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY or the keychain entry openwiz-devin'
+
+======================================================================
+FAIL: test_a_request_that_holds_the_key_is_refused_before_it_is_sent (__main__.Helper.test_a_request_that_holds_the_key_is_refused_before_it_is_sent) [{'host': 'devin', 'method': 'POST', 'path': '/v1/%73ynthetic-ho%73t-key-Kit0ValueKit0ValueKit0Value', 'body': {'prompt': 'hi'}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 205, in test_a_request_that_holds_the_key_is_refused_before_it_is_sent
+    self.refused(request, 'the request holds the key')
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 89, in refused
+    self.assertIn(why, out['error'])
+AssertionError: 'the request holds the key' not found in 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY or the keychain entry openwiz-devin'
+
+======================================================================
+FAIL: test_a_request_that_holds_the_key_is_refused_before_it_is_sent (__main__.Helper.test_a_request_that_holds_the_key_is_refused_before_it_is_sent) [{'host': 'devin', 'method': 'POST', 'path': '/v3/organizations/org-syn1/sessions', 'body': {'k': 'synthetic-host-key-Kit0ValueKit0ValueKit0Value'}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 205, in test_a_request_that_holds_the_key_is_refused_before_it_is_sent
+    self.refused(request, 'the request holds the key')
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 89, in refused
+    self.assertIn(why, out['error'])
+AssertionError: 'the request holds the key' not found in 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY or the keychain entry openwiz-devin'
+
+======================================================================
+FAIL: test_a_request_that_holds_the_key_is_refused_before_it_is_sent (__main__.Helper.test_a_request_that_holds_the_key_is_refused_before_it_is_sent) [{'host': 'devin', 'method': 'POST', 'path': '/v3/organizations/org-syn1/sessions', 'body': {'synthetic-host-key-Kit0ValueKit0ValueKit0Value': 1}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 205, in test_a_request_that_holds_the_key_is_refused_before_it_is_sent
+    self.refused(request, 'the request holds the key')
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 89, in refused
+    self.assertIn(why, out['error'])
+AssertionError: 'the request holds the key' not found in 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY or the keychain entry openwiz-devin'
+
+======================================================================
+FAIL: test_a_request_that_holds_the_key_is_refused_before_it_is_sent (__main__.Helper.test_a_request_that_holds_the_key_is_refused_before_it_is_sent) [{'host': 'devin', 'method': 'POST', 'path': '/v3/organizations/org-syn1/sessions', 'body': {'k': ['xsynthetic-host-key-Kit0ValueKit0ValueKit0Valuey']}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 205, in test_a_request_that_holds_the_key_is_refused_before_it_is_sent
+    self.refused(request, 'the request holds the key')
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 89, in refused
+    self.assertIn(why, out['error'])
+AssertionError: 'the request holds the key' not found in 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY or the keychain entry openwiz-devin'
+
+======================================================================
+FAIL: test_an_answer_that_holds_the_key_is_dropped (__main__.Helper.test_an_answer_that_holds_the_key_is_dropped) [b'{"echo": "Bearer <synthetic key>"}']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 187, in test_an_answer_that_holds_the_key_is_dropped
+    self.assertIn("the host's answer held the key", out['error'])
+AssertionError: "the host's answer held the key" not found in 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY or the keychain entry openwiz-devin'
+
+======================================================================
+FAIL: test_an_answer_that_holds_the_key_is_dropped (__main__.Helper.test_an_answer_that_holds_the_key_is_dropped) [b'<p>synthetic-host-key-Kit0ValueKit0ValueKit0Value</p>']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 187, in test_an_answer_that_holds_the_key_is_dropped
+    self.assertIn("the host's answer held the key", out['error'])
+AssertionError: "the host's answer held the key" not found in 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY or the keychain entry openwiz-devin'
+
+======================================================================
+FAIL: test_an_answer_that_holds_the_key_is_dropped (__main__.Helper.test_an_answer_that_holds_the_key_is_dropped) [b'{"k": "\\u0073ynthetic-ho\\u0073t-key-Kit0ValueKit0ValueKit0Value"}']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 187, in test_an_answer_that_holds_the_key_is_dropped
+    self.assertIn("the host's answer held the key", out['error'])
+AssertionError: "the host's answer held the key" not found in 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY or the keychain entry openwiz-devin'
+
+======================================================================
+FAIL: test_an_answer_that_holds_the_key_is_dropped (__main__.Helper.test_an_answer_that_holds_the_key_is_dropped) [b'{"synthetic-host-key-Kit0ValueKit0ValueKit0Value": 1}']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 187, in test_an_answer_that_holds_the_key_is_dropped
+    self.assertIn("the host's answer held the key", out['error'])
+AssertionError: "the host's answer held the key" not found in 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY or the keychain entry openwiz-devin'
+
+======================================================================
+FAIL: test_an_unreachable_host_is_an_error_without_the_key (__main__.Helper.test_an_unreachable_host_is_an_error_without_the_key)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 245, in test_an_unreachable_host_is_an_error_without_the_key
+    self.refused(GOOD, 'could not reach the host', OPENWIZ_HOSTKEY_TEST_ORIGIN='http://127.0.0.1:%d' % port)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 89, in refused
+    self.assertIn(why, out['error'])
+AssertionError: 'could not reach the host' not found in 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY or the keychain entry openwiz-devin'
+
+======================================================================
+FAIL: test_every_output_path_including_its_fallbacks_holds_no_key (__main__.Helper.test_every_output_path_including_its_fallbacks_holds_no_key) [['{']]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 278, in test_every_output_path_including_its_fallbacks_holds_no_key
+    self.assertEqual(hostkey.render({'error': 'x', 'next': 'y'}, keys), ('', 1))
+AssertionError: Tuples differ: ('{"error": "refused", "next": "retry"}', 1) != ('', 1)
+
+First differing element 0:
+'{"error": "refused", "next": "retry"}'
+''
+
+- ('{"error": "refused", "next": "retry"}', 1)
++ ('', 1)
+
+======================================================================
+FAIL: test_every_output_path_including_its_fallbacks_holds_no_key (__main__.Helper.test_every_output_path_including_its_fallbacks_holds_no_key) [['e']]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 278, in test_every_output_path_including_its_fallbacks_holds_no_key
+    self.assertEqual(hostkey.render({'error': 'x', 'next': 'y'}, keys), ('', 1))
+AssertionError: Tuples differ: ('{"error": "refused", "next": "retry"}', 1) != ('', 1)
+
+First differing element 0:
+'{"error": "refused", "next": "retry"}'
+''
+
+- ('{"error": "refused", "next": "retry"}', 1)
++ ('', 1)
+
+======================================================================
+FAIL: test_every_output_path_including_its_fallbacks_holds_no_key (__main__.Helper.test_every_output_path_including_its_fallbacks_holds_no_key) [['"']]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 278, in test_every_output_path_including_its_fallbacks_holds_no_key
+    self.assertEqual(hostkey.render({'error': 'x', 'next': 'y'}, keys), ('', 1))
+AssertionError: Tuples differ: ('{"error": "refused", "next": "retry"}', 1) != ('', 1)
+
+First differing element 0:
+'{"error": "refused", "next": "retry"}'
+''
+
+- ('{"error": "refused", "next": "retry"}', 1)
++ ('', 1)
+
+======================================================================
+FAIL: test_get_and_delete_with_no_body_and_a_query (__main__.Helper.test_get_and_delete_with_no_body_and_a_query) [GET]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 108, in test_get_and_delete_with_no_body_and_a_query
+    self.assertEqual((code, out), (0, {'status': 200, 'body': {}}))
+AssertionError: Tuples differ: (1, {'error': 'no test key in OPENWIZ_HOST[227 chars]ts"}) != (0, {'status': 200, 'body': {}})
+
+First differing element 0:
+1
+0
+
++ (0, {'body': {}, 'status': 200})
+- (1,
+-  {'error': 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under '
+-            'OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY '
+-            'or the keychain entry openwiz-devin',
+-   'next': 'set OPENWIZ_HOSTKEY_TEST_KEY to a synthetic key; it and the '
+-           "override are only for the kit's tests"})
+
+======================================================================
+FAIL: test_get_and_delete_with_no_body_and_a_query (__main__.Helper.test_get_and_delete_with_no_body_and_a_query) [DELETE]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 108, in test_get_and_delete_with_no_body_and_a_query
+    self.assertEqual((code, out), (0, {'status': 200, 'body': {}}))
+AssertionError: Tuples differ: (1, {'error': 'no test key in OPENWIZ_HOST[227 chars]ts"}) != (0, {'status': 200, 'body': {}})
+
+First differing element 0:
+1
+0
+
++ (0, {'body': {}, 'status': 200})
+- (1,
+-  {'error': 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under '
+-            'OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY '
+-            'or the keychain entry openwiz-devin',
+-   'next': 'set OPENWIZ_HOSTKEY_TEST_KEY to a synthetic key; it and the '
+-           "override are only for the kit's tests"})
+
+======================================================================
+FAIL: test_the_helper_ignores_proxy_variables (__main__.Helper.test_the_helper_ignores_proxy_variables)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 176, in test_the_helper_ignores_proxy_variables
+    self.assertEqual((code, len(self.host.requests), proxy.requests), (0, 1, []))
+AssertionError: Tuples differ: (1, 0, []) != (0, 1, [])
+
+First differing element 0:
+1
+0
+
+- (1, 0, [])
++ (0, 1, [])
+
+======================================================================
+FAIL: test_under_the_override_no_production_key_is_ever_read (__main__.Helper.test_under_the_override_no_production_key_is_ever_read) [{}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 193, in test_under_the_override_no_production_key_is_ever_read
+    out = self.refused(GOOD, NO_TEST_KEY, OPENWIZ_HOSTKEY_TEST_ORIGIN=bare.origin, **env)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 89, in refused
+    self.assertIn(why, out['error'])
+AssertionError: "the kit's fake host gave no test key" not found in 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY or the keychain entry openwiz-devin'
+
+======================================================================
+FAIL: test_under_the_override_no_production_key_is_ever_read (__main__.Helper.test_under_the_override_no_production_key_is_ever_read) [{'DEVIN_API_KEY': None}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 193, in test_under_the_override_no_production_key_is_ever_read
+    out = self.refused(GOOD, NO_TEST_KEY, OPENWIZ_HOSTKEY_TEST_ORIGIN=bare.origin, **env)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 89, in refused
+    self.assertIn(why, out['error'])
+AssertionError: "the kit's fake host gave no test key" not found in 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY or the keychain entry openwiz-devin'
+
+======================================================================
+FAIL: test_under_the_override_no_production_key_is_ever_read (__main__.Helper.test_under_the_override_no_production_key_is_ever_read) [{'OPENWIZ_HOSTKEY_TEST_KEY': 'synthetic-host-key-Kit0ValueKit0ValueKit0Value'}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 193, in test_under_the_override_no_production_key_is_ever_read
+    out = self.refused(GOOD, NO_TEST_KEY, OPENWIZ_HOSTKEY_TEST_ORIGIN=bare.origin, **env)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 86, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_under_the_test_override_neither_production_source_is_read (__main__.Keychain.test_under_the_test_override_neither_production_source_is_read) [{}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 369, in test_under_the_test_override_neither_production_source_is_read
+    self.assertIn(NO_TEST_KEY, caught.exception.args[0])
+AssertionError: "the kit's fake host gave no test key" not found in 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY or the keychain entry openwiz-devin'
+
+======================================================================
+FAIL: test_under_the_test_override_neither_production_source_is_read (__main__.Keychain.test_under_the_test_override_neither_production_source_is_read) [{'DEVIN_API_KEY': 'synthetic-production-key-Kit0ValueKit0ValueKit0Value'}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 369, in test_under_the_test_override_neither_production_source_is_read
+    self.assertIn(NO_TEST_KEY, caught.exception.args[0])
+AssertionError: "the kit's fake host gave no test key" not found in 'no test key in OPENWIZ_HOSTKEY_TEST_KEY; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads DEVIN_API_KEY or the keychain entry openwiz-devin'
+
+======================================================================
+FAIL: test_under_the_test_override_neither_production_source_is_read (__main__.Keychain.test_under_the_test_override_neither_production_source_is_read) [{'OPENWIZ_HOSTKEY_TEST_KEY': 'synthetic-host-key-Kit0ValueKit0ValueKit0Value'}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 367, in test_under_the_test_override_neither_production_source_is_read
+    with self.assertRaises(self.hostkey.Refused) as caught:
+AssertionError: Refused not raised
+
+----------------------------------------------------------------------
+Ran 25 tests in 29.088s
+
+FAILED (failures=46, errors=2)

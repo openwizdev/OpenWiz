@@ -1,6 +1,6 @@
 # The roadmap generator
 
-`roadmap.py` reads GitHub's milestones and writes the short public roadmap to a file; the release check runs it. Python 3 standard library and a logged-in `gh`, run inside a clone of the repository it reads.
+`roadmap.py` reads GitHub's milestones and writes the short public roadmap to a file; the release check runs it. Python 3 standard library and a logged-in `gh`. It reads the clone that holds the script by default, wherever you run it from; pass `--root /absolute/path/to/clone` to read another.
 
 ```sh
 python3 tools/roadmap/roadmap.py --public ROADMAP.md  # write the short public roadmap to a file

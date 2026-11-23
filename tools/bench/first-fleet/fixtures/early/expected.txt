@@ -1,0 +1,11 @@
+| Step | Start | Length | Waits on | Failure |
+| --- | --- | --- | --- | --- |
+| install | 0:00 | 2:30 | agent | - |
+| connect | 2:30 | - | user | gh lacked a scope |
+
+| GitHub | At |
+| --- | --- |
+
+Clock: 2026-11-22T10:01:00Z (the install line) to none
+Total: none: the run stopped before the spec was created
+Timer waits: none

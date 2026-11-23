@@ -1,0 +1,208 @@
+FFFFFFFFFFFFFFFFF.FFFF
+======================================================================
+FAIL: test_a_malformed_step_log_names_the_bad_line (__main__.Broken.test_a_malformed_step_log_names_the_bad_line) (bad='not json')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/bench/first-fleet/test_bench.py", line 85, in test_a_malformed_step_log_names_the_bad_line
+    self.refused('steps.jsonl', good + bad + '\n', 2)
+  File "tools/bench/first-fleet/test_bench.py", line 71, in refused
+    self.assertIn(f'{name} line {where}:', r.stderr)
+AssertionError: 'steps.jsonl line 2:' not found in 'bench: not built yet\n'
+
+======================================================================
+FAIL: test_a_malformed_step_log_names_the_bad_line (__main__.Broken.test_a_malformed_step_log_names_the_bad_line) (bad='{"at": "2026-11-22T10:02:00Z", "step": "deploy", "waits_on": "agent"}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/bench/first-fleet/test_bench.py", line 85, in test_a_malformed_step_log_names_the_bad_line
+    self.refused('steps.jsonl', good + bad + '\n', 2)
+  File "tools/bench/first-fleet/test_bench.py", line 71, in refused
+    self.assertIn(f'{name} line {where}:', r.stderr)
+AssertionError: 'steps.jsonl line 2:' not found in 'bench: not built yet\n'
+
+======================================================================
+FAIL: test_a_malformed_step_log_names_the_bad_line (__main__.Broken.test_a_malformed_step_log_names_the_bad_line) (bad='{"at": "2026-11-22T10:02:00Z", "step": "grill", "waits_on": "nobody"}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/bench/first-fleet/test_bench.py", line 85, in test_a_malformed_step_log_names_the_bad_line
+    self.refused('steps.jsonl', good + bad + '\n', 2)
+  File "tools/bench/first-fleet/test_bench.py", line 71, in refused
+    self.assertIn(f'{name} line {where}:', r.stderr)
+AssertionError: 'steps.jsonl line 2:' not found in 'bench: not built yet\n'
+
+======================================================================
+FAIL: test_a_malformed_step_log_names_the_bad_line (__main__.Broken.test_a_malformed_step_log_names_the_bad_line) (bad='{"at": "yesterday", "step": "grill", "waits_on": "user"}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/bench/first-fleet/test_bench.py", line 85, in test_a_malformed_step_log_names_the_bad_line
+    self.refused('steps.jsonl', good + bad + '\n', 2)
+  File "tools/bench/first-fleet/test_bench.py", line 71, in refused
+    self.assertIn(f'{name} line {where}:', r.stderr)
+AssertionError: 'steps.jsonl line 2:' not found in 'bench: not built yet\n'
+
+======================================================================
+FAIL: test_a_malformed_step_log_names_the_bad_line (__main__.Broken.test_a_malformed_step_log_names_the_bad_line) (bad='{"at": "2026-11-22T10:02:00", "step": "grill", "waits_on": "user"}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/bench/first-fleet/test_bench.py", line 85, in test_a_malformed_step_log_names_the_bad_line
+    self.refused('steps.jsonl', good + bad + '\n', 2)
+  File "tools/bench/first-fleet/test_bench.py", line 71, in refused
+    self.assertIn(f'{name} line {where}:', r.stderr)
+AssertionError: 'steps.jsonl line 2:' not found in 'bench: not built yet\n'
+
+======================================================================
+FAIL: test_a_malformed_step_log_names_the_bad_line (__main__.Broken.test_a_malformed_step_log_names_the_bad_line) (bad='{"at": "2026-11-22T10:00:00Z", "step": "grill", "waits_on": "user"}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/bench/first-fleet/test_bench.py", line 85, in test_a_malformed_step_log_names_the_bad_line
+    self.refused('steps.jsonl', good + bad + '\n', 2)
+  File "tools/bench/first-fleet/test_bench.py", line 71, in refused
+    self.assertIn(f'{name} line {where}:', r.stderr)
+AssertionError: 'steps.jsonl line 2:' not found in 'bench: not built yet\n'
+
+======================================================================
+FAIL: test_a_malformed_step_log_names_the_bad_line (__main__.Broken.test_a_malformed_step_log_names_the_bad_line) (bad='{"at": "2026-11-22T10:02:00Z", "step": "grill", "waits_on": "user", "failure": 3}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/bench/first-fleet/test_bench.py", line 85, in test_a_malformed_step_log_names_the_bad_line
+    self.refused('steps.jsonl', good + bad + '\n', 2)
+  File "tools/bench/first-fleet/test_bench.py", line 71, in refused
+    self.assertIn(f'{name} line {where}:', r.stderr)
+AssertionError: 'steps.jsonl line 2:' not found in 'bench: not built yet\n'
+
+======================================================================
+FAIL: test_a_malformed_step_log_names_the_bad_line (__main__.Broken.test_a_malformed_step_log_names_the_bad_line) (bad='["grill"]')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/bench/first-fleet/test_bench.py", line 85, in test_a_malformed_step_log_names_the_bad_line
+    self.refused('steps.jsonl', good + bad + '\n', 2)
+  File "tools/bench/first-fleet/test_bench.py", line 71, in refused
+    self.assertIn(f'{name} line {where}:', r.stderr)
+AssertionError: 'steps.jsonl line 2:' not found in 'bench: not built yet\n'
+
+======================================================================
+FAIL: test_a_missing_input_is_refused (__main__.Broken.test_a_missing_input_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/bench/first-fleet/test_bench.py", line 109, in test_a_missing_input_is_refused
+    self.assertIn('prs.json', r.stderr)
+AssertionError: 'prs.json' not found in 'bench: not built yet\n'
+
+======================================================================
+FAIL: test_malformed_github_json_names_the_bad_line (__main__.Broken.test_malformed_github_json_names_the_bad_line) (name='prs.json', where=8)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/bench/first-fleet/test_bench.py", line 102, in test_malformed_github_json_names_the_bad_line
+    self.refused(name, text, where)
+  File "tools/bench/first-fleet/test_bench.py", line 71, in refused
+    self.assertIn(f'{name} line {where}:', r.stderr)
+AssertionError: 'prs.json line 8:' not found in 'bench: not built yet\n'
+
+======================================================================
+FAIL: test_malformed_github_json_names_the_bad_line (__main__.Broken.test_malformed_github_json_names_the_bad_line) (name='prs.json', where=2)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/bench/first-fleet/test_bench.py", line 102, in test_malformed_github_json_names_the_bad_line
+    self.refused(name, text, where)
+  File "tools/bench/first-fleet/test_bench.py", line 71, in refused
+    self.assertIn(f'{name} line {where}:', r.stderr)
+AssertionError: 'prs.json line 2:' not found in 'bench: not built yet\n'
+
+======================================================================
+FAIL: test_malformed_github_json_names_the_bad_line (__main__.Broken.test_malformed_github_json_names_the_bad_line) (name='prs.json', where=8)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/bench/first-fleet/test_bench.py", line 102, in test_malformed_github_json_names_the_bad_line
+    self.refused(name, text, where)
+  File "tools/bench/first-fleet/test_bench.py", line 71, in refused
+    self.assertIn(f'{name} line {where}:', r.stderr)
+AssertionError: 'prs.json line 8:' not found in 'bench: not built yet\n'
+
+======================================================================
+FAIL: test_malformed_github_json_names_the_bad_line (__main__.Broken.test_malformed_github_json_names_the_bad_line) (name='tickets.json', where=3)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/bench/first-fleet/test_bench.py", line 102, in test_malformed_github_json_names_the_bad_line
+    self.refused(name, text, where)
+  File "tools/bench/first-fleet/test_bench.py", line 71, in refused
+    self.assertIn(f'{name} line {where}:', r.stderr)
+AssertionError: 'tickets.json line 3:' not found in 'bench: not built yet\n'
+
+======================================================================
+FAIL: test_malformed_github_json_names_the_bad_line (__main__.Broken.test_malformed_github_json_names_the_bad_line) (name='tickets.json', where=2)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/bench/first-fleet/test_bench.py", line 102, in test_malformed_github_json_names_the_bad_line
+    self.refused(name, text, where)
+  File "tools/bench/first-fleet/test_bench.py", line 71, in refused
+    self.assertIn(f'{name} line {where}:', r.stderr)
+AssertionError: 'tickets.json line 2:' not found in 'bench: not built yet\n'
+
+======================================================================
+FAIL: test_malformed_github_json_names_the_bad_line (__main__.Broken.test_malformed_github_json_names_the_bad_line) (name='spec.json', where=1)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/bench/first-fleet/test_bench.py", line 102, in test_malformed_github_json_names_the_bad_line
+    self.refused(name, text, where)
+  File "tools/bench/first-fleet/test_bench.py", line 71, in refused
+    self.assertIn(f'{name} line {where}:', r.stderr)
+AssertionError: 'spec.json line 1:' not found in 'bench: not built yet\n'
+
+======================================================================
+FAIL: test_malformed_github_json_names_the_bad_line (__main__.Broken.test_malformed_github_json_names_the_bad_line) (name='spec.json', where=1)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/bench/first-fleet/test_bench.py", line 102, in test_malformed_github_json_names_the_bad_line
+    self.refused(name, text, where)
+  File "tools/bench/first-fleet/test_bench.py", line 71, in refused
+    self.assertIn(f'{name} line {where}:', r.stderr)
+AssertionError: 'spec.json line 1:' not found in 'bench: not built yet\n'
+
+======================================================================
+FAIL: test_mark_appends_one_timed_line_per_step (__main__.Mark.test_mark_appends_one_timed_line_per_step)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/bench/first-fleet/test_bench.py", line 126, in test_mark_appends_one_timed_line_per_step
+    self.assertEqual(r.returncode, 0, r.stderr)
+AssertionError: 1 != 0 : bench: not built yet
+
+
+======================================================================
+FAIL: test_merged_run_json_is_the_same_table (__main__.Report.test_merged_run_json_is_the_same_table)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/bench/first-fleet/test_bench.py", line 31, in test_merged_run_json_is_the_same_table
+    self.assertEqual(r.returncode, 0, r.stderr)
+AssertionError: 1 != 0 : bench: not built yet
+
+
+======================================================================
+FAIL: test_merged_run_prints_the_exact_table_and_total (__main__.Report.test_merged_run_prints_the_exact_table_and_total)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/bench/first-fleet/test_bench.py", line 25, in test_merged_run_prints_the_exact_table_and_total
+    self.assertEqual(r.returncode, 0, r.stderr)
+AssertionError: 1 != 0 : bench: not built yet
+
+
+======================================================================
+FAIL: test_timer_waits_are_flagged (__main__.Report.test_timer_waits_are_flagged)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/bench/first-fleet/test_bench.py", line 38, in test_timer_waits_are_flagged
+    self.assertEqual(r.returncode, 0, r.stderr)
+AssertionError: 1 != 0 : bench: not built yet
+
+
+======================================================================
+FAIL: test_unmerged_run_reports_no_total_and_why (__main__.Report.test_unmerged_run_reports_no_total_and_why)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/bench/first-fleet/test_bench.py", line 47, in test_unmerged_run_reports_no_total_and_why
+    self.assertEqual(r.returncode, 0, r.stderr)
+AssertionError: 1 != 0 : bench: not built yet
+
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.281s
+
+FAILED (failures=21)

@@ -1,0 +1,12 @@
+R2, the effort wake test's race, on a scratch copy whose fake-harness sleeps 1 second before it appends its turn line (not committed).
+
+Test file at 7218ac4e:
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/template/test_driver.py Template.test_start_passes_its_effort_to_the_harness_and_wake_passes_it_again
+      1 FAILED (errors=5)
+      5 IndexError: list index out of range
+      1 Ran 1 test in 0.531s
+
+Test file with a fresh turn log per case, waiting for that case's first-turn line:
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/template/test_driver.py Template.test_start_passes_its_effort_to_the_harness_and_wake_passes_it_again
+Ran 1 test in 6.736s
+OK

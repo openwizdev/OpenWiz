@@ -1,0 +1,9 @@
+$ python3 -I tools/comment-check/test_check.py
+Ran 10 tests in 3.180s
+OK
+$ python3 -I tools/owned-paths/test_check.py
+Ran 15 tests in 1.208s
+OK
+$ python3 -I tools/wizskills/test_contract.py
+Ran 4 tests in 0.005s
+OK

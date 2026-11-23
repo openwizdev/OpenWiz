@@ -1,7 +1,0 @@
-# #2014 green run: the installed-build test with the fix, WizSkills 0.2.0 (wizskills.lock on main)
-$ python3 -I tools/release/test_package.py Package.test_installed_build_carries_the_wizskills_root_files_its_skills_read
-.
-----------------------------------------------------------------------
-Ran 1 test in 6.051s
-
-OK

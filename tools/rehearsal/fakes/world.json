@@ -1,0 +1,17 @@
+{
+  "api": {
+    "user": {"login": "synthetic-stranger", "id": 1000001, "type": "User"},
+    "repos/synthetic-stranger/synthetic-first-fleet": {
+      "full_name": "synthetic-stranger/synthetic-first-fleet",
+      "default_branch": "main",
+      "private": true,
+      "visibility": "private",
+      "permissions": {"admin": true, "push": true, "pull": true}
+    },
+    "repos/synthetic-stranger/synthetic-first-fleet/issues/1": {
+      "number": 1,
+      "state": "open",
+      "title": "Synthetic service issue"
+    }
+  }
+}

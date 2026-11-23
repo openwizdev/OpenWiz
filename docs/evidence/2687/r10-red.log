@@ -1,0 +1,13 @@
+F
+======================================================================
+FAIL: test_a_sealed_gh_the_system_will_not_execute_names_the_memfd_restriction (__main__.SystemGh.test_a_sealed_gh_the_system_will_not_execute_names_the_memfd_restriction)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/github-app/test_agent_token.py", line 1104, in test_a_sealed_gh_the_system_will_not_execute_names_the_memfd_restriction
+    self.assertIsInstance(caught, helper.Refused, "the exec refusal is the helper's own diagnostic")
+AssertionError: PermissionError(13, 'synthetic noexec memfd') is not an instance of <class 'agent_token.Refused'> : the exec refusal is the helper's own diagnostic
+
+----------------------------------------------------------------------
+Ran 1 test in Ns
+
+FAILED (failures=1)

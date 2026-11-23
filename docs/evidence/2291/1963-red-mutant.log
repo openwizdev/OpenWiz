@@ -1,0 +1,13 @@
+# mutant: the scrub loop removes nothing (if false && is_scrubbed_bytes(..))
+process::scrub_tests::a_child_loses_thread_context_and_keeps_the_server_address --- FAILED
+failures:
+---- process::scrub_tests::a_child_loses_thread_context_and_keeps_the_server_address stdout ----
+thread 'process::scrub_tests::a_child_loses_thread_context_and_keeps_the_server_address' (24320) panicked at crates/adapters/cloudroom/src/process.rs:388:9:
+assertion `left == right` failed
+  left: ["BB_THREAD_ID", "BB_�", "ROOM_PROJECT_ID", "ROOM_SERVER_URL", "ROOM_THREAD_ID", "SYN_KEPT"]
+ right: ["ROOM_SERVER_URL", "SYN_KEPT"]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+failures:
+    process::scrub_tests::a_child_loses_thread_context_and_keeps_the_server_address
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 32 filtered out; finished in 0.00s
+error: test failed, to rerun pass `-p openwiz-adapter-cloudroom --lib`

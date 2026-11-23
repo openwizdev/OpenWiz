@@ -1,8 +1,0 @@
-test_pre_0_2_0_skill_layout_selected_build_reports_status_and_upgrades (__main__.Pull.test_pre_0_2_0_skill_layout_selected_build_reports_status_and_upgrades) ... ok
-test_pre_ap11_selected_build_reports_status_and_upgrades_to_a_cli_only_candidate (__main__.Pull.test_pre_ap11_selected_build_reports_status_and_upgrades_to_a_cli_only_candidate) ... ok
-test_published_upgrade_stages_verified_files_keeps_selection_and_refuses_rollback (__main__.Pull.test_published_upgrade_stages_verified_files_keeps_selection_and_refuses_rollback) ... ok
-
-----------------------------------------------------------------------
-Ran 3 tests in 1.162s
-
-OK

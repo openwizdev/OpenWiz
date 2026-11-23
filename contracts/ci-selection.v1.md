@@ -1,6 +1,6 @@
 # OpenWiz CI selection record, version 1 (`openwiz.ci-selection.v1`)
 
-One plan per CI run: which lanes run, which tests each runs, and why everything else was skipped. A first `changes` job writes it once; every lane reads it, and nothing re-decides. Its schema is [ci-selection.v1.schema.json](ci-selection.v1.schema.json); its fixtures are in [`ci/selection/`](../ci/selection/README.md), and `tests/checks/ci_selection.rs` checks them against the schema and the rules below.
+One plan per CI run: which lanes run, which tests each runs, and why everything else was skipped. A first `changes` job writes it once; every lane reads it, and nothing re-decides. Its JSON schema, fixtures and check have left the tree (the schema in #2482, as nothing read it).
 
 **Contract only** (#1405, X0 of spec #1256). X5 (#1262) writes the record (from the docs-only classifier and K15/K16's selector, #432 and #433), and its lanes and its `ci` check read it; X6 (#1264) reads merged pull requests' plans to find selector escapes; X8 (#1266) splits the Rust lane's tests across runners. How the record is filled is X5's. The fixtures prove the record's shape, never a live run.
 

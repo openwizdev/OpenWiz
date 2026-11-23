@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+import importlib.machinery, importlib.util, json, os, subprocess, sys
+sys.dont_write_bytecode = True
+ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', '..')
+HELPER = os.path.join(ROOT, 'kernel', 'driver-kit', 'hostkey.py')
+spec = importlib.util.spec_from_loader('template', importlib.machinery.SourceFileLoader(
+    'template', os.path.join(ROOT, 'adapters', 'template', 'driver')))
+t = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(t)
+HOST = 'devin'
+
+
+def path(run, *more):
+    return '/v1/runs/' + '/'.join((run,) + more)
+
+
+def ask(method, where, body=None):
+    request = {'host': HOST, 'method': method, 'path': where}
+    if body is not None:
+        request['body'] = body
+    python = os.environ.get('NO_PROC_PYTHON') or sys.executable
+    p = subprocess.run([python, '-I', HELPER], input=json.dumps(request), capture_output=True, text=True, timeout=120)
+    try:
+        out = json.loads(p.stdout)
+    except ValueError:
+        raise t.Refused('the key helper gave no answer', 'run kernel/driver-kit/hostkey.py by hand')
+    if p.returncode:
+        raise t.Refused('the key helper refused: ' + out['error'], out['next'])
+    if not 200 <= out['status'] < 300:
+        raise t.Refused('the host answered %d' % out['status'], 'check the host, then retry')
+    return out['body']
+
+
+def body(req):
+    return {'ticket': req['ticket']}
+
+
+launch, end = t.launch, t.end
+
+
+def keyed_launch(req, run, woken):
+    ask('POST', path(run, 'wake' if woken else 'start'), body(req))
+    return launch(req, run, woken)
+
+
+def keyed_end(turns, run):
+    ask('DELETE', path(run))
+    return end(turns, run)
+
+
+t.launch, t.end = keyed_launch, keyed_end
+if __name__ == '__main__':
+    t.main()

@@ -34,6 +34,17 @@ def background_service(how):
             s.connect(os.environ['FAKE_CLI_HOST'])
             pid = int(s.makefile().readline())
         return [pid, since(pid)]
+    if not os.path.isdir('/proc/self'):
+        return service_in_the_turns_group_that_macos_stop_reaches(clean)
+    return hard_detached_service_that_only_the_linux_subreaper_keeps(clean)
+
+
+def service_in_the_turns_group_that_macos_stop_reaches(clean):
+    p = subprocess.Popen([shutil.which('sleep', path=clean['PATH']), '300'], env=clean, stdin=subprocess.DEVNULL)
+    return [p.pid, since(p.pid)]
+
+
+def hard_detached_service_that_only_the_linux_subreaper_keeps(clean):
     r, w = os.pipe()
     if os.fork() == 0:
         os.setsid()
@@ -87,6 +98,8 @@ def turn(prompt, model, session=None, announce=None, daemon=None, signed_out=Non
     if session is None:
         if woken or announce is None:
             refuse()
+        if os.environ.get('FAKE_CLI_PRELUDE'):
+            print(os.environ['FAKE_CLI_PRELUDE'], flush=True)
         session = 'fake-' + secrets.token_hex(6)
         if not os.environ.get('FAKE_CLI_QUIET'):
             print(announce(session), flush=True)
@@ -95,6 +108,8 @@ def turn(prompt, model, session=None, announce=None, daemon=None, signed_out=Non
              'env': {n: os.environ.get(n) for n in names}}
     if os.environ.get('FAKE_CLI_RECORD_ONLY'):
         record(entry)
+        if os.environ.get('FAKE_CLI_LINGER') and not woken:
+            time.sleep(300)
         sys.exit(0)
     if daemon and not woken:
         entry['daemon'] = background_service(daemon)

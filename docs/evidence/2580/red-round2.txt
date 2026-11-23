@@ -1,0 +1,17 @@
+# Round 2, R6 red at d6d148e1 (bootstrap.sh unchanged), agent-CLI refusal stubs first on PATH:
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/vps/test_bootstrap.py BootstrapTest.test_same_version_repin_that_fails_keeps_the_working_wheel
+test_same_version_repin_that_fails_keeps_the_working_wheel (__main__.BootstrapTest.test_same_version_repin_that_fails_keeps_the_working_wheel) ... FAIL
+
+======================================================================
+FAIL: test_same_version_repin_that_fails_keeps_the_working_wheel (__main__.BootstrapTest.test_same_version_repin_that_fails_keeps_the_working_wheel)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_bootstrap.py", line 302, in test_same_version_repin_that_fails_keeps_the_working_wheel
+    self.assertEqual({p: sha256(p) for p in self.fx.tree()}, before)
+AssertionError: {'/tm[1470 chars]l': '24f2f9fc7e707413edb7f2e1b4640c6c60e016c38[149 chars]914'} != {'/tm[1470 chars]l': '5743220e1f76657e1871ffa74b057f3a1dc9ce32b[149 chars]914'}
+Diff is 1856 characters long. Set self.maxDiff to None to see it.
+
+----------------------------------------------------------------------
+Ran 1 test in 0.237s
+
+FAILED (failures=1)

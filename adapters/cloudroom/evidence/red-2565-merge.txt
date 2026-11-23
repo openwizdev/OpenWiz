@@ -1,0 +1,52 @@
+# #2565 red after merging main: the README names a host whose key the kit's key helper holds
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/cloudroom/test_driver.py Driver.test_kit_passes_all_five
+test_kit_passes_all_five (__main__.Driver.test_kit_passes_all_five) ... 
+  test_kit_passes_all_five (__main__.Driver.test_kit_passes_all_five) [local] ... FAIL
+  test_kit_passes_all_five (__main__.Driver.test_kit_passes_all_five) [cloud] ... FAIL
+
+======================================================================
+FAIL: test_kit_passes_all_five (__main__.Driver.test_kit_passes_all_five) [local]
+----------------------------------------------------------------------
+    self.kit(dict(self.env, FAKE_ROOM_HOST=host))
+    self.assertEqual((p.returncode, p.stdout.splitlines()), (0, [
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[331 chars]st"]) != (0, ['pass version: openwiz:records v1, an[245 chars]er'])
+
+First differing element 0:
+1
+0
+
+- (1,
++ (0,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 1',
+    'pass wake: the run edited builder status note 1',
+    'pass stop: the run ended, and a wake after it is refused',
++   'pass token: no login or token passed through the driver'])
+-   'fail token: the kit could not read a file a process of the driver ran, so '
+-   "it cannot check it; the devin key never reached the kit's fake host"]) : 
+
+======================================================================
+FAIL: test_kit_passes_all_five (__main__.Driver.test_kit_passes_all_five) [cloud]
+----------------------------------------------------------------------
+    self.kit(dict(self.env, FAKE_ROOM_HOST=host))
+    self.assertEqual((p.returncode, p.stdout.splitlines()), (0, [
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[331 chars]st"]) != (0, ['pass version: openwiz:records v1, an[245 chars]er'])
+
+First differing element 0:
+1
+0
+
+- (1,
++ (0,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 1',
+    'pass wake: the run edited builder status note 1',
+    'pass stop: the run ended, and a wake after it is refused',
++   'pass token: no login or token passed through the driver'])
+-   'fail token: the kit could not read a file a process of the driver ran, so '
+-   "it cannot check it; the devin key never reached the kit's fake host"]) : 
+
+----------------------------------------------------------------------
+Ran 1 test in 2.073s
+
+FAILED (failures=2)

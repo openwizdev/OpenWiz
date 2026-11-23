@@ -1,0 +1,2 @@
+{"at": "2026-11-22T10:01:00Z", "step": "install", "waits_on": "agent"}
+{"at": "2026-11-22T10:03:30Z", "step": "connect", "waits_on": "user", "failure": "gh lacked a scope"}

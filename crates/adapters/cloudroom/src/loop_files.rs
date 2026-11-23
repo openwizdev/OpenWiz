@@ -35,6 +35,7 @@ impl Refusal {
 #[derive(Debug, Clone, PartialEq)]
 pub struct LoopFile {
     pub frontmatter: Map<String, Value>,
+    pub params: Vec<(String, PlanParam)>,
     pub body: String,
     pub check: Option<String>,
 }
@@ -558,8 +559,24 @@ impl<'a, 'c> Fields<'a, 'c> {
             frontmatter
                 .entry("params")
                 .or_insert_with(|| Value::Object(Map::new()));
+            let mut params: Vec<(String, PlanParam)> = match self.get("params") {
+                Some(Json::Object(pairs)) => pairs
+                    .iter()
+                    .filter_map(|(name, value)| match value {
+                        Json::String(s) => Some((name.clone(), PlanParam::Str(s.clone()))),
+                        Json::Number {
+                            text,
+                            integer: true,
+                        } => Some((name.clone(), PlanParam::Int(text.clone()))),
+                        _ => None,
+                    })
+                    .collect(),
+                _ => Vec::new(),
+            };
+            params.sort_by(|a, b| a.0.cmp(&b.0));
             LoopFile {
                 frontmatter,
+                params,
                 body: self.body.to_owned(),
                 check: self.check_text.clone(),
             }
@@ -1204,15 +1221,6 @@ fn adapter_loop(file: &LoopFile) -> Option<Loop> {
         Value::Array(items) => Secrets::List(items.iter().map(text).collect::<Option<_>>()?),
         _ => Secrets::All,
     };
-    let params = get("params")?
-        .as_object()?
-        .iter()
-        .map(|(name, value)| match value {
-            Value::String(s) => Some((name.clone(), PlanParam::Str(s.clone()))),
-            Value::Number(n) => Some((name.clone(), PlanParam::Int(n.to_string()))),
-            _ => None,
-        })
-        .collect::<Option<_>>()?;
     Some(Loop {
         id: text(get("id")?)?,
         name: text(get("name")?)?,
@@ -1222,7 +1230,7 @@ fn adapter_loop(file: &LoopFile) -> Option<Loop> {
         agent,
         secrets,
         priority: get("priority")?.as_i64()?,
-        params,
+        params: file.params.clone(),
         body: file.body.clone(),
     })
 }
@@ -1421,6 +1429,9 @@ pub fn instant(time: &str) -> Option<(i64, String)> {
     let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
     let days = era * 146_097 + doe - 719_468;
     let seconds = days * 86_400 + hour * 3600 + minute * 60 + second - offset * 60;
+    if second == 60 && seconds.rem_euclid(86_400) != 0 {
+        return None;
+    }
     Some((seconds, fraction))
 }
 
@@ -2426,7 +2437,7 @@ pub fn read_script(script: &str) -> Option<(String, BTreeMap<String, Param>)> {
             let integer = digits == "0"
                 || (digits.starts_with(|c: char| ('1'..='9').contains(&c))
                     && digits.bytes().all(|b| b.is_ascii_digit()));
-            if !integer || value == "-0" {
+            if !integer {
                 return None;
             }
             Param::Integer(value.to_owned())
@@ -3059,6 +3070,10 @@ mod polish_tests {
             "9223372036854775808",
             "18446744073709551615",
             "-9223372036854775808",
+            "18446744073709551616",
+            "-9223372036854775809",
+            "123456789012345678901234567890",
+            "-0",
         ] {
             let script = format!(
                 "#!/bin/sh\n# wizloop: params from the loop file, as data\nexport WIZLOOP_PARAM_COUNT={digits}\n# wizloop: the check\nprintf '%s' \"$WIZLOOP_PARAM_COUNT\"\n"
@@ -3085,14 +3100,16 @@ mod polish_tests {
             });
             assert!(read.refusals.is_empty(), "{:?}", read.refusals);
             let parsed = read.file.unwrap();
-            let count = &parsed.frontmatter["params"]["count"];
-            assert!(count.is_number());
-            assert_eq!(count.to_string(), digits);
+            assert!(parsed.frontmatter["params"]["count"].is_number());
+            assert_eq!(
+                parsed.params,
+                [("count".to_owned(), PlanParam::Int(digits.to_owned()))]
+            );
             let (restored, params) = read_script(&script).unwrap();
             assert_eq!(restored, check);
             assert_eq!(render_script(&restored, &params).unwrap(), script);
         }
-        for digits in ["+1", "01", "-0", "1.0"] {
+        for digits in ["+1", "01", "-01", "1.0", "1e3", "-"] {
             let script = format!(
                 "#!/bin/sh\n# wizloop: params from the loop file, as data\nexport WIZLOOP_PARAM_COUNT={digits}\n# wizloop: the check\nprintf '%s' \"$WIZLOOP_PARAM_COUNT\"\n"
             );
@@ -3132,6 +3149,9 @@ mod polish_tests {
             ("2016-12-31t23:59:60.5z", true),
             ("1990-12-31T15:59:60-08:00", true),
             ("1991-01-01T00:59:60+01:00", true),
+            ("2030-01-02T03:04:60Z", false),
+            ("2030-06-15T12:30:60+00:00", false),
+            ("2016-12-31T23:59:60+01:00", false),
             ("2030-02-29t03:04:05z", false),
             ("2030-01-02t24:04:05z", false),
             ("2030-01-02t03:60:05z", false),

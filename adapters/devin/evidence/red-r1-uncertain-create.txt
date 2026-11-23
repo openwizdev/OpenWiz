@@ -1,0 +1,50 @@
+# Red (openwizdev/openwiz#1996, review R1 on openwizdev/OpenWiz#2490): an uncertain create (the fake Devin makes the session,
+# then drops the connection; or answers 503 or 408) must say its outcome is unknown and never say retry; a confirmed 422 or
+# a refusal before any call must say nothing started. Agent CLIs stubbed first on PATH; synthetic; no host reached.
+# The key's variable is shown as <the key's variable>: the kit fails any driver file that names it.
+# Run: python3 -I adapters/devin/test_driver.py -k uncertain
+
+FFFF
+======================================================================
+FAIL: test_an_uncertain_create_is_never_retried_and_a_confirmed_refusal_is_told_apart (__main__.Driver.test_an_uncertain_create_is_never_retried_and_a_confirmed_refusal_is_told_apart) (fault={'drop': True})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/devin/test_driver.py", line 144, in test_an_uncertain_create_is_never_retried_and_a_confirmed_refusal_is_told_apart
+    self.assertIn('outcome is unknown', out['error'])
+AssertionError: 'outcome is unknown' not found in 'the key helper refused: the helper could not reach the host, or its answer was unreadable'
+
+======================================================================
+FAIL: test_an_uncertain_create_is_never_retried_and_a_confirmed_refusal_is_told_apart (__main__.Driver.test_an_uncertain_create_is_never_retried_and_a_confirmed_refusal_is_told_apart) (fault={'status': 503, 'body': {}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/devin/test_driver.py", line 144, in test_an_uncertain_create_is_never_retried_and_a_confirmed_refusal_is_told_apart
+    self.assertIn('outcome is unknown', out['error'])
+AssertionError: 'outcome is unknown' not found in 'Devin answered 503 to the new session'
+
+======================================================================
+FAIL: test_an_uncertain_create_is_never_retried_and_a_confirmed_refusal_is_told_apart (__main__.Driver.test_an_uncertain_create_is_never_retried_and_a_confirmed_refusal_is_told_apart) (fault={'status': 408, 'body': {}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/devin/test_driver.py", line 144, in test_an_uncertain_create_is_never_retried_and_a_confirmed_refusal_is_told_apart
+    self.assertIn('outcome is unknown', out['error'])
+AssertionError: 'outcome is unknown' not found in 'Devin answered 408 to the new session'
+
+======================================================================
+FAIL: test_an_uncertain_create_is_never_retried_and_a_confirmed_refusal_is_told_apart (__main__.Driver.test_an_uncertain_create_is_never_retried_and_a_confirmed_refusal_is_told_apart)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/devin/test_driver.py", line 148, in test_an_uncertain_create_is_never_retried_and_a_confirmed_refusal_is_told_apart
+    self.assertEqual((code, out['error']), (1, 'Devin refused the new session (422), so nothing was started'))
+AssertionError: Tuples differ: (1, 'Devin answered 422 to the new session') != (1, 'Devin refused the new session (422), so nothing was started')
+
+First differing element 1:
+'Devin answered 422 to the new session'
+'Devin refused the new session (422), so nothing was started'
+
+- (1, 'Devin answered 422 to the new session')
++ (1, 'Devin refused the new session (422), so nothing was started')
+
+----------------------------------------------------------------------
+Ran 1 test in 0.321s
+
+FAILED (failures=4)
