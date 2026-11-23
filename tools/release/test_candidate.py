@@ -2216,8 +2216,10 @@ class ArchivePrivacy(unittest.TestCase):
     def bad(self, planted=None):
         return ''.join('Bad: a planted case.\n\n```bad\n' + x + '\n```\n\n' for x in planted or self.PLANTED)
 
-    def scan(self, files):
+    def scan(self, files, overlap=None):
         def stage(manifest, archive, checksum, target, keep=None):
+            if overlap:
+                overlap.wait(30)
             build = Path(keep) / ('build-' + target)
             for name, text in files.items():
                 (build / name).parent.mkdir(parents=True, exist_ok=True)
@@ -2252,6 +2254,19 @@ class ArchivePrivacy(unittest.TestCase):
                      'runtime/contracts/x-open-development.v1.md', 'runtime/skills/open-development.v1.md'):
             with self.subTest(name=name):
                 self.assertEqual(self.scan({name: self.bad()}), ['finding'])
+
+    def test_d2_scans_running_at_once_each_see_only_their_own_files(self):
+        import threading
+        overlap, found = threading.Barrier(2), {}
+        files = {'clean': {self.CONTRACT: self.bad()}, 'dirty': {self.CONTRACT: self.bad(), 'runtime/install.py': self.bad()}}
+        threads = [threading.Thread(target=lambda name=name: found.__setitem__(name, self.scan(files[name], overlap)))
+                   for name in files]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        self.assertEqual(found, {'clean': [], 'dirty': ['finding']})
+        self.assertEqual(self.candidate.stage.__qualname__, 'stage')
 
 
 if __name__ == '__main__':
