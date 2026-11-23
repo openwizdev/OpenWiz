@@ -40,17 +40,19 @@ with th.ThrowawayMachine(ROWS, NAME, mode='trust-all-tools') as env:
           code == 1 and th.kit.invalid(out, th.ERROR) is None and out.get('error') == 'harness kiro is not installed here'
           and 'install kiro-cli' in out.get('next', '') and env.runs() == before)
 
-# Not signed in: the fake answers as Kiro CLI 3.5.0 does signed out (its runError line and its stderr line, exit 1).
-with th.ThrowawayMachine(ROWS, NAME, 'kiro-cli', FAKE, 'trust-all-tools') as env:
-    code, out = env.start(KIRO_FAKE_SIGNED_OUT='1')
-    log = ''
-    if env.runs():
-        with open(os.path.join(env.state, env.runs()[0][:-len('.json')] + '.log')) as f:
-            log = f.read()
-    check('not signed in is a D3 error that says so, and its log names kiro-cli login and KIRO_API_KEY',
-          code == 1 and th.kit.invalid(out, th.ERROR) is None and 'not signed in' in out.get('error', '')
-          and out.get('next', '').startswith('read ') and 'run `kiro-cli login` first' in log and 'KIRO_API_KEY' in log)
-    stop_all(env)
+# Not signed in: the fake answers as Kiro CLI 3.5.0 does signed out (its runError line on stdout and its line on
+# stderr, exit 1), or with its runError line alone; either way start's next names `kiro-cli login`.
+for how, lines in (('both', 'its runError line and its stderr line'), ('json', 'its runError line alone')):
+    with th.ThrowawayMachine(ROWS, NAME, 'kiro-cli', FAKE, 'trust-all-tools') as env:
+        code, out = env.start(KIRO_FAKE_SIGNED_OUT=how)
+        log = ''
+        if env.runs():
+            with open(os.path.join(env.state, env.runs()[0][:-len('.json')] + '.log')) as f:
+                log = f.read()
+        check('not signed in (%s) is a D3 error that says so, and its next names kiro-cli login' % lines,
+              code == 1 and th.kit.invalid(out, th.ERROR) is None and 'not signed in' in out.get('error', '')
+              and 'kiro-cli login' in out.get('next', '') and '"stage":"auth"' in log and 'KIRO_API_KEY' in log)
+        stop_all(env)
 
 # The approved mode only: permissions-yaml adds no trust flag; trust-all-tools adds exactly --trust-all-tools.
 for mode, flags in (('permissions-yaml', []), ('trust-all-tools', ['--trust-all-tools'])):
