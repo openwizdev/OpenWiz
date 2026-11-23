@@ -272,6 +272,23 @@ class Check(unittest.TestCase):
                     (folder / name).write_text(bad + THREAD + '\n')
                     self.verdict(self.call('--tree', folder, *args), 'T1')
 
+    def test_a_symlink_at_the_contract_path_is_scanned_as_plain_text(self):
+        fenced = '```bad\n' + THREAD + '\n```\n'
+        for name, args in (('t1/runtime/contracts/open-development.v1.md', ('--runtime-root', 't1')),
+                           ('contracts/open-development.v1.md', ())):
+            with self.subTest(name=name):
+                folder = self.root / ('link-' + name.replace('/', '_'))
+                (folder / name).parent.mkdir(parents=True)
+                (folder / name).symlink_to(fenced)
+                self.verdict(self.call('--tree', folder, *args), 'T1')
+        self.make_repo()
+        (self.repo / 'contracts').mkdir()
+        (self.repo / 'contracts/open-development.v1.md').symlink_to(fenced)
+        self.git('add', '.')
+        result = self.scan_git('--git-tree', self.git('write-tree'))
+        self.assertEqual(result[0], 1, result)
+        self.assertIn('T1 tree:"contracts/open-development.v1.md":2', result[1])
+
     def test_runtime_root_keeps_every_other_rule_and_needs_a_tree(self):
         folder = self.root / 'rt-rules'
         (folder / 't1/runtime/private').mkdir(parents=True)
