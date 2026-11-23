@@ -149,6 +149,9 @@ def reap_adopted_orphans():
 adopt_every_orphan_of_these_tests()
 REQUEST = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude',
            'model': 'claude-opus-5-5'}
+CANT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at "
+        "the host's default")
+HARNESSES = ('claude', 'codex', 'pi', 'opencode', 'prime', 'kimi', 'mistral')
 
 
 def alive(pid):
@@ -295,19 +298,166 @@ class Boat(unittest.TestCase):
         self.assertEqual((code, len(self.logged())), (1, 8), err)
         self.assertIn('is archived, not running', err['error'])
 
-    def test_every_turn_tells_the_agent_its_note_says_default_effort(self):
-        prompts = os.path.join(self.folder, 'prompts')
-        code, out = self.driver('start', REQUEST, FAKE_PROMPTS=prompts)
+    def boat_calls(self, log):
+        try:
+            with open(log) as f:
+                return [json.loads(x) for x in f]
+        except FileNotFoundError:
+            return []
+
+    def run_files(self):
+        try:
+            return os.listdir(self.env['OPENWIZ_BOAT_STATE'])
+        except FileNotFoundError:
+            return []
+
+    def start_and_wake(self, request, calls, prompts):
+        code, out = self.driver('start', request, FAKE_BOAT_ARGS=calls, FAKE_PROMPTS=prompts,
+                                FAKE_BOAT_PROVIDERS='claude,codex,kimi')
         self.assertEqual(code, 0, out)
         self.assertTrue(self.until(lambda: not alive(self.logged()[-1][0])), 'the first turn never ended')
         self.set_state('idle')
-        self.assertEqual(self.driver('wake', out, FAKE_PROMPTS=prompts), (0, dict(out, woke=True)))
+        self.assertEqual(self.driver('wake', out, FAKE_BOAT_ARGS=calls, FAKE_PROMPTS=prompts,
+                                     FAKE_BOAT_PROVIDERS='claude,codex,kimi'), (0, dict(out, woke=True)))
+        self.assertTrue(self.until(lambda: not alive(self.logged()[-1][0])), 'the woken turn never ended')
+        turns = [c for c in self.boat_calls(calls) if c[:1] == ['prompt'] and '--help' not in c]
+        helps = [c for c in self.boat_calls(calls) if c[:1] == ['prompt'] and '--help' in c]
         with open(prompts) as f:
-            texts = [json.loads(line) for line in f]
+            texts = [json.loads(x) for x in f]
+        return turns, helps, texts
+
+    def test_an_effort_reaches_boat_as_reasoning_effort(self):
+        for harness, model, effort in (('claude', 'claude-opus-5-5', 'medium'), ('claude', 'syn-claude-also', 'max'),
+                                       ('codex', 'syn-codex-second', 'xhigh'), ('kimi', 'syn-kimi', 'none')):
+            with self.subTest(harness=harness, model=model, effort=effort):
+                calls, prompts = os.path.join(self.folder, 'calls-' + effort), os.path.join(self.folder, 'p-' + effort)
+                turns, helps, texts = self.start_and_wake(dict(REQUEST, harness=harness, model=model, effort=effort),
+                                                          calls, prompts)
+                self.assertEqual(helps, [['prompt', '--help', '--no-update']])
+                self.assertEqual(len(turns), 2)
+                for turn in turns:
+                    self.assertEqual(turn.count('--reasoning-effort'), 1, turn)
+                    self.assertEqual(turn[turn.index('--reasoning-effort') + 1], effort)
+                    self.assertEqual(turn[turn.index('--provider') + 1], harness)
+                    self.assertEqual(turn[turn.index('--model') + 1], model)
+                self.assertEqual(len(texts), 2)
+                for text in texts:
+                    self.assertIn('`<your model> %s effort`' % effort, text)
+                    self.assertNotIn('default effort', text)
+
+    def test_no_effort_runs_at_the_hosts_default(self):
+        calls, prompts = os.path.join(self.folder, 'calls'), os.path.join(self.folder, 'prompts')
+        turns, helps, texts = self.start_and_wake(REQUEST, calls, prompts)
+        self.assertEqual(helps, [])
+        self.assertEqual(len(turns), 2)
+        for turn in turns:
+            self.assertNotIn('--reasoning-effort', turn)
         self.assertEqual(len(texts), 2)
         for text in texts:
             self.assertRegex(text, r"host's default effort")
             self.assertRegex(text, r'status note.* model field .*`<your model> default effort`')
+
+    def test_an_effort_boat_cannot_set_is_refused_and_starts_nothing(self):
+        for harness, model, effort in (('claude', 'claude-opus-5-5', 'minimal'),
+                                       ('claude', 'syn-claude-small', 'xhigh'), ('claude', 'syn-claude-plain', 'low'),
+                                       ('claude', 'syn-unlisted', 'medium'),
+                                       ('codex', 'claude-opus-5-5', 'medium'), ('opencode', 'syn-open-one', 'medium'),
+                                       ('pi', 'syn-pi', 'medium'), ('kimi', 'syn-kimi', 'low')):
+            with self.subTest(harness=harness, model=model, effort=effort):
+                calls = os.path.join(self.folder, 'calls-%s-%s' % (harness, effort))
+                code, out = self.driver('start', dict(REQUEST, harness=harness, model=model, effort=effort),
+                                        FAKE_BOAT_ARGS=calls, FAKE_BOAT_PROVIDERS='claude,codex,opencode,pi,kimi')
+                self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+                self.assertEqual(out['next'], CANT)
+                self.assertRegex(out['error'], r'(?<![\w-])%s(?![\w-])' % re.escape(harness))
+                self.assertRegex(out['error'], r'(?<![\w-])%s(?![\w-])' % re.escape(effort))
+                self.assertLessEqual(len(out['error']), 300)
+                self.assertEqual(self.boat_calls(calls), [['prompt', '--help', '--no-update']])
+                self.assertEqual((self.sandboxes(), self.run_files(), self.logged()), ({}, [], []))
+        for effort in ('medium', None):
+            with self.subTest(harness='gemini', effort=effort):
+                calls = os.path.join(self.folder, 'calls-gemini-%s' % effort)
+                request = dict(REQUEST, harness='gemini', model='gemini-3.8-flash',
+                               **({'effort': effort} if effort else {}))
+                code, out = self.driver('start', request, FAKE_BOAT_ARGS=calls)
+                self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+                if effort:
+                    self.assertEqual(out['next'], CANT)
+                    self.assertRegex(out['error'], r'(?<![\w-])gemini(?![\w-])')
+                    self.assertRegex(out['error'], r'(?<![\w-])medium(?![\w-])')
+                    self.assertLessEqual(len(out['error']), 300)
+                else:
+                    self.assertEqual(out, {'error': 'boat has no harness gemini',
+                                           'next': 'use one of: claude, codex, pi, opencode, prime, kimi, mistral'})
+                self.assertEqual((self.boat_calls(calls), self.sandboxes(), self.run_files(), self.logged()),
+                                 ([], {}, [], []))
+
+    def test_the_driver_reads_the_level_list_boat_1_0_105_prints(self):
+        for harness, model, effort, passed in (('claude', 'opus-5-5', 'medium', True),
+                                               ('codex', 'gpt-5.6-terra', 'none', True),
+                                               ('pi', 'llmgateway:glm-5.3', 'max', True),
+                                               ('kimi', 'moonshot:kimi-k2.6', 'none', True),
+                                               ('codex', 'gpt-5.4', 'max', False), ('claude', 'haiku', 'low', False),
+                                               ('opencode', 'claude-sonnet-5', 'medium', False),
+                                               ('claude', 'claude-opus-5-5', 'medium', False)):
+            with self.subTest(harness=harness, model=model, effort=effort):
+                calls = os.path.join(self.folder, 'calls-%s-%s-%s' % (harness, effort, passed))
+                code, out = self.driver('start', dict(REQUEST, harness=harness, model=model, effort=effort),
+                                        FAKE_BOAT_ARGS=calls, FAKE_BOAT_HELP='live',
+                                        FAKE_BOAT_PROVIDERS='claude,codex,pi,opencode,kimi')
+                self.assertEqual(code, 0 if passed else 1, out)
+                self.assertEqual(out.get('next'), None if passed else CANT)
+                turns = [c for c in self.boat_calls(calls) if c[:1] == ['prompt'] and '--help' not in c]
+                self.assertEqual([c[c.index('--reasoning-effort') + 1] for c in turns], [effort] if passed else [])
+
+    def test_a_start_whose_levels_cannot_be_read_starts_nothing(self):
+        marker = 'sk-' + 'Synthetic0Host0Marker' + self.mark
+        for name, env in (('fails', dict(FAKE_BOAT_FAIL='prompt')), ('no level list', dict(FAKE_BOAT_HELP='bare')),
+                          ('no model rows', dict(FAKE_BOAT_HELP='headed')),
+                          ('truncated', dict(FAKE_BOAT_HELP='truncated')),
+                          ('diagnostic', dict(PATH=self.odd_boat(), STDERR_FOR='prompt', STDERR_HOW='mixed',
+                                              FAKE_MARKER=marker))):
+            with self.subTest(name):
+                code, out = self.driver('start', dict(REQUEST, effort='medium'), **env)
+                self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+                self.assertNotEqual(out['next'], CANT)
+                self.assertIn('nothing was saved or started', out['error'])
+                self.assertIn('boat prompt --help', out['next'])
+                self.assertNotIn(marker, json.dumps(out))
+                self.assertNotIn('Synthetic', json.dumps(out))
+                self.assertEqual((self.sandboxes(), self.run_files(), self.logged()), ({}, [], []))
+        for effort in ('Medium', 'medium high', '', 'x' * 21, 5, None):
+            with self.subTest(effort=effort):
+                calls = os.path.join(self.folder, 'calls-bad')
+                code, out = self.driver('start', dict(REQUEST, effort=effort), FAKE_BOAT_ARGS=calls)
+                self.assertEqual((code, out), (1, {'error': 'effort is not valid',
+                                                   'next': 'fix effort as `driver schema` shows'}))
+                self.assertEqual((self.boat_calls(calls), self.sandboxes(), self.run_files()), ([], {}, []))
+
+    def test_version_lists_effort_and_the_readme_says_how(self):
+        self.assertEqual(self.driver('version', {}), (0, {
+            'driver': 'boat', 'records': ['openwiz:records v1'],
+            'can': ['start', 'wake', 'stop', 'many-at-once', 'own-sandbox', 'effort']}))
+        with open(os.path.join(HERE, 'README.md')) as f:
+            lines = f.read().splitlines()
+        rest = [x for x in lines[lines.index('Login: held by boat.dev') + 1:] if x.strip()]
+        self.assertTrue(rest[0].startswith('Effort: passed as `boat prompt --reasoning-effort <effort>`'), rest[0])
+        rows = {}
+        for row in rest[1:]:
+            if not row.startswith('|'):
+                break
+            cells = [c.strip().strip('`') for c in row.strip().strip('|').split('|')]
+            rows[cells[0]] = cells[1]
+        self.assertEqual(set(rows) - {'Harness', '---'}, set(HARNESSES))
+        for harness in HARNESSES:
+            if harness == 'opencode':
+                self.assertTrue(rows[harness].startswith("can't ("), rows[harness])
+            else:
+                self.assertIn('--reasoning-effort <effort>', rows[harness])
+        start_row = [x for x in lines if x.startswith('| `start` |')]
+        self.assertEqual(len(start_row), 1)
+        self.assertIn('[--reasoning-effort <effort>]', start_row[0])
+        self.assertNotIn('driver v2 field', '\n'.join(lines))
 
     def set_state(self, now):
         """Set the newest synthetic sandbox's state, as boat would once the agent's turn has ended."""

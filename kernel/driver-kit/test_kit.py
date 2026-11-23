@@ -451,6 +451,16 @@ class Kit(unittest.TestCase):
                                   **macos)
         self.assertEqual((code, out), (0, PASS), err)
 
+    def test_a_driver_whose_processes_live_only_during_each_call_passes_all_five_on_linux_and_macos(self):
+        macos = {'PATH': NO_PROC + os.pathsep + self.env['PATH'], 'NO_PROC_PYTHON': sys.executable}
+        for python, env in ((sys.executable, {}), (os.path.join(NO_PROC, 'python3'), macos)):
+            with self.subTest(python=python):
+                self.tearDown()
+                self.setUp()
+                env = dict(env, PATH=NO_PROC + os.pathsep + self.env['PATH']) if env else {}
+                code, out, err = self.kit(os.path.join(FIXTURES, 'short-lived-driver'), python, **env)
+                self.assertEqual((code, out), (0, PASS), err)
+
     def test_the_kits_visibility_probe_signals_ready_through_the_macos_shim_and_runs_until_its_stdin_closes(self):
         p = subprocess.run([os.path.join(NO_PROC, 'python3')] + module(os.path.join(HERE, 'kit.py')).PROBE,
                            input='', env=dict(self.env, NO_PROC_PYTHON=sys.executable), capture_output=True,

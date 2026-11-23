@@ -1,0 +1,19 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/cloudroom/test_driver.py -k cannot_set   # no-op agent CLI stubs first on PATH
+test_an_effort_it_cannot_set_is_refused_and_starts_nothing (__main__.Driver.test_an_effort_it_cannot_set_is_refused_and_starts_nothing) ...
+  test_an_effort_it_cannot_set_is_refused_and_starts_nothing (__main__.Driver.test_an_effort_it_cannot_set_is_refused_and_starts_nothing) [a provider Cloudroom does not know] ... FAIL
+
+======================================================================
+FAIL: test_an_effort_it_cannot_set_is_refused_and_starts_nothing (__main__.Driver.test_an_effort_it_cannot_set_is_refused_and_starts_nothing) [a provider Cloudroom does not know]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cloudroom/test_driver.py", line 158, in test_an_effort_it_cannot_set_is_refused_and_starts_nothing
+    self.assertEqual(out['next'], CANT)
+AssertionError: 'check `room-cli provider models gemini`,[13 chars]gain' != "this host can't set effort: remove the e[81 chars]ault"
+- check `room-cli provider models gemini`, then start again
++ this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.332s
+
+FAILED (failures=1)

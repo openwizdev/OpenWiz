@@ -2,6 +2,7 @@
 import base64
 import fcntl
 import hashlib
+import http.server
 import importlib.util
 import json
 import os
@@ -159,6 +160,10 @@ class Helper(unittest.TestCase):
                     "OPENWIZ_AGENT_TOKEN_DIR": str(self.private),
                     "OPENWIZ_TOKEN_SERVICE": SERVICE, "OPENWIZ_TOKEN_SERVICE_ROUTE": "pairing",
                     "OPENWIZ_TOKEN_SERVICE_READBACK": "passed"}
+        self.revoke_api = FakeAPI()
+        self.addCleanup(self.revoke_api.server_close)
+        self.addCleanup(self.revoke_api.shutdown)
+        self.env["OPENWIZ_GITHUB_API_BASE"] = self.revoke_api.base()
 
     def answers(self, *items):
         (self.root / "answers.json").write_text(json.dumps(list(items)))
@@ -205,7 +210,7 @@ class Helper(unittest.TestCase):
             for token in tokens:
                 self.assertNotIn(token, " ".join(call["args"]) + call["stdin"])
         for path in self.root.rglob("*"):
-            private = path.parent == self.private and path.name.startswith("token-")
+            private = path.parent == self.private and path.name.startswith(("token-", "kept-"))
             if path.is_file() and not private and path.name != "answers.json":
                 for token in tokens:
                     self.assertNotIn(token.encode(), path.read_bytes(), path)
@@ -793,6 +798,673 @@ class Review(Helper):
                          f'OPENWIZ_TOKEN_SERVICE_READBACK=failed "$PY" -I "$H" run {req} -- gh pr list')
         self.assertEqual([c["gh_token"] for c in self.calls("gh")], [None])
         self.assertEqual(ran.stderr, (NOTE.replace("<reason>", "pairing-off") + "\n") * 2)
+
+
+
+
+NOT_REVOKED = "openwiz: openwiz[bot] token not revoked ({}); the token is kept for a later revoke\n"
+NO_TOKEN = "openwiz: openwiz[bot] token not revoked (no token found)\n"
+
+
+class FakeAPI(http.server.ThreadingHTTPServer):
+    daemon_threads = True
+
+    def __init__(self, status=204, location=None):
+        self.status, self.location, self.watch, self.seen, self.during = status, location, None, [], None
+        super().__init__(("127.0.0.1", 0), FakeAPIHandler)
+        threading.Thread(target=self.serve_forever, daemon=True).start()
+
+    def base(self):
+        return f"http://127.0.0.1:{self.server_address[1]}"
+
+
+class FakeAPIHandler(http.server.BaseHTTPRequestHandler):
+    def answer(self):
+        auth = self.headers.get("Authorization") or ""
+        watch = self.server.watch
+        folder = watch if watch and watch.is_dir() else watch and watch.parent
+        held = folder and any(auth[7:].encode() in p.read_bytes() for p in folder.glob("*")
+                              if p.is_file() and os.access(p, os.R_OK))
+        self.server.seen.append({"method": self.command, "path": self.path,
+                                 "auth": sha(auth) if auth else None, "held": bool(held)})
+        if self.server.during:
+            self.server.during()
+        self.send_response(self.server.status)
+        if self.server.location:
+            self.send_header("Location", self.server.location)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    do_GET = do_POST = do_DELETE = do_CONNECT = answer
+
+    def log_message(self, *args):
+        pass
+
+
+class Revoke(Helper):
+    def api(self, **kwargs):
+        server = FakeAPI(**kwargs)
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        return server
+
+    def minted(self):
+        self.answers(answer())
+        self.assertEqual(self.start().returncode, 0)
+        return self.token_file()
+
+    def revoke(self, api, **env):
+        return self.helper("revoke", *REQ, OPENWIZ_GITHUB_API_BASE=api.base(), **env)
+
+    def assert_revoked_once(self, api, token=TOKEN):
+        self.assertEqual(api.seen, [{"method": "DELETE", "path": "/installation/token",
+                                     "auth": sha(f"Bearer {token}"), "held": True}])
+
+    def test_revoke_makes_its_own_https_call_when_gh_is_refused_or_absent(self):
+        # comment-ok: catches: a revoke routed through gh, its guard or a shim, which fails open when gh
+        # refuses (GA5's crossing) or is not installed.
+        refusing = self.root / "refusing"
+        refusing.mkdir()
+        (refusing / "gh").write_text("#!/bin/sh\necho synthetic-gh-refused >&2\nexit 1\n")
+        (refusing / "gh").chmod(0o755)
+        no_gh = self.root / "no-gh"
+        no_gh.mkdir()
+        for name, path in (("gh refused", f"{refusing}:{self.bin}:/usr/bin:/bin"),
+                           ("gh absent", f"{no_gh}:/usr/bin:/bin")):
+            with self.subTest(name):
+                shutil.rmtree(self.private, True)
+                self.log.unlink(missing_ok=True)
+                held = self.minted()
+                api = self.api()
+                api.watch = held
+                done = self.revoke(api, PATH=path)
+                self.assertEqual((done.returncode, done.stdout, done.stderr), (0, "", ""))
+                self.assert_revoked_once(api)
+                self.assertEqual(self.calls("gh"), [], "revoke never runs gh")
+                self.assertFalse(held.exists(), "a revoked token is removed")
+                self.assert_never_exposed(done)
+
+    def test_revoke_inside_a_run_whose_folder_is_partly_gone_or_unreadable(self):
+        # comment-ok: catches: a revoke that needs the cache file, the exec folder or a folder listing,
+        # so it fails once the run's folder is partly deleted or its cache file is unreadable.
+        breaks = {"cache file gone": 'rm -f "$CACHE"',
+                  "cache file unreadable": 'chmod 000 "$CACHE"',
+                  "cache file not JSON": 'printf "{" > "$CACHE"',
+                  "exec folder and gh binding gone": 'rm -rf "$PRIV"/exec-* "$PRIV"/gh-*'}
+        for name, damage in breaks.items():
+            with self.subTest(name):
+                shutil.rmtree(self.private, True)
+                held = self.minted()
+                api = self.api()
+                api.watch = self.private
+                script = f'{damage}; exec "$PY" -I "$H" revoke {" ".join(REQ)}'
+                done = self.helper("run", *REQ, "--", "/bin/sh", "-c", script,
+                                   OPENWIZ_GITHUB_API_BASE=api.base(), CACHE=str(held),
+                                   PRIV=str(self.private), PY=sys.executable, H=str(HELPER))
+                self.assertEqual((done.returncode, done.stdout, done.stderr), (0, "", ""), name)
+                self.assert_revoked_once(api)
+                self.assertEqual(list(self.private.glob("run-*")) if self.private.exists() else [], [])
+                self.assert_never_exposed(done)
+
+    def test_revoke_finds_the_token_in_a_moved_folder(self):
+        # comment-ok: catches: a revoke that trusts the path this run recorded, so it finds nothing
+        # after the folder was moved and the token stays live.
+        self.minted()
+        moved = self.root / "moved"
+        self.private.rename(moved)
+        api = self.api()
+        api.watch = moved
+        stale = str(self.private / ("run-" + "0" * 32 + ".json"))
+        done = self.revoke(api, OPENWIZ_AGENT_TOKEN_DIR=str(moved), OPENWIZ_AGENT_TOKEN_RUN=stale)
+        self.assertEqual((done.returncode, done.stdout, done.stderr), (0, "", ""))
+        self.assert_revoked_once(api)
+        self.assertEqual(list(moved.iterdir()), [], "no token is left, and the folder stays for later mints")
+        self.assert_never_exposed(done)
+
+    def test_removing_the_token_folder_revokes_first(self):
+        # comment-ok: catches: removing a token file or folder before GitHub confirmed the revoke,
+        # which leaves a live token nobody holds.
+        held = self.minted()
+        other = self.private / "token-other.json"
+        other.write_text(json.dumps({"token": TOKEN2, "expires_at": int(time.time()) + 3600}))
+        other.chmod(0o600)
+        api = self.api()
+        api.watch = held
+        done = self.revoke(api)
+        self.assertEqual((done.returncode, done.stderr), (0, ""))
+        self.assert_revoked_once(api)
+        self.assertFalse(held.exists())
+        self.assertEqual(json.loads(other.read_text())["token"], TOKEN2,
+                         "another request's token is never removed or revoked")
+        self.assertTrue(self.private.is_dir(), "a folder still holding a token stays")
+        other.unlink()
+        api.seen.clear()
+        again = self.revoke(api)
+        self.assertEqual((again.returncode, again.stderr), (1, NO_TOKEN))
+        self.assertEqual(api.seen, [])
+
+    def test_a_failed_revoke_keeps_the_token_and_says_so_in_one_line(self):
+        # comment-ok: catches: a revoke that deletes the only copy of a live token when GitHub refuses,
+        # redirects or cannot be reached, or that reports success, several lines or the token.
+        cases = {"refused 401": ({"status": 401}, "GitHub refused"),
+                 "refused 404": ({"status": 404}, "GitHub refused"),
+                 "server error": ({"status": 500}, "GitHub refused"),
+                 "not a 204": ({"status": 200}, "GitHub refused"),
+                 "redirect": ({"status": 307}, "GitHub refused")}
+        elsewhere = self.api()
+        for name, (kwargs, reason) in cases.items():
+            with self.subTest(name):
+                shutil.rmtree(self.private, True)
+                held = self.minted()
+                before = held.read_bytes()
+                if kwargs["status"] == 307:
+                    kwargs["location"] = elsewhere.base() + "/installation/token"
+                api = self.api(**kwargs)
+                api.watch = held
+                done = self.revoke(api)
+                self.assertEqual((done.returncode, done.stdout, done.stderr),
+                                 (1, "", NOT_REVOKED.format(reason)))
+                self.assert_revoked_once(api)
+                kept = [path.read_bytes() for path in self.private.glob("kept-*")]
+                self.assertEqual(kept, [before], "the only copy of a live token is kept, never deleted")
+                self.assertEqual(elsewhere.seen, [], "a redirect is never followed")
+                self.assert_never_exposed(done)
+        with self.subTest("unreachable"):
+            api = self.api()
+            base = api.base()
+            api.shutdown()
+            api.server_close()
+            done = self.helper("revoke", *REQ, OPENWIZ_GITHUB_API_BASE=base)
+            self.assertEqual((done.returncode, done.stdout, done.stderr),
+                             (1, "", NOT_REVOKED.format("GitHub unreachable")))
+            self.assertEqual([path.read_bytes() for path in self.private.glob("kept-*")], [before])
+            self.assert_never_exposed(done)
+
+    def test_no_token_found_gives_one_fixed_line_and_calls_nobody(self):
+        # comment-ok: catches: a revoke that exits zero, prints more than one line, or calls GitHub
+        # when it holds no current token.
+        api = self.api()
+        expired = {"token": TOKEN, "expires_at": int(time.time()) - 10}
+        setups = {"no folder": lambda: None,
+                  "empty folder": lambda: self.private.mkdir(mode=0o700),
+                  "expired token": lambda: (self.minted().write_text(json.dumps(expired))),
+                  "not a token": lambda: (self.minted().write_text(json.dumps({"token": "a b"}))),
+                  "loose folder": lambda: (self.minted(), self.private.chmod(0o755))}
+        for name, setup in setups.items():
+            with self.subTest(name):
+                shutil.rmtree(self.private, True)
+                setup()
+                done = self.revoke(api)
+                self.assertEqual((done.returncode, done.stdout, done.stderr), (1, "", NO_TOKEN))
+                self.assertEqual(api.seen, [])
+                self.assert_never_exposed(done)
+
+    def test_revoke_https_goes_only_to_the_configured_api_base(self):
+        # comment-ok: catches: a revoke that follows a proxy setting or an arbitrary base, sending the
+        # token to a host other than GitHub's API.
+        held = self.minted()
+        before = held.read_bytes()
+        proxy = self.api()
+        for base in ("https://api.github.com.example", "http://api.github.com",
+                     "http://127.0.0.2:8080", "http://localhost:8080", "http://127.0.0.1:8080/x",
+                     "http://user@127.0.0.1:8080", "https://api.github.com/", ""):
+            with self.subTest(base=base):
+                done = self.helper("revoke", *REQ, OPENWIZ_GITHUB_API_BASE=base)
+                self.assertEqual((done.returncode, done.stdout, done.stderr),
+                                 (1, "", NOT_REVOKED.format("not the GitHub API")))
+                self.assertEqual(held.read_bytes(), before)
+        api = self.api()
+        api.watch = held
+        done = self.revoke(api, HTTP_PROXY=proxy.base(), http_proxy=proxy.base(),
+                           HTTPS_PROXY=proxy.base(), https_proxy=proxy.base(), ALL_PROXY=proxy.base())
+        self.assertEqual((done.returncode, done.stderr), (0, ""))
+        self.assertEqual(proxy.seen, [], "no proxy sees the request")
+        self.assert_revoked_once(api)
+        self.assert_never_exposed(done)
+
+
+
+class FallbackRevoke(Helper):
+    api, minted, revoke, assert_revoked_once = (
+        Revoke.api, Revoke.minted, Revoke.revoke, Revoke.assert_revoked_once)
+
+    def expiring(self, left=100):
+        held_file = self.minted()
+        held = json.loads(held_file.read_text())
+        held["expires_at"] = int(time.time()) + left
+        held_file.write_text(json.dumps(held))
+        return held_file
+
+    def run_gh(self, **env):
+        return self.helper("run", *REQ, "--", "gh", "pr", "list", **env)
+
+    def test_a_fallback_revokes_a_live_token_before_deleting_it(self):
+        # comment-ok: catches: a fallback that deletes the only copy of a still-live token without
+        # revoking it, leaving a token nobody holds until it expires.
+        for name, reason, act in (
+                ("a failed refresh", "unreachable", lambda api: self.run_gh(
+                    OPENWIZ_GITHUB_API_BASE=api.base())),
+                ("the pairing turned off", "pairing-off", lambda api: self.start(
+                    OPENWIZ_GITHUB_API_BASE=api.base(), OPENWIZ_TOKEN_SERVICE_READBACK="failed"))):
+            with self.subTest(name):
+                shutil.rmtree(self.private, True)
+                self.log.unlink(missing_ok=True)
+                held = self.expiring()
+                self.answers(answer(), {"exit": 1, "stdout": ""})
+                api = self.api()
+                api.watch = held
+                done = act(api)
+                self.assert_fallback(done, reason)
+                self.assert_revoked_once(api)
+                self.assertEqual([c["gh_token"] for c in self.calls("gh")], [None] * len(self.calls("gh")))
+                self.assert_never_exposed(done)
+        with self.subTest("an expired token needs no revoke"):
+            shutil.rmtree(self.private, True)
+            self.expiring(left=-10)
+            self.answers(answer(), {"exit": 1, "stdout": ""})
+            api = self.api()
+            done = self.run_gh(OPENWIZ_GITHUB_API_BASE=api.base())
+            self.assert_fallback(done, "unreachable")
+            self.assertEqual(api.seen, [], "a dead token is deleted without a call")
+
+    def test_a_fallback_whose_revoke_fails_keeps_the_token_file(self):
+        # comment-ok: catches: a fallback that deletes a live token whose revoke failed, or that writes
+        # more than the one fallback note.
+        closed = FakeAPI()
+        closed_base = closed.base()
+        closed.shutdown()
+        closed.server_close()
+        for name, base in (("GitHub refuses", None), ("GitHub unreachable", closed_base),
+                           ("not the GitHub API", "http://example.invalid")):
+            with self.subTest(name):
+                shutil.rmtree(self.private, True)
+                self.log.unlink(missing_ok=True)
+                held = self.expiring()
+                self.answers(answer(), {"exit": 1, "stdout": ""})
+                before = json.loads(held.read_text())
+                refusing = self.api(status=401)
+                refusing.watch = held
+                done = self.run_gh(OPENWIZ_GITHUB_API_BASE=base or refusing.base())
+                self.assertEqual((done.returncode, done.stderr),
+                                 (0, NOTE.replace("<reason>", "unreachable") + "\n"))
+                self.assertFalse(held.exists(), "out of the cache, so it is never handed out")
+                kept = self.side_files()
+                self.assertEqual([json.loads(path.read_text()) for path in kept], [before],
+                                 "the token file is kept whole for a later revoke")
+                self.assertEqual(kept[0].stat().st_mode & 0o777, 0o600)
+                self.assertEqual(refusing.seen and [len(refusing.seen)], [1] if base is None else [])
+                self.assertEqual([c["gh_token"] for c in self.calls("gh")], [None])
+                api = self.api()
+                api.watch = held
+                later = self.revoke(api)
+                self.assertEqual((later.returncode, later.stderr), (0, ""))
+                self.assert_revoked_once(api)
+                self.assertEqual(self.side_files(), [])
+                self.assert_never_exposed(done, later)
+
+    def test_a_kept_expiring_token_is_never_handed_out_again(self):
+        # comment-ok: catches: a token kept after a failed revoke being handed to the next run's gh, its
+        # git or the caller, because the refresh boundary is skipped for a kept file.
+        self.expiring()
+        self.answers(answer(), {"exit": 1, "stdout": ""})
+        refusing = self.api(status=401)
+        self.env["OPENWIZ_GITHUB_API_BASE"] = refusing.base()
+        self.run_gh()
+        self.assertEqual([live_token_in(path) for path in self.side_files()], [TOKEN], "the token was kept")
+        github = self.github()
+        outputs = [self.run_gh(), self.helper("run", *REQ, "--", *github.git()),
+                   self.helper("run", *REQ, "--", "git", "credential", "fill",
+                               stdin="protocol=https\nhost=github.com\n\n"),
+                   self.start()]
+        self.assertEqual([live_token_in(path) for path in self.side_files()], [TOKEN],
+                         "still kept after every fallback")
+        self.assertEqual([c["gh_token"] for c in self.calls("gh")], [None, None])
+        self.assertNotIn(sha(f"x-access-token:{TOKEN}"), github.seen)
+        for result in outputs[:1] + outputs[3:]:
+            self.assertEqual(result.stderr, NOTE.replace("<reason>", "unreachable") + "\n")
+        self.assertEqual(len(self.service_calls()), 1 + 1 + len(outputs),
+                         "each use asks for a fresh token instead of using the kept one")
+        self.assert_never_exposed(*outputs)
+
+
+    def test_a_kept_fresh_token_is_never_reused_when_the_route_returns(self):
+        # comment-ok: catches: a fresh token kept after a failed fallback revoke (the pairing turned off)
+        # being handed out again once the route is back, because its file still names its scope.
+        held = self.minted()
+        refusing = self.api(status=401)
+        self.env["OPENWIZ_GITHUB_API_BASE"] = refusing.base()
+        off = self.start(OPENWIZ_TOKEN_SERVICE_READBACK="failed")
+        self.assertEqual(off.stderr, NOTE.replace("<reason>", "pairing-off") + "\n")
+        self.assertEqual([live_token_in(path) for path in self.side_files()], [TOKEN],
+                         "the token is kept for a later revoke")
+        self.answers(answer(), answer(token=TOKEN2))
+        back = self.run_gh()
+        self.assertEqual((back.returncode, back.stderr), (0, ""))
+        self.assertEqual(self.calls("gh")[-1]["gh_token"], sha(TOKEN2), "a fresh mint, not the kept token")
+        self.assertEqual(len(self.service_calls()), 2)
+        self.assert_never_exposed(off, back)
+
+    def kept_token(self):
+        held = self.minted()
+        refusing = self.api(status=401)
+        off = self.start(OPENWIZ_TOKEN_SERVICE_READBACK="failed", OPENWIZ_GITHUB_API_BASE=refusing.base())
+        self.assertEqual(off.stderr, NOTE.replace("<reason>", "pairing-off") + "\n")
+        self.assertEqual([live_token_in(path) for path in self.side_files()], [TOKEN])
+        return held
+
+    def side_files(self):
+        return sorted(self.private.glob("kept-*")) if self.private.is_dir() else []
+
+    def test_a_new_mint_revokes_a_kept_token_before_replacing_it(self):
+        # comment-ok: catches: a new mint that overwrites a kept token's file without revoking it, so the
+        # kept token stays live and nobody holds it.
+        held = self.kept_token()
+        api = self.api()
+        api.watch = held
+        self.answers(answer(token=TOKEN2))
+        back = self.run_gh(OPENWIZ_GITHUB_API_BASE=api.base())
+        self.assertEqual((back.returncode, back.stderr), (0, ""))
+        self.assert_revoked_once(api, TOKEN)
+        self.assertEqual(self.calls("gh")[-1]["gh_token"], sha(TOKEN2))
+        self.assertEqual(self.held()["token"], TOKEN2)
+        self.assertEqual(self.side_files(), [])
+        self.assert_never_exposed(back)
+
+    def test_a_new_mint_keeps_a_kept_token_beside_it_when_the_revoke_fails(self):
+        # comment-ok: catches: a new mint that overwrites a kept token whose revoke failed, or hands that
+        # kept token to gh, git or the caller once it sits beside the new one.
+        self.kept_token()
+        refusing = self.api(status=401)
+        self.env["OPENWIZ_GITHUB_API_BASE"] = refusing.base()
+        self.answers(answer(token=TOKEN2))
+        outputs = [self.run_gh()]
+        self.assertEqual((outputs[0].returncode, outputs[0].stderr), (0, ""))
+        self.assertEqual(self.held()["token"], TOKEN2, "the new token is the request's cache")
+        sides = self.side_files()
+        self.assertEqual(len(sides), 1, "the kept token sits beside the new one")
+        self.assertEqual(json.loads(sides[0].read_text())["token"], TOKEN)
+        self.assertEqual(sides[0].stat().st_mode & 0o777, 0o600)
+        github = self.github()
+        outputs += [self.run_gh(), self.helper("run", *REQ, "--", *github.git()), self.start()]
+        self.assertEqual([c["gh_token"] for c in self.calls("gh")], [sha(TOKEN2)] * 2)
+        self.assertEqual(set(github.seen), {sha(f"x-access-token:{TOKEN2}")})
+        self.assertEqual(len(self.side_files()), 1, "later uses neither drop nor copy it")
+        api = self.api()
+        done = self.revoke(api)
+        self.assertEqual((done.returncode, done.stderr), (0, ""))
+        self.assertEqual(sorted(seen["auth"] for seen in api.seen),
+                         sorted([sha(f"Bearer {TOKEN}"), sha(f"Bearer {TOKEN2}")]))
+        self.assertEqual({seen["method"] for seen in api.seen}, {"DELETE"})
+        self.assertEqual(self.side_files(), [])
+        self.assertFalse(self.token_file().exists())
+        self.assert_never_exposed(*outputs, done)
+
+
+class RevokeReview(Helper):
+    api, minted, revoke, assert_revoked_once = (
+        Revoke.api, Revoke.minted, Revoke.revoke, Revoke.assert_revoked_once)
+    expiring, run_gh, side_files = FallbackRevoke.expiring, FallbackRevoke.run_gh, FallbackRevoke.side_files
+
+    def inside_run(self, script, api, **env):
+        return self.helper("run", *REQ, "--", "/bin/sh", "-c", script, OPENWIZ_GITHUB_API_BASE=api.base(),
+                           PRIV=str(self.private), PY=sys.executable, H=str(HELPER),
+                           CACHE=str(self.token_file()), **env)
+
+    def bytes_kept(self):
+        for path in self.private.iterdir():
+            path.chmod(0o600)
+        return [path.read_bytes() for path in sorted(self.private.iterdir())]
+
+    def test_r1_an_unreadable_or_corrupt_cache_file_is_never_deleted_or_replaced(self):
+        # comment-ok: catches: a fallback or mint that deletes or overwrites a cache file it cannot read,
+        # treating a failed read like a confirmed expiry, so a live token nobody can revoke is lost.
+        for name, damage in (("unreadable", lambda path: path.chmod(0)),
+                             ("corrupt", lambda path: path.write_bytes(path.read_bytes()[:-1]))):
+            with self.subTest(name):
+                shutil.rmtree(self.private, True)
+                self.log.unlink(missing_ok=True)
+                held = self.minted()
+                damage(held)
+                self.answers(answer(), {"exit": 1, "stdout": ""}, answer(token=TOKEN2))
+                off = self.run_gh()
+                self.assertEqual(off.stderr, NOTE.replace("<reason>", "unreachable") + "\n")
+                back = self.run_gh()
+                self.assertEqual((back.returncode, back.stderr), (0, ""))
+                self.assertEqual(self.calls("gh")[-1]["gh_token"], sha(TOKEN2))
+                kept = self.bytes_kept()
+                self.assertEqual(len(kept), 2, "the unreadable file is kept beside the new token")
+                self.assertTrue(any(TOKEN.encode() in b for b in kept), "with the old token's bytes")
+                self.assertEqual(self.revoke_api.seen, [])
+
+    def test_r2_a_refresh_revokes_the_token_it_replaces_unless_a_run_still_holds_it(self):
+        # comment-ok: catches: a refresh that drops a still-live token with no DELETE and no copy, or that
+        # revokes a token another run still uses, or that drops it when its revoke fails.
+        for name, status in (("revoked", 204), ("kept when the revoke fails", 401)):
+            with self.subTest(name):
+                shutil.rmtree(self.private, True)
+                self.log.unlink(missing_ok=True)
+                self.expiring()
+                self.answers(answer(), answer(token=TOKEN2))
+                api = self.api(status=status)
+                api.watch = self.private
+                ran = self.run_gh(OPENWIZ_GITHUB_API_BASE=api.base())
+                self.assertEqual((ran.returncode, ran.stderr), (0, ""))
+                self.assertEqual(self.calls("gh")[-1]["gh_token"], sha(TOKEN2))
+                self.assert_revoked_once(api, TOKEN)
+                self.assertEqual([live_token_in(p) for p in self.side_files()], [] if status == 204 else [TOKEN])
+        with self.subTest("another run still holds it"):
+            shutil.rmtree(self.private, True)
+            self.log.unlink(missing_ok=True)
+            self.minted()
+            self.answers(answer(), answer(token=TOKEN2))
+            api = self.api()
+            api.watch = self.private
+            shorten = ('"$PY" -c \'import json,sys,time;p=sys.argv[1];d=json.load(open(p));'
+                       'd["expires_at"]=int(time.time())+100;json.dump(d,open(p,"w"))\' "$CACHE"')
+            script = f'{shorten}; "$PY" -I "$H" run {" ".join(REQ)} -- gh pr list; gh pr list'
+            done = self.inside_run(script, api)
+            self.assertEqual((done.returncode, done.stderr), (0, ""))
+            self.assertEqual([c["gh_token"] for c in self.calls("gh")], [sha(TOKEN2), sha(TOKEN)],
+                             "the outer run keeps its token while it runs")
+            self.assert_revoked_once(api, TOKEN)
+            self.assertEqual(self.side_files(), [])
+            self.assert_never_exposed(done)
+
+    def test_r3_a_mint_during_a_revoke_keeps_the_new_token(self):
+        # comment-ok: catches: a revoke that deletes whatever the cache file holds after its DELETE, so a
+        # token minted meanwhile is deleted unrevoked.
+        self.expiring()
+        self.answers(answer(), answer(token=TOKEN2))
+        api = self.api()
+        started = []
+        api.during = lambda: started.append(self.start(OPENWIZ_GITHUB_API_BASE=api.base()))
+        done = self.revoke(api)
+        self.assertEqual((done.returncode, done.stderr, started[0].returncode), (0, "", 0))
+        self.assertEqual(api.seen[0]["auth"], sha(f"Bearer {TOKEN}"))
+        self.assertEqual(self.held()["token"], TOKEN2, "the new token is still held")
+        self.assert_never_exposed(done, *started)
+
+    def test_r4_revoke_finds_this_runs_token_after_the_folder_moved_or_went(self):
+        # comment-ok: catches: a revoke that skips this run's snapshot because its recorded path is stale,
+        # or that needs the folder at all, so a moved or deleted folder leaves a live token.
+        for name, damage in (("moved", 'chmod 000 "$CACHE"; mv "$PRIV" "$MOVED"; OPENWIZ_AGENT_TOKEN_REVOKE='),
+                             ("gone", 'rm -rf "$PRIV"')):
+            with self.subTest(name):
+                shutil.rmtree(self.private, True)
+                shutil.rmtree(self.root / "moved", True)
+                self.minted()
+                api = self.api()
+                script = (f'{damage}; OPENWIZ_AGENT_TOKEN_DIR="$MOVED" "$PY" -I "$H" revoke {" ".join(REQ)}')
+                done = self.inside_run(script, api, MOVED=str(self.root / "moved"))
+                self.assertEqual((done.returncode, done.stdout, done.stderr), (0, "", ""))
+                self.assertEqual([(s["method"], s["auth"]) for s in api.seen],
+                                 [("DELETE", sha(f"Bearer {TOKEN}"))])
+
+    def test_r5_revoke_inside_a_run_never_revokes_another_requests_token(self):
+        # comment-ok: catches: a revoke that takes this run's snapshot for any request, so revoking B
+        # from inside A's run revokes A's token.
+        self.minted()
+        api = self.api()
+        other = " ".join(REQ[:3] + ("synthetic-owner/other",))
+        done = self.inside_run(f'"$PY" -I "$H" revoke {other}', api)
+        self.assertEqual((done.returncode, done.stderr), (1, NO_TOKEN))
+        self.assertEqual(api.seen, [])
+        self.assertEqual(self.held()["token"], TOKEN)
+
+    def test_r6_a_kept_token_is_never_handed_out_again(self):
+        # comment-ok: catches: a token kept after a failed fallback or explicit revoke still reaching an
+        # active run's gh, or a new run through the cache.
+        self.minted()
+        refusing = self.api(status=401)
+        inner = f'OPENWIZ_TOKEN_SERVICE_READBACK=failed "$PY" -I "$H" start {" ".join(REQ)}; gh pr list'
+        done = self.inside_run(inner, refusing)
+        self.assertEqual(done.returncode, 128)
+        self.assertEqual(self.calls("gh"), [], "the active run's gh gets no kept token")
+        self.assertEqual([live_token_in(p) for p in self.side_files()], [TOKEN])
+        shutil.rmtree(self.private, True)
+        self.log.unlink()
+        self.minted()
+        failed = self.revoke(refusing)
+        self.assertEqual(failed.returncode, 1)
+        self.answers(answer(), answer(token=TOKEN2))
+        ran = self.run_gh()
+        self.assertEqual([c["gh_token"] for c in self.calls("gh")], [sha(TOKEN2)], "a new run mints afresh")
+        self.assert_never_exposed(done, failed, ran)
+
+    def test_r7_a_malformed_api_base_gives_the_one_fixed_line(self):
+        # comment-ok: catches: a URL parsing error escaping the base check as a traceback in revoke or a
+        # fallback.
+        held = self.minted()
+        done = self.helper("revoke", *REQ, OPENWIZ_GITHUB_API_BASE="http://[127.0.0.1")
+        self.assertEqual((done.returncode, done.stderr), (1, NOT_REVOKED.format("not the GitHub API")))
+        self.answers(answer(), {"exit": 1, "stdout": ""})
+        off = self.start(OPENWIZ_TOKEN_SERVICE_READBACK="failed", OPENWIZ_GITHUB_API_BASE="http://[127.0.0.1")
+        self.assertEqual((off.returncode, off.stderr), (0, NOTE.replace("<reason>", "pairing-off") + "\n"))
+        self.assertEqual([live_token_in(p) for p in [held, *self.side_files()] if p.exists()], [TOKEN])
+
+
+PROBE = r"""
+import os, stat
+held = sockets = 0
+for fd in map(int, os.listdir("/proc/self/fd")):
+    try:
+        sockets += fd > 2 and stat.S_ISSOCK(os.fstat(fd).st_mode)
+        held += fd > 2 and b'"token"' in os.pread(fd, 1 << 16, 0)
+    except OSError:
+        pass
+print(held, sockets)
+"""
+
+
+class FinalRound(Helper):
+    api, minted, revoke = Revoke.api, Revoke.minted, Revoke.revoke
+    expiring, run_gh, side_files = FallbackRevoke.expiring, FallbackRevoke.run_gh, FallbackRevoke.side_files
+    inside_run = RevokeReview.inside_run
+
+    def deletes(self, api):
+        return [(seen["method"], seen["auth"]) for seen in api.seen]
+
+    def test_r4_a_failed_revoke_after_the_folder_went_leaves_a_retry_copy(self):
+        # comment-ok: catches: a run whose folder was deleted ending with its token live and no copy left,
+        # after an in-run revoke GitHub refused or with no revoke at all, so a later revoke finds nothing.
+        for name, script, code in (
+                ("in-run revoke refused", f'rm -rf "$PRIV"; "$PY" -I "$H" revoke {" ".join(REQ)}', 1),
+                ("no revoke before the run ends", 'rm -rf "$PRIV"', 0),
+                ("revoke refused, then the folder went",
+                 f'"$PY" -I "$H" revoke {" ".join(REQ)}; rm -rf "$PRIV"; exit 1', 1)):
+            with self.subTest(name):
+                shutil.rmtree(self.private, True)
+                self.minted()
+                refusing = self.api(status=401)
+                done = self.inside_run(script, refusing)
+                stderr = NOT_REVOKED.format("GitHub refused") if code else ""
+                self.assertEqual((done.returncode, done.stdout, done.stderr), (code, "", stderr))
+                self.assertEqual(self.deletes(refusing), [("DELETE", sha(f"Bearer {TOKEN}"))] * (1 + (
+                    name == "revoke refused, then the folder went")), "the run end retries a copy it rebuilt")
+                api = self.api()
+                later = self.revoke(api)
+                self.assertEqual((later.returncode, later.stderr), (0, ""), "a retry copy survives the run")
+                self.assertEqual(self.deletes(api), [("DELETE", sha(f"Bearer {TOKEN}"))])
+                self.assert_never_exposed(done, later)
+
+    def test_r6_a_fallback_retires_an_unreadable_entry_for_every_active_run(self):
+        # comment-ok: catches: an active run's gh still getting the token after a fallback kept the
+        # request's unreadable cache entry, because retirement was read from the damaged bytes.
+        self.minted()
+        refusing = self.api(status=401)
+        inner = (f'chmod 000 "$CACHE"; OPENWIZ_TOKEN_SERVICE_READBACK=failed "$PY" -I "$H" start {" ".join(REQ)}'
+                 '; gh pr list')
+        done = self.inside_run(inner, refusing)
+        self.assertEqual(done.returncode, 128)
+        self.assertEqual(self.calls("gh"), [], "the active run's gh gets no retired token")
+        self.assertEqual(self.deletes(refusing), [("DELETE", sha(f"Bearer {TOKEN}"))])
+        self.assert_never_exposed(done)
+
+    def gated(self):
+        gated, gate = self.root / "gated", self.root / "gate"
+        gated.mkdir(exist_ok=True)
+        (gated / "room-cli").write_text(f'#!/bin/sh\n: > "{gate}.started"\n'
+                                        f'while [ ! -e "{gate}" ]; do sleep 0.05; done\n'
+                                        f'exec "{self.bin}/room-cli" "$@"\n')
+        (gated / "room-cli").chmod(0o755)
+        full = dict(self.env, PATH=f"{gated}:{self.env['PATH']}")
+        minting = subprocess.Popen([sys.executable, "-I", str(HELPER), "start", *REQ], env=full,
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        self.addCleanup(minting.kill)
+        deadline = time.monotonic() + 20
+        while not Path(f"{gate}.started").exists():
+            self.assertLess(time.monotonic(), deadline, "the mint reached the service")
+            time.sleep(0.05)
+        return minting, gate
+
+    def test_r8_a_mint_in_flight_stores_or_revokes_its_answer(self):
+        # comment-ok: catches: a revoke removing the token folder under an in-flight mint, or a mint that
+        # cannot store its answer leaving the fresh token live with no copy and no DELETE.
+        with self.subTest("a revoke during the mint"):
+            self.expiring()
+            self.answers(answer(), answer(token=TOKEN2))
+            minting, gate = self.gated()
+            api = self.api()
+            done = self.revoke(api)
+            self.assertEqual((done.returncode, done.stderr), (0, ""))
+            gate.touch()
+            out, err = minting.communicate(timeout=30)
+            self.assertEqual((minting.returncode, out, err), (0, "", ""))
+            self.assertEqual(self.held()["token"], TOKEN2, "the fresh token is stored")
+            self.assertEqual(self.private.stat().st_mode & 0o777, 0o700)
+        with self.subTest("the folder deleted during the mint"):
+            shutil.rmtree(self.private, True)
+            for left in ("gate", "gate.started"):
+                (self.root / left).unlink()
+            self.log.unlink()
+            self.expiring()
+            self.answers(answer(), answer(token=TOKEN2))
+            minting, gate = self.gated()
+            shutil.rmtree(self.private)
+            gate.touch()
+            out, err = minting.communicate(timeout=30)
+            self.assertEqual((minting.returncode, out, len(err.splitlines())), (2, "", 1), err)
+            self.assertEqual(self.deletes(self.revoke_api), [("DELETE", sha(f"Bearer {TOKEN2}"))],
+                             "the fresh token it could not store is revoked")
+            self.assertNotIn(TOKEN2, err)
+
+    @unittest.skipUnless(os.path.isdir("/proc/self/fd"), "needs /proc/self/fd")
+    def test_r9_no_child_inherits_a_readable_credential_handle(self):
+        # comment-ok: catches: a run handing its children an open, readable copy of the token, which a
+        # nested fallback child running as the owner keeps after the token is retired.
+        self.minted()
+        (self.root / "probe.py").write_text(PROBE)
+        nested = (f'"$PY" -I "$PROBE"; OPENWIZ_TOKEN_SERVICE_READBACK=failed "$PY" -I "$H" run {" ".join(REQ)}'
+                  ' -- "$PY" -I "$PROBE"')
+        done = self.inside_run(nested, self.api(), PROBE=str(self.root / "probe.py"))
+        self.assertEqual((done.returncode, done.stdout), (0, "0 1\n0 0\n"),
+                         "no fd that reads as a token; only the run's revoke socket, never in a fallback child")
+        self.assert_never_exposed(done)
+
+
+
+def live_token_in(path):
+    return json.loads(path.read_text()).get("token") if path.exists() else None
 
 
 OTHER = 1001 if os.getuid() != 1001 else 1002

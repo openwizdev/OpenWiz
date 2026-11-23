@@ -579,8 +579,8 @@ class Kit:
     def start(self):
         before = set(self.ticket.builder_notes())
         a = self.args
-        kind, v = self.call('start', {'repository': a.repo, 'ticket': a.ticket, 'skill': a.skill,
-                                      'harness': a.harness, 'model': a.model})
+        kind, v = self.sampled('start', {'repository': a.repo, 'ticket': a.ticket, 'skill': a.skill,
+                                         'harness': a.harness, 'model': a.model})
         if kind != 'ok':
             return 'fail', v['error'] if kind == 'refused' else v
         self.run = v['run']
@@ -599,7 +599,7 @@ class Kit:
 
     def wake(self):
         notes = self.ticket.builder_notes()
-        kind, v = self.call('wake', {'run': self.run})
+        kind, v = self.sampled('wake', {'run': self.run})
         if kind != 'ok':
             return 'fail', v['error'] if kind == 'refused' else v
         if v['run'] != self.run:
@@ -614,7 +614,7 @@ class Kit:
 
     def stop(self):
         self.stopped = True
-        kind, v = self.call('stop', {'run': self.run})
+        kind, v = self.sampled('stop', {'run': self.run})
         if self.unverified():
             return 'fail', self.unverified()
         if kind != 'ok':
@@ -836,7 +836,7 @@ class Kit:
         except OSError:
             return None
 
-    def sampled(self, cmd, request, env, canary):
+    def sampled(self, cmd, request, env=None, canary=None):
         stop = threading.Event()
 
         def watch():

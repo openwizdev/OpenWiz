@@ -1,0 +1,32 @@
+# #2570 red: the new short-lived-driver test against 5ee2af9's kit, run behind 34 agent CLI stubs; the checkout path reads <checkout>.
+test_a_driver_whose_processes_live_only_during_each_call_passes_all_five_on_linux_and_macos (kernel.driver-kit.test_kit.Kit.test_a_driver_whose_processes_live_only_during_each_call_passes_all_five_on_linux_and_macos) ... 
+  test_a_driver_whose_processes_live_only_during_each_call_passes_all_five_on_linux_and_macos (kernel.driver-kit.test_kit.Kit.test_a_driver_whose_processes_live_only_during_each_call_passes_all_five_on_linux_and_macos) (python='<checkout>/kernel/driver-kit/../../kernel/driver-kit/fixtures/no-proc/python3') ... FAIL
+
+======================================================================
+FAIL: test_a_driver_whose_processes_live_only_during_each_call_passes_all_five_on_linux_and_macos (kernel.driver-kit.test_kit.Kit.test_a_driver_whose_processes_live_only_during_each_call_passes_all_five_on_linux_and_macos) (python='<checkout>/kernel/driver-kit/../../kernel/driver-kit/fixtures/no-proc/python3')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 428, in test_a_driver_whose_processes_live_only_during_each_call_passes_all_five_on_linux_and_macos
+    self.assertEqual((code, out), (0, PASS), err)
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[355 chars]ed']) != (0, ['pass version: openwiz:records v1, an[245 chars]er'])
+
+First differing element 0:
+1
+0
+
+- (1,
++ (0,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
++   'pass stop: the run ended, and a wake after it is refused',
++   'pass token: no login or token passed through the driver'])
+-   'fail stop: ps -E never showed a process of this run, so the kit cannot tell '
+-   'which processes the driver started',
+-   'fail token: ps -E never showed a process of this run, so the kit cannot '
+-   'tell which processes the driver started']) : 
+
+----------------------------------------------------------------------
+Ran 1 test
+
+FAILED (failures=1)

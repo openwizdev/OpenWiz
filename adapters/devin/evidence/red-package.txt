@@ -1,0 +1,38 @@
+# Red (openwizdev/openwiz#1996): tools/release/test_package.py's runtime test, before build_products.py carries
+# the Devin driver and the key helper's hostkey.py and hosts.json. Synthetic; no host reached.
+# Run: python3 tools/release/test_package.py -k test_runtime_carries_exactly
+
+F
+======================================================================
+FAIL: test_runtime_carries_exactly_the_selected_drivers_and_kit_where_the_caller_finds_them (__main__.Package.test_runtime_carries_exactly_the_selected_drivers_and_kit_where_the_caller_finds_them)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/release/test_package.py", line 178, in test_runtime_carries_exactly_the_selected_drivers_and_kit_where_the_caller_finds_them
+    self.assertEqual(sorted(p for p in assets if p.startswith(('runtime/adapters/', 'runtime/kernel/'))),
+AssertionError: Lists differ: ['run[78 chars]ters/local/driver', 'runtime/adapters/local/sc[154 chars].md'] != ['run[78 chars]ters/devin/driver', 'runtime/adapters/devin/sc[305 chars].md']
+
+First differing element 2:
+'runtime/adapters/local/driver'
+'runtime/adapters/devin/driver'
+
+Second list contains 4 additional elements.
+First extra element 8:
+'runtime/kernel/driver-kit/kit.py'
+
+  ['runtime/adapters/boat/driver',
+   'runtime/adapters/boat/schema.json',
++  'runtime/adapters/devin/driver',
++  'runtime/adapters/devin/schema.json',
+   'runtime/adapters/local/driver',
+   'runtime/adapters/local/schema.json',
++  'runtime/kernel/driver-kit/hostkey.py',
++  'runtime/kernel/driver-kit/hosts.json',
+   'runtime/kernel/driver-kit/kit.py',
+   'runtime/kernel/driver-kit/schema.json',
+   'runtime/kernel/records-kit/check.py',
+   'runtime/kernel/records.v1.md']
+
+----------------------------------------------------------------------
+Ran 1 test in 0.108s
+
+FAILED (failures=1)

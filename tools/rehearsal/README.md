@@ -3,8 +3,20 @@
 `rehearse.py` installs one built OpenWiz package the way a stranger's agent would, following the
 install skill's no-CloudRoom path ("This computer", Claude Code), and writes a receipt
 ([`openwiz.rehearsal.v1`](../../contracts/rehearsal.v1.md)). The Packages workflow runs it on
-every target's archive right after building it (spec #2437), so every release candidate's run
-says whether a stranger could install exactly those bytes.
+all three targets' archives right after building them (spec #2437), so every release candidate's
+run says whether a stranger could install exactly those bytes:
+
+| Job | Target | Machine |
+| --- | --- | --- |
+| `rehearse-linux` | `x86_64-unknown-linux-gnu` | a `debian:12` container on `ubuntu-24.04`, with only Python 3, Git and CA certificates installed |
+| `rehearse-macos` | `aarch64-apple-darwin` | `macos-15`, the system `/usr/bin/python3`, a fresh `HOME` |
+| `rehearse-macos` | `x86_64-apple-darwin` | `macos-15-intel`, the same |
+
+Each job downloads that run's own artifact for its target and uploads its receipt as
+`openwiz-rehearsal-<version>-<target>`. The `rehearsal` job is green only when every rehearse
+job is. The macOS jobs also run the fixture suite on their machine. A hosted Mac comes with Rust
+and Node installed, so there the clean machine is the stranger's environment the runner builds,
+not the runner image.
 
 ```sh
 python3 -I tools/wizskills/install.py   # the install skill at the wizskills.lock commit
@@ -15,7 +27,7 @@ env -u OPENWIZ_GITHUB_APP_KEY python3 -I tools/rehearsal/test_rehearse.py   # th
 ```
 
 Its six steps, their checks and its exits are in `rehearse.py`'s header. Every command runs with
-`env -i`, a fresh `HOME` and a `PATH` of only `python3`, `git`, `sh`, `uname`, `ldd`, the fakes
+`env -i`, a fresh `HOME` and a `PATH` of only `python3`, `git`, `sh`, `uname`, `ldd` (Linux only), the fakes
 and recording `cargo`, `rustc`, `rustup`, `npm`, `node` and `npx`. None of the 32 agent and host
 CLIs in `ABSENT` (`room-cli`, `boat`, `codex` and the rest) may be on it; `claude` and `gh` are the
 recording fakes. It refuses to start while a token, App or CloudRoom variable is set.

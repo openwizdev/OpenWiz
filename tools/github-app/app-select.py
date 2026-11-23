@@ -11,11 +11,12 @@ OPENWIZ_APP_SELECT_CONFIG or ~/.config/openwiz/app-select.json, is a regular fil
 owner owns with no group or other permission bits (0600 or 0400, say), holding one of:
 
   {"state_dir": "/abs/state"}                named: that App, and only it
-  {"routes": [{"repository": "owner/*", "state_dir": "/abs/a"},
-              {"repository": "owner/name", "state_dir": "/abs/b"}]}
-                                             route map: each requested repository
-                                             takes its first matching route, and
-                                             all of them must land on one state
+  {"routes": [{"repository": "owner/name", "state_dir": "/abs/b"},
+              {"repository": "owner/*", "state_dir": "/abs/a"}]}
+                                             route map: all requested repositories
+                                             must land on one state
+
+The first match wins for each repository, so put exact routes before wildcards.
 
 An invalid request gets the service's own usage or one-owner refusal before any
 service call. A missing, unsafe or unclear config, a repository no route matches or

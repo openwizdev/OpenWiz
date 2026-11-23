@@ -1,0 +1,15 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I tools/install/tests/init/test_init.py
+FAIL: test_a_resumed_apply_merges_only_the_companion_and_proposal_this_operation_made (__main__.Init.test_a_resumed_apply_merges_only_the_companion_and_proposal_this_operation_made) [collaborator proposal]
+AssertionError: Tuples differ: ('applied', 'brain_merged') != ('applied', 'brain_proposed')
+FAIL: test_a_resumed_apply_merges_only_the_companion_and_proposal_this_operation_made (__main__.Init.test_a_resumed_apply_merges_only_the_companion_and_proposal_this_operation_made) [companion made elsewhere]
+AssertionError: Tuples differ: ('applied', 'brain_merged') != ('applied', 'brain_proposed')
+FAIL: test_a_resumed_apply_merges_only_the_companion_and_proposal_this_operation_made (__main__.Init.test_a_resumed_apply_merges_only_the_companion_and_proposal_this_operation_made) [companion replaced]
+AssertionError: Tuples differ: ('applied', 'brain_merged') != ('applied', 'brain_proposed')
+FAIL: test_a_resumed_apply_merges_only_the_companion_and_proposal_this_operation_made (__main__.Init.test_a_resumed_apply_merges_only_the_companion_and_proposal_this_operation_made) [proposal pushed to]
+AssertionError: Tuples differ: ('applied', 'brain_merged') != ('applied', 'brain_proposed')
+FAIL: test_lost_replies_stay_uncertain_until_read_back_then_complete_once (__main__.Init.test_lost_replies_stay_uncertain_until_read_back_then_complete_once) (mode='lose', path='user/repos')
+AssertionError: 'merged' != 'open'
+FAIL: test_lost_replies_stay_uncertain_until_read_back_then_complete_once (__main__.Init.test_lost_replies_stay_uncertain_until_read_back_then_complete_once) (mode='lose', path='repos/synthetic-owner/synthetic-app-brain/pulls')
+AssertionError: 'merged' != 'open'
+Ran 23 tests
+FAILED (failures=6)

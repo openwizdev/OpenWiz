@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+import http.server, json, os, re, secrets, sys, time
+
+TRACKER, LOG, FAULTS, KEY_FILE = sys.argv[1:5]
+KEY_PATH = '/.openwiz/hostkey-test-key'
+SESSIONS = {}
+CREATE = re.compile(r'/v3/organizations/(org-[A-Za-z0-9]+)/sessions')
+ONE = re.compile(r'/v3/organizations/(org-[A-Za-z0-9]+)/sessions/(devin-[a-z0-9]+)(/messages)?')
+
+
+def note(session, woken):
+    now = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+    skill = re.search(r'with the ([a-z0-9-]+) skill', session['prompt']).group(1)
+    body = '\n'.join(['<!-- openwiz:status v1 -->', 'agent: builder', 'state: working', 'harness: Devin',
+                      'model: ' + session['mode'], 'skills: %s@0.1.2' % skill,
+                      'step: ' + ('woke and read the ticket again' if woken else 'started the throwaway ticket'),
+                      'time: ' + now]) + '\n'
+    with open(TRACKER) as f:
+        tracker = json.load(f)
+    if woken:
+        [c for c in tracker['comments'] if c['id'] == session['note']][0].update(body=body, updated_at=now)
+    else:
+        session['note'] = 1 + max([c['id'] for c in tracker['comments']], default=0)
+        tracker['comments'].append({'id': session['note'], 'author': 'example-bot[bot]', 'updated_at': now,
+                                    'body': body})
+    with open(TRACKER + '.new', 'w') as f:
+        json.dump(tracker, f)
+    os.replace(TRACKER + '.new', TRACKER)
+
+
+class Devin(http.server.BaseHTTPRequestHandler):
+    def log_message(self, *args):
+        pass
+
+    def reply(self, status, body):
+        data = json.dumps(body).encode()
+        self.send_response(status)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Content-Length', str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def handle_one(self):
+        raw = self.rfile.read(int(self.headers.get('Content-Length') or 0))
+        if self.command == 'GET' and self.path == KEY_PATH:
+            with open(KEY_FILE) as f:
+                return self.reply(200, {'key': f.read()})
+        body = json.loads(raw) if raw else None
+        with open(LOG, 'a') as f:
+            f.write(json.dumps({'method': self.command, 'path': self.path, 'body': body,
+                                'authorization': self.headers.get('Authorization')}) + '\n')
+        create, one = CREATE.fullmatch(self.path), ONE.fullmatch(self.path)
+        kind = 'create' if create else 'message' if one and one.group(3) else 'end' if one else None
+        with open(FAULTS) as f:
+            fault = json.load(f).get('%s %s' % (self.command, kind))
+        if fault and not fault.get('drop'):
+            return self.reply(fault['status'], fault['body'])
+        if self.command == 'POST' and create:
+            sid = 'devin-' + secrets.token_hex(16)
+            SESSIONS[sid] = {'prompt': body['prompt'], 'mode': body.get('devin_mode', 'default'), 'status': 'running'}
+            note(SESSIONS[sid], False)
+            if fault:
+                self.close_connection = True
+                return
+            return self.reply(200, {'session_id': sid, 'status': 'new', 'url': 'https://example.invalid/' + sid})
+        session = SESSIONS.get(one.group(2)) if one else None
+        if session is None:
+            return self.reply(404, {'detail': 'no such session'})
+        if session['status'] == 'exit':
+            return self.reply(410, {'detail': 'the session was terminated'})
+        if self.command == 'POST' and kind == 'message':
+            note(session, True)
+            return self.reply(200, {'session_id': one.group(2), 'status': 'running'})
+        if self.command == 'DELETE' and kind == 'end':
+            session['status'] = 'exit'
+            return self.reply(200, {'session_id': one.group(2), 'status': 'exit'})
+        return self.reply(405, {'detail': 'not a sessions call'})
+
+    do_GET = do_POST = do_DELETE = do_PUT = handle_one
+
+
+server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Devin)
+print('http://127.0.0.1:%d' % server.server_address[1], flush=True)
+server.serve_forever()

@@ -457,6 +457,110 @@
     ]
    }
   },
+  "init-public-new-companion-merged": {
+   "document": {
+    "schema": "openwiz.setup-onboard.v1",
+    "kind": "init_result",
+    "proof_class": "fixture",
+    "synthetic_assumptions": [
+     "Every account, repository, id, time and hash is a synthetic placeholder."
+    ],
+    "private_record": null,
+    "operation_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "repository": {
+     "full_name": "synthetic-owner/synthetic-app",
+     "visibility": {
+      "known": "public"
+     },
+     "basis": "github_repository_read"
+    },
+    "outcome": "applied",
+    "reason_code": "brain_merged",
+    "brain": {
+     "location": "companion",
+     "code_repository": "synthetic-owner/synthetic-app",
+     "code_visibility": "public",
+     "brain_repository": "synthetic-owner/synthetic-app-brain",
+     "brain_visibility": {
+      "known": "private"
+     },
+     "visibility_basis": "github_repository_read",
+     "folder": ".openwiz/brain",
+     "setting": "brain_location",
+     "decision_repositories": {
+      "public": {
+       "owner": "synthetic-owner",
+       "name": "synthetic-app"
+      },
+      "private": {
+       "owner": "synthetic-owner",
+       "name": "synthetic-app-brain"
+      }
+     }
+    },
+    "private_content_written": "brain_repository",
+    "placement_question": false,
+    "report_line": "Brain: private companion synthetic-owner/synthetic-app-brain in .openwiz/brain; change it with the brain_location setting.",
+    "effects": [
+     {
+      "kind": "create_companion",
+      "repository": "synthetic-owner/synthetic-app-brain",
+      "phase": "applied",
+      "effect_count": 1,
+      "attempts": 1,
+      "reconciliation": "none"
+     },
+     {
+      "kind": "link_companion",
+      "repository": "synthetic-owner/synthetic-app",
+      "phase": "applied",
+      "effect_count": 1,
+      "attempts": 1,
+      "reconciliation": "none"
+     },
+     {
+      "kind": "open_pull_request",
+      "repository": "synthetic-owner/synthetic-app-brain",
+      "phase": "applied",
+      "effect_count": 1,
+      "attempts": 1,
+      "reconciliation": "none"
+     },
+     {
+      "kind": "create_label",
+      "repository": "synthetic-owner/synthetic-app",
+      "phase": "applied",
+      "effect_count": 1,
+      "attempts": 1,
+      "reconciliation": "none"
+     },
+     {
+      "kind": "merge_pull_request",
+      "repository": "synthetic-owner/synthetic-app-brain",
+      "phase": "applied",
+      "effect_count": 1,
+      "attempts": 1,
+      "reconciliation": "none"
+     }
+    ],
+    "pull_requests": [
+     {
+      "repository": "synthetic-owner/synthetic-app-brain",
+      "number": 1,
+      "visible": true,
+      "state": "merged"
+     }
+    ]
+   },
+   "expect": {
+    "problems": [],
+    "failures": [],
+    "unproven": [
+     "not_live"
+    ]
+   }
+  },
   "init-unknown-visibility-refused": {
    "document": {
     "schema": "openwiz.setup-onboard.v1",
