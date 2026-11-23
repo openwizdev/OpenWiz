@@ -72,7 +72,7 @@ def post(model, skill, woken):
     os.replace(path + '.%d' % os.getpid(), path)
 
 
-def turn(prompt, model, session=None, announce=None, daemon=None):
+def turn(prompt, model, session=None, announce=None, daemon=None, signed_out=None, signed_out_exit=1):
     woken = prompt.startswith('You were woken')
     skill = prompt.partition('with the ')[2].partition(' skill')[0] or refuse()
     if os.environ.get('FAKE_CLI_WORKER'):
@@ -81,6 +81,9 @@ def turn(prompt, model, session=None, announce=None, daemon=None):
         post(model, skill, woken)
         time.sleep(300)
         sys.exit(0)
+    if signed_out and os.environ.get('FAKE_CLI_SIGNED_OUT'):
+        print(signed_out, flush=True)
+        sys.exit(signed_out_exit)
     if session is None:
         if woken or announce is None:
             refuse()

@@ -19,6 +19,7 @@ HARNESSES = {'claude': lambda model, mode, prompt: ['-p', prompt, '--model', mod
 MODE_ROW = '| Harness permission mode |'
 ROWS = os.path.join(HERE, 'harnesses')
 ROW_FIELDS = ('harness', 'program', 'start', 'wake', 'session', 'modes', 'env', 'effort', 'login', 'daemon')
+OPTIONAL_ROW_FIELDS = ('signed_out', 'login_command')
 PLACEHOLDERS = ('{prompt}', '{model}', '{session}', '{mode}', '{effort}')
 SESSION = r'[A-Za-z0-9._:-]{1,100}'
 EFFORT = r'[A-Za-z0-9._-]{1,40}'
@@ -112,6 +113,27 @@ def settings(env, rule):
         raise Broken(rule, 'a value looks like a credential; env holds only fixed settings that are not credentials')
 
 
+def plain(text):
+    return line(text) and not re.search(r'\{[a-z]+\}', text) and not holds_credential(text)
+
+
+def sign_in(row):
+    if 'signed_out' in row:
+        patterns = row['signed_out']
+        if not isinstance(patterns, list) or not patterns or not all(plain(p) for p in patterns):
+            raise Broken('signed_out', 'it is not a list of one-line patterns, with no placeholder and nothing '
+                                       'credential-shaped')
+        try:
+            [re.compile(p, re.I) for p in patterns]
+        except re.error:
+            raise Broken('signed_out', 'a pattern does not compile')
+        if 'login_command' not in row:
+            raise Broken('login_command', 'a row with signed_out names the command the user runs to sign in')
+    if 'login_command' in row and not (plain(row['login_command']) and len(row['login_command']) <= 200):
+        raise Broken('login_command', 'it is not one line of up to 200 characters, with no placeholder and nothing '
+                                      'credential-shaped')
+
+
 def arguments(row, field, needs):
     args = row[field]
     if not isinstance(args, list) or not args or not all(isinstance(a, str) and a for a in args):
@@ -132,8 +154,9 @@ def check_row(row, name):
         raise Broken('fields', 'it is not one JSON object')
     if 'effort' not in row:
         raise Broken('effort', 'it has no effort form; give an effort map or "none: <one line why>"')
-    if set(row) != set(ROW_FIELDS):
-        raise Broken('fields', 'it needs exactly ' + ', '.join(ROW_FIELDS))
+    if not set(ROW_FIELDS) <= set(row) <= set(ROW_FIELDS + OPTIONAL_ROW_FIELDS):
+        raise Broken('fields', 'it needs exactly %s, and may have %s' % (', '.join(ROW_FIELDS),
+                                                                         ' and '.join(OPTIONAL_ROW_FIELDS)))
     if row['harness'] in HARNESSES:
         raise Broken('harness', '%s is built in, and no row may use a built-in name' % row['harness'])
     if row['harness'] != name or not re.fullmatch(START['harness'], name):
@@ -148,6 +171,7 @@ def check_row(row, name):
             not all(re.fullmatch(MODE, m) and fixed(a) for m, a in modes.items()):
         raise Broken('modes', 'it maps no mode value to its fixed arguments')
     settings(row['env'], 'env')
+    sign_in(row)
     session = row['session']
     kind = next(iter(session)) if isinstance(session, dict) and len(session) == 1 else None
     how = session[kind] if kind else None
@@ -685,7 +709,12 @@ def saved(run, state=None):
         raise Refused('no run ' + run, 'check the run id that `driver start` printed')
 
 
-def ended_at_once(run, turn):
+def signed_out_by_row(row, log):
+    patterns = [re.compile(p, re.I) for p in (row or {}).get('signed_out', [])]
+    return any(p.search(text) for p in patterns for text in log.splitlines())
+
+
+def ended_at_once(run, turn, row=None):
     deadline = time.monotonic() + SETTLE
     while running(turn) and time.monotonic() < deadline:
         time.sleep(0.1)
@@ -697,13 +726,21 @@ def ended_at_once(run, turn):
             log = f.read()
     except OSError:
         log = ''
-    why = ('the harness is not signed in' if SIGNED_OUT.search(log) else
+    signed_out = SIGNED_OUT.search(log) or signed_out_by_row(row, log)
+    why = ('the harness is not signed in' if signed_out else
            'the harness refused a tool' if REFUSAL.search(log) else None if code == 0 else 'the harness failed')
     if why is None:
         return
     end([turn], run)
+    if signed_out and row and 'login_command' in row:
+        fix = 'sign in yourself with `%s` on this machine, then start again; %s has the turn\'s output' % (
+            row['login_command'], log_path(run))
+        fix = fix if len(fix) <= 300 else 'sign in yourself with `%s` on this machine, then start again' % (
+            row['login_command'])
+    else:
+        fix = 'read %s, fix what it says there, then start again' % log_path(run)
     raise Refused('run %s: the first turn ended at once: %s (exit %s)' % (run, why, 'unknown' if code is None else code),
-                  'read %s, fix what it says there, then start again' % log_path(run))
+                  fix)
 
 
 def stopped(run, state):
@@ -779,7 +816,7 @@ def answer(cmd):
         except OSError:
             unsaved(run, turn, 'start')
         try:
-            ended_at_once(run, turn)
+            ended_at_once(run, turn, row)
         except Refused:
             stopped(run, dict(state, turns=[turn]))
             raise

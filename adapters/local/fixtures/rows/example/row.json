@@ -51,5 +51,9 @@
     }
   },
   "login": "example-cli's own login, saved by `example-cli login` under ~/.config/example-cli",
-  "daemon": "example-cli starts a local service under the turn; stop ends it with the process tree"
+  "daemon": "example-cli starts a local service under the turn; stop ends it with the process tree",
+  "signed_out": [
+    "not authenticated\\b"
+  ],
+  "login_command": "example-cli login"
 }
