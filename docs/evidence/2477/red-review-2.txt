@@ -1,0 +1,214 @@
+$ PATH=<stubs>:$PATH env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/test_rig.py -k a_line_with_any -k case_equivalent -k a_symlinked   # review round 2 proofs (R2, R6, R9) before their fixes; agent-CLI stubs first on PATH
+test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept (__main__.Rig.test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept) ... 
+  test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept (__main__.Rig.test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept) [fail start: cannot open /été] ... FAIL
+  test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept (__main__.Rig.test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept) [fail start: cannot open /中文] ... FAIL
+  test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept (__main__.Rig.test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept) [fail start: cannot open ／home／someone] ... FAIL
+  test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept (__main__.Rig.test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept) [fail start: C:\Users\someone] ... FAIL
+  test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept (__main__.Rig.test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept) [fail start: ~someone has no state] ... FAIL
+  test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept (__main__.Rig.test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept) [fail start: HOME=somewhere] ... FAIL
+  test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept (__main__.Rig.test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept) [fail start: [31mred] ... FAIL
+  test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept (__main__.Rig.test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept) [fail start: café is missing] ... FAIL
+  test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept (__main__.Rig.test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept) [fail start: the tab	here] ... FAIL
+test_a_symlinked_host_config_or_hosts_folder_exits_2_and_runs_nothing (__main__.Rig.test_a_symlinked_host_config_or_hosts_folder_exits_2_and_runs_nothing) ... 
+  test_a_symlinked_host_config_or_hosts_folder_exits_2_and_runs_nothing (__main__.Rig.test_a_symlinked_host_config_or_hosts_folder_exits_2_and_runs_nothing) [<fixture folder>/outside.json] ... FAIL
+  test_a_symlinked_host_config_or_hosts_folder_exits_2_and_runs_nothing (__main__.Rig.test_a_symlinked_host_config_or_hosts_folder_exits_2_and_runs_nothing) [../../inside.json] ... FAIL
+test_a_symlinked_host_config_or_hosts_folder_exits_2_and_runs_nothing (__main__.Rig.test_a_symlinked_host_config_or_hosts_folder_exits_2_and_runs_nothing) ... FAIL
+test_case_equivalent_host_or_record_names_exit_2_before_any_run (__main__.Rig.test_case_equivalent_host_or_record_names_exit_2_before_any_run) ... 
+  test_case_equivalent_host_or_record_names_exit_2_before_any_run (__main__.Rig.test_case_equivalent_host_or_record_names_exit_2_before_any_run) [{'host': 'fixture-template', 'driver': 'adapters/template/driver', 'needs': ['fake-harness', 'fake-signed-in'], 'signed_in': [['fake-signed-in', 'status']], 'cost': 'none', 'runs': [{'harness': 'fake-harness', 'model': 'Synthetic 1'}, {'harness': 'fake-harness', 'model': 'SYNTHETIC 1'}], 'wait': 8}] ... FAIL
+  test_case_equivalent_host_or_record_names_exit_2_before_any_run (__main__.Rig.test_case_equivalent_host_or_record_names_exit_2_before_any_run) [{'host': 'Fixture-Template', 'driver': 'adapters/template/driver', 'needs': ['fake-harness', 'fake-signed-in'], 'signed_in': [['fake-signed-in', 'status']], 'cost': 'none', 'runs': [{'harness': 'fake-harness', 'model': 'Synthetic 1'}], 'wait': 8}] ... FAIL
+
+======================================================================
+FAIL: test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept (__main__.Rig.test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept) [fail start: cannot open /été]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 255, in test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept
+    self.assertEqual(rig.record_stdout(line + '\n', settings, LOGIN), 'fail start: withheld\n')
+AssertionError: 'fail start: cannot open /été\n' != 'fail start: withheld\n'
+- fail start: cannot open /été
++ fail start: withheld
+
+
+======================================================================
+FAIL: test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept (__main__.Rig.test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept) [fail start: cannot open /中文]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 255, in test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept
+    self.assertEqual(rig.record_stdout(line + '\n', settings, LOGIN), 'fail start: withheld\n')
+AssertionError: 'fail start: cannot open /中文\n' != 'fail start: withheld\n'
+- fail start: cannot open /中文
++ fail start: withheld
+
+
+======================================================================
+FAIL: test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept (__main__.Rig.test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept) [fail start: cannot open ／home／someone]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 255, in test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept
+    self.assertEqual(rig.record_stdout(line + '\n', settings, LOGIN), 'fail start: withheld\n')
+AssertionError: 'fail start: cannot open ／home／someone\n' != 'fail start: withheld\n'
+- fail start: cannot open ／home／someone
++ fail start: withheld
+
+
+======================================================================
+FAIL: test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept (__main__.Rig.test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept) [fail start: C:\Users\someone]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 255, in test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept
+    self.assertEqual(rig.record_stdout(line + '\n', settings, LOGIN), 'fail start: withheld\n')
+AssertionError: 'fail start: C:\\Users\\someone\n' != 'fail start: withheld\n'
+- fail start: C:\Users\someone
++ fail start: withheld
+
+
+======================================================================
+FAIL: test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept (__main__.Rig.test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept) [fail start: ~someone has no state]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 255, in test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept
+    self.assertEqual(rig.record_stdout(line + '\n', settings, LOGIN), 'fail start: withheld\n')
+AssertionError: 'fail start: ~someone has no state\n' != 'fail start: withheld\n'
+- fail start: ~someone has no state
++ fail start: withheld
+
+
+======================================================================
+FAIL: test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept (__main__.Rig.test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept) [fail start: HOME=somewhere]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 255, in test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept
+    self.assertEqual(rig.record_stdout(line + '\n', settings, LOGIN), 'fail start: withheld\n')
+AssertionError: 'fail start: HOME=somewhere\n' != 'fail start: withheld\n'
+- fail start: HOME=somewhere
++ fail start: withheld
+
+
+======================================================================
+FAIL: test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept (__main__.Rig.test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept) [fail start: [31mred]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 255, in test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept
+    self.assertEqual(rig.record_stdout(line + '\n', settings, LOGIN), 'fail start: withheld\n')
+AssertionError: 'fail start: \x1b[31mred\n' != 'fail start: withheld\n'
+- fail start: [31mred
++ fail start: withheld
+
+
+======================================================================
+FAIL: test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept (__main__.Rig.test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept) [fail start: café is missing]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 255, in test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept
+    self.assertEqual(rig.record_stdout(line + '\n', settings, LOGIN), 'fail start: withheld\n')
+AssertionError: 'fail start: café is missing\n' != 'fail start: withheld\n'
+- fail start: café is missing
++ fail start: withheld
+
+
+======================================================================
+FAIL: test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept (__main__.Rig.test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept) [fail start: the tab	here]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 255, in test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept
+    self.assertEqual(rig.record_stdout(line + '\n', settings, LOGIN), 'fail start: withheld\n')
+AssertionError: 'fail start: the tab\there\n' != 'fail start: withheld\n'
+- fail start: the tab	here
++ fail start: withheld
+
+
+======================================================================
+FAIL: test_a_symlinked_host_config_or_hosts_folder_exits_2_and_runs_nothing (__main__.Rig.test_a_symlinked_host_config_or_hosts_folder_exits_2_and_runs_nothing) [<fixture folder>/outside.json]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 303, in test_a_symlinked_host_config_or_hosts_folder_exits_2_and_runs_nothing
+    self.assertEqual((code, out), (2, []), err)
+AssertionError: Tuples differ: (0, ['skipped fixture-linked fake-harness: cost']) != (2, [])
+
+First differing element 0:
+0
+2
+
+- (0, ['skipped fixture-linked fake-harness: cost'])
++ (2, []) : 
+
+======================================================================
+FAIL: test_a_symlinked_host_config_or_hosts_folder_exits_2_and_runs_nothing (__main__.Rig.test_a_symlinked_host_config_or_hosts_folder_exits_2_and_runs_nothing) [../../inside.json]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 303, in test_a_symlinked_host_config_or_hosts_folder_exits_2_and_runs_nothing
+    self.assertEqual((code, out), (2, []), err)
+AssertionError: Tuples differ: (0, ['skipped fixture-linked fake-harness: cost']) != (2, [])
+
+First differing element 0:
+0
+2
+
+- (0, ['skipped fixture-linked fake-harness: cost'])
++ (2, []) : 
+
+======================================================================
+FAIL: test_a_symlinked_host_config_or_hosts_folder_exits_2_and_runs_nothing (__main__.Rig.test_a_symlinked_host_config_or_hosts_folder_exits_2_and_runs_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 314, in test_a_symlinked_host_config_or_hosts_folder_exits_2_and_runs_nothing
+    self.assertEqual((p.returncode, p.stdout), (2, ''), p.stderr)
+AssertionError: Tuples differ: (0, 'skipped fixture-cost fake-harness: cost\n') != (2, '')
+
+First differing element 0:
+0
+2
+
+- (0, 'skipped fixture-cost fake-harness: cost\n')
++ (2, '') : 
+
+======================================================================
+FAIL: test_case_equivalent_host_or_record_names_exit_2_before_any_run (__main__.Rig.test_case_equivalent_host_or_record_names_exit_2_before_any_run) [{'host': 'fixture-template', 'driver': 'adapters/template/driver', 'needs': ['fake-harness', 'fake-signed-in'], 'signed_in': [['fake-signed-in', 'status']], 'cost': 'none', 'runs': [{'harness': 'fake-harness', 'model': 'Synthetic 1'}, {'harness': 'fake-harness', 'model': 'SYNTHETIC 1'}], 'wait': 8}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 272, in test_case_equivalent_host_or_record_names_exit_2_before_any_run
+    self.assertEqual((code, out), (2, []), err)
+AssertionError: Tuples differ: (0, ['ran fixture-template fake-harness: 5[48 chars] 5']) != (2, [])
+
+First differing element 0:
+0
+2
+
++ (2, [])
+- (0,
+-  ['ran fixture-template fake-harness: 5 of 5',
+-   'ran fixture-template fake-harness: 5 of 5']) : pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 2
+pass wake: the run edited builder status note 2
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 3
+pass wake: the run edited builder status note 3
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+
+
+======================================================================
+FAIL: test_case_equivalent_host_or_record_names_exit_2_before_any_run (__main__.Rig.test_case_equivalent_host_or_record_names_exit_2_before_any_run) [{'host': 'Fixture-Template', 'driver': 'adapters/template/driver', 'needs': ['fake-harness', 'fake-signed-in'], 'signed_in': [['fake-signed-in', 'status']], 'cost': 'none', 'runs': [{'harness': 'fake-harness', 'model': 'Synthetic 1'}], 'wait': 8}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 272, in test_case_equivalent_host_or_record_names_exit_2_before_any_run
+    self.assertEqual((code, out), (2, []), err)
+AssertionError: Tuples differ: (0, ['ran fixture-template fake-harness: 5 of 5']) != (2, [])
+
+First differing element 0:
+0
+2
+
+- (0, ['ran fixture-template fake-harness: 5 of 5'])
++ (2, []) : pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 4
+pass wake: the run edited builder status note 4
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+
+
+----------------------------------------------------------------------
+Ran 3 tests in 62.236s
+
+FAILED (failures=14)

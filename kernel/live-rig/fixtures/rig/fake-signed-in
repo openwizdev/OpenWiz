@@ -1,0 +1,3 @@
+#!/bin/sh
+echo "fake-signed-in output the rig discards"
+exit 0
