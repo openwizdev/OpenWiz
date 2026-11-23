@@ -1,0 +1,28 @@
+# #2379: the registry test before the loosening, run on a hosts.json with one more valid row (a synthetic example-host, as openwizdev/openwiz#2429 adds its own).
+test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) ... FAIL
+
+======================================================================
+FAIL: test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 243, in test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries
+    self.assertEqual(hostkey.registry(), good)
+AssertionError: {'dev[126 chars]rer'}, 'example-host': {'origin': 'https://api[106 chars]er'}} != {'dev[126 chars]rer'}}
+  {'devin': {'header': 'authorization-bearer',
+             'keychain': 'openwiz-devin',
+             'origin': 'https://api.devin.ai',
+-            'variable': 'DEVIN_API_KEY'},
+?                                        ^
+
++            'variable': 'DEVIN_API_KEY'}}
+?                                        ^
+
+-  'example-host': {'header': 'authorization-bearer',
+-                   'keychain': 'openwiz-example',
+-                   'origin': 'https://api.example.org',
+-                   'variable': 'EXAMPLE_API_KEY'}}
+
+----------------------------------------------------------------------
+Ran 1 test in 0.027s
+
+FAILED (failures=1)

@@ -1,5 +1,0 @@
-# Scratch copy of this head with only `logins?` removed from check.py CREDENTIAL: the red for asks/invalid-login.txt.
-$ python3 -I contracts/fixtures/write-driver/check.py
-fail asks/invalid-login.txt: expected {"result": "invalid", "code": "credential"}, read {"result": "valid", "kind": "cost-or-machine", "effect": "start a machine"}
-62 fixtures, 1 failures
-exit 1

@@ -1,0 +1,87 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/cloudroom/test_driver.py -k effort -k default -k levels   # no-op agent CLI stubs first on PATH
+test_a_start_whose_levels_cannot_be_read_starts_nothing (__main__.Driver.test_a_start_whose_levels_cannot_be_read_starts_nothing) ... ok
+test_an_effort_it_cannot_set_is_refused_and_starts_nothing (__main__.Driver.test_an_effort_it_cannot_set_is_refused_and_starts_nothing) ...
+  test_an_effort_it_cannot_set_is_refused_and_starts_nothing (__main__.Driver.test_an_effort_it_cannot_set_is_refused_and_starts_nothing) [a provider with no levels] ... FAIL
+  test_an_effort_it_cannot_set_is_refused_and_starts_nothing (__main__.Driver.test_an_effort_it_cannot_set_is_refused_and_starts_nothing) [a level the model does not list] ... FAIL
+  test_an_effort_it_cannot_set_is_refused_and_starts_nothing (__main__.Driver.test_an_effort_it_cannot_set_is_refused_and_starts_nothing) [a model Cloudroom does not list] ... FAIL
+test_an_effort_reaches_room_cli_as_reasoning_level (__main__.Driver.test_an_effort_reaches_room_cli_as_reasoning_level) ...
+  test_an_effort_reaches_room_cli_as_reasoning_level (__main__.Driver.test_an_effort_reaches_room_cli_as_reasoning_level) [claude] ... FAIL
+  test_an_effort_reaches_room_cli_as_reasoning_level (__main__.Driver.test_an_effort_reaches_room_cli_as_reasoning_level) [codex] ... FAIL
+test_no_effort_runs_at_the_hosts_default (__main__.Driver.test_no_effort_runs_at_the_hosts_default) ... ok
+test_version_lists_effort_and_the_readme_says_how (__main__.Driver.test_version_lists_effort_and_the_readme_says_how) ... FAIL
+
+======================================================================
+FAIL: test_an_effort_it_cannot_set_is_refused_and_starts_nothing (__main__.Driver.test_an_effort_it_cannot_set_is_refused_and_starts_nothing) [a provider with no levels]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cloudroom/test_driver.py", line 140, in test_an_effort_it_cannot_set_is_refused_and_starts_nothing
+    self.assertEqual(out['next'], CANT)
+AssertionError: 'send only those fields; never a login' != "this host can't set effort: remove the e[81 chars]ault"
+- send only those fields; never a login
++ this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default
+
+
+======================================================================
+FAIL: test_an_effort_it_cannot_set_is_refused_and_starts_nothing (__main__.Driver.test_an_effort_it_cannot_set_is_refused_and_starts_nothing) [a level the model does not list]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cloudroom/test_driver.py", line 140, in test_an_effort_it_cannot_set_is_refused_and_starts_nothing
+    self.assertEqual(out['next'], CANT)
+AssertionError: 'send only those fields; never a login' != "this host can't set effort: remove the e[81 chars]ault"
+- send only those fields; never a login
++ this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default
+
+
+======================================================================
+FAIL: test_an_effort_it_cannot_set_is_refused_and_starts_nothing (__main__.Driver.test_an_effort_it_cannot_set_is_refused_and_starts_nothing) [a model Cloudroom does not list]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cloudroom/test_driver.py", line 140, in test_an_effort_it_cannot_set_is_refused_and_starts_nothing
+    self.assertEqual(out['next'], CANT)
+AssertionError: 'send only those fields; never a login' != "this host can't set effort: remove the e[81 chars]ault"
+- send only those fields; never a login
++ this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default
+
+
+======================================================================
+FAIL: test_an_effort_reaches_room_cli_as_reasoning_level (__main__.Driver.test_an_effort_reaches_room_cli_as_reasoning_level) [claude]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cloudroom/test_driver.py", line 114, in test_an_effort_reaches_room_cli_as_reasoning_level
+    self.assertEqual([c[c.index('--reasoning-level'):][:2] for c in spawns if '--reasoning-level' in c],
+AssertionError: Lists differ: [] != [['--reasoning-level', 'medium']]
+
+Second list contains 1 additional elements.
+First extra element 0:
+['--reasoning-level', 'medium']
+
+- []
++ [['--reasoning-level', 'medium']] : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+
+======================================================================
+FAIL: test_an_effort_reaches_room_cli_as_reasoning_level (__main__.Driver.test_an_effort_reaches_room_cli_as_reasoning_level) [codex]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cloudroom/test_driver.py", line 114, in test_an_effort_reaches_room_cli_as_reasoning_level
+    self.assertEqual([c[c.index('--reasoning-level'):][:2] for c in spawns if '--reasoning-level' in c],
+AssertionError: Lists differ: [] != [['--reasoning-level', 'high']]
+
+Second list contains 1 additional elements.
+First extra element 0:
+['--reasoning-level', 'high']
+
+- []
++ [['--reasoning-level', 'high']] : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+
+======================================================================
+FAIL: test_version_lists_effort_and_the_readme_says_how (__main__.Driver.test_version_lists_effort_and_the_readme_says_how)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cloudroom/test_driver.py", line 161, in test_version_lists_effort_and_the_readme_says_how
+    self.assertIn('effort', self.call('version', {})[1]['can'])
+AssertionError: 'effort' not found in ['start', 'wake', 'stop', 'many-at-once', 'own-sandbox']
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.451s
+
+FAILED (failures=6)

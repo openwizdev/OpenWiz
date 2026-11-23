@@ -1,0 +1,11 @@
+# Red run for review R2 (round 2) on openwizdev/OpenWiz#2339 at 3ed8ede3 (paths scrubbed)
+$ python3 -I tools/github-app/test_token_service.py RequestFixtureTests.test_a_failed_audit_lock_revokes_and_a_short_rewrite_keeps_the_entry_readable
+FAIL: test_a_failed_audit_lock_revokes_and_a_short_rewrite_keeps_the_entry_readable (__main__.RequestFixtureTests.test_a_failed_audit_lock_revokes_and_a_short_rewrite_keeps_the_entry_readable)
+AssertionError: Lists differ: [] != ['Bearer <the fake token>']
+Ran 1 test in <time>
+FAILED (failures=1)
+# The same test with its lock-failure half removed, on a scratch copy, so the short-rewrite half runs:
+FAIL: test_a_failed_audit_lock_revokes_and_a_short_rewrite_keeps_the_entry_readable (__main__.RequestFixtureTests.test_a_failed_audit_lock_revokes_and_a_short_rewrite_keeps_the_entry_readable)
+AssertionError: a short rewrite left the audit entry unreadable
+Ran 1 test in <time>
+FAILED (failures=1)

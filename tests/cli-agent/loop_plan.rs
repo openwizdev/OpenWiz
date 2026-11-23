@@ -1049,3 +1049,71 @@ fn a_multibyte_delay_is_refused_and_the_other_files_still_plan() {
     );
     assert_eq!(doc["items"][1]["action"], "create");
 }
+
+#[test]
+fn integer_params_beyond_i64_and_u64_keep_their_digits_through_plan_and_export() {
+    let check =
+        "#!/bin/sh\necho \"$WIZLOOP_PARAM_ACCOUNT $WIZLOOP_PARAM_LOW $WIZLOOP_PARAM_ZERO\"\n";
+    let loop_file = "---\nid: \"big\"\nname: \"Synthetic big\"\ntrigger: {\"cron\": \"0 9 * * *\", \"timezone\": \"UTC\"}\ncheck: {\"run\": \"big/check\", \"timeout\": 60}\nthread: \"new\"\nparams: {\"account\": 18446744073709551617, \"low\": -9223372036854775809, \"zero\": -0}\n---\nInspect account {{account}} below {{low}} from {{zero}}.\n";
+    let prompt = "Inspect account 18446744073709551617 below -9223372036854775809 from -0.\n";
+    let script = "#!/bin/sh\n# wizloop: params from the loop file, as data\nexport WIZLOOP_PARAM_ACCOUNT=18446744073709551617\nexport WIZLOOP_PARAM_LOW=-9223372036854775809\nexport WIZLOOP_PARAM_ZERO=-0\n# wizloop: the check\necho \"$WIZLOOP_PARAM_ACCOUNT $WIZLOOP_PARAM_LOW $WIZLOOP_PARAM_ZERO\"\n";
+    let fake = Fake::new();
+    fake.write("big/check", check);
+    let path = fake.write("big.md", loop_file);
+    let (code, doc) = fake.json(&[path.to_str().unwrap(), "--project", PROJECT]);
+    assert_eq!(code, 0, "{doc:#}");
+    assert_eq!(
+        doc["items"][0]["commands"][0]["files"],
+        json!({"@prompt": prompt, "@script": script})
+    );
+
+    let live = json!({
+        "id": "loop_syn_big", "project_id": PROJECT, "session_id": "thr_syn_0001",
+        "name": "Synthetic big [wizloop:big]", "cron": "0 9 * * *", "timezone": "UTC",
+        "run_at": null, "webhook": false, "new_thread": true, "script": script,
+        "agent": null, "secrets": [], "priority": 3, "prompt": prompt, "enabled": true,
+        "last_error": null, "last_run_at": null, "next_run_at": null, "runs": 0
+    });
+    let fake = Fake::answering(json!({
+        "argv": ["loop", "list", "--json"],
+        "stdout": json!({"automations": [live]}).to_string(),
+    }));
+    super::dirs::private_dir_all(fake.dir().join("exported")).unwrap();
+    let export = fake.0.run(&[
+        "loop",
+        "export",
+        "--project",
+        PROJECT,
+        "--out",
+        "exported",
+        "--json",
+    ]);
+    let report: Value = serde_json::from_slice(&export.stdout).unwrap();
+    assert_eq!(export.status.code(), Some(0), "{report:#}");
+    assert_eq!(report["loops"][0]["result"], "written", "{report:#}");
+    let exported = fs::read_to_string(fake.dir().join("exported/big.md")).unwrap();
+    assert!(
+        exported.contains(
+            "params: {\"account\": 18446744073709551617, \"low\": -9223372036854775809, \"zero\": -0}\n"
+        ),
+        "{exported}"
+    );
+    assert_eq!(
+        fs::read_to_string(fake.dir().join("exported/big/check")).unwrap(),
+        check
+    );
+    let (code, doc) = fake.json(&[
+        fake.dir().join("exported/big.md").to_str().unwrap(),
+        "--project",
+        PROJECT,
+    ]);
+    assert_eq!(code, 0, "{doc:#}");
+    assert_eq!(
+        (
+            &doc["items"][0]["differences"],
+            &doc["items"][0]["commands"]
+        ),
+        (&json!([]), &json!([])),
+        "{doc:#}"
+    );
+}

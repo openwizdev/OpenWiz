@@ -1,0 +1,10 @@
+## Local suite at 1b9cc81c6071dc8bc7174b8f78e429816edd2038 (env -u OPENWIZ_GITHUB_APP_KEY; 37 agent-CLI refusal stubs first on PATH)
+## python3 tools/release/test.py
+Running 279 tests on 8 threads
+test_install_status_never_reads_a_held_or_interrupted_attempt_record (test_candidate.Candidate.test_install_status_never_reads_a_held_or_interrupted_attempt_record) ... ok
+test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history (test_candidate.Notes.test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history) ... ok
+Ran 279 tests in 165.804s
+
+OK
+exit 0
+## python3 -I tools/comment-check/check.py diff --base origin/room/polish-q-2383

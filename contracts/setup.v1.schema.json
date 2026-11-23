@@ -724,7 +724,10 @@
           "properties": {
             "repository": {
               "type": "string",
-              "pattern": "^[A-Za-z0-9-]{1,39}/[A-Za-z0-9_.-]{1,100}$"
+              "pattern": "^[A-Za-z0-9-]{1,39}/[A-Za-z0-9_.-]{1,100}$",
+              "not": {
+                "pattern": "/\\.\\.?$"
+              }
             },
             "project": {
               "type": "string",
@@ -733,11 +736,15 @@
             "operator": {
               "type": "string",
               "minLength": 1,
-              "maxLength": 100
+              "maxLength": 100,
+              "pattern": "^[^\\s\\u0000-\\u001f\\u007f-\\u009f]([^\\u0000-\\u001f\\u007f-\\u009f]*[^\\s\\u0000-\\u001f\\u007f-\\u009f])?$"
             },
             "service_issue": {
               "type": "integer",
-              "minimum": 1
+              "minimum": 1,
+              "not": {
+                "minimum": 9007199254740992
+              }
             },
             "answer_thread": {
               "type": "string",
@@ -786,7 +793,10 @@
           "properties": {
             "repository": {
               "type": "string",
-              "pattern": "^[A-Za-z0-9-]{1,39}/[A-Za-z0-9_.-]{1,100}$"
+              "pattern": "^[A-Za-z0-9-]{1,39}/[A-Za-z0-9_.-]{1,100}$",
+              "not": {
+                "pattern": "/\\.\\.?$"
+              }
             },
             "project": {
               "type": "null"
@@ -794,11 +804,15 @@
             "operator": {
               "type": "string",
               "minLength": 1,
-              "maxLength": 100
+              "maxLength": 100,
+              "pattern": "^[^\\s\\u0000-\\u001f\\u007f-\\u009f]([^\\u0000-\\u001f\\u007f-\\u009f]*[^\\s\\u0000-\\u001f\\u007f-\\u009f])?$"
             },
             "service_issue": {
               "type": "integer",
-              "minimum": 1
+              "minimum": 1,
+              "not": {
+                "minimum": 9007199254740992
+              }
             },
             "answer_thread": {
               "type": "null"

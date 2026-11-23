@@ -1,3 +1,0 @@
-# The proof tests for future behaviour: each is #[ignore = "pending: ticket 2"].
-# tests/checks/pending.rs keeps this list exact. Ticket 2 removes a line when it
-# removes that test's ignore.

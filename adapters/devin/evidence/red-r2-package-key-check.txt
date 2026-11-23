@@ -1,0 +1,70 @@
+# Red (openwizdev/openwiz#1996, review R2 on openwizdev/OpenWiz#2490): the release runtime test before build_products.py
+# carries Devin's README.md and fixtures/kit-host.json. Agent CLIs stubbed first on PATH; synthetic; no host reached.
+# Run: python3 -I tools/release/test_package.py -k test_runtime_carries_exactly
+
+F
+======================================================================
+FAIL: test_runtime_carries_exactly_the_selected_drivers_and_kit_where_the_caller_finds_them (__main__.Package.test_runtime_carries_exactly_the_selected_drivers_and_kit_where_the_caller_finds_them)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/release/test_package.py", line 179, in test_runtime_carries_exactly_the_selected_drivers_and_kit_where_the_caller_finds_them
+    self.assertEqual(sorted(p for p in assets if p.startswith(('runtime/adapters/', 'runtime/kernel/'))),
+AssertionError: Lists differ: ['run[84 chars]evin/driver', 'runtime/adapters/devin/schema.j[299 chars].md'] != ['run[84 chars]evin/README.md', 'runtime/adapters/devin/drive[384 chars].md']
+
+First differing element 2:
+'runtime/adapters/devin/driver'
+'runtime/adapters/devin/README.md'
+
+Second list contains 2 additional elements.
+First extra element 12:
+'runtime/kernel/records-kit/check.py'
+
+  ['runtime/adapters/boat/driver',
+   'runtime/adapters/boat/schema.json',
++  'runtime/adapters/devin/README.md',
+   'runtime/adapters/devin/driver',
++  'runtime/adapters/devin/fixtures/kit-host.json',
+   'runtime/adapters/devin/schema.json',
+   'runtime/adapters/local/driver',
+   'runtime/adapters/local/schema.json',
+   'runtime/kernel/driver-kit/hostkey.py',
+   'runtime/kernel/driver-kit/hosts.json',
+   'runtime/kernel/driver-kit/kit.py',
+   'runtime/kernel/driver-kit/schema.json',
+   'runtime/kernel/records-kit/check.py',
+   'runtime/kernel/records.v1.md']
+
+----------------------------------------------------------------------
+Ran 1 test in 0.112s
+
+FAILED (failures=1)
+
+# Scratch run, not committed: the same test with its carried-set checks disabled, so it reaches the new assertion.
+# The installed kit runs against the installed Devin driver and prints only the generic token line: no key check.
+
+F
+======================================================================
+FAIL: test_runtime_carries_exactly_the_selected_drivers_and_kit_where_the_caller_finds_them (__main__.Package.test_runtime_carries_exactly_the_selected_drivers_and_kit_where_the_caller_finds_them)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/release/test_package.py", line 215, in test_runtime_carries_exactly_the_selected_drivers_and_kit_where_the_caller_finds_them
+    self.assertEqual(keyed.stdout.splitlines()[-1:], [
+AssertionError: Lists differ: ['pas[47 chars]river'] != ['pas[47 chars]river, and on start, wake and stop the devin k[56 chars]der']
+
+First differing element 0:
+'pass[46 chars]river'
+'pass[46 chars]river, and on start, wake and stop the devin k[55 chars]ader'
+
+- ['pass token: no login or token passed through the driver']
+?                                                           -
+
++ ['pass token: no login or token passed through the driver, and on start, wake '
+?                                                          +++++++++++++++++++++
+
++  'and stop the devin key reached its host only from the key helper, in its '
++  'header'] : 
+
+----------------------------------------------------------------------
+Ran 1 test in 0.907s
+
+FAILED (failures=1)

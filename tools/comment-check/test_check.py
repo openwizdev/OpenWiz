@@ -237,6 +237,23 @@ REVIEW_CASES = {
     'R11 directive reasons and directive-like strings': (
         {}, {'d.py': 'x = 1  # noqa: F841 #no-reason\n"""noqa -- formatter details."""\ny = 2  # noqa: F841 # the synthetic rule misfires\n'},
         [], {('d.py', 1, 'directive-reason'), ('d.py', 2, 'comment')}),
+    '#1920 comment-shaped text in a title and a textarea': (
+        {}, {'t.html': '<title>Docs // <!-- example --></title>\n<TEXTAREA rows="2"><!-- example -->\n</textarea>\n<!-- New narration. -->\n'},
+        [], {('t.html', 4, 'comment')}),
+    '#1921 a line continuation at a word boundary and inside a word': (
+        {}, {'w.sh': 'echo ready \\\n# New narration\necho ready\\\n#fragment\n'}, [], {('w.sh', 2, 'comment')}),
+    '#1967 case as a literal argument in a substitution': (
+        {}, {'k.sh': 'word="$(echo case)" # check this directive\nword="$(echo esac)" # New narration\n'},
+        [], {('k.sh', 1, 'comment'), ('k.sh', 2, 'comment')}),
+    'R1 of #2311 a near-match before the closing tag': (
+        {}, {'n.html': '<title></title-example><!-- literal sample --></title>\n<!-- New narration. -->\n'
+                       '<style></style-x>body {} /* More narration. */</style>\n'},
+        [], {('n.html', 2, 'comment'), ('n.html', 3, 'comment')}),
+    'R2 of #2311 a literal case on a continued line': (
+        {}, {'c.sh': 'word="$(echo \\\ncase)" # actual narration\n'}, [], {('c.sh', 2, 'comment')}),
+    '#1968 a backtick in an inner double quote of a substitution': (
+        {}, {'b.sh': 'word="$(printf \'%s\' "`printf \'%s\' value # literal`")" # comment after unsure nesting\n# New narration.\n'},
+        [], {('b.sh', 2, 'comment')}),
 }
 
 

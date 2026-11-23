@@ -1,0 +1,3 @@
+#!/bin/sh
+echo "heads-signed-out output heads.py discards" >&2
+exit 1

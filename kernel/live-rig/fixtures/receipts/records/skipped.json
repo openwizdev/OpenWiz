@@ -1,0 +1,13 @@
+{
+  "host": "local",
+  "harness": "claude",
+  "model": "example-model",
+  "date": "2026-11-01",
+  "driver_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "kit_commit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "outcome": "skipped",
+  "skipped": "not signed in: example-tool",
+  "kit_exit": null,
+  "stdout": null,
+  "seconds": 0
+}

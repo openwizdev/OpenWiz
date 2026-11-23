@@ -1,0 +1,52 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/template/test_driver.py
+test_a_harness_it_does_not_pass_effort_to_is_refused_and_nothing_starts (__main__.Template.test_a_harness_it_does_not_pass_effort_to_is_refused_and_nothing_starts) ... ok
+test_a_harness_without_effort_still_starts_at_its_default (__main__.Template.test_a_harness_without_effort_still_starts_at_its_default) ... ok
+test_an_effort_it_does_not_pass_is_refused_and_nothing_starts (__main__.Template.test_an_effort_it_does_not_pass_is_refused_and_nothing_starts) ... ok
+test_an_effort_that_is_not_a_word_is_refused_as_input (__main__.Template.test_an_effort_that_is_not_a_word_is_refused_as_input) ... ok
+test_no_harness_outside_the_fixtures_is_on_the_tests_path (__main__.Template.test_no_harness_outside_the_fixtures_is_on_the_tests_path) ... ok
+test_save_failure_after_spawn_reports_unknown (__main__.Template.test_save_failure_after_spawn_reports_unknown) ... ok
+test_simultaneous_wakes_start_one_turn (__main__.Template.test_simultaneous_wakes_start_one_turn) ... /usr/lib/python3.11/unittest/case.py:579: ResourceWarning: unclosed file <_io.BufferedReader name=5>
+  if method() is not None:
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/usr/lib/python3.11/unittest/case.py:579: ResourceWarning: unclosed file <_io.BufferedReader name=6>
+  if method() is not None:
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_start_passes_its_effort_to_the_harness_and_wake_passes_it_again (__main__.Template.test_start_passes_its_effort_to_the_harness_and_wake_passes_it_again) ... ok
+test_start_record_is_not_wakeable_before_it_is_confirmed (__main__.Template.test_start_record_is_not_wakeable_before_it_is_confirmed) ... ok
+test_start_with_nowhere_to_save_starts_nothing (__main__.Template.test_start_with_nowhere_to_save_starts_nothing) ... ok
+test_start_without_effort_passes_none (__main__.Template.test_start_without_effort_passes_none) ... ok
+test_stop_ends_a_worker_with_a_clean_environment (__main__.Template.test_stop_ends_a_worker_with_a_clean_environment) ... ok
+test_stop_ends_the_run_when_it_cannot_save (__main__.Template.test_stop_ends_the_run_when_it_cannot_save) ... ok
+test_stop_ends_what_the_turn_left_behind_after_it_exits (__main__.Template.test_stop_ends_what_the_turn_left_behind_after_it_exits) ... ok
+test_the_cant_form_leaves_effort_out_of_can_and_refuses_it_as_input (__main__.Template.test_the_cant_form_leaves_effort_out_of_can_and_refuses_it_as_input) ... ok
+test_version_lists_effort_and_the_readme_says_how_under_its_login_line (__main__.Template.test_version_lists_effort_and_the_readme_says_how_under_its_login_line) ... ok
+test_wake_checks_its_save_before_and_after_spawn (__main__.Template.test_wake_checks_its_save_before_and_after_spawn) ... ok
+test_wake_while_a_turn_runs_starts_no_second_turn (__main__.Template.test_wake_while_a_turn_runs_starts_no_second_turn) ... ok
+test_without_proc_as_on_macos_stop_ends_a_worker_handed_off_as_the_turn_exits (__main__.Template.test_without_proc_as_on_macos_stop_ends_a_worker_handed_off_as_the_turn_exits) ... ok
+test_without_proc_as_on_macos_stop_ends_each_grandchild (__main__.Template.test_without_proc_as_on_macos_stop_ends_each_grandchild) ... ok
+test_without_proc_as_on_macos_stop_says_when_lsof_cannot_check_the_output_file (__main__.Template.test_without_proc_as_on_macos_stop_says_when_lsof_cannot_check_the_output_file) ... ok
+
+----------------------------------------------------------------------
+Ran 21 tests in 23.250s
+
+OK
+
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/driver-kit/test_kit.py
+test_a_failed_start_check_still_stops_its_run (__main__.Kit.test_a_failed_start_check_still_stops_its_run) ... ok
+test_a_refusal_holding_a_credential_never_reaches_the_output (__main__.Kit.test_a_refusal_holding_a_credential_never_reaches_the_output) ... ok
+test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) ... ok
+test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) ... ok
+test_no_harness_outside_the_fixtures_is_on_the_tests_path (__main__.Kit.test_no_harness_outside_the_fixtures_is_on_the_tests_path) ... ok
+test_probe_only_hides_environments_from_the_kits_own_listing_only (__main__.Kit.test_probe_only_hides_environments_from_the_kits_own_listing_only) ... ok
+test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) ... ok
+test_template_passes_all_five (__main__.Kit.test_template_passes_all_five) ... ok
+test_the_kits_visibility_probe_signals_ready_through_the_macos_shim_and_runs_until_its_stdin_closes (__main__.Kit.test_the_kits_visibility_probe_signals_ready_through_the_macos_shim_and_runs_until_its_stdin_closes) ... ok
+test_without_proc_as_on_macos_a_driver_whose_run_stays_in_the_kits_group_passes_all_five (__main__.Kit.test_without_proc_as_on_macos_a_driver_whose_run_stays_in_the_kits_group_passes_all_five) ... ok
+test_without_proc_as_on_macos_the_template_passes_all_five (__main__.Kit.test_without_proc_as_on_macos_the_template_passes_all_five) ... ok
+test_without_proc_or_the_runs_visible_environment_stop_and_token_fail_unverified (__main__.Kit.test_without_proc_or_the_runs_visible_environment_stop_and_token_fail_unverified) ... ok
+
+----------------------------------------------------------------------
+Ran 12 tests in 53.157s
+
+OK

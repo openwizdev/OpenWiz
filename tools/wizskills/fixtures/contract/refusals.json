@@ -15,5 +15,17 @@
   {"name": "different release tree", "at": ["release", "tree"], "value": "dddddddddddddddddddddddddddddddddddddddd", "errors": ["binding"]},
   {"name": "different tag", "at": ["tag"], "value": "v0.2.0", "errors": ["binding"]},
   {"name": "invalid date", "at": ["files", "CHANGELOG.md"], "value": "# Changelog\n\n## 0.1.0 - 2030-02-30\n\n- Synthetic change.\n", "errors": ["changelog"]},
-  {"name": "unlisted changes forbidden", "at": ["files", "CHANGELOG.md"], "value": "# Changelog\n\n## 0.1.0 - 2030-01-02\n\nSynthetic change.\n", "errors": ["changelog"]}
+  {"name": "unlisted changes forbidden", "at": ["files", "CHANGELOG.md"], "value": "# Changelog\n\n## 0.1.0 - 2030-01-02\n\nSynthetic change.\n", "errors": ["changelog"]},
+  {"name": "installer not executable", "at": ["executables"], "value": ["skills/alpha/scripts/run.sh"], "errors": ["layout"]},
+  {"name": "executable not in the package", "at": ["executables"], "value": ["install.sh", "skills/alpha/scripts/run.sh", "skills/alpha/scripts/gone.sh"], "errors": ["layout"]},
+  {"name": "wrong release schema", "at": ["release", "schema"], "value": "openwiz.wizskills.release.v2", "errors": ["release"]},
+  {"name": "two marketplace plugins", "at": ["files", ".claude-plugin/marketplace.json"], "value": "{\"name\":\"wizskills\",\"owner\":{\"name\":\"Synthetic\"},\"plugins\":[{\"name\":\"openwiz\",\"source\":\"./\"},{\"name\":\"other\",\"source\":\"./\"}]}", "errors": ["plugin"]},
+  {"name": "marketplace plugin name", "at": ["files", ".claude-plugin/marketplace.json"], "value": "{\"name\":\"wizskills\",\"owner\":{\"name\":\"Synthetic\"},\"plugins\":[{\"name\":\"other\",\"source\":\"./\"}]}", "errors": ["plugin"]},
+  {"name": "plugin name", "at": ["files", ".claude-plugin/plugin.json"], "value": "{\"name\":\"other\",\"version\":\"0.1.0\",\"skills\":[\"./skills/alpha\"]}", "errors": ["plugin"]},
+  {"name": "duplicate marketplace key", "at": ["files", ".claude-plugin/marketplace.json"], "value": "{\"name\":\"wizskills\",\"name\":\"wizskills\",\"owner\":{\"name\":\"Synthetic\"},\"plugins\":[{\"name\":\"openwiz\",\"source\":\"./\"}]}", "errors": ["plugin"]},
+  {"name": "duplicate plugin key", "at": ["files", ".claude-plugin/plugin.json"], "value": "{\"name\":\"openwiz\",\"version\":\"0.1.0\",\"version\":\"0.1.0\",\"skills\":[\"./skills/alpha\"]}", "errors": ["plugin", "version"]},
+  {"name": "earlier section preserved", "at": ["files", "CHANGELOG.md"], "value": "# Changelog\n\n## 0.1.0 - 2030-01-02\n\n- Synthetic change.\n\n## 0.1.0-rc.1 - 2030-01-01\n\n- Earlier synthetic change.\n", "errors": []},
+  {"name": "latest section first", "at": ["files", "CHANGELOG.md"], "value": "# Changelog\n\n## 0.1.0-rc.1 - 2030-01-01\n\n- Earlier synthetic change.\n\n## 0.1.0 - 2030-01-02\n\n- Synthetic change.\n", "errors": ["version"]},
+  {"name": "repeated changelog version", "at": ["files", "CHANGELOG.md"], "value": "# Changelog\n\n## 0.1.0 - 2030-01-02\n\n- Synthetic change.\n\n## 0.1.0 - 2030-01-01\n\n- Earlier synthetic change.\n", "errors": ["changelog"]},
+  {"name": "invalid earlier date", "at": ["files", "CHANGELOG.md"], "value": "# Changelog\n\n## 0.1.0 - 2030-01-02\n\n- Synthetic change.\n\n## 0.1.0-rc.1 - 2030-02-30\n\n- Earlier synthetic change.\n", "errors": ["changelog"]}
 ]

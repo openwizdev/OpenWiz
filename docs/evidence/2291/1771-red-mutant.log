@@ -1,0 +1,14 @@
+# mutant: state() reads the whole existing file (no length check, no take bound)
+running 1 test
+loop_export::a_huge_sparse_collision_is_refused_under_a_256_mib_limit --- FAILED
+failures:
+---- loop_export::a_huge_sparse_collision_is_refused_under_a_256_mib_limit stdout ----
+thread 'loop_export::a_huge_sparse_collision_is_refused_under_a_256_mib_limit' (49194) panicked at tests/cli-agent/loop_export.rs:98:5:
+assertion `left == right` failed: stderr: openwiz: loop export: could not write to exported: out of memory; the loops before it were written
+  left: Some(1)
+ right: Some(5)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+failures:
+    loop_export::a_huge_sparse_collision_is_refused_under_a_256_mib_limit
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 123 filtered out; finished in 1.45s
+error: test failed, to rerun pass `-p openwiz-tests --test cli-agent`

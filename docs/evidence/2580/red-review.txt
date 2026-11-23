@@ -1,0 +1,133 @@
+# The round-1 tests run against the reviewed head's bootstrap.sh and tools.json (383ecbc0)
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/vps/test_bootstrap.py   # agent-CLI refusal stubs first on PATH
+test_checksum_mismatch_is_refused_and_nothing_from_it_runs (__main__.BootstrapTest.test_checksum_mismatch_is_refused_and_nothing_from_it_runs) ... ok
+test_dry_run_prints_every_step_and_writes_nothing (__main__.BootstrapTest.test_dry_run_prints_every_step_and_writes_nothing) ... FAIL
+test_existing_launcher_is_never_replaced (__main__.BootstrapTest.test_existing_launcher_is_never_replaced) ... FAIL
+test_fixture_install_into_home_prefix (__main__.BootstrapTest.test_fixture_install_into_home_prefix) ... FAIL
+test_home_only_installer_is_refused_under_another_prefix (__main__.BootstrapTest.test_home_only_installer_is_refused_under_another_prefix) ... FAIL
+test_real_tools_plan_offline_on_refusing_downloads (__main__.BootstrapTest.test_real_tools_plan_offline_on_refusing_downloads) ... FAIL
+test_second_run_installs_nothing (__main__.BootstrapTest.test_second_run_installs_nothing) ... FAIL
+test_too_old_system_tool_is_left_out_with_its_reason (__main__.BootstrapTest.test_too_old_system_tool_is_left_out_with_its_reason) ... ok
+test_wrong_version_keeps_the_working_tool (__main__.BootstrapTest.test_wrong_version_keeps_the_working_tool) ... FAIL
+test_every_tool_names_its_source_exact_version_checksum_and_why (__main__.ToolsJsonTest.test_every_tool_names_its_source_exact_version_checksum_and_why) ... FAIL
+
+======================================================================
+FAIL: test_dry_run_prints_every_step_and_writes_nothing (__main__.BootstrapTest.test_dry_run_prints_every_step_and_writes_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_bootstrap.py", line 208, in test_dry_run_prints_every_step_and_writes_nothing
+    self.assert_wrote_nothing()
+  File "<checkout>/kernel/live-rig/vps/test_bootstrap.py", line 193, in assert_wrote_nothing
+    self.assertEqual(os.stat(self.fx.tmp).st_mtime_ns, 10 ** 18, 'something was made or removed in TMPDIR')
+AssertionError: 1795393162607150074 != 1000000000000000000 : something was made or removed in TMPDIR
+
+======================================================================
+FAIL: test_existing_launcher_is_never_replaced (__main__.BootstrapTest.test_existing_launcher_is_never_replaced)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_bootstrap.py", line 308, in test_existing_launcher_is_never_replaced
+    self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+AssertionError: 1 != 0 : already there python3 3.11.2
+already there git 2.43.0
+installed curl 8.23.0
+installed gh 2.105.0
+installed fakedroid 1.17.2
+installed fakeapp 2.4.246
+installed runpane 2.4.246
+Traceback (most recent call last):
+  File "<stdin>", line 270, in <module>
+  File "<stdin>", line 246, in main
+  File "<stdin>", line 160, in install
+KeyError: 'provides'
+
+
+======================================================================
+FAIL: test_fixture_install_into_home_prefix (__main__.BootstrapTest.test_fixture_install_into_home_prefix)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_bootstrap.py", line 231, in test_fixture_install_into_home_prefix
+    self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+AssertionError: 1 != 0 : already there python3 3.11.2
+already there git 2.43.0
+installed curl 8.23.0
+installed gh 2.105.0
+installed fakedroid 1.17.2
+installed fakeapp 2.4.246
+installed runpane 2.4.246
+Traceback (most recent call last):
+  File "<stdin>", line 270, in <module>
+  File "<stdin>", line 246, in main
+  File "<stdin>", line 160, in install
+KeyError: 'provides'
+
+
+======================================================================
+FAIL: test_home_only_installer_is_refused_under_another_prefix (__main__.BootstrapTest.test_home_only_installer_is_refused_under_another_prefix)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_bootstrap.py", line 294, in test_home_only_installer_is_refused_under_another_prefix
+    self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+AssertionError: 1 != 0 : already there python3 3.11.2
+already there git 2.43.0
+installed curl 8.23.0
+installed gh 2.105.0
+installed fakedroid 1.17.2
+installed fakeapp 2.4.246
+installed runpane 2.4.246
+Traceback (most recent call last):
+  File "<stdin>", line 270, in <module>
+  File "<stdin>", line 246, in main
+  File "<stdin>", line 160, in install
+KeyError: 'provides'
+
+
+======================================================================
+FAIL: test_real_tools_plan_offline_on_refusing_downloads (__main__.BootstrapTest.test_real_tools_plan_offline_on_refusing_downloads)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_bootstrap.py", line 221, in test_real_tools_plan_offline_on_refusing_downloads
+    self.assert_wrote_nothing()
+  File "<checkout>/kernel/live-rig/vps/test_bootstrap.py", line 193, in assert_wrote_nothing
+    self.assertEqual(os.stat(self.fx.tmp).st_mtime_ns, 10 ** 18, 'something was made or removed in TMPDIR')
+AssertionError: 1795393162996501703 != 1000000000000000000 : something was made or removed in TMPDIR
+
+======================================================================
+FAIL: test_second_run_installs_nothing (__main__.BootstrapTest.test_second_run_installs_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_bootstrap.py", line 269, in test_second_run_installs_nothing
+    self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
+AssertionError: 1 != 0 : already there python3 3.11.2
+already there git 2.43.0
+installed curl 8.23.0
+installed gh 2.105.0
+installed fakedroid 1.17.2
+installed fakeapp 2.4.246
+installed runpane 2.4.246
+Traceback (most recent call last):
+  File "<stdin>", line 270, in <module>
+  File "<stdin>", line 246, in main
+  File "<stdin>", line 160, in install
+KeyError: 'provides'
+
+
+======================================================================
+FAIL: test_wrong_version_keeps_the_working_tool (__main__.BootstrapTest.test_wrong_version_keeps_the_working_tool)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_bootstrap.py", line 281, in test_wrong_version_keeps_the_working_tool
+    self.assertEqual(self.fx.run().returncode, 0)
+AssertionError: 1 != 0
+
+======================================================================
+FAIL: test_every_tool_names_its_source_exact_version_checksum_and_why (__main__.ToolsJsonTest.test_every_tool_names_its_source_exact_version_checksum_and_why)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_bootstrap.py", line 349, in test_every_tool_names_its_source_exact_version_checksum_and_why
+    self.assertTrue(hermes.get('home_only'))
+AssertionError: None is not true
+
+----------------------------------------------------------------------
+Ran 10 tests in 0.853s
+
+FAILED (failures=8)

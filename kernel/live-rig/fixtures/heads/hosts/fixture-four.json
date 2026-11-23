@@ -1,0 +1,9 @@
+{
+  "host": "fixture-four",
+  "driver": "adapters/four/driver",
+  "needs": ["fake-harness", "heads-signed-in"],
+  "signed_in": [["heads-signed-in", "status"]],
+  "cost": "paid",
+  "runs": [{"harness": "fake-harness", "model": "synthetic-1"}],
+  "wait": 8
+}

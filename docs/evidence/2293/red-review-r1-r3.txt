@@ -1,0 +1,58 @@
+test_stop_finds_its_thread_by_title_when_the_run_record_is_lost (__main__.Driver.test_stop_finds_its_thread_by_title_when_the_run_record_is_lost) ... 
+  test_stop_finds_its_thread_by_title_when_the_run_record_is_lost (__main__.Driver.test_stop_finds_its_thread_by_title_when_the_run_record_is_lost) [own child] ... FAIL
+  test_stop_finds_its_thread_by_title_when_the_run_record_is_lost (__main__.Driver.test_stop_finds_its_thread_by_title_when_the_run_record_is_lost) [cloud] ... FAIL
+test_no_provider_on_the_callers_path_is_ever_started (__main__.Driver.test_no_provider_on_the_callers_path_is_ever_started) ... FAIL
+
+======================================================================
+FAIL: test_stop_finds_its_thread_by_title_when_the_run_record_is_lost (__main__.Driver.test_stop_finds_its_thread_by_title_when_the_run_record_is_lost) [own child]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 500, in test_stop_finds_its_thread_by_title_when_the_run_record_is_lost
+    self.assertEqual(self.call('stop', run, **env), (0, dict(run, stopped=True)),
+AssertionError: Tuples differ: (1, {'error': 'no run run-<id>, an[141 chars]it'}) != (0, {'run': 'run-<id>', 'stopped': True})
+
+First differing element 0:
+1
+0
+
++ (0, {'run': 'run-<id>', 'stopped': True})
+- (1,
+-  {'error': 'no run run-<id>, and no thread this one started has its '
+-            'title',
+-   'next': 'check the run id that `driver start` printed, and stop it from the '
+-           'thread that started it'}) : a retried stop of a recovered run is not answered as stopped
+
+======================================================================
+FAIL: test_stop_finds_its_thread_by_title_when_the_run_record_is_lost (__main__.Driver.test_stop_finds_its_thread_by_title_when_the_run_record_is_lost) [cloud]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 494, in test_stop_finds_its_thread_by_title_when_the_run_record_is_lost
+    self.assertEqual((code, archived), (want, [['thread', 'archive', 'thr_syn_0001']] if not want else []),
+AssertionError: Tuples differ: (1, []) != (0, [['thread', 'archive', 'thr_syn_0001']])
+
+First differing element 0:
+1
+0
+
+- (1, [])
++ (0, [['thread', 'archive', 'thr_syn_0001']]) : {'error': "Cloudroom lists 1 threads with this run's title, and the driver cannot prove one of them is its own, in its project under its parent", 'next': 'stop it again later, or archive its thread by hand: the one whose title ends "(run-<id>)"'}
+
+======================================================================
+FAIL: test_no_provider_on_the_callers_path_is_ever_started (__main__.Driver.test_no_provider_on_the_callers_path_is_ever_started)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 522, in test_no_provider_on_the_callers_path_is_ever_started
+    self.assertEqual(json.load(f)['thr_syn_0001']['turns'], [],
+AssertionError: Lists differ: [28551] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+28551
+
+- [28551]
++ [] : the fake room-cli started a provider from the caller's PATH
+
+----------------------------------------------------------------------
+Ran 2 tests in 1.382s
+
+FAILED (failures=3)

@@ -281,6 +281,25 @@ class Hosts(unittest.TestCase):
         self.assertIn('prepared_project', SETUP_SCHEMA.get('$defs', {}))
         self.assert_cases(HOSTS['prepared_projects'], {'$ref': '#/$defs/prepared_project'}, SETUP_SCHEMA)
 
+    def test_prepared_projects_refuse_what_the_store_refuses(self):
+        store = _load('setup_store', ROOT / 'tools/install/setup/store.py')
+        edges = [('operator', v) for v in ('', ' ', '\t', ' Synthetic', 'Synthetic ', 'Synthetic\n', 'Syn\x00thetic',
+                                           'Syn\x85thetic', '\xa0Synthetic', 'Synthetic\u3000', 'S',
+                                           'Synthetic  Operator', 'S' * 100, 'S' * 101)]
+        edges += [('repository', 'synthetic-owner/' + v) for v in ('.', '..', '...', '.github', '..x', 'x..', '-', '_')]
+        edges += [('service_issue', v) for v in (0, 1, 2 ** 53 - 1, 2 ** 53, 2 ** 63)]
+        for base in ('cloud-nine-keys', 'local-without-cloudroom-ids'):
+            for key, value in edges:
+                with self.subTest(shape=base, key=key, value=value):
+                    doc = dict(HOSTS['prepared_projects'][base]['document'], **{key: value})
+                    try:
+                        store.check_project(doc)
+                        stored = True
+                    except store.Refused:
+                        stored = False
+                    errors = check.schema_errors(doc, {'$ref': '#/$defs/prepared_project'}, SETUP_SCHEMA)
+                    self.assertEqual(not errors, stored, errors)
+
     def test_models_host_selects_the_offered_source(self):
         schema = SETUP_SCHEMA.get('$defs', {}).get('models_host_selection', {})
         for name, case in HOSTS['models_host_selection'].items():

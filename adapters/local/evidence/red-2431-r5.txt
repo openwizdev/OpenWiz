@@ -1,0 +1,19 @@
+# HR1 #2431 R5 red: a good row that lists both of the runner's unlisted-effort candidates crashes the runner (no-op agent CLI stubs first on PATH)
+$ python3 -I adapters/local/test_harnesses.py
+fail claude: row.json harness: claude is built in, and no row may use a built-in name
+fail credential-env: row.json env: a value looks like a credential; env holds only fixed settings that are not credentials
+fail daemon-survives: daemon: the background process the row declares still runs after stop
+Traceback (most recent call last):
+  File "adapters/local/test_harnesses.py", line 440, in <module>
+    sys.exit(main(sys.argv[1:]))
+             ^^^^^^^^^^^^^^^^^^
+  File "adapters/local/test_harnesses.py", line 422, in main
+    got = check(planted, name)
+          ^^^^^^^^^^^^^^^^^^^^
+  File "adapters/local/test_harnesses.py", line 313, in check
+    check_effort(env, row)
+  File "adapters/local/test_harnesses.py", line 294, in check_effort
+    unlisted = next(v for v in ('medium', 'unlisted') if v not in table)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+StopIteration
+exit 1

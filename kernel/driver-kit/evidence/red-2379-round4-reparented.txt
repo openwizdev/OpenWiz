@@ -1,0 +1,20 @@
+# #2379 third fix round: key-undumpable-child, now hiding one second after its driver has exited (as CI's run at bf46432 showed), against a37e750's kit: the reparented child is missed.
+test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) ...
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-undumpable-child] ... FAIL
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-undumpable-child]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 297, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (0 if all(x.startswith('pass') for x in lines) else 1, lines))
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[345 chars]er']) != (1, ['pass version: openwiz:records v1, an[271 chars]it'])
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',

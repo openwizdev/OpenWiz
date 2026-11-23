@@ -22,7 +22,7 @@ ROW_FIELDS = ('harness', 'program', 'start', 'wake', 'session', 'modes', 'env', 
 OPTIONAL_ROW_FIELDS = ('signed_out', 'login_command')
 PLACEHOLDERS = ('{prompt}', '{model}', '{session}', '{mode}', '{effort}')
 SESSION = r'[A-Za-z0-9._:-]{1,100}'
-EFFORT = r'[A-Za-z0-9._-]{1,40}'
+EFFORT = r'[a-z][a-z0-9-]{0,19}'
 ENV_NAME = r'(?!OPENWIZ_)[A-Z][A-Z0-9_]{0,59}'
 PROGRAM = r'[A-Za-z0-9][A-Za-z0-9._-]{0,59}'
 CANT_SET_EFFORT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster "
@@ -149,6 +149,29 @@ def arguments(row, field, needs):
             raise Broken(field, 'it has no ' + p)
 
 
+def credential_shaped(args):
+    return any(holds_credential(a) for a in args if a) or \
+        any(holds_credential('%s=%s' % pair) or holds_credential('%s %s' % pair) for pair in zip(args, args[1:])
+            if all(pair))
+
+
+def no_credential_arguments(row):
+    # PRIVACY: a row's fixed arguments are saved in run state and passed in argv, so none may hold a credential;
+    # the refusal names the field, never the argument.
+    efforts = [a for a in row['effort'].values() if isinstance(a, list)] if isinstance(row['effort'], dict) else []
+    for field, lists in (('start', [row['start']]), ('wake', [row['wake']]), ('modes', list(row['modes'].values())),
+                         ('effort', efforts)):
+        if any(credential_shaped([a if a not in PLACEHOLDERS else '' for a in args]) for args in lists):
+            raise Broken(field, 'a fixed argument looks like a credential; a row holds no login, key or token')
+    for field in ('start', 'wake'):
+        for mode in row['modes'].values():
+            for effort in efforts or [[]]:
+                fills = {'{mode}': mode, '{effort}': effort}
+                if credential_shaped([b for a in row[field] for b in fills.get(a, [a if a not in PLACEHOLDERS else ''])]):
+                    raise Broken(field, 'with a mode or effort spliced in, its arguments look like a credential; a '
+                                        'row holds no login, key or token')
+
+
 def check_row(row, name):
     if not isinstance(row, dict):
         raise Broken('fields', 'it is not one JSON object')
@@ -157,9 +180,9 @@ def check_row(row, name):
     if not set(ROW_FIELDS) <= set(row) <= set(ROW_FIELDS + OPTIONAL_ROW_FIELDS):
         raise Broken('fields', 'it needs exactly %s, and may have %s' % (', '.join(ROW_FIELDS),
                                                                          ' and '.join(OPTIONAL_ROW_FIELDS)))
-    if row['harness'] in HARNESSES:
+    if isinstance(row['harness'], str) and row['harness'] in HARNESSES:
         raise Broken('harness', '%s is built in, and no row may use a built-in name' % row['harness'])
-    if row['harness'] != name or not re.fullmatch(START['harness'], name):
+    if not isinstance(row['harness'], str) or row['harness'] != name or not re.fullmatch(START['harness'], name):
         raise Broken('harness', "it is not its folder's name, or not a valid harness name")
     if not isinstance(row['program'], str) or not re.fullmatch(PROGRAM, row['program']):
         raise Broken('program', 'it is not one plain command name')
@@ -201,6 +224,7 @@ def check_row(row, name):
     arguments(row, 'wake', ('{prompt}', '{mode}', '{session}'))
     if kind != 'chosen' and '{session}' in row['start']:
         raise Broken('start', 'it has {session}, but the session is reported, not chosen')
+    no_credential_arguments(row)
     flags = isinstance(effort, dict) and any(isinstance(s, list) for s in effort.values())
     if flags and '{effort}' not in row['start']:
         raise Broken('effort', 'it maps effort values to arguments, but start has no {effort} to pass them')
@@ -215,7 +239,7 @@ def read_row(path, name):
             row = json.loads(f.read(), object_pairs_hook=unique)
     except FileNotFoundError:
         return None
-    except (OSError, ValueError, Refused):
+    except (OSError, ValueError, RecursionError, Refused):
         raise Broken('file', 'it is not one readable JSON object with each key once')
     return check_row(row, name)
 
@@ -232,15 +256,18 @@ def row_folders():
         return []
 
 
-def program(harness):
+def program(harness, effort):
     row = None
     if harness not in HARNESSES:
         try:
             row = read_row(os.path.join(ROWS, harness, 'row.json'), harness)
         except Broken as e:
-            raise Refused('harness %s has a row that breaks the harness-row contract, %s (%s: %s); nothing was '
-                          'started' % (harness, row_file(harness), e.args[0], e.args[1]),
+            raise Refused('%s breaks the harness-row contract (%s: %s); nothing was started'
+                          % (row_file(harness), e.args[0], e.args[1]),
                           'fix %s as adapters/local/harness-row.md says, then start again' % row_file(harness))
+        if row is None and os.path.isdir(os.path.join(ROWS, harness)):
+            raise Refused('%s is missing, so harness %s has no row; nothing was started' % (row_file(harness), harness),
+                          'add %s as adapters/local/harness-row.md says, then start again' % row_file(harness))
         if row is None:
             names, choices = list(HARNESSES) + row_folders(), 'use one of: '
             for n in names:
@@ -248,6 +275,7 @@ def program(harness):
                     break
                 choices += n if choices.endswith(': ') else ', ' + n
             raise Refused('harness %s is not one this driver runs' % harness, choices)
+    effort_of(harness, row, effort)
     name = row['program'] if row else harness
     path = shutil.which(name)
     if not path:
@@ -278,27 +306,36 @@ def command(state, woken):
         dict(row['env'], **env)
 
 
-def reported_session(run, session):
+NO_PATH = object()
+
+
+def turn_output(run, turn):
     try:
-        with open(log_path(run), errors='replace') as f:
-            lines = f.read().splitlines()
+        with open(log_path(run), 'rb') as f:
+            f.seek(turn.get('output_from', 0))
+            return f.read().decode(errors='replace')
     except OSError:
-        return None
-    for text in lines:
-        found = None
+        return ''
+
+
+def reported_session(run, session, first):
+    for text in turn_output(run, first).splitlines():
         if 'pattern' in session:
             m = re.search(session['pattern'], text)
-            found = m.group(1) if m else None
-        elif text.lstrip().startswith('{'):
+            if not m:
+                continue
+            found = m.group(1)
+        else:
             try:
-                found = json.loads(text)
-                for key in session['json']:
-                    found = found.get(key) if isinstance(found, dict) else None
-            except ValueError:
+                found = json.loads(text) if text.lstrip().startswith('{') else None
+            except (ValueError, RecursionError):
                 found = None
-        if found is not None:
-            ok = isinstance(found, str) and re.fullmatch(SESSION, found) and not holds_credential(found)
-            return found if ok else None
+            for key in session['json']:
+                found = found[key] if isinstance(found, dict) and key in found else NO_PATH
+            if found is NO_PATH:
+                continue
+        ok = isinstance(found, str) and re.fullmatch(SESSION, found) and not holds_credential(found)
+        return found if ok else None
     return None
 
 
@@ -554,12 +591,15 @@ def descendants(pid):
 
 
 def supervise(cmd):
+    # SECURITY: the row's env and effort setting go to the harness only; the supervisor and its process tools keep
+    # the driver's own environment.
+    overlay = json.loads(os.environ.pop('OPENWIZ_TURN_ENV', '{}'))
     if LINUX and ctypes.CDLL(None, use_errno=True).prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0) != 0:
         print(json.dumps({'error': 'this host cannot keep a turn\'s processes together'}), flush=True)
         return
     try:
         harness = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=sys.stderr, stderr=sys.stderr,
-                                   cwd=work(os.environ['OPENWIZ_RUN']))
+                                   cwd=work(os.environ['OPENWIZ_RUN']), env=dict(os.environ, **overlay))
     except OSError as e:
         print(json.dumps({'error': e.strerror}), flush=True)
         return
@@ -618,11 +658,13 @@ def launch(state, run, woken):
     cmd, extra = command(state, woken)
     try:
         log = open_log(run)
+        output_from = os.fstat(log).st_size
     except OSError:
-        log = subprocess.DEVNULL
+        log, output_from = subprocess.DEVNULL, 0
     try:
         sup = subprocess.Popen([sys.executable, '-I', os.path.abspath(__file__), '--turn'] + cmd,
-                               env=dict(os.environ, **extra, OPENWIZ_RUN=run), start_new_session=True,
+                               env=dict(os.environ, OPENWIZ_RUN=run, OPENWIZ_TURN_ENV=json.dumps(extra)),
+                               start_new_session=True,
                                stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=log)
         with sup.stdout:
             line = sup.stdout.readline()
@@ -639,7 +681,8 @@ def launch(state, run, woken):
     if 'pid' not in turn:
         raise Refused('harness %s did not start: %s' % (req['harness'], turn['error']),
                       'run %s by hand once to check it works, then start again' % req['harness'])
-    return {'pid': turn['pid'], 'since': turn['since'], 'supervisor': sup.pid, 'supervisor_since': since(sup.pid)}
+    return {'pid': turn['pid'], 'since': turn['since'], 'supervisor': sup.pid, 'supervisor_since': since(sup.pid),
+            'output_from': output_from}
 
 
 def running(turn):
@@ -726,7 +769,7 @@ def ended_at_once(run, turn, row=None):
             log = f.read()
     except OSError:
         log = ''
-    signed_out = SIGNED_OUT.search(log) or signed_out_by_row(row, log)
+    signed_out = SIGNED_OUT.search(log) or signed_out_by_row(row, turn_output(run, turn))
     why = ('the harness is not signed in' if signed_out else
            'the harness refused a tool' if REFUSAL.search(log) else None if code == 0 else 'the harness failed')
     if why is None:
@@ -769,8 +812,7 @@ def answer(cmd):
             return json.load(f)
     if cmd == 'start':
         req, run = no_credentials(read(START)), 'run-' + secrets.token_hex(6)
-        path, row = program(req['harness'])
-        effort_of(req['harness'], row, req.get('effort'))
+        path, row = program(req['harness'], req.get('effort'))
         state = {'request': req, 'program': path, 'turns': [], 'stopped': False, 'starting': True,
                  'workspace': None, 'mode': None}
         if row:
@@ -844,17 +886,20 @@ def answer(cmd):
             raise Refused('run %s is stopped' % run, 'start a new run')
         if state.get('starting'):
             raise Refused('run %s never finished starting' % run, 'stop it, then start a new run')
-        if state['turns'] and running(state['turns'][-1]):
-            return {'run': run, 'woke': True}
-        if state.get('row') and state['session'] is None:
-            state['session'] = reported_session(run, state['row']['session'])
+        found = state.get('row') and state['session'] is None
+        if found:
+            state['session'] = reported_session(run, state['row']['session'], state['turns'][0])
             if state['session'] is None:
                 raise Refused('run %s has no session id from its first turn yet; nothing was started' % run,
                               'wait until its first turn has printed its session id, then wake again')
-        try:
-            saved(run, state)
-        except OSError:
-            raise Refused('the driver cannot save run %s; nothing was started' % run, WRITABLE)
+        busy = state['turns'] and running(state['turns'][-1])
+        if found or not busy:
+            try:
+                saved(run, state)
+            except OSError:
+                raise Refused('the driver cannot save run %s; nothing was started' % run, WRITABLE)
+        if busy:
+            return {'run': run, 'woke': True}
         turn = launch(state, run, True)
         try:
             saved(run, dict(state, turns=state['turns'] + [turn]))

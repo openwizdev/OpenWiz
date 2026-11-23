@@ -63,7 +63,7 @@ def save(world):
 
 
 def repo_view(r):
-    keys = ('full_name', 'private', 'visibility', 'default_branch', 'permissions', 'owner', 'description', 'homepage')
+    keys = ('id', 'full_name', 'private', 'visibility', 'default_branch', 'permissions', 'owner', 'description', 'homepage')
     return {k: r[k] for k in keys if k in r}
 
 
@@ -79,7 +79,7 @@ def handle_call(world, method, target, body):
         key = f"{owner}/{body['name']}".lower()
         if key in repos:
             return 422, {'message': 'name already exists'}
-        repos[key] = {'full_name': f"{owner}/{body['name']}", 'private': body['private'],
+        repos[key] = {'id': 100 + len(repos), 'full_name': f"{owner}/{body['name']}", 'private': body['private'],
                       'visibility': 'private' if body['private'] else 'public', 'default_branch': 'main',
                       'permissions': {'push': True}, 'owner': {'login': owner, 'type': 'User'},
                       'description': body.get('description'), 'homepage': None,
@@ -110,6 +110,22 @@ def handle_call(world, method, target, body):
             repo['labels'].append(body['name'])
             details[body['name']] = {k: body[k] for k in ('color', 'description') if k in body}
             return 201, dict(details[body['name']], name=body['name'])
+    if rest[:1] == ['pulls'] and len(rest) > 1:
+        pull = next((p for p in repo['pulls'] if str(p['number']) == rest[1]), None)
+        if pull is None:
+            return 404, {'message': 'Not Found'}
+        base = pull.get('base', repo['default_branch'])
+        if method == 'GET' and len(rest) == 2:
+            return 200, {'number': pull['number'], 'state': pull['state'], 'merged_at': pull.get('merged_at'),
+                         'head': {'ref': pull['head'], 'sha': pull.get('sha', 'f' * 40)}, 'base': {'ref': base}}
+        if method == 'PUT' and rest[2:] == ['merge']:
+            if pull['state'] != 'open':
+                return 405, {'message': 'Pull Request is not mergeable'}
+            if body.get('sha') != pull.get('sha', 'f' * 40):
+                return 409, {'message': 'Head branch was modified'}
+            repo['branches'][base].update(repo['branches'][pull['head']])
+            pull.update(state='closed', merged_at='2026-01-01T00:00:00Z')
+            return 200, {'merged': True, 'sha': 'e' * 40, 'message': 'Pull Request successfully merged'}
     if rest[:1] == ['pulls']:
         if method == 'GET':
             head = query.get('head', '').split(':', 1)[-1]
@@ -120,8 +136,8 @@ def handle_call(world, method, target, body):
                 return 422, {'message': 'A pull request already exists'}
             number = 1 + max([p['number'] for p in repo['pulls']] + [0])
             repo['pulls'].append({'number': number, 'state': 'open', 'head': body['head'], 'base': body['base'],
-                                  'title': body['title'], 'body': body['body']})
-            return 201, {'number': number, 'state': 'open'}
+                                  'title': body['title'], 'body': body['body'], 'sha': 'f' * 40})
+            return 201, {'number': number, 'state': 'open', 'head': {'ref': body['head'], 'sha': 'f' * 40}}
     if rest[:3] == ['git', 'ref', 'heads']:
         branch = '/'.join(rest[3:])
         if branch in repo['branches']:

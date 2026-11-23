@@ -1,0 +1,19 @@
+# Red run for review R1 and R2 on openwizdev/OpenWiz#2339 at 9348d449 (paths scrubbed)
+$ python3 -I tools/install/setup/test_check.py CredentialShapedText
+FAIL: test_credential_shaped_operator_effects_and_reasons_are_refused_before_saving (__main__.CredentialShapedText.test_credential_shaped_operator_effects_and_reasons_are_refused_before_saving) (repository='sk-tools')
+AssertionError: Tuples differ: (5, None) != (0, 'proposed')
+FAIL: test_credential_shaped_operator_effects_and_reasons_are_refused_before_saving (__main__.CredentialShapedText.test_credential_shaped_operator_effects_and_reasons_are_refused_before_saving) (repository='eyJ-docs')
+AssertionError: Tuples differ: (5, None) != (0, 'proposed')
+FAIL: test_credential_shaped_operator_effects_and_reasons_are_refused_before_saving (__main__.CredentialShapedText.test_credential_shaped_operator_effects_and_reasons_are_refused_before_saving) (repository='AKIA-notes')
+AssertionError: Tuples differ: (5, None) != (0, 'proposed')
+FAIL: test_credential_shaped_operator_effects_and_reasons_are_refused_before_saving (__main__.CredentialShapedText.test_credential_shaped_operator_effects_and_reasons_are_refused_before_saving) (repository='xoxb-bot')
+AssertionError: Tuples differ: (5, None) != (0, 'proposed')
+FAIL: test_credential_shaped_operator_effects_and_reasons_are_refused_before_saving (__main__.CredentialShapedText.test_credential_shaped_operator_effects_and_reasons_are_refused_before_saving) (repository='ghp_pages')
+AssertionError: Tuples differ: (5, None) != (0, 'proposed')
+Ran 1 test in <time>
+FAILED (failures=5)
+$ python3 -I tools/github-app/test_token_service.py RequestFixtureTests.test_a_failed_audit_rewrite_keeps_the_entry_and_revokes_the_token
+FAIL: test_a_failed_audit_rewrite_keeps_the_entry_and_revokes_the_token (__main__.RequestFixtureTests.test_a_failed_audit_rewrite_keeps_the_entry_and_revokes_the_token)
+AssertionError: 0 != 1 : the request's audit entry survives
+Ran 1 test in <time>
+FAILED (failures=1)

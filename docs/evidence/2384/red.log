@@ -1,0 +1,28 @@
+Red run at origin/main 7892eaf91f54b1cac9278ee794a21cbba0b5bc60 with only the new test:
+python3 -I tools/install/tests/setup-onboard-contract/test_contract.py Hosts
+
+FAIL test_prepared_projects_refuse_what_the_store_refuses (the schema accepts, the store refuses):
+(shape='cloud-nine-keys', key='operator', value=' ')
+(shape='cloud-nine-keys', key='operator', value='\t')
+(shape='cloud-nine-keys', key='operator', value=' Synthetic')
+(shape='cloud-nine-keys', key='operator', value='Synthetic ')
+(shape='cloud-nine-keys', key='operator', value='Synthetic\n')
+(shape='cloud-nine-keys', key='operator', value='Syn\x00thetic')
+(shape='cloud-nine-keys', key='operator', value='Syn\x85thetic')
+(shape='cloud-nine-keys', key='repository', value='synthetic-owner/.')
+(shape='cloud-nine-keys', key='repository', value='synthetic-owner/..')
+(shape='cloud-nine-keys', key='service_issue', value=9007199254740992)
+(shape='cloud-nine-keys', key='service_issue', value=9223372036854775808)
+(shape='local-without-cloudroom-ids', key='operator', value=' ')
+(shape='local-without-cloudroom-ids', key='operator', value='\t')
+(shape='local-without-cloudroom-ids', key='operator', value=' Synthetic')
+(shape='local-without-cloudroom-ids', key='operator', value='Synthetic ')
+(shape='local-without-cloudroom-ids', key='operator', value='Synthetic\n')
+(shape='local-without-cloudroom-ids', key='operator', value='Syn\x00thetic')
+(shape='local-without-cloudroom-ids', key='operator', value='Syn\x85thetic')
+(shape='local-without-cloudroom-ids', key='repository', value='synthetic-owner/.')
+(shape='local-without-cloudroom-ids', key='repository', value='synthetic-owner/..')
+(shape='local-without-cloudroom-ids', key='service_issue', value=9007199254740992)
+(shape='local-without-cloudroom-ids', key='service_issue', value=9223372036854775808)
+
+Ran 8 tests. FAILED (failures=22)
