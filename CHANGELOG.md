@@ -2,6 +2,91 @@
 
 All OpenWiz versions, newest first. How versions work: [RELEASING.md](https://github.com/openwizdev/OpenWiz/blob/main/RELEASING.md).
 
+## 0.1.1 · 2026-11-22
+
+**OpenWiz 0.1.1: OpenWiz no longer needs CloudRoom: install it and run your first fleet on your own computer, with the Claude Code or Codex you're already signed in to**
+
+**What's new for you**
+
+- After the install, your agent asks once where your agents should run: this computer, with the Claude Code or Codex you are signed in to, boat.dev, or CloudRoom, which is installed and signed in to only if you pick it.
+- On this computer, your first fleet's builders and reviewers start with your own login; a reviewer comes from the other model family when you have both, and a same-family review is marked as one.
+- A scheduled job you approve once wakes your fleet every 10 minutes, "run the fleet now" ticks it at once, and one command each shows, pauses or removes it.
+- `openwiz models show`, `list` and `set` pick the models your orchestrator, builders and reviewers use, from what your installed Claude Code and Codex offer, with no CloudRoom needed.
+
+Tested on synthetic fixtures, with fake harnesses, schedulers and GitHub only: nothing in this release has been checked live yet, including a stranger's install and first fleet on a clean machine with no CloudRoom, Claude Code or Codex, and a Mac.
+
+**Under the hood**
+
+- The installer finds the newest release when the latest is a pre-release, names each failure, checks glibc on Linux, repairs a damaged build and checks updates against `SHA256SUMS`, and a new `install remove` deletes only what it made.
+- `install skills` installs per agent and per skill, keeps your own same-named skill, and no longer reports `installed` when no agent folder exists.
+- The boat.dev, local and Cloudroom drivers refuse a start field that looks like a credential and no longer repeat their host's error text, and on macOS they find and stop a run without reading any other process's environment.
+- The boat.dev driver fails a start at once when its first turn hits a usage limit or an expired login, or when the account cannot push to the repository, and every driver's README says where your login lives.
+- `install preflight` calls CloudRoom optional, so an Intel Mac installs and runs agents on this computer or on boat.dev.
+
+[Full release on GitHub](https://github.com/openwizdev/OpenWiz/releases/tag/v0.1.1)
+
+## 0.1.0 · 2026-11-21
+
+**OpenWiz 0.01: see your factory in the app, and run builders where you choose**
+
+**What's new for you**
+
+- Sign in with GitHub at openwiz.dev/app to see what needs you, every spec's live ticket graph and the agents at work, on a laptop or a phone.
+- Choose where your builders run, from Linux or macOS, with one `Host:` line in `docs/agents/host.md`: the computer or VPS you are on, with the `claude` or `codex` you already signed into, Cloudroom threads, or boat.dev cloud sandboxes.
+- Installing puts OpenWiz's skills into the agents you already use (Claude Code, Codex, Cursor, OpenCode and Grok) and leaves your own skills untouched; they are now WizSkills 0.2.1, 18 shorter skills.
+- The `send`, `new` and `attachment` commands, the local web view and its server and service are gone: OpenWiz is now the command, the drivers and the skills, and the app lives on the web.
+
+Live-checked against real hosts: the boat.dev driver passed all five driver-kit checks live from both Linux and a Mac, the local and Cloudroom drivers passed them on Linux with no login or token in their output, and a boat.dev builder woke again after its turn had ended; the owner checked the app on a laptop, and its tab bar on a phone is still to be confirmed; the local and template drivers were not run on a Mac, the kit's macOS process listing has a known edge, logged as [#2039](https://github.com/openwizdev/OpenWiz/issues/2039), on macOS, stop lists the user's own processes to find its run, logged as [#2044](https://github.com/openwizdev/OpenWiz/issues/2044), a macOS package install was not checked live, and the skills install and `openwiz init` are tested on synthetic home folders and a synthetic GitHub only.
+
+**Under the hood**
+
+- Anyone can plug a place that runs agents into OpenWiz with a small driver: `kernel/driver.v1.md` defines its four commands, `adapters/template/` is a minimal one to copy, and a five-check test kit shows whether a driver passes.
+- Records v1 publishes the rules any tool follows to keep a project's work on GitHub, with a kit that reports each record breaking them.
+- The release package carries the three host drivers and the driver kit; the kit never copies a credential into its output, and the template driver leaves no agent running.
+- `install skills` no longer deletes a file of yours at its staging or backup path, and no longer refuses every agent when `~/.config` is a link.
+- `openwiz init` reports a label only when GitHub shows it, and an install made before the removals still passes `install status` and updates.
+
+[Full release on GitHub](https://github.com/openwizdev/OpenWiz/releases/tag/v0.1.0)
+
+## 0.0.17 · 2026-11-21
+
+**Keep your loops as files, with no always-on engine to run**
+
+**What's new for you**
+
+- Keep your Cloudroom loops as files: `openwiz loop validate` checks them, `openwiz loop export` writes your loops out, `openwiz loop plan` shows the exact changes, and `openwiz loop apply` makes one loop match its file and reads it back.
+- The always-on engine is gone: no scheduled fleet tick, health checks and takeover, push notifications or engine step in Setup; your fleets run as fleet threads with their own loops.
+
+Checked live in the 0.0.17 candidate's own smoke test, run by agents on Linux: a fresh install of that candidate, its service starting and serving the web view, `openwiz help --agent`, `ls --json` and `show --json`, one send to a throwaway thread, and one new thread in a throwaway project; the loop commands are tested on synthetic fixtures and [one read-only replay of real loops](https://github.com/openwizdev/OpenWiz/blob/release-0.0.17/docs/evidence/794/README.md), `openwiz loop apply` was never run live, and nothing was checked on a Mac.
+
+**Under the hood**
+
+- `openwiz engine preview`, `activate` and `status` and the executing `openwiz fleet tick` are removed; `fleet tick --dry-run` and `fleet due --github-only` still read and plan.
+- The package no longer ships the engine preparation, activation and handover runtimes.
+- `openwiz loop export` never writes a webhook address or a secret value, and reports each loop it cannot represent instead of dropping it.
+
+[Full release on GitHub](https://github.com/openwizdev/OpenWiz/releases/tag/v0.1.0)
+
+## 0.0.16 · 2026-11-21
+
+**One install instruction, on to your first fleet**
+
+**What's new for you**
+
+- The install instruction continues in one path: GitHub sign-in in your browser, your own private OpenWiz App or an explicit skip, your factory's private brain, then onboarding to a first fleet.
+- `openwiz init` places your private brain by your repository's visibility: in the repository when it is private, or in a linked private companion when it is public, proposed through one pull request.
+- The visual terminal app is removed: `openwiz ui` says so, and `openwiz` with no arguments prints the help.
+
+Tested on [recordings and synthetic fixtures](https://github.com/openwizdev/OpenWiz/blob/release-0.0.17/docs/evidence/openwiz-0.0.16/recording.md) only; a real sign-in, a real App registration and a fresh machine's first merged pull request are still unverified.
+
+**Under the hood**
+
+- Your own GitHub App is registered private, and its tokens are minted only for repositories on the account that owns it.
+- Onboarding accepts fleet records only from configured authors, and creates the demo repository only after GitHub sign-in is verified, with a first commit on its default branch.
+- Updates no longer fail to stage when another process briefly holds the new program open.
+
+[Full release on GitHub](https://github.com/openwizdev/OpenWiz/releases/tag/v0.1.0)
+
 ## 0.0.12 · 2026-11-16
 
 **Scripts and agents can drive OpenWiz**
