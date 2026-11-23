@@ -10,6 +10,7 @@ here="$(cd "$(dirname "$0")" && pwd)"
 code="$(sed '1,/^python_below = True$/d' "$0")"
 exec "$py" -I -c "$code" "$here" "$@"
 python_below = True
+import fcntl
 import hashlib
 import json
 import os
@@ -228,6 +229,22 @@ def install(tool, file, prefix, work):
                 os.remove(os.path.join(wheels, old))
 
 
+def hold_lock(prefix):
+    path = os.path.join(prefix, 'lib', 'openwiz-vps', 'lock')
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        lock = open(path, 'a')
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            print('bootstrap: waiting for another bootstrap on %s' % prefix, file=sys.stderr, flush=True)
+            fcntl.flock(lock, fcntl.LOCK_EX)
+    except OSError as e:
+        print('bootstrap: cannot lock %s: %s' % (path, type(e).__name__), file=sys.stderr)
+        sys.exit(1)
+    return lock
+
+
 def stamp_path(prefix, name):
     return os.path.join(prefix, 'lib', 'openwiz-vps', name + '.json')
 
@@ -252,6 +269,7 @@ def main():
     except (OSError, ValueError, KeyError) as e:
         usage('cannot read %s: %s' % (opts['tools'], type(e).__name__))
     installed, there, left, available, failed, work = 0, 0, [], set(), False, None
+    lock = None if dry else hold_lock(prefix)
 
     def leave(name, why):
         left.append('left out %s: %s' % (name, why))
@@ -333,6 +351,8 @@ def main():
     finally:
         if work:
             shutil.rmtree(work, ignore_errors=True)
+        if lock:
+            lock.close()
     if dry:
         print('bootstrap: dry run, %d to install, %d already there, %d left out' % (installed, there, len(left)))
     else:

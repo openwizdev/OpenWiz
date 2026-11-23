@@ -182,10 +182,11 @@ class Fixture:
                               cwd=self.root, capture_output=True, text=True, timeout=120)
 
     def start(self, tag, tools):
-        out, err = (open(os.path.join(self.root, '%s.%s' % (tag, x)), 'w+') for x in ('out', 'err'))
-        proc = subprocess.Popen(['bash', BOOTSTRAP, '--tools', tools], env=self.env(), cwd=self.root,
-                                stdout=out, stderr=err, text=True)
-        return proc, out.name, err.name
+        out, err = (os.path.join(self.root, '%s.%s' % (tag, x)) for x in ('out', 'err'))
+        with open(out, 'w') as o, open(err, 'w') as e:
+            proc = subprocess.Popen(['bash', BOOTSTRAP, '--tools', tools], env=self.env(), cwd=self.root,
+                                    stdout=o, stderr=e)
+        return proc, out, err
 
     def remove_downloads(self):
         for name in os.listdir(self.dl):
