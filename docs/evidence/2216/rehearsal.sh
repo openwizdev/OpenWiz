@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # OpenWiz 0.1.1 agent rehearsal helpers (#2265, the agent half of #2226).
-# Usage: rehearsal.sh machine | check | run CMD... | repo | candidate RUN_ID | teardown SPEC
+# Usage: rehearsal.sh machine | check | run CMD... | say TEXT | repo | candidate RUN_ID | teardown SPEC
 # Everything lives under $RH (default ~/rehearsal). Raw output stays in $RH, never on GitHub.
+# Every `run` and `say` is recorded with real timing (util-linux script) under $RH/demo/ for the demo video.
 set -euo pipefail
 RH=${RH:-$HOME/rehearsal}
-OWNER=${OWNER:-$(gh api user --jq .login)}
+USER=${USER:-$(id -un)}
+OWNER=${OWNER:-}
 STAMP_FILE=$RH/stamp
 ALLOWED=(claude gh git python3 curl tar gzip sha256sum ldd uname crontab jq)
 CLOUDROOM=(room-cli cloudroom a0 agy browser-harness cursor-agent opencode openclaw codex)
@@ -44,11 +46,26 @@ check() {
 }
 
 repo() {
-  local name="openwiz-rehearsal-011-$(cat "$STAMP_FILE")"
+  local name="openwiz-rehearsal-011-$(cat "$STAMP_FILE")"; OWNER=${OWNER:-$(gh api user --jq .login)}
   gh repo create "$OWNER/$name" --private --add-readme \
     --description "Throwaway: OpenWiz 0.1.1 rehearsal; archived after the run" >/dev/null
   echo "$OWNER/$name" > "$RH/repo"
   echo "repo: $OWNER/$name (private, throwaway)"
+}
+
+record() {  # record one step: its real UTC start, the exact command, its output with timing, its exit code
+  local demo=$RH/demo n
+  mkdir -p "$demo" && chmod 700 "$demo"
+  n=$(printf '%03d' $(( $(find "$demo" -name '*.meta.json' | wc -l) + 1 )))
+  { printf '#!/bin/bash\n'; printf '%q ' "$@"; printf '\n'; } > "$demo/$n.cmd"
+  local start; start=$(date +%s.%N)
+  set +e
+  script -q -e -T "$demo/$n.timing" -O "$demo/$n.typescript" -c "bash $demo/$n.cmd"
+  local code=$?
+  set -e
+  python3 -I -c 'import json,sys;print(json.dumps({"start":float(sys.argv[1]),"end":float(sys.argv[2]),"exit":int(sys.argv[3]),"argv":sys.argv[4:]}))' \
+    "$start" "$(date +%s.%N)" "$code" "$@" > "$demo/$n.meta.json"
+  return $code
 }
 
 candidate() {  # stage the sealed candidate's Linux files from its Packages run, then check SHA256SUMS
@@ -77,6 +94,8 @@ teardown() {  # LV1: nothing left running, the throwaway repository archived
 case ${1:-} in
   machine|check|repo|teardown) "$1" "${@:2}" ;;
   candidate) candidate "$2" ;;
-  run) shift; clean_env "$@" ;;
+  run) shift; record env -i HOME="$HOME" USER="$USER" LOGNAME="$USER" LANG=C.UTF-8 TERM=xterm-256color \
+         PATH="$RH/bin:/usr/bin:/bin" SHELL=/bin/bash "$@" ;;
+  say) shift; record printf '\n\033[1;33m%s\033[0m\n' "$*" ;;
   *) sed -n 2,4p "$0"; exit 2 ;;
 esac

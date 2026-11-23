@@ -18,6 +18,16 @@ The agent half of #2226, run by #2265's release agent on the sealed 0.1.1 candid
 - Don't wait with `sleep` or a shell loop. To wait for the fleet, say "run the fleet now" (`heartbeat.py run`), or use a Monitor with an until-condition.
 - If any step fails, stop, run the teardown, and report the failing step and its exact output.
 
+## Recording (the demo, kept private)
+
+Every `rehearsal.sh run` and `say` is recorded with its real timing under `$RH/demo/`. Put a `say` caption before each moment the demo shows, in these exact words:
+- `say "A stranger pastes into Claude Code: Install OpenWiz from github.com/openwizdev/OpenWiz"` (before step 4);
+- `say "Where should your agents run? This computer"` (step 5);
+- `say "The first fleet starts on this computer"` (step 6);
+- `say "A builder opens the pull request; a reviewer reviews it; it merges"` (step 8).
+
+Show the pull request's review verdict and merge with `rehearsal.sh run gh pr view <N> --repo <throwaway> --json state,mergedAt,reviews`. Never print a key or token, and name no repository but the throwaway one. If the run fails, keep the recording and caption where it stopped. The recording, raw and cut, goes only to the private record.
+
 ## Steps
 
 1. **Machine.** `rehearsal.sh machine`, then `rehearsal.sh check` must print `clean: ...`. Record `uname -a`, `ldd --version` and `claude --version` from `rehearsal.sh run`. Deviation from a stock machine, stated: this sandbox image has no cron and no systemd user manager, so `machine` installs Debian's `cron` and starts it.
