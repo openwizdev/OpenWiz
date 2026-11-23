@@ -78,7 +78,13 @@ candidate() {  # stage the sealed candidate's Linux files from its Packages run,
   local packages="$dir/raw/packages"
   cp "$packages"/{SHA256SUMS,"$artifact.tar.gz","$artifact.manifest.json","openwiz-$target.manifest.json","openwiz-$target.sha256"} "$dir/"
   rm -rf "$dir/raw" && chmod 600 "$dir"/*
-  (cd "$dir" && sha256sum --strict -c SHA256SUMS)
+  (
+    cd "$dir"
+    # GNU checksum records place the filename after the 64-digit digest and two separators.
+    diff -u <(printf '%s\n' "$artifact.manifest.json" "$artifact.tar.gz") \
+      <(LC_ALL=C cut -c67- SHA256SUMS | LC_ALL=C sort)
+    sha256sum --strict -c SHA256SUMS
+  )
 }
 
 teardown() {  # LV1: nothing left running, the throwaway repository archived
