@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import base64
+import fcntl
 import hashlib
 import importlib.util
 import json
@@ -7,11 +8,13 @@ import os
 import shutil
 import socketserver
 import ssl
+import stat
 import subprocess
 import sys
 import tempfile
 import threading
 import time
+import types
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -790,6 +793,344 @@ class Review(Helper):
                          f'OPENWIZ_TOKEN_SERVICE_READBACK=failed "$PY" -I "$H" run {req} -- gh pr list')
         self.assertEqual([c["gh_token"] for c in self.calls("gh")], [None])
         self.assertEqual(ran.stderr, (NOTE.replace("<reason>", "pairing-off") + "\n") * 2)
+
+
+OTHER = 1001 if os.getuid() != 1001 else 1002
+
+
+class SystemGh(Helper):
+    def setUp(self):
+        super().setUp()
+        self.helper_module = helper = load_helper()
+        folder = tempfile.TemporaryDirectory(dir=Path.home().resolve())
+        self.addCleanup(folder.cleanup)
+        self.system = Path(folder.name) / "usr-local-bin"
+        self.system.mkdir(mode=0o755)
+        self.real = self.system / "gh"
+        self.checked = "#!/bin/sh\n# synthetic system gh\nexit 0\n"
+        self.real.write_text(self.checked)
+        self.real.chmod(0o755)
+        self.mine = Path(folder.name) / "mine"
+        self.mine.mkdir(mode=0o755)
+        (self.mine / "gh").symlink_to(self.real)
+        self.name = "run-" + "0" * 32 + ".json"
+        private = helper.Private(self.env, create=True)
+        self.addCleanup(os.close, private.fd)
+        private.write(self.name, {"token": TOKEN, "expires_at": int(time.time()) + 3600})
+        self.private_dir = private
+        self.refuse = str(self.private / "exec-synthetic" / helper.GH_REFUSE)
+        self.run_env = dict(self.env, **{helper.RUN_MARK: str(self.private / self.name)})
+
+    def table(self, **changes):
+        rows, folder = {str(self.real): (OTHER, 0o755)}, str(self.system)
+        while True:
+            rows[folder] = (0, 0o755)
+            if folder == "/":
+                break
+            folder = os.path.dirname(folder)
+        rows[str(self.mine)] = (0, 0o755)
+        names = {"gh": str(self.real), "folder": str(self.system), "above": str(self.system.parent),
+                 "link folder": str(self.mine)}
+        for key, row in changes.items():
+            rows[names[key]] = row
+        return rows
+
+    def faked(self, rows, before_lstat=None):
+        real_stat, real_lstat = os.stat, os.lstat
+
+        def fake(original):
+            def call(target, *args, **kwargs):
+                if before_lstat and original is real_lstat:
+                    before_lstat(target)
+                info = original(target, *args, **kwargs)
+                name = (os.readlink(f"/proc/self/fd/{target}") if isinstance(target, int)
+                        else os.path.realpath(target) if original is real_stat
+                        else os.path.normpath(os.fspath(target)))
+                if name not in rows:
+                    return info
+                uid, mode = rows[name]
+                fields = {key: getattr(info, key) for key in dir(info) if key.startswith("st_")}
+                fields.update(st_uid=uid, st_mode=stat.S_IFMT(info.st_mode) | mode)
+                return types.SimpleNamespace(**fields)
+            return call
+
+        helper = self.helper_module
+        return mock.patch.multiple(helper.os, stat=fake(real_stat), lstat=fake(real_lstat))
+
+    def identity_of(self, rows, chosen=None):
+        with self.faked(rows):
+            return self.helper_module.gh_identity(chosen or str(self.real))
+
+    def bind(self, rows, **binding):
+        identity = self.identity_of(rows)
+        self.private_dir.write(self.helper_module.gh_binding(self.name),
+                               dict({"gh": str(self.real), "refuse": self.refuse, "identity": identity}, **binding))
+        return identity
+
+    def rewrite_in_place(self, text):
+        before = os.stat(self.real)
+        text = text.ljust(before.st_size, "#")[:before.st_size]
+        with open(self.real, "r+") as handle:
+            handle.write(text)
+        os.utime(self.real, ns=(before.st_atime_ns, before.st_mtime_ns))
+        after = os.stat(self.real)
+        self.assertEqual([after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns],
+                         [before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns],
+                         "the same file, the same size and time: only its bytes changed")
+        return text
+
+    def run_gh(self, rows, chosen=None, during=None, before_seal=None, at_seal=None):
+        helper, ran, looked_up = self.helper_module, [], []
+        load, seal = helper.snapshot_token, helper.sealed_gh
+        seals = types.SimpleNamespace(**{k: getattr(fcntl, k) for k in dir(fcntl) if k.isupper()})
+
+        def seal_call(fd, command, *args):
+            if at_seal and command == getattr(fcntl, "F_ADD_SEALS", 1033):
+                at_seal(fd)
+            return fcntl.fcntl(fd, command, *args)
+
+        seals.fcntl = seal_call
+
+        def seal_after(*args):
+            if before_seal:
+                before_seal()
+            return seal(*args)
+
+        def load_then(*args, **kwargs):
+            looked_up.append(True)
+            held = load(*args, **kwargs)
+            if during:
+                during()
+            return held
+
+        def exec_boundary(path, args, child):
+            token = child.get("GH_TOKEN")
+            ran.append((path, Path(path).read_text(), list(args), token == TOKEN))
+            try:
+                self.seals = fcntl.fcntl(int(path.rsplit("/", 1)[1]), getattr(fcntl, "F_GET_SEALS", 1034))
+            except (OSError, ValueError):
+                self.seals = None
+            raise OSError("synthetic exec boundary")
+
+        with self.faked(rows), mock.patch.object(helper, "snapshot_token", load_then), \
+                mock.patch.object(helper, "sealed_gh", seal_after), mock.patch.object(helper, "fcntl", seals), \
+                mock.patch.object(helper.sys, "platform", "linux"), \
+                mock.patch.object(helper.os, "execve", exec_boundary), \
+                mock.patch.object(helper.sys, "stderr") as stderr, mock.patch.object(helper.sys, "stdout") as stdout:
+            try:
+                code = helper.gh([chosen or str(self.real), self.refuse, "pr", "list"], dict(self.run_env))
+            except helper.Refused:
+                code = "exec intercepted"
+        said = "".join(call.args[0] for call in stderr.write.call_args_list)
+        self.printed = "".join(call.args[0] for call in stdout.write.call_args_list)
+        self.assert_no_token(said + self.printed, "the token is never written out")
+        for path, content, args, _ in ran:
+            self.assertFalse(TOKEN in path or TOKEN in content or TOKEN in " ".join(args),
+                             "the token is never in gh's path, file or argument list")
+        return code, ran, said, looked_up
+
+    def assert_no_token(self, text, what):
+        self.assertFalse(TOKEN in text, what)
+
+    def leaks(self, *streams):
+        found = [f"stream {n}" for n, text in enumerate(streams) if TOKEN in text]
+        for root in (self.root, self.system.parent):
+            for path in root.rglob("*"):
+                if path.is_file() and self.private not in path.parents and TOKEN.encode() in path.read_bytes():
+                    found.append(path.name)
+        return found
+
+    def assert_withheld(self, code, ran, said, looked_up, reason, looked=True):
+        self.assertEqual((code, ran), (128, []), "no gh runs with the token")
+        self.assertEqual(said, f"openwiz: openwiz[bot] token withheld from gh ({reason}); "
+                               "gh stops rather than use another account\n")
+        if not looked:
+            self.assertEqual(looked_up, [], "a refused gh never reaches the token lookup")
+
+    def assert_ran_checked(self, code, ran, said, looked_up):
+        self.assertEqual(code, "exec intercepted", said)
+        self.assertEqual(len(ran), 1)
+        path, content, args, token = ran[0]
+        self.assertTrue(path.startswith("/proc/self/fd/"), "gh runs through a pinned fd")
+        self.assertEqual((content, args, token), (self.checked, [str(self.real), "pr", "list"], True))
+        every = 1 | 2 | 4 | 8
+        self.assertEqual((self.seals or 0) & every, every, "what runs is a copy no one can change")
+
+    def test_a_system_gh_owned_by_another_user_gets_the_token_through_its_pinned_fd(self):
+        # comment-ok: catches: the owner rule refusing a gh the agent can't modify or replace, so no
+        # cloud agent gets a token
+        rows = self.table()
+        self.assertIsNotNone(self.bind(rows), "a system gh the agent can't change is accepted")
+        self.assert_ran_checked(*self.run_gh(rows))
+
+    def test_a_system_gh_anyone_but_its_owner_could_change_or_replace_is_refused(self):
+        # comment-ok: catches: the widened owner rule accepting a gh writable by a group or others, or under
+        # a folder the agent owns or anyone else could write, so its entries can be replaced
+        self.assertIsNotNone(self.bind(self.table()), "the baseline system gh is accepted")
+        me = os.getuid()
+        refused = {
+            "gh writable by its group": {"gh": (OTHER, 0o775)},
+            "gh writable by others": {"gh": (OTHER, 0o757)},
+            "gh's folder yours, owner-only": {"folder": (me, 0o755)},
+            "gh's folder yours and group-writable": {"folder": (me, 0o775)},
+            "a folder above yours, owner-only": {"above": (me, 0o755)},
+            "a folder above yours and writable by others": {"above": (me, 0o757)},
+            "a root folder above, group-writable": {"above": (0, 0o775)},
+            "a root folder above, writable by others": {"above": (0, 0o777)},
+            "a sticky shared folder": {"folder": (0, 0o1777)},
+            "gh's folder owned by another user": {"folder": (OTHER, 0o755)},
+        }
+        for case, changes in refused.items():
+            with self.subTest(case):
+                rows = self.table(**changes)
+                self.assertIsNone(self.identity_of(rows), "the run binds no such gh")
+                self.bind(self.table())
+                self.assert_withheld(*self.run_gh(rows), "the gh this run chose was changed", looked=False)
+
+    def test_a_system_gh_reached_through_a_symlink_in_your_folder_is_refused(self):
+        # comment-ok: catches: the folder walk trusting a symlink in a folder the agent owns, which the agent
+        # can point at another file
+        chosen = str(self.mine / "gh")
+        self.assertIsNotNone(self.identity_of(self.table(), chosen), "through root's folders it is accepted")
+        self.assertIsNone(self.identity_of(self.table(**{"link folder": (os.getuid(), 0o755)}), chosen),
+                          "the run binds no gh reached through your folder")
+
+    def test_a_refused_gh_never_matches_a_missing_identity(self):
+        # comment-ok: catches: a binding with a null or missing identity matching a gh whose own check
+        # failed, so a refused gh reaches the token lookup
+        rows = self.table(gh=(OTHER, 0o777))
+        for case, binding in {"null": {"identity": None}, "missing": {}}.items():
+            with self.subTest(case):
+                self.private_dir.write(self.helper_module.gh_binding(self.name),
+                                       dict({"gh": str(self.real), "refuse": self.refuse}, **binding))
+                self.assert_withheld(*self.run_gh(rows), "the gh this run chose was changed", looked=False)
+
+    def test_a_system_gh_still_gets_nothing_by_a_caller_selected_path(self):
+        # comment-ok: catches: the widened owner rule letting a caller hand the token to another system-owned file
+        self.assertIsNotNone(self.bind(self.table()))
+        other = self.system / "gh-other"
+        other.write_text("#!/bin/sh\n# synthetic other system program\nexit 0\n")
+        other.chmod(0o755)
+        rows = dict(self.table(), **{str(other): (OTHER, 0o755)})
+        self.assert_withheld(*self.run_gh(rows, chosen=str(other)), "not the gh this run chose", looked=False)
+
+    def test_a_system_gh_swapped_between_its_check_and_its_exec_never_gets_the_token(self):
+        # comment-ok: catches: the widened owner rule bypassing R12's pinned exec, so a swapped-in file
+        # gets the token
+        self.assertIsNotNone(self.bind(self.table()))
+
+        def swap():
+            swapped = self.system / "gh.swap"
+            swapped.write_text("#!/bin/sh\n# synthetic rogue gh\nexit 0\n")
+            swapped.chmod(0o755)
+            os.replace(swapped, self.real)
+
+        self.assert_ran_checked(*self.run_gh(self.table(), during=swap))
+
+    def test_a_system_gh_its_owner_rewrites_after_the_run_chose_it_gets_nothing(self):
+        # comment-ok: catches: the fd pinning the file but not its bytes, so gh's owner rewrites it in place,
+        # with the same size and time, and the rewrite gets the token
+        self.assertIsNotNone(self.bind(self.table()))
+        self.rewrite_in_place("#!/bin/sh\n# synthetic rewritten gh\nexit 0\n")
+        self.assert_withheld(*self.run_gh(self.table()), "the gh this run chose was changed", looked=False)
+
+    def test_a_system_gh_its_owner_rewrites_between_its_check_and_its_exec_runs_only_as_checked(self):
+        # comment-ok: catches: the run executing the system gh's file itself, so its owner rewrites it in
+        # place after the check and the rewrite gets the token
+        self.assertIsNotNone(self.bind(self.table()))
+        rewritten = []
+        self.assert_ran_checked(*self.run_gh(self.table(), during=lambda: rewritten.append(
+            self.rewrite_in_place("#!/bin/sh\n# synthetic rewritten gh\nexit 0\n"))))
+        self.assertEqual(len(rewritten), 1)
+        self.assertNotEqual(self.real.read_text(), self.checked, "the file really changed before the exec")
+
+    def test_a_system_gh_its_owner_rewrites_while_it_is_copied_gets_nothing(self):
+        # comment-ok: catches: the sealed copy trusted without its own digest check, so a rewrite between
+        # the fd's check and the copy gets the token
+        self.assertIsNotNone(self.bind(self.table()))
+        rewrite = lambda: self.rewrite_in_place("#!/bin/sh\n# synthetic rewritten gh\nexit 0\n")
+        self.assert_withheld(*self.run_gh(self.table(), before_seal=rewrite), "the gh this run chose was changed",
+                             looked=False)
+
+    def test_a_system_gh_whose_copy_is_written_before_it_is_sealed_gets_nothing(self):
+        # comment-ok: catches: the digest taken from the bytes read, not from the sealed copy, so a same-user
+        # process holding a writable fd to the copy rewrites it before the seals and the rewrite gets the token
+        self.assertIsNotNone(self.bind(self.table()))
+        rogue = "#!/bin/sh\n# synthetic rogue gh\nexit 0\n".ljust(len(self.checked), "#")[:len(self.checked)]
+        written = []
+
+        def write_copy(fd):
+            with open(f"/proc/self/fd/{fd}", "r+b") as other_writer:
+                other_writer.write(rogue.encode())
+            written.append(os.pread(fd, len(self.checked) + 1, 0).decode())
+
+        self.assert_withheld(*self.run_gh(self.table(), at_seal=write_copy), "the gh this run chose was changed",
+                             looked=False)
+        self.assertEqual(written, [rogue], "the copy really held other bytes when it was sealed")
+
+    def test_the_token_reaches_no_output_log_or_file_outside_the_private_directory(self):
+        # comment-ok: catches: a leak check that can't see a seeded leak, or a token that a run writes to stdout,
+        # stderr, the call log or a file outside the private directory
+        for seed in (self.root / "seeded.log", self.system.parent / "seeded.txt"):
+            seed.write_text(f"seeded {TOKEN}\n")
+            self.assertEqual(self.leaks(), [seed.name], "the check sees a seeded file")
+            seed.unlink()
+        self.assertEqual(self.leaks("clean", f"seeded {TOKEN}"), ["stream 1"], "the check sees a seeded stream")
+        self.assertIsNotNone(self.bind(self.table()))
+        code, ran, said, looked_up = self.run_gh(self.table())
+        self.assert_ran_checked(code, ran, said, looked_up)
+        self.assertEqual(self.leaks(said, self.printed), [], "no output, log or outside file holds the token")
+
+    def test_a_failed_assertion_never_prints_the_token(self):
+        # comment-ok: catches: a guard assertion whose failure message quotes the text it searched, printing
+        # the token into the test log
+        with self.assertRaises(AssertionError) as caught:
+            self.assert_no_token(f"seeded {TOKEN}", "seeded leak")
+        self.assertFalse(TOKEN in str(caught.exception), "the failure names the leak, not the token")
+
+    def test_a_sealed_gh_the_system_will_not_execute_names_the_memfd_restriction(self):
+        # comment-ok: catches: a kernel or sandbox that blocks executable memfds failing as a bare "cannot run
+        # gh", so nobody learns why a system gh never runs
+        helper = self.helper_module
+        copy = os.memfd_create("openwiz-gh", os.MFD_CLOEXEC)
+        self.addCleanup(os.close, copy)
+        refused = mock.Mock(side_effect=PermissionError(13, "synthetic noexec memfd"))
+        with mock.patch.object(helper.sys, "platform", "linux"), mock.patch.object(helper.os, "execve", refused):
+            try:
+                helper.exec_gh(copy, str(self.real), [str(self.real), "pr", "list"], {})
+                caught = None
+            except Exception as error:
+                caught = error
+        self.assertIsInstance(caught, helper.Refused, "the exec refusal is the helper's own diagnostic")
+        self.assertIn("executable memfds", str(caught))
+        self.assertEqual(refused.call_args.args[0], f"/proc/self/fd/{copy}")
+
+    def test_a_system_gh_moved_while_its_folders_are_checked_is_refused(self):
+        # comment-ok: catches: the folder walk from an open fd vouching for another file now at the fd's path
+        fd = os.open(self.real, os.O_RDONLY)
+        self.addCleanup(os.close, fd)
+        moved = []
+
+        def move(target):
+            if os.fspath(target) == str(self.real) and not moved:
+                moved.append(True)
+                replacement = self.system / "gh.swap"
+                replacement.write_text(self.checked)
+                replacement.chmod(0o755)
+                os.rename(self.real, self.system / "gh.old")
+                os.replace(replacement, self.real)
+
+        rows = dict(self.table(), **{str(self.system / "gh.old"): (OTHER, 0o755)})
+        with self.faked(rows, before_lstat=move):
+            self.assertIsNone(self.helper_module.gh_identity(fd), "an fd whose path now holds another file")
+        self.assertEqual(moved, [True])
+
+    def test_a_system_gh_is_refused_where_procfs_cannot_pin_it(self):
+        # comment-ok: catches: a system gh accepted on macOS or another system, where the run executes it by
+        # its path and can't seal it
+        with mock.patch.object(self.helper_module.sys, "platform", "darwin"):
+            self.assertIsNone(self.identity_of(self.table()), "the run binds no system gh off Linux")
+        self.assertIsNotNone(self.identity_of(self.table()), "on Linux it is accepted")
 
 
 if __name__ == "__main__":

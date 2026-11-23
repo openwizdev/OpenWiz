@@ -1,9 +1,0 @@
-$ python3 -I tools/release/test_package.py -v Package.test_runtime_carries_exactly_the_selected_drivers_and_kit_where_the_caller_finds_them Package.test_native_product_collector_checks_the_executable_architecture Package.test_all_targets_assemble_then_install_complete_matching_products
-test_runtime_carries_exactly_the_selected_drivers_and_kit_where_the_caller_finds_them (__main__.Package.test_runtime_carries_exactly_the_selected_drivers_and_kit_where_the_caller_finds_them) ... ok
-test_native_product_collector_checks_the_executable_architecture (__main__.Package.test_native_product_collector_checks_the_executable_architecture) ... ok
-test_all_targets_assemble_then_install_complete_matching_products (__main__.Package.test_all_targets_assemble_then_install_complete_matching_products) ... ok
-
-----------------------------------------------------------------------
-Ran 3 tests in 2.912s
-
-OK

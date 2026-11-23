@@ -1,6 +1,0 @@
-$ python3 -I tools/install/tests/skills-linked-config/test_linked_config.py   # after the fix
-....
-----------------------------------------------------------------------
-Ran 4 tests in 0.807s
-
-OK

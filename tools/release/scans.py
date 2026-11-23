@@ -168,7 +168,7 @@ def scan(check):
             if assets:
                 require(len(assets) == 1, "release-asset: repeated review")
                 review = exceptions[assets[0]]
-                match = re.fullmatch(r"(0\.[0-9]+\.[0-9]+)@([0-9a-f]{40})@(aarch64-apple-darwin|x86_64-apple-darwin|x86_64-unknown-linux-gnu)", review["value"])
+                match = re.fullmatch(r"(0\.[0-9]+\.[0-9]+)@([0-9a-f]{40})@(aarch64-apple-darwin|x86_64-apple-darwin|aarch64-unknown-linux-gnu|x86_64-unknown-linux-gnu)", review["value"])
                 require(match and match[1] == check.args.version
                         and path == f"packages/openwiz-{match[1]}-{match[3]}.tar.gz",
                         "release-asset: exact version/source/target review required")

@@ -1,0 +1,45 @@
+# The driver's acpx calls given to the real acpx 0.22.0 (npm, MIT) in throwaway folders, with the built-in adapter
+# in `--agent` replaced by a stand-in ACP agent (a short Python script that answers initialize, session/new,
+# session/load, session/set_model and session/prompt, and logs its HOME and any auth variable it was given), so
+# no harness, login or host is reached. "Your home" holds a synthetic ~/.acpx/config.json that maps claude to
+# another command and sets an `auth` value; acpx runs with HOME set to the driver's own <state>/home.
+# Each shape parses and works: the session opens, the prompt is queued and runs in the same session, cancel and
+# close find it. The agent gets your HOME back and no auth variable; acpx refuses a bad policy and an unknown
+# option as usage errors (exit 2; its help text after the second is cut). The control at the end shows why:
+# with acpx's HOME left as your home, acpx copies your config's `auth` into the agent's environment.
+$ HOME=<state>/home acpx --cwd <work> --agent 'env HOME=<your home> <stand-in agent>' --model m1 --auth-policy fail --permission-policy {"autoApprove":["read","search","edit","move","execute","think","fetch"],"autoDeny":["delete","switch_mode"],"defaultAction":"deny"} --non-interactive-permissions deny sessions new --name run-0123456789ab
+[acpx] created session run-0123456789ab (<uuid>)
+[acpx] agent: codex
+[acpx] cwd: <work>
+<uuid>
+exit 0
+$ HOME=<state>/home acpx --cwd <work> --agent 'env HOME=<your home> <stand-in agent>' --auth-policy fail --permission-policy {"autoApprove":["read","search","edit","move","execute","think","fetch"],"autoDeny":["delete","switch_mode"],"defaultAction":"deny"} --non-interactive-permissions deny --ttl 3 prompt -s run-0123456789ab --no-wait Build the ticket: example/site#7, with the build-ticket skill.
+[acpx] session run-0123456789ab (<uuid>) · <work> · agent starting
+[queued] <uuid>
+exit 0
+$ HOME=<state>/home acpx --cwd <work> --agent 'env HOME=<your home> <stand-in agent>' cancel -s run-0123456789ab
+nothing to cancel
+exit 0
+$ HOME=<state>/home acpx --cwd <work> --agent 'env HOME=<your home> <stand-in agent>' sessions close run-0123456789ab
+<uuid>
+exit 0
+# what the stand-in agent saw (its HOME, and any auth variable acpx added):
+agent HOME=<your home> auth-env=[]
+agent got initialize
+agent got session/new
+agent HOME=<your home> auth-env=[]
+agent got initialize
+agent got session/load
+agent got session/set_model
+agent got session/prompt
+# acpx kept only this in the .acpx folder inside the driver's <state> home folder: queues sessions
+$ HOME=<state>/home acpx --cwd <work> --agent 'env HOME=<your home> <stand-in agent>' --permission-policy {"defaultAction":"bogus"} sessions new --name run-0123456789ab
+Invalid permission policy: --permission-policy: permission policy defaultAction must be one of approve, deny, escalate
+exit 2
+$ HOME=<state>/home acpx --cwd <work> --agent 'env HOME=<your home> <stand-in agent>' --bogus sessions new --name run-0123456789ab
+error: unknown option '--bogus'
+error: unknown option '--bogus'
+exit 2
+# control, not what the driver does: the same session started with acpx's HOME left as your home
+exit 0
+agent HOME=<your home> auth-env=['ACPX_AUTH_SYNTHETIC_METHOD', 'SYNTHETIC_METHOD', 'synthetic-method']

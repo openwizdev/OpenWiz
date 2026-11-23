@@ -1,0 +1,9 @@
+# head ee4cdb1a: export refuses the preamble plan writes (R1)
+thread 'loop_plan::integer_params_beyond_i64_and_u64_keep_their_digits_through_plan_and_export' (53200) panicked at tests/cli-agent/loop_plan.rs:1092:5:
+assertion `left == right` failed: {
+  "exit_code": 5,
+          "code": "cf-export-preamble",
+          "message": "the script's params preamble is not one this adapter writes"
+  left: Some(5)
+ right: Some(0)
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 123 filtered out; finished in 0.04s

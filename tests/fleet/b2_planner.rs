@@ -197,9 +197,10 @@ fn b2_1196_all_conditional_tables_are_strict_and_other_family() {
 
 fn b2_1196_setup_template_can_produce_the_strict_rules() {
     let filled = include_str!("../../skills/setup/templates/fleet.md")
-        .replace("`--provider <id>`", "`--provider codex`")
-        .replace("`--model <id>`", "`--model syn-model`")
-        .replace("`--reasoning-level <level>`", "`--reasoning-level high`")
+        .replace(
+            "`--provider <id> --model <id> --reasoning-level <level>`",
+            "`--provider codex --model syn-model --reasoning-level high`",
+        )
         .replace("`<job name>`", "`synthetic`")
         .replace("`<branch>`", "`main`");
     assert!(
