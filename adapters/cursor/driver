@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
+# SECURITY: every Cursor call goes through the kit's key helper (driver v1 N4). This file sends it only a host name,
+# a method, a path and a body, never a key or an address, and never reads the key itself.
 import fcntl, json, os, re, secrets, subprocess, sys, uuid
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+HELPER = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'hostkey.py')
+HOST = 'cursor-cloud'
 STATE = os.environ.get('OPENWIZ_CURSOR_STATE') or os.path.expanduser('~/.local/state/openwiz-cursor')
-API = 'https://api.cursor.com/v1'
 VERSION = {'driver': 'cursor', 'records': ['openwiz:records v1'],
            'can': ['start', 'wake', 'stop', 'many-at-once', 'own-sandbox']}
 START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
@@ -11,9 +14,10 @@ START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket':
          'model': r'[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}'}
 RUN = {'run': r'run-[0-9a-f]{12}'}
 HARNESS = 'cursor'
-SIGN_IN = 'set CURSOR_API_KEY in your own environment to a Cursor API key, as the driver README says'
-CURL = (8, 3)
-KEY = ['--variable', '%CURSOR_API_KEY', '--expand-oauth2-bearer', '{{CURSOR_API_KEY}}']
+SIGN_IN = 'check your Cursor API key and where you keep it, as adapters/cursor/README.md says'
+REFUSED_BEFORE_SENDING = ('no key in either ', 'the key in ', "the kit's fake host gave no test key",
+                          'OPENWIZ_HOSTKEY_TEST_ORIGIN is not', 'the helper runs only in', 'native TLS loaded',
+                          'kernel/driver-kit/hosts.json is not', 'the request holds the key', 'host is not in ')
 FIX_STATE = 'make OPENWIZ_CURSOR_STATE (or ~/.local/state/openwiz-cursor) a folder you can write'
 
 
@@ -41,44 +45,23 @@ def read(fields):
     return req
 
 
-def curl_checked(checked=[]):
-    if checked:
-        return
-    try:
-        first = subprocess.run(['curl', '--disable', '--version'], capture_output=True, text=True, timeout=30).stdout
-    except FileNotFoundError:
-        raise Refused('curl is not installed here; nothing was sent to Cursor', 'install curl 8.3 or later, then try again')
-    found = re.match(r'curl (\d+)\.(\d+)', first)
-    if not found or tuple(map(int, found.groups())) < CURL:
-        raise Refused('%s, and this driver needs curl 8.3 or later so that curl reads CURSOR_API_KEY itself; nothing '
-                      'was sent to Cursor' % ('curl here is ' + '.'.join(found.groups()) if found
-                                              else 'curl here did not say its version'),
-                      'install curl 8.3 or later, then try again')
-    checked.append(True)
-
-
 def api(method, path, body=None):
-    # SECURITY: curl reads the key from the user's inherited CURSOR_API_KEY; the driver never reads it, and puts
-    # it in no argument, environment or output.
-    curl_checked()
-    cmd = ['curl', '--disable', '-sS'] + KEY + ['--max-time', '60', '-X', method, '-H', 'Accept: application/json']
+    request = {'host': HOST, 'method': method, 'path': '/v1' + path}
     if body is not None:
-        cmd += ['-H', 'Content-Type: application/json', '--data-binary', '@-']
-    cmd += ['-o', '-', '-w', '\\n%{http_code}', API + path]
+        request['body'] = body
     try:
-        p = subprocess.run(cmd, input='' if body is None else json.dumps(body), capture_output=True, text=True,
-                           timeout=90)
-    except subprocess.TimeoutExpired:
+        p = subprocess.run([sys.executable, '-I', HELPER], input=json.dumps(request), capture_output=True,
+                           text=True, timeout=120)
+        out = json.loads(p.stdout)
+        assert isinstance(out, dict)
+    except (OSError, subprocess.TimeoutExpired, ValueError, AssertionError):
         return None, None
-    if p.returncode == 2:
-        raise Refused('CURSOR_API_KEY is not set, or empty, in your environment; nothing was sent to Cursor', SIGN_IN)
-    text, _, code = p.stdout.rpartition('\n')
-    if p.returncode != 0 or not code.isdigit() or code == '000':
+    if p.returncode and str(out.get('error')).startswith(REFUSED_BEFORE_SENDING):
+        raise Refused('nothing was sent to Cursor: the key helper refused: ' + str(out.get('error')),
+                      str(out.get('next')))
+    if p.returncode or type(out.get('status')) is not int:
         return None, None
-    try:
-        return int(code), json.loads(text) if text.strip() else {}
-    except ValueError:
-        return int(code), {}
+    return out['status'], out.get('body') if out.get('body') is not None else {}
 
 
 def why(code, answer):
@@ -89,7 +72,7 @@ def why(code, answer):
 
 def refused(code, answer, what, then):
     if code in (401, 403) and 'feature_unavailable' not in why(code, answer):
-        return Refused('Cursor refused the key in CURSOR_API_KEY (%s) when it %s' % (why(code, answer), what), SIGN_IN)
+        return Refused('Cursor refused your key (%s) when it was asked to %s' % (why(code, answer), what), SIGN_IN)
     return Refused('Cursor refused to %s (%s)' % (what, why(code, answer)), then)
 
 
@@ -244,7 +227,7 @@ def wake():
     if code != 200 or not isinstance(answer, dict):
         raise Refused('Cursor did not show run %s\'s agent (%s); nothing was sent'
                       % (run, 'no answer' if code is None else why(code, answer)),
-                      'check that api.cursor.com answers and ' + SIGN_IN + ', then wake it again')
+                      'check that Cursor answers, ' + SIGN_IN + ', then wake it again')
     if answer.get('status') == 'ARCHIVED':
         raise Refused('run %s\'s agent is archived on Cursor' % run, 'stop it, then start a new run')
     if answer.get('status') == 'ACTIVE':

@@ -1,0 +1,23 @@
+# Green run for the N4 port (#1994): the driver reaches Cursor only through kernel/driver-kit/hostkey.py.
+# Fake Cursor on 127.0.0.1 through the key helper's test override; 33 agent CLIs stubbed first on PATH; environment from scratch; synthetic; no host reached.
+$ python3 -I adapters/cursor/test_driver.py
+test_a_failed_archive_is_reported_with_the_agent_to_archive (__main__.Cursor.test_a_failed_archive_is_reported_with_the_agent_to_archive) ... ok
+test_a_lost_create_cursor_does_not_show_yet_stays_unconfirmed_and_stoppable (__main__.Cursor.test_a_lost_create_cursor_does_not_show_yet_stays_unconfirmed_and_stoppable) ... ok
+test_a_missing_key_is_a_clear_error_and_sends_nothing (__main__.Cursor.test_a_missing_key_is_a_clear_error_and_sends_nothing) ... ok
+test_a_refused_login_says_where_the_key_lives_and_shows_no_answer (__main__.Cursor.test_a_refused_login_says_where_the_key_lives_and_shows_no_answer) ... ok
+test_a_start_whose_answer_is_lost_archives_its_agent (__main__.Cursor.test_a_start_whose_answer_is_lost_archives_its_agent) ... ok
+test_a_stop_that_cannot_save_still_archives_and_no_wake_reopens_it (__main__.Cursor.test_a_stop_that_cannot_save_still_archives_and_no_wake_reopens_it) ... ok
+test_a_wake_during_a_run_starts_no_second_run_and_one_after_it_follows_up (__main__.Cursor.test_a_wake_during_a_run_starts_no_second_run_and_one_after_it_follows_up) ... ok
+test_an_installed_driver_starts_with_the_pin_its_build_names (__main__.Cursor.test_an_installed_driver_starts_with_the_pin_its_build_names) ... ok
+test_kit_passes_all_five_with_its_key_check (__main__.Cursor.test_kit_passes_all_five_with_its_key_check) ... ok
+test_runs_reach_only_the_fake_cursor_and_python (__main__.Cursor.test_runs_reach_only_the_fake_cursor_and_python) ... ok
+test_start_creates_one_agent_under_an_id_it_saved_first_with_no_login (__main__.Cursor.test_start_creates_one_agent_under_an_id_it_saved_first_with_no_login) ... ok
+test_start_refuses_any_harness_but_cursor_and_creates_nothing (__main__.Cursor.test_start_refuses_any_harness_but_cursor_and_creates_nothing) ... ok
+test_stop_cancels_the_active_run_then_archives_and_never_deletes (__main__.Cursor.test_stop_cancels_the_active_run_then_archives_and_never_deletes) ... ok
+test_the_key_never_passes_through_the_driver (__main__.Cursor.test_the_key_never_passes_through_the_driver) ... ok
+test_the_tests_read_no_other_process_environment (__main__.Cursor.test_the_tests_read_no_other_process_environment) ... ok
+
+----------------------------------------------------------------------
+Ran 15 tests in 5.339s
+
+OK

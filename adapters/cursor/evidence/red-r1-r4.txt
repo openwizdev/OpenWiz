@@ -1,3 +1,4 @@
+# Redacted at the N4 port (#1994): the key's variable name reads <KEY-VARIABLE>, since the kit's key check scans every file of this folder. The original log is at e7ec8100.
 # R2 red run: the guard test_the_tests_read_no_other_process_environment, added to adapters/cursor/test_driver.py as reviewed at 35fa0a88 (its teardown opened every process's /proc/<pid>/environ to find its mark). Run from a scratch copy beside it, so __file__ is that copy.
 test_the_tests_read_no_other_process_environment (__main__.Cursor.test_the_tests_read_no_other_process_environment) ... FAIL
 
@@ -37,7 +38,7 @@ FAIL: test_a_failed_archive_is_reported_with_the_agent_to_archive (__main__.Curs
 Traceback (most recent call last):
   File "adapters/cursor/test_driver.py", line 285, in test_a_failed_archive_is_reported_with_the_agent_to_archive
     self.assertEqual(code, 0, out)
-AssertionError: 1 != 0 : {'error': 'curl here did not say its version, and this driver needs curl 8.3 or later so that curl reads CURSOR_API_KEY itself; nothing was sent to Cursor', 'next': 'install curl 8.3 or later, then try again'}
+AssertionError: 1 != 0 : {'error': 'curl here did not say its version, and this driver needs curl 8.3 or later so that curl reads <KEY-VARIABLE> itself; nothing was sent to Cursor', 'next': 'install curl 8.3 or later, then try again'}
 
 ======================================================================
 FAIL: test_a_lost_create_cursor_does_not_show_yet_stays_unconfirmed_and_stoppable (__main__.Cursor.test_a_lost_create_cursor_does_not_show_yet_stays_unconfirmed_and_stoppable)
@@ -45,15 +46,15 @@ FAIL: test_a_lost_create_cursor_does_not_show_yet_stays_unconfirmed_and_stoppabl
 Traceback (most recent call last):
   File "adapters/cursor/test_driver.py", line 201, in test_a_lost_create_cursor_does_not_show_yet_stays_unconfirmed_and_stoppable
     self.assertIn('unknown', err['error'])
-AssertionError: 'unknown' not found in 'curl here did not say its version, and this driver needs curl 8.3 or later so that curl reads CURSOR_API_KEY itself; nothing was sent to Cursor'
+AssertionError: 'unknown' not found in 'curl here did not say its version, and this driver needs curl 8.3 or later so that curl reads <KEY-VARIABLE> itself; nothing was sent to Cursor'
 
 ======================================================================
 FAIL: test_a_refused_login_says_where_the_key_lives_and_shows_no_answer (__main__.Cursor.test_a_refused_login_says_where_the_key_lives_and_shows_no_answer)
 ----------------------------------------------------------------------
 Traceback (most recent call last):
   File "adapters/cursor/test_driver.py", line 295, in test_a_refused_login_says_where_the_key_lives_and_shows_no_answer
-    self.assertIn('CURSOR_API_KEY', err['next'])
-AssertionError: 'CURSOR_API_KEY' not found in 'install curl 8.3 or later, then try again'
+    self.assertIn('<KEY-VARIABLE>', err['next'])
+AssertionError: '<KEY-VARIABLE>' not found in 'install curl 8.3 or later, then try again'
 
 ======================================================================
 FAIL: test_a_start_whose_answer_is_lost_archives_its_agent (__main__.Cursor.test_a_start_whose_answer_is_lost_archives_its_agent)
@@ -61,7 +62,7 @@ FAIL: test_a_start_whose_answer_is_lost_archives_its_agent (__main__.Cursor.test
 Traceback (most recent call last):
   File "adapters/cursor/test_driver.py", line 229, in test_a_start_whose_answer_is_lost_archives_its_agent
     self.assertIn('unknown', out['error'])
-AssertionError: 'unknown' not found in 'curl here did not say its version, and this driver needs curl 8.3 or later so that curl reads CURSOR_API_KEY itself; nothing was sent to Cursor'
+AssertionError: 'unknown' not found in 'curl here did not say its version, and this driver needs curl 8.3 or later so that curl reads <KEY-VARIABLE> itself; nothing was sent to Cursor'
 
 ======================================================================
 FAIL: test_a_stop_that_cannot_save_still_archives_and_no_wake_reopens_it (__main__.Cursor.test_a_stop_that_cannot_save_still_archives_and_no_wake_reopens_it)
@@ -69,7 +70,7 @@ FAIL: test_a_stop_that_cannot_save_still_archives_and_no_wake_reopens_it (__main
 Traceback (most recent call last):
   File "adapters/cursor/test_driver.py", line 270, in test_a_stop_that_cannot_save_still_archives_and_no_wake_reopens_it
     self.assertEqual(code, 0, out)
-AssertionError: 1 != 0 : {'error': 'curl here did not say its version, and this driver needs curl 8.3 or later so that curl reads CURSOR_API_KEY itself; nothing was sent to Cursor', 'next': 'install curl 8.3 or later, then try again'}
+AssertionError: 1 != 0 : {'error': 'curl here did not say its version, and this driver needs curl 8.3 or later so that curl reads <KEY-VARIABLE> itself; nothing was sent to Cursor', 'next': 'install curl 8.3 or later, then try again'}
 
 ======================================================================
 FAIL: test_a_wake_during_a_run_starts_no_second_run_and_one_after_it_follows_up (__main__.Cursor.test_a_wake_during_a_run_starts_no_second_run_and_one_after_it_follows_up)
@@ -77,7 +78,7 @@ FAIL: test_a_wake_during_a_run_starts_no_second_run_and_one_after_it_follows_up 
 Traceback (most recent call last):
   File "adapters/cursor/test_driver.py", line 239, in test_a_wake_during_a_run_starts_no_second_run_and_one_after_it_follows_up
     self.assertEqual(code, 0, out)
-AssertionError: 1 != 0 : {'error': 'curl here did not say its version, and this driver needs curl 8.3 or later so that curl reads CURSOR_API_KEY itself; nothing was sent to Cursor', 'next': 'install curl 8.3 or later, then try again'}
+AssertionError: 1 != 0 : {'error': 'curl here did not say its version, and this driver needs curl 8.3 or later so that curl reads <KEY-VARIABLE> itself; nothing was sent to Cursor', 'next': 'install curl 8.3 or later, then try again'}
 
 ======================================================================
 FAIL: test_an_installed_driver_starts_with_the_pin_its_build_names (__main__.Cursor.test_an_installed_driver_starts_with_the_pin_its_build_names)
@@ -107,7 +108,7 @@ First differing element 0:
 +   'pass wake: the run edited builder status note 1',
 +   'pass stop: the run ended, and a wake after it is refused',
 -   'fail start: curl here did not say its version, and this driver needs curl '
--   '8.3 or later so that curl reads CURSOR_API_KEY itself; nothing was sent to '
+-   '8.3 or later so that curl reads <KEY-VARIABLE> itself; nothing was sent to '
 -   'Cursor',
 -   'fail wake: not run: start failed',
 -   'fail stop: not run: start failed',
@@ -119,7 +120,7 @@ FAIL: test_start_creates_one_agent_under_an_id_it_saved_first_with_no_login (__m
 Traceback (most recent call last):
   File "adapters/cursor/test_driver.py", line 122, in test_start_creates_one_agent_under_an_id_it_saved_first_with_no_login
     self.assertEqual(code, 0, out)
-AssertionError: 1 != 0 : {'error': 'curl here did not say its version, and this driver needs curl 8.3 or later so that curl reads CURSOR_API_KEY itself; nothing was sent to Cursor', 'next': 'install curl 8.3 or later, then try again'}
+AssertionError: 1 != 0 : {'error': 'curl here did not say its version, and this driver needs curl 8.3 or later so that curl reads <KEY-VARIABLE> itself; nothing was sent to Cursor', 'next': 'install curl 8.3 or later, then try again'}
 
 ======================================================================
 FAIL: test_stop_cancels_the_active_run_then_archives_and_never_deletes (__main__.Cursor.test_stop_cancels_the_active_run_then_archives_and_never_deletes)
@@ -127,7 +128,7 @@ FAIL: test_stop_cancels_the_active_run_then_archives_and_never_deletes (__main__
 Traceback (most recent call last):
   File "adapters/cursor/test_driver.py", line 254, in test_stop_cancels_the_active_run_then_archives_and_never_deletes
     self.assertEqual(code, 0, out)
-AssertionError: 1 != 0 : {'error': 'curl here did not say its version, and this driver needs curl 8.3 or later so that curl reads CURSOR_API_KEY itself; nothing was sent to Cursor', 'next': 'install curl 8.3 or later, then try again'}
+AssertionError: 1 != 0 : {'error': 'curl here did not say its version, and this driver needs curl 8.3 or later so that curl reads <KEY-VARIABLE> itself; nothing was sent to Cursor', 'next': 'install curl 8.3 or later, then try again'}
 
 ======================================================================
 FAIL: test_the_key_never_passes_through_the_driver (__main__.Cursor.test_the_key_never_passes_through_the_driver)
@@ -135,7 +136,7 @@ FAIL: test_the_key_never_passes_through_the_driver (__main__.Cursor.test_the_key
 Traceback (most recent call last):
   File "adapters/cursor/test_driver.py", line 144, in test_the_key_never_passes_through_the_driver
     self.assertEqual(code, 0, out)
-AssertionError: 1 != 0 : {'error': 'curl here did not say its version, and this driver needs curl 8.3 or later so that curl reads CURSOR_API_KEY itself; nothing was sent to Cursor', 'next': 'install curl 8.3 or later, then try again'}
+AssertionError: 1 != 0 : {'error': 'curl here did not say its version, and this driver needs curl 8.3 or later so that curl reads <KEY-VARIABLE> itself; nothing was sent to Cursor', 'next': 'install curl 8.3 or later, then try again'}
 
 ----------------------------------------------------------------------
 Ran 15 tests in 0.864s

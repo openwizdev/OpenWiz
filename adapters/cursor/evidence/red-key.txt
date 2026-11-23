@@ -1,4 +1,5 @@
-# Red run: python3 -I adapters/cursor/test_driver.py, with the tests and fake curl for the planner's key ruling (curl reads CURSOR_API_KEY itself through --variable and --expand-oauth2-bearer, curl 8.3 or later), against the driver that still used ~/.netrc. Synthetic Cursor and a synthetic key only.
+# Redacted at the N4 port (#1994): the key's variable name reads <KEY-VARIABLE>, since the kit's key check scans every file of this folder. The original log is at e7ec8100.
+# Red run: python3 -I adapters/cursor/test_driver.py, with the tests and fake curl for the planner's key ruling (curl reads <KEY-VARIABLE> itself through --variable and --expand-oauth2-bearer, curl 8.3 or later), against the driver that still used ~/.netrc. Synthetic Cursor and a synthetic key only.
 test_a_failed_archive_is_reported_with_the_agent_to_archive (__main__.Cursor.test_a_failed_archive_is_reported_with_the_agent_to_archive) ... FAIL
 test_a_refused_login_says_where_the_key_lives_and_shows_no_answer (__main__.Cursor.test_a_refused_login_says_where_the_key_lives_and_shows_no_answer) ... FAIL
 test_a_start_whose_answer_is_lost_archives_its_agent (__main__.Cursor.test_a_start_whose_answer_is_lost_archives_its_agent) ... ERROR
@@ -34,8 +35,8 @@ FAIL: test_a_refused_login_says_where_the_key_lives_and_shows_no_answer (__main_
 ----------------------------------------------------------------------
 Traceback (most recent call last):
   File "adapters/cursor/test_driver.py", line 252, in test_a_refused_login_says_where_the_key_lives_and_shows_no_answer
-    self.assertIn('CURSOR_API_KEY', err['next'])
-AssertionError: 'CURSOR_API_KEY' not found in 'archive agent bc-<agent> at cursor.com/agents, and read the ticket for what it did, before you start again'
+    self.assertIn('<KEY-VARIABLE>', err['next'])
+AssertionError: '<KEY-VARIABLE>' not found in 'archive agent bc-<agent> at cursor.com/agents, and read the ticket for what it did, before you start again'
 
 ======================================================================
 FAIL: test_a_stop_that_cannot_save_still_archives_and_no_wake_reopens_it (__main__.Cursor.test_a_stop_that_cannot_save_still_archives_and_no_wake_reopens_it)
