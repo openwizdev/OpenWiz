@@ -1,0 +1,107 @@
+# Run 1 of #2583, from the PR heads, 2026-11-23 (UTC). Fixtures only; every value below is synthetic.
+## Step times (date -u)
+T0 2026-11-23T01:10:46Z
+T1 stubs 2026-11-23T01:10:46Z
+T2 dry-run start 2026-11-23T01:11:27Z
+T3 dry-run end 2026-11-23T01:11:27Z
+T4 bootstrap start 2026-11-23T01:11:31Z
+T5 bootstrap end 2026-11-23T01:12:50Z
+T6 stubs-back start 2026-11-23T01:12:57Z
+T7 stubs-back end 2026-11-23T01:12:57Z
+T8 fake sign-ins start 2026-11-23T01:14:37Z
+T9 fake sign-ins end 2026-11-23T01:14:57Z
+T9b stubs 37 2026-11-23T01:15:03Z
+T10 heads start 2026-11-23T01:15:10Z
+T11 heads end 2026-11-23T01:15:34Z
+## 1. bootstrap.sh --dry-run
+already there python3 3.11.2
+already there git 2.56.1
+would install curl 8.23.0 from https://github.com/stunnel/static-curl/releases/download/8.23.0-1/curl-linux-aarch64-musl-8.23.0-1.tar.xz, sha256 e20f26e5b87c1883608f286f86bdabf39d3b8556e8a8e75dfe205e14bd206199
+would install gh 2.105.0 from https://github.com/cli/cli/releases/download/v2.105.0/gh_2.105.0_linux_arm64.tar.gz, sha256 b1278c75107423d818f1937fd92cafc9e5e9b606631568f68d7fb816f5885a02
+would install hermes 0.23.3 from https://raw.githubusercontent.com/NousResearch/hermes-agent/caafe5389ae585ef77387a962aee05b1bcf17029/scripts/install.sh, sha256 c73dad4dcf7c9ecadb98578e28cc763d23d7be3fa1b513545319038795493214
+would install runpane 2.4.246 from https://files.pythonhosted.org/packages/ec/00/c5e01616e1d1f5ebfc64d1b89e1625aa663942d854683ac6afcc093a78c1/runpane-2.4.246-py3-none-any.whl, sha256 5083d7ee73112b0e6536110775c2a30f225a8f85e1368de006fa6f5cfd8a87c8
+would install pane 2.4.246 from https://github.com/greenfield-inc/Pane/releases/download/v2.4.246/Pane-2.4.246-linux-arm64.AppImage, sha256 68ec316b902c74b60029ff2f525492c38b68698914a0dfa0c07d2f756d5279b0
+would install droid 1.17.2 from https://downloads.factory.ai/factory-cli/releases/1.17.2/linux/arm64/droid, sha256 f24b0028e11726a16f9349251ad565ea1f825976e2cb6443583a9180027dd095
+bootstrap: dry run, 6 to install, 2 already there, 0 left out
+## 2. bootstrap.sh (its own lines; the Hermes installer's progress output is left out)
+already there python3 3.11.2
+already there git 2.56.1
+installed curl 8.23.0
+installed gh 2.105.0
+installed hermes 0.23.3
+installed runpane 2.4.246
+installed pane 2.4.246
+installed droid 1.17.2
+bootstrap: 6 installed, 2 already there, 0 left out
+rc=0
+## 3. stubs back in front, then bootstrap.sh again (idempotent)
+already there pane 2.4.246
+already there droid 1.17.2
+bootstrap: 0 installed, 8 already there, 0 left out
+## 5. heads.py, the page's one command, stdout
+ran Hermes: 5 of 5 at a823bb6f37e7
+posted https://github.com/openwizdev/OpenWiz/pull/2017#issuecomment-901
+ran Conductor: 5 of 5 at 921a7829db30
+posted https://github.com/openwizdev/OpenWiz/pull/2020#issuecomment-902
+ran Cursor: 5 of 5 at e7ec81005d2d
+posted https://github.com/openwizdev/OpenWiz/pull/2021#issuecomment-903
+ran Factory: 5 of 5 at aa83e218c459
+posted https://github.com/openwizdev/OpenWiz/pull/2022#issuecomment-904
+ran Pane: 5 of 5 at cd0e1aff8c8f
+posted https://github.com/openwizdev/OpenWiz/pull/2029#issuecomment-905
+posted https://github.com/openwizdev/WizMarket/pull/41
+rc=0
+## 5. heads.py stderr (the kit's lines)
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 1
+pass wake: the run edited builder status note 1
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 2
+pass wake: the run edited builder status note 2
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 3
+pass wake: the run edited builder status note 3
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 4
+pass wake: the run edited builder status note 4
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 5
+pass wake: the run edited builder status note 5
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+## 5. every call the fixture gh got (nothing reached a real gh)
+      1 api -X POST repos/example-person/WizMarket/git/refs
+      1 api -X POST repos/openwizdev/OpenWiz/issues/2017/comments
+      1 api -X POST repos/openwizdev/OpenWiz/issues/2020/comments
+      1 api -X POST repos/openwizdev/OpenWiz/issues/2021/comments
+      1 api -X POST repos/openwizdev/OpenWiz/issues/2022/comments
+      1 api -X POST repos/openwizdev/OpenWiz/issues/2029/comments
+      1 api -X POST repos/openwizdev/WizMarket/forks
+      1 api -X POST repos/openwizdev/WizMarket/pulls
+      1 api -X PUT repos/example-person/WizMarket/contents/receipts/conductor/2026-11-23-921a7829db30.txt
+      1 api -X PUT repos/example-person/WizMarket/contents/receipts/cursor-cloud-agents/2026-11-23-e7ec81005d2d.txt
+      1 api -X PUT repos/example-person/WizMarket/contents/receipts/factory/2026-11-23-aa83e218c459.txt
+      1 api -X PUT repos/example-person/WizMarket/contents/receipts/hermes/2026-11-23-a823bb6f37e7.txt
+      1 api -X PUT repos/example-person/WizMarket/contents/receipts/pane/2026-11-23-cd0e1aff8c8f.txt
+      1 api -i repos/openwizdev/OpenWiz/issues/1990/comments?per_page=100
+      1 api -i repos/openwizdev/OpenWiz/issues/1993/comments?per_page=100
+      1 api -i repos/openwizdev/OpenWiz/issues/1995/comments?per_page=100
+      1 api -i repos/openwizdev/OpenWiz/issues/1999/comments?per_page=100
+      1 api -i repos/openwizdev/OpenWiz/issues/2001/comments?per_page=100
+     32 api graphql graphql
+      1 api repos/openwizdev/WizMarket/git/ref/heads/main 
+      1 api user 
+## Live-rig suites on the stacked branch (stubs first, env -u OPENWIZ_GITHUB_APP_KEY)
+test_bootstrap.py: OK
+test_heads.py: FAILED (failures=2)
+test_hosts.py: FAILED (failures=31)
+test_receipt.py: OK (skipped=2)
+test_rig.py: OK
