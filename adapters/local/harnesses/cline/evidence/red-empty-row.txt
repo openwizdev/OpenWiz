@@ -1,0 +1,3 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY PATH=<31 refusing stubs>:$PATH python3 -I adapters/local/test_harnesses.py --rows adapters/local/harnesses
+(row.json is the empty object {})
+fail cline: row.json effort: it has no effort form; give an effort map or "none: <one line why>"
