@@ -252,6 +252,38 @@ class Check(unittest.TestCase):
                 path.write_text('```bad\n' + THREAD + '\n```\n```good\n' + THREAD + '\n```\n')
                 self.verdict(self.call('--tree', folder), 'T1')
 
+    def test_runtime_root_maps_only_the_contract_at_an_archive_runtime_path(self):
+        bad = '```bad\n' + THREAD + '\n```\n'
+        for name, roots, rule in (('t1/runtime/contracts/open-development.v1.md', ('t1',), None),
+                                  ('t2/runtime/contracts/open-development.v1.md', ('t1', 't2'), None),
+                                  ('t1/runtime/contracts/open-development.v1.md', (), 'T1'),
+                                  ('other/runtime/contracts/open-development.v1.md', ('t1',), 'T1'),
+                                  ('t1/contracts/open-development.v1.md', ('t1',), 'T1'),
+                                  ('t1/runtime/runtime/contracts/open-development.v1.md', ('t1',), 'T1'),
+                                  ('t1/runtime/skills/contracts/open-development.v1.md', ('t1',), 'T1'),
+                                  ('t1/runtime/other.md', ('t1',), 'T1')):
+            with self.subTest(name=name, roots=roots):
+                folder = self.root / ('rt-' + name.replace('/', '_') + '-'.join(roots))
+                (folder / name).parent.mkdir(parents=True)
+                (folder / name).write_text(bad)
+                args = [x for root in roots for x in ('--runtime-root', root)]
+                self.verdict(self.call('--tree', folder, *args), rule)
+                if rule is None:
+                    (folder / name).write_text(bad + THREAD + '\n')
+                    self.verdict(self.call('--tree', folder, *args), 'T1')
+
+    def test_runtime_root_keeps_every_other_rule_and_needs_a_tree(self):
+        folder = self.root / 'rt-rules'
+        (folder / 't1/runtime/private').mkdir(parents=True)
+        (folder / 't1/runtime/private/note.md').write_text('clean\n')
+        self.verdict(self.call('--tree', folder, '--runtime-root', 't1'))
+        (folder / 't1/runtime/note.md').write_text(BAD_MAIL + '\n')
+        self.verdict(self.call('--tree', folder, '--runtime-root', 't1'), 'T3')
+        for root in ('', 'a/b', '.', '..'):
+            with self.subTest(root=root):
+                self.verdict(self.call('--tree', self.tree, '--runtime-root', root), 'READ')
+        self.verdict(self.call('--title-file', folder / 't1/runtime/private/note.md', '--runtime-root', 't1'), 'READ')
+
     def workflow(self, body, rule=None):
         path = self.tree / '.github/workflows/test.yml'
         path.parent.mkdir(parents=True, exist_ok=True)

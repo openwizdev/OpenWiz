@@ -2196,5 +2196,65 @@ def re_headings(text):
     return [line for line in text.splitlines() if line.startswith('## ')]
 
 
+class ArchivePrivacy(unittest.TestCase):
+    """D2 scans each staged archive's runtime: the open development contract shipped at
+    runtime/contracts/open-development.v1.md gets the repository's bad-block rule, nothing else does."""
+    PLANTED = ('thr_' + 'planted0001', '/home/' + 'plantedname/notes', 'prj_' + 'planted42', 'robin' + '@' + 'mail.invalid')
+    CONTRACT = 'runtime/contracts/open-development.v1.md'
+
+    def setUp(self):
+        import candidate
+        self.candidate = candidate
+        self.tmp = tempfile.TemporaryDirectory(prefix='release-d2-archive-')
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.folder = self.root / 'artifacts'
+        self.folder.mkdir()
+        for target in TARGETS:
+            (self.folder / f'openwiz-{VERSION}-{target}.manifest.json').write_text('{}\n')
+        self.literals = self.root / 'literals.txt'
+        self.literals.write_text('synthetic-private-term-zq\n')
+
+    def bad(self, planted=None):
+        return ''.join('Bad: a planted case.\n\n```bad\n' + x + '\n```\n\n' for x in planted or self.PLANTED)
+
+    def scan(self, files):
+        def stage(manifest, archive, checksum, target, keep=None):
+            build = Path(keep) / ('build-' + target)
+            for name, text in files.items():
+                (build / name).parent.mkdir(parents=True, exist_ok=True)
+                (build / name).write_text(text)
+            return build
+        real = self.candidate.stage
+        self.candidate.stage = stage
+        try:
+            return self.candidate.scan_artifacts({'release_version': VERSION}, self.folder, self.literals)
+        finally:
+            self.candidate.stage = real
+
+    def test_d2_the_contracts_planted_bad_blocks_pass_at_its_runtime_path(self):
+        self.assertEqual(self.scan({self.CONTRACT: '# Contract\n\n' + self.bad() + '```good\nclean\n```\n',
+                                    'runtime/install.py': '# clean\n'}), [])
+
+    def test_d2_a_planted_string_outside_a_bad_block_in_the_contract_is_still_a_finding(self):
+        for planted in self.PLANTED:
+            for outside in (planted + '\n', '```good\n' + planted + '\n```\n', '```bad\nok\n```\n' + planted + '\n'):
+                with self.subTest(planted=planted, outside=outside):
+                    self.assertEqual(self.scan({self.CONTRACT: self.bad() + outside}), ['finding'])
+
+    def test_d2_a_bad_block_in_any_other_runtime_file_is_still_a_finding(self):
+        for name in ('runtime/contracts/agent-status.v1.md', 'runtime/skills/triage/SKILL.md',
+                     'runtime/install.py', 'runtime/open-development.v1.md'):
+            for planted in self.PLANTED:
+                with self.subTest(name=name, planted=planted):
+                    self.assertEqual(self.scan({self.CONTRACT: self.bad(), name: self.bad([planted])}), ['finding'])
+
+    def test_d2_another_member_ending_in_the_contracts_name_gets_no_exemption(self):
+        for name in ('runtime/skills/synthetic/contracts/open-development.v1.md', 'runtime/runtime/contracts/open-development.v1.md',
+                     'runtime/contracts/x-open-development.v1.md', 'runtime/skills/open-development.v1.md'):
+            with self.subTest(name=name):
+                self.assertEqual(self.scan({name: self.bad()}), ['finding'])
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
