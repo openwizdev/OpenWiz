@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""The kiro row's own checks, on top of the runner's: not installed, not signed in, the approved mode only, and
-effort refused with the fixed next. Synthetic: only this folder's fake runs, never a real kiro-cli."""
-import json, os, sys
+import os, sys
 
 sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -31,7 +29,6 @@ def stop_all(env):
         env.driver('stop', {'run': run[:-len('.json')]})
 
 
-# Not installed: no kiro-cli anywhere on PATH (not even the runner's no-op stub).
 with th.ThrowawayMachine(ROWS, NAME, mode='trust-all-tools') as env:
     gh_only = os.pathsep.join([os.path.join(env.folder, 'bin'), without_kiro(env.env['PATH'])])
     before = env.runs()
@@ -40,8 +37,6 @@ with th.ThrowawayMachine(ROWS, NAME, mode='trust-all-tools') as env:
           code == 1 and th.kit.invalid(out, th.ERROR) is None and out.get('error') == 'harness kiro is not installed here'
           and 'install kiro-cli' in out.get('next', '') and env.runs() == before)
 
-# Not signed in: the fake answers as Kiro CLI 3.5.0 does signed out (its runError line on stdout and its line on
-# stderr, exit 1), or with its runError line alone; either way start's next names `kiro-cli login`.
 for how, lines in (('both', 'its runError line and its stderr line'), ('json', 'its runError line alone')):
     with th.ThrowawayMachine(ROWS, NAME, 'kiro-cli', FAKE, 'trust-all-tools') as env:
         code, out = env.start(KIRO_FAKE_SIGNED_OUT=how)
@@ -54,7 +49,6 @@ for how, lines in (('both', 'its runError line and its stderr line'), ('json', '
               and 'kiro-cli login' in out.get('next', '') and '"stage":"auth"' in log and 'KIRO_API_KEY' in log)
         stop_all(env)
 
-# The approved mode only: permissions-yaml adds no trust flag; trust-all-tools adds exactly --trust-all-tools.
 for mode, flags in (('permissions-yaml', []), ('trust-all-tools', ['--trust-all-tools'])):
     with th.ThrowawayMachine(ROWS, NAME, 'kiro-cli', FAKE, mode) as env:
         code, out = env.start(FAKE_CLI_RECORD_ONLY='1')
@@ -63,7 +57,6 @@ for mode, flags in (('permissions-yaml', []), ('trust-all-tools', ['--trust-all-
         check('mode %s starts `kiro-cli %s`' % (mode, ' '.join(HEADLESS + ['--model', '<m>'] + flags + ['<prompt>'])),
               code == 0 and argv[:-1] == HEADLESS + ['--model', 'synthetic-1'] + flags)
 
-# Effort: the row declares none, so every Kiro level is refused with the fixed next, and nothing starts.
 with th.ThrowawayMachine(ROWS, NAME, 'kiro-cli', FAKE, 'trust-all-tools') as env:
     for level in ('low', 'medium', 'high', 'xhigh', 'max'):
         check('effort %s is refused with the fixed next, starting nothing' % level,
