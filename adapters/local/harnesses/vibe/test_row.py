@@ -51,7 +51,8 @@ def pattern_reads_the_entry_id_not_a_nested_one():
         th.local.STATE = state
         with open(os.path.join(state, 'run-x.log'), 'w') as f:
             f.write('Reading API keys from the system keyring\n' + json.dumps([entry], indent=2) + '\n')
-        return th.local.reported_session('run-x', ROW['session']) == 'root-id'
+        first_turn = {'output_from': 0}
+        return th.local.reported_session('run-x', ROW['session'], first_turn) == 'root-id'
 
 
 def main():
