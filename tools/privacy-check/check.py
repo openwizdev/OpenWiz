@@ -53,7 +53,6 @@ CONTRACT = 'contracts/open-development.v1.md'
 class Checker:
     def __init__(self, literals=(), runtime_roots=()):
         self.literals = literals
-        # --runtime-root: a staged release archive holds the contract at <root>/runtime/<CONTRACT>.
         self.runtime_roots = runtime_roots
         self.findings = 0
         self.references = []
@@ -107,11 +106,12 @@ class Checker:
         if skip:
             self.refuse('READ', place)
 
-    def file(self, name, data, place, blob=None):
+    def file(self, name, data, place, blob=None, link=False):
         if name == 'private' or name.startswith('private/') or (name.startswith('docs/grills/') and name != 'docs/grills/README.md'):
             self.refuse('F1', place)
         self.text(name, place + '-path')
-        rules = 'workflow' if is_workflow(name) else 'contract' if self.is_contract(name) else 'text'
+        contract = not link and self.is_contract(name)
+        rules = 'workflow' if is_workflow(name) else 'contract' if contract else 'text'
         key = None
         if SOURCE_VERSION and isinstance(blob, str) and re.fullmatch(r'[0-9a-f]{40}', blob):
             key = (SOURCE_VERSION, tuple(DECIDERS), tuple(self.literals), rules, blob)
@@ -127,7 +127,7 @@ class Checker:
         refusals, start = [], len(self.references)
         self.recording = refusals
         try:
-            self.contents(name, data, place)
+            self.contents(name, data, place, contract)
         finally:
             self.recording = None
         if key:
@@ -136,7 +136,7 @@ class Checker:
     def is_contract(self, name):
         return name == CONTRACT or any(name == root + '/runtime/' + CONTRACT for root in self.runtime_roots)
 
-    def contents(self, name, data, place):
+    def contents(self, name, data, place, contract=False):
         if b'\0' in data:
             if is_workflow(name):
                 self.refuse('F2', place)
@@ -148,7 +148,7 @@ class Checker:
                 return
             self.refuse('READ', place)
             return
-        self.text(text, place, self.is_contract(name))
+        self.text(text, place, contract)
         if is_workflow(name):
             try:
                 if refused_jobs(text):
@@ -340,11 +340,11 @@ def directory_files(root):
                 if relative == '.git':
                     continue
                 if entry.is_symlink():
-                    yield relative, os.readlink(entry.path).encode()
+                    yield relative, os.readlink(entry.path).encode(), True
                 elif entry.is_dir(follow_symlinks=False):
                     yield from walk(entry.path)
                 elif entry.is_file(follow_symlinks=False):
-                    yield relative, Path(entry.path).read_bytes()
+                    yield relative, Path(entry.path).read_bytes(), False
                 else:
                     raise Unreadable()
     yield from walk(root)
@@ -361,7 +361,7 @@ def git_files(repo, ref, blobs):
         mode, kind, sha = info.decode().split()
         if kind != 'blob' or mode not in {'100644', '100755', '120000'}:
             raise Unreadable()
-        yield name.decode('utf-8'), (lambda sha=sha: blobs.read(sha)), sha
+        yield name.decode('utf-8'), (lambda sha=sha: blobs.read(sha)), sha, mode == '120000'
 
 
 def main(argv=None):
@@ -405,7 +405,7 @@ def main(argv=None):
         blobs = BlobReader(args.repo)
         trees = []
         if args.tree:
-            trees.append(('staged', ((name, data, None) for name, data in directory_files(args.tree))))
+            trees.append(('staged', ((name, data, None, link) for name, data, link in directory_files(args.tree))))
         if args.git_tree:
             trees.append(('tree', git_files(args.repo, args.git_tree, blobs)))
         refs = list(dict.fromkeys(([commit(args.repo, args.head)] if args.head else []) + (commits or [])))
@@ -417,9 +417,9 @@ def main(argv=None):
                 checker.runtime_roots = tuple(args.runtime_roots) if tree_place == 'staged' else ()
                 known = set()
                 checker.references = []
-                for name, data, blob in entries:
+                for name, data, blob, link in entries:
                     known.add(name)
-                    checker.file(name, data, tree_place + ':' + safe_place(name, checker.literals), blob)
+                    checker.file(name, data, tree_place + ':' + safe_place(name, checker.literals), blob, link)
                 for target, place in checker.references:
                     if target not in known:
                         checker.refuse('F2', place)

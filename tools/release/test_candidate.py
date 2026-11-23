@@ -2197,8 +2197,6 @@ def re_headings(text):
 
 
 class ArchivePrivacy(unittest.TestCase):
-    """D2 scans each staged archive's runtime: the open development contract shipped at
-    runtime/contracts/open-development.v1.md gets the repository's bad-block rule, nothing else does."""
     PLANTED = ('thr_' + 'planted0001', '/home/' + 'plantedname/notes', 'prj_' + 'planted42', 'robin' + '@' + 'mail.invalid')
     CONTRACT = 'runtime/contracts/open-development.v1.md'
 
