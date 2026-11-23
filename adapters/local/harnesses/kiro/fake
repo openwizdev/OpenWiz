@@ -42,4 +42,4 @@ if os.environ.get('KIRO_FAKE_SIGNED_OUT') in ('both', 'json'):
     sys.exit(1)
 fake_cli.turn(a[0], model, session,
               lambda sid: json.dumps({'type': 'runStarted', 'data': {'sessionId': sid}}, separators=(',', ':')),
-              daemon='tree')
+              daemon='tree', signed_out=RUN_ERROR)

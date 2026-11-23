@@ -41,7 +41,7 @@ So the row takes effort in the contract's second form: `"effort": "none: kiro-cl
 ## Not installed, not signed in
 
 - `kiro-cli` not on `PATH`: the driver's D3 error `harness kiro is not installed here`, whose `next` says to install kiro-cli and sign in to it yourself, then start again. Kiro's installer is `curl -fsSL https://cli.kiro.dev/install | bash` ([Installation](https://kiro.dev/docs/cli/setup/)).
-- Not signed in: Kiro prints ``Not logged in. Set the KIRO_API_KEY environment variable or run `kiro-cli login` first.`` and exits 1, so `start` fails with the driver's D3 error `... the first turn ended at once: the harness is not signed in (exit 1)`, whose `next` says to read the run's log and fix what it says there: that line, which names `kiro-cli login` and `KIRO_API_KEY`.
+- Not signed in: Kiro prints ``Not logged in. Set the KIRO_API_KEY environment variable or run `kiro-cli login` first.`` on stderr and a `runError` record with `"stage":"auth"` in its stream-json output, and exits 1. The row's `signed_out` pattern, `"type":"runError".*"stage":"auth"`, matches that record (Kiro's documented error record, [Headless mode](https://kiro.dev/docs/cli/headless/), "Error records"), so `start` fails with the driver's D3 error `the harness is not signed in`, whose `next` names the row's `login_command`, `kiro-cli login`. Where nobody can sign in, set `KIRO_API_KEY` in your own environment instead.
 
 ## Tests
 

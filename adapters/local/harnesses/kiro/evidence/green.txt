@@ -1,4 +1,4 @@
-# Green: the finished row; agent-CLI stubs first on PATH, OPENWIZ_GITHUB_APP_KEY unset
+# Green: the finished row, with signed_out and login_command; agent-CLI stubs first on PATH, OPENWIZ_GITHUB_APP_KEY unset
 
 $ python3 -I adapters/local/test_harnesses.py
 fail claude: row.json harness: claude is built in, and no row may use a built-in name
@@ -9,7 +9,10 @@ fail effort-unpassed: row.json effort: it maps effort values to arguments, but s
 pass example: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
 pass example-none: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
 fail larger-argument: row.json start: a placeholder sits inside a larger argument; each fills a whole argument
+fail row-missing: row.json is missing
 fail session-differs: session: the wake turn got a different session id from the start turn
+fail signed-out-bad-pattern: row.json signed_out: a pattern does not compile
+pass signed-out-json: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
 fail wake-no-session: row.json wake: it has no {session}
 pass driver: an unknown harness is a D3 error that lists the built-ins and the row folders, and starts nothing
 pass driver: a wake before the reported session id is known is a D3 error that starts nothing
@@ -19,7 +22,8 @@ exit=0
 
 $ python3 -I adapters/local/harnesses/kiro/test_row.py
 pass kiro: not installed is a D3 error whose next says to install kiro-cli, and starts nothing
-pass kiro: not signed in is a D3 error that says so, and its log names kiro-cli login and KIRO_API_KEY
+pass kiro: not signed in (its runError line and its stderr line) is a D3 error that says so, and its next names kiro-cli login
+pass kiro: not signed in (its runError line alone) is a D3 error that says so, and its next names kiro-cli login
 pass kiro: mode permissions-yaml starts `kiro-cli chat --v3 --no-interactive --output-format stream-json --model <m> <prompt>`
 pass kiro: mode trust-all-tools starts `kiro-cli chat --v3 --no-interactive --output-format stream-json --model <m> --trust-all-tools <prompt>`
 pass kiro: effort low is refused with the fixed next, starting nothing
