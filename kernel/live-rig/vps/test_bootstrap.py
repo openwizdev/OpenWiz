@@ -434,6 +434,20 @@ class BootstrapTest(unittest.TestCase):
         self.assertEqual({p: sha256(p) for p in self.fx.tree() if p in before}, before)
         self.assertEqual(read(self.fx.installer_log), '')
 
+    def test_an_older_pin_of_an_installed_tool_is_kept_and_its_installer_never_rerun(self):
+        self.assertEqual(self.fx.run().returncode, 0)
+        stamp = os.path.join(self.fx.prefix, 'lib', 'openwiz-vps', 'fakeagent.json')
+        with open(stamp, 'w') as f:
+            json.dump({'version': '3.2.0', 'sha256': '0' * 64}, f)
+        launcher = os.path.join(self.fx.prefix, 'bin', 'fakeagent')
+        before, calls, installer_log = sha256(launcher), read(self.fx.calls), read(self.fx.installer_log)
+        r = self.fx.run()
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn('left out fakeagent: your existing %s is kept and not run, since its installer would overwrite '
+                      'it in place; move it aside to install the pinned 3.2.1' % launcher, self.summary(r.stdout)[1])
+        self.assertEqual((sha256(launcher), read(self.fx.calls), read(self.fx.installer_log)),
+                         (before, calls, installer_log))
+
     def test_too_old_system_tool_is_left_out_with_its_reason(self):
         script(os.path.join(self.fx.bin, 'git'), 'echo "git version 1.8.5 (synthetic)"\n')
         r = self.fx.run('--dry-run')

@@ -301,11 +301,18 @@ def main():
                             % tool['home_only'])
                 continue
             file = tool['files'].get(key) or tool['files'].get('any')
-            have = None
             if file and stamped(tool, file, prefix):
-                have = tool['version']
-            elif tool.get('system_min'):
-                have = system_tool(name, tool['system_min'])[0]
+                already(name, tool['version'])
+                continue
+            if os.path.lexists(dst) and not os.path.exists(stamp_path(prefix, name)):
+                leave(name, 'your existing %s was not installed by this bootstrap, so it is kept and never run; '
+                            'move it aside to install the pinned %s' % (dst, tool['version']))
+                continue
+            if tool['kind'] == 'installer' and os.path.lexists(dst):
+                leave(name, 'your existing %s is kept and not run, since its installer would overwrite it in '
+                            'place; move it aside to install the pinned %s' % (dst, tool['version']))
+                continue
+            have = system_tool(name, tool['system_min'])[0] if tool.get('system_min') else None
             if have:
                 already(name, have)
                 continue
@@ -315,14 +322,6 @@ def main():
             missing = [n for n in tool.get('needs', []) if n not in available]
             if missing:
                 leave(name, 'needs ' + ', '.join(missing))
-                continue
-            if tool['kind'] == 'installer' and os.path.lexists(dst):
-                said = run_version(dst) or ''
-                if tool['version'] in said:
-                    already(name, tool['version'])
-                else:
-                    leave(name, 'your existing %s is kept (it does not name %s); move it aside to install the '
-                                'pinned one' % (dst, tool['version']))
                 continue
             if dry:
                 print('would install %s %s from %s, sha256 %s' % (name, tool['version'], file['url'], file['sha256']),
