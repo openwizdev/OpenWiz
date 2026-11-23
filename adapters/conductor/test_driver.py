@@ -257,6 +257,20 @@ class Conductor(unittest.TestCase):
         self.assertIn('nothing was started', out['error'])
         self.assertEqual(len(self.calls()[0]), 2, 'a start without a key reached Conductor')
 
+    def test_a_start_the_helper_refuses_leaves_no_input_in_run_state(self):
+        for field in ('model', 'repository'):
+            with self.subTest(field):
+                pasted = self.key if field == 'model' else 'example/' + self.key
+                code, out = self.driver('start', dict(REQUEST, **{field: pasted}))
+                self.assertEqual(code, 1, out)
+                self.assertIn('the request holds the key', out['error'])
+                self.assertIn('nothing was started', out['error'])
+        state = self.env['OPENWIZ_CONDUCTOR_STATE']
+        for name in os.listdir(state) if os.path.isdir(state) else []:
+            with open(os.path.join(state, name), 'rb') as f:
+                self.assertNotIn(self.key.encode(), f.read(), 'run state %s holds the key' % name)
+        self.assertEqual(self.calls()[0], [], 'a start holding the key reached Conductor')
+
     def test_nothing_is_called_without_a_harness_a_state_folder_or_with_an_effort(self):
         blocker = os.path.join(self.folder, 'a-file')
         open(blocker, 'w').close()

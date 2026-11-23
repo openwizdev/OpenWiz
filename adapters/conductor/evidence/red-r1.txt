@@ -1,0 +1,17 @@
+# Red (review R1), at 8a0901b1 plus the new test: a start the helper refuses still leaves its input, key included, in run state.
+# Command: env -u OPENWIZ_GITHUB_APP_KEY env -i PATH=<33 safety stubs>:/usr/bin:/bin HOME=<temp> LANG=C.UTF-8 python3 -I adapters/conductor/test_driver.py Conductor.test_a_start_the_helper_refuses_leaves_no_input_in_run_state
+
+test_a_start_the_helper_refuses_leaves_no_input_in_run_state (__main__.Conductor.test_a_start_the_helper_refuses_leaves_no_input_in_run_state) ... FAIL
+
+======================================================================
+FAIL: test_a_start_the_helper_refuses_leaves_no_input_in_run_state (__main__.Conductor.test_a_start_the_helper_refuses_leaves_no_input_in_run_state)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/conductor/test_driver.py", line 271, in test_a_start_the_helper_refuses_leaves_no_input_in_run_state
+    self.assertNotIn(self.key.encode(), f.read(), 'run state %s holds the key' % name)
+AssertionError: b'syn-test-key-9030f446bd9441083fbd8b9d' unexpectedly found in b'{"request": {"repository": "example/site", "ticket": 7, "skill": "build-ticket", "harness": "claude", "model": "syn-test-key-9030f446bd9441083fbd8b9d"}, "name": "openwiz-run-<id>", "workspace": null, "session": null, "starting": false, "stopped": true, "archived": true}' : run state run-<id>.json holds the key
+
+----------------------------------------------------------------------
+Ran 1 test
+
+FAILED (failures=1)
