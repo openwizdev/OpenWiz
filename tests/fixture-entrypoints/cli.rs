@@ -1,7 +1,9 @@
-//! Test-only CLI: exact production dispatch, private verified fake bundle.
 mod fixture;
 #[path = "../../crates/cli/src/main.rs"]
-#[allow(dead_code)]
+#[allow(
+    dead_code,
+    reason = "this fixture has its own main and reuses only the CLI's dispatch"
+)]
 mod shared;
 
 fn main() -> std::process::ExitCode {

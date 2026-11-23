@@ -1,11 +1,4 @@
 #!/usr/bin/env python3
-"""Check each carried contract in `.wizskills/` equals ClosedWiz's own, byte for byte.
-
-Contract: contracts/wizskills.v1.md. The list is the contract's normative
-`carried_contracts`, never a directory walk; a missing copy fails. Exit 0 when
-every copy is identical, 1 naming each file that differs or is missing, 3 when
-the contract cannot be read.
-"""
 import argparse
 import json
 from pathlib import Path
@@ -13,6 +6,8 @@ import re
 import sys
 
 sys.dont_write_bytecode = True
+
+DESCRIPTION = """Check each carried contract in `.wizskills/` equals ClosedWiz's own, byte for byte."""
 DEST = '.wizskills'
 CONTRACT = 'contracts/wizskills.v1.md'
 
@@ -29,7 +24,6 @@ def carried(root):
 
 
 def read(path):
-    """A regular file's bytes, or None when missing, a link or not a file."""
     if path.is_symlink() or not path.is_file():
         return None
     return path.read_bytes()
@@ -49,7 +43,7 @@ def problems(root):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__.split('\n')[0])
+    parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument('--root', default=str(Path(__file__).resolve().parents[2]),
                         help='the ClosedWiz checkout (default: this one)')
     args = parser.parse_args(argv)

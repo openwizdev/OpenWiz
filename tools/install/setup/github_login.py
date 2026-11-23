@@ -1,5 +1,19 @@
 #!/usr/bin/env python3
-"""OpenWiz setup: GitHub browser sign-in and the explicit App skip (#633).
+import argparse
+import fcntl
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import time
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import store
+import setup
+
+DESCRIPTION = """OpenWiz setup: GitHub browser sign-in and the explicit App skip (#633).
 
   github_login.py status [--repository OWNER/NAME]
       Reads the signed-in GitHub account through gh and, for the selected
@@ -21,42 +35,23 @@ revocation or unknown identity never selects the personal login; only
 skip-app does. Output is JSON with fixed public codes and the public login
 only: never a token or a provider body. Python 3.9+, standard library only.
 """
-import argparse
-import fcntl
-import json
-import os
-from pathlib import Path
-import shutil
-import subprocess
-import sys
-import time
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import store  # noqa: E402
-import setup  # noqa: E402  (the same account and repository read-back)
 
 SCHEMA = 'openwiz.github-login.v1'
-SIGN_IN_TIMEOUT = 15 * 60  # the owner's browser approval, then gh's own exchange
-# GitHub's own browser flow through the GitHub CLI, for github.com over HTTPS.
+SIGN_IN_TIMEOUT = 15 * 60
 SIGN_IN = ('auth', 'login', '--hostname', 'github.com', '--web', '--git-protocol', 'https', '--skip-ssh-key')
-# gh prefers these over its saved login; a sign-in must never stand on one.
 TOKEN_VARIABLES = ('GH_TOKEN', 'GITHUB_TOKEN', 'GH_ENTERPRISE_TOKEN', 'GITHUB_ENTERPRISE_TOKEN')
 
 
-# R2: the pending browser sign-in, durable beyond this process. Its gh child
-# outlives an interrupted wrapper; until that child ends, no second one starts.
 PENDING = 'github-login-pending.json'
 
 
 def sign_in_running(pid):
-    """Whether PID is still our `gh auth login` child (not a reused pid or a
-    reaped zombie). None when the platform cannot say."""
     try:
         os.kill(pid, 0)
     except ProcessLookupError:
         return False
     except PermissionError:
-        return False  # another user's process: not our sign-in
+        return False
     proc = Path(f'/proc/{pid}/cmdline')
     if proc.parent.parent.is_dir() and Path('/proc/self').exists():
         try:
@@ -77,11 +72,6 @@ def sign_in_running(pid):
 
 
 def pending(saved):
-    """True while an earlier sign-in may still be waiting for the owner. A child
-    positively identified as our living `gh auth login` holds it whatever the
-    record's age (final check R2); only a record that proves nothing (unreadable,
-    saved before its child started, or a platform that cannot say) is bounded
-    by the sign-in's own time limit."""
     path = saved.dir / PENDING
     try:
         info = os.lstat(path)
@@ -95,14 +85,12 @@ def pending(saved):
     except (OSError, ValueError, KeyError, TypeError, store.Refused):
         return within_bound
     if pid is None:
-        return within_bound  # recorded before its child started
+        return within_bound
     running = sign_in_running(pid)
     return True if running else (within_bound if running is None else False)
 
 
 def mark_pending(saved, pid):
-    """Saves the pending sign-in (owner-only, replaced atomically) before and
-    after the child starts; None clears it."""
     path = saved.dir / PENDING
     if pid is False:
         path.unlink(missing_ok=True)
@@ -144,7 +132,7 @@ def sign_in(args):
     if failure is None:
         return result('login_reused', login, repository)
     if failure != 'identity_signed_out':
-        return result(failure, None)  # unknown or refused: never a blind browser sign-in
+        return result(failure, None)
     if not args.yes:
         return result('login_needed', None, effects=[
             "Open GitHub's own browser sign-in through the GitHub CLI (gh auth login --web).",
@@ -158,18 +146,15 @@ def sign_in(args):
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             return result('login_in_progress', None)
-        # R2: an earlier sign-in whose wrapper died may still await the owner.
         if pending(saved):
             return result('login_in_progress', None)
-        # A sign-in that finished while this one waited, or before a restart, is reused.
         failure, login = setup.account()
         if failure is None:
             mark_pending(saved, False)
             return result('login_reused', login, repository)
-        mark_pending(saved, None)  # saved before the child starts
+        mark_pending(saved, None)
         child = None
         try:
-            # gh shows its one-time code and browser prompt to the owner directly.
             child = subprocess.Popen([program, *SIGN_IN], stdin=sys.stdin, stdout=sys.stderr, stderr=sys.stderr)
             mark_pending(saved, child.pid)
             try:
@@ -181,8 +166,6 @@ def sign_in(args):
         except OSError:
             finished = None
         finally:
-            # Cleared only once the child has ended; a wrapper that dies first
-            # leaves the record for the next request.
             if child is None or child.poll() is not None:
                 mark_pending(saved, False)
         failure, login = setup.account()
@@ -219,11 +202,11 @@ def skip_app(args):
                       'the selected repository changed; preview it again')
         operation = saved.authorized(value, args.operation, 'connect_app', request, current)
         if operation['phase'] == 'applied':
-            return dict(operation)  # A retry applies nothing twice.
+            return dict(operation)
         store.require(operation['phase'] == 'proposed', 'that operation is not awaiting confirmation')
         if value.get('identity') != identity:
             value['identity'] = identity
-            value['revision'] += 1  # a new selection: earlier checks no longer count
+            value['revision'] += 1
         operation['phase'] = 'applied'
         operation['reason'] = 'Saved. The App stays missing (skipped); run the setup check to verify your login.'
         return dict(operation)
@@ -241,7 +224,7 @@ def status(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(description=DESCRIPTION, formatter_class=argparse.RawDescriptionHelpFormatter)
     commands = parser.add_subparsers(dest='command', required=True)
     for name in ('status', 'sign-in', 'skip-app'):
         command = commands.add_parser(name)

@@ -1,19 +1,3 @@
-//! Spec 2's B3 (ClosedWiz#119): the GitHub writes, and S2-3 for GitHub:
-//! only allowlisted writes.
-//!
-//! - **Here, the static check** of the writes module's part of the
-//!   allowlist: every form it allows is written out by hand below (each
-//!   write, then the read that confirms it, and a close's read before it:
-//!   only an issue is closed), the module and the whole allowlist allow
-//!   each, near misses are all refused, bad arguments can't be built, and
-//!   its source names no forbidden word.
-//! - **`b3_fake`, the recording fake `gh`:** each write makes exactly its
-//!   call and its read back, and nothing else; a write that fails is never
-//!   read back; a write is confirmed only when its read back shows it.
-//!
-//! **Fixtures only.** Every value is synthetic; no test proves live
-//! behaviour (that is B6, #122).
-
 use std::fs;
 use std::num::NonZeroU64;
 
@@ -22,21 +6,10 @@ use openwiz_adapter_github::writes::{self, Body, LABEL_MAX_LEN, Label, Write};
 use openwiz_core::fleet::model::Commit;
 use openwiz_core::messaging::MAX_TEXT_BYTES;
 
-#[path = "b3_fake.rs"]
-mod fake;
-
-/// The synthetic head of the merge form.
 const HEAD: &str = "0123456789abcdef0123456789abcdef01234567";
 
-/// The one GraphQL read: whether a pull request's base has a merge queue.
-/// A query, never a mutation; the repository is `gh`'s own placeholders.
 const QUEUE_QUERY: &str = "query=query($owner:String!,$repo:String!,$number:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$number){isMergeQueueEnabled}}}";
 
-/// Every form the writes module allows, written out by hand: each write,
-/// then the read that confirms it; a close first reads the number's URL,
-/// so that only an issue is closed (`gh issue close` also closes a pull
-/// request); a merge first reads whether the base has a merge queue, so
-/// that a merge is never queued (`gh pr merge` then turns on auto-merge).
 const ALLOWED: &[&[&str]] = &[
     &["issue", "comment", "7", "--body", "Synthetic"],
     &["issue", "view", "7", "--json", "comments"],
@@ -139,9 +112,6 @@ fn the_module_and_the_whole_allowlist_allow_each_form() {
     }
 }
 
-/// The same forms with other values: any issue or pull request number,
-/// any valid label, any valid text (a leading dash, a line break, quotes,
-/// a `$`, non-ASCII), byte for byte as one argument.
 fn each_form_takes_any_valid_value_as_one_argument() {
     let texts = [
         "-x",
@@ -209,7 +179,6 @@ fn each_form_takes_any_valid_value_as_one_argument() {
     }
 }
 
-/// Flags and words no form may carry, whatever the place.
 const EXTRA: &[&[&str]] = &[
     &["--delete-branch"],
     &["-d"],
@@ -255,7 +224,6 @@ const EXTRA: &[&[&str]] = &[
     &[""],
 ];
 
-/// Numbers that are not one canonical, positive whole number.
 const BAD_NUMBERS: &[&str] = &[
     "",
     "0",
@@ -275,7 +243,6 @@ const BAD_NUMBERS: &[&str] = &[
     "99999999999999999999",
 ];
 
-/// Commits that are not 40 lowercase hex digits.
 const BAD_COMMITS: &[&str] = &[
     "",
     "HEAD",
@@ -288,8 +255,6 @@ const BAD_COMMITS: &[&str] = &[
     "--delete-branch",
 ];
 
-/// Label names that could be read as a flag, several labels, or another
-/// label.
 const BAD_LABELS: &[&str] = &[
     "",
     "-held",
@@ -313,7 +278,6 @@ const BAD_LABELS: &[&str] = &[
     "held.1",
 ];
 
-/// Texts send's rules refuse.
 fn bad_bodies() -> Vec<String> {
     vec![
         String::new(),
@@ -324,23 +288,19 @@ fn bad_bodies() -> Vec<String> {
     ]
 }
 
-/// `form` with the argument at `at` replaced by `with`.
 fn replaced(form: &[&str], at: usize, with: &str) -> Vec<String> {
     let mut argv: Vec<String> = form.iter().map(|w| (*w).to_owned()).collect();
     argv[at] = with.to_owned();
     argv
 }
 
-/// Every near miss of the allowed forms, each with why it is one.
 fn near_misses() -> Vec<(String, Vec<String>)> {
     let mut misses = Vec::new();
     for form in ALLOWED {
         let form_owned: Vec<String> = form.iter().map(|w| (*w).to_owned()).collect();
-        // Too short.
         for len in 0..form.len() {
             misses.push((format!("{form:?} cut to {len}"), form_owned[..len].to_vec()));
         }
-        // Anything extra, at every place.
         for extra in EXTRA {
             for at in 0..=form.len() {
                 let mut argv = form_owned.clone();
@@ -350,7 +310,6 @@ fn near_misses() -> Vec<(String, Vec<String>)> {
                 misses.push((format!("{form:?} with {extra:?} at {at}"), argv));
             }
         }
-        // Two neighbours swapped (never the same word twice).
         for at in 0..form.len() - 1 {
             if form[at] != form[at + 1] {
                 let mut argv = form_owned.clone();
@@ -358,7 +317,6 @@ fn near_misses() -> Vec<(String, Vec<String>)> {
                 misses.push((format!("{form:?} with {at} swapped"), argv));
             }
         }
-        // Each word with another case, or a space around it.
         for (at, word) in form.iter().enumerate() {
             for other in [
                 word.to_uppercase(),
@@ -374,7 +332,6 @@ fn near_misses() -> Vec<(String, Vec<String>)> {
                 }
             }
         }
-        // Bad values where each value goes.
         let number_at = form
             .iter()
             .position(|w| w.starts_with("number="))
@@ -415,7 +372,6 @@ fn near_misses() -> Vec<(String, Vec<String>)> {
             }
         }
     }
-    // Other writes and other reads, near the allowed ones.
     let head = HEAD;
     for other in [
         &["issue", "delete", "7"][..],
@@ -790,8 +746,6 @@ fn near_misses() -> Vec<(String, Vec<String>)> {
     misses
 }
 
-/// Whether `argv` asks GitHub to change something: a subcommand no read
-/// module can allow.
 fn is_a_write(argv: &[String]) -> bool {
     let read = |sub: &str| matches!(sub, "view" | "list" | "checks" | "status" | "diff");
     match argv {
@@ -801,7 +755,6 @@ fn is_a_write(argv: &[String]) -> bool {
     }
 }
 
-/// The near misses `allows` lets through, and how many there are.
 fn near_misses_allowed_by(allows: fn(&[&str]) -> bool, whole: bool) -> (Vec<String>, usize) {
     let allowed = owned(ALLOWED);
     let mut wrongly = Vec::new();
@@ -814,8 +767,6 @@ fn near_misses_allowed_by(allows: fn(&[&str]) -> bool, whole: bool) -> (Vec<Stri
         if allows(&words) {
             wrongly.push(format!("the module allows {why}: {argv:?}"));
         }
-        // No module of the allowlist may allow a write this one doesn't:
-        // the others only read.
         if whole && is_a_write(argv) && allowlist::allowed(&words) {
             wrongly.push(format!("the allowlist allows {why}: {argv:?}"));
         }
@@ -837,7 +788,6 @@ fn the_module_refuses_every_near_miss() {
     );
 }
 
-/// The near-miss check catches each kind of loose allowlist, planted.
 fn the_near_miss_check_catches_a_planted_loose_allowlist() {
     fn exact(argv: &[&str]) -> bool {
         ALLOWED.contains(&argv)
@@ -880,7 +830,6 @@ fn the_near_miss_check_catches_a_planted_loose_allowlist() {
             form.len() == argv.len() && form.iter().zip(argv).all(|(f, a)| *f == HEAD || f == a)
         })
     }
-    // Exactly the forms, and nothing else: the check finds nothing.
     assert_eq!(near_misses_allowed_by(exact, false).0, Vec::<String>::new());
     for (why, loose) in [
         ("anything after a form", any_tail as fn(&[&str]) -> bool),
@@ -929,8 +878,6 @@ fn bad_arguments_cannot_be_built_so_nothing_can_run() {
     }
 }
 
-/// Words `writes.rs` must never pass to `gh`, as they appear in Rust: a
-/// quoted argument.
 const FORBIDDEN: &[&str] = &[
     "\"--delete-branch\"",
     "\"-d\"",
@@ -982,15 +929,12 @@ const FORBIDDEN: &[&str] = &[
     "--force",
 ];
 
-/// What the source rule finds wrong in `text`.
 fn source_problems(text: &str) -> Vec<String> {
     let mut problems: Vec<String> = FORBIDDEN
         .iter()
         .filter(|word| text.contains(*word))
         .map(|word| format!("names {word}"))
         .collect();
-    // One way to build a call: an allowlisted invocation, run by the
-    // supplied executor, with no direct process-runner bypass.
     for (needle, times) in [
         ("Invocation::new(", 1),
         ("executor.run(", 1),
@@ -1001,7 +945,6 @@ fn source_problems(text: &str) -> Vec<String> {
             problems.push(format!("names {needle:?} {n} times, not {times}"));
         }
     }
-    // `gh api graphql` only in the one merge-queue read, each word once.
     for word in ["\"api\"", "\"graphql\""] {
         let n = text.matches(word).count();
         if n != 1 {

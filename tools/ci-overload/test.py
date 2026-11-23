@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""CS5 offline proofs through the observer's command boundary."""
 import json
 import fcntl
 import contextlib
@@ -48,7 +47,6 @@ class Alarm(unittest.TestCase):
         return answer
 
     def test_queue_boundaries(self):
-        # Running age must not count as waiting. Only required queued jobs do.
         for wait, level in ((299, 'healthy'), (300, 'alarm'), (301, 'alarm'),
                             (899, 'alarm'), (900, 'escalate'), (901, 'escalate')):
             with self.subTest(wait=wait):
@@ -143,8 +141,6 @@ class Alarm(unittest.TestCase):
                 self.assertEqual(result.stderr, '')
 
     def test_decoder_recursion_preserves_essential_work_and_corrupt_evidence(self):
-        # R2: deeply nested JSON bypasses the byte limit and used to
-        # escape both read boundaries. Existing malformed cases do not recurse.
         nested = '[' * 100000 + '0' + ']' * 100000
         source = self.folder / 'raw.json'
         for boundary in ('input', 'state', 'pending'):
@@ -194,8 +190,6 @@ class Alarm(unittest.TestCase):
         self.assertEqual(self.state.stat().st_mode & 0o777, 0o600)
 
     def test_contended_triggers_survive_healthy_reads_and_upgrade_existing_pause(self):
-        # R1: refusal alone loses the trigger. Later independent healthy calls
-        # must retain both the first pause and a contended severity upgrade.
         with Path(str(self.state) + '.lock').open('a') as lock:
             fcntl.flock(lock, fcntl.LOCK_EX)
             value = healthy()
@@ -225,8 +219,6 @@ class Alarm(unittest.TestCase):
             self.assertEqual(result['pause']['evidence_sha256'], exhausted['evidence_sha256'])
 
     def test_unwritable_or_corrupt_journal_refuses_but_preserves_essential_work(self):
-        # R1: inability to persist or consume a pending trigger must never
-        # silently admit; no existing case exercises this new durable boundary.
         pending = Path(str(self.state) + '.pending')
         pending.write_text('cannot publish here')
         exhausted = healthy()
@@ -249,8 +241,6 @@ class Alarm(unittest.TestCase):
             self.assertEqual(corrupt.read_text(), '{"paused":true}')
 
     def test_recovery_keeps_journal_until_visible_pause_directory_sync_succeeds(self):
-        # R4: a failed state-rename sync leaves a visible pause. Healthy
-        # recovery must not consume its durable journal without that barrier.
         spec = importlib.util.spec_from_file_location('overload_r4', HERE / 'alarm.py')
         alarm = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(alarm)
@@ -377,8 +367,6 @@ class Fleet(unittest.TestCase):
 
 
 class Scheduled(unittest.TestCase):
-    # R3: a scheduled run must refuse before refresh/poll effects. The fleet
-    # action proof alone missed the loop's unconditional fetch/checkout path.
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
@@ -473,8 +461,6 @@ class Scheduled(unittest.TestCase):
     def test_bundle_survives_install_removal_and_rechecks_before_poll(self):
         seed = self.root / 'retained.json'
         self.pause(seed)
-        # The checkout is present only to let the recording git finish. A
-        # retained pause arriving during checkout must stop the later API read.
         for mode in ('source', 'bundle'):
             with self.subTest(mode=mode):
                 folder, env = self.prepare(mode, 'pause-during-refresh')

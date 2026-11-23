@@ -1,8 +1,3 @@
-//! N4: offered combinations only. A harness, model or effort outside the
-//! same-run catalogue is refused with zero `spawn` calls; an off-catalogue
-//! Claude Code model is refused; efforts are the catalogue's and the CLI's
-//! intersection; nothing is defaulted or substituted.
-
 use openwiz_adapter_cloudroom::new_thread::{CLI_REASONING_LEVELS, parse_catalogue};
 use openwiz_core::new_thread::operation::NewThreadError;
 use openwiz_core::new_thread::options::{OptionsState, UnavailableReason, cloud_options};
@@ -102,7 +97,6 @@ fn only_codex_and_claude_code_are_offered_with_the_intersection_of_efforts() {
 
 fn each_model_uses_its_own_effort_levels() {
     let mut doc = fixture_json("cloud-status.json");
-    // Synthetic assumption: distinct models advertise different effort sets.
     doc["harnesses"][0]["models"] = serde_json::json!([
         {"model": "syn-model-a", "reasoning_levels": ["high", "minimal"]},
         {"model": "syn-model-b", "reasoning_levels": ["low", "ultra"]}
@@ -287,8 +281,6 @@ fn conflicting_catalogue_rows_are_unavailable_in_both_orders() {
     use openwiz_cli::models::render_options;
     use serde_json::json;
 
-    // synthetic_assumptions: duplicate catalogue rows and conflicting capabilities
-    // have not been observed live. Exercise them before filtering CLI efforts.
     let mut doc = fixture_json("cloud-status.json");
     doc["harnesses"][0]["models"] = json!([{"model": "syn-model", "reasoning_levels": ["low"]}]);
     let row = doc["harnesses"][0].clone();
@@ -325,7 +317,6 @@ fn conflicting_catalogue_rows_are_unavailable_in_both_orders() {
             } else if rows.len() == 1 {
                 rows[0]["models"].as_array_mut().unwrap().reverse();
             }
-            // Keep the valid Claude harness as an independent control.
             rows.push(unaffected.clone());
             doc["harnesses"] = json!(rows);
             let bytes = serde_json::to_vec(&doc).unwrap();
@@ -390,7 +381,6 @@ fn conflicting_provider_mappings_are_unavailable_in_both_orders() {
 fn identical_catalogue_rows_collapse_and_every_shown_choice_is_accepted() {
     let unique = options();
     let mut doc = fixture_json("cloud-status.json");
-    // synthetic_assumptions: identical repeated model and harness rows.
     for row in doc["harnesses"].as_array_mut().unwrap() {
         if let Some(models) = row["models"].as_array_mut() {
             models.push(models[0].clone());

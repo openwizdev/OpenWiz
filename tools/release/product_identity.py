@@ -105,10 +105,6 @@ def install_locked(root, source, scratch):
 
 
 def locked_skills(root, source, tree=None, install=None):
-    """When `source` tracks `skills` as the WizSkills link: the verified
-    install's {skills/<path>: blob oid}, after checking the install (by
-    default `root`'s .wizskills) is exactly the lock's release tree. None for
-    a source that tracks its skills."""
     tree = tree if tree is not None else source_tree(root, source)
     if tree.get('skills', ('', '', ''))[:2] != LINK:
         return None
@@ -129,7 +125,7 @@ def locked_skills(root, source, tree=None, install=None):
         try:
             ws.verify_install(dest, lock, Path(scratch))
             listed = ws.out(['--git-dir', str(dest / '.git'), 'ls-tree', '-r', '-z', '--full-tree',
-                             lock['tree'], '--', 'skills'], ws.git_env(), 'WizSkills install unreadable')
+                             lock['tree'], '--', 'skills', 'contracts'], ws.git_env(), 'WizSkills install unreadable')
         except ws.Stop:
             raise Refused('WizSkills install is not the locked release')
     skills = {}
@@ -139,7 +135,7 @@ def locked_skills(root, source, tree=None, install=None):
             mode, kind, oid = meta.split(' ')
             require(kind == 'blob' and mode in REGULAR, 'WizSkills skill is not a regular file')
             skills[path] = oid
-    require(skills, 'WizSkills release has no skills')
+    require(any(skill(path) for path in skills), 'WizSkills release has no skills')
     return skills
 
 
@@ -150,13 +146,14 @@ def verify_runtime(root, source, runtime, install=None):
     tree = source_tree(root, source)
     installed = locked_skills(root, source, tree, install)
     if installed is not None:
-        require(set(installed) == {p for p in runtime if skill(p)},
+        released = lambda p: skill(p) or p.startswith('contracts/')
+        require(set(installed) == {p for p in runtime if released(p)},
                 'packaged skills differ from the locked WizSkills release')
         for path in installed:
             data = runtime[path]
             require(hashlib.sha1(b'blob %d\0' % len(data) + data).hexdigest() == installed[path],
                     'packaged skill differs from the locked WizSkills release')
-        runtime = {p: d for p, d in runtime.items() if not skill(p)}
+        runtime = {p: d for p, d in runtime.items() if not released(p)}
     else:
         require({p for p in tree if skill(p)} == {p for p in runtime if skill(p)},
                 'tracked skills differ from the requested source')
@@ -205,11 +202,18 @@ def payload(rows):
     return sha(canonical(sorted(rows, key=lambda row: row['path'])))
 
 
+ELF_MACHINES = {'aarch64-unknown-linux-gnu': 183, 'x86_64-unknown-linux-gnu': 62}
+MACHO_CPUS = {'aarch64-apple-darwin': 0x100000c, 'x86_64-apple-darwin': 0x1000007}
+
+
 def architecture(data, target):
-    if target.endswith('linux-gnu'):
-        return data[:6] == b'\x7fELF\x02\x01' and len(data) >= 20 and struct.unpack_from('<H', data, 18)[0] == 62
-    cpu = 0x100000c if target.startswith('aarch64') else 0x1000007
-    return data[:4] == b'\xcf\xfa\xed\xfe' and len(data) >= 8 and struct.unpack_from('<I', data, 4)[0] == cpu
+    if target in ELF_MACHINES:
+        return (data[:6] == b'\x7fELF\x02\x01' and len(data) >= 20
+                and struct.unpack_from('<H', data, 18)[0] == ELF_MACHINES[target])
+    if target in MACHO_CPUS:
+        return (data[:4] == b'\xcf\xfa\xed\xfe' and len(data) >= 8
+                and struct.unpack_from('<I', data, 4)[0] == MACHO_CPUS[target])
+    return False
 
 
 def segments(data):

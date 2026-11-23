@@ -1,0 +1,18 @@
+# #2145 R1 red: python3 -m unittest tools/release/test_candidate.py -k strangers, at f63760ea plus the retry case
+# After a passed install, a same-target retry that gets HTTP 503 overwrites the passed install's evidence file.
+F
+======================================================================
+FAIL: test_install_check_takes_the_strangers_latest_route_and_refuses_a_prerelease (tools.release.test_candidate.Candidate.test_install_check_takes_the_strangers_latest_route_and_refuses_a_prerelease)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/release/test_candidate.py", line 607, in test_install_check_takes_the_strangers_latest_route_and_refuses_a_prerelease
+    self.assertEqual(sha(saved.read_bytes()), installed['evidence']['sha256'])
+AssertionError: '93731ee1d8895c6c84744c4938061b5be26a510a414c97aaed57b981b7279739' != '75b59d1fd703fa59fc1be6b7d94af7e8c633cc27ac7dffc1cbb21a4d38db0d5e'
+- 93731ee1d8895c6c84744c4938061b5be26a510a414c97aaed57b981b7279739
++ 75b59d1fd703fa59fc1be6b7d94af7e8c633cc27ac7dffc1cbb21a4d38db0d5e
+
+
+----------------------------------------------------------------------
+Ran 1 test in 8.603s
+
+FAILED (failures=1)

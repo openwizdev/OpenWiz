@@ -1,15 +1,3 @@
-//! #793 (LC5): `openwiz loop apply`, run as the real fixture binary against
-//! the fake `room-cli`, on the pinned WizLoops fixtures and synthetic lists
-//! built from the fake's `loops/` scenario. Expected values are literals
-//! from `contracts/loop-cli.v1.md` and `contracts/wizloops-cloudroom.v1.md`,
-//! never computed by the code under test. These read `contracts/` and
-//! `tests/fake-room-cli/`, so they live here rather than in the CLI crate.
-//!
-//! No test can reach a real `room-cli`: `PATH` holds only the sandbox's
-//! `bin/`, whose `room-cli` is a recorder in front of the fake,
-//! and every test checks the exact calls the fake recorded. The recorder
-//! only switches the fake to a second synthetic scenario once a write has
-//! been recorded, so a read-back can see what the write changed.
 use serde_json::{Value, json};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -22,9 +10,14 @@ const LIST: [&str; 3] = ["loop", "list", "--json"];
 const WEBHOOK_CREATE: &str = "loop|create|--name|Wake on a delivery [wizloop:webhook-new]|--prompt-file|@prompt|--webhook|--new-thread|--priority|4|--secrets|none";
 const WEBHOOK_PROMPT: &str = "Read the requests that arrived and route each one to its owner.\n";
 
-/// A sandbox whose `room-cli` is the fake, behind a recorder that answers
-/// from `before` until a loop write is recorded and from `after` once one is.
-struct Room(PathBuf, #[allow(dead_code)] Sandbox);
+struct Room(
+    PathBuf,
+    #[allow(
+        dead_code,
+        reason = "held only so its Drop removes the sandbox when the Room goes"
+    )]
+    Sandbox,
+);
 
 impl Room {
     fn new(before: Vec<Value>, after: Vec<Value>) -> Self {
@@ -82,8 +75,6 @@ exec '{b}/fake-room-cli' "$@"
         Self(root, sandbox)
     }
 
-    /// `loop list` answers `before`, then `after` once a write is recorded;
-    /// every write is accepted.
     fn listing(before: &Value, after: &Value) -> Self {
         Self::new(vec![list(before), accept()], vec![list(after), accept()])
     }
@@ -100,7 +91,6 @@ exec '{b}/fake-room-cli' "$@"
     }
 
     fn run_env(&self, args: &[&str], env: &[(&str, &str)]) -> Output {
-        // Set only the child's umask: parallel tests keep their own process state.
         Command::new("/bin/sh")
             .args(["-c", "umask 000; exec \"$@\"", "openwiz-test"])
             .arg(fixture_cli())
@@ -125,8 +115,6 @@ exec '{b}/fake-room-cli' "$@"
         self.run_env(&all, &[])
     }
 
-    /// Runs with `--json`; checks one document against its schema and the
-    /// process's exit code.
     fn json(&self, args: &[&str]) -> (i32, Value) {
         self.json_env(args, &[])
     }
@@ -143,7 +131,6 @@ exec '{b}/fake-room-cli' "$@"
         (code, document(&output, code))
     }
 
-    /// Every `room-cli` call made, in order.
     fn calls(&self) -> Vec<Value> {
         fs::read_to_string(self.0.join("bin/invocations.log"))
             .unwrap_or_default()
@@ -152,7 +139,6 @@ exec '{b}/fake-room-cli' "$@"
             .collect()
     }
 
-    /// Every loop write the fake recorded: its arguments and named files.
     fn writes(&self) -> Vec<Value> {
         fs::read_to_string(self.0.join("bin/loop-writes.log"))
             .unwrap_or_default()
@@ -161,8 +147,6 @@ exec '{b}/fake-room-cli' "$@"
             .collect()
     }
 
-    /// One literal command and its bytes; only temporary operands come from
-    /// the recording. Accepted writes read back once; refused writes do not.
     fn assert_write(&self, command: &str, files: Value, read_back: bool) {
         let writes = self.writes();
         assert_eq!(writes.len(), 1, "one write, never retried: {writes:#?}");
@@ -193,7 +177,6 @@ exec '{b}/fake-room-cli' "$@"
         self.assert_no_temporary_files();
     }
 
-    /// Nothing is left in apply's temporary folder.
     fn assert_no_temporary_files(&self) {
         let left: Vec<PathBuf> = fs::read_dir(self.0.join("tmp"))
             .unwrap()
@@ -239,7 +222,6 @@ fn fixture(name: &str) -> String {
         .to_owned()
 }
 
-/// The fake's synthetic account (`tests/fake-room-cli/loops/list.json`).
 fn account() -> Value {
     serde_json::from_str(
         &fs::read_to_string(Path::new(ROOT).join("tests/fake-room-cli/loops/list.json")).unwrap(),
@@ -247,7 +229,6 @@ fn account() -> Value {
     .unwrap()
 }
 
-/// The account with `id`'s loop changed by `change`.
 fn changed(id: &str, change: impl Fn(&mut Value)) -> Value {
     let mut list = account();
     for item in list["automations"].as_array_mut().unwrap() {
@@ -258,7 +239,6 @@ fn changed(id: &str, change: impl Fn(&mut Value)) -> Value {
     list
 }
 
-/// The account with `item` added.
 fn with(item: Value) -> Value {
     let mut list = account();
     list["automations"].as_array_mut().unwrap().push(item);
@@ -277,9 +257,6 @@ fn argv(words: &str) -> Value {
     json!(words.split('|').collect::<Vec<_>>())
 }
 
-/// The account's own `syn-triage` loop as its file, by hand from
-/// `loops/list.json` and the adapter's "`room-cli loop list` to a file",
-/// with `priority` as given.
 fn triage(room: &Room, priority: u8) -> String {
     room.write(
         "loops/syn-triage/check",
@@ -291,11 +268,6 @@ fn triage(room: &Room, priority: u8) -> String {
     )
 }
 
-// catches (C4): apply running anything but its own plan's one command for
-// that id (another file's command, a second write, a retry, a `loop show`),
-// a command that differs from what plan printed, no read-back after the
-// write, or a read-back that is not one `loop list` compared as plan
-// compares.
 #[test]
 fn apply_runs_only_its_plans_command_then_reads_back() {
     let room = Room::listing(
@@ -303,14 +275,12 @@ fn apply_runs_only_its_plans_command_then_reads_back() {
         &changed("loop_syn_1", |l| l["priority"] = json!(3)),
     );
     let file = triage(&room, 3);
-    // Another file beside it, which apply must leave alone.
     room.write(
         "loops/syn-nightly.md",
         "---\nid: \"syn-nightly\"\nname: \"Synthetic nightly note\"\ntrigger: {\"cron\": \"0 5 * * *\", \"timezone\": \"UTC\"}\nthread: \"new\"\nsecrets: \"all\"\npriority: 1\n---\nSynthetic: post a short nightly note.",
     );
     let update = argv("loop|update|loop_syn_1|--priority|3");
 
-    // The plan apply runs: printed first, by plan itself.
     let planned = room.run_env(
         &["loop", "plan", "loops", "--project", PROJECT, "--json"],
         &[],
@@ -339,7 +309,6 @@ fn apply_runs_only_its_plans_command_then_reads_back() {
             "outcome": "updated", "read_back": {"differences": []}, "refusals": [],
         })
     );
-    // Plan's one list, then apply's: one list, its one update, one list.
     assert_eq!(
         room.calls(),
         vec![json!(LIST), json!(LIST), update.clone(), json!(LIST)]
@@ -348,9 +317,6 @@ fn apply_runs_only_its_plans_command_then_reads_back() {
     room.assert_no_temporary_files();
 }
 
-// catches (C4): a create whose prompt or script files are not the plan's
-// text byte for byte, are left behind or are not in a private temporary
-// folder; or a created loop's id not read back from `loop list`.
 #[test]
 fn apply_creates_with_the_plans_files_and_removes_them() {
     let script = "#!/bin/sh\n# wizloop: params from the loop file, as data\nexport WIZLOOP_PARAM_REPO='example-org/example-repo'\n# wizloop: the check\n# Prints one line per due item in $WIZLOOP_PARAM_REPO; nothing when none is due.\nif [ -f due.txt ]; then cat due.txt; fi\nexit 0\n";
@@ -382,7 +348,6 @@ fn apply_creates_with_the_plans_files_and_removes_them() {
         json!({"--prompt-file": prompt, "--script-file": script}),
         true,
     );
-    // Observed by the recorder while both files still exist, under umask 000.
     let modes = fs::read_to_string(room.dir().join("bin/file-modes.log")).unwrap();
     let modes: Vec<_> = modes.lines().collect();
     assert_eq!(modes.len(), 6, "{modes:?}");
@@ -395,9 +360,6 @@ fn apply_creates_with_the_plans_files_and_removes_them() {
     }
 }
 
-// catches: a webhook address that is lost, or written anywhere but the one
-// result (a file, the plan, a log), contrary to the adapter's "A webhook
-// address is shown once".
 #[test]
 fn a_created_webhooks_address_reaches_only_the_caller_once() {
     let address = "https://example.invalid/synthetic/hook";
@@ -414,7 +376,6 @@ fn a_created_webhooks_address_reaches_only_the_caller_once() {
         (&doc["outcome"], &doc["loop"], &doc["webhook_address"]),
         (&json!("created"), &json!("loop_syn_7"), &json!(address))
     );
-    // Once in the result, and in no file apply could have written.
     fn walk(dir: &Path, address: &str) {
         for entry in fs::read_dir(dir).unwrap() {
             let path = entry.unwrap().path();
@@ -436,7 +397,6 @@ fn a_created_webhooks_address_reaches_only_the_caller_once() {
         true,
     );
     walk(room.dir(), address);
-    // The text run prints it once, escaped like every other value.
     let room = Room::new(answers, vec![list(&with(created))]);
     let output = room.apply(&["webhook-new", "--from", &file]);
     assert_eq!(output.status.code(), Some(0));
@@ -449,11 +409,8 @@ fn a_created_webhooks_address_reaches_only_the_caller_once() {
     );
 }
 
-// catches (C4, an unclear outcome): a read-back that differs reported as
-// success, or a write retried to make it match.
 #[test]
 fn a_differing_read_back_is_reported_and_never_retried() {
-    // Cloudroom accepts the update, and `loop list` still shows priority 2.
     let room = Room::listing(&account(), &account());
     let file = triage(&room, 3);
     let (code, doc) = room.json(&["syn-triage", "--from", &file]);
@@ -466,25 +423,14 @@ fn a_differing_read_back_is_reported_and_never_retried() {
     room.assert_write("loop|update|loop_syn_1|--priority|3", json!({}), true);
 }
 
-// catches (C4, an unclear outcome): a write that times out, ends without an
-// exit code, or is followed by a failed read-back being reported as done,
-// failed or refused, or retried; and a hung write that is never stopped.
 #[test]
 fn an_unclear_outcome_is_unknown_and_never_retried() {
     let update = argv("loop|update|loop_syn_1|--priority|3");
-    // The first read answers in 600 ms, as a loaded CI runner's did (#1239):
-    // slow reads must not change any case's outcome.
     let slow_list = || {
         let mut answer = list(&account());
         answer["delay_ms"] = json!(600);
         answer
     };
-    // Only the hung write needs a lower timeout, to be stopped soon. It is
-    // the whole process's timeout, so the first read shares it: it is 3 s,
-    // not 500 ms, for a loaded runner's slow read (#1239). The other cases'
-    // calls end at once and keep the ordinary timeout.
-    // (case, read timeout in ms, answers before a write, answers after one,
-    // the calls made)
     let cases = [
         (
             "the write hangs",
@@ -537,7 +483,6 @@ fn an_unclear_outcome_is_unknown_and_never_retried() {
             "{case}"
         );
         room.assert_no_temporary_files();
-        // A hung write was stopped and reaped.
         if let Ok(pid) = fs::read_to_string(room.dir().join("bin/hang.pid")) {
             assert!(
                 !cfg!(target_os = "linux") || !Path::new("/proc").join(pid.trim()).exists(),
@@ -547,9 +492,6 @@ fn an_unclear_outcome_is_unknown_and_never_retried() {
     }
 }
 
-// catches: a command Cloudroom refused being reported as done or unknown,
-// its message changed or withheld, or apply going on to read back or run
-// anything more.
 #[test]
 fn a_command_cloudroom_refuses_is_failed_with_its_message_unchanged() {
     let message = "Error: HTTP 409: Synthetic refusal, the loop changed (try later)";
@@ -574,13 +516,9 @@ fn a_command_cloudroom_refuses_is_failed_with_its_message_unchanged() {
     room.assert_write("loop|update|loop_syn_1|--priority|3", json!({}), false);
 }
 
-// catches: apply writing (or reading) for a file it should refuse: one
-// whose id is not the one named, one the adapter refuses, or one with no
-// change to make.
 #[test]
 fn apply_writes_nothing_it_should_not() {
     let room = Room::listing(&account(), &account());
-    // The file's id is not the one asked for: nothing is read at all.
     let file = triage(&room, 3);
     let (code, doc) = room.json(&["syn-nightly", "--from", &file]);
     assert_eq!(code, 5, "{doc:#}");
@@ -604,7 +542,6 @@ fn apply_writes_nothing_it_should_not() {
     );
     assert_eq!(room.calls(), Vec::<Value>::new());
 
-    // The adapter refuses it (Cloudroom cannot change a loop's thread).
     let file = room.write(
         "loops/syn-nightly.md",
         "---\nid: \"syn-nightly\"\nname: \"Synthetic nightly note\"\ntrigger: {\"cron\": \"0 5 * * *\", \"timezone\": \"America/Los_Angeles\"}\nthread: \"same\"\nsecrets: \"all\"\npriority: 3\n---\nSynthetic: post a short nightly note.",
@@ -621,7 +558,6 @@ fn apply_writes_nothing_it_should_not() {
     );
     assert_eq!(room.calls(), vec![json!(LIST)]);
 
-    // Nothing differs: unchanged, from `./<id>.md` by default.
     room.write(
         "syn-nightly.md",
         "---\nid: \"syn-nightly\"\nname: \"Synthetic nightly note\"\ntrigger: {\"cron\": \"0 5 * * *\", \"timezone\": \"America/Los_Angeles\"}\nthread: \"new\"\nsecrets: \"all\"\npriority: 3\n---\nSynthetic: post a short nightly note.",
@@ -641,8 +577,6 @@ fn apply_writes_nothing_it_should_not() {
     assert_eq!(room.writes(), Vec::<Value>::new());
 }
 
-// catches: a failed read before any write (the file, or `loop list`)
-// reported as a result, or followed by a write.
 #[test]
 fn a_failed_read_before_any_write_exits_1_and_writes_nothing() {
     let room = Room::new(
@@ -664,8 +598,6 @@ fn a_failed_read_before_any_write_exits_1_and_writes_nothing() {
     assert_eq!(room.writes(), Vec::<Value>::new());
 }
 
-// catches: an `--adopt` binding that is ignored, names another id, or is
-// passed to the read-back, so an adopted loop never reads back as its file.
 #[test]
 fn apply_adopts_an_unmarked_loop_by_its_binding() {
     let room = Room::listing(
@@ -679,7 +611,6 @@ fn apply_adopts_an_unmarked_loop_by_its_binding() {
         "loops/synthetic-hourly-kick.md",
         "---\nid: \"synthetic-hourly-kick\"\nname: \"Synthetic hourly kick\"\ntrigger: {\"cron\": \"12 * * * *\", \"timezone\": \"UTC\"}\ncheck: {\"run\": \"synthetic-hourly-kick/check\", \"timeout\": 60}\nthread: \"new\"\nsecrets: []\npriority: 3\n---\nSynthetic: nothing to do.",
     );
-    // A binding for another id is a usage error, and nothing is read.
     let (code, doc) = room.json(&[
         "synthetic-hourly-kick",
         "--from",
@@ -713,17 +644,9 @@ fn apply_adopts_an_unmarked_loop_by_its_binding() {
     assert_eq!(room.writes(), vec![json!({"argv": rename, "files": {}})]);
 }
 
-// catches (revision 3, red first with the round-trip fixture): apply
-// silently dropping a live setting the adapter does not map. `loop update`
-// sends only the mapped flags, and nothing shows whether Cloudroom keeps
-// the rest (an agent rotation, say, which one `--provider` ends), so a loop
-// carrying such a key is refused before any write, never written.
 #[cfg(target_os = "linux")]
 #[test]
 fn apply_refuses_a_loop_with_an_unmapped_setting_and_writes_nothing() {
-    // The round-trip fixture: the synthetic account plus one marked loop
-    // carrying a key the adapter does not map (as `loop_plan.rs`'s
-    // `export_then_plan_shows_no_difference` builds it).
     let mut budget = account()["automations"][2].clone();
     budget["id"] = json!("loop_syn_8");
     budget["name"] = json!("Synthetic budget [wizloop:syn-budget]");
@@ -749,12 +672,10 @@ fn apply_refuses_a_loop_with_an_unmapped_setting_and_writes_nothing() {
     let exported = fs::read_to_string(&file).unwrap();
     let file = file.to_str().unwrap();
 
-    // Exactly as exported: nothing to write, so nothing is dropped.
     let (code, doc) = room.json(&["syn-budget", "--from", file]);
     assert_eq!(code, 0, "{doc:#}");
     assert_eq!(doc["outcome"], "unchanged");
 
-    // A changed priority would need a write: refused, nothing written.
     fs::write(file, exported.replace("priority: 3", "priority: 1")).unwrap();
     let (code, doc) = room.json(&["syn-budget", "--from", file]);
     assert_eq!(code, 5, "{doc:#}");
@@ -788,9 +709,6 @@ fn apply_refuses_a_loop_with_an_unmapped_setting_and_writes_nothing() {
     );
 }
 
-// catches: a text run that prints room-cli's message, a Cloudroom id or a
-// path with its terminal controls (so they can clear the screen or set the
-// clipboard), or that does not show the exact command before it runs.
 #[test]
 fn text_output_previews_the_command_and_never_prints_a_terminal_control() {
     let message = "Error: HTTP 409: Synthetic\u{1b}]52;c;eA==\u{7} refusal";
@@ -826,11 +744,6 @@ fn text_output_previews_the_command_and_never_prints_a_terminal_control() {
     room.assert_write("loop|update|loop_syn_1|--priority|3", json!({}), false);
 }
 
-// catches: inside a thread a loop started, Cloudroom's refusal of the
-// create (the adapter's "Loops cannot be created from a thread a loop
-// started") reported as anything but `failed` with its message unchanged,
-// the loop reported as created, or apply reading back, retrying or leaving
-// its files. The refusal's real wording is unobserved; this one is synthetic.
 #[test]
 fn a_create_cloudroom_refuses_in_a_loop_started_thread_is_not_created() {
     let message = "Error: Synthetic: a thread a loop started cannot create loops";
@@ -870,18 +783,12 @@ fn a_create_cloudroom_refuses_in_a_loop_started_thread_is_not_created() {
     );
 }
 
-// catches (review R3): an `in` file's created loop read back against its
-// own run time, so a loop Cloudroom scheduled at the wrong time reads as
-// created with no difference; and a run time apply cannot check reported as
-// anything but unknown. The window's edges are the adapter's unit test
-// `read_back_checks_an_in_files_run_time_against_the_write`.
 #[test]
 fn an_in_files_run_time_is_checked_against_its_delay() {
     let at = |run_at: Value| json!({"id": "loop_syn_7", "project_id": PROJECT, "session_id": "thr_syn_0001", "name": "Look again in half an hour [wizloop:in-same]", "cron": null, "timezone": null, "run_at": run_at, "webhook": false, "new_thread": false, "script": null, "agent": null, "secrets": [], "priority": 1, "prompt": "Check what changed in the last 6 hours and say it in one line.\n", "enabled": true, "last_error": null, "last_run_at": null, "next_run_at": null, "runs": 0});
     let file = fixture("in-same.md");
     let create =
         || json!({"any_loop_write": "create", "stdout": "Synthetic loop created: loop_syn_7\n"});
-    // Scheduled far later than half an hour: a difference, never success.
     let room = Room::new(
         vec![list(&account()), create()],
         vec![list(&with(at(json!("2099-01-01T00:00:00Z"))))],
@@ -901,7 +808,6 @@ fn an_in_files_run_time_is_checked_against_its_delay() {
         json!({"--prompt-file": "Check what changed in the last 6 hours and say it in one line.\n"}),
         true,
     );
-    // A run time that is not one: it cannot be checked, so unknown.
     let room = Room::new(
         vec![list(&account()), create()],
         vec![list(&with(at(json!("soon"))))],

@@ -1,21 +1,6 @@
-//! B2 proof plan (#118). Fixture tests only; no live claim.
-//!
-//! Rules: table-test fleet.md's operative rows, malformed forms and duplicates.
-//! S2-1: one eligible merge, then remove each authority, head, reviewer, CI,
-//! base and branch condition independently; every negative has zero merges.
-//! Frontier: approved rows across versions, verified blockers, ready labels,
-//! starts (including crashes and uncertainty), holds, people and stale plans.
-//! Reviews: first/fresh/re-check, findings and CI failures; per-head records.
-//! S2-4: an idle snapshot yields exactly [] and no judgment items.
-//! S2-5: exact/directory/folder-local glob contract matches; holds block starts,
-//! building tickets get notes; two hits are consumed lowest PR first per tick.
-//! S2-6: closed-ticket agents archived once; close/unlock and summary lifecycle.
-//! Judgment: new questions, independent dispute/diagnosis records, unread or
-//! duplicate facts, quiet reviewers and blocked merges yield one combined look.
-//! Output: exact facts against independent literals, every action against the
-//! published tick schema, canonical ordering, and no additional dependencies.
-
 use openwiz_core::fleet::tick::Rules;
+
+use crate::md3_models::flags;
 
 const RULES: &str = "## Builder
 | Setting | Value | `room-cli thread spawn` flag |
@@ -77,7 +62,7 @@ fn fleet_rules_contracts_preserve_original_cases() {
 }
 
 fn b2_reads_the_operative_rules() {
-    let rules = Rules::parse(RULES).expect("the current rules file is valid");
+    let rules = Rules::parse(RULES, &flags()).expect("the current rules file is valid");
     let value = serde_json::to_value(rules).unwrap();
     assert_eq!(value["builder"]["model"], "syn-builder");
     assert_eq!(value["reviewer_gpt"]["model"], "syn-reviewer");
@@ -142,7 +127,7 @@ fn b2_rules_refuse_every_malformed_operative_form() {
         ),
     ];
     for (case, text) in bad {
-        assert!(Rules::parse(&text).is_err(), "{case}");
+        assert!(Rules::parse(&text, &flags()).is_err(), "{case}");
     }
     let no_merge = RULES
         .lines()
@@ -150,10 +135,10 @@ fn b2_rules_refuse_every_malformed_operative_form() {
         .collect::<Vec<_>>()
         .join("\n");
     assert_eq!(
-        serde_json::to_value(Rules::parse(&no_merge).unwrap()).unwrap()["merge"],
+        serde_json::to_value(Rules::parse(&no_merge, &flags()).unwrap()).unwrap()["merge"],
         "none"
     );
-    assert!(Rules::parse(include_str!("../../docs/agents/fleet.md")).is_ok());
+    assert!(Rules::parse(include_str!("../../docs/agents/fleet.md"), &flags()).is_ok());
 }
 
 #[path = "b2_cases.rs"]
@@ -166,11 +151,11 @@ fn b2_1196_all_conditional_tables_are_strict_and_other_family() {
         "## Reviewer for GPT-built",
     ] {
         assert!(
-            Rules::parse(&RULES.replace(heading, "## Unrecognized")).is_err(),
+            Rules::parse(&RULES.replace(heading, "## Unrecognized"), &flags()).is_err(),
             "missing {heading}"
         );
         assert!(
-            Rules::parse(&format!("{RULES}\n{heading}\n")).is_err(),
+            Rules::parse(&format!("{RULES}\n{heading}\n"), &flags()).is_err(),
             "duplicate {heading}"
         );
         let at = RULES.find(heading).unwrap();
@@ -181,13 +166,13 @@ fn b2_1196_all_conditional_tables_are_strict_and_other_family() {
         let section = &tail[..end];
         let bad = section.replace("| Model |", "| Harness |");
         assert!(
-            Rules::parse(&RULES.replacen(section, &bad, 1)).is_err(),
+            Rules::parse(&RULES.replacen(section, &bad, 1), &flags()).is_err(),
             "bad {heading}"
         );
     }
     let wrong = RULES.replace("--provider claude-code", "--provider codex");
-    assert!(Rules::parse(&wrong).is_err());
-    let rules = Rules::parse(include_str!("../../docs/agents/fleet.md")).unwrap();
+    assert!(Rules::parse(&wrong, &flags()).is_err());
+    let rules = Rules::parse(include_str!("../../docs/agents/fleet.md"), &flags()).unwrap();
     assert_eq!(rules.builder().harness, "claude-code");
     assert_eq!(rules.builder().model, "claude-opus-5-5");
     assert_eq!(rules.builder().effort, "medium");
@@ -197,28 +182,29 @@ fn b2_1196_all_conditional_tables_are_strict_and_other_family() {
     assert_eq!(
         rules
             .reviewer_for(openwiz_core::fleet::tick::BuilderFamily::Claude)
+            .unwrap()
             .harness,
         "codex"
     );
     assert_eq!(
         rules
             .reviewer_for(openwiz_core::fleet::tick::BuilderFamily::Gpt)
+            .unwrap()
             .harness,
         "claude-code"
     );
 }
 
 fn b2_1196_setup_template_can_produce_the_strict_rules() {
-    // Fill the template's setting/check placeholders with synthetic literals.
-    // A fresh setup must supply every table the product requires.
     let filled = include_str!("../../skills/setup/templates/fleet.md")
-        .replace("`--provider <id>`", "`--provider codex`")
-        .replace("`--model <id>`", "`--model syn-model`")
-        .replace("`--reasoning-level <level>`", "`--reasoning-level high`")
+        .replace(
+            "`--provider <id> --model <id> --reasoning-level <level>`",
+            "`--provider codex --model syn-model --reasoning-level high`",
+        )
         .replace("`<job name>`", "`synthetic`")
         .replace("`<branch>`", "`main`");
     assert!(
-        Rules::parse(&filled).is_ok(),
+        Rules::parse(&filled, &flags()).is_ok(),
         "setup must emit parseable rules"
     );
 }

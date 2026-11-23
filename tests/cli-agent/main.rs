@@ -9,14 +9,15 @@ use std::sync::{
     atomic::{AtomicU64, Ordering},
 };
 
-#[allow(dead_code)]
 #[path = "../support/dirs.rs"]
 mod dirs;
-#[allow(dead_code)]
+#[allow(
+    dead_code,
+    reason = "shared with other test targets; this one uses only part of it"
+)]
 #[path = "../support/schema.rs"]
 mod schema;
 // Placing fixture programs without holding their writer (#811).
-#[allow(dead_code)]
 #[path = "../support/place.rs"]
 mod place;
 
@@ -30,9 +31,13 @@ mod loop_validate;
 mod models;
 #[path = "../../contracts/fixtures/models/models_contract.rs"]
 mod models_contract;
+mod models_forms;
+mod models_local;
 mod process;
 mod results;
 mod review;
+#[path = "../../contracts/fixtures/roster/roster_contract.rs"]
+mod roster_contract;
 mod ui;
 
 const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/..");
@@ -122,7 +127,10 @@ fn cp1_catalogue_covers_the_public_command_flag_and_schema_matrix() {
         ("help.agent", "--agent"),
         ("ls", "-l -a --hidden --limit --offset --json --help"),
         ("show", "--json --help"),
-        ("models", "--json --help"),
+        ("models", "--json --host --help"),
+        ("models.show", "--json --host --help"),
+        ("models.list", "--save --json --help"),
+        ("models.set", "--json --host --help"),
         ("fleets", "--json --help"),
         ("fleet", "--json"),
         ("fleet.tick.preview", "--dry-run --json"),
@@ -324,8 +332,8 @@ fn cp1_advertised_flags_are_accepted_by_the_shipped_public_parsers() {
             "fleet.due" => "fleet due --github-only",
             // These three parsers are private; their flags are checked through
             // real processes below, using only trap sources or absent config.
-            "fleets" | "models" | "loop.off" | "loop.on" | "loop.validate" | "loop.export"
-            | "loop.plan" | "loop.apply" => continue,
+            "fleets" | "models" | "models.show" | "models.list" | "models.set" | "loop.off"
+            | "loop.on" | "loop.validate" | "loop.export" | "loop.plan" | "loop.apply" => continue,
             "init" | "init.apply" => continue,
             "github.token" => {
                 for flag in command["flags"].as_array().unwrap() {
@@ -488,6 +496,9 @@ fn cp1_catalogue_is_discoverable_without_sources_or_state() {
             "ls",
             "show",
             "models",
+            "models.show",
+            "models.list",
+            "models.set",
             "fleets",
             "fleet",
             "fleet.tick.preview",

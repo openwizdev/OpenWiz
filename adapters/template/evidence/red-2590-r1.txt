@@ -1,0 +1,65 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/template/test_driver.py
+test_a_harness_it_does_not_pass_effort_to_is_refused_and_nothing_starts (__main__.Template.test_a_harness_it_does_not_pass_effort_to_is_refused_and_nothing_starts) ... 
+  test_a_harness_it_does_not_pass_effort_to_is_refused_and_nothing_starts (__main__.Template.test_a_harness_it_does_not_pass_effort_to_is_refused_and_nothing_starts) (harness='pi') ... FAIL
+  test_a_harness_it_does_not_pass_effort_to_is_refused_and_nothing_starts (__main__.Template.test_a_harness_it_does_not_pass_effort_to_is_refused_and_nothing_starts) (harness='fake-other') ... FAIL
+test_a_harness_without_effort_still_starts_at_its_default (__main__.Template.test_a_harness_without_effort_still_starts_at_its_default) ... ok
+test_an_effort_it_does_not_pass_is_refused_and_nothing_starts (__main__.Template.test_an_effort_it_does_not_pass_is_refused_and_nothing_starts) ... ok
+test_an_effort_that_is_not_a_word_is_refused_as_input (__main__.Template.test_an_effort_that_is_not_a_word_is_refused_as_input) ... ok
+test_no_harness_outside_the_fixtures_is_on_the_tests_path (__main__.Template.test_no_harness_outside_the_fixtures_is_on_the_tests_path) ... ok
+test_save_failure_after_spawn_reports_unknown (__main__.Template.test_save_failure_after_spawn_reports_unknown) ... ok
+test_simultaneous_wakes_start_one_turn (__main__.Template.test_simultaneous_wakes_start_one_turn) ... /usr/lib/python3.11/unittest/case.py:579: ResourceWarning: unclosed file <_io.BufferedReader name=5>
+  if method() is not None:
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/usr/lib/python3.11/unittest/case.py:579: ResourceWarning: unclosed file <_io.BufferedReader name=6>
+  if method() is not None:
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_start_passes_its_effort_to_the_harness_and_wake_passes_it_again (__main__.Template.test_start_passes_its_effort_to_the_harness_and_wake_passes_it_again) ... ok
+test_start_record_is_not_wakeable_before_it_is_confirmed (__main__.Template.test_start_record_is_not_wakeable_before_it_is_confirmed) ... ok
+test_start_with_nowhere_to_save_starts_nothing (__main__.Template.test_start_with_nowhere_to_save_starts_nothing) ... ok
+test_start_without_effort_passes_none (__main__.Template.test_start_without_effort_passes_none) ... ok
+test_stop_ends_a_worker_with_a_clean_environment (__main__.Template.test_stop_ends_a_worker_with_a_clean_environment) ... ok
+test_stop_ends_the_run_when_it_cannot_save (__main__.Template.test_stop_ends_the_run_when_it_cannot_save) ... ok
+test_stop_ends_what_the_turn_left_behind_after_it_exits (__main__.Template.test_stop_ends_what_the_turn_left_behind_after_it_exits) ... ok
+test_the_cant_form_leaves_effort_out_of_can_and_refuses_it_as_input (__main__.Template.test_the_cant_form_leaves_effort_out_of_can_and_refuses_it_as_input) ... ok
+test_version_lists_effort_and_the_readme_says_how_under_its_login_line (__main__.Template.test_version_lists_effort_and_the_readme_says_how_under_its_login_line) ... FAIL
+test_wake_checks_its_save_before_and_after_spawn (__main__.Template.test_wake_checks_its_save_before_and_after_spawn) ... ok
+test_wake_while_a_turn_runs_starts_no_second_turn (__main__.Template.test_wake_while_a_turn_runs_starts_no_second_turn) ... ok
+test_without_proc_as_on_macos_stop_ends_a_worker_handed_off_as_the_turn_exits (__main__.Template.test_without_proc_as_on_macos_stop_ends_a_worker_handed_off_as_the_turn_exits) ... ok
+test_without_proc_as_on_macos_stop_ends_each_grandchild (__main__.Template.test_without_proc_as_on_macos_stop_ends_each_grandchild) ... ok
+test_without_proc_as_on_macos_stop_says_when_lsof_cannot_check_the_output_file (__main__.Template.test_without_proc_as_on_macos_stop_says_when_lsof_cannot_check_the_output_file) ... ok
+
+======================================================================
+FAIL: test_a_harness_it_does_not_pass_effort_to_is_refused_and_nothing_starts (__main__.Template.test_a_harness_it_does_not_pass_effort_to_is_refused_and_nothing_starts) (harness='pi')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/template/test_driver.py", line 276, in test_a_harness_it_does_not_pass_effort_to_is_refused_and_nothing_starts
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'run-<id>'}
+
+======================================================================
+FAIL: test_a_harness_it_does_not_pass_effort_to_is_refused_and_nothing_starts (__main__.Template.test_a_harness_it_does_not_pass_effort_to_is_refused_and_nothing_starts) (harness='fake-other')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/template/test_driver.py", line 277, in test_a_harness_it_does_not_pass_effort_to_is_refused_and_nothing_starts
+    self.assertEqual(out['next'], REFUSAL)
+AssertionError: 'install fake-other and sign in to it you[19 chars]gain' != "this host can't set effort: remove the e[81 chars]ault"
+- install fake-other and sign in to it yourself, then start again
++ this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default
+
+
+======================================================================
+FAIL: test_version_lists_effort_and_the_readme_says_how_under_its_login_line (__main__.Template.test_version_lists_effort_and_the_readme_says_how_under_its_login_line)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/template/test_driver.py", line 225, in test_version_lists_effort_and_the_readme_says_how_under_its_login_line
+    self.assertEqual(lines[login + 1], "Effort: passed as each harness's own flag, for the harnesses and levels "
+AssertionError: 'Effort: passed as `--effort <level>`, fo[48 chars]ness' != "Effort: passed as each harness's own fla[85 chars]used"
+- Effort: passed as `--effort <level>`, for low, medium, high, xhigh and max, with any harness
++ Effort: passed as each harness's own flag, for the harnesses and levels in the table below; any other harness or level is refused
+
+
+----------------------------------------------------------------------
+Ran 21 tests in 22.343s
+
+FAILED (failures=3)

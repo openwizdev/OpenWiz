@@ -1,0 +1,10 @@
+test_an_intel_mac_without_room_cli_reads_ready_and_says_where_agents_run (test_installer.Preflight.test_an_intel_mac_without_room_cli_reads_ready_and_says_where_agents_run) ... ok
+test_an_unreadable_glibc_is_refused_and_macos_has_no_glibc_check (test_installer.Preflight.test_an_unreadable_glibc_is_refused_and_macos_has_no_glibc_check) ... ok
+test_apple_silicon_and_linux_preflight_output_keeps_its_checks_and_calls_room_cli_optional (test_installer.Preflight.test_apple_silicon_and_linux_preflight_output_keeps_its_checks_and_calls_room_cli_optional) ... ok
+test_linux_accepts_glibc_2_34_and_later (test_installer.Preflight.test_linux_accepts_glibc_2_34_and_later) ... ok
+test_linux_refuses_a_glibc_older_than_2_34_and_names_the_version_found (test_installer.Preflight.test_linux_refuses_a_glibc_older_than_2_34_and_names_the_version_found) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 2.508s
+
+OK

@@ -1,20 +1,7 @@
-//! A JSON Schema checker for `contracts/fleet.v1.schema.json` (A3,
-//! ClosedWiz#111), for every ticket's fleet tests.
-//!
-//! No JSON Schema crate is approved, and the shared checker
-//! (`tests/support/schema.rs`) has no `pattern`, so this checks the subset
-//! the fleet schema uses: `type` (one or a list), `required`, `properties`,
-//! `additionalProperties: false`, `items`, `enum`, `const`, `oneOf`
-//! (exactly one), local `$ref`, `minimum`, `minLength`, `maxLength` and
-//! `pattern`. A pattern is only `^`, then literal characters or `[...]`
-//! classes (single characters and ranges), each optionally followed by
-//! `*`, then `$`. [`lint`] refuses any other keyword or form, so the schema
-//! can't rely on a rule this checker ignores.
-//!
-//! [`Coverage`] records which branches a value took: every `oneOf`
-//! alternative, `enum` value, `type` of a list, and property.
-
-#![allow(dead_code)]
+#![allow(
+    dead_code,
+    reason = "included by more than one test target, and each uses only part of it"
+)]
 
 use std::collections::BTreeSet;
 
@@ -51,8 +38,6 @@ pub fn load_schema() -> Value {
     serde_json::from_str(&text).expect("the fleet schema is JSON")
 }
 
-/// Every keyword or form in `schema` this checker does not enforce,
-/// wherever it appears, `$defs` included.
 pub fn lint(schema: &Value) -> Vec<String> {
     let mut errors = Vec::new();
     lint_node(schema, schema, "#", &mut errors);
@@ -102,18 +87,13 @@ fn lint_node(root: &Value, node: &Value, at: &str, errors: &mut Vec<String>) {
     }
 }
 
-/// The branches values took: each is a schema node's pointer and what was
-/// taken there (`oneOf 2`, `enum "open"`, `type null`, `property name`).
 #[derive(Default, Debug)]
 pub struct Coverage(pub BTreeSet<(String, String)>);
 
-/// Every violation of the schema by `value`, with its JSON path.
 pub fn validate(schema: &Value, value: &Value) -> Vec<String> {
     validate_with(schema, value, &mut Coverage::default())
 }
 
-/// [`validate`], adding the branches `value` took to `coverage` (only when
-/// it is valid).
 pub fn validate_with(schema: &Value, value: &Value, coverage: &mut Coverage) -> Vec<String> {
     let mut errors = Vec::new();
     let mut hits = Coverage::default();
@@ -271,7 +251,6 @@ fn check(
     }
 }
 
-/// A JSON Pointer token for `key`.
 fn escape(key: &str) -> String {
     key.replace('~', "~0").replace('/', "~1")
 }
@@ -293,14 +272,12 @@ fn resolve<'a>(root: &'a Value, reference: &str) -> Option<&'a Value> {
     root.pointer(reference.strip_prefix('#')?)
 }
 
-/// One literal or class, and whether `*` follows it.
 #[derive(Debug)]
 struct Atom {
     class: Vec<(char, char)>,
     repeat: bool,
 }
 
-/// Parses a pattern of the supported form, or says why it isn't one.
 fn parse(pattern: &str) -> Result<Vec<Atom>, String> {
     let body = pattern
         .strip_prefix('^')
@@ -348,7 +325,6 @@ fn parse(pattern: &str) -> Result<Vec<Atom>, String> {
     Ok(atoms)
 }
 
-/// Whether all of `s` matches the atoms.
 fn matches(atoms: &[Atom], s: &str) -> bool {
     let in_class = |atom: &Atom, c: char| atom.class.iter().any(|(a, b)| (*a..=*b).contains(&c));
     match atoms.split_first() {

@@ -79,10 +79,24 @@
           "$ref": "#/$defs/agent"
         },
         "reviewer_claude": {
-          "$ref": "#/$defs/agent"
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/agent"
+            }
+          ]
         },
         "reviewer_gpt": {
-          "$ref": "#/$defs/agent"
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/agent"
+            }
+          ]
         }
       }
     },
@@ -108,11 +122,11 @@
       }
     },
     "setting": {
-      "description": "A narrower form of new-thread.v1's setting: lowercase letters, digits, ., _ and -, starting with a letter or digit.",
+      "description": "models.v1's one id rule, at most 128: letters, digits, ., _ and -, with / between segments; the reader also refuses an empty segment or a trailing /.",
       "type": "string",
       "minLength": 1,
       "maxLength": 128,
-      "pattern": "^[a-z0-9][-._a-z0-9]*$"
+      "pattern": "^[-._A-Za-z0-9][-./_A-Za-z0-9]*$"
     },
     "ci_check": {
       "type": "object",

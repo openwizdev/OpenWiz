@@ -1,11 +1,3 @@
-//! N16 Allowlist (sheet A-2): `thread spawn` and `cloud status` are the only
-//! additions, each in exactly the shape spike run 3 recorded. Every other
-//! mutating subcommand, and every other `spawn` shape, is still refused, by
-//! the adapter (a [`SpawnArgs`] can't be built unsafe). P8(a) and M12 are
-//! updated with this reason. It stays here, not in the adapter's own
-//! `tests/`: P8(a) and M12 read every file under `crates/` as product source
-//! and refuse the flags it spells (#808, W1-7).
-
 use openwiz_adapter_cloudroom::allowlist::{Invocation, SpawnArgs};
 use openwiz_core::messaging::MAX_TEXT_BYTES;
 

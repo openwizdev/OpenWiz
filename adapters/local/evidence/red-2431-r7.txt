@@ -1,0 +1,25 @@
+# HR1 #2431 R7 red: a row's credential-shaped fixed arguments are accepted (no-op agent CLI stubs first on PATH)
+$ python3 -I adapters/local/test_harnesses.py
+fail claude: row.json harness: claude is built in, and no row may use a built-in name
+fail credential-env: row.json env: a value looks like a credential; env holds only fixed settings that are not credentials
+fail daemon-survives: daemon: the background process the row declares still runs after stop
+pass effort-crowded: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+fail effort-missing: row.json effort: it has no effort form; give an effort map or "none: <one line why>"
+fail effort-unpassed: row.json effort: it maps effort values to arguments, but start has no {effort} to pass them
+pass example: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+pass example-none: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+fail larger-argument: row.json start: a placeholder sits inside a larger argument; each fills a whole argument
+fail row-missing: row.json is missing
+fail session-differs: session: the wake turn got a different session id from the start turn
+fail signed-out-bad-pattern: row.json signed_out: a pattern does not compile
+pass signed-out-json: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+fail wake-no-session: row.json wake: it has no {session}
+pass driver: a broken row's D3 error names its row file and fits the error schema: a row folder with no row.json, a harness that is not a string, and a 60-character harness with a missing field
+pass driver: a row's session id and signed_out patterns are read from its first turn's output, never the clone's, and the first line that has the session's JSON path decides it
+pass driver: an effort the row can't take is refused before the driver looks for its program, and a row's effort ids are lower-case words of up to 20 characters
+fail driver: a row whose fixed arguments in start, wake, modes or effort look like a credential, joined or as a flag and its value, is refused naming only its field
+pass driver: a row's env and effort setting reach only the harness, never the turn's supervisor
+pass driver: an unknown harness is a D3 error that lists the built-ins and the row folders, and starts nothing
+pass driver: a wake before the reported session id is known is a D3 error that starts nothing, whether the first turn has ended or still runs
+rows in adapters/local/harnesses: none yet
+exit 1

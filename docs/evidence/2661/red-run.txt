@@ -1,0 +1,280 @@
+$ python3 -I tools/github-app/test_app_select.py   # red: app-select.py is a stub doing today's call (the service on its default state)
+FFFFFFFFFFFF
+======================================================================
+FAIL: test_a_missing_unsafe_or_unclear_config_refuses_before_any_call (__main__.SelectorTests.test_a_missing_unsafe_or_unclear_config_refuses_before_any_call) [missing]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 217, in test_a_missing_unsafe_or_unclear_config_refuses_before_any_call
+    self.assert_refused(self.select(url, request("synthetic-owner/alpha")), calls, 1, "unavailable")
+  File "tools/github-app/test_app_select.py", line 160, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", SENTENCE))
+AssertionError: Tuples differ: (1, '', 'Token service stopped: the owner has [14 chars].\n') != (1, '{"schema": "openwiz.token-service.v1", "k[385 chars].\n')
+
+First differing element 1:
+''
+'{"schema": "openwiz.token-service.v1", "k[124 chars]"}\n'
+
+- (1, '', 'Token service stopped: the owner has not started it.\n')
++ (1,
++  '{"schema": "openwiz.token-service.v1", "kind": "refusal", "refusal": '
++  '"unavailable", "message": "Token refused: the service cannot read its App '
++  'state or reach GitHub."}\n',
++  'App selector refused: set OPENWIZ_APP_SELECT_CONFIG (default '
++  '~/.config/openwiz/app-select.json) to an owner-only (0600) file naming one '
++  'App state as "state_dir", or listing "candidates" of which exactly one App '
++  'is installed on every requested repository.\n')
+
+======================================================================
+FAIL: test_a_missing_unsafe_or_unclear_config_refuses_before_any_call (__main__.SelectorTests.test_a_missing_unsafe_or_unclear_config_refuses_before_any_call) [group-readable]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 217, in test_a_missing_unsafe_or_unclear_config_refuses_before_any_call
+    self.assert_refused(self.select(url, request("synthetic-owner/alpha")), calls, 1, "unavailable")
+  File "tools/github-app/test_app_select.py", line 160, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", SENTENCE))
+AssertionError: Tuples differ: (1, '', 'Token service stopped: the owner has [14 chars].\n') != (1, '{"schema": "openwiz.token-service.v1", "k[385 chars].\n')
+
+First differing element 1:
+''
+'{"schema": "openwiz.token-service.v1", "k[124 chars]"}\n'
+
+- (1, '', 'Token service stopped: the owner has not started it.\n')
++ (1,
++  '{"schema": "openwiz.token-service.v1", "kind": "refusal", "refusal": '
++  '"unavailable", "message": "Token refused: the service cannot read its App '
++  'state or reach GitHub."}\n',
++  'App selector refused: set OPENWIZ_APP_SELECT_CONFIG (default '
++  '~/.config/openwiz/app-select.json) to an owner-only (0600) file naming one '
++  'App state as "state_dir", or listing "candidates" of which exactly one App '
++  'is installed on every requested repository.\n')
+
+======================================================================
+FAIL: test_a_missing_unsafe_or_unclear_config_refuses_before_any_call (__main__.SelectorTests.test_a_missing_unsafe_or_unclear_config_refuses_before_any_call) [both keys]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 217, in test_a_missing_unsafe_or_unclear_config_refuses_before_any_call
+    self.assert_refused(self.select(url, request("synthetic-owner/alpha")), calls, 1, "unavailable")
+  File "tools/github-app/test_app_select.py", line 160, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", SENTENCE))
+AssertionError: Tuples differ: (1, '', 'Token service stopped: the owner has [14 chars].\n') != (1, '{"schema": "openwiz.token-service.v1", "k[385 chars].\n')
+
+First differing element 1:
+''
+'{"schema": "openwiz.token-service.v1", "k[124 chars]"}\n'
+
+- (1, '', 'Token service stopped: the owner has not started it.\n')
++ (1,
++  '{"schema": "openwiz.token-service.v1", "kind": "refusal", "refusal": '
++  '"unavailable", "message": "Token refused: the service cannot read its App '
++  'state or reach GitHub."}\n',
++  'App selector refused: set OPENWIZ_APP_SELECT_CONFIG (default '
++  '~/.config/openwiz/app-select.json) to an owner-only (0600) file naming one '
++  'App state as "state_dir", or listing "candidates" of which exactly one App '
++  'is installed on every requested repository.\n')
+
+======================================================================
+FAIL: test_a_missing_unsafe_or_unclear_config_refuses_before_any_call (__main__.SelectorTests.test_a_missing_unsafe_or_unclear_config_refuses_before_any_call) [not JSON]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 217, in test_a_missing_unsafe_or_unclear_config_refuses_before_any_call
+    self.assert_refused(self.select(url, request("synthetic-owner/alpha")), calls, 1, "unavailable")
+  File "tools/github-app/test_app_select.py", line 160, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", SENTENCE))
+AssertionError: Tuples differ: (1, '', 'Token service stopped: the owner has [14 chars].\n') != (1, '{"schema": "openwiz.token-service.v1", "k[385 chars].\n')
+
+First differing element 1:
+''
+'{"schema": "openwiz.token-service.v1", "k[124 chars]"}\n'
+
+- (1, '', 'Token service stopped: the owner has not started it.\n')
++ (1,
++  '{"schema": "openwiz.token-service.v1", "kind": "refusal", "refusal": '
++  '"unavailable", "message": "Token refused: the service cannot read its App '
++  'state or reach GitHub."}\n',
++  'App selector refused: set OPENWIZ_APP_SELECT_CONFIG (default '
++  '~/.config/openwiz/app-select.json) to an owner-only (0600) file naming one '
++  'App state as "state_dir", or listing "candidates" of which exactly one App '
++  'is installed on every requested repository.\n')
+
+======================================================================
+FAIL: test_a_missing_unsafe_or_unclear_config_refuses_before_any_call (__main__.SelectorTests.test_a_missing_unsafe_or_unclear_config_refuses_before_any_call) [repeated key]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 217, in test_a_missing_unsafe_or_unclear_config_refuses_before_any_call
+    self.assert_refused(self.select(url, request("synthetic-owner/alpha")), calls, 1, "unavailable")
+  File "tools/github-app/test_app_select.py", line 160, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", SENTENCE))
+AssertionError: Tuples differ: (1, '', 'Token service stopped: the owner has [14 chars].\n') != (1, '{"schema": "openwiz.token-service.v1", "k[385 chars].\n')
+
+First differing element 1:
+''
+'{"schema": "openwiz.token-service.v1", "k[124 chars]"}\n'
+
+- (1, '', 'Token service stopped: the owner has not started it.\n')
++ (1,
++  '{"schema": "openwiz.token-service.v1", "kind": "refusal", "refusal": '
++  '"unavailable", "message": "Token refused: the service cannot read its App '
++  'state or reach GitHub."}\n',
++  'App selector refused: set OPENWIZ_APP_SELECT_CONFIG (default '
++  '~/.config/openwiz/app-select.json) to an owner-only (0600) file naming one '
++  'App state as "state_dir", or listing "candidates" of which exactly one App '
++  'is installed on every requested repository.\n')
+
+======================================================================
+FAIL: test_a_missing_unsafe_or_unclear_config_refuses_before_any_call (__main__.SelectorTests.test_a_missing_unsafe_or_unclear_config_refuses_before_any_call) [relative]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 217, in test_a_missing_unsafe_or_unclear_config_refuses_before_any_call
+    self.assert_refused(self.select(url, request("synthetic-owner/alpha")), calls, 1, "unavailable")
+  File "tools/github-app/test_app_select.py", line 160, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", SENTENCE))
+AssertionError: Tuples differ: (1, '', 'Token service stopped: the owner has [14 chars].\n') != (1, '{"schema": "openwiz.token-service.v1", "k[385 chars].\n')
+
+First differing element 1:
+''
+'{"schema": "openwiz.token-service.v1", "k[124 chars]"}\n'
+
+- (1, '', 'Token service stopped: the owner has not started it.\n')
++ (1,
++  '{"schema": "openwiz.token-service.v1", "kind": "refusal", "refusal": '
++  '"unavailable", "message": "Token refused: the service cannot read its App '
++  'state or reach GitHub."}\n',
++  'App selector refused: set OPENWIZ_APP_SELECT_CONFIG (default '
++  '~/.config/openwiz/app-select.json) to an owner-only (0600) file naming one '
++  'App state as "state_dir", or listing "candidates" of which exactly one App '
++  'is installed on every requested repository.\n')
+
+======================================================================
+FAIL: test_a_missing_unsafe_or_unclear_config_refuses_before_any_call (__main__.SelectorTests.test_a_missing_unsafe_or_unclear_config_refuses_before_any_call) [no candidates]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 217, in test_a_missing_unsafe_or_unclear_config_refuses_before_any_call
+    self.assert_refused(self.select(url, request("synthetic-owner/alpha")), calls, 1, "unavailable")
+  File "tools/github-app/test_app_select.py", line 160, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", SENTENCE))
+AssertionError: Tuples differ: (1, '', 'Token service stopped: the owner has [14 chars].\n') != (1, '{"schema": "openwiz.token-service.v1", "k[385 chars].\n')
+
+First differing element 1:
+''
+'{"schema": "openwiz.token-service.v1", "k[124 chars]"}\n'
+
+- (1, '', 'Token service stopped: the owner has not started it.\n')
++ (1,
++  '{"schema": "openwiz.token-service.v1", "kind": "refusal", "refusal": '
++  '"unavailable", "message": "Token refused: the service cannot read its App '
++  'state or reach GitHub."}\n',
++  'App selector refused: set OPENWIZ_APP_SELECT_CONFIG (default '
++  '~/.config/openwiz/app-select.json) to an owner-only (0600) file naming one '
++  'App state as "state_dir", or listing "candidates" of which exactly one App '
++  'is installed on every requested repository.\n')
+
+======================================================================
+FAIL: test_a_missing_unsafe_or_unclear_config_refuses_before_any_call (__main__.SelectorTests.test_a_missing_unsafe_or_unclear_config_refuses_before_any_call) [named state missing]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 217, in test_a_missing_unsafe_or_unclear_config_refuses_before_any_call
+    self.assert_refused(self.select(url, request("synthetic-owner/alpha")), calls, 1, "unavailable")
+  File "tools/github-app/test_app_select.py", line 160, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", SENTENCE))
+AssertionError: Tuples differ: (1, '', 'Token service stopped: the owner has [14 chars].\n') != (1, '{"schema": "openwiz.token-service.v1", "k[385 chars].\n')
+
+First differing element 1:
+''
+'{"schema": "openwiz.token-service.v1", "k[124 chars]"}\n'
+
+- (1, '', 'Token service stopped: the owner has not started it.\n')
++ (1,
++  '{"schema": "openwiz.token-service.v1", "kind": "refusal", "refusal": '
++  '"unavailable", "message": "Token refused: the service cannot read its App '
++  'state or reach GitHub."}\n',
++  'App selector refused: set OPENWIZ_APP_SELECT_CONFIG (default '
++  '~/.config/openwiz/app-select.json) to an owner-only (0600) file naming one '
++  'App state as "state_dir", or listing "candidates" of which exactly one App '
++  'is installed on every requested repository.\n')
+
+======================================================================
+FAIL: test_a_missing_unsafe_or_unclear_config_refuses_before_any_call (__main__.SelectorTests.test_a_missing_unsafe_or_unclear_config_refuses_before_any_call) [symlink]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 225, in test_a_missing_unsafe_or_unclear_config_refuses_before_any_call
+    self.assert_refused(self.select(url, request("synthetic-owner/alpha")), calls, 1, "unavailable")
+  File "tools/github-app/test_app_select.py", line 160, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", SENTENCE))
+AssertionError: Tuples differ: (1, '', 'Token service stopped: the owner has [14 chars].\n') != (1, '{"schema": "openwiz.token-service.v1", "k[385 chars].\n')
+
+First differing element 1:
+''
+'{"schema": "openwiz.token-service.v1", "k[124 chars]"}\n'
+
+- (1, '', 'Token service stopped: the owner has not started it.\n')
++ (1,
++  '{"schema": "openwiz.token-service.v1", "kind": "refusal", "refusal": '
++  '"unavailable", "message": "Token refused: the service cannot read its App '
++  'state or reach GitHub."}\n',
++  'App selector refused: set OPENWIZ_APP_SELECT_CONFIG (default '
++  '~/.config/openwiz/app-select.json) to an owner-only (0600) file naming one '
++  'App state as "state_dir", or listing "candidates" of which exactly one App '
++  'is installed on every requested repository.\n')
+
+======================================================================
+FAIL: test_ambiguous_and_unknown_refuse_and_mint_nothing (__main__.SelectorTests.test_ambiguous_and_unknown_refuse_and_mint_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 198, in test_ambiguous_and_unknown_refuse_and_mint_nothing
+    self.assert_refused(self.select(url, request("synthetic-owner/shared")), calls, 1, "unavailable")
+  File "tools/github-app/test_app_select.py", line 160, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", SENTENCE))
+AssertionError: Tuples differ: (1, '', 'Token service stopped: the owner has [14 chars].\n') != (1, '{"schema": "openwiz.token-service.v1", "k[385 chars].\n')
+
+First differing element 1:
+''
+'{"schema": "openwiz.token-service.v1", "k[124 chars]"}\n'
+
+- (1, '', 'Token service stopped: the owner has not started it.\n')
++ (1,
++  '{"schema": "openwiz.token-service.v1", "kind": "refusal", "refusal": '
++  '"unavailable", "message": "Token refused: the service cannot read its App '
++  'state or reach GitHub."}\n',
++  'App selector refused: set OPENWIZ_APP_SELECT_CONFIG (default '
++  '~/.config/openwiz/app-select.json) to an owner-only (0600) file naming one '
++  'App state as "state_dir", or listing "candidates" of which exactly one App '
++  'is installed on every requested repository.\n')
+
+======================================================================
+FAIL: test_named_uses_exactly_the_named_app (__main__.SelectorTests.test_named_uses_exactly_the_named_app)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 190, in test_named_uses_exactly_the_named_app
+    self.assert_minted_by(self.select(url, request("synthetic-owner/shared")), url, "b")
+  File "tools/github-app/test_app_select.py", line 151, in assert_minted_by
+    self.assertEqual((done.returncode, done.stderr), (0, ""))
+AssertionError: Tuples differ: (1, 'Token service stopped: the owner has not started it.\n') != (0, '')
+
+First differing element 0:
+1
+0
+
+- (1, 'Token service stopped: the owner has not started it.\n')
++ (0, '')
+
+======================================================================
+FAIL: test_resolved_reaches_the_app_installed_on_the_repository (__main__.SelectorTests.test_resolved_reaches_the_app_installed_on_the_repository)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 181, in test_resolved_reaches_the_app_installed_on_the_repository
+    self.assert_minted_by(self.select(url, request("synthetic-owner/beta")), url, "b")
+  File "tools/github-app/test_app_select.py", line 151, in assert_minted_by
+    self.assertEqual((done.returncode, done.stderr), (0, ""))
+AssertionError: Tuples differ: (1, 'Token service stopped: the owner has not started it.\n') != (0, '')
+
+First differing element 0:
+1
+0
+
+- (1, 'Token service stopped: the owner has not started it.\n')
++ (0, '')
+
+----------------------------------------------------------------------
+Ran 4 tests in 8.611s
+
+FAILED (failures=12)

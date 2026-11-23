@@ -1,10 +1,3 @@
-//! Shared helpers for the proof tests: the fake `room-cli` and the text
-//! contract. The scripted in-process source and the fixed clock live in
-//! `crates/core/tests/support/scripted.rs`, shared with `openwiz-core`'s own
-//! tests (#805), and are re-exported here.
-
-#![allow(dead_code)]
-
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -20,7 +13,6 @@ use serde_json::Value;
 mod scripted;
 pub use scripted::*;
 
-/// Sessions in the normal default `thread list`, in fixture order.
 pub const DEFAULT_IDS: [&str; 6] = [
     "thr_syn_0001",
     "thr_syn_0002",
@@ -35,14 +27,11 @@ pub const MISSING_ID: &str = "thr_syn_9999";
 
 const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/room-cli-0.43.1");
 
-/// A private directory with the fake `room-cli` set to one scenario.
 pub struct Fake {
     pub dir: PathBuf,
 }
 
 impl Fake {
-    /// `test` names the directory, so each test has its own; `scenario` is a
-    /// directory under `tests/fixtures/room-cli-0.43.1/`.
     pub fn new(test: &str, scenario: &str) -> Self {
         let dir = Path::new(env!("CARGO_TARGET_TMPDIR"))
             .join("fake-room-cli")
@@ -61,8 +50,6 @@ impl Fake {
         Self { dir }
     }
 
-    /// Points this fake at another scenario. Sources made before still read
-    /// from the same directory, so a second run sees the new responses.
     pub fn set_scenario(&self, scenario: &str) {
         let scenario_file = Path::new(FIXTURES).join(scenario).join("scenario.json");
         assert!(scenario_file.is_file(), "no scenario {scenario}");
@@ -81,7 +68,6 @@ impl Fake {
         CloudRoomSource::new(self.program())
     }
 
-    /// Every argument list the fake received, in order.
     pub fn invocations(&self) -> Vec<Vec<String>> {
         let Ok(text) = fs::read_to_string(self.dir.join("invocations.log")) else {
             return vec![];
@@ -91,7 +77,6 @@ impl Fake {
             .collect()
     }
 
-    /// The process id of a fake that hung, if one did.
     pub fn hung_pid(&self) -> Option<String> {
         fs::read_to_string(self.dir.join("hang.pid")).ok()
     }
@@ -111,12 +96,10 @@ impl Fake {
         )
     }
 
-    /// Runs `openwiz <args>` against this fake: (exit code, stdout, stderr).
     pub fn cli(&self, args: &[&str]) -> (i32, String, String) {
         cli_with(&self.source(), args)
     }
 
-    /// Runs `openwiz <args>` and parses stdout as JSON.
     pub fn cli_json(&self, args: &[&str]) -> Value {
         let (code, out, err) = self.cli(args);
         assert_eq!(code, 0, "openwiz {args:?} failed: {err}");
@@ -124,7 +107,6 @@ impl Fake {
     }
 }
 
-/// Runs `openwiz <args>` against any source: (exit code, stdout, stderr).
 pub fn cli_with(source: &dyn SessionSource, args: &[&str]) -> (i32, String, String) {
     let args: Vec<String> = args.iter().map(|a| (*a).to_owned()).collect();
     let (mut out, mut err) = (Vec::new(), Vec::new());
@@ -136,17 +118,12 @@ pub fn cli_with(source: &dyn SessionSource, args: &[&str]) -> (i32, String, Stri
     )
 }
 
-/// Runs `openwiz <args>` against any source and parses stdout as JSON.
 pub fn cli_json_with(source: &dyn SessionSource, args: &[&str]) -> Value {
     let (code, out, err) = cli_with(source, args);
     assert_eq!(code, 0, "openwiz {args:?} failed: {err}");
     serde_json::from_str(&out).unwrap_or_else(|e| panic!("stdout is not JSON ({e}): {out}"))
 }
 
-/// The lines of `text` that are `id`'s own row: the first session id on the
-/// line is `id`. A child's row may also name its parent; that is not the
-/// parent's row. Gap lines (text contract 3) name sessions too; they are not
-/// rows.
 pub fn row_lines<'a>(text: &'a str, id: &str) -> Vec<&'a str> {
     text.lines()
         .filter(|l| !l.trim_start().starts_with(GAP_PREFIX))
@@ -159,45 +136,15 @@ pub fn row_lines<'a>(text: &'a str, id: &str) -> Vec<&'a str> {
         .collect()
 }
 
-// The text contract.
-//
-// Provisional, set in ticket 1's correction round 1 (Sol S3, S4, S6, S7) so
-// the text proofs can be checked. Text tests rely on
-// these points only, and every value they check comes from the JSON:
-//
-// 1. Line 1 of `ls`, `ls -l` and `show` is the header. It contains
-//    `<source> <version>`, `snapshot <UTC time>` (RFC 3339, whole seconds,
-//    `Z`) and `complete` or `partial`.
-// 2. `ls` prints one line `counts: <key> <value>, <key> <value>, ...` with
-//    every key of `coverage.counts`, under its JSON name, in any order.
-// 3. Each gap is one line: `gap: <kind>`, then its subject (if any) and its
-//    detail. The number of gap lines equals the number of gaps.
-// 4. Rows follow their group's header line: `/factories/<display name>/`,
-//    or `/factories/_ungrouped/`. The display name is the project name, or
-//    `name~<last 6 characters of the id>` when two or more projects in the
-//    same run's project list share that name.
-// 5. A session's row is the line whose first session id is its own. It
-//    contains `age <age>`, `location <location>` and `parent <parent>`, and
-//    an ungrouped row its reason. `show` prints the same items, and its
-//    group's header line.
-// 6. `ls -l` rows and `show` contain
-//    `reported configuration: model <model>, effort <effort>`.
-// 7. A cut value is printed with `…` right after the kept text.
-// 8. The final output is printed verbatim, as one block.
-//
-// Unknowns print as `unknown (<reason>)` everywhere.
-
 pub const GAP_PREFIX: &str = "gap: ";
 pub const COUNTS_PREFIX: &str = "counts: ";
 pub const GROUP_ROOT: &str = "/factories/";
 pub const UNGROUPED_HEADER: &str = "/factories/_ungrouped/";
 pub const CUT_MARKER: char = '…';
 
-/// `ms` since the Unix epoch as RFC 3339 UTC, whole seconds.
 pub fn utc_text(ms: i64) -> String {
     let secs = ms.div_euclid(1000);
     let (days, rem) = (secs.div_euclid(86_400), secs.rem_euclid(86_400));
-    // Days to a civil date (H. Hinnant's algorithm).
     let z = days + 719_468;
     let (era, doe) = (z.div_euclid(146_097), z.rem_euclid(146_097));
     let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
@@ -214,7 +161,6 @@ pub fn utc_text(ms: i64) -> String {
     )
 }
 
-/// A known age: the whole number of the largest unit (d, h, m, s) it reaches.
 pub fn age_text(ms: i64) -> String {
     assert!(ms >= 0, "the text contract defines non-negative ages only");
     let s = ms / 1_000;
@@ -226,7 +172,6 @@ pub fn age_text(ms: i64) -> String {
     format!("{s}s")
 }
 
-/// A JSON fact as text: its value, or `unknown (reason)`.
 pub fn fact_text(fact: &Value) -> String {
     if let Some(reason) = fact["unknown"].as_str() {
         return format!("unknown ({reason})");
@@ -237,7 +182,6 @@ pub fn fact_text(fact: &Value) -> String {
     }
 }
 
-/// `age <age>` for a JSON row.
 pub fn age_token(row: &Value) -> String {
     match row["age_ms"]["known"].as_i64() {
         Some(ms) => format!("age {}", age_text(ms)),
@@ -245,7 +189,6 @@ pub fn age_token(row: &Value) -> String {
     }
 }
 
-/// `location cloud`, `location local on <machine>` or `location unknown (reason)`.
 pub fn location_token(row: &Value) -> String {
     let location = &row["location"];
     if location.get("unknown").is_some() {
@@ -259,7 +202,6 @@ pub fn location_token(row: &Value) -> String {
     }
 }
 
-/// `parent none` (top level), `parent <id>` or `parent unknown (reason)`.
 pub fn parent_token(row: &Value) -> String {
     match &row["parent"]["known"] {
         Value::Null if row["parent"].get("known").is_some() => "parent none".to_owned(),
@@ -268,7 +210,6 @@ pub fn parent_token(row: &Value) -> String {
     }
 }
 
-/// `reported configuration: model <model>, effort <effort>` for a JSON row.
 pub fn configuration_text(row: &Value) -> String {
     let config = &row["reported_configuration"];
     format!(
@@ -278,8 +219,6 @@ pub fn configuration_text(row: &Value) -> String {
     )
 }
 
-/// Names shared by two or more projects in the `normal` project list, which
-/// every fixture scenario uses.
 pub fn shared_project_names() -> BTreeSet<String> {
     let path = Path::new(FIXTURES).join("normal/project-list.json");
     let projects: Value =
@@ -297,13 +236,11 @@ pub fn shared_project_names() -> BTreeSet<String> {
         .collect()
 }
 
-/// The last 6 characters of an id.
 pub fn last_six(id: &str) -> String {
     let chars: Vec<char> = id.chars().collect();
     chars[chars.len().saturating_sub(6)..].iter().collect()
 }
 
-/// The group header line expected for a JSON row's `group`.
 pub fn group_header(row: &Value, shared: &BTreeSet<String>) -> String {
     let group = &row["group"];
     match group["kind"].as_str() {
@@ -321,7 +258,6 @@ pub fn group_header(row: &Value, shared: &BTreeSet<String>) -> String {
     }
 }
 
-/// The session id that starts a row line, if the line is a row.
 pub fn row_id(line: &str) -> Option<String> {
     if line.trim_start().starts_with(GAP_PREFIX) {
         return None;
@@ -334,7 +270,6 @@ pub fn row_id(line: &str) -> Option<String> {
     (!digits.is_empty()).then(|| format!("thr_syn_{digits}"))
 }
 
-/// Each row's id and the group header line above it.
 pub fn rows_by_group(text: &str) -> Vec<(String, Option<String>)> {
     let mut header = None;
     let mut out = Vec::new();
@@ -349,7 +284,6 @@ pub fn rows_by_group(text: &str) -> Vec<(String, Option<String>)> {
     out
 }
 
-/// The `counts:` line as key, value pairs.
 pub fn text_counts(text: &str) -> Vec<(String, String)> {
     let lines: Vec<&str> = text
         .lines()
@@ -367,15 +301,12 @@ pub fn text_counts(text: &str) -> Vec<(String, String)> {
         .collect()
 }
 
-/// The gap lines of `text`.
 pub fn gap_lines(text: &str) -> Vec<&str> {
     text.lines()
         .filter(|l| l.trim_start().starts_with(GAP_PREFIX))
         .collect()
 }
 
-/// A plain string field after the field cap: unchanged if short enough,
-/// otherwise its first `FIELD_MAX_CHARS - 1` characters and `…`.
 pub fn capped(original: &str) -> String {
     if original.chars().count() <= openwiz_core::limits::FIELD_MAX_CHARS {
         return original.to_owned();

@@ -1,0 +1,41 @@
+F.F..
+======================================================================
+FAIL: test_an_intel_mac_without_room_cli_reads_ready_and_says_where_agents_run (test_installer.Preflight.test_an_intel_mac_without_room_cli_reads_ready_and_says_where_agents_run)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/tests/installer/test_installer.py", line 245, in test_an_intel_mac_without_room_cli_reads_ready_and_says_where_agents_run
+    self.assertEqual([c for c in value['checks'] if c['state'] != 'ok'], [OPTIONAL_ROOM_CLI], value)
+AssertionError: Lists differ: [{'id[39 chars]t': 'Install the CloudRoom app and sign in; it[17 chars]i.'}] != [{'id[39 chars]t': 'Optional: CloudRoom is needed only if you[88 chars]i.'}]
+
+First differing element 0:
+{'id'[38 chars]t': 'Install the CloudRoom app and sign in; it[16 chars]li.'}
+{'id'[38 chars]t': 'Optional: CloudRoom is needed only if you[87 chars]li.'}
+
+  [{'id': 'room-cli',
++   'next': 'Optional: CloudRoom is needed only if you pick it as the host; then '
+-   'next': 'Install the CloudRoom app and sign in; it provides room-cli.',
+?    ^^^^^^^^^                                    ^^ ^
+
++           'install the CloudRoom app and sign in, which provides room-cli.',
+? ++++++++   ^                                    ^^^^ ^^
+
+    'state': 'missing'}] : {'schema': 'openwiz.preflight.v1', 'ready': True, 'target': 'x86_64-apple-darwin', 'checks': [{'id': 'python', 'state': 'ok', 'next': 'Python 3.11 is enough.'}, {'id': 'target', 'state': 'ok', 'next': 'Supported. CloudRoom has no Intel Mac build, so on this Mac, agents run on this computer or on boat.dev.'}, {'id': 'disk', 'state': 'ok', 'next': 'Enough free space.'}, {'id': 'room-cli', 'state': 'missing', 'next': 'Install the CloudRoom app and sign in; it provides room-cli.'}, {'id': 'gh', 'state': 'ok', 'next': 'Found on PATH; setup checks it.'}, {'id': 'git', 'state': 'ok', 'next': 'Found on PATH; setup checks it.'}], 'reason': 'Read this machine only; nothing was installed.'}
+
+======================================================================
+FAIL: test_apple_silicon_and_linux_preflight_output_keeps_its_checks_and_calls_room_cli_optional (test_installer.Preflight.test_apple_silicon_and_linux_preflight_output_keeps_its_checks_and_calls_room_cli_optional) (host=('Darwin', 'arm64'), tools=('gh', 'git'))
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/tests/installer/test_installer.py", line 271, in test_apple_silicon_and_linux_preflight_output_keeps_its_checks_and_calls_room_cli_optional
+    self.assertEqual(self.run_entry('preflight', host=host), (code, {
+AssertionError: Tuples differ: (0, {[320 chars]t': 'Install the CloudRoom app and sign in; it[224 chars]d.'}) != (0, {[320 chars]t': 'Optional: CloudRoom is needed only if you[295 chars]d.'})
+
+First differing element 1:
+{'sch[316 chars]t': 'Install the CloudRoom app and sign in; it[223 chars]ed.'}
+{'sch[316 chars]t': 'Optional: CloudRoom is needed only if you[294 chars]ed.'}
+
+Diff is 1075 characters long. Set self.maxDiff to None to see it.
+
+----------------------------------------------------------------------
+Ran 5 tests in 2.507s
+
+FAILED (failures=2)

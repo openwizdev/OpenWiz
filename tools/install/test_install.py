@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""IF1/IF2: synthetic archives through the real installer; no network or source tools."""
 import hashlib
 import importlib.util
 import io
@@ -21,13 +20,11 @@ SOURCE = '1' * 40
 REQUIRED = ['runtime/openwiz-build.txt', 'openwiz', 'runtime/skills/setup/SKILL.md', 'runtime/skills/grill/SKILL.md',
             'runtime/skills/to-tickets/SKILL.md', 'runtime/skills/launch-fleet/SKILL.md',
             'runtime/skills/launch-fleet/scripts/fleet.sh', 'runtime/install.py', 'runtime/pull.py']
-# #1105 (R9): the setup and App connection tools an installed consumer runs.
-SETUP_TOOLS = ['runtime/setup/setup.py', 'runtime/setup/store.py', 'runtime/setup/github_login.py',  # #633
+SETUP_TOOLS = ['runtime/setup/setup.py', 'runtime/setup/store.py', 'runtime/setup/github_login.py',
                'runtime/github-app/setup.py',
                'runtime/github-app/app.py', 'runtime/github-app/manifest.json',
-               'runtime/setup/init.py']  # #635: installed openwiz init's runtime
+               'runtime/setup/init.py']
 REQUIRED += SETUP_TOOLS
-# #2201: setup's CloudRoom install, reuse and sign-in tool.
 CLOUDROOM_TOOL = 'runtime/cloudroom/cloudroom.py'
 REQUIRED += [CLOUDROOM_TOOL]
 
@@ -37,8 +34,6 @@ def sha(data):
 
 
 class Bundles(unittest.TestCase):
-    """Synthetic bundles through the real installer; the helpers every installer test shares."""
-
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(prefix='openwiz-if1-')
         self.addCleanup(self.tmp.cleanup)
@@ -145,9 +140,8 @@ class Install(Bundles):
         self.assertEqual(self.installed(), before)
 
     def test_a_bundle_without_any_setup_tool_is_refused(self):
-        # #1105 R9: an installed consumer must be able to run setup from its bundle.
         self.root = self.base / 'complete'
-        self.run_install(self.bundle())  # control: the same bundle with every tool installs
+        self.run_install(self.bundle())
         for path in SETUP_TOOLS:
             with self.subTest(missing=path):
                 self.root = self.base / ('missing-' + path.replace('/', '-'))
@@ -155,7 +149,6 @@ class Install(Bundles):
                 self.assertFalse((self.root / 'current').exists())
 
     def test_a_bundle_without_the_cloudroom_tool_is_refused(self):
-        # #2201: setup's CloudRoom step runs its packaged tool, never a source checkout.
         self.root = self.base / 'without-cloudroom'
         self.run_install(self.bundle(omit=CLOUDROOM_TOOL), ok=False)
         self.assertFalse((self.root / 'current').exists())
@@ -217,7 +210,6 @@ class Install(Bundles):
         self.assertEqual(os.readlink(self.root / 'current'), str(self.root / 'state/service/builds' / ('2' * 40)))
 
 
-# #1361: distinct bytes per shipped skill file, so a copy that mixes files up fails.
 SKILLS = {'runtime/skills/grill/SKILL.md': b'---\nname: grill\n---\nSynthetic grill.\n',
           'runtime/skills/setup/SKILL.md': b'---\nname: setup\n---\nSynthetic setup.\n',
           'runtime/skills/launch-fleet/scripts/fleet.sh': b'#!/bin/sh\necho synthetic fleet\n'}
@@ -226,13 +218,11 @@ REPO = 'synthetic-owner/synthetic-app'
 
 
 def contract_harnesses():
-    """The harness table of contracts/install.v1.md: (id, folder under HOME)."""
     text = (ROOT / 'contracts/install.v1.md').read_text()
     return re.findall(r'^\| `([a-z-]+)` \| `~/([^`]+)`', text, re.M)
 
 
 def snapshot(folder):
-    """Every entry under folder, without following links: files by bytes and mode."""
     out = {}
     for path in sorted(Path(folder).rglob('*')) if Path(folder).exists() else ():
         info = path.lstat()
@@ -243,7 +233,6 @@ def snapshot(folder):
 
 
 def skill_files(folder, skip=()):
-    """A skills folder's files, without the copy mark or the owner's other skills."""
     return {k: v for k, v in snapshot(folder).items()
             if v != 'dir' and Path(k).name != '.openwiz-skill' and Path(k).parts[0] not in skip}
 
@@ -262,8 +251,6 @@ class HarnessSkills(Bundles):
         return result.returncode, json.loads(result.stdout or '{}')
 
     def test_skills_reach_the_canonical_folder_and_every_named_harness(self):
-        # catches: a harness the contract names getting no copy, or one in the wrong folder; a copy whose
-        # bytes or modes differ from the verified build; the owner's own skill disturbed; a repeat that changes files
         harnesses = contract_harnesses()
         schema = json.loads((ROOT / 'contracts/install.v1.schema.json').read_text())
         self.assertEqual([h for h, _ in harnesses], schema['$defs']['harness']['enum'])
@@ -286,9 +273,7 @@ class HarnessSkills(Bundles):
         self.assertEqual(self.skills()[0], 0)
         self.assertEqual((snapshot(self.home), snapshot(self.root / 'skills')), before)
 
-    def test_absent_harness_is_reported_and_an_unsafe_destination_changes_nothing(self):
-        # catches: folders made for a harness the user doesn't have; CODEX_HOME ignored; the owner's
-        # same-named skill overwritten; a write through a linked harness folder; a half-done refused run
+    def test_absent_harness_is_reported_and_an_unsafe_destination_is_skipped_on_its_own(self):
         (self.home / '.claude').mkdir()
         (self.home / '.codex').mkdir()
         code, result = self.skills(env={'CODEX_HOME': str(self.home / 'codex-elsewhere')})
@@ -311,21 +296,26 @@ class HarnessSkills(Bundles):
                 else:
                     os.symlink(self.base / 'dotfiles', home / '.grok')
                 (self.root / 'skills/grill/SKILL.md').write_bytes(b'stale\n')
-                before = snapshot(home), snapshot(self.root / 'skills')
+                owner = snapshot(home / '.claude/skills/grill')
                 code, result = self.skills(home=home)
-                self.assertEqual((code, result.get('outcome')), (5, 'refused'), result)
-                self.assertEqual((snapshot(home), snapshot(self.root / 'skills')), before)
+                self.assertEqual((code, result.get('outcome')), (0, 'partial'), result)
+                rows = {r['id']: r for r in result['harnesses']}
+                self.assertEqual(skill_files(home / '.cursor/skills'), skill_files(self.root / 'current/runtime/skills'))
+                self.assertEqual(skill_files(self.root / 'skills'), skill_files(self.root / 'current/runtime/skills'))
+                if case == 'foreign':
+                    self.assertEqual(rows['claude-code']['state'], 'partial')
+                    self.assertEqual([s['skill'] for s in rows['claude-code']['skipped']], ['grill'])
+                    self.assertEqual(snapshot(home / '.claude/skills/grill'), owner)
+                else:
+                    self.assertEqual((rows['claude-code']['state'], rows['grok']['state']), ('installed', 'refused'))
                 self.assertEqual(snapshot(self.base / 'dotfiles'), {})
 
-    def test_a_user_entry_at_the_staging_or_backup_path_is_kept_and_nothing_is_written(self):
-        # catches (#1594): the owner's folder at the installer's fixed staging or backup path deleted with exit 0;
-        # the same path as a plain file refused only after the canonical copies were written; a folder holding a
-        # file named like the copy mark but with other text taken as the installer's own and deleted
+    def test_a_user_entry_at_the_staging_or_backup_path_is_kept_and_only_that_skill_is_skipped(self):
         for name in ('.openwiz-stage-grill', '.openwiz-old-grill'):
             for kind in ('dir', 'file', 'fake-mark'):
                 with self.subTest(name=name, kind=kind):
                     home = self.base / f'home{name}-{kind}'
-                    shutil.rmtree(self.root / 'skills', ignore_errors=True)  # no earlier case's copies
+                    shutil.rmtree(self.root / 'skills', ignore_errors=True)
                     entry = home / '.claude/skills' / name
                     if kind in ('dir', 'fake-mark'):
                         entry.mkdir(parents=True)
@@ -335,35 +325,33 @@ class HarnessSkills(Bundles):
                     else:
                         entry.parent.mkdir(parents=True)
                         entry.write_bytes(b'Synthetic owner notes.\n')
-                    before = snapshot(home), snapshot(self.root / 'skills')
+                    before = snapshot(entry) if entry.is_dir() else entry.read_bytes()
                     code, result = self.skills(home=home)
-                    self.assertEqual((code, result.get('outcome')), (5, 'refused'), result)
-                    self.assertEqual((snapshot(home), snapshot(self.root / 'skills')), before)
+                    self.assertEqual((code, result.get('outcome')), (0, 'partial'), result)
+                    self.assertEqual(snapshot(entry) if entry.is_dir() else entry.read_bytes(), before)
+                    self.assertFalse((home / '.claude/skills/grill').exists())
+                    self.assertEqual(skill_files(home / '.claude/skills', skip=(name,)),
+                                     skill_files(self.root / 'current/runtime/skills', skip=('grill',)))
 
-    def test_the_refusal_names_the_unmarked_folder_and_prints_a_working_remove_command(self):
-        # catches (#1594): a refusal that hides which folder blocks the install, or prints a remove command
-        # that a shell splits or misquotes, so the owner can't clear it or removes the wrong thing
+    def test_the_skip_names_the_unmarked_folder_and_prints_a_working_remove_command(self):
         home = self.base / "home it's here"
         entry = home / '.claude/skills/.openwiz-stage-grill'
         entry.mkdir(parents=True)
         (entry / 'notes.md').write_bytes(b'Synthetic owner notes.\n')
         code, result = self.skills(home=home)
-        self.assertEqual(code, 5, result)
-        text = {r['id']: r['next'] for r in result['harnesses']}['claude-code']
+        self.assertEqual(code, 0, result)
+        text = {r['id']: r for r in result['harnesses']}['claude-code']['skipped'][0]['next']
         self.assertTrue(text.startswith(f'{entry} '), text)
         self.assertIn('Look inside it', text)
         command = text.split('run this again: ', 1)[1]
         subprocess.run(['sh', '-c', command], check=True, cwd=self.base)
-        self.assertEqual(sorted(p.name for p in entry.parent.iterdir()), [])
-        self.assertEqual(self.skills(home=home)[0], 0)
+        self.assertFalse(entry.exists())
+        self.assertEqual(self.skills(home=home)[1].get('outcome'), 'installed')
 
     def test_leftovers_of_an_interrupted_run_are_cleaned_up(self):
-        # catches (#1594): the ownership proof rejecting the installer's own staging and backup folders,
-        # so one interrupted run blocks every later install and leaves its leftovers behind
         (self.home / '.claude').mkdir()
         self.assertEqual(self.skills()[0], 0)
         folder = self.home / '.claude/skills'
-        # Interrupted between its two renames: the old copy moved aside, the new one still staged.
         shutil.copytree(folder / 'grill', folder / '.openwiz-stage-grill')
         os.rename(folder / 'grill', folder / '.openwiz-old-grill')
         code, result = self.skills()
@@ -374,7 +362,6 @@ class HarnessSkills(Bundles):
 
 
 def built_openwiz():
-    """The real command, built once by the tests; the installed consumer never builds."""
     subprocess.run(['cargo', 'build', '-p', 'openwiz-cli', '--bin', 'openwiz', '--locked'], cwd=ROOT, check=True)
     meta = subprocess.run(['cargo', 'metadata', '--format-version', '1', '--no-deps'], cwd=ROOT,
                           capture_output=True, check=True)
@@ -383,8 +370,6 @@ def built_openwiz():
 
 class InstalledCommand(Bundles):
     def test_installed_openwiz_sets_up_a_repository_label_and_records_without_build_tools(self):
-        # catches: the verified install leaving an openwiz that can't reach its packaged init runtime,
-        # or one that needs Rust or Node to run
         override = {'openwiz': built_openwiz().read_bytes()}
         for name in ('init.py', 'store.py'):
             override['runtime/setup/' + name] = (HERE / 'setup' / name).read_bytes()
@@ -415,7 +400,6 @@ class InstalledCommand(Bundles):
         applied = openwiz('--yes', '--operation', preview['operation_id'])
         self.assertEqual((applied['kind'], applied['outcome']), ('init_result', 'applied'))
         repo = json.loads(world.read_text())['repos'][REPO]
-        # #1361: the records v1 labels a first fleet needs, beside init's own.
         self.assertEqual(sorted(repo['labels']), sorted(['openwiz', 'spec', 'ready-for-agent', 'ready-for-human', 'needs-info', 'held']))
         self.assertTrue(any(path.startswith('.openwiz/brain/') for branch in repo['branches'].values()
                             for path in branch), repo['branches'])

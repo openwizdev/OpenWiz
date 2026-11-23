@@ -1,30 +1,10 @@
-//! A5 (ClosedWiz#113): `openwiz fleet <spec> [--json]`, one fleet's
-//! tickets, on a fake `gh` ([`World`], in `a5_world.rs`).
-//!
-//! The proofs, from spec #107:
-//! - **S1-2, only a merge read back counts as merged:** an approval, a
-//!   ready pull request, a closed issue, or GitHub's own `MERGED` whose
-//!   merge isn't found on the base, never shows as merged, for a ticket or
-//!   a blocker;
-//! - **S1-3, unknowns stay unknown, with reasons; a failed read makes the
-//!   answer partial:** each read failing, each way, is recorded with its
-//!   gap, and every value it reaches names exactly it;
-//! - **S1-5, the `--json` output matches the contract:** every envelope
-//!   these tests print passes the schema, and the contract's own example
-//!   fleet comes out exactly as the contract prints it, but for the agents
-//!   (A6, #114), which are recorded as not read.
-//!
-//! Expected values are written out, or taken from the contract's example:
-//! never worked out the way the code works them out.
-//!
-//! **Fixtures only.** Fixture tests never prove live behaviour.
-
 #[path = "a5_world.rs"]
 mod world;
 
 #[path = "a5_agents_cli.rs"]
 mod cli_agents;
 
+use std::path::Path;
 use std::process::Command;
 use std::time::Duration;
 
@@ -41,7 +21,6 @@ use world::{
 
 const CONTRACT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../contracts/fleet.v1.md");
 
-/// Checks `envelope` against `contracts/fleet.v1.schema.json`.
 fn conforms(envelope: &Value) {
     let errors = schema::validate(&schema::load_schema(), envelope);
     assert!(
@@ -50,15 +29,12 @@ fn conforms(envelope: &Value) {
     );
 }
 
-/// Runs `openwiz fleet <spec> --json` on `world` and checks the envelope
-/// against the schema.
 fn envelope(world: &World, test: &str, spec: &str) -> Value {
     let got = world.run(test, &[spec, "--json"]).json();
     conforms(&got);
     got
 }
 
-/// The read with this id.
 fn read<'a>(envelope: &'a Value, id: &str) -> &'a Value {
     envelope["reads"]
         .as_array()
@@ -68,7 +44,6 @@ fn read<'a>(envelope: &'a Value, id: &str) -> &'a Value {
         .unwrap_or_else(|| panic!("no read {id}"))
 }
 
-/// Each ticket's number and state.
 fn states(envelope: &Value) -> Vec<(u64, Value)> {
     envelope["data"]["tickets"]
         .as_array()
@@ -78,7 +53,6 @@ fn states(envelope: &Value) -> Vec<(u64, Value)> {
         .collect()
 }
 
-/// Each blocker's number and `merged`.
 fn merged(envelope: &Value) -> Vec<(u64, Value)> {
     envelope["data"]["blockers"]
         .as_array()
@@ -103,14 +77,6 @@ fn unread(ids: &[&str]) -> Value {
 const CLOSED: &str = "closed on GitHub, and no merge was read back";
 const NOT_ON_BASE: &str = "its pull request is merged, but the merge wasn't found on its base";
 
-// ---------------------------------------------------------------------
-// S1-2: only a merge read back counts as merged.
-// ---------------------------------------------------------------------
-
-/// Spec 1's tickets: an approval (2), a ready pull request (3), a closed
-/// issue (4), GitHub's `MERGED` not found on the base, on a closed (5) and
-/// an open (6) issue, one merge read back (7), an approval on a closed issue
-/// (8), and two tickets blocked by them (9 by 2 to 6, 10 by 7).
 fn merge_world() -> World {
     let mut not_on_base = PrW::merged(&[5], '5', 'b');
     not_on_base.ahead_by = 3;
@@ -198,7 +164,6 @@ fn an_approval_a_ready_pull_request_or_a_closed_issue_never_shows_as_merged() {
 fn a_merge_whose_read_back_failed_is_never_merged() {
     let world = merge_world().answer(&compare_argv("main", &oid('a')), answer("", 1));
     let got = envelope(&world, "merge_read_back_failed", "1");
-    // #7's merge read back is the failed read; #10 waits on it as a blocker.
     let id = got["data"]["tickets"][5]["on_base"]
         .as_str()
         .expect("#7's on_base")
@@ -244,8 +209,6 @@ fn a_base_branch_gh_isnt_given_leaves_the_merge_unread_and_runs_nothing() {
 
 #[test]
 fn a_blockers_open_pull_request_is_never_read_for_checks_or_a_verdict() {
-    // #50 is outside the fleet and blocks #3; its pull request #500 is
-    // open. No value needs its checks or comments, so neither is read.
     let mut world = small_world()
         .issue(
             50,
@@ -282,11 +245,6 @@ fn a_blockers_open_pull_request_is_never_read_for_checks_or_a_verdict() {
     assert_eq!(states(&got)[1], (3, known("blocked")));
 }
 
-// ---------------------------------------------------------------------
-// S1-5: the contract's own example fleet, exactly.
-// ---------------------------------------------------------------------
-
-/// The contract's examples: every ```json block of `fleet.v1.md`.
 fn contract_examples() -> Vec<Value> {
     let text = std::fs::read_to_string(CONTRACT).expect("the contract");
     let examples = text.split("\n## Examples\n").nth(1).expect("its examples");
@@ -298,7 +256,6 @@ fn contract_examples() -> Vec<Value> {
         .collect()
 }
 
-/// The GitHub side of the contract's example 2, `fleet 901`.
 fn example_world() -> World {
     let ticket = |title: &str, owned: &str, relies: &str| {
         let mut issue = IssueW::ticket(title);
@@ -443,9 +400,6 @@ fn example_world() -> World {
         .pr(802, merged(812, "room/syn-old-0802", 'c', 'd'))
 }
 
-/// The contract's example 2 as A5 prints it: the CloudRoom reads (r2, the
-/// project and thread lists) recorded as not made, so no workspace read,
-/// every builder and `unplaced` unread, and the coverage partial.
 fn example_as_a5_prints_it() -> Value {
     let mut expected = contract_examples().swap_remove(1);
     assert_eq!(expected["data"]["view"], "fleet", "example 2 is fleet 901");
@@ -479,10 +433,6 @@ fn the_contracts_example_fleet_comes_out_exactly_but_for_the_agents() {
 
 #[test]
 fn through_the_agents_seam_the_contracts_example_fleet_comes_out_exactly() {
-    // The seam A6 (#114) fills: given the example's own CloudRoom reads and
-    // placements, the view records them where the contract does (room-cli's
-    // version second, the lists and branches last) and prints its builders
-    // and `unplaced`: the example itself, unchanged.
     let mut world = example_world();
     world.agents = Some(std::sync::Arc::new(world::ExampleAgents));
     let got = envelope(&world, "contract_example_with_agents", "901");
@@ -531,16 +481,6 @@ fn it_reads_each_thing_once_and_only_through_the_allowlist() {
     }
 }
 
-// ---------------------------------------------------------------------
-// S1-3: unknowns stay unknown, with reasons; a failed read makes the
-// answer partial.
-// ---------------------------------------------------------------------
-
-/// Spec 1: #2 with an approved, passing pull request #20; #3 blocked by #2.
-/// Its reads: r1 gh's version, r2 room-cli's (not made), r3 the
-/// repository, r4 and r5 the spec and its tickets, r6 to r10 #2 and its
-/// pull request's checks and comments, r11 to r13 #3, r14 and r15 the
-/// project and thread lists (not made).
 fn small_world() -> World {
     World::default()
         .spec(1, &[2, 3])
@@ -566,21 +506,17 @@ fn the_small_world_is_complete_on_github() {
     );
 }
 
-/// A gh answer with the first key given twice.
 fn duplicate_key(value: &Value) -> String {
     let text = value.to_string();
     let first = text.split(',').next().expect("a first key");
     format!("{first},{}", &text[1..])
 }
 
-/// One way a read fails, and what it must leave.
 struct Failure {
     name: &'static str,
     argv: Vec<String>,
     response: Value,
-    /// The failed read's id and gap.
     read: (&'static str, &'static str),
-    /// #2's and #3's states, #2's `merged` as a blocker, the progress.
     two: Value,
     three: Value,
     blocker: Value,
@@ -722,8 +658,6 @@ fn each_failed_read_is_recorded_and_every_value_it_reaches_names_it() {
     }
 }
 
-/// A guard, planted: the change to the small world, the failed read and
-/// its reason, and #2's and #3's states.
 struct Plant {
     name: &'static str,
     plant: fn(&mut World),
@@ -824,7 +758,6 @@ fn each_guard_refuses_what_it_exists_for() {
             plant.name
         );
     }
-    // The spec's own list: nothing is printed.
     for (name, sub_issues, reason) in [
         (
             "spec_self",
@@ -855,7 +788,6 @@ fn where_rules_overlap_the_first_in_the_tables_order_wins() {
     draft_changes.draft = true;
     let world = World::default()
         .spec(1, &[2, 3, 4, 5, 6, 7, 8, 9, 10])
-        // 3 (held) before 6 (in review).
         .issue(
             2,
             IssueW::ticket("Held with an approved pull request")
@@ -863,13 +795,11 @@ fn where_rules_overlap_the_first_in_the_tables_order_wins() {
                 .closed_by(&[20]),
         )
         .pr(20, PrW::open(&[2], '2').verdict("APPROVE", '2'))
-        // 4 (changes) before 5 (a draft).
         .issue(
             3,
             IssueW::ticket("A draft with changes asked").closed_by(&[30]),
         )
         .pr(30, draft_changes)
-        // CI: failed before pending before passed; skipping counts for nothing.
         .issue(4, IssueW::ticket("Pending").closed_by(&[40]))
         .pr(
             40,
@@ -887,8 +817,6 @@ fn where_rules_overlap_the_first_in_the_tables_order_wins() {
         )
         .issue(7, IssueW::ticket("Only skipped").closed_by(&[70]))
         .pr(70, PrW::open(&[7], '7').checks(&[("a", "skipping")]))
-        // One pull request closing two tickets: the same value for both,
-        // its checks and comments read once.
         .issue(
             8,
             IssueW::ticket("One of two")
@@ -900,7 +828,6 @@ fn where_rules_overlap_the_first_in_the_tables_order_wins() {
             80,
             PrW::open(&[8, 9], '8').checks(&[("a", "pass"), ("b", "skipping")]),
         )
-        // 5: a draft is building, even with CI passed and no verdict.
         .issue(10, IssueW::ticket("A draft, CI passed").closed_by(&[100]))
         .pr(
             100,
@@ -966,6 +893,11 @@ fn a_read_that_hangs_times_out_and_the_rest_is_still_shown() {
     assert_eq!(
         states(&got),
         vec![(2, unread(&["r9"])), (3, known("blocked"))]
+    );
+    let pid = ran.hung.expect("the fake hung");
+    assert!(
+        !Path::new("/proc").join(pid.trim()).exists(),
+        "the stopped read {pid} is still there"
     );
 }
 
@@ -1238,10 +1170,6 @@ fn with_no_time_left_nothing_is_read() {
     assert_eq!(ran.calls, Vec::<Vec<String>>::new());
 }
 
-// ---------------------------------------------------------------------
-// The command: its arguments, its text, and the program.
-// ---------------------------------------------------------------------
-
 #[test]
 fn a_usage_error_reads_nothing() {
     for args in [
@@ -1360,7 +1288,6 @@ fn the_text_never_says_none_for_a_line_it_couldnt_read() {
     }
 }
 
-/// #373: a real-gh-shaped empty result is complete, including with APPROVE.
 #[test]
 fn no_checks_reported_keeps_the_ticket_building_and_fleet_progress_known() {
     let world = small_world().answer(

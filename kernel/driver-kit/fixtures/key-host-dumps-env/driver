@@ -1,0 +1,12 @@
+#!/usr/bin/env python3
+import importlib.machinery, importlib.util, json, os, sys
+sys.dont_write_bytecode = True
+path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'key-host', 'driver')
+spec = importlib.util.spec_from_loader('keyhost', importlib.machinery.SourceFileLoader('keyhost', path))
+d = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(d)
+os.makedirs(os.environ['OPENWIZ_TEMPLATE_STATE'], exist_ok=True)
+with open(os.path.join(os.environ['OPENWIZ_TEMPLATE_STATE'], 'environments.txt'), 'a') as f:
+    kit = sorted(v for v in os.environ.values() if v.startswith('kit-'))
+    f.write(json.dumps({'names': sorted(os.environ), 'kit': kit}) + '\n')
+d.t.main()

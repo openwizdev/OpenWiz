@@ -1,6 +1,3 @@
-//! P12 Version and schema drift: an untested `room-cli` version and missing
-//! or mistyped fields are reported explicitly.
-
 use openwiz_core::envelope::{Completeness, GapKind};
 use openwiz_core::model::Fact;
 use openwiz_core::ops::ListRequest;
@@ -52,8 +49,6 @@ fn an_untested_version_is_reported_and_never_stops() {
     }
 }
 
-/// #37: version text that is neither `N.N.N` nor `v<N>` is never echoed; the
-/// version is unknown with a reason, a gap says so, and the run goes on.
 #[test]
 fn an_unrecognised_version_is_unknown_and_never_stops() {
     let fake = Fake::new("p12_unrecognised_version", "version-unrecognised");
@@ -71,10 +66,6 @@ fn an_unrecognised_version_is_unknown_and_never_stops() {
     assert!(!out.contains("Synthetic not a version"), "{out}");
 }
 
-/// #37, after Sol's review of PR #39 and PR #40 (finding 1): a failed
-/// version read is unknown with a controlled reason. The source's own error
-/// text is never echoed in text, JSON or stderr, even a line that passes
-/// #21's general diagnostic grammar, and the run goes on.
 #[test]
 fn a_failed_version_read_never_echoes_its_error_text() {
     const MARKER: &str = "Synthetic private version marker";
@@ -177,8 +168,6 @@ fn unknown_extra_fields_are_tolerated() {
     assert_eq!(extra.data, normal.data, "extra fields change nothing");
 }
 
-/// Raw response text must reach the fake unchanged: parsing it as a Value
-/// here would erase the duplicate keys this proof needs to exercise.
 fn normal_with_raw_response(test: &str, argv: &[&str], raw: &str) -> Fake {
     let fake = Fake::new(test, "normal");
     let scenario = serde_json::json!({
@@ -196,8 +185,6 @@ fn normal_with_raw_response(test: &str, argv: &[&str], raw: &str) -> Fake {
     fake
 }
 
-/// #662, policy A: any repeated key refuses the affected read, including
-/// identical values, decoded-equivalent keys and nested/extra objects.
 #[test]
 fn contradictory_status_keys_never_become_complete_known_facts() {
     let original = include_str!("../fixtures/room-cli-0.43.1/normal/thread-list.json");
@@ -341,8 +328,6 @@ fn missing_detail_fields_are_reported_by_session_and_field() {
     }
 }
 
-/// A copy of the `normal` scenario in the fake's own directory, with
-/// `thread list --json` answered by `edit`ed rows.
 fn normal_with_thread_list(test: &str, edit: impl Fn(&mut serde_json::Value)) -> Fake {
     use serde_json::Value;
     use std::fs;
@@ -377,10 +362,6 @@ fn normal_with_thread_list(test: &str, edit: impl Fn(&mut serde_json::Value)) ->
     fake
 }
 
-/// New in ticket 2, after the internal Haiku review (A, R3): a value of the
-/// right type that 0.43.1 never had (a new `visibility` or
-/// `executionTarget`) is unknown, the row stays listed, and the drift is a
-/// gap, so coverage is partial.
 #[test]
 fn unrecognised_values_are_reported_as_drift() {
     let fake = normal_with_thread_list("p12_unrecognised_values", |rows| {
@@ -407,7 +388,6 @@ fn unrecognised_values_are_reported_as_drift() {
     }
 }
 
-/// #1673: synthetic invalid provider shapes must not turn into known absence.
 #[test]
 fn nullable_parent_preserves_primitive_type_drift_at_adapter_reads() {
     use openwiz_core::model::SessionId;

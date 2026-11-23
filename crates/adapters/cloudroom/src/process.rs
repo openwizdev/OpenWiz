@@ -50,7 +50,14 @@ fn is_scrubbed_bytes(name: &[u8]) -> bool {
 }
 
 fn scrub(command: &mut Command) -> &mut Command {
-    for (name, _) in std::env::vars_os() {
+    scrub_from(command, std::env::vars_os().map(|(name, _)| name))
+}
+
+fn scrub_from(
+    command: &mut Command,
+    parent: impl IntoIterator<Item = std::ffi::OsString>,
+) -> &mut Command {
+    for name in parent {
         if is_scrubbed_bytes(name.as_encoded_bytes()) {
             command.env_remove(&name);
         }
@@ -153,24 +160,8 @@ fn execute_with_read_timeout(
     if started >= stop_at {
         return Err(Failure::Source(SourceError::TimedOut { after_ms: 0 }));
     }
-    let resolved = crate::locate::program(program).map_err(Failure::Source)?;
-    let program = resolved.as_path();
-    if Instant::now() >= stop_at {
-        return Err(Failure::Source(SourceError::TimedOut {
-            after_ms: u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX),
-        }));
-    }
-    let mut child = scrub(&mut Command::new(program))
-        .args(invocation.argv())
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|_| {
-            Failure::Source(SourceError::Unavailable {
-                detail: "room-cli could not be started".to_owned(),
-            })
-        })?;
+    let resolved = crate::locate::programs(program).map_err(Failure::Source)?;
+    let mut child = launch(&resolved, invocation, started, stop_at)?;
     let stdout = collect(child.stdout.take(), MAX_STDOUT_BYTES);
     let stderr = collect(child.stderr.take(), MAX_STDERR_BYTES);
     let timed_out = || {
@@ -233,6 +224,41 @@ fn execute_with_read_timeout(
     Err(Failure::Exited {
         exit_code: status.code(),
         stderr: err,
+    })
+}
+
+fn launch(
+    resolved: &[std::path::PathBuf],
+    invocation: &Invocation,
+    started: Instant,
+    stop_at: Instant,
+) -> Result<Child, Failure> {
+    let mut spawned = None;
+    for program in resolved {
+        if Instant::now() >= stop_at {
+            return Err(Failure::Source(SourceError::TimedOut {
+                after_ms: u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX),
+            }));
+        }
+        match scrub(&mut Command::new(program))
+            .args(invocation.argv())
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+        {
+            Ok(child) => {
+                spawned = Some(child);
+                break;
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied => continue,
+            Err(_) => break,
+        }
+    }
+    spawned.ok_or_else(|| {
+        Failure::Source(SourceError::Unavailable {
+            detail: "room-cli could not be started".to_owned(),
+        })
     })
 }
 
@@ -329,5 +355,59 @@ mod scrub_tests {
             assert!(!is_scrubbed(name), "{name}");
         }
         assert!(is_scrubbed_bytes(b"BB_\xff"));
+    }
+
+    #[test]
+    fn a_child_loses_thread_context_and_keeps_the_server_address() {
+        use std::ffi::{OsStr, OsString};
+        use std::os::unix::ffi::OsStrExt;
+        let parent: Vec<(OsString, &str)> = [
+            ("ROOM_THREAD_ID", "thr_syn_2291"),
+            ("ROOM_PROJECT_ID", "prj_syn_2291"),
+            ("BB_THREAD_ID", "thr_syn_2291"),
+            ("ROOM_SERVER_URL", "http://127.0.0.1:9"),
+            ("SYN_KEPT", "synthetic"),
+        ]
+        .into_iter()
+        .map(|(name, value)| (OsString::from(name), value))
+        .chain([(OsStr::from_bytes(b"BB_\xff").to_owned(), "synthetic")])
+        .collect();
+        let mut child = Command::new("/usr/bin/env");
+        child.env_clear().envs(parent.iter().map(|(n, v)| (n, v)));
+        let out = scrub_from(&mut child, parent.iter().map(|(n, _)| n.clone()))
+            .output()
+            .unwrap();
+        assert!(out.status.success());
+        let mut names: Vec<String> = out
+            .stdout
+            .split(|b| *b == b'\n')
+            .filter(|line| !line.is_empty())
+            .map(|line| String::from_utf8_lossy(line.split(|b| *b == b'=').next().unwrap()).into())
+            .collect();
+        names.sort();
+        assert_eq!(names, ["ROOM_SERVER_URL", "SYN_KEPT"]);
+    }
+
+    #[test]
+    fn the_launch_deadline_is_checked_before_each_candidate() {
+        use std::os::unix::fs::PermissionsExt;
+        let denied =
+            std::env::temp_dir().join(format!("openwiz-2291-denied-{}", std::process::id()));
+        std::fs::write(&denied, "#!/bin/sh\nexit 0\n").unwrap();
+        std::fs::set_permissions(&denied, std::fs::Permissions::from_mode(0o600)).unwrap();
+        let candidates = vec![denied.clone(); 2048];
+        let invocation = Invocation::ThreadList {
+            include_hidden: false,
+            include_archived: false,
+        };
+        let budget = Duration::from_millis(20);
+        let started = Instant::now();
+        let result = launch(&candidates, &invocation, started, started + budget);
+        let elapsed = started.elapsed();
+        std::fs::remove_file(&denied).unwrap();
+        assert!(
+            matches!(result, Err(Failure::Source(SourceError::TimedOut { .. }))),
+            "after {elapsed:?}"
+        );
     }
 }

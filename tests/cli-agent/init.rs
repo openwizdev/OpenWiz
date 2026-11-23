@@ -1,6 +1,3 @@
-//! #635: the installed `openwiz init` reaches its packaged runtime, through the
-//! real binary copied beside `runtime/setup/`, with a recording fake `gh` on
-//! PATH. Synthetic repositories only; no real GitHub call.
 use super::*;
 
 fn openwiz() -> PathBuf {
@@ -25,7 +22,6 @@ struct Installed {
 }
 
 impl Installed {
-    /// An installed layout: the binary and the packaged setup runtime.
     fn new(name: &str, with_runtime: bool) -> Self {
         let root = std::env::temp_dir().join(format!("openwiz-init-{name}-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
@@ -88,8 +84,6 @@ impl Drop for Installed {
     }
 }
 
-// Catches: the CLI not reaching the packaged runtime (or the runtime not
-// finding the gh login), a mangled outcome, or a preview that writes.
 #[test]
 fn installed_init_previews_and_applies_through_the_packaged_runtime() {
     let installed = Installed::new("apply", true);
@@ -129,8 +123,6 @@ fn installed_init_previews_and_applies_through_the_packaged_runtime() {
     assert!(installed.writes() > 0);
 }
 
-// Catches: a fallback to a source checkout or PATH when the packaged runtime
-// is absent, and arguments the runtime would act on being let through.
 #[test]
 fn installed_init_refuses_without_its_runtime_and_on_bad_arguments() {
     let bare = Installed::new("bare", false);
@@ -167,7 +159,6 @@ fn installed_init_refuses_without_its_runtime_and_on_bad_arguments() {
     assert_eq!(installed.writes(), 0);
 }
 
-// Catches: help that reads state or sources, or init missing from discovery.
 #[test]
 fn init_help_is_source_free_and_listed_in_agent_discovery() {
     let bare = Installed::new("help", false);

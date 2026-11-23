@@ -1,16 +1,12 @@
 #!/usr/bin/env python3
-"""A synthetic harness for the kit's own tests. Called as `fake-harness --model <m> -p <prompt>`, it
-posts (or, when woken, edits) one builder status note in the local tracker named by KIT_TRACKER, as a
-record author, then waits until it is stopped. Its turn hands that work to a worker in its own session
-and ends."""
 import json, os, re, subprocess, sys, time
 
 path, args = os.environ['KIT_TRACKER'], sys.argv[1:]
-if not os.environ.get('FAKE_WORKER'):  # the turn: its command line and environment go to the worker
+if not os.environ.get('FAKE_WORKER'):
     subprocess.Popen([sys.executable] + sys.argv, env=dict(os.environ, FAKE_WORKER=str(os.getpid())),
-                     start_new_session=True)
+                     start_new_session=not os.environ.get('FAKE_SAME_GROUP'))
     sys.exit(0)
-while os.getppid() == int(os.environ['FAKE_WORKER']):  # the worker posts once the turn has ended
+while os.getppid() == int(os.environ['FAKE_WORKER']):
     time.sleep(0.01)
 model, prompt = args[args.index('--model') + 1], args[args.index('-p') + 1]
 skill = re.search(r'with the ([a-z0-9-]+) skill', prompt).group(1)

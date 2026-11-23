@@ -1,0 +1,20 @@
+running 1 test
+test cp1_catalogue_covers_the_public_command_flag_and_schema_matrix ... FAILED
+
+failures:
+
+---- cp1_catalogue_covers_the_public_command_flag_and_schema_matrix stdout ----
+
+thread 'cp1_catalogue_covers_the_public_command_flag_and_schema_matrix' (25303) panicked at tests/cli-agent/main.rs:165:9:
+assertion `left == right` failed: models
+  left: ["--json", "--help"]
+ right: ["--json", "--host", "--help"]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    cp1_catalogue_covers_the_public_command_flag_and_schema_matrix
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 120 filtered out; finished in 0.03s
+
+error: test failed, to rerun pass `-p openwiz-tests --test cli-agent`

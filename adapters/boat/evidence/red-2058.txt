@@ -1,0 +1,119 @@
+# #2058 red, before the fix: python3 -I adapters/boat/test_driver.py -k credential_shaped -k diagnostics_never
+# Synthetic markers are replaced with <synthetic-marker> here.
+FFFFFFFFFFFFFF
+======================================================================
+FAIL: test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Boat.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (field='model', value='<synthetic-marker>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<tmp>/adapters/boat/test_driver.py", line 331, in test_a_credential_shaped_start_field_is_refused_before_anything_starts
+    self.assertEqual(code, 1, err)
+AssertionError: 0 != 1 : {'run': 'run-a99bee06bb7f'}
+
+======================================================================
+FAIL: test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Boat.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (field='model', value='<synthetic-marker>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<tmp>/adapters/boat/test_driver.py", line 331, in test_a_credential_shaped_start_field_is_refused_before_anything_starts
+    self.assertEqual(code, 1, err)
+AssertionError: 0 != 1 : {'run': 'run-90bde97f47a4'}
+
+======================================================================
+FAIL: test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Boat.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (field='model', value='<synthetic-marker>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<tmp>/adapters/boat/test_driver.py", line 331, in test_a_credential_shaped_start_field_is_refused_before_anything_starts
+    self.assertEqual(code, 1, err)
+AssertionError: 0 != 1 : {'run': 'run-1a455a90ec89'}
+
+======================================================================
+FAIL: test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Boat.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (field='repository', value='<synthetic-token>/site')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<tmp>/adapters/boat/test_driver.py", line 331, in test_a_credential_shaped_start_field_is_refused_before_anything_starts
+    self.assertEqual(code, 1, err)
+AssertionError: 0 != 1 : {'run': 'run-c5cfef68c809'}
+
+======================================================================
+FAIL: test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Boat.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (field='skill', value='<synthetic-marker>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<tmp>/adapters/boat/test_driver.py", line 331, in test_a_credential_shaped_start_field_is_refused_before_anything_starts
+    self.assertEqual(code, 1, err)
+AssertionError: 0 != 1 : {'run': 'run-c23706098f0f'}
+
+======================================================================
+FAIL: test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Boat.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (field='harness', value='<synthetic-marker>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<tmp>/adapters/boat/test_driver.py", line 333, in test_a_credential_shaped_start_field_is_refused_before_anything_starts
+    self.assertIn('credential', err['error'])
+AssertionError: 'credential' not found in 'boat has no harness <synthetic-marker>'
+
+======================================================================
+FAIL: test_boat_diagnostics_never_reach_the_drivers_answer (__main__.Boat.test_boat_diagnostics_never_reach_the_drivers_answer) (cmd='new', how='json')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<tmp>/adapters/boat/test_driver.py", line 351, in test_boat_diagnostics_never_reach_the_drivers_answer
+    self.assertNotIn(marker, json.dumps(err))
+AssertionError: '<synthetic-marker>' unexpectedly found in '{"error": "boat new failed: Synthetic sign-in expired; session <synthetic-marker> (not_authenticated)", "next": "sign in to boat yourself with `boat login`, then start again; if `boat list` shows a sandbox named openwiz-run-23539e3cdec4, stop it first"}'
+
+======================================================================
+FAIL: test_boat_diagnostics_never_reach_the_drivers_answer (__main__.Boat.test_boat_diagnostics_never_reach_the_drivers_answer) (cmd='new', how='code')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<tmp>/adapters/boat/test_driver.py", line 351, in test_boat_diagnostics_never_reach_the_drivers_answer
+    self.assertNotIn(marker, json.dumps(err))
+AssertionError: '<synthetic-marker>' unexpectedly found in '{"error": "boat new failed: Synthetic diagnostic (<synthetic-marker>)", "next": "fix what boat said, then start again; if `boat list` shows a sandbox named openwiz-run-68576796952d, stop it first"}'
+
+======================================================================
+FAIL: test_boat_diagnostics_never_reach_the_drivers_answer (__main__.Boat.test_boat_diagnostics_never_reach_the_drivers_answer) (cmd='new', how='stderr')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<tmp>/adapters/boat/test_driver.py", line 351, in test_boat_diagnostics_never_reach_the_drivers_answer
+    self.assertNotIn(marker, json.dumps(err))
+AssertionError: '<synthetic-marker>' unexpectedly found in '{"error": "boat new failed: Synthetic auth diagnostic: login expired, session <synthetic-marker>", "next": "sign in to boat yourself with `boat login`, then start again; if `boat list` shows a sandbox named openwiz-run-a4016d00ad76, stop it first"}'
+
+======================================================================
+FAIL: test_boat_diagnostics_never_reach_the_drivers_answer (__main__.Boat.test_boat_diagnostics_never_reach_the_drivers_answer) (cmd='exec', how='json')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<tmp>/adapters/boat/test_driver.py", line 351, in test_boat_diagnostics_never_reach_the_drivers_answer
+    self.assertNotIn(marker, json.dumps(err))
+AssertionError: '<synthetic-marker>' unexpectedly found in '{"error": "the pinned WizSkills skills (0.2.0) could not be installed in sandbox bx_fake0001: {\\"event\\": \\"error\\", \\"error\\": \\"Synthetic sign-in expired; session <synthetic-marker>\\", \\"code\\": \\"not_authenticated\\", \\"status\\": 409}", "next": "check that the sandbox reaches github.com and that no other skill of that name is installed there, then start again"}'
+
+======================================================================
+FAIL: test_boat_diagnostics_never_reach_the_drivers_answer (__main__.Boat.test_boat_diagnostics_never_reach_the_drivers_answer) (cmd='exec', how='stderr')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<tmp>/adapters/boat/test_driver.py", line 351, in test_boat_diagnostics_never_reach_the_drivers_answer
+    self.assertNotIn(marker, json.dumps(err))
+AssertionError: '<synthetic-marker>' unexpectedly found in '{"error": "the pinned WizSkills skills (0.2.0) could not be installed in sandbox bx_fake0002: Synthetic auth diagnostic: login expired, session <synthetic-marker>", "next": "check that the sandbox reaches github.com and that no other skill of that name is installed there, then start again"}'
+
+======================================================================
+FAIL: test_boat_diagnostics_never_reach_the_drivers_answer (__main__.Boat.test_boat_diagnostics_never_reach_the_drivers_answer) (cmd='prompt', how='json')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<tmp>/adapters/boat/test_driver.py", line 351, in test_boat_diagnostics_never_reach_the_drivers_answer
+    self.assertNotIn(marker, json.dumps(err))
+AssertionError: '<synthetic-marker>' unexpectedly found in '{"error": "boat prompt failed: Synthetic sign-in expired; session <synthetic-marker> (not_authenticated)", "next": "sign in to boat yourself with `boat login`, then start again"}'
+
+======================================================================
+FAIL: test_boat_diagnostics_never_reach_the_drivers_answer (__main__.Boat.test_boat_diagnostics_never_reach_the_drivers_answer) (cmd='prompt', how='stderr')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<tmp>/adapters/boat/test_driver.py", line 351, in test_boat_diagnostics_never_reach_the_drivers_answer
+    self.assertNotIn(marker, json.dumps(err))
+AssertionError: '<synthetic-marker>' unexpectedly found in '{"error": "boat prompt failed: Synthetic auth diagnostic: login expired, session <synthetic-marker>", "next": "sign in to boat yourself with `boat login`, then start again"}'
+
+======================================================================
+FAIL: test_boat_diagnostics_never_reach_the_drivers_answer (__main__.Boat.test_boat_diagnostics_never_reach_the_drivers_answer) (cmd='prompt', how='code')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<tmp>/adapters/boat/test_driver.py", line 351, in test_boat_diagnostics_never_reach_the_drivers_answer
+    self.assertNotIn(marker, json.dumps(err))
+AssertionError: '<synthetic-marker>' unexpectedly found in '{"error": "boat prompt failed: Synthetic diagnostic (<synthetic-marker>)", "next": "fix what boat said, then start again"}'
+
+----------------------------------------------------------------------
+Ran 2 tests in 3.576s
+
+FAILED (failures=14)

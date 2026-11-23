@@ -49,12 +49,19 @@ VERSION = '0.0.99'
 NAME = 'openwiz-' + TARGET
 BASE = 'https://github.com/openwizdev/OpenWiz/releases/'
 LINE = 'Install OpenWiz from github.com/openwizdev/OpenWiz'
-ORDER = ['Preflight', 'Verified install', 'Setup and connections', 'Explain', 'First fleet']
+ORDER = ['Preflight', 'Verified install', 'Setup and connections', 'Skills into your agents, then a restart', 'Teach',
+         'The onboarding road']
 # #2293 (PR6, copy only): independent literals for the free-only release copy.
 FREE_ONLY = ('OpenWiz is free now. Paid plans come later. '
              'CloudRoom and model charges are separate and not included.')
 NO_REFERRAL = 'Referral verification is unavailable. No referral is applied.'
 NOT_OFFERED = re.compile(r'upgrad|\btrial|\$\s?[0-9]|per month|checkout|subscri', re.I)
+SHELL_ARGUMENT = re.compile(r'"\$[0-9](?=["/])')
+
+
+def not_offered(raw):
+    code = re.sub(r'^```[a-z]*\n.*?^```$', lambda m: SHELL_ARGUMENT.sub('"ARG', m[0]), raw, flags=re.M | re.S)
+    return NOT_OFFERED.findall(' '.join(code.split()))
 BUILD_TOOLS = ('cargo', 'rustc', 'rustup', 'npm', 'node', 'npx')
 REPO = 'synthetic-owner/synthetic-consumer'
 PROFILE = {'metadata': 'read', 'contents': 'write', 'issues': 'write', 'pull_requests': 'write',
@@ -69,8 +76,19 @@ def settings_table(title, provider, model):
             '| Effort | High | `--reasoning-level high` |\n\nSource: synthetic owner, 2026-11-01.\n\n' % (title, provider, model))
 
 
+def models_row(role, provider, model):
+    return '| %s | Synthetic | Synthetic | High | `--provider %s --model %s --reasoning-level high` |\n' % (
+        role, provider, model)
+
+
 # The fleet settings the setup skill writes from the owner's recorded choice (#636).
-FLEET_SETTINGS = ('# Fleet settings\n\nSynthetic settings.\n\n'
+FLEET_SETTINGS = ('# Fleet settings\n\nSynthetic settings.\n\n## Models\n\n'
+                  '| Role | Harness | Model | Effort | `room-cli thread spawn` flags |\n| --- | --- | --- | --- | --- |\n'
+                  + models_row('Orchestrator', 'codex', 'syn-codex-model-01')
+                  + models_row('Builder', 'codex', 'syn-codex-model-01')
+                  + models_row('Reviewer', 'claude-code', 'syn-claude-model-01')
+                  + '| Small builder | follows Builder | | | |\n| Fixer | follows Builder | | | |\n\n'
+                  'Source: synthetic owner, 2026-11-01.\n\n'
                   + settings_table('Builder', 'codex', 'syn-codex-model-01')
                   + settings_table('Builder for small tickets', 'codex', 'syn-codex-model-01')
                   + settings_table('Reviewer for GPT-built', 'claude-code', 'syn-claude-model-01')
@@ -125,7 +143,10 @@ def bundle_assets(source):
     assets['runtime/access/access.py'] = (TOOLS / 'access/access.py').read_bytes()
     for skill in ('setup', 'grill', 'to-spec', 'to-tickets', 'launch-fleet', 'install'):  # the 0.2.0 catalog (#1187)
         assets.update(tracked(ROOT / 'skills' / skill, f'runtime/skills/{skill}/'))
-    assets = {k: v for k, v in assets.items() if not re.search(r'(^|/)test[^/]*$|/tests?/', k)}
+    runtime_test = 'runtime/skills/launch-fleet/test/ops-protocol/'
+    assets = {k: v for k, v in assets.items()
+              if k.startswith(runtime_test) or not re.search(r'(^|/)test[^/]*$|/tests?/', k)}
+    assets.update(tracked(ROOT / '.wizskills/contracts', 'runtime/contracts/'))
     identity = f'openwiz.package.v1\n{VERSION}\n{source}\n{TARGET}\n'.encode()
     assets['runtime/openwiz-build.txt'] = identity
     return assets
@@ -150,10 +171,11 @@ def release(folder, source='1' * 40, tamper=False):
                            'target': TARGET, 'setup_api': 1, 'archive': archive_name,
                            'archive_sha256': sha(archive), 'archive_bytes': len(archive),
                            'assets': rows}).encode()
+    sums = f'{sha(manifest)}  openwiz-{VERSION}-{TARGET}.manifest.json\n{sha(archive)}  {archive_name}\n'.encode()
     if tamper:
         archive = archive[:-1] + bytes([archive[-1] ^ 1])
     files = {NAME + '.sha256': f'{sha(manifest)}  {NAME}.manifest.json\n'.encode(),
-             NAME + '.manifest.json': manifest, archive_name: archive}
+             NAME + '.manifest.json': manifest, archive_name: archive, 'SHA256SUMS': sums}
     for name, data in files.items():
         (folder / name).write_bytes(data)
     return {'assets': assets, 'archive': archive_name, 'files': files}
@@ -378,9 +400,16 @@ class InstallJourney(unittest.TestCase):
                 text = ' '.join((ROOT / path).read_text().split())
                 self.assertIn(FREE_ONLY, text)
                 self.assertIn(NO_REFERRAL, text)
-                self.assertEqual(NOT_OFFERED.findall(text), [])
+                self.assertEqual(not_offered((ROOT / path).read_text()), [])
                 self.assertEqual(set(re.findall(r'cloudroom\.dev/[^\s`)]*', text)), {'cloudroom.dev/pricing'},
                                  "CloudRoom's own page, with no referral code or parameter")
+
+    def test_a_price_in_prose_is_refused_and_a_shell_argument_is_not(self):
+        shell = 'Run:\n\n```sh\nfixed() { grep -q x "$1/SKILL.md" && cat "$1"; }\n```\n'
+        self.assertEqual(not_offered(shell), [])
+        for prose in ('It costs "$5/month".', 'It costs "$5".', 'It costs $5.', 'Run `"$5/month"`.'):
+            with self.subTest(prose):
+                self.assertEqual(not_offered(shell + prose + '\n'), ['$5'])
 
     def test_from_the_line_to_a_first_fleet_on_a_cold_consumer(self):
         c = Consumer(self)
@@ -398,7 +427,7 @@ class InstallJourney(unittest.TestCase):
             self.assertEqual(report['target'], TARGET)
             self.assertTrue(report['ready'])
             ids = [check['id'] for check in report['checks']]
-            self.assertEqual(ids, ['python', 'target', 'disk', 'room-cli', 'gh', 'git'])
+            self.assertEqual(ids, ['python', 'target', 'disk', 'glibc', 'room-cli', 'gh', 'git'])
             self.assertNotIn('cargo', result.stdout)
 
         def verified_install():
@@ -406,7 +435,8 @@ class InstallJourney(unittest.TestCase):
             self.assertEqual((result['version'], result['target'], result['activated']), (VERSION, TARGET, True))
             self.assertEqual(transport.urls, [BASE + f'latest/download/{NAME}.sha256',
                                               BASE + f'latest/download/{NAME}.manifest.json',
-                                              BASE + f'download/v{VERSION}/{published["archive"]}'])
+                                              BASE + f'download/v{VERSION}/{published["archive"]}',
+                                              BASE + f'download/v{VERSION}/SHA256SUMS'])
             self.build = Path(result['build'])
             self.state = Path(result['state_root'])
             self.assertEqual(Path(os.readlink(c.root / 'current')), self.build)
@@ -427,12 +457,26 @@ class InstallJourney(unittest.TestCase):
                              ('cloudroom_login_verified', 'app_missing', 'project_unprepared'))
             self.assertEqual(api.requests, [], 'no App API call before an App is connected')
 
-        def explain():
-            installed = self.build / 'runtime/skills'
-            said = section(installed / 'install/SKILL.md', 'Explain')
-            quote = [line for line in said.splitlines() if line.startswith('> ')]
-            for concept in ('**idea**', '**grill**', '**spec**', '**tickets**', '**builder**', '**reviewer**', '**merges**'):
-                self.assertIn(concept, quote[0])
+        def skills_into_agents():
+            (c.home / '.claude').mkdir(mode=0o700)
+            result = json.loads(c.entry('skills', '--root', str(c.root)).stdout)
+            states = {row['id']: row['state'] for row in result['harnesses']}
+            self.assertEqual(states, dict(dict.fromkeys(('codex', 'cursor', 'opencode', 'grok'), 'absent'),
+                                          **{'claude-code': 'installed'}))
+            shipped = sorted(p.name for p in (self.build / 'runtime/skills').iterdir() if p.is_dir())
+            self.assertEqual(sorted(p.name for p in (c.home / '.claude/skills').iterdir()), shipped)
+            self.assertTrue((c.home / '.claude/skills/install/.openwiz-skill').is_file(), "the installer's own copy")
+            restart = section(ROOT / 'skills/install/SKILL.md', 'Skills into your agents, then a restart')
+            for host in ('local', 'boat', 'cloud'):
+                self.assertIn('`continue the OpenWiz install with host %s and release <tag>`' % host, restart)
+
+        def teach():
+            installed = self.build / 'runtime/skills/install'
+            self.assertIn('[teach.md](teach.md)', section(installed / 'SKILL.md', 'Teach'))
+            up_front = (installed / 'teach.md').read_text().split('## Up front\n', 1)[1].split('\n## ', 1)[0]
+            said = ' '.join(line for line in up_front.splitlines() if line.startswith('> '))
+            for concept in ('factory of coding agents', 'tickets', 'review', 'merge', 'your yes'):
+                self.assertIn(concept, said)
 
         def first_fleet():
             j = self.onboarding(c)
@@ -447,13 +491,16 @@ class InstallJourney(unittest.TestCase):
                          'Private brain: %s (in repository).' % self.repository,
                          'Next: the grill (the explanation is done)'):
                 self.assertIn(line, carried)
-            self.assertEqual(len(j.spawns()), 1, 'one fleet thread starts the approved frontier')
+            self.assertEqual(j.spawns(), [], "the start is launch-fleet's own path, never a one-off thread")
+            self.assertIn("Spec #%d has its fleet record: launch-fleet's loop runs the spec." % j.spec, results[-2][1].stdout)
             self.assertEqual([call['form'] for call in j.logged()], ['fleet'], 'the installed openwiz only reads progress')
             self.assertIn('5 tickets: 3 building, 2 blocked', results[-1][1].stdout)
             self.assertNotEqual(Path(self.onboard.HELPER).resolve().parents[3], ROOT.resolve())
 
         runners = {'Preflight': preflight, 'Verified install': verified_install,
-                   'Setup and connections': setup_and_connections, 'Explain': explain, 'First fleet': first_fleet}
+                   'Setup and connections': setup_and_connections,
+                   'Skills into your agents, then a restart': skills_into_agents, 'Teach': teach,
+                   'The onboarding road': first_fleet}
         skill = ROOT / 'skills/install/SKILL.md'
         self.assertEqual(steps(skill), ORDER)
         for title in steps(skill):
@@ -495,9 +542,9 @@ class InstallJourney(unittest.TestCase):
         shutil.rmtree(c.downloads)
         out = io.StringIO()
         self.assertEqual(entry().main(['download', '--target', TARGET, '--dir', str(c.downloads)],
-                                      fetch=Transport(bad), stdout=out), 0, out.getvalue())
-        refused = c.entry('install', '--assets', str(c.downloads), '--target', TARGET, '--root', str(c.root), check=5)
-        self.assertEqual(json.loads(refused.stdout)['outcome'], 'refused')
+                                      fetch=Transport(bad), stdout=out), 5, out.getvalue())
+        self.assertIn('archive checksum mismatch', json.loads(out.getvalue())['reason'])
+        self.assertFalse(c.downloads.exists())
         self.assertEqual(os.readlink(c.root / 'current'), first['build'], 'the last good build stays selected')
         self.assertFalse((c.root / 'state/service/builds' / ('2' * 40)).exists())
 
@@ -777,6 +824,119 @@ class InstallJourney(unittest.TestCase):
                 self.assertEqual(check['state'], 'refused')
                 self.assertIn('macOS', check['next'])
 
+
+def own_settings():
+    return (ROOT / 'docs/agents/fleet.md').read_text()
+
+
+def in_section(text, title, old, new):
+    head, sep, rest = text.partition('\n## %s\n' % title)
+    body, more, tail = rest.partition('\n## ')
+    assert sep and body.count(old) == 1, (title, old)
+    return head + sep + body.replace(old, new) + more + tail
+
+
+OPUS = '| Claude Code | Opus 5.5 | Medium | `--provider claude-code --model claude-opus-5-5 --reasoning-level medium` |'
+SOL = '| Codex | Sol 6.2 | Medium | `--provider codex --model gpt-6.2-sol --reasoning-level medium` |'
+OPUS_SETTINGS = ('| Harness | Claude Code | `--provider claude-code` |', '| Model | Opus 5.5 | `--model claude-opus-5-5` |',
+                 '| Effort | Medium | `--reasoning-level medium` |')
+SOL_SETTINGS = ('| Harness | Codex | `--provider codex` |', '| Model | Sol 6.2 | `--model gpt-6.2-sol` |',
+                '| Effort | Medium | `--reasoning-level medium` |')
+STABLE_ROWS = {
+    'Models': ('| Orchestrator ' + OPUS, '| Builder ' + OPUS, '| Reviewer ' + SOL,
+               '| Small builder | follows Builder | | | |', '| Fixer | follows Builder | | | |'),
+    'Builder': OPUS_SETTINGS,
+    'Builder for small tickets': OPUS_SETTINGS,
+    'Reviewer for Claude-built': SOL_SETTINGS,
+    'Reviewer for GPT-built': OPUS_SETTINGS,
+    'Fixer': ('| Claude ' + OPUS, '| GPT ' + SOL),
+}
+
+
+def stable_settings():
+    text = own_settings()
+    for title, rows in STABLE_ROWS.items():
+        head, sep, rest = text.partition('\n## %s\n' % title)
+        body, more, tail = rest.partition('\n## ')
+        lines = body.split('\n')
+        table = [i for i, line in enumerate(lines) if line.startswith('|')]
+        assert sep and len(table) > 2 and table == list(range(table[0], table[-1] + 1)), title
+        lines[table[0] + 2:table[-1] + 1] = rows
+        text = head + sep + '\n'.join(lines) + more + tail
+    return text
+
+
+def table_rows(text, title):
+    body = text.split('\n## %s\n' % title, 1)[1].split('\n## ', 1)[0]
+    return [[cell.strip() for cell in line.strip()[1:-1].split('|')]
+            for line in body.splitlines() if line.startswith('|')][2:]
+
+
+class OwnSettings(unittest.TestCase):
+    def test_openwizs_own_models_table_and_the_older_tables_the_pinned_skills_read_agree(self):
+        self.agree(own_settings())
+
+    def test_a_role_set_in_both_forms_still_agrees(self):
+        high = '| Claude Code | Opus 5.5 | High | `--provider claude-code --model claude-opus-5-5 --reasoning-level high` |'
+        text = in_section(stable_settings(), 'Models', '| Small builder | follows Builder | | | |', '| Small builder %s' % high)
+        text = in_section(text, 'Builder for small tickets', '| Effort | Medium | `--reasoning-level medium` |',
+                          '| Effort | High | `--reasoning-level high` |')
+        self.agree(text)
+
+    def test_a_role_changed_in_one_form_only_or_a_second_fixer_row_is_refused(self):
+        for name, text in (
+                ('older small only', in_section(stable_settings(), 'Builder for small tickets',
+                                                '| Effort | Medium | `--reasoning-level medium` |',
+                                                '| Effort | High | `--reasoning-level high` |')),
+                ('models reviewer only', in_section(stable_settings(), 'Models', '--model gpt-6.2-sol --reasoning-level medium',
+                                                    '--model gpt-6.2-sol --reasoning-level high')),
+                ('older GPT fixer only', in_section(stable_settings(), 'Fixer', '--model gpt-6.2-sol --reasoning-level medium',
+                                                    '--model gpt-6.2-sol --reasoning-level high')),
+                ('second GPT fixer row', in_section(stable_settings(), 'Fixer', '\n\nSource:',
+                                                    '\n| GPT | Codex | Sol 6.2 | High | `--provider codex --model '
+                                                    'gpt-6.2-sol --reasoning-level high` |\n\nSource:'))):
+            with self.subTest(name), self.assertRaises(AssertionError):
+                self.agree(text)
+
+    def agree(self, text):
+        setup = module('own_setup', TOOLS / 'setup/setup.py')
+        self.assertTrue(setup.models_usable(text, setup.sections(text)['Models']), 'the install setup reader')
+        skills = ROOT / '.wizskills/skills'
+        problems = []
+        module('own_settings', skills / 'setup/scripts/settings.py').fleet(text, problems)
+        self.assertEqual(problems, [], 'the pinned setup check')
+        flags = re.compile(r'`--provider (\S+) --model (\S+) --reasoning-level (\S+)`')
+        choice = lambda cell: dict(zip(('provider', 'model', 'effort'), flags.fullmatch(cell).groups()))
+        rows = {row[0]: row for row in table_rows(text, 'Models')}
+        role = {name: choice((rows['Builder'] if rows.get(name, [0, 'follows Builder'])[1] == 'follows Builder'
+                              else rows[name])[4]) for name in ('Builder', 'Reviewer', 'Small builder', 'Fixer')}
+        family = {'claude-code': 'claude', 'codex': 'gpt'}
+        models = dict(builder=role['Builder'], small=role['Small builder'])
+        for f in ('claude', 'gpt'):
+            models['review ' + f] = next((c for c in (role['Reviewer'], role['Builder'])
+                                          if family.get(c['provider']) not in (None, f)), 'waits')
+            models['fix ' + f] = next((c for c in (role['Fixer'], role['Reviewer'])
+                                       if family.get(c['provider']) == f), 'waits')
+        starts = module('own_starts', skills / 'launch-fleet/scripts/ops-starts.py')
+        try:
+            read = starts.read_models(text)
+            older_only = starts.read_models(re.sub(r'\n## Models\n.*?(?=\n## |\Z)', '\n', text, flags=re.S))
+        except ValueError as refused:
+            self.fail('the pinned launch-fleet refuses the settings: %s' % refused)
+        self.assertEqual((read['read'], older_only['read']), ('models_table', 'older_tables'))
+        self.assertEqual(dict(builder=read['roles']['builder']['choice'], small=read['roles']['small_builder']['choice'],
+                              **{'review ' + f: read['reviews'][f]['choice'] or 'waits' for f in ('claude', 'gpt')},
+                              **{'fix ' + f: read['fixers'][f]['choice'] or 'waits' for f in ('claude', 'gpt')}),
+                         models, 'the pinned launch-fleet starts what the Models table resolves to')
+        older = dict(builder=older_only['roles']['builder']['choice'], small=older_only['roles']['small_builder']['choice'],
+                     **{'claude-code': older_only['reviews']['claude']['choice'],
+                        'codex': older_only['reviews']['gpt']['choice']})
+        fixers = table_rows(text, 'Fixer')
+        self.assertEqual([row[0] for row in fixers], ['Claude', 'GPT'], 'one older Fixer row per family')
+        self.assertEqual(dict(builder=older['builder'], small=older['small'], **{
+            'review claude': older['claude-code'], 'review gpt': older['codex'],
+            'fix claude': choice(fixers[0][4]), 'fix gpt': choice(fixers[1][4])}), models,
+            'the older tables start what the Models table resolves to')
 
 if __name__ == '__main__':
     unittest.main()

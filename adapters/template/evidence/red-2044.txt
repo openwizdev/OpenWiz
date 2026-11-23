@@ -1,0 +1,45 @@
+# Red run (#2044): python3 adapters/template/test_driver.py -k without_proc, against the driver at 507e6b8d (main): the macOS-style no-/proc tests, with a ps that logs its arguments. The driver asks ps for every process's environment (-E).
+test_without_proc_as_on_macos_stop_ends_each_grandchild (__main__.Template.test_without_proc_as_on_macos_stop_ends_each_grandchild) ... 
+  test_without_proc_as_on_macos_stop_ends_each_grandchild (__main__.Template.test_without_proc_as_on_macos_stop_ends_each_grandchild) (<subtest>) ... FAIL
+  test_without_proc_as_on_macos_stop_ends_each_grandchild (__main__.Template.test_without_proc_as_on_macos_stop_ends_each_grandchild) (FAKE_CLEAN='1', FAKE_SAME_GROUP='1') ... FAIL
+
+======================================================================
+FAIL: test_without_proc_as_on_macos_stop_ends_each_grandchild (__main__.Template.test_without_proc_as_on_macos_stop_ends_each_grandchild) (<subtest>)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/template/test_driver.py", line 335, in test_without_proc_as_on_macos_stop_ends_each_grandchild
+    self.assertEqual(self.asked_ps_for_environments(calls), [], 'the driver asked ps for process environments')
+AssertionError: Lists differ: ['-A -ww -o pid= -o ppid= -o pgid= -o stat[193 chars] -E'] != []
+
+First list contains 4 additional elements.
+First extra element 0:
+'-A -ww -o pid= -o ppid= -o pgid= -o stat= -o command= -E'
+
++ []
+- ['-A -ww -o pid= -o ppid= -o pgid= -o stat= -o command= -E',
+-  '-A -ww -o pid= -o ppid= -o pgid= -o stat= -o command= -E',
+-  '-A -ww -o pid= -o ppid= -o pgid= -o stat= -o command= -E',
+-  '-A -ww -o pid= -o ppid= -o pgid= -o stat= -o command= -E'] : the driver asked ps for process environments
+
+======================================================================
+FAIL: test_without_proc_as_on_macos_stop_ends_each_grandchild (__main__.Template.test_without_proc_as_on_macos_stop_ends_each_grandchild) (FAKE_CLEAN='1', FAKE_SAME_GROUP='1')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/template/test_driver.py", line 335, in test_without_proc_as_on_macos_stop_ends_each_grandchild
+    self.assertEqual(self.asked_ps_for_environments(calls), [], 'the driver asked ps for process environments')
+AssertionError: Lists differ: ['-A -ww -o pid= -o ppid= -o pgid= -o stat[193 chars] -E'] != []
+
+First list contains 4 additional elements.
+First extra element 0:
+'-A -ww -o pid= -o ppid= -o pgid= -o stat= -o command= -E'
+
++ []
+- ['-A -ww -o pid= -o ppid= -o pgid= -o stat= -o command= -E',
+-  '-A -ww -o pid= -o ppid= -o pgid= -o stat= -o command= -E',
+-  '-A -ww -o pid= -o ppid= -o pgid= -o stat= -o command= -E',
+-  '-A -ww -o pid= -o ppid= -o pgid= -o stat= -o command= -E'] : the driver asked ps for process environments
+
+----------------------------------------------------------------------
+Ran 1 test in 0.791s
+
+FAILED (failures=2)

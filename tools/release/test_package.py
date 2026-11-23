@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import shutil
 from pathlib import Path
 import subprocess
 import sys
@@ -136,8 +137,12 @@ class Package(unittest.TestCase):
         # The boat driver is the repository's template driver, and the kit is the real kit, so the
         # installed kit's `version` check runs for real against the installed driver.
         kit = ('kernel/driver-kit/kit.py', 'kernel/driver-kit/schema.json', 'kernel/records-kit/check.py',
-               'kernel/records.v1.md')
-        carried = {'adapters/boat/driver': (ROOT / 'adapters/template/driver').read_bytes(),
+               'kernel/records.v1.md', 'kernel/driver-kit/hostkey.py', 'kernel/driver-kit/hosts.json')
+        carried = {'adapters/devin/driver': (ROOT / 'adapters/devin/driver').read_bytes(),
+                   'adapters/devin/schema.json': (ROOT / 'adapters/devin/schema.json').read_bytes(),
+                   'adapters/devin/README.md': (ROOT / 'adapters/devin/README.md').read_bytes(),
+                   'adapters/devin/fixtures/kit-host.json': (ROOT / 'adapters/devin/fixtures/kit-host.json').read_bytes(),
+                   'adapters/boat/driver': (ROOT / 'adapters/template/driver').read_bytes(),
                    'adapters/boat/schema.json': (ROOT / 'adapters/template/schema.json').read_bytes(),
                    'adapters/local/driver': b'#!/usr/bin/env python3\nprint("synthetic local driver")\n',
                    'adapters/local/schema.json': b'{"synthetic": "local schema"}\n',
@@ -195,6 +200,116 @@ class Package(unittest.TestCase):
                                      env={'PATH': os.environ['PATH']})
             self.assertEqual(checked.stdout.splitlines()[:1],
                              ['pass version: openwiz:records v1, and the schema is driver v1'], checked.stderr)
+            devin = subprocess.run([str(adapters / 'devin/driver'), 'start'], input=json.dumps(
+                {'repository': 'synthetic/throwaway', 'ticket': 1, 'skill': 'build-ticket', 'harness': 'devin',
+                 'model': 'default'}), capture_output=True, text=True, timeout=120, env={
+                'PATH': os.environ['PATH'], 'HOME': str(root), 'DEVIN_ORG_ID': 'org-syn0001',
+                'OPENWIZ_HOSTKEY_TEST_ORIGIN': 'https://example.invalid'})
+            refused = 'the key helper refused: OPENWIZ_HOSTKEY_TEST_ORIGIN is not http://127.0.0.1:<port>'
+            self.assertEqual((devin.returncode, json.loads(devin.stdout)['error'][:len(refused)]), (1, refused))
+            keyed = subprocess.run([sys.executable, '-I', 'kernel/driver-kit/kit.py', '--driver', 'adapters/devin/driver',
+                                    '--repo', 'synthetic/throwaway', '--ticket', '1', '--harness', 'devin',
+                                    '--model', 'default', '--tracker', str(root / 'tracker.json'), '--wait', '1'],
+                                   cwd=adapters.parent, capture_output=True, text=True, timeout=300,
+                                   env={'PATH': os.environ['PATH'], 'HOME': str(root), 'DEVIN_ORG_ID': 'org-syn0001',
+                                        'OPENWIZ_HOSTKEY_TEST_ORIGIN': 'http://127.0.0.1:9'})
+            self.assertEqual(keyed.stdout.splitlines()[-1:], [
+                'pass token: no login or token passed through the driver, and on start, wake and stop the devin key '
+                'reached its host only from the key helper, in its header'], keyed.stderr)
+
+    def test_installed_build_carries_the_wizskills_root_files_its_skills_read(self):
+        release = ROOT / '.wizskills'
+        self.assertTrue((release / '.git').is_dir(), 'Install the pinned WizSkills first: tools/wizskills/install.py')
+        show = lambda *a: subprocess.check_output(['git', '-C', str(release), *a])
+        roots = [p for p in show('ls-tree', '-r', '-z', '--name-only', 'HEAD', '--', 'contracts').decode().split('\0') if p]
+        with tempfile.TemporaryDirectory(prefix='openwiz-wizskills-products-') as temporary:
+            root = Path(temporary)
+            binaries = root / 'bin'
+            binaries.mkdir()
+            runtime_root(self, root)
+            subprocess.run(['rm', '-rf', str(root / 'skills')], check=True)
+            shutil.copytree(release, root / '.wizskills', symlinks=True)
+            os.symlink('.wizskills/skills', root / 'skills')
+            (root / '.gitignore').write_bytes(b'/.wizskills/\n')
+            shutil.copyfile(ROOT / 'wizskills.lock', root / 'wizskills.lock')
+            source = commit(root, '.gitignore', 'wizskills.lock', 'skills', 'tools')
+            target = TARGETS[0]
+            (root / 'job').mkdir()
+            receipts = build(binaries, source, target, root / 'job')
+            output = root / 'products'
+            result = subprocess.run(collector(root, binaries, output, source, target, receipts),
+                                    capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            bundle = root / 'bundle'
+            result = subprocess.run([sys.executable, str(ROOT / 'tools/release/package.py'), '--products', str(output),
+                                     '--identity', str(output) + '.json', '--output', str(bundle)],
+                                    capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.bound_and_installed(root, target, Path(str(output) + '.json'), bundle,
+                                     products=output, home=root / 'installed')
+            runtime = root / 'installed/current/runtime'
+            host = subprocess.run([sys.executable, '-I', str(runtime / 'skills/launch-fleet/scripts/host.py')],
+                                  cwd=root, capture_output=True, text=True, timeout=60, env={'PATH': os.environ['PATH']})
+            self.assertNotIn('FileNotFoundError', host.stderr)
+            self.assertIn('usage: which', host.stderr)
+            for path in roots:
+                self.assertEqual((runtime / path).read_bytes(), show('show', 'HEAD:' + path), path)
+            assets = json.loads(Path(str(output) + '.json').read_bytes())['assets']
+            self.assertEqual(sorted(a['path'] for a in assets if a['path'].startswith('runtime/contracts/')),
+                             sorted('runtime/' + path for path in roots))
+
+    def test_installed_boat_driver_finds_the_wizskills_pin(self):
+        release = ROOT / '.wizskills'
+        self.assertTrue((release / '.git').is_dir(), 'Install the pinned WizSkills first: tools/wizskills/install.py')
+        driver = ('adapters/boat/driver', 'adapters/boat/schema.json', 'kernel/driver-kit/kit.py',
+                  'kernel/driver-kit/schema.json', 'kernel/records-kit/check.py', 'kernel/records.v1.md',
+                  'kernel/driver-kit/hostkey.py', 'kernel/driver-kit/hosts.json')
+        with tempfile.TemporaryDirectory(prefix='openwiz-boat-pin-') as temporary:
+            root = Path(temporary)
+            binaries = root / 'bin'
+            binaries.mkdir()
+            runtime_root(self, root)
+            subprocess.run(['rm', '-rf', str(root / 'skills')], check=True)
+            shutil.copytree(release, root / '.wizskills', symlinks=True)
+            os.symlink('.wizskills/skills', root / 'skills')
+            (root / '.gitignore').write_bytes(b'/.wizskills/\n')
+            for path in ('wizskills.lock', *driver):
+                (root / path).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(ROOT / path, root / path)
+            source = commit(root, '.gitignore', 'wizskills.lock', 'skills', 'tools', *driver)
+            target = TARGETS[0]
+            (root / 'job').mkdir()
+            receipts = build(binaries, source, target, root / 'job')
+            output = root / 'products'
+            result = subprocess.run(collector(root, binaries, output, source, target, receipts),
+                                    capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            bundle = root / 'bundle'
+            result = subprocess.run([sys.executable, str(ROOT / 'tools/release/package.py'), '--products', str(output),
+                                     '--identity', str(output) + '.json', '--output', str(bundle)],
+                                    capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.bound_and_installed(root, target, Path(str(output) + '.json'), bundle,
+                                     products=output, home=root / 'installed')
+            installed = root / 'installed/current/runtime/adapters/boat/driver'
+            boats = root / 'boat.json'
+            env = {'HOME': str(root / 'home'), 'PATH': str(ROOT / 'adapters/boat/fixtures/bin') + os.pathsep
+                   + os.environ['PATH'], 'FAKE_BOAT_STATE': str(boats), 'OPENWIZ_BOAT_STATE': str(root / 'state'),
+                   'OPENWIZ_BOAT_SETTLE': '1', 'KIT_TRACKER': str(root / 'tracker.json'),
+                   'FAKE_BOAT_FAIL': 'exec'}
+            (root / 'tracker.json').write_text(json.dumps({'record_authors': ['synthetic-author'], 'comments': []}))
+            started = subprocess.run([str(installed), 'start'], input=json.dumps(
+                {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude',
+                 'model': 'synthetic'}), env=env, capture_output=True, text=True, timeout=120)
+            self.assertNotIn('wizskills.lock', started.stdout + started.stderr)
+            self.assertEqual(len(json.loads(boats.read_bytes())['sandboxes']), 1, started.stdout + started.stderr)
+            self.assertEqual((root / 'installed/current/runtime/wizskills.lock').read_bytes(),
+                             (ROOT / 'wizskills.lock').read_bytes())
+            (root / 'wizskills.lock').write_bytes((ROOT / 'wizskills.lock').read_bytes() + b'\n')
+            stale = subprocess.run(elsewhere(collector(root, binaries, output, source, target, receipts),
+                                             str(output) + '-stale'), capture_output=True, text=True)
+            self.assertEqual(stale.returncode, 1, stale.stderr)
+            self.assertFalse(Path(str(output) + '-stale').exists())
 
     def bound_and_installed(self, root, target, identity_file, bundle, products=None, home=None):
         """#1148: the collected, packaged target's candidate artifact rows bind

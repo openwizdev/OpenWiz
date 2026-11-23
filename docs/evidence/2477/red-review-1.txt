@@ -1,0 +1,218 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/test_rig.py   # review round 1 proofs (R2, R6, R7, R8, R9) before their fixes; agent-CLI stubs first on PATH
+test_a_dirty_checkout_exits_2_and_runs_nothing (__main__.Rig.test_a_dirty_checkout_exits_2_and_runs_nothing) ... ok
+test_a_held_lock_exits_0_and_runs_nothing (__main__.Rig.test_a_held_lock_exits_0_and_runs_nothing) ... ok
+test_a_kit_line_quoting_the_checkout_or_the_repository_is_withheld_from_the_record_and_shown_on_stderr (__main__.Rig.test_a_kit_line_quoting_the_checkout_or_the_repository_is_withheld_from_the_record_and_shown_on_stderr) ... FAIL
+test_a_lock_error_other_than_another_run_exits_2 (__main__.Rig.test_a_lock_error_other_than_another_run_exits_2) ... FAIL
+test_a_missing_signed_out_or_possibly_paid_host_is_skipped_and_recorded_and_starts_no_kit (__main__.Rig.test_a_missing_signed_out_or_possibly_paid_host_is_skipped_and_recorded_and_starts_no_kit) ... ok
+test_a_planted_drivers_failing_kit_exits_1_with_its_count (__main__.Rig.test_a_planted_drivers_failing_kit_exits_1_with_its_count) ... ok
+test_a_signed_in_host_with_free_runs_runs_five_of_five_and_writes_its_record (__main__.Rig.test_a_signed_in_host_with_free_runs_runs_five_of_five_and_writes_its_record) ... ok
+test_an_unknown_host_or_a_bad_host_config_exits_2_and_only_json_files_are_hosts (__main__.Rig.test_an_unknown_host_or_a_bad_host_config_exits_2_and_only_json_files_are_hosts) ... 
+  test_an_unknown_host_or_a_bad_host_config_exits_2_and_only_json_files_are_hosts (__main__.Rig.test_an_unknown_host_or_a_bad_host_config_exits_2_and_only_json_files_are_hosts) [{'host': 'fixture-cost', 'driver': 'adapters/template/driver', 'needs': ['fake-harness', 'fake-signed-in'], 'signed_in': [['fake-signed-in', 'status']], 'cost': 'unknown', 'runs': [{'harness': 'fake-harness', 'model': 'Synthetic 1'}, {'harness': 'fake-harness', 'model': 'Synthetic 1'}], 'wait': 8}] ... FAIL
+  test_an_unknown_host_or_a_bad_host_config_exits_2_and_only_json_files_are_hosts (__main__.Rig.test_an_unknown_host_or_a_bad_host_config_exits_2_and_only_json_files_are_hosts) [{'host': 'fixture-cost', 'driver': 'adapters/template/driver', 'needs': ['fake-harness', 'fake-signed-in'], 'signed_in': [['fake-signed-in', 'sta\x00tus']], 'cost': 'unknown', 'runs': [{'harness': 'fake-harness', 'model': 'Synthetic 1'}], 'wait': 8}] ... FAIL
+test_an_unknown_host_or_a_bad_host_config_exits_2_and_only_json_files_are_hosts (__main__.Rig.test_an_unknown_host_or_a_bad_host_config_exits_2_and_only_json_files_are_hosts) ... FAIL
+test_every_host_in_one_run_keeps_paths_logins_the_repository_and_planted_secrets_out (__main__.Rig.test_every_host_in_one_run_keeps_paths_logins_the_repository_and_planted_secrets_out) ... ok
+test_hosts_outside_the_checkout_or_untracked_exit_2_and_run_nothing (__main__.Rig.test_hosts_outside_the_checkout_or_untracked_exit_2_and_run_nothing) ... FAIL
+test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons (__main__.Rig.test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons) ... ok
+test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes (__main__.Rig.test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes) ... 
+  test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes (__main__.Rig.test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes) [pass version: openwiz:records v1, and the schema is driver v1] ... ERROR
+  test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes (__main__.Rig.test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes) [fail stop: a process still runs] ... ERROR
+  test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes (__main__.Rig.test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes) [fail start: its schema is not kernel/driver-kit/schema.json] ... ERROR
+  test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes (__main__.Rig.test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes) [fail start: no ticket in Example] ... ERROR
+  test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes (__main__.Rig.test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes) [fail start: rig-throwaway has no fleet.md] ... ERROR
+  test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes (__main__.Rig.test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes) [fail wake: posted as example-rig-login] ... ERROR
+  test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes (__main__.Rig.test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes) [fail token: it sent token=abc123456789] ... ERROR
+  test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes (__main__.Rig.test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes) [kit.py: a line that is no check] ... ERROR
+  test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes (__main__.Rig.test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes) [pass other: not one of the five] ... ERROR
+test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes (__main__.Rig.test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes) ... ERROR
+
+======================================================================
+ERROR: test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes (__main__.Rig.test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes) [pass version: openwiz:records v1, and the schema is driver v1]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 242, in test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes
+    self.assertEqual(rig.record_stdout(line + '\n', settings, LOGIN), kept and kept + '\n')
+                     ^^^^^^^^^^^^^^^^^
+AttributeError: module 'rig' has no attribute 'record_stdout'
+
+======================================================================
+ERROR: test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes (__main__.Rig.test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes) [fail stop: a process still runs]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 242, in test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes
+    self.assertEqual(rig.record_stdout(line + '\n', settings, LOGIN), kept and kept + '\n')
+                     ^^^^^^^^^^^^^^^^^
+AttributeError: module 'rig' has no attribute 'record_stdout'
+
+======================================================================
+ERROR: test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes (__main__.Rig.test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes) [fail start: its schema is not kernel/driver-kit/schema.json]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 242, in test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes
+    self.assertEqual(rig.record_stdout(line + '\n', settings, LOGIN), kept and kept + '\n')
+                     ^^^^^^^^^^^^^^^^^
+AttributeError: module 'rig' has no attribute 'record_stdout'
+
+======================================================================
+ERROR: test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes (__main__.Rig.test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes) [fail start: no ticket in Example]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 242, in test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes
+    self.assertEqual(rig.record_stdout(line + '\n', settings, LOGIN), kept and kept + '\n')
+                     ^^^^^^^^^^^^^^^^^
+AttributeError: module 'rig' has no attribute 'record_stdout'
+
+======================================================================
+ERROR: test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes (__main__.Rig.test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes) [fail start: rig-throwaway has no fleet.md]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 242, in test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes
+    self.assertEqual(rig.record_stdout(line + '\n', settings, LOGIN), kept and kept + '\n')
+                     ^^^^^^^^^^^^^^^^^
+AttributeError: module 'rig' has no attribute 'record_stdout'
+
+======================================================================
+ERROR: test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes (__main__.Rig.test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes) [fail wake: posted as example-rig-login]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 242, in test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes
+    self.assertEqual(rig.record_stdout(line + '\n', settings, LOGIN), kept and kept + '\n')
+                     ^^^^^^^^^^^^^^^^^
+AttributeError: module 'rig' has no attribute 'record_stdout'
+
+======================================================================
+ERROR: test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes (__main__.Rig.test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes) [fail token: it sent token=abc123456789]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 242, in test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes
+    self.assertEqual(rig.record_stdout(line + '\n', settings, LOGIN), kept and kept + '\n')
+                     ^^^^^^^^^^^^^^^^^
+AttributeError: module 'rig' has no attribute 'record_stdout'
+
+======================================================================
+ERROR: test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes (__main__.Rig.test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes) [kit.py: a line that is no check]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 242, in test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes
+    self.assertEqual(rig.record_stdout(line + '\n', settings, LOGIN), kept and kept + '\n')
+                     ^^^^^^^^^^^^^^^^^
+AttributeError: module 'rig' has no attribute 'record_stdout'
+
+======================================================================
+ERROR: test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes (__main__.Rig.test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes) [pass other: not one of the five]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 242, in test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes
+    self.assertEqual(rig.record_stdout(line + '\n', settings, LOGIN), kept and kept + '\n')
+                     ^^^^^^^^^^^^^^^^^
+AttributeError: module 'rig' has no attribute 'record_stdout'
+
+======================================================================
+ERROR: test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes (__main__.Rig.test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 243, in test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes
+    self.assertEqual(rig.record_stdout(PASS[0] + '\n', settings, None), 'pass version: withheld\n')
+                     ^^^^^^^^^^^^^^^^^
+AttributeError: module 'rig' has no attribute 'record_stdout'
+
+======================================================================
+FAIL: test_a_kit_line_quoting_the_checkout_or_the_repository_is_withheld_from_the_record_and_shown_on_stderr (__main__.Rig.test_a_kit_line_quoting_the_checkout_or_the_repository_is_withheld_from_the_record_and_shown_on_stderr)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 224, in test_a_kit_line_quoting_the_checkout_or_the_repository_is_withheld_from_the_record_and_shown_on_stderr
+    self.assertEqual(self.record('fixture-quoting')['stdout'].splitlines(),
+AssertionError: Lists differ: ['pas[69 chars]art: cannot start <repository> in <checkout>/a[143 chars]ver'] != ['pas[69 chars]art: withheld', 'fail wake: not run: start fai[95 chars]ver']
+
+First differing element 1:
+'fail start: cannot start <repository> in <checkout>/adapters/quoting'
+'fail start: withheld'
+
+  ['pass version: openwiz:records v1, and the schema is driver v1',
+-  'fail start: cannot start <repository> in <checkout>/adapters/quoting',
++  'fail start: withheld',
+   'fail wake: not run: start failed',
+   'fail stop: not run: start failed',
+   'pass token: no login or token passed through the driver']
+
+======================================================================
+FAIL: test_a_lock_error_other_than_another_run_exits_2 (__main__.Rig.test_a_lock_error_other_than_another_run_exits_2)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 304, in test_a_lock_error_other_than_another_run_exits_2
+    self.assertEqual(code, 2, err.getvalue())
+AssertionError: 0 != 2 : rig.py: another run holds the lock
+<tmp>/checkout/kernel/live-rig/rig.py:207: ResourceWarning: unclosed file <_io.TextIOWrapper name='<tmp>/out/rig.lock' mode='a' encoding='UTF-8'>
+  return run(args)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+
+
+======================================================================
+FAIL: test_an_unknown_host_or_a_bad_host_config_exits_2_and_only_json_files_are_hosts (__main__.Rig.test_an_unknown_host_or_a_bad_host_config_exits_2_and_only_json_files_are_hosts) [{'host': 'fixture-cost', 'driver': 'adapters/template/driver', 'needs': ['fake-harness', 'fake-signed-in'], 'signed_in': [['fake-signed-in', 'status']], 'cost': 'unknown', 'runs': [{'harness': 'fake-harness', 'model': 'Synthetic 1'}, {'harness': 'fake-harness', 'model': 'Synthetic 1'}], 'wait': 8}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 279, in test_an_unknown_host_or_a_bad_host_config_exits_2_and_only_json_files_are_hosts
+    self.assertEqual(self.rig('--host', 'fixture-cost')[:2], (2, []))
+AssertionError: Tuples differ: (0, ['skipped fixture-cost fake-harness: c[44 chars]st']) != (2, [])
+
+First differing element 0:
+0
+2
+
++ (2, [])
+- (0,
+-  ['skipped fixture-cost fake-harness: cost',
+-   'skipped fixture-cost fake-harness: cost'])
+
+======================================================================
+FAIL: test_an_unknown_host_or_a_bad_host_config_exits_2_and_only_json_files_are_hosts (__main__.Rig.test_an_unknown_host_or_a_bad_host_config_exits_2_and_only_json_files_are_hosts) [{'host': 'fixture-cost', 'driver': 'adapters/template/driver', 'needs': ['fake-harness', 'fake-signed-in'], 'signed_in': [['fake-signed-in', 'sta\x00tus']], 'cost': 'unknown', 'runs': [{'harness': 'fake-harness', 'model': 'Synthetic 1'}], 'wait': 8}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 279, in test_an_unknown_host_or_a_bad_host_config_exits_2_and_only_json_files_are_hosts
+    self.assertEqual(self.rig('--host', 'fixture-cost')[:2], (2, []))
+AssertionError: Tuples differ: (1, []) != (2, [])
+
+First differing element 0:
+1
+2
+
+- (1, [])
+?  ^
+
++ (2, [])
+?  ^
+
+
+======================================================================
+FAIL: test_an_unknown_host_or_a_bad_host_config_exits_2_and_only_json_files_are_hosts (__main__.Rig.test_an_unknown_host_or_a_bad_host_config_exits_2_and_only_json_files_are_hosts)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 283, in test_an_unknown_host_or_a_bad_host_config_exits_2_and_only_json_files_are_hosts
+    self.assertEqual(self.rig('--host', 'fixture-cost')[:2], (2, []))
+AssertionError: Tuples differ: (0, ['skipped fixture-cost fake-harness: cost']) != (2, [])
+
+First differing element 0:
+0
+2
+
+- (0, ['skipped fixture-cost fake-harness: cost'])
++ (2, [])
+
+======================================================================
+FAIL: test_hosts_outside_the_checkout_or_untracked_exit_2_and_run_nothing (__main__.Rig.test_hosts_outside_the_checkout_or_untracked_exit_2_and_run_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 292, in test_hosts_outside_the_checkout_or_untracked_exit_2_and_run_nothing
+    self.assertEqual((p.returncode, p.stdout), (2, ''), p.stderr)
+AssertionError: Tuples differ: (0, 'skipped fixture-cost fake-harness: cost\n') != (2, '')
+
+First differing element 0:
+0
+2
+
+- (0, 'skipped fixture-cost fake-harness: cost\n')
++ (2, '') : 
+
+----------------------------------------------------------------------
+Ran 12 tests in 104.649s
+
+FAILED (failures=6, errors=10)

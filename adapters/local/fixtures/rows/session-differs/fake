@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+import json, os, sys
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.environ['FAKE_CLI_LIB'])
+import fake_cli
+
+HELP = '''The fake session-differs-cli: its synthetic --help allows only:
+  session-differs-cli run --format json --model <m> [--yes] [--effort low|high] <prompt>
+  session-differs-cli run --session <id> --model <m> [--yes] <prompt>
+with EXAMPLE_CLI_BACKEND=local and, optionally, EXAMPLE_CLI_THINKING=max.'''
+
+if sys.argv[1:] == ['--help']:
+    print(HELP)
+    sys.exit(0)
+args = sys.argv[1:]
+if args[:1] != ['run'] or os.environ.get('EXAMPLE_CLI_BACKEND') != 'local' or \
+        os.environ.get('EXAMPLE_CLI_THINKING') not in (None, 'max'):
+    fake_cli.refuse()
+args, session = args[1:], None
+if args[:2] == ['--format', 'json']:
+    args = args[2:]
+elif args[:1] == ['--session'] and len(args) > 1:
+    session, args = args[1], args[2:]
+else:
+    fake_cli.refuse()
+if args[:1] != ['--model'] or len(args) < 3:
+    fake_cli.refuse()
+model, args = args[1], args[2:]
+if args[:1] == ['--yes']:
+    args = args[1:]
+if session is None and args[:1] == ['--effort'] and len(args) > 1 and args[1] in ('low', 'high'):
+    args = args[2:]
+if len(args) != 1:
+    fake_cli.refuse()
+fake_cli.turn(args[0], model, session, lambda sid: 'run job-1 opened session ' + sid)

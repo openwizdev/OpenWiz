@@ -1,14 +1,4 @@
 #!/usr/bin/env python3
-"""Install the WizSkills release pinned by `wizskills.lock` into `.wizskills/`.
-
-Contract: contracts/wizskills.v1.md ("ClosedWiz pin and move"). The only
-remote read is one fetch of the pinned tag. The tag's record, target and tree
-are checked against the lock before the release's own `install.sh` runs, and
-that installer fetches from the verified local copy, never the network again.
-
-Exit codes: 0 installed or already current; 1 refused (mismatch, dirty or
-foreign install, bad release record); 2 invalid lock; 3 fetch or I/O failure.
-"""
 import argparse
 import json
 import os
@@ -20,12 +10,12 @@ import sys
 import tempfile
 
 sys.dont_write_bytecode = True
+
+DESCRIPTION = """Install the WizSkills release pinned by `wizskills.lock` into `.wizskills/`."""
 URL = 'https://github.com/openwizdev/WizSkills.git'
 DEST = '.wizskills'
 LOCK = 'wizskills.lock'
 CONTRACT = 'contracts/wizskills.v1.md'
-# Git variables that would point a command at another repository, index or
-# object store, or redirect its transport; the installer sets its own.
 GIT_LOCATION = ('GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_OBJECT_DIRECTORY',
                 'GIT_ALTERNATE_OBJECT_DIRECTORIES', 'GIT_COMMON_DIR', 'GIT_NAMESPACE',
                 'GIT_CEILING_DIRECTORIES', 'GIT_DISCOVERY_ACROSS_FILESYSTEM')
@@ -43,7 +33,6 @@ def refuse(reason):
 
 
 def rules(root):
-    """The contract's normative vocabulary block."""
     try:
         text = (root / CONTRACT).read_text(encoding='utf-8')
         blocks = re.findall(r'^```wizskills-v1\n(.*?)^```', text, re.M | re.S)
@@ -64,7 +53,6 @@ def unique_object(pairs):
 
 
 def identity(text, fields, vocab):
-    """Parse a lock or release record: exactly `fields`, all well-formed strings."""
     value = json.loads(text, object_pairs_hook=unique_object)
     if not isinstance(value, dict) or set(value) != set(fields):
         raise ValueError
@@ -85,12 +73,6 @@ def read_lock(root, vocab):
 
 
 def git_env(extra=None):
-    """Git isolated from the caller's configuration and attributes, file transport only.
-
-    Every Git command but the one tag fetch uses this, the release installer
-    included: no global, system or inherited `-c`/`GIT_CONFIG_*` setting (an
-    attribute filter, a URL rewrite) can change what is verified or fetched.
-    """
     env = {k: v for k, v in os.environ.items()
            if k not in GIT_LOCATION and not k.startswith('GIT_CONFIG')}
     env.update({'GIT_CONFIG_NOSYSTEM': '1', 'GIT_CONFIG_GLOBAL': os.devnull,
@@ -100,7 +82,6 @@ def git_env(extra=None):
 
 
 def caller_env():
-    """The caller's environment for the one tag fetch: its own transport settings stay."""
     return {k: v for k, v in os.environ.items() if k not in GIT_LOCATION}
 
 
@@ -130,7 +111,6 @@ def out(args, env, reason, cwd=None):
 
 
 def verify_install(dest, lock, workdir):
-    """Refuse unless `dest` is exactly the locked release, clean, with its `.git`."""
     if dest.is_symlink() or not dest.is_dir():
         raise refuse(f'{DEST} is not a directory')
     gitdir = dest / '.git'
@@ -144,17 +124,13 @@ def verify_install(dest, lock, workdir):
                     f'{DEST} is not a WizSkills checkout')
     if head != lock['commit'] or head_tree != lock['tree']:
         raise refuse(f'{DEST} does not match the lock (another version or commit)')
-    # Nothing staged: the index must equal the locked tree.
     code, _ = git([*mine, 'diff-index', '--cached', '--quiet', '--no-ext-diff',
                    lock['commit'], '--'], env)
     if code != 0:
         raise refuse(f'{DEST} does not match the lock (staged changes)')
-    # The actual files, as raw bytes and modes, hashed into a scratch
-    # repository, never into the installation's own .git.
     actual, dirs = raw_tree(dest, workdir)
     if actual != lock['tree']:
         raise refuse(f'{DEST} does not match the lock (files differ from the release tree)')
-    # Git records no empty directories; any directory the tree lacks is extra.
     scratch = ['--git-dir', str(workdir / 'verify.git')]
     listed = out([*scratch, 'ls-tree', '-r', '-d', '--name-only', '-z', actual], env,
                  f'{DEST} cannot be read')
@@ -163,12 +139,6 @@ def verify_install(dest, lock, workdir):
 
 
 def raw_tree(dest, workdir):
-    """The tree of every path under `dest` but its top `.git`: raw bytes, no filters.
-
-    Each entry's mode and blob come straight from the file system (regular,
-    executable or symlink), so no attribute, line-ending or clean filter can
-    make changed bytes hash like the release. Returns (tree, directories).
-    """
     env = git_env({'GIT_INDEX_FILE': str(workdir / 'verify.index')})
     scratch = ['--git-dir', str(workdir / 'verify.git')]
     out(['init', '-q', '--bare', str(workdir / 'verify.git')], env,
@@ -222,7 +192,6 @@ def raw_tree(dest, workdir):
 
 
 def fetch_release(repo, lock, vocab):
-    """Fetch only the pinned tag and check its record, target and tree."""
     tag = f'v{lock["version"]}'
     env = git_env()
     out(['init', '-q', '--bare', str(repo)], env, 'cannot create staging repository')
@@ -254,7 +223,6 @@ def fetch_release(repo, lock, vocab):
                f'release tag {tag} does not match the lock')
     if tree != lock['tree']:
         raise refuse(f'release tag {tag} does not match the lock')
-    # The release installer, from the verified tree: a regular executable file.
     entry = out([*on, 'ls-tree', lock['commit'], '--', 'install.sh'], env,
                 'release has no install.sh')
     if not entry.startswith('100755 blob '):
@@ -269,7 +237,6 @@ def run_release_installer(script, repo, lock, dest, workdir):
     path = workdir / 'install.sh'
     path.write_bytes(script)
     path.chmod(0o700)
-    # Point the release URL at the verified local copy: no second download.
     env = git_env({'GIT_CONFIG_COUNT': '1',
                    'GIT_CONFIG_KEY_0': f'url.{repo.as_uri()}.insteadOf',
                    'GIT_CONFIG_VALUE_0': URL})
@@ -309,7 +276,7 @@ def install(root):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__.split('\n')[0])
+    parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument('--root', default=str(Path(__file__).resolve().parents[2]),
                         help='the ClosedWiz checkout (default: this one)')
     args = parser.parse_args(argv)

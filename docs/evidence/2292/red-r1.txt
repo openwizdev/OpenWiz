@@ -1,0 +1,9 @@
+# #2292 R1 red, at 62077cc1 plus the extended test: python3 -I adapters/local/test_driver.py -k quick_clean
+FAIL: test_a_quick_clean_first_turn_starts (__main__.Local.test_a_quick_clean_first_turn_starts) [Added tests for unauthorized requests.]
+AssertionError: 1 != 0 : {"error": "run run-<id>: the first turn ended at once: the harness is not signed in (exit 0)", "next": "read <tmp>/state/run-<id>.log, fix what it says there, then start again"}
+FAIL: test_a_quick_clean_first_turn_starts (__main__.Local.test_a_quick_clean_first_turn_starts) [Summary: unauthorized requests now get a 401, and a denied upload was refused.]
+AssertionError: 1 != 0 : {"error": "run run-<id>: the first turn ended at once: the harness is not signed in (exit 0)", "next": "read <tmp>/state/run-<id>.log, fix what it says there, then start again"}
+FAIL: test_a_quick_clean_first_turn_starts (__main__.Local.test_a_quick_clean_first_turn_starts) [Checked that the session token is invalid after logout, and that the request was denied.]
+AssertionError: 1 != 0 : {"error": "run run-<id>: the first turn ended at once: the harness is not signed in (exit 0)", "next": "read <tmp>/state/run-<id>.log, fix what it says there, then start again"}
+Ran 1 test
+FAILED (failures=3)

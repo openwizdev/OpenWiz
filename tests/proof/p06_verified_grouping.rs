@@ -1,6 +1,3 @@
-//! P6 Verified grouping: a session is grouped only by a project id seen in
-//! the same run. Anything else is ungrouped, with a reason.
-
 use openwiz_core::model::{Fact, Grouping, ProjectId};
 use openwiz_core::ops::{self, ListRequest};
 
@@ -77,12 +74,8 @@ fn a_missing_or_mistyped_project_id_is_ungrouped_with_a_reason() {
     }
 }
 
-/// New in ticket 1's correction round 1 (Sol S6). One source is read twice;
-/// between the runs a project disappears, then comes back. Each run groups by
-/// its own project list only, so a mapping kept from an earlier run is caught.
 #[test]
 fn grouping_uses_only_the_current_runs_project_list() {
-    // Through the CloudRoom adapter and the fake: one source, two scenarios.
     let fake = Fake::new("p06_successive_runs", "normal");
     let source = fake.source();
     let first = ops::list(&source, &clock(), &ListRequest::default()).expect("first run");
@@ -132,7 +125,6 @@ fn grouping_uses_only_the_current_runs_project_list() {
         "an earlier run's absence is not kept either"
     );
 
-    // Through the core alone: one scripted source whose project list changes.
     let source = ScriptedSource::new(2);
     let first = list_scripted(&source, &ListRequest::default()).expect("first run");
     assert_eq!(
@@ -150,11 +142,6 @@ fn grouping_uses_only_the_current_runs_project_list() {
     }
 }
 
-/// New in ticket 2, after the Sol review (S1): text groups follow the
-/// verified project id, never the printed name. A project named
-/// `_ungrouped`, and two names that print the same once unsafe characters
-/// are replaced, each keep their own header, distinct from the others and
-/// from `/factories/_ungrouped/`.
 #[test]
 fn text_groups_follow_the_project_id_not_the_printed_name() {
     use openwiz_core::source::ProjectRecord;
@@ -218,8 +205,6 @@ fn text_groups_follow_the_project_id_not_the_printed_name() {
     );
 }
 
-/// New in ticket 2, after the Sol re-check (S1, residual): headers stay
-/// distinct even when a project's name is another one's widened header.
 #[test]
 fn group_headers_stay_distinct_when_a_name_copies_a_widened_header() {
     use openwiz_core::source::ProjectRecord;

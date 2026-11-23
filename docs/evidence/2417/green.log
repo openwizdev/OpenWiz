@@ -1,0 +1,6 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I tools/install/tests/init/test_init.py
+Ran 22 tests
+OK
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I tools/install/tests/setup-onboard-contract/test_contract.py
+Ran 26 tests
+OK

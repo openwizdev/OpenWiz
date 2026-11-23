@@ -1,106 +1,3 @@
-//! The fake `room-cli` the tests run in place of the real one. Test-only.
-//!
-//! A test makes a directory holding a symlink named `room-cli` to this
-//! binary, plus a file `fake-room-cli.scenario` with the absolute path of a
-//! fixture `scenario.json`. The fake finds that file next to the path it was
-//! started as (`argv[0]`), so tests running in parallel never share state.
-//!
-//! For each call it:
-//! 1. appends its arguments, as one JSON array per line, to `invocations.log`
-//!    in the same directory, and the **names** (never the values) of the
-//!    CloudRoom variables in its environment (`ROOM_*`, `BB_*` and
-//!    `CLOUDROOM_*`), sorted, to `environment.log` (OpenWiz 0.0.4, N2);
-//! 2. refuses anything outside the OpenWiz allowlist with exit 97;
-//! 3. answers from the scenario: stdout (inline or from a file), stderr and an
-//!    exit code, or never answers (`"hang": true`, after writing its process
-//!    id to `hang.pid`).
-//!    The oversized-response fixture uses `oversized_stdout_bytes` for one
-//!    preallocated in-memory buffer written directly to stdout.
-//!
-//! A scenario may `extends` another; its own responses are tried first.
-//! A `thread show` or `thread output` of an id with no response gets the
-//! not-found answer observed in capture C.
-//!
-//! **`thread tell`** (OpenWiz 0.0.3, the one write; documented, not
-//! observed). The fake accepts only the exact argument shape OpenWiz chose:
-//! `thread tell <id> --mode queue|steer --json -- <text>`. For each accepted
-//! call it first:
-//! 1. adds one to `tell-calls.count` in the fake's directory, under an
-//!    exclusive file lock, so concurrent processes are counted exactly;
-//! 2. copies every send record under the state directory's `sends/` into
-//!    `records-at-tell-<n>.json`, so a test can see what was on disk at the
-//!    moment of the call. The state directory is named by the file
-//!    `fake-room-cli.state` next to the fake, else by `$OPENWIZ_STATE_DIR`.
-//!
-//! A tell response matches on everything but the text when it has
-//! `"any_text": true`. It may also `delay_ms` before answering, `abort`
-//! (a crash: no exit code), `kill_parent` before answering (the sender dies
-//! during the call), or `kill_parent_after_answer` (the sender dies after
-//! the receipt is printed, before it can record the outcome).
-//! `kill_parent` and `kill_parent_after_answer` send SIGKILL to whatever
-//! started the fake: use them only when `openwiz` or the harness runs as its
-//! own process, never with an in-process `send` (that would kill the test
-//! runner).
-//!
-//! **`cloud status --json` and `thread spawn`** (OpenWiz 0.0.4, ClosedWiz#11,
-//! A1 phase 2; the flags observed in spike run 3's help, the call never
-//! observed). The fake accepts `spawn` only in the exact shape OpenWiz
-//! chose: `thread spawn --project <id> --machine cloud --provider
-//! codex|claude-code --model <m> --reasoning-level low|medium|high|xhigh|max
-//! --request-id ow1-<40 hex> --json --prompt <text>`. For each accepted call
-//! it first adds one to `spawn-calls.count` and copies the new-thread records
-//! under the state directory's `new-threads/` into
-//! `records-at-spawn-<n>.json`, as for `tell`. Then its **request-ID table**
-//! (`request-ids.json`, under the same kind of lock) models what the
-//! provider's source reads (#11, not observed): the same request id with
-//! the same content (project, provider, model, effort, text) creates nothing
-//! new; with different content it is refused with the documented 409 line;
-//! a new one is recorded, and counted in `threads-created.count`, when the
-//! response `creates`. A spawn response matches every accepted spawn with
-//! `"any_spawn": true`.
-//!
-//! **Attachments** (OpenWiz 0.0.4, B2, ClosedWiz#15, sheet B-7; the flags
-//! observed in spike run 3's help, a call with them never observed). The
-//! fake accepts `--file <path>` and `--image <path>` pairs on `tell` (after
-//! `--json`, before `--`, and never with `steer`) and on `spawn` (after
-//! `--json`, before `--prompt`), each path absolute and of a staged copy's
-//! shape, `…/attachments/<id>/<safe name>`, checked by its own copy of the
-//! rules. Like `room-cli` (#15's F3 and F21, source-read), it then
-//! **uploads** them before anything else: it reads every file whole, all
-//! held in memory at once, and appends one JSON line to `attachments.log`:
-//! the call, its request id (for `spawn`), each flag, path, SHA-256 and
-//! size at that moment, and its peak memory (`VmHWM`, on Linux). A file it
-//! can't read fails the call there, as an upload error would: exit 1 with a
-//! line that is no documented rejection; so does a response with
-//! `"upload_fails_after": <n>`, after reading `n` files. The request-ID table compares the
-//! text, never the attachments, as CloudRoom's does (F17). A tell response
-//! with `"any_attachments": true` matches whatever attachments the call
-//! carries.
-//!
-//! **`thread archive`** (OpenWiz 0.0.6, B4, ClosedWiz#120; observed in help
-//! (0.43.1), the call never run). The fake accepts only `thread archive
-//! <id> --json`, and counts each accepted call in `archive-calls.count`.
-//! A response with `"archives": true` archives the thread: its id is
-//! appended to `archived-threads.log`. From then on, a `thread show` of that
-//! id answers from its response's `after_archive` (a response of its own),
-//! when it has one, so a test can read an archive back.
-//!
-//! **`loop list --json`, `loop create` and `loop update`** (0.0.17, #789,
-//! `contracts/loop-cli.v1.md`; the forms from `room-cli loop --help`,
-//! cloudroom 0.1.111, never observed live). The fake accepts `list` only
-//! as `loop list --json`, and `create` and `update` only in the contract's
-//! exact flag order. It refuses every other `loop` form, `show` included
-//! (there is no `room-cli loop show`). Before answering, it appends each
-//! accepted `create` or `update` to `loop-writes.log` as one JSON line: the
-//! arguments, and the text of each `--prompt-file` and `--script-file` (null
-//! when it can't be read, which then fails the call with exit 1; a log that
-//! can't be written fails it too, before any answer). Each value is taken
-//! with its flag, so a value spelled like a flag is never read as one. A test
-//! that expects no write checks that the log does not exist. A response with
-//! `"any_loop_write": "create"` or `"update"` matches every accepted call of
-//! that kind; with `"webhook": true` also, only a `--webhook` create.
-//! `loops/` holds the synthetic scenario.
-
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -186,8 +83,6 @@ fn main() -> ExitCode {
     };
 
     let found = find_response(&scenario_path, &argv);
-    // The upload, before the request (F3): every attachment read whole. A
-    // response may make it fail after `upload_fails_after` files.
     let fails_after = found
         .as_ref()
         .and_then(|(response, _)| response["upload_fails_after"].as_u64());
@@ -231,12 +126,10 @@ fn log_invocation(dir: &Path, argv: &[String]) {
         .append(true)
         .open(dir.join(LOG_FILE))
     {
-        // One write per line, so concurrent calls never interleave lines.
         let _ = f.write_all(format!("{line}\n").as_bytes());
     }
 }
 
-/// The names of the CloudRoom variables this call was started with.
 fn log_environment(dir: &Path) {
     let mut names: Vec<String> = std::env::vars_os()
         .filter_map(|(name, _)| name.into_string().ok())
@@ -253,8 +146,6 @@ fn log_environment(dir: &Path) {
     }
 }
 
-/// The fake's own copy of the allowlist, kept independent of the adapter's
-/// so that a mistake in one is caught by the other.
 fn allowlisted(argv: &[String]) -> bool {
     let a: Vec<&str> = argv.iter().map(String::as_str).collect();
     match a.as_slice() {
@@ -270,9 +161,6 @@ fn allowlisted(argv: &[String]) -> bool {
         }
         ["machine", "list", "--json"] => true,
         ["thread", "show" | "output", id, "--json"] => !id.starts_with('-'),
-        // The one write, in exactly the shape OpenWiz chose (documented, not
-        // observed): no other flag, never `auto`, `--` before the text; B2's
-        // attachment pairs after `--json`, never with `steer`.
         [
             "thread",
             "tell",
@@ -287,18 +175,9 @@ fn allowlisted(argv: &[String]) -> bool {
             };
             !id.starts_with('-') && staged_pairs(pairs) && (pairs.is_empty() || *mode == "queue")
         }
-        // OpenWiz 0.0.4: the catalogue read, and the second write in exactly
-        // its shape (the flags observed in help, spike run 3).
         ["cloud", "status", "--json"] => true,
-        // OpenWiz 0.0.6 (A6, ClosedWiz#114): one Cloud thread's branch, the
-        // read approved on #107, 2026-10-31 (approval provenance is linked
-        // by crates/adapters/cloudroom/src/allowlist.rs).
         ["cloud", "thread-workspace", id, "--json"] => !id.starts_with('-'),
-        // OpenWiz 0.0.6 (B4, ClosedWiz#120): the third write, in exactly
-        // its shape (observed in help, 0.43.1): never `--self`.
         ["thread", "archive", id, "--json"] => is_thread_id(id),
-        // 0.0.17 (#789): the loop-file reads and writes, in the exact forms
-        // of contracts/loop-cli.v1.md. No `show`: room-cli has none.
         ["loop", "list", "--json"] => true,
         ["loop", "create" | "update", ..] => loop_write(argv).is_some(),
         [
@@ -331,11 +210,6 @@ fn allowlisted(argv: &[String]) -> bool {
     }
 }
 
-/// B2: zero or more `--file <path>` or `--image <path>` pairs, each path a
-/// staged copy's: absolute, no `.` or `..` and no empty component, no
-/// control character, never a `file:` URL, and ending in
-/// `attachments/<id>/<safe name>` (the fake's own copy of the id and safe
-/// name rules).
 fn staged_pairs(pairs: &[&str]) -> bool {
     pairs.len().is_multiple_of(2)
         && pairs
@@ -372,7 +246,6 @@ fn is_staged_path(path: &str) -> bool {
         && matches!(parts.as_slice(), [.., "attachments", id, name] if id_ok(id) && name_ok(name))
 }
 
-/// The attachment pairs of an accepted `tell` or `spawn`: `(flag, path)`.
 fn attachment_pairs(argv: &[String]) -> Vec<(String, String)> {
     let Some(json) = argv.iter().position(|w| w == "--json") else {
         return vec![];
@@ -384,10 +257,6 @@ fn attachment_pairs(argv: &[String]) -> Vec<(String, String)> {
         .collect()
 }
 
-/// The upload `room-cli` makes before its request (F3, F21, source-read):
-/// every attachment read whole, all held at once, then one line in
-/// `attachments.log`. `false` when a file can't be read: the call fails
-/// there.
 fn upload(dir: &Path, argv: &[String], fails_after: Option<u64>) -> bool {
     let pairs = attachment_pairs(argv);
     if pairs.is_empty() {
@@ -429,7 +298,6 @@ fn upload(dir: &Path, argv: &[String], fails_after: Option<u64>) -> bool {
     read_all
 }
 
-/// This process's peak resident memory in KiB (`VmHWM`), on Linux.
 fn peak_memory_kib() -> Option<u64> {
     let status = fs::read_to_string("/proc/self/status").ok()?;
     status
@@ -438,7 +306,6 @@ fn peak_memory_kib() -> Option<u64> {
         .and_then(|v| v.trim().trim_end_matches("kB").trim().parse().ok())
 }
 
-/// `ow1-` and 40 lowercase hex digits, as OpenWiz derives a request id.
 fn is_request_id(id: &str) -> bool {
     id.strip_prefix("ow1-").is_some_and(|hex| {
         hex.len() == 40 && hex.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
@@ -449,10 +316,6 @@ fn is_spawn(argv: &[String]) -> bool {
     argv.len() >= 17 && argv[0] == "thread" && argv[1] == "spawn"
 }
 
-/// The request-ID table, under its own lock: `false` when the request id
-/// was used with other content (refused, nothing created). The same
-/// content again creates nothing; a new request id is recorded, and
-/// counted as a thread, when the response `creates`.
 fn request_id_table(dir: &Path, argv: &[String], response: &Value) -> bool {
     let mut lock = fs::OpenOptions::new()
         .create(true)
@@ -466,8 +329,6 @@ fn request_id_table(dir: &Path, argv: &[String], response: &Value) -> bool {
     let mut text = String::new();
     std::io::Read::read_to_string(&mut lock, &mut text).expect("read the request-ID table");
     let mut table: serde_json::Map<String, Value> = serde_json::from_str(&text).unwrap_or_default();
-    // Everything but the request id: project, provider, model, effort, text.
-    // Never the attachments: CloudRoom's dedup compares the text (F17).
     let last = argv.len() - 1;
     let content: Vec<&String> = [3, 7, 9, 11, last].iter().map(|&i| &argv[i]).collect();
     let content = serde_json::to_value(content).expect("content serializes");
@@ -492,8 +353,6 @@ fn is_tell(argv: &[String]) -> bool {
     argv.len() >= 8 && argv[0] == "thread" && argv[1] == "tell"
 }
 
-/// Adds one to the cross-process counter in `name` and returns the new
-/// count.
 fn count(dir: &Path, name: &str) -> u64 {
     let mut file = fs::OpenOptions::new()
         .create(true)
@@ -514,8 +373,6 @@ fn count(dir: &Path, name: &str) -> u64 {
     n
 }
 
-/// Copies the records under the state directory's `kind/` on disk at the
-/// moment of a write call into `into`.
 fn snapshot_records(dir: &Path, kind: &str, into: &str) {
     let state = match fs::read_to_string(dir.join(STATE_FILE)) {
         Ok(path) => PathBuf::from(path.trim()),
@@ -542,8 +399,6 @@ fn snapshot_records(dir: &Path, kind: &str, into: &str) {
     );
 }
 
-/// The fake's own copy of `ThreadId`'s rule: 1 to 128 ASCII letters,
-/// digits, `_` or `-`, not starting with `-`.
 fn is_thread_id(id: &str) -> bool {
     (1..=128).contains(&id.len())
         && !id.starts_with('-')
@@ -560,7 +415,6 @@ fn is_show(argv: &[String]) -> bool {
     argv.len() == 4 && argv[0] == "thread" && argv[1] == "show"
 }
 
-/// Records the thread `id` as archived: one line, in one write.
 fn archive(dir: &Path, id: &str) {
     if let Ok(mut f) = fs::OpenOptions::new()
         .create(true)
@@ -571,7 +425,6 @@ fn archive(dir: &Path, id: &str) {
     }
 }
 
-/// Whether a `thread archive` with `"archives": true` archived `id`.
 fn archived(dir: &Path, id: &str) -> bool {
     fs::read_to_string(dir.join(ARCHIVED_FILE)).is_ok_and(|t| t.lines().any(|l| l == id))
 }
@@ -580,17 +433,12 @@ fn is_detail_read(argv: &[String]) -> bool {
     matches!(argv.get(1).map(String::as_str), Some("show" | "output"))
 }
 
-/// One accepted loop write, parsed in the contract's order (#908): its kind,
-/// the file operands it names and whether it creates a webhook loop. A value
-/// is consumed with its flag, so a prompt or model spelled like a flag is
-/// never read as one.
 struct LoopWrite<'a> {
     verb: &'static str,
     files: Vec<(&'static str, &'a str)>,
     webhook: bool,
 }
 
-/// The accepted loop write `argv` makes, else `None`.
 fn loop_write(argv: &[String]) -> Option<LoopWrite<'_>> {
     let a: Vec<&str> = argv.iter().map(String::as_str).collect();
     match a.as_slice() {
@@ -600,8 +448,6 @@ fn loop_write(argv: &[String]) -> Option<LoopWrite<'_>> {
     }
 }
 
-/// Takes `flag <value>` from the front of `rest`, if it is there. The value
-/// may be any text, a prompt starting with `-` included.
 fn take<'a>(rest: &mut &[&'a str], flag: &str) -> Option<&'a str> {
     match *rest {
         &[f, value, ref tail @ ..] if f == flag => {
@@ -612,7 +458,6 @@ fn take<'a>(rest: &mut &[&'a str], flag: &str) -> Option<&'a str> {
     }
 }
 
-/// Takes the switch `flag` from the front of `rest`, if it is there.
 fn take_switch(rest: &mut &[&str], flag: &str) -> bool {
     match *rest {
         &[f, ref tail @ ..] if f == flag => {
@@ -623,8 +468,6 @@ fn take_switch(rest: &mut &[&str], flag: &str) -> bool {
     }
 }
 
-/// `--provider P --model M --reasoning R`, all three or none: `None` for a
-/// partial agent.
 fn take_agent(rest: &mut &[&str]) -> Option<()> {
     if take(rest, "--provider").is_none() {
         return Some(());
@@ -640,9 +483,6 @@ enum Trigger {
     Webhook,
 }
 
-/// A trigger at the front of `rest`: `--cron E --timezone Z` or `--at T`,
-/// and with `create` also `--in D` or `--webhook`. `None` for a cron with no
-/// timezone.
 fn take_trigger(rest: &mut &[&str], create: bool) -> Option<Trigger> {
     if take(rest, "--cron").is_some() {
         return take(rest, "--timezone").map(|_| Trigger::Scheduled);
@@ -658,8 +498,6 @@ fn take_trigger(rest: &mut &[&str], create: bool) -> Option<Trigger> {
     )
 }
 
-/// `loop create`, in the contract's exact order: name, prompt file, trigger,
-/// thread, optional script file, optional agent, priority, secrets.
 fn loop_create<'a>(mut rest: &[&'a str]) -> Option<LoopWrite<'a>> {
     let r = &mut rest;
     take(r, "--name")?;
@@ -679,9 +517,6 @@ fn loop_create<'a>(mut rest: &[&'a str]) -> Option<LoopWrite<'a>> {
     })
 }
 
-/// `loop update <id>`: at least one flag, each at most once, in the
-/// contract's order: name, priority, prompt, trigger, script file, agent,
-/// secrets. Its prompt is text, not a file.
 fn loop_update<'a>(mut rest: &[&'a str]) -> Option<LoopWrite<'a>> {
     let given = !rest.is_empty();
     let r = &mut rest;
@@ -704,9 +539,6 @@ fn loop_update<'a>(mut rest: &[&'a str]) -> Option<LoopWrite<'a>> {
     })
 }
 
-/// Appends one accepted loop write to `loop-writes.log`: its arguments and
-/// the text of each file it names. `Ok(false)` when a named file can't be
-/// read; an error when the record can't be written (#909).
 fn record_loop_write(dir: &Path, argv: &[String], write: &LoopWrite) -> std::io::Result<bool> {
     let mut files = serde_json::Map::new();
     let mut readable = true;
@@ -716,7 +548,6 @@ fn record_loop_write(dir: &Path, argv: &[String], write: &LoopWrite) -> std::io:
         files.insert(flag.to_owned(), text.map_or(Value::Null, Value::String));
     }
     let line = serde_json::json!({"argv": argv, "files": files});
-    // One write per line, so concurrent calls never interleave lines.
     fs::OpenOptions::new()
         .create(true)
         .append(true)
@@ -725,7 +556,6 @@ fn record_loop_write(dir: &Path, argv: &[String], write: &LoopWrite) -> std::io:
     Ok(readable)
 }
 
-/// Finds the response for `argv`, and the directory its files are relative to.
 fn find_response(scenario_path: &Path, argv: &[String]) -> Option<(Value, PathBuf)> {
     let text = fs::read_to_string(scenario_path)
         .unwrap_or_else(|e| panic!("fake room-cli: cannot read {scenario_path:?}: {e}"));
@@ -746,7 +576,6 @@ fn find_response(scenario_path: &Path, argv: &[String]) -> Option<(Value, PathBu
             .collect();
         let mut got: Vec<&str> = argv.iter().map(String::as_str).collect();
         if response["any_attachments"].as_bool() == Some(true) && is_tell(argv) {
-            // The call without its attachment pairs (B2).
             let pairs = 2 * attachment_pairs(argv).len();
             got.drain(6..6 + pairs);
         }
@@ -768,8 +597,6 @@ fn find_response(scenario_path: &Path, argv: &[String]) -> Option<(Value, PathBu
     find_response(&base.join("..").join(parent).join("scenario.json"), argv)
 }
 
-/// Kills the process that started this fake (the sender), with SIGKILL,
-/// and waits until `kill` has delivered it.
 fn kill_parent() {
     let parent = std::os::unix::process::parent_id();
     let status = std::process::Command::new("kill")
@@ -777,7 +604,6 @@ fn kill_parent() {
         .status()
         .expect("fake room-cli: run kill");
     assert!(status.success(), "fake room-cli: kill {parent} failed");
-    // The parent is gone; give the kernel a moment, then end quietly.
     thread::sleep(Duration::from_millis(50));
 }
 
@@ -792,7 +618,6 @@ fn answer(response: &Value, base: &Path, dir: &Path) -> ExitCode {
         std::process::abort();
     }
     if response["hang"].as_bool() == Some(true) {
-        // Lets a test check that the hung read was stopped.
         let _ = fs::write(dir.join(HANG_PID_FILE), std::process::id().to_string());
         loop {
             thread::sleep(Duration::from_secs(3600));
@@ -800,8 +625,6 @@ fn answer(response: &Value, base: &Path, dir: &Path) -> ExitCode {
     }
     if let Some(size) = response["oversized_stdout_bytes"].as_u64() {
         let body = vec![0_u8; usize::try_from(size).expect("oversized fixture size")];
-        // One logical write from one preallocated buffer, with no child,
-        // pipeline, streamed file or fixture-specific pipe configuration.
         if std::io::stdout().lock().write_all(&body).is_err() {
             return ExitCode::FAILURE;
         }

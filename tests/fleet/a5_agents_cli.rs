@@ -1,5 +1,3 @@
-//! #372: the production CLI joins both adapters, on synthetic fakes only.
-
 use super::{Command, fakes_on_path, left_behind, openwiz_release, world};
 
 use std::fs;

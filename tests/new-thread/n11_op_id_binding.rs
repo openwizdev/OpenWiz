@@ -1,7 +1,3 @@
-//! N11: op-id binding. The same op id and binding make one call; any
-//! difference is refused with zero calls. The request id is deterministic
-//! and matches `^[a-zA-Z0-9_-]{1,64}$`.
-
 use openwiz_core::messaging::sha256_hex;
 use openwiz_core::new_thread::operation::NewThreadResult;
 use openwiz_core::new_thread::outcome::Status;
@@ -145,28 +141,12 @@ fn the_record_and_the_call_carry_the_derived_request_id() {
     assert_eq!(client.spawned.lock().unwrap()[0].0.request_id, rid);
 }
 
-// #605 failing-first evidence (synthetic fixtures; Linux aarch64, Rust 1.99.1):
-// Disposable archive of 84da996d2fbbfa383735d4cc9d41e6daa53c440e only:
-// plant REQUEST_ID_DOMAIN v1 -> v2 in crates/core/src/new_thread/mod.rs.
-// cargo test --locked -p openwiz-tests --test new-thread -- --test-threads=2
-// Before this test: exit 0; 152 passed, 0 failed (the mutation survived).
-// Add this test, then cargo test --locked -p openwiz-tests --test new-thread
-//   n11_op_id_binding::synthetic_request_id_matches_contract_at_spawn -- --exact
-// Red: exit 101; 0 passed, 1 failed, 152 filtered out; left == right failed:
-//   left: "ow1-b1eb1b42e57eef0c188c22e1501dd8469e6d7eb0"
-//  right: "ow1-642d3823231f202a8a6907a9546ea7999a351f9c"
-// Restore v1 in the archive; its production module matches the branch bytewise.
-// Pristine, same exact command: exit 0; 1 passed, 0 failed, 152 filtered out.
-// Pristine, filter n11_op_id_binding::: exit 0; 7 passed, 0 failed, 146 filtered out.
-// No production change is included in this branch.
 #[test]
 fn synthetic_request_id_matches_contract_at_spawn() {
     let client = FakeClient::new();
     let store = MemoryStore::new();
     let r = request(offered(), "Synthetic", "op-syn-1");
     let report = create(&client, &store, &r);
-    // contracts/new-thread.v1.schema.json: request_id. Independently checked
-    // with Python hashlib.sha256(b"openwiz.new-thread.request-id.v1:op-syn-1").
     let expected = "ow1-642d3823231f202a8a6907a9546ea7999a351f9c";
     assert_eq!(report.status, Status::Created);
     assert_eq!(report.request_id, expected);

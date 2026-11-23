@@ -1,0 +1,48 @@
+# #2145 red: python3 -m unittest tools/release/test_candidate.py -k strangers, at the commit before the fix
+# The install check has no route of its own: it accepts only an outside receipt, so the stranger's latest route is never driven.
+tools/release/build_products.py:31: ResourceWarning: unclosed file <_io.BufferedReader name='<tmp>
+  require(path.is_file() and not path.is_symlink() and architecture(path.open('rb').read(64), target), 'native binary target mismatch')
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+tools/release/build_products.py:31: ResourceWarning: unclosed file <_io.BufferedReader name='<tmp>
+  require(path.is_file() and not path.is_symlink() and architecture(path.open('rb').read(64), target), 'native binary target mismatch')
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+tools/release/build_products.py:31: ResourceWarning: unclosed file <_io.BufferedReader name='<tmp>
+  require(path.is_file() and not path.is_symlink() and architecture(path.open('rb').read(64), target), 'native binary target mismatch')
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+F
+======================================================================
+FAIL: test_install_check_takes_the_strangers_latest_route_and_refuses_a_prerelease (tools.release.test_candidate.Candidate.test_install_check_takes_the_strangers_latest_route_and_refuses_a_prerelease)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/release/test_candidate.py", line 399, in cli
+    out = json.loads(result.stdout)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/json/decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "tools/release/test_candidate.py", line 563, in test_install_check_takes_the_strangers_latest_route_and_refuses_a_prerelease
+    self.assertEqual(self.install_check(), (1, {'status': 'blocked', 'reasons': ['install_latest_unresolved']}))
+                     ^^^^^^^^^^^^^^^^^^^^
+  File "tools/release/test_candidate.py", line 523, in install_check
+    return self.cli('install', '--state', self.state, '--target', target, **extra)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "tools/release/test_candidate.py", line 401, in cli
+    self.fail(result.stdout + result.stderr)
+AssertionError: usage: release candidate install [-h] --state STATE --receipt RECEIPT
+release candidate install: error: the following arguments are required: --receipt
+
+
+----------------------------------------------------------------------
+Ran 1 test in 6.963s
+
+FAILED (failures=1)

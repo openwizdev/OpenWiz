@@ -1,0 +1,31 @@
+# #2058 R1 red, before the fix: python3 -I adapters/boat/test_driver.py -k boat_output_never
+# Synthetic markers are replaced with <synthetic-marker> here.
+FFF
+======================================================================
+FAIL: test_boat_output_never_reaches_a_wake_or_stop_answer (__main__.Boat.test_boat_output_never_reaches_a_wake_or_stop_answer) (shape='nested')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<tmp>/adapters/boat/test_driver.py", line 362, in test_boat_output_never_reaches_a_wake_or_stop_answer
+    self.assertIn('is unknown, not running', err['error'])
+AssertionError: 'is unknown, not running' not found in 'the sandbox of run run-19fa56b94b72 is <b>Synthetic diagnostic</b> <synthetic-marker>, not running, so the run is not woken'
+
+======================================================================
+FAIL: test_boat_output_never_reaches_a_wake_or_stop_answer (__main__.Boat.test_boat_output_never_reaches_a_wake_or_stop_answer) (shape='flat')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<tmp>/adapters/boat/test_driver.py", line 362, in test_boat_output_never_reaches_a_wake_or_stop_answer
+    self.assertIn('is unknown, not running', err['error'])
+AssertionError: 'is unknown, not running' not found in 'the sandbox of run run-52e7cfeb2e98 is <b>Synthetic diagnostic</b> <synthetic-marker>, not running, so the run is not woken'
+
+======================================================================
+FAIL: test_boat_output_never_reaches_a_wake_or_stop_answer (__main__.Boat.test_boat_output_never_reaches_a_wake_or_stop_answer)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<tmp>/adapters/boat/test_driver.py", line 367, in test_boat_output_never_reaches_a_wake_or_stop_answer
+    self.assertEqual(code, 1, err)
+AssertionError: 0 != 1 : {'run': 'run-00784f9648fc'}
+
+----------------------------------------------------------------------
+Ran 1 test in 1.290s
+
+FAILED (failures=3)

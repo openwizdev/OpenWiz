@@ -1,4 +1,3 @@
-"""Resolve one GitHub repository from a clone's explicit origin URL."""
 import re
 
 from check import git, require

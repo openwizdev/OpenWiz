@@ -1,4 +1,3 @@
-//! LP5 command seam, explicit trusted fixture context only.
 use super::fixture::Fixture;
 use openwiz_core::{model::Timestamp, ops::Clock};
 use std::{ffi::OsString, time::Instant};

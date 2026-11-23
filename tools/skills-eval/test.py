@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-"""Offline proofs for the skills eval's case privacy scan (#1361). No key, no network, synthetic inputs only.
-
-Run: python3 -I tools/skills-eval/test.py
-"""
 import copy
 import os
 import sys
@@ -13,11 +9,10 @@ from unittest import mock
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-import cases as C  # noqa: E402
+import cases as C
 
 
 def setUpModule():
-    # Offline controls explicitly supply synthetic literals; no private checkout read.
     folder = unittest.enterModuleContext(tempfile.TemporaryDirectory())
     literals = Path(folder) / 'literals.txt'
     literals.write_text('synthetic-private-machine\n', encoding='utf-8')
@@ -27,8 +22,6 @@ def setUpModule():
 
 
 class Contract(unittest.TestCase):
-    """Committed eval cases carry no link, operational id or private literal."""
-
     def test_privacy_scan_catches_planted_identifiers(self):
         base = C.load_all()[0]
         for planted in ('see https://github.com/x/y', 'thread thr_synnegative', 'thread cr_child_synthetic', 'issue #123', 'issue #3999',

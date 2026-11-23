@@ -328,7 +328,7 @@ fn allowed_after(write: &Write, answer: &[u8]) -> Result<(), WriteError> {
                 Err(WriteError::NotAnIssue)
             }
         }
-        // External: on a base with a merge queue, `gh pr merge --merge` turns on auto-merge instead, https://github.com/cli/cli/blob/trunk/pkg/cmd/pr/merge/merge.go
+        // External: on a base that requires a merge queue, `gh pr merge --merge` does not merge: it turns on auto-merge while required checks are pending and adds the pull request to the merge queue once they pass, https://github.com/cli/cli/blob/de06af2c2ea536d5722fda35dc2001565f9b9f64/pkg/cmd/pr/merge/merge.go#L81-L90
         Write::Merge { .. } => match read_merge_queue(answer).map_err(WriteError::CheckFailed)? {
             false => Ok(()),
             true => Err(WriteError::MergeQueue),
@@ -677,28 +677,46 @@ mod before_write_tests {
         Number::new(n).unwrap()
     }
 
-    fn url(url: &str) -> Vec<u8> {
-        format!(r#"{{"url": "{url}"}}"#).into_bytes()
+    fn url(url: &str) -> String {
+        format!(r#"{{"url": "{url}"}}"#)
+    }
+
+    fn perform_answering(
+        write: &Write,
+        check_write_and_read_back: [&str; 3],
+    ) -> (Result<Confirmed, WriteError>, Vec<Vec<String>>) {
+        let calls = std::sync::Arc::new(std::sync::Mutex::new(Vec::<Vec<String>>::new()));
+        let seen = calls.clone();
+        let answers = check_write_and_read_back.map(|answer| answer.as_bytes().to_vec());
+        let executor = process::Executor::supplied(std::sync::Arc::new(
+            move |call: &Invocation, _: Instant| {
+                let mut seen = seen.lock().unwrap();
+                seen.push(call.argv().to_vec());
+                Ok(answers[seen.len() - 1].clone())
+            },
+        ));
+        let result = perform_with(&executor, write, Instant::now());
+        let calls = calls.lock().unwrap().clone();
+        (result, calls)
     }
 
     #[test]
     fn a_close_runs_only_on_that_issues_own_url() {
         let close = Write::CloseIssue { issue: number(7) };
+        let closed = r#"{"state": "CLOSED"}"#;
         let issue = url("https://github.invalid/synthetic/repo/issues/7");
-        assert!(allowed_after(&close, &issue).is_ok());
+        let (result, calls) = perform_answering(&close, [&issue, "", closed]);
+        assert_eq!(result, Ok(Confirmed::Closed));
+        assert_eq!(calls, close.calls());
         for other in [
             "https://github.invalid/synthetic/repo/pull/7",
             "https://github.invalid/synthetic/repo/issues/17",
             "https://github.invalid/synthetic/repo/issues/7/",
             "http://github.invalid/synthetic/repo/issues/7",
         ] {
-            assert!(
-                matches!(
-                    allowed_after(&close, &url(other)),
-                    Err(WriteError::NotAnIssue)
-                ),
-                "{other}"
-            );
+            let (result, calls) = perform_answering(&close, [&url(other), "", closed]);
+            assert_eq!(result, Err(WriteError::NotAnIssue), "{other}");
+            assert_eq!(calls, close.calls()[..1], "{other}: only the check ran");
         }
     }
 
@@ -710,17 +728,28 @@ mod before_write_tests {
             body: Body::parse("synthetic merge").unwrap(),
         };
         let queue = |enabled: &str| {
-            format!(r#"{{"data": {{"repository": {{"pullRequest": {{"isMergeQueueEnabled": {enabled}}}}}}}}}"#)
-                .into_bytes()
+            format!(
+                r#"{{"data": {{"repository": {{"pullRequest": {{"isMergeQueueEnabled": {enabled}}}}}}}}}"#
+            )
         };
-        assert!(allowed_after(&merge, &queue("false")).is_ok());
-        assert!(matches!(
-            allowed_after(&merge, &queue("true")),
-            Err(WriteError::MergeQueue)
-        ));
-        assert!(matches!(
-            allowed_after(&merge, &queue("null")),
-            Err(WriteError::CheckFailed(_))
-        ));
+        let merged = format!(
+            r#"{{"state": "MERGED", "mergeCommit": {{"oid": "{}"}}, "headRefOid": "{}"}}"#,
+            "b".repeat(40),
+            "a".repeat(40)
+        );
+        let (result, calls) = perform_answering(&merge, [&queue("false"), "", &merged]);
+        assert_eq!(
+            result,
+            Ok(Confirmed::Merged {
+                merge_commit: Commit::parse(&"b".repeat(40)).unwrap()
+            })
+        );
+        assert_eq!(calls, merge.calls());
+        let (result, calls) = perform_answering(&merge, [&queue("true"), "", &merged]);
+        assert_eq!(result, Err(WriteError::MergeQueue));
+        assert_eq!(calls, merge.calls()[..1], "only the check ran");
+        let (result, calls) = perform_answering(&merge, [&queue("null"), "", &merged]);
+        assert!(matches!(result, Err(WriteError::CheckFailed(_))));
+        assert_eq!(calls, merge.calls()[..1], "only the check ran");
     }
 }

@@ -1,0 +1,4 @@
+# Red run on main: cargo test -p openwiz-tests --test fleet b5_limited_builder (synthetic world; planned_at elided)
+thread 'b5_tick::edges::b5_limited_builder_restarts_only_on_a_codex_small_builder' (9192) panicked at tests/fleet/b5_edges.rs:1336:13:
+syn-harness: {"actions":[{"facts":{"branch":"synthetic-branch-10","builder":"thr_syn_limited","settings":{"effort":"high","harness":"syn-harness","model":"gpt-6.1-sol"}},"kind":"wake","outcome":{"state":"planned"},"rule":"restart","spec":9,"ticket":10}],"default_branch":"main","mode":"dry_run","planned_at":<synthetic>,"rules":{"builder":{"effort":"xhigh","harness":"claude-code","model":"claude-opus-5-5"},"builder_small":{"effort":"high","harness":"syn-harness","model":"gpt-6.1-sol"},"ci_checks":
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

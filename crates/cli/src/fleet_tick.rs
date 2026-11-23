@@ -16,7 +16,7 @@ mod records;
 
 pub const USAGE: &str =
     "  openwiz fleet tick --dry-run [--json]\n  openwiz fleet due --github-only [--json]\n";
-pub const HELP: &str = "fleet tick --dry-run\n  Plan every fleet from GitHub, CloudRoom and OpenWiz start records, and print the\n  plan. It reads only: no locks, writes, starts or messages. Only judgment items are\n  printed; --json prints the whole openwiz.fleet-tick.v1 plan. Without --dry-run it\n  refuses: the executing tick was retired.\nfleet due --github-only\n  A read-only GitHub candidate check for a loop sandbox without room-cli. One line\n  per possible action, silent when idle. A failed global read exits 1. The agent\n  it wakes verifies CloudRoom facts before acting.\n  --json prints openwiz.fleet-due.v1 candidates, including an empty list.\n";
+pub const HELP: &str = "fleet tick --dry-run\n  Plan every fleet from GitHub, CloudRoom and OpenWiz start records, and print the\n  plan. It reads only: no locks, writes, starts or messages. Only judgment items are\n  printed; --json prints the whole openwiz.fleet-tick.v1 plan. Without --dry-run it\n  refuses: the executing tick was retired.\nfleet due --github-only\n  A read-only GitHub candidate check for a loop sandbox without room-cli. One line\n  per distinct candidate spec/ticket pair; silent when idle. A failed global read\n  exits 1. The agent it wakes verifies CloudRoom facts before acting.\n  --json prints openwiz.fleet-due.v1 candidates, including an empty list.\n";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Args {

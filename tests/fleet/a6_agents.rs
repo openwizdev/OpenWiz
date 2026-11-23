@@ -1,30 +1,3 @@
-//! A6 (ClosedWiz#114): a ticket's agents, tied only through the verified
-//! chain (spec #107, proof S1-4; `contracts/fleet.v1.md`, "A ticket's
-//! agents: the verified chain" and "Unplaced"). Fixture tests only: they
-//! never prove live behaviour.
-//!
-//! The seam is the core's `openwiz_core::fleet::agents::place`, which
-//! works the chain out from the envelope's read records, and its
-//! `reviewer`. Every expected value is a literal.
-//!
-//! - **Only the exact head branch places a thread:** near-miss branch
-//!   names place nothing, and a branch named after a ticket places nothing
-//!   without its pull request.
-//! - **Every missing link places nothing,** with the first reason that
-//!   applies: no branch, a shared branch, no pull request, several
-//!   tickets, several issues.
-//! - **A thread is placed at most once,** and every listed thread is
-//!   either one ticket's builder or unplaced, never both.
-//! - **An incomplete read behind the chain leaves every builder and
-//!   `unplaced` unread,** naming exactly the incomplete reads in the order
-//!   of `reads`; a read the chain doesn't require never does.
-//! - **A required read missing from the record, or on it twice, is
-//!   refused:** nothing is placed.
-//! - **No chain places a reviewer.**
-//!
-//! [`reads`] proves the CloudRoom reads behind the chain, on the fake
-//! `room-cli`: only allowlisted reads, strict readers, OpenWiz's own words.
-
 #[path = "a6_reads.rs"]
 mod reads;
 
@@ -47,10 +20,8 @@ fn ne(s: &str) -> NonEmpty {
     NonEmpty::new(s).expect("not empty")
 }
 
-/// The spec of every synthetic fleet here.
 const SPEC: u64 = 940;
 
-/// A ticket's pull request, as its `pr_discovery` read gives it.
 #[derive(Clone)]
 enum Pr {
     None,
@@ -77,8 +48,6 @@ fn open(number: u64, head: &'static str, closes: &'static [u64]) -> Pr {
     }
 }
 
-/// A listed thread: a Cloud thread with its `workspace` read's branch, or a
-/// local one with the thread list's.
 #[derive(Clone)]
 enum Row {
     Cloud(&'static str, String),
@@ -89,8 +58,6 @@ fn cloud(id: &'static str, branch: &str) -> Row {
     Row::Cloud(id, branch.to_owned())
 }
 
-/// One fleet's tickets and threads, written as the reads a producer makes:
-/// the GitHub reads first, then CloudRoom's, as in the contract's examples.
 #[derive(Clone, Default)]
 struct Fleet {
     tickets: Vec<(u64, Pr)>,
@@ -154,7 +121,6 @@ impl Fleet {
         reads
     }
 
-    /// This fleet's placements, which must be on a complete record.
     fn place(&self) -> Placements {
         agents::place(n(SPEC), &self.reads()).expect("a complete record")
     }
@@ -209,12 +175,10 @@ fn thread(row: &Row) -> Thread {
     }
 }
 
-/// A builder as the contract prints it.
 fn printed(builder: &WorkedOut<Option<NonEmpty>>) -> Value {
     serde_json::to_value(builder).expect("prints")
 }
 
-/// Each ticket's builder, as printed, by ticket.
 fn builders(fleet: &Fleet, placements: &Placements) -> Vec<(u64, Value)> {
     fleet
         .tickets
@@ -223,16 +187,12 @@ fn builders(fleet: &Fleet, placements: &Placements) -> Vec<(u64, Value)> {
         .collect()
 }
 
-/// `unplaced` as the contract prints it.
 fn unplaced(placements: &Placements) -> Value {
     serde_json::to_value(placements.unplaced()).expect("prints")
 }
 
-/// The ticket of every chain test: #941, whose pull request's head branch is
-/// `HEAD`.
 const HEAD: &str = "room/syn-a6-0941";
 
-/// Its pull request #971, open, closing #941 alone.
 fn the_pr() -> Pr {
     open(971, HEAD, &[941])
 }
@@ -301,7 +261,6 @@ fn a6_placement_contracts_preserve_all_original_cases() {
 }
 
 fn only_the_exact_head_branch_places_a_thread() {
-    // The positive control: the exact head branch places the thread.
     let exact = Fleet::default()
         .ticket(941, the_pr())
         .thread(cloud("thr_syn_0041", HEAD));
@@ -309,8 +268,6 @@ fn only_the_exact_head_branch_places_a_thread() {
     assert_eq!(placements.builder(n(941)), known_thread("thr_syn_0041"));
     assert_eq!(unplaced(&placements), json!({"known": []}));
 
-    // Near misses: each differs from `HEAD` in one way a loose match would
-    // forgive. None places anything.
     let near_misses = [
         "room/syn-a6-0941 ",
         " room/syn-a6-0941",
@@ -354,9 +311,6 @@ fn known_thread(id: &str) -> WorkedOut<Option<NonEmpty>> {
 }
 
 fn a_branch_named_after_a_ticket_places_nothing_without_its_pull_request() {
-    // #941 has no pull request; #942's head branch names no ticket at all.
-    // A thread whose branch spells #941's number is never #941's builder,
-    // and the thread on #942's head branch is #942's, whatever its name.
     let fleet = Fleet::default()
         .ticket(941, Pr::None)
         .ticket(942, open(972, "room/syn-unrelated-0001", &[942]))
@@ -415,8 +369,6 @@ fn a_local_thread_a_merged_or_a_draft_pull_request_places_like_any_other() {
     assert_eq!(unplaced(&placements), json!({"known": []}));
 }
 
-/// One missing link: the fleet, then each ticket's builder and the
-/// `unplaced` list, as printed.
 struct Case {
     what: &'static str,
     fleet: Fleet,
@@ -546,8 +498,6 @@ fn every_missing_link_places_nothing_with_its_reason() {
 }
 
 fn a_pull_request_that_is_no_tickets_places_nothing() {
-    // #840 blocks #941 but is no ticket of this fleet: its pull request's
-    // head branch, on the record, ties nothing to this fleet.
     let fleet = Fleet::default()
         .ticket(941, Pr::None)
         .thread(cloud("thr_syn_0041", "room/syn-blocker-0840"));
@@ -628,9 +578,6 @@ fn the_first_reason_that_applies_is_the_one_given() {
 
 #[test]
 fn a_thread_is_placed_at_most_once_and_every_thread_is_listed_once() {
-    // Every fleet of two tickets and three threads drawn from these
-    // choices: each thread is the builder of at most one ticket, and each
-    // listed thread is either a builder or in `unplaced`, exactly once.
     let prs = [
         Pr::None,
         open(971, "room/syn-p-0001", &[941]),
@@ -680,12 +627,8 @@ fn a_thread_is_placed_at_most_once_and_every_thread_is_listed_once() {
     assert_eq!(fleets, 6 * 6 * 64);
 }
 
-// The read rule for the chain (`fleet.v1.md`, "The rule").
-
-/// A change that makes one read incomplete.
 type Spoil = fn(&mut Read);
 
-/// Makes `read`'s outcome failed, keeping its kind and subject.
 fn fail(read: &mut Read) {
     let failed = || Failed {
         gap: GapKind::CommandFailed,
@@ -708,7 +651,6 @@ fn fail(read: &mut Read) {
     }
 }
 
-/// Makes a list read partial: what was read is kept, and it is incomplete.
 fn truncate(read: &mut Read) {
     fn partial<T: Clone>(outcome: &mut ListOutcome<T>) {
         let ListOutcome::Complete { value } = outcome else {
@@ -728,12 +670,6 @@ fn truncate(read: &mut Read) {
     }
 }
 
-/// The two-ticket fleet of the read-rule tests: #941 placed on
-/// thr_syn_0041, #942 with no pull request, a local thread with a branch.
-///
-/// Its reads: r1 `sub_issues`, r2 #941's and r3 #942's `pr_discovery`, r4
-/// `projects`, r5 `threads`, r6 thr_syn_0041's and r7 thr_syn_0042's
-/// `workspace`.
 fn two_tickets() -> Fleet {
     Fleet::default()
         .ticket(941, the_pr())
@@ -743,7 +679,6 @@ fn two_tickets() -> Fleet {
         .thread(cloud("thr_syn_0042", "room/syn-x-0042"))
 }
 
-/// Every value of the chain, printed: each builder, then `unplaced`.
 fn every_value(fleet: &Fleet, reads: &[Read]) -> Vec<Value> {
     let placements = agents::place(n(SPEC), reads).expect("on the record");
     let mut values: Vec<Value> = fleet
@@ -808,9 +743,6 @@ fn kind(kind: &ReadKind) -> &'static str {
 
 fn an_incomplete_read_behind_the_chain_leaves_every_builder_and_unplaced_unread() {
     let fleet = two_tickets();
-    // Each read the chain requires, failed or cut short on its own: every
-    // builder (even #942's, which has no pull request) and `unplaced` name
-    // exactly that read.
     let cases: [(usize, Spoil); 9] = [
         (0, fail),
         (0, truncate),
@@ -838,7 +770,6 @@ fn an_incomplete_read_behind_the_chain_leaves_every_builder_and_unplaced_unread(
 fn several_incomplete_reads_are_named_once_each_in_the_order_of_reads() {
     let fleet = two_tickets();
     let mut reads = fleet.reads();
-    // Spoiled out of order; named in the order of `reads`.
     for at in [6, 1, 3] {
         fail(&mut reads[at]);
     }
@@ -849,8 +780,6 @@ fn several_incomplete_reads_are_named_once_each_in_the_order_of_reads() {
         [unread.clone(), unread.clone(), unread]
     );
 
-    // The same, with the reads in another order: the list follows `reads`,
-    // not the read ids or the chain's own order.
     let mut shuffled = reads.clone();
     shuffled.reverse();
     let unread = json!({"unread": ["r7", "r5", "r4", "r2"]});
@@ -863,8 +792,6 @@ fn several_incomplete_reads_are_named_once_each_in_the_order_of_reads() {
 fn a_failed_ticket_or_thread_list_requires_nothing_it_would_have_listed() {
     let fleet = two_tickets();
 
-    // The ticket list failed: no ticket's pull request is required, so a
-    // record without them is still on the record.
     let mut reads = fleet.reads();
     fail(&mut reads[0]);
     let without_prs: Vec<Read> = reads
@@ -878,7 +805,6 @@ fn a_failed_ticket_or_thread_list_requires_nothing_it_would_have_listed() {
         [unread.clone(), unread.clone(), unread]
     );
 
-    // The thread list failed: no thread's branch is required.
     let mut reads = fleet.reads();
     fail(&mut reads[4]);
     let without_branches: Vec<Read> = reads
@@ -901,9 +827,6 @@ fn a_read_the_chain_does_not_require_never_makes_it_unread() {
         gap: GapKind::NotFound,
         reason: ne("a synthetic read failed"),
     };
-    // Every other kind, failed: the tickets' own reads, a blocker's pull
-    // request, the versions and the repository. And a `workspace` read of
-    // a thread the list doesn't name, and of a local thread, both failed.
     let others = vec![
         ReadKind::Version {
             source: SourceName::Cloudroom,
@@ -975,7 +898,6 @@ fn a_required_read_missing_from_the_record_or_on_it_twice_is_refused() {
         (6, Needed::Workspace(ne("thr_syn_0042"))),
     ];
     for (at, need) in needed {
-        // Left out.
         let mut reads = fleet.reads();
         reads.remove(at);
         assert_eq!(
@@ -983,7 +905,6 @@ fn a_required_read_missing_from_the_record_or_on_it_twice_is_refused() {
             Err(RecordError::Missing(need.clone())),
             "without read {at}"
         );
-        // On the record twice, once failed: which one holds can't be told.
         let mut reads = fleet.reads();
         let mut copy = reads[at].clone();
         copy.id = ReadId(99);
@@ -1008,7 +929,6 @@ fn no_chain_places_a_reviewer() {
     );
 }
 
-/// The schema at `pointer` (`#/$defs/...`), as a schema of its own.
 pub(crate) fn sub_schema(pointer: &str) -> Value {
     let schema = crate::schema::load_schema();
     let mut sub = serde_json::Map::new();
@@ -1020,7 +940,6 @@ pub(crate) fn sub_schema(pointer: &str) -> Value {
 fn every_builder_and_unplaced_the_chain_gives_matches_the_schema() {
     let builder = sub_schema("#/$defs/ticket/properties/builder");
     let unplaced_schema = sub_schema("#/$defs/fleet_view/properties/unplaced");
-    // A planted bad value of each: the sub-schemas really check.
     for bad in [
         json!({"known": ""}),
         json!({"known": 1}),
@@ -1040,8 +959,6 @@ fn every_builder_and_unplaced_the_chain_gives_matches_the_schema() {
         );
     }
 
-    // Every value of the read-rule fleet, complete and with each read
-    // spoiled, and of the missing-link and first-reason cases.
     let mut values: Vec<(Value, Value)> = Vec::new();
     let fleet = two_tickets();
     let mut spoiled = vec![fleet.reads()];

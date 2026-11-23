@@ -1,13 +1,4 @@
 #!/usr/bin/env python3
-"""The records v1 test kit: read a tracker and report every record that breaks a rule.
-
-    check.py --fixture <tracker.json>
-    check.py --repo <owner>/<name>
-
-Prints one line per break, `#<issue> <rule>: <what>`. Exit 0: no break; 1: breaks
-printed; 2: the tracker could not be read (nothing is guessed). It never writes.
-The rules are kernel/records.v1.md's.
-"""
 import argparse
 import calendar
 import json
@@ -67,7 +58,6 @@ def _list(value, where):
 
 
 def read_tracker(data):
-    """The tracker, in exactly the shape records-kit/README.md gives, or Unreadable."""
     _object(data, ('tracker', 'repo', 'now', 'record_authors', 'issues'), 'the tracker')
     if data['tracker'] != TRACKER:
         _refuse('tracker is not %r' % TRACKER)
@@ -122,7 +112,6 @@ READY = ('ready-for-agent', 'ready-for-human')
 MARKER = '<!-- openwiz:status v1 -->'
 NOTE_KEYS = ('agent', 'state', 'harness', 'model', 'skills', 'step', 'time', 'pr', 'preview')
 NOTE_REQUIRED = NOTE_KEYS[:7]
-# The pinned agent-status.v1.schema.json's value shapes; a note failing one is unknown (S2), never live.
 TEXT = r'^[^\x00-\x1f\x7f"\u201c\u201d>][^\x00-\x1f\x7f"\u201c\u201d]{0,%d}$'
 SKILL = r'[a-z0-9]+(-[a-z0-9]+)*@[0-9]+\.[0-9]+\.[0-9]+'
 NOTE_VALUES = {
@@ -138,6 +127,7 @@ NOTE_VALUES = {
                           r'(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,63}(?::[0-9]{1,5})?(?:/[^\s"<>?#@\\]*)?$'),
 }
 LINK = re.compile(r'^- #([1-9][0-9]*) (real|file):')
+LONG_LINK = re.compile(r'^- ([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)#([1-9][0-9]*) (real|file):(.*)$')
 LIVE_SECONDS = 30 * 60
 SPEC_SECTIONS = ('Problem Statement', 'Solution', 'Changelog headline', 'User Stories',
                  'Implementation Decisions', 'Testing Decisions', 'Proof', 'Out of Scope',
@@ -147,7 +137,6 @@ RELIES = '**Relies on:**'
 
 
 def read_note(body):
-    """A v1 note's fields, or None when it doesn't read as openwiz:status v1."""
     lines = body.replace('\r\n', '\n').split('\n')
     while lines and lines[-1] == '':
         lines.pop()
@@ -166,10 +155,6 @@ def read_note(body):
 
 
 def read_lines(body):
-    """The body's lines, each without trailing spaces and tabs, and whether it is outside every fenced
-    code block and HTML comment, as the pinned plan-links contract's "Reading a section" reads them.
-    Comment syntax inside a fence and fence syntax inside a comment change nothing, and a line's
-    comment delimiters are read in order, so an opener after a closer opens a comment."""
     out, fence, comment = [], None, False
     for line in body.replace('\r\n', '\n').split('\n'):
         line = line.rstrip(' \t')
@@ -180,7 +165,7 @@ def read_lines(body):
                 fence = None
             continue
         if not comment:
-            fence = (re.match(r'^(`{3,}|~{3,})', trim) or [None])[0]
+            fence = (re.match(r'^(?:`{3,}(?=[^`]*$)|~{3,})', trim) or [None])[0]
             if fence is not None:
                 continue
         at = 0
@@ -193,9 +178,14 @@ def read_lines(body):
     return out
 
 
-def links(lines, blockers):
-    """B1: each native blocker's missing or repeated reason line, or a malformed ## Links section,
-    with the plan-links contract's messages; every native blocker of a ticket needs one line."""
+def short_form_if_own(line, repo):
+    m = LONG_LINK.match(line)
+    if m and m.group(1).lower() == repo.lower():
+        return '- #%s %s:%s' % m.group(2, 3, 4)
+    return line
+
+
+def links(lines, blockers, repo):
     heads = [at for at, (line, shown) in enumerate(lines) if shown and line == '## Links']
     if len(heads) > 1:
         return ['malformed section: more than one ## Links section']
@@ -204,10 +194,14 @@ def links(lines, blockers):
         if re.match(r'^(#{1,6} |#{1,6}$)', line):
             break
         if line:
-            section.append(line)
+            section.append(short_form_if_own(line, repo))
     if heads and not section:
         return ['malformed section: no lines']
-    if any(line != 'none' and not LINK.match(line) for line in section):
+    odd = [line for line in section if line != 'none' and not LINK.match(line)]
+    if odd and LONG_LINK.match(odd[0]):
+        m = LONG_LINK.match(odd[0])
+        return ['malformed section: line `%s` names %s#%s, not this repository' % (odd[0], m.group(1), m.group(2))]
+    if odd:
         return ['malformed section: a line is not a link line or none']
     if len(section) > 1 and 'none' in section:
         return ['malformed section: none must be the only line']
@@ -222,7 +216,6 @@ def links(lines, blockers):
 
 
 def breaks(tracker):
-    """Every break, in issue order, then the order of the rules in records.v1.md."""
     issues = {i['number']: i for i in tracker['issues']}
     parents = {i['parent'] for i in tracker['issues'] if i['parent'] is not None}
     authors = {a.lower() for a in tracker['record_authors']}
@@ -275,7 +268,7 @@ def breaks(tracker):
             if not present:
                 say('T1', '%s lacks %s' % (kind, part))
         if ticket:
-            for what in links(read, i['blocked_by']):
+            for what in links(read, i['blocked_by'], tracker['repo']):
                 say('B1', what)
         for b in i['blocked_by']:
             if b['state'] == 'closed' and b['state_reason'] != 'completed':
@@ -327,7 +320,6 @@ def _comment(c):
 
 
 def record_authors(repo):
-    """The Record authors row of the repository's docs/agents/fleet.md, exactly one."""
     text = _gh('api', 'repos/%s/contents/docs/agents/fleet.md' % repo, '-H', 'Accept: application/vnd.github.raw')
     rows = [line for line in text.splitlines() if re.match(r'^\| Record authors \|', line)]
     names = re.findall(r'`([^`]+)`', rows[0]) if len(rows) == 1 else []
@@ -337,7 +329,6 @@ def record_authors(repo):
 
 
 def read_repo(repo):
-    """A real repository's open issues as a tracker. Reads only; any gap refuses."""
     owner, _, name = repo.partition('/')
     tracker = {'tracker': TRACKER, 'repo': repo, 'now': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
                'record_authors': record_authors(repo), 'issues': []}

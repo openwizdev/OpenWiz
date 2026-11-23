@@ -65,7 +65,7 @@ The reason is OpenWiz's own words, never a tool's raw output. **The gaps are the
 
 `pr_discovery`'s value. A pull request is the issue's when its body closes it (GitHub's closing reference; a `#N:` title alone doesn't count). Exactly one merged pull request takes precedence over any open ones; with none merged, the one open one is its. Closed, unmerged pull requests are never its. **More than one open one, with none merged,** is `{"state": "several", "numbers": [...]}`, at least two numbers, ascending: none of them is its.
 
-**Two or more merged pull requests** closing the issue are ambiguous, whatever the open ones. `fleet` returns `several` with only the merged numbers, ascending, and the ticket's state is unknown; `fleets` fails the `pr_discovery` read with a `malformed` gap, so values requiring it are unread. Neither view selects a pull request or counts the ticket as merged.
+**Two or more merged pull requests** closing the issue are ambiguous, whatever the open ones. `fleet` returns `several` with only the merged numbers, ascending; none is its own, so the state table's rule 10 makes the ticket unknown unless an earlier rule settles it (such as `held`); `fleets` fails the `pr_discovery` read with a `malformed` gap, so values requiring it are unread. Neither view selects a pull request or counts the ticket as merged.
 
 | Field | What |
 | --- | --- |

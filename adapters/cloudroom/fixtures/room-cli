@@ -18,14 +18,20 @@ import json, os, shutil, signal, subprocess, sys, time
 args, log = sys.argv[1:], os.environ['FAKE_ROOM_LOG']
 with open(log, 'a') as f:
     f.write(json.dumps(args) + '\n')
-sub = args[1] if len(args) > 1 and args[0] == 'thread' else ''
+sub = args[1] if len(args) > 1 and args[0] in ('thread', 'provider') else ''
 if sub and os.environ.get('FAKE_ROOM_REFUSE') == sub:
-    sys.exit(print('Synthetic refusal of thread %s %s.' % (sub, ' '.join(args[2:3])), file=sys.stderr) or 1)
+    if os.environ.get('FAKE_ROOM_SAY'):
+        print(json.dumps({'error': os.environ['FAKE_ROOM_SAY']}))
+    sys.exit(print(os.environ.get('FAKE_ROOM_SAY') or 'Synthetic refusal of thread %s %s.' % (
+        sub, ' '.join(args[2:3])), file=sys.stderr) or 1)
 try:
     with open(log + '.threads') as f:
         threads = json.load(f)
 except FileNotFoundError:
     threads = {}
+
+
+local, json_out = os.environ.get('FAKE_ROOM_HOST') == 'local', '--json' in args
 
 
 def flag(name):
@@ -39,24 +45,42 @@ def mark(tid):
 def turn(thread, prompt):
     try:
         p = subprocess.Popen([thread['provider'], '--model', thread['model'], '-p', prompt], start_new_session=True,
-                             env=dict(os.environ, FAKE_ROOM_THREAD=mark(thread['id']).partition('=')[2]),
+                             env=dict(os.environ, FAKE_ROOM_THREAD=mark(thread['id']).partition('=')[2],
+                                      **({'FAKE_ROOM_REASONING_LEVEL': thread['reasoning']} if thread.get('reasoning')
+                                         else {})),
                              stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         thread['turns'].append(p.pid)
     except FileNotFoundError:
         pass  # a provider with no local program: the thread exists, and runs nothing here
 
 
-if sub == 'spawn':
+LEVELS_BY_MODEL = {'Opus 5.5': ('low', 'medium', 'high'), 'Synthetic 1': ('medium', 'high', 'xhigh')}
+PROVIDERS_WITH_MODELS, PROVIDERS_WITH_A_NOTE = ('claude-code', 'codex', 'fake-harness'), ('pi',)
+if sub == 'models' and args[0] == 'provider':
+    if not os.environ.get('FAKE_ROOM_MODELS') and args[2] not in PROVIDERS_WITH_MODELS + PROVIDERS_WITH_A_NOTE:
+        sys.exit(print('Unknown provider %s. See room-cli provider list.' % os.environ.get('FAKE_ROOM_UNKNOWN', args[2]),
+                       file=sys.stderr) or 1)
+    out = os.environ.get('FAKE_ROOM_MODELS') or json.dumps(
+        [{'id': m, 'isDefault': False, 'model': m, 'supportedReasoningEfforts': [{'reasoningEffort': e} for e in levels]}
+         for m, levels in LEVELS_BY_MODEL.items()]
+        if args[2] in PROVIDERS_WITH_MODELS else
+        {'id': args[2], 'model': 'default', 'note': 'Synthetic: models are named by the provider.'})
+elif sub == 'spawn':
     tid = 'thr_syn_%04d' % (len(threads) + 1)
-    threads[tid] = {'id': tid, 'provider': flag('--provider'), 'model': flag('--model'), 'title': flag('--title'), 'turns': []}
+    threads[tid] = {'id': tid, 'provider': flag('--provider'), 'model': flag('--model'), 'title': flag('--title'), 'turns': [],
+                    'reasoning': flag('--reasoning-level') if '--reasoning-level' in args else None}
     turn(threads[tid], flag('--prompt'))
     if os.environ.get('FAKE_ROOM_BREAK'):
         shutil.rmtree(os.environ['FAKE_ROOM_BREAK'], ignore_errors=True)
         open(os.environ['FAKE_ROOM_BREAK'], 'w').close()
+    if os.environ.get('FAKE_ROOM_GONE'):
+        os.remove(os.environ['FAKE_ROOM_GONE'])
     if os.environ.get('FAKE_ROOM_READONLY'):
         os.chmod(os.environ['FAKE_ROOM_READONLY'], 0o500)
-    out = os.environ.get('FAKE_ROOM_RECEIPT') or json.dumps(
+    threads[tid].update(projectId=flag('--project'), parentThreadId=os.environ.get('ROOM_THREAD_ID'))
+    out = os.environ.get('FAKE_ROOM_RECEIPT') or (json.dumps(
         {'id': tid, 'projectId': flag('--project'), 'providerId': flag('--provider'), 'status': 'pending'})
+        if json_out or not local else 'Started %s (%s) in %s' % (tid, flag('--title'), flag('--project')))
 elif sub == 'tell' and not threads.get(args[2], {'archived': True}).get('archived'):
     with open(flag('--message-file')) as f:
         turn(threads[args[2]], f.read())
@@ -68,8 +92,29 @@ elif sub == 'tell' and not threads.get(args[2], {'archived': True}).get('archive
             f.write(json.dumps(['thread', 'told']) + '\n')
     out = json.dumps({'ok': True})
 elif sub == 'list':
-    out = json.dumps({'children': [{'id': t, 'title': v['title'], 'status': 'active'}
-                                   for t, v in threads.items() if not v.get('archived')]})
+    rows = [{'id': t, 'title': v['title'], 'status': 'active', 'projectId': v.get('projectId'),
+             'parentThreadId': v.get('parentThreadId')} for t, v in threads.items() if not v.get('archived')]
+    if local and '--project' in args:
+        rows = [r for r in rows if r['projectId'] == flag('--project')]
+    if not local:
+        rows = [{'id': r['id'], 'parent': r['parentThreadId'], 'sandbox': 'sbx_syn', 'state': 'idle', 'status': r['status'],
+                 'threadId': r['id'], 'title': r['title']} for r in rows
+                if r['parentThreadId'] == os.environ.get('ROOM_THREAD_ID')]
+    rows += json.loads(os.environ.get('FAKE_ROOM_EXTRA') or '[]')
+    if not local and set(args[2:]) - {'--json', '--include-archived'}:
+        sys.exit(print('Unknown option %s.' % sorted(set(args[2:]) - {'--json', '--include-archived'})[0],
+                       file=sys.stderr) or 2)
+    if os.environ.get('FAKE_ROOM_LIST') is not None:
+        out = os.environ['FAKE_ROOM_LIST']
+    elif not local:
+        out = json.dumps({'children': rows})
+    else:
+        out = json.dumps(rows) if json_out else '\n'.join(['ID  TITLE  STATUS'] + [
+            '%s  %s  %s' % (r['id'], r['title'], r['status']) for r in rows])
+elif sub == 'show' and args[2] in threads and not threads[args[2]].get('archived'):
+    shown = threads[args[2]]
+    out = json.dumps({'thread': {'id': args[2], 'projectId': shown.get('projectId'), 'title': shown['title'],
+                                 'parentThreadId': shown.get('parentThreadId'), 'archivedAt': None}})
 elif sub == 'archive' and args[2] in threads:
     threads[args[2]]['archived'] = True
     for pid in filter(str.isdigit, os.listdir('/proc')):  # every process carrying the thread's mark
@@ -82,6 +127,8 @@ elif sub == 'archive' and args[2] in threads:
     out = json.dumps({'archived': [args[2]]})
 else:
     sys.exit(print('Synthetic: not a subagent of this thread.', file=sys.stderr) or 1)
+if local and not json_out and sub in ('tell', 'archive'):
+    out = 'Done: thread %s %s' % (sub, args[2])
 with open(log + '.threads', 'w') as f:
     json.dump(threads, f)
 print(out)

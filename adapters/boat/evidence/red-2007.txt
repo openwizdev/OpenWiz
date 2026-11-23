@@ -1,0 +1,14 @@
+$ python3 -I adapters/boat/test_driver.py Boat.test_every_turn_tells_the_agent_its_note_says_default_effort
+F
+======================================================================
+FAIL: test_every_turn_tells_the_agent_its_note_says_default_effort (__main__.Boat.test_every_turn_tells_the_agent_its_note_says_default_effort)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/boat/test_driver.py", line 283, in test_every_turn_tells_the_agent_its_note_says_default_effort
+    self.assertRegex(text, r"host's default effort")
+AssertionError: Regex didn't match: "host's default effort" not found in 'Build the ticket: GitHub repository example/site, ticket #7, with the build-ticket skill (~/wizskills/skills/build-ticket/SKILL.md). Clone the repository if it is not here yet, and follow its instructions.'
+
+----------------------------------------------------------------------
+Ran 1 test in 0.565s
+
+FAILED (failures=1)

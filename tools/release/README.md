@@ -55,6 +55,8 @@ An allowlist of every tracked file with its hash; unknown keys, unsafe paths, su
 
 With an `entry`, the check generates the version's `CHANGELOG.md` section and the public `ROADMAP.md` (from `tools/roadmap/roadmap.py --public`). Their plan rows use `"source": "generated/CHANGELOG.md"` and `"generated/ROADMAP.md"` with their approved hashes.
 
+The check saves both generated files under `<staging>/generated/`, a hash mismatch refusal names the actual SHA-256, and `report.md` lists both files' hashes, so the approver can hash and review those exact bytes.
+
 ```json
 "entry": {"spec": 4100, "date": "2026-01-02", "tested": "Fixture-tested: ...; live export remains unverified."}
 ```
@@ -79,7 +81,7 @@ $RC gate --state "$STATE" --gate products --receipt r.json --inputs i.json --rep
 $RC live --state "$STATE" --kit "$KIT" --smoke-state "$SMOKE_STATE" --record "$RECORD_POINTER"
 $RC evaluate --state "$STATE" --repo "$CLONE" --artifacts "$ARTIFACTS" --literals "$TERMS"
 $RC publish --state "$STATE" --repo "$CLONE" --artifacts "$ARTIFACTS" --literals "$TERMS"
-$RC install --state "$STATE" --receipt install.json
+$RC install --state "$STATE" --target "$TARGET"
 $RC status --state "$STATE"
 ```
 
@@ -89,9 +91,37 @@ Each pointer is the URL of the private-record comment holding that decision. A r
 - **Prepare** seals the candidate body: public repository, fixed anchor, a commit on public `main` or on its protected `release-<version>` branch, versions in order and newer than every tag, exact notes and `CHANGELOG.md`, a complete product inventory and a risk classification. Preparing again saves only a changed entry or classification.
 - **Decisions** are read from the private comment itself: unedited, by the owner, starting `Private record: Jake, YYYY-MM-DD`, with one `Release decision: ship <candidate_sha256>` or `Release decision: changelog <notes sha256>` line (`Release decision revoked: <comment id>` revokes it).
 - **Gates**, each one constant or function in `candidate.py`: D1 `ci` and `privacy` green at the exact commit; D2 every archive staged and privacy-checked; D3 `cutover` (O17 closed, no hold, immutable releases on, rulesets requiring `ci` and `privacy` with no bypass); D4 `claims` (the notes are exactly what `changes/` generates); D5 kit authority (`Release kit authority: scope <scope_sha256>`); D6 a risk row for every changed path. `products` checks the compiled archives; `live` takes the [live smoke](../live-smoke/README.md) receipt, and each risk classified `yes` needs its own.
+- **Evaluate** runs every check `publish` makes before its first write, with the same functions and reasons, so `ready` means `publish` would pass them now (#2127). The table lists them in `publish`'s order.
 - **Publish** re-checks every gate, records each write in `attempt.json` before making it, pushes only the annotated tag, creates the pre-release with the exact notes and assets, and reads it all back. A mismatch is `incomplete`; an interrupted write is `uncertain` until a read-back settles it. It never retries a write.
 - **Release name** comes from `PUBLIC_NAMES` in `candidate.py` (J264: `0.1.0` is `OpenWiz 0.01`), else `OpenWiz <version>`; the publish write and its read-back both use it, while the tag and its message stay semver.
-- **Install** records a matching install receipt; `status` reports elapsed time from the ship decision against the 30-minute target.
+- **Install** takes a stranger's real route, never `gh release download <tag>`: it runs the installer's own `download`, `install` and `status` (`tools/install/install`, the commands the install skill runs) for one `--target` into a new, empty folder, fetching only the URLs a stranger's agent fetches (`releases/latest/download/openwiz-<target>.sha256` and `.manifest.json`, then the archive the manifest names). It records the result only when `latest` resolves to this candidate's version and commit, the downloaded manifest and archive are the candidate's bytes, and the clean install verifies. GitHub's `latest` skips pre-releases and drafts, so while the release is a pre-release the check is `blocked` by what the `latest` route returns: a 404 gives `install_latest_unresolved`, and another release's version gives `install_latest_not_candidate`; any other download refusal is `install_download_refused`, a refused install or status is `install_refused`, and other bytes are `install_mismatch`. Each attempt writes its outcome, every URL with its HTTP status and each installer output to its own new file, `evidence/install-<target>/<n>.json`, which appears only whole: the bytes are written and synced to a private temporary file, then hard-linked under the next unused number; a retry or an overlapping check for another target never replaces or drops another attempt's file, and there is no shared index to lose. The record's install entry stays the last passed attempt. `status` lists each checked target's latest attempt, with its hash, as `install_attempts`, and reads `incomplete` while any of them is blocked. It proves the published files install on that route from a clean folder; it runs no binary and installs no skills into an agent, so it proves nothing about the target machine, sign-in or setup. `status` reports elapsed time from the ship decision against the 30-minute target.
+
+### Publish preconditions
+
+`publish` runs rows 1 to 17 before it pushes the tag and again before it creates the release (then accepting its own tag in row 17), and row 18 before the tag. `evaluate` runs all 18, collecting every reason. `publish` collects the UTC date reason of row 14 with the shared gate reasons of rows 1 to 13, then stops at the first later failure.
+
+| # | Precondition | Function in `candidate.py` | Reasons |
+| --- | --- | --- | --- |
+| 1 | The sealed candidate is unchanged | `reasons_for` | `candidate_changed` |
+| 2 | Public source at the anchor, on `main` or its protected `release-<version>` branch, with the sealed tree | `check_source`, `release_source`, `release_protection` | `private_source`, `unrelated_history`, `not_on_public_main`, `not_on_release_branch`, `release_branch_wrong_version`, `release_branch_unreadable`, `release_branch_unprotected`, `release_ruleset_unreadable`, `tree_mismatch` |
+| 3 | Versions in order and newer than every published tag | `check_versions` | `invalid_versions`, `version_order` |
+| 4 | The exact notes and `CHANGELOG.md` | `check_notes` | `changelog_*`, `section_changed`, `invalid_changelog` |
+| 5 | Ship and changelog decisions recorded and current | `resolve_decision` | `ship_*`, `changelog_*` |
+| 6 | D3 cutover: O17 closed, no hold, immutable releases on, `main` rulesets requiring `ci` and `privacy` with no bypass | `cutover_reasons` | `cutover_unverified` |
+| 7 | D1 required checks `ci` and `privacy` green at the commit; D2 staged archives privacy-checked | `required_check`, `scan_artifacts` | `ci_*`, `privacy_*` |
+| 8 | D4 notes are what `changes/` generates | `claims_reasons` | `claims_*` |
+| 9 | D5 kit authority | `kit_reasons` | `kit_authority_*` |
+| 10 | D6 a risk row for every changed path | `risk_reasons` | `risk_classification_*` |
+| 11 | The products gate receipt | `gate_reasons` | `products_*` |
+| 12 | Any waiver still recorded | `current_waiver` | `waiver_*` |
+| 13 | A live receipt for the smoke and each `yes` risk | `live_reasons` | `smoke_*`, `<risk>_*` such as `send_live_missing` |
+| 14 | Every notes section dated the publication day in UTC | `date_reasons` | `changelog_date` |
+| 15 | Asset bytes, hashes, links and manifests match the candidate | `check_artifacts` | `artifacts_incomplete`, `invalid_artifacts`, `artifacts_unreadable`, `artifact_changed`, `artifact_links`, `artifact_manifest`, `artifact_archive` |
+| 16 | Immutable releases on | `immutable_reasons` | `immutable_releases_off` |
+| 17 | The tag absent (or, before the release, exactly the tag this attempt pushed) | `tag_reasons` | `tag_exists` |
+| 18 | The tagger: the candidate commit's author name matches `[A-Za-z .-]+` and its email `<digits>+<login>@users.noreply.github.com` | `tagger` | `tagger_identity` |
+
+Before these, `publish` alone reads its own record: a complete publication returns `published`, a recorded incomplete one refuses `publication_incomplete`, and an interrupted attempt is settled by read-back instead of re-checked. No separate check looks for an existing release: one can only be created on the tag, which row 17 requires absent.
 
 ## Prebuilt artifacts
 

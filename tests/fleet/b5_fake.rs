@@ -1,14 +1,3 @@
-//! B5's private, recording command fakes. Node's standard library only.
-//! synthetic_assumptions: the REST projections, CI provenance, timeline order,
-//! dynamic spawn/archive receipts and GitHub mutations below are synthetic.
-//!
-//! One Node process shared by active worlds (#1259): `fake.cjs --serve` runs each call
-//! exactly as one fake process did, in a reused worker thread, so a call no
-//! longer starts Node. `openwiz` finds `bin/gh` and `bin/room-cli`, a small
-//! std-only client ([`CLIENT`], built once per test run) that hands the
-//! call with its private world's path over a Unix socket and prints its answer.
-//! The world's own `gh` and `room-cli` stay the script itself, one call per
-//! Node process, for the tests that run them directly.
 use serde_json::{Value, json};
 use std::ffi::OsStr;
 use std::fs;
@@ -22,8 +11,6 @@ pub const HEAD10: &str = "1010101010101010101010101010101010101010";
 pub const HEAD11: &str = "1111111111111111111111111111111111111111";
 pub const BASE: &str = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 pub const APPROVAL: &str = "**Plan graph approved by Jake, 2026-10-30, revision 1:** \"approved\"\n\n| Ticket | Title | Blocked by | Label |\n| --- | --- | --- | --- |\n| #10 | Synthetic ticket 10 | none | ready-for-agent |\n| #11 | Synthetic ticket 11 | #10 | ready-for-agent |\n\nFingerprint: `5a46b243aa88e90eaae1c4332f4d625154c4299a6fc3f15f9f75bc6ab414c66c`\n\n```text\nplan-graph revision v2\nspec #9 body sha256 e8ed494ca2bac1d6fd37b4742dcf45b43ac1180e687098745590f3692f90a71a\nticket #10 blocked-by none body sha256 60c009f9e72945c1dc45fe9f9bd9cd09dc092b5f87fcb23e3c873cf4372dca9e title Synthetic ticket 10\nticket #11 blocked-by #10 body sha256 04673879b8ae2d96eec6d0e9cc48f8fe4b3d735792fc246107f6661b40de4f3e title Synthetic ticket 11\n```\n";
-/// #718: the factory's identity, as docs/agents/fleet.md names it: its App and
-/// a synthetic owner account it falls back to.
 pub const IDENTITY: &str = "## GitHub identity\n| Setting | Value |\n| --- | --- |\n| Record authors | `openwiz[bot]`, `syn-owner` |\n";
 pub fn node_in(path: &OsStr, cache: Option<&Path>) -> Option<PathBuf> {
     let cached = cache.map(|p| p.join("node/24.22.1/x64/bin/node"));
@@ -44,7 +31,6 @@ pub fn node() -> PathBuf {
 
 pub struct World {
     pub dir: PathBuf,
-    /// Shared fake process; each request still owns this world's state.
     server: Arc<FakeServer>,
 }
 impl World {
@@ -68,8 +54,6 @@ impl World {
         let client = client();
         if let Err(error) = fs::hard_link(&client, bin.join("gh")) {
             assert_eq!(error.kind(), std::io::ErrorKind::CrossesDevices);
-            // Unrelated forked children must never inherit our executable's
-            // writable descriptor. Reap the separate writer before using it.
             let copied = Command::new(&node)
                 .args([
                     "-e",
@@ -181,8 +165,6 @@ impl World {
         self.calls()
             .into_iter()
             .inspect(|(tool, args)| {
-                // P4 scans every body actually written by all B5 fixtures,
-                // including refusal, hold, fallback and notification paths.
                 if tool == "gh"
                     && let Some(at) = args.iter().position(|a| a == "--body")
                 {
@@ -209,7 +191,6 @@ impl World {
 }
 impl Drop for World {
     fn drop(&mut self) {
-        // Cancel this world's outstanding calls without stopping other worlds.
         self.server.drop_world(&self.dir);
         if !std::thread::panicking() {
             let _ = fs::remove_dir_all(&self.dir);
@@ -217,8 +198,6 @@ impl Drop for World {
     }
 }
 
-/// One reusable worker pool while any world is alive. A weak cache lets the
-/// last world kill and reap the process, including its idle workers.
 struct FakeServer {
     dir: PathBuf,
     child: Mutex<Child>,
@@ -277,8 +256,6 @@ fn shared_server(node: &Path) -> Arc<FakeServer> {
         .mode(0o700)
         .create(&dir)
         .unwrap();
-    // Reap the separate script writer before publishing executable symlinks:
-    // no writable script descriptor is inherited by unrelated test children.
     let written = Command::new(node)
         .args([
             "-e",
@@ -301,7 +278,6 @@ fn shared_server(node: &Path) -> Arc<FakeServer> {
     server
 }
 
-/// Starts the shared fake and waits until it listens.
 fn serve(node: &Path, dir: &Path) -> Child {
     struct Reap(Option<Child>);
     impl Drop for Reap {
@@ -338,7 +314,6 @@ fn serve(node: &Path, dir: &Path) -> Child {
     owned.0.take().unwrap()
 }
 
-/// [`CLIENT`], built once per test run with the toolchain running the tests.
 fn client() -> PathBuf {
     static BUILT: OnceLock<PathBuf> = OnceLock::new();
     static LOCK: Mutex<()> = Mutex::new(());
@@ -351,7 +326,6 @@ fn client() -> PathBuf {
                 .mode(0o700)
                 .create(&dir)
                 .unwrap();
-            // Named by its source, so a kept target directory holds one.
             let name = {
                 use std::hash::{Hash, Hasher};
                 let mut hash = std::collections::hash_map::DefaultHasher::new();
@@ -362,11 +336,9 @@ fn client() -> PathBuf {
             if program.is_file() {
                 return program;
             }
-            // Built under this process's own names, then renamed into place.
             let source = dir.join(format!("{name}-{}.rs", std::process::id()));
             fs::write(&source, CLIENT).unwrap();
             let built_at = dir.join(format!("{name}-{}", std::process::id()));
-            // The toolchain's own rustc, beside the cargo running the tests.
             let rustc = std::env::var_os("CARGO")
                 .map(PathBuf::from)
                 .and_then(|cargo| cargo.parent().map(|bin| bin.join("rustc")))
@@ -390,11 +362,6 @@ fn client() -> PathBuf {
         .clone()
 }
 
-/// The world's `bin/gh` and `bin/room-cli`: hands its call (its name, its
-/// process id, its parent's, and its arguments) to the world's fake over
-/// `fake.sock`, then prints the fake's stderr and stdout and exits with its
-/// code, as the fake's own process did. Killed mid-call, its fake's worker
-/// is stopped too.
 const CLIENT: &str = r#"
 use std::io::{Read, Write};
 use std::os::unix::ffi::OsStrExt;

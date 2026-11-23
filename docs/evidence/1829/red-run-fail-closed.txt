@@ -1,9 +1,0 @@
-RC1 self-review red run (#1829): four fail-open cases, before the contract and reader refuse them.
-Command: python3 -I contracts/fixtures/checkpoints/check.py
-
-FAIL spec/invalid-heading.md: expected {"result": "invalid", "code": "section-heading", "early": true, "late": true}, got {"result": "absent", "early": true, "late": false}
-FAIL ask/invalid-code-link-case.md: expected {"result": "invalid", "code": "evidence-code"}, got {"result": "valid", "pr": 4012, "commit": "1111111111111111111111111111111111111111", "evidence": [{"kind": "preview", "url": "https://WWW.GitHub.com/synthetic-owner/synthetic-repo/commit/1111111111111111111111111111111111111111"}], "look_for": "the new settings page."}
-FAIL record/invalid-date.md: expected {"result": "invalid", "code": "record-opening"}, got {"result": "valid", "decider": "Robin", "date": "2030-02-30", "pr": 4012, "commit": "1111111111111111111111111111111111111111", "outcome": "approved", "decision": "the settings page works as the evidence shows.", "pointer": "https://github.com/jparker2006/ClosedWiz/issues/9001#issuecomment-9000000011"}
-FAIL release/record-by-other-decider.json: expected {"merge": "held", "why": "look-due"}, got {"merge": "released"}
-checkpoints fixtures: 49 of 53 read as expected
-exit 1

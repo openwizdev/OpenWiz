@@ -148,6 +148,17 @@ class PlantedBreaks(unittest.TestCase):
         self.assertEqual(len(found), 1)
         self.assertTrue(found[0].startswith('template: the template fields must be exactly'))
 
+    def test_the_template_keeps_the_approved_warning_and_confirmation(self):
+        warning = 'Use only public words you choose to share. Do not paste prompts, transcripts, code, file paths, ' \
+            'tokens, logs or screenshots of private work.'
+        self.refused(template(warning, 'Paste private logs here.'),
+                     'template: the template must carry exactly the approved warning')
+        self.refused(template('Everything above is public words I chose to share.', 'I included my private logs.'),
+                     'template: the public-words checkbox must confirm exactly the approved confirmation')
+        second = '        - label: I agree.\n          required: true\n'
+        self.refused(template('          required: true\n', '          required: true\n' + second),
+                     'template: the public-words checkbox must confirm exactly the approved confirmation')
+
 
 if __name__ == '__main__':
     unittest.main()

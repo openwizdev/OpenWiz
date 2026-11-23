@@ -17,11 +17,17 @@ pub struct Discovery {
     metadata: fn(&fs::Metadata) -> LauncherMetadata,
     fixed: bool,
     process_root: PathBuf,
+    search_path: Option<std::ffi::OsString>,
 }
 
 impl Discovery {
     pub fn with_process_root(mut self, root: PathBuf) -> Self {
         self.process_root = root;
+        self
+    }
+
+    pub fn with_search_path(mut self, path: std::ffi::OsString) -> Self {
+        self.search_path = Some(path);
         self
     }
 
@@ -31,6 +37,7 @@ impl Discovery {
             metadata,
             fixed: false,
             process_root: PathBuf::from("/proc"),
+            search_path: None,
         }
     }
 
@@ -40,14 +47,19 @@ impl Discovery {
             metadata,
             fixed: true,
             process_root: PathBuf::from("/proc"),
+            search_path: None,
         }
     }
 
     pub fn system() -> Self {
-        if cfg!(target_os = "macos") {
+        let discovery = if cfg!(target_os = "macos") {
             Self::fixed(PathBuf::from(MAC_BUNDLE_CLI), real_metadata)
         } else {
             Self::pc(PathBuf::from(PC_BUNDLE_ROOT), real_metadata)
+        };
+        match std::env::var_os("PATH") {
+            Some(path) => discovery.with_search_path(path),
+            None => discovery,
         }
     }
 
@@ -56,7 +68,43 @@ impl Discovery {
     }
 
     pub fn locate(&self) -> Result<Located, LocateError> {
-        retry_ambiguous(Duration::from_millis(100), || self.locate_once())
+        self.candidates().map(|mut found| found.swap_remove(0))
+    }
+
+    pub fn candidates(&self) -> Result<Vec<Located>, LocateError> {
+        match retry_ambiguous(Duration::from_millis(100), || self.locate_once()) {
+            Err(error @ (LocateError::NotRunning | LocateError::NoRunningApp)) => {
+                let found: Vec<_> = self
+                    .on_search_path()
+                    .into_iter()
+                    .map(|launcher| Located {
+                        launcher,
+                        basis: Basis::Path,
+                    })
+                    .collect();
+                if found.is_empty() {
+                    Err(error)
+                } else {
+                    Ok(found)
+                }
+            }
+            located => located.map(|one| vec![one]),
+        }
+    }
+
+    fn on_search_path(&self) -> Vec<PathBuf> {
+        let Some(search) = self.search_path.as_ref() else {
+            return Vec::new();
+        };
+        std::env::split_paths(search)
+            .filter(|dir| dir.is_absolute())
+            .map(|dir| dir.join(crate::PROGRAM))
+            .filter(|candidate| {
+                fs::metadata(candidate).is_ok_and(|file| {
+                    file.is_file() && file.mode() & 0o111 != 0 && file.mode() & 0o022 == 0
+                })
+            })
+            .collect()
     }
 
     fn locate_once(&self) -> Result<Located, LocateError> {
@@ -567,6 +615,7 @@ struct Root {
 pub enum Basis {
     Fixed,
     OneRoot,
+    Path,
     AppImagePair { gui: PathBuf, bridge: PathBuf },
 }
 
@@ -575,6 +624,7 @@ impl Basis {
         match self {
             Self::Fixed => "room-cli from the fixed app bundle".to_owned(),
             Self::OneRoot => "room-cli from the one running app mount".to_owned(),
+            Self::Path => "room-cli from PATH".to_owned(),
             Self::AppImagePair { gui, bridge } => format!(
                 "room-cli from the bridge's mount {} (paired with the GUI's mount {}: \
                  one AppImage file, identical room-cli)",
@@ -633,13 +683,13 @@ pub fn install(discovery: Discovery) -> Result<(), LocateError> {
         .map_err(|_| LocateError::UnexpectedFile)
 }
 
-pub fn program(program: &Path) -> Result<PathBuf, openwiz_core::source::SourceError> {
+pub fn programs(program: &Path) -> Result<Vec<PathBuf>, openwiz_core::source::SourceError> {
     if program == Path::new(crate::PROGRAM) {
-        let located = DISCOVERY.get_or_init(Discovery::system).locate()?;
-        report(&located.basis);
-        Ok(located.launcher)
+        let found = DISCOVERY.get_or_init(Discovery::system).candidates()?;
+        report(&found[0].basis);
+        Ok(found.into_iter().map(|located| located.launcher).collect())
     } else if program.is_absolute() {
-        Ok(program.to_path_buf())
+        Ok(vec![program.to_path_buf()])
     } else {
         Err(LocateError::UnexpectedFile.into())
     }
@@ -662,20 +712,22 @@ fn report(basis: &Basis) {
 impl From<LocateError> for openwiz_core::source::SourceError {
     fn from(error: LocateError) -> Self {
         let reason = match error {
-            LocateError::NotRunning => "no bundled launcher",
+            LocateError::NotRunning => "no bundled launcher and no room-cli on PATH",
             LocateError::NoRunningApp => "no running app identified",
             LocateError::Ambiguous => "ambiguous app bundles",
             LocateError::UnexpectedFile => "unexpected bundle file",
             LocateError::Unreadable => "unreadable app bundle",
         };
         let detail = format!("CloudRoom not running: room-cli could not be started ({reason})");
-        let detail = if error == LocateError::Ambiguous {
-            format!(
+        let detail = match error {
+            LocateError::Ambiguous => format!(
                 "{detail}. CloudRoom is mid-update (two running app mounts): \
                  restart CloudRoom to finish the update, then try again."
-            )
-        } else {
-            detail
+            ),
+            LocateError::NotRunning | LocateError::NoRunningApp => {
+                format!("{detail}. Open the CloudRoom app once and sign in.")
+            }
+            _ => detail,
         };
         Self::Unavailable { detail }
     }

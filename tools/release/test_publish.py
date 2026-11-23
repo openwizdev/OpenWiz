@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""PS5: outside-in publication proofs; git/gh can reach only synthetic fakes."""
 import copy
 import hashlib
 import json
@@ -309,7 +308,6 @@ class Publish(unittest.TestCase):
         self.git(self.repo, "checkout", "--detach", self.base)
         (self.repo/"UNCHECKED.txt").write_text("Synthetic unchecked intermediate content.\n")
         self.commit()
-        # Restore the checked tree, removing the file but retaining its history.
         self.git(self.repo, "read-tree", "--reset", "-u", self.head)
         self.commit()
         self.head = self.oid("HEAD")
@@ -334,7 +332,6 @@ class Publish(unittest.TestCase):
         return later
 
     def historical_report(self, main):
-        # A backfill consumes only a historical check's report (#1191).
         self.data.update(source_head=self.head, historical={"public_main": main})
         self.save()
 
@@ -362,7 +359,6 @@ class Publish(unittest.TestCase):
         self.refused(self.publish(backfill=True), "head")
 
     def test_backfill_refuses_unpublished_commit_even_with_same_tree(self):
-        # Seed its objects on another public branch, outside main's history.
         self.git(self.repo, "push", self.remote, self.head+":refs/heads/unreleased")
         sibling = self.git(self.repo, "commit-tree", self.head+"^{tree}", "-p", self.base,
                            "-m", "Synthetic same public tree, different historical commit")
@@ -412,7 +408,6 @@ class Publish(unittest.TestCase):
         for plant in ("LIVE-PENDING", "PUBLICATION-DATE"):
             (self.repo/"README.md").write_text(plant+"\n")
             self.commit()
-            # Keep the one-public-parent contract, just update the checked bytes.
             self.git(self.repo, "reset", "--soft", self.base)
             self.git(self.repo, "commit", "-qm", "Synthetic placeholder")
             self.data.update(export_head=self.oid("HEAD"), export_tree=self.oid("HEAD^{tree}"))
@@ -458,7 +453,6 @@ class Publish(unittest.TestCase):
         sequence = ["main-push", "readback", "tag", "tag-push", "release"]
         for failed in sequence:
             with self.subTest(failed=failed):
-                # Every case starts with the same clean public base and no tag.
                 self.git(self.remote, "update-ref", "refs/heads/main", self.base)
                 self.git(self.remote, "update-ref", "-d", "refs/tags/v"+VERSION)
                 self.clear()

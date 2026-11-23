@@ -1,10 +1,3 @@
-//! A3 (ClosedWiz#111): the contract's model types
-//! (`openwiz_core::fleet::model`), data only, match `contracts/fleet.v1.*`
-//! exactly: the contract's three examples, each read into the model types by
-//! this file's test-only reader and printed again, are the examples
-//! themselves. (The schema-branch, checker and type-invariant proofs went in
-//! CW2, #1143: they tested the test checker or internal types.)
-
 use std::num::NonZeroU64;
 
 use openwiz_core::envelope::{Completeness, GapKind};
@@ -23,7 +16,6 @@ use crate::schema::{load_schema, validate};
 
 const CONTRACT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../contracts/fleet.v1.md");
 
-/// The contract's examples: every ```json block of `fleet.v1.md`.
 fn examples() -> Vec<Value> {
     let text = std::fs::read_to_string(CONTRACT).expect("the fleet contract");
     let blocks: Vec<Value> = text
@@ -35,10 +27,6 @@ fn examples() -> Vec<Value> {
     assert_eq!(blocks.len(), 3, "the contract has three examples");
     blocks
 }
-
-// The test-only reader: a contract example into the model types. Not
-// strict (the round trip finds anything it drops or changes), and never
-// used by OpenWiz itself.
 
 fn object(v: &Value) -> &serde_json::Map<String, Value> {
     v.as_object()
@@ -94,7 +82,6 @@ fn commit(v: &Value) -> Commit {
     Commit::parse(&text(v)).unwrap_or_else(|| panic!("not a commit: {v}"))
 }
 
-/// A unit enum from its JSON string, through its own printed form.
 macro_rules! label {
     ($v:expr, $all:expr $(,)?) => {{
         let v: &Value = $v;

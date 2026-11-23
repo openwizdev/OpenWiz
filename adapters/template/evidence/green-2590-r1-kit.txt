@@ -1,0 +1,22 @@
+The kit at #2562's head (7636b62), on a throwaway local merge of this head, not pushed; a scratch test reuses its Kit fixture harness and tracker. Synthetic values only.
+== template, harness fake-harness, effort medium: rc=0
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 2; effort: medium reached a process the run started
+pass wake: the run edited builder status note 2
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+stderr: ''
+== template, harness pi, effort medium: rc=0
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 3; effort: refused for pi with the refusal text, as the README says
+pass wake: the run edited builder status note 3
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+stderr: ''
+== can't form copy, harness fake-harness, effort medium: rc=0
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 4; effort: a start with it was refused, as the README's Effort: line says
+pass wake: the run edited builder status note 4
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+stderr: ''

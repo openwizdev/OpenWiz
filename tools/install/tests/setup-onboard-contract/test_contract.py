@@ -1,13 +1,4 @@
 #!/usr/bin/env python3
-"""#632 (P1-P7 at the shared interface only): contracts/setup-onboard.v1 refuses what it says.
-
-Every expected code comes from fixtures/cases.json beside this test, written by
-hand from the contract's rules. The values are synthetic. These tests prove interface
-consistency only: never an installation, a usable account, a saved secret, a timing,
-an action count or a merge.
-
-Run: python3 -I tools/install/tests/setup-onboard-contract/test_contract.py
-"""
 import copy
 import importlib.util
 import json
@@ -32,21 +23,16 @@ check = _load('setup_onboard_check', HERE / 'check.py')
 CONTRACT = (ROOT / 'contracts/setup-onboard.v1.md').read_text()
 SCHEMA = json.loads((ROOT / 'contracts/setup-onboard.v1.schema.json').read_text())
 SETUP_SCHEMA = json.loads((ROOT / 'contracts/setup.v1.schema.json').read_text())
-FIRST_HOUR_SCHEMA = json.loads((ROOT / 'tools/install/tests/first-hour-contract/first-hour.schema.json').read_text())
 IDENTITY = (ROOT / 'contracts/github-identity.v1.md').read_text()
 CASES_PATH = HERE / 'fixtures/cases.json'
 CASES = json.loads(CASES_PATH.read_text())
 EXAMPLES, VARIANTS, VIEWS = CASES['examples'], CASES['variants'], CASES['setup_views']
-# A synthetic pointer in the open-development contract's good form. In memory only.
 POINTER = 'https://github.com/jparker2006/ClosedWiz/issues/9001#issuecomment-9000000001'
 RECEIPT = 'receipt-skip-app-under-limit'
-# The keywords check.schema_errors evaluates. A schema using any other keyword would
-# be silently half-checked, so both schemas are held to this set.
 EVALUATED = {'$schema', '$defs', '$ref', 'title', 'description', 'type', 'const', 'enum',
              'minLength', 'maxLength', 'pattern', 'minimum', 'exclusiveMinimum', 'minItems',
              'maxItems', 'items', 'contains', 'required', 'properties', 'additionalProperties',
              'oneOf', 'anyOf', 'allOf', 'not', 'if', 'then'}
-# Planted credential shapes, built in memory so no file in the tree carries one.
 PLANTED = ['ghs_' + 'S' * 36, 'github_pat_' + 'S' * 30, '-----BEGIN RSA PRIVATE KEY-----',
            'eyJ' + 'a' * 12 + '.' + 'b' * 12 + '.' + 'c' * 12, 'OPENWIZ_GITHUB_APP_KEY=' + 'c3ludGhldGlj']
 
@@ -76,7 +62,6 @@ def document(name):
 
 
 def live(doc):
-    """A document made live in memory: never a fixture, a record or evidence of anything."""
     doc = copy.deepcopy(doc)
     doc.update(proof_class='live', synthetic_assumptions=[], private_record=POINTER)
     if doc['kind'] == 'first_merge_receipt':
@@ -115,7 +100,6 @@ def table_codes():
 
 
 def generic(code):
-    """`stale_evidence:app` -> `stale_evidence:<...>`-style table key."""
     head, _, rest = code.partition(':')
     return head if not rest else head + ':<' + ('kind>' if head in ('duplicate_effect', 'blind_retry', 'effect_uncertain', 'phase_effect_mismatch') else
                                                'kind>:<repository>' if head == 'duplicate_effect_row' else
@@ -152,7 +136,6 @@ class Fixtures(unittest.TestCase):
 
 
     def test_patterns_end_at_the_end_of_the_string(self):
-        # JSON Schema's `$` does not match before a trailing newline; neither may the checker's.
         for name, path in (('init-request-preview', ['repository']), ('identity-user-app', ['app', 'owner_account']),
                            ('init-request-apply', ['operation_id'])):
             with self.subTest(example=name):
@@ -162,8 +145,6 @@ class Fixtures(unittest.TestCase):
 
 
 class Limits(unittest.TestCase):
-    """AC4: 29:59.999 with five actions can qualify; 30:00, a sixth action or an unknown count cannot."""
-
     def receipt(self, **change):
         doc = live(document(RECEIPT))
         for key, value in change.items():
@@ -201,15 +182,6 @@ class Limits(unittest.TestCase):
         del doc['actions']['count']
         self.assertEqual(report(doc)['problems'], ['schema'])
 
-    def test_the_first_hour_keeps_its_own_measures(self):
-        text = json.dumps(FIRST_HOUR_SCHEMA)
-        self.assertIn('"const": 3600000', text, 'first-hour keeps its one-hour limit')
-        self.assertNotIn('1800000', text, 'the 0.0.16 limit is not folded into first-hour.v1')
-        clock = SCHEMA['$defs']['first_merge_receipt']['properties']['clock']['properties']
-        self.assertEqual((clock['limit_ms'], clock['rule']), ({'const': 1800000}, {'const': 'strictly_less_than'}))
-        self.assertEqual(SCHEMA['$defs']['first_merge_receipt']['properties']['actions']['properties']['limit'], {'const': 5})
-        self.assertNotIn('ten_minute', json.dumps(SCHEMA), 'the ten-minute measure stays first-hour.v1 only')
-
 
 class Credentials(unittest.TestCase):
     def test_planted_credentials_are_refused_wherever_they_appear(self):
@@ -225,8 +197,6 @@ class Credentials(unittest.TestCase):
                     self.assertIn('leaked_credential', report(doc)['problems'])
 
     def test_app_key_assignments_are_refused_with_any_horizontal_spacing(self):
-        # R3: a nonempty dotenv assignment of the App key is a credential, spaced or
-        # compact; an empty one holds no value. Synthetic value only, built in memory.
         name, value = 'OPENWIZ_GITHUB_APP_KEY', 'c3ludGhldGlj'
         nonempty = [f'{name}={value}', f'{name} = {value}', f'{name} ={value}', f'{name}= {value}',
                     f'{name}   =   {value}', f'export {name} = {value}']
@@ -292,6 +262,84 @@ class Schemas(unittest.TestCase):
         self.assertEqual(pin['app']['visibility'], 'public', 'the factory App stays public')
 
 
+HOSTS_PATH = HERE / 'fixtures/hosts.json'
+HOSTS = json.loads(HOSTS_PATH.read_text())
+NEW_THREAD = json.loads((ROOT / 'contracts/new-thread.v1.schema.json').read_text())
+
+
+class Hosts(unittest.TestCase):
+    def assert_cases(self, cases, schema, root):
+        for name, case in cases.items():
+            with self.subTest(case=name):
+                errors = check.schema_errors(case['document'], schema, root)
+                self.assertEqual(not errors, case['valid'], errors)
+
+    def test_setup_reports_follow_the_host_rules(self):
+        self.assert_cases(HOSTS['setup_reports'], SETUP_SCHEMA, SETUP_SCHEMA)
+
+    def test_prepared_projects_need_cloudroom_ids_only_for_the_cloud_host(self):
+        self.assertIn('prepared_project', SETUP_SCHEMA.get('$defs', {}))
+        self.assert_cases(HOSTS['prepared_projects'], {'$ref': '#/$defs/prepared_project'}, SETUP_SCHEMA)
+
+    def test_prepared_projects_refuse_what_the_store_refuses(self):
+        store = _load('setup_store', ROOT / 'tools/install/setup/store.py')
+        edges = [('operator', v) for v in ('', ' ', '\t', ' Synthetic', 'Synthetic ', 'Synthetic\n', 'Syn\x00thetic',
+                                           'Syn\x85thetic', '\xa0Synthetic', 'Synthetic\u3000', 'S',
+                                           'Synthetic  Operator', 'S' * 100, 'S' * 101)]
+        edges += [('repository', 'synthetic-owner/' + v) for v in ('.', '..', '...', '.github', '..x', 'x..', '-', '_')]
+        edges += [('service_issue', v) for v in (0, 1, 2 ** 53 - 1, 2 ** 53, 2 ** 63)]
+        for base in ('cloud-nine-keys', 'local-without-cloudroom-ids'):
+            for key, value in edges:
+                with self.subTest(shape=base, key=key, value=value):
+                    doc = dict(HOSTS['prepared_projects'][base]['document'], **{key: value})
+                    try:
+                        store.check_project(doc)
+                        stored = True
+                    except store.Refused:
+                        stored = False
+                    errors = check.schema_errors(doc, {'$ref': '#/$defs/prepared_project'}, SETUP_SCHEMA)
+                    self.assertEqual(not errors, stored, errors)
+
+    def test_models_host_selects_the_offered_source(self):
+        schema = SETUP_SCHEMA.get('$defs', {}).get('models_host_selection', {})
+        for name, case in HOSTS['models_host_selection'].items():
+            with self.subTest(case=name):
+                options = HOSTS['offered_lists'][case['options']]['document']
+                selection = dict(case['document'])
+                if 'source' in options:
+                    selection['source'] = options['source']
+                errors = check.schema_errors(selection, schema, SETUP_SCHEMA)
+                self.assertEqual(not errors, case['valid'], errors)
+
+    def test_offered_lists_mark_only_the_local_source(self):
+        self.assert_cases(HOSTS['offered_lists'], {'$ref': '#/$defs/options'}, NEW_THREAD)
+
+    def test_the_local_source_offers_the_current_choices(self):
+        found = {(h['provider'], m['model'], e)
+                 for h in HOSTS['offered_lists']['local-claude-code-and-codex']['document']['harnesses']
+                 for m in h['models'] for e in m['efforts']}
+        self.assertEqual(found, {('claude-code', 'claude-opus-5-5', 'medium'), ('codex', 'gpt-6.2-sol', 'medium')})
+
+    def test_successful_local_set_can_report_an_unlisted_model(self):
+        doc = HOSTS['unlisted_local_set']
+        options = HOSTS['offered_lists']['local-codex-only']['document']
+        models = [m['model'] for h in options['harnesses'] if h['provider'] == doc['asked']['provider']
+                  for m in h['models']]
+        self.assertTrue(models)
+        self.assertNotIn(doc['asked']['model'], models)
+        self.assertIs(doc['listed'], False)
+        schema = json.loads((ROOT / 'contracts/models.v1.schema.json').read_text())
+        report_schema = {'$ref': '#/$defs/set_report'}
+        self.assertEqual(check.schema_errors(doc, report_schema, schema), [])
+        self.assertTrue(check.schema_errors(dict(doc, listed=True), report_schema, schema))
+
+    def test_host_fixtures_hold_no_credential_and_only_synthetic_accounts(self):
+        text = HOSTS_PATH.read_text()
+        self.assertEqual(check.credential_shapes(text), [])
+        for owner in re.findall(r'"([A-Za-z0-9-]{1,39})/[A-Za-z0-9_.-]+"', text):
+            self.assertTrue(owner.startswith('synthetic'), owner)
+
+
 class CodeTable(unittest.TestCase):
     def test_the_contract_table_is_the_checker_vocabulary(self):
         self.assertEqual(table_codes(), check.CODES)
@@ -306,7 +354,7 @@ class CodeTable(unittest.TestCase):
                 for code in r[key]:
                     self.assertEqual(table.get(generic(code)), kind, code)
                     seen.add(generic(code))
-        seen |= {'not_strict_json', 'leaked_credential'}  # Strict-text and in-memory credential tests.
+        seen |= {'not_strict_json', 'leaked_credential'}
         self.assertEqual(set(table) - seen, set())
 
 

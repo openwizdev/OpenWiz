@@ -1,4 +1,3 @@
-"""Require a changelog line for product PRs; all GitHub calls are reads."""
 import json
 import os
 import re
@@ -61,8 +60,6 @@ def path(value):
 
 
 def product(filename):
-    # Only known nonproduct areas are exempt. New roots require a line until
-    # classified here. Product trees include their manifests and assets.
     nonproduct_roots = (".github/", ".githooks/", ".agents/", ".claude/",
                         "docs/", "private/",
                         "tests/", "tools/", "ci/", "changes/")
@@ -88,8 +85,6 @@ def classify(pages, expected_count):
             has_product |= product(filename)
             if status == "renamed":
                 has_product |= product(path(item.get("previous_filename")))
-            # A correction is allowed by changes/README.md. Deleting a line
-            # never counts. Content, milestone and truth remain review gates.
             has_line |= (status != "removed" and
                          re.fullmatch(r"changes/[1-9][0-9]*\.md", filename) is not None)
     require(len(seen) == expected_count, "incomplete changed-file list")
@@ -123,7 +118,7 @@ if __name__ == "__main__":
     try:
         main()
     except (Refused, ValueError, OSError, subprocess.SubprocessError) as error:
-        # Never echo API bodies (or gh stderr), which may contain private data.
+        # PRIVACY: never echo API bodies or gh's stderr; they may hold private data.
         message = str(error) if isinstance(error, Refused) else type(error).__name__
         print(f"changelog: refused: {message}", file=sys.stderr)
         sys.exit(1)

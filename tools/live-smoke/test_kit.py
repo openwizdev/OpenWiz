@@ -1,6 +1,3 @@
-"""RL7 (#772): the public release smoke kit, cut to SHIP-3's scope (install;
-the agent CLI's help --agent, ls and show; one send; one new thread), its
-owner-only inputs and the 7370 refusal. Synthetic values only."""
 import hashlib
 import json
 import os
@@ -13,15 +10,13 @@ import unittest
 
 HERE = Path(__file__).resolve().parent
 FixtureCase = runpy.run_path(str(HERE / 'test_smoke.py'))['FixtureCase']
-SHIP3 = ['install', 'json', 'send', 'new', 'app']  # 0.1.0 adds the App read (#1727)
-# A sentinel no output may ever print: it stands for a private input value.
+SHIP3 = ['install', 'json', 'send', 'new', 'app']
 PRIVATE = 'thr_synthetic_private_input'
 SCOPE = {'targets': ['synthetic-target'], 'writes': {'send': 1, 'new': 1},
          'app_permissions': [], 'spending_cents': 0}
 
 
 def canonical_sha(value):
-    # The release-candidate contract's digest: canonical JSON, sorted keys.
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(',', ':'),
                                      ensure_ascii=False).encode()).hexdigest()
 
@@ -32,8 +27,6 @@ def run(*argv, env=None, timeout=10):
 
 
 class Claims(FixtureCase):
-    """A kit declares the claims it checks; the runner holds it to exactly those."""
-
     def setUp(self):
         super().setUp()
         steps = []
@@ -45,17 +38,11 @@ class Claims(FixtureCase):
         self.kit.update(claims=list(SHIP3), steps=steps)
 
     def test_a_narrowed_kit_reports_exactly_its_declared_claims(self):
-        """catches: a SHIP-3 kit refused for lacking the combined sheet's other
-        claims, or a report that lists claims (fleet, cockpit, ...) this kit
-        never checks, which a receipt could read as covered or pending."""
         doc = self.report(self.invoke(), 0)
         self.assertEqual(doc['claims'], {c: 'pass' for c in SHIP3})
         self.assertEqual(self.call_list(), [['ls', '--json']] + [[c] for c in SHIP3])
 
     def test_declared_claims_must_match_the_steps_exactly(self):
-        """catches: a kit that declares a claim it has no step for (a receipt
-        would name an unchecked promise), runs a step outside its declared
-        claims, or declares send/new without their one write."""
         rows = {
             'declared, no step': (lambda: self.kit['steps'].pop(0), 'missing_claim'),
             'step outside the declaration': (lambda: self.kit['claims'].remove('install'), 'missing_claim'),
@@ -75,12 +62,7 @@ class Claims(FixtureCase):
 
 
 class Coverage(FixtureCase):
-    """The 0.0.17 lesson (#1727): a risk step in no coverage row refuses at kit load."""
-
     def test_a_risk_step_missing_from_coverage_refuses_before_any_step(self):
-        """catches: a kit whose `release.risk` names a step no `release.coverage`
-        row holds, so its risk receipt's expected coverage is empty and the gate
-        refuses `coverage_mismatch` only after the live writes were spent."""
         steps = [{'id': c, 'claim': c, 'kind': 'write' if c in ('send', 'new') else 'read',
                   'argv': [str(self.fake), c], 'exit': 0, 'checks': [{'path': '/count', 'equals': 1}]}
                  for c in SHIP3]
@@ -90,7 +72,6 @@ class Coverage(FixtureCase):
                    'risk': {'send': ['send'], 'new': ['new'], 'app_permissions': [], 'spending': []},
                    'gaps': ['synthetic gap']}
         self.kit.update(claims=list(SHIP3), steps=steps, release=release)
-        # #1732 R3: the receipt contract's own refusals, at load, not after the run.
         bad = {'send outside every row': ({}, 'coverage_mismatch'),
                'risk not a dict': ({'risk': ['send']}, 'invalid_release'),
                'coverage not a list': ({'coverage': {'steps': ['send']}}, 'invalid_release'),
@@ -110,9 +91,6 @@ class Coverage(FixtureCase):
 
 
 class Port(FixtureCase):
-    """catches: a kit that reaches 7370 (the owner's my.openwiz.dev server on
-    the PC), directly or through a default-port launch, before any effect."""
-
     def pinned(self, name, text):
         path = self.root / name
         path.write_text(text)
@@ -120,7 +98,6 @@ class Port(FixtureCase):
         return str(path)
 
     def terminal(self, argv):
-        # The fixture's read step stands in for a launch (#776 removed the terminal claim).
         step = next(s for s in self.kit['steps'] if s['claim'] == 'json')
         step['argv'] = argv
 
@@ -150,8 +127,6 @@ class Port(FixtureCase):
 
 
 class Inputs(unittest.TestCase):
-    """The PC-side owner-only inputs file and prepare.py's handling of it."""
-
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
@@ -166,7 +141,6 @@ class Inputs(unittest.TestCase):
         return hashlib.sha256(path.read_bytes()).hexdigest()
 
     def standard_records(self):
-        """Every name the standard sheet binds."""
         names = set()
 
         def collect(value):
@@ -181,7 +155,7 @@ class Inputs(unittest.TestCase):
         for name in names:
             if name == 'release_targets':
                 records[name] = SCOPE['targets']
-            elif name == 'release_products':  # #1732 R3: load checks the receipt contract
+            elif name == 'release_products':
                 records[name] = [{'product': 'cli', 'target': 'x86_64-unknown-linux-gnu'}]
             elif name == 'release_gaps':
                 records[name] = ['synthetic gap']
@@ -217,7 +191,6 @@ class Inputs(unittest.TestCase):
         return run(*args), out
 
     def checkout_alias(self, name='outside-run', into='private'):
-        """#777 R1: a directory outside Git that is a symlink into a checkout."""
         checkout = self.root / ('checkout-' + name)
         subprocess.run(['git', 'init', '-q', str(checkout)], check=True)
         (checkout / 'private').mkdir()
@@ -226,10 +199,6 @@ class Inputs(unittest.TestCase):
         return checkout, alias
 
     def test_records_assemble_one_owner_only_file(self):
-        """catches: a world-readable records or inputs file, conflicting record
-        values silently resolved by whichever comes last, or (#777 R1) records
-        or inputs reached through a symlinked folder that resolves into a Git
-        checkout, where an ordinary add/commit could publish them."""
         records = self.standard_records()
         first = dict(list(records.items())[:12])
         second = dict(list(records.items())[12:])
@@ -250,7 +219,6 @@ class Inputs(unittest.TestCase):
         (checkout / 'private' / 'records.json').write_text(json.dumps(records))
         (checkout / 'private' / 'records.json').chmod(0o600)
         refusals['records through an alias'] = ([alias / 'records.json'], 'inside_checkout')
-        # #777 R1 re-check: `..` after a symlinked folder, which the OS applies after the link.
         refusals['records through alias-dotdot'] = ([alias / '..' / 'private' / 'records.json'], 'inside_checkout')
         for name, (paths, reason) in refusals.items():
             with self.subTest(name):
@@ -258,7 +226,6 @@ class Inputs(unittest.TestCase):
                 self.assertEqual(result.returncode, 2)
                 self.assertEqual(json.loads(result.stdout), {'assembled': False, 'reason': reason})
                 self.assertFalse(target.exists())
-        # The reviewer's reproduction: the output path's folder resolves into Git.
         for name, target, reason in (
                 ('out through an alias', alias / 'inputs.json', 'inside_checkout'),
                 ('out through an alias above it', self.checkout_alias('outside-root', None)[1]
@@ -274,8 +241,6 @@ class Inputs(unittest.TestCase):
                 self.assertFalse(os.path.lexists(target))
                 self.assertNotIn(PRIVATE, result.stdout)
                 self.assertEqual(sorted(p.name for p in (checkout / 'private').iterdir()), ['records.json'])
-        # `..` after a symlinked folder that resolves outside any work tree is allowed,
-        # and the file lands where the OS puts it.
         outside = self.root / 'outside-target' / 'deep'
         outside.mkdir(parents=True)
         (self.root / 'outside-target' / 'run').mkdir(mode=0o700)
@@ -289,9 +254,6 @@ class Inputs(unittest.TestCase):
         self.assertEqual(json.loads(out.read_text()), inputs)
 
     def test_prepare_prints_kit_and_scope_digests_and_refuses_unsafe_inputs(self):
-        """catches: prepare accepting a shared or committed inputs file, a stale
-        or misspelt input name, or a token in the inputs; and the scope digest
-        the candidate must carry never being printed."""
         inputs = self.standard_records()
         good = self.write(self.run_dir / 'inputs.json', inputs)
         out = self.run_dir / 'kit.json'
@@ -303,7 +265,6 @@ class Inputs(unittest.TestCase):
             'prepared': True, 'kit_sha256': hashlib.sha256(json.dumps(
                 kit, sort_keys=True, ensure_ascii=True, separators=(',', ':')).encode()).hexdigest(),
             'scope_sha256': canonical_sha(SCOPE)})
-        # A kit changes only by preparing a new file: never an overwrite.
         original = out.read_bytes()
         again = run(HERE / 'prepare.py', '--inputs', good, '--out', out)
         self.assertEqual((again.returncode, out.read_bytes()), (2, original))
@@ -317,7 +278,6 @@ class Inputs(unittest.TestCase):
             'kit through an alias': (good, self.checkout_alias('kit-alias')[1] / 'kit.json', 'inside_checkout'),
             'inputs through an alias': (self.write(self.checkout_alias('inputs-alias')[1] / 'inputs.json', inputs),
                                         out, 'inside_checkout'),
-            # #777 R1 re-check: `..` after a symlinked folder, at both prepare sites.
             'inputs through alias-dotdot': (self.write(self.checkout_alias('dots-in')[1] / 'inputs.json', inputs)
                                         .parent / '..' / 'private' / 'inputs.json', out, 'inside_checkout'),
             'kit through alias-dotdot': (good, self.checkout_alias('dots-out')[1] / '..' / 'private' / 'kit.json',
@@ -339,7 +299,6 @@ class Inputs(unittest.TestCase):
                 self.assertFalse(os.path.lexists(fresh))
         for name in ('checkout-kit-alias', 'checkout-dots-out'):
             self.assertEqual(list((self.root / name / 'private').iterdir()), [], name)
-        # A kit through `..` after a link that resolves outside Git is written there.
         (self.root / 'kit-target' / 'deep').mkdir(parents=True)
         (self.root / 'kit-target' / 'run').mkdir(mode=0o700)
         (self.root / 'kit-link').symlink_to(self.root / 'kit-target' / 'deep', target_is_directory=True)
@@ -350,8 +309,6 @@ class Inputs(unittest.TestCase):
                                         '--out', self.run_dir / 'm.json').stdout)['missing'], ['install_root'])
 
     def test_dry_run_binds_a_synthetic_candidate_and_runs_nothing(self):
-        """catches: a PC dry run that cannot tell its kit is not the one the
-        candidate carries until the live run starts."""
         inputs = self.standard_records()
         source = self.write(self.run_dir / 'inputs.json', inputs)
         kit_path = self.run_dir / 'kit.json'
@@ -364,7 +321,6 @@ class Inputs(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout)
         doc = json.loads(result.stdout)
         self.assertEqual((doc['verdict'], doc['reason']), ('not_run', 'dry_run'))
-        # The report names exactly SHIP-3's claims, none of them run.
         self.assertEqual(doc['claims'], {c: 'not_run' for c in SHIP3})
         self.assertFalse(state.exists())
         other = dict(body, kit=dict(body['kit'], scope_sha256='0' * 64))

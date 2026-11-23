@@ -1,0 +1,16 @@
+# Red run (#2044, option 1): python3 -I adapters/template/test_driver.py -k without_proc, at 51287f93 plus this commit's test change (no workaround for the orphaned worker): a worker in a new session whose turn exits at once is never recorded, so stop leaves it.
+test_without_proc_as_on_macos_stop_ends_each_grandchild (__main__.Template.test_without_proc_as_on_macos_stop_ends_each_grandchild) ... 
+  test_without_proc_as_on_macos_stop_ends_each_grandchild (__main__.Template.test_without_proc_as_on_macos_stop_ends_each_grandchild) (<subtest>) ... FAIL
+
+======================================================================
+FAIL: test_without_proc_as_on_macos_stop_ends_each_grandchild (__main__.Template.test_without_proc_as_on_macos_stop_ends_each_grandchild) (<subtest>)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/template/test_driver.py", line 298, in test_without_proc_as_on_macos_stop_ends_each_grandchild
+    self.assertFalse(alive(child), 'a grandchild of the harness still runs after stop')
+AssertionError: True is not false : a grandchild of the harness still runs after stop
+
+----------------------------------------------------------------------
+Ran 1 test in 0.824s
+
+FAILED (failures=1)

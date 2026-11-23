@@ -116,12 +116,10 @@ pub const VERSION_NOT_RECOGNISED: &str =
 
 pub fn launch_failure_category(detail: &str) -> Option<&'static str> {
     match detail {
-        "CloudRoom not running: room-cli could not be started (no bundled launcher)" => {
-            Some("no bundle")
-        }
-        "CloudRoom not running: room-cli could not be started (no running app identified)" => {
-            Some("no running app identified")
-        }
+        "CloudRoom not running: room-cli could not be started (no bundled launcher and no \
+         room-cli on PATH). Open the CloudRoom app once and sign in." => Some("no bundle"),
+        "CloudRoom not running: room-cli could not be started (no running app identified). \
+         Open the CloudRoom app once and sign in." => Some("no running app identified"),
         "CloudRoom not running: room-cli could not be started (ambiguous app bundles). \
          CloudRoom is mid-update (two running app mounts): restart CloudRoom to finish the \
          update, then try again." => Some("ambiguous bundle"),

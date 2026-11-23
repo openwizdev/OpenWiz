@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-"""KN10: the records v1 claim and lease rules hold in the model, and each broken variant fails.
-
-Run: python3 -I kernel/records/model/test_model.py
-"""
 import os
 import subprocess
 import sys
@@ -11,7 +7,7 @@ import unittest
 sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import model  # noqa: E402
+import model
 
 
 def run(*args):
@@ -20,7 +16,6 @@ def run(*args):
     return p.returncode, p.stdout.splitlines(), p.stderr
 
 
-# Each variant breaks the rule it drops, and exactly these rules in all.
 BREAKS = {
     'no-post-fence': {'P1', 'P4'},
     'older-only-fence': {'P2', 'P4'},
@@ -53,14 +48,11 @@ class BrokenVariants(unittest.TestCase):
                 self.assertIn(rule, BREAKS[variant])
                 self.assertEqual(broken(out), BREAKS[variant], out)
                 self.assertFalse(any(line.startswith('vacuous') for line in out), out)
-                # A counterexample is a numbered trace, not just a verdict.
                 self.assertTrue(any(line.startswith('  1. ') for line in out), out)
 
 
 class SplitWrites(unittest.TestCase):
     def test_the_pinned_writers_read_then_write_order_loses_the_fence(self):
-        # Reported on #1365: a lapsed note's re-read and its edit are two calls, so a newer
-        # note can claim between them and the lapsed one still takes the ticket back.
         code, out, err = run('--writes', 'split')
         self.assertEqual((code, err), (1, ''), out)
         self.assertEqual(broken(out), {'P1', 'P2', 'P3', 'P4', 'P5'}, out)
@@ -78,30 +70,22 @@ class SplitWrites(unittest.TestCase):
 
 
 class FixedWrites(unittest.TestCase):
-    # #1441: the writer's fixed order. Still two calls, but an edit reads back as a post does:
-    # it puts back a release it never read, and steps down when another live note of its kind
-    # exists. The model must hold every rule with it, over every reachable state.
     def test_the_fixed_write_order_holds_every_rule(self):
-        # catches: a writer fix that leaves any of KN10's split-order breaks in place.
         code, out, err = run('--writes', 'fixed')
         self.assertEqual((code, err), (0, ''), out)
         self.assertEqual(len(out), 1, out)
         self.assertRegex(out[0], r'^ok: fixed writes, current rules: P1 to P5 hold over \d+ states$')
 
     def test_a_release_lost_under_a_failed_readback_breaks_p3(self):
-        # catches: #1463 R1, a read-back that fails because a later edit changed the note and
-        # so never puts back the release its own edit replaced.
         class NoRestoreOnFailure(model.Model):
             def readback_edit(self, notes, pending):
                 if notes[pending[1]][1] != pending[2]:
                     return notes, None
                 return super().readback_edit(notes, pending)
         _, found, _ = model.check(NoRestoreOnFailure(None, 'fixed'))
-        # A heartbeat is such an edit too (#1447), so the lost release is also a reopened one.
         self.assertEqual(set(found), {'P3', 'P5'})
 
     def test_the_fixed_order_without_its_edit_readback_breaks_again(self):
-        # catches: a fixed mode that passes for a reason other than the edit's read-back.
         class NoReadback(model.Model):
             def readback_edit(self, notes, pending):
                 return notes, 'kept'
@@ -110,19 +94,13 @@ class FixedWrites(unittest.TestCase):
 
 
 class Heartbeat(unittest.TestCase):
-    # #1447: status.py run's heartbeat is an edit that keeps the state its own read shows, and
-    # writes nothing when that read shows a release. P5: it never turns done or stopped live.
     def test_a_heartbeat_that_rewrites_working_reopens_a_done_note(self):
-        # catches: a heartbeat that writes working on every beat, as a plain write --state
-        # working would, reopening a note its agent marked done, which P3 alone allows (a resume).
         code, out, err = run('--variant', 'heartbeat-reopens')
         self.assertEqual((code, err), (1, ''), out)
         self.assertEqual(broken(out), {'P5'}, out)
         self.assertIn('heartbeat', '\n'.join(out))
 
     def test_a_heartbeat_over_a_release_it_never_read_is_put_back(self):
-        # catches: a heartbeat that read working, lost a race with a sibling wake's done, and
-        # left its own working on top: the fixed writer's edit read-back must cover the beat.
         class NoReadback(model.Model):
             def readback_edit(self, notes, pending):
                 return notes, 'kept'

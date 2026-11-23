@@ -1,0 +1,288 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/vps/test_hosts.py   # red for review R1-R7 at 3e710a7; agent-CLI refusal stubs first on PATH
+FFFFFF..FFFFFFFFFFFFFFF
+======================================================================
+FAIL: test_the_five_configs_load_through_rig_load_host (__main__.Configs.test_the_five_configs_load_through_rig_load_host) (host='hermes')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 82, in test_the_five_configs_load_through_rig_load_host
+    self.assertEqual(config['signed_in'][-1], GH_PROBE)
+AssertionError: Lists differ: ['gh', 'auth', 'status'] != ['gh', 'auth', 'status', '--hostname', 'github.com', '--active', '--no-refresh']
+
+Second list contains 4 additional elements.
+First extra element 3:
+'--hostname'
+
+- ['gh', 'auth', 'status']
++ ['gh', 'auth', 'status', '--hostname', 'github.com', '--active', '--no-refresh']
+
+======================================================================
+FAIL: test_the_five_configs_load_through_rig_load_host (__main__.Configs.test_the_five_configs_load_through_rig_load_host) (host='pane')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 82, in test_the_five_configs_load_through_rig_load_host
+    self.assertEqual(config['signed_in'][-1], GH_PROBE)
+AssertionError: Lists differ: ['gh', 'auth', 'status'] != ['gh', 'auth', 'status', '--hostname', 'github.com', '--active', '--no-refresh']
+
+Second list contains 4 additional elements.
+First extra element 3:
+'--hostname'
+
+- ['gh', 'auth', 'status']
++ ['gh', 'auth', 'status', '--hostname', 'github.com', '--active', '--no-refresh']
+
+======================================================================
+FAIL: test_the_five_configs_load_through_rig_load_host (__main__.Configs.test_the_five_configs_load_through_rig_load_host) (host='factory')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 82, in test_the_five_configs_load_through_rig_load_host
+    self.assertEqual(config['signed_in'][-1], GH_PROBE)
+AssertionError: Lists differ: ['gh', 'auth', 'status'] != ['gh', 'auth', 'status', '--hostname', 'github.com', '--active', '--no-refresh']
+
+Second list contains 4 additional elements.
+First extra element 3:
+'--hostname'
+
+- ['gh', 'auth', 'status']
++ ['gh', 'auth', 'status', '--hostname', 'github.com', '--active', '--no-refresh']
+
+======================================================================
+FAIL: test_the_five_configs_load_through_rig_load_host (__main__.Configs.test_the_five_configs_load_through_rig_load_host) (host='conductor')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 82, in test_the_five_configs_load_through_rig_load_host
+    self.assertEqual(config['signed_in'][-1], GH_PROBE)
+AssertionError: Lists differ: ['gh', 'auth', 'status'] != ['gh', 'auth', 'status', '--hostname', 'github.com', '--active', '--no-refresh']
+
+Second list contains 4 additional elements.
+First extra element 3:
+'--hostname'
+
+- ['gh', 'auth', 'status']
++ ['gh', 'auth', 'status', '--hostname', 'github.com', '--active', '--no-refresh']
+
+======================================================================
+FAIL: test_the_five_configs_load_through_rig_load_host (__main__.Configs.test_the_five_configs_load_through_rig_load_host) (host='cursor')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 82, in test_the_five_configs_load_through_rig_load_host
+    self.assertEqual(config['signed_in'][-1], GH_PROBE)
+AssertionError: Lists differ: ['gh', 'auth', 'status'] != ['gh', 'auth', 'status', '--hostname', 'github.com', '--active', '--no-refresh']
+
+Second list contains 4 additional elements.
+First extra element 3:
+'--hostname'
+
+- ['gh', 'auth', 'status']
++ ['gh', 'auth', 'status', '--hostname', 'github.com', '--active', '--no-refresh']
+
+======================================================================
+FAIL: test_every_row_cites_the_driver_readme_and_the_tools_docs_and_says_whether_it_bills (__main__.Page.test_every_row_cites_the_driver_readme_and_the_tools_docs_and_says_whether_it_bills) (host='pane')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 196, in test_every_row_cites_the_driver_readme_and_the_tools_docs_and_says_whether_it_bills
+    self.assertEqual(cells[-2].strip('*`'), BILLS[host])
+AssertionError: 'no' != 'unknown'
+- no
++ unknown
+
+
+======================================================================
+FAIL: test_the_page_names_each_hand_check_the_probes_cannot_make (__main__.Page.test_the_page_names_each_hand_check_the_probes_cannot_make)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 219, in test_the_page_names_each_hand_check_the_probes_cannot_make
+    self.assertIn('`Record authors`', self.page)
+AssertionError: '`Record authors`' not found in '# The VPS session: sign in, then one command\n\nFor Jake, once, on the VPS. Spec #2474 ("VPS session files"). Everything below is yours to run: no agent signs in, exports a key or passes `--allow-cost` for you. This page holds names only, never a value.\n\n## The session, in order\n\n1. **Bootstrap** the free tools into `~/.local` (#2580): first `kernel/live-rig/vps/bootstrap.sh --dry-run` to read the plan, then `kernel/live-rig/vps/bootstrap.sh`. It never signs in or spends.\n2. **Sign in**, yourself: `gh auth login` first (every host needs it; [GitHub CLI manual](https://cli.github.com/manual/gh_auth_login)), then each host\'s row below. Export each key name in the shell you run step 3 from.\n3. **Run the five checks**, from the root of a clean checkout of `main`. `<file>` is a local settings file outside the repository, `{"repo": "<owner>/<throwaway>", "ticket": <n>}`; `<dir>` is a folder outside the checkout. Every host config says `cost: paid`, so a host runs only when you name it, by its host name, with `--allow-cost`:\n\n   ```sh\n   python3 -I kernel/live-rig/heads.py --tickets kernel/live-rig/vps/live-tickets.json --hosts kernel/live-rig/vps/hosts --settings <file> --out <dir> --allow-cost Hermes --allow-cost Pane --allow-cost Factory --allow-cost Conductor --allow-cost Cursor\n   ```\n\n   Read what it would post, then run the same command again with `--post` added (#2582).\n\nA host you skip signing in to is skipped by the command, `skipped <host> <harness>: <why>`; the rest still run.\n\n## One row per host\n\nEach row starts with the host name its config gives (`hosts/<file>.json`, cited in Sources). "Status check" is what the rig runs before a run: read-only, output discarded, never a sign-in. "Bills" is whether one live turn bills beyond a plan you already have.\n\n| Host | Sign in (yours) | Names you export | Status check | Bills | Sources |\n| --- | --- | --- | --- | --- | --- |\n| `Hermes` | `hermes setup`: pick Hermes\' model and provider (or `hermes setup --portal` for Nous Portal). The run\'s harness is `claude`, so also sign in to `claude` yourself (run `claude`, then `/login`) and enable Hermes\' bundled `claude-code` skill. | none | `gh auth status`. Hermes has no status command whose exit code shows a sign-in: `hermes auth status <provider>` and `hermes doctor` both exit 0 when logged out, so read `hermes status` yourself before step 3. | unknown | `hosts/hermes.json`; `adapters/hermes/README.md` (#2017): "real model turns that cost money", on whatever provider Hermes runs; [Hermes CLI reference](https://hermes-agent.nousresearch.com/docs/reference/cli-commands); [`hermes auth status`](https://github.com/NousResearch/hermes-agent/blob/main/hermes_cli/auth_commands.py) prints "logged out" and returns; [Claude Code quickstart](https://code.claude.com/docs/en/quickstart) for `/login` |\n| `Pane` | Install Pane and open the app, or `runpane install daemon`. Save the throwaway repository\'s checkout: `runpane repos add --path <checkout>`. Sign in to `claude` yourself (run `claude`, then `/login`). | none | `runpane repos list --json` (fails unless the Pane app or daemon is running), then `gh auth status` | no | `hosts/pane.json`; `adapters/pane/README.md` (#2029): a run "uses that agent\'s paid model usage or subscription allowance", so on your Claude plan it is the plan\'s allowance; on a Claude API key it bills; [runpane CLI reference](https://runpane.com/docs/runpane-cli); [Claude Code quickstart](https://code.claude.com/docs/en/quickstart) |\n| `Factory` | Run `droid` once and finish Factory\'s browser device pairing. Make an API key on [Factory\'s settings page](https://app.factory.ai/settings/api-keys). | `FACTORY_API_KEY` | that the name `FACTORY_API_KEY` is in the environment (never its value; as the drivers check it), then `gh auth status`. A missing name reads `not signed in: python3`. | unknown | `hosts/factory.json`; `adapters/factory/README.md` (#2022): "Factory bills each turn against your Factory plan", so `no` only if you already have one; [Droid exec docs](https://docs.factory.com/droid-exec/overview) for the key and `FACTORY_API_KEY` |\n| `Conductor` | Dashboard: a Conductor Pro account with Conductor Cloud, its GitHub App on the throwaway repository, that repository added to your organization\'s Cloud Computer, and your Claude subscription added in Settings, Agents. Make a user API key on Conductor\'s API keys page, which the [Conductor API docs](https://www.conductor.build/docs/api) link. | `CONDUCTOR_API_KEY` | that the name `CONDUCTOR_API_KEY` is in the environment (never its value), then `gh auth status`. A missing name reads `not signed in: python3`. | unknown | `hosts/conductor.json`; `adapters/conductor/README.md` (#2020): "Conductor bills nothing for model usage: each agent\'s own account does", but cloud workspaces need Conductor Pro; [Conductor API docs](https://www.conductor.build/docs/api); [Cloud FAQ](https://www.conductor.build/docs/cloud/faq) |\n| `Cursor` | Dashboard: a Cursor plan with cloud agents, GitHub connected to Cursor, and a user API key at cursor.com/dashboard (API Keys). | `CURSOR_API_KEY` | that the name `CURSOR_API_KEY` is in the environment (never its value), then `gh auth status`. A missing name reads `not signed in: python3`. | unknown | `hosts/cursor.json`; `adapters/cursor/README.md` (#2021): "Cursor bills cloud agents at its model rates, against your plan"; [Cloud Agents billing](https://cursor.com/docs/cloud-agent#billing); the run\'s `composer-2.5` draws from the paid plans\' weekly pool, then bills ([Composer 2.5](https://cursor.com/docs/models/cursor-composer-2-5)) |\n\nThe two API hosts (Conductor, Cursor) need `curl` 8.3 or later, which the bootstrap installs: their drivers have curl read the key from your environment itself. Each host\'s harness and model is in its config\'s `runs`; change one there before step 3 if your plan lists another model.\n'
+
+======================================================================
+FAIL: test_the_paid_command_is_given_once_with_post_and_no_shell_placeholder (__main__.Page.test_the_paid_command_is_given_once_with_post_and_no_shell_placeholder)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 214, in test_the_paid_command_is_given_once_with_post_and_no_shell_placeholder
+    self.assertIn(' --post', commands[0])
+AssertionError: ' --post' not found in '   python3 -I kernel/live-rig/heads.py --tickets kernel/live-rig/vps/live-tickets.json --hosts kernel/live-rig/vps/hosts --settings <file> --out <dir> --allow-cost Hermes --allow-cost Pane --allow-cost Factory --allow-cost Conductor --allow-cost Cursor'
+
+======================================================================
+FAIL: test_the_session_is_written_out_in_order (__main__.Page.test_the_session_is_written_out_in_order)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 208, in test_the_session_is_written_out_in_order
+    self.assertNotIn(-1, at, steps)
+AssertionError: -1 unexpectedly found in [343, -1, -1, -1, 502, 1045] : ['kernel/live-rig/vps/bootstrap.sh', '../../driver-kit/README.md#the-throwaway-ticket', 'curl -fsSL https://claude.ai/install.sh | bash', 'runpane agents doctor --agent claude', 'gh auth login', 'python3 -I kernel/live-rig/heads.py --tickets kernel/live-rig/vps/live-tickets.json --hosts kernel/live-rig/vps/hosts --settings ']
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='hermes', situation='tool signed out')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 152, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.stdout, 'skipped %s %s: %s\n' % (CONFIGS[host]['host'], CONFIGS[host]['harness'],
+AssertionError: 'skipped Hermes claude: not signed in: gh\n' != 'skipped Hermes claude: cost\n'
+- skipped Hermes claude: not signed in: gh
+?                        ^  --------------
++ skipped Hermes claude: cost
+?                        ^ +
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='hermes', situation='key name unset')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 152, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.stdout, 'skipped %s %s: %s\n' % (CONFIGS[host]['host'], CONFIGS[host]['harness'],
+AssertionError: 'skipped Hermes claude: not signed in: gh\n' != 'skipped Hermes claude: cost\n'
+- skipped Hermes claude: not signed in: gh
+?                        ^  --------------
++ skipped Hermes claude: cost
+?                        ^ +
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='hermes', situation='signed in')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 152, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.stdout, 'skipped %s %s: %s\n' % (CONFIGS[host]['host'], CONFIGS[host]['harness'],
+AssertionError: 'skipped Hermes claude: not signed in: gh\n' != 'skipped Hermes claude: cost\n'
+- skipped Hermes claude: not signed in: gh
+?                        ^  --------------
++ skipped Hermes claude: cost
+?                        ^ +
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='pane', situation='key name unset')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 152, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.stdout, 'skipped %s %s: %s\n' % (CONFIGS[host]['host'], CONFIGS[host]['harness'],
+AssertionError: 'skipped Pane claude: not signed in: gh\n' != 'skipped Pane claude: cost\n'
+- skipped Pane claude: not signed in: gh
++ skipped Pane claude: cost
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='pane', situation='signed in')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 152, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.stdout, 'skipped %s %s: %s\n' % (CONFIGS[host]['host'], CONFIGS[host]['harness'],
+AssertionError: 'skipped Pane claude: not signed in: gh\n' != 'skipped Pane claude: cost\n'
+- skipped Pane claude: not signed in: gh
++ skipped Pane claude: cost
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='factory', situation='tool signed out')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 152, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.stdout, 'skipped %s %s: %s\n' % (CONFIGS[host]['host'], CONFIGS[host]['harness'],
+AssertionError: 'skipped Factory droid: not signed in: gh\n' != 'skipped Factory droid: cost\n'
+- skipped Factory droid: not signed in: gh
+?                        ^  --------------
++ skipped Factory droid: cost
+?                        ^ +
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='factory', situation='signed in')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 152, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.stdout, 'skipped %s %s: %s\n' % (CONFIGS[host]['host'], CONFIGS[host]['harness'],
+AssertionError: 'skipped Factory droid: not signed in: gh\n' != 'skipped Factory droid: cost\n'
+- skipped Factory droid: not signed in: gh
+?                        ^  --------------
++ skipped Factory droid: cost
+?                        ^ +
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='conductor', situation='tool signed out')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 152, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.stdout, 'skipped %s %s: %s\n' % (CONFIGS[host]['host'], CONFIGS[host]['harness'],
+AssertionError: 'skipped Conductor claude: not signed in: gh\n' != 'skipped Conductor claude: cost\n'
+- skipped Conductor claude: not signed in: gh
+?                           ^  --------------
++ skipped Conductor claude: cost
+?                           ^ +
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='conductor', situation='signed in')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 152, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.stdout, 'skipped %s %s: %s\n' % (CONFIGS[host]['host'], CONFIGS[host]['harness'],
+AssertionError: 'skipped Conductor claude: not signed in: gh\n' != 'skipped Conductor claude: cost\n'
+- skipped Conductor claude: not signed in: gh
+?                           ^  --------------
++ skipped Conductor claude: cost
+?                           ^ +
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='cursor', situation='tool signed out')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 152, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.stdout, 'skipped %s %s: %s\n' % (CONFIGS[host]['host'], CONFIGS[host]['harness'],
+AssertionError: 'skipped Cursor cursor: not signed in: gh\n' != 'skipped Cursor cursor: cost\n'
+- skipped Cursor cursor: not signed in: gh
+?                        ^  --------------
++ skipped Cursor cursor: cost
+?                        ^ +
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='cursor', situation='signed in')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 152, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.stdout, 'skipped %s %s: %s\n' % (CONFIGS[host]['host'], CONFIGS[host]['harness'],
+AssertionError: 'skipped Cursor cursor: not signed in: gh\n' != 'skipped Cursor cursor: cost\n'
+- skipped Cursor cursor: not signed in: gh
+?                        ^  --------------
++ skipped Cursor cursor: cost
+?                        ^ +
+
+
+======================================================================
+FAIL: test_status_checks_call_only_read_only_status_commands (__main__.Skips.test_status_checks_call_only_read_only_status_commands)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 166, in test_status_checks_call_only_read_only_status_commands
+    self.assertEqual(sorted(calls), sorted([' '.join(GH_PROBE)] * 5 + ['runpane repos list --json']))
+AssertionError: Lists differ: ['gh auth status', 'gh auth status', 'gh auth status', 'g[127 chars]son'] != ['gh auth status --hostname github.com --active --no-refr[277 chars]son']
+
+First differing element 0:
+'gh auth status'
+'gh auth status --hostname github.com --active --no-refresh'
+
+First list contains 5 additional elements.
+First extra element 6:
+'gh refused'
+
++ ['gh auth status --hostname github.com --active --no-refresh',
++  'gh auth status --hostname github.com --active --no-refresh',
++  'gh auth status --hostname github.com --active --no-refresh',
++  'gh auth status --hostname github.com --active --no-refresh',
++  'gh auth status --hostname github.com --active --no-refresh',
+- ['gh auth status',
+-  'gh auth status',
+-  'gh auth status',
+-  'gh auth status',
+-  'gh auth status',
+-  'gh refused',
+-  'gh refused',
+-  'gh refused',
+-  'gh refused',
+-  'gh refused',
+   'runpane repos list --json']
+
+----------------------------------------------------------------------
+Ran 9 tests in 1.547s
+
+FAILED (failures=21)

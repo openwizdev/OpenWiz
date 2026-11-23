@@ -1,8 +1,5 @@
-//! #373: external failure answers, shared by the two public CLI proofs.
-
 use serde_json::{Value, json};
 
-/// Each differs from the one approved response; none is an empty read.
 pub(crate) fn failures() -> Vec<Value> {
     let exact = "no checks reported on the 'room/syn-2' branch\n";
     let mut cases = vec![

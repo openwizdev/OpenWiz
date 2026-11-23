@@ -1,6 +1,3 @@
-//! N6: outcome mapping for every row of the result table. Created never
-//! implies started.
-
 use openwiz_adapter_cloudroom::new_thread::{DOCUMENTED_REFUSALS, spawn_error, spawn_receipt};
 use openwiz_core::messaging::send::UncertainReason;
 use openwiz_core::new_thread::operation::NewThreadResult;
@@ -200,8 +197,6 @@ fn a_spawn_wait_failure_stays_uncertain() {
 
     const CHILD: &str = "OPENWIZ_SYNTHETIC_SPAWN_WAIT_FAILURE";
     if std::env::var_os(CHILD).is_some() {
-        // A real process starts and exits; the shim reaps it, then reports
-        // ECHILD to the adapter's try_wait. This is not a spawn failure.
         let reply = adapter_spawn(std::path::PathBuf::from("/bin/true"));
         assert!(
             matches!(

@@ -1,0 +1,405 @@
+# #2379: the kit's key-check tests against the kit before its key check (the helper and registry already in place).
+test_a_host_that_answers_a_redirect_fails_start_and_the_redirect_is_never_followed (__main__.Kit.test_a_host_that_answers_a_redirect_fails_start_and_the_redirect_is_never_followed) ... /tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp_ppgp3gv/tracker.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp_ppgp3gv/state/run-6017b4143413.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp_ppgp3gv/state/run-6017b4143413.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+FAIL
+test_a_key_host_driver_that_uses_only_the_helper_passes_all_five (__main__.Kit.test_a_key_host_driver_that_uses_only_the_helper_passes_all_five) ... /tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpl0jii_nm/tracker.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpl0jii_nm/state/run-df538253bcf2.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpl0jii_nm/state/run-df538253bcf2.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+
+  test_a_key_host_driver_that_uses_only_the_helper_passes_all_five (__main__.Kit.test_a_key_host_driver_that_uses_only_the_helper_passes_all_five) [/usr/bin/python3] ... FAIL
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpj81j8472/tracker.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpj81j8472/state/run-f0cee57981f4.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpj81j8472/state/run-f0cee57981f4.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+  test_a_key_host_driver_that_uses_only_the_helper_passes_all_five (__main__.Kit.test_a_key_host_driver_that_uses_only_the_helper_passes_all_five) [/tmp/openwiz/kernel/driver-kit/../../kernel/driver-kit/fixtures/no-proc/python3] ... FAIL
+test_a_refusal_holding_a_credential_never_reaches_the_output (__main__.Kit.test_a_refusal_holding_a_credential_never_reaches_the_output) ... ok
+test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) ... ok
+test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) ... /tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpiody_7tg/tracker.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpiody_7tg/state/run-6e1386363aaa.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpiody_7tg/state/run-6e1386363aaa.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-reads-itself] ... FAIL
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpdngdp6h6/tracker.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpdngdp6h6/state/run-9ccea4632600.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpdngdp6h6/state/run-9ccea4632600.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-in-args] ... FAIL
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmposem6jgk/tracker.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmposem6jgk/state/run-b5d28561caa3.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmposem6jgk/state/run-b5d28561caa3.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-unregistered-host] ... FAIL
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmptcp7v_b2/tracker.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmptcp7v_b2/state/run-1c198e036a30.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmptcp7v_b2/state/run-1c198e036a30.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-host-in-path] ... FAIL
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpivip9wvp/tracker.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpivip9wvp/state/run-92d87725d2cc.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpivip9wvp/state/run-92d87725d2cc.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-in-env] ... FAIL
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp1yq66byd/tracker.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp1yq66byd/state/run-d3d3be688353.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp1yq66byd/state/run-d3d3be688353.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-echoed] ... FAIL
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp4wp1ucv1/tracker.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp4wp1ucv1/state/run-089ca2b28c9e.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp4wp1ucv1/state/run-089ca2b28c9e.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-in-body] ... FAIL
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmptvl0j9it/tracker.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmptvl0j9it/state/run-45f2a157c5b5.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmptvl0j9it/state/run-45f2a157c5b5.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-calls-keychain] ... FAIL
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpwg1or6n3/tracker.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpwg1or6n3/state/run-b09d15839e04.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:125: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpwg1or6n3/state/run-b09d15839e04.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-sets-override] ... FAIL
+test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) ... ok
+test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) ... ok
+test_template_passes_all_five (__main__.Kit.test_template_passes_all_five) ... ok
+test_the_kits_visibility_probe_signals_ready_through_the_macos_shim_and_runs_until_its_stdin_closes (__main__.Kit.test_the_kits_visibility_probe_signals_ready_through_the_macos_shim_and_runs_until_its_stdin_closes) ... ok
+test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) ... ok
+test_without_proc_as_on_macos_a_driver_whose_run_stays_in_the_kits_group_passes_all_five (__main__.Kit.test_without_proc_as_on_macos_a_driver_whose_run_stays_in_the_kits_group_passes_all_five) ... ok
+test_without_proc_as_on_macos_the_template_passes_all_five (__main__.Kit.test_without_proc_as_on_macos_the_template_passes_all_five) ... ok
+test_without_proc_or_the_runs_visible_environment_stop_and_token_fail_unverified (__main__.Kit.test_without_proc_or_the_runs_visible_environment_stop_and_token_fail_unverified) ... ok
+
+======================================================================
+FAIL: test_a_host_that_answers_a_redirect_fails_start_and_the_redirect_is_never_followed (__main__.Kit.test_a_host_that_answers_a_redirect_fails_start_and_the_redirect_is_never_followed)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 159, in test_a_host_that_answers_a_redirect_fails_start_and_the_redirect_is_never_followed
+    self.assertEqual((code, out), (1, [PASS[0], 'fail start: the host answered 302'] + NOT_RUN + [KEY_PASS]))
+AssertionError: Tuples differ: (1, [[169 chars]ed', 'pass token: no login or token passed thr[13 chars]er']) != (1, [[169 chars]ed', "pass token: no login or token passed thr[78 chars]er"])
+
+First differing element 1:
+['pas[165 chars]ed', 'pass token: no login or token passed through the driver']
+['pas[165 chars]ed', "pass token: no login or token passed thr[77 chars]der"]
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'fail start: the host answered 302',
+    'fail wake: not run: start failed',
+    'fail stop: not run: start failed',
+-   'pass token: no login or token passed through the driver'])
+?                                                            --
+
++   'pass token: no login or token passed through the driver, and the devin key '
+?                                                           ++++++++++++++++++++
+
++   "reached only its host, in the helper's header"])
+
+======================================================================
+FAIL: test_a_key_host_driver_that_uses_only_the_helper_passes_all_five (__main__.Kit.test_a_key_host_driver_that_uses_only_the_helper_passes_all_five) [/usr/bin/python3]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 139, in test_a_key_host_driver_that_uses_only_the_helper_passes_all_five
+    self.assertEqual((code, out), (0, PASS[:4] + [KEY_PASS]))
+AssertionError: Tuples differ: (0, [[223 chars]ed', 'pass token: no login or token passed thr[13 chars]er']) != (0, [[223 chars]ed', "pass token: no login or token passed thr[78 chars]er"])
+
+First differing element 1:
+['pas[219 chars]ed', 'pass token: no login or token passed through the driver']
+['pas[219 chars]ed', "pass token: no login or token passed thr[77 chars]der"]
+
+  (0,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+-   'pass token: no login or token passed through the driver'])
+?                                                            --
+
++   'pass token: no login or token passed through the driver, and the devin key '
+?                                                           ++++++++++++++++++++
+
++   "reached only its host, in the helper's header"])
+
+======================================================================
+FAIL: test_a_key_host_driver_that_uses_only_the_helper_passes_all_five (__main__.Kit.test_a_key_host_driver_that_uses_only_the_helper_passes_all_five) [/tmp/openwiz/kernel/driver-kit/../../kernel/driver-kit/fixtures/no-proc/python3]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 139, in test_a_key_host_driver_that_uses_only_the_helper_passes_all_five
+    self.assertEqual((code, out), (0, PASS[:4] + [KEY_PASS]))
+AssertionError: Tuples differ: (0, [[223 chars]ed', 'pass token: no login or token passed thr[13 chars]er']) != (0, [[223 chars]ed', "pass token: no login or token passed thr[78 chars]er"])
+
+First differing element 1:
+['pas[219 chars]ed', 'pass token: no login or token passed through the driver']
+['pas[219 chars]ed', "pass token: no login or token passed thr[77 chars]der"]
+
+  (0,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+-   'pass token: no login or token passed through the driver'])
+?                                                            --
+
++   'pass token: no login or token passed through the driver, and the devin key '
+?                                                           ++++++++++++++++++++
+
++   "reached only its host, in the helper's header"])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-reads-itself]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 152, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (1, lines))
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[245 chars]er']) != (1, ['pass version: openwiz:records v1, an[266 chars]le"])
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+-   'pass token: no login or token passed through the driver'])
++   "fail token: the driver's file driver names DEVIN_API_KEY, the key's "
++   'variable'])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-in-args]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 152, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (1, lines))
+AssertionError: Tuples differ: (1, [[299 chars]mand line']) != (1, [[299 chars]mand line; a process holds the devin key on its command line'])
+
+First differing element 1:
+['pas[294 chars]mmand line']
+['pas[294 chars]mmand line; a process holds the devin key on its command line']
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+    'fail token: a process the driver started holds a credential on its command '
+-   'line'])
++   'line; a process holds the devin key on its command line'])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-unregistered-host]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 152, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (1, lines))
+AssertionError: Tuples differ: (1, [[215 chars]ed', 'pass token: no login or token passed thr[13 chars]er']) != (1, [[215 chars]ed', "fail token: the devin key never reached [17 chars]st"])
+
+First differing element 1:
+['pas[211 chars]ed', 'pass token: no login or token passed through the driver']
+['pas[211 chars]ed', "fail token: the devin key never reached [16 chars]ost"]
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'fail start: the key helper refused: host is not in '
+    'kernel/driver-kit/hosts.json',
+    'fail wake: not run: start failed',
+    'fail stop: not run: start failed',
+-   'pass token: no login or token passed through the driver'])
++   "fail token: the devin key never reached the kit's fake host"])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-host-in-path]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 152, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (1, lines))
+AssertionError: Tuples differ: (1, [[192 chars]ed', 'pass token: no login or token passed thr[13 chars]er']) != (1, [[192 chars]ed', "fail token: the devin key never reached [17 chars]st"])
+
+First differing element 1:
+['pas[188 chars]ed', 'pass token: no login or token passed through the driver']
+['pas[188 chars]ed', "fail token: the devin key never reached [16 chars]ost"]
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'fail start: the key helper refused: path has // (a host)',
+    'fail wake: not run: start failed',
+    'fail stop: not run: start failed',
+-   'pass token: no login or token passed through the driver'])
++   "fail token: the devin key never reached the kit's fake host"])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-in-env]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 152, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (1, lines))
+AssertionError: Tuples differ: (1, [[328 chars]ve it']) != (1, [[328 chars]ve it; a process the driver started holds the [45 chars]EY'])
+
+First differing element 1:
+['pas[324 chars]ve it']
+['pas[324 chars]ve it; a process the driver started holds the [44 chars]KEY']
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+    'fail token: a process the driver started holds a credential in '
+-   'OPENWIZ_COPY, which the kit never gave it'])
++   'OPENWIZ_COPY, which the kit never gave it; a process the driver started '
++   'holds the devin key in OPENWIZ_COPY, not in DEVIN_API_KEY'])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-echoed]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 152, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (1, lines))
+AssertionError: Tuples differ: (1, [[246 chars]river printed a credential']) != (1, [[246 chars]river printed a credential; the driver printed the devin key'])
+
+First differing element 1:
+['pas[241 chars]driver printed a credential']
+['pas[241 chars]driver printed a credential; the driver printed the devin key']
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+-   'fail token: the driver printed a credential'])
++   'fail token: the driver printed a credential; the driver printed the devin '
++   'key'])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-in-body]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 152, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (1, lines))
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[245 chars]er']) != (1, ['pass version: openwiz:records v1, an[285 chars]er"])
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+-   'pass token: no login or token passed through the driver'])
++   "fail token: the devin key reached the kit's fake host outside the helper's "
++   'Authorization header'])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-calls-keychain]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 152, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (1, lines))
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[245 chars]er']) != (1, ['pass version: openwiz:records v1, an[262 chars]ol"])
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+-   'pass token: no login or token passed through the driver'])
++   "fail token: the driver's file driver calls the keychain tool secret-tool"])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-sets-override]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 152, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (1, lines))
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[245 chars]er']) != (1, ['pass version: openwiz:records v1, an[285 chars]de"])
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+-   'pass token: no login or token passed through the driver'])
++   "fail token: the driver's file driver names OPENWIZ_HOSTKEY_TEST_ORIGIN, the "
++   "kit's test override"])
+
+----------------------------------------------------------------------
+Ran 13 tests in 67.496s
+
+FAILED (failures=12)

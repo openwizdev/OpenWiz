@@ -1,23 +1,3 @@
-//! P4 (continued) Source diagnostics: text `room-cli` prints when a read
-//! fails, or prints where JSON or a version was expected, never reaches
-//! OpenWiz's output, except a line in the safe grammar.
-//!
-//! New in the separate fix that #5's independent review (S1) asked for. #5
-//! A7: errors and logs never include paths, the environment, stack traces
-//! or credentials. The safe grammar remains provisional; it is:
-//!
-//! - `Error: HTTP <3 digits>`, optionally `: ` and a reason phrase of ASCII
-//!   letters and single spaces (at most 60 characters), is kept as it is;
-//! - otherwise, if the line has `HTTP <3 digits>`, it becomes
-//!   `Error: HTTP <code> (detail withheld)`;
-//! - otherwise `room-cli error (detail withheld)`.
-//!
-//! Each failing read is checked through the core, the in-process `openwiz`
-//! and the release `openwiz` binary, in text and `--json`. The committed
-//! fixtures (`tests/fixtures/room-cli-0.43.1/diagnostics-*`) hold what the
-//! fixture scan allows; the variants it forbids in committed files are
-//! written here, at run time, into each test's own directory.
-
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::{Mutex, OnceLock};
@@ -29,14 +9,10 @@ use crate::support::*;
 
 const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/room-cli-0.43.1");
 
-/// A reason phrase of exactly 60 characters, the longest kept.
 const PHRASE_60: &str = "Synthetic reason phrase of exactly sixty letters and spacesx";
 
-/// What the sanitizer prints when nothing in the line is safe.
 const WITHHELD: &str = "room-cli error (detail withheld)";
 
-/// One planted diagnostic: what the fake prints, the text that must never
-/// be shown, and the line OpenWiz keeps instead.
 struct Planted {
     name: &'static str,
     text: String,
@@ -53,13 +29,10 @@ fn planted(name: &'static str, text: &str, markers: &[&str], kept: &str) -> Plan
     }
 }
 
-/// A token-like string, assembled so that no scanner reads it as a real one.
 fn token() -> String {
     format!("{}{}", "gh", "p_SyntheticTokenAbcDefGhiJklMnoPqrStu12")
 }
 
-/// The planted stderr variants. An empty text keeps the committed
-/// fixture's own stderr.
 fn stderr_variants() -> Vec<Planted> {
     let token = token();
     let long_phrase = "Synthetic ".repeat(2_000);
@@ -202,7 +175,6 @@ fn stderr_variants() -> Vec<Planted> {
             &["SyntheticLongToken"],
             WITHHELD,
         ),
-        // The limits, added after the internal Haiku review (B F3).
         planted(
             "reason phrase of 60 characters",
             &format!("Error: HTTP 500: {PHRASE_60}"),
@@ -248,15 +220,12 @@ fn stderr_variants() -> Vec<Planted> {
         planted(
             "status in a line of another shape",
             "error: HTTP 500 Internal Server Error at 10.0.0.7:8443",
-            // "7:8443", not "8443": a bare number can appear in a real age (age_ms).
             &["Internal Server Error", "10.0.0.7", "7:8443"],
             "Error: HTTP 500 (detail withheld)",
         ),
     ]
 }
 
-/// One read that fails: its committed scenario, its name in messages, and
-/// the commands and core operations that make it.
 struct FailingRead {
     scenario: &'static str,
     read: &'static str,
@@ -288,8 +257,6 @@ fn core_show(fake: &Fake, id: &str) -> Vec<String> {
     )
 }
 
-/// Every string a core result carries: an envelope's string values, or an
-/// error's message parts, and the `Debug` text of either.
 fn texts(debug: String, result: Result<serde_json::Result<Value>, OpError>) -> Vec<String> {
     let mut out = vec![debug];
     match result {
@@ -301,7 +268,6 @@ fn texts(debug: String, result: Result<serde_json::Result<Value>, OpError>) -> V
     out
 }
 
-/// Every key and string value in `value`, unescaped.
 fn strings(value: &Value, out: &mut Vec<String>) {
     match value {
         Value::String(s) => out.push(s.clone()),
@@ -316,7 +282,6 @@ fn strings(value: &Value, out: &mut Vec<String>) {
     }
 }
 
-/// stdout, stderr and, for `--json`, every string in the JSON printed.
 fn cli_texts(args: &[&str], code: i32, out: String, err: String) -> Vec<String> {
     let mut all = vec![format!("exit {code}")];
     if args.contains(&"--json")
@@ -328,9 +293,6 @@ fn cli_texts(args: &[&str], code: i32, out: String, err: String) -> Vec<String> 
     all
 }
 
-/// A fake answering from a copy of `scenario`, written to its own
-/// directory after `edit`. `extends` and every `stdout_file` are made
-/// absolute, so the copy reads the committed fixtures.
 fn fake_with(test: &str, scenario: &str, edit: impl FnOnce(&mut Value)) -> Fake {
     let fake = Fake::new(test, scenario);
     let dir = Path::new(FIXTURES).join(scenario);
@@ -358,14 +320,10 @@ fn fake_with(test: &str, scenario: &str, edit: impl FnOnce(&mut Value)) -> Fake 
     fake
 }
 
-/// What the failing response prints on stdout; a failed read's stdout is
-/// never used (added after the internal Haiku review, B F5).
 const FAILED_STDOUT: &str =
     "Synthetic stdout of a failed read at /Users/synthetic-owner/failed-read-stdout";
 const FAILED_STDOUT_MARKER: &str = "failed-read-stdout";
 
-/// Replaces the failing response's stderr (the committed one is kept when
-/// `text` is empty), and plants [`FAILED_STDOUT`] on its stdout.
 fn set_stderr(text: &str) -> impl FnOnce(&mut Value) + '_ {
     move |doc| {
         for response in doc["responses"].as_array_mut().expect("responses") {
@@ -379,7 +337,6 @@ fn set_stderr(text: &str) -> impl FnOnce(&mut Value) + '_ {
     }
 }
 
-/// The release `openwiz`, built once for this test binary (as P10 does).
 fn release_openwiz() -> &'static Path {
     static PROGRAM: OnceLock<PathBuf> = OnceLock::new();
     PROGRAM.get_or_init(|| {
@@ -405,7 +362,6 @@ fn release_openwiz() -> &'static Path {
     })
 }
 
-/// Runs the release `openwiz` with this fake first on `PATH`.
 fn binary(fake: &Fake, args: &[&str]) -> (i32, String, String) {
     let out = Command::new(release_openwiz())
         .args(args)
@@ -420,8 +376,6 @@ fn binary(fake: &Fake, args: &[&str]) -> (i32, String, String) {
     )
 }
 
-/// Every surface of one fake: the core, then each command in process and
-/// through the release binary. Returns (surface, its strings).
 fn surfaces(fake: &Fake, read: &FailingRead) -> Vec<(String, Vec<String>)> {
     let mut all = vec![("core".to_owned(), (read.core)(fake))];
     for args in read.commands {
@@ -436,8 +390,6 @@ fn surfaces(fake: &Fake, read: &FailingRead) -> Vec<(String, Vec<String>)> {
     all
 }
 
-/// The problems with one surface: a planted marker shown, or the kept
-/// line missing.
 fn problems(
     label: &str,
     surface: &str,
@@ -465,8 +417,6 @@ fn problems(
     found
 }
 
-/// The problems one stderr variant shows on every surface of one failing
-/// read, in a fake of its own.
 fn check_variant(read: &FailingRead, i: usize, variant: Planted) -> Vec<String> {
     let label = format!("{} / {}", read.read, variant.name);
     let fake = fake_with(
@@ -476,8 +426,6 @@ fn check_variant(read: &FailingRead, i: usize, variant: Planted) -> Vec<String> 
     );
     let mut markers = variant.markers;
     markers.push(FAILED_STDOUT_MARKER.to_owned());
-    // #37, Sol's PR #40 finding 1: a failed version read keeps safe facts
-    // only, so even #21's safe line is never shown for it.
     let kept = if read.read == "room-cli --version" {
         markers.push(variant.kept.clone());
         "exited 1 (detail withheld)".to_owned()
@@ -491,16 +439,8 @@ fn check_variant(read: &FailingRead, i: usize, variant: Planted) -> Vec<String> 
     found
 }
 
-/// How many rows of one case run at once (#1260). Eight, not four: on a
-/// runner shared with every other test target, proof's six failing-read cases
-/// were 10.5-10.7 s against 11.5-11.9 s with four (three runs each, beside
-/// five other targets), and the process tree's peak stayed at 151-251 MiB
-/// (X3's fixture-worker measurement).
 const ROWS_AT_ONCE: usize = 8;
 
-/// Runs `check` on every item, [`ROWS_AT_ONCE`] at a time, and returns the
-/// results in the items' order (#1260): for rows that share nothing and
-/// mostly wait on child processes. A row's panic fails the test.
 fn in_pool<T: Send, R: Send>(items: Vec<T>, check: impl Fn(usize, T) -> R + Sync) -> Vec<R> {
     let items = Mutex::new(items.into_iter().enumerate());
     let mut results: Vec<(usize, R)> = std::thread::scope(|scope| {
@@ -526,9 +466,6 @@ fn in_pool<T: Send, R: Send>(items: Vec<T>, check: impl Fn(usize, T) -> R + Sync
     results.into_iter().map(|(_, result)| result).collect()
 }
 
-/// Runs every stderr variant against one failing read. The variants share
-/// nothing (each has its own fake and directory), so they run in a pool
-/// (#1260): the case mostly waits on child processes.
 fn check_failing_read(read: FailingRead) {
     let read = &read;
     let found: Vec<String> = in_pool(stderr_variants(), |i, variant| {
@@ -623,9 +560,6 @@ fn thread_output_diagnostics_never_reach_the_output() {
     });
 }
 
-/// The version read goes through the same runner. Since #37 (Sol's PR #40
-/// finding 1) its failure shows safe facts only: `exited 1 (detail
-/// withheld)`, never even #21's safe line.
 #[test]
 fn version_read_diagnostics_never_reach_the_output() {
     check_failing_read(FailingRead {
@@ -644,9 +578,6 @@ fn version_read_diagnostics_never_reach_the_output() {
     });
 }
 
-/// Text `room-cli` prints on stdout where OpenWiz expects a version, JSON or
-/// a recorded value: only a version of the form `N.N.N`, OpenWiz's own
-/// words and recognised labels are shown.
 #[test]
 fn unexpected_stdout_never_reaches_the_output() {
     let token = token();
@@ -674,8 +605,6 @@ fn unexpected_stdout_never_reaches_the_output() {
     rows[0]["visibility"] = Value::from(leak.clone());
     rows[5]["executionTarget"] = Value::from(leak.clone());
 
-    // (name, the argv answered, its planted stdout, the failing read, the
-    // text OpenWiz shows instead).
     let cases: Vec<(&str, Value, String, FailingRead, &str)> = vec![
         (
             "version text",
@@ -738,8 +667,6 @@ fn unexpected_stdout_never_reaches_the_output() {
     let planted_dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("p04b_planted_stdout");
     let _ = std::fs::remove_dir_all(&planted_dir);
     crate::dirs::private_dir_all(&planted_dir).expect("planted dir");
-    // Each case has its own fake and file, so the cases run in a pool
-    // (#1260).
     let (planted_dir, markers) = (&planted_dir, &markers);
     let found: Vec<String> = in_pool(cases, |i, (name, argv, stdout, read, kept)| {
         let file = planted_dir.join(format!("stdout-{i}"));
@@ -766,10 +693,6 @@ fn unexpected_stdout_never_reaches_the_output() {
     );
 }
 
-/// New after the internal Haiku review (A1): not-found is still recognised
-/// from the raw line, as before the fix (it contains `HTTP 404: Thread not
-/// found`), so `show` of a missing session still exits 3, while only the
-/// safe line is shown.
 #[test]
 fn a_not_found_line_with_an_unsafe_suffix_is_still_not_found() {
     let planted = "Error: HTTP 404: Thread not found at /Users/synthetic-owner/.syn-room (token=synthetic-secret-value)";
@@ -836,10 +759,6 @@ fn a_not_found_line_with_an_unsafe_suffix_is_still_not_found() {
     );
 }
 
-/// New after merging #8's `send` (builder finding M1): the sanitizer keeps
-/// #8's rule that only an exact documented stderr line is a rejection of
-/// `thread tell`. A documented line with an unsafe suffix is uncertain, the
-/// safe direction, and nothing of it is shown.
 #[test]
 fn tell_keeps_its_exact_documented_rejections() {
     use openwiz_core::messaging::Mode;
@@ -914,9 +833,6 @@ fn tell_keeps_its_exact_documented_rejections() {
     );
 }
 
-/// #37: #21's version grammar is `N.N.N` (1 to 4 digits each) or `v<N>` (1 to
-/// 6 digits), the same as the core's. A version in it is shown as it is;
-/// anything else is withheld, and the run goes on.
 #[test]
 fn the_version_grammar_is_n_n_n_or_v_n() {
     let cases: &[(&str, bool)] = &[
@@ -936,7 +852,6 @@ fn the_version_grammar_is_n_n_n_or_v_n() {
         ("v127 (synthetic update notice)", false),
         ("vv127", false),
     ];
-    // Each row has its own fake, so the rows run in a pool (#1260).
     in_pool(cases.to_vec(), |i, (version, shown)| {
         version_grammar_row(i, version, shown)
     });
@@ -974,7 +889,6 @@ fn version_grammar_row(i: usize, version: &str, shown: bool) {
     }
 }
 
-// #1672: unsafe diagnostics use whole HTTP words, including at byte zero.
 #[test]
 fn ta3_http_word_boundaries_return_typed_private_read_failures() {
     use openwiz_core::source::{SessionScope, SessionSource, SourceError};

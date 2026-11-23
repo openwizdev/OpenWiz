@@ -1,3 +1,0 @@
-$ sh ci/hosted/test.sh  # ci/hosted/setup.sh planted: appends a synthetic comment to the copied sources before apt
-FAIL setup: Ubuntu source configuration changed at the apt boundary
-1 failed

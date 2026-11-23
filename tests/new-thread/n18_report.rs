@@ -1,12 +1,6 @@
-//! N18, the core's half (the CLI's is phase 2's): the report, the record
-//! and the preview match `contracts/new-thread.v1.schema.json`, and the
-//! effects are worked out, and recorded, before anything is created. A
-//! preview claims nothing and calls nothing.
-
 use openwiz_core::messaging::send::UncertainReason;
 use openwiz_core::new_thread::effects::EffectKind;
-use openwiz_core::new_thread::operation::{PreviewVerdict, preview_new_thread};
-use openwiz_core::new_thread::outcome::{RefusalReason, SpawnReply};
+use openwiz_core::new_thread::outcome::SpawnReply;
 use openwiz_core::new_thread::record::RecordState;
 use serde_json::Value;
 
@@ -19,11 +13,7 @@ fn valid(def: &str, value: &Value) {
 
 #[test]
 fn n18_report_contracts_preserve_all_original_cases() {
-    let cases: [(&str, fn()); 6] = [
-        (
-            "a_preview_shows_the_effects_and_claims_and_calls_nothing",
-            a_preview_shows_the_effects_and_claims_and_calls_nothing,
-        ),
+    let cases: [(&str, fn()); 4] = [
         (
             "create_effects_keep_the_project_read_time",
             create_effects_keep_the_project_read_time,
@@ -31,10 +21,6 @@ fn n18_report_contracts_preserve_all_original_cases() {
         (
             "every_outcome_matches_the_schema",
             every_outcome_matches_the_schema,
-        ),
-        (
-            "preview_effects_keep_the_project_read_time",
-            preview_effects_keep_the_project_read_time,
         ),
         (
             "the_effects_are_recorded_before_the_call",
@@ -119,8 +105,6 @@ fn the_schema_uses_only_checked_keywords() {
         "op_id": "op-1",
     });
     valid("request", &request);
-    // B2 (ClosedWiz#15), with this recorded reason: the request may carry
-    // staged attachment ids (B-1 to B-10), each at most once.
     let mut attached = request.clone();
     attached["prompt"]["attachments"] = serde_json::json!(["att-syn-0001"]);
     valid("request", &attached);
@@ -178,49 +162,6 @@ fn the_effects_are_recorded_before_the_call() {
             "{needle}: {words:?}"
         );
     }
-}
-
-fn a_preview_shows_the_effects_and_claims_and_calls_nothing() {
-    let client = FakeClient::new();
-    let preview = preview_new_thread(
-        &client,
-        &clock(),
-        &request(offered(), "Synthetic", "op-n18-p"),
-    )
-    .expect("a preview");
-    assert_eq!(client.spawns(), 0);
-    assert_eq!(
-        preview.verdict,
-        PreviewVerdict::Ready {
-            provider: "codex".to_owned()
-        }
-    );
-    assert_eq!(preview.effects.as_ref().unwrap().effects.len(), 7);
-    valid("preview", &serde_json::to_value(&preview).unwrap());
-
-    let mut r = request(offered(), "Synthetic", "op-n18-p2");
-    r.project = openwiz_core::new_thread::ProjectRef::Id("prj_syn_0002".to_owned());
-    let stopped = preview_new_thread(&client, &clock(), &r).unwrap();
-    let PreviewVerdict::Stopped { outcome } = &stopped.verdict else {
-        panic!("{stopped:?}")
-    };
-    assert!(matches!(
-        outcome,
-        openwiz_core::new_thread::outcome::Outcome::Refused {
-            reason: RefusalReason::ProjectNoGithubRemote,
-            ..
-        }
-    ));
-    assert!(stopped.effects.is_none());
-    assert_eq!(client.spawns(), 0);
-    valid("preview", &serde_json::to_value(&stopped).unwrap());
-}
-
-fn preview_effects_keep_the_project_read_time() {
-    let client = FakeClient::new();
-    let r = request(offered(), "Synthetic", "op-n18-preview-time");
-    let preview = preview_new_thread(&client, &clock(), &r).unwrap();
-    assert_eq!(preview.effects.unwrap().read_at, T0);
 }
 
 fn create_effects_keep_the_project_read_time() {

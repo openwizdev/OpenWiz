@@ -1,6 +1,3 @@
-//! P9 Reported configuration: model and effort are always labelled as
-//! reported, never as the serving model.
-
 use openwiz_core::model::{Fact, ReportedConfiguration};
 
 use crate::support::*;
@@ -18,9 +15,6 @@ fn model_and_effort_come_from_thread_show_as_reported_configuration() {
     );
 }
 
-/// Changed in ticket 1's correction round 1 (Sol S7): the label must be the
-/// configuration's own, tied to both values (text contract 6 in
-/// `support.rs`), in `ls -l` and `show`, not just "reported" somewhere.
 #[test]
 fn text_labels_model_and_effort_as_reported_configuration() {
     for scenario in ["normal", "show-missing-fields"] {

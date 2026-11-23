@@ -1,13 +1,3 @@
-//! #1010 (TV13): the CLI build script (which the server and service build
-//! scripts include) reads the build identity from `.git` without watching a
-//! path that doesn't exist. Cargo treats a missing watched path as always
-//! changed, so every build reran the script and rebuilt the program.
-//!
-//! Each case copies `crates/cli/build.rs` byte for byte into a small
-//! `openwiz-cli` crate inside a synthetic git repository, builds it twice and
-//! runs it. The expected commit comes from `git rev-parse HEAD`, never from
-//! the build script's own reading of `.git`.
-
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -18,7 +8,6 @@ use crate::dirs::private_dir_all;
 
 const TESTS: &str = env!("CARGO_MANIFEST_DIR");
 
-/// A throwaway directory, removed when dropped.
 struct Scratch(PathBuf);
 
 impl Scratch {
@@ -42,8 +31,6 @@ impl Drop for Scratch {
     }
 }
 
-/// `command` with no inherited git or Cargo build settings, so an outer
-/// hook's `GIT_DIR` or the outer build's target directory can't leak in.
 fn clean(mut command: Command) -> Command {
     for (key, _) in env::vars_os() {
         let key = key.to_string_lossy().into_owned();
@@ -72,7 +59,6 @@ fn git(dir: &Path, args: &[&str]) -> String {
     String::from_utf8(out.stdout).unwrap().trim().to_owned()
 }
 
-/// A repository on branch `main` with one commit holding the copied crate.
 fn repo(scratch: &Scratch) -> PathBuf {
     let root = scratch.0.join("repo");
     let cli = root.join("crates/cli");
@@ -100,7 +86,6 @@ fn commit(root: &Path, message: &str) {
     git(root, &["commit", "-q", "--allow-empty", "-m", message]);
 }
 
-/// Builds the copied crate under `root`; true when the build script ran.
 fn build(root: &Path, target: &Path) -> bool {
     let cargo = env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
     let mut command = clean(Command::new(cargo));
@@ -121,7 +106,6 @@ fn build(root: &Path, target: &Path) -> bool {
     ran
 }
 
-/// The commit the built program reports.
 fn identity(target: &Path) -> String {
     let out = Command::new(target.join("debug/openwiz-cli"))
         .output()
@@ -129,8 +113,6 @@ fn identity(target: &Path) -> String {
     String::from_utf8(out.stdout).unwrap()
 }
 
-/// Builds twice: the first build reads `root`'s HEAD commit, and the second,
-/// with nothing changed, does not rerun the build script.
 fn builds_once(root: &Path, target: &Path) {
     let expected = git(root, &["rev-parse", "HEAD"]);
     build(root, target);
@@ -141,8 +123,6 @@ fn builds_once(root: &Path, target: &Path) {
     );
 }
 
-// catches: a watched path that doesn't exist (`.git/commondir` outside a
-// worktree) makes every build on a branch rerun the build script.
 #[test]
 fn a_branch_build_reads_its_commit_and_a_second_build_does_nothing() {
     let scratch = Scratch::new("branch");
@@ -150,8 +130,6 @@ fn a_branch_build_reads_its_commit_and_a_second_build_does_nothing() {
     builds_once(&root, &scratch.0.join("target"));
 }
 
-// catches: a packed branch's missing loose ref, watched, reruns every build;
-// or the commit is not read from `packed-refs`.
 #[test]
 fn a_packed_branch_build_reads_its_commit_and_a_second_build_does_nothing() {
     let scratch = Scratch::new("packed");
@@ -161,7 +139,6 @@ fn a_packed_branch_build_reads_its_commit_and_a_second_build_does_nothing() {
     builds_once(&root, &scratch.0.join("target"));
 }
 
-// catches: a detached HEAD's commit is misread, or its build reruns.
 #[test]
 fn a_detached_build_reads_its_commit_and_a_second_build_does_nothing() {
     let scratch = Scratch::new("detached");
@@ -171,8 +148,6 @@ fn a_detached_build_reads_its_commit_and_a_second_build_does_nothing() {
     builds_once(&root, &scratch.0.join("target"));
 }
 
-// catches: a worktree's commit is not read through `commondir`, or its
-// build reruns.
 #[test]
 fn a_worktree_build_reads_its_commit_and_a_second_build_does_nothing() {
     let scratch = Scratch::new("worktree");
@@ -193,9 +168,6 @@ fn a_worktree_build_reads_its_commit_and_a_second_build_does_nothing() {
     builds_once(&tree, &scratch.0.join("target"));
 }
 
-// catches: watching only paths that exist misses a branch's loose ref that
-// appears after the first build (a new commit on a packed branch), so the
-// program keeps reporting the old commit.
 #[test]
 fn a_ref_that_appears_after_the_first_build_rebuilds_with_the_new_commit() {
     let scratch = Scratch::new("appears");

@@ -1,13 +1,7 @@
 #!/usr/bin/env python3
-"""Planted bad driver for the kit's tests: it prints one credential of the format KIT_LEAK names (#1568).
-
-Each value is synthetic and built here, so no file holds one and the kit's environment lacks it.
-"""
 import importlib.machinery, importlib.util, os, sys
 sys.dont_write_bytecode = True
 V = 'Planted0Format0'
-# One per credential format the status contract lists (agent-status v1, "What it never holds"), under its name
-# there, and each other gh?_ prefix.
 FORMATS = {
     'token=': 'to' + 'ken=' + V, 'key=': 'k' + 'ey=' + V, 'secret=': 'sec' + 'ret=' + V,
     'password=': 'pass' + 'word=' + V, 'sig=': 's' + 'ig=' + V, 'password:': 'pass' + 'word: ' + V,

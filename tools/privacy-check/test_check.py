@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Synthetic black-box proofs for open development v1; no network or private reads."""
 import contextlib
 import importlib.util
 import io
@@ -86,9 +85,6 @@ class Check(unittest.TestCase):
         self.text(PRIVATE_MAIL + ' noreply@github.com git@github.com user@github.com pass@github.com')
 
     def test_t3_helper_state_locations(self):
-        # WZ-P4, #1409 R1's form: a concrete helper snapshot/window location
-        # with its per-run suffix is private state, even under $HOME. Every
-        # suffix below is synthetic; the generic templates must still pass.
         store = '$HOME/.openwiz/helper-checks/synthetic-owner/widgets/12/'
         for value in (store + 'snapshot.' + 'aB3xQ9' + '/state.json',
                       'window: `window.' + 'Zq81Kp' + '/state.json` in the same parent',
@@ -103,16 +99,11 @@ class Check(unittest.TestCase):
             self.text(value)
 
     def test_t3_owner_machine_facts(self):
-        # WZ-P4, #1409 R2's form: the owner machine's CPU facts, however
-        # written, even wrapped across comment lines. A generic explanation,
-        # a public runner fact and an explicitly invented example pass.
-        # Numbers are kept apart from their units so this file passes its own scan.
         three, four, ten, sixteen = '3', '4', '10', '16'
         for value in ("# above it (on the PC's runners nproc counts the host's " + sixteen + '\n# CPUs and cpu.max allows ' + three + ').',
                       "The owner's Mac has " + ten + ' cores.',
                       "The PC's runner container has a CPU quota of " + three + '.',
                       'Measured on the Mac, pinned to ' + four + ' vCPUs.',
-                      # #2781: a hyphenated count is the same fact.
                       "# keep the PC's " + three + '-CPU runners busy.',
                       'The Mac has a ' + ten + '-core chip.',
                       "The owner's runner is pinned to " + four + ' - vCPUs.'):
@@ -121,8 +112,6 @@ class Check(unittest.TestCase):
                       'A GitHub-hosted runner has ' + four + ' CPUs.',
                       'For example, an invented PC whose host counts ' + sixteen + ' CPUs while cpu.max allows ' + three + '.',
                       "The PC's runners are listed in the private machine notes.",
-                      # #2781: hyphenated counts without the owner machine, or
-                      # invented, and hyphenated words that are no count, pass.
                       'A GitHub-hosted runner has ' + four + '-CPU machines.',
                       "For example, an invented PC's " + three + '-CPU runners.',
                       "The PC's multi-core build and the Mac's x86_64-cores note.",
@@ -130,17 +119,12 @@ class Check(unittest.TestCase):
             self.text(value)
 
     def test_t3_machine_facts_any_case_and_bound_to_their_own_sentence(self):
-        # Review R5: ordinary sentence capitals are still the owner machine.
-        # Review R6: an unrelated marker on a nearby line exempts nothing;
-        # only the fact's own sentence can say it is invented.
         four, sixteen = '4', '16'
         for value in ('The PC has ' + sixteen + ' cores.', 'The Mac has ' + four + ' CPUs.',
                       'THE MAC HAS ' + four + ' CPUS.',
                       '# the PC has ' + sixteen + ' cores.\n# Synthetic regression cases follow.',
                       '# Synthetic regression cases follow.\n# the PC has ' + sixteen + ' cores.',
                       'An invented example comes later. The PC has ' + sixteen + ' cores.',
-                      # Re-check R6: separate comments without full stops are
-                      # not one sentence, and owner context may be the sentence before.
                       '# Synthetic regression cases follow\n# the PC has ' + sixteen + ' cores',
                       '# the PC has ' + sixteen + ' cores\n# Synthetic regression cases follow',
                       'The PC is the always-on hub. Its CPU quota is ' + four + '.'):
@@ -151,8 +135,6 @@ class Check(unittest.TestCase):
             self.text(value)
 
     def test_t3_refused_locations_are_redacted_in_diagnostics(self):
-        # Review R4: the refusal must not print the private value it refused,
-        # for a staged directory or a Git tree.
         suffix, fact = 'aB3xQ9', 'the PC has ' + '16' + ' cores'
         names = ('helpers/snapshot.' + suffix + '/state.json', 'notes/' + fact + '.md')
         for name in names:
@@ -226,7 +208,6 @@ class Check(unittest.TestCase):
             ('missing-repo', ['--git-tree', 'HEAD'], 'input'),
         ]
         for name, args, role in rows:
-            # A valid list must not hide which later input failed to read.
             for used in (False, True):
                 if '--literals' in args or '--require-literals' in args:
                     options = ['--require-literals'] if used else []
@@ -271,6 +252,55 @@ class Check(unittest.TestCase):
                 path.write_text('```bad\n' + THREAD + '\n```\n```good\n' + THREAD + '\n```\n')
                 self.verdict(self.call('--tree', folder), 'T1')
 
+    def test_runtime_root_maps_only_the_contract_at_an_archive_runtime_path(self):
+        bad = '```bad\n' + THREAD + '\n```\n'
+        for name, roots, rule in (('t1/runtime/contracts/open-development.v1.md', ('t1',), None),
+                                  ('t2/runtime/contracts/open-development.v1.md', ('t1', 't2'), None),
+                                  ('t1/runtime/contracts/open-development.v1.md', (), 'T1'),
+                                  ('other/runtime/contracts/open-development.v1.md', ('t1',), 'T1'),
+                                  ('t1/contracts/open-development.v1.md', ('t1',), 'T1'),
+                                  ('t1/runtime/runtime/contracts/open-development.v1.md', ('t1',), 'T1'),
+                                  ('t1/runtime/skills/contracts/open-development.v1.md', ('t1',), 'T1'),
+                                  ('t1/runtime/other.md', ('t1',), 'T1')):
+            with self.subTest(name=name, roots=roots):
+                folder = self.root / ('rt-' + name.replace('/', '_') + '-'.join(roots))
+                (folder / name).parent.mkdir(parents=True)
+                (folder / name).write_text(bad)
+                args = [x for root in roots for x in ('--runtime-root', root)]
+                self.verdict(self.call('--tree', folder, *args), rule)
+                if rule is None:
+                    (folder / name).write_text(bad + THREAD + '\n')
+                    self.verdict(self.call('--tree', folder, *args), 'T1')
+
+    def test_a_symlink_at_the_contract_path_is_scanned_as_plain_text(self):
+        fenced = '```bad\n' + THREAD + '\n```\n'
+        for name, args in (('t1/runtime/contracts/open-development.v1.md', ('--runtime-root', 't1')),
+                           ('contracts/open-development.v1.md', ())):
+            with self.subTest(name=name):
+                folder = self.root / ('link-' + name.replace('/', '_'))
+                (folder / name).parent.mkdir(parents=True)
+                (folder / name).symlink_to(fenced)
+                self.verdict(self.call('--tree', folder, *args), 'T1')
+        self.make_repo()
+        (self.repo / 'contracts').mkdir()
+        (self.repo / 'contracts/open-development.v1.md').symlink_to(fenced)
+        self.git('add', '.')
+        result = self.scan_git('--git-tree', self.git('write-tree'))
+        self.assertEqual(result[0], 1, result)
+        self.assertIn('T1 tree:"contracts/open-development.v1.md":2', result[1])
+
+    def test_runtime_root_keeps_every_other_rule_and_needs_a_tree(self):
+        folder = self.root / 'rt-rules'
+        (folder / 't1/runtime/private').mkdir(parents=True)
+        (folder / 't1/runtime/private/note.md').write_text('clean\n')
+        self.verdict(self.call('--tree', folder, '--runtime-root', 't1'))
+        (folder / 't1/runtime/note.md').write_text(BAD_MAIL + '\n')
+        self.verdict(self.call('--tree', folder, '--runtime-root', 't1'), 'T3')
+        for root in ('', 'a/b', '.', '..'):
+            with self.subTest(root=root):
+                self.verdict(self.call('--tree', self.tree, '--runtime-root', root), 'READ')
+        self.verdict(self.call('--title-file', folder / 't1/runtime/private/note.md', '--runtime-root', 't1'), 'READ')
+
     def workflow(self, body, rule=None):
         path = self.tree / '.github/workflows/test.yml'
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -308,8 +338,6 @@ class Check(unittest.TestCase):
             self.workflow(body, 'F2')
 
     def test_actual_repository_workflows_pass_f2(self):
-        # The import carries these exact bytes; fixture-only acceptance is not
-        # proof that the representation used by CI is publicly checkable.
         folder = self.tree / '.github/workflows'
         folder.mkdir(parents=True)
         sources = HERE.parent.parent / '.github/workflows'
@@ -322,8 +350,6 @@ class Check(unittest.TestCase):
         self.verdict(self.call('--tree', self.tree))
 
     def test_actual_workflow_proof_requires_both_inputs(self):
-        # Execute the owning proof from an incomplete checkout, as the private
-        # Privacy job did. A missing source must fail before a partial scan.
         for missing in ('ci.yml', 'privacy.yml'):
             with self.subTest(missing=missing):
                 checkout = self.root / missing
@@ -363,8 +389,6 @@ class Check(unittest.TestCase):
             for label in ('self-hosted', 'namespace-profile-closedwiz-rust', 'unknown'):
                 mutants.append(runner.replace("|| 'ubuntu-24.04' }}", "|| '" + label + "' }}"))
                 mutants.append("${{ " + route + " || '" + label + "' }}")
-            # Removing either guard must never admit a private pool for a fork
-            # or for a public copy. Trailing expressions cannot escape proof.
             mutants.extend([
                 "${{ github.repository == 'jparker2006/ClosedWiz' && (" + route + suffix,
                 "${{ " + route + suffix,
@@ -394,7 +418,6 @@ class Check(unittest.TestCase):
         spec.loader.exec_module(self.checker)
 
     def history(self, rule=None, base=None):
-        # Substitute policy data only: all history traversal is real Git.
         out = io.StringIO()
         with patch.multiple(self.checker, PUBLIC_ROOT=self.public_root, PUBLIC_ANCHOR=self.anchor), contextlib.redirect_stdout(out):
             rc = self.checker.main(['--repo', str(self.repo), '--base', base or self.anchor, '--head', 'HEAD'])
@@ -557,7 +580,6 @@ class Check(unittest.TestCase):
 
     def test_hook_rejects_private_ancestry_before_fast_checks(self):
         self.make_repo()
-        # The user-facing hook receives Git's update stream; no network push.
         head = self.git('rev-parse', 'HEAD')
         line = f'refs/heads/main {head} refs/heads/main {self.anchor}\n'
         r = subprocess.run(['sh', str(HERE.parent.parent / '.githooks/pre-push'), 'origin',
@@ -698,10 +720,6 @@ class Check(unittest.TestCase):
             self.assertIn('READ ', out)
 
     def published_main(self):
-        # Already-public history: a commit on the destination's main whose
-        # message this check would refuse. It stands for main's history,
-        # scanned when it landed; a first-push scan that reaches it scanned
-        # commits the push does not publish.
         self.make_repo()
         self.git('commit', '--allow-empty', '-qm', 'published\n\n' + THREAD)
         self.git('update-ref', 'refs/remotes/origin/main', 'HEAD')
@@ -710,8 +728,6 @@ class Check(unittest.TestCase):
         self.git('commit', '--allow-empty', '-qm', 'clean pushed commit')
 
     def test_first_push_scans_from_merge_base_with_destination_main(self):
-        # The user-facing hook, copied with synthetic policy constants, pushing
-        # to a guarded ssh URL whose transport runs a local bare repository.
         self.published_main()
         hook = self.root / 'hook-root'
         (hook / '.githooks').mkdir(parents=True)
@@ -725,7 +741,6 @@ class Check(unittest.TestCase):
         policy.write_text(text)
         remotes = self.root / 'remotes'
         url = lambda name: 'ssh://synthetic.invalid/' + name + '.git'
-        # Test-only destinations: the copy's allowlist names the fixture URLs.
         adapter = hook / 'tools/privacy-check/hook.py'
         text, count = re.subn(r'PUBLIC_URLS = \([^)]*\)', 'PUBLIC_URLS = ' + repr(tuple(url(x) for x in ('published', 'fresh', 'empty', 'ahead'))), adapter.read_text())
         self.assertLessEqual(count, 1)
@@ -742,8 +757,6 @@ class Check(unittest.TestCase):
             subprocess.run(['git', 'init', '-q', '--bare', str(remotes / (name + '.git'))], check=True)
             if main:
                 self.git('push', '-q', str(remotes / (name + '.git')), main + ':refs/heads/main')
-        # The push's own environment, as Git hands it to the hook: no GIT_*
-        # override unless a case adds one, and a private HOME for config.
         (self.root / 'home').mkdir()
         clean = {**{k: v for k, v in os.environ.items() if not k.startswith('GIT_')},
                  'HOME': str(self.root / 'home'), 'XDG_CONFIG_HOME': str(self.root / 'home'),
@@ -753,19 +766,13 @@ class Check(unittest.TestCase):
             r = subprocess.run(['sh', str(hook / '.githooks/pre-push'), 'origin', url(name)],
                                cwd=self.repo, input=line, text=True, capture_output=True, env={**clean, **env})
             return r.returncode, r.stdout + r.stderr
-        # Only the pushed commit is new at the destination, whose main
-        # already holds the published history: that history is not rescanned.
         self.git('remote', 'add', 'origin', url('published'))
         rc, out = push('published')
         self.assertEqual(rc, 0, out)
         self.assertIn('range: from the merge-base with upstream', out)
-        # The pushed commits themselves are always scanned.
         self.git('commit', '--allow-empty', '-qm', 'pushed\n\n' + THREAD)
         self.assertEqual(push('published')[0], 1)
         self.git('reset', '-q', '--hard', 'HEAD~1')
-        # The local origin/main still names the planted commit in every case
-        # below, but the destination does not hold it: it is unpublished
-        # there and must be scanned. Fail closed: scan from the anchor.
         cases = (
             ('split push URL', 'fresh', [('remote.origin.url', str(remotes / 'published.git')),
                                          ('remote.origin.pushurl', url('fresh'))]),
@@ -774,10 +781,6 @@ class Check(unittest.TestCase):
             ('URL Git would rewrite', 'empty', [('remote.origin.url', url('empty')),
                                                 ('url.' + url('published') + '.insteadOf', url('empty'))]),
         )
-        # R2 and the allowlist: the destination does hold the planted commit
-        # here, but a command-scoped Git setting or override variable can
-        # make the lookup reach a different repository than the push, and an
-        # off-allowlist URL is never trusted. Fail closed: scan from the anchor.
         ssh_value = str(ssh)
         overrides = (
             ('git -c core.sshCommand', {'GIT_CONFIG_PARAMETERS': "'core.sshcommand'='" + ssh_value + "'"}),
@@ -804,9 +807,6 @@ class Check(unittest.TestCase):
                 self.assertIn('T1 ', out)
                 for key, _ in config:
                     self.git('config', '--unset-all', key)
-        # #872: the destination's main moved on after this clone last
-        # fetched, so its commit is not here yet. The push still narrows,
-        # and the pushed commits themselves are still scanned.
         ahead = str(remotes / 'ahead.git')
         subprocess.run(['git', 'init', '-q', '--bare', ahead], check=True)
         self.git('push', '-q', ahead, published + ':refs/heads/main')
@@ -819,9 +819,6 @@ class Check(unittest.TestCase):
         self.git('commit', '--allow-empty', '-qm', 'pushed\n\n' + THREAD)
         self.assertEqual(push('ahead')[0], 1)
         self.git('reset', '-q', '--hard', 'HEAD~1')
-        # The lookup and fetch reach the push URL and nothing else: no lazy
-        # fetch from a promisor remote, no configured bundle source, and no
-        # per-URL remote settings (which fall back to the full scan).
         other = remotes / 'other.git'
         bundle = self.root / 'other.bundle'
         self.git('-C', str(other), 'bundle', 'create', '-q', str(bundle), 'refs/heads/main')
@@ -854,9 +851,6 @@ class Check(unittest.TestCase):
                         self.git('update-ref', '-d', ref)
 
     def test_first_push_narrowing_allowlist(self):
-        # The production allowlist, read as the hook reads it: which push URL
-        # and which push environment may ask the destination for its main.
-        # Every refusal here means the full scan from the anchor.
         hook = self.load_adapter('hook')
         canonical = 'https://github.com/openwizdev/OpenWiz'
         for url in ('https://github.com/openwizdev/OpenWiz', 'https://github.com/openwizdev/OpenWiz.git',
@@ -871,8 +865,6 @@ class Check(unittest.TestCase):
                     'https://github.com/openwizdev/openwiz-fork', 'https://github.com/jparker2006/ClosedWiz', ''):
             with self.subTest(url=url):
                 self.assertFalse(hook.narrowable(url, {}))
-        # Command-scoped config whose every key is a hook.* key (as a sandbox's
-        # commit-message hook sets) picks no repository or transport.
         def scoped(*keys, **extra):
             env = {'GIT_CONFIG_COUNT': str(len(keys))}
             for i, key in enumerate(keys):
@@ -922,19 +914,11 @@ class Check(unittest.TestCase):
                 return adapter.main(), out.getvalue()
         rc, out = run('refs/heads/topic')
         self.assertEqual(rc, 0, out)
-        # Creating main itself: origin/main is the pushed commit, so there is
-        # no earlier public state to start from; scan from the anchor.
         rc, out = run('refs/heads/main')
         self.assertEqual(rc, 1, out)
         self.assertIn('T1 ', out)
 
     def test_ci_pull_request_scans_from_merge_base_with_base_branch(self):
-        # #757. A pull_request event's base.sha can be older than its base
-        # branch, as on #721 after main was merged in. Main's already-public
-        # history (the planted commit) is not the PR's own: scanning it made
-        # #721's scan time out. Catches: a range that reaches past the PR's
-        # merge-base with its base branch, one that omits a PR commit, and a
-        # missing base that refuses or skips instead of scanning from the anchor.
         self.published_main()
         adapter = self.load_adapter('ci')
         event_path = self.root / 'event.json'
@@ -948,21 +932,16 @@ class Check(unittest.TestCase):
                                 adapter.check, PUBLIC_ROOT=self.public_root, PUBLIC_ANCHOR=self.anchor), contextlib.redirect_stdout(out):
                 return adapter.main(), out.getvalue()
         absent = 'f' * 40
-        # A stale base, or one missing from the checkout: the base branch's
-        # merge-base bounds the scan.
         for base in (self.anchor, absent):
             with self.subTest(base=base):
                 rc, out = run(base)
                 self.assertEqual(rc, 0, out)
                 self.assertIn('range: from the merge-base with upstream', out)
-        # Every PR commit is still scanned.
         self.git('commit', '--allow-empty', '-qm', 'pr commit\n\n' + THREAD)
         rc, out = run(self.anchor)
         self.assertEqual(rc, 1, out)
         self.assertIn('T1 commit-1', out)
         self.git('reset', '-q', '--hard', 'HEAD~1')
-        # No usable base branch and no base commit: the full scan from the
-        # anchor, which reaches the planted commit; never a skip or a refusal.
         for ref in ('missing', '../main', None):
             with self.subTest(ref=ref):
                 rc, out = run(absent, ref)
@@ -979,7 +958,6 @@ class Check(unittest.TestCase):
         parsed = workflow.parse(path.read_text())
         self.assertEqual(parsed['jobs']['privacy']['name'], 'privacy')
         runner = parsed['jobs']['privacy']['runs-on']
-        # Synthetic labels distinguish variable precedence from the default.
         for repository in ('jparker2006/ClosedWiz', 'openwizdev/OpenWiz', 'owner/repo'):
             for event, head, trusted in (
                 ('push', '', True),
@@ -1010,13 +988,7 @@ class Check(unittest.TestCase):
                                          'jparker2006/ClosedWiz' else 'ubuntu-24.04')
         self.assertEqual(parsed['permissions'], {'contents': 'read'})
         self.assertEqual(set(parsed['on']), {'push', 'pull_request', 'merge_group'})
-        # #714, #725: a push run on any branch but main duplicates the required
-        # privacy check; a new branch's first push (zero before) scans every
-        # commit tree since the anchor, hits the job timeout and reports
-        # cancelled, which blocks the merge queue. pull_request and merge_group
-        # cover PR branches and queue groups, so push stays main only.
         self.assertEqual(parsed['on']['push'], {'branches': ['main']})
-        # privacy is required: a branch or path filter would leave it missing on some PRs.
         self.assertFalse({'branches', 'branches-ignore', 'paths', 'paths-ignore'} & set(parsed['on']['pull_request']))
         self.assertEqual(parsed['on']['merge_group'], {'types': ['checks_requested']})
         self.assertEqual(workflow.refused_jobs(path.read_text()), [])
@@ -1033,7 +1005,6 @@ class Check(unittest.TestCase):
 
 
     def commit_files(self, message, files):
-        # files: name -> bytes to write, or None to delete.
         for name, data in files.items():
             path = self.repo / name
             if data is None:
@@ -1051,9 +1022,6 @@ class Check(unittest.TestCase):
         return rc, out.getvalue()
 
     def test_range_reads_each_unchanged_blob_once(self):
-        # #761: every commit tree of a range used to re-read and re-check all
-        # of its files, so a long PR hit Privacy's time cap. A blob seen once
-        # in this run is not read again; every commit is still scanned.
         self.make_repo()
         self.commit_files('synthetic files', {'a.md': b'synthetic a', 'b.md': b'synthetic b', 'same.md': b'synthetic b'})
         for n in range(4):
@@ -1065,15 +1033,9 @@ class Check(unittest.TestCase):
         with patch.object(self.checker.BlobReader, 'read', counted):
             self.assertEqual(self.scan_range(), (0, 'literals: not used\n'))
         self.assertEqual(len(reads), len(set(reads)), 'a blob was read again in the same run')
-        # a, b (also at same.md) and the four versions of c.
         self.assertEqual(len(reads), 6)
 
     def test_range_findings_repeat_for_every_commit_and_path(self):
-        # #761's cache must not change any verdict: a forbidden blob added
-        # early refuses in every commit tree and at every path holding it,
-        # and a blob's verdict is never reused for a path checked under other
-        # rules (workflows, the contract's bad examples) or for a workflow
-        # whose local target is gone. The expected lines were written by hand.
         self.make_repo()
         planted = (THREAD + '\n').encode()
         bad = ('```bad\n' + THREAD + '\n```\n').encode()
@@ -1088,7 +1050,6 @@ class Check(unittest.TestCase):
         self.commit_files('synthetic 3', {'planted.md': None, 'copy.md': None, 'other.md': None,
                                           '.github/workflows/runner.yml': None})
         self.assertEqual(self.scan_range(), (1,
-            # commit-tree-1 is HEAD (synthetic 3); -2 is synthetic 2; -3 is synthetic 1.
             'F2 commit-tree-2:".github/workflows/runner.yml":1\n'
             'T1 commit-tree-2:"copy.md":1\n'
             'T1 commit-tree-2:"other.md":2\n'

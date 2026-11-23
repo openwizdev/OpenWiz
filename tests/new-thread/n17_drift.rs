@@ -1,8 +1,3 @@
-//! N17: drift. An unexpected receipt shape gives uncertain with a gap; an
-//! unexpected catalogue shape gives no options. The version is reported,
-//! never a gate (#37): the draft's "an untested version means nothing is
-//! created" is dropped (sheet, "Already decided").
-
 use openwiz_adapter_cloudroom::new_thread::{parse_catalogue, spawn_receipt};
 use openwiz_core::messaging::send::UncertainReason;
 use openwiz_core::model::Fact;
@@ -138,8 +133,6 @@ fn an_untested_or_unreadable_version_is_reported_never_a_gate() {
     }
 }
 
-// Keeper for #1016: genuine string-valued reports alone cannot catch a
-// widened schema that also accepts numbers or null for tested_version.
 fn the_schema_says_new_has_its_own_tested_version() {
     assert_eq!(
         schema()["$defs"]["source"]["properties"]["tested_version"],

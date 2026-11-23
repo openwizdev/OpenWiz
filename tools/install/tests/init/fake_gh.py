@@ -1,22 +1,10 @@
 #!/usr/bin/env python3
-"""A recording stand-in for `gh api --include` (and setup.py's plain `gh api PATH`)
-over a synthetic GitHub world.
-
-Test-only: copied into a scratch bin directory as `gh`. The world is JSON at
-$FAKE_GH_WORLD (else `../world.json` beside its bin directory); every call is appended to its `log` (method, path), so tests
-count provider effects. `faults` rows `{method, path, mode, times}` plant
-`lose` (the effect happens, the reply is lost), `drop` (no effect, no reply),
-`taken` (someone else makes it first with the row's `body` fields, then the
-call gets 422) or a status number (refused, no effect). Synthetic values only.
-"""
 import base64
 import json
 import os
 import sys
 import urllib.parse
 
-# The installed CLI forwards no test variable, so the fake also finds the
-# world beside its own bin directory.
 WORLD = os.environ.get('FAKE_GH_WORLD') or os.path.join(os.path.dirname(os.path.abspath(__file__)), '..',
                                                          'world.json')
 
@@ -25,7 +13,7 @@ INCLUDE = True
 
 
 def reply(status, body=None):
-    if not INCLUDE:  # setup.py's plain `gh api PATH` read: the body only
+    if not INCLUDE:
         sys.stdout.write(json.dumps(body))
         return 0 if status < 400 else 1
     reason = {200: 'OK', 201: 'Created', 404: 'Not Found'}.get(status, 'Status')
@@ -62,7 +50,7 @@ def main(argv):
         return reply(fault['mode'], {'message': 'synthetic refusal'})
     status, value = handle_call(world, method, target, body)
     save(world)
-    if fault is not None:  # lose: the effect stands, its reply never arrives
+    if fault is not None:
         sys.stderr.write('connection reset\n')
         return 1
     return reply(status, value)
@@ -75,7 +63,7 @@ def save(world):
 
 
 def repo_view(r):
-    keys = ('full_name', 'private', 'visibility', 'default_branch', 'permissions', 'owner', 'description', 'homepage')
+    keys = ('id', 'full_name', 'private', 'visibility', 'default_branch', 'permissions', 'owner', 'description', 'homepage')
     return {k: r[k] for k in keys if k in r}
 
 
@@ -91,7 +79,7 @@ def handle_call(world, method, target, body):
         key = f"{owner}/{body['name']}".lower()
         if key in repos:
             return 422, {'message': 'name already exists'}
-        repos[key] = {'full_name': f"{owner}/{body['name']}", 'private': body['private'],
+        repos[key] = {'id': 100 + len(repos), 'full_name': f"{owner}/{body['name']}", 'private': body['private'],
                       'visibility': 'private' if body['private'] else 'public', 'default_branch': 'main',
                       'permissions': {'push': True}, 'owner': {'login': owner, 'type': 'User'},
                       'description': body.get('description'), 'homepage': None,
@@ -111,7 +99,7 @@ def handle_call(world, method, target, body):
             repo.update(body)
             return 200, repo_view(repo)
     if rest[:1] == ['labels']:
-        details = repo.setdefault('label_details', {})  # name -> colour and description, as created
+        details = repo.setdefault('label_details', {})
         if method == 'GET' and len(rest) == 2:
             if rest[1] not in repo['labels']:
                 return 404, {'message': 'Not Found'}
@@ -122,6 +110,22 @@ def handle_call(world, method, target, body):
             repo['labels'].append(body['name'])
             details[body['name']] = {k: body[k] for k in ('color', 'description') if k in body}
             return 201, dict(details[body['name']], name=body['name'])
+    if rest[:1] == ['pulls'] and len(rest) > 1:
+        pull = next((p for p in repo['pulls'] if str(p['number']) == rest[1]), None)
+        if pull is None:
+            return 404, {'message': 'Not Found'}
+        base = pull.get('base', repo['default_branch'])
+        if method == 'GET' and len(rest) == 2:
+            return 200, {'number': pull['number'], 'state': pull['state'], 'merged_at': pull.get('merged_at'),
+                         'head': {'ref': pull['head'], 'sha': pull.get('sha', 'f' * 40)}, 'base': {'ref': base}}
+        if method == 'PUT' and rest[2:] == ['merge']:
+            if pull['state'] != 'open':
+                return 405, {'message': 'Pull Request is not mergeable'}
+            if body.get('sha') != pull.get('sha', 'f' * 40):
+                return 409, {'message': 'Head branch was modified'}
+            repo['branches'][base].update(repo['branches'][pull['head']])
+            pull.update(state='closed', merged_at='2026-01-01T00:00:00Z')
+            return 200, {'merged': True, 'sha': 'e' * 40, 'message': 'Pull Request successfully merged'}
     if rest[:1] == ['pulls']:
         if method == 'GET':
             head = query.get('head', '').split(':', 1)[-1]
@@ -132,8 +136,8 @@ def handle_call(world, method, target, body):
                 return 422, {'message': 'A pull request already exists'}
             number = 1 + max([p['number'] for p in repo['pulls']] + [0])
             repo['pulls'].append({'number': number, 'state': 'open', 'head': body['head'], 'base': body['base'],
-                                  'title': body['title'], 'body': body['body']})
-            return 201, {'number': number, 'state': 'open'}
+                                  'title': body['title'], 'body': body['body'], 'sha': 'f' * 40})
+            return 201, {'number': number, 'state': 'open', 'head': {'ref': body['head'], 'sha': 'f' * 40}}
     if rest[:3] == ['git', 'ref', 'heads']:
         branch = '/'.join(rest[3:])
         if branch in repo['branches']:

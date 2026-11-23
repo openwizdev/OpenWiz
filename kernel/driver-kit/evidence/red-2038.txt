@@ -1,0 +1,87 @@
+$ python3 -I kernel/driver-kit/test_kit.py Kit.test_the_kits_visibility_probe_runs_through_the_macos_shim_until_the_kit_closes_its_stdin
+test_the_kits_visibility_probe_runs_through_the_macos_shim_until_the_kit_closes_its_stdin (__main__.Kit.test_the_kits_visibility_probe_runs_through_the_macos_shim_until_the_kit_closes_its_stdin) ... FAIL
+
+======================================================================
+FAIL: test_the_kits_visibility_probe_runs_through_the_macos_shim_until_the_kit_closes_its_stdin (__main__.Kit.test_the_kits_visibility_probe_runs_through_the_macos_shim_until_the_kit_closes_its_stdin)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/kernel/driver-kit/test_kit.py", line 124, in test_the_kits_visibility_probe_runs_through_the_macos_shim_until_the_kit_closes_its_stdin
+    self.assertEqual((p.returncode, p.stderr), (0, ''))
+AssertionError: Tuples differ: (1, 'Traceback (most recent call last):\n [323 chars]'\n') != (0, '')
+
+First differing element 0:
+1
+0
+
++ (0, '')
+- (1,
+-  'Traceback (most recent call last):\n'
+-  '  File "<repo>/kernel/driver-kit/fixtures/no-proc/no_proc.py", line '
+-  '52, in <module>\n'
+-  "    runpy.run_path(args[0], run_name='__main__')\n"
+-  '  File "<frozen runpy>", line 290, in run_path\n'
+-  '  File "<frozen runpy>", line 254, in _get_code_from_file\n'
+-  "FileNotFoundError: [Errno 2] No such file or directory: '<repo>/-c'\n")
+
+----------------------------------------------------------------------
+Ran 1 test in 0.031s
+
+FAILED (failures=1)
+
+Slowed listing (the kit's ps -E listing delayed 0.5 s, the probe through the shim, kit and fixture at origin/main 70e37d1):
+test_without_proc_as_on_macos_the_template_passes_all_five (test_kit.Kit.test_without_proc_as_on_macos_the_template_passes_all_five) ... FAIL
+
+======================================================================
+FAIL: test_without_proc_as_on_macos_the_template_passes_all_five (test_kit.Kit.test_without_proc_as_on_macos_the_template_passes_all_five)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/kernel/driver-kit/test_kit.py", line 99, in test_without_proc_as_on_macos_the_template_passes_all_five
+    self.assertEqual(self.kit(TEMPLATE, os.path.join(NO_PROC, 'python3'), **macos)[:2], (0, PASS))
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[351 chars]ed"]) != (0, ['pass version: openwiz:records v1, an[245 chars]er'])
+
+First differing element 0:
+1
+0
+
+- (1,
++ (0,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
++   'pass stop: the run ended, and a wake after it is refused',
++   'pass token: no login or token passed through the driver'])
+-   "fail stop: ps shows no process's environment here, so the kit cannot tell "
+-   'which processes the driver started',
+-   "fail token: ps shows no process's environment here, so the kit cannot tell "
+-   'which processes the driver started'])
+
+----------------------------------------------------------------------
+Ran 1 test in 7.051s
+
+FAILED (failures=1)
+
+R1 red at c4c1fcc13ca0e304bad5e101a819584b65725f1c plus this test change:
+$ python3 -I kernel/driver-kit/test_kit.py Kit.test_the_kits_visibility_probe_signals_ready_through_the_macos_shim_and_runs_until_its_stdin_closes
+test_the_kits_visibility_probe_signals_ready_through_the_macos_shim_and_runs_until_its_stdin_closes (__main__.Kit.test_the_kits_visibility_probe_signals_ready_through_the_macos_shim_and_runs_until_its_stdin_closes) ... FAIL
+
+======================================================================
+FAIL: test_the_kits_visibility_probe_signals_ready_through_the_macos_shim_and_runs_until_its_stdin_closes (__main__.Kit.test_the_kits_visibility_probe_signals_ready_through_the_macos_shim_and_runs_until_its_stdin_closes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/kernel/driver-kit/test_kit.py", line 123, in test_the_kits_visibility_probe_signals_ready_through_the_macos_shim_and_runs_until_its_stdin_closes
+    self.assertEqual((p.returncode, p.stdout, p.stderr), (0, '.', ''))
+AssertionError: Tuples differ: (0, '', '') != (0, '.', '')
+
+First differing element 1:
+''
+'.'
+
+- (0, '', '')
++ (0, '.', '')
+?      +
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.028s
+
+FAILED (failures=1)

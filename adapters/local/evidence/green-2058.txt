@@ -1,0 +1,14 @@
+# #2058 green, with the fix on the red commit: python3 -I adapters/local/test_driver.py -v -k credential_shaped
+test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Local.test_a_credential_shaped_start_field_is_refused_before_anything_starts) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.273s
+
+OK
+
+# full suite: python3 -I adapters/local/test_driver.py
+Ran 15 tests in 41.837s
+
+OK
+
+# re-run at 3c249f6a after the comment-contract fix: full boat and local suites pass; comment-check: ok

@@ -29,6 +29,9 @@
       "path": "docs/evidence/7/red.log"
      },
      {
+      "path": "docs/evidence/8/red.log"
+     },
+     {
       "path": "tools/registry/paths.json"
      },
      {
@@ -68,6 +71,7 @@
   "standing: tools/registry/paths.json",
   "standing: tests/catalogue.rs",
   "OUT: changes/8.md (ticket #7)",
-  "OUT: contracts/x.md (ticket #7)"
+  "OUT: contracts/x.md (ticket #7)",
+  "OUT: docs/evidence/8/red.log (ticket #7)"
  ]
 }

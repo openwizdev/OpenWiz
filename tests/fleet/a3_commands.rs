@@ -1,12 +1,3 @@
-//! A3 (ClosedWiz#111): `openwiz --help` carries `openwiz fleets` and
-//! `openwiz fleet <spec>`'s own usage line, section and exit codes in their
-//! places. The program's dispatch to each command is proven by running the
-//! release `openwiz` (`a4_fleets.rs`, `a5_agents_cli.rs`).
-//!
-//! What the stubs do (say not yet, read nothing) is each command's own,
-//! proven in `a4_fleets.rs` and `a5_fleet.rs`, which A4 and A5 replace (Sol
-//! on #247, R1).
-
 use openwiz_cli::{fleet, fleets};
 
 #[test]
@@ -22,7 +13,6 @@ fn the_help_carries_each_commands_own_lines_in_their_places() {
             .find("  openwiz --help\n")
             .expect("--help's line");
     let exit_codes = help.rfind("\nExit codes:\n").expect("the exit codes");
-    // Up to and with the newline that ends the last exit code's line.
     let on_error = exit_codes
         + help[exit_codes..]
             .find("\nOn an error, stdout is empty")

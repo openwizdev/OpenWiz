@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-import ctypes, fcntl, json, os, re, secrets, shutil, signal, subprocess, sys, time
+import ctypes, fcntl, importlib.machinery, importlib.util, json, os, re, secrets, shutil, signal, subprocess, sys, time, uuid
+
+sys.dont_write_bytecode = True
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-STATE = os.environ.get('OPENWIZ_LOCAL_STATE') or os.path.expanduser('~/.local/state/openwiz-local')
-# The host owner's approved permission mode per repository and harness, saved by setup on this machine,
-# outside any repository: {"<owner>/<name>": {"<harness>": "<mode>"}}. A repository's own row must match it.
+KIT = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'kit.py')
+STATE = os.path.abspath(os.environ.get('OPENWIZ_LOCAL_STATE') or os.path.expanduser('~/.local/state/openwiz-local'))
 APPROVALS = os.path.join(STATE, 'approvals.json')
 MODE = r'[A-Za-z][A-Za-z0-9_-]{0,39}'
 WRITABLE = 'make OPENWIZ_LOCAL_STATE (or ~/.local/state/openwiz-local) a folder you can write'
@@ -13,18 +14,35 @@ START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket':
          'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
          'model': r'[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}'}
 RUN = {'run': r'run-[0-9a-f]{12}'}
-# Each harness's own non-interactive command, with the permission mode the owner saved for the repository
-# (docs/agents/fleet.md, `| Harness permission mode | `<mode>` |`), passed unchanged as that harness's own
-# option. The driver adds no login or token, and never chooses or widens a permission itself.
 HARNESSES = {'claude': lambda model, mode, prompt: ['-p', prompt, '--model', model, '--permission-mode', mode],
              'codex': lambda model, mode, prompt: ['exec', '--model', model, '--sandbox', mode, prompt]}
 MODE_ROW = '| Harness permission mode |'
-GRACE = 10  # seconds a stopped process has to exit before it is killed
-SETTLE = float(os.environ.get('OPENWIZ_LOCAL_SETTLE') or 30)  # seconds start watches the first turn
-# First-turn log lines that say the harness isn't signed in, or was refused a tool. The driver only classifies
-# them: raw harness and tool output stays in the run's owner-only log, never in its JSON (N2).
-SIGNED_OUT = re.compile(r'(?i)oauth|log ?in\b|sign ?in\b|authenticat|unauthori[sz]ed|expired|credential')
-REFUSAL = re.compile(r'(?i)denied|refused|not allowed|permission')
+ROWS = os.path.join(HERE, 'harnesses')
+ROW_FIELDS = ('harness', 'program', 'start', 'wake', 'session', 'modes', 'env', 'effort', 'login', 'daemon')
+OPTIONAL_ROW_FIELDS = ('signed_out', 'login_command')
+PLACEHOLDERS = ('{prompt}', '{model}', '{session}', '{mode}', '{effort}')
+SESSION = r'[A-Za-z0-9._:-]{1,100}'
+EFFORT = r'[a-z][a-z0-9-]{0,19}'
+ENV_NAME = r'(?!OPENWIZ_)[A-Z][A-Z0-9_]{0,59}'
+PROGRAM = r'[A-Za-z0-9][A-Za-z0-9._-]{0,59}'
+CANT_SET_EFFORT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster "
+                   "to run it at the host's default")
+GRACE = 10
+SETTLE = float(os.environ.get('OPENWIZ_LOCAL_SETTLE') or 30)
+DIAGNOSTIC_LINE = r'(?im)^[ \t]*(?:[\w .()\[\]-]{0,40}:[ \t]*){0,2}(?:%s)'
+SIGNED_OUT = re.compile(DIAGNOSTIC_LINE % '|'.join((
+    r'(?:not|no longer) (?:logged|signed) in\b', r'please (?:run /login|log ?in|sign ?in)\b', r'invalid api key\b',
+    r'authentication (?:failed|error|required)\b',
+    r'(?:oauth|login|auth|session)(?: token| session)?(?: has| is)? (?:expired|revoked)\b',
+    r'(?:401 )?unauthori[sz]ed[ \t]*[.!]?[ \t]*$')))
+REFUSAL = re.compile(DIAGNOSTIC_LINE % '|'.join((
+    r'permission\b[^.\n]{0,60}\b(?:denied|refused|rejected)\b',
+    r'(?:\w+ ){0,3}(?:was |were |has been |is )?(?:denied|refused)\b',
+    r'not allowed to (?:run|use|write|edit|execute)\b')))
+LSOF_COULD_NOT_CHECK = []
+NO_LSOF = ('driver: lsof could not run or failed, so the driver could not check which processes hold this '
+           "run's output file open; it ended only the turns' process groups and the processes their "
+           'supervisors recorded')
 
 
 class Refused(Exception):
@@ -38,7 +56,6 @@ def unique(pairs):
 
 
 def read(fields):
-    """The request on stdin, with exactly these fields, each valid, or Refused."""
     try:
         req = json.loads(sys.stdin.read(), object_pairs_hook=unique)
     except ValueError:
@@ -52,19 +69,277 @@ def read(fields):
     return req
 
 
-def program(harness):
-    """The harness's absolute path on this machine, or Refused."""
+def holds_credential(text):
+    if not hasattr(holds_credential, 'check'):
+        try:
+            spec = importlib.util.spec_from_loader('openwiz_driver_kit', importlib.machinery.SourceFileLoader(
+                'openwiz_driver_kit', KIT))
+            kit = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(kit)
+            holds_credential.check = kit.holds_credential
+        except Exception:
+            raise Refused("the driver kit's credential check is missing, so no start field can be checked; nothing "
+                          'was started', 'run the driver from an OpenWiz checkout or release that carries '
+                          'kernel/driver-kit/kit.py')
+    return holds_credential.check(text)
+
+
+def no_credentials(req):
+    # PRIVACY: runs before anything is saved or started, and the refusal names the field, never its value.
+    for key in START:
+        if isinstance(req[key], str) and holds_credential(req[key]):
+            raise Refused('%s looks like a credential, so nothing was saved or started' % key,
+                          'send the %s itself in %s; never a login, key or token' % (key, key))
+    return req
+
+
+class Broken(Exception):
+    pass
+
+
+def line(v):
+    return isinstance(v, str) and 0 < len(v) <= 300 and '\n' not in v and '\r' not in v
+
+
+def fixed(v):
+    return isinstance(v, list) and all(isinstance(a, str) and a and not any(p in a for p in PLACEHOLDERS) for a in v)
+
+
+def settings(env, rule):
+    if not isinstance(env, dict) or not all(isinstance(k, str) and re.fullmatch(ENV_NAME, k) and line(v)
+                                            for k, v in env.items()):
+        raise Broken(rule, 'each name is capitals, digits and _, not OPENWIZ_, and each value one line')
+    if any(holds_credential(v) or holds_credential('%s=%s' % (k, v)) for k, v in env.items()):
+        raise Broken(rule, 'a value looks like a credential; env holds only fixed settings that are not credentials')
+
+
+def plain(text):
+    return line(text) and not re.search(r'\{[a-z]+\}', text) and not holds_credential(text)
+
+
+def sign_in(row):
+    if 'signed_out' in row:
+        patterns = row['signed_out']
+        if not isinstance(patterns, list) or not patterns or not all(plain(p) for p in patterns):
+            raise Broken('signed_out', 'it is not a list of one-line patterns, with no placeholder and nothing '
+                                       'credential-shaped')
+        try:
+            [re.compile(p, re.I) for p in patterns]
+        except re.error:
+            raise Broken('signed_out', 'a pattern does not compile')
+        if 'login_command' not in row:
+            raise Broken('login_command', 'a row with signed_out names the command the user runs to sign in')
+    if 'login_command' in row and not (plain(row['login_command']) and len(row['login_command']) <= 200):
+        raise Broken('login_command', 'it is not one line of up to 200 characters, with no placeholder and nothing '
+                                      'credential-shaped')
+
+
+def arguments(row, field, needs):
+    args = row[field]
+    if not isinstance(args, list) or not args or not all(isinstance(a, str) and a for a in args):
+        raise Broken(field, 'it is not a list of arguments')
+    for a in args:
+        if a not in PLACEHOLDERS and re.search(r'\{[a-z]+\}', a):
+            raise Broken(field, 'a placeholder sits inside a larger argument; each fills a whole argument'
+                         if any(p in a for p in PLACEHOLDERS) else 'it has an unknown placeholder')
+    if any(args.count(p) > 1 for p in PLACEHOLDERS):
+        raise Broken(field, 'a placeholder appears more than once')
+    for p in needs:
+        if p not in args:
+            raise Broken(field, 'it has no ' + p)
+
+
+def credential_shaped(args):
+    return any(holds_credential(a) for a in args if a) or \
+        any(holds_credential('%s=%s' % pair) or holds_credential('%s %s' % pair) for pair in zip(args, args[1:])
+            if all(pair))
+
+
+def no_credential_arguments(row):
+    # PRIVACY: a row's fixed arguments are saved in run state and passed in argv, so none may hold a credential;
+    # the refusal names the field, never the argument.
+    efforts = [a for a in row['effort'].values() if isinstance(a, list)] if isinstance(row['effort'], dict) else []
+    for field, lists in (('start', [row['start']]), ('wake', [row['wake']]), ('modes', list(row['modes'].values())),
+                         ('effort', efforts)):
+        if any(credential_shaped([a if a not in PLACEHOLDERS else '' for a in args]) for args in lists):
+            raise Broken(field, 'a fixed argument looks like a credential; a row holds no login, key or token')
+    for field in ('start', 'wake'):
+        for mode in row['modes'].values():
+            for effort in efforts or [[]]:
+                fills = {'{mode}': mode, '{effort}': effort}
+                if credential_shaped([b for a in row[field] for b in fills.get(a, [a if a not in PLACEHOLDERS else ''])]):
+                    raise Broken(field, 'with a mode or effort spliced in, its arguments look like a credential; a '
+                                        'row holds no login, key or token')
+
+
+def check_row(row, name):
+    if not isinstance(row, dict):
+        raise Broken('fields', 'it is not one JSON object')
+    if 'effort' not in row:
+        raise Broken('effort', 'it has no effort form; give an effort map or "none: <one line why>"')
+    if not set(ROW_FIELDS) <= set(row) <= set(ROW_FIELDS + OPTIONAL_ROW_FIELDS):
+        raise Broken('fields', 'it needs exactly %s, and may have %s' % (', '.join(ROW_FIELDS),
+                                                                         ' and '.join(OPTIONAL_ROW_FIELDS)))
+    if isinstance(row['harness'], str) and row['harness'] in HARNESSES:
+        raise Broken('harness', '%s is built in, and no row may use a built-in name' % row['harness'])
+    if not isinstance(row['harness'], str) or row['harness'] != name or not re.fullmatch(START['harness'], name):
+        raise Broken('harness', "it is not its folder's name, or not a valid harness name")
+    if not isinstance(row['program'], str) or not re.fullmatch(PROGRAM, row['program']):
+        raise Broken('program', 'it is not one plain command name')
+    for field in ('login', 'daemon'):
+        if not line(row[field]):
+            raise Broken(field, 'it is not one line of 1 to 300 characters')
+    modes = row['modes']
+    if not isinstance(modes, dict) or not modes or \
+            not all(re.fullmatch(MODE, m) and fixed(a) for m, a in modes.items()):
+        raise Broken('modes', 'it maps no mode value to its fixed arguments')
+    settings(row['env'], 'env')
+    sign_in(row)
+    session = row['session']
+    kind = next(iter(session)) if isinstance(session, dict) and len(session) == 1 else None
+    how = session[kind] if kind else None
+    try:
+        good = (kind == 'chosen' and how == 'uuid' or kind == 'json' and isinstance(how, list) and how and
+                all(isinstance(k, str) and k for k in how) or kind == 'pattern' and isinstance(how, str) and
+                re.compile(how).groups == 1)
+    except re.error:
+        good = False
+    if not good:
+        raise Broken('session', 'it is not {"chosen": "uuid"}, {"json": [<key path>]} or {"pattern": <one group>}')
+    effort = row['effort']
+    if isinstance(effort, str):
+        if not (line(effort) and effort.startswith('none: ') and effort[6:].strip()):
+            raise Broken('effort', 'a row that can\'t set effort says "none: <one line why>"')
+    elif not isinstance(effort, dict) or not effort:
+        raise Broken('effort', 'it has no effort form; give an effort map or "none: <one line why>"')
+    else:
+        for value, setting in effort.items():
+            if not re.fullmatch(EFFORT, value):
+                raise Broken('effort', 'an effort value is not an effort id')
+            if isinstance(setting, dict) and list(setting) == ['env'] and setting['env']:
+                settings(setting['env'], 'effort')
+            elif not (fixed(setting) and setting):
+                raise Broken('effort', 'each value adds fixed arguments, or sets {"env": {...}}')
+    arguments(row, 'start', ('{prompt}', '{model}', '{mode}') + (('{session}',) if kind == 'chosen' else ()))
+    arguments(row, 'wake', ('{prompt}', '{mode}', '{session}'))
+    if kind != 'chosen' and '{session}' in row['start']:
+        raise Broken('start', 'it has {session}, but the session is reported, not chosen')
+    no_credential_arguments(row)
+    flags = isinstance(effort, dict) and any(isinstance(s, list) for s in effort.values())
+    if flags and '{effort}' not in row['start']:
+        raise Broken('effort', 'it maps effort values to arguments, but start has no {effort} to pass them')
+    if not flags and ('{effort}' in row['start'] or '{effort}' in row['wake']):
+        raise Broken('effort', 'it has {effort}, but no effort value adds arguments')
+    return row
+
+
+def read_row(path, name):
+    try:
+        with open(path) as f:
+            row = json.loads(f.read(), object_pairs_hook=unique)
+    except FileNotFoundError:
+        return None
+    except (OSError, ValueError, RecursionError, Refused):
+        raise Broken('file', 'it is not one readable JSON object with each key once')
+    return check_row(row, name)
+
+
+def row_file(harness):
+    return os.path.join('adapters', 'local', 'harnesses', harness, 'row.json')
+
+
+def row_folders():
+    try:
+        return sorted(d for d in os.listdir(ROWS) if re.fullmatch(START['harness'], d) and d not in HARNESSES and
+                      os.path.isfile(os.path.join(ROWS, d, 'row.json')))
+    except OSError:
+        return []
+
+
+def program(harness, effort):
+    row = None
     if harness not in HARNESSES:
-        raise Refused('harness %s is not one this driver runs' % harness, 'use one of: ' + ', '.join(HARNESSES))
-    path = shutil.which(harness)
+        try:
+            row = read_row(os.path.join(ROWS, harness, 'row.json'), harness)
+        except Broken as e:
+            raise Refused('%s breaks the harness-row contract (%s: %s); nothing was started'
+                          % (row_file(harness), e.args[0], e.args[1]),
+                          'fix %s as adapters/local/harness-row.md says, then start again' % row_file(harness))
+        if row is None and os.path.isdir(os.path.join(ROWS, harness)):
+            raise Refused('%s is missing, so harness %s has no row; nothing was started' % (row_file(harness), harness),
+                          'add %s as adapters/local/harness-row.md says, then start again' % row_file(harness))
+        if row is None:
+            names, choices = list(HARNESSES) + row_folders(), 'use one of: '
+            for n in names:
+                if len(choices) + len(n) + 2 > 300:
+                    break
+                choices += n if choices.endswith(': ') else ', ' + n
+            raise Refused('harness %s is not one this driver runs' % harness, choices)
+    effort_of(harness, row, effort)
+    name = row['program'] if row else harness
+    path = shutil.which(name)
     if not path:
         raise Refused('harness %s is not installed here' % harness,
-                      'install %s on this machine and sign in to it yourself, then start again' % harness)
-    return path
+                      'install %s on this machine and sign in to it yourself, then start again' % name)
+    return path, row
+
+
+def effort_of(harness, row, effort):
+    if effort is None:
+        return [], {}
+    setting = row['effort'].get(effort) if row and isinstance(row['effort'], dict) else None
+    if setting is None:
+        raise Refused("harness %s can't set effort %s; nothing was started" % (harness, effort), CANT_SET_EFFORT)
+    return (setting, {}) if isinstance(setting, list) else ([], setting['env'])
+
+
+def command(state, woken):
+    req, row = state['request'], state.get('row')
+    text = prompt(req, woken)
+    if not row:
+        effort_of(req['harness'], None, req.get('effort'))
+        return [state['program']] + HARNESSES[req['harness']](req['model'], state['mode'], text), {}
+    effort, env = effort_of(req['harness'], row, req.get('effort'))
+    fills = {'{prompt}': [text], '{model}': [req['model']], '{session}': [state.get('session')],
+             '{mode}': row['modes'][state['mode']], '{effort}': effort}
+    return [state['program']] + [b for a in row['wake' if woken else 'start'] for b in fills.get(a, [a])], \
+        dict(row['env'], **env)
+
+
+NO_PATH = object()
+
+
+def turn_output(run, turn):
+    try:
+        with open(log_path(run), 'rb') as f:
+            f.seek(turn.get('output_from', 0))
+            return f.read().decode(errors='replace')
+    except OSError:
+        return ''
+
+
+def reported_session(run, session, first):
+    for text in turn_output(run, first).splitlines():
+        if 'pattern' in session:
+            m = re.search(session['pattern'], text)
+            if not m:
+                continue
+            found = m.group(1)
+        else:
+            try:
+                found = json.loads(text) if text.lstrip().startswith('{') else None
+            except (ValueError, RecursionError):
+                found = None
+            for key in session['json']:
+                found = found[key] if isinstance(found, dict) and key in found else NO_PATH
+            if found is NO_PATH:
+                continue
+        ok = isinstance(found, str) and re.fullmatch(SESSION, found) and not holds_credential(found)
+        return found if ok else None
+    return None
 
 
 def log_path(run):
-    """The run's owner-only log: the clone's and every turn's raw output."""
     return os.path.join(STATE, run + '.log')
 
 
@@ -72,13 +347,16 @@ def open_log(run):
     return os.open(log_path(run), os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
 
 
+def work(run):
+    return os.path.join(STATE, 'work', run)
+
+
 def workspace(run, repository):
-    """A fresh clone of the repository for this run alone, by the person's own signed-in `gh`."""
     gh = shutil.which('gh')
     if not gh:
         raise Refused('gh is not installed here, so the driver cannot clone %s' % repository,
                       'install the GitHub CLI (gh) on this machine and sign in to it yourself, then start again')
-    folder = os.path.join(STATE, 'work', run)
+    folder = work(run)
     os.makedirs(os.path.dirname(folder), mode=0o700, exist_ok=True)
     log = open_log(run)
     try:
@@ -96,24 +374,49 @@ def workspace(run, repository):
     return folder
 
 
+def row_label(line):
+    cells = line.strip().split('|')
+    return ' '.join(cells[1].split()) if len(cells) > 2 and not cells[0] else None
+
+
+def row_value(row):
+    values = re.findall(r'`([^`]*)`', row)
+    return values[0] if len(values) == 1 and re.fullmatch(MODE, values[0]) else None
+
+
 def permission_mode(folder, repository, harness):
-    """The one permission mode the owner saved in the repository's docs/agents/fleet.md, or Refused."""
+    single, own = MODE_ROW.strip('| '), 'Harness permission mode (%s)' % harness
     try:
         with open(os.path.join(folder, 'docs', 'agents', 'fleet.md')) as f:
-            rows = [line for line in f.read().splitlines() if line.startswith(MODE_ROW)]
+            lines = f.read().splitlines()
     except OSError:
-        rows = []
-    values = re.findall(r'`([^`]*)`', rows[0]) if len(rows) == 1 else []
-    if len(values) != 1 or not re.fullmatch(MODE, values[0]):
+        lines = []
+    labelled = [(row_label(line), line.strip().split('|', 2)[-1]) for line in lines]
+    if not any(label and label.startswith(single + ' (') for label, _ in labelled):
+        rows = [line for line in lines if line.startswith(MODE_ROW)]
+        mode = row_value(rows[0]) if len(rows) == 1 else None
+    else:
+        rows, mine = [rest for label, rest in labelled if label == single], [rest for label, rest in labelled if label == own]
+        if rows and mine:
+            raise Refused('%s saves both the single Harness permission mode row and a %s row in docs/agents/fleet.md; '
+                          'nothing was started' % (repository, own), 'keep one of them in docs/agents/fleet.md, with '
+                          'the mode approved for %s, then start again' % harness)
+        if not rows:
+            mode = row_value(mine[0]) if len(mine) == 1 else None
+            if mode is None:
+                raise Refused('%s has no harness permission mode for %s saved in docs/agents/fleet.md; nothing was '
+                              'started' % (repository, harness), 'choose the mode %s may run in and save it there as '
+                              'the row `| %s | `<mode>` |`, then start again' % (harness, own))
+            return mode, own
+        mode = row_value(rows[0]) if len(rows) == 1 else None
+    if mode is None:
         raise Refused('%s has no single harness permission mode saved in docs/agents/fleet.md; nothing was started'
                       % repository, 'choose the mode %s may run in and save it there as the row '
                       '`| Harness permission mode | `<mode>` |`, then start again' % harness)
-    return values[0]
+    return mode, None
 
 
 def approved_mode(repository, harness):
-    """The mode this machine's owner approved for the repository and harness (APPROVALS), or Refused. Only the
-    owner may be able to change that file; the driver never uses a mode it read only from a repository (R6)."""
     setup = ('approve a mode on this machine: in %s, set "%s": {"%s": "<mode>"} (owner-only), then start again'
              % (APPROVALS, repository, harness))
     try:
@@ -149,9 +452,6 @@ LINUX = os.path.isdir('/proc/self') and hasattr(os, 'pidfd_open')
 PR_SET_CHILD_SUBREAPER = 36
 
 
-TURN = re.compile(r'\s--turn\s')
-
-
 def ps(*args):
     try:
         p = subprocess.Popen(['ps'] + list(args), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
@@ -164,17 +464,22 @@ def ps(*args):
     return out.splitlines(), p.pid
 
 
-def members(roots, run):
-    rows, me = ps('-A', '-ww', '-o', 'pid=', '-o', 'ppid=', '-o', 'pgid=', '-o', 'stat=', '-o', 'command=', '-E')
-    mark = re.compile(r'(?:^|\s)OPENWIZ_RUN=%s(?:\s|$)' % re.escape(run))
-    found, children = set(), {}
+MACOS_SECONDS_BETWEEN_LOOKS = 0.2
+LOOKS_PER_OUTPUT_CHECK = 5
+
+
+# PRIVACY: reads only ps's process table (pid, parent, group, state, start time), never any environment.
+def members(roots, recorded, writers=()):
+    rows, me = ps('-A', '-o', 'pid=', '-o', 'ppid=', '-o', 'pgid=', '-o', 'stat=', '-o', 'lstart=')
+    started, children, found = {}, {}, set()
     for row in rows:
         f = row.split(None, 4)
-        if len(f) < 4 or f[3].startswith('Z'):
+        if len(f) < 5 or f[3].startswith('Z'):
             continue
         pid, ppid, group = int(f[0]), int(f[1]), int(f[2])
+        started[pid] = f[4].strip()
         children.setdefault(ppid, []).append(pid)
-        if group in roots or len(f) > 4 and mark.search(f[4]) and not TURN.search(f[4]):
+        if group in roots or recorded.get(pid) == started[pid] or pid in writers:
             found.add(pid)
     todo = list(roots) + list(found)
     while todo:
@@ -182,11 +487,79 @@ def members(roots, run):
             if c not in found:
                 found.add(c)
                 todo.append(c)
-    return found - set(roots) - {os.getpid(), me}
+    return {p: started[p] for p in found - set(roots) - {os.getpid(), me}}
+
+
+# PRIVACY: asks lsof only which processes hold this run's own output file open for writing, never any environment.
+# PRIVACY: lsof's own text is never repeated.
+def writing_to(path):
+    try:
+        p = subprocess.run(['lsof', '-w', '-F', 'pa', '--', path], stdin=subprocess.DEVNULL, capture_output=True,
+                           text=True, errors='replace', timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        p = None
+    if p is None or p.returncode not in (0, 1) or p.returncode == 1 and p.stderr.strip():
+        LSOF_COULD_NOT_CHECK.append(path)
+        return set()
+    out = p.stdout
+    found, pid = set(), None
+    for field in out.splitlines():
+        if field[:1] == 'p' and field[1:].isdigit():
+            pid = int(field[1:])
+        elif field[:1] == 'a' and field[1:2] in ('w', 'u') and pid is not None:
+            found.add(pid)
+    return found
+
+
+def supervisor_record(run, supervisor):
+    return os.path.join(STATE, '%s.%d.sup' % (run, supervisor))
+
+
+def record_kept(run, kept):
+    record = supervisor_record(run, os.getpid())
+    try:
+        with open(record + '.new', 'w') as f:
+            json.dump({'supervisor_since': since(os.getpid()), 'kept': {str(p): t for p, t in kept.items()}}, f)
+        os.replace(record + '.new', record)
+    except OSError:
+        pass
+
+
+def recorded_by(run, supervisors):
+    recorded = {}
+    for pid, started in supervisors:
+        try:
+            with open(supervisor_record(run, pid)) as f:
+                record = json.load(f)
+            if record['supervisor_since'] == started:
+                recorded.update({int(p): t for p, t in record['kept'].items() if isinstance(t, str)})
+        except (OSError, ValueError, KeyError, TypeError, AttributeError):
+            continue
+    return recorded
+
+
+def look_after_the_turn_on_macos(run, harness, output):
+    kept, looks = {}, 0
+    while True:
+        children_left = any_child_running_after_reaping(harness)
+        scanned = looks % LOOKS_PER_OUTPUT_CHECK == 0
+        now = members({os.getpid()}, kept, writing_to(output) if scanned else ())
+        if not children_left and not now and not scanned:
+            now = members({os.getpid()}, kept, writing_to(output))
+        looks += 1
+        if now != kept:
+            kept = now
+            record_kept(run, kept)
+        if not children_left and not kept:
+            try:
+                os.remove(supervisor_record(run, os.getpid()))
+            except OSError:
+                pass
+            return
+        time.sleep(MACOS_SECONDS_BETWEEN_LOOKS)
 
 
 def since(pid):
-    """When process pid started, or None once it has exited: with its pid, this names one process."""
     if not LINUX:
         row = ps('-o', 'stat=', '-o', 'lstart=', '-p', str(pid))[0]
         return row[0].split(None, 1)[1].strip() if row and not row[0].lstrip().startswith('Z') else None
@@ -199,7 +572,6 @@ def since(pid):
 
 
 def descendants(pid):
-    """Every live process under pid."""
     children = {}
     for p in filter(str.isdigit, os.listdir('/proc')):
         try:
@@ -219,34 +591,50 @@ def descendants(pid):
 
 
 def supervise(cmd):
-    """One turn, as `driver --turn <command>`: run the harness, its output going to the run's log, and keep
-    every process it starts as this turn's (an orphan comes back here, whatever its session or environment)
-    until none is left; then exit."""
+    # SECURITY: the row's env and effort setting go to the harness only; the supervisor and its process tools keep
+    # the driver's own environment.
+    overlay = json.loads(os.environ.pop('OPENWIZ_TURN_ENV', '{}'))
     if LINUX and ctypes.CDLL(None, use_errno=True).prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0) != 0:
         print(json.dumps({'error': 'this host cannot keep a turn\'s processes together'}), flush=True)
         return
     try:
-        harness = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=sys.stderr, stderr=sys.stderr)
+        harness = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=sys.stderr, stderr=sys.stderr,
+                                   cwd=work(os.environ['OPENWIZ_RUN']), env=dict(os.environ, **overlay))
     except OSError as e:
         print(json.dumps({'error': e.strerror}), flush=True)
         return
-    signal.signal(signal.SIGTERM, signal.SIG_IGN)  # only `end` stops a turn, and it never orphans one
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
     print(json.dumps({'pid': harness.pid, 'since': since(harness.pid)}), flush=True)
     os.dup2(os.open(os.devnull, os.O_WRONLY), 1)
+    if not LINUX:
+        os.dup2(os.open(os.devnull, os.O_WRONLY), 2)
+        return look_after_the_turn_on_macos(os.environ['OPENWIZ_RUN'], harness.pid, log_path(os.environ['OPENWIZ_RUN']))
     while True:
         try:
             pid, status = os.wait()
         except ChildProcessError:
-            if LINUX or not members({os.getpid()}, os.environ['OPENWIZ_RUN']):
-                return
-            time.sleep(0.2)
-            continue
-        if pid == harness.pid:  # its exit code, for `start` to read (`exited`)
-            try:
-                with open(exit_file(os.environ['OPENWIZ_RUN'], pid), 'w') as f:
-                    f.write(str(os.waitstatus_to_exitcode(status)))
-            except OSError:
-                pass
+            return
+        saved_exit(pid, status, harness.pid)
+
+
+def saved_exit(pid, status, harness):
+    if pid == harness:
+        try:
+            with open(exit_file(os.environ['OPENWIZ_RUN'], pid), 'w') as f:
+                f.write(str(os.waitstatus_to_exitcode(status)))
+        except OSError:
+            pass
+
+
+def any_child_running_after_reaping(harness):
+    while True:
+        try:
+            pid, status = os.waitpid(-1, os.WNOHANG)
+        except ChildProcessError:
+            return False
+        if pid == 0:
+            return True
+        saved_exit(pid, status, harness)
 
 
 def exit_file(run, pid):
@@ -254,7 +642,6 @@ def exit_file(run, pid):
 
 
 def exited(run, turn):
-    """The ended harness's exit code, as its supervisor saved it, or None if unknown."""
     deadline = time.monotonic() + 2
     while True:
         try:
@@ -267,17 +654,17 @@ def exited(run, turn):
 
 
 def launch(state, run, woken):
-    """Start one turn under its supervisor, with the person's environment and this run's mark; return what
-    `running` and `end` need."""
     req = state['request']
-    cmd = [state['program']] + HARNESSES[req['harness']](req['model'], state['mode'], prompt(req, woken))
+    cmd, extra = command(state, woken)
     try:
         log = open_log(run)
+        output_from = os.fstat(log).st_size
     except OSError:
-        log = subprocess.DEVNULL  # the run is saved; a log it can't open never stops its turn
+        log, output_from = subprocess.DEVNULL, 0
     try:
         sup = subprocess.Popen([sys.executable, '-I', os.path.abspath(__file__), '--turn'] + cmd,
-                               env=dict(os.environ, OPENWIZ_RUN=run), start_new_session=True, cwd=state['workspace'],
+                               env=dict(os.environ, OPENWIZ_RUN=run, OPENWIZ_TURN_ENV=json.dumps(extra)),
+                               start_new_session=True,
                                stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=log)
         with sup.stdout:
             line = sup.stdout.readline()
@@ -294,17 +681,15 @@ def launch(state, run, woken):
     if 'pid' not in turn:
         raise Refused('harness %s did not start: %s' % (req['harness'], turn['error']),
                       'run %s by hand once to check it works, then start again' % req['harness'])
-    return {'pid': turn['pid'], 'since': turn['since'], 'supervisor': sup.pid, 'supervisor_since': since(sup.pid)}
+    return {'pid': turn['pid'], 'since': turn['since'], 'supervisor': sup.pid, 'supervisor_since': since(sup.pid),
+            'output_from': output_from}
 
 
 def running(turn):
-    """Whether the turn `launch` returned still runs its harness."""
     return bool(turn) and turn['since'] is not None and since(turn['pid']) == turn['since']
 
 
 def end(turns, run):
-    """Stop the run: every process its turns' supervisors still keep, whatever its session or environment.
-    A supervisor exits only once none of its processes is left, so answer once every supervisor has exited."""
     kept = [(t['supervisor'], t['supervisor_since']) for t in turns if t and t['supervisor_since'] is not None]
     for sig, wait in ((signal.SIGTERM, GRACE), (signal.SIGKILL, 2)):
         sent, deadline = set(), time.monotonic() + wait
@@ -313,7 +698,7 @@ def end(turns, run):
             if not kept:
                 return
             if not LINUX:
-                for p in members({s for s, _ in kept}, run) - sent:
+                for p in set(members({s for s, _ in kept}, recorded_by(run, kept), writing_to(log_path(run)))) - sent:
                     try:
                         os.kill(p, sig)
                         sent.add(p)
@@ -323,7 +708,7 @@ def end(turns, run):
                 continue
             pinned = {}
             for p in set().union(*(descendants(s) for s, _ in kept)) - sent:
-                try:  # pin each pid first, then check it is still under a supervisor, so no reused pid is hit
+                try:
                     pinned[p] = os.pidfd_open(p)
                 except OSError:
                     pass
@@ -344,7 +729,6 @@ def end(turns, run):
 
 
 def lock(run):
-    """Hold the run's lock until this command ends, so its wakes and stops take turns."""
     if not os.path.exists(os.path.join(STATE, run + '.json')):
         raise Refused('no run ' + run, 'check the run id that `driver start` printed')
     try:
@@ -368,10 +752,12 @@ def saved(run, state=None):
         raise Refused('no run ' + run, 'check the run id that `driver start` printed')
 
 
-def ended_at_once(run, turn):
-    """Watch a first turn for SETTLE seconds. One that has already ended with a non-zero (or unknown) exit, or
-    with a refusal or sign-in line in its log (a harness whose permissions refuse every tool still exits 0),
-    has failed: end what is left and say why. One that ended cleanly simply finished: the run started."""
+def signed_out_by_row(row, log):
+    patterns = [re.compile(p, re.I) for p in (row or {}).get('signed_out', [])]
+    return any(p.search(text) for p in patterns for text in log.splitlines())
+
+
+def ended_at_once(run, turn, row=None):
     deadline = time.monotonic() + SETTLE
     while running(turn) and time.monotonic() < deadline:
         time.sleep(0.1)
@@ -383,17 +769,24 @@ def ended_at_once(run, turn):
             log = f.read()
     except OSError:
         log = ''
-    why = ('the harness is not signed in' if SIGNED_OUT.search(log) else
+    signed_out = SIGNED_OUT.search(log) or signed_out_by_row(row, turn_output(run, turn))
+    why = ('the harness is not signed in' if signed_out else
            'the harness refused a tool' if REFUSAL.search(log) else None if code == 0 else 'the harness failed')
     if why is None:
         return
     end([turn], run)
+    if signed_out and row and 'login_command' in row:
+        fix = 'sign in yourself with `%s` on this machine, then start again; %s has the turn\'s output' % (
+            row['login_command'], log_path(run))
+        fix = fix if len(fix) <= 300 else 'sign in yourself with `%s` on this machine, then start again' % (
+            row['login_command'])
+    else:
+        fix = 'read %s, fix what it says there, then start again' % log_path(run)
     raise Refused('run %s: the first turn ended at once: %s (exit %s)' % (run, why, 'unknown' if code is None else code),
-                  'read %s, fix what it says there, then start again' % log_path(run))
+                  fix)
 
 
 def stopped(run, state):
-    """Save the run as stopped, if the state folder still lets it: it never runs again."""
     try:
         saved(run, dict(state, stopped=True))
     except OSError:
@@ -401,7 +794,6 @@ def stopped(run, state):
 
 
 def unsaved(run, turn, cmd):
-    """A turn began but could not be saved: end it, and say the outcome is unknown, never retry."""
     try:
         end([turn], run)
     except Refused:
@@ -419,23 +811,37 @@ def answer(cmd):
         with open(os.path.join(HERE, 'schema.json')) as f:
             return json.load(f)
     if cmd == 'start':
-        req, run = read(START), 'run-' + secrets.token_hex(6)
-        state = {'request': req, 'program': program(req['harness']), 'turns': [], 'stopped': False,
-                 'starting': True, 'workspace': None, 'mode': None}  # never woken while starting
-        try:  # save the run before its turn starts: nowhere to keep it, nothing starts
+        req, run = no_credentials(read(START)), 'run-' + secrets.token_hex(6)
+        path, row = program(req['harness'], req.get('effort'))
+        state = {'request': req, 'program': path, 'turns': [], 'stopped': False, 'starting': True,
+                 'workspace': None, 'mode': None}
+        if row:
+            state.update(row=row, session=str(uuid.uuid4()) if 'chosen' in row['session'] else None)
+        try:
             saved(run, state)
             os.close(os.open(os.path.join(STATE, run + '.lock'), os.O_WRONLY | os.O_CREAT, 0o600))
         except OSError:
             raise Refused('the driver cannot save runs in its state folder; nothing was started', WRITABLE)
-        try:  # its own clone, and the owner's saved permission mode, before anything runs
-            approved = approved_mode(req['repository'], req['harness'])  # before anything is cloned
+        try:
+            approved = approved_mode(req['repository'], req['harness'])
+            if row and approved not in row['modes']:
+                raise Refused('the mode approved on this machine for %s with %s is not one its row lists; nothing '
+                              'was started' % (req['repository'], req['harness']),
+                              'approve one of the modes in %s, in both places, then start again'
+                              % row_file(req['harness']))
             state['workspace'] = workspace(run, req['repository'])
-            if permission_mode(state['workspace'], req['repository'], req['harness']) != approved:
+            mode, own = permission_mode(state['workspace'], req['repository'], req['harness'])
+            if own and mode != approved:
+                raise Refused('the %s row in %s does not match the mode approved on this machine for %s; nothing '
+                              'was started' % (own, req['repository'], req['harness']),
+                              'save the one mode you approve for %s in both its docs/agents/fleet.md and %s, then '
+                              'start again' % (req['harness'], APPROVALS))
+            if mode != approved:
                 raise Refused('the Harness permission mode row in %s does not match the mode approved on this '
                               'machine; nothing was started' % req['repository'],
                               'save the one mode you approve in both its docs/agents/fleet.md and %s, then start '
                               'again' % APPROVALS)
-            state['mode'] = approved  # never a mode read only from the repository
+            state['mode'] = approved
             saved(run, state)
         except OSError:
             raise Refused('the driver cannot save run %s in its state folder; nothing was started' % run, WRITABLE)
@@ -448,11 +854,11 @@ def answer(cmd):
             stopped(run, state)
             raise
         try:
-            saved(run, dict(state, turns=[turn]))  # still starting: stop reaches the turn, wake refuses it
-        except OSError:  # the turn began but its run is not saved: end it, and never say retry
+            saved(run, dict(state, turns=[turn]))
+        except OSError:
             unsaved(run, turn, 'start')
         try:
-            ended_at_once(run, turn)
+            ended_at_once(run, turn, row)
         except Refused:
             stopped(run, dict(state, turns=[turn]))
             raise
@@ -466,12 +872,12 @@ def answer(cmd):
         lock(run)
         state = saved(run)
         if cmd == 'stop':
-            try:  # first, so no wake starts a turn meanwhile
+            try:
                 saved(run, dict(state, stopped=True))
                 kept = True
             except OSError:
                 kept = False
-            end(state['turns'], run)  # whether or not that save worked
+            end(state['turns'], run)
             if not kept:
                 raise Refused('run %s has ended, but the driver could not save that it is stopped' % run,
                               WRITABLE + ', then stop it again')
@@ -480,13 +886,20 @@ def answer(cmd):
             raise Refused('run %s is stopped' % run, 'start a new run')
         if state.get('starting'):
             raise Refused('run %s never finished starting' % run, 'stop it, then start a new run')
-        # One agent per ticket: while its last turn runs, that agent is awake and reads the ticket itself (#1469).
-        if state['turns'] and running(state['turns'][-1]):
+        found = state.get('row') and state['session'] is None
+        if found:
+            state['session'] = reported_session(run, state['row']['session'], state['turns'][0])
+            if state['session'] is None:
+                raise Refused('run %s has no session id from its first turn yet; nothing was started' % run,
+                              'wait until its first turn has printed its session id, then wake again')
+        busy = state['turns'] and running(state['turns'][-1])
+        if found or not busy:
+            try:
+                saved(run, state)
+            except OSError:
+                raise Refused('the driver cannot save run %s; nothing was started' % run, WRITABLE)
+        if busy:
             return {'run': run, 'woke': True}
-        try:  # a turn it could not save would be beyond a later wake's check: save first, or start nothing
-            saved(run, state)
-        except OSError:
-            raise Refused('the driver cannot save run %s; nothing was started' % run, WRITABLE)
         turn = launch(state, run, True)
         try:
             saved(run, dict(state, turns=state['turns'] + [turn]))
@@ -505,6 +918,8 @@ def main():
         out, code = {'error': e.args[0], 'next': e.args[1]}, 1
     except Exception as e:
         out, code = {'error': 'the driver failed: ' + type(e).__name__, 'next': 'read its code, fix it, retry'}, 1
+    if LSOF_COULD_NOT_CHECK:
+        print(NO_LSOF, file=sys.stderr)
     print(json.dumps(out))
     sys.exit(code)
 

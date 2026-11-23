@@ -1,19 +1,3 @@
-//! One table of good and bad JSON per contract (Sol re-check, round 2).
-//!
-//! **Readers:** no new-thread or prompt type has a serde reader, so
-//! `serde_json::from_str` and `from_value` can't be called on them at all:
-//! the core's compile-time guard (`new_thread::no_readers`) proves it. Every
-//! bad form below is therefore refused by both serde entry points, by
-//! construction, and the schema must refuse it too. The good forms are what
-//! the core writes.
-//!
-//! **The one reader** (A1 phase 2) is the store's: the record, read back
-//! through `NewThreadRecord::read` over a `StrictJson` tree. The record
-//! table runs every row through it too: it accepts exactly the rows the
-//! schema accepts. **Duplicate keys** are the tree's concern: a parsed
-//! `Value` keeps one of them, so no schema can see them, and the tree
-//! refuses them at every depth.
-
 use std::path::Path;
 
 use openwiz_core::messaging::send::UncertainReason;
@@ -36,7 +20,6 @@ fn at(mut schema: Value, def: &str) -> Value {
     schema
 }
 
-/// Runs `rows` of `(good, json)` against `schema`.
 fn table(name: &str, schema: &Value, rows: &[(bool, Value)]) {
     for (good, value) in rows {
         let errors = pattern::validate(schema, value);
@@ -112,7 +95,6 @@ fn the_prompt_contract() {
         (false, with(&good, "/attachments", json!({}))),
         (false, with(&good, "/attachments", json!(["-att"]))),
         (false, with(&good, "/attachments", json!([""]))),
-        // Merged from n14's schema case (#808).
         (false, with(&good, "/attachments", json!(["a/b"]))),
         (false, with(&good, "/attachments", json!([1]))),
         (false, with(&good, "/text", json!(""))),
@@ -126,8 +108,6 @@ fn the_prompt_contract() {
     table("prompt.v1", &prompt_schema(), &rows);
     table("new-thread prompt", &at(schema(), "prompt"), &rows);
 
-    // B2: ids are taken each at most once. One literal uniqueness table
-    // owns the prompt, new-thread and messaging schemas and core parity.
     let messaging = at(
         serde_json::from_str(
             &std::fs::read_to_string(Path::new(ROOT).join("contracts/messaging.v1.schema.json"))
@@ -330,8 +310,6 @@ fn the_record_contract_with_nested_forms() {
     );
 }
 
-/// The store's reader on the same table: it accepts exactly what the
-/// schema accepts, and refuses a key given twice at any depth.
 fn the_records_reader_follows_the_table() {
     let schema = at(schema(), "record");
     let claimed = record();
@@ -400,7 +378,6 @@ fn the_records_reader_follows_the_table() {
     }
 
     let text = claimed.to_string();
-    // `Value` writes its keys in order: binding's come first.
     for (from, to) in [
         ("\"schema\":", "\"schema\":\"x\",\"schema\":"),
         ("\"harness\":", "\"harness\":\"codex\",\"harness\":"),
@@ -448,8 +425,6 @@ fn erased_created_records_require_both_digest_length_and_lowercase_hex() {
     }
 }
 
-/// The core's strict record reader over a JSON value (moved here from the
-/// deleted `record_store.rs` by #1264).
 fn read(value: &Value) -> Result<NewThreadRecord, String> {
     let tree: openwiz_core::new_thread::read::StrictJson =
         serde_json::from_str(&value.to_string()).map_err(|e| format!("tree: {e}"))?;

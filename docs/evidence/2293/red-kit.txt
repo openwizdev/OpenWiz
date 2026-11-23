@@ -1,0 +1,72 @@
+test_a_failed_start_check_still_stops_its_run (__main__.Kit.test_a_failed_start_check_still_stops_its_run) ... FAIL
+test_a_refusal_holding_a_credential_never_reaches_the_output (__main__.Kit.test_a_refusal_holding_a_credential_never_reaches_the_output) ... ok
+test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) ... ok
+test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) ... ok
+test_no_harness_outside_the_fixtures_is_on_the_tests_path (__main__.Kit.test_no_harness_outside_the_fixtures_is_on_the_tests_path) ... FAIL
+test_probe_only_hides_environments_from_the_kits_own_listing_only (__main__.Kit.test_probe_only_hides_environments_from_the_kits_own_listing_only) ... 
+  test_probe_only_hides_environments_from_the_kits_own_listing_only (__main__.Kit.test_probe_only_hides_environments_from_the_kits_own_listing_only) (caller={}) ... FAIL
+  test_probe_only_hides_environments_from_the_kits_own_listing_only (__main__.Kit.test_probe_only_hides_environments_from_the_kits_own_listing_only) (caller={'OPENWIZ_KIT_RUN': '8cee93a9986c4ced'}) ... FAIL
+test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) ... ok
+test_template_passes_all_five (__main__.Kit.test_template_passes_all_five) ... ok
+test_the_kits_visibility_probe_signals_ready_through_the_macos_shim_and_runs_until_its_stdin_closes (__main__.Kit.test_the_kits_visibility_probe_signals_ready_through_the_macos_shim_and_runs_until_its_stdin_closes) ... ok
+test_without_proc_as_on_macos_a_driver_whose_run_stays_in_the_kits_group_passes_all_five (__main__.Kit.test_without_proc_as_on_macos_a_driver_whose_run_stays_in_the_kits_group_passes_all_five) ... ok
+test_without_proc_as_on_macos_the_template_passes_all_five (__main__.Kit.test_without_proc_as_on_macos_the_template_passes_all_five) ... ok
+test_without_proc_or_the_runs_visible_environment_stop_and_token_fail_unverified (__main__.Kit.test_without_proc_or_the_runs_visible_environment_stop_and_token_fail_unverified) ... ok
+
+======================================================================
+FAIL: test_a_failed_start_check_still_stops_its_run (__main__.Kit.test_a_failed_start_check_still_stops_its_run)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 182, in test_a_failed_start_check_still_stops_its_run
+    self.assertEqual(self.left(), [], 'the run whose start check failed still runs after the kit')
+AssertionError: Lists differ: [7532, 7533] != []
+
+First list contains 2 additional elements.
+First extra element 0:
+7532
+
+- [7532, 7533]
++ [] : the run whose start check failed still runs after the kit
+
+======================================================================
+FAIL: test_no_harness_outside_the_fixtures_is_on_the_tests_path (__main__.Kit.test_no_harness_outside_the_fixtures_is_on_the_tests_path)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 199, in test_no_harness_outside_the_fixtures_is_on_the_tests_path
+    self.assertIsNone(shutil.which('claude', path=self.env['PATH']), 'the PATH reaches a real claude')
+AssertionError: '<tmp>/outside/claude' is not None : the PATH reaches a real claude
+
+======================================================================
+FAIL: test_probe_only_hides_environments_from_the_kits_own_listing_only (__main__.Kit.test_probe_only_hides_environments_from_the_kits_own_listing_only) (caller={})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 165, in test_probe_only_hides_environments_from_the_kits_own_listing_only
+    self.assertEqual((bool(rows), any('KIT_TEST=' + self.mark in r for r in rows)), (True, shown))
+AssertionError: Tuples differ: (False, False) != (True, False)
+
+First differing element 0:
+False
+True
+
+- (False, False)
++ (True, False)
+
+======================================================================
+FAIL: test_probe_only_hides_environments_from_the_kits_own_listing_only (__main__.Kit.test_probe_only_hides_environments_from_the_kits_own_listing_only) (caller={'OPENWIZ_KIT_RUN': '8cee93a9986c4ced'})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 165, in test_probe_only_hides_environments_from_the_kits_own_listing_only
+    self.assertEqual((bool(rows), any('KIT_TEST=' + self.mark in r for r in rows)), (True, shown))
+AssertionError: Tuples differ: (False, False) != (True, True)
+
+First differing element 0:
+False
+True
+
+- (False, False)
++ (True, True)
+
+----------------------------------------------------------------------
+Ran 12 tests in 53.340s
+
+FAILED (failures=4)

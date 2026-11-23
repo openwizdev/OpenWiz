@@ -1,25 +1,5 @@
-//! A small JSON Schema checker for `contracts/inventory.v1.schema.json`.
-//!
-//! No JSON Schema crate is approved, so this checks the subset the schema
-//! uses: `type`, `required`, `properties`, `additionalProperties: false`,
-//! `items`, `enum`, `const`, `oneOf`, local `$ref`, `minimum`, `minLength`,
-//! `maxLength`, `maximum`, `exclusiveMinimum`, `minItems`, `maxItems`,
-//! `pattern` and `maxUtf8Bytes`, plus `uniqueItems: true` on array nodes.
-//! Patterns use either the prompt checker's
-//! restricted grammar or the engine's anchored ASCII character-class grammar.
-//! [`lint`] walks the whole schema, every `$defs` entry included. It refuses
-//! any other keyword, any other form of
-//! `additionalProperties` and any `$ref` that does not resolve, so the
-//! schema cannot rely on a rule this checker ignores.
-//!
-//! Its own test is in `tests/checks/support_proofs.rs`, so it runs once, not
-//! once per target that includes this file (#811).
-
 use serde_json::Value;
 
-// Mirror the prompt checker's restricted grammar here: this shared module is
-// also compiled under nested service-test modules and by standalone reproducers,
-// where the prompt checker's crate::schema dependency is unavailable.
 mod text_rules {
     #[derive(Debug)]
     enum Atom {
@@ -31,7 +11,6 @@ mod text_rules {
     }
 
     fn escape(chars: &[char], i: &mut usize) -> Result<char, String> {
-        // At `\`: only `\uXXXX`.
         let hex: String = chars
             .get(*i + 2..*i + 6)
             .ok_or("a short escape")?
@@ -49,7 +28,6 @@ mod text_rules {
         '.', '|', '?', '*', '+', '(', ')', '{', '}', '^', '$', '[', ']',
     ];
 
-    /// Parses a pattern of the supported form, or says why it isn't one.
     fn parse(pattern: &str) -> Result<Vec<Atom>, String> {
         let body = pattern
             .strip_prefix('^')
@@ -196,8 +174,6 @@ pub fn load_schema() -> Value {
     serde_json::from_str(&text).expect("schema is JSON")
 }
 
-/// Returns every keyword or form in `schema` that this checker does not
-/// enforce, wherever it appears.
 pub fn lint(schema: &Value) -> Vec<String> {
     let mut errors = Vec::new();
     lint_node(schema, schema, "#", &mut errors);
@@ -266,7 +242,6 @@ fn lint_node(root: &Value, node: &Value, path: &str, errors: &mut Vec<String>) {
     }
 }
 
-/// Returns every violation of `schema` by `value`, with its JSON path.
 pub fn validate(schema: &Value, value: &Value) -> Vec<String> {
     let mut errors = Vec::new();
     check(schema, schema, value, "$", &mut errors);
@@ -455,9 +430,6 @@ fn resolve<'a>(root: &'a Value, reference: &str) -> Option<&'a Value> {
     root.pointer(pointer)
 }
 
-// Deliberately bounded regex syntax, enforced by lint: ASCII literals/escapes,
-// positive character classes/ranges, and *, +, ?, {n}, {n,m}, {n,} repetition.
-// No groups, alternation, wildcard or hidden unsupported regex semantics.
 struct Atom {
     ranges: Vec<(char, char)>,
     min: usize,
@@ -468,8 +440,6 @@ fn parse_pattern(pattern: &str) -> Result<Vec<Atom>, ()> {
         .strip_prefix('^')
         .and_then(|s| s.strip_suffix('$'))
         .ok_or(())?;
-    // Only the engine's anchored character-class forms are added. Keep
-    // literal-only patterns outside this subset and its existing lint guard.
     if !body.is_ascii() || !body.contains('[') {
         return Err(());
     }

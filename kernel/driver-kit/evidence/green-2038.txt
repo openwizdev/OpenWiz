@@ -1,0 +1,42 @@
+$ python3 -I kernel/driver-kit/test_kit.py Kit.test_the_kits_visibility_probe_runs_through_the_macos_shim_until_the_kit_closes_its_stdin
+test_the_kits_visibility_probe_runs_through_the_macos_shim_until_the_kit_closes_its_stdin (__main__.Kit.test_the_kits_visibility_probe_runs_through_the_macos_shim_until_the_kit_closes_its_stdin) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.027s
+
+OK
+
+Slowed listing (the kit's ps -E listing delayed 0.5 s, the probe through the shim):
+test_without_proc_as_on_macos_the_template_passes_all_five (test_kit.Kit.test_without_proc_as_on_macos_the_template_passes_all_five) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 22.477s
+
+OK
+
+test_without_proc_as_on_macos_the_template_passes_all_five, 50 runs in a row: 50/50 passed
+Before the fix, 20 runs on a quiet machine: 70e37d1 20/20 passed, b0346d9 20/20 passed
+python3 -I kernel/driver-kit/test_kit.py: Ran 8 tests in 42.493s, OK
+python3 -I adapters/template/test_driver.py: Ran 10 tests in 9.874s, OK
+python3 -I adapters/local/test_driver.py: Ran 14 tests in 40.957s, OK
+python3 -I adapters/boat/test_driver.py: Ran 13 tests in 25.312s, OK
+
+At 5c7dcba4d9f1bd46372b0cc5fc7528d89a68e304 (helper docstring removed; the later green head only reverts changes/ to main, so no code or test differs from this commit):
+comment-check diff --base origin/main: ok
+kernel/driver-kit/test_kit.py: Ran 8 tests, OK
+adapters/template/test_driver.py: Ran 10 tests, OK
+adapters/local/test_driver.py: Ran 14 tests, OK
+adapters/boat/test_driver.py: Ran 13 tests, OK
+
+R1 (probe readiness signal), kit.py change on top of 7b9ea73ea74705f6cc57dcabcce62d408896e2e8:
+readiness test: OK
+slowed listing (0.5 s ps -E delay): OK
+kit visibility check, by probe (fixture ps on PATH):
+signals: visible (0.0s)
+never signals: ps shows no process's environment here, so the kit cannot tell which processes the driver started (30.0s)
+exits at once: ps shows no process's environment here, so the kit cannot tell which processes the driver started (0.0s)
+test_without_proc_as_on_macos_the_template_passes_all_five, 50 runs in a row: 50-run: 50/50 passed
+kernel/driver-kit/test_kit.py Ran 8 tests in 42.304s OK
+adapters/template/test_driver.py Ran 10 tests in 9.840s OK
+adapters/local/test_driver.py Ran 14 tests in 40.850s OK
+adapters/boat/test_driver.py Ran 13 tests in 24.819s OK

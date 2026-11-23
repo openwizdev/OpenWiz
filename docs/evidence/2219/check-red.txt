@@ -1,0 +1,67 @@
+FFFFFF
+======================================================================
+FAIL: test_cloud_catalogue_cannot_verify_a_local_choice (__main__.HostCheck.test_cloud_catalogue_cannot_verify_a_local_choice)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/install/setup/test_check.py", line 468, in test_cloud_catalogue_cannot_verify_a_local_choice
+    self.assertEqual(answer['results']['harness'], 'harness_unreadable')
+AssertionError: 'harness_listed' != 'harness_unreadable'
+- harness_listed
++ harness_unreadable
+
+
+======================================================================
+FAIL: test_local_check_matches_ready_host_fixture (__main__.HostCheck.test_local_check_matches_ready_host_fixture)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/install/setup/test_check.py", line 414, in test_local_check_matches_ready_host_fixture
+    self.assertEqual(answer.get('host'), report['host'])
+AssertionError: None != 'local'
+
+======================================================================
+FAIL: test_missing_harness_is_reported_even_if_list_would_offer_it (__main__.HostCheck.test_missing_harness_is_reported_even_if_list_would_offer_it)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/install/setup/test_check.py", line 429, in test_missing_harness_is_reported_even_if_list_would_offer_it
+    self.assertEqual(answer['results']['harness'], 'harness_not_installed')
+AssertionError: 'harness_unreadable' != 'harness_not_installed'
+- harness_unreadable
++ harness_not_installed
+
+
+======================================================================
+FAIL: test_non_settable_choice_names_only_local_next_steps (__main__.HostCheck.test_non_settable_choice_names_only_local_next_steps)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/install/setup/test_check.py", line 457, in test_non_settable_choice_names_only_local_next_steps
+    self.assertEqual(answer['results']['harness'], 'harness_unavailable')
+AssertionError: 'harness_unreadable' != 'harness_unavailable'
+- harness_unreadable
+?           -- ^
++ harness_unavailable
+?            ^^^^
+
+
+======================================================================
+FAIL: test_probe_accepts_the_contract_unlisted_model_on_boat (__main__.HostCheck.test_probe_accepts_the_contract_unlisted_model_on_boat)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/install/setup/test_check.py", line 441, in test_probe_accepts_the_contract_unlisted_model_on_boat
+    self.assertEqual(answer.get('host'), 'boat')
+AssertionError: None != 'boat'
+
+======================================================================
+FAIL: test_project_without_push_permission_is_refused (__main__.HostCheck.test_project_without_push_permission_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/install/setup/test_check.py", line 450, in test_project_without_push_permission_is_refused
+    self.assertEqual(answer['results']['project'], 'project_no_write')
+AssertionError: 'project_unreadable' != 'project_no_write'
+- project_unreadable
++ project_no_write
+
+
+----------------------------------------------------------------------
+Ran 6 tests
+
+FAILED (failures=6)

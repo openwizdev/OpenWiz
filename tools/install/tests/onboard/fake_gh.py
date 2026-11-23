@@ -1,26 +1,4 @@
 #!/usr/bin/env python3
-"""A recording fake `gh` for the onboarding journey (#1108).
-
-#1074: the demo repository's creation and read-back (`repo create OWNER/NAME
---private [--add-readme]` and `repo view OWNER/NAME --json FIELDS`) and real
-init's REST calls (`api --include -X METHOD PATH`, answered by init's own
-recording fake, tools/install/tests/init/fake_gh.py) share ONE synthetic GitHub
-world, the JSON file $FAKE_GH_REPOS in init's world format ({"user", "repos":
-{"owner/name": repository}, "faults", "log"}), so an onboarding-created
-repository is exactly the one init reads. Its onboarding switches: "create":
-"ok" | "lost" | "fail", "fail_after_create": N (the N `repo view` reads after a
-create fail as a network error would), "view_fails". A plain create makes an
-empty repository with no branch, as GitHub does; `--add-readme` is GitHub's
-initial commit: its default branch `main` holding one README.md. "lost" creates
-the repository but exits 1 with no answer, as a timed-out create. Creation and
-`repo view` calls are logged to $FAKE_GH_CREATE_LOG.
-
-It also answers the launch's read of a spec's comments (#636: `api --paginate
-repos/R/issues/N/comments?per_page=100 --jq EXPR`) from launch-fleet's synthetic
-world, through jq as gh does, or fails it when $FAKE_GH_COMMENTS_FAIL is set.
-Every other call goes to launch-fleet's fake gh unchanged, which refuses writes.
-All values are synthetic.
-"""
 import json
 import os
 from pathlib import Path
@@ -34,7 +12,6 @@ FIELDS = {'nameWithOwner', 'isPrivate', 'defaultBranchRef'}
 
 
 def repository(owner, name, branches):
-    """A repository as init's fake models it, created by this login."""
     return {'full_name': '%s/%s' % (owner, name), 'private': True, 'visibility': 'private',
             'default_branch': 'main', 'permissions': {'push': True}, 'owner': {'login': owner, 'type': 'User'},
             'description': None, 'homepage': None, 'labels': [], 'pulls': [], 'branches': branches}

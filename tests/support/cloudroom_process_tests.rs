@@ -1,4 +1,3 @@
-//! Compiled only by the CloudRoom adapter unit-test target.
 use super::*;
 
 #[test]
@@ -9,14 +8,9 @@ fn the_read_timeout_is_read_timeout_unless_a_fixture_lowers_it() {
     assert_eq!(read_timeout_with(15_000), READ_TIMEOUT);
     assert_eq!(read_timeout_with(15_001), READ_TIMEOUT);
     assert_eq!(read_timeout_with(u64::MAX), READ_TIMEOUT);
-    // Nothing in this process lowered it.
     assert_eq!(read_timeout(), READ_TIMEOUT);
 }
 
-// #2831: output beyond the cap is sufficient to refuse a read even if its
-// writer catches BrokenPipe and remains alive. The old child-exit-first
-// path misses that event and returns TimedOut instead. Writes share this
-// runner, so the same early-refusal change must not silently stop a write.
 struct OversizedProcess {
     dir: std::path::PathBuf,
     program: std::path::PathBuf,
@@ -61,8 +55,6 @@ while True:
     }
 }
 
-/// As in the service tests (#2580, #2676), only the child owns a writable
-/// descriptor for the executable. Sibling forks cannot inherit that writer.
 fn place(src: &Path, dst: &Path) {
     use std::os::unix::fs::PermissionsExt;
     assert!(!dst.is_dir(), "{} is a directory", dst.display());
@@ -179,8 +171,6 @@ fn over_cap_writes_keep_waiting_and_are_never_early_malformed() {
         ("pause", Invocation::LoopPause(id)),
     ] {
         let fixture = OversizedProcess::new(name);
-        // The outer deadline dominates even attachment allowances. The held
-        // state proves the write reached its oversized-output attempt.
         let result = run(
             &fixture.program,
             &invocation,

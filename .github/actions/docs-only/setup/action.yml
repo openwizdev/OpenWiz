@@ -15,12 +15,6 @@ runs:
   steps:
     - name: One device for the test roots
       shell: bash
-      # One device for a directory and its files: an overlay root (#2467)
-      # gives directories the overlay's device and files another, and
-      # /proc/locks names a file by the overlay's. Then tests/support/forks.rs
-      # never finds a held lock. /tmp, and Cargo's CARGO_TARGET_TMPDIR
-      # (target/tmp, where those tests make their files), go on a tmpfs when
-      # they are split.
       run: |
         split() {
           probe="$(mktemp -d "$1/device.XXXXXX")"
@@ -63,8 +57,6 @@ runs:
         rustup toolchain install "$PIN" --profile minimal --component rustfmt,clippy --no-self-update
         rustup default "$PIN"
         command -v zsh >/dev/null || { sudo apt-get update -q && sudo apt-get install -y zsh; }
-    # #555: `skills` is a tracked link to the gitignored .wizskills/skills, so
-    # every job installs the WizSkills release wizskills.lock pins first.
     - name: The pinned WizSkills
       shell: bash
       run: python3 -I tools/wizskills/install.py

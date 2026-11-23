@@ -1,10 +1,3 @@
-//! Shared helpers for the new-thread proofs: the fixtures, a fixed clock,
-//! an in-memory record store (test-only, never shipped) and a fake client
-//! that answers the core through the adapter's own parsers, so the core and
-//! the adapter are proven together on the same fixtures.
-
-#![allow(dead_code)]
-
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -35,7 +28,6 @@ use openwiz_core::prompt::PromptPayload;
 use openwiz_core::source::SourceError;
 use serde_json::Value;
 
-/// The fixed wall-clock time the fixtures are written against.
 pub const T0: Timestamp = Timestamp(1_700_000_600_000);
 
 pub const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/..");
@@ -91,12 +83,10 @@ pub fn settings(harness: &str, model: &str, effort: &str) -> Settings {
     }
 }
 
-/// codex, its first model, high: offered by `cloud-status.json`.
 pub fn offered() -> Settings {
     settings("codex", "syn-codex-model-01", "high")
 }
 
-/// A create in `prj_syn_0001` with `settings` and `text`.
 pub fn request(settings: Settings, text: &str, op_id: &str) -> NewThreadRequest {
     let mut r = NewThreadRequest::new(
         ProjectRef::Id("prj_syn_0001".to_owned()),
@@ -117,8 +107,6 @@ fn candidate(id: &str, name: &str, kind: &str, github: bool) -> ProjectCandidate
     }
 }
 
-/// The synthetic projects: one ready, one without a GitHub remote, one
-/// personal, two sharing a name.
 pub fn projects() -> Vec<ProjectCandidate> {
     vec![
         candidate("prj_syn_0001", "Synthetic project one", "standard", true),
@@ -129,21 +117,13 @@ pub fn projects() -> Vec<ProjectCandidate> {
     ]
 }
 
-/// How the fake answers the one call.
 #[derive(Clone, Debug)]
 pub enum SpawnAnswer {
-    /// Exit 0 with this fixture's bytes, through the adapter's receipt
-    /// parser.
     Receipt(&'static str),
-    /// A failed call, through the adapter's error parser.
     Error(Option<i32>, String),
-    /// A reply as it is (a timeout, a call that never started).
     Reply(SpawnReply),
 }
 
-/// A fake client: every answer goes through the adapter's parsers. It
-/// counts every call, and keeps the exact `spawn` arguments the adapter
-/// builds for each create.
 pub struct FakeClient {
     pub version: Result<String, SourceError>,
     pub projects: Result<Vec<ProjectCandidate>, SourceError>,
@@ -158,7 +138,6 @@ pub struct FakeClient {
     pub show_calls: AtomicUsize,
     pub list_calls: AtomicUsize,
     pub spawned: Mutex<Vec<(SpawnRequest, Vec<String>)>>,
-    /// The store's write count at each spawn, when a store is watched.
     pub writes_at_spawn: Mutex<Vec<usize>>,
     pub watched: Option<&'static MemoryStore>,
 }
@@ -202,7 +181,6 @@ impl FakeClient {
         self.spawn_calls.load(Ordering::SeqCst)
     }
 
-    /// Every call of any kind.
     pub fn calls(&self) -> usize {
         [
             &self.version_calls,
@@ -215,16 +193,6 @@ impl FakeClient {
         .iter()
         .map(|c| c.load(Ordering::SeqCst))
         .sum()
-    }
-
-    pub fn last_argv(&self) -> Vec<String> {
-        self.spawned
-            .lock()
-            .unwrap()
-            .last()
-            .expect("a spawn")
-            .1
-            .clone()
     }
 }
 
@@ -291,14 +259,10 @@ impl NewThreadClient for FakeClient {
     }
 }
 
-/// An in-memory record store: claims are atomic under one lock. A record is
-/// "live" while its claimer holds it; [`MemoryStore::stop`] simulates a
-/// process that stopped. Test-only.
 #[derive(Default)]
 pub struct MemoryStore {
     records: Mutex<BTreeMap<OpId, (NewThreadRecord, bool)>>,
     writes: AtomicUsize,
-    /// Every version written, in order.
     pub history: Mutex<Vec<NewThreadRecord>>,
 }
 
@@ -307,7 +271,6 @@ impl MemoryStore {
         Self::default()
     }
 
-    /// Leaked, so a fake client can watch it for the whole test.
     pub fn leaked() -> &'static Self {
         Box::leak(Box::new(Self::new()))
     }
@@ -324,7 +287,6 @@ impl MemoryStore {
             .map(|(r, _)| r.clone())
     }
 
-    /// Puts `record` in place, held by a live process when `live`.
     pub fn seed(&self, record: NewThreadRecord, live: bool) {
         self.records
             .lock()
@@ -397,7 +359,6 @@ impl NewThreadStore for MemoryStore {
     }
 }
 
-/// `new_thread` with the fixed clock, expecting a report.
 pub fn create(
     client: &FakeClient,
     store: &MemoryStore,
@@ -406,7 +367,6 @@ pub fn create(
     new_thread(client, store, &clock(), request).expect("a report")
 }
 
-/// `new_thread` with the fixed clock.
 pub fn try_create(
     client: &FakeClient,
     store: &MemoryStore,
@@ -415,7 +375,6 @@ pub fn try_create(
     new_thread(client, store, &clock(), request)
 }
 
-/// The new-thread schema, read and parsed once per test run (#1260).
 pub fn schema() -> Value {
     static SCHEMA_JSON: std::sync::OnceLock<Value> = std::sync::OnceLock::new();
     SCHEMA_JSON
@@ -425,14 +384,12 @@ pub fn schema() -> Value {
         .clone()
 }
 
-/// Validates `value` against `$defs/<def>` of the new-thread schema.
 pub fn validate_def(def: &str, value: &Value) -> Vec<String> {
     let mut schema = schema();
     schema["$ref"] = serde_json::json!(format!("#/$defs/{def}"));
     crate::pattern::validate(&schema, value)
 }
 
-/// Every string in `value`, keys included, recursively.
 pub fn strings(value: &Value, out: &mut Vec<String>) {
     match value {
         Value::String(s) => out.push(s.clone()),
@@ -445,7 +402,6 @@ pub fn strings(value: &Value, out: &mut Vec<String>) {
     }
 }
 
-/// This run's own private directory, outside any repository.
 pub fn private_dir(name: &str) -> PathBuf {
     use std::os::unix::fs::PermissionsExt;
     let parent = std::env::temp_dir().join("openwiz-new-thread-tests");

@@ -1,6 +1,3 @@
-//! CK1 source-half proofs: synthetic issue comments and explicit risk labels.
-//! The public GitHub issue reader feeds the fleet's public worked-value seam.
-
 use std::num::NonZeroU64;
 
 use openwiz_adapter_github::tickets::issue;
@@ -350,8 +347,6 @@ fn c10_detail_reads_comment_facts_and_the_fleets_list_keeps_its_query() {
         "--json",
         "blockedBy,body,id,labels,milestone,number,state,subIssues,title",
     ];
-    // The repository-wide list reads no comments (#539: with them, the live
-    // list took 46 s against the 30 s run budget), so its rows carry none.
     let mut row = issue_document(&["needs-info", "live"], vec![]);
     for key in ["closedByPullRequestsReferences", "comments"] {
         row.as_object_mut().unwrap().remove(key);
@@ -410,9 +405,6 @@ fn c10_detail_reads_comment_facts_and_the_fleets_list_keeps_its_query() {
 }
 
 fn c10_more_than_one_hundred_comments_still_give_the_newest_question() {
-    // `gh issue view --json comments` pages through every comment: #325's
-    // view returned 148 (a count-only live read, 2026-11-06). So no page
-    // boundary hides the newest one, and a busy ticket keeps its question.
     let mut comments: Vec<_> = (0..140)
         .map(|n| {
             comment(
