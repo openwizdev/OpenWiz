@@ -47,11 +47,14 @@ def source_version():
 
 
 SOURCE_VERSION = source_version()
+CONTRACT = 'contracts/open-development.v1.md'
 
 
 class Checker:
-    def __init__(self, literals=()):
+    def __init__(self, literals=(), runtime_roots=()):
         self.literals = literals
+        # --runtime-root: a staged release archive holds the contract at <root>/runtime/<CONTRACT>.
+        self.runtime_roots = runtime_roots
         self.findings = 0
         self.references = []
         self.verdicts = {}
@@ -108,7 +111,7 @@ class Checker:
         if name == 'private' or name.startswith('private/') or (name.startswith('docs/grills/') and name != 'docs/grills/README.md'):
             self.refuse('F1', place)
         self.text(name, place + '-path')
-        rules = 'workflow' if is_workflow(name) else 'contract' if name == 'contracts/open-development.v1.md' else 'text'
+        rules = 'workflow' if is_workflow(name) else 'contract' if self.is_contract(name) else 'text'
         key = None
         if SOURCE_VERSION and isinstance(blob, str) and re.fullmatch(r'[0-9a-f]{40}', blob):
             key = (SOURCE_VERSION, tuple(DECIDERS), tuple(self.literals), rules, blob)
@@ -130,6 +133,9 @@ class Checker:
         if key:
             self.verdicts[key] = (tuple(refusals), tuple(x for x, _ in self.references[start:]))
 
+    def is_contract(self, name):
+        return name == CONTRACT or any(name == root + '/runtime/' + CONTRACT for root in self.runtime_roots)
+
     def contents(self, name, data, place):
         if b'\0' in data:
             if is_workflow(name):
@@ -142,7 +148,7 @@ class Checker:
                 return
             self.refuse('READ', place)
             return
-        self.text(text, place, name == 'contracts/open-development.v1.md')
+        self.text(text, place, self.is_contract(name))
         if is_workflow(name):
             try:
                 if refused_jobs(text):
@@ -370,6 +376,8 @@ def main(argv=None):
     parser.add_argument('--body-file', type=Path)
     parser.add_argument('--literals', type=Path)
     parser.add_argument('--require-literals', action='store_true', help='required for importer and mover')
+    parser.add_argument('--runtime-root', action='append', default=[], dest='runtime_roots',
+                        help='with --tree: ROOT/runtime/ is a staged release runtime, so its contracts/open-development.v1.md gets that contract\'s bad-block rule')
     args = parser.parse_args(argv)
     checker = Checker()
     input_role = 'literals'
@@ -382,6 +390,9 @@ def main(argv=None):
                 raise Unreadable()
             checker.literals = values
         input_role = 'input'
+        if args.runtime_roots and (not args.tree or any(
+                not re.fullmatch(r'[A-Za-z0-9_][A-Za-z0-9._-]*', x) for x in args.runtime_roots)):
+            raise Unreadable()
         if not any((args.tree, args.git_tree, args.head, args.title_file, args.body_file)):
             raise Unreadable()
         if (args.head or args.git_tree or args.base) and not args.repo:
@@ -403,6 +414,7 @@ def main(argv=None):
         with closing(blobs):
             for tree_place, entries in trees:
                 input_role = 'tree' if tree_place == 'staged' else 'input'
+                checker.runtime_roots = tuple(args.runtime_roots) if tree_place == 'staged' else ()
                 known = set()
                 checker.references = []
                 for name, data, blob in entries:

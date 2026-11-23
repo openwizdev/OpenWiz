@@ -958,7 +958,8 @@ def scan_artifacts(body, folder, literals):
                 shutil.copytree(build / part, tree / target / part)
         try:
             done = subprocess.run([sys.executable, '-I', str(HERE.parent / 'privacy-check/check.py'), '--tree', str(tree),
-                                   '--literals', str(literals), '--require-literals'],
+                                   '--literals', str(literals), '--require-literals',
+                                   *(x for target in TARGETS for x in ('--runtime-root', target))],
                                   stdin=subprocess.DEVNULL, capture_output=True, timeout=300)
         except (OSError, subprocess.TimeoutExpired):
             return ['unreadable']
