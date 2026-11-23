@@ -57,11 +57,12 @@ owner-only state on the owner's machine, through protected
 secret provisioning for Cloud, never prompts/args/URLs/logs/repository files.
 
 Remote access defaults unknown. Named Cloudflare Tunnel plus owner-only Access
-or authenticated Tailscale must be independently verified before ready. A tunnel
-process is insufficient. No quick tunnel. Keep loopback binding, HTTPS host,
-origin, callback, content-type, request-id and once-only write guards. Denied,
-expired and foreign requests cannot reach an effect. Setup does not fabricate
-spec confirmation or plan approval, and install permission never starts work.
+or authenticated Tailscale must be independently verified before remote access
+is reported verified. A tunnel process is insufficient. No quick tunnel. Keep
+loopback binding, HTTPS host, origin, callback, content-type, request-id and
+once-only write guards. Denied, expired and foreign requests cannot reach an
+effect. Setup does not fabricate spec confirmation or plan approval, and
+install permission never starts work.
 
 ## 0.0.16 expansion: selected identity and brain (#632)
 
@@ -156,7 +157,11 @@ and another host's report whose `cloudroom` component is anything else.
   line is `Select OWNER/NAME for your first fleet, with agents on HOST.`;
   every other line is as today.
 
-The schema's `$defs/prepared_project` pins both shapes.
+The schema's `$defs/prepared_project` pins both shapes. The setup store's
+value and credential checks apply to both: a trimmed operator of at most 100
+characters with no control character, a repository name other than `.` or
+`..`, a service issue below 2^53 and agent settings holding no credential
+shape. The schema expresses each of these but the credential check.
 
 ### `check`
 

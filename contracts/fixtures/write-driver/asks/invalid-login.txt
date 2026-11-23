@@ -1,1 +1,0 @@
-Before I copy your exampleagent login to the sandbox on examplehost: this may start a machine. Say yes to go ahead, or no to skip it.

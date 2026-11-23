@@ -1,0 +1,4 @@
+#!/bin/sh
+echo "${0##*/} $*" >> "$REHEARSAL_TOOL_LOG"
+echo "synthetic ${0##*/}: build tools are refused in the rehearsal" >&2
+exit 97

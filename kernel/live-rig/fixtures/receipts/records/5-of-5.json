@@ -1,0 +1,13 @@
+{
+  "host": "local",
+  "harness": "claude",
+  "model": "example-model",
+  "date": "2026-11-01",
+  "driver_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "kit_commit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "outcome": "ran",
+  "skipped": null,
+  "kit_exit": 0,
+  "stdout": "pass version: openwiz:records v1, and the schema is driver v1\npass start: the run posted builder status note 1000000001\npass wake: the run edited builder status note 1000000001\npass stop: the run ended, and a wake after it is refused\npass token: no login or token passed through the driver\n",
+  "seconds": 412
+}

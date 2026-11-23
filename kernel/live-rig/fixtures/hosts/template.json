@@ -1,0 +1,9 @@
+{
+  "host": "fixture-template",
+  "driver": "adapters/template/driver",
+  "needs": ["fake-harness", "fake-signed-in"],
+  "signed_in": [["fake-signed-in", "status"]],
+  "cost": "none",
+  "runs": [{"harness": "fake-harness", "model": "Synthetic 1"}],
+  "wait": 8
+}

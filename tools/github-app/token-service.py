@@ -154,18 +154,25 @@ def mint(api, request, setting):
     except Exception:
         raise Refused("github") from None
     token, listed = result.get("token"), result.get("repositories")
-    check(result.get("permissions") == permissions and result.get("repository_selection") == "selected", "github")
-    check(isinstance(listed, list) and all(isinstance(r, dict) and isinstance(r.get("full_name"), str)
-                                           for r in listed), "github")
-    check(sorted(r["full_name"].lower() for r in listed) == sorted(n.lower() for n in repositories), "github")
-    check(isinstance(token, str) and TOKEN.fullmatch(token) is not None, "github")
     try:
-        expires_at = int(datetime.fromisoformat(result["expires_at"].replace("Z", "+00:00")).timestamp())
-    except Exception:
-        raise Refused("github") from None
-    left = expires_at - time.time()
-    check(REFRESH + HANDOVER < left <= LONGEST, "expiry")
+        check(result.get("permissions") == permissions and result.get("repository_selection") == "selected", "github")
+        check(isinstance(listed, list) and all(isinstance(r, dict) and isinstance(r.get("full_name"), str)
+                                               for r in listed), "github")
+        check(sorted(r["full_name"].lower() for r in listed) == sorted(n.lower() for n in repositories), "github")
+        check(isinstance(token, str) and TOKEN.fullmatch(token) is not None, "github")
+        try:
+            expires_at = int(datetime.fromisoformat(result["expires_at"].replace("Z", "+00:00")).timestamp())
+        except Exception:
+            raise Refused("github") from None
+        check(fresh(expires_at), "expiry")
+    except Refused:
+        app.revoke(api["base"], token)
+        raise
     return token, expires_at
+
+
+def fresh(expires_at):
+    return REFRESH + HANDOVER < expires_at - time.time() <= LONGEST
 
 
 def serve(api, log, data, setting):

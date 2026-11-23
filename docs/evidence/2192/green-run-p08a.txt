@@ -1,5 +1,0 @@
-# Green run, #2192 P08a (J306) and the ACL tests, at the fix
-$ cargo test -p openwiz-tests --test proof p08a
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 107 filtered out; finished in 0.66s
-$ cargo test -p openwiz-tests --test cli-agent macos
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 122 filtered out; finished in 0.05s

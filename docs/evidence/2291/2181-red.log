@@ -1,0 +1,12 @@
+# main behaviour: no deadline check between PATH candidates (2048 denied, 20 ms budget)
+running 1 test
+process::scrub_tests::the_launch_deadline_is_checked_before_each_candidate --- FAILED
+failures:
+---- process::scrub_tests::the_launch_deadline_is_checked_before_each_candidate stdout ----
+thread 'process::scrub_tests::the_launch_deadline_is_checked_before_each_candidate' (6324) panicked at crates/adapters/cloudroom/src/process.rs:415:9:
+after 284.806177ms
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+failures:
+    process::scrub_tests::the_launch_deadline_is_checked_before_each_candidate
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 32 filtered out; finished in 0.29s
+error: test failed, to rerun pass `-p openwiz-adapter-cloudroom --lib`

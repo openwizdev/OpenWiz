@@ -1,0 +1,66 @@
+$ python3 -I tools/comment-check/test_check.py
+test_before_and_after_are_counted_the_same_way (__main__.Count.test_before_and_after_are_counted_the_same_way) ... ok
+test_cases_count_their_comment_lines (__main__.Count.test_cases_count_their_comment_lines) ... ok
+test_count_matches_the_known_tree (__main__.Count.test_count_matches_the_known_tree) ... ok
+test_doc_comments_pass_only_under_a_published_docs_path (__main__.Diff.test_doc_comments_pass_only_under_a_published_docs_path) ... ok
+test_each_allowed_kind_passes_and_each_disallowed_kind_fails_at_its_line (__main__.Diff.test_each_allowed_kind_passes_and_each_disallowed_kind_fails_at_its_line) ... ok
+test_excluded_files_never_fail (__main__.Diff.test_excluded_files_never_fail) ... ok
+test_only_added_lines_fail (__main__.Diff.test_only_added_lines_fail) ... ok
+test_quoted_paths_and_undecodable_files_fail_closed (__main__.Diff.test_quoted_paths_and_undecodable_files_fail_closed) ... ok
+test_the_escape_tag_passes_only_with_a_reason (__main__.Diff.test_the_escape_tag_passes_only_with_a_reason) ... ok
+test_each_reviewed_break_is_read_right_by_both_modes (__main__.Review.test_each_reviewed_break_is_read_right_by_both_modes) ... 
+  test_each_reviewed_break_is_read_right_by_both_modes (__main__.Review.test_each_reviewed_break_is_read_right_by_both_modes) [R1 of #2311 a near-match before the closing tag] ... FAIL
+  test_each_reviewed_break_is_read_right_by_both_modes (__main__.Review.test_each_reviewed_break_is_read_right_by_both_modes) [R2 of #2311 a literal case on a continued line] ... FAIL
+
+======================================================================
+FAIL: test_each_reviewed_break_is_read_right_by_both_modes (__main__.Review.test_each_reviewed_break_is_read_right_by_both_modes) [R1 of #2311 a near-match before the closing tag]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+    self.assertEqual((code, failures(out)), (1 if want else 0, want), err)
+AssertionError: Tuples differ: (1, {('n.html', 1, 'comment'), ('n.html', 2, 'comment')}) != (1, {('n.html', 2, 'comment'), ('n.html', 3, 'comment')})
+
+First differing element 1:
+{('n.html', 1, 'comment'), ('n.html', 2, 'comment')}
+{('n.html', 2, 'comment'), ('n.html', 3, 'comment')}
+
+- (1, {('n.html', 1, 'comment'), ('n.html', 2, 'comment')})
+?                 ^                         ^
+
++ (1, {('n.html', 2, 'comment'), ('n.html', 3, 'comment')})
+?                 ^                         ^
+ : comment-check: 2 disallowed comment(s) in added lines
+
+
+======================================================================
+FAIL: test_each_reviewed_break_is_read_right_by_both_modes (__main__.Review.test_each_reviewed_break_is_read_right_by_both_modes) [R2 of #2311 a literal case on a continued line]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+    self.assertEqual((code, failures(out)), (1 if want else 0, want), err)
+AssertionError: Tuples differ: (0, set()) != (1, {('c.sh', 2, 'comment')})
+
+First differing element 0:
+0
+1
+
+- (0, set())
++ (1, {('c.sh', 2, 'comment')}) : comment-check: ok
+
+
+----------------------------------------------------------------------
+Ran 10 tests in 2.967s
+
+FAILED (failures=2)
+$ python3 -I tools/owned-paths/test_check.py
+....F..........
+======================================================================
+FAIL: test_an_annotation_before_an_exclusion_admits_no_tests (__main__.Check.test_an_annotation_before_an_exclusion_admits_no_tests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+    self.verdict('annotated-exclusion', s)
+    self.assertIn(line, out)
+AssertionError: 'owned: tools/plain/test_run.py (tests of `tools/plain/run.py`)' not found in 'owned: crates/core/src/widget_tests.rs (tests of `crates/core/src/widget.rs`)\nOUT: tools/excluded/test_run.py (ticket #7)\nowned: tools/install/harness.py (by `tools/install/harness.py`)\nowned: tools/install/setup/init.test.mjs (tests of `tools/install/setup/init.py`)\nOUT: tools/install/test_install.py (ticket #7)\nOUT: tools/plain/test_run.py (ticket #7)\nOUT: tools/release/test_release.py (ticket #7)\nowned-paths: 4 file(s) outside the owned paths and grants of ticket #7: move them out, or ask on the ticket for an F4 supporting edit grant naming each path\n'
+
+----------------------------------------------------------------------
+Ran 15 tests in 1.087s
+
+FAILED (failures=1)

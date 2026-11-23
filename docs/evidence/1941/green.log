@@ -1,3 +1,0 @@
-$ python3 -I contracts/fixtures/checkpoints/check.py   # with the fence fix
-checkpoints fixtures: 71 of 71 read as expected
-exit 0

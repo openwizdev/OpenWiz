@@ -1,0 +1,21 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/test_heads.py   # refusing stubs for 37 agent CLIs first on PATH, at the merge of origin/main
+test_a_fetched_commit_that_is_not_the_frozen_head_is_refused_and_runs_no_kit (__main__.Heads.test_a_fetched_commit_that_is_not_the_frozen_head_is_refused_and_runs_no_kit) ... ok
+test_a_frozen_head_naming_another_pr_or_a_host_with_no_config_is_skipped_and_starts_no_kit (__main__.Heads.test_a_frozen_head_naming_another_pr_or_a_host_with_no_config_is_skipped_and_starts_no_kit) ... ok
+test_a_host_not_signed_in_is_skipped_and_starts_no_kit (__main__.Heads.test_a_host_not_signed_in_is_skipped_and_starts_no_kit) ... ok
+test_a_kit_line_quoting_any_one_private_value_is_withheld_from_the_record_and_comment (__main__.Heads.test_a_kit_line_quoting_any_one_private_value_is_withheld_from_the_record_and_comment) ... ok
+test_a_paid_host_without_its_allow_cost_is_skipped_and_starts_no_kit (__main__.Heads.test_a_paid_host_without_its_allow_cost_is_skipped_and_starts_no_kit) ... ok
+test_a_post_retried_after_a_lost_write_finishes_it_without_a_second_kit_run_comment_or_branch (__main__.Heads.test_a_post_retried_after_a_lost_write_finishes_it_without_a_second_kit_run_comment_or_branch) ... ok
+test_a_ticket_with_a_second_page_is_refused_after_one_read_even_from_the_saved_etag (__main__.Heads.test_a_ticket_with_a_second_page_is_refused_after_one_read_even_from_the_saved_etag) ... ok
+test_a_ticket_with_no_frozen_head_line_from_a_record_author_is_skipped_and_starts_no_kit (__main__.Heads.test_a_ticket_with_no_frozen_head_line_from_a_record_author_is_skipped_and_starts_no_kit) ... ok
+test_an_allow_cost_naming_no_listed_host_and_a_bad_tickets_file_exit_2 (__main__.Heads.test_an_allow_cost_naming_no_listed_host_and_a_bad_tickets_file_exit_2) ... ok
+test_five_of_five_gives_the_exact_pr_comment_receipt_and_record_and_writes_nothing_to_github (__main__.Heads.test_five_of_five_gives_the_exact_pr_comment_receipt_and_record_and_writes_nothing_to_github) ... ok
+test_four_of_five_gives_a_comment_and_no_receipt (__main__.Heads.test_four_of_five_gives_a_comment_and_no_receipt) ... ok
+test_help_and_a_skip_never_load_the_kit_module_or_its_credential_reads (__main__.Heads.test_help_and_a_skip_never_load_the_kit_module_or_its_credential_reads) ... ok
+test_hosts_outside_the_checkout_or_untracked_in_it_exit_2_and_run_nothing (__main__.Heads.test_hosts_outside_the_checkout_or_untracked_in_it_exit_2_and_run_nothing) ... ok
+test_post_reaches_only_the_fake_gh_with_one_comment_per_run_and_one_wizmarket_pull_request (__main__.Heads.test_post_reaches_only_the_fake_gh_with_one_comment_per_run_and_one_wizmarket_pull_request) ... ok
+test_the_vps_live_tickets_file_names_the_five_live_checks_their_build_prs_and_listing_ids (__main__.Heads.test_the_vps_live_tickets_file_names_the_five_live_checks_their_build_prs_and_listing_ids) ... ok
+
+----------------------------------------------------------------------
+Ran 15 tests in 172.983s
+
+OK

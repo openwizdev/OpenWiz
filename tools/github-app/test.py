@@ -153,6 +153,11 @@ def fake_github(pem):
             self.end_headers()
             self.wfile.write(json.dumps(result).encode())
 
+        def do_DELETE(self):
+            calls.append((self.path, dict(self.headers), b""))
+            self.send_response(204)
+            self.end_headers()
+
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -166,6 +171,10 @@ def fake_github(pem):
 
 def mints(calls):
     return [c for c in calls if c[0].endswith("/access_tokens")]
+
+
+def revoked(calls):
+    return [c[1].get("Authorization") for c in calls if c[0] == "/installation/token"]
 
 
 OWNER_READS = ["/app", "/app/installations/2002"]
@@ -386,7 +395,8 @@ class ReadProfileTests(KeyFixture):
                     self.assertEqual(result.stdout, b"")
                     self.assertEqual(result.stderr,
                                      b"App token refused: check PC state permissions, App installation and GitHub availability.\n")
-            self.assertEqual(len(calls), 3 * (len(cases) - 2))
+            self.assertEqual(len(calls) - len(revoked(calls)), 3 * (len(cases) - 2))
+            self.assertEqual(len(revoked(calls)), 4, "each token refused after minting is revoked")
 
     def test_read_token_is_bound_to_the_app_owner_or_the_named_factory_installations(self):
         text = (HERE.parent.parent / "contracts/github-identity.v1.md").read_text()
@@ -479,6 +489,70 @@ class GuardTests(KeyFixture):
             self.assert_no_key(result.stderr)
 
 
+class HardeningTests(KeyFixture):
+    def test_a_token_refused_after_minting_is_revoked_and_a_good_one_kept(self):
+        later = (datetime.now(timezone.utc) + timedelta(hours=2)).isoformat()
+        for name, change in (("write permissions", {"permissions": SERVICE}), ("too long", {"expires_at": later}),
+                             ("other repository", {"read_profile": {"repository_selection": "selected",
+                                                                     "repositories": [{"full_name": "synthetic-owner/x"}]}})):
+            with self.subTest(name), fake_github(self.pem) as (endpoint, calls, behavior):
+                behavior.update(change)
+                result = self.token(endpoint)
+                self.assertEqual((result.returncode, result.stdout), (1, b""))
+                self.assertEqual(revoked(calls), ["Bearer " + behavior["token"]])
+        with fake_github(self.pem) as (endpoint, calls, _behavior):
+            self.assertEqual(self.token(endpoint).returncode, 0)
+            self.assertEqual(revoked(calls), [])
+
+    def with_openssl(self, endpoint, program, env):
+        bootstrap = ("import runpy, sys; sys.path.insert(0, sys.argv[1]); import app; app.OPENSSL = sys.argv[2]; "
+                     "sys.argv = sys.argv[3:]; runpy.run_path(sys.argv[0], run_name='__main__')")
+        return subprocess.run(["python3", "-c", bootstrap, str(HERE), program, str(HERE / "mint-token.py"),
+                               "--state-dir", str(self.state), "--installation-id", "2002", "--api-base", endpoint,
+                               "--repository", "synthetic-owner/work"], capture_output=True, timeout=15, env=env)
+
+    def test_openssl_runs_by_absolute_path_with_a_fixed_environment_or_not_at_all(self):
+        tools, seen = Path(self.tmp.name) / "bin", Path(self.tmp.name) / "seen"
+        tools.mkdir()
+        (tools / "openssl").write_text(
+            f"#!{sys.executable}\nimport json, os, sys\nopen({str(seen)!r}, 'a').write(json.dumps(dict(os.environ)) + '\\n')\n"
+            "os.execv('/usr/bin/openssl', ['/usr/bin/openssl', *sys.argv[1:]])\n")
+        (tools / "openssl").chmod(0o700)
+        env = {k: v for k, v in os.environ.items() if not k.startswith("OPENWIZ_GITHUB_APP_")}
+        env.update(PATH=f"{tools}:{env['PATH']}", SYNTHETIC_PLANTED="planted")
+        with fake_github(self.pem) as (endpoint, _calls, _behavior):
+            self.assertEqual(self.token(endpoint, env=env).returncode, 0)
+            self.assertFalse(seen.exists(), "openssl was taken from PATH")
+            self.assertEqual(self.with_openssl(endpoint, str(tools / "openssl"), env).returncode, 0)
+            environment, = [json.loads(line) for line in seen.read_text().splitlines()]
+            self.assertFalse({"PATH", "SYNTHETIC_PLANTED"} & set(environment), "openssl inherited the environment")
+            missing = self.with_openssl(endpoint, str(tools / "absent"), env)
+            self.assertEqual((missing.returncode, missing.stdout), (1, b""))
+            self.assertIn(b"App token refused", missing.stderr)
+            self.assertEqual(len(seen.read_text().splitlines()), 1)
+
+    def test_an_interrupted_key_write_leaves_no_key_and_never_replaces_one(self):
+        self.key.unlink()
+        crash = ("import os, sys; from pathlib import Path; sys.path.insert(0, sys.argv[1]); import app\n"
+                 "directory = app.app_directory(Path(sys.argv[2]))\nos.fsync = lambda fd: os._exit(9)\n"
+                 "app.save_file(directory, 'private-key.pem', b'synthetic partial key')\n")
+        done = subprocess.run(["python3", "-c", crash, str(HERE), str(self.state)], capture_output=True, timeout=15)
+        self.assertEqual(done.returncode, 9, done.stderr)
+        self.assertFalse(self.key.exists(), "a crash mid-write left a key at its final name")
+        spec = importlib.util.spec_from_file_location("app_609", HERE / "app.py")
+        app = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(app)
+        directory = app.app_directory(self.state)
+        try:
+            app.save_file(directory, "private-key.pem", self.pem)
+            with self.assertRaises(FileExistsError):
+                app.save_file(directory, "private-key.pem", b"synthetic other key")
+        finally:
+            os.close(directory)
+        self.assertEqual((self.key.read_bytes(), self.key.stat().st_mode & 0o777, self.key.stat().st_nlink),
+                         (self.pem, 0o600, 1))
+
+
 class SetupCheckOwnerBoundary(KeyFixture):
     def check(self, endpoint):
         spec = importlib.util.spec_from_file_location("install_setup_606", HERE.parent / "install/setup/setup.py")
@@ -499,6 +573,16 @@ class SetupCheckOwnerBoundary(KeyFixture):
                 else:
                     self.assertEqual(code, "app_not_installed")
                     self.assertEqual(mints(calls), [])
+
+    def test_the_proof_token_is_revoked_and_must_cover_selected_repositories_only(self):
+        soon = (datetime.now(timezone.utc) + timedelta(minutes=50)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        for selection, code in (("selected", "app_verified"), ("all", "app_wrong_repository")):
+            with self.subTest(selection=selection), fake_github(self.pem) as (endpoint, calls, behavior):
+                behavior.update(permissions=SERVICE, expires_at=soon, read_profile={
+                    "repository_selection": selection,
+                    "repositories": [{"full_name": "synthetic-owner/synthetic-repo"}]})
+                self.assertEqual(self.check(endpoint)[0], code)
+                self.assertEqual(revoked(calls), ["Bearer " + behavior["token"]])
 
 
 class Form(HTMLParser):
@@ -580,6 +664,20 @@ class SetupTests(KeyFixture):
         self.assertEqual(manifest["hook_attributes"],
                          {"url": "https://github.com/synthetic-owner/other-repo", "active": False})
         self.assertEqual(calls, [])
+
+    def test_the_setup_page_has_a_44_pixel_button_a_viewport_and_a_language(self):
+        with fake_github(self.pem) as (endpoint, _calls, _behavior):
+            process, line, _page, _form, _manifest = self.start(endpoint)
+            with urllib.request.urlopen(re.search(rb"http://[^\s]+", line).group().decode()) as response:
+                policy, again = response.headers["Content-Security-Policy"], response.read().decode()
+            process.kill()
+            process.communicate(timeout=10)
+        self.assertTrue(again.startswith('<!doctype html><html lang="en"><meta charset="utf-8">'
+                                         '<meta name="viewport" content="width=device-width, initial-scale=1">'), again)
+        nonce, rules = re.search(r'<style nonce="([A-Za-z0-9_-]{16,})">([^<]*)</style>', again).groups()
+        self.assertIn(f"style-src 'nonce-{nonce}'", policy)
+        self.assertRegex(rules, r"button\{[^}]*min-height:44px;[^}]*min-width:44px")
+        self.assertIn('<button type="submit">Create the App on GitHub</button>', again)
 
     def test_manifest_follows_the_clone_by_default(self):
         for origin, repo in (
@@ -1749,9 +1847,7 @@ with patch("datetime.datetime", DeviceClock), patch("time.time", return_value=fi
                 fake_github(self.pem) as (endpoint, calls, behavior):
             behavior["permissions"] = SERVICE
             self.assertEqual(self.run_tool("refresh-token.py", endpoint, "--write").returncode, 0)
-        log = self.openssl_log.read_bytes()
-        self.assertIn(b"/dev/fd/", log)
-        self.assertFalse(b"synthetic-runner-value" in log, "the runner's environment reached the tool")
+        self.assertFalse(self.openssl_log.exists(), "the key file is signed by /usr/bin/openssl, never PATH's (#608)")
         for check in (lambda: self.assert_no_key("synthetic-context " + self.pem.decode()),
                       lambda: self.assert_hidden("synthetic-leaked-token", "synthetic-context synthetic-leaked-token")):
             with self.assertRaises(AssertionError) as caught:

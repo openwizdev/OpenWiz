@@ -1,4 +1,0 @@
-$ grep -i -c -e <private repository name> contracts/comments.v1.md tools/comment-check/check.py
-tools/comment-check/check.py:1
-contracts/comments.v1.md:2
-exit: 0

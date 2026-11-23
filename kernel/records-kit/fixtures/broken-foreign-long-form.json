@@ -1,0 +1,101 @@
+{
+ "tracker": "openwiz:records-kit tracker v1",
+ "repo": "example/site",
+ "now": "2030-01-02T04:00:00Z",
+ "record_authors": [
+  "example-bot[bot]",
+  "example-owner"
+ ],
+ "issues": [
+  {
+   "number": 1,
+   "labels": [
+    "spec"
+   ],
+   "parent": null,
+   "blocked_by": [],
+   "body": "## Problem Statement\n\nSynthetic.\n\n## Solution\n\nSynthetic.\n\n## Changelog headline\n\nSynthetic.\n\n## User Stories\n\nSynthetic.\n\n## Implementation Decisions\n\nSynthetic.\n\n## Testing Decisions\n\nSynthetic.\n\n## Proof\n\nSynthetic.\n\n## Out of Scope\n\nSynthetic.\n\n## Further Notes\n\nSynthetic.\n",
+   "comments": []
+  },
+  {
+   "number": 2,
+   "labels": [
+    "ready-for-agent",
+    "polish"
+   ],
+   "parent": 1,
+   "blocked_by": [
+    {
+     "number": 3,
+     "state": "closed",
+     "state_reason": "completed"
+    }
+   ],
+   "body": "## Parent\n\nTicket A1 of spec #1.\n\n## What to build\n\nA synthetic change.\n\n## Owned paths\n\n- `src/example.txt`\n\n**Relies on:** nothing\n\n## Links\n\n- other-owner/site#3 real: the example shape\n\n## Acceptance criteria\n\n- [ ] It works\n\n```md\n## Proof\n```\n\n## Proof\n\nA fixture test.\n",
+   "comments": [
+    {
+     "id": 201,
+     "author": "example-bot[bot]",
+     "updated_at": "2030-01-02T03:30:00Z",
+     "body": "<!-- openwiz:status v1 -->\nagent: builder\nstate: working\nharness: Claude Code\nmodel: Opus 5.5 Medium\nskills: build-ticket@0.1.2\nstep: opened the pull request\ntime: 2030-01-02T03:30:00Z\n"
+    },
+    {
+     "id": 202,
+     "author": "Example-Owner",
+     "updated_at": "2030-01-02T03:31:00Z",
+     "body": "<!-- openwiz:status v1 -->\nagent: builder\nstate: working\nharness: Claude Code\nmodel: Opus 5.5 Medium\nskills: build-ticket@0.1.2\nstep: opened the pull request\ntime: 2030-01-02T03:31:00Z\n"
+    },
+    {
+     "id": 203,
+     "author": "example-bot[bot]",
+     "updated_at": "2030-01-02T03:50:00Z",
+     "body": "<!-- openwiz:status v1 -->\nagent: reviewer\nstate: working\nharness: Claude Code\nmodel: Opus 5.5 Medium\nskills: build-ticket@0.1.2\nstep: opened the pull request\ntime: 2030-01-02T03:50:00Z\n"
+    },
+    {
+     "id": 204,
+     "author": "example-bot[bot]",
+     "updated_at": "2030-01-02T03:55:00Z",
+     "body": "<!-- openwiz:status v1 -->\nagent: builder\nstate: done\nharness: Claude Code\nmodel: Opus 5.5 Medium\nskills: build-ticket@0.1.2\nstep: opened the pull request\ntime: 2030-01-02T03:55:00Z\n"
+    },
+    {
+     "id": 205,
+     "author": "someone-else",
+     "updated_at": "2030-01-02T03:56:00Z",
+     "body": "<!-- openwiz:status v1 -->\nagent: builder\nstate: working\n"
+    },
+    {
+     "id": 206,
+     "author": "example-bot[bot]",
+     "updated_at": "2030-01-02T03:57:00Z",
+     "body": "<!-- openwiz:status v2 -->\nanything: goes\n"
+    },
+    {
+     "id": 207,
+     "author": "example-owner",
+     "updated_at": "2030-01-02T03:58:00Z",
+     "body": "Looks good."
+    }
+   ]
+  },
+  {
+   "number": 4,
+   "labels": [
+    "ready-for-human"
+   ],
+   "parent": 1,
+   "blocked_by": [],
+   "body": "## Parent\n\nTicket A1 of spec #1.\n\n## Done by\n\nThe owner.\n\n## What to build\n\nA synthetic change.\n\n## Owned paths\n\n- `src/example.txt`\n\n**Relies on:** nothing\n\n## Links\n\n- #3 real: the example shape\n\n## Acceptance criteria\n\n- [ ] It works\n\n```md\n## Proof\n```\n\n## Proof\n\nA fixture test.\n",
+   "comments": []
+  },
+  {
+   "number": 5,
+   "labels": [
+    "needs-triage"
+   ],
+   "parent": null,
+   "blocked_by": [],
+   "body": "A plain issue.\n",
+   "comments": []
+  }
+ ]
+}

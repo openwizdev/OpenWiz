@@ -1,0 +1,209 @@
+$ python3 -I tools/comment-check/test_check.py
+test_before_and_after_are_counted_the_same_way (__main__.Count.test_before_and_after_are_counted_the_same_way) ... ok
+test_cases_count_their_comment_lines (__main__.Count.test_cases_count_their_comment_lines) ... ok
+test_count_matches_the_known_tree (__main__.Count.test_count_matches_the_known_tree) ... ok
+test_doc_comments_pass_only_under_a_published_docs_path (__main__.Diff.test_doc_comments_pass_only_under_a_published_docs_path) ... ok
+test_each_allowed_kind_passes_and_each_disallowed_kind_fails_at_its_line (__main__.Diff.test_each_allowed_kind_passes_and_each_disallowed_kind_fails_at_its_line) ... ok
+test_excluded_files_never_fail (__main__.Diff.test_excluded_files_never_fail) ... ok
+test_only_added_lines_fail (__main__.Diff.test_only_added_lines_fail) ... ok
+test_quoted_paths_and_undecodable_files_fail_closed (__main__.Diff.test_quoted_paths_and_undecodable_files_fail_closed) ... ok
+test_the_escape_tag_passes_only_with_a_reason (__main__.Diff.test_the_escape_tag_passes_only_with_a_reason) ... ok
+test_each_reviewed_break_is_read_right_by_both_modes (__main__.Review.test_each_reviewed_break_is_read_right_by_both_modes) ... 
+  test_each_reviewed_break_is_read_right_by_both_modes (__main__.Review.test_each_reviewed_break_is_read_right_by_both_modes) [#1920 comment-shaped text in a title and a textarea] ... FAIL
+  test_each_reviewed_break_is_read_right_by_both_modes (__main__.Review.test_each_reviewed_break_is_read_right_by_both_modes) [#1921 a line continuation at a word boundary and inside a word] ... FAIL
+  test_each_reviewed_break_is_read_right_by_both_modes (__main__.Review.test_each_reviewed_break_is_read_right_by_both_modes) [#1967 case as a literal argument in a substitution] ... FAIL
+  test_each_reviewed_break_is_read_right_by_both_modes (__main__.Review.test_each_reviewed_break_is_read_right_by_both_modes) [#1968 a backtick in an inner double quote of a substitution] ... FAIL
+
+======================================================================
+FAIL: test_each_reviewed_break_is_read_right_by_both_modes (__main__.Review.test_each_reviewed_break_is_read_right_by_both_modes) [#1920 comment-shaped text in a title and a textarea]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+    self.assertEqual((code, failures(out)), (1 if want else 0, want), err)
+AssertionError: Tuples differ: (1, {[15 chars]comment'), ('t.html', 2, 'comment'), ('t.html', 1, 'comment')}) != (1, {[15 chars]comment')})
+
+First differing element 1:
+{('t.html', 4, 'comment'), ('t.html', 2, 'comment'), ('t.html', 1, 'comment')}
+{('t.html', 4, 'comment')}
+
++ (1, {('t.html', 4, 'comment')})
+- (1,
+-  {('t.html', 4, 'comment'), ('t.html', 2, 'comment'), ('t.html', 1, 'comment')}) : comment-check: 3 disallowed comment(s) in added lines
+
+
+======================================================================
+FAIL: test_each_reviewed_break_is_read_right_by_both_modes (__main__.Review.test_each_reviewed_break_is_read_right_by_both_modes) [#1921 a line continuation at a word boundary and inside a word]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+    self.assertEqual((code, failures(out)), (1 if want else 0, want), err)
+AssertionError: Tuples differ: (0, set()) != (1, {('w.sh', 2, 'comment')})
+
+First differing element 0:
+0
+1
+
+- (0, set())
++ (1, {('w.sh', 2, 'comment')}) : comment-check: ok
+
+
+======================================================================
+FAIL: test_each_reviewed_break_is_read_right_by_both_modes (__main__.Review.test_each_reviewed_break_is_read_right_by_both_modes) [#1967 case as a literal argument in a substitution]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+    self.assertEqual((code, failures(out)), (1 if want else 0, want), err)
+AssertionError: Tuples differ: (0, set()) != (1, {('k.sh', 1, 'comment'), ('k.sh', 2, 'comment')})
+
+First differing element 0:
+0
+1
+
+- (0, set())
++ (1, {('k.sh', 1, 'comment'), ('k.sh', 2, 'comment')}) : comment-check: ok
+
+
+======================================================================
+FAIL: test_each_reviewed_break_is_read_right_by_both_modes (__main__.Review.test_each_reviewed_break_is_read_right_by_both_modes) [#1968 a backtick in an inner double quote of a substitution]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+    self.assertEqual((code, failures(out)), (1 if want else 0, want), err)
+AssertionError: Tuples differ: (1, {('b.sh', 1, 'comment'), ('b.sh', 2, 'comment')}) != (1, {('b.sh', 2, 'comment')})
+
+First differing element 1:
+{('b.sh', 1, 'comment'), ('b.sh', 2, 'comment')}
+{('b.sh', 2, 'comment')}
+
+- (1, {('b.sh', 1, 'comment'), ('b.sh', 2, 'comment')})
++ (1, {('b.sh', 2, 'comment')}) : comment-check: 2 disallowed comment(s) in added lines
+
+
+----------------------------------------------------------------------
+Ran 10 tests in 2.626s
+
+FAILED (failures=4)
+$ python3 -I tools/owned-paths/test_check.py
+....F..........
+======================================================================
+FAIL: test_an_annotation_before_an_exclusion_admits_no_tests (__main__.Check.test_an_annotation_before_an_exclusion_admits_no_tests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+    self.verdict('annotated-exclusion', s)
+    self.assertEqual(r.returncode, s['exit'], out)
+AssertionError: 0 != 1 : owned: crates/core/src/widget_tests.rs (tests of `crates/core/src/widget.rs`)
+owned: tools/install/harness.py (by `tools/install/harness.py`)
+owned: tools/install/setup/init.test.mjs (tests of `tools/install/setup/init.py`)
+owned: tools/install/test_install.py (tests of `tools/install/harness.py`)
+owned: tools/release/test_release.py (tests of `tools/release/test.py`)
+owned-paths: ok: 5 file(s) inside the owned paths and grants of ticket #7
+
+
+----------------------------------------------------------------------
+Ran 15 tests in 1.088s
+
+FAILED (failures=1)
+$ python3 -I tools/wizskills/test_contract.py
+.FFEEFFFF.
+======================================================================
+ERROR: test_refusal_examples (__main__.ContractTests.test_refusal_examples) (name='duplicate marketplace key')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+    self.assertEqual(package_errors(changed, rules), case['errors'])
+    marketplace = read_json(files['.claude-plugin/marketplace.json'])
+    return json.loads(text, object_pairs_hook=unique_object)
+    return cls(**kw).decode(s)
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+    obj, end = self.scan_once(s, idx)
+    raise ValueError('duplicate key')
+ValueError: duplicate key
+
+======================================================================
+ERROR: test_refusal_examples (__main__.ContractTests.test_refusal_examples) (name='duplicate plugin key')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+    self.assertEqual(package_errors(changed, rules), case['errors'])
+    plugin = read_json(files['.claude-plugin/plugin.json'])
+    return json.loads(text, object_pairs_hook=unique_object)
+    return cls(**kw).decode(s)
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+    obj, end = self.scan_once(s, idx)
+    raise ValueError('duplicate key')
+ValueError: duplicate key
+
+======================================================================
+FAIL: test_refusal_examples (__main__.ContractTests.test_refusal_examples) (name='installer not executable')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+    self.assertEqual(package_errors(changed, rules), case['errors'])
+AssertionError: Lists differ: [] != ['layout']
+
+Second list contains 1 additional elements.
+First extra element 0:
+'layout'
+
+- []
++ ['layout']
+
+======================================================================
+FAIL: test_refusal_examples (__main__.ContractTests.test_refusal_examples) (name='executable not in the package')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+    self.assertEqual(package_errors(changed, rules), case['errors'])
+AssertionError: Lists differ: [] != ['layout']
+
+Second list contains 1 additional elements.
+First extra element 0:
+'layout'
+
+- []
++ ['layout']
+
+======================================================================
+FAIL: test_refusal_examples (__main__.ContractTests.test_refusal_examples) (name='earlier section preserved')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+    self.assertEqual(package_errors(changed, rules), case['errors'])
+AssertionError: Lists differ: ['changelog'] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+'changelog'
+
+- ['changelog']
++ []
+
+======================================================================
+FAIL: test_refusal_examples (__main__.ContractTests.test_refusal_examples) (name='latest section first')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+    self.assertEqual(package_errors(changed, rules), case['errors'])
+AssertionError: Lists differ: ['changelog'] != ['version']
+
+First differing element 0:
+'changelog'
+'version'
+
+- ['changelog']
++ ['version']
+
+======================================================================
+FAIL: test_standalone_resolution_examples_and_safe_diagnostics (__main__.ContractTests.test_standalone_resolution_examples_and_safe_diagnostics) (name='words naming a missing non-setting')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+    self.assertEqual(reference_result(case, package['files'], rules),
+AssertionError: {'rule': 'standalone.words', 'file': 'skills/alpha/SKILL.md', 'line': 7} != {'rule': 'standalone.read', 'file': 'skills/alpha/SKILL.md', 'line': 7}
+- {'file': 'skills/alpha/SKILL.md', 'line': 7, 'rule': 'standalone.words'}
+?                                                                  --  -
+
++ {'file': 'skills/alpha/SKILL.md', 'line': 7, 'rule': 'standalone.read'}
+?                                                                   ++
+
+
+======================================================================
+FAIL: test_standalone_resolution_examples_and_safe_diagnostics (__main__.ContractTests.test_standalone_resolution_examples_and_safe_diagnostics) (name='unknown kind fails closed')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+    self.assertEqual(reference_result(case, package['files'], rules),
+AssertionError: None != {'rule': 'standalone.read', 'file': 'skills/alpha/SKILL.md', 'line': 7}
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.008s
+
+FAILED (failures=6, errors=2)

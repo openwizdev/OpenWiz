@@ -16,20 +16,21 @@ A row is `adapters/local/harnesses/<harness>/row.json`, read with standard-libra
 | `env` | Fixed, non-credential variables the turn gets, such as a CLI's local-backend switch |
 | `effort` | An effort map, or `"none: <one line why, naming the primary source>"` (section 4) |
 | `login` | One line saying where the CLI's own login lives |
-| `daemon` | `none`, or one line naming the background process the CLI may start and how stop ends it |
-| `signed_out` (optional) | A list of fixed, case-insensitive patterns, specific to this CLI, that mean it isn't signed in; each is matched anywhere in a line of the turn's output, a JSON line included |
+| `daemon` | `none`, or one line naming the background process the CLI may start and how stop ends it. On macOS, `stop` cannot reach a process that leaves its turn's process group, closes or redirects its output and is orphaned before the supervisor's next look (the local README's limit), so a row whose service does that holds on Linux only |
+| `signed_out` (optional) | A list of fixed, case-insensitive patterns, specific to this CLI, that mean it isn't signed in; each is matched anywhere in a line of the first turn's own output (never the clone's), a JSON line included |
 | `login_command` (optional; required with `signed_out`) | The exact command the user runs to sign in, such as `example-cli login`. `login` keeps its meaning: where the login lives |
 
 - **Placeholders.** A placeholder fills a whole argument, never part of one (`--model={model}` breaks the row), and appears at most once in a list. `{prompt}`, `{model}` and `{session}` each become one argument. `{mode}` splices the approved mode's fixed arguments, and `{effort}` the requested effort's (section 4). A fixed argument holds no placeholder.
 - **Start** holds `{prompt}`, `{model}` and `{mode}`. **Wake** holds `{prompt}`, `{mode}` and `{session}`: wake must hold `{session}`. Start holds `{session}` only when the session is chosen.
 - **Session ids** match `[A-Za-z0-9._:-]{1,100}` and must not look like a credential by the kit's check (`holds_credential` in `kernel/driver-kit/kit.py`).
   - `{"chosen": "uuid"}`: the driver makes a UUID before the first turn, saves it, and passes it at start and at every wake.
-  - `{"json": [<key path>]}`: the first JSON line of the run's output that has that path of object keys.
-  - `{"pattern": "<regex>"}`: the regex's one group, on the first line of the run's output that it matches.
-  - A reported id (`json` or `pattern`) is read from the run's log once the turn has printed it, then saved. When it isn't there yet, wake refuses with a D3 error and starts nothing.
+  - `{"json": [<key path>]}`: the value at that path of object keys, on the first JSON line of the first turn's output that has the whole path.
+  - `{"pattern": "<regex>"}`: the regex's one group, on the first line of the first turn's output that it matches.
+  - A reported id (`json` or `pattern`) is read from the first turn's own output in the run's log, never the clone's, once the turn has printed it, then saved. That first line decides: when its value is not a valid session id (`null` or an unmatched group included), no later line is read. When there is no valid id yet, wake refuses with a D3 error and starts nothing, even while the first turn still runs.
 - **Modes:** each key is a mode value (a letter, then up to 39 letters, digits, `_` or `-`), each value a list of fixed arguments (it may be empty). The owner approves one mode per repository and harness, as for a built-in, and the driver passes only that mode's arguments.
 - **Signed out:** each `signed_out` pattern is one line, compiles as a regular expression, holds no placeholder and nothing credential-shaped. No pattern is a program: the driver only matches it. A row's pattern matches anywhere in a line of the turn's output, case-insensitively, inside a JSON line too; the driver's own sign-in diagnostics keep their line-start rule. `login_command` is one line of up to 200 characters, with no placeholder and nothing credential-shaped; the driver never runs it.
-- **Env:** each name is capitals, digits and `_`, starting with a capital and not with `OPENWIZ_`; each value is one line that passes the kit's `holds_credential`, alone and as `NAME=value`. The driver adds `env` to the turn's environment.
+- **No credential in an argument:** every fixed argument in `start`, `wake`, `modes` and `effort` passes the kit's `holds_credential`, alone, as a flag and its value (`--flag=value` and `--flag value`), and in the start and wake lines with each mode and effort spliced in. The driver saves these arguments with the run and passes them in the process's argv, so a row that breaks this is refused naming only its field.
+- **Env:** each name is capitals, digits and `_`, starting with a capital and not with `OPENWIZ_`; each value is one line that passes the kit's `holds_credential`, alone and as `NAME=value`. The driver adds `env`, and a requested effort's `env` setting, to the harness's own environment only: the turn's supervisor and the tools it uses to find and stop processes keep the driver's environment.
 
 ## 2. The row folder
 
@@ -55,18 +56,18 @@ A row ticket owns only its folder. No row edits the driver, this file, the local
 
 A user must always be able to set effort. Each row takes exactly one of two forms:
 
-- **It passes the user's effort to the CLI:** an `effort` object maps each effort value the user may set (an effort id: letters, digits, `.`, `_` or `-`, up to 40) to either a non-empty list of fixed arguments it adds where `{effort}` sits, or `{"env": {"<NAME>": "<value>"}}`, the fixed `env` setting it makes. It names the exact flag or setting. An effort flag that needs another flag with it, such as a model, keeps both in the same argument list.
+- **It passes the user's effort to the CLI:** an `effort` object maps each effort value the user may set (an effort id, as driver v1's `effort` start field has it in #2471: `^[a-z][a-z0-9-]{0,19}$`, such as `low` or `xhigh`) to either a non-empty list of fixed arguments it adds where `{effort}` sits, or `{"env": {"<NAME>": "<value>"}}`, the fixed `env` setting it makes. It names the exact flag or setting. An effort flag that needs another flag with it, such as a model, keeps both in the same argument list.
 - **The host can't set effort:** `"effort": "none: <one line why, naming the primary source>"`.
 
 Both `row.json` and the row's README say which form it is. `{effort}` may appear in `start` only, or in both `start` and `wake`, because some CLIs refuse an effort flag on resume; it appears only when some effort value adds arguments. A row must not claim an effort value that its CLI silently ignores for some models: it declares `none` instead.
 
-When a start carries an effort, the effort reaches the CLI. When the row's effort is `none`, or doesn't list that value, the start is a D3 refusal that starts nothing, and its `next` is exactly:
+When a start carries an effort, the effort reaches the CLI. When the row's effort is `none`, or doesn't list that value, the start is a D3 refusal that starts nothing, checked with the row and before the driver looks for its `program`, and its `next` is exactly:
 
 `this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default`
 
 A start with an effort never falls back to a default. Built-in `claude` and `codex` refuse an effort the same way until their flags are added.
 
-**Hooks for driver v1's `effort` start field (#2471).** That ticket adds the field to driver v1, the schema and `version`'s `can` list (the local driver lists `effort` there, because `claude` and `codex` take it); `version` carries no per-row note, since its schema is fixed, and each row's README `Effort:` line says what the row takes. Until then the driver is wired below the field: `command(state, woken)` turns a run's row and request into the turn's command line and environment, `effort_of(harness, row, effort)` gives an effort's arguments and environment or the refusal above, and `start` reads `request.get('effort')` before it saves anything. Turning the field on is adding `effort` to the driver's `START` fields. Its field name and values are matched once its contract is posted.
+**Hooks for driver v1's `effort` start field (#2471).** That ticket adds the field to driver v1, the schema and `version`'s `can` list (the local driver lists `effort` there, because `claude` and `codex` take it); `version` carries no per-row note, since its schema is fixed, and each row's README `Effort:` line says what the row takes. Until then the driver is wired below the field: `command(state, woken)` turns a run's row and request into the turn's command line and environment, `effort_of(harness, row, effort)` gives an effort's arguments and environment or the refusal above, and `start` reads `request.get('effort')` before it saves anything. Turning the field on is adding `effort` to the driver's `START` fields as an optional field: `read` takes exactly `START`'s fields today, so it must also accept a start without `effort`, and an ordinary start stays valid. Its field name and values are matched once its contract is posted.
 
 ## 5. The kit check for rows
 
@@ -87,8 +88,8 @@ It prints one line per row: `pass <row>: ...`, or `fail <row>: <rule>: <reason>`
 
 ## 6. The fake library
 
-[`fixtures/fake_cli.py`](fixtures/fake_cli.py). A row's `fake` parses its command line, then calls `fake_cli.turn(prompt, model, session, announce, daemon, signed_out)`. The library posts and edits the builder note in `KIT_TRACKER`, detaches a worker that waits to be stopped, records each turn's session id, arguments and the row's environment, prints the session id with `announce` when the row reports it, prints `signed_out`, its CLI's signed-out line, and exits with `signed_out_exit` (1 unless the row's CLI exits 0) when the runner asks (`FAKE_CLI_SIGNED_OUT`), and, when told to, starts a double-forked background process that stands in for a CLI's service.
+[`fixtures/fake_cli.py`](fixtures/fake_cli.py). A row's `fake` parses its command line, then calls `fake_cli.turn(prompt, model, session, announce, daemon, signed_out)`. The library posts and edits the builder note in `KIT_TRACKER`, detaches a worker that waits to be stopped, records each turn's session id, arguments and the row's environment, prints the session id with `announce` when the row reports it, prints `signed_out`, its CLI's signed-out line, and exits with `signed_out_exit` (1 unless the row's CLI exits 0) when the runner asks (`FAKE_CLI_SIGNED_OUT`), and, when told to, starts a background process that stands in for a CLI's service: double-forked into its own session with its output closed on Linux, and in the turn's process group with the turn's output elsewhere, where macOS `stop` can always reach it.
 
 ## 7. The merge gate
 
-As driver v1 section 3 sets it for any new host, a row merges only after its live check records 5 of 5 at the row pull request's approved head: a person signs in to that CLI on their own machine and runs the kit against the local driver with that harness, on one throwaway ticket.
+As driver v1 section 3 sets it for any new host, a row merges only after its live check records 5 of 5 at the row pull request's approved head: a person signs in to that CLI on their own machine and runs the kit against the local driver with that harness, on one throwaway ticket. A row claims only the platforms its live check ran on, and that check's stop must end the CLI's background process there. The planted fixtures prove a hard-detached service is stopped on Linux only; on macOS their service stays in the turn's process group.

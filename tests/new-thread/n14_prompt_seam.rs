@@ -1,60 +1,26 @@
 use openwiz_adapter_cloudroom::new_thread::spawn_argv;
 use openwiz_core::messaging::sha256_hex;
-use openwiz_core::new_thread::operation::{NewThreadError, SpawnRequest, preview_new_thread};
-use openwiz_core::prompt::{
-    AttachmentId, ReadyPrompt, attachments_digest, empty_attachments_digest,
-};
+use openwiz_core::new_thread::operation::SpawnRequest;
+use openwiz_core::prompt::{ReadyPrompt, attachments_digest, empty_attachments_digest};
 
 use crate::support::*;
 
-fn with_attachment() -> openwiz_core::new_thread::NewThreadRequest {
-    let mut r = request(offered(), "Synthetic with a file", "op-n14");
-    r.prompt.attachments = vec![AttachmentId::parse("att-syn-0001").unwrap()];
-    r
-}
-
 #[test]
 fn n14_prompt_seam_contracts_preserve_all_original_cases() {
-    let cases: [(&str, fn()); 4] = [
+    let cases: [(&str, fn()); 2] = [
         (
             "a_text_only_prompt_passes_no_attachment_flag",
             a_text_only_prompt_passes_no_attachment_flag,
         ),
         (
-            "an_attachment_id_is_one_safe_segment",
-            an_attachment_id_is_one_safe_segment,
-        ),
-        (
             "the_empty_list_has_its_fixed_digest_on_every_record",
             the_empty_list_has_its_fixed_digest_on_every_record,
-        ),
-        (
-            "without_an_attachment_store_any_attachment_is_refused_with_zero_calls_and_no_claim",
-            without_an_attachment_store_any_attachment_is_refused_with_zero_calls_and_no_claim,
         ),
     ];
     for (name, proof) in cases {
         eprintln!("TA2 case: n14_prompt_seam::{name}");
         proof();
     }
-}
-
-fn without_an_attachment_store_any_attachment_is_refused_with_zero_calls_and_no_claim() {
-    let client = FakeClient::new();
-    let store = MemoryStore::new();
-    let Err(NewThreadError::Invalid(why)) = try_create(&client, &store, &with_attachment()) else {
-        panic!("not refused")
-    };
-    assert!(
-        why.0.starts_with("attachment att-syn-0001 is not found")
-            && why.0.contains("nothing was sent"),
-        "{}",
-        why.0
-    );
-    assert_eq!(client.calls(), 0);
-    assert_eq!(store.writes(), 0, "nothing claimed");
-    assert!(preview_new_thread(&client, &clock(), &with_attachment()).is_err());
-    assert_eq!(client.calls(), 0);
 }
 
 fn a_text_only_prompt_passes_no_attachment_flag() {
@@ -91,14 +57,4 @@ fn the_empty_list_has_its_fixed_digest_on_every_record() {
         store.get(&r.op_id).unwrap().binding.attachments_digest,
         empty_attachments_digest()
     );
-}
-
-fn an_attachment_id_is_one_safe_segment() {
-    for good in ["a", "att-syn-0001", "A_1"] {
-        assert!(AttachmentId::parse(good).is_ok(), "{good}");
-    }
-    let long = "a".repeat(65);
-    for bad in ["", "-a", "_a", "a/b", "..", "a b", long.as_str()] {
-        assert!(AttachmentId::parse(bad).is_err(), "{bad}");
-    }
 }

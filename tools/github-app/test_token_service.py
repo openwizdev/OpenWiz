@@ -35,6 +35,10 @@ CLOCK = ("import runpy, sys, time\n"
          "runpy.run_path(sys.argv[0], run_name='__main__')\n")
 
 
+def revoked(calls):
+    return [c[2] for c in calls if c[:2] == ("DELETE", "/installation/token")]
+
+
 @contextmanager
 def fake_github(pem, installed):
     calls = []
@@ -75,6 +79,11 @@ def fake_github(pem, installed):
                       "repositories": [{"full_name": behavior["account"] + "/" + n.lower()} for n in body["repositories"]]}
             result.update(behavior["grant"])
             self.reply(201, result)
+
+        def do_DELETE(self):
+            calls.append(("DELETE", self.path, self.headers.get("Authorization")))
+            self.send_response(204)
+            self.end_headers()
 
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -188,10 +197,11 @@ class RequestFixtureTests(ServiceFixture):
                       {"repositories": [{"full_name": "synthetic-owner/work"}, {"full_name": "synthetic-owner/tools"}]},
                       {"repository_selection": "all"}, {"expires_at": "not a time"},
                       {"token": "synthetic token with spaces"}):
-            with self.subTest(grant), fake_github(self.pem, REQUESTS["installed"]) as (url, _calls, fake):
+            with self.subTest(grant), fake_github(self.pem, REQUESTS["installed"]) as (url, calls, fake):
                 fake["grant"] = grant
                 done = self.mint(url, SMALL)
                 self.assertEqual((done.returncode, json.loads(done.stdout).get("refusal")), (5, "github"))
+                self.assertEqual(revoked(calls), [] if "token" in grant else ["Bearer " + fake["token"]])
                 self.assertEqual(self.logged()[-1]["outcome"], "github")
                 self.assert_nothing_exposed("synthetic-token", done.stdout, done.stderr)
 

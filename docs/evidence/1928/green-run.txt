@@ -1,3 +1,0 @@
-$ python3 -I contracts/fixtures/write-driver/check.py
-71 fixtures, 0 failures
-exit 0

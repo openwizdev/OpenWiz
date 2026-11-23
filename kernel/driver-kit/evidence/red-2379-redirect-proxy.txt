@@ -1,0 +1,110 @@
+# The synthetic test key after "Bearer" is shown as <synthetic key>.
+# #2379: the redirect and proxy tests run against a planted helper that sends through urllib.request.urlopen (follows redirects, honours proxy variables).
+test_a_redirect_comes_back_as_its_status_and_is_never_followed (__main__.Helper.test_a_redirect_comes_back_as_its_status_and_is_never_followed) ... 
+  test_a_redirect_comes_back_as_its_status_and_is_never_followed (__main__.Helper.test_a_redirect_comes_back_as_its_status_and_is_never_followed) [301] ... FAIL
+  test_a_redirect_comes_back_as_its_status_and_is_never_followed (__main__.Helper.test_a_redirect_comes_back_as_its_status_and_is_never_followed) [302] ... FAIL
+  test_a_redirect_comes_back_as_its_status_and_is_never_followed (__main__.Helper.test_a_redirect_comes_back_as_its_status_and_is_never_followed) [303] ... FAIL
+test_a_redirect_comes_back_as_its_status_and_is_never_followed (__main__.Helper.test_a_redirect_comes_back_as_its_status_and_is_never_followed) ... FAIL
+test_the_helper_ignores_proxy_variables (__main__.Helper.test_the_helper_ignores_proxy_variables) ... FAIL
+
+======================================================================
+FAIL: test_a_redirect_comes_back_as_its_status_and_is_never_followed (__main__.Helper.test_a_redirect_comes_back_as_its_status_and_is_never_followed) [301]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_hostkey.py", line 160, in test_a_redirect_comes_back_as_its_status_and_is_never_followed
+    self.assertEqual((code, out), (0, {'status': status, 'body': None}))
+AssertionError: Tuples differ: (0, {'status': 200, 'body': {}}) != (0, {'status': 301, 'body': None})
+
+First differing element 1:
+{'status': 200, 'body': {}}
+{'status': 301, 'body': None}
+
+- (0, {'body': {}, 'status': 200})
+?              ^^            ^ ^
+
++ (0, {'body': None, 'status': 301})
+?              ^^^^            ^ ^
+
+
+======================================================================
+FAIL: test_a_redirect_comes_back_as_its_status_and_is_never_followed (__main__.Helper.test_a_redirect_comes_back_as_its_status_and_is_never_followed) [302]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_hostkey.py", line 160, in test_a_redirect_comes_back_as_its_status_and_is_never_followed
+    self.assertEqual((code, out), (0, {'status': status, 'body': None}))
+AssertionError: Tuples differ: (0, {'status': 200, 'body': {}}) != (0, {'status': 302, 'body': None})
+
+First differing element 1:
+{'status': 200, 'body': {}}
+{'status': 302, 'body': None}
+
+- (0, {'body': {}, 'status': 200})
+?              ^^             --
+
++ (0, {'body': None, 'status': 302})
+?              ^^^^            ++
+
+
+======================================================================
+FAIL: test_a_redirect_comes_back_as_its_status_and_is_never_followed (__main__.Helper.test_a_redirect_comes_back_as_its_status_and_is_never_followed) [303]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_hostkey.py", line 160, in test_a_redirect_comes_back_as_its_status_and_is_never_followed
+    self.assertEqual((code, out), (0, {'status': status, 'body': None}))
+AssertionError: Tuples differ: (0, {'status': 200, 'body': {}}) != (0, {'status': 303, 'body': None})
+
+First differing element 1:
+{'status': 200, 'body': {}}
+{'status': 303, 'body': None}
+
+- (0, {'body': {}, 'status': 200})
+?              ^^            ^ ^
+
++ (0, {'body': None, 'status': 303})
+?              ^^^^            ^ ^
+
+
+======================================================================
+FAIL: test_a_redirect_comes_back_as_its_status_and_is_never_followed (__main__.Helper.test_a_redirect_comes_back_as_its_status_and_is_never_followed)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_hostkey.py", line 162, in test_a_redirect_comes_back_as_its_status_and_is_never_followed
+    self.assertEqual(target.requests, [], 'the helper followed a redirect')
+AssertionError: Lists differ: [('GET /v1/stolen HTTP/1.1', [('Accept-Enc[757 chars]b'')] != []
+
+First list contains 3 additional elements.
+First extra element 0:
+('GET /v1/stolen HTTP/1.1', [('Accept-Encoding', 'identity'), ('Host', '127.0.0.1:44275'), ('Authorization', 'Bearer <synthetic key>'), ('Accept', 'application/json'), ('User-Agent', 'openwiz-hostkey/1'), ('Connection', 'close')], b'')
+
+Diff is 917 characters long. Set self.maxDiff to None to see it. : the helper followed a redirect
+
+======================================================================
+FAIL: test_the_helper_ignores_proxy_variables (__main__.Helper.test_the_helper_ignores_proxy_variables)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_hostkey.py", line 168, in test_the_helper_ignores_proxy_variables
+    self.assertEqual((code, len(self.host.requests), proxy.requests), (0, 1, []))
+AssertionError: Tuples differ: (0, 0, [('POST http://127.0.0.1:34231/v3/orga[354 chars]}')]) != (0, 1, [])
+
+First differing element 1:
+0
+1
+
++ (0, 1, [])
+- (0,
+-  0,
+-  [('POST http://127.0.0.1:34231/v3/organizations/org-syn1/sessions HTTP/1.1',
+-    [('Accept-Encoding', 'identity'),
+-     ('Content-Length', '16'),
+-     ('Host', '127.0.0.1:34231'),
+-     ('Authorization', 'Bearer <synthetic key>'),
+-     ('Accept', 'application/json'),
+-     ('User-Agent', 'openwiz-hostkey/1'),
+-     ('Content-Type', 'application/json'),
+-     ('Connection', 'close')],
+-    b'{"prompt": "hi"}')])
+
+----------------------------------------------------------------------
+Ran 2 tests in 4.008s
+
+FAILED (failures=5)

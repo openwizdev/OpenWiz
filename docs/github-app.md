@@ -219,6 +219,52 @@ python3 -I tools/github-app/token-service.py stop --state-dir "$HOME/.local/stat
   `contracts/fixtures/token-service/requests.json` case and the guards above against
   a fake GitHub with a throwaway key.
 
+## Pairing App selection
+
+When the owner's machine holds more than one App's state, the pairing mint must reach
+the right App, not whatever the default state directory holds. Point
+`OPENWIZ_TOKEN_SERVICE` at the selector, `tools/github-app/app-select.py`, instead of
+the service. The contract's call is unchanged (`python3 -I '<OPENWIZ_TOKEN_SERVICE>'
+mint`): the selector reads the same request, chooses one App's state directory, runs
+`token-service.py mint --state-dir <that state>` and passes the service's one JSON line
+and exit back unchanged. Start each App's service as above, with its own `--state-dir`.
+
+Its config is `OPENWIZ_APP_SELECT_CONFIG`, by default
+`~/.config/openwiz/app-select.json`: a regular file you own, with one link and no
+group or other permission bits (0600 or 0400, say), opened without following a
+symlink. It holds exactly one of:
+
+```json
+{"state_dir": "/home/someone/.local/state/openwiz-agents"}
+{"routes": [{"repository": "someone/private-tool", "state_dir": "/home/someone/.local/state/openwiz"},
+            {"repository": "someone/*", "state_dir": "/home/someone/.local/state/openwiz-agents"}]}
+```
+
+- **Named** (`state_dir`): every mint goes to exactly that App.
+- **Route map** (`routes`): each route's `repository` is an exact `owner/name` or an
+  owner glob `owner/*`, matched without regard to case; no other glob is accepted.
+  Each requested repository takes the first route that matches it, and every
+  requested repository must land on the same state directory. A repository no route
+  matches, or a request split across two state directories, mints nothing.
+- **The request is checked first, in both modes.** An invalid request gets the
+  service's own `usage` refusal, and repositories of more than one owner its
+  `one-owner` refusal (exit 2), before any config is read or service started.
+- **Fails closed.** A missing, unreadable, symlinked or not-owner-only config, one
+  with both or neither key, an unknown key, a route pattern outside the two forms, a
+  relative or missing state directory, an unmatched repository or a split request:
+  the selector answers the contract's refusal (`not-installed`, exit 3, when a
+  repository matches no route; otherwise `unavailable`, exit 1) and writes one fixed
+  sentence to standard error naming `OPENWIZ_APP_SELECT_CONFIG`. It starts no
+  service and mints nothing.
+- **Never exposed.** The selector opens no private key, signs nothing and makes no
+  GitHub call: only the service it starts does. No key or token reaches its
+  arguments, standard error or any file. The token crosses only in the service's
+  answer, which the selector passes through on standard output.
+- **Tests.** `python3 -I tools/github-app/test_app_select.py` runs two fake App states
+  with throwaway keys against a fake GitHub: named, routed, unmatched, split, invalid
+  request and unsafe-config cases, with an audit hook showing the selector opens no
+  key and makes no request.
+
 ## Agent tokens (G2)
 
 **The legacy Cloudroom-secret route is retired: use [the token service
@@ -319,6 +365,12 @@ python3 -I tools/github-app/agent-token.py run $REQ -- git push origin HEAD
   a file changed since, before the token is looked up. It runs gh through its open file on Linux
   and uses the resolved path on systems such as macOS only when every directory visited during
   resolution, including through symlinks, is owned by you or root and writable by no one else.
+  The gh itself must be writable only by its owner, and owned by you, root or, as in a cloud
+  sandbox's system gh, another non-root user. That last case works only on Linux, through
+  `/proc/self/fd`: every folder from `/` down to it must be owned by root and writable by no
+  one else, and the run records a SHA-256 of the gh it chose, then runs a sealed in-memory
+  copy that matches it, so the gh's owner can't change what runs; the kernel and sandbox must
+  allow executable memfds, or gh is refused with a message naming that restriction.
   For an allowed command, it reads
   the snapshot and starts that gh
   with `GH_TOKEN`, the owner's own `GH_CONFIG_DIR`, `GH_PAGER=cat`, and an editor and
@@ -358,8 +410,11 @@ python3 -I tools/github-app/agent-token.py run $REQ -- git push origin HEAD
 - **Refresh.** Before each use, a token with 300 seconds or less left is replaced by a
   fresh request. An answer is used only when it names exactly the requested
   repositories and permissions and has more than 300 and at most 3900 seconds left.
-- **Fallback.** When no token can be had, the helper deletes the request's cache file,
-  hands no App token to the command (one handed down by an outer `run` included), and
+- **Fallback.** When no token can be had, the helper takes the request's cache file and every
+  running `run`'s snapshot of it out of use: it revokes a live token and deletes the file only
+  after GitHub confirms, and keeps the file for a later `revoke` if that revoke fails or the
+  file can't be read ([Revoke](#revoke)). It hands no App token, and no handle to one, to the
+  command (one handed down by an outer `run` included), and
   writes exactly one line to standard error:
   `openwiz: no openwiz[bot] token (<reason>); using the owner's GitHub account`. The
   reasons are `unreachable`, `bad-answer`, `pairing-off` and the service's refusal
@@ -369,7 +424,52 @@ python3 -I tools/github-app/agent-token.py run $REQ -- git push origin HEAD
 
 ## Revoke
 
-In **Settings → Applications → Installed GitHub Apps → Configure**, choose
+**An agent's token.** Revoke a token the helper holds with the same request, never with gh
+and never by deleting its folder:
+
+```sh
+python3 -I tools/github-app/agent-token.py revoke $REQ
+```
+
+- It makes its own HTTPS call, `DELETE /installation/token` with the token in the
+  `Authorization` header, to `https://api.github.com` only, through no proxy and following no
+  redirect. It never runs gh, its guard or any shim, so a refused or missing gh can't stop it.
+  `OPENWIZ_GITHUB_API_BASE` exists for the tests and accepts only `http://127.0.0.1:PORT`.
+- It finds the request's tokens by name: the request's cache file, its kept files, and every
+  run snapshot that records this request. Inside a `run` for the same request it asks the `run`
+  itself, which holds its token in memory, through a socket the run hands down that can only ask
+  for a revoke and never returns the token. So it still works when the folder is partly gone, the
+  cache file is unreadable, or the folder was moved or deleted. A run asked about another request
+  leaves it to the folder, and its own token is never used for it.
+- Before its call it moves each token it found into a kept file, so it is never handed out
+  again. A `run` whose folder was deleted first writes its token into a kept file in a fresh
+  private folder at the same path, so a refused revoke leaves a copy that outlives the run.
+  Only after GitHub confirms (`204`) does it remove every file holding exactly that token. A
+  token minted meanwhile and another request's token are never touched, and the helper never
+  removes the private folder itself, so a mint in flight can always store its answer. If the
+  folder is deleted under a mint anyway, the helper revokes the new token and stops with one line.
+- **Kept files.** A token is never deleted or replaced while it may be live and unrevoked. The
+  helper moves it to its own `kept-<request>-<random>.json` file in the same 0700 folder, and
+  revokes it there. The helper does this when it falls back, when a refresh replaces a token
+  that no running `run` still holds, when a `run` ends holding a token nothing else holds, and
+  when `revoke` starts. A fallback and `revoke` also move every run snapshot that records the
+  request into a kept file, even when the cache file can't be read, and a run's gh and git read
+  only their own snapshot, so a kept token never reaches gh, git or the caller again. A file the helper can't read is kept the same way, never deleted or
+  overwritten; an expired token's file is deleted. Every later mint or fallback for the request
+  tries the kept tokens' revoke again, and `revoke` with the same request tries it at once.
+  Locking keeps two helpers from racing on these files, and no lock is held during a call to
+  GitHub.
+- It fails closed with exactly one line on standard error and exit 1, and never prints the
+  token: `openwiz: openwiz[bot] token not revoked (no token found)` when it holds no current
+  token, or `openwiz: openwiz[bot] token not revoked (<reason>); the token is kept for a later
+  revoke` with `GitHub refused`, `GitHub unreachable` or `not the GitHub API`. The token then
+  stays in its kept file, so you can retry; never delete it, which leaves a live token nobody
+  can revoke.
+- **Last resort.** GitHub revokes an installation token only with the token itself. If it is
+  lost or can't be revoked, the owner suspends the installation (**Settings → Applications →
+  Installed GitHub Apps → Configure → Suspend**), which stops every token it has minted.
+
+**The installation.** In **Settings → Applications → Installed GitHub Apps → Configure**, choose
 **Uninstall** to revoke the installation and its tokens. To retire the App too,
 open **Developer settings → GitHub Apps → your App → Advanced → Delete GitHub App**.
 Delete its private key in GitHub's App settings if rotating it. Remove the local

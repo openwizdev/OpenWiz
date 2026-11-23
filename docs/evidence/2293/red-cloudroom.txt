@@ -1,0 +1,146 @@
+test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Driver.test_a_credential_shaped_start_field_is_refused_before_anything_starts) ... ok
+test_a_credential_shaped_thread_id_is_never_kept_or_passed (__main__.Driver.test_a_credential_shaped_thread_id_is_never_kept_or_passed) ... ok
+test_a_failed_room_cli_command_is_named_by_fixed_words (__main__.Driver.test_a_failed_room_cli_command_is_named_by_fixed_words) ... 
+  test_a_failed_room_cli_command_is_named_by_fixed_words (__main__.Driver.test_a_failed_room_cli_command_is_named_by_fixed_words) (out='', err='Synthetic request expired') ... FAIL
+  test_a_failed_room_cli_command_is_named_by_fixed_words (__main__.Driver.test_a_failed_room_cli_command_is_named_by_fixed_words) (out='', err='Synthetic 401 from a mirror') ... FAIL
+  test_a_failed_room_cli_command_is_named_by_fixed_words (__main__.Driver.test_a_failed_room_cli_command_is_named_by_fixed_words) (out='{"error": "Synthetic request expired"}', err='') ... FAIL
+  test_a_failed_room_cli_command_is_named_by_fixed_words (__main__.Driver.test_a_failed_room_cli_command_is_named_by_fixed_words) (out='Synthetic plain diagnostic', err='') ... FAIL
+  test_a_failed_room_cli_command_is_named_by_fixed_words (__main__.Driver.test_a_failed_room_cli_command_is_named_by_fixed_words) (out='{"ok": false}', err='') ... FAIL
+test_a_kit_lost_during_spawn_never_claims_nothing_started (__main__.Driver.test_a_kit_lost_during_spawn_never_claims_nothing_started) ... ok
+test_a_start_it_could_not_finish_stays_starting (__main__.Driver.test_a_start_it_could_not_finish_stays_starting) ... ok
+test_a_stop_that_could_not_save_keeps_the_run_unwakeable_once_writes_recover (__main__.Driver.test_a_stop_that_could_not_save_keeps_the_run_unwakeable_once_writes_recover) ... ok
+test_a_stop_that_could_write_nothing_still_keeps_the_run_unwakeable (__main__.Driver.test_a_stop_that_could_write_nothing_still_keeps_the_run_unwakeable) ... ok
+test_a_stop_waits_for_a_wake_in_progress (__main__.Driver.test_a_stop_waits_for_a_wake_in_progress) ... ok
+test_a_wake_goes_on_only_when_the_lock_file_reads_live (__main__.Driver.test_a_wake_goes_on_only_when_the_lock_file_reads_live) ... 
+  test_a_wake_goes_on_only_when_the_lock_file_reads_live (__main__.Driver.test_a_wake_goes_on_only_when_the_lock_file_reads_live) (text='') ... FAIL
+  test_a_wake_goes_on_only_when_the_lock_file_reads_live (__main__.Driver.test_a_wake_goes_on_only_when_the_lock_file_reads_live) (text='lives') ... FAIL
+  test_a_wake_goes_on_only_when_the_lock_file_reads_live (__main__.Driver.test_a_wake_goes_on_only_when_the_lock_file_reads_live) (text='Live') ... FAIL
+  test_a_wake_goes_on_only_when_the_lock_file_reads_live (__main__.Driver.test_a_wake_goes_on_only_when_the_lock_file_reads_live) (text='live\n') ... FAIL
+test_a_wake_refuses_a_run_whose_lock_file_was_lost (__main__.Driver.test_a_wake_refuses_a_run_whose_lock_file_was_lost) ... ok
+test_every_drivers_readme_names_its_platforms (__main__.Driver.test_every_drivers_readme_names_its_platforms) ... 
+  test_every_drivers_readme_names_its_platforms (__main__.Driver.test_every_drivers_readme_names_its_platforms) [<checkout>/adapters/cloudroom/../cloudroom/README.md] ... FAIL
+test_kit_passes_all_five (__main__.Driver.test_kit_passes_all_five) ... ok
+test_reads_a_local_and_a_cloud_room_cli (__main__.Driver.test_reads_a_local_and_a_cloud_room_cli) ... ok
+test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) ... ok
+test_start_refuses_a_run_cloudroom_did_not_make (__main__.Driver.test_start_refuses_a_run_cloudroom_did_not_make) ... ok
+test_start_that_cannot_save_its_run_never_says_retry (__main__.Driver.test_start_that_cannot_save_its_run_never_says_retry) ... ok
+test_stop_by_title_ends_only_its_own_thread (__main__.Driver.test_stop_by_title_ends_only_its_own_thread) ... ok
+test_stop_finds_its_thread_by_title_when_the_run_record_is_lost (__main__.Driver.test_stop_finds_its_thread_by_title_when_the_run_record_is_lost) ... 
+  test_stop_finds_its_thread_by_title_when_the_run_record_is_lost (__main__.Driver.test_stop_finds_its_thread_by_title_when_the_run_record_is_lost) [own child] ... FAIL
+test_stop_that_cannot_save_ends_the_thread_and_leaves_nothing_to_wake (__main__.Driver.test_stop_that_cannot_save_ends_the_thread_and_leaves_nothing_to_wake) ... ok
+test_wake_is_the_fleet_routes_queued_delivery (__main__.Driver.test_wake_is_the_fleet_routes_queued_delivery) ... ok
+
+======================================================================
+FAIL: test_a_failed_room_cli_command_is_named_by_fixed_words (__main__.Driver.test_a_failed_room_cli_command_is_named_by_fixed_words) (out='', err='Synthetic request expired')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 515, in test_a_failed_room_cli_command_is_named_by_fixed_words
+    self.assertEqual(driver.room_said(out, err), want)
+AssertionError: 'room-cli is not signed in' != 'room-cli gave an error the driver does not repeat'
+- room-cli is not signed in
++ room-cli gave an error the driver does not repeat
+
+
+======================================================================
+FAIL: test_a_failed_room_cli_command_is_named_by_fixed_words (__main__.Driver.test_a_failed_room_cli_command_is_named_by_fixed_words) (out='', err='Synthetic 401 from a mirror')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 515, in test_a_failed_room_cli_command_is_named_by_fixed_words
+    self.assertEqual(driver.room_said(out, err), want)
+AssertionError: 'room-cli is not signed in' != 'room-cli gave an error the driver does not repeat'
+- room-cli is not signed in
++ room-cli gave an error the driver does not repeat
+
+
+======================================================================
+FAIL: test_a_failed_room_cli_command_is_named_by_fixed_words (__main__.Driver.test_a_failed_room_cli_command_is_named_by_fixed_words) (out='{"error": "Synthetic request expired"}', err='')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 515, in test_a_failed_room_cli_command_is_named_by_fixed_words
+    self.assertEqual(driver.room_said(out, err), want)
+AssertionError: 'room-cli is not signed in' != 'room-cli gave an error the driver does not repeat'
+- room-cli is not signed in
++ room-cli gave an error the driver does not repeat
+
+
+======================================================================
+FAIL: test_a_failed_room_cli_command_is_named_by_fixed_words (__main__.Driver.test_a_failed_room_cli_command_is_named_by_fixed_words) (out='Synthetic plain diagnostic', err='')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 515, in test_a_failed_room_cli_command_is_named_by_fixed_words
+    self.assertEqual(driver.room_said(out, err), want)
+AssertionError: 'room-cli gave no answer' != 'room-cli gave an error the driver does not repeat'
+- room-cli gave no answer
++ room-cli gave an error the driver does not repeat
+
+
+======================================================================
+FAIL: test_a_failed_room_cli_command_is_named_by_fixed_words (__main__.Driver.test_a_failed_room_cli_command_is_named_by_fixed_words) (out='{"ok": false}', err='')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 515, in test_a_failed_room_cli_command_is_named_by_fixed_words
+    self.assertEqual(driver.room_said(out, err), want)
+AssertionError: 'room-cli gave no answer' != 'room-cli gave an error the driver does not repeat'
+- room-cli gave no answer
++ room-cli gave an error the driver does not repeat
+
+
+======================================================================
+FAIL: test_a_wake_goes_on_only_when_the_lock_file_reads_live (__main__.Driver.test_a_wake_goes_on_only_when_the_lock_file_reads_live) (text='')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 469, in test_a_wake_goes_on_only_when_the_lock_file_reads_live
+    self.assertEqual(self.call('wake', out)[0], 1, 'a wake took a lock file reading %r' % text)
+AssertionError: 0 != 1 : a wake took a lock file reading ''
+
+======================================================================
+FAIL: test_a_wake_goes_on_only_when_the_lock_file_reads_live (__main__.Driver.test_a_wake_goes_on_only_when_the_lock_file_reads_live) (text='lives')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 469, in test_a_wake_goes_on_only_when_the_lock_file_reads_live
+    self.assertEqual(self.call('wake', out)[0], 1, 'a wake took a lock file reading %r' % text)
+AssertionError: 0 != 1 : a wake took a lock file reading 'lives'
+
+======================================================================
+FAIL: test_a_wake_goes_on_only_when_the_lock_file_reads_live (__main__.Driver.test_a_wake_goes_on_only_when_the_lock_file_reads_live) (text='Live')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 469, in test_a_wake_goes_on_only_when_the_lock_file_reads_live
+    self.assertEqual(self.call('wake', out)[0], 1, 'a wake took a lock file reading %r' % text)
+AssertionError: 0 != 1 : a wake took a lock file reading 'Live'
+
+======================================================================
+FAIL: test_a_wake_goes_on_only_when_the_lock_file_reads_live (__main__.Driver.test_a_wake_goes_on_only_when_the_lock_file_reads_live) (text='live\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 469, in test_a_wake_goes_on_only_when_the_lock_file_reads_live
+    self.assertEqual(self.call('wake', out)[0], 1, 'a wake took a lock file reading %r' % text)
+AssertionError: 0 != 1 : a wake took a lock file reading 'live\n'
+
+======================================================================
+FAIL: test_every_drivers_readme_names_its_platforms (__main__.Driver.test_every_drivers_readme_names_its_platforms) [<checkout>/adapters/cloudroom/../cloudroom/README.md]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 526, in test_every_drivers_readme_names_its_platforms
+    self.assertRegex(f.read(), r'\*\*Platforms:\*\* (Linux|macOS)[^\n]*, Python 3\.[0-9]+ or later')
+AssertionError: Regex didn't match: '\\*\\*Platforms:\\*\\* (Linux|macOS)[^\\n]*, Python 3\\.[0-9]+ or later' not found in '# Cloudroom driver\n\nLogin: held by Cloudroom\n\nA [driver v1](../../kernel/driver.v1.md) for [Cloudroom](https://cloudroom.dev): each run is one Cloudroom thread. One Python file, standard library only. Run it inside a Cloudroom thread of the project the repository belongs to, where `room-cli` is already signed in and `ROOM_PROJECT_ID` is set; the threads it starts are that thread\'s children, each in its own sandbox.\n\n| Command | What it runs |\n| --- | --- |\n| `start` | `room-cli thread spawn --parent-self --project $ROOM_PROJECT_ID --provider <harness> --model <model> --title "#<ticket>: <repository> builder (<run>)" --prompt <the skill\'s one-line brief> --json`. The harness `claude` is Cloudroom\'s `claude-code`; other names pass as they are. The run is saved as `starting` first (no folder to keep it, nothing starts), and finishes starting only once Cloudroom\'s answer names a thread of this project and that is saved. If Cloudroom may have made a thread the driver could not save, the answer says the outcome is unknown, never retry |\n| `wake` | `room-cli thread tell <thread> --mode queue --message-file <file>`: "You were woken for `<repository>#<ticket>`: read the ticket again, edit your own status note, and carry on". It answers `woke` only when `room-cli` accepts the message; a refusal is an error that leaves the run for the next wake. A run that is stopped, or never finished starting, takes no wake |\n| `stop` | Marks the run stopped, then `room-cli thread archive <thread>`, which stops the thread and archives it. A run whose thread id was never saved finds its thread by its title (`room-cli thread list --json --project <project>`, or `room-cli thread list --json` where the Cloud `room-cli` refuses `--project`, only from the thread that started the run). It archives a thread only when exactly one row in the list has the run\'s title and that row\'s project and parent are strings equal to the run\'s saved ones (a Local row\'s `projectId` and `parentThreadId`; a Cloud row has `parent` and no project, so on Cloud this lookup always refuses). A list it cannot read, a second titled row, or a titled row whose project or parent is missing, malformed or conflicting, is an unknown outcome that archives nothing and leaves the run for the next `stop`. A refused archive leaves the run stopping: no wake, and the next `stop` archives again. Before anything else, `stop` writes `stop` over the `live` in the run\'s lock file, which exists from `start`, and sets that file\'s modification time to the epoch, which its owner can do even when neither the file nor its folder takes a write. `wake` refuses either mark, or an unreadable or missing lock file, for good; only `stop` makes a lost lock file again |\n\nRuns (run id, thread id, request) are kept privately in `$OPENWIZ_CLOUDROOM_STATE` (default `~/.local/state/openwiz-cloudroom`, owner-only). A run id never shows its thread. A wake or a stop holds the run\'s lock (`<run>.lock`) throughout, so they take turns. Each turn runs inside the Cloudroom thread, so archiving the thread ends everything the run started there; the kit sees only the local `room-cli` calls.\n\n**Local and Cloud.** Every `room-cli` answer the driver reads is asked for with `--json`: a Local `room-cli` on your own machine prints a table without it and lists threads as a bare list, and the Cloud one lists them as `{"children": [...]}`. The driver reads both. `wake` and `archive` read only `room-cli`\'s exit code.\n\n**Logins.** The driver never reads, adds or passes a login: `room-cli` runs with the caller\'s environment unchanged, and inputs carry no credential (D1, N1 to N3).\n\n**No credential in, no diagnostic out.** `start` refuses a field whose value has a credential\'s shape, by the driver kit\'s own check (`kernel/driver-kit/kit.py`), before it saves or starts anything; its error names the field, never the value, and without the kit it refuses every start. A spawn receipt whose thread id has a credential\'s shape is never saved or passed on: the run stays `starting`, and `stop` finds its thread by title. `start` loads the check once, before it saves anything, so a kit that goes missing during the spawn cannot turn a started thread into a run marked as never started. `stop` passes a thread id it found by title only after the same check, and without the kit, or for an id with a credential\'s shape, it archives nothing and names the run\'s title for archiving by hand. A failed `room-cli` command answers fixed words: a sign-in failure as one, anything else as an error the driver does not repeat, and silence as no answer. `room-cli`\'s own text, from a structured error or its stderr, never reaches the driver\'s answer.\n\n## Waking on GitHub\'s events\n\nGitHub\'s events reach a fleet through launch-fleet\'s route (#1329\'s FF2): the repository\'s webhook runs the project\'s wake loop, its tick runs `fleet.sh wake` on the numbers the events name, and for a spec with a fleet loop that runs the loop. The fleet wake then delivers to the ticket\'s builder with `room-cli thread tell <id> --mode queue --message-file <file>`, counting it only on `tell`\'s own acceptance. `wake` is exactly that delivery, so a fleet that keeps a run id calls `driver wake` there instead, with the same rules.\n\n## Tests and the kit\n\n```sh\npython3 -I adapters/cloudroom/test_driver.py   # the kit\'s five checks and the wake route, on a synthetic room-cli\npython3 -I kernel/driver-kit/kit.py --driver adapters/cloudroom/driver \\\n  --repo <owner>/<throwaway> --ticket <n> --harness claude --model claude-opus-5-5   # the real host\n```\n\n`fixtures/room-cli` is a synthetic `room-cli`: it never reaches Cloudroom, and runs each thread\'s turns as local processes of the kit\'s fake harness. The kit sees only processes on its own machine, so on the real host its stop and token checks see `room-cli` itself, not the remote thread; that thread ends when Cloudroom archives it.\n'
+
+======================================================================
+FAIL: test_stop_finds_its_thread_by_title_when_the_run_record_is_lost (__main__.Driver.test_stop_finds_its_thread_by_title_when_the_run_record_is_lost) [own child]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 495, in test_stop_finds_its_thread_by_title_when_the_run_record_is_lost
+    self.assertEqual((code, archived), (want, [['thread', 'archive', 'thr_syn_0001']] if not want else []),
+AssertionError: Tuples differ: (1, []) != (0, [['thread', 'archive', 'thr_syn_0001']])
+
+First differing element 0:
+1
+0
+
+- (1, [])
++ (0, [['thread', 'archive', 'thr_syn_0001']]) : {'error': 'no run run-b4c293f3bce0', 'next': 'check the run id that `driver start` printed'}
+
+----------------------------------------------------------------------
+Ran 20 tests in 18.556s
+
+FAILED (failures=11)

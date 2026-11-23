@@ -79,31 +79,42 @@ def ours(path):
     return MARKED.fullmatch(text) is not None
 
 
-def place(folder, skills, names, source):
+def discard(path, plain, name, landed):
+    try:
+        shutil.rmtree(path)
+    except OSError as error:
+        done = f'{plain} got OpenWiz\'s {name}, but' if landed else f'{plain} did not get OpenWiz\'s {name}:'
+        quoted = shlex.quote(str(path))
+        return (f'{done} OpenWiz could not delete {path}, a copy it set aside ({error.strerror}). Delete it '
+                f'with chmod -R u+rwx -- {quoted} && rm -rf -- {quoted}, then run this again.')
+    return None
+
+
+def place(folder, skills, name, source, plain):
     folder.mkdir(mode=0o700, exist_ok=True)
-    for name in names:
-        (stage, old), target = leftovers(folder, name), folder / name
-        for leftover in (stage, old):
-            if owned_dir(leftover):
-                shutil.rmtree(leftover)
-        stage.mkdir(mode=0o700)
-        fd = os.open(stage / MARK, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    (stage, old), target = leftovers(folder, name), folder / name
+    for leftover in (stage, old):
+        if owned_dir(leftover):
+            trouble = discard(leftover, plain, name, False)
+            if trouble:
+                return False, trouble
+    stage.mkdir(mode=0o700)
+    fd = os.open(stage / MARK, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(fd, 'wb') as handle:
+        handle.write(mark(source))
+    for path in sorted((skills / name).rglob('*')):
+        if path.is_dir() or path == skills / name / MARK:
+            continue
+        copy = stage / path.relative_to(skills / name)
+        copy.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        fd = os.open(copy, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                     stat.S_IMODE(path.lstat().st_mode))
         with os.fdopen(fd, 'wb') as handle:
-            handle.write(mark(source))
-        for path in sorted((skills / name).rglob('*')):
-            if path.is_dir() or path == skills / name / MARK:
-                continue
-            copy = stage / path.relative_to(skills / name)
-            copy.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-            fd = os.open(copy, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
-                         stat.S_IMODE(path.lstat().st_mode))
-            with os.fdopen(fd, 'wb') as handle:
-                handle.write(path.read_bytes())
-        if owned_dir(target):
-            os.rename(target, old)
-        os.rename(stage, target)
-        if owned_dir(old):
-            shutil.rmtree(old)
+            handle.write(path.read_bytes())
+    if owned_dir(target):
+        os.rename(target, old)
+    os.rename(stage, target)
+    return True, discard(old, plain, name, True) if owned_dir(old) else None
 
 
 def guard_parent(base, plain):
@@ -125,17 +136,23 @@ def unreadable(path, plain, error):
 
 
 def copy(folder, skills, wanted, source, plain):
-    placed = []
-    try:
-        for name in wanted:
-            place(folder, skills, [name], source)
+    placed, notes, unwritable = [], [], None
+    for name in wanted:
+        try:
+            landed, trouble = place(folder, skills, name, source, plain)
+        except (OSError, installer.Refused) as error:
+            landed, trouble = False, None
+            unwritable = unwritable or (error.strerror if isinstance(error, OSError) and error.strerror
+                                        else str(error))
+        if landed:
             placed.append(name)
-    except (OSError, installer.Refused) as error:
-        why = error.strerror if isinstance(error, OSError) and error.strerror else str(error)
-        return placed, (f'OpenWiz could not write {folder} ({why}), so {plain} got {len(placed)} of '
+        if trouble:
+            notes.append(trouble)
+    if unwritable:
+        notes.insert(0, f'OpenWiz could not write {folder} ({unwritable}), so {plain} got {len(placed)} of '
                         f'{len(wanted)} skills. Make it writable with chmod u+rwx -- {shlex.quote(str(folder))}, '
                         'then run this again.')
-    return placed, None
+    return placed, ' '.join(notes) or None
 
 
 def install_skills(build, value, root, home, codex_home=None):

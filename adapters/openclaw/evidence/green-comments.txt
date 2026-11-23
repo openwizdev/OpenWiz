@@ -1,0 +1,3 @@
+# Green at c47c7cac: python3 -I tools/comment-check/check.py diff --base origin/main
+comment-check: ok
+exit 0

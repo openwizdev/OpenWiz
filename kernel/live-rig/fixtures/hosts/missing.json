@@ -1,0 +1,9 @@
+{
+  "host": "fixture-missing",
+  "driver": "adapters/template/driver",
+  "needs": ["fake-harness", "rig-fixture-not-installed"],
+  "signed_in": [["fake-signed-out", "status"]],
+  "cost": "unknown",
+  "runs": [{"harness": "fake-harness", "model": "Synthetic 1"}],
+  "wait": 8
+}

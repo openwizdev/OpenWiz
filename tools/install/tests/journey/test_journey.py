@@ -49,12 +49,19 @@ VERSION = '0.0.99'
 NAME = 'openwiz-' + TARGET
 BASE = 'https://github.com/openwizdev/OpenWiz/releases/'
 LINE = 'Install OpenWiz from github.com/openwizdev/OpenWiz'
-ORDER = ['Preflight', 'Verified install', 'Setup and connections', 'Teach', 'The onboarding road']
+ORDER = ['Preflight', 'Verified install', 'Setup and connections', 'Skills into your agents, then a restart', 'Teach',
+         'The onboarding road']
 # #2293 (PR6, copy only): independent literals for the free-only release copy.
 FREE_ONLY = ('OpenWiz is free now. Paid plans come later. '
              'CloudRoom and model charges are separate and not included.')
 NO_REFERRAL = 'Referral verification is unavailable. No referral is applied.'
 NOT_OFFERED = re.compile(r'upgrad|\btrial|\$\s?[0-9]|per month|checkout|subscri', re.I)
+SHELL_ARGUMENT = re.compile(r'"\$[0-9](?=["/])')
+
+
+def not_offered(raw):
+    code = re.sub(r'^```[a-z]*\n.*?^```$', lambda m: SHELL_ARGUMENT.sub('"ARG', m[0]), raw, flags=re.M | re.S)
+    return NOT_OFFERED.findall(' '.join(code.split()))
 BUILD_TOOLS = ('cargo', 'rustc', 'rustup', 'npm', 'node', 'npx')
 REPO = 'synthetic-owner/synthetic-consumer'
 PROFILE = {'metadata': 'read', 'contents': 'write', 'issues': 'write', 'pull_requests': 'write',
@@ -393,9 +400,16 @@ class InstallJourney(unittest.TestCase):
                 text = ' '.join((ROOT / path).read_text().split())
                 self.assertIn(FREE_ONLY, text)
                 self.assertIn(NO_REFERRAL, text)
-                self.assertEqual(NOT_OFFERED.findall(text), [])
+                self.assertEqual(not_offered((ROOT / path).read_text()), [])
                 self.assertEqual(set(re.findall(r'cloudroom\.dev/[^\s`)]*', text)), {'cloudroom.dev/pricing'},
                                  "CloudRoom's own page, with no referral code or parameter")
+
+    def test_a_price_in_prose_is_refused_and_a_shell_argument_is_not(self):
+        shell = 'Run:\n\n```sh\nfixed() { grep -q x "$1/SKILL.md" && cat "$1"; }\n```\n'
+        self.assertEqual(not_offered(shell), [])
+        for prose in ('It costs "$5/month".', 'It costs "$5".', 'It costs $5.', 'Run `"$5/month"`.'):
+            with self.subTest(prose):
+                self.assertEqual(not_offered(shell + prose + '\n'), ['$5'])
 
     def test_from_the_line_to_a_first_fleet_on_a_cold_consumer(self):
         c = Consumer(self)
@@ -443,6 +457,19 @@ class InstallJourney(unittest.TestCase):
                              ('cloudroom_login_verified', 'app_missing', 'project_unprepared'))
             self.assertEqual(api.requests, [], 'no App API call before an App is connected')
 
+        def skills_into_agents():
+            (c.home / '.claude').mkdir(mode=0o700)
+            result = json.loads(c.entry('skills', '--root', str(c.root)).stdout)
+            states = {row['id']: row['state'] for row in result['harnesses']}
+            self.assertEqual(states, dict(dict.fromkeys(('codex', 'cursor', 'opencode', 'grok'), 'absent'),
+                                          **{'claude-code': 'installed'}))
+            shipped = sorted(p.name for p in (self.build / 'runtime/skills').iterdir() if p.is_dir())
+            self.assertEqual(sorted(p.name for p in (c.home / '.claude/skills').iterdir()), shipped)
+            self.assertTrue((c.home / '.claude/skills/install/.openwiz-skill').is_file(), "the installer's own copy")
+            restart = section(ROOT / 'skills/install/SKILL.md', 'Skills into your agents, then a restart')
+            for host in ('local', 'boat', 'cloud'):
+                self.assertIn('`continue the OpenWiz install with host %s and release <tag>`' % host, restart)
+
         def teach():
             installed = self.build / 'runtime/skills/install'
             self.assertIn('[teach.md](teach.md)', section(installed / 'SKILL.md', 'Teach'))
@@ -471,7 +498,9 @@ class InstallJourney(unittest.TestCase):
             self.assertNotEqual(Path(self.onboard.HELPER).resolve().parents[3], ROOT.resolve())
 
         runners = {'Preflight': preflight, 'Verified install': verified_install,
-                   'Setup and connections': setup_and_connections, 'Teach': teach, 'The onboarding road': first_fleet}
+                   'Setup and connections': setup_and_connections,
+                   'Skills into your agents, then a restart': skills_into_agents, 'Teach': teach,
+                   'The onboarding road': first_fleet}
         skill = ROOT / 'skills/install/SKILL.md'
         self.assertEqual(steps(skill), ORDER)
         for title in steps(skill):
@@ -888,7 +917,20 @@ class OwnSettings(unittest.TestCase):
                                           if family.get(c['provider']) not in (None, f)), 'waits')
             models['fix ' + f] = next((c for c in (role['Fixer'], role['Reviewer'])
                                        if family.get(c['provider']) == f), 'waits')
-        older = module('own_starts', skills / 'launch-fleet/scripts/ops-starts.py').read_settings(text)
+        starts = module('own_starts', skills / 'launch-fleet/scripts/ops-starts.py')
+        try:
+            read = starts.read_models(text)
+            older_only = starts.read_models(re.sub(r'\n## Models\n.*?(?=\n## |\Z)', '\n', text, flags=re.S))
+        except ValueError as refused:
+            self.fail('the pinned launch-fleet refuses the settings: %s' % refused)
+        self.assertEqual((read['read'], older_only['read']), ('models_table', 'older_tables'))
+        self.assertEqual(dict(builder=read['roles']['builder']['choice'], small=read['roles']['small_builder']['choice'],
+                              **{'review ' + f: read['reviews'][f]['choice'] or 'waits' for f in ('claude', 'gpt')},
+                              **{'fix ' + f: read['fixers'][f]['choice'] or 'waits' for f in ('claude', 'gpt')}),
+                         models, 'the pinned launch-fleet starts what the Models table resolves to')
+        older = dict(builder=older_only['roles']['builder']['choice'], small=older_only['roles']['small_builder']['choice'],
+                     **{'claude-code': older_only['reviews']['claude']['choice'],
+                        'codex': older_only['reviews']['gpt']['choice']})
         fixers = table_rows(text, 'Fixer')
         self.assertEqual([row[0] for row in fixers], ['Claude', 'GPT'], 'one older Fixer row per family')
         self.assertEqual(dict(builder=older['builder'], small=older['small'], **{

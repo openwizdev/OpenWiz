@@ -1,0 +1,10 @@
+# The pruning proof against main's access.py:
+FAIL: test_pruning_the_checked_operation_never_hands_its_observation_to_an_older_check (__main__.Access.test_pruning_the_checked_operation_never_hands_its_observation_to_an_older_check)
+AssertionError: {'at': <ms>, 'code': 'access_cloudflare_verified', 'revision': 0} is not None : the pruned later check's result is not the kept operation's
+Ran 1 test
+FAILED (failures=1)
+# The same proof with only the pruning guard undone:
+FAIL: test_pruning_the_checked_operation_never_hands_its_observation_to_an_older_check (__main__.Access.test_pruning_the_checked_operation_never_hands_its_observation_to_an_older_check)
+AssertionError: {'at': <ms>, 'code': 'access_cloudflare_verified', 'revision': 0} is not None : the pruned later check's result is not the kept operation's
+Ran 1 test
+FAILED (failures=1)

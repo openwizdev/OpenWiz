@@ -131,7 +131,7 @@ models show|list|set
 Exit codes:
   0  a result was printed, complete or partial
   1  a read failed
-  1  ls, show, --help: the output could not be written or flushed;
+  1  ls, show and the help commands: the output could not be written or flushed;
      some of it may already be on stdout
   2  usage error, or a request out of bounds
   3  show: the session was not found
@@ -139,9 +139,10 @@ Exit codes:
   13 models: nothing can be offered right now; the report says why
   1  models show|list|set: fleet.md missing, unreadable or refused, or a failed write
   5  models set: not offered, or not writable to the Models table; nothing was changed
-{fleets_exit_codes}{fleet_exit_codes}On an error, stdout is empty unless ls, show or --help fails to write or flush output;
-some output may already be on stdout in that case.
-In either case, stderr has one line starting with \"openwiz: \".
+{fleets_exit_codes}{fleet_exit_codes}On an error, stdout is empty unless ls, show or a help command fails to write or
+flush output, when some of it may already be on stdout, or unless --json was given.
+With --json, an error that printed nothing else prints openwiz.cli-error.v1 on stdout.
+Either way, stderr has one line starting with \"openwiz: \".
 ",
         default = ops::ListRequest::default().limit,
         kib = FINAL_OUTPUT_MAX_BYTES / 1024,

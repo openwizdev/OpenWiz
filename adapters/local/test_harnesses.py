@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import importlib.machinery, importlib.util, json, os, shutil, signal, socket, subprocess, sys, tempfile, threading, time
+import contextlib, importlib.machinery, importlib.util, json, os, shlex, shutil, signal, socket, subprocess, sys, tempfile, threading, time
 
 sys.dont_write_bytecode = True
 USAGE = '''usage: test_harnesses.py            the planted rows, then every row in adapters/local/harnesses/
@@ -18,7 +18,7 @@ local.__spec__.loader.exec_module(local)
 
 # SAFETY: no-op stubs for every known agent CLI, so no real one runs here; only a row's own fake goes ahead of them.
 STUBS = ('claude codex cursor-agent agent pi opencode copilot goose gemini kimi qwen cline kilo crush vibe auggie '
-         'kiro-cli junie amp agy oz sculpt hermes acpx droid').split()
+         'kiro-cli junie amp agy oz sculpt hermes acpx droid boat pane openclaw kiro cn aider').split()
 CANT_SET_EFFORT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster "
                    "to run it at the host's default")
 PASS = ['pass version: openwiz:records v1, and the schema is driver v1',
@@ -30,6 +30,7 @@ GOOD = 'the contract, the folder, the kit\'s five checks, and the session, env, 
 PLANTED = {
     'example': 'pass example: ' + GOOD,
     'example-none': 'pass example-none: ' + GOOD,
+    'effort-crowded': 'pass effort-crowded: ' + GOOD,
     'signed-out-json': 'pass signed-out-json: ' + GOOD,
     'wake-no-session': 'fail wake-no-session: row.json wake: it has no {session}',
     'larger-argument': 'fail larger-argument: row.json start: a placeholder sits inside a larger argument; '
@@ -106,7 +107,7 @@ class RunningHubOutsideEveryRun:
 
 class ThrowawayMachine:
 
-    def __init__(self, rows, name, program=None, fake=None, mode=None, names=()):
+    def __init__(self, rows, name, program=None, fake=None, mode=None, names=(), clone_says=None):
         self.folder = tempfile.mkdtemp(prefix='rows-')
         checkout = os.path.join(self.folder, 'checkout', 'adapters', 'local')
         os.makedirs(checkout)
@@ -124,7 +125,13 @@ class ThrowawayMachine:
             os.chmod(os.path.join(stubs, stub), 0o700)
         if program:
             os.symlink(fake, os.path.join(binary, program))
-        os.symlink(os.path.join(FIXTURES, 'gh'), os.path.join(binary, 'gh'))
+        if clone_says is None:
+            os.symlink(os.path.join(FIXTURES, 'gh'), os.path.join(binary, 'gh'))
+        else:
+            with open(os.path.join(binary, 'gh'), 'w') as f:
+                f.write('#!/bin/sh\necho %s\nexec %s "$@"\n' % (shlex.quote(clone_says),
+                                                                shlex.quote(os.path.join(FIXTURES, 'gh'))))
+            os.chmod(os.path.join(binary, 'gh'), 0o700)
         with open(os.path.join(repo, 'fleet.md'), 'w') as f:
             f.write('# Fleet\n\n| Setting | Value |\n| --- | --- |\n| Harness permission mode | `%s` |\n' % mode)
         os.makedirs(self.state, mode=0o700)
@@ -284,7 +291,7 @@ def check_effort(env, row):
         if not (contains(got['argv'], setting) if isinstance(setting, list) else
                 all(got['env'].get(k) == v for k, v in setting['env'].items())):
             raise Fail('effort', 'effort %s did not reach the fake CLI\'s command line or environment' % value)
-    unlisted = next(v for v in ('medium', 'unlisted') if v not in table)
+    unlisted = next(v for v in ['unlisted'] + ['unlisted-%d' % i for i in range(len(table))] if v not in table)
     if not env.start_refused_starting_nothing(lambda out: out['next'] == CANT_SET_EFFORT, effort=unlisted, FAKE_CLI_RECORD_ONLY='1'):
         raise Fail('effort', 'a start with an effort the row can\'t take was not refused with the fixed next, '
                              'starting nothing')
@@ -314,19 +321,142 @@ def check(rows, name):
         return 'fail %s: %s' % (name, ': '.join(x for x in e.args if x))
 
 
-def check_driver_unknown_harness_and_early_wake(rows):
-    found = []
+@contextlib.contextmanager
+def example_variant(name, drop=(), **fields):
+    with tempfile.TemporaryDirectory(prefix='variant-') as rows:
+        folder = os.path.join(rows, name)
+        shutil.copytree(os.path.join(FIXTURES, 'rows', 'example'), folder)
+        with open(os.path.join(folder, 'row.json')) as f:
+            row = json.load(f)
+        row.update(fields)
+        for key in drop:
+            del row[key]
+        with open(os.path.join(folder, 'row.json'), 'w') as f:
+            json.dump(row, f)
+        yield rows
+
+
+def broken_rows_name_their_file(planted):
+    long = 'a' * 60
+    with ThrowawayMachine(planted, 'row-missing', mode='auto') as env:
+        ok = env.start_refused_starting_nothing(lambda out: 'harnesses/row-missing/row.json' in out['error'])
+    for name, drop, fields in (('example', (), {'harness': ['example']}), (long, ('login',), {'harness': long})):
+        with example_variant(name, drop, **fields) as rows, ThrowawayMachine(rows, name, mode='auto') as env:
+            ok = env.start_refused_starting_nothing(
+                lambda out: 'harnesses/%s/row.json' % name in out['error'] and 'harnesses/%s/row.json' % name
+                in out['next']) and ok
+    return ok
+
+
+def rows_read_first_turn_output(planted):
+    example = (planted, 'example', 'example-cli', os.path.join(planted, 'example', 'fake'), 'auto')
+    with ThrowawayMachine(*example, clone_says='{"session": {"id": "clone-0000"}}') as env:
+        code, out = env.start(FAKE_CLI_RECORD_ONLY='1')
+        woke = env.driver('wake', out) if code == 0 else (1, {})
+        env.driver('stop', out)
+        turns = env.records()
+        ok = woke[0] == 0 and len(turns) == 2 and turns[1]['session'] == turns[0]['session'] != 'clone-0000'
+    with ThrowawayMachine(*example, clone_says='Error: not authenticated') as env:
+        code, out = env.start(FAKE_CLI_RECORD_ONLY='1')
+        env.driver('stop', out)
+        ok = ok and code == 0
+    with ThrowawayMachine(*example) as env:
+        code, out = env.start(FAKE_CLI_RECORD_ONLY='1', FAKE_CLI_PRELUDE='{"session": {"id": null}}')
+        woke = env.driver('wake', out) if code == 0 else (0, {})
+        env.driver('stop', out)
+        ok = ok and woke[0] == 1 and 'no session id' in woke[1].get('error', '') and len(env.records()) == 1
+    return ok
+
+
+def effort_checked_first_with_its_grammar(planted):
+    with ThrowawayMachine(planted, 'example', mode='auto') as env:
+        ok = env.start_refused_starting_nothing(lambda out: out['next'] == CANT_SET_EFFORT, effort='medium')
+    with example_variant('example', effort={'High': ['--effort', 'high']}) as rows, \
+            ThrowawayMachine(rows, 'example', mode='auto') as env:
+        ok = env.start_refused_starting_nothing(lambda out: 'harnesses/example/row.json' in out['error'] and '(effort:' in out['error']) and ok
+    return ok
+
+
+def supervisor_keeps_the_drivers_environment(planted):
+    with ThrowawayMachine(planted, 'example', 'example-cli', os.path.join(planted, 'example', 'fake'), 'auto',
+                          ('EXAMPLE_CLI_BACKEND', 'EXAMPLE_CLI_THINKING')) as env:
+        code, out = env.start(effort='max', FAKE_CLI_RECORD_ONLY='1', FAKE_CLI_LINGER='1')
+        try:
+            with open(os.path.join(env.state, out['run'] + '.json')) as f:
+                supervisor = json.load(f)['turns'][0]['supervisor']
+            with open('/proc/%d/environ' % supervisor, 'rb') as f:
+                names = {v.partition(b'=')[0] for v in f.read().split(b'\0')}
+        except (OSError, KeyError, ValueError):
+            names = None
+        env.driver('stop', out)
+        turns = env.records()
+    return code == 0 and names is not None and not names & {b'EXAMPLE_CLI_BACKEND', b'EXAMPLE_CLI_THINKING'} and \
+        len(turns) == 1 and turns[0]['env'] == {'EXAMPLE_CLI_BACKEND': 'local', 'EXAMPLE_CLI_THINKING': 'max'}
+
+
+def credential_arguments_refused(planted):
+    example = local.read_row(os.path.join(planted, 'example', 'row.json'), 'example')
+    value, ok = 'synthetic-0000', True
+    for field, fields in (
+            ('modes', {'modes': dict(example['modes'], auto=['--yes', '--token=' + value])}),
+            ('modes', {'modes': dict(example['modes'], auto=['--api-key', value])}),
+            ('start', {'start': ['password=' + value] + example['start']}),
+            ('effort', {'effort': dict(example['effort'], low=['--effort', 'low', '--auth', value])})):
+        with example_variant('example', **fields) as rows, ThrowawayMachine(rows, 'example', mode='auto') as env:
+            ok = env.start_refused_starting_nothing(
+                lambda out: 'harnesses/example/row.json' in out['error'] and '(%s:' % field in out['error'] and
+                value not in json.dumps(out)) and ok
+    return ok
+
+
+def busy_wake_needs_no_write(env):
+    before = len(env.records())
+    code, out = env.start(FAKE_CLI_RECORD_ONLY='1', FAKE_CLI_LINGER='1')
+    if code != 0 or not until(lambda: len(env.records()) == before + 1):
+        return False
+    path = os.path.join(env.state, out['run'] + '.json')
+    first = env.driver('wake', out)
+    with open(path) as f:
+        kept = json.load(f)['session']
+    os.mkdir(path + '.new')
+    try:
+        again = env.driver('wake', out)
+    finally:
+        os.rmdir(path + '.new')
+        env.driver('stop', out)
+    return first == again == (0, {'run': out['run'], 'woke': True}) and kept == env.records()[-1]['session'] and \
+        len(env.records()) == before + 1
+
+
+def check_driver(rows):
+    found = [("a broken row's D3 error names its row file and fits the error schema: a row folder with no row.json, "
+              "a harness that is not a string, and a 60-character harness with a missing field",
+              broken_rows_name_their_file(rows)),
+             ("a row's session id and signed_out patterns are read from its first turn's output, never the clone's, "
+              "and the first line that has the session's JSON path decides it", rows_read_first_turn_output(rows)),
+             ("an effort the row can't take is refused before the driver looks for its program, and a row's effort "
+              "ids are lower-case words of up to 20 characters", effort_checked_first_with_its_grammar(rows)),
+             ("a row whose fixed arguments in start, wake, modes or effort look like a credential, joined or as a "
+              "flag and its value, is refused naming only its field", credential_arguments_refused(rows))]
+    if os.path.isdir('/proc/self'):
+        found.append(("a row's env and effort setting reach only the harness, never the turn's supervisor",
+                      supervisor_keeps_the_drivers_environment(rows)))
     with ThrowawayMachine(rows, 'example', 'example-cli', os.path.join(rows, 'example', 'fake'), 'auto') as env:
         lists = lambda out: out['next'].startswith('use one of: claude, codex, ') and 'example-none' in out['next']
         found.append(('an unknown harness is a D3 error that lists the built-ins and the row folders, and starts '
                       'nothing', env.start_refused_starting_nothing(lists, 'no-such-row')))
-        code, out = env.start(FAKE_CLI_QUIET='1', FAKE_CLI_RECORD_ONLY='1')
-        before = len(env.records())
-        woke = env.driver('wake', out) if code == 0 else (0, {})
-        env.driver('stop', out)
-        found.append(('a wake before the reported session id is known is a D3 error that starts nothing',
-                      woke[0] == 1 and kit.invalid(woke[1], ERROR) is None and 'no session id' in woke[1]['error']
-                      and len(env.records()) == before == 1))
+        early = []
+        for linger in ('', '1'):
+            code, out = env.start(FAKE_CLI_QUIET='1', FAKE_CLI_RECORD_ONLY='1', FAKE_CLI_LINGER=linger)
+            before = len(env.records())
+            woke = env.driver('wake', out) if code == 0 else (0, {})
+            env.driver('stop', out)
+            early.append(woke[0] == 1 and kit.invalid(woke[1], ERROR) is None and 'no session id' in woke[1]['error']
+                         and len(env.records()) == before == len(early) + 1)
+        found.append(('a wake before the reported session id is known is a D3 error that starts nothing, whether '
+                      'the first turn has ended or still runs', all(early)))
+        found.append(("a wake while the first turn runs saves its newly reported session id, and once it is saved "
+                      "answers woke with no state write and starts nothing", busy_wake_needs_no_write(env)))
     return ['%s driver: %s' % ('pass' if ok else 'fail', what) for what, ok in found]
 
 
@@ -352,7 +482,7 @@ def main(argv):
         if got != PLANTED[name]:
             print('unexpected: planted row %s should give: %s' % (name, PLANTED[name]))
             ok = False
-    for line in check_driver_unknown_harness_and_early_wake(planted):
+    for line in check_driver(planted):
         print(line)
         ok = ok and line.startswith('pass ')
     rows = folders(ROWS)

@@ -25,6 +25,9 @@ BREAKS = {
     'blocker-without-reason': ['#2 B1: #3 has no reason line'],
     'blocker-not-completed': ['#2 B2: blocker #9 is closed as not_planned, not completed',
                               '#2 B2: blocker #10 is closed as duplicate, not completed'],
+    'one-line-code-span': ['#1 T1: spec lacks ## Out of Scope'],
+    'foreign-long-form': ['#2 B1: malformed section: line `- other-owner/site#3 real: the example shape` names '
+                          'other-owner/site#3, not this repository'],
 }
 
 
@@ -40,9 +43,13 @@ def valid():
 
 
 class Kit(unittest.TestCase):
-    def test_valid_tracker_passes(self):
-        code, out, err = run(os.path.join(FIXTURES, 'valid.json'))
-        self.assertEqual((code, out), (0, []), err)
+    def test_valid_trackers_pass(self):
+        names = sorted(n for n in os.listdir(FIXTURES) if n.startswith('valid'))
+        self.assertEqual(names, ['valid-own-long-form.json', 'valid.json'])
+        for name in names:
+            with self.subTest(name):
+                code, out, err = run(os.path.join(FIXTURES, name))
+                self.assertEqual((code, out), (0, []), err)
 
     def test_each_planted_break_is_reported(self):
         names = sorted(n[len('broken-'):-len('.json')] for n in os.listdir(FIXTURES) if n.startswith('broken-'))

@@ -1,0 +1,93 @@
+# Red run on main's code at ae10e2834ef94e319c47fd966d3558340520731a, synthetic temp folders only
+$ python3 -I tools/install/tests/skills-linked-config/test_linked_config.py
+...F.........................F.F.........
+======================================================================
+FAIL: test_a_read_only_backup_still_counts_the_promoted_skill_and_the_rest_install (__main__.LinkedConfig.test_a_read_only_backup_still_counts_the_promoted_skill_and_the_rest_install)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/install/tests/skills-linked-config/test_linked_config.py", line 96, in test_a_read_only_backup_still_counts_the_promoted_skill_and_the_rest_install
+    self.assertEqual((code, result.get('outcome')), (0, 'installed'), result)
+AssertionError: Tuples differ: (5, 'refused') != (0, 'installed')
+First differing element 0:
+5
+0
+- (5, 'refused')
++ (0, 'installed') : {'schema': 'openwiz.skills-install.v1', 'version': '0.0.99', 'source': '1111111111111111111111111111111111111111', 'canonical': '/tmp/SYNTHETIC/installed/skills', 'skills': ['grill', 'launch-fleet', 'setup', 'to-tickets'], 'harnesses': [{'id': 'claude-code', 'path': '/tmp/SYNTHETIC/HOME/.claude/skills', 'state': 'refused', 'next': 'OpenWiz could not write /tmp/SYNTHETIC/HOME/.claude/skills (Permission denied), so Claude Code got 0 of 4 skills. Make it writable with chmod u+rwx -- /tmp/SYNTHETIC/HOME/.claude/skills, then run this again.'}, {'id': 'codex', 'path': '/tmp/SYNTHETIC/HOME/.codex/skills', 'state': 'absent', 'next': 'Codex is not set up here (/tmp/SYNTHETIC/HOME/.codex is missing), so it got no skills; install Codex, then run this again.'}, {'id': 'cursor', 'path': '/tmp/SYNTHETIC/HOME/.cursor/skills', 'state': 'absent', 'next': 'Cursor is not set up here (/tmp/SYNTHETIC/HOME/.cursor is missing), so it got no skills; install Cursor, then run this again.'}, {'id': 'opencode', 'path': '/tmp/SYNTHETIC/HOME/.config/opencode/skills', 'state': 'absent', 'next': 'OpenCode is not set up here (/tmp/SYNTHETIC/HOME/.config/opencode is missing), so it got no skills; install OpenCode, then run this again.'}, {'id': 'grok', 'path': '/tmp/SYNTHETIC/HOME/.grok/skills', 'state': 'absent', 'next': 'Grok is not set up here (/tmp/SYNTHETIC/HOME/.grok is missing), so it got no skills; install Grok, then run this again.'}], 'outcome': 'refused', 'reason': "No agent here took OpenWiz's skills (see each row), so the canonical folder was not written either."}
+======================================================================
+FAIL: test_remove_on_a_root_without_its_lock_holds_one_against_a_new_install (__main__.LockedRemove.test_remove_on_a_root_without_its_lock_holds_one_against_a_new_install)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/install/tests/skills-linked-config/test_linked_config.py", line 125, in test_remove_on_a_root_without_its_lock_holds_one_against_a_new_install
+    self.assertEqual((code, value['outcome'], seen), (0, 'preview', ['held']), value)
+AssertionError: Tuples differ: (0, 'preview', ['free']) != (0, 'preview', ['held'])
+First differing element 2:
+['free']
+['held']
+- (0, 'preview', ['free'])
+?                  ^^ ^
++ (0, 'preview', ['held'])
+?                  ^ ^^
+ : {'schema': 'openwiz.install-remove.v1', 'root': '/tmp/SYNTHETIC/HOME/.local/lib/openwiz', 'state_root': '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state', 'delete': ['/tmp/SYNTHETIC/HOME/.local/lib/openwiz/current', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/install.lock', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/channel.json', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/skills/grill', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/skills/launch-fleet', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/skills/setup', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/skills/to-tickets', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/service/builds/1111111111111111111111111111111111111111', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/setup', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/cloudroom', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/service/config.json', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/service/app', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/service/state.json', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/service/loops', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/service/clone'], 'skills': [{'id': 'claude-code', 'path': '/tmp/SYNTHETIC/HOME/.claude/skills', 'names': ['grill', 'launch-fleet', 'setup', 'to-tickets']}], 'outcome': 'preview', 'next': "Run install remove --root /tmp/SYNTHETIC/HOME/.local/lib/openwiz --yes to delete exactly these; anything else stays. Your agents still hold OpenWiz's skill copies: delete the listed folders by name from each path in skills; other skills there are yours."}
+======================================================================
+FAIL: test_remove_refuses_a_lock_that_is_not_a_private_file (__main__.LockedRemove.test_remove_refuses_a_lock_that_is_not_a_private_file)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/install/tests/skills-linked-config/test_linked_config.py", line 137, in test_remove_refuses_a_lock_that_is_not_a_private_file
+    self.assertEqual((code, value['outcome']), (5, 'refused'), value)
+AssertionError: Tuples differ: (0, 'removed') != (5, 'refused')
+First differing element 0:
+0
+5
+- (0, 'removed')
++ (5, 'refused') : {'schema': 'openwiz.install-remove.v1', 'root': '/tmp/SYNTHETIC/HOME/.local/lib/openwiz', 'state_root': '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state', 'delete': ['/tmp/SYNTHETIC/HOME/.local/lib/openwiz/current', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/install.lock', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/channel.json', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/skills/grill', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/skills/launch-fleet', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/skills/setup', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/skills/to-tickets', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/service/builds/1111111111111111111111111111111111111111', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/setup', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/cloudroom', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/service/config.json', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/service/app', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/service/state.json', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/service/loops', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/service/clone'], 'skills': [{'id': 'claude-code', 'path': '/tmp/SYNTHETIC/HOME/.claude/skills', 'names': ['grill', 'launch-fleet', 'setup', 'to-tickets']}], 'outcome': 'removed', 'kept': [], 'next': "Deleted exactly the listed entries; no folder was left. Your agents still hold OpenWiz's skill copies: delete the listed folders by name from each path in skills; other skills there are yours."}
+----------------------------------------------------------------------
+Ran 41 tests in 30.128s
+FAILED (failures=3)
+
+# Red rerun after the preview stopped making a lock: the reshaped LockedRemove tests against main's tools/install/install
+$ python3 -I tools/install/tests/skills-linked-config/test_linked_config.py LockedRemove
+...F.F.
+======================================================================
+FAIL: test_remove_on_a_root_without_its_lock_holds_one_against_a_new_install (__main__.LockedRemove.test_remove_on_a_root_without_its_lock_holds_one_against_a_new_install)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/install/tests/skills-linked-config/test_linked_config.py", line 128, in test_remove_on_a_root_without_its_lock_holds_one_against_a_new_install
+    self.assertEqual((code, value['outcome'], seen), (0, 'removed', ['held']), value)
+AssertionError: Tuples differ: (0, 'removed', ['free']) != (0, 'removed', ['held'])
+First differing element 2:
+['free']
+['held']
+- (0, 'removed', ['free'])
+?                  ^^ ^
++ (0, 'removed', ['held'])
+?                  ^ ^^
+ : {'schema': 'openwiz.install-remove.v1', 'root': '/tmp/SYNTHETIC/HOME/.local/lib/openwiz', 'state_root': '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state', 'delete': ['/tmp/SYNTHETIC/HOME/.local/lib/openwiz/current', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/install.lock', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/channel.json', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/skills/grill', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/skills/launch-fleet', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/skills/setup', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/skills/to-tickets', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/service/builds/1111111111111111111111111111111111111111', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/setup', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/cloudroom', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/service/config.json', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/service/app', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/service/state.json', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/service/loops', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/service/clone'], 'skills': [{'id': 'claude-code', 'path': '/tmp/SYNTHETIC/HOME/.claude/skills', 'names': ['grill', 'launch-fleet', 'setup', 'to-tickets']}], 'outcome': 'removed', 'kept': [], 'next': "Deleted exactly the listed entries; no folder was left. Your agents still hold OpenWiz's skill copies: delete the listed folders by name from each path in skills; other skills there are yours."}
+======================================================================
+FAIL: test_remove_refuses_a_lock_that_is_not_a_private_file (__main__.LockedRemove.test_remove_refuses_a_lock_that_is_not_a_private_file)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/install/tests/skills-linked-config/test_linked_config.py", line 136, in test_remove_refuses_a_lock_that_is_not_a_private_file
+    self.assertEqual((code, value['outcome']), (5, 'refused'), value)
+AssertionError: Tuples differ: (0, 'removed') != (5, 'refused')
+First differing element 0:
+0
+5
+- (0, 'removed')
++ (5, 'refused') : {'schema': 'openwiz.install-remove.v1', 'root': '/tmp/SYNTHETIC/HOME/.local/lib/openwiz', 'state_root': '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state', 'delete': ['/tmp/SYNTHETIC/HOME/.local/lib/openwiz/current', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/install.lock', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/channel.json', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/skills/grill', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/skills/launch-fleet', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/skills/setup', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/skills/to-tickets', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/service/builds/1111111111111111111111111111111111111111', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/setup', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/cloudroom', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/service/config.json', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/service/app', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/service/state.json', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/service/loops', '/tmp/SYNTHETIC/HOME/.local/lib/openwiz/state/service/clone'], 'skills': [{'id': 'claude-code', 'path': '/tmp/SYNTHETIC/HOME/.claude/skills', 'names': ['grill', 'launch-fleet', 'setup', 'to-tickets']}], 'outcome': 'removed', 'kept': [], 'next': "Deleted exactly the listed entries; no folder was left. Your agents still hold OpenWiz's skill copies: delete the listed folders by name from each path in skills; other skills there are yours."}
+----------------------------------------------------------------------
+Ran 7 tests in 3.515s
+FAILED (failures=2)
+
+# Red run for review R1 at 86dc8868 (install wins the lock remove made)
+$ python3 -I tools/install/tests/skills-linked-config/test_linked_config.py LockedRemove
+F.......
+======================================================================
+FAIL: test_an_install_that_wins_the_lock_remove_made_keeps_it_and_a_retry_is_refused (__main__.LockedRemove.test_an_install_that_wins_the_lock_remove_made_keeps_it_and_a_retry_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/install/tests/skills-linked-config/test_linked_config.py", line 146, in test_an_install_that_wins_the_lock_remove_made_keeps_it_and_a_retry_is_refused
+    self.assertTrue(os.path.lexists(self.root / 'install.lock'))
+AssertionError: False is not true
+----------------------------------------------------------------------
+Ran 8 tests in 4.020s
+FAILED (failures=1)
