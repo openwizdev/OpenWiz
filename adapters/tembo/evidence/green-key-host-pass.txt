@@ -1,0 +1,10 @@
+Tembo driver suite: 16 tests, OK.
+Standalone kit on the Tembo loopback fixture:
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 2
+pass wake: the run edited builder status note 2
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver, and on start, wake and stop the tembo key reached its host only from the key helper, in its header
+Key helper suite: 25 tests, OK.
+Changing the creation request's effort to low in a scratch copy:
+AssertionError: {'reasoningLevel': 'low'} != {'reasoningLevel': 'high'}
