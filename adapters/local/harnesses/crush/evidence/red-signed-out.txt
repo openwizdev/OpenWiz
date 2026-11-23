@@ -1,0 +1,8 @@
+# Red (HR1 revision 4): test_row.py expects the signed-out D3 naming `crush login`; row.json has no signed_out or login_command yet
+# Command: python3 -I test_row.py (in the row folder). No-op stubs for every known agent CLI first on PATH; OPENWIZ_GITHUB_APP_KEY unset.
+pass crush row: not installed is a D3 error whose next says to install and sign in, and starts nothing
+fail crush row: not signed in is a D3 error whose next says to sign in with crush login
+pass crush row: a turn gets CRUSH_CLIENT_SERVER=0 over the user's own setting, and attaches to no outside server
+pass crush row: the wake gets the session id crush logged to stderr at start
+pass crush row: stop leaves no process of the run
+exit=1

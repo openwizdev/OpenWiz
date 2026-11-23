@@ -8,8 +8,10 @@ HELP = '''The fake crush (v0.102.0's `crush run --help`, cut to what the row use
   crush run --quiet --verbose --model <m> --yolo -- <prompt>
   crush run --quiet --verbose --session <id> --model <m> --yolo -- <prompt>
 Like Crush, it logs "Created session for non-interactive run session_id=<id>" to stderr before the first turn,
-attaches to an already running server when CRUSH_CLIENT_SERVER is true, and with FAKE_CRUSH_SIGNED_OUT=1
-answers as a Crush with no provider signed in.'''
+attaches to an already running server when CRUSH_CLIENT_SERVER is true, and with FAKE_CLI_SIGNED_OUT set
+answers as a Crush with no provider signed in (on stderr, exit 1).'''
+
+SIGNED_OUT = "   ERROR  \n  No providers configured - please run 'crush' to set up a provider interactively."
 
 if sys.argv[1:] == ['--help']:
     print(HELP)
@@ -22,11 +24,8 @@ if a[:1] == ['--session'] and len(a) > 1:
     session, a = a[1], a[2:]
 if len(a) != 5 or a[0] != '--model' or a[2:4] != ['--yolo', '--']:
     fake_cli.refuse()
-if os.environ.get('FAKE_CRUSH_SIGNED_OUT') == '1':
-    sys.stderr.write("   ERROR  \n  No providers configured - please run 'crush' to set up a provider interactively.\n")
-    sys.exit(1)
 # Go's strconv.ParseBool, as internal/cmd/root.go useClientServer reads it.
 attach = os.environ.get('CRUSH_CLIENT_SERVER') in ('1', 't', 'T', 'TRUE', 'true', 'True')
 sys.stdout = sys.stderr
 fake_cli.turn(a[4], a[1], session, lambda sid: 'INFO  Created session for non-interactive run session_id=' + sid,
-              daemon='via-running-hub' if attach else None)
+              daemon='via-running-hub' if attach else None, signed_out=SIGNED_OUT)

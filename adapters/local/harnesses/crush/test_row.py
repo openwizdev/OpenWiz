@@ -43,18 +43,18 @@ with machine(None) as env, tempfile.TemporaryDirectory() as bare:
           d3(code, out) and out.get('next') == NOT_INSTALLED and 'not installed' in out.get('error', '')
           and env.runs() == before and env.records() == [])
 
-# Not signed in: Crush's own "No providers configured" exit, which the driver's first-turn watch turns into D3.
+# Not signed in: Crush's own "No providers configured" exit; the row's signed_out turns it into the signed-out D3.
 with machine() as env:
-    code, out = env.start(FAKE_CRUSH_SIGNED_OUT='1')
-    log = out.get('next', '').partition('read ')[2].partition(', fix what it says there')[0]
+    code, out = env.start(FAKE_CLI_SIGNED_OUT='1')
+    log = out.get('next', '').partition('; ')[2].partition(' has the turn')[0]
     try:
         with open(log) as f:
             said = f.read()
     except OSError:
         said = ''
-    check('not signed in is a D3 error whose next points at the log that says how to set up a provider',
-          d3(code, out) and 'the first turn ended at once' in out.get('error', '')
-          and out['next'] == 'read %s, fix what it says there, then start again' % log
+    check('not signed in is a D3 error whose next says to sign in with crush login',
+          d3(code, out) and 'the harness is not signed in' in out.get('error', '')
+          and out['next'].startswith('sign in yourself with `crush login` on this machine, then start again')
           and "No providers configured - please run 'crush' to set up a provider interactively." in said
           and env.records() == [] and processes_under(env.folder) == [])
 
