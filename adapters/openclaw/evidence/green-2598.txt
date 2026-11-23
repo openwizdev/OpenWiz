@@ -1,0 +1,47 @@
+# green, after the driver change: the fixture tests on the synthetic acpx, then the effort part of
+# the kit's start check (EF2's kit.py, at the head of its pull request) on this driver
+$ python3 -I adapters/openclaw/test_driver.py
+test_a_field_shaped_like_a_credential_is_refused_before_anything_keeps_it ... ok
+test_a_harness_acpx_would_run_as_a_command_is_refused_without_echoing_it ... ok
+test_a_missing_acpx_is_refused_with_how_to_install_it ... ok
+test_a_project_acpx_config_in_the_run_folder_never_reaches_acpx ... ok
+test_a_refused_prompt_fails_start_and_wake ... ok
+test_a_start_whose_session_fails_leaves_nothing ... ok
+test_a_start_without_an_effort_sets_none ... ok
+test_a_wake_during_a_turn_reaches_the_same_session_after_acpx_acknowledged_the_first ... ok
+test_acpx_output_is_never_kept ... ok
+test_acpx_runs_with_a_permission_policy_and_a_short_queue_owner ... ok
+test_an_effort_for_a_harness_it_cannot_set_it_for_is_refused_with_the_refusal_text ... ok
+test_an_effort_out_of_shape_is_refused_before_acpx_runs ... ok
+test_an_effort_the_adapter_rejects_is_refused_and_starts_nothing ... ok
+test_kit_passes_all_five ... ok
+test_save_failure_after_the_prompt_reports_unknown ... ok
+test_stop_ends_a_queue_owner_with_a_clean_environment ... ok
+test_stop_runs_the_built_in_adapter_even_when_a_config_appears_while_it_runs ... ok
+test_the_driver_never_reads_your_acpx_config_and_acpx_never_loads_it ... ok
+test_the_effort_default_is_refused_before_acpx_runs ... ok
+test_the_effort_reaches_the_adapter_before_the_first_prompt_and_stays_on_a_wake ... ok
+test_version_lists_effort_and_the_readme_says_how_it_is_passed ... ok
+Ran 21 tests in 8.628s
+OK
+$ python3 -I kernel/driver-kit/kit.py --driver adapters/openclaw/driver --repo example/site --ticket 7 --harness claude --model claude-opus-5-5 (EF2 kit)
+exit 0
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 1; effort: medium reached a process the run started
+pass wake: the run edited builder status note 1
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+$ python3 -I kernel/driver-kit/kit.py --driver adapters/openclaw/driver --repo example/site --ticket 7 --harness codex --model claude-opus-5-5 (EF2 kit)
+exit 0
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 1; effort: medium reached a process the run started
+pass wake: the run edited builder status note 1
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+$ python3 -I kernel/driver-kit/kit.py --driver adapters/openclaw/driver --repo example/site --ticket 7 --harness droid --model claude-opus-5-5 (EF2 kit)
+exit 0
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 1; effort: refused for droid with the refusal text, as the README says
+pass wake: the run edited builder status note 1
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver

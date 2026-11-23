@@ -212,7 +212,8 @@ def main():
             env = {k: v for k, v in os.environ.items()
                    if not (os.environ.get('FAKE_CLEAN') and k.startswith(MARKS))}
             session['owner'] = subprocess.Popen(
-                [sys.executable, os.path.abspath(__file__), '--owner', name, opts.get('--ttl', '300')],
+                [sys.executable, os.path.abspath(__file__), '--owner', name, opts.get('--ttl', '300'),
+                 '--session-options', json.dumps(session.get('config', {}), separators=(',', ':'))],
                 start_new_session=True, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL).pid
     update(queue)

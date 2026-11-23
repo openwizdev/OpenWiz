@@ -3,15 +3,19 @@ import ctypes, fcntl, json, os, re, secrets, select, shutil, signal, subprocess,
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATE = os.environ.get('OPENWIZ_OPENCLAW_STATE') or os.path.expanduser('~/.local/state/openwiz-openclaw')
-VERSION = {'driver': 'openclaw', 'records': ['openwiz:records v1'], 'can': ['start', 'wake', 'stop']}
+VERSION = {'driver': 'openclaw', 'records': ['openwiz:records v1'], 'can': ['start', 'wake', 'stop', 'effort']}
 START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
          'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
          'model': r'[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}'}
+START_OPTIONAL = {'effort': r'[a-z][a-z0-9-]{0,19}'}
+CANT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at "
+        "the host's default")
 RUN = {'run': r'run-[0-9a-f]{12}'}
 GRACE = 10
 AGENTS = {'claude': 'npx -y --package=@agentclientprotocol/claude-agent-acp@^0.95.0 -- claude-agent-acp',
           'codex': 'npx -y --package=@agentclientprotocol/codex-acp@^1.1.5 -- codex-acp',
           'droid': 'droid exec --output-format acp', 'opencode': 'npx -y --package=opencode-ai -- opencode acp'}
+EFFORT = {'claude': 'effort', 'codex': 'reasoning_effort'}
 POLICY = json.dumps({'autoApprove': ['read', 'search', 'edit', 'move', 'execute', 'think', 'fetch'],
                      'autoDeny': ['delete', 'switch_mode'], 'defaultAction': 'deny'}, separators=(',', ':'))
 TTL = 60
@@ -32,14 +36,18 @@ def unique(pairs):
     return dict(pairs)
 
 
-def read(fields):
+def read(fields, optional=None):
+    optional = optional or {}
     try:
         req = json.loads(sys.stdin.read(), object_pairs_hook=unique)
     except ValueError:
         raise Refused('the input is not JSON', 'send one JSON object on stdin, as `driver schema` shows')
-    if not isinstance(req, dict) or set(req) != set(fields):
-        raise Refused('the input needs exactly ' + ', '.join(fields), 'send only those fields; never a login')
-    for key, pattern in fields.items():
+    if not isinstance(req, dict) or not set(fields) <= set(req) <= set(fields) | set(optional):
+        raise Refused('the input needs exactly ' + ', '.join(fields) + ''.join(', and optionally ' + k for k in optional),
+                      'send only those fields; never a login')
+    for key, pattern in dict(fields, **optional).items():
+        if key not in req:
+            continue
         v = req[key]
         if not (type(v) is int and v > 0 if pattern is None else isinstance(v, str) and re.fullmatch(pattern, v)):
             raise Refused(key + ' is not valid', 'fix ' + key + ' as `driver schema` shows')
@@ -66,6 +74,11 @@ def acpx(run, *args, harness):
 def opening(req, run):
     return acpx(run, '--model', req['model'], '--auth-policy', 'fail', '--permission-policy', POLICY,
                 '--non-interactive-permissions', 'deny', harness=req['harness']) + ['sessions', 'new', '--name', run]
+
+
+def setting(req, run):
+    return acpx(run, '--auth-policy', 'fail', '--permission-policy', POLICY, '--non-interactive-permissions', 'deny',
+                harness=req['harness']) + ['set', '-s', run, EFFORT[req['harness']], req['effort']]
 
 
 def command(req, woken, run):
@@ -264,7 +277,10 @@ def answer(cmd):
         with open(os.path.join(HERE, 'schema.json')) as f:
             return json.load(f)
     if cmd == 'start':
-        req, run = read(START), 'run-' + secrets.token_hex(6)
+        req, run = read(START, START_OPTIONAL), 'run-' + secrets.token_hex(6)
+        if 'effort' in req and (req['harness'] not in EFFORT or req['effort'] == 'default'):
+            raise Refused('the driver can\'t set effort %s for harness %s through acpx; nothing was saved or started'
+                          % (req['effort'], req['harness']), CANT)
         if req['harness'] not in AGENTS:
             raise Refused('the harness is not one this driver runs through acpx',
                           'use one of: ' + ', '.join(AGENTS))
@@ -284,6 +300,14 @@ def answer(cmd):
                               % (req['harness'], run, 'unknown' if code is None else code),
                               'check that you are signed in to %s yourself and that acpx runs it by hand'
                               % req['harness'])
+            code = step(setting(req, run), run) if 'effort' in req else 0
+            if code is None:
+                raise Refused('acpx did not say whether the %s adapter took effort %s for run %s, so the driver ended '
+                              'it; nothing was started' % (req['harness'], req['effort'], run),
+                              'check that acpx runs %s by hand, then start again' % req['harness'])
+            if code != 0:
+                raise Refused('the %s adapter did not take effort %s for model %s in run %s (acpx exit %d); nothing '
+                              'was started' % (req['harness'], req['effort'], req['model'], run, code), CANT)
             turn = launch(req, run, False)
         except Refused:
             try:

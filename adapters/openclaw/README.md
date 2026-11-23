@@ -2,11 +2,20 @@
 
 Login: stays on your machine
 
+Effort: passed as the adapter's own ACP config option, with `acpx ... set -s <run> <option> <effort>` after the session opens and before the first prompt; acpx saves it with the session and sets it again before each later prompt. A level the adapter does not list for the model, the word `default`, or any other harness is refused with driver v1's refusal text, and nothing is started; a start without an effort runs at the harness's default.
+
+| Harness | Effort |
+| --- | --- |
+| `claude` | `set -s <run> effort <effort>`, for each level `claude-agent-acp` 0.95 lists for the model (such as `low`, `medium`, `high`, `xhigh`, `max`) |
+| `codex` | `set -s <run> reasoning_effort <effort>`, for each level `codex-acp` 1.x lists for the model (such as `low`, `medium`, `high`, `xhigh`) |
+| `droid` | can't (the driver sets no option for `droid exec --output-format acp`: it found no effort option in that adapter's docs) |
+| `opencode` | can't (the driver sets no option for `opencode acp`: it found no effort option in that adapter's docs) |
+
 A [driver v1](../../kernel/driver.v1.md) that runs builders on this machine through [`acpx`](https://github.com/openclaw/acpx), OpenClaw's own headless command-line client for the Agent Client Protocol (MIT). It never uses the OpenClaw gateway: the gateway refuses remote agent starts by default, and this driver never asks you to loosen that. One Python file, standard library only, built on [`adapters/template/`](../template/README.md). **Platforms:** Linux only (kernel 5.3 or later), Python 3.9 or later: it keeps each acpx call's processes with a child subreaper, `/proc` and process file descriptors, so it does not run on macOS. Runs are saved in `$OPENWIZ_OPENCLAW_STATE` (default `~/.local/state/openwiz-openclaw`), owner-only.
 
 | Command | What it does with `acpx` |
 | --- | --- |
-| `start` | Makes the run's own empty folder, `work/<run>` in the state folder, and opens one named session there: `acpx --cwd <folder> --agent <adapter> --model <model> --auth-policy fail --permission-policy <policy> --non-interactive-permissions deny sessions new --name <run>`. Then it queues the first prompt, the ticket and skill, with `acpx ... --ttl 60 prompt -s <run> --no-wait <prompt>`, and answers only once acpx has acknowledged it (exit 0); acpx's queue owner then runs the turn. If the session can't be opened (a missing sign-in, say) or acpx refuses the prompt, the driver ends what it started and refuses. |
+| `start` | Makes the run's own empty folder, `work/<run>` in the state folder, and opens one named session there: `acpx --cwd <folder> --agent <adapter> --model <model> --auth-policy fail --permission-policy <policy> --non-interactive-permissions deny sessions new --name <run>`. With an `effort`, it then sets it: `acpx ... set -s <run> <option> <effort>` (the table above), and refuses with driver v1's refusal text, ending what it started, if the adapter does not take it. Then it queues the first prompt, the ticket and skill, with `acpx ... --ttl 60 prompt -s <run> --no-wait <prompt>`, and answers only once acpx has acknowledged it (exit 0); acpx's queue owner then runs the turn. If the session can't be opened (a missing sign-in, say) or acpx refuses the prompt, the driver ends what it started and refuses. |
 | `wake` | Queues one follow-up prompt in the same session, and answers only once acpx has acknowledged it. acpx runs a session's prompts one after another, so a wake during a turn runs after it, in the same agent, with its memory, which edits its own status note: never a second agent. A stopped run is never woken, and a refused follow-up is an error. |
 | `stop` | `acpx ... cancel -s <run>`, then `acpx ... sessions close <run>`, then it ends every process the run's acpx calls started, acpx's queue owner included, so nothing is left. Stopping again answers again. The run's folder stays, in case it holds unpushed work; delete it when you are done. |
 
@@ -16,7 +25,7 @@ Each acpx call runs under its own supervisor (`driver --turn`, a Linux child sub
 
 ## What the driver refuses
 
-- A `harness` outside the list below, without repeating the value.
+- A `harness` outside the list below, without repeating the value. With an `effort`, any harness but `claude` and `codex`, or the effort `default`, is refused first, with driver v1's refusal text (`this host can't set effort: ...`), naming the harness and the effort, before anything is saved or started.
 - A run whose folder holds `.acpxrc.json`, before any acpx call, naming the file and never reading it. A wake then refuses; a stop skips acpx and still ends the run's processes.
 - Any field shaped like a login or token (a `token=` or `Bearer` value, or a known key shape such as `ghp_…` or `sk-…`), before it saves or starts anything.
 
@@ -41,4 +50,4 @@ python3 -I kernel/driver-kit/kit.py --driver adapters/openclaw/driver \
 python3 -I adapters/openclaw/test_driver.py   # the fixture tests, on a synthetic acpx
 ```
 
-`fixtures/bin/acpx` is a synthetic `acpx`. Its command shapes follow `acpx --help` of acpx 0.22.0, and it resolves the agent as acpx 0.22.0 does (`--agent`, then an `agents` entry in `~/.acpx/config.json` or `.acpxrc.json`, then the built-in), logging which command and which `auth` names each call would have used, and like acpx 0.22.0's `--no-wait`, a prompt hands its turn to a separate queue owner and exits once queued (its own source, `sendSession`). Every call prints a synthetic diagnostic, so the tests can show none is kept. The tests find their processes by ancestry, as a child subreaper, never by reading another process's environment; and `evidence/acpx-shapes.txt` shows the real acpx 0.22.0 running each call the driver makes, with a stand-in agent. The tests run with a `PATH` that holds only the fake, `python3` and `sleep`, so no real harness or acpx ever runs. `schema.json` is byte for byte the kit's `kernel/driver-kit/schema.json`.
+`fixtures/bin/acpx` is a synthetic `acpx`. Its command shapes follow `acpx --help` of acpx 0.22.0, and it resolves the agent as acpx 0.22.0 does (`--agent`, then an `agents` entry in `~/.acpx/config.json` or `.acpxrc.json`, then the built-in), logging which command and which `auth` names each call would have used, and like acpx 0.22.0's `--no-wait`, a prompt hands its turn to a separate queue owner and exits once queued (its own source, `sendSession`). Its `set` takes only the effort option each adapter names (`effort` for Claude, `reasoning_effort` for Codex) with a synthetic list of levels, and refuses anything else as the adapters do; its queue owner shows the session options it started with on its own command line, standing in for the options the real acpx hands its queue owner on stdin, so the kit's effort check can see that the effort arrived. Every call prints a synthetic diagnostic, so the tests can show none is kept. The tests find their processes by ancestry, as a child subreaper, never by reading another process's environment; and `evidence/acpx-shapes.txt` shows the real acpx 0.22.0 running each call the driver makes, with a stand-in agent. The tests run with a `PATH` that holds only the fake, `python3` and `sleep`, so no real harness or acpx ever runs. `schema.json` is byte for byte the kit's `kernel/driver-kit/schema.json`.

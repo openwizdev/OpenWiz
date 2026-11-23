@@ -218,9 +218,10 @@ class OpenClaw(unittest.TestCase):
                 self.assertEqual(code, 0, out)
                 calls = [c[next(i for i in range(0, len(c), 2) if not c[i].startswith('--')):]
                          for c in self.acpx()[start:]]
-                self.assertEqual(calls[:3], [['sessions', 'new', '--name', out['run']],
-                                             ['set', '-s', out['run'], key, 'medium'],
-                                             ['prompt', '-s', out['run'], '--no-wait'] + calls[2][4:]])
+                self.assertEqual([c[:4] for c in calls[:3]], [['sessions', 'new', '--name', out['run']],
+                                                               ['set', '-s', out['run'], key],
+                                                               ['prompt', '-s', out['run'], '--no-wait']])
+                self.assertEqual(calls[1][4:], ['medium'])
                 self.assertTrue(self.until(lambda: len(self.logged()) == 1))
                 self.assertEqual(self.driver('wake', out), (0, dict(out, woke=True)))
                 self.assertTrue(self.until(lambda: len(self.logged()) == 2))
@@ -246,7 +247,7 @@ class OpenClaw(unittest.TestCase):
 
     def test_an_effort_the_adapter_rejects_is_refused_and_starts_nothing(self):
         code, out = self.driver('start', dict(REQUEST, effort='ultra'))
-        self.assertEqual((code, out['next']), (1, CANT), out)
+        self.assertEqual((code, out.get('next')), (1, CANT), out)
         self.assertIn('claude', out['error'])
         self.assertIn('ultra', out['error'])
         self.assertNotIn(DIAGNOSTIC, json.dumps(out))
@@ -266,7 +267,10 @@ class OpenClaw(unittest.TestCase):
             with self.subTest(effort=effort):
                 code, out = self.driver('start', dict(REQUEST, effort=effort))
                 self.assertEqual((code, out['error']), (1, 'effort is not valid'), out)
-        self.assertEqual(self.acpx(), [])
+        effort = 'sk-' + 'syntheticvalue00'
+        code, out = self.driver('start', dict(REQUEST, effort=effort))
+        self.assertEqual((code, out['error']), (1, 'effort looks like a login or token, so nothing was saved or started'))
+        self.assertEqual((self.kept(effort), self.acpx()), ([], []))
 
     def test_a_harness_acpx_would_run_as_a_command_is_refused_without_echoing_it(self):
         for harness in ('sh', 'zz-unknown-agent', 'openclaw', 'gemini'):
