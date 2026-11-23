@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 import importlib.machinery
 import importlib.util
 import json
@@ -77,7 +78,15 @@ PLANTED_KEY = {
     'key-runtime-credential-path': PASS[:4] + ['fail token: %s; a file a process of the driver ran, which the kit '
                                                'does not name, %s' % (IN_ARGS, SCRIPT)],
     'key-local-login': PASS[:4] + [KEY_PASS],
+    'key-runtime-missing-path': PASS[:4] + ['fail token: the kit could not resolve a file a process of the driver ran, '
+                                            'so it cannot check it'],
+    'key-relative-helper': PASS[:4] + ["fail token: a process that is not the key helper asked the kit's fake host "
+                                       "for the key; " + NO_HEADER],
+    'key-helper-loader-env': PASS[:4] + ["fail token: a process that is not the key helper asked the kit's fake host "
+                                         "for the key; " + NEVER[len('fail token: '):]],
 }
+LINUX_ONLY = {'key-undumpable-child': PASS[:4] + ['fail token: a process of the driver hides its details, so the kit '
+                                                  'cannot check it']}
 HOST_SCHEMA = {'type': 'object', 'required': ['origin', 'variable', 'keychain', 'header'],
                'additionalProperties': False,
                'properties': {'origin': {'type': 'string',
@@ -133,7 +142,8 @@ class Kit(unittest.TestCase):
         p = subprocess.run([python, '-I', os.path.join(HERE, 'kit.py'), '--driver', driver,
                             '--repo', 'example/site', '--ticket', '7', '--harness', 'fake-harness',
                             '--model', 'Synthetic 1', '--tracker', self.env['KIT_TRACKER'], '--wait', '8'],
-                           env=dict(self.env, **env), capture_output=True, text=True, timeout=120)
+                           env=dict(self.env, **env), capture_output=True, text=True, timeout=120,
+                           cwd=os.path.join(HERE, '..', '..'))
         return p.returncode, p.stdout.splitlines(), p.stderr
 
     def keyed(self, driver, *answer, python=sys.executable, **env):
@@ -188,8 +198,76 @@ class Kit(unittest.TestCase):
         self.assertEqual(k.sampled('start', {}, {}, ('devin', 'kit-canary-0', 'DEVIN_API_KEY')), ('ok', {}))
         self.assertEqual(k.leaks, ["the kit's process watch failed, so it cannot check the driver"])
 
+    def test_a_script_whose_path_holds_a_space_is_scanned_on_linux_and_macos(self):
+        macos = {'PATH': NO_PROC + os.pathsep + self.env['PATH'], 'NO_PROC_PYTHON': sys.executable}
+        driver = os.path.join(FIXTURES, 'planted', 'key-runtime-spaced-path', 'driver')
+        for python, env in ((sys.executable, {}), (os.path.join(NO_PROC, 'python3'), macos)):
+            with self.subTest(python):
+                self.tearDown()
+                self.setUp()
+                env = dict(env, PATH=NO_PROC + os.pathsep + self.env['PATH']) if env else {}
+                code, out, _ = self.keyed(driver, python=python, **env)
+                script = os.path.realpath(os.path.join(self.folder, 'state', 'a spaced folder', 'reader'))
+                rel = os.path.relpath(script, os.path.realpath(os.path.dirname(driver)))
+                self.assertEqual((code, out), (1, PASS[:4] + ['fail token: the file %s, which a process of the driver '
+                                                             'ran, %s' % (rel, SCRIPT)]))
+
+    def test_the_kit_trusts_only_its_own_interpreter_not_one_on_path(self):
+        fake = os.path.join(self.folder, 'bin')
+        os.makedirs(fake)
+        with open(os.path.join(fake, 'python3'), 'w') as f:
+            f.write('#!/bin/sh\nexit 1\n')
+        os.chmod(os.path.join(fake, 'python3'), 0o700)
+        probe = ('import importlib.machinery as m, importlib.util as u\n'
+                 's = u.spec_from_loader("kit", m.SourceFileLoader("kit", %r))\nk = u.module_from_spec(s)\n'
+                 's.loader.exec_module(k)\nprint("\\n".join(sorted(k.TRUSTED_PYTHONS)))\n' % os.path.join(HERE, 'kit.py'))
+        p = subprocess.run([sys.executable, '-I', '-c', probe], env=dict(self.env, PATH=fake + os.pathsep + '/usr/bin:/bin'),
+                           capture_output=True, text=True, timeout=60)
+        own = {os.path.realpath(x) for x in (sys.executable, getattr(sys, '_base_executable', sys.executable))}
+        self.assertEqual(set(p.stdout.split()), own, p.stderr)
+
+    def test_a_helper_without_a_visible_environment_row_is_not_trusted(self):
+        kit = module(os.path.join(HERE, 'kit.py'))
+        k = kit.Kit.__new__(kit.Kit)
+        k.mark = 'OPENWIZ_KIT_RUN=synthetic'
+        k.peer = lambda port, server: (424242, [sys.executable, '-I', kit.HOSTKEY])
+        k.process_cwd = lambda pid: HERE
+        k.executable = lambda pid: os.path.realpath(sys.executable)
+        rows = {'missing': {}, 'no mark': {424242: sys.executable + ' -I ' + kit.HOSTKEY + ' HOME=/synthetic'},
+                'loader': {424242: sys.executable + ' -I ' + kit.HOSTKEY + ' LD_BIND_NOW=1 ' + k.mark},
+                'good': {424242: sys.executable + ' -I ' + kit.HOSTKEY + ' HOME=/synthetic ' + k.mark}}
+        old = kit.PROC
+        kit.PROC = False
+        try:
+            for name, row in rows.items():
+                with self.subTest(name):
+                    k.ps = lambda *a, row=row: row
+                    self.assertEqual(k.trusted_helper(1, 2), name == 'good')
+        finally:
+            kit.PROC = old
+
+    def test_a_path_diagnostic_never_prints_the_active_canary(self):
+        kit = module(os.path.join(HERE, 'kit.py'))
+        k = kit.Kit.__new__(kit.Kit)
+        k.lock, k.leaks = threading.RLock(), []
+        canary = 'kit-canary-' + secrets.token_hex(16)
+        k.active = {canary}
+        folder, drv = os.path.join(self.folder, canary), os.path.join(self.folder, 'drv')
+        os.makedirs(os.path.join(drv, canary))
+        os.makedirs(folder)
+        for path in (os.path.join(folder, 'reader'), os.path.join(drv, canary, 'reader'), os.path.join(drv, 'driver')):
+            with open(path, 'w') as f:
+                f.write('' if path.endswith('driver') else 'DEVIN_API_KEY\n')
+        k.runtime = {os.path.join(folder, 'reader')}
+        k.args = argparse.Namespace(driver=os.path.join(drv, 'driver'))
+        entry = {'variable': 'DEVIN_API_KEY', 'keychain': 'openwiz-devin'}
+        k.runtime_check(entry)
+        k.file_check(entry)
+        self.assertEqual(len(k.leaks), 2, k.leaks)
+        self.assertFalse(any(canary in leak for leak in k.leaks), k.leaks)
+
     def test_each_planted_key_driver_fails_with_its_own_line(self):
-        for name, lines in PLANTED_KEY.items():
+        for name, lines in dict(PLANTED_KEY, **(LINUX_ONLY if os.path.isdir('/proc/self') else {})).items():
             with self.subTest(name):
                 self.tearDown()
                 self.setUp()
