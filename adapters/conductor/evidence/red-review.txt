@@ -1,10 +1,11 @@
+# Redacted at the N4 port (#1992): the key variable's name is written <key variable>, because driver v1 N4 lets no file of the driver name it. The original log is at commit 4eb014a7.
 # red at f049be89 for review findings R1-R3: driver unchanged; the new tests, and the fake requiring --disable first
 $ python3 -I adapters/conductor/test_driver.py
 test_a_failed_archive_says_so_and_the_run_stays_stopped (__main__.Conductor.test_a_failed_archive_says_so_and_the_run_stays_stopped) ... ERROR
 test_a_lost_start_reply_is_never_retried (__main__.Conductor.test_a_lost_start_reply_is_never_retried) ... FAIL
 test_a_refused_start_starts_nothing_and_says_what_to_do (__main__.Conductor.test_a_refused_start_starts_nothing_and_says_what_to_do) ...
   test_a_refused_start_starts_nothing_and_says_what_to_do (__main__.Conductor.test_a_refused_start_starts_nothing_and_says_what_to_do) (env=['FAKE_CONDUCTOR_FAIL']) ... FAIL
-  test_a_refused_start_starts_nothing_and_says_what_to_do (__main__.Conductor.test_a_refused_start_starts_nothing_and_says_what_to_do) (env=['CONDUCTOR_API_KEY']) ... FAIL
+  test_a_refused_start_starts_nothing_and_says_what_to_do (__main__.Conductor.test_a_refused_start_starts_nothing_and_says_what_to_do) (env=['<key variable>']) ... FAIL
 test_an_old_curl_is_refused_by_its_version (__main__.Conductor.test_an_old_curl_is_refused_by_its_version) ...
   test_an_old_curl_is_refused_by_its_version (__main__.Conductor.test_an_old_curl_is_refused_by_its_version) [7.88.1] ... FAIL
   test_an_old_curl_is_refused_by_its_version (__main__.Conductor.test_an_old_curl_is_refused_by_its_version) [8.2.1] ... FAIL
@@ -41,12 +42,12 @@ Traceback (most recent call last):
 AssertionError: 'planted failure' not found in 'the driver cannot read the version of curl; nothing was startedcheck that `curl --version` prints curl 8.3 or later, then try again'
 
 ======================================================================
-FAIL: test_a_refused_start_starts_nothing_and_says_what_to_do (__main__.Conductor.test_a_refused_start_starts_nothing_and_says_what_to_do) (env=['CONDUCTOR_API_KEY'])
+FAIL: test_a_refused_start_starts_nothing_and_says_what_to_do (__main__.Conductor.test_a_refused_start_starts_nothing_and_says_what_to_do) (env=['<key variable>'])
 ----------------------------------------------------------------------
 Traceback (most recent call last):
   File "adapters/conductor/test_driver.py", line 194, in test_a_refused_start_starts_nothing_and_says_what_to_do
     self.assertIn(word, out['error'] + out['next'])
-AssertionError: 'CONDUCTOR_API_KEY' not found in 'the driver cannot read the version of curl; nothing was startedcheck that `curl --version` prints curl 8.3 or later, then try again'
+AssertionError: '<key variable>' not found in 'the driver cannot read the version of curl; nothing was startedcheck that `curl --version` prints curl 8.3 or later, then try again'
 
 ======================================================================
 FAIL: test_an_old_curl_is_refused_by_its_version (__main__.Conductor.test_an_old_curl_is_refused_by_its_version) [7.88.1]

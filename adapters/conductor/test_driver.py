@@ -158,7 +158,7 @@ class Conductor(unittest.TestCase):
                         named.append(os.path.relpath(path, HERE))
         self.assertEqual(sorted(set(named)), [], 'these files name the key variable')
         with open(DRIVER) as f:
-            self.assertNotIn('conductor.build', f.read(), 'the driver picks the address itself')
+            self.assertFalse(ENTRY['origin'].split('//')[1] in f.read(), 'the driver picks the address itself')
         guarded = os.path.join(self.folder, 'guarded')
         with open(guarded, 'w') as f:
             f.write(NEVER_READS_THE_KEY % DRIVER)
@@ -276,7 +276,7 @@ class Conductor(unittest.TestCase):
         with open(os.path.join(HERE, 'README.md')) as f:
             lines = f.read().splitlines()
         login = lines.index('Login: held by Conductor')
-        self.assertEqual((lines[login + 1], lines[login + 2][:30]), ('', "Effort: the host can't set it"))
+        self.assertEqual((lines[login + 1], lines[login + 2][:31]), ('', "Effort: the host can't set it ("))
 
     def test_a_failed_archive_says_so_and_the_run_stays_stopped(self):
         run = self.driver('start', REQUEST)[1]['run']

@@ -2,7 +2,12 @@
 
 Login: held by Conductor
 
-A [driver v1](../../kernel/driver.v1.md) that runs each builder in its own [Conductor](https://www.conductor.build) cloud workspace, through Conductor's API (beta, `https://api.conductor.build/v0`). One Python file, standard library only, plus `curl` 8.3 or later. **Platforms:** Linux and macOS, Python 3.9 or later. Runs are saved in `$OPENWIZ_CONDUCTOR_STATE` (default `~/.local/state/openwiz-conductor`), owner-only.
+Effort: the host can't set it (the driver's `POST /v0/workspaces` call sends `agent`, `model` and a message, and no effort setting). A start that carries `effort` is refused, and nothing starts.
+
+- The Conductor API key is your own `CONDUCTOR_API_KEY`, or the keychain entry `openwiz-conductor` when that variable is unset.
+- OpenWiz never stores it. Remove it from your environment or keychain to revoke it.
+
+A [driver v1](../../kernel/driver.v1.md) that runs each builder in its own [Conductor](https://www.conductor.build) cloud workspace, through Conductor's API (beta, `/v0`). One Python file, standard library only. **Platforms:** Linux and macOS, Python 3.9 or later. Runs are saved in `$OPENWIZ_CONDUCTOR_STATE` (default `~/.local/state/openwiz-conductor`), owner-only.
 
 | Command | What it does on Conductor |
 | --- | --- |
@@ -15,14 +20,13 @@ A [driver v1](../../kernel/driver.v1.md) that runs each builder in its own [Cond
 ## Where your logins live
 
 - **Your Claude, Codex or Cursor login is held by Conductor.** Conductor Cloud runs the agent with the subscription token or API key you added to Conductor (Settings, Agents); the driver never sees it.
-- **Your Conductor API key stays in your environment.** Every call is `curl --disable --variable %CONDUCTOR_API_KEY --expand-oauth2-bearer '{{CONDUCTOR_API_KEY}}' ...`: curl reads the key from the environment it inherits and sends it only to Conductor. The driver checks only that the name `CONDUCTOR_API_KEY` is in the environment, and never reads, prints or passes on its value (driver v1, N1 to N3).
+- **Your Conductor API key is read only by the kit's key helper.** Every Conductor call goes through [`hostkey.py`](../../kernel/driver-kit/hostkey.py) for host `conductor` (driver v1 N4). The driver sends it only a method, a path and a body. The helper alone reads the key, from the variable or the keychain entry named above, and sends it only as a bearer header over HTTPS to Conductor's address in [`hosts.json`](../../kernel/driver-kit/hosts.json). The driver never reads, names or passes the key, and never builds a URL. A 401 or 403 is an error that says Conductor refused the key.
 
 ## Before the first run (yours to do)
 
 1. A Conductor Pro account with Conductor Cloud, its GitHub App on your repositories, and each repository you run on added to your organization's Cloud Computer.
 2. In Conductor, add the subscription or API key of each agent you use (Settings, Agents), and install the WizSkills skills your fleet runs on the Cloud Computer, so the agent can follow its skill and post its status note.
-3. `curl` 8.3 or later (for `--variable`). Before each command the driver runs `curl --version` and refuses an older curl by name, such as `curl 7.88.1 is too old`, before it calls Conductor.
-4. Create a Conductor API key (the [API docs](https://www.conductor.build/docs/api) say where) and export it as `CONDUCTOR_API_KEY` in the shell that runs the driver.
+3. Create a Conductor API key (the [API docs](https://www.conductor.build/docs/api) say where), and set it as the variable or the keychain entry named at the top of this file. In the keychain, store it as a password whose service is that entry's name (macOS Keychain, or the Secret Service on Linux).
 
 Conductor bills nothing for model usage: each agent's own account does. Each workspace runs until it is stopped, sleeps or is archived.
 
@@ -41,6 +45,6 @@ python3 -I kernel/driver-kit/kit.py --driver adapters/conductor/driver \
   --repo <owner>/<throwaway> --ticket <n> --harness claude --model <model>   # live: real workspace, real cost
 ```
 
-The tests run the kit in a wrapper that lets it read only the processes of its own run (it is their subreaper), so it never reads another process's environment on the machine. They build each environment from scratch, with `PATH` limited to `fixtures/bin` and `python3`.
+The tests run the kit in a wrapper that lets it read only the processes of its own run (it is their subreaper), so it never reads another process's environment on the machine. They build each environment from scratch, with `PATH` limited to a link to `python3`.
 
-`fixtures/bin/curl` is a synthetic Conductor behind a synthetic `curl`: it takes only the driver's one call shape, and its request and answer shapes follow Conductor's API reference and OpenAPI document (read 2026-11-20). Nothing in it was observed on a live account; the live check records that. It keeps its state in the file `FAKE_CONDUCTOR_STATE` and logs each call's arguments to `FAKE_CONDUCTOR_LOG`, and refuses any call that doesn't start with `--disable` (so curl reads no config file that could trace the key or retry a start); its agent posts and edits one builder note in the local tracker `KIT_TRACKER`; `FAKE_CONDUCTOR_FAIL=<METHOD> <route>=<status>` plants a refusal, and `FAKE_CONDUCTOR_LOSE=<METHOD> <route>` does the call, then loses its answer.
+`fixtures/fake-conductor` is a synthetic Conductor on `127.0.0.1`, reached through the key helper under the kit's loopback override (`OPENWIZ_HOSTKEY_TEST_ORIGIN`): the helper takes its test key from the fake, never from your environment or keychain. Its request and answer shapes follow Conductor's API reference and OpenAPI document (read 2026-11-20). Nothing in it was observed on a live account; the live check records that. It logs each call's method, path, body and bearer header, refuses any bearer but its test key, and its agent posts and edits one builder note in the local tracker `KIT_TRACKER`. A faults file plants a refusal or a lost answer per route. `fixtures/kit-host.json` holds the answers the kit's own fake host gives in its key check.

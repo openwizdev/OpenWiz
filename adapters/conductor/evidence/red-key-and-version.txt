@@ -1,3 +1,4 @@
+# Redacted at the N4 port (#1992): the key variable's name is written <key variable>, because driver v1 N4 lets no file of the driver name it. The original log is at commit 7cc6bb69.
 # red at 34bd24e9 (driver unchanged; new tests, PATH pinned to fixtures/bin and python3)
 $ python3 -I adapters/conductor/test_driver.py
 test_a_failed_archive_says_so_and_the_run_stays_stopped (__main__.Conductor.test_a_failed_archive_says_so_and_the_run_stays_stopped) ... ok
@@ -48,12 +49,12 @@ Ran 8 tests in <n>s
 
 FAILED (failures=3)
 
-$ # planted in start(): os.environ['CONDUCTOR_API_KEY']
+$ # planted in start(): os.environ['<key variable>']
 $ python3 -I adapters/conductor/test_driver.py Conductor.test_the_driver_never_reads_the_key
 AssertionError: 1 != 0 : {"error": "the driver failed: AssertionError", "next": "read its code, fix it, retry"}
 FAILED (failures=1)
 
-$ # planted in start(): subprocess.run(['true'], env=dict(os.environ, KEY_COPY=os.environ['CONDUCTOR_API_KEY']))
+$ # planted in start(): subprocess.run(['true'], env=dict(os.environ, KEY_COPY=os.environ['<key variable>']))
 $ python3 -I adapters/conductor/test_driver.py Conductor.test_the_driver_never_reads_the_key
 AssertionError: 1 != 0 : {"error": "the driver failed: AssertionError", "next": "read its code, fix it, retry"}
 FAILED (failures=1)
