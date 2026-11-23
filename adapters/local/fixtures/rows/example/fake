@@ -33,4 +33,4 @@ if session is None and args[:1] == ['--effort'] and len(args) > 1 and args[1] in
 if len(args) != 1:
     fake_cli.refuse()
 fake_cli.turn(args[0], model, session, lambda sid: json.dumps({'type': 'init', 'session': {'id': sid}}),
-              daemon='tree')
+              daemon='tree', signed_out='Error: not authenticated; run example-cli login')

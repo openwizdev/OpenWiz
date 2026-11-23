@@ -1,0 +1,5 @@
+# Green run, #2192 review R1 (stderr) and R2 (check every file before any rename), at the fix
+$ cargo test -p openwiz-tests --test cli-agent models
+test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 82 filtered out; finished in 2.93s
+$ cargo test -p openwiz-tests --test proof
+test result: ok. 109 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 15.11s

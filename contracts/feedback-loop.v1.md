@@ -3,7 +3,7 @@
 How a public report about OpenWiz is recognised, triaged, fixed and answered
 once, end to end. Ticket FL1 (#1840) of spec #1838 (0.1.1). Source: Jake,
 2026-11-20, the FL1 ruling, option A: a small end-to-end feedback loop for
-public 0.02 ([private record](https://github.com/jparker2006/ClosedWiz/issues/3065#issuecomment-7035394761)).
+0.1.1 ([private record](https://github.com/jparker2006/ClosedWiz/issues/3065#issuecomment-7035394761)).
 
 It builds on the [feedback contract](feedback.v1.md) (`openwiz.feedback.v1`)
 and changes none of its rules: the agent route still files one issue with only
