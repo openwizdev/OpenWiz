@@ -1,0 +1,10 @@
+# Red: CI's owned-paths comment check on this row's files (as run in CI); agent-CLI stubs first on PATH
+
+$ python3 -I tools/comment-check/check.py diff --base <HR1 head>
+comment-check: 5 disallowed comment(s) in added lines
+adapters/local/harnesses/kiro/test_row.py:2: comment: a comment outside the allowed kinds: delete it, or turn what it meant into a name, a test or a check
+adapters/local/harnesses/kiro/test_row.py:34: comment: a comment outside the allowed kinds: delete it, or turn what it meant into a name, a test or a check
+adapters/local/harnesses/kiro/test_row.py:43: comment: a comment outside the allowed kinds: delete it, or turn what it meant into a name, a test or a check
+adapters/local/harnesses/kiro/test_row.py:57: comment: a comment outside the allowed kinds: delete it, or turn what it meant into a name, a test or a check
+adapters/local/harnesses/kiro/test_row.py:66: comment: a comment outside the allowed kinds: delete it, or turn what it meant into a name, a test or a check
+exit=1
