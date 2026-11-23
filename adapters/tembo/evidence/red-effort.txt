@@ -1,0 +1,9 @@
+$ python3 -I adapters/tembo/test_driver.py (after merging EF1, before effort joins can and the schema is copied), agent CLIs stubbed first on PATH, OPENWIZ_GITHUB_APP_KEY unset
+FAIL: test_kit_passes_all_five_on_the_fake_host (__main__.Driver.test_kit_passes_all_five_on_the_fake_host)
+- (['fail version: its schema is not kernel/driver-kit/schema.json',
++ (['pass version: openwiz:records v1, and the schema is driver v1',
+FAIL: test_version_and_schema (__main__.Driver.test_version_and_schema)
+-  {'can': ['start', 'wake', 'stop'],
++  {'can': ['start', 'wake', 'stop', 'effort'],
+Ran 16 tests in 11.616s
+FAILED (failures=2)

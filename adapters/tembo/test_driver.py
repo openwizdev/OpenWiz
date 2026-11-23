@@ -243,7 +243,7 @@ class Driver(unittest.TestCase):
 
     def test_version_and_schema(self):
         self.assertEqual(self.driver('version'), (0, {'driver': 'tembo', 'records': ['openwiz:records v1'],
-                                                       'can': ['start', 'wake', 'stop']}))
+                                                       'can': ['start', 'wake', 'stop', 'effort']}))
         with open(os.path.join(ROOT, 'kernel', 'driver-kit', 'schema.json'), 'rb') as a, \
                 open(os.path.join(HERE, 'schema.json'), 'rb') as b:
             self.assertEqual(a.read(), b.read())
