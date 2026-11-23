@@ -1,0 +1,203 @@
+$ python3 -I adapters/ona/test_driver.py   (the template, copied and renamed; agent CLI stubs first on PATH; KY1 at 4a8dfe81 and EF1 at 371c9cbf merged in)
+FEFFFF.FE.EFFEFFEE
+======================================================================
+ERROR: test_a_lost_prompt_names_its_run_so_stop_can_end_it (__main__.Driver.test_a_lost_prompt_names_its_run_so_stop_can_end_it)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/ona/test_driver.py", line 195, in test_a_lost_prompt_names_its_run_so_stop_can_end_it
+    [run] = self.host.runs
+    ^^^^^
+ValueError: not enough values to unpack (expected 1, got 0)
+
+======================================================================
+ERROR: test_models_map_to_ona_codex_models_and_others_are_refused (__main__.Driver.test_models_map_to_ona_codex_models_and_others_are_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/ona/test_driver.py", line 143, in test_models_map_to_ona_codex_models_and_others_are_refused
+    self.assertEqual(self.host.bodies('StartAgent')[-1]['codexSettings'],
+                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^
+IndexError: list index out of range
+
+======================================================================
+ERROR: test_no_effort_sends_none (__main__.Driver.test_no_effort_sends_none)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/ona/test_driver.py", line 173, in test_no_effort_sends_none
+    self.assertNotIn('reasoningEffort', self.host.bodies('StartAgent')[0]['codexSettings'])
+                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^
+IndexError: list index out of range
+
+======================================================================
+ERROR: test_stop_ends_the_execution_and_its_environment_and_wake_after_is_refused (__main__.Driver.test_stop_ends_the_execution_and_its_environment_and_wake_after_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/ona/test_driver.py", line 228, in test_stop_ends_the_execution_and_its_environment_and_wake_after_is_refused
+    env = self.host.runs[run]['environment']
+          ~~~~~~~~~~~~~~^^^^^
+KeyError: 'run-1b950c8cba2d'
+
+======================================================================
+ERROR: test_wake_of_a_running_execution_queues_the_message (__main__.Driver.test_wake_of_a_running_execution_queues_the_message)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/ona/test_driver.py", line 221, in test_wake_of_a_running_execution_queues_the_message
+    self.assertEqual(self.host.runs[run]['messages'], [PROMPT, WOKEN])
+                     ~~~~~~~~~~~~~~^^^^^
+KeyError: 'run-6ec4e04176a0'
+
+======================================================================
+ERROR: test_wake_sends_to_the_same_execution_once_its_turn_has_finished (__main__.Driver.test_wake_sends_to_the_same_execution_once_its_turn_has_finished)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/ona/test_driver.py", line 205, in test_wake_sends_to_the_same_execution_once_its_turn_has_finished
+    self.assertEqual(self.host.runs[run]['phase'], 'PHASE_WAITING_FOR_INPUT')
+                     ~~~~~~~~~~~~~~^^^^^
+KeyError: 'run-0762d0a9906e'
+
+======================================================================
+FAIL: test_a_host_error_is_a_fixed_refusal (__main__.Driver.test_a_host_error_is_a_fixed_refusal)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/ona/test_driver.py", line 264, in test_a_host_error_is_a_fixed_refusal
+    self.assertEqual((code, out), (1, {'error': 'Ona answered 401 to POST %sStartAgent' % AGENT,
+AssertionError: Tuples differ: (0, {'run': 'run-7b8e07fe6070'}) != (1, {'error': 'Ona answered 401 to POST /a[89 chars]ry"})
+
+First differing element 0:
+0
+1
+
+- (0, {'run': 'run-7b8e07fe6070'})
++ (1,
++  {'error': 'Ona answered 401 to POST /api/gitpod.v1.AgentService/StartAgent',
++   'next': "check your key and Ona's status, then retry"})
+
+======================================================================
+FAIL: test_a_refused_start_sends_nothing_more (__main__.Driver.test_a_refused_start_sends_nothing_more)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/ona/test_driver.py", line 187, in test_a_refused_start_sends_nothing_more
+    self.assertEqual((code, out), (1, {'error': 'Ona answered 403 to POST %sStartAgent' % AGENT,
+AssertionError: Tuples differ: (1, {'error': 'the input needs exactly repository, ticke[71 chars]in'}) != (1, {'error': 'Ona answered 403 to POST /api/gitpod.v1.A[75 chars]ry"})
+
+First differing element 1:
+{'error': 'the input needs exactly repository, ticke[70 chars]gin'}
+{'error': 'Ona answered 403 to POST /api/gitpod.v1.A[74 chars]try"}
+
+  (1,
+-  {'error': 'the input needs exactly repository, ticket, skill, harness, model',
+-   'next': 'send only those fields; never a login'})
++  {'error': 'Ona answered 403 to POST /api/gitpod.v1.AgentService/StartAgent',
++   'next': "check your key and Ona's status, then retry"})
+
+======================================================================
+FAIL: test_an_effort_ona_has_no_value_for_is_refused_and_starts_nothing (__main__.Driver.test_an_effort_ona_has_no_value_for_is_refused_and_starts_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/ona/test_driver.py", line 179, in test_an_effort_ona_has_no_value_for_is_refused_and_starts_nothing
+    self.assertEqual((code, out), (1, {'error': 'Ona cannot set effort %s for harness codex' % effort,
+AssertionError: Tuples differ: (1, {'error': 'the input needs exactly repository, ticke[71 chars]in'}) != (1, {'error': 'Ona cannot set effort minimal for harness[141 chars]lt"})
+
+First differing element 1:
+{'error': 'the input needs exactly repository, ticke[70 chars]gin'}
+{'error': 'Ona cannot set effort minimal for harness[140 chars]ult"}
+
+  (1,
+-  {'error': 'the input needs exactly repository, ticket, skill, harness, model',
+-   'next': 'send only those fields; never a login'})
++  {'error': 'Ona cannot set effort minimal for harness codex',
++   'next': "this host can't set effort: remove the effort for this harness in "
++           "your Models table or Roster to run it at the host's default"})
+
+======================================================================
+FAIL: test_effort_reaches_the_host_as_codex_reasoning_effort (__main__.Driver.test_effort_reaches_the_host_as_codex_reasoning_effort)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/ona/test_driver.py", line 164, in test_effort_reaches_the_host_as_codex_reasoning_effort
+    run = self.started(effort=effort)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "adapters/ona/test_driver.py", line 92, in started
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+
+======================================================================
+FAIL: test_every_request_reaches_the_host_with_the_key_header_only (__main__.Driver.test_every_request_reaches_the_host_with_the_key_header_only)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/ona/test_driver.py", line 116, in test_every_request_reaches_the_host_with_the_key_header_only
+    self.assertEqual(len(self.host.requests), 7)
+AssertionError: 0 != 7
+
+======================================================================
+FAIL: test_kit_passes_all_five_on_the_fake_host (__main__.Driver.test_kit_passes_all_five_on_the_fake_host)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/ona/test_driver.py", line 108, in test_kit_passes_all_five_on_the_fake_host
+    self.assertEqual((out, err), (KIT_PASS, ''))
+AssertionError: Tuples differ: (['pa[58 chars]1', 'fail start: no builder status note appear[154 chars], '') != (['pa[58 chars]1', 'pass start: the run posted builder status[277 chars], '')
+
+First differing element 0:
+['pas[57 chars]1', 'fail start: no builder status note appear[149 chars]ost"]
+['pas[57 chars]1', 'pass start: the run posted builder status[272 chars]der']
+
+Diff is 641 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_only_codex_runs (__main__.Driver.test_only_codex_runs)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/ona/test_driver.py", line 156, in test_only_codex_runs
+    self.assertEqual(out, {'error': 'harness %s is not one Ona runs through its API' % harness,
+AssertionError: {'err[28 chars] not installed here', 'next': 'install claude-[46 chars]ain'} != {'err[28 chars] not one Ona runs through its API', 'next': 'u[13 chars]dex'}
+- {'error': 'harness claude-code is not installed here',
+-  'next': 'install claude-code and sign in to it yourself, then start again'}
++ {'error': 'harness claude-code is not one Ona runs through its API',
++  'next': 'use harness codex'}
+
+======================================================================
+FAIL: test_start_starts_codex_on_the_repository_then_sends_the_prompt (__main__.Driver.test_start_starts_codex_on_the_repository_then_sends_the_prompt)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/ona/test_driver.py", line 124, in test_start_starts_codex_on_the_repository_then_sends_the_prompt
+    self.assertRegex(run, UUID)
+AssertionError: Regex didn't match: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' not found in 'run-dbdefa361099'
+
+======================================================================
+FAIL: test_unknown_run (__main__.Driver.test_unknown_run)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/ona/test_driver.py", line 245, in test_unknown_run
+    self.assertEqual((code, out['error']), (1, 'Ona has no run %s' % run))
+AssertionError: Tuples differ: (1, 'run is not valid') != (1, 'Ona has no run 00000000-0000-4000-8000-0000000000ff')
+
+First differing element 1:
+'run is not valid'
+'Ona has no run 00000000-0000-4000-8000-0000000000ff'
+
+- (1, 'run is not valid')
++ (1, 'Ona has no run 00000000-0000-4000-8000-0000000000ff')
+
+======================================================================
+FAIL: test_version_and_schema (__main__.Driver.test_version_and_schema)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/ona/test_driver.py", line 282, in test_version_and_schema
+    self.assertEqual(self.driver('version'), (0, {'driver': 'ona', 'records': ['openwiz:records v1'],
+AssertionError: Tuples differ: (0, {[33 chars]nwiz:records v1'], 'can': ['start', 'wake', 'stop']}) != (0, {[33 chars]nwiz:records v1'], 'can': ['start', 'wake', 'stop', 'effort']})
+
+First differing element 1:
+{'dri[28 chars]enwiz:records v1'], 'can': ['start', 'wake', 'stop']}
+{'dri[28 chars]enwiz:records v1'], 'can': ['start', 'wake', 'stop', 'effort']}
+
+  (0,
+-  {'can': ['start', 'wake', 'stop'],
++  {'can': ['start', 'wake', 'stop', 'effort'],
+?                                  ++++++++++
+
+    'driver': 'ona',
+    'records': ['openwiz:records v1']})
+
+----------------------------------------------------------------------
+Ran 18 tests in 22.034s
+
+FAILED (failures=10, errors=6)
+exit 1

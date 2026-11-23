@@ -1,0 +1,12 @@
+{"answers": [
+  {"method": "POST", "path": "/api/gitpod\\.v1\\.AgentService/StartAgent", "status": 200,
+   "body": {"agentExecutionId": "00000000-0000-4000-9000-000000000001"}},
+  {"method": "POST", "path": "/api/gitpod\\.v1\\.AgentService/GetAgentExecution", "status": 200,
+   "body": {"agentExecution": {"id": "00000000-0000-4000-9000-000000000001",
+                               "status": {"phase": "PHASE_WAITING_FOR_INPUT",
+                                          "usedEnvironments": [{"environmentId": "00000000-0000-4000-9000-00000000e001",
+                                                                "createdByAgent": true}]}}}},
+  {"method": "POST", "path": "/api/gitpod\\.v1\\.AgentService/(SendToAgentExecution|StopAgentExecution)",
+   "status": 200, "body": {}},
+  {"method": "POST", "path": "/api/gitpod\\.v1\\.EnvironmentService/StopEnvironment", "status": 200, "body": {}}
+]}
