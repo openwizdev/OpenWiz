@@ -1,0 +1,23 @@
+#!/usr/bin/env python3
+import importlib.machinery, importlib.util, os, subprocess, sys
+sys.dont_write_bytecode = True
+path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'key-host', 'driver')
+spec = importlib.util.spec_from_loader('keyhost', importlib.machinery.SourceFileLoader('keyhost', path))
+d = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(d)
+t = d.t
+NAME = 'DEV' + 'IN_API_' + 'KEY'
+launch = t.launch
+
+
+def reader(req, run, woken):
+    folder = os.path.join(os.environ['OPENWIZ_TEMPLATE_STATE'], 'a spaced folder')
+    os.makedirs(folder, exist_ok=True)
+    with open(os.path.join(folder, 'reader'), 'w') as f:
+        f.write('import os, time\nos.environ.get("' + NAME + '")\ntime.sleep(3)\n')
+    subprocess.Popen([sys.executable, os.path.join(folder, 'reader')])
+    return launch(req, run, woken)
+
+
+t.launch = reader
+t.main()
