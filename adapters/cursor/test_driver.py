@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
+import http.client
+import importlib.util
 import json
-import re
 import os
+import re
 import secrets
 import shutil
 import signal
@@ -14,12 +16,14 @@ import unittest
 sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.abspath(__file__))
 DRIVER = os.path.join(HERE, 'driver')
-KIT = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'kit.py')
+KIT = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit')
+HOST = 'cursor-cloud'
 START = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'cursor',
          'model': 'synthetic-model-1'}
-ENV_KEYS = ('PATH', 'KIT_TRACKER', 'KIT_TEST', 'CURSOR_API_KEY', 'FAKE_TURNS', 'FAKE_HOLD', 'FAKE_CURSOR_LOG',
-            'FAKE_CURSOR_STATE', 'OPENWIZ_CURSOR_STATE')
-TOKEN = 'synthetic-' + 'x' * 24
+ENV_KEYS = ('PATH', 'KIT_TRACKER', 'KIT_TEST', 'OPENWIZ_CURSOR_STATE', 'OPENWIZ_HOSTKEY_TEST_ORIGIN')
+_spec = importlib.util.spec_from_file_location('hostkey', os.path.join(KIT, 'hostkey.py'))
+hostkey = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(hostkey)
 
 
 def alive(pid):
@@ -41,17 +45,30 @@ class Cursor(unittest.TestCase):
         with open(self.tracker, 'w') as f:
             json.dump({'record_authors': ['example-bot[bot]'], 'comments': []}, f)
         self.turns, self.hold = os.path.join(self.folder, 'turns'), os.path.join(self.folder, 'hold')
-        self.log = os.path.join(self.folder, 'calls')
-        self.env = dict(KIT_TRACKER=self.tracker, KIT_TEST=self.mark, CURSOR_API_KEY=TOKEN,
-                        FAKE_TURNS=self.turns, FAKE_HOLD=self.hold, FAKE_CURSOR_LOG=self.log,
-                        FAKE_CURSOR_STATE=os.path.join(self.folder, 'cursor.json'),
+        self.log, self.faults = os.path.join(self.folder, 'calls'), os.path.join(self.folder, 'faults.json')
+        self.state, self.key_file = os.path.join(self.folder, 'cursor.json'), os.path.join(self.folder, 'key')
+        self.key = 'syn-test-key-' + secrets.token_hex(12)
+        with open(self.key_file, 'w') as f:
+            f.write(self.key)
+        self.fault({})
+        open(self.log, 'w').close()
+        self.cursor = subprocess.Popen(
+            [sys.executable, '-I', os.path.join(HERE, 'fixtures', 'fake-cursor'), self.state, self.log, self.faults,
+             self.key_file], stdout=subprocess.PIPE, text=True,
+            env={'PATH': python, 'KIT_TRACKER': self.tracker, 'FAKE_TURNS': self.turns, 'FAKE_HOLD': self.hold})
+        self.origin = self.cursor.stdout.readline().strip()
+        self.env = dict(KIT_TRACKER=self.tracker, KIT_TEST=self.mark, PATH=python,
                         OPENWIZ_CURSOR_STATE=os.path.join(self.folder, 'state'),
-                        PATH=os.path.join(HERE, 'fixtures', 'bin') + os.pathsep + python)
-        real = [n for n in ('claude', 'codex', 'agent', 'cursor-agent', 'gh', 'boat') if shutil.which(n, path=self.env['PATH'])]
-        if real or shutil.which('curl', path=self.env['PATH']) != os.path.join(HERE, 'fixtures', 'bin', 'curl'):
-            raise RuntimeError('the test PATH reaches a real program: %s' % (real or ['curl']))
+                        OPENWIZ_HOSTKEY_TEST_ORIGIN=self.origin)
+        real = [n for n in ('claude', 'codex', 'agent', 'cursor-agent', 'gh', 'boat', 'curl')
+                if shutil.which(n, path=self.env['PATH'])]
+        if real or not re.fullmatch(r'http://127\.0\.0\.1:[0-9]+', self.origin):
+            raise RuntimeError('the test reaches a real program or host: %s' % (real or [self.origin]))
 
     def tearDown(self):
+        self.cursor.send_signal(signal.SIGTERM)
+        self.cursor.wait(30)
+        self.cursor.stdout.close()
         for pid in self.running():
             try:
                 os.killpg(pid, signal.SIGKILL)
@@ -69,21 +86,23 @@ class Cursor(unittest.TestCase):
         except OSError:
             return False
 
+    def fault(self, faults):
+        with open(self.faults, 'w') as f:
+            json.dump(faults, f)
+
     def driver(self, cmd, request, **env):
         p = subprocess.run([DRIVER, cmd], input=json.dumps(request), env=dict(self.env, **env),
                            capture_output=True, text=True, timeout=120)
+        self.assertNotIn(self.key, p.stdout + p.stderr)
         return p.returncode, json.loads(p.stdout)
 
-    def calls(self, version=False):
-        try:
-            with open(self.log) as f:
-                return [c for c in map(json.loads, f) if (c['call'] == 'VERSION') == version]
-        except FileNotFoundError:
-            return []
+    def calls(self):
+        with open(self.log) as f:
+            return [dict(c, call=c['method'] + ' ' + c['path'][len('/v1'):]) for c in map(json.loads, f)]
 
     def agents(self):
         try:
-            with open(self.env['FAKE_CURSOR_STATE']) as f:
+            with open(self.state) as f:
                 return json.load(f)
         except FileNotFoundError:
             return {}
@@ -107,14 +126,13 @@ class Cursor(unittest.TestCase):
         return ready()
 
     def test_runs_reach_only_the_fake_cursor_and_python(self):
-        found = {name: shutil.which(name, path=self.env['PATH']) for name in ('curl', 'claude', 'codex', 'agent', 'gh')}
-        self.assertEqual(found, dict.fromkeys(found, None) | {'curl': os.path.join(HERE, 'fixtures', 'bin', 'curl')})
-        self.assertEqual(sorted(os.listdir(self.env['PATH'].split(os.pathsep)[1])), ['python3'])
+        self.assertEqual(sorted(os.listdir(self.env['PATH'])), ['python3'])
         self.assertEqual(sorted(self.env), sorted(ENV_KEYS))
+        self.assertRegex(self.env['OPENWIZ_HOSTKEY_TEST_ORIGIN'], r'^http://127\.0\.0\.1:[0-9]+$')
 
-    def test_kit_passes_all_five(self):
-        p = subprocess.run([sys.executable, '-I', KIT, '--driver', DRIVER, '--repo', 'example/site',
-                            '--ticket', '7', '--harness', 'cursor', '--model', 'synthetic-model-1',
+    def test_kit_passes_all_five_with_its_key_check(self):
+        p = subprocess.run([sys.executable, '-I', os.path.join(KIT, 'kit.py'), '--driver', DRIVER, '--repo',
+                            'example/site', '--ticket', '7', '--harness', 'cursor', '--model', 'synthetic-model-1',
                             '--tracker', self.tracker, '--wait', '8'],
                            env=self.env, capture_output=True, text=True, timeout=300)
         self.assertEqual((p.returncode, p.stdout.splitlines()), (0, [
@@ -122,18 +140,14 @@ class Cursor(unittest.TestCase):
             'pass start: the run posted builder status note 1',
             'pass wake: the run edited builder status note 1',
             'pass stop: the run ended, and a wake after it is refused',
-            'pass token: no login or token passed through the driver']), p.stderr)
+            'pass token: no login or token passed through the driver, and on start, wake and stop the %s key '
+            'reached its host only from the key helper, in its header' % HOST]), p.stderr)
 
     def test_start_creates_one_agent_under_an_id_it_saved_first_with_no_login(self):
         code, out = self.driver('start', START)
         self.assertEqual(code, 0, out)
         [call] = self.calls()
-        self.assertEqual(call['call'], 'POST /agents')
-        self.assertEqual([c['argv'] for c in self.calls(version=True)], [['--disable', '--version']])
-        self.assertEqual(call['argv'][0], '--disable')
-        self.assertEqual(call['argv'][2:6], ['--variable', '%CURSOR_API_KEY', '--expand-oauth2-bearer',
-                                             '{{CURSOR_API_KEY}}'])
-        self.assertNotIn(TOKEN, json.dumps(call))
+        self.assertEqual((call['call'], call['authorization']), ('POST /agents', 'Bearer ' + self.key))
         body = json.loads(call['body'])
         self.assertEqual(body['repos'], [{'url': 'https://github.com/example/site'}])
         self.assertEqual(body['model'], {'id': 'synthetic-model-1'})
@@ -147,37 +161,46 @@ class Cursor(unittest.TestCase):
         self.assertEqual(list(self.agents()), [body['agentId']])
 
     def test_the_key_never_passes_through_the_driver(self):
-        code, out = self.driver('start', START)
+        hosts = hostkey.registry()
+        self.assertIn(HOST, hosts)
+        entry = hosts[HOST]
+        self.assertEqual(entry['origin'], 'https://api.cursor.com')
+        with open(DRIVER) as f:
+            source = f.read()
+        self.assertFalse(entry['variable'] in source, 'the driver names the key')
+        for folder, _, names in os.walk(HERE):
+            for name in names:
+                with open(os.path.join(folder, name), 'rb') as f:
+                    lines = f.read().decode('utf-8').split('\n')
+                if os.path.join(folder, name) == os.path.join(HERE, 'README.md'):
+                    lines = [x for x in lines if entry['keychain'] not in x]
+                self.assertEqual([x for x in lines if entry['variable'] in x], [], 'a file names the key: ' + name)
+        self.assertEqual(re.findall(r'\benviron\b\S*', source), ["environ.get('OPENWIZ_CURSOR_STATE')"])
+        self.assertEqual([x for x in ('getenv', 'environb', 'env=', 'curl', entry['origin'], entry['keychain'])
+                          if x in source], [])
+        planted = 'syn-planted-key-' + secrets.token_hex(12)
+        code, out = self.driver('start', START, **{entry['variable']: planted})
         self.assertEqual(code, 0, out)
         outputs = [json.dumps(out)]
         for cmd in ('wake', 'stop'):
             self.until(lambda: not any(alive(p) for p, _ in self.logged(1)))
-            code, answer = self.driver(cmd, out)
+            code, answer = self.driver(cmd, out, **{entry['variable']: planted})
             self.assertEqual(code, 0, answer)
             outputs.append(json.dumps(answer))
-        with open(DRIVER) as f:
-            source = f.read()
-        self.assertNotIn(TOKEN, source)
-        self.assertEqual(re.findall(r'\benviron\b\S*', source), ["environ.get('OPENWIZ_CURSOR_STATE')"])
-        self.assertEqual([x for x in ('getenv', 'environb', 'env=') if x in source], [])
         calls = self.calls()
         self.assertEqual([c['call'].split(' ')[0] for c in calls], ['POST', 'GET', 'POST', 'GET', 'POST', 'POST'])
-        self.assertNotIn(TOKEN, json.dumps(calls) + ''.join(outputs))
-        self.assertEqual({tuple(c['key_in']) for c in calls}, {('CURSOR_API_KEY',)})
+        self.assertEqual({c['authorization'] for c in calls}, {'Bearer ' + self.key})
+        sent = json.dumps([[c['path'], c['body']] for c in calls]) + ''.join(outputs)
+        self.assertEqual([k for k in (self.key, planted) if k in sent], [])
 
-    def test_an_old_curl_or_a_missing_key_is_a_clear_error_and_sends_nothing(self):
-        code, err = self.driver('start', START, FAKE_CURL_VERSION='8.2.1')
+    def test_a_missing_key_is_a_clear_error_and_sends_nothing(self):
+        with open(self.key_file, 'w') as f:
+            f.write('')
+        code, err = self.driver('start', START)
         self.assertEqual(code, 1, err)
-        self.assertIn('8.3', err['error'] + err['next'])
-        for key in (None, ''):
-            env = dict(self.env, CURSOR_API_KEY=key) if key is not None else \
-                {k: v for k, v in self.env.items() if k != 'CURSOR_API_KEY'}
-            p = subprocess.run([DRIVER, 'start'], input=json.dumps(START), env=env, capture_output=True, text=True,
-                               timeout=60)
-            err = json.loads(p.stdout)
-            self.assertEqual(p.returncode, 1, err)
-            self.assertIn('CURSOR_API_KEY', err['error'])
-            self.assertNotIn('unknown', err['error'])
+        self.assertIn('key helper refused', err['error'])
+        self.assertIn('nothing was sent', err['error'])
+        self.assertNotIn('unknown', err['error'])
         self.assertEqual((self.calls(), self.agents()), ([], {}))
 
     def test_the_tests_read_no_other_process_environment(self):
@@ -187,8 +210,11 @@ class Cursor(unittest.TestCase):
     def test_an_installed_driver_starts_with_the_pin_its_build_names(self):
         runtime = os.path.join(self.folder, 'current', 'runtime')
         os.makedirs(os.path.join(runtime, 'adapters', 'cursor'))
+        os.makedirs(os.path.join(runtime, 'kernel', 'driver-kit'))
         for name in ('driver', 'schema.json'):
             shutil.copy2(os.path.join(HERE, name), os.path.join(runtime, 'adapters', 'cursor', name))
+        for name in ('hostkey.py', 'hosts.json'):
+            shutil.copy2(os.path.join(KIT, name), os.path.join(runtime, 'kernel', 'driver-kit', name))
         source = '0123456789abcdef0123456789abcdef01234567'
         with open(os.path.join(runtime, 'openwiz-build.txt'), 'w') as f:
             f.write('openwiz.package.v1\n0.1.1\n%s\nx86_64-unknown-linux-gnu\n' % source)
@@ -202,19 +228,20 @@ class Cursor(unittest.TestCase):
 
     def test_a_lost_create_cursor_does_not_show_yet_stays_unconfirmed_and_stoppable(self):
         open(self.hold, 'w').close()
-        code, err = self.driver('start', START, FAKE_CURSOR_FAIL='POST /agents=pending')
+        self.fault({'POST /agents': 'pending'})
+        code, err = self.driver('start', START)
         self.assertEqual(code, 1, err)
         self.assertNotIn('archived', err['error'])
         self.assertIn('unknown', err['error'])
         run = re.search(r'run-[0-9a-f]{12}', err['error'] + err['next']).group()
         self.assertIn('stop', err['next'])
-        with open(self.env['FAKE_CURSOR_STATE'] + '.pending') as f:
+        self.fault({})
+        with open(self.state + '.pending', 'rb') as f:
             late = f.read()
-        subprocess.run([os.path.join(HERE, 'fixtures', 'bin', 'curl'), '--disable', '-sS', '--variable',
-                        '%CURSOR_API_KEY', '--expand-oauth2-bearer', '{{CURSOR_API_KEY}}', '--max-time', '60', '-X',
-                        'POST', '-H', 'Accept: application/json', '-H', 'Content-Type: application/json',
-                        '--data-binary', '@-', '-o', '-', '-w', '\\n%{http_code}', 'https://api.cursor.com/v1/agents'],
-                       input=late, env=self.env, capture_output=True, text=True, timeout=60, check=True)
+        conn = http.client.HTTPConnection('127.0.0.1', int(self.origin.rpartition(':')[2]), timeout=60)
+        conn.request('POST', '/v1/agents', body=late, headers={'Content-Type': 'application/json'})
+        self.assertEqual(conn.getresponse().status, 201)
+        conn.close()
         [agent] = self.agents().values()
         self.assertFalse(agent['archived'])
         self.assertEqual(self.driver('wake', {'run': run})[0], 1, 'a wake reopened an unconfirmed start')
@@ -231,7 +258,8 @@ class Cursor(unittest.TestCase):
 
     def test_a_start_whose_answer_is_lost_archives_its_agent(self):
         open(self.hold, 'w').close()
-        code, out = self.driver('start', START, FAKE_CURSOR_FAIL='POST /agents=lost')
+        self.fault({'POST /agents': 'lost'})
+        code, out = self.driver('start', START)
         self.assertEqual(code, 1, out)
         self.assertIn('unknown', out['error'])
         self.assertNotIn('retry', json.dumps(out))
@@ -291,16 +319,18 @@ class Cursor(unittest.TestCase):
     def test_a_failed_archive_is_reported_with_the_agent_to_archive(self):
         code, out = self.driver('start', START)
         self.assertEqual(code, 0, out)
-        code, err = self.driver('stop', out, FAKE_CURSOR_FAIL='POST /archive=500')
+        self.fault({'POST /archive': 500})
+        code, err = self.driver('stop', out)
         self.assertEqual(code, 1, err)
         [agent] = self.agents()
         self.assertIn(agent, err['error'] + err['next'])
         self.assertEqual(self.driver('wake', out)[0], 1, 'a wake was taken after a stop')
 
     def test_a_refused_login_says_where_the_key_lives_and_shows_no_answer(self):
-        code, err = self.driver('start', START, FAKE_CURSOR_FAIL='POST /agents=401')
+        self.fault({'POST /agents': 401})
+        code, err = self.driver('start', START)
         self.assertEqual(code, 1, err)
-        self.assertIn('CURSOR_API_KEY', err['next'])
+        self.assertIn('adapters/cursor/README.md', err['next'])
         self.assertNotIn('told to fail', json.dumps(err))
         self.assertEqual(self.agents(), {})
 

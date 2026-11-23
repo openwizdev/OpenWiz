@@ -1,0 +1,145 @@
+#!/usr/bin/env python3
+import http.server, json, os, re, signal, subprocess, sys, threading
+
+STATE, LOG, FAULTS, KEY_FILE = sys.argv[1:5]
+HERE = os.path.dirname(os.path.abspath(__file__))
+AGENT = os.path.join(HERE, 'fake-agent')
+KEY_PATH = '/.openwiz/hostkey-test-key'
+ACTIVE = ('CREATING', 'RUNNING', 'WAITING_FOR_BACKGROUND_WORK')
+CREATE = {'prompt', 'model', 'repos', 'name', 'agentId', 'autoCreatePR'}
+ONE = re.compile(r'/v1/agents/(bc-[0-9a-f-]{36})(/runs|/archive|/runs/(run-[0-9]+)/cancel)?')
+AGENTS, PROCESSES, LOCK = {}, {}, threading.Lock()
+
+
+def status(run):
+    if run['status'] in ACTIVE and PROCESSES[run['pid']].poll() is not None:
+        run['status'] = 'FINISHED'
+    return run['status']
+
+
+def spawn(agent, woken):
+    p = subprocess.Popen([sys.executable, AGENT, 'woken' if woken else 'first', agent['model'], agent['prompt']],
+                         start_new_session=True, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL)
+    PROCESSES[p.pid] = p
+    run = {'id': 'run-%08d' % (len(agent['runs']) + 1), 'status': 'RUNNING', 'pid': p.pid}
+    agent['runs'].append(run)
+    return {'id': run['id'], 'agentId': agent['id'], 'status': 'CREATING',
+            'createdAt': '2026-11-20T00:00:00.000Z', 'updatedAt': '2026-11-20T00:00:00.000Z'}
+
+
+def public(agent):
+    state = 'ARCHIVED' if agent['archived'] else \
+        'ACTIVE' if agent['runs'] and status(agent['runs'][-1]) in ACTIVE else 'IDLE'
+    return {'id': agent['id'], 'name': agent['name'], 'status': state, 'env': {'type': 'cloud'},
+            'repos': agent['repos'], 'workOnCurrentBranch': False, 'autoCreatePR': False,
+            'url': 'https://cursor.com/agents/' + agent['id'], 'createdAt': '2026-11-20T00:00:00.000Z',
+            'updatedAt': '2026-11-20T00:00:00.000Z', 'latestRunId': agent['runs'][-1]['id']}
+
+
+def route(method, path, body):
+    if method == 'POST' and path == '/v1/agents':
+        if not isinstance(body, dict) or set(body) - CREATE or not {'prompt', 'agentId'} <= set(body) or \
+                set(body['prompt']) != {'text'}:
+            return 400, {'error': {'code': 'validation_error', 'message': 'unexpected body'}}
+        if body['agentId'] in AGENTS:
+            return 409, {'error': {'code': 'agent_id_conflict', 'message': 'agent exists'}}
+        agent = AGENTS[body['agentId']] = {'id': body['agentId'], 'name': body.get('name', ''), 'archived': False,
+                                           'repos': body.get('repos', []), 'model': body['model']['id'],
+                                           'prompt': body['prompt']['text'], 'runs': []}
+        run = spawn(agent, False)
+        return 201, {'agent': public(agent), 'run': run}
+    m = ONE.fullmatch(path)
+    agent = AGENTS.get(m.group(1)) if m else None
+    if agent is None:
+        return 404, {'error': {'code': 'not_found', 'message': 'no such agent'}}
+    if method == 'GET' and m.group(2) is None:
+        return 200, public(agent)
+    if method == 'POST' and m.group(2) == '/runs':
+        # External: Cursor's endpoint reference gives no error code for a follow-up on an archived agent, so
+        # this one is a guess, https://cursor.com/docs/cloud-agent/api/endpoints
+        if agent['archived']:
+            return 409, {'error': {'code': 'agent_archived', 'message': 'archived'}}
+        if status(agent['runs'][-1]) in ACTIVE:
+            return 409, {'error': {'code': 'agent_busy', 'message': 'a run is active'}}
+        if not isinstance(body, dict) or set(body) != {'prompt'} or set(body['prompt']) != {'text'}:
+            return 400, {'error': {'code': 'validation_error', 'message': 'unexpected body'}}
+        agent['prompt'] = body['prompt']['text']
+        return 201, {'run': spawn(agent, True)}
+    if method == 'POST' and m.group(3):
+        run = next((r for r in agent['runs'] if r['id'] == m.group(3)), None)
+        if run is None or status(run) not in ACTIVE:
+            return 409, {'error': {'code': 'run_not_cancellable', 'message': 'not active'}}
+        try:
+            os.killpg(run['pid'], signal.SIGKILL)
+        except OSError:
+            pass
+        PROCESSES[run['pid']].wait()
+        run['status'] = 'CANCELLED'
+        return 200, {'id': run['id']}
+    if method == 'POST' and m.group(2) == '/archive':
+        agent['archived'] = True
+        return 200, {'id': agent['id']}
+    return 404, {'error': {'code': 'not_found', 'message': 'no such route'}}
+
+
+class Cursor(http.server.BaseHTTPRequestHandler):
+    def log_message(self, *args):
+        pass
+
+    def reply(self, code, body):
+        data = json.dumps(body).encode()
+        self.send_response(code)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Content-Length', str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def drop(self):
+        self.close_connection = True
+
+    def handle_one(self):
+        raw = self.rfile.read(int(self.headers.get('Content-Length') or 0))
+        if self.command == 'GET' and self.path == KEY_PATH:
+            with open(KEY_FILE) as f:
+                return self.reply(200, {'key': f.read()})
+        with open(LOG, 'a') as f:
+            f.write(json.dumps({'method': self.command, 'path': self.path, 'body': raw.decode(),
+                                'authorization': self.headers.get('Authorization')}) + '\n')
+        with open(FAULTS) as f:
+            faults = json.load(f)
+        fault = next((v for k, v in faults.items()
+                      if k.split(' ')[0] == self.command and self.path.endswith(k.split(' ', 1)[1])), None)
+        if fault == 'pending':
+            with open(STATE + '.pending', 'wb') as f:
+                f.write(raw)
+            return self.drop()
+        if isinstance(fault, int):
+            return self.reply(fault, {'error': {'code': 'fake_failure', 'message': 'the fake was told to fail'}})
+        with LOCK:
+            code, answer = route(self.command, self.path, json.loads(raw) if raw else None)
+            with open(STATE + '.new', 'w') as f:
+                json.dump(AGENTS, f)
+            os.replace(STATE + '.new', STATE)
+        if fault == 'lost':
+            return self.drop()
+        self.reply(code, answer)
+
+    do_GET = do_POST = do_DELETE = do_PUT = handle_one
+
+
+def end(*_):
+    for p in PROCESSES.values():
+        if p.poll() is None:
+            try:
+                os.killpg(p.pid, signal.SIGKILL)
+            except OSError:
+                pass
+        p.wait()
+    os._exit(0)
+
+
+signal.signal(signal.SIGTERM, end)
+server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Cursor)
+print('http://127.0.0.1:%d' % server.server_address[1], flush=True)
+server.serve_forever()
