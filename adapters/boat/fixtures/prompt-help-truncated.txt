@@ -1,0 +1,26 @@
+Send a prompt to a coding agent (Claude Code, Codex, pi, OpenCode, Prime Agent, Kimi Code, Mistral Vibe) inside a sandbox
+
+Usage: boat prompt [OPTIONS] [ID] [PROMPT]...
+
+Options:
+      --provider <PROVIDER>  Agent provider to use: codex, claude, pi, opencode, prime, kimi or mistral
+      --json                 Force machine-readable JSON/JSONL output
+      --model <MODEL>        Provider model id. Omit to use the Agents dashboard default.
+      --reasoning-effort <LEVEL>
+                             Reasoning/thinking level. Omit to use the model default.
+      --new                  Start a new conversation (they run in parallel on the sandbox)
+      --resume <CONVERSATION_ID>
+                             Continue a conversation by id (or "current"). Omit for this shell's current one.
+      --no-update            Skip the automatic CLI update check
+  -h, --help                 Print help
+
+Models (default marked; from https://boat.example/api/provider-models):
+  codex        syn-codex-wide (default), syn-codex-narrow
+  claude       claude-opus-5-5 (default), syn-claude-small, syn-claude-plain
+
+Reasoning / thinking levels (grouped by the models that share them):
+  codex
+    low (default), medium, high, xhigh, max : syn-codex-wide, syn-codex-first,
+                                              syn-codex-second
+    low, high (default)                : syn-codex-narrow
+  claude

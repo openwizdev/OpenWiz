@@ -128,6 +128,7 @@ jobs:
           python3 -I kernel/records/model/test_model.py
           python3 -I adapters/template/test_driver.py
           python3 -I adapters/cloudroom/test_driver.py
+          python3 -I adapters/devin/test_driver.py
           python3 -I adapters/openclaw/test_driver.py
           python3 -I adapters/ona/test_driver.py
           python3 -I contracts/fixtures/feedback-loop/test_check.py

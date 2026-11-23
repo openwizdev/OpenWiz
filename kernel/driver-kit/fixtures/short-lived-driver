@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+import importlib.machinery, importlib.util, json, os, sys, time
+sys.dont_write_bytecode = True
+path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'adapters', 'template', 'driver')
+spec = importlib.util.spec_from_loader('template', importlib.machinery.SourceFileLoader('template', path))
+t = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(t)
+
+
+def launch(req, run, woken):
+    time.sleep(0.3)
+    tracker, now = os.environ['KIT_TRACKER'], time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+    body = '\n'.join(['<!-- openwiz:status v1 -->', 'agent: builder', 'state: working', 'harness: Fake',
+                      'model: ' + req['model'], 'skills: %s@0.1.2' % req['skill'],
+                      'step: ' + ('woke and read the ticket again' if woken else 'started the throwaway ticket'),
+                      'time: ' + now]) + '\n'
+    with open(tracker) as f:
+        state = json.load(f)
+    mine = [c for c in state['comments'] if c['author'] == 'example-bot[bot]' and 'agent: builder' in c['body']]
+    if woken:
+        mine[-1].update(body=body, updated_at=now)
+    else:
+        state['comments'].append({'id': 1 + max(c['id'] for c in state['comments']),
+                                  'author': 'example-bot[bot]', 'updated_at': now, 'body': body})
+    with open(tracker + '.new', 'w') as f:
+        json.dump(state, f)
+    os.replace(tracker + '.new', tracker)
+    return None
+
+
+t.launch = launch
+t.main()

@@ -19,10 +19,13 @@ sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATE = os.environ.get('OPENWIZ_CLOUDROOM_STATE') or os.path.expanduser('~/.local/state/openwiz-cloudroom')
 VERSION = {'driver': 'cloudroom', 'records': ['openwiz:records v1'],
-           'can': ['start', 'wake', 'stop', 'many-at-once', 'own-sandbox']}
+           'can': ['start', 'wake', 'stop', 'many-at-once', 'own-sandbox', 'effort']}
 START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
          'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
          'model': r'[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}'}
+START_OPTIONAL = {'effort': r'[a-z][a-z0-9-]{0,19}'}
+CANT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at "
+        "the host's default")
 RUN = {'run': r'run-[0-9a-f]{12}'}
 THREAD, PROJECT = r'thr_[A-Za-z0-9_]{1,80}', r'[A-Za-z0-9_]{1,80}'
 WRITABLE = 'make OPENWIZ_CLOUDROOM_STATE (or ~/.local/state/openwiz-cloudroom) a folder you can write'
@@ -51,15 +54,18 @@ def unique(pairs):
     return dict(pairs)
 
 
-def read(fields):
-    """The request on stdin, with exactly these fields, each valid, or Refused."""
+def read(required, optional=None):
+    optional = optional or {}
     try:
         req = json.loads(sys.stdin.read(), object_pairs_hook=unique)
     except ValueError:
         raise Refused('the input is not JSON', 'send one JSON object on stdin, as `driver schema` shows')
-    if not isinstance(req, dict) or set(req) != set(fields):
-        raise Refused('the input needs exactly ' + ', '.join(fields), 'send only those fields; never a login')
-    for key, pattern in fields.items():
+    if not isinstance(req, dict) or not set(required) <= set(req) <= set(required) | set(optional):
+        raise Refused('the input needs exactly ' + ', '.join(required) + ''.join(', and optionally ' + k for k in optional),
+                      'send only those fields; never a login')
+    for key, pattern in dict(required, **optional).items():
+        if key not in req:
+            continue
         v = req[key]
         if not (type(v) is int and v > 0 if pattern is None else isinstance(v, str) and re.fullmatch(pattern, v)):
             raise Refused(key + ' is not valid', 'fix ' + key + ' as `driver schema` shows')
@@ -88,7 +94,7 @@ def passable(holds_credential, value):
 
 def no_credentials(req, holds_credential):
     # PRIVACY: runs before anything is saved or started, and the refusal names the field, never its value.
-    for key in START:
+    for key in req:
         if isinstance(req[key], str) and holds_credential(req[key]):
             raise Refused('%s looks like a credential, so nothing was saved or started' % key,
                           'send the %s itself in %s; never a login, key or token' % (key, key))
@@ -126,13 +132,46 @@ def brief(req):
             + LOOKUP.format(s=req['skill']))
 
 
+def provider(req):
+    return PROVIDERS.get(req['harness'], req['harness'])
+
+
+def refuse_unlisted_effort(req):
+    if 'effort' not in req:
+        return req
+    try:
+        code, out, said = room('provider', 'models', provider(req), '--json')
+    except Unknown:
+        code, said = 1, 'room-cli gave no answer'
+    if code != 0:
+        raise Refused('Cloudroom did not list the levels of harness %s: %s; nothing was saved or started'
+                      % (req['harness'], said), 'check `room-cli provider models %s`, then start again' % provider(req))
+    try:
+        models = json.loads(out)
+    except ValueError:
+        models = None
+    a_note_without_models = isinstance(models, dict)
+    if not (a_note_without_models or isinstance(models, list)):
+        raise Refused('Cloudroom\'s level list for harness %s could not be read; nothing was saved or started'
+                      % req['harness'], 'check `room-cli provider models %s --json`, then start again' % provider(req))
+    for m in [] if a_note_without_models else models:
+        if isinstance(m, dict) and req['model'] in (m.get('id'), m.get('model')):
+            levels = m.get('supportedReasoningEfforts')
+            if isinstance(levels, list) and any(isinstance(l, dict) and l.get('reasoningEffort') == req['effort']
+                                                for l in levels):
+                return req
+    raise Refused('Cloudroom lists no effort %s for harness %s and model %s, so nothing was saved or started'
+                  % (req['effort'], req['harness'], req['model']), CANT)
+
+
 def spawn(req, title, holds_credential):
     project = os.environ.get('ROOM_PROJECT_ID', '')
     if not re.fullmatch(PROJECT, project):
         raise Refused('no Cloudroom project here: ROOM_PROJECT_ID is not set',
                       "run the driver inside a Cloudroom thread of the repository's project")
     code, out, said = room('thread', 'spawn', '--parent-self', '--project', project,
-                           '--provider', PROVIDERS.get(req['harness'], req['harness']), '--model', req['model'],
+                           '--provider', provider(req), '--model', req['model'],
+                           *(['--reasoning-level', req['effort']] if 'effort' in req else []),
                            '--title', title, '--prompt', brief(req), '--json')
     if code != 0:
         raise Refused('Cloudroom refused the start: ' + said,
@@ -395,7 +434,7 @@ def answer(cmd):
             return json.load(f)
     if cmd == 'start':
         holds_credential = credential_check()
-        req = no_credentials(read(START), holds_credential)
+        req = refuse_unlisted_effort(no_credentials(read(START, START_OPTIONAL), holds_credential))
         return start(req, 'run-' + secrets.token_hex(6), holds_credential)
     if cmd in ('wake', 'stop'):
         run = read(RUN)['run']

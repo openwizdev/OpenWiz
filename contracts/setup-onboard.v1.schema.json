@@ -520,7 +520,8 @@
             "create_companion",
             "link_companion",
             "open_pull_request",
-            "create_label"
+            "create_label",
+            "merge_pull_request"
           ]
         },
         "repository": {

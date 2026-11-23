@@ -1,0 +1,303 @@
+Send a prompt to a coding agent (Claude Code, Codex, pi, OpenCode, Prime Agent, Kimi Code, Mistral Vibe) inside a sandbox
+
+Usage: boat prompt [OPTIONS] [ID] [PROMPT]...
+
+Arguments:
+  [ID]          Sandbox ID, or "current"/"self". Omit for this shell's current sandbox, or the sandbox you are in.
+  [PROMPT]...   Prompt text to send.
+
+Options:
+      --api-url <API_URL>    [env: BOAT_API_URL=]
+      --provider <PROVIDER>  Agent provider to use: codex, claude, pi, opencode, prime, kimi or mistral
+      --json                 Force machine-readable JSON/JSONL output
+      --model <MODEL>        Provider model id. Omit to use the Agents dashboard default.
+      --reasoning-effort <LEVEL>
+                             Reasoning/thinking level. Omit to use the model default.
+      --fast                 Fast mode: same model, faster output, higher provider rate. Models below.
+      --ultrafast            Codex's fastest tier, above Fast. Needs a sign-in with Ultrafast access. Models below.
+      --new                  Start a new conversation (they run in parallel on the sandbox)
+      --resume <CONVERSATION_ID>
+                             Continue a conversation by id (or "current"). Omit for this shell's current one.
+      --attach <PATH>        Attach a file (image, PDF, any file). Repeat for several. [alias: --image]
+                             Saved on the sandbox under ~/attachments too.
+      --org <ID_OR_NAME>     Run this command in an organization's billing scope [env: BOAT_ORG=]
+      --no-update            Skip the automatic CLI update check
+  -h, --help                 Print help
+
+Providers:
+  codex        OpenAI Codex / ChatGPT
+  claude       Claude Code
+  pi           pi — multi-model (Anthropic, OpenAI, OpenRouter, llmgateway)
+  opencode     OpenCode — multi-model
+  prime        Prime Agent — multi-model
+  kimi         Kimi Code CLI (Moonshot AI)
+  mistral      Mistral Vibe
+
+Models (default marked; from https://boat.dev/api/provider-models):
+  codex        gpt-6.2-sol, gpt-6.2-astra, gpt-6.1-sol, gpt-6-astra, gpt-6-luna, gpt-6-sol,
+               gpt-5.6-sol, gpt-5.6-terra (default), gpt-5.6-luna, gpt-5.5, gpt-5.4, gpt-5.4-mini,
+               gpt-5.3-codex, openai.gpt-5.6-terra, openai.gpt-5.5, openai.gpt-5.4,
+               openai.gpt-5.6-sol, openai.gpt-5.6-luna, openai.gpt-5.5-2026-04-23,
+               openai.gpt-5.4-2026-03-05, deepseek-flash, deepseek-v4-pro
+  claude       claude-fable-5-2, claude-fable-5-1, claude-fable-5, opus-5-5, opus-5, opus,
+               claude-sonnet-5-5, sonnet (default), claude-haiku-5-5, haiku, opusplan,
+               us.anthropic.claude-sonnet-4-6, us.anthropic.claude-opus-4-6-v1,
+               us.anthropic.claude-sonnet-4-5-20250929-v1:0,
+               us.anthropic.claude-opus-4-5-20251101-v1:0,
+               us.anthropic.claude-haiku-4-5-20251001-v1:0, us.anthropic.claude-sonnet-5,
+               us.anthropic.claude-opus-5, us.anthropic.claude-fable-5-2,
+               us.anthropic.claude-fable-5-1, us.anthropic.claude-fable-5,
+               us.anthropic.claude-opus-4-8, us.anthropic.claude-opus-4-7, deepseek-flash,
+               deepseek-v4-pro
+  pi           claude-fable-5-2, claude-fable-5-1, claude-fable-5, claude-opus-5-5, claude-opus-5,
+               claude-sonnet-5-5, claude-sonnet-5 (default), claude-haiku-5-5, claude-haiku-4-5,
+               gpt-6.1-sol, gpt-6-sol, gpt-6-luna, gpt-5.6-terra, gpt-5.5, gpt-5.4-mini,
+               openrouter:anthropic/claude-sonnet-5.5, openrouter:anthropic/claude-opus-5.5,
+               openrouter:anthropic/claude-haiku-5.5, openrouter:openai/gpt-6.1-sol,
+               openrouter:openai/gpt-6-luna, openrouter:google/gemini-4-argon,
+               openrouter:x-ai/grok-4.7, openrouter:google/gemini-3.8-flash,
+               openrouter:google/gemini-3.7-flash, openrouter:google/gemini-3.6-flash,
+               openrouter:google/gemini-3.5-flash-lite, openrouter:z-ai/glm-5.3,
+               openrouter:z-ai/glm-5.3-flash, openrouter:moonshotai/kimi-k3,
+               openrouter:minimax/minimax-m3, openrouter:xiaomi/mimo-v2.6-pro,
+               openrouter:xiaomi/mimo-v2.6-flash, openrouter:qwen/qwen3.8-max-0902,
+               openrouter:deepseek/deepseek-v4.1-flash, openrouter:deepseek/deepseek-v4-flash-0731,
+               openrouter:deepseek/deepseek-v4-pro-0813, llmgateway:gemini-3.8-flash,
+               llmgateway:gemini-3.7-flash, llmgateway:gemini-3.5-flash-lite, llmgateway:glm-5.3,
+               llmgateway:glm-5.3-flash, llmgateway:kimi-k3, llmgateway:claude-sonnet-5,
+               llmgateway:gpt-5.2, mistral-large-4, mistral-medium-3.5, mistral-small-4,
+               mistral-large-3, openrouter:mistralai/mistral-large-4-0,
+               openrouter:mistralai/mistral-medium-3-5, openrouter:mistralai/mistral-small-2603,
+               openrouter:mistralai/mistral-large-2512, llmgateway:mistral-large-4,
+               llmgateway:mistral-medium-3-5, llmgateway:mistral-small-2603,
+               llmgateway:mistral-large-2512, grok-4.7, grok-4.6, grok-build-0.1,
+               opencode-go:kimi-k3, opencode-go:glm-5.3, opencode-go:qwen3.8-max,
+               opencode-go:deepseek-v4-pro, opencode-go:minimax-m3, opencode-go:mimo-v2.6-pro,
+               opencode-go:grok-4.7, opencode-go:gpt-6-luna, opencode:claude-opus-5-5,
+               opencode:claude-sonnet-5-5, opencode:gpt-6.1-sol, opencode:gemini-4-argon
+  opencode     claude-fable-5-1, claude-fable-5, claude-opus-5-5, claude-opus-5, claude-sonnet-5-5,
+               claude-sonnet-5 (default), claude-haiku-5-5, claude-haiku-4-5, gpt-6.1-sol,
+               gpt-6-sol, gpt-6-luna, gpt-5.6-terra, gpt-5.5, gpt-5.4, gpt-5.4-mini,
+               openrouter:anthropic/claude-sonnet-5.5, openrouter:anthropic/claude-opus-5.5,
+               openrouter:anthropic/claude-haiku-5.5, openrouter:openai/gpt-6.1-sol,
+               openrouter:openai/gpt-6-luna, openrouter:google/gemini-4-argon,
+               openrouter:x-ai/grok-4.7, openrouter:google/gemini-3.8-flash,
+               openrouter:google/gemini-3.7-flash, openrouter:google/gemini-3.6-flash,
+               openrouter:google/gemini-3.5-flash-lite, openrouter:z-ai/glm-5.3,
+               openrouter:z-ai/glm-5.3-flash, openrouter:moonshotai/kimi-k3,
+               openrouter:minimax/minimax-m3, openrouter:xiaomi/mimo-v2.6-pro,
+               openrouter:xiaomi/mimo-v2.6-flash, openrouter:qwen/qwen3.8-max-0902,
+               openrouter:deepseek/deepseek-v4.1-flash, openrouter:deepseek/deepseek-v4-flash-0731,
+               openrouter:deepseek/deepseek-v4-pro-0813, llmgateway:gemini-3.8-flash,
+               llmgateway:gemini-3.7-flash, llmgateway:gemini-3.5-flash-lite, llmgateway:glm-5.3,
+               llmgateway:glm-5.3-flash, llmgateway:kimi-k3, llmgateway:claude-sonnet-5,
+               llmgateway:gpt-5.2, mistral-large-4, mistral-medium-3.5, mistral-small-4,
+               mistral-large-3, openrouter:mistralai/mistral-large-4-0,
+               openrouter:mistralai/mistral-medium-3-5, openrouter:mistralai/mistral-small-2603,
+               openrouter:mistralai/mistral-large-2512, llmgateway:mistral-large-4,
+               llmgateway:mistral-medium-3-5, llmgateway:mistral-small-2603,
+               llmgateway:mistral-large-2512, grok-4.7, grok-4.6, grok-build-0.1,
+               opencode-go:kimi-k3, opencode-go:glm-5.3, opencode-go:qwen3.8-max,
+               opencode-go:deepseek-v4-pro, opencode-go:minimax-m3, opencode-go:mimo-v2.6-pro,
+               opencode-go:grok-4.7, opencode-go:gpt-6-luna, opencode:claude-opus-5-5,
+               opencode:claude-sonnet-5-5, opencode:gpt-6.1-sol, opencode:gemini-4-argon
+  prime        claude-fable-5-1, claude-fable-5, claude-opus-5-5, claude-opus-5, claude-sonnet-5-5,
+               claude-sonnet-5 (default), claude-haiku-5-5, claude-haiku-4-5, gpt-6.1-sol,
+               gpt-6-sol, gpt-6-luna, gpt-5.6-terra, gpt-5.5, gpt-5.4-mini,
+               openrouter:anthropic/claude-sonnet-5.5, openrouter:anthropic/claude-opus-5.5,
+               openrouter:anthropic/claude-haiku-5.5, openrouter:openai/gpt-6.1-sol,
+               openrouter:openai/gpt-6-luna, openrouter:google/gemini-4-argon,
+               openrouter:x-ai/grok-4.7, openrouter:google/gemini-3.8-flash,
+               openrouter:google/gemini-3.7-flash, openrouter:google/gemini-3.6-flash,
+               openrouter:google/gemini-3.5-flash-lite, openrouter:z-ai/glm-5.3,
+               openrouter:z-ai/glm-5.3-flash, openrouter:moonshotai/kimi-k3,
+               openrouter:minimax/minimax-m3, openrouter:xiaomi/mimo-v2.6-pro,
+               openrouter:xiaomi/mimo-v2.6-flash, openrouter:qwen/qwen3.8-max-0902,
+               openrouter:deepseek/deepseek-v4.1-flash, openrouter:deepseek/deepseek-v4-flash-0731,
+               openrouter:deepseek/deepseek-v4-pro-0813, llmgateway:gemini-3.8-flash,
+               llmgateway:gemini-3.7-flash, llmgateway:gemini-3.5-flash-lite, llmgateway:glm-5.3,
+               llmgateway:glm-5.3-flash, llmgateway:kimi-k3, llmgateway:claude-sonnet-5,
+               llmgateway:gpt-5.2, mistral-large-4, mistral-medium-3.5, mistral-small-4,
+               mistral-large-3, openrouter:mistralai/mistral-large-4-0,
+               openrouter:mistralai/mistral-medium-3-5, openrouter:mistralai/mistral-small-2603,
+               openrouter:mistralai/mistral-large-2512, llmgateway:mistral-large-4,
+               llmgateway:mistral-medium-3-5, llmgateway:mistral-small-2603,
+               llmgateway:mistral-large-2512, grok-4.7, grok-4.6, grok-build-0.1,
+               opencode:claude-opus-5-5, opencode:claude-sonnet-5-5, opencode:gpt-6.1-sol,
+               opencode:gemini-4-argon
+  kimi         k3 (default), k3-256k, kimi-for-coding, kimi-for-coding-highspeed, moonshot:kimi-k3,
+               moonshot:kimi-k2.7-code, moonshot:kimi-k2.7-code-highspeed, moonshot:kimi-k2.6
+  mistral      mistral-large-4 (default), mistral-medium-3.5, mistral-small-4
+
+Reasoning / thinking levels (grouped by the models that share them):
+  codex
+    low (default), medium, high, xhigh, max : gpt-6.2-sol, gpt-6.2-astra, gpt-6.1-sol, gpt-6-astra,
+                                              gpt-6-luna
+    low, medium (default), high, xhigh, max : gpt-6-sol
+    none (default), low, medium, high, xhigh, max : gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna,
+                                                    openai.gpt-5.6-terra, openai.gpt-5.6-sol,
+                                                    openai.gpt-5.6-luna
+    none (default), low, medium, high, xhigh : gpt-5.5, gpt-5.4, gpt-5.4-mini, openai.gpt-5.5,
+                                               openai.gpt-5.4, openai.gpt-5.5-2026-04-23,
+                                               openai.gpt-5.4-2026-03-05
+    low, medium (default), high, xhigh : gpt-5.3-codex
+    low, high (default)                : deepseek-flash, deepseek-v4-pro
+  claude
+    low, medium, high (default), xhigh, max : claude-fable-5-2, claude-fable-5-1, claude-fable-5,
+                                              opus-5-5, opus-5, opus, claude-sonnet-5-5,
+                                              us.anthropic.claude-fable-5-2
+    low, medium, high (default), xhigh : sonnet, opusplan
+    low, medium, high (default)        : claude-haiku-5-5, us.anthropic.claude-sonnet-4-6,
+                                         us.anthropic.claude-sonnet-4-5-20250929-v1:0,
+                                         us.anthropic.claude-sonnet-5
+    no thinking levels                 : haiku, us.anthropic.claude-haiku-4-5-20251001-v1:0
+    low, medium, high (default), max   : us.anthropic.claude-opus-4-6-v1,
+                                         us.anthropic.claude-opus-4-5-20251101-v1:0,
+                                         us.anthropic.claude-opus-5, us.anthropic.claude-fable-5-1,
+                                         us.anthropic.claude-fable-5, us.anthropic.claude-opus-4-8,
+                                         us.anthropic.claude-opus-4-7, deepseek-flash,
+                                         deepseek-v4-pro
+  pi
+    low, medium, high (default), xhigh, max : claude-fable-5-2, claude-fable-5-1, claude-fable-5,
+                                              claude-opus-5-5, claude-opus-5, claude-sonnet-5-5,
+                                              claude-sonnet-5
+    low, medium (default), high        : claude-haiku-5-5, claude-haiku-4-5,
+                                         openrouter:anthropic/claude-sonnet-5.5,
+                                         openrouter:anthropic/claude-opus-5.5,
+                                         openrouter:anthropic/claude-haiku-5.5,
+                                         openrouter:openai/gpt-6.1-sol,
+                                         openrouter:openai/gpt-6-luna,
+                                         openrouter:google/gemini-4-argon,
+                                         openrouter:google/gemini-3.8-flash,
+                                         openrouter:google/gemini-3.7-flash,
+                                         openrouter:google/gemini-3.6-flash,
+                                         openrouter:google/gemini-3.5-flash-lite,
+                                         llmgateway:gemini-3.8-flash, llmgateway:gemini-3.7-flash,
+                                         llmgateway:gemini-3.5-flash-lite
+    low, medium (default), high, xhigh, max : gpt-6.1-sol, gpt-6-sol, gpt-6-luna, gpt-5.6-terra,
+                                              llmgateway:claude-sonnet-5
+    low, medium (default), high, xhigh : gpt-5.5, gpt-5.4-mini, llmgateway:gpt-5.2
+    low, medium, high (default)        : openrouter:x-ai/grok-4.7, grok-4.7, grok-4.6
+    low, high (default), max           : openrouter:z-ai/glm-5.3, openrouter:z-ai/glm-5.3-flash,
+                                         openrouter:moonshotai/kimi-k3,
+                                         openrouter:deepseek/deepseek-v4.1-flash,
+                                         openrouter:deepseek/deepseek-v4-flash-0731,
+                                         openrouter:deepseek/deepseek-v4-pro-0813,
+                                         llmgateway:glm-5.3, llmgateway:glm-5.3-flash,
+                                         llmgateway:kimi-k3
+    low, high (default)                : openrouter:minimax/minimax-m3,
+                                         openrouter:xiaomi/mimo-v2.6-pro,
+                                         openrouter:xiaomi/mimo-v2.6-flash,
+                                         openrouter:qwen/qwen3.8-max-0902
+    high (default)                     : mistral-large-4, mistral-medium-3.5, mistral-small-4
+    no thinking levels                 : mistral-large-3, openrouter:mistralai/mistral-large-4-0,
+                                         openrouter:mistralai/mistral-medium-3-5,
+                                         openrouter:mistralai/mistral-small-2603,
+                                         openrouter:mistralai/mistral-large-2512,
+                                         llmgateway:mistral-large-4, llmgateway:mistral-medium-3-5,
+                                         llmgateway:mistral-small-2603,
+                                         llmgateway:mistral-large-2512, grok-build-0.1,
+                                         opencode-go:kimi-k3, opencode-go:glm-5.3,
+                                         opencode-go:qwen3.8-max, opencode-go:deepseek-v4-pro,
+                                         opencode-go:minimax-m3, opencode-go:mimo-v2.6-pro,
+                                         opencode-go:grok-4.7, opencode-go:gpt-6-luna,
+                                         opencode:claude-opus-5-5, opencode:claude-sonnet-5-5,
+                                         opencode:gpt-6.1-sol, opencode:gemini-4-argon
+  opencode
+    no thinking levels : claude-fable-5-1, claude-fable-5, claude-opus-5-5, claude-opus-5,
+                         claude-sonnet-5-5, claude-sonnet-5, claude-haiku-5-5, claude-haiku-4-5,
+                         gpt-6.1-sol, gpt-6-sol, gpt-6-luna, gpt-5.6-terra, gpt-5.5, gpt-5.4,
+                         gpt-5.4-mini, openrouter:anthropic/claude-sonnet-5.5,
+                         openrouter:anthropic/claude-opus-5.5,
+                         openrouter:anthropic/claude-haiku-5.5, openrouter:openai/gpt-6.1-sol,
+                         openrouter:openai/gpt-6-luna, openrouter:google/gemini-4-argon,
+                         openrouter:x-ai/grok-4.7, openrouter:google/gemini-3.8-flash,
+                         openrouter:google/gemini-3.7-flash, openrouter:google/gemini-3.6-flash,
+                         openrouter:google/gemini-3.5-flash-lite, openrouter:z-ai/glm-5.3,
+                         openrouter:z-ai/glm-5.3-flash, openrouter:moonshotai/kimi-k3,
+                         openrouter:minimax/minimax-m3, openrouter:xiaomi/mimo-v2.6-pro,
+                         openrouter:xiaomi/mimo-v2.6-flash, openrouter:qwen/qwen3.8-max-0902,
+                         openrouter:deepseek/deepseek-v4.1-flash,
+                         openrouter:deepseek/deepseek-v4-flash-0731,
+                         openrouter:deepseek/deepseek-v4-pro-0813, llmgateway:gemini-3.8-flash,
+                         llmgateway:gemini-3.7-flash, llmgateway:gemini-3.5-flash-lite,
+                         llmgateway:glm-5.3, llmgateway:glm-5.3-flash, llmgateway:kimi-k3,
+                         llmgateway:claude-sonnet-5, llmgateway:gpt-5.2, mistral-large-4,
+                         mistral-medium-3.5, mistral-small-4, mistral-large-3,
+                         openrouter:mistralai/mistral-large-4-0,
+                         openrouter:mistralai/mistral-medium-3-5,
+                         openrouter:mistralai/mistral-small-2603,
+                         openrouter:mistralai/mistral-large-2512, llmgateway:mistral-large-4,
+                         llmgateway:mistral-medium-3-5, llmgateway:mistral-small-2603,
+                         llmgateway:mistral-large-2512, grok-4.7, grok-4.6, grok-build-0.1,
+                         opencode-go:kimi-k3, opencode-go:glm-5.3, opencode-go:qwen3.8-max,
+                         opencode-go:deepseek-v4-pro, opencode-go:minimax-m3,
+                         opencode-go:mimo-v2.6-pro, opencode-go:grok-4.7, opencode-go:gpt-6-luna,
+                         opencode:claude-opus-5-5, opencode:claude-sonnet-5-5, opencode:gpt-6.1-sol,
+                         opencode:gemini-4-argon
+  prime
+    low, medium, high (default), xhigh, max : claude-fable-5-1, claude-fable-5, claude-opus-5-5,
+                                              claude-opus-5, claude-sonnet-5-5, claude-sonnet-5
+    low, medium (default), high        : claude-haiku-5-5, claude-haiku-4-5,
+                                         openrouter:anthropic/claude-sonnet-5.5,
+                                         openrouter:anthropic/claude-opus-5.5,
+                                         openrouter:anthropic/claude-haiku-5.5,
+                                         openrouter:openai/gpt-6.1-sol,
+                                         openrouter:openai/gpt-6-luna,
+                                         openrouter:google/gemini-4-argon,
+                                         openrouter:google/gemini-3.8-flash,
+                                         openrouter:google/gemini-3.7-flash,
+                                         openrouter:google/gemini-3.6-flash,
+                                         openrouter:google/gemini-3.5-flash-lite,
+                                         llmgateway:gemini-3.8-flash, llmgateway:gemini-3.7-flash,
+                                         llmgateway:gemini-3.5-flash-lite
+    low, medium (default), high, xhigh, max : gpt-6.1-sol, gpt-6-sol, gpt-6-luna, gpt-5.6-terra,
+                                              llmgateway:claude-sonnet-5
+    low, medium (default), high, xhigh : gpt-5.5, gpt-5.4-mini, llmgateway:gpt-5.2
+    low, medium, high (default)        : openrouter:x-ai/grok-4.7, grok-4.7, grok-4.6
+    low, high (default), max           : openrouter:z-ai/glm-5.3, openrouter:z-ai/glm-5.3-flash,
+                                         openrouter:moonshotai/kimi-k3,
+                                         openrouter:deepseek/deepseek-v4.1-flash,
+                                         openrouter:deepseek/deepseek-v4-flash-0731,
+                                         openrouter:deepseek/deepseek-v4-pro-0813,
+                                         llmgateway:glm-5.3, llmgateway:glm-5.3-flash,
+                                         llmgateway:kimi-k3
+    low, high (default)                : openrouter:minimax/minimax-m3,
+                                         openrouter:xiaomi/mimo-v2.6-pro,
+                                         openrouter:xiaomi/mimo-v2.6-flash,
+                                         openrouter:qwen/qwen3.8-max-0902
+    no thinking levels                 : mistral-large-4, mistral-medium-3.5, mistral-small-4,
+                                         mistral-large-3, openrouter:mistralai/mistral-large-4-0,
+                                         openrouter:mistralai/mistral-medium-3-5,
+                                         openrouter:mistralai/mistral-small-2603,
+                                         openrouter:mistralai/mistral-large-2512,
+                                         llmgateway:mistral-large-4, llmgateway:mistral-medium-3-5,
+                                         llmgateway:mistral-small-2603,
+                                         llmgateway:mistral-large-2512, grok-build-0.1,
+                                         opencode:claude-opus-5-5, opencode:claude-sonnet-5-5,
+                                         opencode:gpt-6.1-sol, opencode:gemini-4-argon
+  kimi
+    low, high, max (default) : k3, k3-256k
+    no thinking levels       : kimi-for-coding, kimi-for-coding-highspeed, moonshot:kimi-k2.7-code,
+                               moonshot:kimi-k2.7-code-highspeed
+    low, high (default), max : moonshot:kimi-k3
+    none, high (default)     : moonshot:kimi-k2.6
+  mistral
+    none, high (default) : mistral-large-4, mistral-medium-3.5, mistral-small-4
+
+Fast mode (--fast):
+  codex        gpt-6.2-sol, gpt-6.2-astra, gpt-6.1-sol, gpt-6-astra, gpt-6-luna, gpt-6-sol,
+               gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna, gpt-5.5
+  claude       opus-5-5, opus-5, opus
+
+Ultrafast (--ultrafast):
+  codex        gpt-6.2-sol, gpt-6.2-astra, gpt-6.1-sol, gpt-6-astra
+
+If --provider is omitted, Boat uses the default harness selected in the Agents dashboard.
+If --model is omitted, Boat uses the default model selected there.
+Docs:
+  CLI reference:     https://docs.boat.dev/cli-reference
+  Programmatic use:  https://docs.boat.dev/sdks/overview
+  Environment:       https://boat.dev/dashboard?tab=environment
+  All docs:          https://docs.boat.dev
+

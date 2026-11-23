@@ -1,0 +1,75 @@
+# Red (openwizdev/openwiz#1996, planner ruling J318): the effort test against the driver before it declares that Devin
+# can't set effort. Agent CLIs stubbed first on PATH; synthetic fake Devin; no host reached.
+# Run: python3 -I adapters/devin/test_driver.py -k effort
+
+FFFF
+======================================================================
+FAIL: test_a_start_with_an_effort_is_refused_and_nothing_starts (__main__.Driver.test_a_start_with_an_effort_is_refused_and_nothing_starts) (effort='medium')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/devin/test_driver.py", line 137, in test_a_start_with_an_effort_is_refused_and_nothing_starts
+    self.assertEqual((code, out['next']), (1, CANT_SET_EFFORT))
+AssertionError: Tuples differ: (1, 'send only those fields; never a login') != (1, "this host can't set effort: remove the e[82 chars]ult")
+
+First differing element 1:
+'send only those fields; never a login'
+"this host can't set effort: remove the e[81 chars]ault"
+
+- (1, 'send only those fields; never a login')
++ (1,
++  "this host can't set effort: remove the effort for this harness in your "
++  "Models table or Roster to run it at the host's default")
+
+======================================================================
+FAIL: test_a_start_with_an_effort_is_refused_and_nothing_starts (__main__.Driver.test_a_start_with_an_effort_is_refused_and_nothing_starts) (effort='max')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/devin/test_driver.py", line 137, in test_a_start_with_an_effort_is_refused_and_nothing_starts
+    self.assertEqual((code, out['next']), (1, CANT_SET_EFFORT))
+AssertionError: Tuples differ: (1, 'send only those fields; never a login') != (1, "this host can't set effort: remove the e[82 chars]ult")
+
+First differing element 1:
+'send only those fields; never a login'
+"this host can't set effort: remove the e[81 chars]ault"
+
+- (1, 'send only those fields; never a login')
++ (1,
++  "this host can't set effort: remove the effort for this harness in your "
++  "Models table or Roster to run it at the host's default")
+
+======================================================================
+FAIL: test_a_start_with_an_effort_is_refused_and_nothing_starts (__main__.Driver.test_a_start_with_an_effort_is_refused_and_nothing_starts) (effort='Not A Word')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/devin/test_driver.py", line 137, in test_a_start_with_an_effort_is_refused_and_nothing_starts
+    self.assertEqual((code, out['next']), (1, CANT_SET_EFFORT))
+AssertionError: Tuples differ: (1, 'send only those fields; never a login') != (1, "this host can't set effort: remove the e[82 chars]ult")
+
+First differing element 1:
+'send only those fields; never a login'
+"this host can't set effort: remove the e[81 chars]ault"
+
+- (1, 'send only those fields; never a login')
++ (1,
++  "this host can't set effort: remove the effort for this harness in your "
++  "Models table or Roster to run it at the host's default")
+
+======================================================================
+FAIL: test_a_start_with_an_effort_is_refused_and_nothing_starts (__main__.Driver.test_a_start_with_an_effort_is_refused_and_nothing_starts)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/devin/test_driver.py", line 148, in test_a_start_with_an_effort_is_refused_and_nothing_starts
+    self.assertEqual((lines[login + 1], lines[login + 2][:35]), ('', "Effort: the host can't set it (Devi"))
+AssertionError: Tuples differ: ('', '- The key is your own `DEVIN_API_KE') != ('', "Effort: the host can't set it (Devi")
+
+First differing element 1:
+'- The key is your own `DEVIN_API_KE'
+"Effort: the host can't set it (Devi"
+
+- ('', '- The key is your own `DEVIN_API_KE')
++ ('', "Effort: the host can't set it (Devi")
+
+----------------------------------------------------------------------
+Ran 1 test in 0.135s
+
+FAILED (failures=4)

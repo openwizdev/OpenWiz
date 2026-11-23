@@ -6,12 +6,17 @@ import importlib.util
 import json
 import os
 import re
+import stat
+import subprocess
 import sys
 import tempfile
 
 sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.realpath(os.path.join(HERE, '..', '..'))
 KIT = os.path.join(HERE, '..', 'driver-kit', 'kit.py')
+RIG = os.path.join(HERE, 'rig.py')
+HOST_FOLDERS = ('kernel/live-rig/hosts', 'kernel/live-rig/vps/hosts')
 LISTINGS = os.path.join(HERE, 'listings.json')
 REPO = 'openwizdev/OpenWiz'
 KEYS = {'host', 'harness', 'model', 'date', 'driver_commit', 'kit_commit', 'outcome', 'skipped', 'kit_exit',
@@ -28,12 +33,17 @@ DATE = re.compile(r'[0-9]{4}-[0-9]{2}-[0-9]{2}\Z', re.ASCII)
 PUBLIC_TOKEN = re.compile(r'[a-z0-9][a-z0-9._-]{0,59}\Z', re.ASCII)
 LISTING_ID = re.compile(r'[a-z0-9-]{2,40}\Z', re.ASCII)
 LOGIN = re.compile(r'[A-Za-z0-9](?:-?[A-Za-z0-9]){0,38}\Z', re.ASCII)
-PRIVATE_ID = re.compile(r'\b(?:thr_[A-Za-z0-9]|(?:proj|prj|mch|usr|acct|auto)_[A-Za-z0-9]|cr_[0-9A-Za-z])', re.ASCII)
+PRIVATE_ID = re.compile(r'\b(?:thr_[A-Za-z0-9]|(?:proj|prj|mch|usr|acct|auto)_[A-Za-z0-9]|cr_[0-9A-Za-z]'
+                        r'|[0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12}\b)', re.ASCII)
+MAX_RECORD = 65536
 USAGE = 'usage: receipt.py <run record> --listing <id> --run-by <login> -o <dir>'
 UNREADABLE = 'the run record is not readable JSON with each key once'
 INCONSISTENT = 'the run record is not a consistent ran or skipped record'
 EXISTS = 'a receipt is already at its path; the first one is kept'
 UNWRITTEN = 'the receipt could not be written'
+NOT_CONFIGURED = 'the run record host, harness and model are not one runs entry of a tracked host config'
+UNREAD_HOSTS = 'the tracked host configs could not be read'
+BAD_HOST = 'a tracked host config is not a valid host config'
 
 
 class Refused(Exception):
@@ -49,11 +59,52 @@ class Args(argparse.ArgumentParser):
         raise Usage()
 
 
-def kit():
-    spec = importlib.util.spec_from_loader('kit', importlib.machinery.SourceFileLoader('kit', KIT))
+def source(name, path):
+    spec = importlib.util.spec_from_loader(name, importlib.machinery.SourceFileLoader(name, path))
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def kit():
+    return source('kit', KIT)
+
+
+def git(*args):
+    env = {k: v for k, v in os.environ.items() if not k.startswith('GIT_')}
+    try:
+        p = subprocess.run(['git', '-C', ROOT, '-c', 'core.fsmonitor=false'] + list(args), stdin=subprocess.DEVNULL,
+                           capture_output=True, env=env, timeout=60)
+    except (OSError, subprocess.TimeoutExpired):
+        raise Refused(UNREAD_HOSTS)
+    if p.returncode:
+        raise Refused(UNREAD_HOSTS)
+    return p.stdout.decode('utf-8', 'surrogateescape')
+
+
+def configured():
+    if git('rev-parse', '--show-toplevel').strip() != ROOT:
+        raise Refused(UNREAD_HOSTS)
+    changed = set(git('diff', '--name-only', '-z', '--no-renames', 'HEAD', '--', *HOST_FOLDERS).split('\0'))
+    rig = source('rig', RIG)
+    triples = set()
+    for entry in git('ls-files', '-s', '-z', '--', *HOST_FOLDERS).split('\0'):
+        meta, _, rel = entry.partition('\t')
+        if not rel.endswith('.json') or os.path.dirname(rel) not in HOST_FOLDERS or rel in changed:
+            continue
+        path = os.path.join(ROOT, rel)
+        if meta.split(' ')[0] not in ('100644', '100755') or os.path.realpath(path) != path:
+            continue
+        try:
+            if not stat.S_ISREG(os.lstat(path).st_mode):
+                continue
+            host = rig.load_host(path)
+        except OSError:
+            continue
+        except rig.Refused:
+            raise Refused(BAD_HOST)
+        triples.update((host['host'], r['harness'], r['model']) for r in host['runs'])
+    return triples
 
 
 def is_int(v):
@@ -74,8 +125,14 @@ def no_constant(name):
 def load(path):
     try:
         with open(path, 'rb') as f:
-            return json.loads(f.read().decode('utf-8'), object_pairs_hook=once_each, parse_constant=no_constant)
-    except (OSError, ValueError):
+            data = f.read(MAX_RECORD + 1)
+    except OSError:
+        raise Refused(UNREADABLE)
+    if len(data) > MAX_RECORD:
+        raise Refused('the run record is larger than 64 KiB')
+    try:
+        return json.loads(data.decode('utf-8'), object_pairs_hook=once_each, parse_constant=no_constant)
+    except (ValueError, RecursionError):
         raise Refused(UNREADABLE)
 
 
@@ -103,7 +160,7 @@ def checked(rec):
     if skipped:
         raise Refused('the run record is a skipped run')
     if rec['kit_exit'] != 0:
-        raise Refused('kit.py exited %d, not 0' % rec['kit_exit'])
+        raise Refused('kit.py exited non-zero, not 0')
     for key in ('harness', 'model'):
         if not isinstance(rec[key], str) or not PUBLIC_TOKEN.match(rec[key]):
             raise Refused('the run record %s is not a public token' % key)
@@ -121,7 +178,7 @@ def kit_lines(stdout):
         raise Refused("kit.py's stdout does not end in a newline")
     lines = lines[:-1]
     if len(lines) != 5:
-        raise Refused("kit.py's stdout has %d lines, not its five" % len(lines))
+        raise Refused("kit.py's stdout does not have its five lines")
     names = [re.match(r'(?:pass|fail) (\w+): ', l, re.ASCII) for l in lines]
     if None in names:
         raise Refused("kit.py's stdout holds a line that is not a check line")
@@ -134,17 +191,21 @@ def kit_lines(stdout):
             raise Refused("the %s line is withheld in the run record; a receipt needs kit.py's line" % name)
     passed = sum(l.startswith('pass ') for l in lines)
     if passed != 5:
-        raise Refused('the run is %d of 5 pass, not 5 of 5' % passed)
+        raise Refused('the run is not 5 of 5 pass')
     out = []
+    notes = set()
     for name, line in zip(CHECKS, lines):
         if name in KIT_NOTE_PASS:
             prefix = KIT_NOTE_PASS[name]
             if not (line.startswith(prefix) and NOTE_ID.match(line[len(prefix):])):
                 raise Refused("the %s line is not kit.py's passing %s line" % (name, name))
+            notes.add(line[len(prefix):])
             line = prefix + '<note>'
         elif line != KIT_PASS[name]:
             raise Refused("the %s line is not kit.py's passing %s line" % (name, name))
         out.append(line)
+    if len(notes) != 1:
+        raise Refused('the start and wake lines name different builder status notes')
     return out
 
 
@@ -181,6 +242,8 @@ def receipt(rec, listing, run_by):
             raise Refused('line %d holds a private id' % n)
         if line != KIT_PASS['token'] and k.holds_credential(line):
             raise Refused('line %d holds a credential shape' % n)
+    if (rec['host'], rec['harness'], rec['model']) not in configured():
+        raise Refused(NOT_CONFIGURED)
     path = os.path.join('receipts', listing, '%s-%s.txt' % (rec['date'], rec['driver_commit'][:12]))
     return path, ''.join(l + '\n' for l in lines).encode('utf-8')
 

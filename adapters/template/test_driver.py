@@ -17,7 +17,7 @@ DRIVER = os.path.join(HERE, 'driver')
 NO_PROC = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'fixtures', 'no-proc')
 REPO = os.path.realpath(os.path.join(HERE, '..', '..'))
 HARNESSES = ('claude', 'claude-code', 'codex', 'gemini', 'opencode', 'openclaw', 'cursor-agent', 'amp', 'aider',
-             'goose')
+             'goose', 'pi')
 TOOLS = ('sh', 'ps', 'lsof', 'awk', 'sleep', 'dirname')
 START = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'fake-harness',
          'model': 'Synthetic 1'}
@@ -38,6 +38,16 @@ def broken(req, run, woken):
         os.chmod(t.STATE, 0o500)
     return pid
 t.launch = broken
+t.main()
+'''
+REFUSAL = ("this host can't set effort: remove the effort for this harness in your Models table or Roster to run it "
+           "at the host's default")
+CANT_FORM = '''import importlib.machinery, importlib.util, sys
+sys.dont_write_bytecode = True
+spec = importlib.util.spec_from_loader('template', importlib.machinery.SourceFileLoader('template', %r))
+t = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(t)
+t.VERSION['can'] = [c for c in t.VERSION['can'] if c != 'effort']
 t.main()
 '''
 PAUSES_AFTER_CHECK = '''import importlib.machinery, importlib.util, os, sys, time
@@ -185,6 +195,124 @@ class Template(unittest.TestCase):
                          os.path.join(HERE, 'fixtures', 'fake-harness'))
         with self.assertRaisesRegex(AssertionError, 'could launch a real harness'):
             self.call('start', dict(START, harness='claude'), PATH=outside + os.pathsep + self.env['PATH'])
+
+    def args(self, count=0):
+        deadline = time.monotonic() + 10
+        while True:
+            try:
+                with open(self.env['FAKE_ARGS']) as f:
+                    found = [json.loads(line) for line in f]
+            except FileNotFoundError:
+                found = []
+            if len(found) >= count or time.monotonic() > deadline:
+                return found
+            time.sleep(0.05)
+
+    def effort_in(self, args):
+        return [args[i + 1] for i, a in enumerate(args[:-1]) if a == '--effort']
+
+    def nothing_started(self):
+        time.sleep(0.5)
+        state = self.env['OPENWIZ_TEMPLATE_STATE']
+        return (self.logged(), self.marked(), os.listdir(state) if os.path.isdir(state) else []) == ([], [], [])
+
+    def test_version_lists_effort_and_the_readme_says_how_under_its_login_line(self):
+        code, version = self.call('version', {})
+        self.assertEqual(code, 0, version)
+        self.assertIn('effort', version['can'])
+        lines = read(os.path.join(HERE, 'README.md')).splitlines()
+        login = next(i for i, line in enumerate(lines) if line.startswith('Login:'))
+        self.assertEqual(lines[login + 1], "Effort: passed as each harness's own flag, for the harnesses and levels "
+                                           'in the table below; any other harness or level is refused')
+        rows = {}
+        for line in lines[login + 2:]:
+            if line.startswith('|'):
+                cells = [c.strip() for c in line.strip().strip('|').split('|')]
+                rows[cells[0]] = cells[1]
+            elif rows:
+                break
+        self.assertEqual(rows['`fake-harness`'], '`--effort <level>`, for low, medium, high, xhigh and max')
+        self.assertTrue(rows['`pi`'].startswith("can't ("), rows)
+        self.assertTrue(rows['any other harness'].startswith("can't ("), rows)
+
+    def test_start_passes_its_effort_to_the_harness_and_wake_passes_it_again(self):
+        for effort in ('low', 'medium', 'high', 'xhigh', 'max'):
+            with self.subTest(effort=effort):
+                self.env['FAKE_ARGS'] = os.path.join(self.folder, 'args-' + effort)
+                self.turns = self.env['FAKE_TURNS'] = os.path.join(self.folder, 'turns-' + effort)
+                code, out = self.call('start', dict(START, effort=effort))
+                self.assertEqual(code, 0, out)
+                [first] = self.args(1)
+                self.assertEqual(self.effort_in(first), [effort], first)
+                [(turn, _, _)] = self.logged(1)
+                self.assertTrue(self.until(lambda: not alive(turn)), 'the fake turn did not end')
+                self.assertEqual(self.call('wake', out), (0, dict(out, woke=True)))
+                self.assertEqual(len(self.args(2)), 2, 'the wake started no turn')
+                self.assertEqual(self.effort_in(self.args()[1]), [effort], 'the wake dropped the effort')
+                self.assertEqual(self.call('stop', out), (0, dict(out, stopped=True)))
+
+    def test_start_without_effort_passes_none(self):
+        self.env['FAKE_ARGS'] = os.path.join(self.folder, 'args')
+        code, out = self.call('start', START)
+        self.assertEqual(code, 0, out)
+        [args] = self.args(1)
+        self.assertNotIn('--effort', args)
+        self.assertEqual(self.call('stop', out), (0, dict(out, stopped=True)))
+
+    def test_an_effort_it_does_not_pass_is_refused_and_nothing_starts(self):
+        for effort in ('turbo', 'minimal', 'none', 'medium-high'):
+            with self.subTest(effort=effort):
+                code, out = self.call('start', dict(START, effort=effort))
+                self.assertEqual(code, 1, out)
+                self.assertEqual(out['next'], REFUSAL)
+                self.assertIn('fake-harness', out['error'])
+                self.assertIn(effort, out['error'])
+                self.assertTrue(self.nothing_started(), 'a refused effort started something')
+
+    def test_a_harness_it_does_not_pass_effort_to_is_refused_and_nothing_starts(self):
+        for harness in ('pi', 'fake-other'):
+            with self.subTest(harness=harness):
+                code, out = self.call('start', dict(START, harness=harness, effort='medium'))
+                self.assertEqual(code, 1, out)
+                self.assertEqual(out['next'], REFUSAL)
+                self.assertIn(harness, out['error'])
+                self.assertIn('medium', out['error'])
+                self.assertTrue(self.nothing_started(), 'a refused harness started something')
+
+    def test_a_harness_without_effort_still_starts_at_its_default(self):
+        self.env['FAKE_ARGS'] = os.path.join(self.folder, 'args')
+        code, out = self.call('start', dict(START, harness='pi'))
+        self.assertEqual(code, 0, out)
+        [args] = self.args(1)
+        self.assertNotIn('--effort', args)
+        self.assertEqual(self.call('stop', out), (0, dict(out, stopped=True)))
+
+    def test_an_effort_that_is_not_a_word_is_refused_as_input(self):
+        for effort in ('Medium', '', 'x' * 21, 7, None):
+            with self.subTest(effort=effort):
+                code, out = self.call('start', dict(START, effort=effort))
+                self.assertEqual(code, 1, out)
+                self.assertEqual(out, {'error': 'effort is not valid', 'next': 'fix effort as `driver schema` shows'})
+                self.assertTrue(self.nothing_started(), 'an invalid effort started something')
+
+    def test_the_cant_form_leaves_effort_out_of_can_and_refuses_it_as_input(self):
+        driver = self.wrapper('cant-form', CANT_FORM)
+        code, version = self.call('version', {}, driver=driver)
+        self.assertEqual((code, version['can']), (0, ['start', 'wake', 'stop']))
+        code, out = self.call('start', dict(START, effort='medium'), driver=driver)
+        self.assertEqual(code, 1, out)
+        self.assertNotEqual(out['next'], REFUSAL, "the can't form answered as if it could set some effort")
+        self.assertIn('the input needs exactly', out['error'])
+        self.assertTrue(self.nothing_started(), "the can't form started a run with an effort")
+        self.env['FAKE_ARGS'] = os.path.join(self.folder, 'args')
+        code, out = self.call('start', START, driver=driver)
+        self.assertEqual(code, 0, out)
+        [args] = self.args(1)
+        self.assertNotIn('--effort', args)
+        self.assertEqual(self.call('stop', out, driver=driver), (0, dict(out, stopped=True)))
+        readme = read(os.path.join(HERE, 'README.md'))
+        self.assertIn('drop `effort` from `can`', readme)
+        self.assertIn("Effort: the host can't set it (<why>)", readme)
 
     def test_stop_ends_what_the_turn_left_behind_after_it_exits(self):
         code, out = self.call('start', START)

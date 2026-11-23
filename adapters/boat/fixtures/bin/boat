@@ -97,13 +97,12 @@ def note(conversation, woken, model, skill):
 
 
 def prompt(args):
-    # boat prompt <id> (--new | --resume <conversation>) --provider <p> --model <m> --json <text>
     m = re.fullmatch(r'(\S+)\x00(?:--new|--resume\x00(\S+))\x00--provider\x00(\S+)\x00--model\x00([^\x00]+)'
-                     r'\x00--json\x00([^\x00]+)', '\x00'.join(args))
+                     r'(?:\x00--reasoning-effort\x00([a-z][a-z0-9-]*))?\x00--json\x00([^\x00]+)', '\x00'.join(args))
     if not m:
         print('boat prompt: unexpected arguments', file=sys.stderr)
         sys.exit(2)
-    sid, resume, provider, model, text = m.groups()
+    sid, resume, provider, model, _, text = m.groups()
     if provider not in PROVIDERS:
         fail('provider_not_configured', 'connect a %s key or subscription first' % provider)
     skill = re.search(r'the ([a-z0-9-]+) skill', text).group(1)
@@ -212,6 +211,16 @@ def main():
         say(event='ready' if cmd == 'resume' else 'done', id=rest[0])
     elif cmd == 'exec':
         run_in_sandbox(rest)
+    elif cmd == 'prompt' and rest == ['--help', '--no-update']:
+        how = os.environ.get('FAKE_BOAT_HELP')
+        name = {'live': 'prompt-help-1.0.105.txt', 'truncated': 'prompt-help-truncated.txt'}.get(how, 'prompt-help.txt')
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', name)) as f:
+            text = f.read()
+        if how in ('bare', 'headed'):
+            text = text.split('Reasoning / thinking levels')[0]
+            if how == 'headed':
+                text += 'Reasoning / thinking levels (grouped by the models that share them):\n  claude\n'
+        print(text, end='')
     elif cmd == 'prompt':
         prompt(rest)
     else:

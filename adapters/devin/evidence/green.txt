@@ -1,0 +1,36 @@
+# Green (openwizdev/openwiz#1996) at f235808a, on KY1's 2292b177, after review R1 and R2: the Devin driver's tests (the kit's five
+# checks with its key check, the uncertain-create and effort refusals, on the synthetic fake Devin) and the release tests,
+# the installed kit's Devin key check included. Agent CLIs (devin included) stubbed first on PATH; run as
+# env -u OPENWIZ_GITHUB_APP_KEY; synthetic; no host reached. test_package.py's compiled-programs test needs rustc (CI has it).
+
+$ python3 -I adapters/devin/test_driver.py -v
+test_a_host_refusal_is_an_error_and_a_failed_stop_is_tried_again (__main__.Driver.test_a_host_refusal_is_an_error_and_a_failed_stop_is_tried_again) ... ok
+test_a_start_with_an_effort_is_refused_and_nothing_starts (__main__.Driver.test_a_start_with_an_effort_is_refused_and_nothing_starts) ... ok
+test_an_uncertain_create_is_never_retried_and_a_confirmed_refusal_is_told_apart (__main__.Driver.test_an_uncertain_create_is_never_retried_and_a_confirmed_refusal_is_told_apart) ... ok
+test_kit_passes_all_five_with_its_key_check (__main__.Driver.test_kit_passes_all_five_with_its_key_check) ... ok
+test_model_harness_and_organization_are_checked_before_any_call (__main__.Driver.test_model_harness_and_organization_are_checked_before_any_call) ... ok
+test_start_wake_and_stop_are_devins_documented_calls (__main__.Driver.test_start_wake_and_stop_are_devins_documented_calls) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 3.035s
+
+OK
+
+$ python3 -I tools/release/test_package.py -v
+test_all_targets_assemble_then_install_complete_matching_products (__main__.Package.test_all_targets_assemble_then_install_complete_matching_products) ... ok
+test_compiled_programs_answer_their_identity_query_without_effects (__main__.Package.test_compiled_programs_answer_their_identity_query_without_effects) ... ERROR
+test_identity_query_spy_records_a_call_whose_failure_is_ignored (__main__.Package.test_identity_query_spy_records_a_call_whose_failure_is_ignored) ... ok
+test_installed_boat_driver_finds_the_wizskills_pin (__main__.Package.test_installed_boat_driver_finds_the_wizskills_pin) ... ok
+test_installed_build_carries_the_wizskills_root_files_its_skills_read (__main__.Package.test_installed_build_carries_the_wizskills_root_files_its_skills_read) ... ok
+test_installed_platform_and_private_key_contracts (__main__.Package.test_installed_platform_and_private_key_contracts) ... ok
+test_native_product_collector_checks_the_executable_architecture (__main__.Package.test_native_product_collector_checks_the_executable_architecture) ... ok
+test_runtime_carries_exactly_the_selected_drivers_and_kit_where_the_caller_finds_them (__main__.Package.test_runtime_carries_exactly_the_selected_drivers_and_kit_where_the_caller_finds_them) ... ok
+ERROR: test_compiled_programs_answer_their_identity_query_without_effects (__main__.Package.test_compiled_programs_answer_their_identity_query_without_effects)
+FileNotFoundError: [Errno 2] No such file or directory: 'rustc'
+Ran 8 tests in 14.362s
+FAILED (errors=1)
+
+$ python3 -I tools/release/test_product_identity.py
+Ran 17 tests in 5.231s
+
+OK

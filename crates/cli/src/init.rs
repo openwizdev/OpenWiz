@@ -126,6 +126,7 @@ fn text(report: &serde_json::Value, out: &mut dyn Write) -> std::io::Result<()> 
             Some("create_companion") => "Create the private companion",
             Some("link_companion") => "Link the companion to the code",
             Some("create_label") => "Create the missing openwiz and workflow labels",
+            Some("merge_pull_request") => "Merge the brain's pull request",
             _ => "Open the brain's pull request",
         };
         writeln!(

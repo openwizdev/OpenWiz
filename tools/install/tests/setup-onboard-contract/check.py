@@ -385,6 +385,12 @@ def _init(doc, p, f, u):
             f.append('blind_retry:' + e['kind'])
         if phase == 'uncertain':
             u.append('effect_uncertain:' + e['kind'])
+        if e['kind'] == 'merge_pull_request':
+            made = [c for c in effects if c['kind'] == 'create_companion' and _same(c['repository'], e['repository'])]
+            states = [pr['state'] for pr in doc['pull_requests'] if _same(pr['repository'], e['repository'])]
+            if (visibility != 'public' or not made or (e['attempts'] and made[0]['phase'] != 'applied')
+                    or (phase == 'applied' and states != ['merged'])):
+                p.append('phase_effect_mismatch:merge_pull_request')
     if outcome == 'uncertain':
         u.append('outcome_uncertain')
 

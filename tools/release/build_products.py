@@ -17,9 +17,10 @@ from product_identity import PROGRAMS as COMPILED, WIZSKILLS, architecture, cano
 
 # #1699: the drivers 0.1.0 launches with (KN3 to KN5), each carried when the source tracks it,
 # and the driver kit's files (kit.py reads its schema, ../records.v1.md and ../records-kit/check.py).
-DRIVERS = ('boat', 'cloudroom', 'local', 'ona', 'openclaw')
+DRIVERS = ('boat', 'cloudroom', 'devin', 'local', 'ona', 'openclaw')
+KEY_CHECK_FILES = {'devin': ('README.md', 'fixtures/kit-host.json')}
 KIT = ['kernel/driver-kit/kit.py', 'kernel/driver-kit/schema.json', 'kernel/records-kit/check.py',
-       'kernel/records.v1.md']
+       'kernel/records.v1.md', 'kernel/driver-kit/hostkey.py', 'kernel/driver-kit/hosts.json']
 
 
 def collect(root, binaries, output, version, source, target, program_receipt):
@@ -95,7 +96,7 @@ def collect(root, binaries, output, version, source, target, program_receipt):
     tracked = set(git(root, 'ls-tree', '-r', '-z', '--name-only', '--end-of-options', source,
                       '--', 'adapters', 'kernel').decode('utf-8').split('\0'))
     selected = [f'adapters/{host}/{name}' for host in DRIVERS if f'adapters/{host}/driver' in tracked
-                for name in ('driver', 'schema.json')]
+                for name in ('driver', 'schema.json') + KEY_CHECK_FILES.get(host, ())]
     if 'kernel/driver-kit/kit.py' in tracked:
         selected += KIT
     for path in selected:
