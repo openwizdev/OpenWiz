@@ -39,7 +39,5 @@ if session is None and args[:1] == ['--thinking'] and len(args) == 2 and args[1]
     args = []
 if args:
     fake_cli.refuse()
-if os.environ.get('FAKE_VIBE_SIGNED_OUT'):
-    print('Error: Missing MISTRAL_API_KEY environment variable for mistral provider', file=sys.stderr)
-    sys.exit(1)
-fake_cli.turn(prompt, model, session, lambda sid: history(sid, prompt), daemon='tree')
+fake_cli.turn(prompt, model, session, lambda sid: history(sid, prompt), daemon='tree',
+              signed_out='Error: Missing MISTRAL_API_KEY environment variable for mistral provider')

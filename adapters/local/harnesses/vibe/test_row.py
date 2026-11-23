@@ -27,14 +27,15 @@ def not_installed():
 
 def not_signed_in():
     with machine() as env:
-        code, out = env.start(FAKE_VIBE_SIGNED_OUT='1')
+        code, out = env.start(FAKE_CLI_SIGNED_OUT='1')
         logs = [f for f in os.listdir(env.state) if f.endswith('.log')]
         if len(logs) != 1:
             return False
         with open(os.path.join(env.state, logs[0])) as f:
             log = f.read()
-        return code == 1 and th.kit.invalid(out, th.ERROR) is None and 'ended at once' in out['error'] and \
-            out['next'].startswith('read ') and 'Missing MISTRAL_API_KEY' in log
+        return code == 1 and th.kit.invalid(out, th.ERROR) is None and \
+            out['error'].endswith('the harness is not signed in (exit 1)') and 'vibe --setup' in out['next'] and \
+            'Missing MISTRAL_API_KEY' in log
 
 
 def off_refused():

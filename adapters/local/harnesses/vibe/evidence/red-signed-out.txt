@@ -1,0 +1,12 @@
+Red run of the vibe row after HR1 revision 4: test_row.py now expects a signed-out start to fail as "the harness is not signed in" with a next naming vibe --setup, but row.json has no signed_out or login_command yet, so the driver still says "the harness failed". No-op stubs for every known agent CLI were first on PATH; no real agent CLI ran.
+
+$ python3 -I adapters/local/harnesses/vibe/test_row.py
+pass not installed
+fail not signed in
+pass off refused
+pass pattern reads the entry id not a nested one
+exit 1
+
+$ python3 -I adapters/local/test_harnesses.py --rows adapters/local/harnesses
+fail vibe: test_row.py: it failed (exit 1)
+exit 1
