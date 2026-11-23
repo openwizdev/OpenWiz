@@ -1,7 +1,4 @@
 #!/usr/bin/env python3
-# A synthetic Tembo, built from the host's public API reference (docs.tembo.io/api): only the operations the
-# driver uses, with their documented status codes. It also plays the run's agent: a created session or a queued
-# message posts or edits one builder status note in the kit's tracker file.
 import http.server
 import json
 import os
