@@ -1,0 +1,25 @@
+# #2379 third fix round: a hidden process older than the kit (as on CI's runner) must cost no retry and raise no flag, against 30ffc97's kit.
+test_a_hidden_process_costs_a_retry_once_and_one_older_than_the_kit_none (__main__.Kit.test_a_hidden_process_costs_a_retry_once_and_one_older_than_the_kit_none) ... FAIL
+/usr/lib/python3.11/subprocess.py:1125: ResourceWarning: subprocess 192911 is still running
+  _warn("subprocess %s is still running" % self.pid,
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/usr/lib/python3.11/unittest/case.py:657: ResourceWarning: unclosed file <_io.BufferedReader name=4>
+  function, args, kwargs = self._cleanups.pop()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/usr/lib/python3.11/subprocess.py:1125: ResourceWarning: subprocess 192904 is still running
+  _warn("subprocess %s is still running" % self.pid,
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+
+======================================================================
+FAIL: test_a_hidden_process_costs_a_retry_once_and_one_older_than_the_kit_none (__main__.Kit.test_a_hidden_process_costs_a_retry_once_and_one_older_than_the_kit_none)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 286, in test_a_hidden_process_costs_a_retry_once_and_one_older_than_the_kit_none
+    self.assertEqual(once, kit.HIDDEN_TRIES - 1, 'only the hidden process newer than the kit is retried')
+AssertionError: 8 != 4 : only the hidden process newer than the kit is retried
+
+----------------------------------------------------------------------
+Ran 1 test in 0.173s
+
+FAILED (failures=1)
+sys:1: ResourceWarning: unclosed file <_io.BufferedReader name=3>

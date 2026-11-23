@@ -9,6 +9,10 @@ START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket':
          'model': r'[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}'}
 RUN = {'run': r'run-[0-9a-f]{12}'}
 GRACE = 10
+LSOF_COULD_NOT_CHECK = []
+NO_LSOF = ('driver: lsof could not run or failed, so the driver could not check which processes hold this '
+           "run's output files open; it ended only the turns' process groups and the processes their "
+           'supervisors recorded')
 
 
 class Refused(Exception):
@@ -84,12 +88,19 @@ def members(roots, recorded, writers=()):
 
 
 # PRIVACY: asks lsof only which processes hold this run's own output file open for writing, never any environment.
+# PRIVACY: lsof's own text is never repeated.
 def writing_to(path):
-    try:
-        out = subprocess.run(['lsof', '-F', 'pa', '--', path], stdin=subprocess.DEVNULL, capture_output=True,
-                             text=True, timeout=30).stdout
-    except (OSError, subprocess.TimeoutExpired):
+    if not os.path.exists(path):
         return set()
+    try:
+        p = subprocess.run(['lsof', '-w', '-F', 'pa', '--', path], stdin=subprocess.DEVNULL, capture_output=True,
+                           text=True, errors='replace', timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        p = None
+    if p is None or p.returncode not in (0, 1) or p.returncode == 1 and p.stderr.strip():
+        LSOF_COULD_NOT_CHECK.append(path)
+        return set()
+    out = p.stdout
     found, pid = set(), None
     for field in out.splitlines():
         if field[:1] == 'p' and field[1:].isdigit():
@@ -391,6 +402,8 @@ def main():
         out, code = {'error': e.args[0], 'next': e.args[1]}, 1
     except Exception as e:
         out, code = {'error': 'the driver failed: ' + type(e).__name__, 'next': 'read its code, fix it, retry'}, 1
+    if LSOF_COULD_NOT_CHECK:
+        print(NO_LSOF, file=sys.stderr)
     print(json.dumps(out))
     sys.exit(code)
 

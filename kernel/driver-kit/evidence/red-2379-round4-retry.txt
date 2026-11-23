@@ -1,0 +1,43 @@
+# #2379 third fix round: the retry-cost test against bf46432's kit (a hidden process is retried on every read).
+test_a_refused_process_costs_a_retry_once_and_another_users_never (__main__.Kit.test_a_refused_process_costs_a_retry_once_and_another_users_never) ... FAIL
+/usr/lib/python3.11/subprocess.py:1125: ResourceWarning: subprocess 156099 is still running
+  _warn("subprocess %s is still running" % self.pid,
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/usr/lib/python3.11/unittest/case.py:627: ResourceWarning: unclosed file <_io.BufferedReader name=3>
+  self.doCleanups()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+
+======================================================================
+FAIL: test_a_refused_process_costs_a_retry_once_and_another_users_never (__main__.Kit.test_a_refused_process_costs_a_retry_once_and_another_users_never)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 269, in test_a_refused_process_costs_a_retry_once_and_another_users_never
+    self.assertEqual(len(pauses), once, 'a process already found hidden was retried again')
+AssertionError: 8 != 4 : a process already found hidden was retried again
+
+----------------------------------------------------------------------
+Ran 1 test in 0.047s
+
+FAILED (failures=1)
+
+# The same test against 4a8dfe8's kit (every refused process, other users' included, is retried).
+test_a_refused_process_costs_a_retry_once_and_another_users_never (__main__.Kit.test_a_refused_process_costs_a_retry_once_and_another_users_never) ... FAIL
+/usr/lib/python3.11/subprocess.py:1125: ResourceWarning: subprocess 156102 is still running
+  _warn("subprocess %s is still running" % self.pid,
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/usr/lib/python3.11/unittest/case.py:627: ResourceWarning: unclosed file <_io.BufferedReader name=3>
+  self.doCleanups()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+
+======================================================================
+FAIL: test_a_refused_process_costs_a_retry_once_and_another_users_never (__main__.Kit.test_a_refused_process_costs_a_retry_once_and_another_users_never)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 268, in test_a_refused_process_costs_a_retry_once_and_another_users_never
+    self.assertEqual(once, kit.HIDDEN_TRIES - 1, 'the hidden child was not retried, or others were')
+AssertionError: 336 != 4 : the hidden child was not retried, or others were
+
+----------------------------------------------------------------------
+Ran 1 test in 0.056s
+
+FAILED (failures=1)

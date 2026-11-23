@@ -49,6 +49,7 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(ROOT / 'tools/install'))
 import package
 import build_products
+import entry as rl6_entry
 rl4 = load('release_candidate_rl4_fixture', HERE / 'test_product_identity.py')
 RUNTIME = dict(rl4.RUNTIME, **{f'skills/{name}': f'Synthetic {name}.\n'.encode() for name in (
     'setup/SKILL.md', 'grill/SKILL.md', 'to-tickets/SKILL.md', 'launch-fleet/SKILL.md')},
@@ -667,6 +668,74 @@ class Candidate(World):
         for attempt in status['install_attempts']:
             saved = self.state / attempt['evidence']['record']
             self.assertEqual(sha(saved.read_bytes()), attempt['evidence']['sha256'])
+
+    def test_install_status_never_reads_a_held_or_interrupted_attempt_record(self):
+        import candidate
+        state = candidate.State(self.root / 'attempts')
+        evidence = {'target': LINUX, 'downloads': [], 'steps': []}
+        first = candidate.install_attempt(state, LINUX, None, 100, evidence)
+        code = candidate.install_attempt.__code__
+
+        def at_each_line(watch):
+            def tracer(frame, event, arg):
+                if frame.f_code is not code:
+                    return None
+                def line(frame, event, arg):
+                    if event == 'line':
+                        watch(frame.f_lineno)
+                    return line
+                return line
+            return tracer
+
+        held = []
+
+        def status(_):
+            try:
+                [attempt] = candidate.install_attempts(state)
+                held.append(attempt['attempts'])
+            except ValueError as error:
+                held.append(f'unreadable: {error}')
+        sys.settrace(at_each_line(status))
+        try:
+            second = candidate.install_attempt(state, LINUX, 'install_refused', 200, evidence)
+        finally:
+            sys.settrace(None)
+        self.assertGreater(len(held), 3)
+        self.assertLessEqual(set(held), {1, 2})
+        self.assertEqual(held, sorted(held))
+        self.assertIn(1, held)
+        self.assertEqual(candidate.install_attempts(state)[0]['evidence'], second['evidence'])
+        interrupted = 0
+        for at, stop in enumerate(sorted({n for _, _, n in code.co_lines() if n}), 300):
+            fired = []
+
+            def interrupt(lineno):
+                if lineno == stop and not fired:
+                    fired.append(lineno)
+                    raise KeyboardInterrupt
+            sys.settrace(at_each_line(interrupt))
+            try:
+                candidate.install_attempt(state, LINUX, 'install_refused', at, evidence)
+            except KeyboardInterrupt:
+                interrupted += 1
+            finally:
+                sys.settrace(None)
+            try:
+                [attempt] = candidate.install_attempts(state)
+            except ValueError as error:
+                self.fail(f'status after an interrupt at line {stop}: {error}')
+            self.assertIn(attempt['attempts'], (2, 3))
+            if attempt['attempts'] == 3:
+                saved = state.file(attempt['evidence']['record'])
+                self.assertEqual(json.loads(saved.read_bytes())['at'], at)
+                saved.unlink()
+        self.assertGreater(interrupted, 3)
+        third = candidate.install_attempt(state, LINUX, 'install_refused', 400, evidence)
+        folder = state.file(f'evidence/install-{LINUX}')
+        self.assertEqual(sorted(p.name for p in folder.iterdir() if candidate.ATTEMPT.fullmatch(p.name)),
+                         ['1.json', '2.json', '3.json'])
+        self.assertEqual((first['evidence']['record'], third['evidence']['record']),
+                         (f'evidence/install-{LINUX}/1.json', f'evidence/install-{LINUX}/3.json'))
 
     def test_missing_ship_or_exact_changelog_approval_refuses_before_any_write(self):
         self.smoke_kit()
@@ -2074,8 +2143,7 @@ class Notes(World):
     def test_rl6_the_approved_changelog_passes_as_is(self):
         raw = (ROOT / 'changes/notes/0.0.12.md').read_bytes()
         self.assertEqual(sha(raw), 'e690a1652787865d67cb557fc1a2a59588b87a21a067b2e547b90a709f5e6e3d')
-        current, cut = (ROOT / 'CHANGELOG.md').read_bytes(), raw.index(b'\n\n', raw.index(b'All OpenWiz versions')) + 2
-        self.assertTrue(current.startswith(raw[:cut]) and current.endswith(raw[cut:]))
+        kept_history((ROOT / 'CHANGELOG.md').read_bytes(), raw)
         self.untagged(raw.decode())
         (self.repo / 'changes/notes').mkdir()
         (self.repo / 'changes/notes/0.0.12.md').write_bytes(raw)
@@ -2125,6 +2193,23 @@ class Notes(World):
                 self.untagged(HISTORY)
                 (code, out), _ = self.curated(text, included)
                 self.assertEqual((code, out['reasons']), (1, [reason]))
+
+    def test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history(self):
+        raw = (ROOT / 'changes/notes/0.0.12.md').read_bytes()
+        cut = raw.index(b'\n\n', raw.index(b'All OpenWiz versions')) + 2
+        newer = (section('0.1.1') + '\n' + section('0.1.0') + '\n').encode()
+        kept_history(raw, raw)
+        kept_history(raw[:cut] + newer + raw[cut:], raw)
+        whole, order = 'is not whole version sections', 'are not newest first and newer than the kept history'
+        for name, planted, reason in (
+                ('a stray paragraph', b'Synthetic stray paragraph.\n\n', whole),
+                ('a broken section', newer.replace(b'**Use 0.1.0**', b'Use 0.1.0'),
+                 'entry: 0.1.0 needs its bold headline here'),
+                ('an older version', (section('0.0.11') + '\n').encode(), order),
+                ('oldest first', (section('0.1.0') + '\n' + section('0.1.1') + '\n').encode(), order),
+                ('no blank line before the history', newer[:-1], whole)):
+            with self.subTest(case=name), self.assertRaisesRegex(AssertionError, re.escape(reason)):
+                kept_history(raw[:cut] + planted + raw[cut:], raw)
 
     def test_rl6_moved_lines_take_their_version_from_the_ticket_they_moved_to(self):
         moved = b'kind: fixed\n\nFixture-tested: The moved line.\n'
@@ -2178,6 +2263,33 @@ class Notes(World):
         self.assertEqual(code, 0, out)
 
 
+def kept_history(current, raw):
+    cut = raw.index(b'\n\n', raw.index(b'All OpenWiz versions')) + 2
+    if not (current.startswith(raw[:cut]) and current.endswith(raw[cut:])):
+        raise AssertionError('the approved changelog bytes moved')
+    inserted = current[cut:len(current) - len(raw) + cut].decode('utf-8')
+    if not inserted:
+        return []
+    if not (inserted.startswith('## ') and inserted.endswith('\n\n')):
+        raise AssertionError('inserted changelog text is not whole version sections')
+    lines = inserted[:-2].split('\n')
+    starts = [i for i, line in enumerate(lines) if line.startswith('## ')]
+    found = []
+    for k, start in enumerate(starts):
+        end = starts[k + 1] - 1 if k + 1 < len(starts) else len(lines)
+        if k + 1 < len(starts) and lines[end] != '':
+            raise AssertionError('inserted changelog sections are not separated by one blank line')
+        try:
+            found.append(tuple(map(int, rl6_entry.curated_section(lines[start:end]).split('.'))))
+        except rl6_entry.Refused as error:
+            raise AssertionError(f'inserted changelog text: {error}') from None
+    kept = re.search(rb'^## ([0-9]+)\.([0-9]+)\.([0-9]+) ', raw[cut:], re.M)
+    order = found + [tuple(map(int, kept.groups()))]
+    if not all(x > y for x, y in zip(order, order[1:])):
+        raise AssertionError('inserted changelog versions are not newest first and newer than the kept history')
+    return found
+
+
 def section(version):
     return (f"## {version} · 2026-11-20\n\n**Use {version}**\n\n**What's new for you**\n\n"
             f"- You can use {version} part one.\n- You can use {version} part two.\n\n"
@@ -2194,6 +2306,64 @@ HISTORY = ('# Changelog\n\nAll synthetic versions, newest first.\n\n'
 
 def re_headings(text):
     return [line for line in text.splitlines() if line.startswith('## ')]
+
+
+class ArchivePrivacy(unittest.TestCase):
+    PLANTED = ('thr_' + 'planted0001', '/home/' + 'plantedname/notes', 'prj_' + 'planted42', 'robin' + '@' + 'mail.invalid')
+    CONTRACT = 'runtime/contracts/open-development.v1.md'
+
+    def setUp(self):
+        import candidate
+        self.candidate = candidate
+        self.tmp = tempfile.TemporaryDirectory(prefix='release-d2-archive-')
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.folder = self.root / 'artifacts'
+        self.folder.mkdir()
+        for target in TARGETS:
+            (self.folder / f'openwiz-{VERSION}-{target}.manifest.json').write_text('{}\n')
+        self.literals = self.root / 'literals.txt'
+        self.literals.write_text('synthetic-private-term-zq\n')
+
+    def bad(self, planted=None):
+        return ''.join('Bad: a planted case.\n\n```bad\n' + x + '\n```\n\n' for x in planted or self.PLANTED)
+
+    def scan(self, files):
+        def stage(manifest, archive, checksum, target, keep=None):
+            build = Path(keep) / ('build-' + target)
+            for name, text in files.items():
+                (build / name).parent.mkdir(parents=True, exist_ok=True)
+                (build / name).write_text(text)
+            return build
+        real = self.candidate.stage
+        self.candidate.stage = stage
+        try:
+            return self.candidate.scan_artifacts({'release_version': VERSION}, self.folder, self.literals)
+        finally:
+            self.candidate.stage = real
+
+    def test_d2_the_contracts_planted_bad_blocks_pass_at_its_runtime_path(self):
+        self.assertEqual(self.scan({self.CONTRACT: '# Contract\n\n' + self.bad() + '```good\nclean\n```\n',
+                                    'runtime/install.py': '# clean\n'}), [])
+
+    def test_d2_a_planted_string_outside_a_bad_block_in_the_contract_is_still_a_finding(self):
+        for planted in self.PLANTED:
+            for outside in (planted + '\n', '```good\n' + planted + '\n```\n', '```bad\nok\n```\n' + planted + '\n'):
+                with self.subTest(planted=planted, outside=outside):
+                    self.assertEqual(self.scan({self.CONTRACT: self.bad() + outside}), ['finding'])
+
+    def test_d2_a_bad_block_in_any_other_runtime_file_is_still_a_finding(self):
+        for name in ('runtime/contracts/agent-status.v1.md', 'runtime/skills/triage/SKILL.md',
+                     'runtime/install.py', 'runtime/open-development.v1.md'):
+            for planted in self.PLANTED:
+                with self.subTest(name=name, planted=planted):
+                    self.assertEqual(self.scan({self.CONTRACT: self.bad(), name: self.bad([planted])}), ['finding'])
+
+    def test_d2_another_member_ending_in_the_contracts_name_gets_no_exemption(self):
+        for name in ('runtime/skills/synthetic/contracts/open-development.v1.md', 'runtime/runtime/contracts/open-development.v1.md',
+                     'runtime/contracts/x-open-development.v1.md', 'runtime/skills/open-development.v1.md'):
+            with self.subTest(name=name):
+                self.assertEqual(self.scan({name: self.bad()}), ['finding'])
 
 
 if __name__ == '__main__':

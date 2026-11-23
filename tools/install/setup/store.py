@@ -23,6 +23,8 @@ HOST_NAME = re.compile(r'[a-z0-9]+(?:-[a-z0-9]+)*')
 CLOUD_ID = re.compile(r'[A-Za-z0-9_-]{1,128}')
 SETTING = re.compile(r'[A-Za-z0-9_.:/-]{1,128}')
 CREDENTIAL = re.compile(r'(?<![A-Za-z0-9])(?:gh[pousr]_|github_pat_|sk-|xox[abprs]-|AKIA|eyJ)')
+SECRET_TEXT = re.compile(CREDENTIAL.pattern + r'[A-Za-z0-9_-]*[A-Za-z0-9]{16}'
+                         r'|(?<![0-9A-Fa-f])[0-9A-Fa-f]{40}(?![0-9A-Fa-f])|PRIVATE KEY')
 LOGIN = re.compile(r'[A-Za-z0-9-]{1,39}')
 SELECTED = ('app', 'personal_login', 'unselected')
 APP_CHOICES = ('create', 'reuse', 'skip', 'undecided')
@@ -57,6 +59,10 @@ def text(value):
     return isinstance(value, str) and TEXT.fullmatch(value) is not None and value.strip() == value
 
 
+def plain_text(value):
+    return text(value) and SECRET_TEXT.search(value) is None
+
+
 def check_project(value):
     if value is None:
         return
@@ -76,7 +82,7 @@ def check_project(value):
             require(value[key] is None, 'CloudRoom ids are only accepted for --host cloud')
         else:
             require(isinstance(value[key], str) and CLOUD_ID.fullmatch(value[key]), 'invalid CloudRoom id')
-    require(text(value['operator']) and len(value['operator']) <= 100, 'invalid operator')
+    require(plain_text(value['operator']) and len(value['operator']) <= 100, 'invalid operator')
     require(positive(value['service_issue']), 'invalid service issue')
     for key in ('harness', 'model', 'effort'):
         require(isinstance(value[key], str) and SETTING.fullmatch(value[key])
@@ -138,8 +144,8 @@ def check_operation(value):
     require(isinstance(value['fingerprint'], str) and re.fullmatch('[0-9a-f]{64}', value['fingerprint']),
             'invalid fingerprint')
     require(type(value['effects']) is list and 1 <= len(value['effects']) <= 8 and
-            all(text(e) for e in value['effects']), 'invalid effects')
-    require(text(value['reason']), 'invalid reason')
+            all(plain_text(e) for e in value['effects']), 'invalid effects')
+    require(plain_text(value['reason']), 'invalid reason')
 
 
 def validate(value):

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import fcntl
 import hashlib
 import json
 import os
@@ -449,10 +450,61 @@ def exec_folder(private, child):
 
 def gh_identity(path):
     info = os.stat(path)
-    if (not stat.S_ISREG(info.st_mode) or info.st_uid not in (0, os.getuid())
-            or info.st_mode & 0o022):
+    if not stat.S_ISREG(info.st_mode) or info.st_mode & 0o022:
         return None
-    return [info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns]
+    identity = [info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns]
+    if info.st_uid in (0, os.getuid()):
+        return identity
+    if not sys.platform.startswith("linux"):
+        return None
+    if not isinstance(path, int):
+        fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK | os.O_NOCTTY)
+        try:
+            return gh_identity(fd) if _root_only_path_to(path, os.fstat(fd)) else None
+        finally:
+            os.close(fd)
+    try:
+        if not _root_only_path_to(os.readlink(f"/proc/self/fd/{path}"), info):
+            return None
+        return identity + [_gh_bytes(path, None)]
+    except OSError:
+        return None
+
+
+def _root_only_path_to(path, info):
+    entry = owner_only_gh_path(path, uid=0)
+    found = os.lstat(entry) if entry else None
+    return bool(found) and (found.st_dev, found.st_ino) == (info.st_dev, info.st_ino)
+
+
+def _gh_bytes(fd, copy):
+    hashed, offset = hashlib.sha256(), 0
+    while chunk := os.pread(fd, 1 << 20, offset):
+        hashed.update(chunk)
+        offset += len(chunk)
+        while copy is not None and chunk:
+            chunk = chunk[os.write(copy, chunk):]
+    return hashed.hexdigest()
+
+
+def sealed_gh(fd, digest):
+    add_seals, get_seals = getattr(fcntl, "F_ADD_SEALS", 1033), getattr(fcntl, "F_GET_SEALS", 1034)
+    seals = (getattr(fcntl, "F_SEAL_SHRINK", 2) | getattr(fcntl, "F_SEAL_GROW", 4)
+             | getattr(fcntl, "F_SEAL_WRITE", 8) | getattr(fcntl, "F_SEAL_SEAL", 1))
+    copy = os.memfd_create("openwiz-gh", os.MFD_CLOEXEC | os.MFD_ALLOW_SEALING)
+    try:
+        _gh_bytes(fd, copy)
+        fcntl.fcntl(copy, add_seals, seals)
+        sealed = os.open(f"/proc/self/fd/{copy}", os.O_RDONLY)
+    finally:
+        os.close(copy)
+    try:
+        if fcntl.fcntl(sealed, get_seals) & seals == seals and _gh_bytes(sealed, None) == digest:
+            return sealed
+    except OSError:
+        pass
+    os.close(sealed)
+    return None
 
 
 def execute(command, env, wait=False):
@@ -581,12 +633,21 @@ def bound_gh(real, refuse, env):
     except OSError:
         return "the gh this run chose cannot be opened to check", None
     try:
-        same = gh_identity(fd) == bound.get("identity")
+        current = gh_identity(fd)
     except OSError:
-        same = False
-    if not same:
+        current = None
+    if current is None or current != bound.get("identity"):
         os.close(fd)
         return "the gh this run chose was changed", None
+    if len(current) == 5:
+        try:
+            sealed = sealed_gh(fd, current[4])
+        except OSError:
+            sealed = None
+        os.close(fd)
+        if sealed is None:
+            return "the gh this run chose was changed", None
+        fd = sealed
     return None, (fd, path)
 
 
@@ -594,10 +655,10 @@ def owner_only_directory(info, uid):
     return stat.S_ISDIR(info.st_mode) and info.st_uid in (0, uid) and not info.st_mode & 0o022
 
 
-def owner_only_gh_path(path):
+def owner_only_gh_path(path, uid=None):
     if not path.startswith("/"):
         return None
-    uid = os.getuid()
+    uid = os.getuid() if uid is None else uid
     folder = "/"
     remaining = path[1:]
     symlinks = 0
@@ -634,10 +695,18 @@ def owner_only_gh_path(path):
 
 
 def exec_gh(fd, path, args, env):
+    sealed = False
     if sys.platform.startswith("linux"):
         os.set_inheritable(fd, True)
         path = f"/proc/self/fd/{fd}"
-    os.execve(path, args, env)
+        sealed = os.readlink(path).startswith("/memfd:")
+    try:
+        os.execve(path, args, env)
+    except OSError:
+        if sealed:
+            raise Refused("cannot run gh's sealed in-memory copy: this kernel or sandbox does not allow "
+                          "executable memfds (vm.memfd_noexec, seccomp or a security module)") from None
+        raise
 
 
 def gh(args, env):

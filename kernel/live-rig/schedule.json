@@ -1,0 +1,6 @@
+{
+  "cron": "0 3 * * 1",
+  "timezone": "UTC",
+  "command": ["python3", "-I", "kernel/live-rig/rig.py", "--hosts", "kernel/live-rig/hosts",
+              "--settings", "../openwiz-live-rig/settings.json", "--out", "../openwiz-live-rig/runs"]
+}

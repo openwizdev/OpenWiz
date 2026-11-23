@@ -1,0 +1,8 @@
+{
+  "fixture-five": {"id": "FX1L", "ticket": 101, "pr": 201, "listing": "fixture-five"},
+  "fixture-four": {"id": "FX2L", "ticket": 102, "pr": 202, "listing": "fixture-four"},
+  "fixture-nohead": {"id": "FX3L", "ticket": 103, "pr": 203, "listing": "fixture-nohead"},
+  "fixture-signed-out": {"id": "FX4L", "ticket": 104, "pr": 204, "listing": "fixture-signed-out"},
+  "fixture-paid": {"id": "FX5L", "ticket": 105, "pr": 205, "listing": "fixture-paid"},
+  "fixture-quoting": {"id": "FX6L", "ticket": 106, "pr": 206, "listing": "fixture-quoting"}
+}

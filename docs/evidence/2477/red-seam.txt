@@ -1,0 +1,47 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/test_rig.py Rig.test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons   # before load_host and check_host exist; agent-CLI stubs first on PATH
+test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons (__main__.Rig.test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons) ... 
+  test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons (__main__.Rig.test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons) [fixture-missing] ... ERROR
+  test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons (__main__.Rig.test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons) [fixture-signed-out] ... ERROR
+  test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons (__main__.Rig.test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons) [fixture-cost] ... ERROR
+  test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons (__main__.Rig.test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons) [fixture-template] ... ERROR
+
+======================================================================
+ERROR: test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons (__main__.Rig.test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons) [fixture-missing]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 206, in test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons
+    config = rig.load_host(os.path.join(HOSTS, files[host]))
+             ^^^^^^^^^^^^^
+AttributeError: module 'rig' has no attribute 'load_host'
+
+======================================================================
+ERROR: test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons (__main__.Rig.test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons) [fixture-signed-out]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 206, in test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons
+    config = rig.load_host(os.path.join(HOSTS, files[host]))
+             ^^^^^^^^^^^^^
+AttributeError: module 'rig' has no attribute 'load_host'
+
+======================================================================
+ERROR: test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons (__main__.Rig.test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons) [fixture-cost]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 206, in test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons
+    config = rig.load_host(os.path.join(HOSTS, files[host]))
+             ^^^^^^^^^^^^^
+AttributeError: module 'rig' has no attribute 'load_host'
+
+======================================================================
+ERROR: test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons (__main__.Rig.test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons) [fixture-template]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 206, in test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons
+    config = rig.load_host(os.path.join(HOSTS, files[host]))
+             ^^^^^^^^^^^^^
+AttributeError: module 'rig' has no attribute 'load_host'
+
+----------------------------------------------------------------------
+Ran 1 test in 0.037s
+
+FAILED (errors=4)

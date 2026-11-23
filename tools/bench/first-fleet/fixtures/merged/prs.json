@@ -1,0 +1,20 @@
+[
+  {
+    "closingIssuesReferences": [{"number": 12, "url": "https://github.com/example/other/issues/12"}],
+    "createdAt": "2026-11-22T10:04:00Z",
+    "mergedAt": "2026-11-22T10:04:30Z",
+    "number": 11
+  },
+  {
+    "closingIssuesReferences": [{"number": 13, "url": "https://github.com/example/fleet/issues/13"}],
+    "createdAt": "2026-11-22T10:13:30Z",
+    "mergedAt": "2026-11-22T10:18:00Z",
+    "number": 22
+  },
+  {
+    "closingIssuesReferences": [{"number": 12, "url": "https://github.com/example/fleet/issues/12"}],
+    "createdAt": "2026-11-22T10:13:00Z",
+    "mergedAt": "2026-11-22T10:17:05Z",
+    "number": 21
+  }
+]

@@ -1,0 +1,13 @@
+# Green run for review R2 (round 2) on openwizdev/OpenWiz#2339 (paths scrubbed)
+$ python3 -I tools/github-app/test_token_service.py RequestFixtureTests.test_a_failed_audit_lock_revokes_and_a_short_rewrite_keeps_the_entry_readable
+Ran 1 test in <time>
+OK
+$ python3 -I tools/github-app/test_token_service.py
+Ran 14 tests in <time>
+OK
+$ python3 -I contracts/fixtures/token-service/test_fixtures.py
+Ran 17 tests in <time>
+OK
+$ python3 -I tools/github-app/test_agent_token.py
+Ran 36 tests in <time>
+OK

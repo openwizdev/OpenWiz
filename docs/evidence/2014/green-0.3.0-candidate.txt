@@ -1,7 +1,0 @@
-# #2014 green run: the same test with the fix, against the WizSkills 0.3.0 candidate (openwizdev/WizSkills#217 head 85b804e5fc59530eb3ceffbc5341b9ed0f045fc7, tree e33eb93d88cfab5b0dfc2a10109d725deaab8887), wizskills.lock pointed at it locally and not committed
-$ python3 -I tools/release/test_package.py Package.test_installed_build_carries_the_wizskills_root_files_its_skills_read
-.
-----------------------------------------------------------------------
-Ran 1 test in 3.629s
-
-OK

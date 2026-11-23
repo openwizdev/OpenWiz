@@ -219,6 +219,52 @@ python3 -I tools/github-app/token-service.py stop --state-dir "$HOME/.local/stat
   `contracts/fixtures/token-service/requests.json` case and the guards above against
   a fake GitHub with a throwaway key.
 
+## Pairing App selection
+
+When the owner's machine holds more than one App's state, the pairing mint must reach
+the right App, not whatever the default state directory holds. Point
+`OPENWIZ_TOKEN_SERVICE` at the selector, `tools/github-app/app-select.py`, instead of
+the service. The contract's call is unchanged (`python3 -I '<OPENWIZ_TOKEN_SERVICE>'
+mint`): the selector reads the same request, chooses one App's state directory, runs
+`token-service.py mint --state-dir <that state>` and passes the service's one JSON line
+and exit back unchanged. Start each App's service as above, with its own `--state-dir`.
+
+Its config is `OPENWIZ_APP_SELECT_CONFIG`, by default
+`~/.config/openwiz/app-select.json`: a regular file you own, with one link and no
+group or other permission bits (0600 or 0400, say), opened without following a
+symlink. It holds exactly one of:
+
+```json
+{"state_dir": "/home/someone/.local/state/openwiz-agents"}
+{"routes": [{"repository": "someone/private-tool", "state_dir": "/home/someone/.local/state/openwiz"},
+            {"repository": "someone/*", "state_dir": "/home/someone/.local/state/openwiz-agents"}]}
+```
+
+- **Named** (`state_dir`): every mint goes to exactly that App.
+- **Route map** (`routes`): each route's `repository` is an exact `owner/name` or an
+  owner glob `owner/*`, matched without regard to case; no other glob is accepted.
+  Each requested repository takes the first route that matches it, and every
+  requested repository must land on the same state directory. A repository no route
+  matches, or a request split across two state directories, mints nothing.
+- **The request is checked first, in both modes.** An invalid request gets the
+  service's own `usage` refusal, and repositories of more than one owner its
+  `one-owner` refusal (exit 2), before any config is read or service started.
+- **Fails closed.** A missing, unreadable, symlinked or not-owner-only config, one
+  with both or neither key, an unknown key, a route pattern outside the two forms, a
+  relative or missing state directory, an unmatched repository or a split request:
+  the selector answers the contract's refusal (`not-installed`, exit 3, when a
+  repository matches no route; otherwise `unavailable`, exit 1) and writes one fixed
+  sentence to standard error naming `OPENWIZ_APP_SELECT_CONFIG`. It starts no
+  service and mints nothing.
+- **Never exposed.** The selector opens no private key, signs nothing and makes no
+  GitHub call: only the service it starts does. No key or token reaches its
+  arguments, standard error or any file. The token crosses only in the service's
+  answer, which the selector passes through on standard output.
+- **Tests.** `python3 -I tools/github-app/test_app_select.py` runs two fake App states
+  with throwaway keys against a fake GitHub: named, routed, unmatched, split, invalid
+  request and unsafe-config cases, with an audit hook showing the selector opens no
+  key and makes no request.
+
 ## Agent tokens (G2)
 
 **The legacy Cloudroom-secret route is retired: use [the token service
@@ -319,6 +365,12 @@ python3 -I tools/github-app/agent-token.py run $REQ -- git push origin HEAD
   a file changed since, before the token is looked up. It runs gh through its open file on Linux
   and uses the resolved path on systems such as macOS only when every directory visited during
   resolution, including through symlinks, is owned by you or root and writable by no one else.
+  The gh itself must be writable only by its owner, and owned by you, root or, as in a cloud
+  sandbox's system gh, another non-root user. That last case works only on Linux, through
+  `/proc/self/fd`: every folder from `/` down to it must be owned by root and writable by no
+  one else, and the run records a SHA-256 of the gh it chose, then runs a sealed in-memory
+  copy that matches it, so the gh's owner can't change what runs; the kernel and sandbox must
+  allow executable memfds, or gh is refused with a message naming that restriction.
   For an allowed command, it reads
   the snapshot and starts that gh
   with `GH_TOKEN`, the owner's own `GH_CONFIG_DIR`, `GH_PAGER=cat`, and an editor and

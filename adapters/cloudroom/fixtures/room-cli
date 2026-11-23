@@ -97,6 +97,10 @@ elif sub == 'list':
     else:
         out = json.dumps(rows) if json_out else '\n'.join(['ID  TITLE  STATUS'] + [
             '%s  %s  %s' % (r['id'], r['title'], r['status']) for r in rows])
+elif sub == 'show' and args[2] in threads and not threads[args[2]].get('archived'):
+    shown = threads[args[2]]
+    out = json.dumps({'thread': {'id': args[2], 'projectId': shown.get('projectId'), 'title': shown['title'],
+                                 'parentThreadId': shown.get('parentThreadId'), 'archivedAt': None}})
 elif sub == 'archive' and args[2] in threads:
     threads[args[2]]['archived'] = True
     for pid in filter(str.isdigit, os.listdir('/proc')):  # every process carrying the thread's mark

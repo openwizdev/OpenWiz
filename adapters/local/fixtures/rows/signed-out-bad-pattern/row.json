@@ -1,0 +1,39 @@
+{
+  "harness": "signed-out-bad-pattern",
+  "program": "example-none-cli",
+  "start": [
+    "--print",
+    "--session-id",
+    "{session}",
+    "--model",
+    "{model}",
+    "{mode}",
+    "{prompt}"
+  ],
+  "wake": [
+    "--print",
+    "--resume",
+    "{session}",
+    "--model",
+    "{model}",
+    "{mode}",
+    "{prompt}"
+  ],
+  "session": {
+    "chosen": "uuid"
+  },
+  "modes": {
+    "workspace-write": [
+      "--sandbox",
+      "workspace-write"
+    ]
+  },
+  "env": {},
+  "effort": "none: example-none-cli has no effort flag or setting (its synthetic --help, in this folder's fake, lists none)",
+  "login": "example-none-cli's own login, saved by `example-none-cli auth` under ~/.example-none",
+  "daemon": "none",
+  "signed_out": [
+    "(not signed in"
+  ],
+  "login_command": "example-none-cli auth"
+}

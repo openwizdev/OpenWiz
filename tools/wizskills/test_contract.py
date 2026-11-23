@@ -11,6 +11,7 @@ from urllib.parse import unquote
 ROOT = Path(__file__).resolve().parents[2]
 CONTRACT = ROOT / 'contracts/wizskills.v1.md'
 FIXTURES = Path(__file__).resolve().parent / 'fixtures/contract'
+RULES = ('link', 'script', 'import', 'read', 'symlink')
 
 
 def unique_object(pairs):
@@ -35,6 +36,13 @@ def identity(value, fields, rules):
         and re.fullmatch(rules['oid_pattern'], value['tree']))
 
 
+def manifest(text):
+    try:
+        return read_json(text)
+    except ValueError:
+        return {}
+
+
 def package_errors(package, rules):
     errors = set()
     files = package['files']
@@ -49,8 +57,10 @@ def package_errors(package, rules):
                 errors.add('layout')
     if not skills:
         errors.add('layout')
-    plugin = read_json(files['.claude-plugin/plugin.json'])
-    marketplace = read_json(files['.claude-plugin/marketplace.json'])
+    executables = package['executables']
+    if 'install.sh' not in executables or any(p not in files for p in executables):
+        errors.add('layout')
+    plugin, marketplace = (manifest(files[f'.claude-plugin/{n}.json']) for n in ('plugin', 'marketplace'))
     if (plugin.get('name') != rules['plugin_name']
             or plugin.get('skills') != [f'./skills/{s}' for s in skills]
             or len(marketplace.get('plugins', [])) != 1
@@ -70,18 +80,19 @@ def package_errors(package, rules):
         if package['tag'] != 'v' + lock['version']:
             errors.add('binding')
     changelog = files['CHANGELOG.md']
-    match = re.fullmatch(r'# Changelog\n\n## (\S+) - (\d{4}-\d{2}-\d{2})\n\n'
-                         r'((?:- [^\n]+\n)+)', changelog)
-    if match:
-        try:
-            datetime.date.fromisoformat(match[2])
-        except ValueError:
-            match = None
-    if not match:
+    section = r'## (\S+) - (\d{4}-\d{2}-\d{2})\n\n(?:- [^\n]+\n)+'
+    sections = re.findall(section, changelog)
+    valid = bool(re.fullmatch(rf'# Changelog\n(?:\n{section})+', changelog))
+    try:
+        for _, day in sections:
+            datetime.date.fromisoformat(day)
+    except ValueError:
+        valid = False
+    if not valid or len({v for v, _ in sections}) != len(sections):
         errors.add('changelog')
-    elif (plugin.get('version') != match[1]
+    elif (plugin.get('version') != sections[0][0]
           or plugin.get('version') != lock.get('version')
-          or not re.fullmatch(rules['version_pattern'], match[1])):
+          or not re.fullmatch(rules['version_pattern'], sections[0][0])):
         errors.add('version')
     return sorted(errors)
 
@@ -96,8 +107,9 @@ def reference_result(case, files, rules):
     if (setting and '..' not in PurePosixPath(target).parts
             and (kind == 'words' or (kind == 'read' and case.get('project')))):
         return None
-    failure = {'rule': 'standalone.' + kind, 'file': case['file'], 'line': case['line']}
-    if kind == 'symlink' or not target or target.startswith(('/', '~')):
+    rule = kind if kind in RULES else 'read'
+    failure = {'rule': 'standalone.' + rule, 'file': case['file'], 'line': case['line']}
+    if kind not in RULES + ('words',) or kind == 'symlink' or not target or target.startswith(('/', '~')):
         return failure
     parts = list(PurePosixPath(case['base']).parts)
     for part in PurePosixPath(unquote(target).split('#')[0]).parts:

@@ -1,0 +1,31 @@
+# Green run for openwizdev/OpenWiz#2287: the red run's proofs, then each touched suite in full (paths scrubbed)
+$ python3 -I tools/github-app/test.py HardeningTests SetupCheckOwnerBoundary.test_the_proof_token_is_revoked_and_must_cover_selected_repositories_only SetupTests.test_the_setup_page_has_a_44_pixel_button_a_viewport_and_a_language
+Ran 5 tests in <time>
+OK
+$ python3 -I tools/github-app/test_token_service.py RequestFixtureTests.test_a_grant_wider_or_other_than_the_request_is_refused RequestFixtureTests.test_a_slow_audit_sync_is_checked_again_and_logged_as_the_answer
+Ran 2 tests in <time>
+OK
+$ python3 -I tools/install/setup/test_check.py UnknownIsNotRefused CredentialShapedText EveryCodeHasANextStep.test_a_relative_openwiz_override_prints_an_absolute_models_command
+Ran 3 tests in <time>
+OK
+$ python3 -I tools/github-app/test.py
+Ran 63 tests in <time>
+OK
+$ python3 -I tools/github-app/test_token_service.py
+Ran 12 tests in <time>
+OK
+$ python3 -I tools/install/setup/test_check.py
+Ran 23 tests in <time>
+OK
+$ python3 -I tools/github-app/test_agent_token.py
+Ran 36 tests in <time>
+OK
+$ python3 -I tools/install/tests/public-release-security/baseline/test_baseline.py
+Ran 3 tests in <time>
+OK
+$ python3 -I tools/install/tests/public-release-security/test_candidate.py
+Ran 8 tests in <time>
+OK
+$ python3 -I tools/install/tests/journey/test_journey.py
+Ran 18 tests in <time>
+OK

@@ -127,6 +127,7 @@ NOTE_VALUES = {
                           r'(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,63}(?::[0-9]{1,5})?(?:/[^\s"<>?#@\\]*)?$'),
 }
 LINK = re.compile(r'^- #([1-9][0-9]*) (real|file):')
+LONG_LINK = re.compile(r'^- ([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)#([1-9][0-9]*) (real|file):(.*)$')
 LIVE_SECONDS = 30 * 60
 SPEC_SECTIONS = ('Problem Statement', 'Solution', 'Changelog headline', 'User Stories',
                  'Implementation Decisions', 'Testing Decisions', 'Proof', 'Out of Scope',
@@ -164,7 +165,7 @@ def read_lines(body):
                 fence = None
             continue
         if not comment:
-            fence = (re.match(r'^(`{3,}|~{3,})', trim) or [None])[0]
+            fence = (re.match(r'^(?:`{3,}(?=[^`]*$)|~{3,})', trim) or [None])[0]
             if fence is not None:
                 continue
         at = 0
@@ -177,7 +178,14 @@ def read_lines(body):
     return out
 
 
-def links(lines, blockers):
+def short_form_if_own(line, repo):
+    m = LONG_LINK.match(line)
+    if m and m.group(1).lower() == repo.lower():
+        return '- #%s %s:%s' % m.group(2, 3, 4)
+    return line
+
+
+def links(lines, blockers, repo):
     heads = [at for at, (line, shown) in enumerate(lines) if shown and line == '## Links']
     if len(heads) > 1:
         return ['malformed section: more than one ## Links section']
@@ -186,10 +194,14 @@ def links(lines, blockers):
         if re.match(r'^(#{1,6} |#{1,6}$)', line):
             break
         if line:
-            section.append(line)
+            section.append(short_form_if_own(line, repo))
     if heads and not section:
         return ['malformed section: no lines']
-    if any(line != 'none' and not LINK.match(line) for line in section):
+    odd = [line for line in section if line != 'none' and not LINK.match(line)]
+    if odd and LONG_LINK.match(odd[0]):
+        m = LONG_LINK.match(odd[0])
+        return ['malformed section: line `%s` names %s#%s, not this repository' % (odd[0], m.group(1), m.group(2))]
+    if odd:
         return ['malformed section: a line is not a link line or none']
     if len(section) > 1 and 'none' in section:
         return ['malformed section: none must be the only line']
@@ -256,7 +268,7 @@ def breaks(tracker):
             if not present:
                 say('T1', '%s lacks %s' % (kind, part))
         if ticket:
-            for what in links(read, i['blocked_by']):
+            for what in links(read, i['blocked_by'], tracker['repo']):
                 say('B1', what)
         for b in i['blocked_by']:
             if b['state'] == 'closed' and b['state_reason'] != 'completed':

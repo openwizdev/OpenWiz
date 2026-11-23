@@ -1,5 +1,0 @@
-RC1 P1 green run (#1829), with contracts/checkpoints.v1.md.
-Command: python3 -I contracts/fixtures/checkpoints/check.py
-
-checkpoints fixtures: 69 of 69 read as expected
-exit 0

@@ -159,6 +159,11 @@ sys.exit(reply.get("exit", 0))
         self.assertIn("python3 -I .github/actions/changelog/test_check.py", workflow)
         self.assertIn("uses: ./.github/actions/changelog", workflow)
 
+    def test_checkout_failure_is_reported_only_when_checkout_failed(self):
+        workflow = (HERE.parents[1] / "workflows/changelog.yml").read_text()
+        step = workflow.split("      - name: Report checkout failure\n", 1)[1].split("\n      - ", 1)[0]
+        self.assertEqual(step.splitlines()[0], "        if: ${{ failure() && steps.checkout.outcome == 'failure' }}")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

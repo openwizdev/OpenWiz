@@ -1,7 +1,7 @@
 # OpenWiz plan contract, version 1 (`openwiz.plan.v1`)
 
 The repository-wide plan read, `openwiz.plan.v1` (0.0.11, #648, U1 #651). Its
-schema is [plan.v1.schema.json](plan.v1.schema.json). The GitHub adapter's
+JSON schema left the tree in #2482, as nothing read it. The GitHub adapter's
 bounded reads (`crates/adapters/github/src/plan.rs`) gather its sources; no
 OpenWiz route serves it since #1264.
 

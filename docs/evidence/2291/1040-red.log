@@ -1,0 +1,14 @@
+# main behaviour: plan rounds integer params through f64
+running 1 test
+loop_plan::integer_params_beyond_i64_and_u64_keep_their_digits --- FAILED
+failures:
+---- loop_plan::integer_params_beyond_i64_and_u64_keep_their_digits stdout ----
+thread 'loop_plan::integer_params_beyond_i64_and_u64_keep_their_digits' (11015) panicked at tests/cli-agent/loop_plan.rs:1063:5:
+assertion `left == right` failed
+  left: Object {"@prompt": String("Inspect account 1.8446744073709552e+19 below -9.223372036854776e+18.\n"), "@script": String("#!/bin/sh\n# wizloop: params from the loop file, as data\nexport WIZLOOP_PARAM_ACCOUNT=1.8446744073709552e+19\nexport WIZLOOP_PARAM_LOW=-9.223372036854776e+18\n# wizloop: the check\necho \"$WIZLOOP_PARAM_ACCOUNT $WIZLOOP_PARAM_LOW\"\n")}
+ right: Object {"@prompt": String("Inspect account 18446744073709551617 below -9223372036854775809.\n"), "@script": String("#!/bin/sh\n# wizloop: params from the loop file, as data\nexport WIZLOOP_PARAM_ACCOUNT=18446744073709551617\nexport WIZLOOP_PARAM_LOW=-9223372036854775809\n# wizloop: the check\necho \"$WIZLOOP_PARAM_ACCOUNT $WIZLOOP_PARAM_LOW\"\n")}
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+failures:
+    loop_plan::integer_params_beyond_i64_and_u64_keep_their_digits
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 122 filtered out; finished in 1.58s
+error: test failed, to rerun pass `-p openwiz-tests --test cli-agent`

@@ -42,10 +42,6 @@ name = "new-thread"
 path = "new-thread/main.rs"
 
 [[test]]
-name = "attachments"
-path = "attachments/main.rs"
-
-[[test]]
 name = "fleet"
 path = "fleet/main.rs"
 
