@@ -1,1 +1,41 @@
-{}
+{
+  "harness": "opencode",
+  "program": "opencode",
+  "start": [
+    "run",
+    "--format",
+    "json",
+    "--model",
+    "{model}",
+    "{mode}",
+    "--",
+    "{prompt}"
+  ],
+  "wake": [
+    "run",
+    "--session",
+    "{session}",
+    "--format",
+    "json",
+    "--model",
+    "{model}",
+    "{mode}",
+    "--",
+    "{prompt}"
+  ],
+  "session": {
+    "json": [
+      "sessionID"
+    ]
+  },
+  "modes": {
+    "auto": [
+      "--auto"
+    ],
+    "configured": []
+  },
+  "env": {},
+  "effort": "none: opencode 1.19.6 run --variant silently drops a variant the model lacks (packages/opencode/src/session/llm/request.ts, anomalyco/opencode v1.19.6)",
+  "login": "opencode's own login, saved by `opencode auth login` in ~/.local/share/opencode/auth.json, or a provider API-key variable you set yourself",
+  "daemon": "opencode run (1.19.6, no --attach) starts no background service and serves itself in-process; its shell tool, LSP and MCP children run detached in their own sessions and can outlive the turn; stop ends them with the process tree"
+}
