@@ -109,6 +109,17 @@ def system_tool(name, minimum):
     return '.'.join(map(str, have)), None
 
 
+def digest(path):
+    h = hashlib.sha256()
+    try:
+        with open(path, 'rb') as f:
+            for block in iter(lambda: f.read(1 << 20), b''):
+                h.update(block)
+    except OSError:
+        return None
+    return h.hexdigest()
+
+
 def fetch(file, work):
     path = os.path.join(work, 'download')
     digest = hashlib.sha256()
@@ -190,9 +201,14 @@ def install(tool, file, prefix, work):
             except (KeyError, OSError, tarfile.TarError, zipfile.BadZipFile) as e:
                 raise Refused('cannot unpack %s: %s' % (file['member'], type(e).__name__))
         elif kind == 'wheel':
-            new_wheel = not os.path.exists(wheel)
-            if new_wheel:
-                place(open(path, 'rb').read(), wheel)
+            if digest(wheel) != file['sha256']:
+                try:
+                    place(open(path, 'rb').read(), wheel)
+                except OSError as e:
+                    raise Refused('%s: %s' % ('its cached wheel fails its checksum and cannot be replaced'
+                                              if os.path.lexists(wheel) else 'cannot write its wheel',
+                                              type(e).__name__))
+                new_wheel = True
             code = 'import importlib, sys; sys.path.insert(0, sys.argv.pop(1)); ' \
                    'sys.exit(importlib.import_module(%r).main())' % tool['module']
             place(('#!/bin/sh\nexec %s -I -c %s %s "$@"\n' % (shlex.quote(sys.executable), shlex.quote(code),
