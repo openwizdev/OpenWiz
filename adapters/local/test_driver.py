@@ -606,7 +606,7 @@ class Local(unittest.TestCase):
         code, out = self.driver('version')
         self.assertEqual(code, 0, out)
         self.assertIn('effort', out['can'])
-        self.assertIsNone(kit.invalid(out, kit.load_schema()['version']), out)
+        self.assertIsNone(kit.invalid(out, kit.load_schema()['commands']['version']['output']), out)
 
     def test_each_built_in_gets_the_effort_flag_at_start_and_at_wake(self):
         expected = {'claude': lambda argv: argv[-2:] == ['--effort', 'medium'],
@@ -686,10 +686,10 @@ class Local(unittest.TestCase):
         login = lines.index('Login: stays on your machine')
         self.assertTrue(lines[login + 1].startswith('Effort: passed as '), lines[login + 1])
         table = [line for line in lines[login + 2:login + 12] if line.startswith('| ')]
-        rows = {re.search(r'`([a-z-]+)`', r).group(1): r for r in table[2:]}
+        rows = {r.split('|')[1].strip().strip('`'): r for r in table[2:]}
         self.assertIn('`--effort <level>`', rows['claude'])
         self.assertIn('`CLAUDE_CODE_EFFORT_LEVEL`', rows['claude'])
-        self.assertIn('`-c model_reasoning_effort=<level>`', rows['codex'])
+        self.assertIn('-c model_reasoning_effort=<level>`', rows['codex'])
         for harness, levels in (('claude', ['low', 'medium', 'high', 'xhigh', 'max']),
                                 ('codex', ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'])):
             self.assertEqual(re.findall(r'`([a-z]+)`', rows[harness].split('|')[2].partition('for ')[2]), levels)
