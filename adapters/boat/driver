@@ -109,10 +109,14 @@ def host_said(lines, stderr):
     code = errors[-1].get('code') if errors else None
     if isinstance(code, str) and code in HOST_ERRORS:
         return code, HOST_ERRORS[code]
-    told = ' '.join(str(errors[-1].get(k)) for k in ('error', 'code')) if errors else stderr
-    if SIGNED_OUT.search(told):
+    for known in HOST_ERRORS:
+        if re.search(r'(?<![A-Za-z0-9_])%s(?![A-Za-z0-9_])' % known, stderr):
+            return known, HOST_ERRORS[known]
+    told = ' '.join(str(errors[-1].get(k)) for k in ('error', 'code')) if errors else ''
+    if SIGNED_OUT.search(told) or SIGNED_OUT.search(stderr):
         return 'boat is not signed in', SIGN_IN
-    return ('boat gave an error the driver does not repeat' if told.strip() else 'boat gave no answer'), None
+    return ('boat gave an error the driver does not repeat' if told.strip() or stderr.strip()
+            else 'boat gave no answer'), None
 
 
 def boat_error(what, lines, stderr, then, log=None):
@@ -239,10 +243,10 @@ def has_write_access_or_refuse(sandbox, repository, run):
     url = 'https://github.com/%s.git' % repository
     try:
         p = subprocess.run([boat_program(), 'exec', sandbox, '--timeout', str(PUSH_CHECK_WAIT), '--', 'sh', '-c',
-                            PUSH_CHECK % {'url': url, 'run': run}], stdin=subprocess.DEVNULL, capture_output=True, text=True,
-                           timeout=PUSH_CHECK_WAIT + 15)
-        pushed = p.returncode == 0 and 'openwiz-push-ok' in p.stdout
-    except subprocess.TimeoutExpired:
+                            PUSH_CHECK % {'url': url, 'run': run}], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                           stderr=subprocess.DEVNULL, timeout=PUSH_CHECK_WAIT + 15)
+        pushed = p.returncode == 0 and b'openwiz-push-ok' in p.stdout
+    except (OSError, subprocess.TimeoutExpired):
         pushed = False
     if not pushed:
         raise Refused("the sandbox cannot push to %s: the GitHub account connected in boat needs write access to "
@@ -687,12 +691,13 @@ def strays(run, known):
     return found
 
 
-def shutdown(run, turns, sandbox, conversation, stop_sandbox, logs=None):
+def shutdown(run, turns, sandbox, conversation, stop_sandbox, logs=None, spared=()):
     """End the run's local turns, then always stop its sandbox (or only interrupt the conversation), whatever
     the first step did: a failure of one never skips the other. Returns each failure, as Refused."""
     failures = []
     try:
-        end(turns + strays(run, {t['supervisor'] for t in turns}), run, turn_logs(run) if logs is None else logs)
+        known = {t['supervisor'] for t in list(turns) + list(spared) if t}
+        end(turns + strays(run, known), run, turn_logs(run) if logs is None else logs)
     except Refused as e:
         failures.append(e)
     except Exception as e:  # even a /proc this driver may not read (L2): the sandbox's stop below still runs
@@ -725,7 +730,7 @@ def abandon(run, state, cmd, error):
     of error: no failure here goes unreported."""
     what = error.args[0] if isinstance(error, Refused) else 'the driver failed: ' + type(error).__name__
     failures = shutdown(run, [], state['sandbox'], state['conversation'], cmd == 'start',
-                        [path(run, '%d.log' % len(state['turns']))])
+                        [path(run, '%d.log' % len(state['turns']))], state['turns'])
     if cmd == 'start':
         try:
             saved(run, dict(state, stopped=True))
@@ -734,10 +739,10 @@ def abandon(run, state, cmd, error):
     return reported(what, failures, '') if failures else None
 
 
-def unsaved(run, sandbox, turn, conversation, cmd, log):
+def unsaved(run, sandbox, turn, conversation, cmd, log, spared=()):
     """A turn began but could not be saved: end it here and in the sandbox, and say the outcome is unknown,
     never to do it again. After a start, the sandbox is stopped too: the run never finished starting."""
-    failures = shutdown(run, [turn], sandbox, conversation, cmd == 'start', [log])
+    failures = shutdown(run, [turn], sandbox, conversation, cmd == 'start', [log], spared)
     if failures:
         raise reported('run %s began a turn it could not save, and could not confirm everything ended; its '
                        'outcome is unknown' % run, failures, 'read the ticket for what its agent did')
@@ -819,7 +824,8 @@ def wake(run):
         try:
             saved(run, dict(state, turns=state['turns'] + [turn]))
         except OSError:
-            unsaved(run, state['sandbox'], turn, state['conversation'], 'wake', path(run, '%d.log' % len(state['turns'])))
+            unsaved(run, state['sandbox'], turn, state['conversation'], 'wake', path(run, '%d.log' % len(state['turns'])),
+                    state['turns'])
     except Refused:
         raise  # prompt and unsaved have already ended what they began
     except Exception as e:

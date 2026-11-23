@@ -1254,7 +1254,7 @@
       }
     },
     "several_prs": {
-      "description": "Two or more open pull requests close the issue, and none merged: none of them is its.",
+      "description": "Two or more open pull requests with none merged, or (in `fleet`) two or more merged ones, close the issue: none of them is its.",
       "type": "object",
       "required": [
         "state",

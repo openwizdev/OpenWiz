@@ -1,0 +1,35 @@
+{
+  "clock_start": "2026-11-22T10:01:00Z",
+  "stop": "2026-11-22T10:17:05Z",
+  "stop_pull_request": 21,
+  "total_seconds": 965,
+  "no_total_reason": null,
+  "timer_waits": [],
+  "after_stop": [],
+  "steps": [
+    {"step": "preflight", "at": "2026-11-22T10:00:00Z", "start_seconds": -60, "length_seconds": 60, "waits_on": "user", "failure": null},
+    {"step": "install", "at": "2026-11-22T10:01:00Z", "start_seconds": 0, "length_seconds": 40, "waits_on": "agent", "failure": null},
+    {"step": "setup check", "at": "2026-11-22T10:01:40Z", "start_seconds": 40, "length_seconds": 30, "waits_on": "agent", "failure": null},
+    {"step": "skills copy", "at": "2026-11-22T10:02:10Z", "start_seconds": 70, "length_seconds": 20, "waits_on": "agent", "failure": null},
+    {"step": "where", "at": "2026-11-22T10:02:30Z", "start_seconds": 90, "length_seconds": 30, "waits_on": "user", "failure": null},
+    {"step": "repo", "at": "2026-11-22T10:03:00Z", "start_seconds": 120, "length_seconds": 30, "waits_on": "user", "failure": null},
+    {"step": "connect", "at": "2026-11-22T10:03:30Z", "start_seconds": 150, "length_seconds": 90, "waits_on": "user", "failure": "gh lacked a scope; refreshed the login"},
+    {"step": "grill", "at": "2026-11-22T10:05:00Z", "start_seconds": 240, "length_seconds": 120, "waits_on": "user", "failure": null},
+    {"step": "models", "at": "2026-11-22T10:07:00Z", "start_seconds": 360, "length_seconds": 20, "waits_on": "user", "failure": null},
+    {"step": "host setting", "at": "2026-11-22T10:07:20Z", "start_seconds": 380, "length_seconds": 25, "waits_on": "user", "failure": null},
+    {"step": "plan", "at": "2026-11-22T10:07:45Z", "start_seconds": 405, "length_seconds": 75, "waits_on": "agent", "failure": null},
+    {"step": "launch", "at": "2026-11-22T10:09:00Z", "start_seconds": 480, "length_seconds": 30, "waits_on": "agent", "failure": null},
+    {"step": "build", "at": "2026-11-22T10:09:30Z", "start_seconds": 510, "length_seconds": 270, "waits_on": "agent", "failure": null},
+    {"step": "review", "at": "2026-11-22T10:14:00Z", "start_seconds": 780, "length_seconds": 150, "waits_on": "agent", "failure": null},
+    {"step": "merge", "at": "2026-11-22T10:16:30Z", "start_seconds": 930, "length_seconds": 35, "waits_on": "ci", "failure": null}
+  ],
+  "github": [
+    {"event": "spec #10 created", "at": "2026-11-22T10:08:30Z", "start_seconds": 450},
+    {"event": "ticket #12 created", "at": "2026-11-22T10:08:50Z", "start_seconds": 470},
+    {"event": "ticket #13 created", "at": "2026-11-22T10:08:55Z", "start_seconds": 475},
+    {"event": "pull request #21 created", "at": "2026-11-22T10:13:00Z", "start_seconds": 720},
+    {"event": "pull request #22 created", "at": "2026-11-22T10:13:30Z", "start_seconds": 750},
+    {"event": "pull request #21 merged", "at": "2026-11-22T10:17:05Z", "start_seconds": 965},
+    {"event": "pull request #22 merged", "at": "2026-11-22T10:18:00Z", "start_seconds": 1020}
+  ]
+}

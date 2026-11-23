@@ -6,9 +6,6 @@ use openwiz_adapter_github::writes::{self, Body, LABEL_MAX_LEN, Label, Write};
 use openwiz_core::fleet::model::Commit;
 use openwiz_core::messaging::MAX_TEXT_BYTES;
 
-#[path = "b3_fake.rs"]
-mod fake;
-
 const HEAD: &str = "0123456789abcdef0123456789abcdef01234567";
 
 const QUEUE_QUERY: &str = "query=query($owner:String!,$repo:String!,$number:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$number){isMergeQueueEnabled}}}";

@@ -9,7 +9,7 @@ python3 -I kernel/driver-kit/test_kit.py     # the kit's own tests: the template
 python3 -I kernel/driver-kit/test_hostkey.py # the key helper's own tests: every refusal, and the key never leaks
 ```
 
-It prints one line per check, in the order version, start, wake, stop, token: `pass <check>: <what>` or `fail <check>: <why>`. Exit 0: all five pass. 1: a check failed. 2: the kit could not run; it says why on stderr, `kit.py: <why>`. Wake and stop run only after start passes.
+It prints one line per check, in the order version, start, wake, stop, token: `pass <check>: <what>` or `fail <check>: <why>`. Exit 0: all five pass. 1: a check failed. 2: the kit could not run; it says why on stderr, `kit.py: <why>`. The wake and stop checks run only after start passes. Once `start` has answered a run id, the kit always calls the driver's `stop` for that run before it goes on or exits, even when the start check failed; that stop is not the stop check.
 
 ## Key hosts
 
@@ -35,7 +35,7 @@ On macOS, with no `/proc`, the kit lists processes with `ps -A`, and reads each 
 
 ## Fixtures
 
-- `fixtures/no-proc/`: runs Python as on macOS, on Linux: no `/proc`, no `prctl` and no pidfd, `sys.platform` `darwin`, and a `ps` that takes macOS's `-E` (with `NO_PROC_HIDE_ENV` set, it shows no environment at all; with `NO_PROC_PROBE_ONLY` set, only the kit's own probe's). The drivers' and the kit's tests put it first on `PATH` to run the macOS path (#2010).
+- `fixtures/no-proc/`: runs Python as on macOS, on Linux: no `/proc`, no `prctl` and no pidfd, `sys.platform` `darwin`, and a `ps` that takes macOS's `-E` (with `NO_PROC_HIDE_ENV` set, it shows no environment at all; with `NO_PROC_PROBE_ONLY` set, only the kit's own probe's, and only in the kit's own listing: a caller with `OPENWIZ_KIT_RUN` set, as the driver is, keeps its own view). The drivers' and the kit's tests put it first on `PATH` to run the macOS path (#2010).
 - `fixtures/fake-harness`: a synthetic harness. It posts one builder note into the tracker named by `KIT_TRACKER`, edits it when woken, then waits to be stopped.
 - `fixtures/planted/<name>`: the template with one planted break each. `test_kit.py` names the exact lines each must print.
 - `fixtures/key-host/`: a fake key-host driver, the template sending each start, wake and stop to host `devin` through the helper. `fixtures/planted/key-*/` are it with one key break each: it reads the key itself (in the driver, in a `test_*` file it imports, or in a script it runs, `fixtures/runtime-reader`), names the variable in its README (or twice on the login line), keeps it behind a symbolic link or in a script it runs by a relative or a credential-shaped path, passes the key in an argument, in another variable, in a variable's name or in a request body, prints it, sends it to the host itself, impersonates the helper (a Perl process with the helper's arguments), asks for an unregistered host or for a path with a host in it, calls the keychain tool, names a key host under a local login line, or meets a fake host whose `fixtures/kit-host.json` refuses start. `fixtures/key-host-dumps-env/` records its environment, to show the canary never reaches the driver. `test_kit.py` also runs it against a fake host that answers a redirect: start fails, and the redirect's target gets no request.

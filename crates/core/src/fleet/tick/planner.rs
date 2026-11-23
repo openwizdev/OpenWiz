@@ -569,15 +569,7 @@ fn ticket(
             .as_ref()
             .is_none_or(|p| matches!(p, PrInput::Open(p) if p.fields.head_branch == source.branch))
     {
-        if out.rules.small_builder().harness == "claude-code" {
-            look(
-                out,
-                spec,
-                Some(id),
-                vec!["fallback builder is the limited family".into()],
-                &t.records.looked,
-            );
-        } else {
+        if out.rules.small_builder().harness == "codex" {
             emit(
                 out,
                 spec,
@@ -587,6 +579,14 @@ fn ticket(
                     branch: source.branch.clone(),
                     settings: out.rules.small_builder().clone(),
                 },
+            );
+        } else {
+            look(
+                out,
+                spec,
+                Some(id),
+                vec!["fallback builder is not another family".into()],
+                &t.records.looked,
             );
         }
     }

@@ -1,0 +1,73 @@
+test_each_planted_break_is_reported (__main__.Kit.test_each_planted_break_is_reported) ... 
+  test_each_planted_break_is_reported (__main__.Kit.test_each_planted_break_is_reported) [one-line-code-span] ... FAIL
+  test_each_planted_break_is_reported (__main__.Kit.test_each_planted_break_is_reported) [foreign-long-form] ... FAIL
+test_fences_and_comments_hide_only_what_github_hides (__main__.Kit.test_fences_and_comments_hide_only_what_github_hides) ... ok
+test_links_section_read_as_plan_links_reads_it (__main__.Kit.test_links_section_read_as_plan_links_reads_it) ... ok
+test_reader_refuses_any_other_shape (__main__.Kit.test_reader_refuses_any_other_shape) ... ok
+test_valid_trackers_pass (__main__.Kit.test_valid_trackers_pass) ... 
+  test_valid_trackers_pass (__main__.Kit.test_valid_trackers_pass) [valid-own-long-form.json] ... FAIL
+
+======================================================================
+FAIL: test_each_planted_break_is_reported (__main__.Kit.test_each_planted_break_is_reported) [one-line-code-span]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/records-kit/test_check.py", line 63, in test_each_planted_break_is_reported
+    self.assertEqual((code, out), (1, want), err)
+AssertionError: Tuples differ: (1, [[17 chars]s ## Problem Statement', '#1 T1: spec lacks ##[283 chars]es']) != (1, [[17 chars]s ## Out of Scope'])
+
+First differing element 1:
+['#1 [13 chars]s ## Problem Statement', '#1 T1: spec lacks ##[282 chars]tes']
+['#1 [13 chars]s ## Out of Scope']
+
+- (1,
+-  ['#1 T1: spec lacks ## Problem Statement',
+-   '#1 T1: spec lacks ## Solution',
+-   '#1 T1: spec lacks ## Changelog headline',
+-   '#1 T1: spec lacks ## User Stories',
+-   '#1 T1: spec lacks ## Implementation Decisions',
+-   '#1 T1: spec lacks ## Testing Decisions',
+-   '#1 T1: spec lacks ## Proof',
+-   '#1 T1: spec lacks ## Out of Scope',
+? ^^                                   ^
+
++ (1, ['#1 T1: spec lacks ## Out of Scope'])
+? ^^^^^                                   ^^
+
+-   '#1 T1: spec lacks ## Further Notes']) : 
+
+======================================================================
+FAIL: test_each_planted_break_is_reported (__main__.Kit.test_each_planted_break_is_reported) [foreign-long-form]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/records-kit/test_check.py", line 63, in test_each_planted_break_is_reported
+    self.assertEqual((code, out), (1, want), err)
+AssertionError: Tuples differ: (1, [[22 chars]ion: a line is not a link line or none']) != (1, [[22 chars]ion: line `- other-owner/site#3 real: the exam[54 chars]ry'])
+
+First differing element 1:
+['#2 [18 chars]ion: a line is not a link line or none']
+['#2 [18 chars]ion: line `- other-owner/site#3 real: the exam[53 chars]ory']
+
+- (1, ['#2 B1: malformed section: a line is not a link line or none'])
++ (1,
++  ['#2 B1: malformed section: line `- other-owner/site#3 real: the example '
++   'shape` names other-owner/site#3, not this repository']) : 
+
+======================================================================
+FAIL: test_valid_trackers_pass (__main__.Kit.test_valid_trackers_pass) [valid-own-long-form.json]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/records-kit/test_check.py", line 55, in test_valid_trackers_pass
+    self.assertEqual((code, out), (0, []), err)
+AssertionError: Tuples differ: (1, ['#2 B1: malformed section: a line is not a link line or none']) != (0, [])
+
+First differing element 0:
+1
+0
+
+- (1, ['#2 B1: malformed section: a line is not a link line or none'])
++ (0, []) : 
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.987s
+
+FAILED (failures=3)

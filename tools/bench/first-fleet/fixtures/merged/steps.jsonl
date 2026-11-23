@@ -1,0 +1,15 @@
+{"at": "2026-11-22T10:00:00Z", "step": "preflight", "waits_on": "user"}
+{"at": "2026-11-22T10:01:00Z", "step": "install", "waits_on": "agent"}
+{"at": "2026-11-22T10:01:40Z", "step": "setup check", "waits_on": "agent"}
+{"at": "2026-11-22T10:02:10Z", "step": "skills copy", "waits_on": "agent"}
+{"at": "2026-11-22T10:02:30Z", "step": "where", "waits_on": "user"}
+{"at": "2026-11-22T10:03:00Z", "step": "repo", "waits_on": "user"}
+{"at": "2026-11-22T10:03:30Z", "step": "connect", "waits_on": "user", "failure": "gh lacked a scope; refreshed the login"}
+{"at": "2026-11-22T10:05:00Z", "step": "grill", "waits_on": "user"}
+{"at": "2026-11-22T10:07:00Z", "step": "models", "waits_on": "user"}
+{"at": "2026-11-22T10:07:20Z", "step": "host setting", "waits_on": "user"}
+{"at": "2026-11-22T10:07:45Z", "step": "plan", "waits_on": "agent"}
+{"at": "2026-11-22T10:09:00Z", "step": "launch", "waits_on": "agent"}
+{"at": "2026-11-22T10:09:30Z", "step": "build", "waits_on": "agent"}
+{"at": "2026-11-22T10:14:00Z", "step": "review", "waits_on": "agent"}
+{"at": "2026-11-22T10:16:30Z", "step": "merge", "waits_on": "ci"}

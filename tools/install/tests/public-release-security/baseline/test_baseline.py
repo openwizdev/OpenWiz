@@ -201,7 +201,7 @@ class GitHub(BaseHTTPRequestHandler):
                 return self.answer(422, {'message': 'synthetic: no access'})
             asked = json.loads(body)
             return self.answer(201, dict({'token': PLANTED_INSTALLATION, 'expires_at': app['expires_at'],
-                                          'permissions': asked['permissions'],
+                                          'permissions': asked['permissions'], 'repository_selection': 'selected',
                                           'repositories': [{'full_name': REPO}]}, **app['mint']))
         return self.answer(404, {'message': 'synthetic: unexpected route'})
 

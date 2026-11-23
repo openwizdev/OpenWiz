@@ -493,7 +493,7 @@ def main():
             def log_message(self, *_args):
                 pass
 
-            def reply(self, status, text):
+            def reply(self, status, text, style=None):
                 data = text.encode()
                 self.send_response(status)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -502,7 +502,8 @@ def main():
                 self.send_header("Referrer-Policy", "no-referrer")
                 self.send_header("X-Content-Type-Options", "nosniff")
                 self.send_header("Content-Security-Policy",
-                                 "default-src 'none'; form-action https://github.com; base-uri 'none'; frame-ancestors 'none'")
+                                 "default-src 'none'; form-action https://github.com; base-uri 'none'; frame-ancestors 'none'"
+                                 + (f"; style-src 'nonce-{style}'" if style else ""))
                 self.end_headers()
                 self.wfile.write(data)
 
@@ -529,14 +530,18 @@ def main():
                     value = dict(template, redirect_url=f"{base}/callback",
                                  setup_url=f"{base}/installed", setup_on_update=True)
                     action = "https://github.com/settings/apps/new?" + urllib.parse.urlencode({"state": nonce})
-                    self.reply(200, '<!doctype html><title>OpenWiz GitHub App</title>'
+                    style = secrets.token_urlsafe(16)
+                    self.reply(200, '<!doctype html><html lang="en"><meta charset="utf-8">'
+                               '<meta name="viewport" content="width=device-width, initial-scale=1">'
+                               f'<style nonce="{style}">button{{font:inherit;min-height:44px;min-width:44px;'
+                               'padding:8px 16px}</style><title>OpenWiz GitHub App</title>'
                                '<h1>OpenWiz GitHub App</h1>'
                                '<p>Create it with Metadata read, Contents, Issues and Pull requests write, '
                                'Checks and Actions read, then install it on only the repositories you select. '
                                'The private key stays in this host’s OpenWiz state directory.</p>'
                                f'<form method="post" action="{html.escape(action, quote=True)}">'
                                f'<input type="hidden" name="manifest" value="{html.escape(json.dumps(value), quote=True)}">'
-                               '<button type="submit">Create the App on GitHub</button></form>')
+                               '<button type="submit">Create the App on GitHub</button></form>', style)
                     return
                 try:
                     query = urllib.parse.parse_qs(parts.query, strict_parsing=True)

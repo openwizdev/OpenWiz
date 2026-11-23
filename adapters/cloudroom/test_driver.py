@@ -4,6 +4,8 @@ route the fleet's GitHub events use, and the refusals that keep a run from being
 
 Run: python3 -I adapters/cloudroom/test_driver.py   (Linux: the kit watches /proc)
 """
+import importlib.machinery
+import importlib.util
 import json
 import os
 import re
@@ -22,6 +24,12 @@ DRIVER = os.path.join(HERE, 'driver')
 KIT = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit')
 sys.path.insert(0, KIT)
 import kit  # noqa: E402
+import test_kit  # noqa: E402 -- the kit's folder goes on sys.path above, so this import must follow it
+
+_spec = importlib.util.spec_from_loader('cloudroom_driver', importlib.machinery.SourceFileLoader('cloudroom_driver',
+                                                                                                DRIVER))
+driver = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(driver)
 
 TOKEN = 'gh' + 'p_' + 'Synthetic0Kit0Value' * 2 + '00'  # a token's shape, built here so no file holds one
 PROJECT, PARENT = 'prj_syn_0001', 'thr_syn_parent'
@@ -37,8 +45,8 @@ class Driver(unittest.TestCase):
             json.dump({'record_authors': ['example-bot[bot]'], 'comments': []}, f)
         self.env = dict(os.environ, KIT_TRACKER=tracker, KIT_TEST=self.mark, GH_TOKEN=TOKEN, ROOM_PROJECT_ID=PROJECT, ROOM_THREAD_ID=PARENT,
                         FAKE_ROOM_LOG=self.log, OPENWIZ_CLOUDROOM_STATE=os.path.join(self.folder, 'state'),
-                        PATH=os.pathsep.join([os.path.join(HERE, 'fixtures'), os.path.join(KIT, 'fixtures'),
-                                              os.environ.get('PATH', '')]))
+                        PATH=test_kit.pinned_path(self.folder, os.path.join(HERE, 'fixtures'),
+                                                  os.path.join(KIT, 'fixtures')))
 
     def tearDown(self):
         for pid in filter(str.isdigit, os.listdir('/proc')):
@@ -54,7 +62,9 @@ class Driver(unittest.TestCase):
         self.setUp()
 
     def call(self, cmd, request, **env):
-        p = subprocess.run([sys.executable, DRIVER, cmd], input=json.dumps(request), env=dict(self.env, **env), capture_output=True,
+        env = dict(self.env, **env)
+        test_kit.no_real_harness(env['PATH'])
+        p = subprocess.run([sys.executable, DRIVER, cmd], input=json.dumps(request), env=env, capture_output=True,
                            text=True, timeout=60)
         out = json.loads(p.stdout)
         schema = kit.load_schema()
@@ -73,6 +83,7 @@ class Driver(unittest.TestCase):
                 self.kit(dict(self.env, FAKE_ROOM_HOST=host))
 
     def kit(self, env):
+        test_kit.no_real_harness(env['PATH'])
         p = subprocess.run([sys.executable, '-I', os.path.join(KIT, 'kit.py'), '--driver', DRIVER, '--repo',
                             'example/site', '--ticket', '7', '--harness', 'fake-harness', '--model', 'Synthetic 1',
                             '--tracker', self.env['KIT_TRACKER'], '--wait', '8'],
@@ -448,6 +459,121 @@ class Driver(unittest.TestCase):
         self.assertNotIn('tell', [c[1] for c in self.calls()])
         self.assertEqual(self.call('stop', out), (0, dict(out, stopped=True)))
         self.assertEqual(self.calls()[-1], ['thread', 'archive', 'thr_syn_0001'])
+
+    def test_a_wake_goes_on_only_when_the_lock_file_reads_live(self):
+        for text in ('', 'lives', 'Live', 'live\n'):
+            with self.subTest(text=text):
+                self.fresh()
+                code, out = self.call('start', START)
+                self.assertEqual(code, 0, out)
+                with open(os.path.join(self.env['OPENWIZ_CLOUDROOM_STATE'], out['run'] + '.lock'), 'w') as f:
+                    f.write(text)
+                self.assertEqual(self.call('wake', out)[0], 1, 'a wake took a lock file reading %r' % text)
+                self.assertNotIn('tell', [c[1] for c in self.calls()])
+
+    def test_stop_finds_its_thread_by_title_when_the_run_record_is_lost(self):
+        cases = {'own child': ({}, 0), 'cloud': ({'FAKE_ROOM_HOST': 'cloud'}, 0),
+                 'another caller': ({'ROOM_THREAD_ID': 'thr_syn_else'}, 1), 'two titled': ({'TWIN': 1}, 1),
+                 'cloud, another caller': ({'FAKE_ROOM_HOST': 'cloud', 'ROOM_THREAD_ID': 'thr_syn_else'}, 1),
+                 'cloud, two titled': ({'FAKE_ROOM_HOST': 'cloud', 'TWIN': 1}, 1),
+                 'cloud, another project': ({'FAKE_ROOM_HOST': 'cloud', 'ROOM_PROJECT_ID': 'prj_syn_0002'}, 1)}
+        for name, (env, want) in cases.items():
+            with self.subTest(name):
+                self.fresh()
+                state = self.env['OPENWIZ_CLOUDROOM_STATE']
+                env = dict({'FAKE_ROOM_HOST': 'local'}, **env)
+                twin = env.pop('TWIN', None)
+                code, out = self.call('start', START, FAKE_ROOM_BREAK=state, FAKE_ROOM_REFUSE='archive',
+                                      FAKE_ROOM_HOST=env['FAKE_ROOM_HOST'])
+                self.assertEqual(code, 1, out)
+                run = {'run': re.search(r'run-[0-9a-f]{12}', json.dumps(out)).group()}
+                os.remove(state)
+                os.mkdir(state)
+                if twin:
+                    env['FAKE_ROOM_EXTRA'] = json.dumps([{'id': 'thr_syn_twin', 'projectId': PROJECT,
+                                                          'parentThreadId': PARENT,
+                                                          'title': '#8: example/other builder (%s)' % run['run']}])
+                code, err = self.call('stop', run, **env)
+                archived = [c for c in self.calls() if c[1] == 'archive'][1:]
+                self.assertEqual((code, archived), (want, [['thread', 'archive', 'thr_syn_0001']] if not want else []),
+                                 err)
+                if want:
+                    self.assertIn(run['run'], json.dumps(err))
+                else:
+                    before = len(self.calls())
+                    self.assertEqual(self.call('stop', run, **env), (0, dict(run, stopped=True)),
+                                     'a retried stop of a recovered run is not answered as stopped')
+                    self.assertNotIn('archive', [c[1] for c in self.calls()[before:]])
+                self.assertEqual(self.call('wake', run)[0], 1)
+                self.assertNotIn('tell', [c[1] for c in self.calls()])
+
+    def test_no_provider_on_the_callers_path_is_ever_started(self):
+        outside = os.path.join(self.folder, 'outside')
+        ran = os.path.join(self.folder, 'provider-ran')
+        os.mkdir(outside)
+        with open(os.path.join(outside, 'claude-code'), 'w') as f:
+            f.write('#!/bin/sh\ntouch %s\n' % ran)
+        os.chmod(os.path.join(outside, 'claude-code'), 0o700)
+        old = os.environ['PATH']
+        os.environ['PATH'] = outside + os.pathsep + old
+        try:
+            self.fresh()
+        finally:
+            os.environ['PATH'] = old
+        code, out = self.call('start', START)
+        self.assertEqual(code, 0, out)
+        with open(self.log + '.threads') as f:
+            self.assertEqual(json.load(f)['thr_syn_0001']['turns'], [],
+                             "the fake room-cli started a provider from the caller's PATH")
+        self.assertFalse(os.path.exists(ran))
+        self.assertIsNone(shutil.which('claude-code', path=self.env['PATH']))
+
+    def test_a_failed_room_cli_command_is_named_by_fixed_words(self):
+        signed_out, other, silent = 'room-cli is not signed in', 'room-cli gave an error the driver does not repeat', \
+            'room-cli gave no answer'
+        cases = [('', 'Synthetic: not signed in', signed_out), ('', 'Synthetic: please log in again', signed_out),
+                 (json.dumps({'error': 'Synthetic: signed out'}), '', signed_out),
+                 ('', 'Synthetic request expired', other), ('', 'Synthetic 401 from a mirror', other),
+                 (json.dumps({'error': 'Synthetic request expired'}), '', other),
+                 ('Synthetic plain diagnostic', '', other), (json.dumps({'ok': False}), '', other),
+                 ('', '', silent), (' \n', '\t', silent), (json.dumps({'error': ' '}), '', silent)]
+        for out, err, want in cases:
+            with self.subTest(out=out, err=err):
+                self.assertEqual(driver.room_said(out, err), want)
+
+    def test_every_drivers_readme_names_its_platforms(self):
+        adapters = os.path.join(HERE, '..')
+        readmes = sorted(os.path.join(adapters, d, 'README.md') for d in os.listdir(adapters)
+                         if os.path.isfile(os.path.join(adapters, d, 'driver')))
+        self.assertIn(os.path.join(adapters, 'cloudroom', 'README.md'), readmes)
+        for path in readmes:
+            with self.subTest(path):
+                with open(path) as f:
+                    self.assertRegex(f.read(), r'\*\*Platforms:\*\* (Linux|macOS)[^\n]*, Python 3\.[0-9]+ or later')
+
+    def test_a_start_whose_cleanup_archive_times_out_still_names_its_run(self):
+        run, calls = 'run-0123456789ab', []
+        old = driver.STATE, driver.saved, driver.spawn, driver.room
+        driver.STATE = self.env['OPENWIZ_CLOUDROOM_STATE']
+
+        def saved(name, state=None):
+            if state and state['thread']:
+                raise OSError('Synthetic full disk')
+            return old[1](name, state)
+
+        def room(*args):
+            calls.append(args)
+            raise driver.Unknown('room-cli thread archive did not answer within 100 seconds; its outcome is unknown',
+                                 'read `room-cli thread list` before you do anything again, so nothing happens twice')
+        driver.saved, driver.spawn, driver.room = saved, lambda *a: 'thr_syn_0001', room
+        try:
+            with self.assertRaises(driver.Unknown) as e:
+                driver.start(START, run, kit.holds_credential)
+        finally:
+            driver.STATE, driver.saved, driver.spawn, driver.room = old
+        self.assertEqual(calls, [('thread', 'archive', 'thr_syn_0001')])
+        self.assertIn(run, e.exception.args[0])
+        self.assertIn('stop %s' % run, e.exception.args[1])
 
 
 if __name__ == '__main__':

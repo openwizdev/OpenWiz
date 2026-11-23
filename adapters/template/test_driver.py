@@ -15,6 +15,10 @@ sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.abspath(__file__))
 DRIVER = os.path.join(HERE, 'driver')
 NO_PROC = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'fixtures', 'no-proc')
+REPO = os.path.realpath(os.path.join(HERE, '..', '..'))
+HARNESSES = ('claude', 'claude-code', 'codex', 'gemini', 'opencode', 'openclaw', 'cursor-agent', 'amp', 'aider',
+             'goose')
+TOOLS = ('sh', 'ps', 'lsof', 'awk', 'sleep', 'dirname')
 START = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'fake-harness',
          'model': 'Synthetic 1'}
 BREAKS_AFTER_SPAWN = '''import importlib.machinery, importlib.util, os, shutil, sys
@@ -53,6 +57,25 @@ t.main()
 '''
 
 
+def pinned_path(folder, *fixtures):
+    tools = os.path.join(folder, 'tools')
+    os.makedirs(tools)
+    for name in TOOLS:
+        if shutil.which(name):
+            os.symlink(shutil.which(name), os.path.join(tools, name))
+    os.symlink(sys.executable, os.path.join(tools, 'python3'))
+    return no_real_harness(os.pathsep.join(fixtures + (tools,)))
+
+
+def no_real_harness(path):
+    for name in HARNESSES:
+        found = shutil.which(name, path=path)
+        if found and not os.path.realpath(found).startswith(REPO + os.sep):
+            raise AssertionError('%s on the PATH is %s, outside the fixtures: a test could launch a real harness'
+                                 % (name, found))
+    return path
+
+
 def alive(pid):
     try:
         with open('/proc/%d/stat' % pid) as f:
@@ -81,7 +104,7 @@ class Template(unittest.TestCase):
         self.turns, self.hold = os.path.join(self.folder, 'turns'), os.path.join(self.folder, 'hold')
         self.env = dict(os.environ, KIT_TEST=self.mark, FAKE_TURNS=self.turns, FAKE_HOLD=self.hold,
                         OPENWIZ_TEMPLATE_STATE=os.path.join(self.folder, 'state'),
-                        PATH=os.path.join(HERE, 'fixtures') + os.pathsep + os.environ.get('PATH', ''))
+                        PATH=pinned_path(self.folder, os.path.join(HERE, 'fixtures')))
 
     def tearDown(self):
         os.chmod(self.folder, 0o700)
@@ -121,8 +144,10 @@ class Template(unittest.TestCase):
         return path
 
     def call(self, cmd, request, driver=DRIVER, **env):
-        p = subprocess.run([driver, cmd], input=json.dumps(request), env=dict(self.env, **env),
-                           capture_output=True, text=True, timeout=60)
+        env = dict(self.env, **env)
+        no_real_harness(env['PATH'])
+        p = subprocess.run([driver, cmd], input=json.dumps(request), env=env, capture_output=True, text=True,
+                           timeout=60)
         return p.returncode, json.loads(p.stdout)
 
     def logged(self, count=None):
@@ -142,6 +167,24 @@ class Template(unittest.TestCase):
         while not ready() and time.monotonic() < deadline:
             time.sleep(0.05)
         return ready()
+
+    def test_no_harness_outside_the_fixtures_is_on_the_tests_path(self):
+        outside = os.path.join(self.folder, 'outside')
+        os.mkdir(outside)
+        with open(os.path.join(outside, 'claude'), 'w') as f:
+            f.write('#!/bin/sh\nexit 0\n')
+        os.chmod(os.path.join(outside, 'claude'), 0o700)
+        old = os.environ['PATH']
+        os.environ['PATH'] = outside + os.pathsep + old
+        try:
+            self.setUp()
+        finally:
+            os.environ['PATH'] = old
+        self.assertIsNone(shutil.which('claude', path=self.env['PATH']), 'the PATH reaches a real claude')
+        self.assertEqual(shutil.which('fake-harness', path=self.env['PATH']),
+                         os.path.join(HERE, 'fixtures', 'fake-harness'))
+        with self.assertRaisesRegex(AssertionError, 'could launch a real harness'):
+            self.call('start', dict(START, harness='claude'), PATH=outside + os.pathsep + self.env['PATH'])
 
     def test_stop_ends_what_the_turn_left_behind_after_it_exits(self):
         code, out = self.call('start', START)
@@ -319,6 +362,29 @@ class Template(unittest.TestCase):
         worker = self.handed_off(pids)
         self.assertEqual(self.call('stop', out, **macos), (0, dict(out, stopped=True)))
         self.assertFalse(alive(worker), 'a worker the turn handed off as it exited still runs after stop')
+
+    def test_without_proc_as_on_macos_stop_says_when_lsof_cannot_check_the_output_file(self):
+        for broken in (False, True):
+            with self.subTest(lsof_fails=broken):
+                self.tearDown()
+                self.setUp()
+                macos = {'PATH': NO_PROC + os.pathsep + self.env['PATH'], 'NO_PROC_PYTHON': sys.executable}
+                code, out = self.call('start', START, **macos)
+                self.assertEqual(code, 0, out)
+                self.logged(1)
+                stop = dict(self.env, **macos)
+                if broken:
+                    folder = os.path.join(self.folder, 'broken-lsof')
+                    os.mkdir(folder)
+                    with open(os.path.join(folder, 'lsof'), 'w') as f:
+                        f.write('#!/bin/sh\necho "lsof: synthetic failure %s" >&2\nexit 1\n' % self.mark)
+                    os.chmod(os.path.join(folder, 'lsof'), 0o700)
+                    stop['PATH'] = folder + os.pathsep + stop['PATH']
+                p = subprocess.run([DRIVER, 'stop'], input=json.dumps(out), env=stop, capture_output=True, text=True,
+                                   timeout=60)
+                self.assertEqual((p.returncode, json.loads(p.stdout)), (0, dict(out, stopped=True)))
+                self.assertEqual('could not check' in p.stderr, broken, p.stderr)
+                self.assertNotIn(self.mark, p.stderr)
 
     def asked_ps_for_environments(self, calls):
         with open(calls) as f:

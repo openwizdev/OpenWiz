@@ -1,0 +1,10 @@
+test_each_planted_break_is_reported (__main__.Kit.test_each_planted_break_is_reported) ... ok
+test_fences_and_comments_hide_only_what_github_hides (__main__.Kit.test_fences_and_comments_hide_only_what_github_hides) ... ok
+test_links_section_read_as_plan_links_reads_it (__main__.Kit.test_links_section_read_as_plan_links_reads_it) ... ok
+test_reader_refuses_any_other_shape (__main__.Kit.test_reader_refuses_any_other_shape) ... ok
+test_valid_trackers_pass (__main__.Kit.test_valid_trackers_pass) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.934s
+
+OK

@@ -34,7 +34,7 @@ Each `blocked_by` entry is a native blocker: `number`, `state` (`open` or `close
 
 ## What it reads in a body
 
-- A template section counts only outside fenced code blocks and HTML comments, read as the pinned [plan links contract](https://github.com/openwizdev/WizSkills/blob/a2993f47b8fd3d7853ee45e6c21feea708c70c02/contracts/plan-links.v1.md)'s "Reading a section" reads them.
+- A template section counts only outside fenced code blocks and HTML comments, read as the pinned [plan links contract](https://github.com/openwizdev/WizSkills/blob/a2993f47b8fd3d7853ee45e6c21feea708c70c02/contracts/plan-links.v1.md)'s "Reading a section" reads them, except that a backtick line opens a fence only when nothing after its backticks holds another backtick, as CommonMark reads it (a one-line span such as three backticks, `bash ok`, three backticks is not a fence).
 - B1 checks a ticket's `## Links` section by that contract's mechanical rules: each native blocker needs exactly one reason line (`#<n> has no reason line`, `#<n> has more than one line`), and a malformed section labels nothing (`malformed section: <detail>`). A reason's wording is not checked.
 - A status note counts toward S1 only when every field has the pinned [status schema](https://github.com/openwizdev/WizSkills/blob/a2993f47b8fd3d7853ee45e6c21feea708c70c02/contracts/agent-status.v1.schema.json)'s shape; any other is S2.
 

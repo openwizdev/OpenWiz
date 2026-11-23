@@ -1,5 +1,0 @@
-$ python3 -I contracts/fixtures/checkpoints/check.py   # at main + the new fixture, before the fence fix
-FAIL spec/both-yes-inline-code.md: expected {"result": "answered", "one_way_door": true, "user_visible": true, "release": false, "early": true, "late": true}, got {"result": "absent", "early": true, "late": false}
-FAIL release/inline-code-span.json: expected {"merge": "held", "why": "ask-due"}, got {"merge": "flows"}
-checkpoints fixtures: 69 of 71 read as expected
-exit 1

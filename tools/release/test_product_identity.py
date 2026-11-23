@@ -592,5 +592,109 @@ class CandidateArtifacts(unittest.TestCase):
                     (self.packages / name).write_bytes(data)
 
 
+def elf(machine, ident=b'\x7fELF\x02\x01\x01'):
+    data = bytearray(program(TARGET))
+    data[:len(ident)] = ident
+    struct.pack_into('<H', data, 18, machine)
+    return bytes(data)
+
+
+class LinuxArchitecture(unittest.TestCase):
+    ARM = 'aarch64-unknown-linux-gnu'
+
+    def architecture(self, data, target):
+        sys.path.insert(0, str(ROOT / 'tools/release'))
+        self.addCleanup(sys.path.remove, str(ROOT / 'tools/release'))
+        from product_identity import architecture
+        return architecture(data, target)
+
+    def test_aarch64_elf_is_the_arm_linux_target_only(self):
+        self.assertTrue(self.architecture(elf(183), self.ARM))
+        self.assertFalse(self.architecture(elf(183), TARGET))
+
+    def test_x86_64_elf_is_not_the_arm_linux_target(self):
+        self.assertTrue(self.architecture(elf(62), TARGET))
+        self.assertFalse(self.architecture(elf(62), self.ARM))
+
+    def test_arm_linux_target_refuses_other_elf_forms_and_macho(self):
+        for case, data in {'32-bit ARM': elf(40, b'\x7fELF\x01\x01\x01'),
+                           '32-bit AArch64': elf(183, b'\x7fELF\x01\x01\x01'),
+                           'big-endian AArch64': elf(183, b'\x7fELF\x02\x02\x01'),
+                           'other machine': elf(243),
+                           'truncated header': elf(183)[:19],
+                           'Mach-O arm64': program('aarch64-apple-darwin')}.items():
+            with self.subTest(case=case):
+                self.assertFalse(self.architecture(data, self.ARM))
+
+    def test_unsupported_target_aliases_refuse_every_program(self):
+        programs = {'AArch64 ELF': elf(183), 'x86_64 ELF': elf(62),
+                    'Mach-O arm64': program('aarch64-apple-darwin'), 'Mach-O x86_64': program('x86_64-apple-darwin')}
+        for target in ('aarch64-synthetic-linux-gnu', 'x86_64-synthetic-linux-gnu', 'aarch64-linux-gnu',
+                       'x86_64-unknown-linux-musl', 'aarch64-synthetic-darwin', 'x86_64-synthetic-darwin', ''):
+            for case, data in programs.items():
+                with self.subTest(target=target, program=case):
+                    self.assertFalse(self.architecture(data, target))
+
+    def test_macho_targets_are_unchanged_and_refuse_elf(self):
+        for target in ('aarch64-apple-darwin', 'x86_64-apple-darwin'):
+            with self.subTest(target=target):
+                self.assertTrue(self.architecture(program(target), target))
+                self.assertFalse(self.architecture(elf(183), target))
+
+
+class ReleaseAssetTargets(unittest.TestCase):
+    VERSION = '0.1.2'
+
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory(prefix='openwiz-release-asset-')
+        self.addCleanup(temporary.cleanup)
+        self.work = Path(temporary.name)
+        self.repo = self.work / 'repo'
+        subprocess.run([*GIT, 'init', '-q', str(self.repo)], check=True)
+        subprocess.run([*GIT, '-C', str(self.repo), 'remote', 'add', 'origin',
+                        'https://github.com/example/synthetic.git'], check=True)
+        sys.path.insert(0, str(ROOT / 'tools/release'))
+        self.addCleanup(sys.path.remove, str(ROOT / 'tools/release'))
+        import check
+        import scans
+        self.scans, self.Refused = scans, check.Refused
+
+    def scan(self, target):
+        export = self.work / f'export-{target}'
+        path = f'packages/openwiz-{self.VERSION}-{target}.tar.gz'
+        data = gzip.compress(b'synthetic package\0', mtime=0)
+        (export / path).parent.mkdir(parents=True)
+        (export / path).write_bytes(data)
+        review = {'path': path, 'sha256': sha(data), 'rule': 'release-asset',
+                  'value': f'{self.VERSION}@{"1" * 40}@{target}'}
+        from types import SimpleNamespace
+        check = SimpleNamespace(args=SimpleNamespace(version=self.VERSION, repo=str(self.repo)),
+                                plan={'scan_exceptions': [review]}, export=export,
+                                report={'files': [{'path': path, 'mode': '100644', 'sha256': sha(data)}]},
+                                literals=['synthetic-named-term'])
+        self.scans.scan(check)
+        return check
+
+    def test_arm_linux_package_review_is_accepted(self):
+        try:
+            check = self.scan('aarch64-unknown-linux-gnu')
+        except self.Refused as refused:
+            self.fail(f'ARM Linux package refused: {refused}')
+        self.assertEqual(check.used_exceptions, {0})
+
+    def test_existing_targets_are_still_accepted(self):
+        for target in ('aarch64-apple-darwin', 'x86_64-apple-darwin', 'x86_64-unknown-linux-gnu'):
+            with self.subTest(target=target):
+                self.assertEqual(self.scan(target).used_exceptions, {0})
+
+    def test_unknown_targets_are_still_refused(self):
+        for target in ('armv7-unknown-linux-gnueabihf', 'aarch64-unknown-linux-musl',
+                       'aarch64-unknown-linux-gnux', 'aarch64-pc-windows-msvc'):
+            with self.subTest(target=target):
+                with self.assertRaises(self.Refused) as refused:
+                    self.scan(target)
+                self.assertEqual(str(refused.exception), 'release-asset: exact version/source/target review required')
+
+
 if __name__ == '__main__':
     unittest.main()

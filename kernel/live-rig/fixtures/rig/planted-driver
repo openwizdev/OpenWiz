@@ -1,0 +1,5 @@
+#!/usr/bin/env python3
+import os, sys
+here = os.path.dirname(os.path.abspath(__file__))
+planted = os.path.join(here, '..', '..', 'kernel', 'driver-kit', 'fixtures', 'planted', 'wake-does-nothing')
+os.execv(sys.executable, [sys.executable, '-I', planted] + sys.argv[1:])

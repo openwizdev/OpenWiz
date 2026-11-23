@@ -1,0 +1,7 @@
+{
+  "Hermes": {"id": "DW1L", "ticket": 1990, "pr": 2017, "listing": "hermes"},
+  "Conductor": {"id": "DW3L", "ticket": 1993, "pr": 2020, "listing": "conductor"},
+  "Cursor": {"id": "DW4L", "ticket": 1995, "pr": 2021, "listing": "cursor-cloud-agents"},
+  "Factory": {"id": "DW6L", "ticket": 1999, "pr": 2022, "listing": "factory"},
+  "Pane": {"id": "DW7L", "ticket": 2001, "pr": 2029, "listing": "pane"}
+}

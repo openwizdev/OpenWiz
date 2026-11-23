@@ -1,0 +1,16 @@
+# Green run for review R1 and R2 on openwizdev/OpenWiz#2339: the review red run's proofs, then the touched suites (paths scrubbed)
+$ python3 -I tools/install/setup/test_check.py CredentialShapedText
+Ran 1 test in <time>
+OK
+$ python3 -I tools/github-app/test_token_service.py RequestFixtureTests.test_a_failed_audit_rewrite_keeps_the_entry_and_revokes_the_token
+Ran 1 test in <time>
+OK
+$ python3 -I tools/install/setup/test_check.py
+Ran 23 tests in <time>
+OK
+$ python3 -I tools/github-app/test_token_service.py
+Ran 13 tests in <time>
+OK
+$ python3 -I contracts/fixtures/token-service/test_fixtures.py
+Ran 17 tests in <time>
+OK

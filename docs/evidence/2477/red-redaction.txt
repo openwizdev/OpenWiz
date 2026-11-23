@@ -1,0 +1,18 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/test_rig.py Rig.test_a_kit_line_quoting_the_checkout_or_the_repository_is_recorded_without_them   # rig.py with its stdout redaction undone; agent-CLI stubs first on PATH
+test_a_kit_line_quoting_the_checkout_or_the_repository_is_recorded_without_them (__main__.Rig.test_a_kit_line_quoting_the_checkout_or_the_repository_is_recorded_without_them) ... FAIL
+
+======================================================================
+FAIL: test_a_kit_line_quoting_the_checkout_or_the_repository_is_recorded_without_them (__main__.Rig.test_a_kit_line_quoting_the_checkout_or_the_repository_is_recorded_without_them)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_rig.py", line 189, in test_a_kit_line_quoting_the_checkout_or_the_repository_is_recorded_without_them
+    self.record('fixture-quoting')['stdout'])
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<checkout>/kernel/live-rig/test_rig.py", line 131, in record
+    self.assertNotIn(private, text)
+AssertionError: '<tmp>' unexpectedly found in '{\n  "host": "fixture-quoting",\n  "harness": "fake-harness",\n  "model": "Synthetic 1",\n  "date": "2026-11-22",\n  "driver_commit": "909cf7a9a688ef456ac61c7cce4bc241c5443103",\n  "kit_commit": "909cf7a9a688ef456ac61c7cce4bc241c5443103",\n  "outcome": "ran",\n  "skipped": null,\n  "kit_exit": 1,\n  "stdout": "pass version: openwiz:records v1, and the schema is driver v1\\nfail start: cannot start example/rig-throwaway in <tmp>/checkout/adapters/quoting\\nfail wake: not run: start failed\\nfail stop: not run: start failed\\npass token: no login or token passed through the driver\\n",\n  "seconds": 0\n}\n'
+
+----------------------------------------------------------------------
+Ran 1 test in 0.257s
+
+FAILED (failures=1)

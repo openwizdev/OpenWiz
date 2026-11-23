@@ -339,6 +339,35 @@ class Local(unittest.TestCase):
         self.assertEqual(code, 0, out)
         self.assertEqual(self.driver('wake', out), (0, dict(out, woke=True)))
 
+    def test_a_quick_clean_first_turn_starts(self):
+        talker = os.path.join(self.folder, 'talker')
+        os.mkdir(talker)
+        with open(os.path.join(talker, 'claude'), 'w') as f:
+            f.write('#!%s\nimport os\nprint(os.environ["TALK"])\n' % sys.executable)
+        os.chmod(os.path.join(talker, 'claude'), 0o700)
+        request = {'repository': 'example/quick', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude',
+                   'model': 'synthetic-1'}
+        talks = dict(self.env, PATH=talker + os.pathsep + self.env['PATH'])
+        for case, env in [('relative state', dict(self.env, OPENWIZ_LOCAL_STATE='state'))] + [
+                (said, dict(talks, TALK=said)) for said in (
+                    'Updated the permission documentation and the login guide.',
+                    'Added tests for unauthorized requests.',
+                    'Summary: unauthorized requests now get a 401, and a denied upload was refused.',
+                    'Checked that the session token is invalid after logout, and that the request was denied.')]:
+            with self.subTest(case):
+                p = subprocess.run([DRIVER, 'start'], input=json.dumps(request), env=env, cwd=self.folder,
+                                   capture_output=True, text=True, timeout=60)
+                self.assertEqual(p.returncode, 0, p.stdout)
+                self.assertEqual(self.driver('wake', json.loads(p.stdout))[0], 0)
+        for said, says in (('Error: 401 Unauthorized', 'not signed in'), ('Unauthorized', 'not signed in'),
+                           ('Not logged in \u00b7 Please run /login', 'not signed in'),
+                           ('API Error: OAuth token has expired.', 'not signed in'),
+                           ('Error: permission to use Write was denied.', 'refused a tool')):
+            with self.subTest(said):
+                code, err = self.start(env=dict(talks, TALK=said), repository='example/quick')
+                self.assertEqual(code, 1, err)
+                self.assertIn(says + ' (exit 0)', err['error'])
+
     def test_a_credential_shaped_start_field_is_refused_before_anything_starts(self):
         calls, logging = os.path.join(self.folder, 'calls'), os.path.join(self.folder, 'logging-bin')
         os.mkdir(logging)
@@ -407,6 +436,27 @@ class Local(unittest.TestCase):
         worker = self.handed_off(pids)
         self.assertEqual(self.driver('stop', out, dict(self.env, **macos)), (0, dict(out, stopped=True)))
         self.assertFalse(alive(worker), 'a worker the turn handed off as it exited still runs after stop')
+
+    def test_without_proc_as_on_macos_stop_says_when_lsof_cannot_check_the_output_file(self):
+        for broken in (False, True):
+            with self.subTest(lsof_fails=broken):
+                self.tearDown()
+                self.setUp()
+                macos = {'PATH': NO_PROC + os.pathsep + self.env['PATH'], 'NO_PROC_PYTHON': sys.executable}
+                out, _, _ = self.first_turn(**macos)
+                stop = dict(self.env, **macos)
+                if broken:
+                    folder = os.path.join(self.folder, 'broken-lsof')
+                    os.mkdir(folder)
+                    with open(os.path.join(folder, 'lsof'), 'w') as f:
+                        f.write('#!/bin/sh\necho "lsof: synthetic failure %s" >&2\nexit 1\n' % OPAQUE)
+                    os.chmod(os.path.join(folder, 'lsof'), 0o700)
+                    stop['PATH'] = folder + os.pathsep + stop['PATH']
+                p = subprocess.run([DRIVER, 'stop'], input=json.dumps(out), env=stop, capture_output=True, text=True,
+                                   timeout=60)
+                self.assertEqual((p.returncode, json.loads(p.stdout)), (0, dict(out, stopped=True)))
+                self.assertEqual('could not check' in p.stderr, broken, p.stderr)
+                self.assertNotIn(OPAQUE, p.stderr)
 
     def asked_ps_for_environments(self, calls):
         with open(calls) as f:

@@ -907,3 +907,47 @@ fn export_refuses_a_check_where_its_folder_cannot_be_held_open() {
     assert_eq!(doc["loops"][0]["files"], json!(["plain.md"]));
     assert_eq!(tree(&plain.dir().join("exported")), ["plain.md"]);
 }
+
+#[cfg(target_os = "linux")]
+#[test]
+fn a_huge_sparse_collision_is_refused_under_a_256_mib_limit() {
+    let room = Room::loops();
+    dirs::private_dir(room.dir().join("exported")).unwrap();
+    let huge = room.dir().join("exported/syn-triage.md");
+    fs::File::create(&huge).unwrap().set_len(1 << 30).unwrap();
+    let output = Command::new("/bin/sh")
+        .args(["-c", "ulimit -v 262144 && exec \"$0\" \"$@\""])
+        .arg(fixture_cli())
+        .args([
+            "loop",
+            "export",
+            "--project",
+            PROJECT,
+            "--out",
+            "exported",
+            "--json",
+        ])
+        .env_clear()
+        .env("PATH", room.dir().join("bin"))
+        .env("HOME", room.dir().join("home"))
+        .env("OPENWIZ_STATE_DIR", room.dir().join("state"))
+        .env("OPENWIZ_FIXTURE_PROGRAM", room.dir().join("bin/room-cli"))
+        .current_dir(room.dir())
+        .stdin(Stdio::null())
+        .output()
+        .unwrap();
+    let doc = report(&output, 5, "export_report");
+    assert_eq!(doc["loops"][0]["refusals"][0]["code"], "export-exists");
+    let results: Vec<&Value> = doc["loops"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|l| &l["result"])
+        .collect();
+    assert_eq!(
+        results,
+        ["refused", "written", "written", "written", "written"]
+    );
+    assert_eq!(fs::metadata(&huge).unwrap().len(), 1 << 30);
+    assert_eq!(room.read("exported/syn-nightly.md"), NIGHTLY_MD);
+}

@@ -1,9 +1,0 @@
-$ python3 -I contracts/fixtures/write-driver/check.py
-fail lessons/invalid-repeated-key.json: expected {"result": "invalid", "code": "lesson-fields"}, read {"result": "pass"}
-fail lessons/expired-login-exit-true.json: expected {"result": "invalid", "code": "lesson-fields"}, read {"result": "pass"}
-fail lessons/expired-login-next-not-text.json: expected {"result": "invalid", "code": "lesson-fields"}, read {"result": "pass"}
-fail lessons/wake-after-turn-not-bool.json: expected {"result": "invalid", "code": "lesson-fields"}, read {"result": "fail", "code": "turn-still-running"}
-fail asks/invalid-env-token.txt: expected {"result": "invalid", "code": "credential"}, read {"result": "valid", "kind": "cost-or-machine", "effect": "cost money"}
-fail asks/invalid-pat.txt: expected {"result": "invalid", "code": "credential"}, read {"result": "valid", "kind": "cost-or-machine", "effect": "start a machine"}
-61 fixtures, 6 failures
-exit 1

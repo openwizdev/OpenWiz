@@ -91,6 +91,34 @@ def paused(*args):
 t.sandbox_state = paused
 t.main()
 '''
+ODD_BOAT = '''import json, os, sys
+if sys.argv[1:2] == ['exec'] and 'openwiz-push-ok' in ' '.join(sys.argv) and os.environ.get('PUSH_ANSWER'):
+    ok = os.environ['PUSH_ANSWER'] == 'ok'
+    sys.stdout.buffer.write(b'\\xff\\xfe synthetic\\n' + (b'openwiz-push-ok\\n' if ok else b''))
+    sys.stderr.buffer.write(b'\\xff synthetic diagnostic\\n')
+    sys.exit(0 if ok else 1)
+if sys.argv[1:2] == [os.environ.get('STDERR_FOR')]:
+    if os.environ['STDERR_HOW'] == 'code':
+        print('Error: provider_not_configured (synthetic detail %%s)' %% os.environ['FAKE_MARKER'], file=sys.stderr)
+    else:
+        print(json.dumps({'event': 'error', 'error': 'Synthetic failure', 'code': 'internal_error'}), flush=True)
+        print('Synthetic: login expired, session ' + os.environ['FAKE_MARKER'], file=sys.stderr)
+    sys.exit(1)
+os.execv(%r, [%r] + sys.argv[1:])
+'''
+EXEC_FAILS = '''import importlib.machinery, importlib.util, os, sys
+sys.dont_write_bytecode = True
+spec = importlib.util.spec_from_loader('boat', importlib.machinery.SourceFileLoader('boat', %r))
+t = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(t)
+run = t.subprocess.run
+def failing(args, *rest, **options):
+    if 'openwiz-push-ok' in ' '.join(args):
+        raise OSError(7, 'Argument list too long')
+    return run(args, *rest, **options)
+t.subprocess.run = failing
+t.main()
+'''
 ENVIRON_OPENS, WATCHING = [], []
 
 
@@ -629,6 +657,45 @@ class Boat(unittest.TestCase):
         for detail in ('synthetic-app', '403', 'Permission', TOKEN, 'bx_fake'):
             self.assertNotIn(detail, json.dumps(err))
 
+    def odd_boat(self):
+        folder = os.path.join(self.folder, 'odd-boat')
+        os.makedirs(folder, exist_ok=True)
+        real = os.path.join(HERE, 'fixtures', 'bin', 'boat')
+        with open(os.path.join(folder, 'boat'), 'w') as f:
+            f.write('#!%s\n' % sys.executable + ODD_BOAT % (real, real))
+        os.chmod(os.path.join(folder, 'boat'), 0o700)
+        return folder + os.pathsep + self.env['PATH']
+
+    def test_the_push_refusal_holds_when_the_check_answers_odd_bytes_or_cannot_run(self):
+        refusal = (1, {'error': "the sandbox cannot push to example/site: the GitHub account connected in boat needs "
+                                "write access to it",
+                       'next': "give the GitHub account connected in boat's dashboard write access to example/site, then "
+                               "start again"})
+        for case, program, env in (('odd bytes', DRIVER, {'PUSH_ANSWER': 'odd', 'PATH': self.odd_boat()}),
+                                   ('exec fails', self.wrapper('exec-fails', EXEC_FAILS), {})):
+            with self.subTest(case):
+                self.assertEqual(self.driver('start', REQUEST, program=program, **env), refusal)
+                self.assertEqual(self.logged(), [], 'a start that cannot push ran a turn')
+                self.assertNotIn('running', self.sandboxes().values())
+        code, out = self.driver('start', REQUEST, PUSH_ANSWER='ok', PATH=self.odd_boat())
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.driver('stop', out), (0, dict(out, stopped=True)))
+
+    def test_known_boat_guidance_reaches_the_answer_from_stderr(self):
+        marker = 'sk-' + 'Synthetic0Host0Marker' + self.mark
+        path = self.odd_boat()
+        for cmd, how, says in (('new', 'code', 'Agents & Proxying'), ('prompt', 'code', 'Agents & Proxying'),
+                               ('new', 'mixed', 'sign in to boat'), ('prompt', 'mixed', 'sign in to boat')):
+            with self.subTest(cmd=cmd, how=how):
+                code, err = self.driver('start', REQUEST, PATH=path, STDERR_FOR=cmd, STDERR_HOW=how, FAKE_MARKER=marker)
+                self.assertEqual(code, 1, err)
+                self.assertIn(says, err['next'] if how == 'code' else json.dumps(err))
+                if how == 'code':
+                    self.assertIn('provider_not_configured', err['error'])
+                self.assertNotIn(marker, json.dumps(err))
+                self.assertNotIn('Synthetic', json.dumps(err))
+                self.assertNotIn('running', self.sandboxes().values())
+
     def test_the_push_refusal_fits_driver_v1_for_the_longest_repository_name(self):
         longest = 'o' * 100 + '/' + 'r' * 100
         code, err = self.driver('start', dict(REQUEST, repository=longest), FAKE_BOAT_PUSH='denied')
@@ -731,6 +798,28 @@ class Boat(unittest.TestCase):
         failed = self.logged()[1][1]
         self.assertFalse(alive(failed), "the failed wake's worker still runs")
         self.assertTrue(alive(earlier), "the failed wake ended an earlier turn's worker")
+        self.assertEqual(self.driver('stop', out, **macos), (0, dict(out, stopped=True)))
+        self.assertFalse(alive(earlier))
+
+    def test_without_proc_as_on_macos_a_wake_that_cannot_save_ends_only_its_own_turn(self):
+        macos = {'PATH': NO_PROC + os.pathsep + self.env['PATH'], 'NO_PROC_PYTHON': sys.executable}
+        code, out = self.driver('start', REQUEST, **macos)
+        self.assertEqual(code, 0, out)
+        self.assertTrue(self.until(lambda: len(self.logged()) == 1))
+        prompt_pid, earlier = self.logged()[0][:2]
+        self.assertTrue(self.until(lambda: not alive(prompt_pid)))
+        breaks = os.path.join(self.folder, 'breaks-without-proc')
+        with open(breaks, 'w') as f:
+            f.write('#!/usr/bin/env python3\n' + BREAKS_AFTER_SPAWN % DRIVER)
+        os.chmod(breaks, 0o700)
+        code, err = self.driver('wake', out, program=breaks, **macos)
+        self.assertEqual(code, 1, err)
+        self.assertIn('could not save', err['error'])
+        self.assertTrue(self.until(lambda: len(self.logged()) == 2))
+        failed = self.logged()[1][1]
+        self.assertTrue(self.until(lambda: not alive(failed)), "the failed wake's worker still runs")
+        self.assertTrue(alive(earlier), "the failed wake ended an earlier turn's worker")
+        os.rmdir(os.path.join(self.env['OPENWIZ_BOAT_STATE'], out['run'] + '.json.new'))
         self.assertEqual(self.driver('stop', out, **macos), (0, dict(out, stopped=True)))
         self.assertFalse(alive(earlier))
 

@@ -299,6 +299,7 @@ impl World {
             stdout: String::from_utf8(out).expect("UTF-8 stdout"),
             stderr: String::from_utf8(err).expect("UTF-8 stderr"),
             calls: fake.invocations(),
+            hung: fake.hung_pid(),
         }
     }
 }
@@ -308,6 +309,7 @@ pub struct Ran {
     pub stdout: String,
     pub stderr: String,
     pub calls: Vec<Vec<String>>,
+    pub hung: Option<String>,
 }
 
 impl Ran {

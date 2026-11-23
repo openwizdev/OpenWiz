@@ -28,6 +28,7 @@ PROFILE = {'metadata': 'read', 'contents': 'write', 'issues': 'write',
 WRITES = ('contents', 'issues', 'pull_requests')
 SKILLS = ('setup', 'grill', 'to-tickets', 'launch-fleet')
 API = 'https://api.github.com'
+OPENSSL = '/usr/bin/openssl'
 TIMEOUT = 30
 
 
@@ -123,7 +124,7 @@ UNAUTHENTICATED = re.compile(rb'gh: [^\n]* \(HTTP 401\)\n?')
 def github_com_read(path):
     program = shutil.which('gh')
     if program is None:
-        return None, None, False
+        return None, None, True
     try:
         result = subprocess.run([program, 'api', path], stdin=subprocess.DEVNULL, capture_output=True,
                                 timeout=TIMEOUT, env={**os.environ, 'GH_HOST': 'github.com'})
@@ -136,9 +137,13 @@ def github_com_read(path):
     return result.returncode, value, result.returncode == 1 and UNAUTHENTICATED.fullmatch(result.stderr) is not None
 
 
+def not_found(code, value):
+    return code == 1 and type(value) is dict and value.get('message') == 'Not Found'
+
+
 def account():
     code, user, unauthenticated = github_com_read('user')
-    if code is None or code == 4 or unauthenticated:
+    if code == 4 or unauthenticated:
         return 'identity_signed_out', None
     if code != 0 or type(user) is not dict:
         return 'identity_unreadable', None
@@ -156,7 +161,7 @@ def read_back(repository):
         return failure, None
     code, repo = github_com(f'repos/{repository}')
     if code != 0 or type(repo) is not dict:
-        return ('identity_no_push' if code == 1 else 'identity_unreadable'), login
+        return ('identity_no_push' if not_found(code, repo) else 'identity_unreadable'), login
     permissions = repo.get('permissions')
     if type(permissions) is dict and permissions.get('push') is True:
         return 'identity_verified', login
@@ -286,10 +291,10 @@ def check_brain(brain, repository, read=gh):
         return 'project_unreadable'
     if code != 0 or type(repo) is not dict or not str(repo.get('full_name', '')).lower() == home.lower() \
             or repo.get('private') is not True or repo.get('visibility') != 'private':
-        return 'project_settings_missing' if code in (0, 1) else 'project_unreadable'
+        return 'project_settings_missing' if code == 0 or not_found(code, repo) else 'project_unreadable'
     code, record = read(f"repos/{home}/contents/{brain['folder']}/settings.json")
     if code != 0 or type(record) is not dict or record.get('encoding') != 'base64':
-        return 'project_settings_missing' if code in (0, 1) else 'project_unreadable'
+        return 'project_settings_missing' if code == 0 or not_found(code, record) else 'project_unreadable'
     try:
         settings = json.loads(base64.b64decode(record.get('content', ''), validate=False),
                               object_pairs_hook=store.unique)
@@ -312,7 +317,7 @@ def check_project(openwiz, project, runtime, brain=None):
     read = github_com if local else gh
     if local:
         code, repo = read(f'repos/{repository}')
-        if code == 1 and type(repo) is dict and repo.get('message') == 'Not Found':
+        if not_found(code, repo):
             return 'project_no_write'
         if code != 0 or type(repo) is not dict:
             return 'project_unreadable'
@@ -326,10 +331,10 @@ def check_project(openwiz, project, runtime, brain=None):
         return 'project_unreadable'
     if (code != 0 or type(issue) is not dict or issue.get('state') != 'open'
             or issue.get('number') != project['service_issue'] or 'pull_request' in issue):
-        return 'project_issue_refused' if code in (0, 1) else 'project_unreadable'
+        return 'project_issue_refused' if code == 0 or not_found(code, issue) else 'project_unreadable'
     code, settings = read(f'repos/{repository}/contents/docs/agents/fleet.md')
     if code != 0 or type(settings) is not dict or settings.get('encoding') != 'base64':
-        return 'project_settings_missing' if code in (0, 1) else 'project_unreadable'
+        return 'project_settings_missing' if code == 0 or not_found(code, settings) else 'project_unreadable'
     try:
         text = base64.b64decode(settings.get('content', ''), validate=False).decode()
     except ValueError:
@@ -453,9 +458,9 @@ def sign_jwt(directory, app_id):
         now = int(time.time())
         message = b64(b'{"alg":"RS256","typ":"JWT"}') + b'.' + b64(json.dumps(
             {'iat': now - 60, 'exp': now + 540, 'iss': str(app_id)}, separators=(',', ':')).encode())
-        result = subprocess.run(['/usr/bin/openssl' if Path('/usr/bin/openssl').exists() else 'openssl',
-                                 'dgst', '-sha256', '-sign', f'/dev/fd/{fd}'], input=message,
-                                capture_output=True, timeout=10, pass_fds=(fd,))
+        store.require(os.path.isfile(OPENSSL), 'App signing failed')
+        result = subprocess.run([OPENSSL, 'dgst', '-sha256', '-sign', f'/dev/fd/{fd}'], input=message,
+                                capture_output=True, timeout=10, pass_fds=(fd,), env={})
         store.require(result.returncode == 0, 'App signing failed')
         return (message + b'.' + b64(result.stdout)).decode('ascii')
     finally:
@@ -528,16 +533,27 @@ def check_app(state_path, project, recorded, base):
         return 'app_wrong_repository', ids
     if status != 201 or type(token) is not dict:
         return 'app_unreadable', ids
+    code = proof_code(token, project['repository'])
+    if isinstance(token.get('token'), str) and TOKEN.fullmatch(token['token']):
+        try:
+            request(base, 'DELETE', '/installation/token', token['token'])
+        except Exception:
+            pass
+    del token
+    return code, ids
+
+
+def proof_code(token, repository):
     repositories = token.get('repositories')
     if token.get('permissions') != PROFILE:
-        return 'app_read_only', ids
-    if (type(repositories) is not list or len(repositories) != 1 or type(repositories[0]) is not dict
-            or str(repositories[0].get('full_name', '')).lower() != project['repository'].lower()):
-        return 'app_wrong_repository', ids
+        return 'app_read_only'
+    if (token.get('repository_selection') != 'selected' or type(repositories) is not list
+            or len(repositories) != 1 or type(repositories[0]) is not dict
+            or str(repositories[0].get('full_name', '')).lower() != repository.lower()):
+        return 'app_wrong_repository'
     if not usable_token(token, time.time()):
-        return 'app_token_unusable', ids
-    del token
-    return 'app_verified', ids
+        return 'app_token_unusable'
+    return 'app_verified'
 
 
 TOKEN = re.compile(r'[A-Za-z0-9._~+/-]{1,16384}=*')
@@ -558,7 +574,7 @@ def usable_token(answer, now):
 
 def default_openwiz(explicit):
     if explicit is not None:
-        return Path(explicit) if Path(explicit).is_file() else None
+        return Path(explicit).absolute() if Path(explicit).is_file() else None
     packaged = HERE.parent.parent / 'openwiz'
     return packaged if packaged.is_file() else None
 

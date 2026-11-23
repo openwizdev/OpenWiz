@@ -83,8 +83,8 @@ STORE = module('openwiz_setup_store', ROOT / 'tools/install/setup/store.py')
 
 
 def skill_steps():
-    explain, _, branch = SKILL.read_text().partition('## 5. The onboarding road\n')
-    names = re.findall(r'^## 4\. (Teach)$', explain, re.M)
+    explain, _, branch = re.split(r'^(## [0-9]+\. The onboarding road)\n', SKILL.read_text(), maxsplit=1, flags=re.M)
+    names = re.findall(r'^## [0-9]+\. (Teach)$', explain, re.M)
     names.extend(re.findall(r'^### [0-9]+\. (.+)$', branch.partition('\n## ')[0], re.M))
     return [name.split()[-1].lower() for name in names]
 
@@ -186,6 +186,9 @@ class Journey:
         self.git('init', '-q', '-b', 'main', str(self.dir))
         self.git('-C', str(self.dir), 'remote', 'add', 'origin', str(self.origin))
         self.origin_write({'README.md': '# synthetic\n'})
+        self.checkout = self.dir / 'docs/agents/fleet.md'
+        self.checkout.parent.mkdir(parents=True)
+        self.checkout.write_text(FILES['docs/agents/fleet.md'])
         self.save_world()
         self.room_script.write_text('{}')
         self.approval = None

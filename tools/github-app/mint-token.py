@@ -53,17 +53,21 @@ def main():
                           body, jwt)
     finally:
         os.close(directory)
-    app.permissions(result.get("permissions"))
     token = result.get("token")
-    app.require(isinstance(token, str) and
-                re.fullmatch(r"[A-Za-z0-9._~+/-]+=*", token) is not None)
-    expiry = datetime.fromisoformat(result["expires_at"].replace("Z", "+00:00"))
-    remaining = (expiry - datetime.now(timezone.utc)).total_seconds()
-    app.require(0 < remaining <= 3600 + 300)
-    listed = result.get("repositories")
-    app.require(result.get("repository_selection") == "selected" and isinstance(listed, list))
-    app.require(all(isinstance(r, dict) and isinstance(r.get("full_name"), str) for r in listed))
-    app.require(sorted(r["full_name"].lower() for r in listed) == selected)
+    try:
+        app.permissions(result.get("permissions"))
+        app.require(isinstance(token, str) and
+                    re.fullmatch(r"[A-Za-z0-9._~+/-]+=*", token) is not None)
+        expiry = datetime.fromisoformat(result["expires_at"].replace("Z", "+00:00"))
+        remaining = (expiry - datetime.now(timezone.utc)).total_seconds()
+        app.require(0 < remaining <= 3600 + 300)
+        listed = result.get("repositories")
+        app.require(result.get("repository_selection") == "selected" and isinstance(listed, list))
+        app.require(all(isinstance(r, dict) and isinstance(r.get("full_name"), str) for r in listed))
+        app.require(sorted(r["full_name"].lower() for r in listed) == selected)
+    except Exception:
+        app.revoke(args.api_base, token)
+        raise
     print(token)
     print(int(expiry.timestamp()))
 

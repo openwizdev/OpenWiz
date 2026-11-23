@@ -1,0 +1,9 @@
+{
+  "host": "Factory",
+  "driver": "adapters/factory/driver",
+  "needs": ["droid", "gh"],
+  "signed_in": [["python3", "-I", "-c", "import sys, os; sys.exit(0 if any(n == 'FACTORY_API_KEY' for n in os.environ) else 1)"], ["gh", "auth", "status", "--hostname", "github.com", "--active", "--no-refresh"]],
+  "cost": "paid",
+  "runs": [{"harness": "droid", "model": "claude-opus-5-5"}],
+  "wait": 900
+}
