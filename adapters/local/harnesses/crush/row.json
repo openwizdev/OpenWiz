@@ -36,5 +36,9 @@
   },
   "effort": "none: crush run --reasoning-effort can be replaced or dropped without an error (internal/agent/coordinator.go getProviderOptions, charmbracelet/crush v0.102.0)",
   "login": "Crush's own login: `crush login` saves it in ~/.local/share/crush/crush.json (or $XDG_DATA_HOME/crush/crush.json)",
-  "daemon": "none"
+  "daemon": "none",
+  "signed_out": [
+    "No providers configured - please run 'crush' to set up a provider"
+  ],
+  "login_command": "crush login"
 }

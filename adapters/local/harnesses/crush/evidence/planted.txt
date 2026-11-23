@@ -5,3 +5,6 @@ fail crush row: a turn gets CRUSH_CLIENT_SERVER=0 over the user's own setting, a
 fail crush: kit: fail wake: run run-7d89b73587be has no session id from its first turn yet; nothing was started
 == planted: fake logs "Created a session ...", not the line Crush logs (test_harnesses.py --rows)
 fail crush: kit: fail wake: run run-57bed89ba0a8 has no session id from its first turn yet; nothing was started
+
+== planted: signed_out pattern "No provider is set", which matches no line Crush prints (test_harnesses.py --rows)
+fail crush: signed_out: a signed-out first turn did not fail start with 'the harness is not signed in' and a next naming the row's login_command
