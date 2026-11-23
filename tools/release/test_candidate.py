@@ -1362,15 +1362,22 @@ class Candidate(World):
         self.assertEqual(self.record()['publication']['status'], 'complete')
         self.assertEqual(self.git(self.remote, 'tag', '-l', '--format=%(contents:subject)', 'v0.1.0'), 'OpenWiz 0.1.0')
 
-    def test_2278_publishing_0_1_1_creates_and_reads_back_openwiz_0_02(self):
+    def test_2278_publishing_0_1_1_creates_and_reads_back_openwiz_0_1_1(self):
         self.ready_public('0.1.1')
         code, out = self.publish()
         self.assertEqual((code, out['status']), (0, 'published'), out)
         created = next(c['args'] for c in self.calls() if c['action'] == 'release')
-        self.assertEqual(created[created.index('--title') + 1], 'OpenWiz 0.02')
-        self.assertEqual(json.loads((self.releases / 'v0.1.1' / 'meta.json').read_text())['title'], 'OpenWiz 0.02')
+        self.assertEqual(created[created.index('--title') + 1], 'OpenWiz 0.1.1')
+        self.assertEqual(json.loads((self.releases / 'v0.1.1' / 'meta.json').read_text())['title'], 'OpenWiz 0.1.1')
         self.assertEqual(self.record()['publication']['status'], 'complete')
         self.assertEqual(self.git(self.remote, 'tag', '-l', '--format=%(contents:subject)', 'v0.1.1'), 'OpenWiz 0.1.1')
+
+    def test_2527_from_0_1_1_on_a_release_is_named_by_its_version(self):
+        candidate = load('release_candidate_public_name', HERE / 'candidate.py')
+        self.assertEqual(candidate.public_name('0.1.0'), 'OpenWiz 0.01')
+        for version in ('0.1.1', '0.1.2'):
+            with self.subTest(version=version):
+                self.assertEqual(candidate.public_name(version), 'OpenWiz ' + version)
 
     def test_1836_a_0_1_0_release_read_back_under_another_name_is_incomplete(self):
         self.ready_public()
