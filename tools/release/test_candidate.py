@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import types
 import unittest
 
 sys.dont_write_bytecode = True
@@ -2337,12 +2338,9 @@ class ArchivePrivacy(unittest.TestCase):
                 (build / name).parent.mkdir(parents=True, exist_ok=True)
                 (build / name).write_text(text)
             return build
-        real = self.candidate.stage
-        self.candidate.stage = stage
-        try:
-            return self.candidate.scan_artifacts({'release_version': VERSION}, self.folder, self.literals)
-        finally:
-            self.candidate.stage = real
+        scan = self.candidate.scan_artifacts
+        scan = types.FunctionType(scan.__code__, {**vars(self.candidate), 'stage': stage})
+        return scan({'release_version': VERSION}, self.folder, self.literals)
 
     def test_d2_the_contracts_planted_bad_blocks_pass_at_its_runtime_path(self):
         self.assertEqual(self.scan({self.CONTRACT: '# Contract\n\n' + self.bad() + '```good\nclean\n```\n',
