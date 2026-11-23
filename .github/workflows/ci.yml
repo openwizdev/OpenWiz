@@ -131,6 +131,18 @@ jobs:
           python3 -I contracts/fixtures/feedback-loop/test_check.py
           python3 -I contracts/fixtures/ask-a-wiz/test_fixtures.py
           python3 -I tools/bench/first-fleet/test_bench.py
+      - name: The live-check rig's tests
+        if: matrix.part == 2
+        run: |
+          stubs=$(mktemp -d)
+          for cli in claude codex cursor-agent agent pi opencode copilot goose gemini kimi qwen cline kilo crush \
+              vibe auggie kiro-cli junie amp agy oz sculpt hermes acpx droid; do
+            printf '#!/bin/sh\necho "%s: refused, CI never starts an agent CLI" >&2\nexit 1\n' "$cli" > "$stubs/$cli"
+            chmod +x "$stubs/$cli"
+          done
+          for test in kernel/live-rig/test_*.py kernel/live-rig/*/test_*.py; do
+            if [ -e "$test" ]; then PATH="$stubs:$PATH" env -u OPENWIZ_GITHUB_APP_KEY python3 -I "$test"; fi
+          done
       # #555: fail on any carried contract that differs from the pinned
       # WizSkills release by one byte.
       - name: The WizSkills installer

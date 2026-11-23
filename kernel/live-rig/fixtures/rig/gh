@@ -1,0 +1,23 @@
+#!/usr/bin/env python3
+import json, os, sys
+
+args = sys.argv[1:]
+with open(os.environ['RIG_GH_LOG'], 'a') as f:
+    f.write(json.dumps(args) + '\n')
+if args == ['api', 'user', '--jq', '.login']:
+    print(os.environ['RIG_GH_LOGIN'])
+    sys.exit(0)
+fields = dict(a.partition('=')[::2] for a in args[3::2])
+if args[:2] != ['api', 'graphql'] or fields.get('owner') + '/' + fields.get('name') != os.environ['RIG_GH_REPO']:
+    sys.exit('gh: the fake answers only GraphQL reads of the settings repository')
+if 'docs/agents/fleet.md' in fields['query']:
+    repository = {'object': {'text': '| Record authors | `example-bot[bot]` |\n'}}
+elif fields.get('number') == os.environ['RIG_GH_TICKET']:
+    with open(os.environ['KIT_TRACKER']) as f:
+        comments = json.load(f)['comments']
+    nodes = [{'databaseId': c['id'], 'updatedAt': c['updated_at'], 'body': c['body'],
+              'author': {'__typename': 'Bot', 'login': c['author'][:-len('[bot]')]}} for c in comments]
+    repository = {'issue': {'comments': {'pageInfo': {'hasNextPage': False, 'endCursor': None}, 'nodes': nodes}}}
+else:
+    sys.exit('gh: the fake answers only the settings ticket')
+print(json.dumps({'data': {'repository': repository}}))

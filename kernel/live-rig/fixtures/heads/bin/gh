@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+import hashlib, json, os, sys
+
+args = sys.argv[1:]
+stdin = '' if sys.stdin is None or sys.stdin.isatty() else sys.stdin.read()
+with open(os.environ['HEADS_GH_LOG'], 'a') as f:
+    f.write(json.dumps({'args': args, 'stdin': stdin}) + '\n')
+
+
+def answer(value):
+    print(json.dumps(value))
+    sys.exit(0)
+
+
+def counter(name):
+    path = os.path.join(os.environ['HEADS_GH_STATE'], name)
+    n = int(open(path).read()) + 1 if os.path.exists(path) else 1
+    with open(path, 'w') as f:
+        f.write(str(n))
+    return n
+
+
+if args[:2] == ['api', 'graphql']:
+    fields = dict(a.partition('=')[::2] for a in args[3::2])
+    if fields.get('owner', '') + '/' + fields.get('name', '') != os.environ['HEADS_KIT_REPO']:
+        sys.exit('gh: the fake answers GraphQL reads of the settings repository only')
+    if 'docs/agents/fleet.md' in fields['query']:
+        answer({'data': {'repository': {'object': {'text': '| Record authors | `example-bot[bot]` |\n'}}}})
+    if fields.get('number') != os.environ['HEADS_KIT_TICKET']:
+        sys.exit('gh: the fake answers the settings ticket only')
+    with open(os.environ['KIT_TRACKER']) as f:
+        comments = json.load(f)['comments']
+    nodes = [{'databaseId': c['id'], 'updatedAt': c['updated_at'], 'body': c['body'],
+              'author': {'__typename': 'Bot', 'login': c['author'][:-len('[bot]')]}} for c in comments]
+    answer({'data': {'repository': {'issue': {'comments': {
+        'pageInfo': {'hasNextPage': False, 'endCursor': None}, 'nodes': nodes}}}}})
+
+if args == ['api', 'user']:
+    answer({'login': os.environ['HEADS_GH_LOGIN']})
+
+if args[:2] == ['api', '-i']:
+    rest, etag = args[2:], None
+    if rest[:1] == ['-H']:
+        etag, rest = rest[1].partition('If-None-Match: ')[2], rest[2:]
+    prefix, suffix = 'repos/openwizdev/OpenWiz/issues/', '/comments?per_page=100'
+    if len(rest) != 1 or not rest[0].startswith(prefix) or not rest[0].endswith(suffix):
+        sys.exit('gh: the fake answers live-check ticket comment reads only')
+    with open(os.environ['HEADS_COMMENTS']) as f:
+        comments = json.load(f).get(rest[0][len(prefix):-len(suffix)])
+    if comments is None:
+        print('HTTP/2.0 404 Not Found\r\n\r\n{"message": "Not Found"}')
+        sys.exit(1)
+    body = json.dumps(comments)
+    tag = 'W/"%s"' % hashlib.sha256(body.encode()).hexdigest()
+    if etag == tag:
+        print('HTTP/2.0 304 Not Modified\r\nEtag: %s\r\n\r\n' % tag, end='')
+        sys.exit(1)
+    print('HTTP/2.0 200 OK\r\nContent-Type: application/json\r\nEtag: %s\r\n\r\n%s' % (tag, body))
+    sys.exit(0)
+
+if args == ['api', 'repos/openwizdev/WizMarket/git/ref/heads/main']:
+    answer({'ref': 'refs/heads/main', 'object': {'sha': 'c' * 40}})
+
+if args[:2] == ['api', '-X'] and args[4:] == ['--input', '-']:
+    method, path, sent = args[2], args[3], json.loads(stdin or '{}')
+    login = os.environ['HEADS_GH_LOGIN']
+    if method == 'POST' and path.startswith('repos/openwizdev/OpenWiz/issues/') and path.endswith('/comments'):
+        number = path.split('/')[4]
+        answer({'html_url': 'https://github.com/openwizdev/OpenWiz/pull/%s#issuecomment-%d' % (
+            number, 900 + counter('comment'))})
+    if (method, path) == ('POST', 'repos/openwizdev/WizMarket/forks'):
+        answer({'full_name': login + '/WizMarket'})
+    if (method, path) == ('POST', 'repos/%s/WizMarket/git/refs' % login):
+        answer({'ref': sent['ref']})
+    if method == 'PUT' and path.startswith('repos/%s/WizMarket/contents/receipts/' % login):
+        answer({'content': {'path': path.split('/contents/', 1)[1]}})
+    if (method, path) == ('POST', 'repos/openwizdev/WizMarket/pulls'):
+        answer({'html_url': 'https://github.com/openwizdev/WizMarket/pull/%d' % (40 + counter('pull'))})
+sys.exit('gh: the fake refuses %s' % ' '.join(args[:4]))
