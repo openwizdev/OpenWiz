@@ -15,7 +15,6 @@ KIT_DIR = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit')
 KIT = os.path.join(KIT_DIR, 'kit.py')
 with open(os.path.join(KIT_DIR, 'hosts.json')) as _f:
     ENTRY = json.load(_f).get('conductor', {})
-# The key's variable, read from the registry: no file of this folder may name it (driver v1 N4).
 VARIABLE = ENTRY.get('variable', 'unregistered')
 NEVER_READS_THE_KEY = '''import importlib.machinery, importlib.util, os, sys
 sys.dont_write_bytecode = True

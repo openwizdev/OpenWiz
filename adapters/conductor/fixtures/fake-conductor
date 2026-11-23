@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
-# A synthetic Conductor API on 127.0.0.1, for the tests only. Its shapes follow Conductor's API reference and OpenAPI
-# document (read 2026-11-20); nothing here was observed on a live account.
-# Arguments: tracker log faults key-file state. It prints its origin, then serves until killed.
-# It serves the key helper's test key at /.openwiz/hostkey-test-key (the key file's text, or faults["serve"]), and
-# answers 401 to any other call whose bearer is not the key file's text. faults["<METHOD> <route>"] is
-# {"status": n} (a planted refusal) or {"lose": true} (do the call, then drop the answer); <route> has {id} for an id.
-import http.server, json, os, re, sys, time
+import http.server, json, os, re, sys, threading, time
 
 TRACKER, LOG, FAULTS, KEY_FILE, STATE = sys.argv[1:6]
 KEY_PATH = '/.openwiz/hostkey-test-key'
@@ -119,7 +113,7 @@ class Conductor(http.server.BaseHTTPRequestHandler):
     do_GET = do_POST = do_DELETE = handle_one
 
 
-LOCK = __import__('threading').Lock()
+LOCK = threading.Lock()
 server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Conductor)
 print('http://127.0.0.1:%d' % server.server_address[1], flush=True)
 server.serve_forever()
