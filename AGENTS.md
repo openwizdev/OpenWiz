@@ -45,3 +45,4 @@ Rust 1.99.1 with `rustfmt` and `clippy`; there is deliberately no `rust-toolchai
 
 - Outside the tests, `openwiz ls`, `show` and `fleet` read the live CloudRoom through the bundled `room-cli`: that is live work.
 - Jake approves first: a new dependency, toolchain file or tool on the Mac; a change to the `room-cli` allowlist or an approved limit; any live `room-cli` read or Mac work outside an approved live kit. Releasing follows [ADR 0020](docs/adr/0020-release-on-demand.md); never force-push or rewrite a release.
+- Each of these gates, with who approves it, is a row of the [Approval rules](docs/agents/fleet.md#approval-rules) table.

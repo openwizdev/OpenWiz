@@ -1,0 +1,37 @@
+FFFF
+======================================================================
+FAIL: test_explicit_cloud_prepare_has_the_legacy_bytes_and_settings (__main__.HostSetup.test_explicit_cloud_prepare_has_the_legacy_bytes_and_settings)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/install/setup/test_check.py", line 309, in test_explicit_cloud_prepare_has_the_legacy_bytes_and_settings
+    self.assertEqual(explicit.returncode, 0, explicit.stderr)
+AssertionError: 2 != 0 : b'usage: setup.py [-h] {prepare,check} ...\nsetup.py: error: unrecognized arguments: --host=cloud\n'
+
+======================================================================
+FAIL: test_prepare_matches_host_fixtures (__main__.HostSetup.test_prepare_matches_host_fixtures) (case='local-without-cloudroom-ids')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/install/setup/test_check.py", line 287, in test_prepare_matches_host_fixtures
+    self.assertEqual(preview.returncode == 0, case['valid'], preview.stderr)
+AssertionError: False != True : b'usage: setup.py prepare [-h] [--state-dir STATE_DIR] [--runtime RUNTIME]\n                        --repository REPOSITORY --project PROJECT --operator\n                        OPERATOR --service-issue SERVICE_ISSUE --answer-thread\n                        ANSWER_THREAD --harness HARNESS --model MODEL --effort\n                        EFFORT [--yes] [--operation OPERATION]\nsetup.py prepare: error: the following arguments are required: --project, --answer-thread\n'
+
+======================================================================
+FAIL: test_prepare_matches_host_fixtures (__main__.HostSetup.test_prepare_matches_host_fixtures) (case='boat-without-cloudroom-ids')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/install/setup/test_check.py", line 287, in test_prepare_matches_host_fixtures
+    self.assertEqual(preview.returncode == 0, case['valid'], preview.stderr)
+AssertionError: False != True : b'usage: setup.py prepare [-h] [--state-dir STATE_DIR] [--runtime RUNTIME]\n                        --repository REPOSITORY --project PROJECT --operator\n                        OPERATOR --service-issue SERVICE_ISSUE --answer-thread\n                        ANSWER_THREAD --harness HARNESS --model MODEL --effort\n                        EFFORT [--yes] [--operation OPERATION]\nsetup.py prepare: error: the following arguments are required: --project, --answer-thread\n'
+
+======================================================================
+FAIL: test_prepare_matches_host_fixtures (__main__.HostSetup.test_prepare_matches_host_fixtures) (case='other-driver-without-cloudroom-ids')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/install/setup/test_check.py", line 287, in test_prepare_matches_host_fixtures
+    self.assertEqual(preview.returncode == 0, case['valid'], preview.stderr)
+AssertionError: False != True : b'usage: setup.py prepare [-h] [--state-dir STATE_DIR] [--runtime RUNTIME]\n                        --repository REPOSITORY --project PROJECT --operator\n                        OPERATOR --service-issue SERVICE_ISSUE --answer-thread\n                        ANSWER_THREAD --harness HARNESS --model MODEL --effort\n                        EFFORT [--yes] [--operation OPERATION]\nsetup.py prepare: error: the following arguments are required: --project, --answer-thread\n'
+
+----------------------------------------------------------------------
+Ran 2 tests
+
+FAILED (failures=4)

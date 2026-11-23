@@ -1,4 +1,3 @@
-//! LP5: synthetic private checkout/state and explicit trusted inputs only.
 use super::fixture::{Fixture, git};
 use openwiz_cli::state::loops::Trust;
 use serde_json::json;
@@ -209,8 +208,6 @@ fn switch_and_scheduler_share_the_lock_and_authority_is_rechecked_under_it() {
     assert_eq!(f.saved(), before);
 }
 
-/// Advance controlled monotonic time to the 30-second deadline on contention.
-/// No real 30-second wait and no assertion against elapsed wall-clock time.
 pub struct ExpiredClock {
     base: std::time::Instant,
     calls: AtomicU64,

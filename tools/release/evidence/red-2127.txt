@@ -1,0 +1,41 @@
+
+======================================================================
+FAIL: test_2127_evaluate_gives_each_publish_precondition_publish_refuses_before_its_first_write (test_candidate.Candidate.test_2127_evaluate_gives_each_publish_precondition_publish_refuses_before_its_first_write) (case='notes dated the day before')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+AssertionError: 0 != 1 : {'candidate_sha256': 'a6d8499475733494bffc4089285de9b638c6304a06c4bc8d1bab16b472eb428d', 'status': 'ready'}
+
+======================================================================
+FAIL: test_2127_evaluate_gives_each_publish_precondition_publish_refuses_before_its_first_write (test_candidate.Candidate.test_2127_evaluate_gives_each_publish_precondition_publish_refuses_before_its_first_write) (case='asset bytes changed after the gates')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+AssertionError: 0 != 1 : {'candidate_sha256': 'c0f898bc8d981e4e488d32a85b7f3d96f2fbfee901e7a4e926c52b44bd51ba16', 'status': 'ready'}
+
+======================================================================
+FAIL: test_2127_evaluate_gives_each_publish_precondition_publish_refuses_before_its_first_write (test_candidate.Candidate.test_2127_evaluate_gives_each_publish_precondition_publish_refuses_before_its_first_write) (case='author name with a digit')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+AssertionError: 0 != 1 : {'candidate_sha256': '01ff2c0430c7fe7a26448433d91511ee85ebb7a35407a0340cadb16f9c59bd97', 'status': 'ready'}
+
+======================================================================
+FAIL: test_2127_evaluate_gives_each_publish_precondition_publish_refuses_before_its_first_write (test_candidate.Candidate.test_2127_evaluate_gives_each_publish_precondition_publish_refuses_before_its_first_write) (case='author email not a noreply address')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+AssertionError: 0 != 1 : {'candidate_sha256': 'bf16242db780d5a9dc6b2c7f72047493d26f4a6f0051f4ca881b72643d7a628d', 'status': 'ready'}
+
+======================================================================
+FAIL: test_2127_evaluate_gives_each_publish_precondition_publish_refuses_before_its_first_write (test_candidate.Candidate.test_2127_evaluate_gives_each_publish_precondition_publish_refuses_before_its_first_write) (case='immutable releases off')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+AssertionError: 'immutable_releases_off' not found in ['cutover_unverified']
+
+======================================================================
+FAIL: test_2127_evaluate_gives_each_publish_precondition_publish_refuses_before_its_first_write (test_candidate.Candidate.test_2127_evaluate_gives_each_publish_precondition_publish_refuses_before_its_first_write) (case='tag already present')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+AssertionError: 'tag_exists' not found in ['version_order']
+
+----------------------------------------------------------------------
+Ran 1 test
+
+AILED (failures=6)

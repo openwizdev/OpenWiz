@@ -1,3 +1,0 @@
-$ docs/evidence/1818/r1-repro.sh <openwiz-cli lib test binary>   # at 76543150, before the fix
-planted 2 folders; test exit=0; pre-existing files kept=no
-exit 1

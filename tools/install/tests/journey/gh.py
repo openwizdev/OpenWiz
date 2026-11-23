@@ -1,14 +1,4 @@
 #!/usr/bin/env python3
-"""Test-only `gh` for the joined install journey (#636). Synthetic only.
-
-One recording GitHub for the installed setup, sign-in, App skip and init tools:
-T5's world (tools/install/tests/init/fake_gh.py, at $FAKE_GH_WORLD) answers
-every call unchanged, so init's effects and setup's brain read-back land in the
-same world. Only the service-record issue read setup's project check makes
-(`gh api repos/OWNER/NAME/issues/N`), which that world does not model, is
-answered here from the world's `issues` list. Every call is logged by the
-world as T5's fake logs it.
-"""
 import json
 import os
 from pathlib import Path

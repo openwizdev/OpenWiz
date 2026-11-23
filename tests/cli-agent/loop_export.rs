@@ -1,11 +1,11 @@
-//! #791 (LC3): `openwiz loop export`, run as the real fixture binary against
-//! the fake `room-cli`'s synthetic `loops/` scenario and synthetic lists.
-//! These read `contracts/` and `tests/fake-room-cli/`, so they live here
-//! rather than in the CLI crate, whose tests also run where only the crates
-//! are copied (the service's update proofs).
-// Off Linux the check-writing tests are compiled out (R1), so their helpers
-// go unused there.
-#![cfg_attr(not(target_os = "linux"), allow(dead_code, unused_imports))]
+#![cfg_attr(
+    not(target_os = "linux"),
+    allow(
+        dead_code,
+        unused_imports,
+        reason = "off Linux the check-writing tests are compiled out, so their helpers go unused"
+    )
+)]
 use serde_json::{Value, json};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -15,7 +15,6 @@ use super::{ROOT, Sandbox, dirs, fixture_cli, schema};
 
 const PROJECT: &str = "prj_syn_0001";
 
-/// A sandbox whose `room-cli` is the fake, answering from `scenario`.
 struct Room(Sandbox);
 
 impl Room {
@@ -33,12 +32,10 @@ impl Room {
         room
     }
 
-    /// The synthetic `loops/` scenario that LC1 wrote.
     fn loops() -> Self {
         Self::new(&Path::new(ROOT).join("tests/fake-room-cli/loops/scenario.json"))
     }
 
-    /// A scenario whose `loop list --json` prints `automations`.
     fn listing(automations: Value) -> Self {
         Self::answering(json!({
             "argv": ["loop", "list", "--json"],
@@ -84,7 +81,6 @@ impl Room {
         self.run(&args)
     }
 
-    /// Every `room-cli` call the run made.
     fn calls(&self) -> Vec<Value> {
         fs::read_to_string(self.dir().join("bin/invocations.log"))
             .unwrap_or_default()
@@ -98,7 +94,6 @@ impl Room {
     }
 }
 
-/// The one JSON document, checked against `export_report` (or `def`).
 fn report(output: &Output, code: i32, def: &str) -> Value {
     assert_eq!(
         output.status.code(),
@@ -130,7 +125,6 @@ fn report(output: &Output, code: i32, def: &str) -> Value {
     doc
 }
 
-/// Every file under `dir`, relative, sorted.
 fn tree(dir: &Path) -> Vec<String> {
     fn walk(root: &Path, dir: &Path, out: &mut Vec<String>) {
         for entry in fs::read_dir(dir).unwrap() {
@@ -206,13 +200,6 @@ priority: 3
 ---
 Synthetic: nothing to do."#;
 
-// catches: an export that drops, reorders or mismaps a setting `loop list`
-// returns (trigger, check and its params, agent, secrets including "all",
-// priority, thread, body), reads another project's loop, writes a Cloudroom
-// identifier, a webhook address or run state into a file, writes anything
-// but the one `loop list --json` read, or loses the binding an unmarked loop
-// needs.
-// Linux only: these write checks, which only Linux can (R1).
 #[cfg(target_os = "linux")]
 #[test]
 fn export_writes_each_loop_of_the_project_complete_and_secret_free() {
@@ -285,10 +272,6 @@ fn export_writes_each_loop_of_the_project_complete_and_secret_free() {
     assert!(!room.dir().join("bin/loop-writes.log").exists());
 }
 
-// catches: a second export that replaces a file someone edited, rewrites
-// identical files instead of reporting them unchanged, or stops the other
-// loops when one is refused.
-// Linux only: these write checks, which only Linux can (R1).
 #[cfg(target_os = "linux")]
 #[test]
 fn export_never_replaces_a_file_with_other_bytes() {
@@ -337,8 +320,6 @@ fn export_never_replaces_a_file_with_other_bytes() {
     assert_eq!(room.read("exported/syn-triage.md"), TRIAGE_MD);
     assert_eq!(room.read("exported/syn-nightly.md"), NIGHTLY_MD);
 
-    // A file, or a link elsewhere, where a check's folder goes: that loop is
-    // refused and nothing is written through the link.
     dirs::private_dir(room.dir().join("other")).unwrap();
     fs::write(room.dir().join("other/synthetic-hourly-kick"), "a file\n").unwrap();
     dirs::private_dir(room.dir().join("elsewhere")).unwrap();
@@ -373,7 +354,6 @@ fn export_never_replaces_a_file_with_other_bytes() {
     ));
 }
 
-/// One synthetic `loop list` item of the project, with `over` applied.
 fn item(id: &str, name: &str, over: Value) -> Value {
     let mut base = json!({
         "id": id, "project_id": PROJECT, "session_id": "thr_syn_0001", "name": name,
@@ -398,15 +378,10 @@ fn refused(loop_: &str, id: Value, file: &str, refusals: &[(&str, &str, &str)]) 
                "file": file, "code": code, "field": field, "message": message})).collect::<Vec<_>>()})
 }
 
-// catches: a loop the adapter cannot write as a valid, faithful file that is
-// written anyway (or silently dropped from the report), a refusal with the
-// wrong code, field or message, or one refused loop that stops the rest.
-// Linux only: these write checks, which only Linux can (R1).
 #[cfg(target_os = "linux")]
 #[test]
 fn export_reports_each_loop_it_cannot_represent_and_writes_the_rest() {
     let cases: Vec<(Value, Value)> = vec![
-        // Two loops carry one marker: both refused.
         (
             item("loop_a1", "Twin one [wizloop:twin]", json!({})),
             refused(
@@ -433,7 +408,6 @@ fn export_reports_each_loop_it_cannot_represent_and_writes_the_rest() {
                 )],
             ),
         ),
-        // Two unmarked loops derive one id: both refused.
         (
             item("loop_b1", "Same Name!", json!({})),
             refused(
@@ -695,7 +669,6 @@ fn export_reports_each_loop_it_cannot_represent_and_writes_the_rest() {
                 )],
             ),
         ),
-        // A good loop among them is still written.
         (
             item("loop_z", "Still written [wizloop:still-written]", json!({})),
             json!({"loop": "loop_z", "id": "still-written", "result": "written", "files": ["still-written.md"],
@@ -720,10 +693,6 @@ fn export_reports_each_loop_it_cannot_represent_and_writes_the_rest() {
     );
 }
 
-// catches: a `loop list` key the adapter rules do not name (a new
-// Cloudroom setting, at the top or in the agent) that export drops without a
-// word, or that makes it refuse or skip the loop instead of writing it and
-// naming the key.
 #[test]
 fn export_writes_a_loop_with_an_unmapped_key_and_names_the_key() {
     let room = Room::listing(json!([
@@ -776,19 +745,12 @@ fn export_writes_a_loop_with_an_unmapped_key_and_names_the_key() {
     );
 }
 
-// catches: a preamble read back wrongly (a quoted value not unquoted, an
-// integer read as a string, the preamble left in the check), checked against
-// the pinned WizLoops fixtures' own checks and params: the adapter rules'
-// stated scripts and prompts for `cron-check.md` and `params-env.md`.
-// Linux only: these write checks, which only Linux can (R1).
 #[cfg(target_os = "linux")]
 #[test]
 fn export_reads_the_params_preamble_back_into_the_pinned_fixtures_checks() {
     let fixtures = Path::new(ROOT).join("contracts/fixtures/wizloops");
     let expected: Value =
         serde_json::from_str(&fs::read_to_string(fixtures.join("expected.json")).unwrap()).unwrap();
-    // The scripts and prompts exactly as contracts/wizloops-cloudroom.v1.md
-    // writes them for these two creates.
     let cron_check = "#!/bin/sh\n# wizloop: params from the loop file, as data\nexport WIZLOOP_PARAM_REPO='example-org/example-repo'\n# wizloop: the check\n# Prints one line per due item in $WIZLOOP_PARAM_REPO; nothing when none is due.\nif [ -f due.txt ]; then cat due.txt; fi\nexit 0\n";
     let params_env = "#!/bin/sh\n# wizloop: params from the loop file, as data\nexport WIZLOOP_PARAM_REF='release/\";printf${IFS}WAKE;false${IFS}\"'\nexport WIZLOOP_PARAM_REPO='example-org/example-repo'\nexport WIZLOOP_PARAM_SPEC=7\nexport WIZLOOP_PARAM_TITLE='it'\\''s $(touch marker) `touch marker`'\n# wizloop: the check\n# Reads its params from the environment as data and prints nothing, so no\n# agent starts: $WIZLOOP_PARAM_REPO, $WIZLOOP_PARAM_REF, $WIZLOOP_PARAM_TITLE\n# and $WIZLOOP_PARAM_SPEC.\nexit 0\n";
     let room = Room::listing(json!([
@@ -850,9 +812,6 @@ fn export_reads_the_params_preamble_back_into_the_pinned_fixtures_checks() {
     }
 }
 
-// catches: a text run that prints a Cloudroom name, loop id, unmapped key or
-// room-cli's error text with its control bytes (screen clearing, spoofed
-// lines, OSC 52 clipboard writes), while JSON keeps the values exactly.
 #[test]
 fn text_output_never_prints_a_terminal_control() {
     let esc = "\u{1b}[2J\u{1b}]52;c;eA==\u{7}";
@@ -901,8 +860,6 @@ fn text_output_never_prints_a_terminal_control() {
     );
 }
 
-// catches: a failed `loop list` that still writes files, prints a report, or
-// passes room-cli's error text into the JSON result.
 #[test]
 fn a_failed_loop_list_writes_nothing() {
     for response in [
@@ -923,10 +880,6 @@ fn a_failed_loop_list_writes_nothing() {
     }
 }
 
-// catches: an export on a system with no held-folder route (macOS) that
-// writes a loop's check by pathname, which a folder swapped for a link
-// redirects outside --out (review R1), or that writes part of the run before
-// it refuses; and a run with no check that stops being written there.
 #[cfg(not(target_os = "linux"))]
 #[test]
 fn export_refuses_a_check_where_its_folder_cannot_be_held_open() {
@@ -953,4 +906,48 @@ fn export_refuses_a_check_where_its_folder_cannot_be_held_open() {
     );
     assert_eq!(doc["loops"][0]["files"], json!(["plain.md"]));
     assert_eq!(tree(&plain.dir().join("exported")), ["plain.md"]);
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn a_huge_sparse_collision_is_refused_under_a_256_mib_limit() {
+    let room = Room::loops();
+    dirs::private_dir(room.dir().join("exported")).unwrap();
+    let huge = room.dir().join("exported/syn-triage.md");
+    fs::File::create(&huge).unwrap().set_len(1 << 30).unwrap();
+    let output = Command::new("/bin/sh")
+        .args(["-c", "ulimit -v 262144 && exec \"$0\" \"$@\""])
+        .arg(fixture_cli())
+        .args([
+            "loop",
+            "export",
+            "--project",
+            PROJECT,
+            "--out",
+            "exported",
+            "--json",
+        ])
+        .env_clear()
+        .env("PATH", room.dir().join("bin"))
+        .env("HOME", room.dir().join("home"))
+        .env("OPENWIZ_STATE_DIR", room.dir().join("state"))
+        .env("OPENWIZ_FIXTURE_PROGRAM", room.dir().join("bin/room-cli"))
+        .current_dir(room.dir())
+        .stdin(Stdio::null())
+        .output()
+        .unwrap();
+    let doc = report(&output, 5, "export_report");
+    assert_eq!(doc["loops"][0]["refusals"][0]["code"], "export-exists");
+    let results: Vec<&Value> = doc["loops"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|l| &l["result"])
+        .collect();
+    assert_eq!(
+        results,
+        ["refused", "written", "written", "written", "written"]
+    );
+    assert_eq!(fs::metadata(&huge).unwrap().len(), 1 << 30);
+    assert_eq!(room.read("exported/syn-nightly.md"), NIGHTLY_MD);
 }

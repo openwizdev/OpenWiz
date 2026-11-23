@@ -1,0 +1,8 @@
+#!/bin/sh
+if [ "$#" -eq 1 ] && [ "$1" = --version ]; then
+  echo '2.0.0 (Claude Code, synthetic rehearsal fake)'
+  exit 0
+fi
+echo "claude $*" >> "$REHEARSAL_TOOL_LOG"
+echo 'synthetic claude: only --version answers in the rehearsal' >&2
+exit 97

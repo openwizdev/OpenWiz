@@ -1,0 +1,10 @@
+======================================================================
+FAIL: test_2127_an_unreadable_release_branch_gives_evaluate_publishs_reasons (test_candidate.Candidate.test_2127_an_unreadable_release_branch_gives_evaluate_publishs_reasons)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+AssertionError: 'release_branch_unreadable' not found in ['git --no-replace-objects failed (exit 42)']
+
+----------------------------------------------------------------------
+Ran 1 test
+
+FAILED (failures=1)

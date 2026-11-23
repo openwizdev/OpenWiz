@@ -1,4 +1,3 @@
-"""Gather reviewed changelog lines and R1's public roadmap for release check."""
 import datetime
 import json
 from pathlib import Path
@@ -16,15 +15,9 @@ GENERATED = {"CHANGELOG.md", "ROADMAP.md"}
 # ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6842773730)).
 SETTLED_COMBINED = ("0.0.12", "0.0.11", "0.0.10", "0.0.9", "0.0.8", "0.0.7", "0.0.6")
 CAP_EXCEPTIONS = {"0.0.6": 17, "0.0.8": 7, "0.0.9": 11, "0.0.11": 6, "0.0.12": 6}
-# changes/<N>.md is OpenWiz ticket N; changes/closedwiz-<N>.md is a line moved
-# from old ClosedWiz ticket N, renamed where OpenWiz N owns changes/<N>.md (#735).
 CHANGE = r"changes/(closedwiz-)?([1-9][0-9]*)\.md"
-# RL6 (#739): every changelog line moved from ClosedWiz, by its old ClosedWiz
-# number, with its moved bytes and the OpenWiz ticket that carries it (`was
-# ClosedWiz #N` on that ticket), or null when that ticket did not move.
 MOVED_SCHEMA = "openwiz.moved-changes.v1"
 WAS = r"was \[?ClosedWiz #{}(?![0-9])"
-# RL6 (#739, J77, VS9): a curated section's two labelled parts; its footer sits between them.
 NEW, UNDER = "**What's new for you**", "**Under the hood**"
 PUBLIC_LINK = re.compile(r"https://github\.com/openwizdev/openwiz(?:[/?#][^\s()<>\]]*)?", re.I)
 ISSUE_JQ = ('{number, body, milestone: (.milestone | {number, title}), '
@@ -40,8 +33,6 @@ def sentence(value, label):
 
 
 def entries(metadata, version):
-    """The plan's entry: one object for the checked version, or a combined
-    release's per-version list, newest first, starting at the checked version."""
     if isinstance(metadata, dict):
         validate(metadata)
         return [dict(metadata, version=version)]
@@ -68,7 +59,6 @@ def validate(metadata):
 
 
 def cap(version, versions):
-    """The line cap for one section of this release."""
     return CAP_EXCEPTIONS.get(version, 5) if tuple(versions) == SETTLED_COMBINED else 5
 
 
@@ -84,7 +74,6 @@ def issue(repo, number, unversioned=False):
     shape(data["milestone"], "number title")
     if unversioned and not (isinstance(data["milestone"]["title"], str)
                             and re.fullmatch(VERSION, data["milestone"]["title"])):
-        # No milestone, or a non-version one (Design, Infra): it assigns no version.
         return dict(data, milestone=None)
     require(type(data["milestone"]["number"]) is int and data["milestone"]["number"] > 0
             and isinstance(data["milestone"]["title"], str)
@@ -140,7 +129,6 @@ def prepend(old, entry, version):
         require(published != wanted, "entry: version already published")
         require(published < wanted, "entry: version must be newer than published entries")
     if headers:
-        # Keep both the preamble and every older entry's bytes, including CRLF.
         index = len(text[:headers[0].start()].encode("utf-8"))
         return old[:index] + entry.encode("utf-8") + b"\n" + old[index:]
     require(not text.strip() or text.strip() == "# Changelog", "entry: unrecognized published changelog")
@@ -148,7 +136,6 @@ def prepend(old, entry, version):
 
 
 def version_entry(check, source, metadata, tickets, versions=()):
-    """One version's section and its included sources, in numeric ticket order."""
     a = check.args
     version = metadata["version"]
     spec = issue(a.repo, metadata["spec"])
@@ -171,8 +158,6 @@ def version_entry(check, source, metadata, tickets, versions=()):
     require(len(changes) <= limit, f"entry: more than {'five' if limit == 5 else limit} changelog lines: "
             + ", ".join(c[1] for c in changes))
     if not changes:
-        # HL1: a confirmed headline with no outcome entries is its dated heading and
-        # headline alone; a version with neither is refused by headline() above.
         return f'## {version} · {metadata["date"]}\n\n{title}\n', []
     # J14, Jake 2026-11-13: in the settled combined release every footer links to
     # its one published release, v0.0.12; every other release keeps its own tag
@@ -186,7 +171,6 @@ def version_entry(check, source, metadata, tickets, versions=()):
 
 
 def exclusions(rows):
-    """Recorded unassigned sources: each exact path and bytes, with its reason."""
     require(isinstance(rows, list), "entry: exclusions must be a list")
     excluded = {}
     for row in rows:
@@ -201,7 +185,6 @@ def exclusions(rows):
 
 
 def moved(doc):
-    """The moved-number map: {old ClosedWiz N: (its OpenWiz ticket or None, moved bytes' sha256)}."""
     require(isinstance(doc, dict) and set(doc) == {"schema", "moved"} and doc["schema"] == MOVED_SCHEMA
             and isinstance(doc["moved"], list), "entry: invalid moved-number map")
     rows = {}
@@ -221,7 +204,6 @@ MOVED = moved(json.loads((Path(__file__).resolve().parent / "moved.json").read_t
 
 
 def sections(check, source, versions, excluded):
-    """Every version's section, newest first, from changes/ at source."""
     a = check.args
     tickets = []
     paths = tree(a.repo, source, ["changes"])
@@ -232,19 +214,15 @@ def sections(check, source, versions, excluded):
             require(lines[path] is not None, f"entry: invalid changelog filename {path}")
     for path, match in lines.items():
         number = int(match[2])
-        # A moved line keeps its old ClosedWiz number (changes/README.md): the
-        # prefixed name always, the plain name while no prefixed rename exists.
         old = bool(match[1]) or (number in MOVED and f"changes/closedwiz-{number}.md" not in paths)
         lookup = number
         if old:
             require(number in MOVED, f"entry: {path}: ClosedWiz #{number} is not in the moved-number map")
             lookup = MOVED[number][0]
-            # A new OpenWiz #N line written over the moved one is a collision, not the moved line.
             require(match[1] or sha(blob(a.repo, source, path)) == MOVED[number][1],
                     f"entry: {path} is not the moved ClosedWiz #{number} line: rename the moved line "
                     f"changes/closedwiz-{number}.md, or record its new bytes in the moved-number map")
         if path in excluded:
-            # A recorded unassigned source: exact bytes, still without a version.
             require(sha(blob(a.repo, source, path)) == excluded[path], f"entry: excluded source changed: {path}")
             if lookup is not None:
                 data = moved_issue(a.repo, lookup, number if old else None, unversioned=True)
@@ -261,7 +239,6 @@ def sections(check, source, versions, excluded):
 
 
 def moved_issue(repo, number, closedwiz=None, unversioned=False):
-    """OpenWiz ticket `number`; for a moved line, only if it says it was ClosedWiz #closedwiz."""
     data = issue(repo, number, unversioned)
     require(closedwiz is None or re.search(WAS.format(closedwiz), data["body"]),
             f"entry: OpenWiz #{number} does not say it was ClosedWiz #{closedwiz}")
@@ -269,10 +246,6 @@ def moved_issue(repo, number, closedwiz=None, unversioned=False):
 
 
 def curated(text, included, tags=()):
-    """RL6 (J77, VS9): a curated changelog's checked structure: `# Changelog`, an
-    optional one-paragraph preamble, then version sections, newest first. Returns
-    its versions and the release notes: the leading `included` sections, cut
-    before the next version heading, trailing newlines stripped, then one LF."""
     require(isinstance(text, str) and "\r" not in text and text.endswith("\n") and not text.endswith("\n\n"),
             "entry: curated notes are LF text ending in one newline")
     lines = text[:-1].split("\n")
@@ -282,8 +255,6 @@ def curated(text, included, tags=()):
     require(preamble[:2] == ["# Changelog", ""] and preamble[-1] == ""
             and all(line and not line.startswith(("#", "- ")) for line in preamble[2:-1]),
             "entry: curated notes start with # Changelog and at most one plain paragraph")
-    # Published entries are already immutable history (checked byte for byte
-    # against the published changelog): only the newer sections are curated here.
     published = max((tuple(map(int, t[1:].split("."))) for t in tags if re.fullmatch("v" + VERSION, t)), default=None)
     found, fresh = [], len(lines)
     for k, start in enumerate(starts):
@@ -299,7 +270,6 @@ def curated(text, included, tags=()):
     require(all(x > y for x, y in zip(numbers, numbers[1:])), "entry: curated versions must be newest first, each once")
     require(isinstance(included, list) and included and found[:len(included)] == included,
             "entry: curated notes must start with the included versions, in order")
-    # Links: only inline links to the public repository, and only to a tag that exists.
     text, whole = "\n".join(lines[:fresh]) + "\n", text
     require(not re.search(r"<[A-Za-z/!]|^ {0,3}\[[^\]]*\]:", re.sub(r"`[^`\n]*`", "", text), re.M),
             "entry: curated notes allow only inline links")
@@ -318,9 +288,6 @@ def curated(text, included, tags=()):
 
 
 def curated_section(lines):
-    """One version: heading; bold headline; What's new for you (2-4 lines); one
-    footer paragraph with the honest caveat; Under the hood (1-5 lines); and
-    optionally one closing link line."""
     match = re.fullmatch(r"## " + VERSION + r" · ([0-9]{4}-[0-9]{2}-[0-9]{2})", lines[0])
     require(match is not None, f"entry: invalid curated heading: {lines[0]}")
     version = ".".join(match.groups()[:3])
@@ -343,7 +310,6 @@ def curated_section(lines):
         require(low <= len(found) <= high, f"entry: {version} {name} needs {low} to {high} lines")
         return found
 
-    # The honest caveat is said once, in the footer, never per line.
     require(not any("fixture" in line.lower() for line in part(NEW, 2, 4)),
             f"entry: {version} What's new for you carries a fixture caveat: say it once in the footer")
     require(len(rest) >= 2 and rest[0] == "" and rest[1] != UNDER,
@@ -360,9 +326,6 @@ def curated_section(lines):
 
 
 def compose(old, text, restate=False):
-    """CHANGELOG.md: `old`'s preamble, `text`, then `old`'s entries older than text's
-    oldest version. Published history keeps every entry, each older than `text`;
-    with nothing published yet (`restate`), text may restate old's newer entries."""
     oldest = re.findall(r"^## " + VERSION + " ", text, re.M)[-1]
     if restate:
         s = old.decode("utf-8")
@@ -374,7 +337,7 @@ def compose(old, text, restate=False):
             if tuple(int(n) for n in match.groups()) < tuple(map(int, oldest)):
                 kept.append(header)
         if headers:
-            at = lambda h: len(s[:h.start()].encode("utf-8"))  # noqa: E731
+            at = lambda h: len(s[:h.start()].encode("utf-8"))
             preamble = old[:at(headers[0])]
             if not kept:
                 preamble_check(preamble.decode("utf-8"))
@@ -387,10 +350,7 @@ def generate(check, source, base_files):
     a = check.args
     versions = entries(check.plan["entry"], a.version)
     old = blob(a.public_repo, check.plan["public_base"], "CHANGELOG.md") if "CHANGELOG.md" in base_files else b""
-    # Every new version must be newer than every published one: check the
-    # oldest, before any GitHub read for its spec.
     prepend(old, "", versions[-1]["version"])
-    # One entry per version, newest first, each from its own spec and lines.
     text = "\n".join(sections(check, source, versions, {})[0])
     changelog = prepend(old, text, versions[-1]["version"])
     roadmap = a.staging / "ROADMAP.md"

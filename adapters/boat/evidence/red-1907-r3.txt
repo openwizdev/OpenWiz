@@ -1,0 +1,27 @@
+# Red run (#1907 review R3): python3 -I adapters/boat/test_driver.py -k never_open -k track_only, against the driver and tests at 2c823b7b (main merged in). The list of opened paths is cut to its count.
+FF
+======================================================================
+FAIL: test_stop_and_failure_cleanup_never_open_another_process_environment (__main__.Boat.test_stop_and_failure_cleanup_never_open_another_process_environment)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/boat/test_driver.py", line 486, in test_stop_and_failure_cleanup_never_open_another_process_environment
+    self.assertFalse(os.path.exists(seen), 'a failed start opened another process\'s environment')
+AssertionError: True is not false : a failed start opened another process's environment
+
+======================================================================
+FAIL: test_the_tests_track_only_their_own_processes (__main__.Boat.test_the_tests_track_only_their_own_processes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/boat/test_driver.py", line 507, in test_the_tests_track_only_their_own_processes
+    self.assertEqual(ENVIRON_OPENS, [], 'the tests opened another process\'s environment')
+AssertionError: Lists differ: [<every visible process's /proc/<pid>/environ>] != []
+
+First list contains one entry per visible process.
+
+
+: the tests opened another process's environment
+
+----------------------------------------------------------------------
+Ran 2 tests in 1.119s
+
+FAILED (failures=2)

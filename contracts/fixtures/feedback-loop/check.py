@@ -252,8 +252,13 @@ def check_template(root, c):
         else:
             req = f.get('validations', {}).get('required') is True
         fields.append({'type': f.get('type'), 'id': f.get('id'), 'required': req})
-        if f.get('type') == 'markdown' and not str(attrs.get('value', '')).startswith(t['notice']):
-            problems.append('the template must open with the public notice')
+        if f.get('type') == 'markdown':
+            if not str(attrs.get('value', '')).startswith(t['notice']):
+                problems.append('the template must open with the public notice')
+            elif attrs.get('value') != t['warning']:
+                problems.append('the template must carry exactly the approved warning')
+        if f.get('id') == 'public-words' and [o.get('label') for o in attrs.get('options', [])] != [t['confirmation']]:
+            problems.append('the public-words checkbox must confirm exactly the approved confirmation')
     if fields != t['fields']:
         problems.append(f'the template fields must be exactly {t["fields"]}, found {fields}')
     return problems

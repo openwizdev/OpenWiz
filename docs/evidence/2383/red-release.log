@@ -1,0 +1,61 @@
+$ python3 -I tools/release/test_candidate.py Candidate.test_install_status_never_reads_a_held_or_interrupted_attempt_record Notes.test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history
+test_install_status_never_reads_a_held_or_interrupted_attempt_record (__main__.Candidate.test_install_status_never_reads_a_held_or_interrupted_attempt_record) ... FAIL
+test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history (__main__.Notes.test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history) ... 
+  test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history (__main__.Notes.test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history) (case='a stray paragraph') ... FAIL
+  test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history (__main__.Notes.test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history) (case='a broken section') ... FAIL
+  test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history (__main__.Notes.test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history) (case='an older version') ... FAIL
+  test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history (__main__.Notes.test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history) (case='oldest first') ... FAIL
+  test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history (__main__.Notes.test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history) (case='no blank line before the history') ... FAIL
+
+======================================================================
+FAIL: test_install_status_never_reads_a_held_or_interrupted_attempt_record (__main__.Candidate.test_install_status_never_reads_a_held_or_interrupted_attempt_record)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/release/test_candidate.py", line 702, in test_install_status_never_reads_a_held_or_interrupted_attempt_record
+    self.assertLessEqual(set(held), {1, 2})
+AssertionError: {1, 2, 'unreadable: Expecting value: line 1 column 1 (char 0)'} not less than or equal to {1, 2}
+
+======================================================================
+FAIL: test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history (__main__.Notes.test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history) (case='a stray paragraph')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/release/test_candidate.py", line 2198, in test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history
+    with self.subTest(case=name), self.assertRaises(AssertionError):
+AssertionError: AssertionError not raised
+
+======================================================================
+FAIL: test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history (__main__.Notes.test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history) (case='a broken section')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/release/test_candidate.py", line 2198, in test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history
+    with self.subTest(case=name), self.assertRaises(AssertionError):
+AssertionError: AssertionError not raised
+
+======================================================================
+FAIL: test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history (__main__.Notes.test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history) (case='an older version')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/release/test_candidate.py", line 2198, in test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history
+    with self.subTest(case=name), self.assertRaises(AssertionError):
+AssertionError: AssertionError not raised
+
+======================================================================
+FAIL: test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history (__main__.Notes.test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history) (case='oldest first')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/release/test_candidate.py", line 2198, in test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history
+    with self.subTest(case=name), self.assertRaises(AssertionError):
+AssertionError: AssertionError not raised
+
+======================================================================
+FAIL: test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history (__main__.Notes.test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history) (case='no blank line before the history')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/release/test_candidate.py", line 2198, in test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history
+    with self.subTest(case=name), self.assertRaises(AssertionError):
+AssertionError: AssertionError not raised
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.223s
+
+FAILED (failures=6)

@@ -1,0 +1,22 @@
+# #2067 green at 9388f0dd, after the fix: python3 -I adapters/cloudroom/test_driver.py (all), then python3 -I kernel/driver-kit/test_kit.py: Ran 9 tests, OK; python3 -I tools/comment-check/check.py diff --base origin/main: ok
+# The red run's thread-id case asserted the word "unknown"; the driver's existing receipt refusal says "names no thread", so that assertion now reads that.
+test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Driver.test_a_credential_shaped_start_field_is_refused_before_anything_starts) ... ok
+test_a_credential_shaped_thread_id_is_never_kept_or_passed (__main__.Driver.test_a_credential_shaped_thread_id_is_never_kept_or_passed) ... ok
+test_a_start_it_could_not_finish_stays_starting (__main__.Driver.test_a_start_it_could_not_finish_stays_starting) ... ok
+test_a_stop_that_could_not_save_keeps_the_run_unwakeable_once_writes_recover (__main__.Driver.test_a_stop_that_could_not_save_keeps_the_run_unwakeable_once_writes_recover) ... ok
+test_a_stop_that_could_write_nothing_still_keeps_the_run_unwakeable (__main__.Driver.test_a_stop_that_could_write_nothing_still_keeps_the_run_unwakeable) ... ok
+test_a_stop_waits_for_a_wake_in_progress (__main__.Driver.test_a_stop_waits_for_a_wake_in_progress) ... ok
+test_a_wake_refuses_a_run_whose_lock_file_was_lost (__main__.Driver.test_a_wake_refuses_a_run_whose_lock_file_was_lost) ... ok
+test_kit_passes_all_five (__main__.Driver.test_kit_passes_all_five) ... ok
+test_reads_a_local_and_a_cloud_room_cli (__main__.Driver.test_reads_a_local_and_a_cloud_room_cli) ... ok
+test_room_cli_diagnostics_never_reach_the_drivers_answer (__main__.Driver.test_room_cli_diagnostics_never_reach_the_drivers_answer) ... ok
+test_start_refuses_a_run_cloudroom_did_not_make (__main__.Driver.test_start_refuses_a_run_cloudroom_did_not_make) ... ok
+test_start_that_cannot_save_its_run_never_says_retry (__main__.Driver.test_start_that_cannot_save_its_run_never_says_retry) ... ok
+test_stop_by_title_ends_only_its_own_thread (__main__.Driver.test_stop_by_title_ends_only_its_own_thread) ... ok
+test_stop_that_cannot_save_ends_the_thread_and_leaves_nothing_to_wake (__main__.Driver.test_stop_that_cannot_save_ends_the_thread_and_leaves_nothing_to_wake) ... ok
+test_wake_is_the_fleet_routes_queued_delivery (__main__.Driver.test_wake_is_the_fleet_routes_queued_delivery) ... ok
+
+----------------------------------------------------------------------
+Ran 15 tests in 17.059s
+
+OK

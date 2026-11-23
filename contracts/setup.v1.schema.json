@@ -334,6 +334,9 @@
           }
         }
       ]
+    },
+    "host": {
+      "$ref": "#/$defs/host_name"
     }
   },
   "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -351,22 +354,6 @@
         "properties": {
           "components": {
             "allOf": [
-              {
-                "contains": {
-                  "properties": {
-                    "id": {
-                      "const": "cloudroom"
-                    },
-                    "state": {
-                      "const": "verified"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "state"
-                  ]
-                }
-              },
               {
                 "contains": {
                   "properties": {
@@ -462,6 +449,103 @@
     {
       "if": {
         "properties": {
+          "ready": {
+            "const": true
+          },
+          "host": {
+            "const": "cloud"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "components": {
+            "contains": {
+              "properties": {
+                "id": {
+                  "const": "cloudroom"
+                },
+                "state": {
+                  "const": "verified"
+                }
+              },
+              "required": [
+                "id",
+                "state"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "host": {
+            "const": "cloud"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "components": {
+            "not": {
+              "contains": {
+                "properties": {
+                  "reason": {
+                    "const": "cloudroom_not_needed"
+                  }
+                },
+                "required": [
+                  "reason"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "host"
+        ],
+        "not": {
+          "properties": {
+            "host": {
+              "const": "cloud"
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "components": {
+            "contains": {
+              "properties": {
+                "id": {
+                  "const": "cloudroom"
+                },
+                "state": {
+                  "const": "unknown"
+                },
+                "reason": {
+                  "const": "cloudroom_not_needed"
+                }
+              },
+              "required": [
+                "id",
+                "state",
+                "reason"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
           "cost": {
             "properties": {
               "provenance": {
@@ -517,5 +601,265 @@
         }
       }
     }
-  ]
+  ],
+  "$defs": {
+    "host_name": {
+      "type": "string",
+      "maxLength": 40,
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "not": {
+        "const": "cloudroom"
+      }
+    },
+    "models_host_selection": {
+      "description": "The models host selector and the source marker on the offered-list response, projected together. host is the explicit flag and saved_host is the saved project host. An omitted saved host includes a legacy cloud project.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "host": {
+          "$ref": "#/$defs/host_name"
+        },
+        "saved_host": {
+          "$ref": "#/$defs/host_name"
+        },
+        "source": {
+          "const": "local"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "anyOf": [
+              {
+                "required": [
+                  "host"
+                ],
+                "properties": {
+                  "host": {
+                    "not": {
+                      "const": "cloud"
+                    }
+                  }
+                }
+              },
+              {
+                "required": [
+                  "saved_host"
+                ],
+                "not": {
+                  "required": [
+                    "host"
+                  ]
+                },
+                "properties": {
+                  "saved_host": {
+                    "not": {
+                      "const": "cloud"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "then": {
+            "required": [
+              "source"
+            ]
+          }
+        },
+        {
+          "if": {
+            "anyOf": [
+              {
+                "required": [
+                  "host"
+                ],
+                "properties": {
+                  "host": {
+                    "const": "cloud"
+                  }
+                }
+              },
+              {
+                "not": {
+                  "required": [
+                    "host"
+                  ]
+                },
+                "properties": {
+                  "saved_host": {
+                    "const": "cloud"
+                  }
+                }
+              }
+            ]
+          },
+          "then": {
+            "not": {
+              "required": [
+                "source"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "prepared_project": {
+      "description": "The project settings prepare saves: a cloud project's nine keys exactly as today, or another host's ten, naming the host and holding no CloudRoom id.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "repository",
+            "project",
+            "operator",
+            "service_issue",
+            "answer_thread",
+            "harness",
+            "model",
+            "effort",
+            "runtime"
+          ],
+          "properties": {
+            "repository": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9-]{1,39}/[A-Za-z0-9_.-]{1,100}$",
+              "not": {
+                "pattern": "/\\.\\.?$"
+              }
+            },
+            "project": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,128}$"
+            },
+            "operator": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "pattern": "^[^\\s\\u0000-\\u001f\\u007f-\\u009f]([^\\u0000-\\u001f\\u007f-\\u009f]*[^\\s\\u0000-\\u001f\\u007f-\\u009f])?$"
+            },
+            "service_issue": {
+              "type": "integer",
+              "minimum": 1,
+              "not": {
+                "minimum": 9007199254740992
+              }
+            },
+            "answer_thread": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,128}$"
+            },
+            "harness": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_.:/-]{1,128}$"
+            },
+            "model": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_.:/-]{1,128}$"
+            },
+            "effort": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_.:/-]{1,128}$"
+            },
+            "runtime": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "string",
+                  "pattern": "^0\\.[0-9]{1,10}\\.[0-9]{1,10} [0-9a-f]{40}$"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "repository",
+            "project",
+            "operator",
+            "service_issue",
+            "answer_thread",
+            "harness",
+            "model",
+            "effort",
+            "runtime",
+            "host"
+          ],
+          "properties": {
+            "repository": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9-]{1,39}/[A-Za-z0-9_.-]{1,100}$",
+              "not": {
+                "pattern": "/\\.\\.?$"
+              }
+            },
+            "project": {
+              "type": "null"
+            },
+            "operator": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "pattern": "^[^\\s\\u0000-\\u001f\\u007f-\\u009f]([^\\u0000-\\u001f\\u007f-\\u009f]*[^\\s\\u0000-\\u001f\\u007f-\\u009f])?$"
+            },
+            "service_issue": {
+              "type": "integer",
+              "minimum": 1,
+              "not": {
+                "minimum": 9007199254740992
+              }
+            },
+            "answer_thread": {
+              "type": "null"
+            },
+            "harness": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_.:/-]{1,128}$"
+            },
+            "model": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_.:/-]{1,128}$"
+            },
+            "effort": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_.:/-]{1,128}$"
+            },
+            "runtime": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "string",
+                  "pattern": "^0\\.[0-9]{1,10}\\.[0-9]{1,10} [0-9a-f]{40}$"
+                }
+              ]
+            },
+            "host": {
+              "allOf": [
+                {
+                  "type": "string",
+                  "maxLength": 40,
+                  "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+                  "not": {
+                    "const": "cloudroom"
+                  }
+                },
+                {
+                  "not": {
+                    "const": "cloud"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
 }

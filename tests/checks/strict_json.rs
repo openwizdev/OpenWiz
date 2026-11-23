@@ -1,8 +1,3 @@
-//! Strict JSON: like `serde_json::from_slice::<Value>`, but a repeated key in
-//! any object is an error rather than "the last one wins". Moved unchanged
-//! from the removed terminal crate (#776) for the release-candidate fixture
-//! scan: duplicate-key JSON is rejected, never data.
-
 use std::fmt;
 
 use serde::Deserialize;
@@ -70,8 +65,6 @@ impl<'de> Visitor<'de> for StrictVisitor {
     }
 }
 
-/// Parses one complete JSON document (trailing whitespace only), refusing a
-/// repeated key anywhere.
 pub fn parse(bytes: &[u8]) -> Result<Value, String> {
     let mut de = serde_json::Deserializer::from_slice(bytes);
     let Strict(value) = Strict::deserialize(&mut de).map_err(|e| format!("invalid JSON: {e}"))?;

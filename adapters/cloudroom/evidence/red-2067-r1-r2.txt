@@ -1,0 +1,48 @@
+# #2067 R1/R2 red, before the fix: python3 -I adapters/cloudroom/test_driver.py -k credential_shaped_thread_id -k kit_lost
+# Rerun with the marked-list stop first: in the earlier red log a plain stop had archived the Local run, so its second stop never reached room-cli.
+# Synthetic markers are replaced with <synthetic-marker> or <synthetic-token> here.
+test_a_credential_shaped_thread_id_is_never_kept_or_passed (__main__.Driver.test_a_credential_shaped_thread_id_is_never_kept_or_passed) ... 
+  test_a_credential_shaped_thread_id_is_never_kept_or_passed (__main__.Driver.test_a_credential_shaped_thread_id_is_never_kept_or_passed) [local] ... FAIL
+  test_a_credential_shaped_thread_id_is_never_kept_or_passed (__main__.Driver.test_a_credential_shaped_thread_id_is_never_kept_or_passed) [cloud] ... FAIL
+test_a_kit_lost_during_spawn_never_claims_nothing_started (__main__.Driver.test_a_kit_lost_during_spawn_never_claims_nothing_started) ... 
+  test_a_kit_lost_during_spawn_never_claims_nothing_started (__main__.Driver.test_a_kit_lost_during_spawn_never_claims_nothing_started) [local] ... FAIL
+  test_a_kit_lost_during_spawn_never_claims_nothing_started (__main__.Driver.test_a_kit_lost_during_spawn_never_claims_nothing_started) [cloud] ... FAIL
+
+======================================================================
+FAIL: test_a_credential_shaped_thread_id_is_never_kept_or_passed (__main__.Driver.test_a_credential_shaped_thread_id_is_never_kept_or_passed) [local]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 262, in test_a_credential_shaped_thread_id_is_never_kept_or_passed
+    self.assertIn(run['run'], err['next'])
+AssertionError: 'run-4ed877d01708' not found in 'stop it again: its thread still runs'
+
+======================================================================
+FAIL: test_a_credential_shaped_thread_id_is_never_kept_or_passed (__main__.Driver.test_a_credential_shaped_thread_id_is_never_kept_or_passed) [cloud]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 262, in test_a_credential_shaped_thread_id_is_never_kept_or_passed
+    self.assertIn(run['run'], err['next'])
+AssertionError: 'run-8ffa126912ee' not found in 'stop it again: its thread still runs'
+
+======================================================================
+FAIL: test_a_kit_lost_during_spawn_never_claims_nothing_started (__main__.Driver.test_a_kit_lost_during_spawn_never_claims_nothing_started) [local]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 281, in test_a_kit_lost_during_spawn_never_claims_nothing_started
+    self.assertTrue(found, p.stdout)
+AssertionError: None is not true : {"error": "the driver kit's credential check is missing, so no start field can be checked; nothing was saved or started", "next": "run the driver from an OpenWiz checkout or release that carries kernel/driver-kit/kit.py"}
+
+
+======================================================================
+FAIL: test_a_kit_lost_during_spawn_never_claims_nothing_started (__main__.Driver.test_a_kit_lost_during_spawn_never_claims_nothing_started) [cloud]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/cloudroom/test_driver.py", line 281, in test_a_kit_lost_during_spawn_never_claims_nothing_started
+    self.assertTrue(found, p.stdout)
+AssertionError: None is not true : {"error": "the driver kit's credential check is missing, so no start field can be checked; nothing was saved or started", "next": "run the driver from an OpenWiz checkout or release that carries kernel/driver-kit/kit.py"}
+
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.466s
+
+FAILED (failures=4)

@@ -10,63 +10,45 @@ autotests = false
 autoexamples = false
 autobenches = false
 
-# The fake room-cli the tests run in place of the real one.
 [[bin]]
 name = "fake-room-cli"
 path = "fake-room-cli/main.rs"
 test = false
 
-# The fake gh the fleet tests run in place of the real one (OpenWiz 0.0.6,
-# A3, ClosedWiz#111).
 [[bin]]
 name = "fake-gh"
 path = "fake-gh/main.rs"
 test = false
 
-# Fixture executables use existing dev-dependencies, never shipped.
 [[example]]
 name = "openwiz"
 path = "fixture-entrypoints/cli.rs"
 test = false
 
-# The 0.0.1 proof cases P1 to P12.
 [[test]]
 name = "proof"
 path = "proof/main.rs"
 
-# Foundation checks: dependency direction, fixture scan, schema conformance
-# and the pending list.
 [[test]]
 name = "checks"
 path = "checks/main.rs"
 
-# The 0.0.3 messaging proof cases M1 to M15.
 [[test]]
 name = "messaging"
 path = "messaging/main.rs"
 
-# OpenWiz 0.0.4: new threads (A1, ClosedWiz#11). Empty until A1 fills it.
 [[test]]
 name = "new-thread"
 path = "new-thread/main.rs"
 
-# OpenWiz 0.0.4: attachments (B1, ClosedWiz#14). Empty until B1 fills it.
-[[test]]
-name = "attachments"
-path = "attachments/main.rs"
-
-# OpenWiz 0.0.6 spec 1, seeing fleets (ClosedWiz#107): A3's seams (#111),
-# then one file each for A4, A5, A6 and spec 2's B3.
 [[test]]
 name = "fleet"
 path = "fleet/main.rs"
 
-# OpenWiz 0.0.9 L2 (#544): pure loop planner tables (LP1, LP2).
 [[test]]
 name = "loops"
 path = "loops/main.rs"
 
-# 0.0.12 T1 (#1096): the real fixture CLI's agent discovery seam.
 [[test]]
 name = "cli-agent"
 path = "cli-agent/main.rs"
@@ -75,12 +57,10 @@ path = "cli-agent/main.rs"
 serde_json.workspace = true
 openwiz-core = { path = "../crates/core" }
 openwiz-adapter-cloudroom = { path = "../crates/adapters/cloudroom" }
-# The GitHub adapter, for the fleet tests (OpenWiz 0.0.6, A3, ClosedWiz#111).
 openwiz-adapter-github = { path = "../crates/adapters/github" }
 openwiz-cli = { path = "../crates/cli" }
 
 [dev-dependencies]
-# The checks' strict JSON reader (#776; moved from the removed terminal crate).
 serde.workspace = true
 
 [lints]

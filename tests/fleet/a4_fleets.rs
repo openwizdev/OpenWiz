@@ -1,26 +1,3 @@
-//! A4 (ClosedWiz#112): `openwiz fleets`, proven at the program's seam:
-//! the release `openwiz`, with the fake `gh` and the fake `room-cli` first
-//! on `PATH`, on the synthetic scenarios in `tests/fixtures/github/fleets/`.
-//!
-//! - **S1-1, only allowlisted reads:** the recording fake `gh` logs exactly
-//!   the reads expected, each one the GitHub allowlist allows, and the fake
-//!   `room-cli` is never called.
-//! - **S1-3, unknowns and partial answers:** a failed, cut-short, timed-out
-//!   or malformed read makes the result partial; every value it reaches is
-//!   unread, naming exactly that read, and nothing else changes; what the
-//!   state table can't settle is unknown, with its reason.
-//! - **S1-5, the contract:** every `--json` output matches
-//!   `contracts/fleet.v1.schema.json`, and the complete scenario prints the
-//!   contract's example 1 itself.
-//!
-//! Every expected value is the contract's (its example and its rules),
-//! worked out by hand here: never by the code under test.
-//!
-//! **Answers written here, not in the fixtures:** a pull request's comments
-//! (a `VERDICT` line has no form in the fixture scan) and bounded
-//! ancestry batch responses. Each run copies the fixtures into its own
-//! directory and adds them as one more scenario that extends a fixture's.
-
 #[path = "a4_allowlist.rs"]
 mod allowlist_forms;
 #[path = "a4_edges.rs"]
@@ -80,9 +57,6 @@ fn comments_argv(pr: u64) -> Vec<String> {
     ])
 }
 
-/// Synthetic ancestry answers for the existing example's merged PRs.
-/// Their expected containment is a literal fixture fact, independent of
-/// production parsing. Raw SHA headRef acceptance remains unverified live.
 fn batch_response(commits: &[char], absent: Option<char>) -> Value {
     let pairs: Vec<_> = commits
         .iter()
@@ -103,9 +77,6 @@ fn batch_response(commits: &[char], absent: Option<char>) -> Value {
     json!({"argv": edges::batch_argv(&pairs), "stdout": json!({"data":{"repository":repo}}).to_string()})
 }
 
-/// Partial discovery can leave any subset of the example's three merged
-/// PRs. Only those exact queries get answers; a full run's invocation log
-/// is separately asserted to contain exactly one three-pair batch.
 fn batch_responses() -> Vec<Value> {
     (1..8)
         .map(|mask| {
@@ -123,14 +94,10 @@ fn words(w: &[&str]) -> Vec<String> {
     w.iter().map(|s| (*s).to_owned()).collect()
 }
 
-/// A full commit of one repeated hex digit.
 fn commit(c: char) -> String {
     c.to_string().repeat(40)
 }
 
-/// The comments of the four open pull requests: #952 approved on its
-/// head, #953 changes on its head, #954 none, #955 changes on an older
-/// commit (the latest verdict only).
 fn comments() -> Vec<Value> {
     let answer = |pr: u64, bodies: &[String]| {
         json!({
@@ -165,8 +132,6 @@ fn comments() -> Vec<Value> {
     ]
 }
 
-/// One run of the release `openwiz fleets` on a fixture scenario, plus
-/// `extra` answers: what it printed and what the fakes saw.
 struct Ran {
     code: Option<i32>,
     stdout: String,
@@ -187,7 +152,6 @@ impl Ran {
     }
 }
 
-/// A directory only its owner can use, whatever the umask (#170).
 fn private_dir(dir: &Path) {
     DirBuilder::new()
         .recursive(true)
@@ -209,8 +173,6 @@ fn copy_dir(from: &Path, to: &Path) {
     }
 }
 
-/// The fixtures copied into `test`'s own directory, with one more scenario
-/// that extends `base` by `extra` and the comments: its path.
 fn stage(test: &str, base: &str, extra: Vec<Value>) -> PathBuf {
     let root = Path::new(env!("CARGO_TARGET_TMPDIR"))
         .join("a4-scenarios")
@@ -233,8 +195,6 @@ fn stage(test: &str, base: &str, extra: Vec<Value>) -> PathBuf {
     path
 }
 
-/// The release `openwiz fleets <args>` in a private directory holding
-/// both fakes, first on `PATH`, the fake `gh` set to the staged scenario.
 fn run(test: &str, base: &str, extra: Vec<Value>, args: &[&str]) -> Ran {
     let scenario = stage(test, base, extra);
     let (dir, path) = fakes_on_path(&format!("a4-{test}"));
@@ -252,7 +212,6 @@ fn run(test: &str, base: &str, extra: Vec<Value>, args: &[&str]) -> Ran {
         .lines()
         .map(|l| serde_json::from_str(l).expect("a JSON list"))
         .collect();
-    // S1-1 in every run: each call the fake saw is on the allowlist.
     for argv in &gh {
         let argv: Vec<&str> = argv.iter().map(String::as_str).collect();
         assert!(
@@ -281,9 +240,6 @@ fn json_run(test: &str, base: &str, extra: Vec<Value>) -> (Value, Ran) {
     (doc, ran)
 }
 
-/// The contract's example 1, with the values the fixture scan can't hold
-/// renamed as the complete scenario renames them, and the run's own
-/// snapshot time.
 fn example_one(snapshot_at: &Value) -> Value {
     let text = fs::read_to_string(CONTRACT).expect("the contract");
     let block = text
@@ -317,7 +273,6 @@ fn example_one(snapshot_at: &Value) -> Value {
     doc
 }
 
-/// The read whose `kind` and subject are given.
 fn read<'a>(doc: &'a Value, kind: &str, key: &str, subject: Value) -> &'a Value {
     doc["reads"]
         .as_array()
@@ -345,8 +300,6 @@ fn fleet(doc: &Value, spec: u64) -> &Value {
         .unwrap_or_else(|| panic!("no fleet {spec}"))
 }
 
-/// Every value of `doc` but those at `paths` (`/`-separated, an array
-/// item by its index) equals `base`'s.
 fn same_but(doc: &Value, base: &Value, paths: &[&str]) {
     let mut a = doc.clone();
     let mut b = base.clone();
@@ -361,14 +314,12 @@ fn same_but(doc: &Value, base: &Value, paths: &[&str]) {
     assert_eq!(a, b, "only {paths:?} differ");
 }
 
-/// The fake's own files: no `room-cli` log, nothing else.
 const FAKE_GH_FILES: &[&str] = &[
     "fake-gh.scenario",
     "gh-environment.log",
     "gh-invocations.log",
 ];
 
-/// The complete scenario, run for `test` in its own directory.
 fn complete(test: &str) -> (Value, Ran) {
     json_run(&format!("{test}-base"), "complete", vec![])
 }
@@ -380,9 +331,6 @@ fn the_complete_scenario_prints_the_contracts_first_example() {
     assert_eq!(ran.left, FAKE_GH_FILES, "room-cli was called");
 }
 
-/// S1-1: exactly these reads, once each, and each one on the allowlist;
-/// never a `room-cli` call. The per-pull-request reads may run in any
-/// order, so the log is compared sorted.
 #[test]
 fn only_the_allowlisted_reads_run_once_each_and_never_room_cli() {
     let mut want: Vec<Vec<String>> = vec![
@@ -402,7 +350,6 @@ fn only_the_allowlisted_reads_run_once_each_and_never_room_cli() {
     for args in [&["--json"][..], &[]] {
         let ran = run("allowlisted", "complete", vec![], args);
         assert_eq!(ran.code, Some(0), "{}", ran.stderr);
-        // The four list reads come first, in this order.
         assert_eq!(ran.gh[..4], want_first(), "{args:?}");
         let mut got = ran.gh.clone();
         got.sort();
@@ -451,8 +398,6 @@ fleets
     );
 }
 
-/// S1-3: one failed read reaches only the values that require it: #903's
-/// state and its fleet's progress. Everything else is as complete.
 #[test]
 fn a_failed_checks_read_leaves_only_what_requires_it_unread() {
     let (doc, ran) = json_run("checks-fail", "checks-fail", vec![]);
@@ -505,8 +450,6 @@ fn a_malformed_checks_answer_is_never_read_as_a_value() {
     assert_eq!(ticket(&doc, 903)["state"], json!({"unread": ["r13"]}));
 }
 
-/// A read that never answers is stopped at the read timeout (15 seconds),
-/// and the run goes on: only what requires it is unread.
 #[test]
 fn a_read_that_hangs_times_out_and_the_run_goes_on() {
     let (doc, ran) = json_run("hang", "hang", vec![]);
@@ -532,8 +475,6 @@ fn a_read_that_hangs_times_out_and_the_run_goes_on() {
     );
 }
 
-/// A list GitHub gave in part is partial, with what it listed; the state
-/// it reaches is unread even though a listed blocker is known unmerged.
 #[test]
 fn a_blocker_list_cut_short_is_partial_and_its_ticket_unread() {
     let (doc, _) = json_run("truncated", "truncated", vec![]);
@@ -558,8 +499,6 @@ fn a_blocker_list_cut_short_is_partial_and_its_ticket_unread() {
     );
 }
 
-/// A blocker with this repository's number but another issue's node id
-/// is never taken for this repository's issue: the blocker list fails.
 #[test]
 fn a_blocker_from_another_repository_is_never_taken_for_this_ones() {
     let (doc, _) = json_run("foreign-blocker", "foreign-blocker", vec![]);
@@ -577,8 +516,6 @@ fn a_blocker_from_another_repository_is_never_taken_for_this_ones() {
         .iter()
         .map(|b| &b["number"])
         .collect();
-    // #903 blocked only #908, and #811 and #812 too: none is a listed
-    // ticket's blocker now.
     assert_eq!(blockers, [&json!(902), &json!(931)]);
     assert!(
         doc["reads"]
@@ -590,11 +527,6 @@ fn a_blocker_from_another_repository_is_never_taken_for_this_ones() {
     );
 }
 
-/// Without the pull request list nothing about a pull request is known:
-/// every `pr_discovery` read failed, no per-pull-request read is made,
-/// and every state is unread. #908's names its own read and its three
-/// blockers' (r8, r11, r26, r34, r36 by hand: three reads per ticket and
-/// two per blocker, in the contract's order).
 #[test]
 fn without_the_pull_request_list_no_ticket_is_ever_merged() {
     let (doc, ran) = json_run("pr-list-fails", "pr-list-fails", vec![]);
@@ -635,8 +567,6 @@ fn without_the_pull_request_list_no_ticket_is_ever_merged() {
     assert_eq!(ran.gh, want_first());
 }
 
-/// Without the issue list there is no fleet to show: the spec list
-/// failed, and "needs you" is unread, never empty.
 #[test]
 fn without_the_issue_list_no_fleet_is_shown_and_needs_you_is_unread() {
     for scenario in ["issue-list-fails", "malformed-issues"] {
@@ -666,8 +596,6 @@ fn without_the_issue_list_no_fleet_is_shown_and_needs_you_is_unread() {
     assert!(text.stdout.contains("\nneeds you\n  unread: r3\n\nfleets\n  none listed\n\ngaps\n  r3 the spec list: failed (command_failed): gh issue list exited 1: gh error (detail withheld)\n"), "{}", text.stdout);
 }
 
-/// The version is reported, never a gate: an unreadable one is a failed
-/// read and `version_tested` false, and every other read still runs.
 #[test]
 fn an_unreadable_version_is_reported_and_never_a_gate() {
     let (doc, ran) = json_run("version-unreadable", "version-unreadable", vec![]);
@@ -691,9 +619,6 @@ fn an_unreadable_version_is_reported_and_never_a_gate() {
     assert_eq!(ran.gh.len(), 13);
 }
 
-/// A merge read back that isn't on its base never makes merged: #902 is
-/// closed, so it is unknown (rule 2), and as a blocker it isn't merged, so
-/// #906 is blocked. #903's open pull request keeps it in review.
 #[test]
 fn a_merge_not_found_on_its_base_is_never_merged() {
     let behind = batch_response(&['2', 'b', 'd'], Some('2'));
@@ -724,7 +649,6 @@ fn a_merge_not_found_on_its_base_is_never_merged() {
     assert_eq!(doc["coverage"], json!({"state": "complete"}));
 }
 
-/// The entire stdout must be one document of the pinned CLI schema.
 fn cli_document(text: &str) -> Value {
     assert!(text.ends_with('\n'));
     let doc: Value = serde_json::from_str(text).expect("one whole-stream CLI document");
@@ -734,8 +658,6 @@ fn cli_document(text: &str) -> Value {
     doc
 }
 
-/// Usage: anything but `--json` is refused before anything is read, and
-/// `--help` prints the help.
 #[test]
 fn a_usage_error_reads_nothing() {
     for (args, why, json_output) in [
@@ -803,7 +725,6 @@ fn a_usage_error_reads_nothing() {
     assert_eq!(fleets::USAGE, "  openwiz fleets [--json]\n");
 }
 
-/// #373: gh exits before its JSON exporter when there are no checks.
 #[test]
 fn no_checks_reported_keeps_the_ticket_building_and_fleet_progress_known() {
     let response = json!({"argv": checks_argv(954), "exit": 1,

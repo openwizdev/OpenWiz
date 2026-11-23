@@ -1,11 +1,4 @@
 #!/usr/bin/env python3
-"""#2201: the CloudRoom install, reuse and sign-in tool, on recording fakes only.
-
-No test downloads, installs, opens or signs in to anything real: every program,
-URL and file the tool touches goes through the FakeHost below, inside a private
-temporary directory. Expected values come from the fixtures and the contract
-(contracts/public-cloudroom-setup.v1.md), never from the tool's own helpers.
-"""
 import hashlib
 import http.client
 import importlib.util
@@ -35,16 +28,10 @@ DOWNLOAD_PAGE = 'https://www.cloudroom.dev/download'
 SIGN_IN_URL = 'https://www.cloudroom.dev/login?desktop=synthetic-nonce-0001'
 APPIMAGE = 'Cloudroom-v9001-x86_64.AppImage'
 DMG = 'Cloudroom-v9001-arm64.dmg'
-# The published digests, read from the fixture's own SHA256SUMS.txt lines.
 SUMS = {line.split('  ')[1]: line.split('  ')[0]
         for line in (FIXTURES / 'SHA256SUMS.txt').read_text().splitlines()}
-# #2859: CloudRoom's Apple signing team, as published: the Developer ID
-# Application certificate in gui-v153's Cloudroom-v153-arm64.zip (whose sha256,
-# e0da001acf412183a2381cdc3dcd47696e23064259ecc70912baf13a78300766, the
-# release's SHA256SUMS.txt lists) names team 4AJ9HF33Z5.
 CLOUDROOM_TEAM = '4AJ9HF33Z5'
-OTHER_TEAM = 'SYNTHETIC0'  # a synthetic, differently signed app: a valid signature from another team
-# The fake codesign honours only this designated requirement form; anything else is refused.
+OTHER_TEAM = 'SYNTHETIC0'
 REQUIREMENT = re.compile(r'=anchor apple generic and certificate 1\[field\.1\.2\.840\.113635\.100\.6\.2\.6\] exists'
                          r' and certificate leaf\[field\.1\.2\.840\.113635\.100\.6\.1\.13\] exists'
                          r' and certificate leaf\[subject\.OU\] = "([A-Z0-9]{10})"')
@@ -61,12 +48,10 @@ cloudroom = load()
 
 
 class Lost(BaseException):
-    """The tool's process dies here (a crash or kill): nothing after it runs."""
+    pass
 
 
 class FakeHost(cloudroom.Host):
-    """Records every program, URL and open; the tests steer each answer."""
-
     def __init__(self, base, system='Linux', machine='x86_64'):
         self.base = base
         super().__init__(system=system, machine=machine, home=base / 'home', root=base / 'root')
@@ -77,20 +62,25 @@ class FakeHost(cloudroom.Host):
                     RELEASE + 'SHA256SUMS.txt': (FIXTURES / 'SHA256SUMS.txt').read_bytes()}
         for name in (APPIMAGE, DMG):
             self.web[RELEASE + name] = (FIXTURES / name).read_bytes()
-        self.status = None          # room-cli cloud status --json: fixture name, bytes, or 'timeout'
+        self.status = None
         self.sign_in_reply = (FIXTURES / 'cloud-sign-in.json').read_bytes()
-        self.lose_download = False  # the process dies mid-download
-        self.during_download = None  # something else happens on the host meanwhile
-        self.during_mount = None     # ... while the disk image mounts
-        self.during_codesign = None  # ... while a copy is being verified: (path) -> None
-        self.effect = 'ok'          # ditto/hdiutil: 'ok', 'fail', 'timeout', 'partial'
+        self.lose_download = False
+        self.during_download = None
+        self.during_mount = None
+        self.during_codesign = None
+        self.effect = 'ok'
         self.codesign = 0
-        self.codesign_fails = set()  # paths whose signature check fails even when codesign is 0
-        self.signers = {}  # app path -> its signing team; any other app is signed by CloudRoom's team
-        self.dmg_signer = CLOUDROOM_TEAM  # the team that signed the app inside the disk image
+        self.codesign_fails = set()
+        self.signers = {}
+        self.dmg_signer = CLOUDROOM_TEAM
         self.dead = set()
+        self.environ = {'DISPLAY': ':0'}
+        for path in ('dev/fuse', 'usr/bin/fusermount3'):
+            (base / 'root' / path).parent.mkdir(parents=True, exist_ok=True)
+            (base / 'root' / path).write_text('synthetic')
+        self.sign_in_code, self.sign_in_said = 0, b''
+        self.open_result = (None, b'')
 
-    # --- the host's seams -------------------------------------------------
     def fetch(self, url, limit):
         self.fetched.append(url)
         if url not in self.web:
@@ -124,7 +114,7 @@ class FakeHost(cloudroom.Host):
                     return 0, self.status
                 return 0, (FIXTURES / f'cloud-{self.status}.json').read_bytes()
             if argv[1:] == ['cloud', 'sign-in', '--json']:
-                return 0, self.sign_in_reply
+                return self.sign_in_code, self.sign_in_reply
             return 2, b''
         if name == 'hdiutil' and argv[1] == 'attach':
             mount = Path(argv[argv.index('-mountpoint') + 1])
@@ -138,7 +128,6 @@ class FakeHost(cloudroom.Host):
             shutil.rmtree(argv[2], ignore_errors=True)
             return 0, b''
         if name == 'ditto':
-            # Like ditto: copies into an existing folder too, merging and overwriting.
             if self.effect == 'fail':
                 return 1, b''
             if self.effect == 'partial':
@@ -154,20 +143,27 @@ class FakeHost(cloudroom.Host):
             if path in self.codesign_fails or self.codesign:
                 return 1 if path in self.codesign_fails else self.codesign, b''
             if '-R' not in argv:
-                return 0, b''  # like codesign: any valid signature passes
+                return 0, b''
             match = REQUIREMENT.fullmatch(argv[argv.index('-R') + 1])
             signer = (path / 'Contents/synthetic-signer').read_text() \
                 if (path / 'Contents/synthetic-signer').is_file() else self.signers.get(path, CLOUDROOM_TEAM)
-            return (0 if match and match.group(1) == signer else 3), b''  # 3: the requirement fails
+            return (0 if match and match.group(1) == signer else 3), b''
         return 127, b''
 
+    def ask(self, argv, timeout):
+        code, out = self.run(argv, timeout)
+        return code, out, self.sign_in_said if argv[1:] == ['cloud', 'sign-in', '--json'] else b''
+
     def open(self, argv):
+        self.opened.append(list(argv))
+        return self.open_result
+
+    def start(self, argv):
         self.opened.append(list(argv))
 
     def alive(self, pid):
         return pid not in self.dead
 
-    # --- helpers for the tests --------------------------------------------
     def launcher(self, status='signed-in'):
         self.status = status
         path = self.home / '.local/bin/room-cli'
@@ -189,8 +185,6 @@ class FakeHost(cloudroom.Host):
         return self.root / 'Applications/Cloudroom.app'
 
     def publish_appimage(self, data):
-        """CloudRoom's release publishes these AppImage bytes instead: its digest,
-        size and SHA256SUMS.txt line follow them."""
         digest = hashlib.sha256(data).hexdigest()
         sums = ''.join(f'{digest if name == APPIMAGE else sha}  {name}\n' for name, sha in SUMS.items()).encode()
         release = json.loads(self.web[API])
@@ -223,20 +217,16 @@ class Base(unittest.TestCase):
         return json.loads((self.state / 'cloudroom/install.json').read_text())
 
     def effects(self):
-        """Every effect the tool caused: programs other than the login read, opens and installs."""
         return ([c for c in self.host.calls if c[1:] != ['cloud', 'status', '--json']], self.host.opened,
                 self.host.appimage().exists(), self.host.mac_app().exists())
 
 
 class Detection(Base):
-    """An existing installation is reused: never reinstalled, replaced or downgraded."""
-
     def test_no_installation_is_not_installed(self):
         self.assertEqual(self.status()['code'], 'cloudroom_not_installed')
         self.assertFalse(self.state.exists(), 'a read-only status writes nothing')
 
     def test_each_existing_installation_is_reused_and_never_reinstalled(self):
-        # An AppImage is never reused: only the checked install's own copy counts (#2911).
         cases = [('Linux', 'x86_64', 'home', '.local/bin/room-cli'),
                  ('Darwin', 'arm64', 'root', 'Applications/Cloudroom.app'),
                  ('Darwin', 'arm64', 'home', 'Applications/Cloudroom.app'),
@@ -251,7 +241,6 @@ class Detection(Base):
                 existing.mkdir() if path.endswith('.app') else host.plant_appimage(existing, b'older synthetic copy')
                 before = sorted(p.relative_to(base).as_posix() for p in base.rglob('*'))
                 status = cloudroom.status(host, base / 'state')
-                # CloudRoom's launcher means it has opened here: its login is read, and only that.
                 launcher = path.endswith('room-cli')
                 self.assertEqual(status['code'], 'cloudroom_login_unknown' if launcher else 'cloudroom_reused')
                 self.assertEqual(host.calls, [[str(existing), 'cloud', 'status', '--json']] if launcher else [])
@@ -321,7 +310,6 @@ class Install(Base):
         self.assertEqual(self.status()['code'], 'cloudroom_installed')
         leftovers = [p.name for p in (self.state / 'cloudroom').iterdir()]
         self.assertEqual(sorted(leftovers), ['.lock', 'install.json'], 'the download is removed')
-        # A retry applies nothing twice.
         fetched = list(self.host.fetched)
         again = self.install(yes=True, operation=operation['operation_id'])
         self.assertEqual(again['operation']['phase'], 'applied')
@@ -338,10 +326,10 @@ class Install(Base):
     def test_a_checksum_mismatch_installs_nothing(self):
         operation = self.preview()
         good = self.host.web[RELEASE + APPIMAGE]
-        for at, tampered in enumerate((good + b'more', good[:-2] + b'X\n')):  # another size, then the same size
+        for at, tampered in enumerate((good + b'more', good[:-2] + b'X\n')):
             if at:
                 self.host.web[RELEASE + APPIMAGE] = good
-                operation = self.preview()  # a refused operation needs a new preview
+                operation = self.preview()
             self.host.web[RELEASE + APPIMAGE] = tampered
             result = self.install(yes=True, operation=operation['operation_id'])
             self.assertEqual(result['code'], 'cloudroom_checksum_mismatch')
@@ -451,8 +439,7 @@ class Install(Base):
         self.assertEqual(self.install()['code'], 'cloudroom_install_uncertain')
         with self.assertRaises(cloudroom.Refused):
             self.install(decline=True, operation=operation['operation_id'])
-        # The retry reconciles first: nothing is installed, so the same operation tries again.
-        self.host.lose_download = False  # the lost process stays dead; this is a new attempt
+        self.host.lose_download = False
         result = self.install(yes=True, operation=operation['operation_id'])
         self.assertEqual(result['operation']['operation_id'], operation['operation_id'])
         self.assertEqual(result['code'], 'cloudroom_installed')
@@ -465,14 +452,12 @@ class Install(Base):
         operation = cloudroom.install(mac, state)['operation']
         self.assertEqual(operation['request']['destination'], '/Applications/Cloudroom.app')
         self.assertEqual(operation['request']['sha256'], SUMS[DMG])
-        mac.effect = 'timeout'  # ditto copied, but its answer was lost
+        mac.effect = 'timeout'
         result = cloudroom.install(mac, state, yes=True, operation=operation['operation_id'])
         self.assertEqual(result['code'], 'cloudroom_install_uncertain')
         self.assertEqual(result['operation']['phase'], 'uncertain')
         self.assertEqual(cloudroom.status(mac, state)['code'], 'cloudroom_install_uncertain')
         self.assertFalse(mac.mac_app().exists(), 'an unanswered copy is never published')
-        # Reconciled against the actual installation first: nothing is there, so
-        # the same operation copies again, verifies and publishes.
         mac.effect = 'ok'
         result = cloudroom.install(mac, state, yes=True, operation=operation['operation_id'])
         self.assertEqual(result['operation']['operation_id'], operation['operation_id'])
@@ -480,7 +465,6 @@ class Install(Base):
         self.assertEqual(result['code'], 'cloudroom_installed')
         self.assertTrue((mac.mac_app() / 'Contents/Info.plist').is_file())
         self.assertEqual(len([c for c in mac.calls if Path(c[0]).name == 'hdiutil' and c[1] == 'attach']), 2)
-        # A signed app found when reconciling is applied without copying again.
         state2 = self.base / 'mac-state-2'
         (self.base / 'mac2').mkdir()
         mac2 = FakeHost(self.base / 'mac2', 'Darwin', 'arm64')
@@ -499,7 +483,7 @@ class Install(Base):
         operation = cloudroom.install(mac, state)['operation']
         mac.effect = 'timeout'
         cloudroom.install(mac, state, yes=True, operation=operation['operation_id'])
-        (mac.mac_app() / 'Contents').mkdir(parents=True)  # something appeared that does not verify
+        (mac.mac_app() / 'Contents').mkdir(parents=True)
         mac.codesign = 1
         result = cloudroom.install(mac, state, yes=True, operation=operation['operation_id'])
         self.assertEqual(result['operation']['phase'], 'uncertain', 'a later failure never lowers uncertainty')
@@ -519,23 +503,20 @@ class Install(Base):
         self.assertEqual(cloudroom.status(mac, state)['code'], 'cloudroom_install_failed')
         detaches = [c for c in mac.calls if Path(c[0]).name == 'hdiutil' and c[1] == 'detach']
         self.assertEqual(len(detaches), 1, 'the disk image is always detached')
-        # R1: a resuming agent's preview returns the failed operation, never reuse.
         for residue in (False, True):
             with self.subTest(residue=residue):
-                if residue:  # a copy appears that does not verify
+                if residue:
                     (mac.mac_app() / 'Contents').mkdir(parents=True)
                     mac.codesign = 1
                 preview = cloudroom.install(mac, state)
                 self.assertEqual(preview['code'], 'cloudroom_install_failed')
                 self.assertEqual(preview['operation']['operation_id'], operation['operation_id'])
-        # A retry reconciles with the same id: an unverifiable residue keeps it failed, untouched.
         dittos = len([c for c in mac.calls if Path(c[0]).name == 'ditto'])
         result = cloudroom.install(mac, state, yes=True, operation=operation['operation_id'])
         self.assertEqual((result['operation']['operation_id'], result['operation']['phase']),
                          (operation['operation_id'], 'failed'))
         self.assertEqual(len([c for c in mac.calls if Path(c[0]).name == 'ditto']), dittos)
         self.assertEqual(sorted(p.name for p in mac.mac_app().iterdir()), ['Contents'])
-        # With the residue gone, the same operation installs.
         shutil.rmtree(mac.mac_app())
         mac.codesign, mac.effect = 0, 'ok'
         result = cloudroom.install(mac, state, yes=True, operation=operation['operation_id'])
@@ -578,7 +559,7 @@ class Install(Base):
                         (mac.mac_app() / 'Contents/competing').write_text('the user installed their own copy')
                 if when == 'mount':
                     mac.during_mount = compete
-                else:  # while OpenWiz's own copy is verified, just before it would be published
+                else:
                     mac.during_codesign = lambda path: compete() if path != mac.mac_app() else None
                 result = cloudroom.install(mac, state, yes=True, operation=operation['operation_id'])
                 self.assertEqual(result['operation']['phase'], 'failed')
@@ -593,29 +574,26 @@ class Install(Base):
         mac = FakeHost(self.base / 'mac', 'Darwin', 'arm64')
         state = self.base / 'mac-state'
         operation = cloudroom.install(mac, state)['operation']
-        mac.codesign = 1  # the copy finished, but Apple's signature check refuses it
+        mac.codesign = 1
         result = cloudroom.install(mac, state, yes=True, operation=operation['operation_id'])
         self.assertEqual(result['operation']['phase'], 'failed')
         self.assertEqual(result['code'], 'cloudroom_install_failed')
         self.assertEqual(cloudroom.status(mac, state)['code'], 'cloudroom_install_failed')
         self.assertFalse(mac.mac_app().exists())
-        # The staged copy verifies, but the published one does not: still never applied.
         mac.codesign, mac.codesign_fails = 0, {mac.mac_app()}
         result = cloudroom.install(mac, state, yes=True, operation=operation['operation_id'])
         self.assertEqual(result['operation']['phase'], 'failed')
         self.assertEqual(cloudroom.status(mac, state)['code'], 'cloudroom_install_failed')
 
     def test_an_app_signed_by_another_team_is_never_trusted(self):
-        # #2859 (C-C2): a valid signature alone is not CloudRoom's; the app must be signed by its team.
         (self.base / 'mac').mkdir()
         mac = FakeHost(self.base / 'mac', 'Darwin', 'arm64')
         state = self.base / 'mac-state'
         operation = cloudroom.install(mac, state)['operation']
-        mac.dmg_signer = OTHER_TEAM  # the disk image's app is validly signed, by someone else
+        mac.dmg_signer = OTHER_TEAM
         result = cloudroom.install(mac, state, yes=True, operation=operation['operation_id'])
         self.assertEqual((result['code'], result['operation']['phase']), ('cloudroom_install_failed', 'failed'))
         self.assertFalse(mac.mac_app().exists(), 'an app from another team is never published')
-        # Reconciling a lost reply: an app from another team at the destination is never applied.
         (self.base / 'mac2').mkdir()
         mac2 = FakeHost(self.base / 'mac2', 'Darwin', 'arm64')
         state2 = self.base / 'mac-state-2'
@@ -627,7 +605,6 @@ class Install(Base):
         result = cloudroom.install(mac2, state2, yes=True, operation=operation['operation_id'])
         self.assertEqual((result['code'], result['operation']['phase']),
                          ('cloudroom_install_uncertain', 'uncertain'))
-        # The same app signed by CloudRoom's team is applied.
         mac2.signers[mac2.mac_app()] = CLOUDROOM_TEAM
         result = cloudroom.install(mac2, state2, yes=True, operation=operation['operation_id'])
         self.assertEqual(result['operation']['phase'], 'applied')
@@ -642,8 +619,6 @@ class Install(Base):
         self.assertNotIn(RELEASE + APPIMAGE, self.host.fetched)
 
     def test_the_record_and_its_folder_are_synced_before_any_effect(self):
-        # R3: each save syncs the file and then its folder; a failed folder sync
-        # stops the install before any effect.
         synced = []
         real = os.fsync
 
@@ -669,8 +644,6 @@ class Install(Base):
         self.assertFalse(self.host.appimage().exists())
 
     def test_a_fresh_nested_state_path_is_durable_before_any_effect(self):
-        # R3 re-check: every folder created on first use is synced into its parent,
-        # and the record's folder after each save, all before the first download.
         state = self.base / 'fresh/nested/state'
         real = os.fsync
         synced = []
@@ -692,10 +665,8 @@ class Install(Base):
         self.assertEqual(len(before_download), 1, 'exactly one download, after the barriers')
         for parent in (self.base, self.base / 'fresh', self.base / 'fresh/nested', state, state / 'cloudroom'):
             self.assertIn(ids(parent), before_download[0], f'{parent} holds a new entry and is synced first')
-        # Owner-only state, folder and record, as before.
         for path, mode in ((state, 0o700), (state / 'cloudroom', 0o700), (state / 'cloudroom/install.json', 0o600)):
             self.assertEqual(stat.S_IMODE(os.stat(path).st_mode), mode, path)
-        # A state folder that already exists still works, and its existing parent needs no new sync.
         (self.base / 'other').mkdir()
         other = FakeHost(self.base / 'other')
         existing = self.base / 'existing-state'
@@ -741,8 +712,6 @@ class Install(Base):
                 if case == 'new parent':
                     self.assertFalse((state / 'cloudroom/install.json').exists(), 'no operation without a durable home')
                 else:
-                    # The operation keeps its identity: once its process is gone it is
-                    # uncertain, and a retry with the same id reconciles, then installs.
                     host.dead.add(os.getpid())
                     self.assertEqual(cloudroom.status(host, state)['code'], 'cloudroom_install_uncertain')
                     retry = cloudroom.install(host, state, yes=True, operation=operation['operation_id'])
@@ -750,9 +719,6 @@ class Install(Base):
                                      (operation['operation_id'], 'cloudroom_installed'))
 
     def test_a_retry_after_a_failed_folder_sync_repairs_it_before_any_effect(self):
-        # R3 on #2772: a folder whose parent sync failed still exists. Every retry
-        # syncs it again (and the record's folder) before any download, and keeps
-        # the operation's identity where one was saved.
         real = os.fsync
         ids = lambda path: (os.stat(path).st_dev, os.stat(path).st_ino)
         for at in ('base', 'fresh', 'nested', 'state', 'cloudroom'):
@@ -795,8 +761,6 @@ class Install(Base):
                 self.assertIn(ids(target), before_download[0], f'{at} repaired before the download')
 
     def test_a_download_is_never_an_installation_launchable_or_not(self):
-        # R4, C-C1: a ~/Downloads AppImage is unchecked, so it is never reused or launched,
-        # executable or not; only the checked install location counts.
         for mode in (0o644, 0o755):
             with self.subTest(mode=oct(mode)):
                 base = self.base / f'download-{mode:o}'
@@ -818,10 +782,6 @@ class Install(Base):
                 self.assertEqual(self.host.opened, [[str(self.host.appimage())]], 'only the checked copy is launched')
 
     def test_only_the_checked_copy_at_the_checked_location_counts_as_installed(self):
-        # #2911: an AppImage counts only at ~/Applications/Cloudroom.AppImage, and only
-        # as the copy the checked install produced and verified. Every other
-        # executable AppImage, a renamed copy of the checked installer included, is
-        # never reused or launched.
         checked = (FIXTURES / APPIMAGE).read_bytes()
         cases = [('another name', 'Applications/Cloudroom-other.AppImage', b'unchecked synthetic copy'),
                  ('a renamed checked installer', f'Applications/{APPIMAGE}', checked),
@@ -842,8 +802,6 @@ class Install(Base):
                 self.assertEqual(stat.S_IMODE(planted.stat().st_mode), 0o755)
 
     def test_the_checked_install_counts_until_its_copy_changes(self):
-        # #2911: the checked install still works end to end, and only while the copy at
-        # the checked location is still the one it verified.
         self.host.plant_appimage(self.host.home / 'Applications/Cloudroom-other.AppImage', b'unchecked synthetic copy')
         operation = self.preview()
         self.assertEqual(self.install(yes=True, operation=operation['operation_id'])['code'], 'cloudroom_installed')
@@ -858,7 +816,6 @@ class Install(Base):
             with self.subTest(name):
                 self.host.appimage().unlink()
                 change(self.host.appimage())
-                # Still executable: only the SHA-256 tells it from the checked copy (#2924).
                 self.assertTrue(os.access(self.host.appimage(), os.X_OK))
                 self.assertEqual(self.status()['code'], 'cloudroom_destination_blocked')
                 with self.assertRaises(cloudroom.Refused):
@@ -866,10 +823,6 @@ class Install(Base):
                 self.assertEqual(self.host.opened, [], 'a changed copy is never launched')
 
     def test_a_blocked_destination_wins_over_an_existing_launcher(self):
-        # #2911 R1: CloudRoom's launcher never masks an occupied destination. With the
-        # launcher present, an unchecked copy there, or the checked copy changed after
-        # CloudRoom first opened, reads destination-blocked in status, preview and
-        # confirmation; sign-in refuses; no launcher call runs; the bytes stay as they are.
         def unchecked():
             self.host.launcher('signed-out')
             self.host.plant_appimage(data=b'unchecked synthetic copy')
@@ -878,9 +831,9 @@ class Install(Base):
         def changed_after_opening():
             operation = self.preview()
             self.assertEqual(self.install(yes=True, operation=operation['operation_id'])['code'], 'cloudroom_installed')
-            self.host.launcher('signed-out')  # CloudRoom opened once and made its launcher
+            self.host.launcher('signed-out')
             self.assertEqual(self.status()['code'], 'cloudroom_login_missing')
-            self.host.plant_appimage(data=b'unchecked synthetic copy')  # executable, other bytes
+            self.host.plant_appimage(data=b'unchecked synthetic copy')
             return operation['operation_id']
 
         def appears_before_confirming():
@@ -942,10 +895,7 @@ class Install(Base):
 
 
 class Login(Base):
-    """One sign-in screen: CloudRoom's own sign-in opens once; signed in only on positive evidence."""
-
     def installed(self, status):
-        # CloudRoom installed by the checked install: only its own verified copy counts (#2911).
         operation = self.install()['operation']
         self.assertEqual(self.install(yes=True, operation=operation['operation_id'])['code'], 'cloudroom_installed')
         self.host.fetched.clear()
@@ -990,8 +940,6 @@ class Login(Base):
         self.assertEqual(self.status()['code'], 'cloudroom_login_verified')
 
     def test_a_reachable_inventory_or_listed_harness_never_verifies(self):
-        # Other room-cli reads answer; only the login read can verify, and it
-        # is the only read made.
         self.installed('timeout')
         self.assertEqual(self.status()['code'], 'cloudroom_login_unknown')
         self.assertEqual(self.host.calls, [[str(self.host.home / '.local/bin/room-cli'), 'cloud', 'status', '--json']])
@@ -1031,9 +979,6 @@ class Login(Base):
         self.assertEqual(mac.opened, [['/usr/bin/open', str(mac.mac_app())]])
 
     def test_sign_in_launches_only_an_executable_app_at_the_real_boundary(self):
-        # R4: production Host.open, a real process. The checked install's own synthetic
-        # copy starts; a non-executable download is never launched, and sign-in says so
-        # instead of crashing.
         marker = self.base / 'launched'
         real = cloudroom.Host(system='Linux', machine='x86_64', home=self.host.home, root=self.host.root)
         self.host.open = real.open
@@ -1062,8 +1007,144 @@ class Login(Base):
                 self.assertIsNone(result['opened'])
                 self.assertEqual(self.host.opened, [])
 
+    def said(self):
+        out, err = io.StringIO(), io.StringIO()
+        with redirect_stdout(out), redirect_stderr(err):
+            cloudroom.main(['sign-in', '--state-dir', str(self.state)], host=self.host)
+        result = json.loads(out.getvalue())
+        self.assertEqual(set(result), {'schema', 'code', 'operation', 'opened'})
+        return result, err.getvalue()
+
+    def test_a_failed_sign_in_never_prints_cloudrooms_raw_output(self):
+        self.installed('signed-out')
+        secret = (b'Retry at https://www.cloudroom.dev/login?desktop=synthetic-nonce-0001 as owner@example.invalid\n'
+                  b'token: synthetic-token-0123456789abcdefghij\n\x1b[31mpassword=hunter2\x1b[0m\n'
+                  b'{\n  "error": "refresh failed",\n  "refresh_token":\n\n    "rt1"\n}\n'
+                  b'Your refresh token for this session is\n  rt2\n'
+                  b'{"message": "Your token is:\\n rt3", "refresh_token": {"detail": "rt4"}}\n')
+        run = 'openwiz-cloudroom: to see its full output, run: "$HOME"/.local/bin/room-cli cloud sign-in --json\n'
+        cases = (
+            (1, b'', secret, "openwiz-cloudroom: CloudRoom's sign-in exited with status 1 and gave no usable link.\n" + run),
+            (1, secret, b'', "openwiz-cloudroom: CloudRoom's sign-in exited with status 1 and gave no usable link.\n" + run),
+            (0, b'{"error": {"message": "rt5"}}', b'',
+             "openwiz-cloudroom: CloudRoom's sign-in exited with status 0 and gave no usable link.\n" + run),
+            (None, b'', secret + b'getaddrinfo ENOTFOUND www.cloudroom.dev',
+             "openwiz-cloudroom: CloudRoom's sign-in did not answer within 30 seconds; is CloudRoom running?\n"
+             'openwiz-cloudroom: CloudRoom reported: CloudRoom could not look up its server; check the network.\n' + run),
+            (1, b'', b'connect ECONNREFUSED 127.0.0.1:4100 rt6\nconnect ECONNREFUSED 127.0.0.1:4100 rt6\n',
+             "openwiz-cloudroom: CloudRoom's sign-in exited with status 1 and gave no usable link.\n"
+             'openwiz-cloudroom: CloudRoom reported: CloudRoom could not connect; is CloudRoom running?\n' + run),
+            (1, b'', b'getaddrinfo enotfound www.cloudroom.dev\n',
+             "openwiz-cloudroom: CloudRoom's sign-in exited with status 1 and gave no usable link.\n" + run),
+        )
+        for code, reply, said, expected in cases:
+            with self.subTest(code=code, reply=reply, said=said):
+                self.host.sign_in_code, self.host.sign_in_reply, self.host.sign_in_said = code, reply, said
+                result, err = self.said()
+                self.assertEqual((result['code'], result['opened']), ('cloudroom_login_missing', None))
+                self.assertEqual(self.host.opened, [])
+                self.assertEqual(err, expected)
+
+    def test_an_opener_that_fails_is_shown_and_not_counted_as_opened(self):
+        self.installed('signed-out')
+        self.host.open_result = (4, b'xdg-open: no method available for opening '
+                                    b'https://www.cloudroom.dev/login?desktop=synthetic-nonce-0001\n')
+        result, err = self.said()
+        self.assertIsNone(result['opened'])
+        self.assertEqual(err, 'openwiz-cloudroom: xdg-open exited with status 4; the sign-in page did not open.\n'
+                              'openwiz-cloudroom: xdg-open reported: No browser is set up to open the sign-in page.\n'
+                              'openwiz-cloudroom: to see its full output, run: /usr/bin/xdg-open https://www.cloudroom.dev\n')
+        self.host.open_result = (None, b'')
+        result, err = self.said()
+        self.assertEqual((result['opened'], err), ('sign_in', ''))
+
+    def test_an_app_that_fails_at_launch_shows_its_status_and_known_errors_only(self):
+        real = cloudroom.Host(system='Linux', machine='x86_64', home=self.host.home, root=self.host.root)
+        self.host.open = real.open
+        self.host.publish_appimage(b'#!/bin/sh\necho "error while loading shared libraries: libnss3.so" >&2\n'
+                                   b'echo "see https://example.invalid/help?session=synthetic-0001" >&2\nexit 1\n')
+        self.installed(None)
+        with patch.object(cloudroom, 'OPEN_WAIT', 120):
+            result, err = self.said()
+        self.assertIsNone(result['opened'])
+        self.assertEqual(err, 'openwiz-cloudroom: CloudRoom exited with status 1 at launch.\n'
+                              'openwiz-cloudroom: CloudRoom reported: A system library CloudRoom needs is missing.\n'
+                              'openwiz-cloudroom: to see its full output, run: "$HOME"/Applications/Cloudroom.AppImage\n')
+
+    def test_a_launch_that_outlives_the_wait_never_fills_a_file(self):
+        go, wrote, pidfile, app = (self.base / name for name in ('go', 'wrote', 'pid', 'app'))
+        app.write_text(f'#!/bin/sh\necho $$ > {pidfile}\nwhile [ ! -e {go} ]; do sleep 0.05; done\n'
+                       f'head -c 4194304 /dev/zero\necho done > {wrote}\nexec sleep 60\n')
+        app.chmod(0o700)
+        real = cloudroom.Host(system='Linux', machine='x86_64', home=self.host.home, root=self.host.root)
+        with patch.object(cloudroom, 'OPEN_WAIT', 0.5):
+            self.assertEqual(real.open([str(app)]), (None, b''))
+        for _ in range(400):
+            if pidfile.exists() and pidfile.read_text().strip():
+                break
+            time.sleep(0.05)
+        pid = int(pidfile.read_text())
+        self.addCleanup(lambda: os.kill(pid, 9))
+        go.touch()
+        for _ in range(400):
+            if wrote.exists():
+                break
+            time.sleep(0.05)
+        self.assertEqual(wrote.read_text(), 'done\n', 'later output is drained, never blocking the app')
+        for fd in (1, 2):
+            self.assertTrue(os.readlink(f'/proc/{pid}/fd/{fd}').startswith('pipe:'), 'no file holds its output')
+        noisy = self.base / 'noisy'
+        noisy.write_text('#!/bin/sh\nhead -c 300000 /dev/zero | tr "\\0" x\nexit 7\n')
+        noisy.chmod(0o700)
+        with patch.object(cloudroom, 'OPEN_WAIT', 120):
+            code, out = real.open([str(noisy)])
+        self.assertEqual((code, len(out)), (7, 1 << 16))
+
+    def test_a_headless_linux_machine_is_told_what_sign_in_needs(self):
+        fuse_runtime = b'\x7fELF synthetic AppImage runtime libfuse.so.2 fusermount'
+        cases = {
+            'no desktop session': (dict(environ={}), ['needs a desktop session', 'DISPLAY or WAYLAND_DISPLAY',
+                                                      'Next: run sign-in from a desktop session']),
+            'empty display': (dict(environ={'DISPLAY': '', 'WAYLAND_DISPLAY': ''}), ['needs a desktop session']),
+            'no /dev/fuse': (dict(missing='dev/fuse'), ['needs FUSE', '/dev/fuse', 'Next: install FUSE']),
+            'no fusermount': (dict(missing='usr/bin/fusermount3'), ['needs FUSE', 'fusermount']),
+            'no libfuse2': (dict(app=fuse_runtime), ['libfuse.so.2', 'libfuse2']),
+            'headless and no FUSE': (dict(environ={}, missing='dev/fuse'), ['needs a desktop session', 'needs FUSE']),
+        }
+        for status in ('signed-out', 'signed-in', None):
+            for index, (name, (case, words)) in enumerate(cases.items()):
+                with self.subTest(name, status=status):
+                    base = self.base / f'headless-{index}-{status}'
+                    base.mkdir()
+                    self.host, self.state = FakeHost(base), base / 'state'
+                    if 'app' in case:
+                        self.host.publish_appimage(case['app'])
+                    self.installed(status)
+                    self.host.environ = case.get('environ', self.host.environ)
+                    if 'missing' in case:
+                        (self.host.root / case['missing']).unlink()
+                    self.host.calls.clear()
+                    with self.assertRaises(cloudroom.Refused) as refused:
+                        self.sign_in()
+                    for word in words:
+                        self.assertIn(word, str(refused.exception))
+                    self.assertEqual(self.host.opened, [])
+                    self.assertEqual([c for c in self.host.calls if Path(c[0]).name == 'room-cli'], [])
+        base = self.base / 'with libfuse2'
+        base.mkdir()
+        self.host, self.state = FakeHost(base), base / 'state'
+        self.host.publish_appimage(fuse_runtime)
+        self.installed(None)
+        (self.host.root / 'usr/lib/x86_64-linux-gnu').mkdir(parents=True)
+        (self.host.root / 'usr/lib/x86_64-linux-gnu/libfuse.so.2').write_text('synthetic')
+        self.assertEqual(self.sign_in()['opened'], 'app')
+        (self.base / 'mac').mkdir()
+        mac = FakeHost(self.base / 'mac', 'Darwin', 'arm64')
+        mac.environ = {}
+        mac.mac_app().mkdir(parents=True)
+        self.assertEqual(cloudroom.sign_in(mac, self.base / 'mac-state')['opened'], 'app')
+
     def test_sign_in_never_takes_a_password_or_token(self):
-        # The command line has no secret option, and nothing reads stdin.
         result = subprocess.run([sys.executable, '-I', str(HERE / 'cloudroom.py'), 'sign-in', '--help'],
                                 capture_output=True, text=True, stdin=subprocess.DEVNULL)
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -1078,8 +1159,6 @@ class Login(Base):
 
 
 class Allowlist(Base):
-    """J30: exactly two room-cli calls, pinned in the Rust allowlist and the contract; no other can be built."""
-
     ALLOWLIST = HERE.parents[2] / 'crates/adapters/cloudroom/src/allowlist.rs'
     PINNED = [['cloud', 'status', '--json'], ['cloud', 'sign-in', '--json']]
 
@@ -1103,8 +1182,6 @@ class Allowlist(Base):
         self.assertEqual(len(self.host.calls), calls, 'a refused call runs nothing')
 
     def test_every_path_runs_only_the_two_calls(self):
-        # Install, reuse, every login state and sign-in, on both platforms: every
-        # room-cli argument list the tool ran is one of the two.
         for system, machine in (('Linux', 'x86_64'), ('Darwin', 'arm64')):
             for status in ('signed-in', 'signed-out', 'signing-in', 'timeout'):
                 base = self.base / f'{system}-{status}'
@@ -1126,10 +1203,6 @@ class Allowlist(Base):
 
 class Packaged(Base):
     def test_deeply_nested_release_json_gets_the_fixed_refusal_without_writes(self):
-        # Synthetic assumption: valid release JSON nests 500,000 arrays inside
-        # the 1 MiB fetch cap, beyond decoder limits on Python 3.11 through 3.14.
-        # Existing malformed-source cases do not exercise RecursionError or
-        # the executable's refusal boundary.
         responses = {
             GUIDE: (FIXTURES / 'setup.md').read_bytes(),
             API: b'[' * 500000 + b'0' + b']' * 500000,
@@ -1140,8 +1213,6 @@ class Packaged(Base):
             fetched.append(request.full_url)
             return io.BytesIO(responses[request.full_url])
 
-        # Seed only the ordinary empty lock, so the before/after comparison
-        # covers every byte and path, including absence of an install record.
         folder = self.state / 'cloudroom'
         folder.mkdir(parents=True, mode=0o700)
         self.state.chmod(0o700)
@@ -1179,18 +1250,15 @@ class Packaged(Base):
         self.assertIn(value['code'], ('cloudroom_not_installed', 'cloudroom_unsupported'))
 
     def test_the_setup_check_records_the_tools_code_from_the_packaged_runtime(self):
-        # The collector's layout: runtime/setup/ and runtime/cloudroom/, outside any repository.
         runtime = self.base / 'build/runtime'
         for source, name in ((HERE.parent / 'setup/setup.py', 'setup/setup.py'),
                              (HERE.parent / 'setup/store.py', 'setup/store.py'), (HERE / 'cloudroom.py', 'cloudroom/cloudroom.py')):
             (runtime / name).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source, runtime / name)
         home = self.host.home
-        # Launcher-only reuse: nothing at the destination (an unchecked copy there would block, #2911 R1).
         calls = self.base / 'calls.log'
         launcher = home / '.local/bin/room-cli'
         launcher.parent.mkdir(parents=True)
-        # A recording fake of CloudRoom's launcher: logs its arguments, answers the fixture.
         launcher.write_text(f'#!/bin/sh\necho "$*" >> {calls}\ncat {FIXTURES / "cloud-signed-in.json"}\n')
         launcher.chmod(0o700)
         for fixture, expected in (('cloud-signed-in.json', 'cloudroom_login_verified'),

@@ -1,4 +1,3 @@
-"""Loading and checking cases (contract.md, sections 1 and 8)."""
 import hashlib
 import json
 import os
@@ -14,7 +13,6 @@ MATCH_KEYS = {'read', 'write', 'run', 'args', 'flags', 'absent', 'record', 'cont
 RECORDS = {'decisions.v1', 'verdict', 'launch-fleet', 'handback', 'text'}
 REASONS = {'incomplete', 'escape', 'forbidden', 'unlisted-write', 'missing-action', 'bad-record', 'unjudged', 'bad-final'}
 
-# Synthetic-only scan: patterns no case input may hold.
 PRIVATE = [
     (re.compile(r'https?://(?!127\.0\.0\.1[:/]|localhost[:/])'), 'a URL'),
     (re.compile(r'\bthr_(?!synth)[a-z0-9]{6,}'), 'a real-looking thread id'),
@@ -42,7 +40,6 @@ def cases_hash(folder=HERE / 'cases'):
 
 
 def _has_write(m):
-    """Does the matcher require more than a read (a write, a script or a local change)?"""
     return 'write' in m or 'run' in m or any(_has_write(x) for x in m.get('any', []))
 
 
@@ -78,7 +75,6 @@ def _strings(x):
 
 
 def privacy_problems(case):
-    # Explicit O3 input only: never infer a private checkout or continue without coverage.
     path = os.environ.get('OPENWIZ_PRIVACY_LITERALS')
     try:
         if not path:
@@ -94,7 +90,7 @@ def privacy_problems(case):
     for s in _strings(inputs):
         if any(rx.search(s) for rx in private_literals):
             errs.append('case privacy: a private literal')
-            continue  # Generic identifier diagnostics must not echo a supplied literal.
+            continue
         for rx, what in PRIVATE:
             if rx.search(s):
                 errs.append(f"{case.get('id')}: {what}: {rx.search(s).group(0)!r}")
@@ -102,7 +98,6 @@ def privacy_problems(case):
 
 
 def problems(case, skills, path_name=None):
-    """Structural, coverage and privacy problems with one case."""
     cid = case.get('id', '?')
     errs = []
     if set(case) - CASE_KEYS or not {'schema', 'id', 'skills', 'category', 'brief', 'world', 'expect', 'controls'} <= set(case):
@@ -152,7 +147,6 @@ def problems(case, skills, path_name=None):
 
 
 def control_transcript(case, ctl):
-    """Expand a control's compact events into a transcript."""
     events = []
     for k, e in enumerate(ctl['events'], 1):
         kind, cmd = e[0], e[1]

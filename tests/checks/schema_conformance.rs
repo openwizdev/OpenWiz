@@ -1,6 +1,3 @@
-//! Every fixture envelope, and every envelope the core types can produce,
-//! matches the schema's required fields and types.
-
 use std::fs;
 use std::path::Path;
 
@@ -115,7 +112,6 @@ fn sample_session(n: u32) -> Session {
     }
 }
 
-/// Every gap kind, listed by hand. Add a new kind here.
 const EVERY_GAP_KIND: [GapKind; 8] = [
     GapKind::UntestedVersion,
     GapKind::CommandFailed,
@@ -158,7 +154,6 @@ fn sample_envelope<T>(data: T, counts: Option<Counts>) -> Envelope<T> {
 #[test]
 fn the_core_types_serialize_to_schema_valid_json() {
     let schema = load_schema();
-    // Merged (CW4): the checker knows every keyword the schema uses.
     assert_eq!(schema["title"], SCHEMA_ID);
     assert_eq!(lint(&schema), Vec::<String>::new());
     let mut no_recap = sample_session(2);

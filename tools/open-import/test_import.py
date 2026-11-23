@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""CLI proofs with real Git and O3, synthetic repositories, no network."""
 import hashlib
 import json
 import os
@@ -15,7 +14,6 @@ HERE = Path(__file__).resolve().parent
 CLI = HERE / 'import.py'
 CHECKER = HERE.parent / 'privacy-check/check.py'
 
-# OQ1's exact reviewed carriage, independent of the importer's policy file.
 REVIEWED_CARRIAGE = (
     'ci/shard/README.md',
     'ci/shard/shard.py',
@@ -34,11 +32,6 @@ REVIEWED_CARRIAGE = (
     'tools/live-smoke/test_smoke.py',
 )
 
-# #2405's classification of every path the real importer reported unlisted on
-# pinned main 67c7e6e6 (166 paths; the PR lists each one). One entry per carried
-# group: (sample path, class, reason). Every group is public: none is under
-# private/, under docs/grills/ or in a retiring kit (PC runner, CI overflow
-# switch, PC capacity), the contract's only private and retiring classes.
 CLASSIFIED_2405 = (
     ('ci/main-batch/shadow.py', 'public', 'C7 combined-main shadow code, tests and synthetic fixtures'),
     ('docs/evidence/ci2-pr-cuts.md', 'public', 'docs: CI2 evidence summaries with private-record pointers'),
@@ -79,8 +72,6 @@ class Import(unittest.TestCase):
         })
         self.base = self.git(self.public, 'rev-parse', 'HEAD').strip()
         self.head = self.git(self.source, 'rev-parse', 'HEAD').strip()
-        # Same real O3 implementation; synthetic history constants only here,
-        # as in O3's own fixtures. Production has no history-policy override.
         self.checker = self.root / 'checker.py'
         self.checker.write_text(
             'import sys\nsys.dont_write_bytecode = True\n'
@@ -163,7 +154,6 @@ class Import(unittest.TestCase):
                                         'crates/core/src/lib.rs', 'docs/grills/README.md', *CARRIED]))
         for name, data in carried.items():
             self.assertEqual(self.git(self.public, 'show', commit + ':' + name).encode(), data)
-        # #1285: the README is carried from source; keep still wins for LICENSE.
         self.assertEqual(self.git(self.public, 'show', commit + ':README.md'),
                          'source readme replaces public readme\n')
         self.assertEqual(self.git(self.public, 'show', commit + ':LICENSE'), 'public license\n')
@@ -193,12 +183,8 @@ class Import(unittest.TestCase):
     def test_unlisted_path_refuses(self):
         for name in ('not-reviewed.txt', 'ci/shard/sixteenth.py',
                      'tools/live-smoke/sixteenth.py',
-                     # #2405 near misses: a new tool, docs folder or sibling
-                     # of a listed folder still needs its own review.
                      'tools/new-tool/run.py', 'docs/new-folder/notes.md',
                      'ci/main-batch-next/run.py', 'tools/war-room-next/run.py',
-                     # #2405 R1: an unclassified file inside a folder whose
-                     # classified paths are listed still refuses.
                      'ci/main-batch/unclassified.py', 'docs/evidence/unclassified.bin',
                      'docs/security/unclassified.md', 'docs/spikes/unclassified.md',
                      'tools/ci-overload/unclassified.py',
@@ -260,7 +246,6 @@ class Import(unittest.TestCase):
                            f'os.execv({real_git!r}, [{real_git!r}, *sys.argv[1:]])\n')
         wrapper.chmod(0o755)
         self.env['PATH'] = str(binaries) + os.pathsep + self.env['PATH']
-        # Instrument only importer children; fixture setup uses the real Git.
         original_git = self.git
         def fixture_git(repo, *args, **kwargs):
             with patch.dict(self.env, {'PATH': os.environ['PATH']}):
@@ -289,7 +274,6 @@ class Import(unittest.TestCase):
         base = self.head
         (self.source / 'crates/core/src/lib.rs').write_text('pub const VALUE: u8 = 43;\n')
         self.head = self.commit(self.source)
-        # Public base already has the imported original source content.
         self.git(self.public, 'show', self.base + ':README.md')
         (self.public / 'crates/core/src/lib.rs').write_text('pub const VALUE: u8 = 42;\n')
         self.commit(self.public)
@@ -308,7 +292,6 @@ class Import(unittest.TestCase):
         saved = self.success(self.call('apply-patch', '--patch-dir', output, '--write-local'))
         self.assertEqual(self.git(self.public, 'show', saved['commit'] + ':crates/core/src/lib.rs'), 'pub const VALUE: u8 = 43;\n')
         self.assertNotEqual(self.git(self.public, 'cat-file', '-e', self.head, ok=False).returncode, 0)
-        # Drift must refuse, without changing anything else.
         (self.public / 'LICENSE').write_text('updated public license\n')
         self.commit(self.public)
         before = self.snapshot(self.public)
@@ -318,7 +301,6 @@ class Import(unittest.TestCase):
         self.assertEqual(before, self.snapshot(self.public))
 
     def test_reviewed_carriage_patch_excludes_private_retired(self):
-        # Match the patch's old side so carrying the index would apply cleanly.
         (self.source / 'docs/grills/README.md').write_bytes(
             b'synthetic destination grill index\n')
         self.head = self.commit(self.source)
@@ -449,8 +431,6 @@ class Import(unittest.TestCase):
         self.assertEqual(reapplied['tree'], result['tree'])
 
     def test_import_can_replace_preexisting_public_text(self):
-        # The existing public baseline is already published; check the proposed
-        # tree/range, rather than requiring old text being replaced to pass.
         (self.public / 'crates/core/src/lib.rs').write_text('planted-machine\n')
         self.base = self.commit(self.public)
         result = self.success(self.call('tree', '--write-local'))
@@ -515,7 +495,6 @@ class Import(unittest.TestCase):
         self.assertEqual(applied['tree'], result['tree'])
         self.assertEqual(self.git(self.public, 'show', applied['commit'] + ':.github/workflows/caller.yml'),
                          caller.replace('synthetic-one', 'synthetic-two'))
-        # Context is actual public files, not a waiver of missing dependencies.
         path.write_text(caller.replace('reusable.yml', 'missing.yml'))
         self.head = self.commit(self.source)
         refused = self.root / 'missing-workflow'
@@ -572,7 +551,6 @@ class Import(unittest.TestCase):
                     self.assertIn('outside input repositories', result.stderr)
                     self.assertFalse(output.exists())
                     self.assertEqual(before, [self.snapshot(repo) for repo in observed])
-            # This is outside every registered worktree and Git directory.
             external = self.root / (primary.name + '-external-patch')
             before = [self.snapshot(repo) for repo in observed]
             result = self.success(self.call('patch', '--source-base', base, '--output', external,

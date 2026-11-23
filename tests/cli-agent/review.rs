@@ -1,5 +1,3 @@
-//! First review R1–R3. All targets, paths and bytes are synthetic assumptions;
-//! the real fixture CLI shares production dispatch, with recording source traps.
 use super::{ROOT, Sandbox, discovered, schema};
 use serde_json::{Value, json};
 use std::ffi::OsString;
@@ -93,8 +91,6 @@ fn r1_help_precedence_matches_the_shipped_parser_and_catalogue() {
         );
         assert!(output.stdout.is_empty());
     }
-    // HX1: the two option-splitting parsers must agree with inline=false,
-    // including empty values; standalone help and legacy precedence stay put.
     let mut cases = Vec::new();
     for command in ["show", "models", "ui"] {
         for (flag, code) in [

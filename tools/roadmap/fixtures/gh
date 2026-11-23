@@ -1,30 +1,4 @@
 #!/usr/bin/env python3
-"""A fake `gh` for roadmap.py's tests (test.py puts it first on PATH).
-
-It answers only the reads roadmap.py makes, from a synthetic GitHub in the
-JSON file $FAKE_GH_WORLD (see world.json), and logs each call, as its
-arguments joined by spaces, to $FAKE_GH_LOG. Any other call, every write
-included, fails, so a test catches it. A ticket read by number is found in
-the world's milestone issue lists or its "outside" list (issues in no version
-milestone, pull requests included); a number in neither fails as GitHub's
-404 does.
-
-What it prints is what the real `gh` prints for that read: one compact JSON
-object per line (its keys sorted), or one ref per line. A list item of the
-form {"__raw__": "<text>"} is printed as <text> exactly, for the bad-shape
-cases.
-
-$FAKE_GH_PUBLIC names the repository whose tags it answers (default
-jparker2006/OpenWiz, roadmap.py's default --public-repo).
-
-Faults, for the error cases:
-  FAKE_GH_FAIL=<text>     a call whose log line contains <text> prints nothing
-                          and fails (exit 1)
-  FAKE_GH_PARTIAL=<text>  such a call prints its answer, then fails (exit 1),
-                          like a read that breaks on a later page
-  FAKE_GH_NOT_UTF8=<text> such a call's answer ends with a byte that isn't UTF-8
-  FAKE_GH_NO_NEWLINE=<text> such a call's answer loses its final newline
-"""
 import json
 import os
 import sys
@@ -34,7 +8,7 @@ ISSUES_JQ = (".[] | select(.pull_request == null)"
              " | {number, state, state_reason, sub_issues: .sub_issues_summary.total, html_url}")
 REFS_JQ = ".[].ref"
 TICKET_JQ = "{number, state, state_reason, pull: (.pull_request != null), html_url}"
-PUBLIC = os.environ.get("FAKE_GH_PUBLIC", "jparker2006/OpenWiz")  # the repository with the tags
+PUBLIC = os.environ.get("FAKE_GH_PUBLIC", "jparker2006/OpenWiz")
 
 
 def fail(message):
@@ -51,7 +25,6 @@ def line_of(item):
 
 
 def emit(out, logline):
-    """Print OUT as the answer, with any planted fault, and exit."""
     def planted(name):
         text = os.environ.get(name, "")
         return bool(text) and text in logline

@@ -1,6 +1,3 @@
-//! P2 Freshness: the snapshot time, the source and its version, and each
-//! row's age.
-
 use openwiz_core::model::{Fact, Timestamp};
 use openwiz_core::ops::ListRequest;
 
@@ -21,7 +18,6 @@ fn snapshot_time_and_source_version_are_reported() {
 fn each_row_has_its_age_from_the_snapshot() {
     let fake = Fake::new("p02_each_row_has_its_age", "normal");
     let env = fake.list(&ListRequest::default()).expect("normal list");
-    // The fixture puts thr_syn_000N at N minutes before T0.
     for (i, id) in DEFAULT_IDS.iter().enumerate() {
         let s = session(&env, id);
         let age = 60_000 * (i as i64 + 1);
@@ -30,9 +26,6 @@ fn each_row_has_its_age_from_the_snapshot() {
     }
 }
 
-/// New in ticket 2, after the internal Haiku review (A, R1): an update time
-/// so far out that the age cannot be computed gives an unknown age, never a
-/// panic or a wrapped value.
 #[test]
 fn an_out_of_range_update_time_gives_an_unknown_age() {
     let mut records: Vec<_> = (1..=2).map(scripted_record).collect();
@@ -56,7 +49,6 @@ fn an_out_of_range_update_time_gives_an_unknown_age() {
     );
 }
 
-/// #1675: synthetic visibility variants pass through both adapter reads.
 #[test]
 fn visibility_is_known_only_for_hidden_and_visible_at_adapter_reads() {
     use openwiz_core::envelope::GapKind;

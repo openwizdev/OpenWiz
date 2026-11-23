@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-"""#1191: approved product paths, alias links, historical verification and backfill.
-
-Synthetic repositories only. git delegates to the real binary behind a recording
-fake; cargo, npm, node and gh are fakes. Nothing here can reach a real remote.
-"""
 import hashlib
 import json
 import os
@@ -46,7 +41,6 @@ def digest(data):
 
 
 def reviews(texts):
-    """Explicit dispositions for every prose line of each Markdown document."""
     result = []
     for path, text in sorted(texts.items()):
         if not path.endswith(".md"):
@@ -64,7 +58,7 @@ def reviews(texts):
                 claims.append({"text": line, "status": label[1].lower(),
                                "evidence": "docs/evidence/check.md#fixture"})
             elif "Live observation — " in line:
-                continue  # a reviewed label form or the evidence document, bound below
+                continue
             else:
                 claims.append({"text": line, "status": "context", "evidence": ""})
         if path == "docs/testing.md":
@@ -73,7 +67,6 @@ def reviews(texts):
     return result
 
 
-# The real tests/Cargo.toml shape (published 5d069b02 and main): explicit targets only.
 WORKSPACE = '\n[workspace]\nmembers = [\n    "crates/core",\n    "tests",\n]\n'
 TESTS_MANIFEST = """[package]
 name = "openwiz-tests"
@@ -109,8 +102,6 @@ class Backfill(base.ReleaseCheck):
         super().setUp()
         self.git(self.public,"remote","add","origin",test_publish.PUBLIC)
         self.real_git = shutil.which("git", path=os.defpath+":/usr/bin:/usr/local/bin")
-
-    # ----- normal staging with approved product rows -----
 
     def product_source(self, link_target=TARGET, alias=ALIAS):
         for path, text in PRODUCT.items():
@@ -150,8 +141,6 @@ class Backfill(base.ReleaseCheck):
         self.assertEqual(self.git(export, "cat-file", "-p", "HEAD:"+ALIAS).stdout, TARGET)
         self.assertEqual(os.readlink(self.stage/"fresh"/ALIAS), TARGET)
 
-    # catches: a source release after #555's cut refusing the tracked WizSkills
-    # link, or the harness aliases that now resolve through it.
     def test_r1_the_wizskills_link_and_aliases_through_it_stage(self):
         self.product_source(".wizskills/skills", "skills")
         link = self.repo/ALIAS
@@ -167,7 +156,6 @@ class Backfill(base.ReleaseCheck):
         export = self.stage/"export"
         self.assertEqual(self.git(export, "cat-file", "-p", "HEAD:skills").stdout, ".wizskills/skills")
         self.assertEqual(self.git(export, "cat-file", "-p", "HEAD:"+ALIAS).stdout, TARGET)
-        # The skills link must point at the install exactly, never elsewhere.
         self.outputs_clear()
         (self.repo/"skills").unlink()
         os.symlink(".wizskills/other", self.repo/"skills")
@@ -195,7 +183,6 @@ class Backfill(base.ReleaseCheck):
                 self.save_plan()
                 self.refused(reason)
                 self.assertFalse((self.stage/"export").exists())
-        # A product destination fed from a different, private source is refused.
         self.reset_fixture()
         self.outputs_clear()
         self.product_source()
@@ -221,7 +208,6 @@ class Backfill(base.ReleaseCheck):
                 self.git(self.repo, "rm", "-rq", "--ignore-unmatch", ".agents", "skills/alias")
                 self.product_source(target, alias)
                 self.refused(reason)
-        # A link the plan does not explicitly approve as mode 120000.
         self.outputs_clear()
         self.git(self.repo, "rm", "-rq", "--ignore-unmatch", ".agents", "skills/alias")
         self.product_source()
@@ -229,7 +215,6 @@ class Backfill(base.ReleaseCheck):
             row.pop("mode", None)
         self.save_plan()
         self.refused("link")
-        # The alias target folder must itself be exported.
         self.outputs_clear()
         self.git(self.repo,"rm","-rq","skills/alpha")
         self.commit(self.repo)
@@ -251,7 +236,6 @@ class Backfill(base.ReleaseCheck):
         self.assertIn("READ ",(self.evidence/"open-development-privacy.log").read_text())
 
     def test_r2_public_base_with_links_can_be_restaged(self):
-        """A release after 0.0.5 starts from a public base that already has aliases."""
         self.product_source()
         for path, text in PRODUCT.items():
             p = self.public/path
@@ -276,7 +260,7 @@ class Backfill(base.ReleaseCheck):
         self.refused("link target missing")
         self.outputs_clear()
         self.plant("docs/guide.md", "# Guide\n\n```md\n\nFixture-tested: See [x](missing.md).\n")
-        self.refused("link target missing")  # an unclosed fence hides nothing
+        self.refused("link target missing")
 
     def test_r8_directory_links_resolve_only_to_exported_folders(self):
         self.plant("docs/guide.md", "# Guide\n\nFixture-tested: The [evidence folder](evidence/) and [docs](../docs) hold it.\n")
@@ -349,7 +333,6 @@ class Backfill(base.ReleaseCheck):
 
     def regression_successors(self):
         self.regression_fixture()
-        # The read/send scrub proofs now live under another name and target.
         (self.repo/"tests/messaging/environment.rs").unlink()
         (self.repo/"tests/new-thread").mkdir(parents=True)
         (self.repo/"tests/new-thread/n02_no_rewrite.rs").write_text(
@@ -358,7 +341,6 @@ class Backfill(base.ReleaseCheck):
         (self.repo/"tests/new-thread/main.rs").write_text("mod n02_no_rewrite;\n")
         (self.repo/"tests/new-thread/n03_undeclared.rs").write_text(
             "#[test]\nfn every_call_runs_without_the_thread_context() {}\n")
-        # The real shape: a workspace member with explicit [[test]] targets only.
         self.root_manifest = (self.repo/"Cargo.toml").read_text()
         (self.repo/"Cargo.toml").write_text(self.root_manifest+WORKSPACE)
         (self.repo/"tests/Cargo.toml").write_text(TESTS_MANIFEST)
@@ -378,8 +360,6 @@ class Backfill(base.ReleaseCheck):
         calls = [json.loads(s) for s in (self.root/"calls.jsonl").read_text().splitlines()]
         exact = "n02_no_rewrite::every_call_runs_without_the_thread_context"
         runs = [(c["args"], Path(c["cwd"]).name) for c in calls if c["tool"] == "cargo" and c["args"][-1] == exact]
-        # R3: the one declared test, by its full identity and --exact, never a substring filter:
-        # first in the nonce scratch clone (re-check 5, Jake's ruling (a)), then unchanged.
         args = ["test", "--locked", "-p", "openwiz-tests", "--test", "new-thread", "--", "--exact", exact]
         self.assertEqual(runs, [(args, "nonce"), (args, "fresh")])
         self.assertFalse([c for c in calls if "every_read_runs_without_the_thread_context" in c["args"]])
@@ -399,7 +379,6 @@ class Backfill(base.ReleaseCheck):
         self.data["regressions"] = [successor, successor]
         self.save_plan()
         self.refused("duplicate regression successor")
-        # A planted failure in the successor still fails its id.
         self.outputs_clear()
         self.data["regressions"] = [successor]
         self.save_plan()
@@ -409,7 +388,6 @@ class Backfill(base.ReleaseCheck):
         self.refused("0.0.3-R3")
 
     def test_r16_successor_module_is_bound_to_its_declared_file(self):
-        """Re-check R3: the declared proof file is the module that runs, lexically checked."""
         self.regression_successors()
         successor = {"id": "0.0.3-R3", "proof": "tests/new-thread/n02_no_rewrite.rs",
                      "tests": ["every_call_runs_without_the_thread_context"]}
@@ -429,7 +407,6 @@ class Backfill(base.ReleaseCheck):
             "nested": "mod outer {\n    mod n02_no_rewrite;\n}\n",
             "inline and file": "mod n02_no_rewrite;\nmod n02_no_rewrite {}\n",
             "unterminated comment": "mod n02_no_rewrite;\n/* never closed\n",
-            # +1 round (orchestrator's diagnosis): an allowlist of top-level forms.
             "macro redirect": ('macro_rules! redirect {\n    (mod $name:ident;) => { #[path = "actual.rs"] mod $name; };\n}\n'
                                "redirect!(mod n02_no_rewrite;);\n"),
             "include": 'include!("actual.rs");\nmod n02_no_rewrite;\n',
@@ -451,7 +428,6 @@ class Backfill(base.ReleaseCheck):
                 r = json.loads((self.evidence/"report.json").read_text())
                 self.assertEqual(r["checks"][-1], {"id": "regression-proofs", "status": "fail",
                                                    "reason": r["checks"][-1]["reason"]})
-        # A declared test that exists only in a comment is not a test.
         self.outputs_clear()
         (self.repo/"tests/new-thread/main.rs").write_text("pub mod n02_no_rewrite;\n")
         (self.repo/"tests/new-thread/n02_no_rewrite.rs").write_text(
@@ -461,7 +437,6 @@ class Backfill(base.ReleaseCheck):
         self.data["regressions"] = [successor]
         self.save_plan()
         self.refused("missing named regression")
-        # The plain, public declaration still passes.
         self.outputs_clear()
         (self.repo/"tests/new-thread/n02_no_rewrite.rs").write_text(
             "/* A synthetic proof. */\n#[test]\nfn every_call_runs_without_the_thread_context() {}\n")
@@ -473,7 +448,6 @@ class Backfill(base.ReleaseCheck):
         self.assertEqual(r.returncode, 0, r.stdout+r.stderr)
 
     def test_r17_successor_tests_are_real_top_level_test_items(self):
-        """+1 round: a discarded test plus a macro-made passing twin never binds the proof."""
         self.regression_successors()
         successor = {"id": "0.0.3-R3", "proof": "tests/new-thread/n02_no_rewrite.rs",
                      "tests": ["every_call_runs_without_the_thread_context"]}
@@ -488,7 +462,6 @@ class Backfill(base.ReleaseCheck):
                 "missing named regression"),
             "not a test": ("#[cfg(test)]\nfn every_call_runs_without_the_thread_context() {}\n",
                            "missing named regression"),
-            # Re-check 3: two top-level fns of the name, cfg picks which one runs.
             "cfg-chosen twin": ('#[cfg(any())]\n#[test]\nfn every_call_runs_without_the_thread_context() { panic!("proof"); }\n'
                                 "#[cfg(all())]\n#[test]\nfn every_call_runs_without_the_thread_context() {}\n",
                                 "named regression declared twice"),
@@ -504,8 +477,6 @@ class Backfill(base.ReleaseCheck):
                 self.refused(reason)
 
     def test_r17_real_test_target_forms_still_pass(self):
-        """Control: the top-level forms the real tests/*/main.rs files use (they are pruned
-        from the CI job that runs this suite, so their shapes are reproduced here)."""
         self.regression_successors()
         (self.repo/"tests/new-thread/main.rs").write_text(
             "//! Synthetic test target.\n#![allow(clippy::needless_return)]\n\n"
@@ -529,13 +500,10 @@ class Backfill(base.ReleaseCheck):
         self.assertEqual(r.returncode, 0, r.stdout+r.stderr)
 
     def test_r18_successor_target_is_the_file_cargo_selects(self):
-        """Re-check 3 R3: the inspected main.rs must be the source Cargo builds for
-        `-p openwiz-tests --test <target>`, read from the manifest, never assumed."""
         self.regression_successors()
         successor = {"id": "0.0.3-R3", "proof": "tests/new-thread/n02_no_rewrite.rs",
                      "tests": ["every_call_runs_without_the_thread_context"]}
         public = self.repo
-        # The reviewer's probe: the approved file fails, a same-identity twin passes elsewhere.
         (public/"tests/new-thread/n02_no_rewrite.rs").write_text(
             '#[test]\nfn every_call_runs_without_the_thread_context() { panic!("proof"); }\n')
         (public/"tests/new-thread/actual.rs").write_text(
@@ -574,7 +542,6 @@ class Backfill(base.ReleaseCheck):
                 self.refused("0.0.3-R3")
                 r = json.loads((self.evidence/"report.json").read_text())
                 self.assertEqual(r["checks"][-1]["id"], "regression-proofs")
-        # Control: the real manifest shape, with the approved file passing, still passes.
         self.outputs_clear()
         (public/"Cargo.toml").write_text(self.root_manifest+WORKSPACE)
         (public/"tests/Cargo.toml").write_text(TESTS_MANIFEST)
@@ -589,8 +556,6 @@ class Backfill(base.ReleaseCheck):
         self.assertEqual(r.returncode, 0, r.stdout+r.stderr)
 
     def test_r19_python_without_tomllib(self):
-        """Re-check 4 R6: Python 3.9 and 3.10 have no tomllib. Ordinary checks still
-        run there; only successor binding, which reads Cargo manifests, refuses."""
         shadow = self.root/"no-tomllib"
         shadow.mkdir()
         (shadow/"tomllib.py").write_text('raise ModuleNotFoundError("No module named \'tomllib\'")\n')
@@ -604,8 +569,6 @@ class Backfill(base.ReleaseCheck):
         self.refused("0.0.3-R3: regression successors need Python 3.11+", PYTHONPATH=str(shadow))
 
     def test_r20_the_approved_body_is_what_runs(self):
-        """Re-check 5 R3, ruling (a) nonce: in a scratch clone the approved test's body
-        becomes a random nonce panic, and the same --exact identity must fail printing it."""
         self.regression_successors()
         successor = {"id": "0.0.3-R3", "proof": "tests/new-thread/n02_no_rewrite.rs",
                      "tests": ["every_call_runs_without_the_thread_context"]}
@@ -615,7 +578,6 @@ class Backfill(base.ReleaseCheck):
                     "fn every_call_runs_without_the_thread_context() {\n"
                     '    assert!(Path::new("x").to_str().is_some(), "{}", "}");\n}\n\n'
                     "#[test]\nfn another_test() { assert!(true) }\n")
-        # The reviewer's probe: the attribute macro swaps the panicking approved test for a passing twin.
         cases = {
             "proof-replacing attribute": ({}, "#[replace_proof::supply]\n#[test]\n"
                                               'fn every_call_runs_without_the_thread_context() { panic!("proof"); }\n'),
@@ -631,7 +593,6 @@ class Backfill(base.ReleaseCheck):
                 self.data["regressions"] = [successor]
                 self.save_plan()
                 self.refused("0.0.3-R3: approved test body did not run", **env)
-        # Control: a plain approved test binds; the scratch clone is gone and nothing tracked changed.
         self.outputs_clear()
         proof.write_text(approved)
         self.commit(self.repo)
@@ -653,7 +614,6 @@ class Backfill(base.ReleaseCheck):
         self.refused("unused regression successor")
 
     def test_r12_product_destinations_refuse_other_allowed_sources(self):
-        """Review R1: a product file comes from its own path (AGENTS.md: the public template)."""
         self.product_source()
         readme = self.repo/"README.md"
         for path in ("GLOSSARY.md", "AGENTS.md", "skills/alpha/SKILL.md", ".claude-plugin/plugin.json",
@@ -672,7 +632,6 @@ class Backfill(base.ReleaseCheck):
                 self.refused("release rows must name their own tracked path")
 
     def test_r13_alias_destinations_must_be_links(self):
-        """Review R2: .agents/skills/<name> is only ever a mode-120000 alias."""
         self.product_source()
         for mode in (None, "100644", "100755"):
             with self.subTest(mode=mode):
@@ -713,18 +672,14 @@ class Backfill(base.ReleaseCheck):
         self.historical_refused("alias row needs mode 120000")
 
     def test_r14_inline_code_with_backticks_is_not_a_fence(self):
-        """Review R4: a backtick info string with a backtick is inline code, not a fence."""
         self.plant("docs/guide.md", "# Guide\n\n```x```\nFixture-tested: See [broken](missing.md).\n```\n")
         self.refused("link target missing")
         self.outputs_clear()
         self.plant("docs/guide.md", "# Guide\n\n~~~x`y\n[template](missing.md)\n~~~\n")
-        r = self.check()  # a tilde fence may carry backticks in its info string
+        r = self.check()
         self.assertEqual(r.returncode, 0, r.stdout+r.stderr)
 
-    # ----- historical verification of an exact published commit -----
-
     def publish_history(self, changelog=CHANGELOG, extra=None):
-        """Public main: base -> historical H -> later L, as the real 0.0.5 history."""
         for name, content in base.fixture_files().items():
             p = self.public/name
             p.parent.mkdir(parents=True, exist_ok=True)
@@ -878,7 +833,6 @@ class Backfill(base.ReleaseCheck):
         self.historical_refused("approved plan", approved="0"*64)
         self.outputs_clear()
         self.historical_refused("historical commit differs from the approved plan", commit=self.later)
-        # Same tree, different commit, not on main.
         sibling = self.git(self.public, "commit-tree", self.head+"^{tree}", "-p", self.base,
                            "-m", "Synthetic unpublished sibling").stdout.strip()
         self.git(self.public, "update-ref", "refs/heads/unreleased", sibling)
@@ -991,7 +945,6 @@ class Backfill(base.ReleaseCheck):
         self.save_plan()
         r = self.historical()
         self.assertEqual(r.returncode, 0, r.stderr)
-        # The raw text is still scanned: an unreviewed private id still refuses.
         self.outputs_clear()
         self.git(self.public, "reset", "-q", "--hard", self.base)
         leaked = truncated.replace("thr_syn_one", "thr" + "_abc123")
@@ -1002,8 +955,6 @@ class Backfill(base.ReleaseCheck):
         self.assertEqual((self.evidence/"open-development-privacy.log").read_text(),
             'T1 tree:"tests/fixtures/truncated.json":1\n'
             'T1 commit-tree-1:"tests/fixtures/truncated.json":1\nliterals: used\n')
-
-    # ----- public live-evidence summaries and reviewed label forms -----
 
     def test_r5_reviewed_label_and_live_summary_document_pass_only_when_declared(self):
         self.publish_history()
@@ -1047,8 +998,6 @@ class Backfill(base.ReleaseCheck):
         self.save_plan()
         r = self.historical()
         self.assertEqual(r.returncode, 0, r.stderr)
-
-    # ----- backfill publication from the historical report -----
 
     def backfill_tools(self, **env):
         for name in ("git", "gh"):
@@ -1141,13 +1090,10 @@ class Backfill(base.ReleaseCheck):
                 actions = [c["action"] for c in self.publish_calls()
                            if c["action"] in ("main-push", "tag", "tag-push", "release")]
                 self.assertEqual(actions, writes)
-                # No retry and no rollback: one release attempt at most.
                 self.assertLessEqual(actions.count("release"), 1)
 
 
 class FutureRelease(test_entry.EntryCheck):
-    """AC3: a normal new release, product rows included, checked then published unedited."""
-
     def test_r7_new_release_stages_from_tracked_inputs_and_publishes_unedited(self):
         for path, text in PRODUCT.items():
             p = self.repo/path
@@ -1171,7 +1117,6 @@ class FutureRelease(test_entry.EntryCheck):
         export = self.stage/"export"
         head = self.git(export, "rev-parse", "HEAD").stdout.strip()
         self.assertEqual(self.git(export, "rev-parse", "HEAD^").stdout.strip(), self.git(self.repo,"rev-parse","HEAD").stdout.strip())
-        # Publish the exact checked export with the publisher's recording fakes.
         remote = self.root/"remote.git"
         subprocess.run([shutil.which("git"), "clone", "-q", "--bare", self.public, remote], check=True,
                        env=self.env)
@@ -1193,8 +1138,6 @@ class FutureRelease(test_entry.EntryCheck):
 
 
 class PreservedRange(test_entry.EntryCheck):
-    """Review R5: an older range heading kept from the public base is refused too."""
-
     def test_r15_a_preserved_public_range_heading_is_refused(self):
         older = "## 0.0.97 - 0.0.98 · 2026-01-01\n\nContext: Earlier combined public entry.\n"
         (self.public/"CHANGELOG.md").write_text("# Changelog\n\n"+older)
@@ -1208,8 +1151,6 @@ class PreservedRange(test_entry.EntryCheck):
 
 
 class CombinedRelease(test_entry.EntryCheck):
-    """Q4 (a): a combined release gets one generated entry per version, newest first."""
-
     def combined(self):
         world = self.world
         world["repos/{owner}/{repo}/issues/4200"] = {
@@ -1225,7 +1166,6 @@ class CombinedRelease(test_entry.EntryCheck):
                  "Fixture-tested: Synthetic compare fixtures pass; live compare remains unverified.\n\n"
                  "[Full release on GitHub](https://github.com/example-owner/example-release/releases/tag/v0.0.100)\n")
         changelog = "# Changelog\n\n"+newer+"\n"+test_entry.ENTRY+"\n"+test_entry.OLD.removeprefix("# Changelog\n\n")
-        # Both milestones now have release branches, so both are built.
         roadmap = ("# OpenWiz roadmap\n\nWhat is being built now, and what comes next.\n\n## Now\n\n"
                    "- **0.0.99**, built: You can preview an export.\n"
                    "- **0.0.100**, built: You can compare exports.\n\n## Next\n\n- None right now.\n")
@@ -1276,7 +1216,6 @@ class CombinedRelease(test_entry.EntryCheck):
 
 
 def load_tests(loader, tests, pattern):
-    """Only this file's proofs; the inherited release-check proofs run in test.py."""
     return unittest.TestSuite([*(Backfill(name) for name in Backfill.__dict__ if name.startswith("test_")),
                                *(FutureRelease(name) for name in FutureRelease.__dict__
                                  if name.startswith("test_")),

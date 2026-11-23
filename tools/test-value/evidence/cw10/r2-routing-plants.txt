@@ -1,9 +1,0 @@
-# R2: the kept lifecycle verifier (tools/fleet-load/load.py verify, run by test.py LoadProof) on an unscaled run
-# of the pinned WizSkills launch-fleet (load.run(), 9.5 minutes here; the scaled run needs cargo, absent in this sandbox),
-# then each routing fault planted into a copy of the same report (load.plant):
-unscaled lifecycle: verify passes (100 tickets, 5 specs)
-actual-findings-target: caught: S1 notification: wrong agent for requested ticket/role
-actual-recheck-role: caught: S1 notification: wrong agent for requested ticket/role
-target: caught: S1 target: due line names the wrong agent
-owner: caught: S1 owner: action belongs to another fleet
-unsafe-merge: caught: S2 unsafe merge: missing CI or approval

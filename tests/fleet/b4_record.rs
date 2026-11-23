@@ -1,10 +1,3 @@
-//! B4 (ClosedWiz#120): the start record. It is read back only exactly:
-//! a table of good and bad records through the store's reader
-//! (`openwiz_cli::state::starts::read`), each bad one refused; and the store
-//! keeps it owner-only, locks it across processes and writes it only under
-//! the lock, while the read-only store `fleet tick --dry-run` opens never
-//! locks.
-
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 
@@ -16,8 +9,6 @@ use serde_json::{Value, json};
 
 use super::fake::*;
 
-/// A builder's record, its one attempt pending: the shape the store
-/// writes, by hand.
 fn good() -> Value {
     json!({
         "schema": "openwiz.start-record.v1",
@@ -36,8 +27,6 @@ fn good() -> Value {
     })
 }
 
-/// A reviewer's record: two attempts that created nothing, then one that
-/// created its thread.
 fn good_reviewer() -> Value {
     json!({
         "schema": "openwiz.start-record.v1",
@@ -61,7 +50,6 @@ fn good_reviewer() -> Value {
     })
 }
 
-/// `good()` with `edit` applied.
 fn with(edit: impl FnOnce(&mut Value)) -> String {
     let mut record = good();
     edit(&mut record);
@@ -85,7 +73,6 @@ fn the_reader_takes_each_good_record_exactly() {
             thread_id: THREAD.to_owned()
         }
     );
-    // An uncertain last attempt, and the records' own JSON read back.
     let uncertain = with(|r| {
         r["attempts"][0]["outcome"] = json!({"kind": "uncertain", "words": "Synthetic"});
     });
@@ -96,7 +83,6 @@ fn the_reader_takes_each_good_record_exactly() {
     assert_eq!(again, reviewer_record);
 }
 
-/// #1652: isolate the byte allowlist from length and leading-dash guards.
 #[test]
 fn start_thread_ids_preserve_interior_hyphens_and_refuse_forbidden_bytes() {
     use openwiz_core::fleet::starts::safe_id;
@@ -354,7 +340,6 @@ fn the_reader_refuses_every_other_shape() {
     for (what, text) in &cases {
         assert!(read(text).is_err(), "{what}: accepted {text}");
     }
-    // Each bad case differs from a good record only in what it names.
     assert!(read(&with(|_| {})).is_ok());
 }
 
@@ -364,15 +349,13 @@ fn record(value: &Value) -> StartRecord {
 
 #[test]
 fn the_store_keeps_records_owner_only_and_writes_only_under_the_lock() {
-    let fake = Fake::new("b4_store", vec![]);
+    let fake = Fake::new("b4_store");
     let (first, second) = (fake.starts(), fake.starts());
     let request = builder(7);
     let pending = record(&good());
 
-    // Writing without the lock is refused.
     assert!(first.write(&pending).is_err());
     assert_eq!(first.lock(&request.key).unwrap(), Locked::Mine(None));
-    // A second store, as another process would, can't take it meanwhile.
     assert_eq!(second.lock(&request.key).unwrap(), Locked::Busy);
     first.write(&pending).unwrap();
     first.unlock(&request.key);
@@ -389,13 +372,11 @@ fn the_store_keeps_records_owner_only_and_writes_only_under_the_lock() {
     let file = dir.join(format!("{}.json", request.key.id()));
     assert_eq!(mode(&file), 0o600);
 
-    // A record under another start's file name is refused.
     let other = builder(8);
     fs::copy(&file, dir.join(format!("{}.json", other.key.id()))).unwrap();
     assert!(first.inspect(&other.key).is_err());
     assert!(first.lock(&other.key).is_err());
 
-    // A store opened for reading only never locks or writes.
     let read_only = StartFileStore::open_read_only(&fake.state)
         .unwrap()
         .expect("the record directory exists");

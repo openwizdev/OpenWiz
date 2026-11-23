@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-"""Test-only entry: inject recording management APIs into the INSTALLED tool.
-Optional loopback edge exercises its probes against the real fixture server.
-Never collected in a release and never invokes any live provider.
-"""
 import argparse
 import importlib.util
 import json
@@ -39,8 +35,6 @@ class Wire(Recording):
             assert edge.scheme == 'http' and edge.hostname == '127.0.0.1' and not edge.username
             self.calls.append((method, p['host'], urlsplit(url).path))
             if p['provider'] == 'tailscale':
-                # Model this read coming from the authenticated owner's network
-                # context. The production Tailscale transport uses no cookie.
                 headers = {**headers, 'Cookie': 'CF_Authorization=' + jwt(p['owner'], time.time() + 7200)}
             request = urllib.request.Request(args.edge + urlsplit(url).path, data=body,
                                              headers={**headers, 'Host': p['host']}, method=method)

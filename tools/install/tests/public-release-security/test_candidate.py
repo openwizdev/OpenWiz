@@ -1,23 +1,4 @@
 #!/usr/bin/env python3
-"""#2206: planted synthetic secrets at the candidate's changed and new boundaries.
-
-P10's baseline cases (baseline/) cover the App setup check and phone access as
-they stood at its source revision. These cases cover what the candidate added
-or changed since then, each through its public entry point and a recording
-provider:
-
-- the CloudRoom install and sign-in tool (#2201), on its own recording host;
-- the PC read-token tool's repository downscope (#2315), on a loopback App API;
-- the setup tool's harness, model and effort settings (C-S1, #2865), on `prepare`.
-
-Each case plants unmistakable synthetic values (an account, a sign-in nonce,
-tokens, private-looking context), drives a refused, revoked, expired or
-lost-reply path, and proves that nothing unauthorized took effect and that no
-planted value reached output, errors, saved state or a request it was not meant
-for. Synthetic values only; no network beyond 127.0.0.1.
-
-  python3 -I tools/install/tests/public-release-security/test_candidate.py
-"""
 from contextlib import redirect_stderr, redirect_stdout
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import importlib.util
@@ -35,7 +16,6 @@ import unittest
 sys.dont_write_bytecode = True
 ROOT = Path(__file__).resolve().parents[4]
 
-# Planted values: unmistakable, synthetic, never a real credential.
 PLANTED_ACCOUNT_ID = 'acct_synthetic2206plantedaaaaaaaa'
 PLANTED_EMAIL = 'planted-2206-owner@example.invalid'
 PLANTED_NONCE = 'PlantedSyntheticNonce2206bbbbbbbbbbbb'
@@ -45,7 +25,6 @@ PLANTED_MINTED = 'ghs_PlantedSyntheticMinted2206eeeeeeeeeeeeee'
 
 
 def files_text(folder):
-    """Every byte under FOLDER, as text, so a planted value anywhere is found."""
     folder = Path(folder)
     if not folder.exists():
         return ''
@@ -59,9 +38,6 @@ def load(name, path):
     return module
 
 
-# --- #2201: the CloudRoom install, reuse and sign-in tool ---------------------
-
-# The tool's own recording host (every program, URL and open is recorded).
 cloudroom_tests = load('cloudroom_tests_for_2206', ROOT / 'tools/install/cloudroom/test_cloudroom.py')
 cloudroom = cloudroom_tests.cloudroom
 
@@ -75,8 +51,6 @@ def status_answer(**change):
 
 
 class CloudRoomBoundary(unittest.TestCase):
-    """The login read and sign-in handoff never repeat CloudRoom's account or link."""
-
     PLANTED = (PLANTED_ACCOUNT_ID, PLANTED_EMAIL, PLANTED_NONCE, PLANTED_SIGN_IN_ERROR)
 
     def setUp(self):
@@ -85,7 +59,7 @@ class CloudRoomBoundary(unittest.TestCase):
         self.base = Path(self.tmp.name)
         self.state = self.base / 'state'
         self.host = cloudroom_tests.FakeHost(self.base)
-        self.host.launcher()  # CloudRoom installed and opened before: reuse, no install
+        self.host.launcher()
         self.host.sign_in_reply = json.dumps(
             {'url': f'https://www.cloudroom.dev/login?desktop={PLANTED_NONCE}'}).encode()
 
@@ -108,7 +82,6 @@ class CloudRoomBoundary(unittest.TestCase):
 
     def test_lost_refused_and_contradictory_login_reads_never_verify_or_leak(self):
         cases = [
-            # (case, room-cli cloud status answer, expected code)
             ('lost reply: the status read times out', 'timeout', 'cloudroom_login_unknown'),
             ('the status read fails', None, 'cloudroom_login_unknown'),
             ('a truncated answer', status_answer()[:40], 'cloudroom_login_unknown'),
@@ -177,8 +150,6 @@ class CloudRoomBoundary(unittest.TestCase):
                 self.assert_confined(leaked)
 
 
-# --- #2315: the PC read-token tool's repository downscope ---------------------
-
 MINT = ROOT / 'tools/github-app/mint-token.py'
 READ = {'metadata': 'read', 'contents': 'read', 'issues': 'read', 'pull_requests': 'read',
         'checks': 'read', 'actions': 'read'}
@@ -186,14 +157,10 @@ OWNER, NAME = 'synthetic-owner', 'synthetic-consumer'
 
 
 class AppApi(BaseHTTPRequestHandler):
-    """A loopback GitHub App API for one installation, 3003; each answer steered by the test."""
-
     def log_message(self, *_args):
         pass
 
     def do_GET(self):
-        # The mint's owner-bound reads (C-G1/J48, #606): this App, owned by the
-        # installation's account. Only the token request is recorded in `seen`.
         found = {'/app': {'id': 1001, 'owner': {'login': OWNER}},
                  '/app/installations/3003': {'id': 3003, 'app_id': 1001, 'account': {'login': OWNER},
                                              'repository_selection': 'selected'}}.get(self.path)
@@ -211,7 +178,7 @@ class AppApi(BaseHTTPRequestHandler):
         answer = self.server.answer
         if answer == 'lost':
             self.close_connection = True
-            return  # lost reply: the connection closes with no response
+            return
         status, value = answer
         data = json.dumps(value).encode()
         self.send_response(status)
@@ -222,8 +189,6 @@ class AppApi(BaseHTTPRequestHandler):
 
 
 class MintBoundary(unittest.TestCase):
-    """mint-token.py --repository: a refused, expired, wider or lost answer prints no token."""
-
     @classmethod
     def setUpClass(cls):
         cls.temp = tempfile.TemporaryDirectory(prefix='openwiz-2206-mint-')
@@ -319,12 +284,7 @@ class MintBoundary(unittest.TestCase):
                 self.assertNotIn(PLANTED_MINTED, files_text(self.state), 'a token was stored')
 
 
-# --- C-S1 (#2865): setup's agent settings refuse credential shapes ------------
-
 class SetupSettingsBoundary(unittest.TestCase):
-    """`setup.py prepare` refuses a credential-shaped harness, model or effort
-    before any effect text or state is made, and keeps ordinary names."""
-
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)

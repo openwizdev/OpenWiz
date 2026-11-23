@@ -1,0 +1,10 @@
+{
+  "answers": [
+    {"method": "POST", "path": "/v3/organizations/org-[A-Za-z0-9]+/sessions", "status": 200,
+     "body": {"session_id": "devin-0000000000000000000000000000c0de", "status": "new"}},
+    {"method": "POST", "path": "/v3/organizations/org-[A-Za-z0-9]+/sessions/devin-[a-z0-9]+/messages", "status": 200,
+     "body": {"status": "running"}},
+    {"method": "DELETE", "path": "/v3/organizations/org-[A-Za-z0-9]+/sessions/devin-[a-z0-9]+", "status": 200,
+     "body": {"status": "exit"}}
+  ]
+}

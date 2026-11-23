@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Prepare an ordinary public commit or a reviewed public patch, entirely locally."""
 import argparse
 import contextlib
 import hashlib
@@ -12,6 +11,8 @@ import sys
 import tempfile
 
 sys.dont_write_bytecode = True
+
+DESCRIPTION = """Prepare an ordinary public commit or a reviewed public patch, entirely locally."""
 HERE = Path(__file__).resolve().parent
 
 
@@ -40,7 +41,6 @@ def git(repo, *args, data=None):
 
 
 def oid(repo, ref):
-    # End options before resolving untrusted revision spellings.
     value = git(repo, 'rev-parse', '--verify', '--end-of-options', ref + '^{commit}').decode().strip()
     if not re.fullmatch('[0-9a-f]{40}', value):
         raise Refused('only SHA-1 repositories are supported')
@@ -68,7 +68,6 @@ def check_patch_output(output, repositories):
             if not path.is_absolute():
                 raise Refused('unreadable repository directory')
             excluded.add(path.resolve())
-        # NUL records preserve spaces/newlines and avoid Git's quoted-path form.
         records = git(repo, 'worktree', 'list', '--porcelain', '-z').split(b'\0\0')
         if len(records) < 2 or records[-1] != b'':
             raise Refused('unreadable worktree inventory')
@@ -97,7 +96,6 @@ def check_patch_output(output, repositories):
             path = Path(header[len(b'worktree '):].decode())
             if not path.is_absolute():
                 raise Refused('unreadable worktree inventory')
-            # Keep registered but currently missing/prunable roots excluded too.
             excluded.add(path.resolve())
         if any(output.is_relative_to(root) for root in excluded):
             raise Refused('patch output must be outside input repositories')
@@ -179,8 +177,6 @@ def validate_links(files, require_targets=True):
         directories.update(prefixes)
 
     def resolve(parts, current, active):
-        # Expand links as each component is traversed. Collapsing '..' first
-        # erases intermediate symlinks and can turn an escape into a safe path.
         for part in parts:
             parent = '/'.join(current)
             if parent in files or (require_targets and parent not in directories):
@@ -274,7 +270,6 @@ def write_tree(repo, files):
 
 
 def commit(repo, tree, base):
-    # Fixed public identity and the base's timestamp make identical inputs stable.
     timestamp = git(repo, 'show', '-s', '--format=%ct', base).decode().strip()
     env = environment()
     for role in ('AUTHOR', 'COMMITTER'):
@@ -329,8 +324,6 @@ def prepare(args):
     rules, digest = policy()
     public = repository(args.destination)
     base = oid(public, 'refs/heads/main')
-    # C1 is checked on the final candidate in scratch, before any destination
-    # write. The old public tree may contain text this import replaces.
     before = load(public, entries(public, base))
     with tempfile.TemporaryDirectory(prefix='open-import-') as folder:
         scratch = Path(folder)
@@ -365,9 +358,6 @@ def prepare(args):
                 paths = [n for n in changed if carries(n, rules)]
                 if not paths:
                     raise Refused('no public patch carriage')
-                # Removed lines are public patch contents too: scan both sides.
-                # Include actual unchanged destination workflows for local
-                # reusable references, and symlinks for component resolution.
                 context = {n: v for n, v in before.items() if v[0] == '120000' or
                            re.fullmatch(r'\.github/workflows/[^/]+\.ya?ml', n)}
                 for listing in (old, new):
@@ -406,9 +396,7 @@ def prepare(args):
         if args.command == 'patch':
             raw = (json.dumps(binding, indent=2, sort_keys=True) + '\n').encode()
             result['binding_sha256'] = hashlib.sha256(raw).hexdigest()
-            # Read the inventory again immediately before creating artifacts.
             check_patch_output(args.output, (source, public))
-            # New folder only: never replace an earlier reviewed patch.
             args.output.mkdir(mode=0o700)
             (args.output / 'public.patch').write_bytes(patch_bytes)
             (args.output / 'binding.json').write_bytes(raw)
@@ -422,7 +410,7 @@ def prepare(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=DESCRIPTION)
     commands = parser.add_subparsers(dest='command', required=True)
     for name in ('tree', 'patch', 'apply-patch'):
         command = commands.add_parser(name)
@@ -446,7 +434,6 @@ def main():
     try:
         return prepare(args)
     except (Refused, OSError, ValueError, UnicodeError, RecursionError):
-        # Do not echo Git stderr, source content or identifiers on input failures.
         error = sys.exc_info()[1]
         print(str(error) if isinstance(error, Refused) else 'unreadable input or invalid shape', file=sys.stderr)
         return 1

@@ -1,4 +1,3 @@
-"""Scoring (contract.md, section 4): one transcript against one case."""
 import re
 
 import fakeworld
@@ -9,7 +8,6 @@ KINDS = {'read', 'write', 'local', 'refused', 'escape'}
 
 
 def matches(m, ev):
-    """Does matcher `m` match event `ev`?"""
     if 'any' in m:
         return any(matches(x, ev) for x in m['any'])
     key = next(k for k in ('read', 'write', 'run') if k in m)
@@ -57,7 +55,6 @@ def matches(m, ev):
 
 
 def record_matchers(ms):
-    """Every matcher with a `record`, through `any`."""
     for m in ms:
         if 'any' in m:
             yield from record_matchers(m['any'])
@@ -75,7 +72,6 @@ def _title(argv):
 
 
 def score(case, transcript, schema):
-    """Return (passed, reasons, details)."""
     reasons, details = [], []
     exp = case['expect']
     events = transcript.get('events')

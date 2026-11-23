@@ -1,6 +1,3 @@
-"""Synthetic recording providers; never delegate a request to a real service.
-Shapes are synthetic assumptions based on the cited vendor API/CLI references.
-"""
 import base64
 from copy import deepcopy
 from datetime import datetime, timezone
@@ -13,9 +10,8 @@ OWNER = 'owner@example.invalid'
 FOREIGN = 'foreign@example.invalid'
 
 
-# Public, deliberately compromised RSA example from RFC 7515 A.2. Never use
-# this test key with any real account. Production collects neither this file
-# nor its signer. OpenSSL, not this signer, verifies production signatures.
+# SECURITY: this is RFC 7515's public, deliberately compromised RSA example key (appendix A.2,
+# https://www.rfc-editor.org/rfc/rfc7515#appendix-A.2); never use it with a real account.
 N = ('ofgWCuLjybRlzo0tZWJjNiuSfb4p4fAkd_wWJcyQoTbji9k0l8W26mPddx'
      'HmfHQp-Vaw-4qPCJrcS2mJPMEzP1Pt0Bm4d4QlL-yRT-SFd2lZS-pCgNMs'
      'D1W_YpRPEwOWvG6b32690r2jZ47soMZo9wGzjb_7OMg0LOL-bSf63kpaSH'

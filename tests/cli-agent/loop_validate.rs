@@ -1,8 +1,3 @@
-//! #790 (LC2): `openwiz loop validate`, run as the real binary on the pinned
-//! WizLoops fixtures (`contracts/fixtures/wizloops/`), with a `room-cli` that
-//! records any call. Expected results come from the fixtures' own
-//! `expected.json`, never from the reader. These read `contracts/`, so they
-//! live here rather than in the CLI crate.
 use serde_json::{Value, json};
 use std::fs;
 use std::path::Path;
@@ -15,8 +10,6 @@ fn load(path: &str) -> Value {
     serde_json::from_str(&fs::read_to_string(Path::new(ROOT).join(path)).unwrap()).unwrap()
 }
 
-/// Runs `loop validate` with `args`, checks the one JSON document against
-/// the contract's schema and that nothing called `room-cli`.
 fn validate(sandbox: &Sandbox, contract: &Value, args: &[&str]) -> (i32, Value) {
     let mut argv = vec!["loop", "validate"];
     argv.extend(args);
@@ -25,7 +18,6 @@ fn validate(sandbox: &Sandbox, contract: &Value, args: &[&str]) -> (i32, Value) 
     let code = output.status.code().unwrap();
     assert!(output.stdout.ends_with(b"\n"), "{args:?}");
     let doc: Value = serde_json::from_slice(&output.stdout).unwrap();
-    // A report is the loop contract's; an error is the CLI contract's.
     let schema = if doc["schema"] == "openwiz.cli-error.v1" {
         &load("contracts/cli.v1.schema.json")
     } else {
@@ -44,7 +36,6 @@ fn validate(sandbox: &Sandbox, contract: &Value, args: &[&str]) -> (i32, Value) 
     (code, doc)
 }
 
-/// `expected.json`'s refusals for one file, with `file` as validate names it.
 fn refusals(expected: &Value, file: &str) -> Value {
     expected["refusals"]
         .as_array()
@@ -58,9 +49,6 @@ fn refusals(expected: &Value, file: &str) -> Value {
         .unwrap_or_else(|| json!([]))
 }
 
-// catches: a reader that accepts an invalid fixture, refuses a valid one, or
-// names the wrong code, field or message (text or JSON), or a validate that
-// calls room-cli. One file per run, as given.
 #[test]
 fn each_pinned_fixture_file_passes_or_refuses_as_expected_json_says() {
     let contract = load("contracts/loop-cli.v1.schema.json");
@@ -91,7 +79,6 @@ fn each_pinned_fixture_file_passes_or_refuses_as_expected_json_says() {
             assert_eq!(entry["id"], id, "{name}");
         }
         assert_eq!(doc["folder_refusals"], json!([]), "{name}");
-        // Text: each refusal as `<file>: <field>: <message>`, on stdout.
         let output = sandbox.run(&["loop", "validate", &path]);
         assert_eq!(output.status.code(), Some(code), "{name}");
         let stdout = String::from_utf8(output.stdout).unwrap();
@@ -108,9 +95,6 @@ fn each_pinned_fixture_file_passes_or_refuses_as_expected_json_says() {
     assert!(checked >= 60, "every fixture file is checked: {checked}");
 }
 
-// catches: a folder read that misses `duplicate-id` or `catalog-all-secrets`,
-// reads `README.md` or files out of byte order, or names the folder's files
-// with the wrong path.
 #[test]
 fn folders_and_catalogs_refuse_as_expected_json_says() {
     let contract = load("contracts/loop-cli.v1.schema.json");
@@ -137,7 +121,6 @@ fn folders_and_catalogs_refuse_as_expected_json_says() {
             })
             .collect();
         assert_eq!(doc["folder_refusals"], json!(wanted), "{name}");
-        // Each file inside is valid alone, in byte order of name.
         let mut inside: Vec<&String> = fixtures["fixtures"]
             .as_object()
             .unwrap()
@@ -155,7 +138,6 @@ fn folders_and_catalogs_refuse_as_expected_json_says() {
             .collect();
         assert_eq!(doc["files"], json!(files), "{name}");
     }
-    // The catalog's file is valid when its folder is not read as a catalog.
     let (code, doc) = validate(
         &sandbox,
         &contract,
@@ -164,9 +146,6 @@ fn folders_and_catalogs_refuse_as_expected_json_says() {
     assert_eq!((code, &doc["folder_refusals"]), (0, &json!([])));
 }
 
-// catches: a reader whose parse of a valid file differs from the format's
-// (a default left out, a value changed), which plan and export (#791, #792)
-// map to `room-cli`.
 #[test]
 fn each_valid_fixture_parses_to_expected_json() {
     let fixtures = load(&format!("{FIXTURES}/expected.json"));
@@ -190,9 +169,6 @@ fn each_valid_fixture_parses_to_expected_json() {
     assert!(checked >= 15, "{checked}");
 }
 
-// catches: several paths reported out of the order given, a refused file
-// that does not fail the run, or an unreadable path that prints a report
-// instead of the contract's error with exit 1.
 #[test]
 fn several_paths_keep_their_order_and_an_unreadable_one_fails_the_run() {
     let contract = load("contracts/loop-cli.v1.schema.json");
@@ -233,9 +209,6 @@ fn several_paths_keep_their_order_and_an_unreadable_one_fails_the_run() {
     assert!(String::from_utf8(output.stderr).unwrap().contains(missing));
 }
 
-// catches (R5): a folder whose entries can be listed but not looked up
-// (mode 0400), read as holding no loop file, so validate reports success
-// without checking any. It must fail the run with read_failed and exit 1.
 #[test]
 fn a_folder_whose_files_cannot_be_looked_up_fails_the_run() {
     use std::os::unix::fs::PermissionsExt;
@@ -249,7 +222,6 @@ fn a_folder_whose_files_cannot_be_looked_up_fails_the_run() {
     )
     .unwrap();
     fs::set_permissions(&locked, fs::Permissions::from_mode(0o400)).unwrap();
-    // Root reads through the mode, so the break cannot be shown there.
     let bypassed = fs::metadata(locked.join("a.md")).is_ok();
     let (code, doc) = validate(&sandbox, &contract, &[locked.to_str().unwrap()]);
     fs::set_permissions(&locked, fs::Permissions::from_mode(0o700)).unwrap();
@@ -260,10 +232,6 @@ fn a_folder_whose_files_cannot_be_looked_up_fails_the_run() {
     assert_eq!(doc["error"]["kind"], "read_failed", "{doc}");
 }
 
-// catches (R6): a path or file name carrying terminal control characters
-// (an escape sequence that clears or spoofs the screen) printed unchanged on
-// stderr, in the error's message or in the text report. The JSON report
-// keeps the name exactly, as data.
 #[test]
 fn control_characters_in_paths_never_reach_the_terminal() {
     let contract = load("contracts/loop-cli.v1.schema.json");

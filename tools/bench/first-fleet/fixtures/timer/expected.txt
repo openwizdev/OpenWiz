@@ -1,0 +1,20 @@
+| Step | Start | Length | Waits on | Failure |
+| --- | --- | --- | --- | --- |
+| install | 0:00 | 2:00 | agent | - |
+| grill | 2:00 | 2:00 | user | - |
+| plan | 4:00 | 1:00 | agent | - |
+| launch | 5:00 | 0:30 | agent | - |
+| build | 5:30 | 10:00 | timer | - |
+| review | 15:30 | 10:00 | timer | - |
+| merge | 25:30 | 0:40 | timer | - |
+
+| GitHub | At |
+| --- | --- |
+| spec #30 created | 4:30 |
+| ticket #31 created | 4:40 |
+| pull request #41 created | 14:00 |
+| pull request #41 merged | 26:10 |
+
+Clock: 2026-11-22T09:00:00Z (the install line) to 2026-11-22T09:26:10Z (pull request #41 merged)
+Total: 26:10
+Timer waits: build, review, merge

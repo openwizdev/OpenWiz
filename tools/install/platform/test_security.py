@@ -1,4 +1,3 @@
-"""Private path and descriptor proofs; synthetic key, offline OpenSSL only."""
 import importlib.util
 import ast
 import os

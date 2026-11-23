@@ -1,10 +1,3 @@
-//! #792 (LC4): `openwiz loop plan`, through the real fixture binary and the
-//! fake `room-cli`, on the pinned WizLoops fixtures and the synthetic
-//! `loops/` account (`tests/fake-room-cli/loops/`). Expected values are
-//! literals from `contracts/wizloops-cloudroom.v1.md`, `loop-cli.v1.md` and
-//! the pinned `expected.json`, never computed by the code under test. These
-//! read `contracts/` and need the fake, so they live here rather than in
-//! the CLI crate.
 use serde_json::{Value, json};
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
@@ -18,7 +11,6 @@ const PROJECT: &str = "prj_syn_0001";
 struct Fake(Sandbox);
 
 impl Fake {
-    /// The fake `room-cli` answering from the synthetic `loops/` scenario.
     fn new() -> Self {
         Self::with_scenario(&Path::new(ROOT).join("tests/fake-room-cli/loops/scenario.json"))
     }
@@ -37,7 +29,6 @@ impl Fake {
         Self(sandbox)
     }
 
-    /// A scenario of the sandbox's own, answering `loop list` as given.
     fn answering(list: Value) -> Self {
         let fake = Self::new();
         let path = fake.0.0.join("scenario.json");
@@ -60,7 +51,6 @@ impl Fake {
         self.0.run(&all)
     }
 
-    /// Runs with `--json`; checks one document, its schema and its exit.
     fn json(&self, args: &[&str]) -> (i32, Value) {
         let mut all = args.to_vec();
         all.push("--json");
@@ -86,7 +76,6 @@ impl Fake {
         (code, doc)
     }
 
-    /// The `room-cli` calls made, in order.
     fn calls(&self) -> Vec<Value> {
         fs::read_to_string(self.0.0.join("bin/invocations.log"))
             .unwrap_or_default()
@@ -95,7 +84,6 @@ impl Fake {
             .collect()
     }
 
-    /// Plan changes nothing: one `loop list` and no recorded write.
     fn assert_only_listed(&self) {
         assert_eq!(self.calls(), vec![json!(["loop", "list", "--json"])]);
         assert!(
@@ -148,10 +136,6 @@ fn codes(item: &Value) -> Vec<(String, String)> {
         .collect()
 }
 
-// catches: a create whose flags, values or order drift from the adapter's
-// table (so apply would run a different loop than the file says), a
-// prompt or script that is not the body and check rendered as the adapter
-// says, or a file the adapter can't represent planned instead of refused.
 #[test]
 fn plan_creates_each_valid_fixture_as_the_adapters_table_says() {
     let fake = Fake::new();
@@ -187,7 +171,6 @@ fn plan_creates_each_valid_fixture_as_the_adapters_table_says() {
     assert_eq!(files, expected, "one item per file, in byte order of name");
     let cron_check_script = "#!/bin/sh\n# wizloop: params from the loop file, as data\nexport WIZLOOP_PARAM_REPO='example-org/example-repo'\n# wizloop: the check\n# Prints one line per due item in $WIZLOOP_PARAM_REPO; nothing when none is due.\nif [ -f due.txt ]; then cat due.txt; fi\nexit 0\n";
     let params_env_script = "#!/bin/sh\n# wizloop: params from the loop file, as data\nexport WIZLOOP_PARAM_REF='release/\";printf${IFS}WAKE;false${IFS}\"'\nexport WIZLOOP_PARAM_REPO='example-org/example-repo'\nexport WIZLOOP_PARAM_SPEC=7\nexport WIZLOOP_PARAM_TITLE='it'\\''s $(touch marker) `touch marker`'\n# wizloop: the check\n# Reads its params from the environment as data and prints nothing, so no\n# agent starts: $WIZLOOP_PARAM_REPO, $WIZLOOP_PARAM_REF, $WIZLOOP_PARAM_TITLE\n# and $WIZLOOP_PARAM_SPEC.\nexit 0\n";
-    // A check that uses no param is carried byte for byte.
     let script_only = fs::read_to_string(valid.join("script-only/check.sh")).unwrap();
     let creates = [
         (
@@ -275,7 +258,6 @@ fn plan_creates_each_valid_fixture_as_the_adapters_table_says() {
         item(&doc, "/long-check.md")["refusals"][0]["message"],
         "Cloudroom runs a check for exactly 60 seconds; set the timeout to 60"
     );
-    // A same-thread run's limit is reported, as the adapter's Limits say.
     for file in ["/at-same.md", "/in-same.md", "/all-secrets-same.md"] {
         let notes = item(&doc, file)["notes"].as_array().unwrap();
         assert!(
@@ -291,9 +273,6 @@ fn plan_creates_each_valid_fixture_as_the_adapters_table_says() {
     );
 }
 
-// catches: plan building a command from a file the format refuses, or
-// refusing it with other codes, fields, messages or order than the pinned
-// expected.json (so plan and validate disagree on what a file is).
 #[test]
 fn plan_refuses_each_invalid_fixture_with_its_expected_refusals() {
     let expected: Value =
@@ -333,7 +312,6 @@ fn plan_refuses_each_invalid_fixture_with_its_expected_refusals() {
         assert_eq!(item["refusals"], json!(want), "{name}");
     }
     assert_eq!(seen, 47, "every invalid fixture is planned");
-    // The folder rule: the first file plans, the second is refused.
     let a = item(&doc, "/duplicate-id/a.md");
     assert_eq!(a["action"], "create");
     let b = item(&doc, "/duplicate-id/b.md");
@@ -345,8 +323,6 @@ fn plan_refuses_each_invalid_fixture_with_its_expected_refusals() {
     assert_eq!(doc["items"].as_array().unwrap().len(), 49);
 }
 
-/// The files `export` writes for the synthetic account's project, by hand
-/// from the adapter's "`room-cli loop list` to a file" (`loops/list.json`).
 const ACCOUNT_FILES: [(&str, &str); 7] = [
     (
         "loops/syn-triage.md",
@@ -382,9 +358,6 @@ fn account(fake: &Fake) -> PathBuf {
     fake.dir().join("loops")
 }
 
-// catches (C5): plan and the list-to-file mapping disagreeing, so a freshly
-// exported account shows differences, or would be updated, or another
-// project's loop with the same marker being matched.
 #[test]
 fn plan_of_the_accounts_own_files_shows_no_difference() {
     let fake = Fake::new();
@@ -417,7 +390,6 @@ fn plan_of_the_accounts_own_files_shows_no_difference() {
             "{file}"
         );
     }
-    // The adopted loop gains its marker, and nothing else differs.
     let kick = item(&doc, "/synthetic-hourly-kick.md");
     assert_eq!(
         (&kick["action"], &kick["loop"]),
@@ -436,7 +408,6 @@ fn plan_of_the_accounts_own_files_shows_no_difference() {
         (&json!([]), &json!([]))
     );
 
-    // Without the binding: refused, never a second loop; the loop is unmanaged.
     let (code, doc) = fake.json(&[loops.to_str().unwrap(), "--project", PROJECT]);
     assert_eq!(code, 5);
     let kick = item(&doc, "/synthetic-hourly-kick.md");
@@ -447,7 +418,6 @@ fn plan_of_the_accounts_own_files_shows_no_difference() {
         json!([{"loop": "loop_syn_5", "name": "Synthetic hourly kick"}])
     );
 
-    // The text form says the same and that nothing changed.
     let output = fake.run(&[
         loops.to_str().unwrap(),
         "--project",
@@ -468,9 +438,6 @@ fn plan_of_the_accounts_own_files_shows_no_difference() {
     assert!(text.ends_with("Nothing was changed.\n"), "{text}");
 }
 
-/// Every file under `dir`, relative and sorted, with its bytes; the fake's
-/// `bin/` (its binaries and its own logs, checked through `calls` and
-/// `loop-writes.log`) is left out.
 fn files_under(dir: &Path) -> Vec<(String, Vec<u8>)> {
     fn walk(root: &Path, dir: &Path, out: &mut Vec<(String, Vec<u8>)>) {
         for entry in fs::read_dir(dir).unwrap() {
@@ -492,15 +459,6 @@ fn files_under(dir: &Path) -> Vec<(String, Vec<u8>)> {
     out
 }
 
-// catches (C5, spec #785's one round-trip test): export's list-to-file
-// mapping and plan's file-to-list comparison disagreeing on any field
-// (trigger, check and its preamble, agent, secrets, thread, priority, body),
-// so a freshly exported account shows differences, refusals or a create;
-// export's binding for an unmarked loop not being one plan accepts; either
-// command calling anything but `loop list` or writing outside `--out`; or a
-// live setting the adapter does not map vanishing on the way, so its loop
-// reads as identical to its file.
-// Linux only: export writes checks, which only Linux can (LC3's R1).
 #[cfg(target_os = "linux")]
 #[test]
 fn export_then_plan_shows_no_difference() {
@@ -508,8 +466,6 @@ fn export_then_plan_shows_no_difference() {
         &fs::read_to_string(Path::new(ROOT).join("tests/fake-room-cli/loops/list.json")).unwrap(),
     )
     .unwrap();
-    // The synthetic account, plus one marked loop carrying a key the adapter
-    // does not map.
     let mut automations = list["automations"].as_array().unwrap().clone();
     let mut budget = automations
         .iter()
@@ -563,7 +519,6 @@ fn export_then_plan_shows_no_difference() {
         unmapped,
         [(&json!("syn-budget"), &json!(["budget_synthetic"]))]
     );
-    // Export wrote only under --out.
     let after_export = files_under(fake.dir());
     assert!(
         after_export
@@ -594,7 +549,6 @@ fn export_then_plan_shows_no_difference() {
         &bindings[0],
     ]);
     assert_eq!(code, 0, "{doc:#}");
-    // Export and plan each made one `loop list`, and nothing else ran.
     assert_eq!(
         fake.calls(),
         vec![
@@ -628,7 +582,6 @@ fn export_then_plan_shows_no_difference() {
             "{file}"
         );
     }
-    // The unmarked loop gains only its marker, through export's binding.
     let kick = item(&doc, "/synthetic-hourly-kick.md");
     assert_eq!(
         kick["commands"],
@@ -638,8 +591,6 @@ fn export_then_plan_shows_no_difference() {
         (&doc["unmanaged"], &doc["orphans"]),
         (&json!([]), &json!([]))
     );
-    // The unmapped key is not identical: the plan names it, and only on that
-    // loop (the contract's `differences` has no field for it).
     for item in items {
         let named = item["notes"]
             .as_array()
@@ -664,9 +615,6 @@ fn export_then_plan_shows_no_difference() {
     assert_eq!(budget_lines.len(), 1, "{text}");
 }
 
-// catches: a difference missed or invented (a reordered secret list, an
-// instant spelled differently), the wrong value on either side, or an
-// update carrying flags for fields that did not change.
 #[test]
 fn plan_shows_each_difference_and_the_update_that_makes_it() {
     let fake = Fake::new();
@@ -744,9 +692,6 @@ fn plan_shows_each_difference_and_the_update_that_makes_it() {
     );
 }
 
-// catches: a change `update` cannot make planned as an update (or as a
-// delete and create), a binding used when the contract forbids it, or an
-// `in` or past `at` file planned at all.
 #[test]
 fn plan_refuses_what_the_adapter_cannot_do() {
     type Case<'a> = (&'a str, &'a str, &'a [&'a str], &'a [(&'a str, &'a str)]);
@@ -821,7 +766,6 @@ fn plan_refuses_what_the_adapter_cannot_do() {
             .collect();
         assert_eq!(codes(item), want, "{name}");
     }
-    // A loop already managed by another file's marker can't be adopted.
     let fake = Fake::new();
     let path = fake.write("syn-nightly.md", "---\nid: \"syn-nightly\"\nname: \"Synthetic nightly note\"\ntrigger: {\"cron\": \"0 5 * * *\", \"timezone\": \"America/Los_Angeles\"}\nthread: \"new\"\nsecrets: \"all\"\n---\nSynthetic: post a short nightly note.");
     let (_, doc) = fake.json(&[
@@ -835,7 +779,6 @@ fn plan_refuses_what_the_adapter_cannot_do() {
         doc["items"][0]["refusals"][0]["message"],
         "the binding to Cloudroom loop loop_syn_2 cannot be used: it already carries a marker"
     );
-    // Loops left alone are reported: unmanaged, and managed with no file.
     let (code, doc) = fake.json(&[path.to_str().unwrap(), "--project", PROJECT]);
     assert_eq!((code, &doc["items"][0]["action"]), (0, &json!("none")));
     assert_eq!(
@@ -848,8 +791,6 @@ fn plan_refuses_what_the_adapter_cannot_do() {
     );
 }
 
-// catches: two loops with one marker resolved by picking one, so plan (and
-// apply after it) would change a loop the file may not mean.
 #[test]
 fn plan_refuses_a_marker_two_loops_carry() {
     let row = |id: &str| json!({"id": id, "project_id": PROJECT, "name": "Synthetic twin [wizloop:twin]", "cron": "0 9 * * *", "timezone": "UTC", "run_at": null, "webhook": false, "new_thread": true, "script": null, "agent": null, "secrets": [], "priority": 3, "prompt": "Synthetic.", "enabled": true});
@@ -866,9 +807,6 @@ fn plan_refuses_a_marker_two_loops_carry() {
     assert_eq!(doc["items"][0]["loop"], Value::Null);
 }
 
-// catches: plan going on after a failed read (planning against no live
-// loops would print creates for loops that exist), or reading room-cli
-// when a path or a binding is already wrong.
 #[test]
 fn plan_stops_before_planning_when_a_read_fails() {
     let fake = Fake::answering(
@@ -908,8 +846,6 @@ fn plan_stops_before_planning_when_a_read_fails() {
     assert_eq!(fake.calls(), Vec::<Value>::new(), "no room-cli call");
 }
 
-// catches: a check refused for its timeout no longer counted as using its
-// params, so a correct param is wrongly refused as unused beside it.
 #[test]
 fn a_refused_checks_params_still_count_as_used() {
     let fake = Fake::new();
@@ -923,9 +859,6 @@ fn a_refused_checks_params_still_count_as_used() {
     );
 }
 
-// catches (LC3's ruling on #791): a live loop carrying a setting the adapter
-// does not map shown as identical to its file, so the setting is lost from
-// view (and an apply would never mention it).
 #[test]
 fn a_live_setting_the_adapter_does_not_map_is_reported() {
     let row = json!({"id": "loop_syn_8", "project_id": PROJECT, "name": "Synthetic delivery [wizloop:syn-delivery]", "cron": null, "timezone": null, "run_at": null, "webhook": true, "new_thread": true, "script": null, "agent": null, "secrets": [], "priority": 4, "prompt": "Synthetic: route each request that arrived to its owner.", "enabled": true, "budget_synthetic": {"max_runs": 3}});
@@ -961,10 +894,6 @@ fn a_live_setting_the_adapter_does_not_map_is_reported() {
     );
 }
 
-// catches (#980 R1): untrusted text from a loop file, a path or the live list
-// reaching the terminal with its control bytes, so a previewed file could
-// clear the screen and forge the plan the owner reads; or the escaping
-// changing what JSON says or what the printed command passes to room-cli.
 #[test]
 fn human_output_escapes_terminal_controls_and_json_keeps_them() {
     const ESC: char = '\u{1b}';
@@ -1001,7 +930,6 @@ fn human_output_escapes_terminal_controls_and_json_keeps_them() {
         text.contains("forged\nsecond"),
         "a preview keeps its line breaks: {text:?}"
     );
-    // The printed update, run by sh, passes exactly the JSON's argv.
     let (_, doc) = fake.json(&args);
     let nightly_item = item(&doc, "/syn-nightly.md");
     assert_eq!(
@@ -1015,9 +943,6 @@ fn human_output_escapes_terminal_controls_and_json_keeps_them() {
     assert!(doc["unmanaged"][0]["name"].as_str().unwrap().contains(ESC));
     let start = text.find("  room-cli 'loop' 'update'").unwrap() + "  room-cli ".len();
     let command = shell_command(&text[start..]);
-    // The shell inherits nothing: its PATH holds only a recorder named
-    // room-cli, so no line of the script can reach an installed CLI, and
-    // any command it runs besides the shell's own builtins is caught.
     let shell = fake.dir().join("shell");
     super::dirs::private_dir_all(shell.join("bin")).unwrap();
     let recorder = shell.join("bin/room-cli");
@@ -1062,7 +987,6 @@ fn human_output_escapes_terminal_controls_and_json_keeps_them() {
         nightly_item["commands"][0]["argv"],
         "{command:?}"
     );
-    // A diagnostic naming an untrusted path is escaped too.
     let missing = fake.dir().join(format!("gone{ESC}[2J.md"));
     let output = fake.run(&[missing.to_str().unwrap(), "--project", PROJECT]);
     assert_eq!(output.status.code(), Some(1));
@@ -1071,8 +995,6 @@ fn human_output_escapes_terminal_controls_and_json_keeps_them() {
         stderr.contains("gone") && !stderr.contains(ESC),
         "{stderr:?}"
     );
-    // So is the shared usage line (LC1's parser), which echoes the option
-    // it refuses; its JSON message keeps the original.
     let option = format!("--kick{ESC}[2J");
     let output = fake.run(&[&option, "--project", PROJECT, "--json"]);
     assert_eq!(output.status.code(), Some(2));
@@ -1090,10 +1012,6 @@ fn human_output_escapes_terminal_controls_and_json_keeps_them() {
     );
 }
 
-/// The one shell command `text` starts with: up to its first line break
-/// outside quotes, so a quoted line break stays in it and the next printed
-/// line never does. Knows POSIX single and double quotes, backslashes, and
-/// single quotes inside a double-quoted `$(...)`.
 fn shell_command(text: &str) -> &str {
     let (mut single, mut double, mut inner, mut escaped) = (false, false, false, false);
     for (i, c) in text.char_indices() {
@@ -1113,8 +1031,6 @@ fn shell_command(text: &str) -> &str {
     text
 }
 
-// catches (#980 R2): a delay ending in a multibyte character crashing plan,
-// so no report and no plan of the other files, instead of `bad-in`.
 #[test]
 fn a_multibyte_delay_is_refused_and_the_other_files_still_plan() {
     let fake = Fake::new();
@@ -1132,4 +1048,72 @@ fn a_multibyte_delay_is_refused_and_the_other_files_still_plan() {
         vec![("bad-in".into(), "trigger.in".into())]
     );
     assert_eq!(doc["items"][1]["action"], "create");
+}
+
+#[test]
+fn integer_params_beyond_i64_and_u64_keep_their_digits_through_plan_and_export() {
+    let check =
+        "#!/bin/sh\necho \"$WIZLOOP_PARAM_ACCOUNT $WIZLOOP_PARAM_LOW $WIZLOOP_PARAM_ZERO\"\n";
+    let loop_file = "---\nid: \"big\"\nname: \"Synthetic big\"\ntrigger: {\"cron\": \"0 9 * * *\", \"timezone\": \"UTC\"}\ncheck: {\"run\": \"big/check\", \"timeout\": 60}\nthread: \"new\"\nparams: {\"account\": 18446744073709551617, \"low\": -9223372036854775809, \"zero\": -0}\n---\nInspect account {{account}} below {{low}} from {{zero}}.\n";
+    let prompt = "Inspect account 18446744073709551617 below -9223372036854775809 from -0.\n";
+    let script = "#!/bin/sh\n# wizloop: params from the loop file, as data\nexport WIZLOOP_PARAM_ACCOUNT=18446744073709551617\nexport WIZLOOP_PARAM_LOW=-9223372036854775809\nexport WIZLOOP_PARAM_ZERO=-0\n# wizloop: the check\necho \"$WIZLOOP_PARAM_ACCOUNT $WIZLOOP_PARAM_LOW $WIZLOOP_PARAM_ZERO\"\n";
+    let fake = Fake::new();
+    fake.write("big/check", check);
+    let path = fake.write("big.md", loop_file);
+    let (code, doc) = fake.json(&[path.to_str().unwrap(), "--project", PROJECT]);
+    assert_eq!(code, 0, "{doc:#}");
+    assert_eq!(
+        doc["items"][0]["commands"][0]["files"],
+        json!({"@prompt": prompt, "@script": script})
+    );
+
+    let live = json!({
+        "id": "loop_syn_big", "project_id": PROJECT, "session_id": "thr_syn_0001",
+        "name": "Synthetic big [wizloop:big]", "cron": "0 9 * * *", "timezone": "UTC",
+        "run_at": null, "webhook": false, "new_thread": true, "script": script,
+        "agent": null, "secrets": [], "priority": 3, "prompt": prompt, "enabled": true,
+        "last_error": null, "last_run_at": null, "next_run_at": null, "runs": 0
+    });
+    let fake = Fake::answering(json!({
+        "argv": ["loop", "list", "--json"],
+        "stdout": json!({"automations": [live]}).to_string(),
+    }));
+    super::dirs::private_dir_all(fake.dir().join("exported")).unwrap();
+    let export = fake.0.run(&[
+        "loop",
+        "export",
+        "--project",
+        PROJECT,
+        "--out",
+        "exported",
+        "--json",
+    ]);
+    let report: Value = serde_json::from_slice(&export.stdout).unwrap();
+    assert_eq!(export.status.code(), Some(0), "{report:#}");
+    assert_eq!(report["loops"][0]["result"], "written", "{report:#}");
+    let exported = fs::read_to_string(fake.dir().join("exported/big.md")).unwrap();
+    assert!(
+        exported.contains(
+            "params: {\"account\": 18446744073709551617, \"low\": -9223372036854775809, \"zero\": -0}\n"
+        ),
+        "{exported}"
+    );
+    assert_eq!(
+        fs::read_to_string(fake.dir().join("exported/big/check")).unwrap(),
+        check
+    );
+    let (code, doc) = fake.json(&[
+        fake.dir().join("exported/big.md").to_str().unwrap(),
+        "--project",
+        PROJECT,
+    ]);
+    assert_eq!(code, 0, "{doc:#}");
+    assert_eq!(
+        (
+            &doc["items"][0]["differences"],
+            &doc["items"][0]["commands"]
+        ),
+        (&json!([]), &json!([])),
+        "{doc:#}"
+    );
 }

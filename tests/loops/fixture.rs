@@ -1,6 +1,3 @@
-//! LP5's shared fixture: a synthetic private checkout and state, with
-//! explicit trusted inputs only. No tests here, so a target that includes it
-//! (the service's `l6-switches`) runs only its own tests.
 use openwiz_cli::state::loops::{Context, Trust};
 use serde_json::{Value, json};
 use std::{

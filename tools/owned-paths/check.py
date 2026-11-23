@@ -1,30 +1,12 @@
 #!/usr/bin/env python3
-"""Fail a pull request that edits files outside its ticket's owned paths (#1418).
-
-  check.py --pr N [--repo OWNER/NAME]           a pull request's changed files, as CI checks them
-  check.py --ticket N [--base REF] [--repo ...] this branch's changes (committed and not) against REF
-
-A file is covered by its linked tickets' `## Owned paths` bullets for this repository
-(shared ones too), by the fleet's standing supporting-edit rule in docs/agents/fleet.md,
-or by an `F4 supporting edit granted` comment from a record author (docs/agents/fleet.md's
-`## GitHub identity` table) on the ticket or the pull request that names it in backticks.
-Owned paths are parsed as build-ticket's `ticket.py` parses them. A path ending in `/`, or
-naming a folder, covers what is under it; `*` matches within one folder and `**` across.
-An owned path followed by "and its tests" or ", plus its tests" also covers its tests (#1639).
-
-Tickets are linked by GitHub's closing references and by `Closes`/`Fixes`/`Resolves`/
-`Part of` followed by `#N`, `owner/name#N` or the issue's URL; only this repository's
-issues are checked. No linked ticket, or none with an `## Owned paths` section: a note.
-
-Reads GitHub only through `gh api graphql`, and fleet.md from the base, never the head.
-Exit 0 every file covered (or nothing to check), 1 a file outside (named, with the ticket),
-2 an input it cannot read.
-"""
 import json
 import os
 import re
 import subprocess
 import sys
+
+USAGE = """  check.py --pr N [--repo OWNER/NAME]           a pull request's changed files, as CI checks them
+  check.py --ticket N [--base REF] [--repo ...] this branch's changes (committed and not) against REF"""
 
 REPO_NAME = re.compile(r'[A-Za-z0-9-]+/[A-Za-z0-9_.-]+')
 LOGIN = re.compile(r'[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})(?:\[bot\])?')
@@ -33,9 +15,8 @@ LINK = re.compile(r'\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?|part of)\b:?\s+'
                   r'(?:https://github\.com/([A-Za-z0-9-]+/[A-Za-z0-9_.-]+)/issues/(\d+)\b'
                   r'|([A-Za-z0-9-]+/[A-Za-z0-9_.-]+)?#(\d+)\b)', re.I)
 FLEET = 'docs/agents/fleet.md'
-# "and its tests" ends the bullet, or is followed only by its repository and annotation.
 ITS_TESTS = re.compile(r',?\s+(?:and|plus)\s+its\s+tests'
-                       r'(?:\s+in\s+`[A-Za-z0-9-]+/[A-Za-z0-9_.-]+`)?\s*(?:\(.*)?$', re.I)
+                       r'(?:\s+in\s+`[A-Za-z0-9-]+/[A-Za-z0-9_.-]+`)?\s*(\(.*)?$', re.I)
 TEST_NAME = re.compile(r'test_(.+)\.py|(.+)_test\.py|(.+)\.test\.(?:ts|tsx|mjs)|(.+)_tests?\.rs')
 
 PR_QUERY = '''query($owner: String!, $name: String!, $number: Int!, $files: String, $comments: String) {
@@ -79,8 +60,6 @@ def graphql(query, what, **variables):
         raise Unreadable(f'cannot read {what}: unexpected shape')
 
 
-# --- parsing: build-ticket's ticket.py rules (section, owned_bullets, covers) ---
-
 def section(text, heading):
     lines, inside = [], False
     for line in text.splitlines():
@@ -101,12 +80,16 @@ def is_path(token):
             and '..' not in token.split('/') and '<' not in token)
 
 
-def owned_paths(body, repo):
-    """(paths, unparsed bullets) of `## Owned paths` bound to repo, as ticket.py's owned_bullets.
+def its_tests(m):
+    rest, depth = (m.group(1) or '') if m else '', 0
+    for i, c in enumerate(rest):
+        depth += (c == '(') - (c == ')')
+        if depth == 0:
+            return m if not rest[i + 1:].strip() else None
+    return m if not rest else None
 
-    Each path is (path, with its tests): its backticks are followed by "and its tests" or
-    ", plus its tests", or that wording ends the backticked text itself.
-    """
+
+def owned_paths(body, repo):
     paths, unparsed = [], []
     for line in section(body, 'owned paths'):
         if not line.startswith('- '):
@@ -117,8 +100,8 @@ def owned_paths(body, repo):
                  if REPO_NAME.fullmatch(m.group(1)) and text[:m.start()].endswith('in ')}
         found = []
         for m in tokens:
-            token, tail = m.group(1), ITS_TESTS.match(text, m.end())
-            inner = re.search(ITS_TESTS.pattern, token, re.I)
+            token, tail = m.group(1), its_tests(ITS_TESTS.match(text, m.end()))
+            inner = its_tests(ITS_TESTS.search(token))
             if inner:
                 token, tail = token[:inner.start()], inner
             if token.lower() not in repos and is_path(token):
@@ -145,15 +128,6 @@ def covers(rule, path):
 
 
 def tests_of(rule, path):
-    """Is path one of the tests beside owned path `rule`, for "`rule` and its tests" (#1639)?
-
-    X's folder D, X's stem S (its name before the first dot) and D's own name F. Covered:
-    a test file directly in D (test_*.py, *_test.py, *.test.ts, *.test.tsx, *.test.mjs,
-    *_test.rs, *_tests.rs) whose name, without that test marker, has S or F as a word; any
-    file under D/tests/ or D/test/ whose path below that folder, without a file's test marker,
-    has S as a word; and D/S/tests.rs, a Rust module's tests. A word is a part split at `_`,
-    `.`, `-` and `/`, never `test` or `tests` itself. A glob names no one stem: no tests.
-    """
     rule = rule[2:] if rule.startswith('./') else rule
     if any(c in rule for c in '*?['):
         return False
@@ -171,10 +145,6 @@ def tests_of(rule, path):
 
 
 def naming(path, marked=False):
-    """The words a path names X by: its file's test marker and extension dropped, never `test(s)`.
-
-    marked: the file must carry a test marker (a file directly beside X).
-    """
     folders, _, name = path.rpartition('/')
     m = TEST_NAME.fullmatch(name)
     if marked and not m:
@@ -182,8 +152,6 @@ def naming(path, marked=False):
     name = next(g for g in m.groups() if g) if m else name.rpartition('.')[0] or name
     return set(re.split(r'[_.\-/]', f'{folders}/{name}')) - {'', 'test', 'tests'}
 
-
-# --- records: who may grant, what the standing rule allows, what each grant names ---
 
 def record_authors(fleet):
     rows = [l for l in section(fleet, 'github identity') if re.match(r'\|\s*Record authors\s*\|', l)]
@@ -196,7 +164,6 @@ def record_authors(fleet):
 
 
 def standing(fleet, tickets):
-    """The standing rule's numbered kinds' backticked paths, `<ticket>` read as each ticket."""
     out = []
     for line in section(fleet, 'supporting edits'):
         if re.match(r'\d+\. ', line):
@@ -215,11 +182,6 @@ def author(comment):
 
 
 def grant_paths(body, repo):
-    """Backticked paths after the grant marker, if the grant names no repository or this one.
-
-    A backticked `owner/name` after `in ` is a repository, as in ticket.py, unless it looks
-    like a file (a dot in its last part) under another owner: `in `ci/lanes.tsv`` is a path.
-    """
     m = GRANT.search(body)
     if not m:
         return []
@@ -236,8 +198,6 @@ def grant_paths(body, repo):
     return paths if not repos or repo in repos else []
 
 
-# --- links and verdict ---
-
 def linked(repo, body, closing):
     mine, other = [], []
     refs = [(n['repository']['nameWithOwner'], n['number']) for n in closing]
@@ -250,7 +210,6 @@ def linked(repo, body, closing):
 
 
 def judge(repo, files, tickets, other_refs, fleet, pr_comments, pr_label, shown):
-    """tickets: {N: {'body', 'comments'}} of this repository. Prints the verdict, returns the exit."""
     for r, n in other_refs:
         print(f'owned-paths: note: {r}#{n} is not a ticket in {shown}: not checked here')
     if not tickets:
@@ -295,8 +254,6 @@ def judge(repo, files, tickets, other_refs, fleet, pr_comments, pr_label, shown)
     print(f'owned-paths: ok: {len(files)} file(s) inside the owned paths and grants of ticket {names}')
     return 0
 
-
-# --- reads ---
 
 def read_pr(repo, n):
     owner, name = repo.split('/')
@@ -345,7 +302,6 @@ def read_fleet_remote(repo, base):
 
 
 def changed(base):
-    """This branch's changed paths against base, committed and not, both sides of a rename."""
     run(['git', 'rev-parse', '--verify', '--quiet', base + '^{commit}'], f'base {base}')
     paths = set()
     fields = run(['git', 'diff', '--name-status', '-z', '--find-renames', f'{base}...HEAD'], 'the diff').split('\0')
@@ -371,7 +327,7 @@ def main(argv):
         if argv[i] in ('--pr', '--ticket', '--repo', '--base') and i + 1 < len(argv) and argv[i] not in flags:
             flags[argv[i]], i = argv[i + 1], i + 2
         else:
-            print(__doc__.split('\n\n')[1], file=sys.stderr)
+            print(USAGE, file=sys.stderr)
             return 2
     shown = flags.get('--repo') or os.environ.get('GITHUB_REPOSITORY') or 'openwizdev/OpenWiz'
     repo = shown.lower()

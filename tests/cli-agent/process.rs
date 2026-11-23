@@ -1,4 +1,3 @@
-//! Synthetic source/store boundary fixtures for CP2. No external account access.
 use super::{ROOT, Sandbox, fixture_cli, schema};
 use serde_json::{Value, json};
 use std::{
@@ -180,7 +179,10 @@ fn cp2_inventory_success_partial_and_failure_keep_their_meaning() {
     }
 }
 
-#[allow(dead_code)]
+#[allow(
+    dead_code,
+    reason = "shared with other test targets; this one uses only part of it"
+)]
 #[path = "../fleet/b5_fake.rs"]
 mod fleet_fixture;
 #[path = "../fleet/schema.rs"]
@@ -219,7 +221,6 @@ fn cp2_due_candidates_and_tick_reports_follow_the_recorded_world() {
     );
     assert_eq!(doc["actions"].as_array().unwrap().len(), 1);
     assert_eq!(doc["actions"][0]["rule"], "frontier");
-    // The plan reads only: the executing tick that acted on it was retired (#800).
     assert!(w.writes().is_empty());
 }
 

@@ -1,10 +1,4 @@
 #!/bin/sh
-# Test-only installed `openwiz` for the install journey (#1109, joined in #636). Synthetic only.
-# `init` runs the installed runtime/setup/init.py beside this program, as the
-# real CLI does (crates/cli/src/init.rs); `fleet` forms go to the onboarding's
-# recording fake, and the reads setup makes go to the connections fake. The
-# journey never runs the engine or its tick (#636, J87 Q1): such a call is
-# logged to $JOURNEY_ENGINE_LOG and fails.
 here=$(cd "$(dirname "$0")" && pwd)
 case "$1" in
   init) shift; exec /usr/bin/python3 -I "$here/runtime/setup/init.py" "$@" ;;

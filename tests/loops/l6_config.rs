@@ -1,4 +1,3 @@
-//! Operator comes from install config, not a definition or HTTP caller.
 use super::fixture::{Fixture, git};
 use serde_json::{Value, json};
 use std::fs;
@@ -206,8 +205,6 @@ fn installed_origin_requires_one_exact_existing_github_remote() {
         !clean.contains("foreign.git"),
         "fixture cleanup must remove every added origin url"
     );
-    // A literal GitHub origin whose real fetch URL an insteadOf rewrite sends
-    // to another host still reads as GitHub to a guard that skips [url] sections.
     for rewrite in [
         "[url \"https://foreign.example.invalid/other/\"]\n\tinsteadOf = https://github.com/\n",
         "[URL \"https://foreign.example.invalid/other/\"]\n\tpushInsteadOf = https://github.com/\n",

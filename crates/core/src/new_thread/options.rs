@@ -8,6 +8,12 @@ use crate::source::SourceError;
 
 use super::{OPTIONS_SCHEMA_ID, Settings};
 
+pub const J255_CLAUDE_MODEL: &str = "claude-opus-5-5";
+pub const J255_CODEX_MODEL: &str = "gpt-6.2-sol";
+pub const J255_EFFORT: &str = "medium";
+
+const LOCAL_LABEL: &str = "Installed local harnesses with OpenWiz's current choices";
+
 pub const SAVED_COPY_LABEL: &str = "as reported by CloudRoom; it may answer from a saved copy";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -106,6 +112,55 @@ pub struct CloudOptions {
     pub state: OptionsState,
     pub harnesses: Vec<HarnessOption>,
     pub unavailable: Vec<UnavailableHarness>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source: Option<OptionsSource>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OptionsSource {
+    Local,
+}
+
+pub fn local_options(
+    claude_installed: bool,
+    codex_installed: bool,
+    read_at: Timestamp,
+) -> CloudOptions {
+    let harnesses: Vec<_> = [
+        (claude_installed, "claude-code", J255_CLAUDE_MODEL),
+        (codex_installed, "codex", J255_CODEX_MODEL),
+    ]
+    .into_iter()
+    .filter(|(installed, _, _)| *installed)
+    .map(|(_, provider, model)| HarnessOption {
+        harness: provider.to_owned(),
+        provider: provider.to_owned(),
+        models: vec![ModelOption {
+            model: model.to_owned(),
+            efforts: vec![J255_EFFORT.to_owned()],
+        }],
+        attachments: None,
+        steer: None,
+    })
+    .collect();
+    let state = if harnesses.is_empty() {
+        OptionsState::NoOptions {
+            reason: NoOptionsReason::HarnessesNotReported,
+            text: "neither claude nor codex was found on PATH".to_owned(),
+        }
+    } else {
+        OptionsState::Offered
+    };
+    CloudOptions {
+        schema: OPTIONS_SCHEMA_ID.to_owned(),
+        read_at,
+        label: LOCAL_LABEL.to_owned(),
+        state,
+        harnesses,
+        unavailable: vec![],
+        source: Some(OptionsSource::Local),
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -196,6 +251,7 @@ pub fn cloud_options(
         state: OptionsState::NoOptions { reason, text },
         harnesses: vec![],
         unavailable: vec![],
+        source: None,
     };
     let catalogue = match read {
         Ok(catalogue) => catalogue,
@@ -308,5 +364,6 @@ pub fn cloud_options(
         state: OptionsState::Offered,
         harnesses,
         unavailable,
+        source: None,
     }
 }

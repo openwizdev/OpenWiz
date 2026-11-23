@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
-"""A synthetic `gh` for the local driver's tests: `gh repo clone <owner>/<name> <folder>` copies the folder
-FAKE_REPOS/<owner>/<name>. Any other call, or a repository it doesn't have, fails as gh does, on stderr, with a synthetic opaque value."""
 import os, shutil, sys
 
-OPAQUE = 'opaque-fixture-value-7Kq2Zr9w'  # a synthetic value the driver must never repeat in its JSON
+OPAQUE = 'opaque-fixture-value-7Kq2Zr9w'
 
 args = sys.argv[1:]
 if len(args) != 4 or args[:2] != ['repo', 'clone']:

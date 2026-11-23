@@ -1,11 +1,3 @@
-//! #776 (TA1): the terminal app is removed. Neither `openwiz ui` nor a bare
-//! `openwiz` in a terminal may start anything: a planted `openwiz-terminal`
-//! beside the program must never run. In a terminal, a bare `openwiz` prints
-//! the help; `openwiz ui` says the app was removed. Piped, a bare `openwiz`
-//! keeps its usage error.
-//!
-//! Catches: a leftover launcher that still runs the sibling, or a bare
-//! `openwiz` in a terminal that fails or waits instead of helping.
 use super::{Sandbox, fixture_cli};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -15,8 +7,6 @@ use std::{fs, os::unix::process::ExitStatusExt};
 const REMOVED: &str = "openwiz: the terminal app was removed in OpenWiz 0.0.16; \
                        nothing was opened (see openwiz --help)\n";
 
-/// The fixture CLI copied beside a planted `openwiz-terminal` that leaves
-/// `ran` behind if anything starts it.
 fn install(sandbox: &Sandbox) -> PathBuf {
     let dir = sandbox.0.join("install");
     super::dirs::private_dir(&dir).unwrap();
@@ -38,9 +28,6 @@ fn env(command: &mut Command, sandbox: &Sandbox) {
         .current_dir(&sandbox.0);
 }
 
-/// Runs `program args` with a pseudo-terminal on stdin, stdout and stderr
-/// (Python's `pty`, as the CI image has it), and returns what it wrote
-/// there. A run still going after 10 s is killed: it waited.
 fn in_terminal(sandbox: &Sandbox, program: &Path, args: &[&str]) -> Output {
     const DRIVE: &str = "import os, signal, subprocess, sys\n\
         signal.alarm(10)\n\

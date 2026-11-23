@@ -1,6 +1,3 @@
-//! CK1 source proofs for #539. Synthetic fixtures only; no live behavior claim.
-//! Creation/update times are not a report that an agent started running.
-
 use std::fs;
 use std::path::Path;
 use std::time::Instant;
@@ -87,9 +84,6 @@ fn c10_unreported_start_stays_unknown_in_list_and_show_despite_creation_and_upda
 
 #[test]
 fn c10_explicit_start_time_is_preserved_and_unusable_start_times_stay_unknown() {
-    // synthetic_assumptions: startedAt is a hypothetical explicit running-start
-    // report, in Unix milliseconds. The live discovery did not observe it.
-    // createdAt and updatedAt are deliberately different and cannot substitute.
     use serde_json::json;
     let normal = Path::new(env!("CARGO_MANIFEST_DIR")).join("fixtures/room-cli-0.43.1/normal");
     let list: Value =
@@ -179,11 +173,6 @@ fn c10_explicit_start_time_is_preserved_and_unusable_start_times_stay_unknown() 
 
 #[test]
 fn c10_long_inventory_keeps_a_start_only_its_detail_read_reports() {
-    // R1 on PR #1459: `thread list` omits startedAt, `thread show` reports one.
-    // Short inventory never reads the detail, so its start stays unknown; long
-    // inventory reads that detail and must show the same start as `show`.
-    // synthetic_assumptions: startedAt is a hypothetical explicit running-start
-    // report in Unix milliseconds; the live discovery did not observe it.
     use openwiz_core::ops::Detail;
     use serde_json::json;
     let normal = Path::new(env!("CARGO_MANIFEST_DIR")).join("fixtures/room-cli-0.43.1/normal");

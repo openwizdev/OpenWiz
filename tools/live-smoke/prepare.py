@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Bind the combined run sheet to approved private inputs, offline."""
 import argparse
 import contextlib
 import json
@@ -10,11 +9,11 @@ import runpy
 import stat
 import tempfile
 
+DESCRIPTION = """Bind the combined run sheet to approved private inputs, offline."""
+
 HERE = Path(__file__).resolve().parent
 smoke = runpy.run_path(str(HERE / 'smoke.py'))
 TEMPLATE = HERE / 'combined.template.json'
-# Credential shapes that never belong in inputs or a kit: GitHub tokens and
-# PEM private keys. Tokens reach steps only through the process environment.
 CREDENTIAL = re.compile(r'gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----')
 
 
@@ -35,7 +34,6 @@ def bind(value, inputs):
 
 
 def names(value):
-    """Every input name a run sheet binds."""
     if isinstance(value, str) and value.startswith('@'):
         return {value[1:]}
     if isinstance(value, list):
@@ -62,14 +60,6 @@ def in_work_tree(path):
 
 
 def resolve_private(path):
-    """The one resolver for every guarded read and write (#777 R1): the path as
-    the OS resolves it, never lexically normalized first, so `alias/..` follows
-    the link before `..`. For a path that does not exist yet, its deepest
-    existing ancestor is resolved and any `..` after it refuses (`unsafe_path`).
-    Every existing ancestor, and the result, must be outside a Git work tree
-    (`inside_checkout`): a private file there could be committed. A leaf
-    symlink is refused separately, by the owner-only read and the exclusive
-    write. Returns the resolved path, which is the one read or written."""
     text = os.fspath(path)
     if not os.path.isabs(text):
         raise Refused('unsafe_path')
@@ -90,7 +80,6 @@ def resolve_private(path):
 
 
 def owner_only(path, reason):
-    """An absolute regular file, not a link, owned by this user, mode 0600 or tighter."""
     if not path.is_absolute():
         raise Refused(reason)
     info = path.lstat()
@@ -99,7 +88,6 @@ def owner_only(path, reason):
 
 
 def private_output(path):
-    """A new private file's resolved path, outside every work tree."""
     if not path.is_absolute():
         raise Refused('inside_checkout')
     return resolve_private(path)
@@ -119,8 +107,6 @@ def read_private(path, reason):
 
 @contextlib.contextmanager
 def write_exclusive(out, text):
-    """Refuse overwrite, including a symlink: a private file changes only by
-    explicit preparation of a new one, and gets a different reviewed digest."""
     with tempfile.TemporaryDirectory(dir=out.parent) as private:
         staged = Path(private) / out.name
         fd = os.open(staged, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
@@ -129,7 +115,7 @@ def write_exclusive(out, text):
             stream.flush()
             os.fsync(stream.fileno())
         yield staged
-        os.link(staged, out)  # exclusive: never follows/replaces output
+        os.link(staged, out)
 
 
 def prepare(inputs_path, out):
@@ -151,7 +137,7 @@ def prepare(inputs_path, out):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument('--inputs', required=True, type=Path, help='absolute owner-only inputs file (inputs.py)')
     parser.add_argument('--out', required=True, type=Path, help='absolute new kit path, outside any checkout')
     args = parser.parse_args()
@@ -163,7 +149,6 @@ def main():
     except smoke['Refusal'] as error:
         print(json.dumps({'prepared': False, 'reason': str(error)}))
     except (OSError, ValueError, KeyError, TypeError):
-        # Never interpolate an exception: it may carry a private path or value.
         print(json.dumps({'prepared': False, 'reason': 'invalid_input'}))
     return 2
 

@@ -1,0 +1,7 @@
+# Review R1 and R2 proofs at e1006371 (before their fixes):
+FAIL: test_deeply_nested_or_truncated_provider_answers_keep_the_fixed_code (__main__.Access.test_deeply_nested_or_truncated_provider_answers_keep_the_fixed_code) (case='short')
+AssertionError: 'access_cloudflare_verified' != 'access_unavailable'
+FAIL: test_pruning_the_checked_operation_never_hands_its_observation_to_an_older_check (__main__.Access.test_pruning_the_checked_operation_never_hands_its_observation_to_an_older_check) (pruner='setup_preview')
+AssertionError: {'at': <ms>, 'code': 'access_cloudflare_verified', 'revision': 0} is not None : the pruned later check's result is not the kept operation's
+Ran 23 tests
+FAILED (failures=2)

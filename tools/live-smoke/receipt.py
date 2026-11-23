@@ -1,22 +1,4 @@
 #!/usr/bin/env python3
-"""Candidate-bound smoke and risk receipts from a runner checkpoint (#1844, RL3).
-
-`produce` reads the approved kit, the runner's owner-only checkpoint and one
-`openwiz.release-candidate.v1` document, and prints the contract's `smoke`
-and risk gate receipts (contracts/release-candidate.v1.md, "Gate receipts and
-live interface"), with each receipt's complete inputs. `check` is the live-gate
-reading the release command applies: only a live, finished, passing receipt
-bound to this exact candidate, artifacts, approved kit and scope passes.
-
-The kit's `release` section declares, inside the approved kit digest:
-`scope` (throwaway targets, write-step counts per claim, the App permissions
-the existing grant already has, a spending cap in cents), the candidate
-`products` the kit's pinned programs are, `coverage` (the bounded steps that
-exercise each live included version's promise end to end; every other
-included promise is a named not-live gap), `risk` (the steps that
-check send, new, App permissions and spending) and known `gaps`. Nothing here
-grants, widens or runs anything: it reads files and hashes. Standard library only.
-"""
 import argparse
 import hashlib
 import importlib.util
@@ -27,6 +9,8 @@ import re
 import stat
 import sys
 
+DESCRIPTION = """Candidate-bound smoke and risk receipts from a runner checkpoint (#1844, RL3)."""
+
 _SPEC = importlib.util.spec_from_file_location(
     'live_smoke_runner', Path(__file__).resolve().with_name('smoke.py'))
 smoke = importlib.util.module_from_spec(_SPEC)
@@ -34,23 +18,16 @@ _SPEC.loader.exec_module(smoke)
 
 SCHEMA = 'openwiz.live-smoke-receipts.v1'
 PRESERVE = 'openwiz.live-smoke-evidence.v1'
-# The run's restriction (#828): the runner refuses every `fleet tick` and
-# `engine` step, so no kit step can run the retired engine's tick. A receipt
-# from the old expected-plan runner (`expect-plan`) is stale.
 RESTRICTION = 'no-fleet-tick'
 RISKS = ('send', 'new', 'app_permissions', 'spending')
 RECEIPT = {'candidate_sha256', 'inputs_sha256', 'artifacts_sha256', 'kit_sha256', 'evidence_class',
            'status', 'started_at', 'finished_at', 'evidence', 'coverage', 'gaps'}
 GATES = ('smoke',) + RISKS
-# APP-1 (a), Jake, 2026-11-15: one recorded waiver may stand in for one risk's
-# live receipt of one release. tools/release/candidate.py resolves the private
-# record (unedited, unrevoked) and passes it here; this checks its scope again.
 WAIVABLE = {('app_permissions', '0.0.12')}
 WAIVER_KEYS = {'pointer', 'record_sha256', 'decided_at', 'risk', 'version'}
 
 
 def _waived(waiver, body):
-    """The one risk a resolved, in-scope waiver covers for this candidate."""
     if waiver is None:
         return None
     if (type(waiver) is not dict or set(waiver) != WAIVER_KEYS
@@ -60,20 +37,14 @@ def _waived(waiver, body):
             or type(waiver['record_sha256']) is not str or not re.fullmatch('[0-9a-f]{64}', waiver['record_sha256'])):
         raise Refusal('waiver_out_of_scope')
     return waiver['risk']
-# The kit claim whose steps can check each risk. This kit has no spending
-# check, so a candidate that changes spending refuses as `risk_missing`.
 RISK_CLAIM = {'send': 'send', 'new': 'new', 'app_permissions': 'app', 'spending': None}
 PRODUCTS = ('cli', 'server', 'service', 'web', 'runtime')
 TARGETS = ('aarch64-apple-darwin', 'x86_64-apple-darwin', 'x86_64-unknown-linux-gnu')
 PC_GAP = 'Agent-run PC smoke only: no Mac, real-device, real-radio or WebKit observation.'
 NOT_LIVE_GAP = 'Fixture or dry-run evidence: diagnostic only, never a live result.'
-# #18: only a version whose approved notes section carries a live-checked line
-# needs live coverage; every other included promise is one named not-live gap.
 LIVE_LINE = 'Live-checked'
 NOT_LIVE = 'Not live-checked in this release: {version} {promise}'
 SECTION = re.compile(r'## (0\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)) · ')
-# #915 R1: the approved notes are LF-only. Every other line or paragraph break
-# str.splitlines() honours could move a section boundary, so it refuses.
 OTHER_BREAKS = re.compile('[\r\x0b\x0c\x1c\x1d\x1e\x85  ]')
 RECORD = re.compile(r'(https://github\.com/jparker2006/ClosedWiz/(issues|pull)/[1-9][0-9]*'
                     r'#issuecomment-[1-9][0-9]*|[a-z][a-z0-9-]{0,31}:[A-Za-z0-9._-]{1,128})')
@@ -84,7 +55,6 @@ class Refusal(Exception):
 
 
 def sha(value):
-    """The contract's canonical JSON digest."""
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(',', ':'),
                                      ensure_ascii=False).encode('utf-8')).hexdigest()
 
@@ -95,7 +65,6 @@ def _names(value, empty=False):
 
 
 def release_section(kit):
-    """The kit's own declared release scope, coverage and risk steps."""
     section = kit.get('release')
     if type(section) is not dict or set(section) != {'scope', 'products', 'coverage', 'risk', 'gaps'}:
         raise Refusal('invalid_release')
@@ -138,10 +107,6 @@ def release_section(kit):
 
 
 def split_promises(body):
-    """The candidate's (version, promise) pairs, split into the live ones (their
-    notes section has a line starting `Live-checked`) and the not-live ones. An
-    included version with no notes section is neither, and refuses. Lines are
-    split only on LF; notes holding any other line break refuse."""
     text = body['changelog']['utf8']
     if type(text) is not str or OTHER_BREAKS.search(text):
         raise Refusal('invalid_notes')
@@ -177,13 +142,6 @@ def _sealed(candidate):
 
 
 def evidence(state_dir, kit, state):
-    """Replay the run's hash-chained journal; it must yield the checkpoint exactly.
-
-    The replay (smoke.replay) refuses an out-of-order lifecycle, a pass whose
-    exit is not the step's expected exit, and a pass whose recorded bounded
-    observations fail the step's own checks. A checkpoint is resume state; alone
-    it never shows a run happened. Returns the journal digest and consumed writes.
-    """
     try:
         raw, events = smoke.read_journal(Path(state_dir))
         replayed = smoke.replay(kit, events)
@@ -203,13 +161,10 @@ def evidence(state_dir, kit, state):
 
 
 def preserved_line(journal_sha, candidate_sha, kit_sha):
-    """The one line the run's private record must carry, after the run finished."""
     return f'{PRESERVE} journal={journal_sha} candidate={candidate_sha} kit={kit_sha}'
 
 
 def produce(kit_path, state_dir, candidate, record, waiver=None):
-    """The smoke receipt and every required risk receipt, or a refusal. A
-    resolved in-scope `waiver` stands in for its one risk's receipt, as `waived`."""
     if type(record) is not str or not RECORD.fullmatch(record):
         raise Refusal('invalid_record')
     if not _sealed(candidate):
@@ -255,7 +210,6 @@ def produce(kit_path, state_dir, candidate, record, waiver=None):
         raise Refusal(str(error)) from error
     evidence_class = kit['mode'] if ran else 'dry-run'
     if ran:
-        # Receipts exist only for the candidate this run was bound to.
         if state['candidate'] is None:
             raise Refusal('unbound_run')
         if state['candidate'] != candidate['candidate_sha256']:
@@ -265,7 +219,6 @@ def produce(kit_path, state_dir, candidate, record, waiver=None):
         journal_sha, consumed = None, {}
     if any(n > section['scope']['writes'].get(c, 0) for c, n in consumed.items()):
         raise Refusal('scope_exceeded')
-    # A write attempted without a known result stays uncertain, never incomplete.
     states = {s['id']: 'attempting' if s['kind'] == 'write' and item['state'] == 'incomplete' else item['state']
               for s, item in zip(kit['steps'], state['steps']) if s['kind'] != 'event'}
     whole = _status(list(states.values()), state['times']['finished'])
@@ -305,7 +258,6 @@ def produce(kit_path, state_dir, candidate, record, waiver=None):
             gates[category] = inputs[category] = None
             continue
         if category == waived:
-            # Waived, never passed: no live receipt, only the waiver's record.
             gates[category] = {'status': 'waived', 'waiver': {'pointer': waiver['pointer'],
                                                               'record_sha256': waiver['record_sha256']}}
             inputs[category] = None
@@ -321,14 +273,6 @@ def produce(kit_path, state_dir, candidate, record, waiver=None):
 
 
 def accept(gate, doc, candidate, kit_path, state_dir, resolve=None, waiver=None):
-    """Return only when `gate`'s receipt satisfies a live gate for `candidate`.
-
-    The receipt's own fields are never enough: it must be exactly what its
-    evidence (the approved kit, checkpoint and journal) produces today, and
-    `resolve(record)` must independently return the preserved private record
-    (`{'body': str, 'created_at': int}`), created at or after the run finished
-    and carrying this journal's digest line. No resolver: refused.
-    """
     if gate not in GATES:
         raise Refusal('unknown_gate')
     if not _sealed(candidate):
@@ -341,7 +285,7 @@ def accept(gate, doc, candidate, kit_path, state_dir, resolve=None, waiver=None)
         raise Refusal('risk_unknown')
     found, inputs = doc['gates'].get(gate), doc['inputs'].get(gate)
     if type(found) is dict and found.get('status') == 'waived':
-        raise Refusal('waived')  # a waiver is never a live pass
+        raise Refusal('waived')
     if found is None or type(inputs) is not dict:
         raise Refusal('missing')
     if type(found) is not dict or set(found) != RECEIPT or type(found['evidence']) is not dict:
@@ -407,7 +351,6 @@ def accept(gate, doc, candidate, kit_path, state_dir, resolve=None, waiver=None)
 
 
 def github_record(record):
-    """Resolve a private-record comment pointer through gh (read-only)."""
     import datetime
     import subprocess
     match = re.fullmatch(r'https://github\.com/jparker2006/ClosedWiz/(?:issues|pull)/[1-9][0-9]*'
@@ -425,7 +368,7 @@ def github_record(record):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(description=DESCRIPTION)
     sub = parser.add_subparsers(dest='action', required=True)
     make = sub.add_parser('produce')
     make.add_argument('--kit', required=True, type=Path)
@@ -451,7 +394,6 @@ def main():
     except (Refusal, smoke.Refusal) as error:
         reason = str(error)
     except (OSError, TypeError, ValueError, KeyError, AttributeError):
-        # Never interpolate an exception: it may contain private paths.
         reason = 'invalid_input'
     if args.action == 'check' and reason != 'invalid_input':
         print(json.dumps({'gate': args.gate, 'accepted': False, 'reason': reason}, sort_keys=True))

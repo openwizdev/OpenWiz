@@ -1,7 +1,3 @@
-//! P11 Visibility: hidden sessions are excluded unless `--hidden` is given;
-//! archived sessions unless `-a` is given. The core's own exclusion, with no
-//! adapter or client, is in `crates/core/tests/inventory.rs` (#805).
-
 use openwiz_core::model::Fact;
 
 use crate::support::*;

@@ -1,8 +1,3 @@
-"""Compiled into the App adapter. Descriptor-relative private-key boundary.
-
-Uses Python's standard-library openat bindings on Darwin and Linux. No key bytes
-are read into Python or Rust; only OpenSSL inherits the pinned key descriptor.
-"""
 import os
 import stat
 import sys
@@ -76,9 +71,6 @@ def main():
     key = open_key(sys.argv[2])
     try:
         if sys.argv[1] == 'sign':
-            # Replace this helper with OpenSSL. The existing Rust deadline
-            # therefore stops/reaps the actual signer, never an intermediate
-            # parent that could leave a key-holding child behind.
             os.set_inheritable(key, True)
             os.execve('/usr/bin/openssl', ['/usr/bin/openssl','dgst','-sha256','-sign',
                                          '/dev/fd/'+str(key)], {})
@@ -89,5 +81,5 @@ if __name__ == '__main__':
     try:
         main()
     except BaseException:
-        # Credentials, tool output and local paths never become diagnostics.
+        # SECURITY: credentials, tool output and local paths never become diagnostics.
         sys.exit(1)

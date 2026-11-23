@@ -1,7 +1,3 @@
-//! #908, #909: the fake `room-cli`'s loop writes, called directly on the
-//! synthetic `loops/` scenario. The loop tests rely on its record and its
-//! answer; these pin both at the fake's own boundary. Expected values are
-//! the scenario's literals.
 use serde_json::{Value, json};
 use std::fs;
 use std::path::Path;
@@ -12,8 +8,6 @@ use super::{ROOT, Sandbox};
 const UPDATED: &str = "Synthetic loop updated\n";
 const CREATED: &str = "Synthetic loop created: loop_syn_7\n";
 
-/// A sandbox whose `bin/room-cli` is the fake on the `loops/` scenario, with
-/// one synthetic prompt file.
 fn room() -> (Sandbox, String) {
     let sandbox = Sandbox::new();
     let bin = sandbox.0.join("bin");
@@ -39,10 +33,6 @@ fn call(sandbox: &Sandbox, argv: &[&str]) -> Output {
         .unwrap()
 }
 
-// catches: a recorder or matcher that scans raw argv, so a consumed value
-// spelled like a flag is read as one: an update's prompt `--prompt-file`
-// reads `--secrets` as a file, and a cron create whose model or name is
-// `--webhook` or `--script-file` gets the webhook answer or a file read.
 #[test]
 fn a_loop_value_spelled_like_a_flag_is_never_read_as_one() {
     let (sandbox, prompt) = room();
@@ -120,8 +110,6 @@ fn a_loop_value_spelled_like_a_flag_is_never_read_as_one() {
     }
 }
 
-// catches: a write the fake accepts and answers without its promised
-// record, so a test reading the record could pass on a write never logged.
 #[test]
 fn a_loop_write_whose_record_fails_fails_before_answering() {
     let (sandbox, prompt) = room();

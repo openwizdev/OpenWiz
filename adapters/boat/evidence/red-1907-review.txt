@@ -1,0 +1,129 @@
+# Red run (#1907 review R1, R2): python3 -I adapters/boat/test_driver.py -k first_turn -k settle, an unrecognised plain limit type and malformed OPENWIZ_BOAT_SETTLE values against the driver at c50a1c1d.
+EFFFFFEF.
+======================================================================
+ERROR: test_a_bad_settle_setting_refuses_start_and_never_blocks_stop (__main__.Boat.test_a_bad_settle_setting_refuses_start_and_never_blocks_stop) (settle='two')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/boat/test_driver.py", line 286, in test_a_bad_settle_setting_refuses_start_and_never_blocks_stop
+    code, err = self.driver('start', REQUEST, OPENWIZ_BOAT_SETTLE=bad)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "adapters/boat/test_driver.py", line 167, in driver
+    return p.returncode, json.loads(p.stdout)
+                         ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/json/decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+======================================================================
+ERROR: test_a_bad_settle_setting_refuses_start_and_never_blocks_stop (__main__.Boat.test_a_bad_settle_setting_refuses_start_and_never_blocks_stop)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/boat/test_driver.py", line 289, in test_a_bad_settle_setting_refuses_start_and_never_blocks_stop
+    self.assertEqual(self.driver('stop', out, OPENWIZ_BOAT_SETTLE='two'), (0, dict(out, stopped=True)))
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "adapters/boat/test_driver.py", line 167, in driver
+    return p.returncode, json.loads(p.stdout)
+                         ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/json/decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+======================================================================
+FAIL: test_a_bad_settle_setting_refuses_start_and_never_blocks_stop (__main__.Boat.test_a_bad_settle_setting_refuses_start_and_never_blocks_stop) (settle='nan')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/boat/test_driver.py", line 287, in test_a_bad_settle_setting_refuses_start_and_never_blocks_stop
+    self.assertEqual((code, len(self.sandboxes())), (1, 1), err)
+AssertionError: Tuples differ: (0, 2) != (1, 1)
+
+First differing element 0:
+0
+1
+
+- (0, 2)
++ (1, 1) : {'run': 'run-963813157b31'}
+
+======================================================================
+FAIL: test_a_bad_settle_setting_refuses_start_and_never_blocks_stop (__main__.Boat.test_a_bad_settle_setting_refuses_start_and_never_blocks_stop) (settle='inf')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/boat/test_driver.py", line 287, in test_a_bad_settle_setting_refuses_start_and_never_blocks_stop
+    self.assertEqual((code, len(self.sandboxes())), (1, 1), err)
+AssertionError: Tuples differ: (0, 3) != (1, 1)
+
+First differing element 0:
+0
+1
+
+- (0, 3)
++ (1, 1) : {'run': 'run-0c608dca810a'}
+
+======================================================================
+FAIL: test_a_bad_settle_setting_refuses_start_and_never_blocks_stop (__main__.Boat.test_a_bad_settle_setting_refuses_start_and_never_blocks_stop) (settle='-1')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/boat/test_driver.py", line 287, in test_a_bad_settle_setting_refuses_start_and_never_blocks_stop
+    self.assertEqual((code, len(self.sandboxes())), (1, 1), err)
+AssertionError: Tuples differ: (0, 4) != (1, 1)
+
+First differing element 0:
+0
+1
+
+- (0, 4)
++ (1, 1) : {'run': 'run-0bcf280752c6'}
+
+======================================================================
+FAIL: test_a_bad_settle_setting_refuses_start_and_never_blocks_stop (__main__.Boat.test_a_bad_settle_setting_refuses_start_and_never_blocks_stop) (settle='0')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/boat/test_driver.py", line 287, in test_a_bad_settle_setting_refuses_start_and_never_blocks_stop
+    self.assertEqual((code, len(self.sandboxes())), (1, 1), err)
+AssertionError: Tuples differ: (0, 5) != (1, 1)
+
+First differing element 0:
+0
+1
+
+- (0, 5)
++ (1, 1) : {'run': 'run-2943ef34a93d'}
+
+======================================================================
+FAIL: test_a_bad_settle_setting_refuses_start_and_never_blocks_stop (__main__.Boat.test_a_bad_settle_setting_refuses_start_and_never_blocks_stop) (settle='61')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/boat/test_driver.py", line 287, in test_a_bad_settle_setting_refuses_start_and_never_blocks_stop
+    self.assertEqual((code, len(self.sandboxes())), (1, 1), err)
+AssertionError: Tuples differ: (0, 6) != (1, 1)
+
+First differing element 0:
+0
+1
+
+- (0, 6)
++ (1, 1) : {'run': 'run-1839ed0db0fa'}
+
+======================================================================
+FAIL: test_a_first_turn_that_hits_a_usage_limit_or_does_nothing_fails_start (__main__.Boat.test_a_first_turn_that_hits_a_usage_limit_or_does_nothing_fails_start) (turn='usage_limit:private_diagnostic', held=False)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/boat/test_driver.py", line 263, in test_a_first_turn_that_hits_a_usage_limit_or_does_nothing_fails_start
+    self.assertIn(why, err['error'])
+AssertionError: 'hit a usage limit (unknown)' not found in 'run run-1c6e417c442b: the first turn hit a usage limit (private_diagnostic), so the run did not start'
+
+----------------------------------------------------------------------
+Ran 3 tests in 7.608s
+
+FAILED (failures=6, errors=2)

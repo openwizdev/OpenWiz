@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-"""R1: the records kit passes a valid tracker and reports each planted break.
-
-Run: python3 -I kernel/records-kit/test_check.py
-"""
 import json
 import os
 import subprocess
@@ -14,7 +10,6 @@ sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.abspath(__file__))
 FIXTURES = os.path.join(HERE, 'fixtures')
 
-# Each planted break, with the exact lines the kit must print for it, and nothing else.
 BREAKS = {
     'wrong-label': ['#2 L1: label building says what an agent is doing; read it from GitHub'],
     'held-and-ready': ['#2 L2: held beside ready-for-agent'],
@@ -30,6 +25,9 @@ BREAKS = {
     'blocker-without-reason': ['#2 B1: #3 has no reason line'],
     'blocker-not-completed': ['#2 B2: blocker #9 is closed as not_planned, not completed',
                               '#2 B2: blocker #10 is closed as duplicate, not completed'],
+    'one-line-code-span': ['#1 T1: spec lacks ## Out of Scope'],
+    'foreign-long-form': ['#2 B1: malformed section: line `- other-owner/site#3 real: the example shape` names '
+                          'other-owner/site#3, not this repository'],
 }
 
 
@@ -45,14 +43,15 @@ def valid():
 
 
 class Kit(unittest.TestCase):
-    def test_valid_tracker_passes(self):
-        # catches: a rule that flags a valid record (a lapsed note counted live, a heading in a code
-        # block, a record author's name in another case, another version's note, a project's own label)
-        code, out, err = run(os.path.join(FIXTURES, 'valid.json'))
-        self.assertEqual((code, out), (0, []), err)
+    def test_valid_trackers_pass(self):
+        names = sorted(n for n in os.listdir(FIXTURES) if n.startswith('valid'))
+        self.assertEqual(names, ['valid-own-long-form.json', 'valid.json'])
+        for name in names:
+            with self.subTest(name):
+                code, out, err = run(os.path.join(FIXTURES, name))
+                self.assertEqual((code, out), (0, []), err)
 
     def test_each_planted_break_is_reported(self):
-        # catches: a rule that misses its break, or reports the wrong issue, rule or count
         names = sorted(n[len('broken-'):-len('.json')] for n in os.listdir(FIXTURES) if n.startswith('broken-'))
         self.assertEqual(names, sorted(BREAKS))
         for name, want in BREAKS.items():
@@ -61,7 +60,6 @@ class Kit(unittest.TestCase):
                 self.assertEqual((code, out), (1, want), err)
 
     def test_links_section_read_as_plan_links_reads_it(self):
-        # catches: a B1 check that counts a repeated, malformed or hidden reason line as the blocker's one reason
         links = '## Links\n\n- #3 real: the example shape\n'
         planted = {
             'two lines': ('- #3 real: the example shape\n- #3 real: the example shape again\n',
@@ -87,8 +85,6 @@ class Kit(unittest.TestCase):
                     self.assertEqual((code, out), (1, want), err)
 
     def test_fences_and_comments_hide_only_what_github_hides(self):
-        # catches: comment syntax inside a fence or fence syntax inside a comment changing what is hidden,
-        # or a line's delimiters read out of order (an opener after a closer hides nothing)
         what, proof = 'A synthetic change.\n', '\n## Proof\n\nA fixture test.\n'
         planted = {
             'comment opener in a fence': (what, what + '\n```html\n<!--\n```\n', []),
@@ -110,7 +106,6 @@ class Kit(unittest.TestCase):
                     self.assertEqual((code, out), (1 if want else 0, want), err)
 
     def test_reader_refuses_any_other_shape(self):
-        # catches: a reader that guesses at a malformed tracker and reports it clean (exit 0)
         def drop(d, k):
             del d[k]
         bad = {

@@ -1,0 +1,25 @@
+# #2145 R4 red: python3 -m unittest tools/release/test_candidate.py -k overlapping, at 7ac038ff plus the overlap case
+# Linux and macOS install checks overlap: both read install-attempts.json, Linux writes, then macOS writes.
+# A scratch copy of this test printed the index after the overlap (not committed):
+# INDEX ROWS [('aarch64-apple-darwin', 'blocked')] EVIDENCE FILES ['evidence/install-aarch64-apple-darwin/1.json', 'evidence/install-x86_64-unknown-linux-gnu/1.json']
+# So the Linux attempt is lost from the index, and status cannot list both attempts:
+F
+======================================================================
+FAIL: test_overlapping_install_checks_for_two_targets_keep_both_attempts (tools.release.test_candidate.Candidate.test_overlapping_install_checks_for_two_targets_keep_both_attempts)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/release/test_candidate.py", line 657, in test_overlapping_install_checks_for_two_targets_keep_both_attempts
+    self.assertEqual(sorted((a['target'], a['status']) for a in status.get('install_attempts', [])),
+AssertionError: Lists differ: [] != [('aarch64-apple-darwin', 'blocked'), ('x86_64-unknown-linux-gnu', 'blocked')]
+
+Second list contains 2 additional elements.
+First extra element 0:
+('aarch64-apple-darwin', 'blocked')
+
+- []
++ [('aarch64-apple-darwin', 'blocked'), ('x86_64-unknown-linux-gnu', 'blocked')]
+
+----------------------------------------------------------------------
+Ran 1 test in 7.480s
+
+FAILED (failures=1)

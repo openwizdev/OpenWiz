@@ -1,0 +1,86 @@
+#!/usr/bin/env python3
+import json
+import os
+import sys
+
+READ_FLAGS = {'--jq', '-q', '-H', '--header'}
+SWITCHES = {'-i', '--include', '--paginate', '--silent'}
+WRITE_FLAGS = {'-f', '--raw-field', '-F', '--field', '--input'}
+
+
+def record(argv, kind):
+    with open(os.environ['REHEARSAL_GH_LOG'], 'a', encoding='utf-8') as log:
+        log.write(json.dumps({'argv': argv, 'kind': kind}) + '\n')
+
+
+def refuse(argv, kind):
+    record(argv, kind)
+    sys.stderr.write('synthetic gh: %s refused in the rehearsal: gh %s\n' % (kind, ' '.join(argv)))
+    return 1
+
+
+def jq(value, query):
+    if query == '.':
+        return value
+    if not query.startswith('.') or not all(query[1:].split('.')):
+        raise ValueError(query)
+    for key in query[1:].split('.'):
+        value = value[key] if isinstance(value, dict) and key in value else None
+    return value
+
+
+def api(argv):
+    method, path, query, rest = 'GET', None, None, argv[1:]
+    while rest:
+        flag = rest.pop(0)
+        if flag in ('-X', '--method') and rest:
+            method = rest.pop(0).upper()
+        elif flag in WRITE_FLAGS:
+            return refuse(argv, 'write')
+        elif flag in READ_FLAGS and rest:
+            value = rest.pop(0)
+            query = value if flag in ('--jq', '-q') else query
+        elif flag in SWITCHES:
+            continue
+        elif path is None and not flag.startswith('-'):
+            path = flag.lstrip('/')
+        else:
+            return refuse(argv, 'unknown')
+    if method != 'GET':
+        return refuse(argv, 'write')
+    if path is None:
+        return refuse(argv, 'unknown')
+    record(argv, 'read')
+    with open(os.environ['REHEARSAL_GH_WORLD'], encoding='utf-8') as handle:
+        world = json.load(handle)
+    found = world['api'].get(path.split('?')[0])
+    if found is None:
+        print(json.dumps({'message': 'Not Found', 'status': '404'}))
+        sys.stderr.write('gh: Not Found (HTTP 404)\n')
+        return 1
+    try:
+        value = jq(found, query) if query else found
+    except ValueError:
+        return refuse(argv, 'unknown')
+    print(value if isinstance(value, str) else json.dumps(value))
+    return 0
+
+
+def main(argv):
+    if argv == ['--version']:
+        record(argv, 'read')
+        print('gh version 2.0.0-synthetic (rehearsal fake)')
+        return 0
+    if argv[:2] == ['auth', 'status']:
+        record(argv, 'read')
+        with open(os.environ['REHEARSAL_GH_WORLD'], encoding='utf-8') as handle:
+            login = json.load(handle)['api']['user']['login']
+        print('github.com\n  Logged in to github.com account %s (synthetic)' % login)
+        return 0
+    if argv[:1] == ['api']:
+        return api(argv)
+    return refuse(argv, 'unknown')
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

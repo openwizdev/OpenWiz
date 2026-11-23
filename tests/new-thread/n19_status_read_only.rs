@@ -1,7 +1,3 @@
-//! N19: status is read-only. `new_thread_status` makes zero `spawn` calls
-//! and no write, for every record state; its observations never change an
-//! Uncertain outcome. With N8: creation and start are reported apart.
-
 use std::time::Duration;
 
 use openwiz_core::messaging::send::UncertainReason;

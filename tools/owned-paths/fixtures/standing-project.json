@@ -1,0 +1,62 @@
+{
+ "pr": {
+  "body": "Closes #7",
+  "baseRefOid": "0000000000000000000000000000000000000000",
+  "closingIssuesReferences": {
+   "nodes": [
+    {
+     "number": 7,
+     "repository": {
+      "nameWithOwner": "example/project"
+     }
+    }
+   ]
+  },
+  "files": [
+   {
+    "pageInfo": {
+     "hasNextPage": false,
+     "endCursor": null
+    },
+    "nodes": [
+     {
+      "path": "docs/evidence/7/red.log"
+     },
+     {
+      "path": "docs/evidence/8/red.log"
+     },
+     {
+      "path": "docs/evidence/red.log"
+     }
+    ]
+   }
+  ],
+  "comments": {
+   "pageInfo": {
+    "hasNextPage": false,
+    "endCursor": null
+   },
+   "nodes": []
+  }
+ },
+ "issues": {
+  "7": {
+   "__typename": "Issue",
+   "body": "## What to build\n\nSynthetic ticket.\n\n## Owned paths\n\n- `tools/widget/` in `example/project` (new: the widget and its tests)\n- `.github/workflows/` in `example/project` (shared: one new job)\n- `crates/*/src/widget.rs` and `docs/**/widget.md`\n- `apps/gadget` (a folder named without its slash)\n- `README.md` in `example/other` (the other repository's half)\n- the widget's icon files in `example/project`\n\n**Relies on:** nothing\n\n## Acceptance criteria\n\n- [ ] `outside/mentioned.txt` is only mentioned here, never owned\n",
+   "comments": {
+    "pageInfo": {
+     "hasNextPage": false,
+     "endCursor": null
+    },
+    "nodes": []
+   }
+  }
+ },
+ "exit": 1,
+ "out": [
+  "standing: docs/evidence/7/red.log",
+  "OUT: docs/evidence/8/red.log (ticket #7)",
+  "OUT: docs/evidence/red.log (ticket #7)"
+ ],
+ "fleet": "docs/agents/fleet.md"
+}

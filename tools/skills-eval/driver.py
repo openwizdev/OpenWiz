@@ -1,8 +1,3 @@
-"""The paid role run (contract.md, section 6): the model acts through the fake shell.
-
-Standard library only (no new dependency). The only network call is the model
-API; the agent's commands run in `fakeworld.World`, in process.
-"""
 import json
 import math
 import os
@@ -18,9 +13,9 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))  # `driver.py mcp-relay` runs under python3 -I
-import fakeworld  # noqa: E402
-import records  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import fakeworld
+import records
 
 API = 'https://api.anthropic.com/v1/messages'
 OPENROUTER_API = 'https://openrouter.ai/api/v1/chat/completions'
@@ -36,16 +31,12 @@ OUT_LIMIT = 30000
 
 
 class TransportError(Exception):
-    """A failed model request. `retryable`: refused before any work (429, 529), so retrying is safe;
-    `uncertain`: the request may have been processed and charged."""
-
     def __init__(self, msg, retryable=False, uncertain=False):
         super().__init__(msg)
         self.retryable, self.uncertain = retryable, uncertain
 
 
 def http_post(key, version):
-    """One attempt per call; the driver decides about retries, each one reserved against the cap."""
     def post(url, body):
         if version == 'openrouter':
             if url != OPENROUTER_API:
@@ -70,15 +61,12 @@ def cost(usage, prices):
 
 
 def reserve(body, settings):
-    """A conservative cost bound for one request: every request byte as an uncached input token
-    at the dearest input price, plus a full `max_tokens` of output."""
     p = settings['prices_usd_per_mtok']
     size = len(json.dumps(body).encode())
     return ((size + 4096) * max(p['input_tokens'], p['cache_creation_input_tokens']) + body['max_tokens'] * p['output_tokens']) / 1e6
 
 
 def openrouter_request(body, settings):
-    """Convert the driver conversation to chat completions; no model command runs here."""
     messages = [{'role': 'system', 'content': body['system']}]
     for m in body['messages']:
         content = m['content']
@@ -112,7 +100,6 @@ def openrouter_request(body, settings):
 
 
 def openrouter_response(resp):
-    """Validate usage before accepting a charged response; preserve raw provider counts."""
     raw = resp['usage']
     for key in ('prompt_tokens', 'completion_tokens'):
         if type(raw.get(key)) is not int or raw[key] < 0:
@@ -154,8 +141,6 @@ JUDGE = ('You check one reply an agent gave at the end of a task. You see only t
 
 
 def judge(rubric, final, settings, call):
-    """An independent judgment of the final reply alone. Returns (judgment, stop or None).
-    Only a completed reply that is one strict JSON object, exactly {verdict, reason}, counts."""
     body = {'model': settings['judge_model'], 'max_tokens': settings.get('judge_max_tokens', 1000), 'system': JUDGE,
             'messages': [{'role': 'user', 'content': f'Rule:\n{rubric}\n\nReply:\n<<<\n{final}\n>>>'}]}
     resp, stop, error = call(body)
@@ -176,7 +161,6 @@ def judge(rubric, final, settings, call):
 
 
 def run_case(case, settings, snapshot, post, repeat, budget_usd=None, checkpoint=None):
-    """One role run. Returns the transcript (contract.md, section 4), complete or not; never raises."""
     if settings.get('provider') == 'hermes':
         return hermes_run_case(case, settings, snapshot, repeat, budget_usd, checkpoint)
     world = fakeworld.World(case['world'], snapshot)
@@ -191,7 +175,6 @@ def run_case(case, settings, snapshot, post, repeat, budget_usd=None, checkpoint
     is_openrouter = settings.get('provider') == 'openrouter'
 
     def spend(body, used=None):
-        """With a body: may this request start inside the budget? With `used`: add its usage."""
         if used is not None:
             for k in usage:
                 usage[k] += used.get(k) or 0
@@ -199,8 +182,6 @@ def run_case(case, settings, snapshot, post, repeat, budget_usd=None, checkpoint
         return budget_usd is None or charged[0] + uncertain[0] + reserve(body, settings) <= budget_usd
 
     def call(body):
-        """(response, None) or (None, stop, error). Every attempt is reserved first; an attempt whose usage
-        is unknown keeps its reservation as spent and ends the run."""
         if is_openrouter:
             body = openrouter_request(body, settings)
         for attempt in range(4):
@@ -225,7 +206,7 @@ def run_case(case, settings, snapshot, post, repeat, budget_usd=None, checkpoint
                     time.sleep(5 * 2 ** attempt)
                     continue
                 return None, 'error', str(e)[:500]
-            except Exception as e:  # noqa: BLE001 - an unknown failure may have been charged
+            except Exception as e:
                 uncertain[0] += reserve(body, settings)
                 return None, 'error', str(e)[:500]
             used = resp.get('usage') or {}
@@ -233,7 +214,7 @@ def run_case(case, settings, snapshot, post, repeat, budget_usd=None, checkpoint
                 provider_usage.append(resp['provider_usage'])
             billed = resp.get('provider_usage', {}).get('cost')
             charged[0] += cost(used, prices) if billed is None else billed
-            spend(None, used)  # every successful response, the judge's too, counted once here
+            spend(None, used)
             return resp, None, None
         return None, 'error', 'retries exhausted'
 
@@ -264,7 +245,7 @@ def run_case(case, settings, snapshot, post, repeat, budget_usd=None, checkpoint
                     out = r.out if len(r.out) <= OUT_LIMIT else r.out[:OUT_LIMIT] + f'\n... (output cut at {OUT_LIMIT} characters)'
                     out = f'{out}\n[exit {r.code}]'
                 results.append({'type': 'tool_result', 'tool_use_id': b['id'], 'content': out})
-        except Exception as e:  # noqa: BLE001 - a fake-shell fault ends the run, recorded
+        except Exception as e:
             stop, error = 'error', f'fake shell failed: {type(e).__name__}: {str(e)[:300]}'
             break
         messages.append({'role': 'user', 'content': results})
@@ -280,12 +261,6 @@ def run_case(case, settings, snapshot, post, repeat, budget_usd=None, checkpoint
             'uncertain_usd': round(uncertain[0], 9), 'error': error, 'judgment': judgment, 'turns': sum(1 for m in messages if m['role'] == 'assistant')}
 
 
-# ---- Hermes route (#1362; A1 as revised 2026-11-13: Hermes Nous login) --------------------------
-# Hermes is the harness; the case, fake shell, scorer and cap stay frozen. Hermes reaches the fake shell
-# only through one MCP tool (`driver.py mcp-relay`), and the model only through `ModelProxy`, a loopback
-# endpoint in this process that checks, bounds and accounts every outbound attempt. The only credential is
-# the sandbox's Hermes Nous login, copied into each session; this process holds no API key.
-
 HERMES_TOOL = 'mcp__eval__shell'
 HERMES_TOOLSET = 'mcp-eval'
 HERMES_TOKENIZER = 'DeepSeek V4.1 Flash via Nous (Hermes session usage; not Claude tokens)'
@@ -300,7 +275,6 @@ RELOGIN = 'sign in again with `hermes auth` (Nous Portal) on this machine'
 
 
 def hermes_settings(settings):
-    """The exact Hermes route block, or ValueError: a malformed route never starts a session."""
     h = settings.get('hermes')
     if not isinstance(h, dict) or set(h) != set(HERMES_KEYS) or any(type(h[k]) is not v for k, v in HERMES_KEYS.items()):
         raise ValueError('invalid hermes route settings')
@@ -324,14 +298,10 @@ def hermes_attempt_bound(h, input_tokens, max_tokens):
 
 
 def hermes_reserve(h, max_tokens, calls):
-    """A whole session's bound: every allowed attempt at the full input bound, uncached, plus full output."""
     return calls * hermes_attempt_bound(h, h['max_input_tokens_per_call'], max_tokens)
 
 
 def usage_cost(u, h):
-    """One attempt's cost from the provider's own usage, or None when it is missing or malformed. Reasoning
-    is charged as output on top of completion tokens, and a reported cost wins when higher: overlaps can
-    only overcharge."""
     if not isinstance(u, dict):
         return None
     prompt, completion = u.get('prompt_tokens'), u.get('completion_tokens')
@@ -357,18 +327,6 @@ class suppress_oserror:
 
 
 class ModelProxy:
-    """Hermes's NOUS_INFERENCE_BASE_URL for one session. Before an attempt leaves, it must name the route's
-    model, fit the attempt count and input bound, and carry max_tokens at or under the cap (clamped);
-    streams always ask for usage. Hermes's own bearer is passed to the fixed upstream unchanged. Each
-    attempt reserves its bound until its usage arrives; `close()` freezes the accounting, so an attempt
-    still open then (an interrupted stream, a killed session) stays uncertain.
-
-    It is also the session's only HTTP(S) proxy (HTTPS_PROXY and friends, with NO_PROXY naming just this
-    endpoint), so routing does not depend on Hermes keeping NOUS_INFERENCE_BASE_URL: after a credential
-    refresh or client rebuild, a request to any other endpoint arrives here as CONNECT or an absolute URL
-    and is refused before it leaves. Only CONNECT to the login's Nous Portal (token refresh, port 443) is
-    tunnelled."""
-
     def __init__(self, h, max_tokens, calls_cap):
         from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
         self.h, self.max_tokens, self.calls_cap = h, max_tokens, calls_cap
@@ -391,13 +349,13 @@ class ModelProxy:
             def do_CONNECT(self):
                 proxy._connect(self)
 
-            def __getattr__(self, name):  # any other method, any target: refused
+            def __getattr__(self, name):
                 if name.startswith('do_'):
                     return lambda: proxy._offroute(self, always=True)
                 raise AttributeError(name)
         self.server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
         self.server.daemon_threads = True
-        self.server.handle_error = lambda *a: None  # a client gone mid-reply is accounted, not printed
+        self.server.handle_error = lambda *a: None
         self.endpoint = f'127.0.0.1:{self.server.server_address[1]}'
         self.url = f'http://{self.endpoint}/v1'
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
@@ -420,14 +378,12 @@ class ModelProxy:
         return out
 
     def proxy_env(self):
-        """Every proxy variable Hermes and its clients read, all naming this endpoint."""
         url = f'http://{self.endpoint}'
         env = {k: url for k in ('HTTPS_PROXY', 'HTTP_PROXY', 'ALL_PROXY', 'https_proxy', 'http_proxy', 'all_proxy')}
         env.update(NO_PROXY=self.endpoint, no_proxy=self.endpoint)
         return env
 
     def _offroute(self, handler, always=False):
-        """A proxied request for another endpoint (an absolute URL) is refused; True when refused."""
         if not always and handler.path.startswith('/'):
             return False
         with self.lock:
@@ -472,13 +428,13 @@ class ModelProxy:
         handler.close_connection = True
 
     def _get(self, handler):
-        if handler.path.rstrip('/') != '/v1/models':  # model listing is free; nothing else is forwarded
+        if handler.path.rstrip('/') != '/v1/models':
             return self._reply(handler, 404, {'error': {'message': 'skills-eval proxy: not found'}})
         try:
             req = urllib.request.Request(self.h['upstream'].rstrip('/') + '/models', headers=self._headers(handler, 'application/json'))
             with urllib.request.urlopen(req, timeout=60) as r:
                 return self._reply(handler, r.status, json.loads(r.read()))
-        except Exception:  # noqa: BLE001 - a listing failure costs nothing
+        except Exception:
             return self._reply(handler, 502, {'error': {'message': 'skills-eval proxy: upstream listing failed'}})
 
     def _refuse(self, handler, problem):
@@ -511,7 +467,7 @@ class ModelProxy:
                     so = body.get('stream_options') if isinstance(body.get('stream_options'), dict) else {}
                     body['stream_options'] = dict(so, include_usage=True)
                 data = json.dumps(body).encode()
-                tokens = len(data) + 4096  # every request byte as a token, plus template slack
+                tokens = len(data) + 4096
                 if tokens > self.h['max_input_tokens_per_call']:
                     problem = f"the request is over the input bound of {self.h['max_input_tokens_per_call']} tokens"
                 else:
@@ -525,14 +481,14 @@ class ModelProxy:
                                      headers=self._headers(handler, accept))
         try:
             resp = urllib.request.urlopen(req, timeout=self.h['timeout_s'])
-        except urllib.error.HTTPError as e:  # its usage is unknown: the attempt stays reserved
+        except urllib.error.HTTPError as e:
             attempt['status'] = e.code
             try:
                 payload = json.loads(e.read() or b'{}')
             except ValueError:
                 payload = {'error': {'message': f'upstream HTTP {e.code}'}}
             return self._reply(handler, e.code, payload)
-        except Exception:  # noqa: BLE001 - may have been processed: stays reserved
+        except Exception:
             return self._reply(handler, 502, {'error': {'message': 'skills-eval proxy: upstream failed'}})
         usage, alive = None, True
         with resp:
@@ -549,7 +505,7 @@ class ModelProxy:
             except OSError:
                 alive = False
             if streaming:
-                for line in resp:  # keep reading after Hermes goes away: the usage still arrives here
+                for line in resp:
                     if alive:
                         try:
                             handler.wfile.write(line)
@@ -578,7 +534,6 @@ class ModelProxy:
             attempt['usage'], attempt['cost'] = usage, usage_cost(usage, self.h)
 
     def close(self):
-        """Stop taking attempts and freeze the accounting."""
         with self.lock:
             self.closed = True
             done = [a for a in self.attempts if a['cost'] is not None]
@@ -592,7 +547,6 @@ class ModelProxy:
 
 
 def hermes_session(home):
-    """Read the one session in an isolated HERMES_HOME, read-only: (usage, messages). ValueError if absent or odd."""
     db = Path(home) / 'state.db'
     if not db.is_file():
         raise ValueError('no Hermes session store')
@@ -613,7 +567,6 @@ def hermes_session(home):
 
 
 def hermes_calls(tool_calls):
-    """Tool names in one stored assistant message; ValueError on anything but a list of function calls."""
     if tool_calls in (None, '', '[]'):
         return []
     calls = records.strict_json(tool_calls)
@@ -629,8 +582,6 @@ def hermes_calls(tool_calls):
 
 
 class ShellRelay:
-    """A Unix socket in the run's private folder; each line {"command": str} runs in the case's World."""
-
     def __init__(self, world, folder):
         self.world, self.calls, self.fault, self.connected = world, 0, None, False
         self.path = str(Path(folder) / 'shell.sock')
@@ -664,7 +615,7 @@ class ShellRelay:
                             r = self.world.shell(cmd)
                         out = r.out if len(r.out) <= OUT_LIMIT else r.out[:OUT_LIMIT] + f'\n... (output cut at {OUT_LIMIT} characters)'
                         reply = {'text': f'{out}\n[exit {r.code}]'}
-                except Exception as e:  # noqa: BLE001 - a fake-shell fault ends the run, recorded
+                except Exception as e:
                     self.fault = f'fake shell failed: {type(e).__name__}: {str(e)[:300]}'
                     reply = {'text': 'error: the sandbox failed'}
                 f.write((json.dumps(reply) + '\n').encode())
@@ -675,7 +626,6 @@ class ShellRelay:
 
 
 def mcp_relay(sock_path, inp=sys.stdin, out=sys.stdout):
-    """`driver.py mcp-relay SOCK`: a minimal MCP stdio server with one tool, `shell`, forwarded to the driver."""
     conn = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     conn.connect(sock_path)
     link = conn.makefile('rwb')
@@ -692,7 +642,7 @@ def mcp_relay(sock_path, inp=sys.stdin, out=sys.stdout):
             send({'jsonrpc': '2.0', 'id': None, 'error': {'code': -32700, 'message': 'parse error'}})
             continue
         if not isinstance(msg, dict) or 'id' not in msg:
-            continue  # notifications need no answer
+            continue
         method, mid, params = msg.get('method'), msg['id'], msg.get('params') or {}
         if method == 'initialize':
             result = {'protocolVersion': params.get('protocolVersion', '2025-06-18'), 'capabilities': {'tools': {}},
@@ -732,8 +682,6 @@ print(_j.dumps({'version': getattr(hermes_cli, '__version__', None), 'install_en
 
 
 def hermes_home(h, folder):
-    """A fresh private session home: (env, problem). Only the Nous login is copied in; nothing else of the
-    machine's Hermes state, environment or managed scope is visible."""
     folder = Path(folder)
     home, hh, cwd, managed = (folder / n for n in ('home', 'hermes', 'cwd', 'managed'))
     for d in (home, hh, cwd, managed):
@@ -746,8 +694,6 @@ def hermes_home(h, folder):
     nous = (store.get('providers') or {}).get('nous') if isinstance(store, dict) and isinstance(store.get('providers') or {}, dict) else None
     if not isinstance(nous, dict):
         return None, f'Nous login missing; {RELOGIN}'
-    # Only the subscription login: no credential pool (it can hold manually added API keys) and no field
-    # named as an API key. Hermes seeds its pool from this singleton.
     login_state = {k: v for k, v in nous.items() if 'api_key' not in k.lower()}
     portal = urllib.parse.urlparse(str(login_state.get('portal_base_url') or 'https://portal.nousresearch.com'))
     if portal.scheme != 'https' or portal.hostname not in h['portal_hosts']:
@@ -757,14 +703,12 @@ def hermes_home(h, folder):
     with os.fdopen(fd, 'w') as f:
         f.write(json.dumps(copy))
     env = {'PATH': os.environ.get('PATH', '/usr/bin:/bin'), 'HOME': str(home), 'HERMES_HOME': str(hh), 'LANG': 'C.UTF-8',
-           'HERMES_MANAGED_DIR': str(managed),  # an empty private managed scope: no machine env or config overlay
-           'HERMES_SHARED_AUTH_DIR': str(login / 'shared')}  # Hermes's rotation-safe Nous token store, so refreshes stay in the login
+           'HERMES_MANAGED_DIR': str(managed),
+           'HERMES_SHARED_AUTH_DIR': str(login / 'shared')}
     return env, None
 
 
 def hermes_preflight(h, env):
-    """Through Hermes's own published launch command, with no model call: the pinned version, no
-    installation-root .env, the private empty managed scope and a usable Nous login. Returns a problem or None."""
     program = str(Path(h['program']).expanduser())
     try:
         p = subprocess.run([program, '--print-runtime-command', '--module', 'json.tool'], env=env, capture_output=True,
@@ -796,7 +740,6 @@ def hermes_preflight(h, env):
 
 
 def hermes_login_problem(settings):
-    """Offline: can a Hermes session start under this machine's Nous login? A problem string or None."""
     try:
         h = hermes_settings(settings)
     except ValueError as e:
@@ -807,8 +750,6 @@ def hermes_login_problem(settings):
 
 
 def hermes_run(prompt, persona, h, settings, folder, relay, max_tokens, calls_cap):
-    """One isolated Hermes session. Returns {'not_run': problem} before any model attempt, or
-    {'usage', 'msgs', 'error', 'proxy'} with the proxy's frozen attempt accounting."""
     env, problem = hermes_home(h, folder)
     problem = problem or hermes_preflight(h, env)
     if problem:
@@ -821,7 +762,7 @@ def hermes_run(prompt, persona, h, settings, folder, relay, max_tokens, calls_ca
     if relay:
         config['mcp_servers'] = {'eval': {'command': sys.executable, 'args': ['-I', str(Path(__file__).resolve()), 'mcp-relay', relay.path],
                                           'env': {}, 'tools': {'include': [TOOL['name']], 'resources': False, 'prompts': False}}}
-    (hh / 'config.yaml').write_text(json.dumps(config, indent=1) + '\n')  # JSON is YAML
+    (hh / 'config.yaml').write_text(json.dumps(config, indent=1) + '\n')
     (hh / 'SOUL.md').write_text(persona + '\n')
     proxy = ModelProxy(h, max_tokens, calls_cap)
     env['NOUS_INFERENCE_BASE_URL'] = proxy.url
@@ -848,7 +789,6 @@ def hermes_run(prompt, persona, h, settings, folder, relay, max_tokens, calls_ca
 
 
 def hermes_check(usage, msgs, calls_cap, allowed):
-    """Stored tool names must all be `allowed`, and the session within its call bound. Returns (final, turns, problem)."""
     final, turns, problem = '', 0, None
     try:
         for role, content, tool_calls in msgs:
@@ -867,7 +807,6 @@ def hermes_check(usage, msgs, calls_cap, allowed):
 
 
 def hermes_run_case(case, settings, snapshot, repeat, budget_usd=None, checkpoint=None):
-    """The Hermes form of `run_case`: one actor session, then one judge session; never raises."""
     world = fakeworld.World(case['world'], snapshot)
     usage = {'input_tokens': 0, 'output_tokens': 0, 'cache_creation_input_tokens': 0, 'cache_read_input_tokens': 0}
     sessions, spent, uncertain = [], [0.0], [0.0]
@@ -885,9 +824,6 @@ def hermes_run_case(case, settings, snapshot, repeat, budget_usd=None, checkpoin
         return transcript()
 
     def session(prompt, persona, relay_world, max_tokens, calls_cap, allowed):
-        """((final, turns), None) or (None, (stop, error)). The whole bound is reserved before Hermes starts;
-        afterwards the proxy's attempt accounting replaces it. When the session store cannot confirm that
-        every model call passed the proxy, the rest of the bound stays reserved as uncertain."""
         bound = hermes_reserve(h, max_tokens, calls_cap)
         if budget_usd is not None and spent[0] + uncertain[0] + bound > budget_usd:
             return None, ('cap', None)
@@ -905,7 +841,7 @@ def hermes_run_case(case, settings, snapshot, repeat, budget_usd=None, checkpoin
                 if relay:
                     relay.close()
         if 'not_run' in r:
-            return None, ('error', r['not_run'])  # nothing left this process: no proxy existed yet
+            return None, ('error', r['not_run'])
         acct, u = r['proxy'], r['usage']
         spent[0] += acct['cost']
         uncertain[0] += acct['uncertain']
@@ -913,7 +849,7 @@ def hermes_run_case(case, settings, snapshot, repeat, budget_usd=None, checkpoin
         sessions.append({'session': u, 'proxy': {k: acct[k] for k in ('forwarded', 'accounted', 'refused', 'escapes', 'cost', 'uncertain', 'usage')}})
         problem = None
         escaped = [e for e in acct['escapes'] if urllib.parse.urlparse(h['upstream']).hostname in e]
-        if acct['uncertain'] > 0:  # contract section 6: unknown usage ends the run; nothing more is admitted
+        if acct['uncertain'] > 0:
             problem = (f"{acct['forwarded'] - acct['accounted']} model attempt(s) without complete usage; "
                        'their reservations are kept and the run ends')
         if escaped:
@@ -970,7 +906,6 @@ def hermes_run_case(case, settings, snapshot, repeat, budget_usd=None, checkpoin
 
 
 def hermes_usage_report(folder):
-    """Recorded Hermes session usage per run, actor and judge included. No request, no estimate."""
     folder = Path(folder)
     manifest = json.loads((folder / 'manifest.json').read_text())
     if manifest['settings'].get('provider') != 'hermes':

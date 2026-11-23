@@ -1,4 +1,3 @@
-# Separate from CI: labels can invalidate a passing exemption without a push.
 name: Changelog
 
 on:
@@ -18,10 +17,6 @@ concurrency:
 
 jobs:
   changelog:
-    # This small read-only job needs Python and gh: gh is on the PC runner and
-    # GitHub's Ubuntu image; Python comes from the step below. It runs where
-    # ci.yml's jobs run, so it spends no GitHub-hosted minutes while
-    # CI_RUNS_ON names the PC (#1307).
     runs-on: ${{ vars.CI_RUNS_ON || 'ubuntu-24.04' }}
     timeout-minutes: 5
     steps:
@@ -36,12 +31,10 @@ jobs:
             /.github/actions/changelog/
             /.github/workflows/changelog.yml
       - name: Report checkout failure
-        if: ${{ always() && steps.checkout.outcome != 'success' }}
+        if: ${{ failure() && steps.checkout.outcome == 'failure' }}
         run: |
           echo "::error::Changelog checkout failed or exceeded 2 minutes; inspect the checkout log before retrying."
           exit 1
-      # The PC's deployed image may have no python3 (#1307 R1): ci.yml's pinned
-      # CPython, word for word, on GITHUB_PATH for both steps below.
       - name: Python
         run: |
           if ! command -v python3 > /dev/null; then

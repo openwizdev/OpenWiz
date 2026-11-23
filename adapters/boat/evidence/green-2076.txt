@@ -1,0 +1,26 @@
+$ python3 -I adapters/boat/test_driver.py -k without_proc -k hands_off   (5 repeat runs)
+test_without_proc_as_on_macos_stop_ends_a_worker_the_turn_hands_off_as_it_exits (__main__.Boat.test_without_proc_as_on_macos_stop_ends_a_worker_the_turn_hands_off_as_it_exits) ... ok
+test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild (__main__.Boat.test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild) ... ok
+Ran 2 tests in <time>
+OK
+test_without_proc_as_on_macos_stop_ends_a_worker_the_turn_hands_off_as_it_exits (__main__.Boat.test_without_proc_as_on_macos_stop_ends_a_worker_the_turn_hands_off_as_it_exits) ... ok
+test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild (__main__.Boat.test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild) ... ok
+Ran 2 tests in <time>
+OK
+test_without_proc_as_on_macos_stop_ends_a_worker_the_turn_hands_off_as_it_exits (__main__.Boat.test_without_proc_as_on_macos_stop_ends_a_worker_the_turn_hands_off_as_it_exits) ... ok
+test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild (__main__.Boat.test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild) ... ok
+Ran 2 tests in <time>
+OK
+test_without_proc_as_on_macos_stop_ends_a_worker_the_turn_hands_off_as_it_exits (__main__.Boat.test_without_proc_as_on_macos_stop_ends_a_worker_the_turn_hands_off_as_it_exits) ... ok
+test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild (__main__.Boat.test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild) ... ok
+Ran 2 tests in <time>
+OK
+test_without_proc_as_on_macos_stop_ends_a_worker_the_turn_hands_off_as_it_exits (__main__.Boat.test_without_proc_as_on_macos_stop_ends_a_worker_the_turn_hands_off_as_it_exits) ... ok
+test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild (__main__.Boat.test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild) ... ok
+Ran 2 tests in <time>
+OK
+
+$ python3 -I adapters/boat/test_driver.py
+Ran 24 tests in <time>
+
+OK

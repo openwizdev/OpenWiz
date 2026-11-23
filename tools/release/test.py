@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Outside-in release check proofs, with synthetic repositories and recording tools."""
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
 from html import escape
@@ -49,7 +48,6 @@ class ReleaseCheck(unittest.TestCase):
         self.evidence = self.root / "evidence"
         self.bin = self.root / "bin"
         self.bin.mkdir()
-        # Explicit private operator input; never part of the fixture release tree.
         self.literals = self.root/"named-terms.txt"
         self.literals.write_text("synthetic-private-name\nsynthetic.private+name\n")
         self.env = dict(os.environ, GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL=os.devnull,
@@ -68,8 +66,6 @@ class ReleaseCheck(unittest.TestCase):
         copy_fixture(self.repo)
         self.commit(self.repo)
         self.plan = self.root / "plan.json"
-        # An isolated copy substitutes synthetic Git policy anchors, exactly as
-        # O3's own history fixtures do. Production has no anchor override.
         self.cli = self.root/"fixture-tools/release/release"
         shutil.copytree(CLI.parent,self.cli.parent,ignore=shutil.ignore_patterns("__pycache__","evidence"))
         shutil.copytree(ROOT/"tools/privacy-check",self.cli.parent.parent/"privacy-check",
@@ -77,11 +73,6 @@ class ReleaseCheck(unittest.TestCase):
         shutil.copytree(ROOT/"tools/roadmap",self.cli.parent.parent/"roadmap",
                         ignore=shutil.ignore_patterns("__pycache__"))
         self.replan()
-        # Record every external invocation, delegate git only to the real binary.
-        # Each call appends one JSON line to RELEASE_CALLS. git and gh are
-        # shell scripts and the others start Python without site or pathlib:
-        # a check runs git about 28 times, and a Python start for each one
-        # was most of this suite's time.
         record = """#!/bin/sh
 json() {
   case $1 in
@@ -237,7 +228,6 @@ if name == "node":
         copy_fixture(self.repo)
 
     def save_plan(self):
-        # Reconcile fixture main before taking any no-write snapshots.
         if self.repo != self.public and self.data["public_base"] == self.git(self.public,"rev-parse","main").stdout.strip():
             if self.git(self.repo,"rev-parse","main").stdout.strip() != self.data["public_base"]:
                 self.git(self.repo,"fetch",str(self.public),"main:main")
@@ -284,7 +274,6 @@ if name == "node":
                 self.assertFalse(self.evidence.exists())
 
     def test_named_terms_input_stays_outside_release_outputs(self):
-        # R1: a valid private output location must not appear in CLI diagnostics.
         self.evidence = self.root/"synthetic-private-name"
         result = self.check()
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -301,8 +290,6 @@ if name == "node":
             self.assertEqual((self.evidence/name).read_text(), "literals: used\n")
 
     def test_named_terms_preserve_literal_case_insensitive_refusal_and_exceptions(self):
-        # Uppercase bypasses O3's case-sensitive text rule, so this owns the
-        # release scanner's existing case-insensitive substring contract.
         self.plant("src/named.txt", "prefix-SYNTHETIC.PRIVATE+NAME-suffix\n")
         result = self.check()
         self.assertEqual(result.returncode, 1, result.stderr)
@@ -464,7 +451,6 @@ if name == "node":
                 self.refused(finding)
         self.outputs_clear()
         self.plant("README.md",fixture_files()["README.md"])
-        # Read to EOF: the plant is after a full megabyte of ordinary text in a non-doc file.
         self.plant("src/note.txt",("x"*99+"\n")*11_000+"\nghp_"+"SYNTHETICVALUE"*3)
         self.refused("secret")
 
@@ -549,7 +535,6 @@ fn env_configuration_value() {}
         for rule, path, text in cases:
             with self.subTest(rule=rule, path=path, text=text):
                 self.outputs_clear()
-                # Every plant is independent, including paths left by prior cases.
                 self.reset_fixture()
                 self.plant(path, text + "\n")
                 self.refused(rule)
@@ -597,7 +582,6 @@ fn env_configuration_value() {}
 
 
     def test_no_python_cache_written_outside_outputs(self):
-        # Copy the command so this proof does not depend on an existing pyc cache.
         runner = self.root/"runner"
         shutil.copytree(CLI.parent,runner,ignore=shutil.ignore_patterns("__pycache__"))
         shutil.copytree(self.cli.parent.parent/"privacy-check",self.root/"privacy-check",ignore=shutil.ignore_patterns("__pycache__"))
@@ -618,7 +602,6 @@ fn env_configuration_value() {}
 
     def test_missing_tools_duplicate_keys_bad_binary_and_symlink(self):
         (self.bin/"cargo").unlink()
-        # Deliberately hide any installed cargo as well.
         self.env["PATH"] = str(self.bin)+":/usr/bin:/bin"
         self.refused("cannot run cargo")
         self.outputs_clear()
@@ -662,8 +645,6 @@ fn env_configuration_value() {}
         self.assertEqual(r.returncode,0,r.stderr)
         cases = [("0.0.3-R3","every_read_runs_without_the_thread_context"),
                  ("0.0.3-R3","every_call_of_a_send_runs_without_the_thread_context")]
-        # The fake evaluates the planted tree, simulating each exported public
-        # regression failing. These prove orchestration, not product behaviour.
         for finding,test in cases:
             with self.subTest(finding=finding,test=test):
                 self.outputs_clear()
@@ -786,8 +767,6 @@ fn env_configuration_value() {}
 
 
     def test_exact_hash_bound_scan_exceptions(self):
-        # Public scan tests legitimately contain synthetic planted values.
-        # An exception is one exact match in one exact reviewed file revision.
         self.plant("src/scan-test.txt","/Users/synthetic-owner\n")
         self.refused("personal")
         self.outputs_clear()
@@ -819,8 +798,6 @@ fn env_configuration_value() {}
 
 
     def test_git_attributes_cannot_change_reported_export_bytes(self):
-        # Same-path tracked attributes differ only in the source's local override.
-        # The public clone has no override and normalizes the approved CRLF blob.
         (self.repo/".gitattributes").write_text("*.txt text eol=lf\n")
         info = self.repo/".git/info/attributes"
         info.write_text("normalization.txt -text\n")
@@ -1077,8 +1054,6 @@ fn env_configuration_value() {}
                 self.outputs_clear()
                 self.allow_url("src/diag.rs",url)
                 if host == "example.com":
-                    # The existing personal-data rule also sees this email-shaped
-                    # substring. Its separate, exact review remains required.
                     self.data["scan_exceptions"].append(dict(self.data["scan_exceptions"][0],
                         rule="personal",value="synthetic-pass@example.com"))
                     self.save_plan()
@@ -1125,8 +1100,6 @@ fn env_configuration_value() {}
 
 
 def live_smoke_receipts():
-    """#1844's candidate-bound smoke/risk receipt proofs, loaded by path like
-    the restriction proofs; their fake program is written once, at import."""
     import importlib.util
     spec = importlib.util.spec_from_file_location(
         "live_smoke_test_receipt", Path(__file__).resolve().parents[1]/"live-smoke"/"test_receipt.py")
@@ -1136,19 +1109,16 @@ def live_smoke_receipts():
 
 
 def load_tests(loader, tests, pattern):
-    """CI runs this file: include the entry, publish and backfill proofs too."""
-    import test_backfill, test_candidate, test_entry, test_publish, test_open, test_review
-    for module in (test_entry, test_publish, test_backfill, test_open, test_review, live_smoke_receipts(),
+    import test_backfill, test_candidate, test_entry, test_help, test_publish, test_open, test_review
+    for module in (test_entry, test_help, test_publish, test_backfill, test_open, test_review, live_smoke_receipts(),
                    test_candidate):
         tests.addTests(loader.loadTestsFromModule(module))
     return tests
 
 
-# Include export-wording regressions in the existing CI entrypoint.
 from test_export_review import ExportFindings
 
 def cpus():
-    """The CPUs this process may use: its affinity, capped by a cgroup v2 quota."""
     count = len(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else os.cpu_count() or 1
     try:
         quota, period = Path("/sys/fs/cgroup/cpu.max").read_text().split()
@@ -1160,28 +1130,16 @@ def cpus():
 
 
 def main():
-    """Run the cases at once and print each case's time.
-
-    Two threads per CPU, at most 8: a case mostly waits on its subprocesses
-    and the file system (measured: 3 threads on 3 CPUs took 17 s, 6 took 10 s),
-    and 8 keeps memory small on a 2 GiB runner.
-
-    The cases are independent: each has its own temporary directory, recording
-    tools and environment, and changes no process-wide state. With arguments
-    (a case name, -k), this is plain unittest, one case after another.
-    """
     if len(sys.argv) > 1:
         unittest.main(verbosity=2)
     tests = [test for case in (ReleaseCheck, ExportFindings)
              for test in unittest.defaultTestLoader.loadTestsFromTestCase(case)]
-    # CI runs this file only: the entry, publish and backfill proofs run here too.
-    import test_backfill, test_candidate, test_entry, test_publish, test_open, test_review
+    import test_backfill, test_candidate, test_entry, test_help, test_publish, test_open, test_review
 
     def flat(suite):
         for item in suite:
             yield from (flat(item) if isinstance(item, unittest.TestSuite) else (item,))
-    # #1843: the checked public release command's proofs (test_candidate).
-    for module in (test_entry, test_publish, test_backfill, test_open, test_review, live_smoke_receipts(),
+    for module in (test_entry, test_help, test_publish, test_backfill, test_open, test_review, live_smoke_receipts(),
                    test_candidate):
         tests += list(flat(unittest.defaultTestLoader.loadTestsFromModule(module)))
     if not tests:

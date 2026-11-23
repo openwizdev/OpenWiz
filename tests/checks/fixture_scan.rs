@@ -1,38 +1,3 @@
-//! The fixture scan: no real session content or identifiers.
-//!
-//! Two rules, applied to every file under `tests/fixtures/` and the fake:
-//! 1. **Nothing that looks private:** no email, home path, token prefix,
-//!    UUID (apart from the one reserved synthetic UUID in send/),
-//!    non-synthetic id or URL outside `example.invalid`.
-//! 2. **Only synthetic values in room-cli data:** every key is a key recorded
-//!    in the 0.43.1 shapes (or starts with `synthetic`), and every string
-//!    value is a recorded enum label, a synthetic id, path, URL or version,
-//!    or text that starts with "Synthetic".
-//!
-//! OpenWiz 0.0.3 (ClosedWiz#8) adds the `thread tell` fixtures. Their keys,
-//! labels and argument words are **documented, not observed**, so they are
-//! kept in their own lists below ([`DOCUMENTED_SEND_KEYS`],
-//! [`DOCUMENTED_SEND_LABELS`], [`SEND_ARGV_WORDS`], [`SEND_ERROR_LINES`]),
-//! apart from the PC-observed sent keys (#571, `OBSERVED_SENT_KEYS`). Both
-//! sets are accepted **only in files under
-//! `room-cli-0.43.1/send/`**. Every other fixture is scanned exactly as before.
-//!
-//! OpenWiz 0.0.4 (A1 phase 1, ClosedWiz#11) adds the new-thread fixtures the
-//! same way: `cloud status`'s keys and labels, **observed** in spike run 3
-//! (`room-cli` v131, structure only), and the receipt's and `thread show`'s
-//! source-read labels, are kept in their own lists ([`NEW_THREAD_KEYS`],
-//! [`NEW_THREAD_LABELS`]) and accepted **only in files under
-//! `room-cli-v127/new-thread/`**.
-//!
-//! OpenWiz 0.0.6 (A3, ClosedWiz#111) adds `gh`'s fixtures under `github/`
-//! the same way, and scans the fake `gh` (`tests/fake-gh/`) for rule 1. The
-//! keys and labels A1's spike **observed** in `gh`'s answers, and the
-//! contract's synthetic forms of a commit, a branch, a time and the version
-//! line, are kept in their own lists ([`GITHUB_KEYS`], [`GITHUB_LABELS`])
-//! and accepted **only in files under `github/`**, where room-cli's keys are
-//! not. A `github/` scenario has the fake gh's keys, and answers only calls
-//! the GitHub adapter's allowlist allows ([`scan_github_scenario`]).
-
 use std::fs;
 use std::fs::DirBuilder;
 use std::os::unix::fs::DirBuilderExt;
@@ -43,9 +8,7 @@ use serde_json::{Value, json};
 const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures");
 const FAKE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/fake-room-cli");
 
-/// Keys recorded in the room-cli 0.43.1 shapes (captures A, B and C).
 const OBSERVED_KEYS: &[&str] = &[
-    // thread list rows, thread show `thread`
     "id",
     "projectId",
     "providerId",
@@ -96,7 +59,6 @@ const OBSERVED_KEYS: &[&str] = &[
     "total",
     "queuedMessageCount",
     "canSpawnChild",
-    // thread show
     "thread",
     "execution",
     "model",
@@ -123,15 +85,12 @@ const OBSERVED_KEYS: &[&str] = &[
     "managed",
     "workspaceProvisionType",
     "pullRequest",
-    // thread output
     "output",
     "error",
-    // project list
     "kind",
     "gitRemoteUrl",
     "sources",
     "isDefault",
-    // machine list
     "machineProviderId",
     "suspendedAt",
     "message",
@@ -141,11 +100,8 @@ const OBSERVED_KEYS: &[&str] = &[
     "lastRejectedProtocolVersion",
 ];
 
-/// Queue/sent receipt keys observed by the PC live test #10 at 4379586
-/// (#571), with synthetic identifiers in fixtures. Only in `send/`.
 const OBSERVED_SENT_KEYS: &[&str] = &["threadId", "ok", "delivery", "mode"];
 
-/// Queued keys/labels observed by PC probe c687079 (#571), only in send/.
 const OBSERVED_QUEUED_KEYS: &[&str] = &[
     "queuedMessage",
     "id",
@@ -174,19 +130,13 @@ const OBSERVED_QUEUED_LABELS: &[&str] = &["agent", "user", "inline"];
 const SYNTHETIC_QUEUED_UUID: &str = "00000000-0000-4000-8000-000000000001";
 const SYNTHETIC_QUEUED_ID: &str = "qmsg_syn_0001";
 
-/// Keys of the `thread tell` receipt, documented in the room-cli 0.43.1
-/// guide (read 2026-10-23) and **not observed**; plus the keys of a `thread
-/// log` event, observed in capture A (outside-observer shape), which OpenWiz
-/// never reads: they appear only in `send/thread-log-one-match.json`.
 const DOCUMENTED_SEND_KEYS: &[&str] = &[
-    // thread tell --json receipt (documented, not observed)
     "delivery",
     "queuedMessage",
     "waitingOn",
     "sendAt",
     "initiator",
     "senderThreadId",
-    // thread log event (capture A; not on the allowlist)
     "scope",
     "threadId",
     "seq",
@@ -200,8 +150,6 @@ const DOCUMENTED_SEND_KEYS: &[&str] = &[
     "permissionMode",
 ];
 
-/// Labels of the `thread tell` receipt and of queued work, documented in the
-/// room-cli 0.43.1 guide and changelog, and **not observed**.
 const DOCUMENTED_SEND_LABELS: &[&str] = &[
     "sent",
     "queued",
@@ -215,11 +163,7 @@ const DOCUMENTED_SEND_LABELS: &[&str] = &[
     "plugin",
 ];
 
-/// `cloud status --json`'s keys, observed in spike run 3 (v131, 2026-10-30,
-/// #11's structure-only discovery record), and `thread show`'s
-/// `lastError` (source-read, not observed). Only in `room-cli-v127/new-thread/`.
 const NEW_THREAD_KEYS: &[&str] = &[
-    // top level
     "ready",
     "harnesses",
     "plan",
@@ -257,7 +201,6 @@ const NEW_THREAD_KEYS: &[&str] = &[
     "signInError",
     "storage",
     "sync",
-    // harnesses[]
     "reasoning_levels",
     "provider",
     "models",
@@ -270,20 +213,14 @@ const NEW_THREAD_KEYS: &[&str] = &[
     "skill_mentions",
     "subagents",
     "usage",
-    // thread show (source-read)
     "lastError",
 ];
 
-/// The catalogue's harness ids and effort labels (observed, run 3), and the
-/// `pending` and `starting` statuses (source-read). Only in
-/// `room-cli-v127/new-thread/`.
 const NEW_THREAD_LABELS: &[&str] = &[
     "pi", "cursor", "fx", "opencode", "hermes", "devin", "openclaw", "none", "minimal", "low",
     "medium", "xhigh", "max", "ultra", "pending", "starting",
 ];
 
-/// Enum labels recorded in the shapes, plus `hidden`, a labelled synthetic
-/// assumption (no hidden session was observed).
 const LABELS: &[&str] = &[
     "idle",
     "active",
@@ -309,7 +246,6 @@ const LABELS: &[&str] = &[
     "high",
 ];
 
-/// Keys of the scenario files the fake reads (not room-cli data).
 const SCENARIO_KEYS: &[&str] = &[
     "scenario",
     "description",
@@ -322,11 +258,9 @@ const SCENARIO_KEYS: &[&str] = &[
     "stderr",
     "exit",
     "hang",
-    // thread tell responses (OpenWiz 0.0.3)
     "any_text",
 ];
 
-/// Words of the allowlisted argument lists.
 const ARGV_WORDS: &[&str] = &[
     "--version",
     "thread",
@@ -342,36 +276,21 @@ const ARGV_WORDS: &[&str] = &[
     "output",
 ];
 
-/// Words of the one write, `thread tell <id> --mode queue|steer --json --
-/// <text>`: documented, not observed. The text is never in a fixture's
-/// `argv` (responses match it with `any_text`).
 const SEND_ARGV_WORDS: &[&str] = &["tell", "--mode", "queue", "steer", "--"];
 
-/// Error lines the fake prints: the observed not-found line and synthetic ones.
 const ERROR_LINES: &[&str] = &[
     "Error: HTTP 404: Thread not found",
     "Error: HTTP 500: Synthetic server error",
-    // #37, Sol's PR #40 finding 1: a safe-grammar line a failed version read
-    // must still never echo.
     "Error: HTTP 500: Synthetic private version marker",
 ];
 
-/// Synthetic placeholders for the documented `thread tell` rejections, whose
-/// wording is not documented (OpenWiz 0.0.3). Only in `send/`.
 const SEND_ERROR_LINES: &[&str] = &[
     "Error: HTTP 400: Invalid input",
     "Error: HTTP 400: Unsupported mode",
 ];
 
-/// `tests/fake-gh/`: the fake gh's source (OpenWiz 0.0.6, A3, #111), rule 1
-/// only, like the fake room-cli's.
 const FAKE_GH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/fake-gh");
 
-/// OpenWiz 0.0.6 (A3, ClosedWiz#111): every key A1's spike observed in
-/// `gh`'s answers: `gh … --json`, and REST and GraphQL through `gh api`
-/// (`gh` 2.100.0, 2026-10-31, structure only;
-/// A1's structure-only discovery record (#109), each key path's
-/// names). Only in `github/`.
 const GITHUB_KEYS: &[&str] = &[
     "__typename",
     "active_lock_reason",
@@ -636,9 +555,6 @@ const GITHUB_KEYS: &[&str] = &[
     "workflowName",
 ];
 
-/// The labels A1 observed in those answers, the label names it listed
-/// (`spike/shapes.md`, "Labels"), and `main`, the base branch it saw. Only
-/// in `github/`.
 const GITHUB_LABELS: &[&str] = &[
     "BLOCKED",
     "CANCELLED",
@@ -671,7 +587,6 @@ const GITHUB_LABELS: &[&str] = &[
     "pull_request",
     "ready-for-agent",
     "ready-for-human",
-    // shapes.md, "Labels": the other names `gh label list` gave
     "needs-info",
     "needs-triage",
     "accessibility",
@@ -684,17 +599,11 @@ const GITHUB_LABELS: &[&str] = &[
     "invalid",
     "question",
     "wontfix",
-    // shapes.md, "Pull requests": the base branch
     "main",
 ];
 
-/// Values the fleet contract names that A1 did not observe
-/// (`contracts/fleet.v1.md`, "Where each field comes from"): the `held`
-/// label, and `gh pr checks`'s other buckets. A scenario that uses one says
-/// so in its `synthetic_assumptions`. Only in `github/`.
 const GITHUB_DOCUMENTED_LABELS: &[&str] = &["held", "fail", "skipping", "cancel"];
 
-/// The fake gh's scenario keys, and its responses' (`tests/fake-gh/main.rs`).
 const GITHUB_SCENARIO_KEYS: &[&str] = &[
     "scenario",
     "description",
@@ -732,8 +641,6 @@ fn all_files() -> Vec<PathBuf> {
     out
 }
 
-// #2186: declared contract vocabulary, not observed room-cli fields. This
-// allowlist is used only for files directly in release/candidate/.
 const RELEASE_CANDIDATE_KEYS: &[&str] = &[
     "anchor",
     "app_permissions",
@@ -824,7 +731,7 @@ const RELEASE_CANDIDATE_LABELS: &[&str] = &[
     "openwiz.release-candidate.v1",
     "openwiz.product.v1",
     "openwizdev/OpenWiz",
-    "example/private", // synthetic refused repository
+    "example/private",
     "cli",
     "server",
     "service",
@@ -873,7 +780,6 @@ const RELEASE_CANDIDATE_TARGETS: &[&str] = &[
     "x86_64-apple-darwin",
     "x86_64-unknown-linux-gnu",
 ];
-// Invented comment identities from the contract examples, never real authority.
 const RELEASE_CANDIDATE_POINTERS: &[&str] = &[
     "https://github.com/jparker2006/ClosedWiz/issues/9001#issuecomment-9000000001",
     "https://github.com/jparker2006/ClosedWiz/issues/9001#issuecomment-9000000002",
@@ -927,16 +833,20 @@ fn release_candidate_value(s: &str) -> bool {
                     .and_then(|heading| heading.strip_suffix(" · 2030-01-02"))
                     .is_some_and(release_candidate_version)
         });
-    s.is_empty() || s.starts_with("Synthetic") || synthetic_name || hash
+    s.is_empty()
+        || s.starts_with("Synthetic")
+        || synthetic_name
+        || hash
         || is_synthetic_commit(s)
-        // The fixed public-history anchor is contract vocabulary, not live data.
         || s == "5d069b025c6eacb4123ca8241ba21345f1eae9dd"
         || RELEASE_CANDIDATE_LABELS.contains(&s)
         || RELEASE_CANDIDATE_TARGETS.contains(&s)
         || RELEASE_CANDIDATE_POINTERS.contains(&s)
         || release_candidate_version(s)
         || s.strip_prefix('v').is_some_and(release_candidate_version)
-        || asset || pointer_path || notes
+        || asset
+        || pointer_path
+        || notes
 }
 
 fn is_synthetic_id(s: &str) -> bool {
@@ -949,7 +859,6 @@ fn is_synthetic_id(s: &str) -> bool {
 }
 
 fn is_version(s: &str) -> bool {
-    // `v<N>`: the format `room-cli` prints since v127 (#37).
     if let Some(n) = s.strip_prefix('v') {
         return !n.is_empty() && n.len() <= 6 && n.bytes().all(|b| b.is_ascii_digit());
     }
@@ -978,17 +887,12 @@ fn is_allowed_key(k: &str) -> bool {
     OBSERVED_KEYS.contains(&k) || k.starts_with("synthetic")
 }
 
-/// Which documented or newly observed shapes a fixture may use.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Folder {
     Other,
-    /// Declared release contract examples, only in the exact named directory.
     ReleaseCandidate,
-    /// `room-cli-0.43.1/send/` (OpenWiz 0.0.3).
     Send,
-    /// `room-cli-v127/new-thread/` (OpenWiz 0.0.4).
     NewThread,
-    /// `github/` (OpenWiz 0.0.6): `gh`'s answers, for the fake gh.
     GitHub,
 }
 
@@ -1007,7 +911,6 @@ fn folder(path: &Path) -> Folder {
     }
 }
 
-/// [`value_ok`] and [`key_ok`] for a fixture in `folder`.
 fn value_in(s: &str, folder: Folder) -> bool {
     if folder == Folder::ReleaseCandidate {
         return release_candidate_value(s);
@@ -1017,7 +920,6 @@ fn value_in(s: &str, folder: Folder) -> bool {
         || (folder == Folder::GitHub && is_github_value(s))
 }
 
-/// In `github/`, only `gh`'s keys (or a `synthetic` one): never room-cli's.
 fn key_in(k: &str, folder: Folder) -> bool {
     if folder == Folder::ReleaseCandidate {
         return RELEASE_CANDIDATE_KEYS.contains(&k);
@@ -1029,8 +931,6 @@ fn key_in(k: &str, folder: Folder) -> bool {
         || (folder == Folder::NewThread && NEW_THREAD_KEYS.contains(&k))
 }
 
-/// A `gh` value allowed in `github/`: an observed or documented label, or
-/// one of the contract's synthetic forms.
 fn is_github_value(s: &str) -> bool {
     GITHUB_LABELS.contains(&s)
         || GITHUB_DOCUMENTED_LABELS.contains(&s)
@@ -1043,22 +943,17 @@ fn is_github_value(s: &str) -> bool {
             .is_some_and(is_synthetic_branch)
 }
 
-/// A commit id as the contract's examples write one: one lowercase hex
-/// digit, 40 times.
 fn is_synthetic_commit(s: &str) -> bool {
     let b = s.as_bytes();
     b.len() == 40 && matches!(b[0], b'0'..=b'9' | b'a'..=b'f') && b.iter().all(|c| *c == b[0])
 }
 
-/// A branch as the contract's examples name one: `room/syn-`, then letters,
-/// digits and `-`.
 fn is_synthetic_branch(s: &str) -> bool {
     s.strip_prefix("room/syn-").is_some_and(|rest| {
         !rest.is_empty() && rest.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-')
     })
 }
 
-/// `gh`'s time form, `YYYY-MM-DDTHH:MM:SSZ` (A1: ISO strings).
 fn is_time(s: &str) -> bool {
     let b = s.as_bytes();
     b.len() == 20
@@ -1071,7 +966,6 @@ fn is_time(s: &str) -> bool {
         })
 }
 
-/// `gh --version`'s first line as A1 saw it: `gh version N.N.N (YYYY-MM-DD)`.
 fn is_gh_version_line(s: &str) -> bool {
     let Some((version, date)) = s
         .strip_prefix("gh version ")
@@ -1090,8 +984,6 @@ fn is_gh_version_line(s: &str) -> bool {
         })
 }
 
-/// A value allowed in a fixture: synthetic, or (only in `send/`) one of the
-/// documented send labels, words or placeholder lines.
 fn value_ok(s: &str, send: bool) -> bool {
     is_synthetic_value(s)
         || (send
@@ -1103,7 +995,6 @@ fn value_ok(s: &str, send: bool) -> bool {
                 || s == SYNTHETIC_QUEUED_UUID))
 }
 
-/// A key allowed in a fixture: observed, or (only in `send/`) documented.
 fn key_ok(k: &str, send: bool) -> bool {
     is_allowed_key(k)
         || (send
@@ -1112,30 +1003,23 @@ fn key_ok(k: &str, send: bool) -> bool {
                 || OBSERVED_QUEUED_KEYS.contains(&k)))
 }
 
-/// Whether `path` is a `send/` fixture (OpenWiz 0.0.3).
 fn is_send_fixture(path: &Path) -> bool {
     path.starts_with(Path::new(FIXTURES).join("room-cli-0.43.1/send"))
 }
 
-/// Fixture context is explicit; the global guard remains unchanged.
 fn private_looking_in(text: &str, context: Folder) -> Vec<String> {
     if context == Folder::ReleaseCandidate {
         let mut text = text.to_owned();
         for pointer in RELEASE_CANDIDATE_POINTERS {
-            // Only a complete quoted token is an invented decision pointer.
             text = text.replace(&format!("\"{pointer}\""), "\"synthetic-pointer\"");
         }
         let mut bad = private_looking(&text);
-        // Even reserved domains are unexpected here unless they were one of
-        // the exact complete pointer tokens above. Synthetic prose is no bypass.
         if text.contains("://") {
             bad.push("unexpected release-candidate URL".to_owned());
         }
         return bad;
     }
     if context == Folder::Send {
-        // Only an entire quoted JSON token is the reserved fixture UUID.
-        // Prefixes/suffixes and every unrelated UUID remain visible.
         let quoted = format!("\"{SYNTHETIC_QUEUED_UUID}\"");
         let quoted_id = format!("\"{SYNTHETIC_QUEUED_ID}\"");
         return private_looking(
@@ -1147,7 +1031,6 @@ fn private_looking_in(text: &str, context: Folder) -> Vec<String> {
     private_looking(text)
 }
 
-/// Rule 1: patterns that must never appear anywhere. Returns what matched.
 fn private_looking(text: &str) -> Vec<String> {
     let mut found = Vec::new();
     for needle in [
@@ -1186,8 +1069,6 @@ fn private_looking(text: &str) -> Vec<String> {
             }
         }
     }
-    // Queued identifiers have no global synthetic-prefix exemption.
-    // Only the complete quoted reserved token is masked in send/ above.
     if text.contains("qmsg_") {
         found.push("a queued message id".to_owned());
     }
@@ -1219,7 +1100,6 @@ fn has_uuid(text: &str) -> bool {
     })
 }
 
-/// Rule 2 for room-cli JSON that parses: every key and string value.
 fn walk(value: &Value, path: &str, bad: &mut Vec<String>, send: bool) {
     let folder = if send { Folder::Send } else { Folder::Other };
     walk_in(value, path, bad, folder)
@@ -1242,7 +1122,6 @@ fn walk_in(value: &Value, path: &str, bad: &mut Vec<String>, folder: Folder) {
         }
         Value::String(s) => {
             if folder == Folder::ReleaseCandidate {
-                // Scan decoded strings too: JSON escapes cannot hide a secret.
                 bad.extend(private_looking_in(
                     &serde_json::to_string(s).expect("string JSON"),
                     folder,
@@ -1256,9 +1135,6 @@ fn walk_in(value: &Value, path: &str, bad: &mut Vec<String>, folder: Folder) {
     }
 }
 
-/// Rule 2 for a scenario file: its own keys, allowlisted argument words,
-/// file names in its directory and synthetic stdout and stderr. The prose in
-/// `description` and `synthetic_assumptions` is covered by rule 1.
 fn scan_scenario(path: &Path, value: &Value, bad: &mut Vec<String>) {
     let dir = path.parent().expect("scenario dir");
     let send = is_send_fixture(path);
@@ -1303,16 +1179,12 @@ fn scan_scenario(path: &Path, value: &Value, bad: &mut Vec<String>) {
     }
 }
 
-/// Rule 2 for text that is not valid JSON: every double-quoted token, and
-/// otherwise the whole text.
 fn scan_unparsed(text: &str, bad: &mut Vec<String>, send: bool) {
     scan_unparsed_with(text, bad, &|t| key_ok(t, send) || value_ok(t, send), &|t| {
         value_ok(t, send)
     })
 }
 
-/// [`scan_unparsed`] for a fixture in `folder`'s own lists: used for
-/// `github/`.
 fn scan_unparsed_in(text: &str, bad: &mut Vec<String>, folder: Folder) {
     scan_unparsed_with(
         text,
@@ -1356,12 +1228,6 @@ fn scan_unparsed_with(
     }
 }
 
-/// Rule 2 for a `github/` scenario: the fake gh's keys only; its own name,
-/// a description and its synthetic assumptions, as every room-cli scenario
-/// has; scenario names that are sibling scenarios, file names in its
-/// directory, and an `argv` the GitHub adapter's allowlist allows
-/// exactly. Inline answers are scanned like files in `github/`: JSON
-/// walked, other text as unparsed.
 fn scan_github_scenario(path: &Path, value: &Value, bad: &mut Vec<String>) {
     scan_github_scenario_with(
         path,
@@ -1371,8 +1237,6 @@ fn scan_github_scenario(path: &Path, value: &Value, bad: &mut Vec<String>) {
     )
 }
 
-/// [`scan_github_scenario`] with the allowlist `allowed`, so the rule can be
-/// proven with a planted one.
 fn scan_github_scenario_with(
     path: &Path,
     value: &Value,
@@ -1445,11 +1309,9 @@ fn scan_text(path: &Path, text: &str) -> Vec<String> {
     let in_fake = path.starts_with(FAKE) || path.starts_with(FAKE_GH);
     let is_envelope = path.components().any(|c| c.as_os_str() == "envelopes");
     if in_fake || path.file_name().is_some_and(|n| n == "README.md") {
-        return bad; // source code and prose: rule 1 only
+        return bad;
     }
     if folder(path) == Folder::ReleaseCandidate {
-        // The strict reader: no duplicate value is discarded before scanning.
-        // Candidate files dispatch here even when named scenario.json.
         match crate::strict_json::parse(text.as_bytes()) {
             Ok(value) => walk_in(&value, "$", &mut bad, Folder::ReleaseCandidate),
             Err(_) => bad
@@ -1477,7 +1339,6 @@ fn scan_text(path: &Path, text: &str) -> Vec<String> {
     bad
 }
 
-/// Every `const` and `enum` word in the schema: OpenWiz's own labels.
 fn schema_words() -> Vec<String> {
     fn collect(v: &Value, out: &mut Vec<String>) {
         match v {
@@ -1501,10 +1362,6 @@ fn schema_words() -> Vec<String> {
     out
 }
 
-/// Envelopes use OpenWiz's own keys, so only their string values are
-/// checked: a schema label, the source name, or a synthetic value. Reasons
-/// and gap details are OpenWiz's own words quoting synthetic values, so only
-/// rule 1 applies to them.
 fn walk_envelope(value: &Value, words: &[String], bad: &mut Vec<String>) {
     match value {
         Value::Object(map) => {
@@ -1526,7 +1383,6 @@ fn walk_envelope(value: &Value, words: &[String], bad: &mut Vec<String>) {
 fn fixtures_contain_only_synthetic_values() {
     let files = all_files();
     assert!(files.len() > 20, "the fixtures are there");
-    // Both fakes' sources get rule 1: they are scanned, as source code.
     for fake in [
         Path::new(FAKE).join("main.rs"),
         Path::new(FAKE_GH).join("main.rs"),
@@ -1542,8 +1398,6 @@ fn fixtures_contain_only_synthetic_values() {
     assert!(problems.is_empty(), "{problems:#?}");
 }
 
-// Release candidate contract examples are not observed room-cli responses.
-// Their own named shapes must pass, while privacy and directory boundaries hold.
 #[test]
 fn release_candidate_examples_have_scoped_synthetic_provenance() {
     let dir = Path::new(FIXTURES).join("release/candidate");
@@ -1583,7 +1437,6 @@ fn release_candidate_examples_have_scoped_synthetic_provenance() {
 fn release_candidate_privacy_and_unknown_forms_still_refuse() {
     let path = Path::new(FIXTURES).join("release/candidate/synthetic-ready.json");
     for planted in [
-        // A synthetic-looking prose prefix cannot hide a private value.
         json!({"reason": "Synthetic thr_synprivate123"}),
         json!({"reason": "Synthetic ghp_planted_credential"}),
         json!({"reason": "Synthetic someone@example.com"}),
@@ -1605,7 +1458,6 @@ fn release_candidate_privacy_and_unknown_forms_still_refuse() {
         walk_in(&planted, "$", &mut bad, folder(&path));
         assert!(!bad.is_empty(), "accepted release fixture plant: {planted}");
     }
-    // Raw JSON escaping cannot hide forbidden content in a decoded string.
     let encoded = r#"{"reason":"Synthetic \u0067hp_planted_credential"}"#;
     let mut bad = private_looking_in(encoded, folder(&path));
     walk_in(
@@ -1617,7 +1469,6 @@ fn release_candidate_privacy_and_unknown_forms_still_refuse() {
     assert!(!bad.is_empty(), "accepted encoded credential");
 }
 
-// Run through the file-dispatch boundary, before any Value can discard a field.
 #[test]
 fn release_candidate_duplicate_keys_cannot_hide_private_values() {
     let path = Path::new(FIXTURES).join("release/candidate/synthetic-ready.json");
@@ -1713,8 +1564,6 @@ fn the_scan_catches_planted_private_data() {
     assert!(!bad.is_empty(), "the scan missed a value in truncated JSON");
 }
 
-/// #571: the PC observed these sent-receipt keys at 4379586. They are
-/// allowed in send fixtures only; every identifier below is synthetic.
 #[test]
 fn the_observed_sent_keys_pass_only_in_send_fixtures() {
     for planted in [
@@ -1734,8 +1583,6 @@ fn the_observed_sent_keys_pass_only_in_send_fixtures() {
     }
 }
 
-/// OpenWiz 0.0.3: the documented `thread tell` keys and labels pass only in
-/// `send/`; anywhere else they are refused as before.
 #[test]
 fn the_documented_send_shapes_pass_only_in_send_fixtures() {
     for planted in [
@@ -1756,8 +1603,6 @@ fn the_documented_send_shapes_pass_only_in_send_fixtures() {
     assert!(!value_ok("tell", false));
 }
 
-/// OpenWiz 0.0.4: the observed `cloud status` keys and labels, and the
-/// source-read statuses, pass only in `room-cli-v127/new-thread/`.
 #[test]
 fn the_new_thread_shapes_pass_only_in_new_thread_fixtures() {
     for planted in [
@@ -1787,11 +1632,6 @@ fn the_new_thread_shapes_pass_only_in_new_thread_fixtures() {
     }
 }
 
-/// OpenWiz 0.0.6 (A3, ClosedWiz#111): the `gh` keys A1 observed, its
-/// labels, and the contract's synthetic commit, branch, time and version
-/// forms pass only in `github/`; anywhere else they are refused as before.
-/// In `github/`, the room-cli keys are refused, and so is anything private
-/// or not synthetic.
 #[test]
 fn the_github_shapes_pass_only_in_github_fixtures() {
     for planted in [
@@ -1846,8 +1686,6 @@ fn the_github_shapes_pass_only_in_github_fixtures() {
     assert!(bad.is_empty(), "{bad:?}");
 }
 
-/// A `github/` scenario names itself, describes itself and labels what is
-/// not observed, as every room-cli scenario does.
 #[test]
 fn a_github_scenario_records_its_name_and_synthetic_assumptions() {
     let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("fixture-scan/github/syn-recorded");
@@ -1894,10 +1732,6 @@ fn a_github_scenario_records_its_name_and_synthetic_assumptions() {
     }
 }
 
-/// A `github/` scenario has the fake gh's keys only, and answers only a
-/// call the GitHub adapter's allowlist allows, whatever its modules allow
-/// (Sol on #247, R2): the scan asks the allowlist, and holds no list of its
-/// own. Its inline answers are scanned as fixtures.
 #[test]
 fn a_github_scenario_answers_only_calls_the_allowlist_allows() {
     let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("fixture-scan/github/syn-scenario");
@@ -1948,7 +1782,6 @@ fn a_github_scenario_answers_only_calls_the_allowlist_allows() {
         );
         off_the_list == 1
     };
-    // The real allowlist, whatever its modules allow now or later.
     for argv in forms {
         let allowed = openwiz_adapter_github::allowlist::allowed(argv);
         assert_eq!(
@@ -1966,7 +1799,6 @@ fn a_github_scenario_answers_only_calls_the_allowlist_allows() {
             "{argv:?}: the scan uses the real allowlist"
         );
     }
-    // A planted allowlist: exactly the version read and one issue read.
     let planted = |argv: &[&str]| {
         argv == ["--version"] || argv == ["issue", "view", "902", "--json", "title"]
     };
@@ -2013,9 +1845,6 @@ fn a_github_scenario_answers_only_calls_the_allowlist_allows() {
     }
 }
 
-/// A `github/` scenario's `argv` is a list of text, word for word: a word
-/// that is not text is refused, never dropped (dropping it could leave an
-/// allowed call).
 #[test]
 fn a_github_scenarios_argv_is_only_text() {
     let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("fixture-scan/github/syn-argv");
@@ -2044,7 +1873,6 @@ fn a_github_scenarios_argv_is_only_text() {
     }
 }
 
-/// #373: the diagnostic is public grammar, but its branch must be synthetic.
 #[test]
 fn no_checks_diagnostic_accepts_only_the_existing_synthetic_branch_form() {
     for branch in ["room/syn-2", "room/syn-a5-0005", "room/syn-A1"] {
@@ -2073,8 +1901,6 @@ fn no_checks_diagnostic_accepts_only_the_existing_synthetic_branch_form() {
     }
 }
 
-/// #571 probe c687079: exactly two reserved synthetic queued identifiers,
-/// only under send/. Other UUIDs/ids must still fail, including in prose.
 #[test]
 fn observed_queued_identifiers_and_keys_are_scoped() {
     for id in ["qmsg_syn_0001", "00000000-0000-4000-8000-000000000001"] {
@@ -2093,8 +1919,6 @@ fn observed_queued_identifiers_and_keys_are_scoped() {
         "editable",
     ] {
         assert!(key_in(key, Folder::Send), "{key}");
-        // These are new send-only keys, rather than keys already shared
-        // with independently observed inventory/catalogue shapes.
         for outside in [Folder::Other, Folder::GitHub] {
             assert!(!key_in(key, outside), "{key} accepted outside send/");
         }

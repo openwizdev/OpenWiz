@@ -21,7 +21,7 @@ evidence show; a fixture or recording pass shows the shape is consistent, never
 that an absent runtime works. It changes no once-only, authorization,
 public-record or token rule of [setup.v1](setup.v1.md),
 [github-identity.v1](github-identity.v1.md), [cli.v1](cli.v1.md),
-[first-hour.v1](../tools/install/tests/first-hour/README.md#evidence-and-validation), [install.v1](install.v1.md),
+[install.v1](install.v1.md),
 [decisions.v1](decisions.v1.md) or [open-development.v1](open-development.v1.md),
 which stay authoritative where they apply. Each of those contracts names its
 compatible expansion and points here.
@@ -166,14 +166,27 @@ An `init_result` reports what happened:
 - **Visible proposals.** Brain files are proposed through a visible pull
   request on the brain's repository (`open` or `merged`). An applied init
   without one is refused. A private repository has no companion effect.
+  When init creates the companion in this same apply, it also merges that
+  pull request, under the same authorization, right after opening it and
+  reading it back, and reports it `merged`; the pull request stays as the
+  visible proposal and record. Only GitHub's own replies to this operation's
+  create requests count: the companion's repository id and the pull request's
+  number and head must still match them. A creation or proposal known only
+  from a later read, an existing companion, an in-repository brain and a
+  repeated init leave the pull request `open` for the user.
 - **One line.** `report_line` names the brain's repository as a whole word and
   says how to change it later.
 - **Effects once.** Each effect (`create_companion`, `link_companion`,
-  `open_pull_request`, `create_label`) has first-hour.v1's `phase`,
-  `effect_count`, `attempts` and `reconciliation`: above one effect is a
-  duplicate; above one attempt without `provider_read_back` is a blind retry;
-  `uncertain` stays unproven until reconciled. A repeated init reconciles the
-  existing brain, companion, link and pending pull requests before any call.
+  `open_pull_request`, `create_label`, `merge_pull_request`) has
+  first-hour.v1's `phase`, `effect_count`, `attempts` and `reconciliation`:
+  above one effect is a duplicate; above one attempt without
+  `provider_read_back` is a blind retry; `uncertain` stays unproven until
+  reconciled. A repeated init reconciles the existing brain, companion, link
+  and pending pull requests before any call. `merge_pull_request` belongs only
+  beside a `create_companion` of the same companion in the same result; once
+  it has an attempt, that creation is `applied`, and once it is `applied`, the
+  brain's pull request reads `merged`. Any other merge is
+  `phase_effect_mismatch:merge_pull_request`.
 
 Repository creation and changes remain disclosed effects under setup.v1's
 explicit, current authorization; this contract adds no route or authority.

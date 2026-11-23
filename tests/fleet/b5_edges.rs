@@ -1,5 +1,3 @@
-//! Boundary and interruption proofs suggested by the independent helpers;
-//! verified and written by the builder. All data is synthetic.
 use super::fake::{self, World};
 use serde_json::{Value, json};
 use std::fs;
@@ -50,9 +48,6 @@ fn b5_approval_v1_is_stale_and_aligned_table_is_valid() {
     }
 }
 
-// synthetic_assumptions: Markdown serialization variants of the approved
-// fixture; the issue and hashed revision use the raw title, while only the
-// table cell contains Markdown pipe escapes.
 fn r1_approval_world(name: &str, title: &str, table_title: &str) -> World {
     use openwiz_core::messaging::sha256_hex;
     let w = World::new(name);
@@ -486,8 +481,6 @@ fn b5_review_r3b_due_reads_one_inventory_and_one_repository_comment_snapshot() {
             "{pair:?}: {calls:?}"
         );
     }
-    // The two repo reads have distinct contracts: one inventory identity and
-    // one freshly verified privacy fact. Neither may be repeated or omitted.
     for fields in [
         "defaultBranchRef,nameWithOwner,url",
         "nameWithOwner,isPrivate",
@@ -1302,5 +1295,50 @@ fn b5_review_r2_github_only_cannot_distinguish_an_unlogged_local_start() {
             "fleet #9: candidate #10\n"
         );
         assert!(w.calls()[before..].iter().all(|(tool, _)| tool == "gh"));
+    }
+}
+
+#[test]
+fn b5_limited_builder_restarts_only_on_a_codex_small_builder() {
+    for (harness, restart) in [
+        ("codex", true),
+        ("syn-harness", false),
+        ("claude-code", false),
+    ] {
+        let w = World::new(&format!("fallback_{harness}"));
+        w.change(|s| {
+            s["threads"]["thr_syn_limited"] = json!({"provider":"claude-code","model":"claude-opus-5-5","effort":"high","archived":false,"prompt":"synthetic builder","output":"Claude usage limit reached"});
+            s["comments"]["10"] = json!([{"id":1910,"created":1_793_400_010_000_u64,"updated":1_793_400_010_000_u64,"body":"launch-fleet: start checked, thread thr_syn_limited, branch synthetic-branch-10"}]);
+            let small = format!("## Builder for small tickets\n| Setting | Value | `room-cli thread spawn` flag |\n| --- | --- | --- |\n| Harness | Synthetic | `--provider {harness}` |");
+            let rules = s["rules"].as_str().unwrap().replacen(
+                "## Builder for small tickets\n| Setting | Value | `room-cli thread spawn` flag |\n| --- | --- | --- |\n| Harness | Codex | `--provider codex` |",
+                &small,
+                1,
+            );
+            assert!(rules.contains(&small));
+            s["rules"] = rules.into();
+        });
+        let o = w.run(&["fleet", "tick", "--dry-run", "--json"]);
+        assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+        let doc: Value = serde_json::from_slice(&o.stdout).unwrap();
+        let ten = doc["actions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|a| a["ticket"] == 10)
+            .collect::<Vec<_>>();
+        assert_eq!(ten.len(), 1, "{harness}: {doc}");
+        if restart {
+            assert_eq!(ten[0]["rule"], "restart", "{harness}: {doc}");
+            assert_eq!(ten[0]["facts"]["builder"], "thr_syn_limited");
+            assert_eq!(ten[0]["facts"]["settings"]["harness"], harness);
+        } else {
+            assert_eq!(ten[0]["rule"], "look", "{harness}: {doc}");
+            assert_eq!(
+                ten[0]["facts"]["reason"], "fallback builder is not another family",
+                "{harness}: {doc}"
+            );
+        }
+        assert!(w.writes().is_empty());
     }
 }

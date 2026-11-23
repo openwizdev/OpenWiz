@@ -1,0 +1,19 @@
+# #2292 green, after the fixes: the same proofs as red.txt
+
+$ python3 -I adapters/local/test_driver.py -k quick_clean -k lsof_cannot
+test_a_quick_clean_first_turn_starts ... ok
+test_without_proc_as_on_macos_stop_says_when_lsof_cannot_check_the_output_file ... ok
+Ran 2 tests
+OK
+
+$ python3 -I adapters/template/test_driver.py -k lsof_cannot
+test_without_proc_as_on_macos_stop_says_when_lsof_cannot_check_the_output_file ... ok
+Ran 1 test
+OK
+
+$ python3 -I adapters/boat/test_driver.py -k odd_bytes -k from_stderr -k wake_that_cannot_save
+test_known_boat_guidance_reaches_the_answer_from_stderr ... ok
+test_the_push_refusal_holds_when_the_check_answers_odd_bytes_or_cannot_run ... ok
+test_without_proc_as_on_macos_a_wake_that_cannot_save_ends_only_its_own_turn ... ok
+Ran 3 tests
+OK

@@ -17,9 +17,10 @@ from product_identity import PROGRAMS as COMPILED, WIZSKILLS, architecture, cano
 
 # #1699: the drivers 0.1.0 launches with (KN3 to KN5), each carried when the source tracks it,
 # and the driver kit's files (kit.py reads its schema, ../records.v1.md and ../records-kit/check.py).
-DRIVERS = ('boat', 'cloudroom', 'conductor', 'local')
+DRIVERS = ('boat', 'cloudroom', 'conductor', 'devin', 'local', 'openclaw')
+KEY_CHECK_FILES = {'devin': ('README.md', 'fixtures/kit-host.json')}
 KIT = ['kernel/driver-kit/kit.py', 'kernel/driver-kit/schema.json', 'kernel/records-kit/check.py',
-       'kernel/records.v1.md']
+       'kernel/records.v1.md', 'kernel/driver-kit/hostkey.py', 'kernel/driver-kit/hosts.json']
 
 
 def collect(root, binaries, output, version, source, target, program_receipt):
@@ -43,6 +44,8 @@ def collect(root, binaries, output, version, source, target, program_receipt):
         files['runtime/' + relative] = actual
     files['runtime/install.py'] = root / 'tools/install/install.py'
     files['runtime/pull.py'] = root / 'tools/install/pull.py'
+    if installed is not None:
+        files['runtime/wizskills.lock'] = root / 'wizskills.lock'
     # #1105: the setup and App connection tools an installed consumer runs.
     for name, tool in (('setup/setup.py', 'tools/install/setup/setup.py'),
                        ('setup/store.py', 'tools/install/setup/store.py'),
@@ -93,7 +96,7 @@ def collect(root, binaries, output, version, source, target, program_receipt):
     tracked = set(git(root, 'ls-tree', '-r', '-z', '--name-only', '--end-of-options', source,
                       '--', 'adapters', 'kernel').decode('utf-8').split('\0'))
     selected = [f'adapters/{host}/{name}' for host in DRIVERS if f'adapters/{host}/driver' in tracked
-                for name in ('driver', 'schema.json')]
+                for name in ('driver', 'schema.json') + KEY_CHECK_FILES.get(host, ())]
     if 'kernel/driver-kit/kit.py' in tracked:
         selected += KIT
     for path in selected:
@@ -105,8 +108,11 @@ def collect(root, binaries, output, version, source, target, program_receipt):
     # #555: a runtime file's repository path, as the receipt records it and the
     # candidate verifies it: a skill is skills/<path>, the path users and briefs
     # see through the link, even when its bytes come from the WizSkills install.
+    released = {'runtime/' + relative for relative in installed or ()}
+
     def repository(name, path):
-        return name[len('runtime/'):] if name.startswith('runtime/skills/') else path.relative_to(root).as_posix()
+        return name[len('runtime/'):] if name.startswith('runtime/skills/') or name in released \
+            else path.relative_to(root).as_posix()
 
     output.mkdir(mode=0o700)
     rows, runtime = [], {}

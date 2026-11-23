@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Synthetic regressions for the 0.0.5 export findings; no product suites or live calls."""
 from pathlib import Path
 from types import SimpleNamespace
 import sys

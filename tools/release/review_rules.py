@@ -1,4 +1,3 @@
-"""Public-wording regressions from the 0.0.5 export review; no publication authority."""
 import re
 
 STATE_DOCS = {'README.md', 'CHANGELOG.md', 'RELEASING.md', 'docs/testing.md'}
@@ -9,12 +8,10 @@ PRIVATE_POINTERS = (
 )
 
 
-# Comment spans exclude literals so planted strings and example payloads stay data.
 def comment_spans(path, text):
     if not path.endswith(('.rs', '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.css', '.sh', '.py')):
         return
     if path.endswith(('.sh', '.py')):
-        # Shell heredocs contain payload, not comments, including Markdown headings.
         quote = None
         heredoc = None
         offset = 0
@@ -87,7 +84,6 @@ def comment_findings(path, text):
         number = text.count('\n', 0, start)+1
         for index, line in enumerate(text[start:end].split('\n')):
             prose = re.sub(r'^\s*(?://[/!]?|/\*[*!]?|\*|#)\s?', '', line)
-            # Literal examples retain their own syntax; prose around them is checked.
             semantic = prose
             prose = re.sub(r'`[^`]*`', 'CODE', prose)
             context = previous[1]+' '+semantic if previous[0] == number+index-1 else semantic
@@ -99,7 +95,6 @@ def comment_findings(path, text):
 
 
 def findings(texts, public_commits=()):
-    """Return every recorded slip as id/path/line; never echo matched values."""
     out = []
     for path, text in sorted(texts.items()):
         out.extend(comment_findings(path, text))

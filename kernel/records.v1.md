@@ -45,7 +45,7 @@ Every spec and ticket is an issue whose body has the sections below, each as a `
 
 ## 4. Blockers
 
-- **B1.** A ticket waits for another issue only through GitHub's native "blocked by" link. Text in a body never blocks. Each native blocker gets one reason line in `## Links`, as the [plan links contract](https://github.com/openwizdev/WizSkills/blob/a2993f47b8fd3d7853ee45e6c21feea708c70c02/contracts/plan-links.v1.md) says.
+- **B1.** A ticket waits for another issue only through GitHub's native "blocked by" link. Text in a body never blocks. Each native blocker gets one reason line in `## Links`, as the [plan links contract](https://github.com/openwizdev/WizSkills/blob/8fea52a934492272e3d138c79602f93c9e2d45e0/contracts/plan-links.v1.md) says, in its short form (`- #<n>`) or its long form naming this repository (`- <owner>/<repo>#<n>`, in any case).
 - **B2.** A blocker is done only when it is closed as completed. A blocker closed as not planned or as a duplicate is not done, and never will be. An open issue that has such a blocker is a break, and its plan must change: drop the link, or replace the blocker.
 
 ## 5. Everything else is read from GitHub
@@ -68,7 +68,7 @@ Nothing else is stored. A tool reads the rest from GitHub itself:
 A project says where its agents run in one file on its default branch, `docs/agents/host.md`. It holds one setting line, `Host: <name>`, where `<name>` is a driver's folder in OpenWiz's `adapters/` (such as `local`, `cloudroom` or `boat`): lowercase letters, digits and single hyphens, at most 40 characters, as a [driver v1](driver.v1.md) names itself. The rest of the file is prose for people.
 
 - **H1.** Onboarding asks once and writes the file. The person changes it by asking their agent, which edits that one line; nothing else changes.
-- **H2.** A tool that starts, wakes or stops agents reads the setting and calls that host's driver. A run is woken and stopped through the driver that started it, even after the setting changes; only later starts use the new host.
+- **H2.** A start reads the setting on the default branch as it is then, and calls that host's driver. A wake or a stop uses the run's saved driver, the one that started it, even after the setting changes.
 - **H3.** A file without exactly one valid setting line starts nothing: the tool says what is wrong. A project with no file has chosen no host, and its tools keep their own default.
 - **H4.** The setting names a host and nothing more: never a login, token, key, machine or account.
 

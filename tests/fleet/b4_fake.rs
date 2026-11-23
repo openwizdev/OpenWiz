@@ -1,53 +1,21 @@
-//! B4's fakes (ClosedWiz#120): a private copy of the repository's fake
-//! `room-cli` per test, a scenario the test writes, and a private state
-//! directory for the new-thread and start records.
-//!
-//! **The scenario is written by the test**, not committed, as the
-//! new-thread proofs do (`tests/new-thread/fake.rs`): a create needs a
-//! project with a GitHub remote, which no committed fixture may hold. Every
-//! value is synthetic. The committed stdout files of
-//! `room-cli-v127/new-thread/` are served by absolute path; the catalogue
-//! is that file with two of its synthetic model names changed to the
-//! builder and reviewer models these tests start.
-
 use std::fs;
 use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
-use openwiz_adapter_cloudroom::source::CloudRoomSource;
 use openwiz_cli::state::StartFileStore;
 use openwiz_core::fleet::model::{Commit, Number};
 use openwiz_core::fleet::starts::{Repository, StartKey, StartRequest};
 use openwiz_core::messaging::OpId;
 use openwiz_core::new_thread::Settings;
-use serde_json::{Value, json};
 
-/// The new-thread fixtures, served by absolute path.
-pub const NEW_THREAD: &str = concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/fixtures/room-cli-v127/new-thread"
-);
-
-/// The 0.43.1 inventory scenario every B4 scenario extends (the thread
-/// list a status read of an uncertain start reads).
-pub const NORMAL: &str = concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/fixtures/room-cli-0.43.1/normal"
-);
-
-/// The project every start here is in, and the thread the default create
-/// makes (the committed receipt's).
 pub const PROJECT: &str = "prj_syn_0001";
 pub const THREAD: &str = "thr_syn_0021";
 
-/// A synthetic repository.
 pub const REPOSITORY: &str = "synthetic-owner/synthetic-repo-0001";
 
-/// A synthetic head commit.
 pub const COMMIT: &str = "0123456789abcdef0123456789abcdef01234567";
 
-/// A synthetic timestamp, in milliseconds.
 pub const T0: i64 = 1_700_000_000_000;
 
 pub fn repository() -> Repository {
@@ -70,20 +38,14 @@ pub fn settings(harness: &str, model: &str, effort: &str) -> Settings {
     }
 }
 
-/// A builder's settings here: Claude Code, Opus 5.5, XHigh (fleet.md's
-/// builder row when #120 was planned). A start passes on whatever settings
-/// its caller gives; nothing here depends on these.
 pub fn builder_settings() -> Settings {
     settings("claude-code", "claude-opus-5-5", "xhigh")
 }
 
-/// A reviewer's settings here: Codex, Sol 6.1, High (fleet.md's reviewer
-/// row when #120 was planned).
 pub fn reviewer_settings() -> Settings {
     settings("codex", "gpt-6.1-sol", "high")
 }
 
-/// The builder of ticket `ticket`, in [`PROJECT`].
 pub fn builder(ticket: u64) -> StartRequest {
     StartRequest::new(
         StartKey::builder(repository(), number(ticket)),
@@ -92,7 +54,6 @@ pub fn builder(ticket: u64) -> StartRequest {
     )
 }
 
-/// The reviewer of pull request `pr` at [`COMMIT`], in [`PROJECT`].
 pub fn reviewer(pr: u64) -> StartRequest {
     StartRequest::new(
         StartKey::reviewer(
@@ -105,77 +66,6 @@ pub fn reviewer(pr: u64) -> StartRequest {
     )
 }
 
-/// A committed new-thread stdout file, by absolute path.
-pub fn file(name: &str) -> String {
-    let path = Path::new(NEW_THREAD).join(name);
-    assert!(path.is_file(), "no fixture {path:?}");
-    path.to_str().expect("utf-8").to_owned()
-}
-
-/// A create that makes [`THREAD`].
-pub fn created() -> Value {
-    json!({"any_spawn": true, "stdout_file": file("spawn-receipt-created.json"), "creates": true})
-}
-
-fn project_row(id: &str, name: &str, remote: Value) -> Value {
-    json!({
-        "id": id,
-        "kind": "standard",
-        "name": name,
-        "gitRemoteUrl": remote,
-        "createdAt": 1_699_100_600_000_i64,
-        "updatedAt": 1_699_200_600_000_i64,
-        "sources": [],
-    })
-}
-
-/// The responses every B4 scenario starts from: the version, the project
-/// lists (one project, with a synthetic GitHub remote), the catalogue, one
-/// create, and the new thread's `thread show`.
-fn defaults(catalogue: &Path) -> Vec<Value> {
-    let projects = json!([project_row(
-        PROJECT,
-        "Synthetic project one",
-        json!("https://github.com/synthetic-owner/synthetic-repo-0001.git"),
-    )]);
-    vec![
-        json!({"argv": ["--version"], "stdout": "v127\n"}),
-        json!({
-            "argv": ["project", "list", "--json", "--include-personal"],
-            "stdout": projects.to_string(),
-        }),
-        json!({
-            "argv": ["project", "list", "--json", "--include-personal", "--hidden"],
-            "stdout": "[]",
-        }),
-        json!({"argv": ["cloud", "status", "--json"], "stdout_file": catalogue}),
-        created(),
-        json!({
-            "argv": ["thread", "show", THREAD, "--json"],
-            "stdout_file": file("thread-show-active.json"),
-        }),
-    ]
-}
-
-/// The committed catalogue, with the first model of `codex` and of
-/// `claude-code` renamed to the reviewer and builder models above. Their
-/// effort lists are the fixture's.
-fn catalogue() -> Value {
-    let text = fs::read_to_string(file("cloud-status.json")).expect("the catalogue");
-    let mut catalogue: Value = serde_json::from_str(&text).expect("JSON");
-    for harness in catalogue["harnesses"].as_array_mut().expect("harnesses") {
-        let model = match harness["id"].as_str() {
-            Some("codex") => "gpt-6.1-sol",
-            Some("claude-code") => "claude-opus-5-5",
-            _ => continue,
-        };
-        harness["models"][0]["model"] = json!(model);
-    }
-    catalogue
-}
-
-/// This test run's own directory under the system temp directory: records
-/// must be outside every repository.
 fn run_root() -> &'static Path {
     static ROOT: OnceLock<PathBuf> = OnceLock::new();
     ROOT.get_or_init(|| {
@@ -199,92 +89,18 @@ fn private_dir(dir: &Path) {
     fs::set_permissions(dir, fs::Permissions::from_mode(0o700)).expect("private");
 }
 
-/// A private fake `room-cli` and state directory for one test.
 pub struct Fake {
-    pub dir: PathBuf,
     pub state: PathBuf,
 }
 
 impl Fake {
-    /// `responses` tried first, then the defaults, then the 0.43.1
-    /// inventory.
-    pub fn new(test: &str, responses: Vec<Value>) -> Self {
-        let dir = Path::new(env!("CARGO_TARGET_TMPDIR"))
-            .join("b4-fake")
-            .join(test);
+    pub fn new(test: &str) -> Self {
         let state = run_root().join(format!("{test}-state"));
-        let _ = fs::remove_dir_all(&dir);
         let _ = fs::remove_dir_all(&state);
-        private_dir(&dir);
-        std::os::unix::fs::symlink(env!("CARGO_BIN_EXE_fake-room-cli"), dir.join("room-cli"))
-            .expect("link the fake");
-        fs::write(dir.join("fake-room-cli.state"), state.to_str().unwrap()).expect("state");
-        fs::write(dir.join("catalogue.json"), catalogue().to_string()).expect("catalogue");
-        let fake = Self { dir, state };
-        fake.respond(responses);
-        fake
-    }
-
-    /// Replaces the scenario: `responses` first, then the defaults.
-    pub fn respond(&self, mut responses: Vec<Value>) {
-        responses.extend(defaults(&self.dir.join("catalogue.json")));
-        let scenario = json!({
-            "scenario": "own",
-            "description": "A B4 test's own responses.",
-            "extends": NORMAL,
-            "synthetic_assumptions": ["Written by the test; every value is synthetic."],
-            "responses": responses,
-        });
-        let own = self.dir.join("own");
-        private_dir(&own);
-        let file = own.join("scenario.json");
-        fs::write(&file, serde_json::to_string_pretty(&scenario).unwrap()).expect("scenario");
-        fs::write(
-            self.dir.join("fake-room-cli.scenario"),
-            file.to_str().unwrap(),
-        )
-        .expect("scenario pointer");
-    }
-
-    pub fn program(&self) -> PathBuf {
-        self.dir.join("room-cli")
-    }
-
-    pub fn source(&self) -> CloudRoomSource {
-        CloudRoomSource::new(self.program())
+        Self { state }
     }
 
     pub fn starts(&self) -> StartFileStore {
         StartFileStore::open(&self.state).expect("open the start record")
-    }
-
-    /// Every argument list the fake received, in order.
-    pub fn invocations(&self) -> Vec<Vec<String>> {
-        let Ok(text) = fs::read_to_string(self.dir.join("invocations.log")) else {
-            return vec![];
-        };
-        text.lines()
-            .map(|l| serde_json::from_str(l).expect("a JSON line"))
-            .collect()
-    }
-
-    fn counter(&self, name: &str) -> u64 {
-        let path = self.dir.join(name);
-        let Ok(mut file) = fs::File::open(&path) else {
-            return 0;
-        };
-        file.lock_shared().expect("lock the counter");
-        let mut text = String::new();
-        std::io::Read::read_to_string(&mut file, &mut text).expect("read the counter");
-        if text.is_empty() {
-            0
-        } else {
-            text.parse().expect("a count")
-        }
-    }
-
-    /// The archive calls the fake accepted.
-    pub fn archive_count(&self) -> u64 {
-        self.counter("archive-calls.count")
     }
 }

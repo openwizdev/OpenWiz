@@ -1,0 +1,81 @@
+# Red run (#1907): python3 -I adapters/boat/test_driver.py -k first_turn, the new first-turn tests and the fake boat's usage_limit and no-tool-call turns against the driver at 8b98977f.
+FFFFF.
+======================================================================
+FAIL: test_a_first_turn_that_hits_a_usage_limit_or_does_nothing_fails_start (__main__.Boat.test_a_first_turn_that_hits_a_usage_limit_or_does_nothing_fails_start) (turn='usage_limit:auth_expiry', held=False)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/boat/test_driver.py", line 249, in test_a_first_turn_that_hits_a_usage_limit_or_does_nothing_fails_start
+    self.assertEqual((code, list(self.sandboxes().values())[-1]), (1, 'stopped'), err)
+AssertionError: Tuples differ: (0, 'running') != (1, 'stopped')
+
+First differing element 0:
+0
+1
+
+- (0, 'running')
++ (1, 'stopped') : {'run': 'run-09173834eb7b'}
+
+======================================================================
+FAIL: test_a_first_turn_that_hits_a_usage_limit_or_does_nothing_fails_start (__main__.Boat.test_a_first_turn_that_hits_a_usage_limit_or_does_nothing_fails_start) (turn='usage_limit_flat:rate_limit', held=False)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/boat/test_driver.py", line 249, in test_a_first_turn_that_hits_a_usage_limit_or_does_nothing_fails_start
+    self.assertEqual((code, list(self.sandboxes().values())[-1]), (1, 'stopped'), err)
+AssertionError: Tuples differ: (0, 'running') != (1, 'stopped')
+
+First differing element 0:
+0
+1
+
+- (0, 'running')
++ (1, 'stopped') : {'run': 'run-199791faff9d'}
+
+======================================================================
+FAIL: test_a_first_turn_that_hits_a_usage_limit_or_does_nothing_fails_start (__main__.Boat.test_a_first_turn_that_hits_a_usage_limit_or_does_nothing_fails_start) (turn='usage_limit:auth_expiry', held=True)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/boat/test_driver.py", line 249, in test_a_first_turn_that_hits_a_usage_limit_or_does_nothing_fails_start
+    self.assertEqual((code, list(self.sandboxes().values())[-1]), (1, 'stopped'), err)
+AssertionError: Tuples differ: (0, 'running') != (1, 'stopped')
+
+First differing element 0:
+0
+1
+
+- (0, 'running')
++ (1, 'stopped') : {'run': 'run-240a3e65d24b'}
+
+======================================================================
+FAIL: test_a_first_turn_that_hits_a_usage_limit_or_does_nothing_fails_start (__main__.Boat.test_a_first_turn_that_hits_a_usage_limit_or_does_nothing_fails_start) (turn='usage_limit:<b>raw text</b>', held=False)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/boat/test_driver.py", line 249, in test_a_first_turn_that_hits_a_usage_limit_or_does_nothing_fails_start
+    self.assertEqual((code, list(self.sandboxes().values())[-1]), (1, 'stopped'), err)
+AssertionError: Tuples differ: (0, 'running') != (1, 'stopped')
+
+First differing element 0:
+0
+1
+
+- (0, 'running')
++ (1, 'stopped') : {'run': 'run-4937e18df51b'}
+
+======================================================================
+FAIL: test_a_first_turn_that_hits_a_usage_limit_or_does_nothing_fails_start (__main__.Boat.test_a_first_turn_that_hits_a_usage_limit_or_does_nothing_fails_start) (turn='no_tools', held=False)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/boat/test_driver.py", line 249, in test_a_first_turn_that_hits_a_usage_limit_or_does_nothing_fails_start
+    self.assertEqual((code, list(self.sandboxes().values())[-1]), (1, 'stopped'), err)
+AssertionError: Tuples differ: (0, 'running') != (1, 'stopped')
+
+First differing element 0:
+0
+1
+
+- (0, 'running')
++ (1, 'stopped') : {'run': 'run-149cb60a0e6a'}
+
+----------------------------------------------------------------------
+Ran 2 tests in 2.199s
+
+FAILED (failures=5)

@@ -1,0 +1,3 @@
+#!/bin/sh
+echo "heads-signed-in output heads.py discards"
+exit 0

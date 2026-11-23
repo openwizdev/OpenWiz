@@ -1,8 +1,3 @@
-//! N5: honest options. The read time, the saved-copy label and the
-//! unavailable harnesses with their reasons; `harnesses: null` gives no
-//! options; account fields (and every other non-catalogue field) are never
-//! parsed into the core.
-
 use openwiz_adapter_cloudroom::new_thread::{CLI_REASONING_LEVELS, parse_catalogue};
 use openwiz_core::new_thread::options::{
     NoOptionsReason, OptionsState, SAVED_COPY_LABEL, cloud_options,
@@ -80,8 +75,6 @@ fn not_ready_null_harnesses_and_a_failed_read_give_no_options() {
     );
 }
 
-/// The account and every other field are dropped at the adapter's boundary:
-/// nothing of them reaches the core, whatever their type.
 fn account_and_other_fields_never_reach_the_core() {
     let mut doc = fixture_json("cloud-status.json");
     doc["account"] = serde_json::json!({

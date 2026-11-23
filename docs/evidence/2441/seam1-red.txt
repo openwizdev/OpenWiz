@@ -1,0 +1,83 @@
+# Seam 1 red (#2441): the runner's first slice checks exit codes only.
+# Run in a scratch copy whose installer host table also accepts this aarch64 Linux sandbox as x86_64-unknown-linux-gnu; CI runs the unmodified tree on x86_64.
+# Command: env -u OPENWIZ_GITHUB_APP_KEY python3 -I tools/rehearsal/test_rehearse.py
+.FFFFF.
+======================================================================
+FAIL: test_each_planted_break_fails_its_named_step (__main__.Rehearse.test_each_planted_break_fails_its_named_step) (planted='other-version-manifest')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/rehearsal/test_rehearse.py", line 88, in test_each_planted_break_fails_its_named_step
+    self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+AssertionError: 0 != 1 : step preflight: pass
+step install: pass
+step build_identity: pass
+step setup: pass
+step skills: pass
+step first_fleet_dry_run: pass
+rehearsal: pass
+
+
+======================================================================
+FAIL: test_each_planted_break_fails_its_named_step (__main__.Rehearse.test_each_planted_break_fails_its_named_step) (planted='other-commit-identity')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/rehearsal/test_rehearse.py", line 88, in test_each_planted_break_fails_its_named_step
+    self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+AssertionError: 0 != 1 : step preflight: pass
+step install: pass
+step build_identity: pass
+step setup: pass
+step skills: pass
+step first_fleet_dry_run: pass
+rehearsal: pass
+
+
+======================================================================
+FAIL: test_each_planted_break_fails_its_named_step (__main__.Rehearse.test_each_planted_break_fails_its_named_step) (planted='setup-needs-cloudroom')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/rehearsal/test_rehearse.py", line 88, in test_each_planted_break_fails_its_named_step
+    self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+AssertionError: 0 != 1 : step preflight: pass
+step install: pass
+step build_identity: pass
+step setup: pass
+step skills: pass
+step first_fleet_dry_run: pass
+rehearsal: pass
+
+
+======================================================================
+FAIL: test_each_planted_break_fails_its_named_step (__main__.Rehearse.test_each_planted_break_fails_its_named_step) (planted='dry-run-writes')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/rehearsal/test_rehearse.py", line 88, in test_each_planted_break_fails_its_named_step
+    self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+AssertionError: 0 != 1 : step preflight: pass
+step install: pass
+step build_identity: pass
+step setup: pass
+step skills: pass
+step first_fleet_dry_run: pass
+rehearsal: pass
+
+
+======================================================================
+FAIL: test_each_planted_break_fails_its_named_step (__main__.Rehearse.test_each_planted_break_fails_its_named_step) (planted='calls-cargo')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/rehearsal/test_rehearse.py", line 88, in test_each_planted_break_fails_its_named_step
+    self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+AssertionError: 0 != 1 : step preflight: pass
+step install: pass
+step build_identity: pass
+step setup: pass
+step skills: pass
+step first_fleet_dry_run: pass
+rehearsal: pass
+
+
+----------------------------------------------------------------------
+Ran 3 tests in 19.925s
+
+FAILED (failures=5)

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""P9: release a public branch in isolation; never reach a real remote."""
 import json
 import shutil
 import sys
@@ -44,15 +43,12 @@ class OpenRelease(base.ReleaseCheck):
         self.assertFalse((self.stage / 'export').exists())
 
     def test_named_terms_refuse_unlisted_source_and_exact_staged_commit(self):
-        # Healthy source and staged trees pass with an explicit private input.
         result = self.check()
         self.assertEqual(result.returncode, 0, result.stderr)
         from check import Check, Refused
         from types import SimpleNamespace
         check = Check(SimpleNamespace(version=base.VERSION, repo=self.repo, historical=None,
                                       evidence=self.evidence, literals=self.literals))
-        # Expand the private test input to an independently known literal that
-        # exists in the already-staged fixture; do not change its commit/tree.
         self.literals.write_text("synthetic-private-name\nFixture-tested\n")
         staged_head = self.git(self.stage/"export", "rev-parse", "HEAD").stdout.strip()
         with self.assertRaisesRegex(Refused, "privacy checker failed"):
@@ -63,8 +59,6 @@ class OpenRelease(base.ReleaseCheck):
         self.literals.write_text("synthetic-private-name\nsynthetic.private+name\n")
         (self.repo/"unlisted.txt").write_text("prefix-synthetic-private-name-suffix\n")
         self.commit(self.repo)
-        # The tool itself may live under a private operator path. Its failure
-        # must not echo a named term from that path into release diagnostics.
         private_tools = self.root/"synthetic-private-name"
         self.cli.parent.parent.rename(private_tools)
         self.cli = private_tools/"release/release"
@@ -76,8 +70,6 @@ class OpenRelease(base.ReleaseCheck):
         self.assertFalse((self.stage/"export").exists())
 
     def test_private_tool_startup_diagnostics_are_not_saved(self):
-        # R2: exercise the real Python startup error under a private tool path,
-        # plus unexpected traceback/stdout/stderr from the copied O3 program.
         private_tools = self.root/"synthetic-private-name"
         self.cli.parent.parent.rename(private_tools)
         self.cli = private_tools/"release/release"
@@ -193,7 +185,6 @@ def load_tests(loader, tests, pattern):
 
 
 if __name__ == '__main__':
-    # Inherited release scanner proofs are owned by test.py, run only P9 here.
     suite = unittest.TestSuite(OpenRelease(name) for name in OpenRelease.__dict__ if name.startswith('test_'))
     result = unittest.TextTestRunner(verbosity=2).run(suite)
     sys.exit(not result.wasSuccessful())

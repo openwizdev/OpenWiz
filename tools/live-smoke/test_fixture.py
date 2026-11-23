@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-"""Small integration with the repository's real fixture dispatch and Rust fake.
-
-This proves the runner reaches the real bundle/adapter boundary, not live
-feature acceptance. The synthetic workflow's other labels exercise sequencing.
-No browser, product daemon or live endpoint is used.
-"""
 from contextlib import contextmanager
 import argparse
 import hashlib
@@ -14,6 +8,13 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+
+DESCRIPTION = """Small integration with the repository's real fixture dispatch and Rust fake.
+
+This proves the runner reaches the real bundle/adapter boundary, not live
+feature acceptance. The synthetic workflow's other labels exercise sequencing.
+No browser, product daemon or live endpoint is used.
+"""
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
@@ -32,8 +33,6 @@ def world(cli, fake):
         root.chmod(0o700)
         room = root / 'room-cli'
         room.symlink_to(fake)
-        # A complete, synthetic, empty inventory removes unrelated source gaps;
-        # the existing normal fixtures supply project/machine/version reads.
         scenario = json.loads((ROOT / 'tests/fixtures/room-cli-0.43.1/normal/scenario.json').read_text())
         fixture_root = ROOT / 'tests/fixtures/room-cli-0.43.1/normal'
         for response in scenario['responses']:
@@ -80,8 +79,6 @@ def integration(cli, fake):
         assert len(calls) == 8, len(calls)
         assert calls.count(['thread', 'list', '--json']) == 2
         assert not any(c[:2] in (['thread', 'tell'], ['thread', 'spawn']) for c in calls)
-        # Prove a bundle/source refusal gates the workflow using the same
-        # production dispatcher and an allowlisted but failing fake response.
         scenario['responses'].insert(0, {'argv': ['thread', 'list', '--json'], 'stdout': '', 'exit_code': 1})
         scenario_file.write_text(json.dumps(scenario))
         failed = subprocess.run(argv + ['--fixture'], capture_output=True, text=True, timeout=30)
@@ -119,8 +116,6 @@ def receipt_case(cli, fake, case):
         if case == 'ready-preview':
             project_file = ROOT / 'tests/fixtures/room-cli-0.43.1/normal/project-list.json'
             projects = json.loads(project_file.read_text())
-            # Same synthetic GitHub project shape as tests/new-thread/fake.rs;
-            # all values invented, never a live target.
             projects[0]['gitRemoteUrl'] = 'https://github.com/synthetic-owner/synthetic-repo.git'
             replies = [
                 {'argv': ['project', 'list', '--json', '--include-personal'], 'stdout': json.dumps(projects)},
@@ -147,7 +142,6 @@ def receipt_case(cli, fake, case):
         spawns = sum(c[:2] == ['thread', 'spawn'] for c in calls)
         assert spawns == 0
         assert tells == (0 if case == 'ready-preview' else 1)
-        # Resume never repeats the successful message/preview.
         result = subprocess.run(argv, capture_output=True, text=True, timeout=30)
         assert result.returncode == 0, result.stdout + result.stderr
         after = [json.loads(line) for line in (root / 'invocations.log').read_text().splitlines()]
@@ -158,7 +152,7 @@ def receipt_case(cli, fake, case):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument('--cli', required=True, type=Path)
     parser.add_argument('--fake', required=True, type=Path)
     parser.add_argument('--case', choices=['integration', 'ready-preview', 'accepted-send', 'queued-send'], default='integration')

@@ -1,107 +1,4 @@
 //! Approval provenance: [private record](https://github.com/jparker2006/ClosedWiz/issues/1277#issuecomment-6704800036).
-//! P8(a) Allowlist, static: no invocation outside the allowlist.
-//!
-//! This passes in ticket 1. It checks every [`Invocation`] the adapter can
-//! build, the id guard that stops an id becoming a flag, and that only the
-//! adapter's allowlist can start a process. Which invocations a real run
-//! makes is checked against the fake's log in the other proof cases.
-//!
-//! **Updated for OpenWiz 0.0.3 (ClosedWiz#8, M12)**, with this recorded
-//! reason: #8 adds exactly one write to the allowlist, `thread tell <id>
-//! --mode queue|steer --json -- <text>` (documented, not observed; the
-//! argument shape must be rechecked on the owner's endpoint before any live
-//! send). So `ALLOWED` gains its two forms, `tell` may appear only as the
-//! subcommand of [`Invocation::ThreadTell`]: once in the allowlist's source,
-//! inside that variant's argv, and `send` (OpenWiz's own command name, not a `room-cli` word)
-//! only in the CLI's source. Every read is checked as before, and every
-//! other forbidden word stays forbidden everywhere.
-//!
-//! **Updated for OpenWiz 0.0.4 (ClosedWiz#11, A1 phase 2, N16)**, with this
-//! recorded reason: sheet A-2, approved by Jake on 2026-10-30, adds exactly
-//! two invocations in the shapes spike run 3 recorded (`room-cli` v131 help and one structure-only read): the read
-//! `cloud status --json`, and the second write, `thread spawn --project
-//! <id> --machine cloud --provider <p> --model <m> --reasoning-level <l>
-//! --request-id <rid> --json --prompt <text>` (the flags observed in help;
-//! the call itself never ran). So `ALLOWED` gains their forms, and `spawn`
-//! may appear only as the subcommand of [`Invocation::ThreadSpawn`]: once in
-//! the allowlist's source, inside that variant's argv. Phase 1's exemption
-//! for `crates/adapters/cloudroom/src/new_thread.rs` is gone: the argv is
-//! built only here now.
-//!
-//! **Updated for OpenWiz 0.0.4 (ClosedWiz#14, B1 phase 2)**, with this
-//! recorded reason: staging an attachment must never leave less than 1 GiB
-//! free on the state volume (sheet B-3), and the standard library can't
-//! measure free space without `unsafe` or a new crate. Jake approved B-3
-//! option (a) on #14, 2026-10-31: the store may run exactly
-//! `/bin/df -P -k <state dir>` with `LC_ALL=C` and nothing else, failing
-//! closed (any error or unparsable output stages nothing). So the
-//! attachment store was the one source outside the adapter that may start a
-//! process (#1264 removed it, and this exception with it), and only that one: one `Command::new`, of
-//! `DF_PROGRAM` (`/bin/df`), with exactly `DF_ARGS` (`-P -k`), the directory,
-//! a cleared environment and `LC_ALL=C`
-//! (`the_free_space_measure_runs_only_bin_df`). It names no `room-cli`
-//! word; every other source is checked as before.
-//!
-//! **T2 native App exception (ClosedWiz#1102, Jake, 2026-11-05):**
-//! macOS App signing may use only absolute `/usr/bin/python3 -I -c` with the
-//! compiled-in reviewed security.py, inspect/sign and private root, a cleared
-//! environment and no PATH or override (comment 6672035698). This is an App-only
-//! exception; P8(a)'s store guard below remains unchanged, `/bin/df` only.
-//!
-//! **Updated for OpenWiz 0.0.4 (ClosedWiz#15, B2)**, with this recorded
-//! reason: sheet B-7 (approved by Jake, 2026-10-30) adds `--file <path>`
-//! and `--image <path>` to `tell` and `spawn`, with staged absolute paths
-//! only; the type forbids any other path. So `ALLOWED` gains one form
-//! of each write with attachments (a file, then an image: the core's
-//! dispatch order), the tail after `--json` and before the text's `--` or
-//! `--prompt`, each path a staged copy's (`StagedPath`, buildable only from
-//! an absolute, plain `attachments` directory, an attachment id and a safe
-//! name). The flags are built only by the allowlist's one
-//! `attachment_args`, which no forbidden word reaches; every other form and
-//! every other check are unchanged.
-//!
-//! **Updated for OpenWiz 0.0.6 (ClosedWiz#111, A3)**, with this recorded
-//! reason: spec #107 (approved by Jake, 2026-10-31) reads GitHub through
-//! `gh` behind a fixed allowlist of reads, and the orchestrator decided on
-//! #111 (2026-10-31, Q3 (a)) that A3 adds the GitHub adapter's one runner,
-//! and that this check lets the GitHub adapter start a process only there.
-//! So `crates/adapters/github/src/process.rs` is the second source outside
-//! the CloudRoom adapter that may start a process, and only that one: one
-//! `Command::new(program)`, with exactly an `Invocation`'s argv, stdin
-//! closed and both outputs piped, and nothing else
-//! (`the_github_runner_runs_only_an_invocation`). An `Invocation` is built
-//! only from an argument list a module of the GitHub adapter's allowlist
-//! allows; every module is empty in A3. Every other source is checked as
-//! before.
-//!
-//! **Updated for OpenWiz 0.0.6 (ClosedWiz#114, A6)**, with this recorded
-//! reason: spec #107's verified chain needs each Cloud thread's branch, which
-//! CloudRoom reports only through `cloud thread-workspace <id> --json`
-//! (A1's spike, #109). Jake approved that one read-only invocation on #107
-//! (Q1), 2026-10-31. So `ALLOWED`
-//! gains its one form, `cloud thread-workspace <id> --json`, with the id a
-//! [`ThreadId`], so it can't become a flag. It is a read: no forbidden word,
-//! and every other form and every other check are unchanged.
-//!
-//! **Updated for OpenWiz 0.0.6 (ClosedWiz#120, B4)**, with this recorded
-//! reason: spec #116 (approved by Jake, 2026-10-31) adds the CloudRoom
-//! `thread archive` write, and the orchestrator widened #120's paths to
-//! this file (2026-11-01). It adds exactly one invocation,
-//! [`Invocation::ThreadArchive`]: `thread archive <id> --json` (observed in
-//! help, 0.43.1; the call never run). So `ALLOWED` gains its one form, and
-//! `archive` may appear only as that variant's subcommand. Every other form
-//! and every other check are unchanged.
-//!
-//! **Updated for OpenWiz 0.0.9 (ClosedWiz#545, L3)**: Jake's approved
-//! #541 plan and the executor contract authorize local immutable Git reads
-//! and an exactly approved check, with its deadline and own-group cleanup.
-//! Ops recorded the bounded paths/invocations in #545 comment 6631634142.
-//! Only repository.rs and check.rs below gain exceptions; CloudRoom writes
-//! still go through the existing new-thread gates and adapter allowlist.
-//! #1014 hardens those same Git reads with pinned config and environment;
-//! scope/ops authority: the explicit ruling in #1014 comment 6649970932.
-//! Correction R1/R2's config setup read/allowlist and canonical worktree pin
-//! are authorized by #1014 comment 6651994842.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -115,8 +12,6 @@ use openwiz_core::attachment::{
 };
 use openwiz_core::messaging::Mode;
 
-/// The two staged copies of the attachment forms (B2): a file, then an
-/// image.
 const STAGED_FILE: &str = "/synthetic/state/attachments/att-syn-0001/syn-notes.txt";
 const STAGED_IMAGE: &str = "/synthetic/state/attachments/att-syn-0002/syn-photo.png";
 
@@ -143,10 +38,8 @@ fn staged() -> Vec<StagedAttachment> {
     .collect()
 }
 
-/// The request id of the spawn forms below.
 const RID: &str = "ow1-0123456789abcdef0123456789abcdef01234567";
 
-/// The allowlist as approved in ClosedWiz#2, written out by hand.
 const ALLOWED: &[&[&str]] = &[
     &["--version"],
     &["thread", "list", "--json"],
@@ -170,7 +63,6 @@ const ALLOWED: &[&[&str]] = &[
     &["machine", "list", "--json"],
     &["thread", "show", "thr_syn_0001", "--json"],
     &["thread", "output", "thr_syn_0001", "--json"],
-    // The one write (OpenWiz 0.0.3, ClosedWiz#8). Documented, not observed.
     &[
         "thread",
         "tell",
@@ -191,8 +83,6 @@ const ALLOWED: &[&[&str]] = &[
         "--",
         "Synthetic",
     ],
-    // OpenWiz 0.0.4 (ClosedWiz#11, sheet A-2): the catalogue read and the
-    // second write, in the shapes spike run 3 recorded.
     &["cloud", "status", "--json"],
     &[
         "thread",
@@ -213,8 +103,6 @@ const ALLOWED: &[&[&str]] = &[
         "--prompt",
         "Synthetic",
     ],
-    // B2 (ClosedWiz#15, sheet B-7): each write with attachments, staged
-    // absolute paths only, the tail before the text's placement.
     &[
         "thread",
         "tell",
@@ -252,17 +140,11 @@ const ALLOWED: &[&[&str]] = &[
         "--prompt",
         "Synthetic",
     ],
-    // OpenWiz 0.0.6 (ClosedWiz#114, A6): one Cloud thread's branch,
-    // approved by Jake on #107, 2026-10-31.
     &["cloud", "thread-workspace", "thr_syn_0001", "--json"],
-    // B4 (ClosedWiz#120): the third write, observed in help (0.43.1).
     &["thread", "archive", "thr_syn_0001", "--json"],
-    // T5: only inventory and a single verified owned-loop resume.
     &["loop", "list", "--json"],
     &["loop", "resume", "loop_syn_1", "--json"],
     &["loop", "pause", "loop_syn_1", "--json"],
-    // #792 (J109, orchestrator ruling on #792): the loop file writes, in
-    // contracts/loop-cli.v1.md's forms; plan builds them, apply runs them.
     &[
         "loop",
         "create",
@@ -313,7 +195,6 @@ const ALLOWED: &[&[&str]] = &[
     ],
 ];
 
-/// Arguments that must never be passed, whatever the invocation.
 const FORBIDDEN: &[&str] = &[
     "--work-status",
     "--git-diff",
@@ -342,9 +223,6 @@ fn syn_agent() -> LoopAgentArgs {
     }
 }
 
-/// Every invocation the adapter can build. The `match` makes a new variant
-/// a compile error here, as a reminder to add its forms to `all`; it cannot
-/// force that by itself.
 fn every_invocation() -> Vec<Invocation> {
     let id = ThreadId::parse("thr_syn_0001").expect("valid id");
     let all = vec![
@@ -525,11 +403,6 @@ fn hidden_and_archived_flags_are_added_only_on_request() {
 fn no_invocation_passes_a_forbidden_argument() {
     for invocation in every_invocation() {
         let argv = invocation.argv();
-        // The two writes: `tell` and `spawn` are their subcommands, and the
-        // text after `--` or `--prompt` is not an argument to `room-cli` (it
-        // is the message or the prompt).
-        // B2: the attachment tail sits before the text's placement; its
-        // paths are staged copies, never a word room-cli reads as a command.
         let (checked, allowed): (&[String], &[&str]) = match invocation {
             Invocation::ThreadTell { .. } => {
                 assert_eq!(argv[1], "tell");
@@ -543,14 +416,10 @@ fn no_invocation_passes_a_forbidden_argument() {
                 assert_eq!(argv[end], "--prompt", "the text follows --prompt");
                 (&argv[..=end], &["spawn"])
             }
-            // B4: `archive` is the third write's subcommand, and nothing
-            // else.
             Invocation::ThreadArchive(_) => {
                 assert_eq!(argv[1], "archive");
                 (&argv[..], &["archive"])
             }
-            // #792 (J109): the loop file writes' subcommands, and nothing
-            // else; update's `--prompt` value is the prompt, not an argument.
             Invocation::LoopCreate(_) => {
                 assert_eq!(argv[1], "create");
                 (&argv[..], &["create"])
@@ -580,8 +449,6 @@ fn no_invocation_passes_a_forbidden_argument() {
                 "{invocation:?} passes {word}"
             );
         }
-        // Every read asks for JSON, except --version, which prints plain
-        // text; the loop file writes (#792) have no --json form.
         assert!(
             argv == ["--version"]
                 || matches!(
@@ -644,8 +511,6 @@ fn product_sources() -> Vec<(PathBuf, String)> {
         .collect()
 }
 
-/// The GitHub adapter's runner: the one source there that may start a
-/// process, `gh` with an allowlisted invocation only (#111, Q3 (a)).
 const GITHUB_RUNNER: &str = "../crates/adapters/github/src/process.rs";
 const GITHUB_APP: &str = "../crates/adapters/github/src/app.rs";
 const GITHUB_APP_TRANSPORT_TESTS: &str = "../crates/adapters/github/src/app_transport_tests.rs";
@@ -660,12 +525,21 @@ const LOOP_REPOSITORY: &str = "../crates/cli/src/state/loops/repository.rs";
 /// Private record: https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6904873199
 const INIT_LAUNCHER: &str = "../crates/cli/src/init.rs";
 
+/// J306 (#2192), Jake's choice, 2026-11-22: on macOS the models writer runs
+/// only absolute `/bin/ls -lde <file>` to see a file's extended ACL.
+/// Private record: https://github.com/jparker2006/ClosedWiz/issues/3065#issuecomment-7077406386
+const MODELS_ACL_LISTER: &str = "../crates/cli/src/models.rs";
+
 #[test]
 fn allowlist_source_contracts_preserve_original_cases() {
-    let cases: [(&str, fn()); 12] = [
+    let cases: [(&str, fn()); 13] = [
         (
             "init_interpreter_exception_rejects_planted_widening",
             init_interpreter_exception_rejects_planted_widening,
+        ),
+        (
+            "j306_models_lister_exception_rejects_planted_widening",
+            j306_models_lister_exception_rejects_planted_widening,
         ),
         (
             "l3_exceptions_reject_aliased_process_starts",
@@ -733,10 +607,6 @@ fn only_the_adapter_can_start_a_process_and_only_from_the_allowlist() {
         .canonicalize()
         .unwrap();
     let mut signed = false;
-    // #1264: T7's curl transport test moved, unchanged, from
-    // `tests/service/` to beside `app.rs`. It is that file's
-    // `#[cfg(test)]` module only, never product code, so it keeps the
-    // process start it had outside `crates/`, and nothing else does.
     let app_transport_tests = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join(GITHUB_APP_TRANSPORT_TESTS)
         .canonicalize()
@@ -747,6 +617,11 @@ fn only_the_adapter_can_start_a_process_and_only_from_the_allowlist() {
         .canonicalize()
         .expect("the init launcher");
     let mut init_launched = false;
+    let models_lister = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join(MODELS_ACL_LISTER)
+        .canonicalize()
+        .expect("the models writer");
+    let mut models_listed = false;
     let canonical_loop = |file| {
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .join(file)
@@ -761,7 +636,6 @@ fn only_the_adapter_can_start_a_process_and_only_from_the_allowlist() {
             || text.contains("process::{");
         let canonical = path.canonicalize().expect("path");
         let in_adapter = canonical.starts_with(&adapter);
-        // Exact canonical files, never the loops directory as a whole.
         if canonical == loop_repository {
             assert_eq!(l3_repository_problems(&text), Vec::<String>::new());
             checked_loops[0] = true;
@@ -789,6 +663,19 @@ fn only_the_adapter_can_start_a_process_and_only_from_the_allowlist() {
             init_launched = true;
             continue;
         }
+        if canonical == models_lister {
+            assert_eq!(
+                models_lister_problems(&text),
+                Vec::<String>::new(),
+                "{MODELS_ACL_LISTER}"
+            );
+            models_listed = true;
+            continue;
+        }
+        assert!(
+            !text.contains("run_models_listing_acls"),
+            "{path:?} injects a models ACL lister"
+        );
         if canonical == app_transport_tests {
             let app_text = fs::read_to_string(&app).unwrap();
             assert_eq!(
@@ -838,11 +725,10 @@ fn only_the_adapter_can_start_a_process_and_only_from_the_allowlist() {
         "{GITHUB_APP_TRANSPORT_TESTS} was not checked"
     );
     assert!(init_launched, "{INIT_LAUNCHER} was not checked");
+    assert!(models_listed, "{MODELS_ACL_LISTER} was not checked");
     assert_eq!(checked_loops, [true; 1], "the canonical L3 gate checked");
 }
 
-// Normalize layout and discard comments, retaining literal contents. A cited
-// gate in a comment must not stand in for the operative function or call.
 fn l3_compact(text: &str) -> String {
     let bytes = text.as_bytes();
     let mut out = Vec::new();
@@ -891,9 +777,7 @@ fn l3_literal_end(bytes: &[u8], start: usize) -> Option<usize> {
             i += 2;
         } else if bytes[i] == quote {
             return Some(i + 1);
-        }
-        // An apostrophe naming a lifetime is not a character literal.
-        else if quote == b'\'' && (bytes[i].is_ascii_whitespace() || i > start + 4) {
+        } else if quote == b'\'' && (bytes[i].is_ascii_whitespace() || i > start + 4) {
             return None;
         } else {
             i += 1;
@@ -937,7 +821,6 @@ fn l3_function<'a>(code: &'a str, signature: &str) -> Option<&'a str> {
             }
             found = Some(&code[start..i]);
         } else {
-            // Move over a complete UTF-8 character outside literals too.
             i += code[i..].chars().next()?.len_utf8();
         }
     }
@@ -970,8 +853,6 @@ fn l3_repository_problems(text: &str) -> Vec<String> {
             ("GitRead(", 1),
             ("Self(", 1),
             ("Command::new(", 1),
-            // Count qualified calls too: C::new/C::spawn must not hide
-            // behind unchanged Command::new/.spawn counts (#1015).
             ("::new(", 9),
             ("Vec::new(", 2),
             ("BTreeSet::new(", 1),
@@ -985,7 +866,6 @@ fn l3_repository_problems(text: &str) -> Vec<String> {
             ("::exec(", 0),
             ("Commandas", 0),
             ("processas", 0),
-            // The existing import and the synthetic test's process id.
             ("process::", 2),
             ("process::Command,", 1),
             ("std::process::id()", 1),
@@ -1247,8 +1127,6 @@ fn l3_repository_exception_rejects_planted_breaks() {
     assert!(!l3_repository_problems(&extra).is_empty());
 }
 
-// #1015: extra starts must fail even when literal Command::new/.spawn
-// counts stay unchanged. Mutate copies only; no planted command is executed.
 fn l3_exceptions_reject_aliased_process_starts() {
     let mut missed = Vec::new();
     for (name, text, inspect) in [(
@@ -1281,10 +1159,6 @@ fn l3_exceptions_reject_aliased_process_starts() {
     assert!(missed.is_empty(), "missed planted breaks: {missed:#?}");
 }
 
-/// #111's one exception for GitHub, and nothing more: one process, of the
-/// program it is given, with exactly an `Invocation`'s argv, stdin closed
-/// and both outputs piped, in exactly that call. No other argument,
-/// variable or directory can be given, and nothing else is started.
 fn github_runner_problems(text: &str) -> Vec<String> {
     let Some((personal, app)) = split_app_runner(text) else {
         return vec!["missing or repeated App runner boundary".to_owned()];
@@ -1347,8 +1221,6 @@ fn t7_the_approved_app_runner_preserves_the_personal_runner() {
     );
 }
 
-/// The GitHub runner's rule catches each break it exists for, planted in a
-/// copy of the real runner.
 fn the_github_runner_rule_catches_a_planted_break() {
     let whole = fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join(GITHUB_RUNNER))
         .expect("the GitHub runner");
@@ -1468,7 +1340,6 @@ fn app_runner_problems(text: &str) -> Vec<String> {
 fn app_source_problems(text: &str) -> Vec<String> {
     let mut errors = Vec::new();
     for (word, count) in [
-        // GI5 (#2547, J26): a second fixed curl call, its status read.
         ("Command::new(", 4),
         ("Command::new(PYTHON_PROGRAM)", 1),
         ("Command::new(CURL_PROGRAM)", 2),
@@ -1511,7 +1382,6 @@ fn app_source_problems(text: &str) -> Vec<String> {
         "constCURL_PROGRAM:&str=\"/usr/bin/curl\";",
         "constCURL_ARGS:[&str;15]=[\"--disable\",\"--silent\",\"--show-error\",\"--fail-with-body\",\"--max-time\",\"15\",\"--proto\",\"=https\",\"--max-redirs\",\"0\",\"--config\",\"-\",\"--write-out\",\"\\\\n%{http_code}\",\"--no-progress-meter\",];",
         r#"https://api.github.com/app/installations/{installation}/access_tokens\"\nrequest=\"POST\"\n"#,
-        // GI5 (#2547, J26): the second call's list, URL template and endpoints.
         "constCURL_STATUS_ARGS:[&str;14]=[\"--disable\",\"--silent\",\"--show-error\",\"--max-time\",\"15\",\"--proto\",\"=https\",\"--max-redirs\",\"0\",\"--config\",\"-\",\"--write-out\",\"\\\\n%{http_code}\",\"--no-progress-meter\",];",
         r#""url=\"https://api.github.com/{url}\"\n{post}header=\"Authorization:Bearer{jwt}\"\nheader=\"Accept:application/vnd.github+json\"\nheader=\"X-GitHub-Api-Version:2026-03-10\"\n""#,
         r#"format!("repos/{repository}/installation")"#,
@@ -1532,7 +1402,6 @@ fn app_source_problems(text: &str) -> Vec<String> {
     {
         errors.push("App signing spawn changed".to_owned());
     }
-    // Each curl spawn, in order: the token exchange, then GI5's status call.
     let curl: Vec<String> = text
         .split("Command::new(CURL_PROGRAM)")
         .skip(1)
@@ -1573,7 +1442,6 @@ fn t7_the_token_endpoint_rejects_suffixes() {
     let end = r#"access_tokens\"\nrequest"#;
     assert_eq!(app.matches(end).count(), 1);
     for suffix in ["/synthetic", "?synthetic=1", "#synthetic"] {
-        // GI5's two templates take no suffix either.
         for (from, to) in [
             ("/installation\")", format!("/installation{suffix}\")")),
             ("/access_tokens\")", format!("/access_tokens{suffix}\")")),
@@ -1646,7 +1514,6 @@ fn t7_app_guards_catch_extra_programs_arguments_environments_and_endpoints() {
             "\"--fail-with-body\",\n    \"--max-time\",\n    \"15\",\n    \"--proto\",\n    \"=http,https\"",
         ),
         (".arg(root)", ".arg(root).arg(\"--extra\")"),
-        // GI5's second curl call: its program, list, chain and endpoints.
         (
             ".args(CURL_STATUS_ARGS)",
             ".args(CURL_STATUS_ARGS).arg(\"--location\")",
@@ -1698,8 +1565,6 @@ fn no_product_source_spells_a_forbidden_argument() {
     for (path, text) in product_sources() {
         let path = path.canonicalize().expect("path");
         for word in FORBIDDEN {
-            // #792 (J109): `loop create` and `loop update`, once each, only
-            // opening their own argv arm in the allowlist.
             if matches!(*word, "create" | "update") && path == allowlist {
                 let variant = if *word == "create" {
                     "LoopCreate"
@@ -1726,9 +1591,6 @@ fn no_product_source_spells_a_forbidden_argument() {
                 );
                 continue;
             }
-            // The two writes' subcommands, only where the allowlist builds
-            // them, each exactly once, inside its variant's argv; and
-            // OpenWiz's own `send` command, only in the CLI.
             let arm = |variant: &str| {
                 text.split(variant)
                     .nth(1)
@@ -1752,7 +1614,6 @@ fn no_product_source_spells_a_forbidden_argument() {
                 );
                 continue;
             }
-            // B4 (ClosedWiz#120): the third write's subcommand, the same way.
             if *word == "archive" && path == allowlist {
                 assert_eq!(text.matches("\"archive\"").count(), 1, "{path:?}");
                 assert!(
@@ -1792,7 +1653,6 @@ fn t13_key_helper_keeps_one_fixed_descriptor_handover() {
 }
 
 fn t2_linux_owner_query_keeps_the_existing_kernel_boundary() {
-    // #1264: the owner query moved, unchanged, to the command's state module.
     let code = l3_compact(include_str!("../../crates/cli/src/state/owner.rs"));
     let linux = code
         .split_once("#[cfg(target_os=\"linux\")]")
@@ -1808,8 +1668,6 @@ fn t2_linux_owner_query_keeps_the_existing_kernel_boundary() {
     );
 }
 
-// #1680: the public invocation must carry the allowance for the aggregate
-// staged bytes. These expectations are literal B2 examples, not its formula.
 fn ta3_staged_totals_reach_tell_and_spawn_allowances() {
     use std::time::Duration;
     for (sizes, seconds) in [
@@ -1929,6 +1787,89 @@ fn init_launcher_problems(text: &str) -> Vec<String> {
 "#,
     );
     problems
+}
+
+fn models_lister_problems(text: &str) -> Vec<String> {
+    let code = l3_compact(text);
+    let mut problems = Vec::new();
+    l3_counts(
+        &mut problems,
+        &code,
+        &[
+            ("Command", 1),
+            ("Command::new(", 1),
+            ("process::{", 0),
+            ("macos_ls", 2),
+            (".arg(", 2),
+            (".args(", 0),
+            (".env_clear(", 1),
+            (".env(", 0),
+            (".envs(", 0),
+            (".current_dir(", 0),
+            (".output(", 1),
+            (".spawn(", 0),
+            (".status(", 0),
+            (".exec(", 0),
+            ("run_models_listing_acls(", 2),
+            (
+                r#"letlister:Option<AclLister>=ifstd::env::consts::OS=="macos"{Some(&macos_ls)}else{None};"#,
+                1,
+            ),
+        ],
+    );
+    l3_exact_function(
+        &mut problems,
+        &code,
+        "fn macos_ls(path: &Path) -> std::io::Result<std::process::Output>",
+        r#"fn macos_ls(path: &Path) -> std::io::Result<std::process::Output> {
+    std::process::Command::new("/bin/ls")
+        .arg("-lde")
+        .arg(path)
+        .env_clear()
+        .stdin(std::process::Stdio::null())
+        .output()
+}
+"#,
+    );
+    problems
+}
+
+fn j306_models_lister_exception_rejects_planted_widening() {
+    let code = l3_compact(include_str!("../../crates/cli/src/models.rs"));
+    assert_eq!(models_lister_problems(&code), Vec::<String>::new());
+    for (from, to) in [
+        (r#"Command::new("/bin/ls")"#, r#"Command::new("ls")"#),
+        (r#"Command::new("/bin/ls")"#, r#"Command::new("/bin/sh")"#),
+        (r#".arg("-lde")"#, r#".arg("-c")"#),
+        (r#".arg("-lde")"#, r#".arg("-lde").arg("-@")"#),
+        (".arg(path)", ".args([path])"),
+        (".env_clear()", ""),
+        (".env_clear()", r#".env_clear().env("LS_COLORS", "syn")"#),
+        (".env_clear()", r#".env_clear().current_dir("/synthetic")"#),
+        (".stdin(std::process::Stdio::null())", ""),
+        (".output()", ".spawn()"),
+        (r#"OS=="macos""#, r#"OS!="windows""#),
+        ("Some(&macos_ls)", "Some(&|p: &Path| macos_ls(p))"),
+    ] {
+        let planted = l3_plant(&code, from, to);
+        assert!(
+            !models_lister_problems(&planted).is_empty(),
+            "missed {from} -> {to}"
+        );
+    }
+    for extra in [
+        r#"fn extra() { std::process::Command::new("/bin/sh").output(); }"#,
+        r#"use std::process::Command as C; fn extra() { C::new("/bin/sh").spawn(); }"#,
+        r#"type C = std::process::Command; fn extra() { C::new("/bin/sh").spawn(); }"#,
+        r#"use std::process::{Command as C}; fn extra() { C::new("/bin/sh"); }"#,
+        r#"fn extra() { let f = macos_ls; let _ = f(Path::new("/")); }"#,
+        r#"fn extra(a: &[String]) { run_models_listing_acls(a, Path::new("."), todo!(), todo!(), None, todo!(), todo!()); }"#,
+    ] {
+        assert!(
+            !models_lister_problems(&format!("{code}{}", l3_compact(extra))).is_empty(),
+            "missed {extra}"
+        );
+    }
 }
 
 fn init_interpreter_exception_rejects_planted_widening() {

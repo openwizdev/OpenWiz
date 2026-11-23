@@ -1,0 +1,24 @@
+F....
+======================================================================
+FAIL: test_an_intel_mac_without_room_cli_reads_ready_and_says_where_agents_run (test_installer.Preflight.test_an_intel_mac_without_room_cli_reads_ready_and_says_where_agents_run)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/tests/installer/test_installer.py", line 237, in test_an_intel_mac_without_room_cli_reads_ready_and_says_where_agents_run
+    self.assertEqual((code, value['ready'], value['target']), (0, True, 'x86_64-apple-darwin'), value)
+AssertionError: Tuples differ: (5, False, 'x86_64-apple-darwin') != (0, True, 'x86_64-apple-darwin')
+
+First differing element 0:
+5
+0
+
+- (5, False, 'x86_64-apple-darwin')
+?  ^  ^^^^
+
++ (0, True, 'x86_64-apple-darwin')
+?  ^  ^^^
+ : {'schema': 'openwiz.preflight.v1', 'ready': False, 'target': 'x86_64-apple-darwin', 'checks': [{'id': 'python', 'state': 'ok', 'next': 'Python 3.11 is enough.'}, {'id': 'target', 'state': 'ok', 'next': "This Intel Mac runs openwiz, but OpenWiz's install needs CloudRoom, which has no Intel Mac build today; stop here and install on an Apple silicon Mac or Linux on x86_64."}, {'id': 'disk', 'state': 'ok', 'next': 'Enough free space.'}, {'id': 'room-cli', 'state': 'missing', 'next': 'Install the CloudRoom app and sign in; it provides room-cli.'}, {'id': 'gh', 'state': 'ok', 'next': 'Found on PATH; setup checks it.'}, {'id': 'git', 'state': 'ok', 'next': 'Found on PATH; setup checks it.'}], 'reason': 'Read this machine only; nothing was installed.'}
+
+----------------------------------------------------------------------
+Ran 5 tests in 2.508s
+
+FAILED (failures=1)

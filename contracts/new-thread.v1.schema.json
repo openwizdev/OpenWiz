@@ -1506,7 +1506,10 @@
           "type": "integer"
         },
         "label": {
-          "const": "as reported by CloudRoom; it may answer from a saved copy"
+          "enum": [
+            "as reported by CloudRoom; it may answer from a saved copy",
+            "Installed local harnesses with OpenWiz's current choices"
+          ]
         },
         "state": {
           "oneOf": [
@@ -1562,6 +1565,10 @@
           "items": {
             "$ref": "#/$defs/unavailable_harness"
           }
+        },
+        "source": {
+          "description": "Where the list came from (#2217). Absent: CloudRoom's catalogue, from one cloud status read, as before 0.1.1. local: the Claude Code and Codex programs installed on this computer, with OpenWiz's current choices, read without CloudRoom.",
+          "const": "local"
         }
       }
     }

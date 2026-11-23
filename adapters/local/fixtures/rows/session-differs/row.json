@@ -1,0 +1,52 @@
+{
+  "harness": "session-differs",
+  "program": "session-differs-cli",
+  "start": [
+    "run",
+    "--format",
+    "json",
+    "--model",
+    "{model}",
+    "{mode}",
+    "{effort}",
+    "{prompt}"
+  ],
+  "wake": [
+    "run",
+    "--session",
+    "{session}",
+    "--model",
+    "{model}",
+    "{mode}",
+    "{prompt}"
+  ],
+  "session": {
+    "pattern": "run (\\S+)"
+  },
+  "modes": {
+    "auto": [
+      "--yes"
+    ],
+    "ask": []
+  },
+  "env": {
+    "EXAMPLE_CLI_BACKEND": "local"
+  },
+  "effort": {
+    "low": [
+      "--effort",
+      "low"
+    ],
+    "high": [
+      "--effort",
+      "high"
+    ],
+    "max": {
+      "env": {
+        "EXAMPLE_CLI_THINKING": "max"
+      }
+    }
+  },
+  "login": "example-cli's own login, saved by `example-cli login` under ~/.config/example-cli",
+  "daemon": "none"
+}

@@ -1,4 +1,3 @@
-"""Review regressions. Only synthetic endpoints/processes and local Git."""
 import ctypes
 import hashlib
 import json
@@ -17,10 +16,6 @@ FixtureCase = runpy.run_path(str(HERE / 'test_smoke.py'))['FixtureCase']
 
 class Review(FixtureCase):
     def test_r6_timeout_reaps_a_child_that_started_its_own_session(self):
-        # A step's child that leaves the runner's session (as a PTY driver's
-        # child does with setsid) must still be killed and reaped on timeout.
-        # Adopt a leaking baseline child so this regression can clean it up
-        # even before the fix. Only descendants of this test can be adopted.
         libc = ctypes.CDLL(None, use_errno=True)
         self.assertEqual(libc.prctl(36, 1, 0, 0, 0), 0)
         pid_file = self.root / 'child-pid'
@@ -36,7 +31,6 @@ class Review(FixtureCase):
         step = self.kit['steps'][0]
         step['kind'] = 'read'
         step['argv'] = [python, '-I', str(child)]
-        # Keep the fixture's required fleet write separate from the timed probe.
         self.kit['steps'].append({'id': 'fleet_write', 'claim': 'fleet', 'kind': 'write',
             'argv': [str(self.fake), 'fleet'], 'exit': 0,
             'checks': [{'path': '/count', 'equals': 1}]})
@@ -110,8 +104,6 @@ else:
                 self.report(result, code)
                 self.assertEqual(writes.read_text().splitlines(), ['write'])
                 if mode == 'stdout':
-                    # Resume may recheck the bundle but cannot dispatch a later
-                    # step or repeat this unknown cleanup write/readback.
                     self.assertNotIn(['send'], self.call_list())
                     self.assertEqual(self.call_list(), before + [['ls', '--json']])
 

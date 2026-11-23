@@ -1,0 +1,16 @@
+#!/usr/bin/env python3
+import importlib.machinery, importlib.util, os, subprocess, sys
+sys.dont_write_bytecode = True
+path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'adapters', 'template', 'driver')
+spec = importlib.util.spec_from_loader('template', importlib.machinery.SourceFileLoader('template', path))
+t = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(t)
+
+
+class SameGroup(subprocess.Popen):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **dict(kwargs, start_new_session=False))
+
+
+subprocess.Popen = SameGroup
+t.main()

@@ -1,0 +1,14 @@
+test_no_harness_outside_the_fixtures_is_on_the_tests_path (__main__.Template.test_no_harness_outside_the_fixtures_is_on_the_tests_path) ... FAIL
+
+======================================================================
+FAIL: test_no_harness_outside_the_fixtures_is_on_the_tests_path (__main__.Template.test_no_harness_outside_the_fixtures_is_on_the_tests_path)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/template/test_driver.py", line 164, in test_no_harness_outside_the_fixtures_is_on_the_tests_path
+    self.assertIsNone(shutil.which('claude', path=self.env['PATH']), 'the PATH reaches a real claude')
+AssertionError: '<tmp>/outside/claude' is not None : the PATH reaches a real claude
+
+----------------------------------------------------------------------
+Ran 1 test in 0.001s
+
+FAILED (failures=1)

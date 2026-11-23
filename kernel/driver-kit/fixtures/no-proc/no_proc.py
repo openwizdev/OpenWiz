@@ -48,5 +48,9 @@ class CDLL(ctypes.CDLL):
 ctypes.CDLL = CDLL
 sys.platform = 'darwin'
 sys.executable = os.path.join(HERE, 'python3')
-sys.argv = args
-runpy.run_path(args[0], run_name='__main__')
+if args[:1] == ['-c']:
+    sys.argv = ['-c'] + args[2:]
+    exec(compile(args[1], '<string>', 'exec'), {'__name__': '__main__'})
+else:
+    sys.argv = args
+    runpy.run_path(args[0], run_name='__main__')

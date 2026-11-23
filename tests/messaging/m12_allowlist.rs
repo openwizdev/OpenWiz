@@ -1,25 +1,4 @@
 //! Approval provenance: [private record](https://github.com/jparker2006/ClosedWiz/issues/1277#issuecomment-6704800036).
-//! M12 Allowlist: `thread tell` is `send`'s only write, and every other
-//! mutating subcommand is still refused. P8(a) is updated for it (see the
-//! evidence README for the recorded reason).
-//!
-//! **Updated for OpenWiz 0.0.4 (ClosedWiz#11, A1 phase 2, N16)**, with this
-//! recorded reason: sheet item A-2 (approved by Jake, 2026-10-30) adds
-//! `cloud status --json` and the second write, `thread spawn`, in the shapes
-//! spike run 3 recorded. `spawn`, `--model` and `--reasoning-level` may now
-//! be spelled only in the allowlist, inside `ThreadSpawn`'s argv, never in
-//! `tell`'s; `--model` is also `openwiz new`'s own option in the CLI. The
-//! catalogue key `steer` stays only in the adapter's `cloud status` reader.
-//! `tell`'s shape and every other refusal are unchanged; N16
-//! (`tests/new-thread/n16_allowlist.rs`) proves `spawn`'s shape.
-//!
-//! **Updated for B2 (ClosedWiz#15)**, with this recorded reason: sheet B-7
-//! (approved by Jake, 2026-10-30) adds `--file` and `--image` to `tell`
-//! and `spawn`, only with staged paths. A path in the text remains text
-//! (#15, AD12). So each flag may be spelled only in the allowlist,
-//! once, inside its one `attachment_args`, and the fake (its own copy of the
-//! allowlist) takes them only in OpenWiz's position, with a staged copy's
-//! absolute path, and never with steer. Every other refusal is unchanged.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -30,8 +9,6 @@ use openwiz_core::messaging::Mode;
 
 use crate::support::*;
 
-/// The flags of `thread tell` OpenWiz never passes, and the mode it never
-/// asks for (moved here from M1, `m01_exact_invocation.rs`, by #1264).
 const EXCLUDED: &[&str] = &[
     "--model",
     "--reasoning-level",
@@ -45,8 +22,6 @@ const EXCLUDED: &[&str] = &[
     "auto",
 ];
 
-/// The exact argument list OpenWiz passes for one tell (moved with
-/// [`EXCLUDED`]).
 fn tell_argv(target: &str, mode: &str, text: &str) -> Vec<String> {
     [
         "thread", "tell", target, "--mode", mode, "--json", "--", text,
@@ -56,7 +31,6 @@ fn tell_argv(target: &str, mode: &str, text: &str) -> Vec<String> {
     .collect()
 }
 
-/// Subcommands that change something. Only `tell` may ever be passed.
 const MUTATING: &[&str] = &[
     "spawn",
     "fork",
@@ -206,9 +180,6 @@ fn the_fake_refuses_every_other_write_and_every_other_tell_shape() {
     assert_eq!(fake.tell_count(), 0, "a refused call is not counted");
 }
 
-/// B2 (sheet B-7): the fake takes `--file` and `--image` only after
-/// `--json` and before `--`, in queue mode, each with a staged copy's
-/// absolute path; every other form is refused before anything is counted.
 #[test]
 fn the_fake_takes_attachment_flags_only_with_staged_paths_in_queue() {
     let fake = SendFake::new("m12_fake_attachments", "send");
@@ -289,13 +260,10 @@ fn no_product_source_spells_an_excluded_flag_or_another_write() {
         .join("crates/adapters/cloudroom/src/allowlist.rs")
         .canonicalize()
         .unwrap();
-    // OpenWiz 0.0.4 (ClosedWiz#11, A1 phase 2): the catalogue key `steer`,
-    // only in the adapter's `cloud status` reader.
     let catalogue = Path::new(ROOT)
         .join("crates/adapters/cloudroom/src/new_thread.rs")
         .canonicalize()
         .unwrap();
-    // `spawn`'s own flags, only inside `ThreadSpawn`'s argv in the allowlist.
     let spawn_arm = |text: &str| {
         text.split("Self::ThreadSpawn(")
             .nth(1)
@@ -303,8 +271,6 @@ fn no_product_source_spells_an_excluded_flag_or_another_write() {
             .unwrap_or_default()
             .to_owned()
     };
-    // OpenWiz 0.0.6 (ClosedWiz#120, B4): `archive`, only inside
-    // `ThreadArchive`'s argv in the allowlist.
     let archive_arm = |text: &str| {
         text.split("Self::ThreadArchive(")
             .nth(1)
@@ -317,8 +283,6 @@ fn no_product_source_spells_an_excluded_flag_or_another_write() {
         let canonical = path.canonicalize().unwrap();
         for flag in EXCLUDED {
             let literal = format!("\"{flag}\"");
-            // #792 (J109, orchestrator ruling on #792): `--model` also once in
-            // each of the two loop write arms, and nowhere else.
             if canonical == allowlist && *flag == "--model" {
                 assert!(
                     loop_write_arms_only(&canonical, &allowlist, &text, flag),
@@ -355,8 +319,6 @@ fn no_product_source_spells_an_excluded_flag_or_another_write() {
         }
         for word in MUTATING {
             let literal = format!("\"{word}\"");
-            // #792 (J109): `loop create` and `loop update`, once each, only
-            // inside their own argv arms in the allowlist.
             if matches!(*word, "create" | "update") && canonical == allowlist {
                 assert!(
                     loop_write_arms_only(&canonical, &allowlist, &text, word),
@@ -382,9 +344,6 @@ fn no_product_source_spells_an_excluded_flag_or_another_write() {
             if *word == "tell" && is_allowlist {
                 continue;
             }
-            // `queue` and `steer` are the core's mode words, passed through
-            // `Mode::as_str`; `send` is OpenWiz's own command, parsed by the
-            // CLI. Neither is a room-cli subcommand there.
             let mode_words = path.ends_with("core/src/messaging/mod.rs");
             if matches!(*word, "queue" | "steer") && mode_words {
                 continue;
@@ -412,8 +371,6 @@ fn no_product_source_spells_an_excluded_flag_or_another_write() {
     }
 }
 
-// #792 (J109): the two loop write arms of the allowlist's argv, each from
-// its own `Self::Loop…(a) => {` to that arm's closing brace.
 fn loop_write_arm(text: &str, variant: &str) -> String {
     let header = format!("            Self::{variant}(a) => {{\n");
     text.split(&header)
@@ -422,9 +379,6 @@ fn loop_write_arm(text: &str, variant: &str) -> String {
         .unwrap_or_default()
         .to_owned()
 }
-// `create`, `update` and `--model` only where the allowlist builds the two
-// loop writes: each subcommand once, opening its own arm; `--model` once in
-// each loop arm and once in `ThreadSpawn`, so three times in the file.
 fn loop_write_arms_only(path: &Path, allowlist: &Path, text: &str, word: &str) -> bool {
     let literal = format!("\"{word}\"");
     let compact = |s: &str| s.split_whitespace().collect::<String>();
@@ -509,7 +463,6 @@ fn loop_write_exception_rejects_other_paths_and_command_like_occurrences() {
     }
 }
 
-// T5 owns only the canonical LoopResume argv arm, never another write.
 fn loop_resume_arm_only(path: &Path, allowlist: &Path, text: &str) -> bool {
     path == allowlist
         && text.matches("\"resume\"").count() == 1
