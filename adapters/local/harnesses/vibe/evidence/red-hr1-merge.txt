@@ -1,0 +1,18 @@
+HR1 merge, before adapting the Vibe row test to the final reported_session signature.
+40 agent CLI stubs were first on PATH.
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/local/harnesses/vibe/test_row.py
+pass not installed
+pass not signed in
+pass off refused
+Traceback (most recent call last):
+  File "adapters/local/harnesses/vibe/test_row.py", line 67, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "adapters/local/harnesses/vibe/test_row.py", line 60, in main
+    passed = check()
+             ^^^^^^^
+  File "adapters/local/harnesses/vibe/test_row.py", line 54, in pattern_reads_the_entry_id_not_a_nested_one
+    return th.local.reported_session('run-x', ROW['session']) == 'root-id'
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: reported_session() missing 1 required positional argument: 'first'
+Exit: 1
