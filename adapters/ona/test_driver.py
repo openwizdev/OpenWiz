@@ -102,13 +102,11 @@ class Driver(unittest.TestCase):
                             '--wait', '8'], env=self.env, capture_output=True, text=True, timeout=300)
         return p.returncode, p.stdout.splitlines(), p.stderr
 
-    # catches: any check of the five failing on fixtures, the key check included
     def test_kit_passes_all_five_on_the_fake_host(self):
         code, out, err = self.kit()
         self.assertEqual((out, err), (KIT_PASS, ''))
         self.assertEqual(code, 0)
 
-    # catches: a request sent without the helper's header, or with the key in its path or body
     def test_every_request_reaches_the_host_with_the_key_header_only(self):
         run = self.started()
         self.driver('wake', {'run': run})
@@ -118,7 +116,6 @@ class Driver(unittest.TestCase):
             self.assertEqual((method, auth), ('POST', 'Bearer ' + KEY))
             self.assertNotIn(KEY, path + body.decode())
 
-    # catches: a start that sends no prompt (StartAgent has no prompt field), the wrong agent, repository or model
     def test_start_starts_codex_on_the_repository_then_sends_the_prompt(self):
         run = self.started()
         self.assertRegex(run, UUID)
@@ -135,7 +132,6 @@ class Driver(unittest.TestCase):
         self.assertEqual(sent['userInput']['inputs'], [{'text': {'content': PROMPT}}])
         self.assertEqual(len(self.notes()), 1)
 
-    # catches: a model name mapped to the wrong enum value, or an unknown one sent on to the host
     def test_models_map_to_ona_codex_models_and_others_are_refused(self):
         for model, value in (('gpt-5.5', 'GPT_5_5'), ('gpt-6-sol', 'GPT_6_SOL'), ('gpt-5.6-terra', 'GPT_5_6_TERRA'),
                              ('GPT-6-Luna', 'GPT_6_LUNA')):
@@ -148,7 +144,6 @@ class Driver(unittest.TestCase):
             self.assertEqual((code, out['error']), (1, 'model %s is not a Codex model Ona offers' % model))
         self.assertEqual(self.host.requests, [])
 
-    # catches: a harness Ona doesn't run reaching the host as Codex
     def test_only_codex_runs(self):
         for harness in ('claude-code', 'claude', 'gemini-cli'):
             code, out = self.driver('start', dict(START, harness=harness))
@@ -157,7 +152,6 @@ class Driver(unittest.TestCase):
                                    'next': 'use harness codex'})
         self.assertEqual(self.host.requests, [])
 
-    # catches: an effort dropped, renamed to a nearby value or sent outside codexSettings
     def test_effort_reaches_the_host_as_codex_reasoning_effort(self):
         for effort, value in (('low', 'LOW'), ('medium', 'MEDIUM'), ('high', 'HIGH'), ('xhigh', 'EXTRA_HIGH'),
                               ('max', 'MAX'), ('ultra', 'ULTRA')):
@@ -167,12 +161,10 @@ class Driver(unittest.TestCase):
                               'reasoningEffort': 'CODEX_REASONING_EFFORT_' + value})
             self.assertEqual(self.host.runs[run]['effort'], 'CODEX_REASONING_EFFORT_' + value)
 
-    # catches: a silent default (E2): no effort must send no reasoning effort at all
     def test_no_effort_sends_none(self):
         self.started()
         self.assertNotIn('reasoningEffort', self.host.bodies('StartAgent')[0]['codexSettings'])
 
-    # catches: an effort Ona has no value for substituted or dropped instead of the contract's refusal
     def test_an_effort_ona_has_no_value_for_is_refused_and_starts_nothing(self):
         for effort in ('minimal', 'extra-high', 'none'):
             code, out = self.driver('start', dict(START, effort=effort))
@@ -180,7 +172,6 @@ class Driver(unittest.TestCase):
                                                'next': NO_EFFORT}))
         self.assertEqual(self.host.requests, [])
 
-    # catches: a start the host refuses (an organization's effort limit) that still sends the prompt
     def test_a_refused_start_sends_nothing_more(self):
         self.use(refuse_efforts=('CODEX_REASONING_EFFORT_ULTRA',))
         code, out = self.driver('start', dict(START, effort='ultra'))
@@ -188,7 +179,6 @@ class Driver(unittest.TestCase):
                                            'next': "check your key and Ona's status, then retry"}))
         self.assertEqual((self.host.calls(), self.host.runs), ([AGENT + 'StartAgent'], {}))
 
-    # catches: a start whose prompt is lost leaving a run nothing names, so nothing stops it
     def test_a_lost_prompt_names_its_run_so_stop_can_end_it(self):
         self.use(lose_send=True)
         code, out = self.driver('start', START)
@@ -199,7 +189,6 @@ class Driver(unittest.TestCase):
         self.assertEqual(self.driver('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
         self.assertEqual(self.host.runs[run]['phase'], 'PHASE_STOPPED')
 
-    # catches: a wake that starts a new run or posts a second note instead of reaching the same execution
     def test_wake_sends_to_the_same_execution_once_its_turn_has_finished(self):
         run = self.started()
         self.assertEqual(self.host.runs[run]['phase'], 'PHASE_WAITING_FOR_INPUT')
@@ -213,14 +202,12 @@ class Driver(unittest.TestCase):
         [note] = self.notes()
         self.assertIn('step: woke and read the ticket again', note['body'])
 
-    # catches: a wake dropped while the agent is still busy: Ona queues it for the agent's next turn
     def test_wake_of_a_running_execution_queues_the_message(self):
         self.use(idle_phase='PHASE_RUNNING')
         run = self.started()
         self.assertEqual(self.driver('wake', {'run': run}), (0, {'run': run, 'woke': True}))
         self.assertEqual(self.host.runs[run]['messages'], [PROMPT, WOKEN])
 
-    # catches: a stop that leaves the run's environment running, stops one it didn't create, or a wake after it
     def test_stop_ends_the_execution_and_its_environment_and_wake_after_is_refused(self):
         run = self.started()
         self.host.requests.clear()
@@ -238,7 +225,6 @@ class Driver(unittest.TestCase):
         self.assertNotIn(AGENT + 'StopAgentExecution', self.host.calls())
         self.assertEqual(self.host.runs[run]['messages'], [PROMPT])
 
-    # catches: an unknown run woken as if it were live, or a stop of it failing
     def test_unknown_run(self):
         run = '00000000-0000-4000-8000-0000000000ff'
         code, out = self.driver('wake', {'run': run})
@@ -246,7 +232,6 @@ class Driver(unittest.TestCase):
         self.assertEqual(self.driver('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
         self.assertEqual(self.host.calls(), [AGENT + 'GetAgentExecution'] * 2)
 
-    # catches: an input off the schema reaching the host
     def test_inputs_off_the_schema_are_refused_before_any_request(self):
         for bad in (dict(START, token='kit-probe-not-a-login'), {k: v for k, v in START.items() if k != 'model'},
                     dict(START, ticket='7'), dict(START, repository='https://example.com/x'),
@@ -257,14 +242,12 @@ class Driver(unittest.TestCase):
                 self.assertEqual(self.driver(cmd, bad)[0], 1)
         self.assertEqual(self.host.requests, [])
 
-    # catches: host text (which can hold anything) shown in the driver's error
     def test_a_host_error_is_a_fixed_refusal(self):
         self.use(served_key='synthetic-wrong-' + 'Kit0Value' * 2)
         code, out = self.driver('start', START)
         self.assertEqual((code, out), (1, {'error': 'Ona answered 401 to POST %sStartAgent' % AGENT,
                                            'next': "check your key and Ona's status, then retry"}))
 
-    # catches: a driver file that names the key's variable or calls the keychain
     def test_no_driver_file_names_the_key_or_the_keychain(self):
         for folder, _, names in os.walk(HERE):
             for n in names:
@@ -277,7 +260,6 @@ class Driver(unittest.TestCase):
                     self.assertNotIn(b'ONA' + b'_API_KEY', line, rel)
                     self.assertIsNone(KEYCHAIN_TOOLS_SPELLED_IN_PARTS.search(line), rel)
 
-    # catches: effort missing from can, or a schema copy that is not EF1's byte for byte
     def test_version_and_schema(self):
         self.assertEqual(self.driver('version'), (0, {'driver': 'ona', 'records': ['openwiz:records v1'],
                                                        'can': ['start', 'wake', 'stop', 'effort']}))

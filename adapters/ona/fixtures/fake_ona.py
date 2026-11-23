@@ -1,7 +1,4 @@
 #!/usr/bin/env python3
-# A fake Ona management plane: the Connect RPC methods the driver calls, as Ona's API reference documents them
-# (POST /api/gitpod.v1.<Service>/<Method>, Protocol Buffer JSON bodies, unknown fields rejected). Each agent turn
-# posts or edits one builder note in the test's tracker file, as the real run's agent would on GitHub.
 import http.server
 import json
 import os
