@@ -8,7 +8,6 @@ import os
 import re
 import secrets
 import select
-import shutil
 import subprocess
 import sys
 import threading
@@ -26,9 +25,11 @@ HOSTKEY = os.path.realpath(os.path.join(HERE, 'hostkey.py'))
 SHOWN_NAME = re.compile(r'[A-Za-z_][A-Za-z0-9_]{0,63}')
 PYTHON = re.compile(r'python3?(\.[0-9]+)?')
 SAMPLE_SECONDS = 0.005
-LOADER_VARIABLES = ('LD_PRELOAD', 'LD_AUDIT', 'LD_LIBRARY_PATH', 'DYLD_INSERT_LIBRARIES', 'DYLD_LIBRARY_PATH')
-TRUSTED_PYTHONS = {os.path.realpath(p) for p in [sys.executable, getattr(sys, '_base_executable', sys.executable)] +
-                   [shutil.which(n) for n in ('python3', 'python')] if p and os.path.isfile(p)}
+LOADER_PREFIXES = ('LD_', 'DYLD_')
+TRUSTED_PYTHONS = {os.path.realpath(p) for p in (sys.executable, getattr(sys, '_base_executable', sys.executable))
+                   if p and os.path.isabs(p) and os.path.isfile(p)}
+PATH_ARGUMENT = ('/', './', '../', '~')
+HIDDEN_TRIES, HIDDEN_PAUSE = 5, 0.01
 KEYCHAIN_TOOLS = re.compile(rb'(?<![A-Za-z0-9_-])(security|secret-tool|find-generic-password)(?![A-Za-z0-9_-])')
 
 SHAPES = re.compile(r'\b(?:[a-z_]*token|[a-z_]*key|secret|password|passwd|pwd|sig|signature|auth|credentials?)\s*='
@@ -150,10 +151,6 @@ def texts(value):
 
 def holds_credential(text):
     return bool(SHAPES.search(text)) or any(v in text for v in SECRETS)
-
-
-def shown_path(path):
-    return path.isprintable() and not holds_credential(path)
 
 
 def shown(name, *values):
@@ -286,7 +283,7 @@ class Kit:
         self.leaks = []
         self.groups = set()
         self.lock = threading.RLock()
-        self.runtime, self.listed_pids = set(), set()
+        self.runtime, self.listed_pids, self.active = set(), set(), set()
         self.seen = PROC
         self.blind = None if PROC else self.unseen()
 
@@ -328,16 +325,76 @@ class Kit:
         if not PROC:
             yield from self.listed()
             return
+        table = self.table()
+        for pid, (ppid, uid, env, cmd) in table.items():
+            if env is not None and self.mark in env:
+                yield cmd, env
+        for pid, (ppid, uid, env, cmd) in table.items():
+            if env is None and uid == os.getuid() and self.under_run(table, ppid):
+                self.leak('a process of the driver hides its details, so the kit cannot check it')
+
+    def table(self):
+        found = {}
         for pid in filter(str.isdigit, os.listdir('/proc')):
+            try:
+                with open('/proc/%s/stat' % pid) as f:
+                    state, ppid = f.read().rpartition(')')[2].split()[:2]
+                ppid = int(ppid)
+                with open('/proc/%s/status' % pid) as f:
+                    uid = int(next(row for row in f if row.startswith('Uid:')).split()[1])
+            except (OSError, ValueError, IndexError, StopIteration):
+                continue
+            try:
+                env, cmd = self.details(pid)
+            except PermissionError:
+                if state in 'ZX' or not self.running(pid):
+                    continue
+                env = cmd = None
+            except OSError:
+                continue
+            found[pid] = (ppid, uid, env, cmd)
+        return found
+
+    @staticmethod
+    def details(pid, tries=HIDDEN_TRIES):
+        for attempt in range(tries):
             try:
                 with open('/proc/%s/environ' % pid, 'rb') as f:
                     env = f.read().decode('utf-8', 'replace').split('\0')
                 with open('/proc/%s/cmdline' % pid, 'rb') as f:
-                    cmd = f.read().decode('utf-8', 'replace').split('\0')
-            except OSError:
-                continue
-            if self.mark in env:
-                yield cmd, env
+                    return env, f.read().decode('utf-8', 'replace').split('\0')
+            except PermissionError:
+                if attempt == tries - 1:
+                    raise
+                time.sleep(HIDDEN_PAUSE)
+
+    @staticmethod
+    def folder_of(pid, tries=HIDDEN_TRIES):
+        for attempt in range(tries):
+            try:
+                return os.readlink('/proc/%s/cwd' % pid)
+            except PermissionError:
+                if attempt == tries - 1:
+                    raise
+                time.sleep(HIDDEN_PAUSE)
+
+    @staticmethod
+    def running(pid):
+        try:
+            with open('/proc/%s/stat' % pid) as f:
+                return f.read().rpartition(')')[2].split()[0] not in 'ZX'
+        except OSError:
+            return False
+
+    def under_run(self, table, pid):
+        seen = set()
+        while str(pid) in table and pid not in seen:
+            seen.add(pid)
+            ppid, _, env, _ = table[str(pid)]
+            if env is not None and self.mark in env:
+                return True
+            pid = ppid
+        return False
 
     @staticmethod
     def ps(*args):
@@ -413,45 +470,58 @@ class Kit:
 
     def run_processes(self):
         if PROC:
-            for pid in filter(str.isdigit, os.listdir('/proc')):
-                try:
-                    with open('/proc/%s/environ' % pid, 'rb') as f:
-                        if self.mark.encode() not in f.read().split(b'\0'):
-                            continue
-                except OSError:
+            for pid, (_, _, env, cmd) in self.table().items():
+                if env is None or self.mark not in env:
                     continue
                 try:
-                    with open('/proc/%s/cmdline' % pid, 'rb') as f:
-                        argv = f.read().decode('utf-8', 'replace').split('\0')[:-1]
-                    cwd = os.readlink('/proc/%s/cwd' % pid)
-                except OSError:
-                    if os.path.exists('/proc/%s' % pid):
-                        self.leak('the kit could not resolve a file a process of the driver ran, so it cannot check it')
+                    cwd = self.folder_of(pid)
+                except PermissionError:
+                    if self.running(pid):
+                        self.leak('a process of the driver hides its details, so the kit cannot check it')
                     continue
-                yield argv, cwd
+                except OSError:
+                    continue
+                yield cmd[:-1], cwd
             return
         rows = self.ps('-o', 'command=')
         for pid in sorted(self.listed_pids):
             if pid not in rows:
                 continue
-            try:
-                out = subprocess.run(['lsof', '-a', '-p', str(pid), '-d', 'cwd', '-Fn'], stdin=subprocess.DEVNULL,
-                                     capture_output=True, text=True, timeout=30).stdout
-            except (OSError, subprocess.TimeoutExpired):
-                out = ''
-            cwd = [f[1:] for f in out.splitlines() if f[:1] == 'n']
-            if not cwd:
+            cwd = self.process_cwd(pid)
+            if cwd is None:
                 if not self.ps('-o', 'stat=').get(pid, 'Z').strip().startswith('Z'):
                     self.leak('the kit could not resolve a file a process of the driver ran, so it cannot check it')
                 continue
-            yield rows[pid].split(' '), cwd[0]
+            yield rows[pid], cwd
 
     def collect_runtime(self):
         for argv, cwd in self.run_processes():
-            for a in argv[1:]:
-                path = os.path.join(cwd, a)
-                if a and os.path.isfile(path):
-                    self.runtime.add(os.path.realpath(path))
+            for path in (self.argument_files(argv, cwd) if isinstance(argv, list) else self.text_files(argv, cwd)):
+                self.runtime.add(os.path.realpath(path))
+
+    def argument_files(self, argv, cwd):
+        for a in argv[1:]:
+            path = os.path.join(cwd, os.path.expanduser(a))
+            if a and os.path.isfile(path):
+                yield path
+            elif a.startswith(PATH_ARGUMENT) and not os.path.isdir(path):
+                self.leak('the kit could not resolve a file a process of the driver ran, so it cannot check it')
+
+    def text_files(self, text, cwd):
+        words, i = text.split(' '), 1
+        while i < len(words):
+            pathlike = words[i].startswith(PATH_ARGUMENT)
+            found = next(((j, path) for j in range(len(words) if pathlike else i + 1, i, -1)
+                          for path in [os.path.join(cwd, os.path.expanduser(' '.join(words[i:j])))]
+                          if os.path.exists(path)), None)
+            if found:
+                if os.path.isfile(found[1]):
+                    yield found[1]
+                i = found[0]
+                continue
+            if pathlike:
+                self.leak('the kit could not resolve a file a process of the driver ran, so it cannot check it')
+            i += 1
 
     def _scan(self, canary):
         if canary:
@@ -622,13 +692,16 @@ class Kit:
             found.append('calls the keychain tool %s' % tool.group(1).decode())
         return found
 
+    def shown_path(self, path):
+        return path.isprintable() and not holds_credential(path) and not any(v in path for v in self.active)
+
     def file_check(self, entry):
         top = os.path.dirname(os.path.abspath(self.args.driver))
         try:
             for path in self.driver_files():
                 rel = os.path.relpath(path, top)
                 for what in self.names_key(path, entry, rel == 'README.md'):
-                    self.leak("the driver's file %s %s" % (rel, what) if shown_path(rel) else
+                    self.leak("the driver's file %s %s" % (rel, what) if self.shown_path(rel) else
                               "a file of the driver, which the kit does not name, %s" % what)
         except OSError:
             self.leak('the kit could not read every file of the driver, so it cannot check them')
@@ -646,7 +719,8 @@ class Kit:
                 continue
             rel = os.path.relpath(real, top)
             for what in found:
-                self.leak('the file %s, which a process of the driver ran, %s' % (rel, what) if shown_path(rel) else
+                self.leak('the file %s, which a process of the driver ran, %s' % (rel, what)
+                          if self.shown_path(rel) else
                           'a file a process of the driver ran, which the kit does not name, %s' % what)
 
     def lifecycle(self):
@@ -702,27 +776,54 @@ class Kit:
 
     def trusted_helper(self, port, server):
         pid, argv = self.peer(port, server)
-        if pid is None or not self.is_helper(argv):
+        if pid is None or not argv or len(argv) != 3 or argv[1] != '-I' or not PYTHON.fullmatch(
+                os.path.basename(argv[0])):
             return False
-        try:
-            if PROC:
-                exe = os.readlink('/proc/%d/exe' % pid)
-                with open('/proc/%d/environ' % pid, 'rb') as f:
-                    names = {e.partition(b'=')[0].decode('utf-8', 'replace') for e in f.read().split(b'\0')}
-            else:
-                out = subprocess.run(['lsof', '-a', '-p', str(pid), '-d', 'txt', '-Fn'], stdin=subprocess.DEVNULL,
-                                     capture_output=True, text=True, timeout=30).stdout
-                exe = next(f[1:] for f in out.splitlines() if f[:1] == 'n')
-                text = self.ps('-o', 'command=', '-E').get(pid, '')
-                names = set(re.findall(r'(?:^|\s)([A-Za-z_][A-Za-z0-9_]*)=', text))
-        except (OSError, StopIteration, subprocess.TimeoutExpired, Unusable):
+        cwd, exe, names = self.process_cwd(pid), self.executable(pid), self.environment_names(pid)
+        if cwd is None or exe is None or names is None:
             return False
-        return os.path.realpath(exe) in TRUSTED_PYTHONS and not names & set(LOADER_VARIABLES)
+        return os.path.realpath(os.path.join(cwd, argv[2])) == HOSTKEY and os.path.realpath(exe) in TRUSTED_PYTHONS \
+            and not any(n.startswith(LOADER_PREFIXES) for n in names)
 
     @staticmethod
-    def is_helper(argv):
-        return bool(argv) and len(argv) == 3 and bool(PYTHON.fullmatch(os.path.basename(argv[0]))) and \
-            argv[1] == '-I' and os.path.realpath(argv[2]) == HOSTKEY
+    def lsof_name(pid, kind):
+        try:
+            out = subprocess.run(['lsof', '-a', '-p', str(pid), '-d', kind, '-Fn'], stdin=subprocess.DEVNULL,
+                                 capture_output=True, text=True, timeout=30).stdout
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+        return next((f[1:] for f in out.splitlines() if f[:1] == 'n'), None)
+
+    def process_cwd(self, pid):
+        if not PROC:
+            return self.lsof_name(pid, 'cwd')
+        try:
+            return os.readlink('/proc/%d/cwd' % pid)
+        except OSError:
+            return None
+
+    def executable(self, pid):
+        if not PROC:
+            return self.lsof_name(pid, 'txt')
+        try:
+            return os.readlink('/proc/%d/exe' % pid)
+        except OSError:
+            return None
+
+    def environment_names(self, pid):
+        if not PROC:
+            try:
+                row = self.ps('-o', 'command=', '-E').get(pid)
+            except Unusable:
+                return None
+            if row is None or not re.search(r'(?:^|\s)%s(?:\s|$)' % re.escape(self.mark), row):
+                return None
+            return set(re.findall(r'(?:^|\s)([A-Za-z_][A-Za-z0-9_]*)=', row))
+        try:
+            with open('/proc/%d/environ' % pid, 'rb') as f:
+                return {e.partition(b'=')[0].decode('utf-8', 'replace') for e in f.read().split(b'\0') if e}
+        except OSError:
+            return None
 
     def sampled(self, cmd, request, env, canary):
         stop = threading.Event()
@@ -751,6 +852,7 @@ class Kit:
     def key_check(self, name, entry):
         self.file_check(entry)
         canary = (name, 'kit-canary-' + secrets.token_hex(16))
+        self.active.add(canary[1])
         phase, server = {'now': None}, []
         host = FakeHost(answers=self.lifecycle(), test_key=canary[1], phase=lambda: phase['now'],
                         trust=lambda port: self.trusted_helper(port, server[0]))
