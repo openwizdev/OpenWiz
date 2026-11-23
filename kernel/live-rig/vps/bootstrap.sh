@@ -33,8 +33,9 @@ sha256 before anything is run or installed from it. It never signs in, never ins
 never runs sudo, and runs nothing it installed except `<tool> --version`; a tool is published only
 after its staged copy names its pinned version, so a working one is never replaced by a broken one.
 Each program it starts gets only HOME, USER, LOGNAME, SHELL, LANG, LC_ALL, LC_CTYPE, TERM, TMPDIR
-and TZ from your environment, never a token or key. A second run installs nothing. --dry-run prints
-each step and writes nothing, not even a temporary file.
+and TZ from your environment, never a token or key. A command already in <prefix>/bin that it didn't
+install is kept and never run. A second run installs nothing, and two runs for one prefix take turns.
+--dry-run prints each step and writes nothing, not even a temporary file.
 
 Exit 0 when every tool is installed, already there or left out by design; 1 when a download,
 checksum or install failed; 2 on a usage error or a missing python3 3.9+.'''
@@ -110,7 +111,7 @@ def system_tool(name, minimum):
     return '.'.join(map(str, have)), None
 
 
-def digest(path):
+def sha256_of(path):
     h = hashlib.sha256()
     try:
         with open(path, 'rb') as f:
@@ -201,7 +202,7 @@ def install(tool, file, prefix, work):
             except (KeyError, OSError, tarfile.TarError, zipfile.BadZipFile) as e:
                 raise Refused('cannot unpack %s: %s' % (file['member'], type(e).__name__))
         elif kind == 'wheel':
-            if digest(wheel) != file['sha256']:
+            if sha256_of(wheel) != file['sha256']:
                 try:
                     place(open(path, 'rb').read(), wheel)
                 except OSError as e:
