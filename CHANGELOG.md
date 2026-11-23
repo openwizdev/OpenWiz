@@ -2,7 +2,7 @@
 
 All OpenWiz versions, newest first. How versions work: [RELEASING.md](https://github.com/openwizdev/OpenWiz/blob/main/RELEASING.md).
 
-## 0.1.1 · 2026-11-22
+## 0.1.1 · 2026-11-23
 
 **OpenWiz 0.1.1: OpenWiz no longer needs CloudRoom: install it and run your first fleet on your own computer, with the Claude Code or Codex you're already signed in to**
 
@@ -13,13 +13,13 @@ All OpenWiz versions, newest first. How versions work: [RELEASING.md](https://gi
 - A scheduled job you approve once wakes your fleet every 10 minutes, "run the fleet now" ticks it at once, and one command each shows, pauses or removes it.
 - `openwiz models show`, `list` and `set` pick the models your orchestrator, builders and reviewers use, from what your installed Claude Code and Codex offer, with no CloudRoom needed.
 
-Tested on synthetic fixtures, with fake harnesses, schedulers and GitHub only: nothing in this release has been checked live yet, including a stranger's install and first fleet on a clean machine with no CloudRoom, Claude Code or Codex, and a Mac.
+Live-checked against real hosts on Linux: installing this release and running `openwiz help --agent`, `ls --json` and `show --json`; the CloudRoom driver starting, waking and stopping a real builder; and the GitHub App reading only its one approved repository. Not checked live: agents on this computer with no CloudRoom, the heartbeat, Codex, boat.dev and anything on a Mac; everything else is tested on synthetic fixtures only.
 
 **Under the hood**
 
 - The installer finds the newest release when the latest is a pre-release, names each failure, checks glibc on Linux, repairs a damaged build and checks updates against `SHA256SUMS`, and a new `install remove` deletes only what it made.
 - `install skills` installs per agent and per skill, keeps your own same-named skill, and no longer reports `installed` when no agent folder exists.
-- The boat.dev, local and Cloudroom drivers refuse a start field that looks like a credential and no longer repeat their host's error text, and on macOS they find and stop a run without reading any other process's environment.
+- The boat.dev, local and CloudRoom drivers refuse a start field that looks like a credential and no longer repeat their host's error text, and on macOS they find and stop a run without reading any other process's environment.
 - The boat.dev driver fails a start at once when its first turn hits a usage limit or an expired login, or when the account cannot push to the repository, and every driver's README says where your login lives.
 - `install preflight` calls CloudRoom optional, so an Intel Mac installs and runs agents on this computer or on boat.dev.
 
