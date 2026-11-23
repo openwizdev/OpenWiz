@@ -1,0 +1,210 @@
+................................FFFFFFFFFFFFFFFF/usr/lib/python3.11/subprocess.py:1125: ResourceWarning: subprocess 4173 is still running
+  _warn("subprocess %s is still running" % self.pid,
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+F.openwiz-cloudroom: CloudRoom's sign-in gave no usable link and said nothing (status 0)
+openwiz-cloudroom: CloudRoom's sign-in gave no usable link and said nothing (status 0)
+openwiz-cloudroom: CloudRoom's sign-in gave no usable link and said nothing (status 0)
+openwiz-cloudroom: CloudRoom's sign-in gave no usable link and said nothing (status 0)
+openwiz-cloudroom: CloudRoom's sign-in gave no usable link and said nothing (status 0)
+openwiz-cloudroom: CloudRoom's sign-in gave no usable link and said nothing (status 0)
+..............
+======================================================================
+FAIL: test_a_failed_sign_in_shows_cloudrooms_own_words_and_nothing_secret (__main__.Login.test_a_failed_sign_in_shows_cloudrooms_own_words_and_nothing_secret) (code=1, reply=b'', said=b'Could not reach the CloudRoom server.\nRetry at https://www.cloudroom.dev/login?desktop=synthetic-nonce-0001 as owner@example.invalid\ntoken: synthetic-token-0123456789abcdefghij\n\x1b[31mpassword=hunter2\x1b[0m\nAuthorization: Bearer synthetic-bearer\n{"token": "tk1", "refresh_token":"tk2"}\nAuthorization:\tBearer\ttb3\n\x1b[38:2:255:0:0mcolour\x1b[0m done\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1033, in test_a_failed_sign_in_shows_cloudrooms_own_words_and_nothing_secret
+    self.assertNotIn(word, err)
+AssertionError: 'tk1' unexpectedly found in 'openwiz-cloudroom: CloudRoom said: Could not reach the CloudRoom server.\nopenwiz-cloudroom: CloudRoom said: Retry at [link removed] as [address removed]\nopenwiz-cloudroom: CloudRoom said: token [removed]\nopenwiz-cloudroom: CloudRoom said: password [removed]\nopenwiz-cloudroom: CloudRoom said: Authorization [removed]\nopenwiz-cloudroom: CloudRoom said: {"token": "tk1", "refresh_token":"tk2"}\nopenwiz-cloudroom: CloudRoom said: Authorization [removed]\nopenwiz-cloudroom: CloudRoom said: [38:2:255:0:0mcolour done\n'
+
+======================================================================
+FAIL: test_a_failed_sign_in_shows_cloudrooms_own_words_and_nothing_secret (__main__.Login.test_a_failed_sign_in_shows_cloudrooms_own_words_and_nothing_secret) (code=1, reply=b'Could not reach the CloudRoom server.\nRetry at https://www.cloudroom.dev/login?desktop=synthetic-nonce-0001 as owner@example.invalid\ntoken: synthetic-token-0123456789abcdefghij\n\x1b[31mpassword=hunter2\x1b[0m\nAuthorization: Bearer synthetic-bearer\n{"token": "tk1", "refresh_token":"tk2"}\nAuthorization:\tBearer\ttb3\n\x1b[38:2:255:0:0mcolour\x1b[0m done\n', said=b'')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1033, in test_a_failed_sign_in_shows_cloudrooms_own_words_and_nothing_secret
+    self.assertNotIn(word, err)
+AssertionError: 'tk1' unexpectedly found in 'openwiz-cloudroom: CloudRoom said: Could not reach the CloudRoom server.\nopenwiz-cloudroom: CloudRoom said: Retry at [link removed] as [address removed]\nopenwiz-cloudroom: CloudRoom said: token [removed]\nopenwiz-cloudroom: CloudRoom said: password [removed]\nopenwiz-cloudroom: CloudRoom said: Authorization [removed]\nopenwiz-cloudroom: CloudRoom said: {"token": "tk1", "refresh_token":"tk2"}\nopenwiz-cloudroom: CloudRoom said: Authorization [removed]\nopenwiz-cloudroom: CloudRoom said: [38:2:255:0:0mcolour done\n'
+
+======================================================================
+FAIL: test_a_failed_sign_in_shows_cloudrooms_own_words_and_nothing_secret (__main__.Login.test_a_failed_sign_in_shows_cloudrooms_own_words_and_nothing_secret) (code=None, reply=b'', said=b'CloudRoom could not start its server.\nhalf a line with tk4')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1037, in test_a_failed_sign_in_shows_cloudrooms_own_words_and_nothing_secret
+    self.assertIn('openwiz-cloudroom: CloudRoom said: CloudRoom could not start its server.\n', err)
+AssertionError: 'openwiz-cloudroom: CloudRoom said: CloudRoom could not start its server.\n' not found in "openwiz-cloudroom: CloudRoom's sign-in did not answer within 30 seconds; is CloudRoom running?\n"
+
+======================================================================
+FAIL: test_a_failed_sign_in_shows_cloudrooms_own_words_and_nothing_secret (__main__.Login.test_a_failed_sign_in_shows_cloudrooms_own_words_and_nothing_secret) (code=None, reply=b'Could not reach the CloudRoom server.\nRetry at https://www.cloudroom.dev/login?desktop=synthetic-nonce-0001 as owner@example.invalid\ntoken: synthetic-token-0123456789abcdefghij\n\x1b[31mpassword=hunter2\x1b[0m\nAuthorization: Bearer synthetic-bearer\n{"token": "tk1", "refresh_token":"tk2"}\nAuthorization:\tBearer\ttb3\n\x1b[38:2:255:0:0mcolour\x1b[0m done\n', said=b'')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1040, in test_a_failed_sign_in_shows_cloudrooms_own_words_and_nothing_secret
+    self.assertIn('openwiz-cloudroom: CloudRoom said: Could not reach the CloudRoom server.\n', err)
+AssertionError: 'openwiz-cloudroom: CloudRoom said: Could not reach the CloudRoom server.\n' not found in "openwiz-cloudroom: CloudRoom's sign-in did not answer within 30 seconds; is CloudRoom running?\n"
+
+======================================================================
+FAIL: test_a_headless_linux_machine_is_told_what_sign_in_needs (__main__.Login.test_a_headless_linux_machine_is_told_what_sign_in_needs) [no desktop session] (status='signed-out')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1133, in test_a_headless_linux_machine_is_told_what_sign_in_needs
+    self.assertEqual([c for c in self.host.calls if Path(c[0]).name == 'room-cli'], [])
+AssertionError: Lists differ: [['<tmp> chars]on']] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+['<tmp> 'cloud', 'status', '--json']
+
++ []
+- [['<tmp>
+-   'cloud',
+-   'status',
+-   '--json']]
+
+======================================================================
+FAIL: test_a_headless_linux_machine_is_told_what_sign_in_needs (__main__.Login.test_a_headless_linux_machine_is_told_what_sign_in_needs) [empty display] (status='signed-out')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1133, in test_a_headless_linux_machine_is_told_what_sign_in_needs
+    self.assertEqual([c for c in self.host.calls if Path(c[0]).name == 'room-cli'], [])
+AssertionError: Lists differ: [['<tmp> chars]on']] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+['<tmp> 'cloud', 'status', '--json']
+
++ []
+- [['<tmp>
+-   'cloud',
+-   'status',
+-   '--json']]
+
+======================================================================
+FAIL: test_a_headless_linux_machine_is_told_what_sign_in_needs (__main__.Login.test_a_headless_linux_machine_is_told_what_sign_in_needs) [no /dev/fuse] (status='signed-out')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1133, in test_a_headless_linux_machine_is_told_what_sign_in_needs
+    self.assertEqual([c for c in self.host.calls if Path(c[0]).name == 'room-cli'], [])
+AssertionError: Lists differ: [['<tmp> chars]on']] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+['<tmp> 'cloud', 'status', '--json']
+
++ []
+- [['<tmp>
+-   'cloud',
+-   'status',
+-   '--json']]
+
+======================================================================
+FAIL: test_a_headless_linux_machine_is_told_what_sign_in_needs (__main__.Login.test_a_headless_linux_machine_is_told_what_sign_in_needs) [no fusermount] (status='signed-out')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1133, in test_a_headless_linux_machine_is_told_what_sign_in_needs
+    self.assertEqual([c for c in self.host.calls if Path(c[0]).name == 'room-cli'], [])
+AssertionError: Lists differ: [['<tmp> chars]on']] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+['<tmp> 'cloud', 'status', '--json']
+
++ []
+- [['<tmp>
+-   'cloud',
+-   'status',
+-   '--json']]
+
+======================================================================
+FAIL: test_a_headless_linux_machine_is_told_what_sign_in_needs (__main__.Login.test_a_headless_linux_machine_is_told_what_sign_in_needs) [no libfuse2] (status='signed-out')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1133, in test_a_headless_linux_machine_is_told_what_sign_in_needs
+    self.assertEqual([c for c in self.host.calls if Path(c[0]).name == 'room-cli'], [])
+AssertionError: Lists differ: [['<tmp> chars]on']] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+['<tmp> 'cloud', 'status', '--json']
+
++ []
+- [['<tmp>
+-   'cloud',
+-   'status',
+-   '--json']]
+
+======================================================================
+FAIL: test_a_headless_linux_machine_is_told_what_sign_in_needs (__main__.Login.test_a_headless_linux_machine_is_told_what_sign_in_needs) [headless and no FUSE] (status='signed-out')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1133, in test_a_headless_linux_machine_is_told_what_sign_in_needs
+    self.assertEqual([c for c in self.host.calls if Path(c[0]).name == 'room-cli'], [])
+AssertionError: Lists differ: [['<tmp> chars]on']] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+['<tmp> 'cloud', 'status', '--json']
+
++ []
+- [['<tmp>
+-   'cloud',
+-   'status',
+-   '--json']]
+
+======================================================================
+FAIL: test_a_headless_linux_machine_is_told_what_sign_in_needs (__main__.Login.test_a_headless_linux_machine_is_told_what_sign_in_needs) [no desktop session] (status='signed-in')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1128, in test_a_headless_linux_machine_is_told_what_sign_in_needs
+    with self.assertRaises(cloudroom.Refused) as refused:
+AssertionError: Refused not raised
+
+======================================================================
+FAIL: test_a_headless_linux_machine_is_told_what_sign_in_needs (__main__.Login.test_a_headless_linux_machine_is_told_what_sign_in_needs) [empty display] (status='signed-in')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1128, in test_a_headless_linux_machine_is_told_what_sign_in_needs
+    with self.assertRaises(cloudroom.Refused) as refused:
+AssertionError: Refused not raised
+
+======================================================================
+FAIL: test_a_headless_linux_machine_is_told_what_sign_in_needs (__main__.Login.test_a_headless_linux_machine_is_told_what_sign_in_needs) [no /dev/fuse] (status='signed-in')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1128, in test_a_headless_linux_machine_is_told_what_sign_in_needs
+    with self.assertRaises(cloudroom.Refused) as refused:
+AssertionError: Refused not raised
+
+======================================================================
+FAIL: test_a_headless_linux_machine_is_told_what_sign_in_needs (__main__.Login.test_a_headless_linux_machine_is_told_what_sign_in_needs) [no fusermount] (status='signed-in')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1128, in test_a_headless_linux_machine_is_told_what_sign_in_needs
+    with self.assertRaises(cloudroom.Refused) as refused:
+AssertionError: Refused not raised
+
+======================================================================
+FAIL: test_a_headless_linux_machine_is_told_what_sign_in_needs (__main__.Login.test_a_headless_linux_machine_is_told_what_sign_in_needs) [no libfuse2] (status='signed-in')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1128, in test_a_headless_linux_machine_is_told_what_sign_in_needs
+    with self.assertRaises(cloudroom.Refused) as refused:
+AssertionError: Refused not raised
+
+======================================================================
+FAIL: test_a_headless_linux_machine_is_told_what_sign_in_needs (__main__.Login.test_a_headless_linux_machine_is_told_what_sign_in_needs) [headless and no FUSE] (status='signed-in')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1128, in test_a_headless_linux_machine_is_told_what_sign_in_needs
+    with self.assertRaises(cloudroom.Refused) as refused:
+AssertionError: Refused not raised
+
+======================================================================
+FAIL: test_a_launch_that_outlives_the_wait_never_fills_a_file (__main__.Login.test_a_launch_that_outlives_the_wait_never_fills_a_file)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/tools/install/cloudroom/test_cloudroom.py", line 1096, in test_a_launch_that_outlives_the_wait_never_fills_a_file
+    self.assertTrue(os.readlink(f'/proc/{pid}/fd/{fd}').startswith('pipe:'), 'no file holds its output')
+AssertionError: False is not true : no file holds its output
+
+----------------------------------------------------------------------
+Ran 50 tests in 3.117s
+
+FAILED (failures=17)

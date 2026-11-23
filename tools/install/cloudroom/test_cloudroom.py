@@ -74,6 +74,12 @@ class FakeHost(cloudroom.Host):
         self.signers = {}
         self.dmg_signer = CLOUDROOM_TEAM
         self.dead = set()
+        self.environ = {'DISPLAY': ':0'}
+        for path in ('dev/fuse', 'usr/bin/fusermount3'):
+            (base / 'root' / path).parent.mkdir(parents=True, exist_ok=True)
+            (base / 'root' / path).write_text('synthetic')
+        self.sign_in_code, self.sign_in_said = 0, b''
+        self.open_result = (None, b'')
 
     def fetch(self, url, limit):
         self.fetched.append(url)
@@ -108,7 +114,7 @@ class FakeHost(cloudroom.Host):
                     return 0, self.status
                 return 0, (FIXTURES / f'cloud-{self.status}.json').read_bytes()
             if argv[1:] == ['cloud', 'sign-in', '--json']:
-                return 0, self.sign_in_reply
+                return self.sign_in_code, self.sign_in_reply
             return 2, b''
         if name == 'hdiutil' and argv[1] == 'attach':
             mount = Path(argv[argv.index('-mountpoint') + 1])
@@ -144,7 +150,15 @@ class FakeHost(cloudroom.Host):
             return (0 if match and match.group(1) == signer else 3), b''
         return 127, b''
 
+    def ask(self, argv, timeout):
+        code, out = self.run(argv, timeout)
+        return code, out, self.sign_in_said if argv[1:] == ['cloud', 'sign-in', '--json'] else b''
+
     def open(self, argv):
+        self.opened.append(list(argv))
+        return self.open_result
+
+    def start(self, argv):
         self.opened.append(list(argv))
 
     def alive(self, pid):
@@ -992,6 +1006,143 @@ class Login(Base):
                 result = self.sign_in()
                 self.assertIsNone(result['opened'])
                 self.assertEqual(self.host.opened, [])
+
+    def said(self):
+        out, err = io.StringIO(), io.StringIO()
+        with redirect_stdout(out), redirect_stderr(err):
+            cloudroom.main(['sign-in', '--state-dir', str(self.state)], host=self.host)
+        result = json.loads(out.getvalue())
+        self.assertEqual(set(result), {'schema', 'code', 'operation', 'opened'})
+        return result, err.getvalue()
+
+    def test_a_failed_sign_in_never_prints_cloudrooms_raw_output(self):
+        self.installed('signed-out')
+        secret = (b'Retry at https://www.cloudroom.dev/login?desktop=synthetic-nonce-0001 as owner@example.invalid\n'
+                  b'token: synthetic-token-0123456789abcdefghij\n\x1b[31mpassword=hunter2\x1b[0m\n'
+                  b'{\n  "error": "refresh failed",\n  "refresh_token":\n\n    "rt1"\n}\n'
+                  b'Your refresh token for this session is\n  rt2\n'
+                  b'{"message": "Your token is:\\n rt3", "refresh_token": {"detail": "rt4"}}\n')
+        run = 'openwiz-cloudroom: to see its full output, run: "$HOME"/.local/bin/room-cli cloud sign-in --json\n'
+        cases = (
+            (1, b'', secret, "openwiz-cloudroom: CloudRoom's sign-in exited with status 1 and gave no usable link.\n" + run),
+            (1, secret, b'', "openwiz-cloudroom: CloudRoom's sign-in exited with status 1 and gave no usable link.\n" + run),
+            (0, b'{"error": {"message": "rt5"}}', b'',
+             "openwiz-cloudroom: CloudRoom's sign-in exited with status 0 and gave no usable link.\n" + run),
+            (None, b'', secret + b'getaddrinfo ENOTFOUND www.cloudroom.dev',
+             "openwiz-cloudroom: CloudRoom's sign-in did not answer within 30 seconds; is CloudRoom running?\n"
+             'openwiz-cloudroom: CloudRoom reported: CloudRoom could not look up its server; check the network.\n' + run),
+            (1, b'', b'connect ECONNREFUSED 127.0.0.1:4100 rt6\nconnect ECONNREFUSED 127.0.0.1:4100 rt6\n',
+             "openwiz-cloudroom: CloudRoom's sign-in exited with status 1 and gave no usable link.\n"
+             'openwiz-cloudroom: CloudRoom reported: CloudRoom could not connect; is CloudRoom running?\n' + run),
+            (1, b'', b'getaddrinfo enotfound www.cloudroom.dev\n',
+             "openwiz-cloudroom: CloudRoom's sign-in exited with status 1 and gave no usable link.\n" + run),
+        )
+        for code, reply, said, expected in cases:
+            with self.subTest(code=code, reply=reply, said=said):
+                self.host.sign_in_code, self.host.sign_in_reply, self.host.sign_in_said = code, reply, said
+                result, err = self.said()
+                self.assertEqual((result['code'], result['opened']), ('cloudroom_login_missing', None))
+                self.assertEqual(self.host.opened, [])
+                self.assertEqual(err, expected)
+
+    def test_an_opener_that_fails_is_shown_and_not_counted_as_opened(self):
+        self.installed('signed-out')
+        self.host.open_result = (4, b'xdg-open: no method available for opening '
+                                    b'https://www.cloudroom.dev/login?desktop=synthetic-nonce-0001\n')
+        result, err = self.said()
+        self.assertIsNone(result['opened'])
+        self.assertEqual(err, 'openwiz-cloudroom: xdg-open exited with status 4; the sign-in page did not open.\n'
+                              'openwiz-cloudroom: xdg-open reported: No browser is set up to open the sign-in page.\n'
+                              'openwiz-cloudroom: to see its full output, run: /usr/bin/xdg-open https://www.cloudroom.dev\n')
+        self.host.open_result = (None, b'')
+        result, err = self.said()
+        self.assertEqual((result['opened'], err), ('sign_in', ''))
+
+    def test_an_app_that_fails_at_launch_shows_its_status_and_known_errors_only(self):
+        real = cloudroom.Host(system='Linux', machine='x86_64', home=self.host.home, root=self.host.root)
+        self.host.open = real.open
+        self.host.publish_appimage(b'#!/bin/sh\necho "error while loading shared libraries: libnss3.so" >&2\n'
+                                   b'echo "see https://example.invalid/help?session=synthetic-0001" >&2\nexit 1\n')
+        self.installed(None)
+        with patch.object(cloudroom, 'OPEN_WAIT', 120):
+            result, err = self.said()
+        self.assertIsNone(result['opened'])
+        self.assertEqual(err, 'openwiz-cloudroom: CloudRoom exited with status 1 at launch.\n'
+                              'openwiz-cloudroom: CloudRoom reported: A system library CloudRoom needs is missing.\n'
+                              'openwiz-cloudroom: to see its full output, run: "$HOME"/Applications/Cloudroom.AppImage\n')
+
+    def test_a_launch_that_outlives_the_wait_never_fills_a_file(self):
+        go, wrote, pidfile, app = (self.base / name for name in ('go', 'wrote', 'pid', 'app'))
+        app.write_text(f'#!/bin/sh\necho $$ > {pidfile}\nwhile [ ! -e {go} ]; do sleep 0.05; done\n'
+                       f'head -c 4194304 /dev/zero\necho done > {wrote}\nexec sleep 60\n')
+        app.chmod(0o700)
+        real = cloudroom.Host(system='Linux', machine='x86_64', home=self.host.home, root=self.host.root)
+        with patch.object(cloudroom, 'OPEN_WAIT', 0.5):
+            self.assertEqual(real.open([str(app)]), (None, b''))
+        for _ in range(400):
+            if pidfile.exists() and pidfile.read_text().strip():
+                break
+            time.sleep(0.05)
+        pid = int(pidfile.read_text())
+        self.addCleanup(lambda: os.kill(pid, 9))
+        go.touch()
+        for _ in range(400):
+            if wrote.exists():
+                break
+            time.sleep(0.05)
+        self.assertEqual(wrote.read_text(), 'done\n', 'later output is drained, never blocking the app')
+        for fd in (1, 2):
+            self.assertTrue(os.readlink(f'/proc/{pid}/fd/{fd}').startswith('pipe:'), 'no file holds its output')
+        noisy = self.base / 'noisy'
+        noisy.write_text('#!/bin/sh\nhead -c 300000 /dev/zero | tr "\\0" x\nexit 7\n')
+        noisy.chmod(0o700)
+        with patch.object(cloudroom, 'OPEN_WAIT', 120):
+            code, out = real.open([str(noisy)])
+        self.assertEqual((code, len(out)), (7, 1 << 16))
+
+    def test_a_headless_linux_machine_is_told_what_sign_in_needs(self):
+        fuse_runtime = b'\x7fELF synthetic AppImage runtime libfuse.so.2 fusermount'
+        cases = {
+            'no desktop session': (dict(environ={}), ['needs a desktop session', 'DISPLAY or WAYLAND_DISPLAY',
+                                                      'Next: run sign-in from a desktop session']),
+            'empty display': (dict(environ={'DISPLAY': '', 'WAYLAND_DISPLAY': ''}), ['needs a desktop session']),
+            'no /dev/fuse': (dict(missing='dev/fuse'), ['needs FUSE', '/dev/fuse', 'Next: install FUSE']),
+            'no fusermount': (dict(missing='usr/bin/fusermount3'), ['needs FUSE', 'fusermount']),
+            'no libfuse2': (dict(app=fuse_runtime), ['libfuse.so.2', 'libfuse2']),
+            'headless and no FUSE': (dict(environ={}, missing='dev/fuse'), ['needs a desktop session', 'needs FUSE']),
+        }
+        for status in ('signed-out', 'signed-in', None):
+            for index, (name, (case, words)) in enumerate(cases.items()):
+                with self.subTest(name, status=status):
+                    base = self.base / f'headless-{index}-{status}'
+                    base.mkdir()
+                    self.host, self.state = FakeHost(base), base / 'state'
+                    if 'app' in case:
+                        self.host.publish_appimage(case['app'])
+                    self.installed(status)
+                    self.host.environ = case.get('environ', self.host.environ)
+                    if 'missing' in case:
+                        (self.host.root / case['missing']).unlink()
+                    self.host.calls.clear()
+                    with self.assertRaises(cloudroom.Refused) as refused:
+                        self.sign_in()
+                    for word in words:
+                        self.assertIn(word, str(refused.exception))
+                    self.assertEqual(self.host.opened, [])
+                    self.assertEqual([c for c in self.host.calls if Path(c[0]).name == 'room-cli'], [])
+        base = self.base / 'with libfuse2'
+        base.mkdir()
+        self.host, self.state = FakeHost(base), base / 'state'
+        self.host.publish_appimage(fuse_runtime)
+        self.installed(None)
+        (self.host.root / 'usr/lib/x86_64-linux-gnu').mkdir(parents=True)
+        (self.host.root / 'usr/lib/x86_64-linux-gnu/libfuse.so.2').write_text('synthetic')
+        self.assertEqual(self.sign_in()['opened'], 'app')
+        (self.base / 'mac').mkdir()
+        mac = FakeHost(self.base / 'mac', 'Darwin', 'arm64')
+        mac.environ = {}
+        mac.mac_app().mkdir(parents=True)
+        self.assertEqual(cloudroom.sign_in(mac, self.base / 'mac-state')['opened'], 'app')
 
     def test_sign_in_never_takes_a_password_or_token(self):
         result = subprocess.run([sys.executable, '-I', str(HERE / 'cloudroom.py'), 'sign-in', '--help'],

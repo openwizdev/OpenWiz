@@ -1,0 +1,91 @@
+# Red run (#2304): python3 -I adapters/local/test_driver.py -k per_harness -k single_row, against the driver at ae10e283 (main). The per-harness rows are refused or ignored; today's single-row words pass.
+test_a_missing_or_mismatched_per_harness_row_refuses_naming_the_harness (__main__.Local.test_a_missing_or_mismatched_per_harness_row_refuses_naming_the_harness) ... 
+  test_a_missing_or_mismatched_per_harness_row_refuses_naming_the_harness (__main__.Local.test_a_missing_or_mismatched_per_harness_row_refuses_naming_the_harness) [example/half] ... FAIL
+  test_a_missing_or_mismatched_per_harness_row_refuses_naming_the_harness (__main__.Local.test_a_missing_or_mismatched_per_harness_row_refuses_naming_the_harness) [example/twice] ... FAIL
+  test_a_missing_or_mismatched_per_harness_row_refuses_naming_the_harness (__main__.Local.test_a_missing_or_mismatched_per_harness_row_refuses_naming_the_harness) [example/wider] ... FAIL
+test_a_missing_or_mismatched_per_harness_row_refuses_naming_the_harness (__main__.Local.test_a_missing_or_mismatched_per_harness_row_refuses_naming_the_harness) ... FAIL
+test_a_single_row_and_a_per_harness_row_for_the_same_harness_refuse (__main__.Local.test_a_single_row_and_a_per_harness_row_for_the_same_harness_refuse) ... FAIL
+test_a_single_row_file_refuses_with_todays_exact_words (__main__.Local.test_a_single_row_file_refuses_with_todays_exact_words) ... ok
+test_per_harness_rows_start_each_harness_with_its_own_mode (__main__.Local.test_per_harness_rows_start_each_harness_with_its_own_mode) ... 
+  test_per_harness_rows_start_each_harness_with_its_own_mode (__main__.Local.test_per_harness_rows_start_each_harness_with_its_own_mode) [claude] ... FAIL
+  test_per_harness_rows_start_each_harness_with_its_own_mode (__main__.Local.test_per_harness_rows_start_each_harness_with_its_own_mode) [codex] ... FAIL
+test_per_harness_rows_start_each_harness_with_its_own_mode (__main__.Local.test_per_harness_rows_start_each_harness_with_its_own_mode) ... FAIL
+
+======================================================================
+FAIL: test_a_missing_or_mismatched_per_harness_row_refuses_naming_the_harness (__main__.Local.test_a_missing_or_mismatched_per_harness_row_refuses_naming_the_harness) [example/half]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 492, in test_a_missing_or_mismatched_per_harness_row_refuses_naming_the_harness
+    self.assertIn(says, err['error'])
+AssertionError: 'no harness permission mode for codex' not found in 'example/half has no single harness permission mode saved in docs/agents/fleet.md; nothing was started'
+
+======================================================================
+FAIL: test_a_missing_or_mismatched_per_harness_row_refuses_naming_the_harness (__main__.Local.test_a_missing_or_mismatched_per_harness_row_refuses_naming_the_harness) [example/twice]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 492, in test_a_missing_or_mismatched_per_harness_row_refuses_naming_the_harness
+    self.assertIn(says, err['error'])
+AssertionError: 'no harness permission mode for codex' not found in 'example/twice has no single harness permission mode saved in docs/agents/fleet.md; nothing was started'
+
+======================================================================
+FAIL: test_a_missing_or_mismatched_per_harness_row_refuses_naming_the_harness (__main__.Local.test_a_missing_or_mismatched_per_harness_row_refuses_naming_the_harness) [example/wider]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 492, in test_a_missing_or_mismatched_per_harness_row_refuses_naming_the_harness
+    self.assertIn(says, err['error'])
+AssertionError: 'Harness permission mode (codex) row' not found in 'example/wider has no single harness permission mode saved in docs/agents/fleet.md; nothing was started'
+
+======================================================================
+FAIL: test_a_missing_or_mismatched_per_harness_row_refuses_naming_the_harness (__main__.Local.test_a_missing_or_mismatched_per_harness_row_refuses_naming_the_harness)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 494, in test_a_missing_or_mismatched_per_harness_row_refuses_naming_the_harness
+    self.assertIn('`| Harness permission mode (codex) | `<mode>` |`', self.refused('codex', half)['next'])
+AssertionError: '`| Harness permission mode (codex) | `<mode>` |`' not found in 'choose the mode codex may run in and save it there as the row `| Harness permission mode | `<mode>` |`, then start again'
+
+======================================================================
+FAIL: test_a_single_row_and_a_per_harness_row_for_the_same_harness_refuse (__main__.Local.test_a_single_row_and_a_per_harness_row_for_the_same_harness_refuse)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 502, in test_a_single_row_and_a_per_harness_row_for_the_same_harness_refuse
+    err = self.refused('claude', both)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "adapters/local/test_driver.py", line 463, in refused
+    self.assertEqual(code, 1, err)
+AssertionError: 0 != 1 : {'run': 'run-0123456789ab'}
+
+======================================================================
+FAIL: test_per_harness_rows_start_each_harness_with_its_own_mode (__main__.Local.test_per_harness_rows_start_each_harness_with_its_own_mode) [claude]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 474, in test_per_harness_rows_start_each_harness_with_its_own_mode
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'example/pair has no single harness permission mode saved in docs/agents/fleet.md; nothing was started', 'next': 'choose the mode claude may run in and save it there as the row `| Harness permission mode | `<mode>` |`, then start again'}
+
+======================================================================
+FAIL: test_per_harness_rows_start_each_harness_with_its_own_mode (__main__.Local.test_per_harness_rows_start_each_harness_with_its_own_mode) [codex]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 474, in test_per_harness_rows_start_each_harness_with_its_own_mode
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'example/pair has no single harness permission mode saved in docs/agents/fleet.md; nothing was started', 'next': 'choose the mode codex may run in and save it there as the row `| Harness permission mode | `<mode>` |`, then start again'}
+
+======================================================================
+FAIL: test_per_harness_rows_start_each_harness_with_its_own_mode (__main__.Local.test_per_harness_rows_start_each_harness_with_its_own_mode)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 476, in test_per_harness_rows_start_each_harness_with_its_own_mode
+    self.assertEqual([t[4] for t in self.logged()], ['acceptEdits', 'workspace-write'])
+AssertionError: Lists differ: [] != ['acceptEdits', 'workspace-write']
+
+Second list contains 2 additional elements.
+First extra element 0:
+'acceptEdits'
+
+- []
++ ['acceptEdits', 'workspace-write']
+
+----------------------------------------------------------------------
+Ran 4 tests in 3.278s
+
+FAILED (failures=8)

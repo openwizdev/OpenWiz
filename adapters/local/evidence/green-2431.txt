@@ -8,7 +8,10 @@ fail effort-unpassed: row.json effort: it maps effort values to arguments, but s
 pass example: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
 pass example-none: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
 fail larger-argument: row.json start: a placeholder sits inside a larger argument; each fills a whole argument
+fail row-missing: row.json is missing
 fail session-differs: session: the wake turn got a different session id from the start turn
+fail signed-out-bad-pattern: row.json signed_out: a pattern does not compile
+pass signed-out-json: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
 fail wake-no-session: row.json wake: it has no {session}
 pass driver: an unknown harness is a D3 error that lists the built-ins and the row folders, and starts nothing
 pass driver: a wake before the reported session id is known is a D3 error that starts nothing
@@ -24,11 +27,14 @@ fail effort-unpassed: row.json effort: it maps effort values to arguments, but s
 pass example: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
 pass example-none: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
 fail larger-argument: row.json start: a placeholder sits inside a larger argument; each fills a whole argument
+fail row-missing: row.json is missing
 fail session-differs: session: the wake turn got a different session id from the start turn
+fail signed-out-bad-pattern: row.json signed_out: a pattern does not compile
+pass signed-out-json: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
 fail wake-no-session: row.json wake: it has no {session}
 exit 1
 
-$ python3 -I adapters/local/test_driver.py
-Ran 18 tests in 53.062s
+$ python3 -I adapters/local/test_driver.py   # after merging main, which adds per-harness permission mode rows
+Ran 23 tests in 64.657s
 
 OK

@@ -496,5 +496,102 @@ class Local(unittest.TestCase):
                            env=dict(self.env, **macos), capture_output=True, text=True, timeout=180)
         self.assertEqual((p.returncode, p.stdout.splitlines()), (0, PASS), p.stderr)
 
+    def repository_with(self, name, rows, modes):
+        folder = os.path.join(self.env['FAKE_REPOS'], 'example', name, 'docs', 'agents')
+        os.makedirs(folder)
+        with open(os.path.join(folder, 'fleet.md'), 'w') as f:
+            f.write('# Fleet\n\n| Setting | Value |\n| --- | --- |\n%s\n' % '\n'.join(rows))
+        path = os.path.join(self.env['OPENWIZ_LOCAL_STATE'], 'approvals.json')
+        approvals = json.loads(read(path))
+        approvals['example/' + name] = modes
+        with open(os.open(path, os.O_WRONLY | os.O_TRUNC), 'w') as f:
+            json.dump(approvals, f)
+        return 'example/' + name
+
+    def refused(self, harness, repository):
+        code, err = self.start(harness, repository=repository)
+        self.assertEqual(code, 1, err)
+        self.assertIsNone(kit.invalid(err, kit.load_schema()['error']), err)
+        return err
+
+    def test_per_harness_rows_start_each_harness_with_its_own_mode(self):
+        repository = self.repository_with('pair', ['| Harness permission mode (claude) | `acceptEdits` |',
+                                                   '| Harness permission mode (codex) | `workspace-write` |'],
+                                          {'claude': 'acceptEdits', 'codex': 'workspace-write'})
+        for harness, mode in (('claude', 'acceptEdits'), ('codex', 'workspace-write')):
+            with self.subTest(harness):
+                code, out = self.start(harness, repository=repository)
+                self.assertEqual(code, 0, out)
+                self.until(lambda: len(self.logged()) and self.logged()[-1][4] == mode)
+        self.assertEqual([t[4] for t in self.logged()], ['acceptEdits', 'workspace-write'])
+
+    def test_a_missing_or_mismatched_per_harness_row_refuses_naming_the_harness(self):
+        half = self.repository_with('half', ['| Harness permission mode (claude) | `acceptEdits` |'],
+                                    {'claude': 'acceptEdits', 'codex': 'workspace-write'})
+        wider = self.repository_with('wider', ['| Harness permission mode (claude) | `acceptEdits` |',
+                                               '| Harness permission mode (codex) | `danger-full-access` |'],
+                                     {'claude': 'acceptEdits', 'codex': 'workspace-write'})
+        twice = self.repository_with('twice', ['| Harness permission mode (codex) | `workspace-write` |',
+                                               '| Harness permission mode (codex) | `workspace-write` |'],
+                                     {'codex': 'workspace-write'})
+        for repository, says in ((half, 'no harness permission mode for codex'),
+                                 (twice, 'no harness permission mode for codex'),
+                                 (wider, 'Harness permission mode (codex) row')):
+            with self.subTest(repository):
+                err = self.refused('codex', repository)
+                self.assertIn(says, err['error'])
+                self.assertIn('codex', err['next'])
+        self.assertIn('`| Harness permission mode (codex) | `<mode>` |`', self.refused('codex', half)['next'])
+        self.assertIn('does not match the mode approved on this machine for codex', self.refused('codex', wider)['error'])
+        self.no_new_turn(0)
+
+    def test_a_single_row_and_a_per_harness_row_for_the_same_harness_refuse(self):
+        both = self.repository_with('both', ['| Harness permission mode | `acceptEdits` |',
+                                             '| Harness permission mode (claude) | `acceptEdits` |'],
+                                    {'claude': 'acceptEdits'})
+        err = self.refused('claude', both)
+        self.assertIn('both the single Harness permission mode row and a Harness permission mode (claude) row',
+                      err['error'])
+        self.assertIn('keep one of them', err['next'])
+        self.no_new_turn(0)
+
+    def test_a_single_row_file_refuses_with_todays_exact_words(self):
+        approvals = os.path.join(self.env['OPENWIZ_LOCAL_STATE'], 'approvals.json')
+        self.assertEqual(self.refused('codex', 'example/blog'), {
+            'error': 'example/blog has no single harness permission mode saved in docs/agents/fleet.md; nothing was '
+                     'started',
+            'next': 'choose the mode codex may run in and save it there as the row `| Harness permission mode | '
+                    '`<mode>` |`, then start again'})
+        self.assertEqual(self.refused('claude', 'example/raiser'), {
+            'error': 'the Harness permission mode row in example/raiser does not match the mode approved on this '
+                     'machine; nothing was started',
+            'next': 'save the one mode you approve in both its docs/agents/fleet.md and %s, then start again'
+                    % approvals})
+        self.no_new_turn(0)
+
+    def test_padded_row_labels_count_as_the_same_row(self):
+        padded = self.repository_with('padded', ['| Harness permission mode | `acceptEdits` |',
+                                                 '| Harness permission mode (claude)  | `acceptEdits` |'],
+                                      {'claude': 'acceptEdits'})
+        spaced = self.repository_with('spaced', ['|  Harness  permission mode  | `acceptEdits` |',
+                                                 '| Harness permission mode (claude) | `acceptEdits` |'],
+                                      {'claude': 'acceptEdits'})
+        twice = self.repository_with('twice-padded', ['| Harness permission mode (codex) | `workspace-write` |',
+                                                      '| Harness permission mode (codex)  | `workspace-write` |'],
+                                     {'codex': 'workspace-write'})
+        for harness, repository, says in (('claude', padded, 'saves both'), ('claude', spaced, 'saves both'),
+                                          ('codex', twice, 'no harness permission mode for codex')):
+            with self.subTest(repository):
+                self.assertIn(says, self.refused(harness, repository)['error'])
+        self.no_new_turn(0)
+        aligned = self.repository_with('aligned', ['|  Harness permission mode (claude)   | `acceptEdits`     |',
+                                                   '| Harness  permission mode (codex)    | `workspace-write` |'],
+                                       {'claude': 'acceptEdits', 'codex': 'workspace-write'})
+        for harness, mode in (('claude', 'acceptEdits'), ('codex', 'workspace-write')):
+            with self.subTest(harness):
+                self.assertEqual(self.start(harness, repository=aligned)[0], 0)
+                self.until(lambda: len(self.logged()) and self.logged()[-1][4] == mode)
+        self.assertEqual([t[4] for t in self.logged()], ['acceptEdits', 'workspace-write'])
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

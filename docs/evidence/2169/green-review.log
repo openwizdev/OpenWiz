@@ -1,0 +1,28 @@
+Runs at af5efdcae8b0bdc9f8c15c848999b0947e19594c (this commit adds only this log)
+................................../usr/lib/python3.11/subprocess.py:1125: ResourceWarning: subprocess 4445 is still running
+  _warn("subprocess %s is still running" % self.pid,
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/usr/lib/python3.11/subprocess.py:1125: ResourceWarning: subprocess 4434 is still running
+  _warn("subprocess %s is still running" % self.pid,
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+..openwiz-cloudroom: CloudRoom's sign-in gave no usable link and said nothing (status 0)
+openwiz-cloudroom: CloudRoom's sign-in gave no usable link and said nothing (status 0)
+openwiz-cloudroom: CloudRoom's sign-in gave no usable link and said nothing (status 0)
+openwiz-cloudroom: CloudRoom's sign-in gave no usable link and said nothing (status 0)
+openwiz-cloudroom: CloudRoom's sign-in gave no usable link and said nothing (status 0)
+openwiz-cloudroom: CloudRoom's sign-in gave no usable link and said nothing (status 0)
+..............
+----------------------------------------------------------------------
+Ran 50 tests in 2.988s
+
+OK
+.
+----------------------------------------------------------------------
+Ran 1 test in 1.415s
+
+OK
+..................
+----------------------------------------------------------------------
+Ran 18 tests in 5.244s
+
+OK

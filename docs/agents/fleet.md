@@ -146,6 +146,26 @@ Agents act on GitHub as the OpenWiz App, under [`openwiz.github-identity.v1`](..
 
 Source: Jake, 2026-11-13 ([private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6844995843)).
 
+## Approval rules
+
+| Rule | Approver |
+| --- | --- |
+| Ask before publishing a release, a tag or a package | Jake |
+| Ask before spending money or credits beyond the recorded limits | Jake |
+| Ask before adding, reading or changing a secret | Jake |
+| Ask before deleting user data | Jake |
+| Ask before a cut-over | Jake |
+| Ask before installing the repository webhook | Jake |
+| Ask before adding a dependency, a toolchain file or a tool on the Mac | Jake |
+| Ask before changing the `room-cli` allowlist or an approved limit | Jake |
+| Ask before any live `room-cli` read or Mac work outside an approved live kit | Jake |
+| Ask before shipping a release: Jake chooses when it ships | Jake |
+| Ask before shipping a release whose exact changelog Jake has not approved | Jake |
+
+For a release, the ship instruction and the exact changelog approval are the asks; ADR 0020 adds no other human step.
+
+Source: the first six rows are the fleet's action gates; the next three are the "Jake approves first" list in [AGENTS.md, Live work and approvals](../../AGENTS.md#live-work-and-approvals); the last two are [ADR 0020](../adr/0020-release-on-demand.md). Jake, 2026-11-22 (spec #2273; [private record](https://github.com/jparker2006/ClosedWiz/issues/3065#issuecomment-7077657739)).
+
 ## Standing merge rules
 
 | Pull request | Review | Merged by, and when |
