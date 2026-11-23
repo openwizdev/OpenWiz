@@ -17,7 +17,7 @@ from product_identity import PROGRAMS as COMPILED, WIZSKILLS, architecture, cano
 
 # #1699: the drivers 0.1.0 launches with (KN3 to KN5), each carried when the source tracks it,
 # and the driver kit's files (kit.py reads its schema, ../records.v1.md and ../records-kit/check.py).
-DRIVERS = ('boat', 'cloudroom', 'local')
+DRIVERS = ('boat', 'cloudroom', 'local', 'ona')
 KIT = ['kernel/driver-kit/kit.py', 'kernel/driver-kit/schema.json', 'kernel/records-kit/check.py',
        'kernel/records.v1.md']
 
