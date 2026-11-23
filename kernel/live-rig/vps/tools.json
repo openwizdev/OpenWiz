@@ -1,0 +1,191 @@
+{
+  "about": "Pinned free CLIs for the VPS live-check session (spec #2474, ticket #2580). bootstrap.sh reads this file. Conductor and Cursor cloud agents are API hosts: they need only curl 8.3+.",
+  "tools": [
+    {
+      "name": "python3",
+      "kind": "system",
+      "min_version": "3.9",
+      "hosts": [
+        "all"
+      ],
+      "source": "your system's own package (Debian and Ubuntu: python3)",
+      "why": "The rig, the kit and every driver are Python 3.9+ (spec #2474). The bootstrap itself runs on it, so it checks for it and never installs it: python.org ships no Linux build, and a system package needs sudo, which this bootstrap never runs."
+    },
+    {
+      "name": "git",
+      "kind": "system",
+      "min_version": "2.0",
+      "hosts": [
+        "all"
+      ],
+      "source": "your system's own package (Debian and Ubuntu: git)",
+      "why": "The kit, every driver and the Hermes installer use git. No driver README names a minimum version. git publishes no prebuilt Linux binary, so it is checked, never installed: a system package needs sudo, which this bootstrap never runs."
+    },
+    {
+      "name": "curl",
+      "kind": "archive",
+      "version": "8.23.0",
+      "system_min": "8.3",
+      "hosts": [
+        "conductor",
+        "cursor",
+        "hermes"
+      ],
+      "source": "https://github.com/stunnel/static-curl/releases/tag/8.23.0-1",
+      "why": "The Conductor and Cursor drivers need curl 8.3 or later for --variable (their READMEs on room/1992-conductor-driver and room/1994-cursor-driver); the Hermes installer downloads with curl. A curl 8.3+ already on PATH is kept. Otherwise this installs the static curl build that curl.se's download page lists for Linux and macOS, the latest stable release on 2026-11-22, the day this was pinned; the checksums are the release's asset digests, matched against a download of each.",
+      "files": {
+        "linux-x86_64": {
+          "url": "https://github.com/stunnel/static-curl/releases/download/8.23.0-1/curl-linux-x86_64-musl-8.23.0-1.tar.xz",
+          "sha256": "2e0c54ba696afd0df1e899e4344fa63d53d73107f9ac08173314d9be85bc76fd",
+          "member": "curl"
+        },
+        "linux-aarch64": {
+          "url": "https://github.com/stunnel/static-curl/releases/download/8.23.0-1/curl-linux-aarch64-musl-8.23.0-1.tar.xz",
+          "sha256": "e20f26e5b87c1883608f286f86bdabf39d3b8556e8a8e75dfe205e14bd206199",
+          "member": "curl"
+        },
+        "darwin-x86_64": {
+          "url": "https://github.com/stunnel/static-curl/releases/download/8.23.0-1/curl-macos-x86_64-8.23.0-1.tar.xz",
+          "sha256": "be645642d239a625c9f06a823ae0a62e2acb4788309435bf8d91e7b6bd197238",
+          "member": "curl"
+        },
+        "darwin-arm64": {
+          "url": "https://github.com/stunnel/static-curl/releases/download/8.23.0-1/curl-macos-arm64-8.23.0-1.tar.xz",
+          "sha256": "dea0ecfa234f1c79f1473e19b73769a25ce517644cd1908eec7d530c419886d2",
+          "member": "curl"
+        }
+      }
+    },
+    {
+      "name": "gh",
+      "kind": "archive",
+      "version": "2.105.0",
+      "hosts": [
+        "all"
+      ],
+      "source": "https://github.com/cli/cli/releases/tag/v2.105.0",
+      "why": "Every live check reads and posts through the person's own signed-in gh. No driver names a version, so this is GitHub CLI's the latest stable release on 2026-11-22, the day this was pinned; the checksums are from the release's gh_2.105.0_checksums.txt.",
+      "files": {
+        "linux-x86_64": {
+          "url": "https://github.com/cli/cli/releases/download/v2.105.0/gh_2.105.0_linux_amd64.tar.gz",
+          "sha256": "79e7ab5db738c48777b696e374f8b428f0647debfb424f44d2f426370407fe2f",
+          "member": "gh_2.105.0_linux_amd64/bin/gh"
+        },
+        "linux-aarch64": {
+          "url": "https://github.com/cli/cli/releases/download/v2.105.0/gh_2.105.0_linux_arm64.tar.gz",
+          "sha256": "b1278c75107423d818f1937fd92cafc9e5e9b606631568f68d7fb816f5885a02",
+          "member": "gh_2.105.0_linux_arm64/bin/gh"
+        },
+        "darwin-x86_64": {
+          "url": "https://github.com/cli/cli/releases/download/v2.105.0/gh_2.105.0_macOS_amd64.zip",
+          "sha256": "23602cbccbbdc6285a8520745b714cb927ce2ca621779373c2a20cd8e33fda66",
+          "member": "gh_2.105.0_macOS_amd64/bin/gh"
+        },
+        "darwin-arm64": {
+          "url": "https://github.com/cli/cli/releases/download/v2.105.0/gh_2.105.0_macOS_arm64.zip",
+          "sha256": "2a5d03103ae444927383b93d9ffd65579a26e2eb900ce1cf11f55258d5319ded",
+          "member": "gh_2.105.0_macOS_arm64/bin/gh"
+        }
+      }
+    },
+    {
+      "name": "hermes",
+      "kind": "installer",
+      "version": "0.23.3",
+      "needs": [
+        "git",
+        "curl"
+      ],
+      "hosts": [
+        "hermes"
+      ],
+      "args": [
+        "--commit",
+        "caafe5389ae585ef77387a962aee05b1bcf17029",
+        "--non-interactive",
+        "--skip-browser",
+        "--skip-computer-use",
+        "--dir",
+        "{home}/.hermes/hermes-agent",
+        "--hermes-home",
+        "{home}/.hermes"
+      ],
+      "source": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.3",
+      "why": "The Hermes driver (room/1988-hermes-driver) names no Hermes version; its fixture says v0.0.0 (synthetic). Hermes Agent ships no release binary, only its installer, so this pins scripts/install.sh at the v0.23.3 tag's commit (the latest stable release on 2026-11-22, byte-identical to hermes-agent.nousresearch.com/install.sh that day) and runs it with --commit pinned to that same commit and --non-interactive, so its setup and gateway stages do nothing. Its other stages, authorised by the spec's lead on the pull request: prerequisites, the git clone and checkout, uv's pinned and sha256-checked install, uv python find and python install, python -m pm.cli install, the config folders, the product build, and the completion marker under ~/.hermes (no update channel is set, so it runs no hermes update). Upstream installs into your home, as these arguments say, and adds ~/.local/bin to your shell startup files with no option to skip that; so Hermes is never installed under another --prefix, and an existing ~/.local/bin/hermes is never replaced. It never signs in: hermes setup (the model and provider) is yours to run.",
+      "files": {
+        "any": {
+          "url": "https://raw.githubusercontent.com/NousResearch/hermes-agent/caafe5389ae585ef77387a962aee05b1bcf17029/scripts/install.sh",
+          "sha256": "c73dad4dcf7c9ecadb98578e28cc763d23d7be3fa1b513545319038795493214"
+        }
+      },
+      "home_only": "~/.hermes and ~/.local/bin/hermes, and it adds ~/.local/bin to your shell startup files"
+    },
+    {
+      "name": "runpane",
+      "kind": "wheel",
+      "version": "2.4.246",
+      "module": "runpane.cli",
+      "hosts": [
+        "pane"
+      ],
+      "source": "https://pypi.org/project/runpane/2.4.246/",
+      "why": "The Pane driver (room/2000-pane-driver) was written against runpane 2.4.246, as its README says. This is that release's pure-Python wheel from PyPI (sha256 from PyPI), run by this python3 with no pip and no other package; it drives a running Pane app or daemon.",
+      "files": {
+        "any": {
+          "url": "https://files.pythonhosted.org/packages/ec/00/c5e01616e1d1f5ebfc64d1b89e1625aa663942d854683ac6afcc093a78c1/runpane-2.4.246-py3-none-any.whl",
+          "sha256": "5083d7ee73112b0e6536110775c2a30f225a8f85e1368de006fa6f5cfd8a87c8"
+        }
+      }
+    },
+    {
+      "name": "pane",
+      "kind": "binary",
+      "version": "2.4.246",
+      "run_version": false,
+      "hosts": [
+        "pane"
+      ],
+      "source": "https://github.com/greenfield-inc/Pane/releases/tag/v2.4.246",
+      "why": "Pane's app is also its daemon, which the Pane driver needs running for start, wake and stop (its README). This installs the 2.4.246 AppImage, the version runpane 2.4.246 belongs to, checked against the release's SHA256SUMS.txt. The bootstrap never runs it, not even --version (an Electron app): starting the daemon (runpane install daemon) is a session step on the sign-in page. AGPL-3.0, free.",
+      "note": "on macOS install the Pane app from its dmg yourself",
+      "files": {
+        "linux-x86_64": {
+          "url": "https://github.com/greenfield-inc/Pane/releases/download/v2.4.246/Pane-2.4.246-linux-x86_64.AppImage",
+          "sha256": "f2a572b5d3b51d655c17492e1d8aabd57a30daaf3114f72be99b7cf83df9f725"
+        },
+        "linux-aarch64": {
+          "url": "https://github.com/greenfield-inc/Pane/releases/download/v2.4.246/Pane-2.4.246-linux-arm64.AppImage",
+          "sha256": "68ec316b902c74b60029ff2f525492c38b68698914a0dfa0c07d2f756d5279b0"
+        }
+      }
+    },
+    {
+      "name": "droid",
+      "kind": "binary",
+      "version": "1.17.2",
+      "hosts": [
+        "factory"
+      ],
+      "source": "https://docs.factory.com/droid-cli/cli-reference",
+      "why": "The Factory driver (room/1998-factory-driver) names no droid version. This is Factory's direct download of the version its official installer (app.factory.ai/cli) pinned on 2026-11-22, with Factory's published .sha256 (the linux x64 one matched a download). On x86_64 it takes Factory's baseline build, which needs no AVX2. The download is free; each turn bills your Factory plan, and the sign-in is yours.",
+      "files": {
+        "linux-x86_64": {
+          "url": "https://downloads.factory.ai/factory-cli/releases/1.17.2/linux/x64-baseline/droid",
+          "sha256": "68d0296a4a0bef2ada3b21276d32e6aec4f8a0c044a209d8cb79d95c0d38196e"
+        },
+        "linux-aarch64": {
+          "url": "https://downloads.factory.ai/factory-cli/releases/1.17.2/linux/arm64/droid",
+          "sha256": "f24b0028e11726a16f9349251ad565ea1f825976e2cb6443583a9180027dd095"
+        },
+        "darwin-x86_64": {
+          "url": "https://downloads.factory.ai/factory-cli/releases/1.17.2/darwin/x64-baseline/droid",
+          "sha256": "e9e293c7570a5d8a55242b0a25d0a208de5d75c6047bdf9f74190ac6ab370588"
+        },
+        "darwin-arm64": {
+          "url": "https://downloads.factory.ai/factory-cli/releases/1.17.2/darwin/arm64/droid",
+          "sha256": "7a56a31dadab4bb5d53e541362eccdfa2bf307e6d7832deb805c5ea78c5f0168"
+        }
+      }
+    }
+  ]
+}
