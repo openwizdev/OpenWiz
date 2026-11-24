@@ -5,13 +5,12 @@ sys.path.insert(0, os.environ['FAKE_CLI_LIB'])
 import fake_cli
 
 HELP = '''The fake vibe: its synthetic --help allows only these programmatic forms:
-  vibe --prompt <p> --output json --model <alias> <mode> [--thinking low|medium|high|xhigh|max]
+  vibe --prompt <p> --output json --model <alias> <mode>
   vibe -p <p> --resume <session id> <mode>
 where <mode> is --auto-approve, or --approval-policy accept-edits|ask. As the real vibe does, it
-refuses --model and --thinking on --resume, and --output json prints the history as one
+refuses --model on --resume; the row passes no --thinking, so this fake refuses it; --output json prints the history as one
 pretty-printed JSON array whose entries carry session_id.'''
 MODES = (['--auto-approve'], ['--approval-policy', 'accept-edits'], ['--approval-policy', 'ask'])
-LEVELS = ('low', 'medium', 'high', 'xhigh', 'max')
 
 
 MISSING = 'Error: Missing MISTRAL_API_KEY environment variable for mistral provider'
@@ -43,8 +42,6 @@ else:
     fake_cli.refuse()
 mode = next((m for m in MODES if args[:len(m)] == m), None) or fake_cli.refuse()
 args = args[len(mode):]
-if session is None and args[:1] == ['--thinking'] and len(args) == 2 and args[1] in LEVELS:
-    args = []
 if args:
     fake_cli.refuse()
 fake_cli.turn(prompt, model, session, lambda sid: history(sid, prompt), daemon='tree',

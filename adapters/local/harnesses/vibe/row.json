@@ -1,7 +1,7 @@
 {
   "harness": "vibe",
   "program": "vibe",
-  "start": ["--prompt", "{prompt}", "--output", "json", "--model", "{model}", "{mode}", "{effort}"],
+  "start": ["--prompt", "{prompt}", "--output", "json", "--model", "{model}", "{mode}"],
   "wake": ["-p", "{prompt}", "--resume", "{session}", "{mode}"],
   "session": {"pattern": "^    \"session_id\": \"([A-Za-z0-9._:-]{1,100})\",?$"},
   "modes": {
@@ -10,13 +10,7 @@
     "ask": ["--approval-policy", "ask"]
   },
   "env": {},
-  "effort": {
-    "low": ["--thinking", "low"],
-    "medium": ["--thinking", "medium"],
-    "high": ["--thinking", "high"],
-    "xhigh": ["--thinking", "xhigh"],
-    "max": ["--thinking", "max"]
-  },
+  "effort": "none: vibe --thinking sends high, xhigh and max as one 32000-token thinking budget on budget-token models such as claude-haiku-4-5, without saying so (mistralai/mistral-vibe e76235b2, completion_profile/reasoning.py THINKING_BUDGET_TOKENS and known_models.py)",
   "login": "vibe's own sign-in: a Mistral account sign-in done once in vibe, or an API key you keep in the OS keyring or in your own MISTRAL_API_KEY; the row never reads, sets or stores a key",
   "signed_out": [
     "^Error: Missing \\w+ environment variable for \\w+ provider$",
