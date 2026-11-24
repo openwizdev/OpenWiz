@@ -1224,7 +1224,7 @@ class Packaged(Base):
 
         before = files()
         out, err = io.StringIO(), io.StringIO()
-        with patch.dict(os.environ, HOME=str(self.host.home)), \
+        with patch.dict(os.environ, {'HOME': str(self.host.home)}, clear=True), \
                 patch('platform.system', return_value='Linux'), \
                 patch('platform.machine', return_value='x86_64'), \
                 patch('urllib.request.OpenerDirector.open', fetch), \

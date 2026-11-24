@@ -43,6 +43,21 @@ OpenWiz does not run on Windows. On a host without a target, the tool installs
 nothing and says so (`cloudroom_unsupported`). Asked to install, it opens
 CloudRoom's download page once instead.
 
+### Cloudroom cloud-thread host
+
+A Linux host running inside a Cloudroom cloud thread (any architecture, no
+`~/.local/bin/room-cli`, an executable file or symlink to one at
+`/usr/local/bin/room-cli`, and both `ROOM_THREAD_ID` and `ROOM_PROJECT_ID` in
+the environment matching `[A-Za-z0-9][A-Za-z0-9_-]{0,127}`) is already a
+signed-in CloudRoom host. It is reused without installing or opening anything
+(`install` returns `cloudroom_reused` with no operation and opens nothing).
+Because cloud-thread `room-cli` has no `cloud` subcommand, `status` and
+`sign-in` skip the desktop-only `room-cli cloud` calls, desktop session and
+FUSE checks, and report `cloudroom_login_verified` (`opened: null`). Pending
+install operations and a blocked Linux AppImage destination still take
+precedence, and partial or malformed signals fail closed. Detecting a cloud
+thread makes no `room-cli` call; the two allowlisted calls below are unchanged.
+
 ## Installer source and integrity check
 
 The tool reads CloudRoom's install guide and accepts exactly one link for the

@@ -67,6 +67,8 @@ TARGETS = {('Darwin', 'arm64'): ('macos-arm64', 'arm64', 'dmg'),
            ('Linux', 'x86_64'): ('linux-x64', 'x86_64', 'AppImage')}
 DESTINATIONS = {'macos-arm64': '/Applications/Cloudroom.app', 'linux-x64': '~/Applications/Cloudroom.AppImage'}
 LAUNCHER = '.local/bin/room-cli'
+CLOUD_LAUNCHER = 'usr/local/bin/room-cli'
+CLOUD_ID = re.compile(r'[A-Za-z0-9][A-Za-z0-9_-]{0,127}')
 ROOM_CLI_CALLS = (('cloud', 'status', '--json'), ('cloud', 'sign-in', '--json'))
 PHASES = ('proposed', 'installing', 'applied', 'failed', 'refused', 'uncertain')
 REASONS = ('proposed', 'installed', 'existing', 'declined', 'checksum_mismatch', 'download_failed',
@@ -227,6 +229,19 @@ def checked_appimage(host, operation):
     return None
 
 
+def cloud_thread(host):
+    if host.system != 'Linux' or os.path.lexists(host.home / LAUNCHER):
+        return False
+    launcher = host.root / CLOUD_LAUNCHER
+    try:
+        if not (launcher.is_file() and os.access(launcher, os.X_OK)):
+            return False
+    except OSError:
+        return False
+    return all(isinstance(host.environ.get(name), str) and bool(CLOUD_ID.fullmatch(host.environ[name]))
+               for name in ('ROOM_THREAD_ID', 'ROOM_PROJECT_ID'))
+
+
 def installation(host, operation):
     if blocked(host, operation):
         return []
@@ -236,6 +251,8 @@ def installation(host, operation):
                   if os.path.lexists(p)]
     elif host.system == 'Linux':
         found += [p for p in (checked_appimage(host, operation),) if p is not None]
+        if not found and cloud_thread(host):
+            found.append(host.root / CLOUD_LAUNCHER)
     return found
 
 
@@ -555,6 +572,8 @@ def login_code(host):
 
 def code_for(host, operation):
     code = install_code(host, operation)
+    if code == 'cloudroom_reused' and cloud_thread(host):
+        return 'cloudroom_login_verified'
     if code in ('cloudroom_installed', 'cloudroom_reused'):
         return login_code(host) or code
     return code
@@ -756,6 +775,8 @@ def sign_in(host, state_dir):
     operation = records.read()
     installed = install_code(host, operation)
     require(installed in ('cloudroom_installed', 'cloudroom_reused'), 'CloudRoom is not installed here; install it first')
+    if installed == 'cloudroom_reused' and cloud_thread(host):
+        return answer('cloudroom_login_verified')
     linux_needs(host, operation)
     code = login_code(host) or installed
     if code == 'cloudroom_login_verified':
