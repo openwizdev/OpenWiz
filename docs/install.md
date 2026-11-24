@@ -10,7 +10,7 @@ Check which OpenWiz release GitHub offers before choosing a host. This guide des
 
 - Use macOS on Apple silicon or Intel, or Linux on x86_64 or ARM64 (aarch64) with glibc 2.34 or later. On Linux, `ldd --version` shows the glibc version.
 - Install Python 3.9 or later, Git and the GitHub CLI. Sign in to GitHub yourself with `gh auth login`.
-- Choose where your agents run. On **this computer**, sign in to Claude Code or Codex. For **boat.dev**, sign in with the host as prompted. For **CloudRoom**, install and sign in to CloudRoom. On an Intel Mac, the available hosts are this computer and boat.dev.
+- Choose where your agents run. On **this computer**, sign in to Claude Code or Codex. For **boat.dev**, sign in with the host as prompted. For **CloudRoom**, install and sign in to CloudRoom. On an Intel Mac or an ARM64 Linux machine without an existing CloudRoom environment, choose this computer or boat.dev. CloudRoom’s desktop installer supports Apple silicon and x86_64 Linux.
 
 ## What the agent does
 
