@@ -195,9 +195,10 @@ The tool has no option for one and reads nothing from standard input.
 ## States, codes and reasons
 
 Setup's check (`tools/install/setup/setup.py check`) stores the tool's one code
-as the `cloudroom` observation. The server maps it through its fixed `CODES`
-table (`crates/server/src/setup.rs`). A code is current for an hour and for the
-current selection, as for every component; old evidence is unknown.
+as the `cloudroom` observation and maps it to its next step in
+`tools/install/setup/setup.py` (the local server that previously mapped it left
+in #1264). A code is current for an hour and for the current selection, as for
+every component; old evidence is unknown.
 
 | Code | State | Meaning |
 | --- | --- | --- |
@@ -226,17 +227,15 @@ step are fixed public text.
 
 ## The sign-in screen and the powered-by line
 
-The setup page's CloudRoom step (`apps/web/src/components/CloudRoomSetup.tsx`,
-mounted only by `Setup.tsx`'s `cloudroom` component) is the one sign-in screen.
-It is display only: its state, reason and next step come from
-`GET /api/v1/setup`. It says that sign-in happens once, in CloudRoom's own
-window, and that OpenWiz never asks for, sees or stores a CloudRoom password or
-token. It says signed in only when the state is verified. It has no password
-field, no link and no request of its own. The main flow stays in OpenWiz.
+The local setup web page left in #1264; `tools/install/setup/setup.py check`
+reports the `cloudroom` component's state, reason and next step directly. Sign-in
+still happens once, in CloudRoom's own window (`tools/install/cloudroom/cloudroom.py sign-in`),
+and OpenWiz never asks for, sees or stores a CloudRoom password or token. It
+reports signed in only when the state is verified.
 
-**Powered-by line:** exactly `Powered by CloudRoom`, plain text, no logo or
-link. It is the last line of the CloudRoom step, in the caption style
-(`.meta`). It appears on the CloudRoom step only, once.
+**Powered-by line:** when a surface displays the CloudRoom step, its powered-by
+line is exactly `Powered by CloudRoom`, plain text, no logo or link, once on the
+CloudRoom step only.
 
 ## The tool's command line (seam for #1109 and #2207)
 
