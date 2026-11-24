@@ -753,6 +753,12 @@ class Kit(unittest.TestCase):
                 code, out, host = self.keyed(os.path.join(FIXTURES, name, 'driver'))
                 self.assertEqual((code, out), (0 if all(x.startswith('pass') for x in lines) else 1, lines))
 
+    def test_key_host_effort_on_creation_still_counts_when_start_also_posts_a_prompt(self):
+        driver = os.path.join(FIXTURES, 'planted', 'effort-cleanup-only', 'driver')
+        code, out, _ = self.keyed(driver, KIT_EFFORT_RECEIPT='create-then-prompt')
+        self.maxDiff = None
+        self.assertEqual((code, out), (0, EFFORT_KEY['effort-key-host']))
+
     def test_effort_on_another_key_host_request_does_not_count(self):
         name = 'planted/effort-cleanup-only'
         for mode in ('cleanup-post', 'start-get', 'start-second-post'):

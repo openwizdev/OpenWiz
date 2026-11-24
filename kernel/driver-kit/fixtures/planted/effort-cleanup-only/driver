@@ -18,6 +18,8 @@ def keyed_launch(req, run, woken):
     result = launch(req, run, woken)
     if not woken and 'effort' in req:
         effort = {'effort': req['effort']}
+        if mode == 'create-then-prompt':
+            d.k.ask('POST', d.k.path(run, 'messages'), {'message': 'Build the synthetic ticket'})
         if mode == 'start-get':
             d.k.ask('GET', d.k.path(run, 'metadata'), effort)
         if mode == 'start-second-post':
@@ -37,6 +39,7 @@ def keyed_end(turns, run):
     return end(turns, run)
 
 
-d.k.body = lambda req: {'ticket': req['ticket']}
+if mode != 'create-then-prompt':
+    d.k.body = lambda req: {'ticket': req['ticket']}
 d.k.t.launch, d.k.t.end = keyed_launch, keyed_end
 d.k.t.main()
