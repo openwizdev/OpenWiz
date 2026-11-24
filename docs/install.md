@@ -18,7 +18,7 @@ Using Grok Bot? See [Grok Bot + OpenWiz](grok-bot.md).
 
 ## What happens, in order
 
-The agent runs each command itself and reads its JSON. `<root>` is the install folder, by default `~/.local/lib/openwiz`: use a new or empty folder that holds nothing else, because the installer also accepts a folder that already has other files in it. If you give `install install` a separate `--state-root`, it too must be a new or empty folder used by OpenWiz alone, never one shared with another app. `<target>` is `aarch64-apple-darwin`, `x86_64-apple-darwin` or `x86_64-unknown-linux-gnu`.
+The agent runs each command itself and reads its JSON. `<root>` is the install folder, by default `~/.local/lib/openwiz`: use a new or empty folder that holds nothing else, because the installer also accepts a folder that already has other files in it. If you give `install install` a separate `--state-root`, it too must be a new or empty folder used by OpenWiz alone, never one shared with another app. `<target>` is `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-gnu` or `aarch64-unknown-linux-gnu`.
 
 1. **Preflight.** It clones this repository at the `v0.1.0` tag into a private temporary folder as `$openwiz` (`git clone --depth 1 --branch v0.1.0 https://github.com/openwizdev/OpenWiz "$openwiz"`) and checks this computer: Python, a supported system, free disk space, and whether `room-cli`, `gh` and `git` are installed. It reads only; anything missing comes with its next step. An Intel Mac passes it with no CloudRoom, as "Before you start" says.
 
