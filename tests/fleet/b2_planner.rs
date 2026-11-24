@@ -211,6 +211,12 @@ fn b2_1196_all_conditional_tables_are_strict_and_other_family() {
         assert!(Rules::parse(&bad, &flags()).is_err(), "{case}");
     }
     fallback_rows_survive_set(fleet);
+    let older = RULES.split("## CI checks").next().unwrap();
+    let older = older.replace("--provider codex", "--provider claude-code");
+    let row = "`--provider codex --model syn --reasoning-level high` |";
+    fallback_rows_survive_set(&format!(
+        "{fleet}\n{older}## Fixer\n| Builder family | Harness | Model | Effort | `room-cli thread spawn` flags |\n| --- | --- | --- | --- | --- |\n| Claude | S | S | S | {row}\n| GPT | S | S | S | {row}\n"
+    ));
 }
 
 fn fallback_rows_survive_set(fleet: &str) {
