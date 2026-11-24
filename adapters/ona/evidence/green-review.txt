@@ -1,0 +1,41 @@
+$ python3 -I adapters/ona/test_driver.py -v (agent CLI stubs first on PATH, OPENWIZ_GITHUB_APP_KEY unset)
+test_a_host_error_is_a_fixed_refusal (__main__.Driver.test_a_host_error_is_a_fixed_refusal) ... ok
+test_a_lookup_off_its_documented_shape_is_refused_before_wake_or_stop_acts (__main__.Driver.test_a_lookup_off_its_documented_shape_is_refused_before_wake_or_stop_acts) ... ok
+test_a_lost_prompt_names_its_run_so_stop_can_end_it (__main__.Driver.test_a_lost_prompt_names_its_run_so_stop_can_end_it) ... ok
+test_a_phase_ona_does_not_document_is_refused_before_wake_or_stop_acts (__main__.Driver.test_a_phase_ona_does_not_document_is_refused_before_wake_or_stop_acts) ... ok
+test_a_refused_start_sends_nothing_more (__main__.Driver.test_a_refused_start_sends_nothing_more) ... ok
+test_a_rejected_environment_stop_is_refused_with_the_run (__main__.Driver.test_a_rejected_environment_stop_is_refused_with_the_run) ... ok
+test_an_effort_ona_has_no_value_for_is_refused_and_starts_nothing (__main__.Driver.test_an_effort_ona_has_no_value_for_is_refused_and_starts_nothing) ... ok
+test_an_environment_ona_no_longer_has_or_already_stopped_counts_as_stopped (__main__.Driver.test_an_environment_ona_no_longer_has_or_already_stopped_counts_as_stopped) ... ok
+test_an_unreadable_start_acknowledgement_starts_nothing_more (__main__.Driver.test_an_unreadable_start_acknowledgement_starts_nothing_more) ... ok
+test_an_unreadable_write_acknowledgement_is_refused_with_the_run (__main__.Driver.test_an_unreadable_write_acknowledgement_is_refused_with_the_run) ... ok
+test_another_harness_with_effort_gets_the_exact_effort_refusal (__main__.Driver.test_another_harness_with_effort_gets_the_exact_effort_refusal) ... ok
+test_effort_reaches_the_host_as_codex_reasoning_effort (__main__.Driver.test_effort_reaches_the_host_as_codex_reasoning_effort) ... ok
+test_environment_data_off_its_shape_is_refused_before_stop_writes (__main__.Driver.test_environment_data_off_its_shape_is_refused_before_stop_writes) ... ok
+test_every_request_reaches_the_host_with_the_key_header_only (__main__.Driver.test_every_request_reaches_the_host_with_the_key_header_only) ... ok
+test_inputs_off_the_schema_are_refused_before_any_request (__main__.Driver.test_inputs_off_the_schema_are_refused_before_any_request) ... ok
+test_kit_passes_all_five_on_the_fake_host (__main__.Driver.test_kit_passes_all_five_on_the_fake_host) ... ok
+test_models_map_to_ona_codex_models_and_others_are_refused (__main__.Driver.test_models_map_to_ona_codex_models_and_others_are_refused) ... ok
+test_no_effort_sends_none (__main__.Driver.test_no_effort_sends_none) ... ok
+test_omitted_environments_are_none_and_only_the_execution_stops (__main__.Driver.test_omitted_environments_are_none_and_only_the_execution_stops) ... ok
+test_only_codex_runs (__main__.Driver.test_only_codex_runs) ... ok
+test_start_starts_codex_on_the_repository_then_sends_the_prompt (__main__.Driver.test_start_starts_codex_on_the_repository_then_sends_the_prompt) ... ok
+test_stop_ends_the_execution_and_its_environment_and_wake_after_is_refused (__main__.Driver.test_stop_ends_the_execution_and_its_environment_and_wake_after_is_refused) ... ok
+test_unknown_run (__main__.Driver.test_unknown_run) ... ok
+test_version_and_schema (__main__.Driver.test_version_and_schema) ... ok
+test_wake_of_a_running_execution_queues_the_message (__main__.Driver.test_wake_of_a_running_execution_queues_the_message) ... ok
+test_wake_sends_to_the_same_execution_once_its_turn_has_finished (__main__.Driver.test_wake_sends_to_the_same_execution_once_its_turn_has_finished) ... ok
+
+----------------------------------------------------------------------
+Ran 26 tests in 30.136s
+
+OK
+exit 0
+
+$ python3 -I kernel/driver-kit/kit.py --driver adapters/ona/driver --repo example/site --ticket 7 --harness codex --model gpt-6.1-sol --tracker <synthetic tracker> --wait 8, on the fake Ona
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 1
+pass wake: the run edited builder status note 1
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver, and on start, wake and stop the ona key reached its host only from the key helper, in its header
+exit 0
