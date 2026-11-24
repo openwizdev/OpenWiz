@@ -205,7 +205,7 @@ def repair_backups(builds, source, raw):
     return found
 
 
-ROOT_ENTRIES = re.compile(r'current|channel\.json|install\.lock|skills|state|\.current-[0-9]+')
+ROOT_ENTRIES = re.compile(r'current|channel\.json|install\.lock|skills|contracts|\.claude-plugin|state|\.current-[0-9]+')
 STATE_ENTRIES = (('', re.compile(r'setup|cloudroom|service')),
                  ('service', re.compile(r'config\.json|app|state\.json|loops|clone|builds')),
                  ('service/builds', re.compile(r'[0-9a-f]{40}|\.stage-[A-Za-z0-9_]+|\.damaged-[0-9]+-[0-9a-f]{40}')))
