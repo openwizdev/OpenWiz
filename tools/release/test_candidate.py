@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
+import base64
 import datetime
 import hashlib
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
@@ -13,6 +15,7 @@ import tempfile
 import time
 import types
 import unittest
+import zipfile
 
 sys.dont_write_bytecode = True
 HERE = Path(__file__).resolve().parent
@@ -78,6 +81,31 @@ def sha(data):
 
 def iso(seconds):
     return datetime.datetime.fromtimestamp(seconds, datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+
+REHEARSAL_STEPS = ('preflight', 'install', 'build_identity', 'setup', 'skills', 'first_fleet_dry_run')
+
+
+class Zipped(bytes):
+    pass
+
+
+def io_zip(data, method=zipfile.ZIP_STORED):
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, 'w') as archive:
+        archive.writestr(zipfile.ZipInfo('rehearsal.json', (2026, 11, 20, 0, 0, 0)), data, compress_type=method)
+    return buffer.getvalue()
+
+
+def bent_zip(flag=0, method=None, deflate=None):
+    data = bytearray(io_zip(b'{"schema": "openwiz.rehearsal.v1"}', zipfile.ZIP_DEFLATED))
+    central = data.index(b'PK\x01\x02')
+    data[6], data[central + 8] = data[6] | flag, data[central + 8] | flag
+    if method is not None:
+        data[8], data[central + 10] = method, method
+    if deflate is not None:
+        data[30 + len('rehearsal.json')] = deflate
+    return Zipped(data)
 
 
 def section_sha(text, version):
@@ -167,7 +195,7 @@ State.write = _hold(State.write)
 '''
 
 FAKE_GH = r'''#!/usr/bin/env python3
-import json, os, pathlib, shutil, sys
+import base64, json, os, pathlib, shutil, sys
 args = sys.argv[1:]
 with open(os.environ["CALLS"], "a") as log:
     action = "release" if args[:2] == ["release", "create"] else "gh-read"
@@ -218,6 +246,9 @@ if path not in world:
     print("unexpected fixture read: " + path, file=sys.stderr)
     sys.exit(95)
 value = world[path]
+if path.endswith("/zip"):
+    sys.stdout.buffer.write(base64.b64decode(value))
+    sys.exit(0)
 print(json.dumps(value))
 '''
 
@@ -474,12 +505,42 @@ class World(unittest.TestCase):
             {'id': 11, 'name': 'ci', 'head_sha': self.head, 'status': 'completed', 'conclusion': 'success',
              'app': actions, 'check_suite': {'id': 501}},
             {'id': 12, 'name': 'privacy', 'head_sha': self.head, 'status': 'completed', 'conclusion': 'success',
-             'app': actions, 'check_suite': {'id': 502}}]}]
+             'app': actions, 'check_suite': {'id': 502}},
+            {'id': 15, 'name': 'rehearsal', 'head_sha': self.head, 'status': 'completed', 'conclusion': 'success',
+             'app': actions, 'check_suite': {'id': 505}}]}]
         self.world[f'repos/{PUBLIC}/actions/runs?head_sha={self.head}&per_page=100'] = [{'workflow_runs': workflows or [
             {'id': 601, 'path': '.github/workflows/ci.yml', 'head_sha': self.head, 'status': 'completed',
              'conclusion': 'success', 'check_suite_id': 501, 'run_attempt': 1, 'created_at': '2026-11-20T00:00:00Z'},
             {'id': 602, 'path': '.github/workflows/privacy.yml', 'head_sha': self.head, 'status': 'completed',
              'conclusion': 'success', 'check_suite_id': 502, 'run_attempt': 1, 'created_at': '2026-11-20T00:00:00Z'}]}]
+        if (self.state / 'record.json').exists():
+            self.rehearse()
+        self.save()
+
+    def rehearsal(self, target, **changes):
+        body = self.record()['candidate']
+        archive = next(a['sha256'] for a in body['artifacts'] if a['role'] == 'archive' and a['target'] == target)
+        return dict({'schema': 'openwiz.rehearsal.v1', 'version': body['release_version'], 'source': self.head,
+                     'target': target, 'archive_sha256': archive, 'manifest_sha256': sha(b'synthetic manifest'),
+                     'status': 'pass', 'steps': [{'name': step, 'status': 'pass'} for step in REHEARSAL_STEPS]},
+                    **changes)
+
+    def rehearse(self, receipts=None, run=None):
+        receipts = {t: self.rehearsal(t) for t in TARGETS} if receipts is None else receipts
+        version = self.record()['candidate']['release_version']
+        self.world[f'repos/{PUBLIC}/actions/workflows/packages.yml/runs?head_sha={self.head}&per_page=100'] = [
+            {'workflow_runs': [dict({'id': 605, 'path': '.github/workflows/packages.yml', 'head_sha': self.head,
+                                     'status': 'completed', 'conclusion': 'success', 'check_suite_id': 505,
+                                     'run_attempt': 1, 'created_at': '2026-11-20T00:00:00Z'}, **(run or {}))]}]
+        listed = []
+        for number, (target, receipt) in enumerate(receipts.items(), 701):
+            data = receipt if isinstance(receipt, Zipped) else io_zip(
+                receipt if isinstance(receipt, bytes) else json.dumps(receipt).encode())
+            self.world[f'repos/{PUBLIC}/actions/artifacts/{number}/zip'] = base64.b64encode(data).decode()
+            listed.append({'id': number, 'name': f'openwiz-rehearsal-{version}-{target}', 'expired': False,
+                           'digest': 'sha256:' + sha(data), 'size_in_bytes': len(data),
+                           'created_at': '2026-11-20T00:10:00Z', 'workflow_run': {'id': 605, 'head_sha': self.head}})
+        self.world[f'repos/{PUBLIC}/actions/runs/605/artifacts?per_page=100'] = [{'artifacts': listed}]
         self.save()
 
     def receipt(self, gate, cls='source-inspection', status='pass', **extra):
@@ -2330,6 +2391,116 @@ HISTORY = ('# Changelog\n\nAll synthetic versions, newest first.\n\n'
 
 def re_headings(text):
     return [line for line in text.splitlines() if line.startswith('## ')]
+
+
+class Rehearsal(World):
+    def test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish(self):
+        self.ready()
+        checks = f'repos/{PUBLIC}/commits/{self.head}/check-runs?per_page=100'
+        listing = f'repos/{PUBLIC}/actions/runs/605/artifacts?per_page=100'
+        good = json.loads(json.dumps(self.world))
+        runs = good[checks][0]['check_runs']
+        frozen = self.root / 'frozen'
+
+        def copy(source, target):
+            if target.is_dir():
+                shutil.rmtree(target)
+            target.unlink(missing_ok=True)
+            if source.is_dir():
+                shutil.copytree(source, target, symlinks=True)
+            elif source.exists():
+                shutil.copy2(source, target)
+        for name in ('state', 'clone', 'public.git', 'releases', 'calls.jsonl'):
+            frozen.mkdir(exist_ok=True)
+            copy(self.root / name, frozen / name)
+
+        def thaw():
+            for name in ('state', 'clone', 'public.git', 'releases', 'calls.jsonl'):
+                copy(frozen / name, self.root / name)
+
+        def only(*kept):
+            self.world[checks] = [{'check_runs': runs[:2] + list(kept)}]
+
+        def receipts(**changed):
+            return {t: changed.get(t, self.rehearsal(t)) for t in TARGETS if changed.get(t, True) is not None}
+
+        def relist(**changes):
+            rows = self.world[listing][0]['artifacts']
+            rows[-1] = {k: v for k, v in dict(rows[-1], **changes).items() if v is not None}
+        failed = dict(self.rehearsal(LINUX), status='fail',
+                      steps=[{'name': s, 'status': 'pass'} for s in REHEARSAL_STEPS[:-1]]
+                      + [{'name': REHEARSAL_STEPS[-1], 'status': 'fail'}])
+        for name, plant, reason in (
+                ('no Packages run at the commit, its rehearsal check green', lambda: self.world.update(
+                    {f'repos/{PUBLIC}/actions/workflows/packages.yml/runs?head_sha={self.head}&per_page=100':
+                     [{'workflow_runs': []}]}), 'rehearsal_untrusted'),
+                ('a run from another workflow path',
+                 lambda: self.rehearse(run={'path': '.github/workflows/other.yml'}), 'rehearsal_untrusted'),
+                ('a rehearsal check run from another app',
+                 lambda: only(dict(runs[2], app={'slug': 'synthetic-app'})), 'rehearsal_untrusted'),
+                ('a red rehearsal check run, its Packages run green', lambda: only(dict(runs[2], conclusion='failure')),
+                 'rehearsal_failed'),
+                ('a green rehearsal check run from another check suite',
+                 lambda: only(dict(runs[2], check_suite={'id': 509})), 'rehearsal_failed'),
+                ('a missing rehearsal check run', lambda: only(), 'rehearsal_missing'),
+                ('a missing target receipt', lambda: self.rehearse(receipts(**{LINUX: None})), 'rehearsal_missing'),
+                ('an expired target receipt', lambda: relist(expired=True), 'rehearsal_missing'),
+                ('a fail receipt', lambda: self.rehearse(receipts(**{LINUX: failed})), 'rehearsal_failed'),
+                ('a receipt for other bytes',
+                 lambda: self.rehearse(receipts(**{LINUX: self.rehearsal(LINUX, archive_sha256='f' * 64)})),
+                 'rehearsal_stale'),
+                ('a receipt for another commit',
+                 lambda: self.rehearse(receipts(**{LINUX: self.rehearsal(LINUX, source='e' * 40)})),
+                 'rehearsal_stale'),
+                ('a receipt for another version',
+                 lambda: self.rehearse(receipts(**{LINUX: self.rehearsal(LINUX, version='0.0.98')})),
+                 'rehearsal_stale'),
+                ('a receipt whose version is not 0.minor.patch',
+                 lambda: self.rehearse(receipts(**{LINUX: self.rehearsal(LINUX, version='broken')})),
+                 'rehearsal_unreadable'),
+                ('a receipt whose version is 1.0.0',
+                 lambda: self.rehearse(receipts(**{LINUX: self.rehearsal(LINUX, version='1.0.0')})),
+                 'rehearsal_unreadable'),
+                ('a receipt for another target',
+                 lambda: self.rehearse(receipts(**{LINUX: self.rehearsal('x86_64-apple-darwin')})),
+                 'rehearsal_unreadable'),
+                ('a zip that is not its listed digest', lambda: relist(digest='sha256:' + 'd' * 64),
+                 'rehearsal_unreadable'),
+                ('a listing without a digest', lambda: relist(digest=None), 'rehearsal_unreadable'),
+                ('a pass without its six steps',
+                 lambda: self.rehearse(receipts(**{LINUX: self.rehearsal(LINUX, steps=[])})), 'rehearsal_unreadable'),
+                ('a receipt that is not JSON', lambda: self.rehearse(receipts(**{LINUX: b'synthetic'})),
+                 'rehearsal_unreadable'),
+                ('a receipt of small, deeply nested JSON',
+                 lambda: self.rehearse(receipts(**{LINUX: b'[' * 30000 + b']' * 30000})), 'rehearsal_unreadable'),
+                ('an encrypted receipt member', lambda: self.rehearse(receipts(**{LINUX: bent_zip(flag=1)})),
+                 'rehearsal_unreadable'),
+                ('a receipt member in an unknown compression',
+                 lambda: self.rehearse(receipts(**{LINUX: bent_zip(method=99)})), 'rehearsal_unreadable'),
+                ('a receipt member of broken deflate data',
+                 lambda: self.rehearse(receipts(**{LINUX: bent_zip(deflate=0xff)})), 'rehearsal_unreadable'),
+                ('an unreadable artifact listing', lambda: self.world.update(_fail=[listing]),
+                 'rehearsal_unreadable')):
+            with self.subTest(case=name):
+                seen = []
+                for run in (self.evaluate, self.publish):
+                    thaw()
+                    self.world = json.loads(json.dumps(good))
+                    plant()
+                    self.save()
+                    try:
+                        code, out = run()
+                    except self.failureException as error:
+                        code, out = None, {'reasons': str(error).strip().splitlines()[-1:]}
+                    seen.append((code, out.get('reasons'), self.writes()))
+                self.assertEqual(seen, [(1, [reason], [])] * 2)
+        thaw()
+        self.world = good
+        self.save()
+        self.assertEqual(self.evaluate()[0], 0)
+        self.assertEqual(self.publish()[1]['status'], 'published')
+        kept = json.loads((self.state / 'evidence/rehearsal.json').read_text())
+        self.assertEqual(([r['target'] for r in kept['receipts']], kept['workflow_run']['id']), (list(TARGETS), 605))
 
 
 class ArchivePrivacy(unittest.TestCase):

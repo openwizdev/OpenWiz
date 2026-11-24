@@ -1,0 +1,60 @@
+test_a_failed_room_cli_command_is_named_by_fixed_words (__main__.Driver.test_a_failed_room_cli_command_is_named_by_fixed_words) ... 
+  test_a_failed_room_cli_command_is_named_by_fixed_words (__main__.Driver.test_a_failed_room_cli_command_is_named_by_fixed_words) (out='Synthetic invalid sign', err='in input') ... FAIL
+  test_a_failed_room_cli_command_is_named_by_fixed_words (__main__.Driver.test_a_failed_room_cli_command_is_named_by_fixed_words) (out='{"error": "Synthetic: please log"}', err='in again later') ... FAIL
+
+======================================================================
+FAIL: test_a_failed_room_cli_command_is_named_by_fixed_words (__main__.Driver.test_a_failed_room_cli_command_is_named_by_fixed_words) (out='Synthetic invalid sign', err='in input')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cloudroom/test_driver.py", line 545, in test_a_failed_room_cli_command_is_named_by_fixed_words
+    self.assertEqual(driver.room_said(out, err), want)
+AssertionError: 'room-cli is not signed in' != 'room-cli gave an error the driver does not repeat'
+- room-cli is not signed in
++ room-cli gave an error the driver does not repeat
+
+
+======================================================================
+FAIL: test_a_failed_room_cli_command_is_named_by_fixed_words (__main__.Driver.test_a_failed_room_cli_command_is_named_by_fixed_words) (out='{"error": "Synthetic: please log"}', err='in again later')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cloudroom/test_driver.py", line 545, in test_a_failed_room_cli_command_is_named_by_fixed_words
+    self.assertEqual(driver.room_said(out, err), want)
+AssertionError: 'room-cli is not signed in' != 'room-cli gave an error the driver does not repeat'
+- room-cli is not signed in
++ room-cli gave an error the driver does not repeat
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.002s
+
+FAILED (failures=2)
+test_the_shared_platform_check_takes_any_platform_and_language (__main__.Driver.test_the_shared_platform_check_takes_any_platform_and_language) ... 
+  test_the_shared_platform_check_takes_any_platform_and_language (__main__.Driver.test_the_shared_platform_check_takes_any_platform_and_language) [**Platforms:** Windows] ... FAIL
+  test_the_shared_platform_check_takes_any_platform_and_language (__main__.Driver.test_the_shared_platform_check_takes_any_platform_and_language) [**Platforms:** Linux, a Rust binary] ... FAIL
+
+======================================================================
+FAIL: test_the_shared_platform_check_takes_any_platform_and_language (__main__.Driver.test_the_shared_platform_check_takes_any_platform_and_language) [**Platforms:** Windows]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cloudroom/test_driver.py", line 562, in test_the_shared_platform_check_takes_any_platform_and_language
+    self.assertEqual(bool(re.search(PLATFORMS, text)), named)
+AssertionError: False != True
+
+======================================================================
+FAIL: test_the_shared_platform_check_takes_any_platform_and_language (__main__.Driver.test_the_shared_platform_check_takes_any_platform_and_language) [**Platforms:** Linux, a Rust binary]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cloudroom/test_driver.py", line 562, in test_the_shared_platform_check_takes_any_platform_and_language
+    self.assertEqual(bool(re.search(PLATFORMS, text)), named)
+AssertionError: False != True
+
+----------------------------------------------------------------------
+Ran 1 test in 0.002s
+
+FAILED (failures=2)
+test_every_drivers_readme_names_its_platforms (__main__.Driver.test_every_drivers_readme_names_its_platforms) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.002s
+
+OK

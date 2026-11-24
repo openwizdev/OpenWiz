@@ -1,0 +1,24 @@
+test_a_lost_comment_answer_is_found_on_resume_and_a_closed_earlier_pull_request_is_never_adopted (__main__.Heads.test_a_lost_comment_answer_is_found_on_resume_and_a_closed_earlier_pull_request_is_never_adopted) ... ok
+test_a_post_retried_after_a_lost_write_finishes_it_without_a_second_kit_run_comment_or_branch (__main__.Heads.test_a_post_retried_after_a_lost_write_finishes_it_without_a_second_kit_run_comment_or_branch) ... FAIL
+
+======================================================================
+FAIL: test_a_post_retried_after_a_lost_write_finishes_it_without_a_second_kit_run_comment_or_branch (__main__.Heads.test_a_post_retried_after_a_lost_write_finishes_it_without_a_second_kit_run_comment_or_branch)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_heads.py", line 343, in test_a_post_retried_after_a_lost_write_finishes_it_without_a_second_kit_run_comment_or_branch
+    self.assertEqual(self.heads(hosts, *extra)[:2], (1, 'would finish the publish an earlier --post left unfinished:\n'
+AssertionError: Tuples differ: (0, 'would finish the publish an earlier -[72 chars]t\n') != (1, 'would finish the publish an earlier -[72 chars]t\n')
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   'would finish the publish an earlier --post left unfinished:\n'
+   'would open a pull request on openwizdev/WizMarket\n')
+
+----------------------------------------------------------------------
+Ran 2 tests in 53.760s
+
+FAILED (failures=1)

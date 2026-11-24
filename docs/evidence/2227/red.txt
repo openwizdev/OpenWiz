@@ -1,0 +1,13 @@
+FAIL README.md:12: says CloudRoom is required: 'needs CloudRoom'
+FAIL README.md:16: says CloudRoom is required: 'You need [CloudRoom'
+FAIL README.md: no line names this computer, boat.dev and CloudRoom in that order and says "CloudRoom is optional"
+FAIL README.md: never says that on 0.1.0 the automatic fleet runs in CloudRoom
+FAIL README.md: never says that 0.1.1 adds the automatic fleet on this computer
+FAIL docs/install.md:11: says CloudRoom is required: 'needs CloudRoom'
+FAIL docs/install.md:48: runs CloudRoom's install without "only if you pick" it
+FAIL docs/install.md: "Before you start" lists CloudRoom without saying it is optional: '- **CloudRoom,** installed, opened once and signed in. Openi'
+FAIL docs/install.md: no line names this computer, boat.dev and CloudRoom in that order and says "CloudRoom is optional"
+FAIL docs/install.md: never says that on 0.1.0 the automatic fleet runs in CloudRoom
+FAIL docs/install.md: never says that 0.1.1 adds the automatic fleet on this computer
+11 failures
+exit 1

@@ -1,0 +1,60 @@
+{
+  "harness": "stop-other-program",
+  "program": "row-commands-cli",
+  "start": [
+    "run",
+    "--session-id",
+    "{session}",
+    "--model",
+    "{model}",
+    "{mode}",
+    "{effort}",
+    "{prompt}"
+  ],
+  "wake": [
+    "run",
+    "--resume",
+    "{session}",
+    "--model",
+    "{model}",
+    "{mode}",
+    "{prompt}"
+  ],
+  "session": {
+    "chosen": "uuid"
+  },
+  "modes": {
+    "auto": [
+      "--yes"
+    ]
+  },
+  "env": {
+    "ROW_COMMANDS_CLI_BACKEND": "local"
+  },
+  "effort": {
+    "low": [
+      "--effort",
+      "low"
+    ],
+    "high": [
+      "--effort",
+      "high"
+    ]
+  },
+  "login": "row-commands-cli's own login, saved by `row-commands-cli login` under ~/.config/row-commands-cli",
+  "daemon": "none",
+  "precheck": {
+    "run": [
+      "row-commands-cli",
+      "models",
+      "{model}",
+      "--verbose"
+    ],
+    "match": "^model {model} ready$"
+  },
+  "stop": [
+    "kill",
+    "--session",
+    "{session}"
+  ]
+}

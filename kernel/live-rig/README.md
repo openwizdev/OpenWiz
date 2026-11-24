@@ -23,9 +23,9 @@ PATH=<stubs>:$PATH env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/test
 
 - `--settings`: a local JSON file outside the repository, `{"repo": "<owner>/<name>", "ticket": <n>}`, naming the throwaway repository and ticket the kit uses ([the kit's throwaway ticket](../driver-kit/README.md#the-throwaway-ticket)).
 - `--out`: a folder outside the checkout. It holds the lock (`rig.lock`), so two runs never overlap: a second one prints `rig.py: another run holds the lock` and exits 0.
-- `--hosts`: a folder inside the checkout whose `*.json` files git tracks; only those files are host configs, and anything else there (a host's `test_<host>.py`) is ignored. A folder outside the checkout or through a symlink, an untracked config, or a config that is a symlink, refuses (exit 2). Two `runs` entries that would write the same run record, ignoring case (a case-insensitive disk would merge them), refuse too, and so do two host names that differ only in case.
+- `--hosts` names a folder inside the checkout whose `*.json` files git tracks. Only those files are host configs. The rig ignores other files, such as a host's `test_<host>.py`. The path must be traversable as written, including each step before a `..`. A failed prefix lookup, a path outside the checkout or through a symlink inside it, an untracked config, or a config that is a symlink causes exit 2. Two `runs` entries that would write the same run record, ignoring case (a case-insensitive disk would merge them), cause exit 2 too, as do two host names that differ only in case.
 
-Per host, in order: every `needs` program, then every `signed_in` command, then `cost`, then one kit run per `runs` entry:
+For each host the rig checks every `needs` program, then `cost`, then every `signed_in` command. If all checks pass, it runs the kit once per `runs` entry.
 `python3 -I kernel/driver-kit/kit.py --driver <driver> --repo <repo> --ticket <n> --harness <h> --model <m> --wait <w>`.
 It prints one line per entry, `ran <host> <harness>: <k> of 5` or `skipped <host> <harness>: <why>`, where `<why>` is `not installed: <program>`, `not signed in: <program>` or `cost`. Exit 0: every entry ran or was skipped. 1: a kit exited 1 or 2. 2: the rig could not run; it says why on stderr, `rig.py: <why>`.
 

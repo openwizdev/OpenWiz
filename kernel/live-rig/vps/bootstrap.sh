@@ -18,6 +18,7 @@ import platform
 import re
 import shlex
 import shutil
+import stat
 import subprocess
 import sys
 import tarfile
@@ -41,6 +42,7 @@ Exit 0 when every tool is installed, already there or left out by design; 1 when
 checksum or install failed; 2 on a usage error or a missing python3 3.9+.'''
 NO_SUDO = 'this bootstrap never runs sudo'
 PASSED_ON = ('HOME', 'USER', 'LOGNAME', 'SHELL', 'LANG', 'LC_ALL', 'LC_CTYPE', 'TERM', 'TMPDIR', 'TZ')
+LAUNCHER_TYPES = ('file', 'symlink')
 
 
 class Refused(Exception):
@@ -111,15 +113,52 @@ def system_tool(name, minimum):
     return '.'.join(map(str, have)), None
 
 
+def open_regular(path):
+    try:
+        if not stat.S_ISREG(os.lstat(path).st_mode):
+            return None
+        fd = os.open(path, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0) | getattr(os, 'O_NONBLOCK', 0))
+    except OSError:
+        return None
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            os.close(fd)
+            return None
+        return os.fdopen(fd, 'rb')
+    except OSError:
+        os.close(fd)
+        return None
+
+
 def sha256_of(path):
+    f = open_regular(path)
+    if f is None:
+        return None
     h = hashlib.sha256()
     try:
-        with open(path, 'rb') as f:
+        with f:
             for block in iter(lambda: f.read(1 << 20), b''):
                 h.update(block)
     except OSError:
         return None
     return h.hexdigest()
+
+
+def launcher_entry(path):
+    try:
+        st = os.lstat(path)
+    except OSError:
+        return None, None
+    if stat.S_ISREG(st.st_mode):
+        digest = sha256_of(path)
+        return ('file', digest) if digest else (None, None)
+    if stat.S_ISLNK(st.st_mode):
+        try:
+            target = os.fsencode(os.readlink(path))
+        except OSError:
+            return None, None
+        return 'symlink', hashlib.sha256(target).hexdigest()
+    return None, None
 
 
 def fetch(file, work):
@@ -183,6 +222,13 @@ def run_installer(tool, script, prefix, work):
     check_version(tool, dst)
 
 
+def wheel_launcher(module, wheel):
+    code = 'import importlib, sys; sys.path.insert(0, sys.argv.pop(1)); ' \
+           'sys.exit(importlib.import_module(%r).main())' % module
+    return ('#!/bin/sh\nexec %s -I -c %s %s "$@"\n'
+            % (shlex.quote(sys.executable), shlex.quote(code), shlex.quote(wheel))).encode()
+
+
 def install(tool, file, prefix, work):
     name, kind = tool['name'], tool['kind']
     dst = os.path.join(prefix, 'bin', name)
@@ -190,37 +236,35 @@ def install(tool, file, prefix, work):
     if kind == 'installer':
         return run_installer(tool, path, prefix, work)
     staged = os.path.join(prefix, 'lib', 'openwiz-vps', 'staged', name)
-    wheel = wheel_path(prefix, name, file['sha256'])
-    wheels = os.path.dirname(wheel)
-    new_wheel = False
-    try:
-        if kind == 'binary':
-            place(open(path, 'rb').read(), staged)
-        elif kind == 'archive':
-            try:
-                place(member(path, file['member']), staged)
-            except (KeyError, OSError, tarfile.TarError, zipfile.BadZipFile) as e:
-                raise Refused('cannot unpack %s: %s' % (file['member'], type(e).__name__))
-        elif kind == 'wheel':
-            if sha256_of(wheel) != file['sha256']:
-                try:
-                    place(open(path, 'rb').read(), wheel)
-                except OSError as e:
-                    raise Refused('%s: %s' % ('its cached wheel fails its checksum and cannot be replaced'
-                                              if os.path.lexists(wheel) else 'cannot write its wheel',
-                                              type(e).__name__))
-                new_wheel = True
-            code = 'import importlib, sys; sys.path.insert(0, sys.argv.pop(1)); ' \
-                   'sys.exit(importlib.import_module(%r).main())' % tool['module']
-            place(('#!/bin/sh\nexec %s -I -c %s %s "$@"\n' % (shlex.quote(sys.executable), shlex.quote(code),
-                                                             shlex.quote(wheel))).encode(), staged)
-        else:
-            raise Refused('unknown kind %r in tools.json' % kind)
+    if kind == 'binary':
+        with open(path, 'rb') as f:
+            place(f.read(), staged)
         check_version(tool, staged)
-    except Refused:
-        if new_wheel:
-            os.remove(wheel)
-        raise
+    elif kind == 'archive':
+        try:
+            place(member(path, file['member']), staged)
+        except (KeyError, OSError, tarfile.TarError, zipfile.BadZipFile) as e:
+            raise Refused('cannot unpack %s: %s' % (file['member'], type(e).__name__))
+        check_version(tool, staged)
+    elif kind == 'wheel':
+        candidate = os.path.join(work, file['sha256'] + '.whl')
+        os.replace(path, candidate)
+        probe = os.path.join(work, name)
+        place(wheel_launcher(tool['module'], candidate), probe)
+        check_version(tool, probe)
+        wheel = wheel_path(prefix, name, file['sha256'])
+        wheels = os.path.dirname(wheel)
+        if sha256_of(wheel) != file['sha256']:
+            try:
+                with open(candidate, 'rb') as f:
+                    place(f.read(), wheel)
+            except OSError as e:
+                raise Refused('%s: %s' % ('its cached wheel fails its checksum and cannot be replaced'
+                                          if os.path.lexists(wheel) else 'cannot write its wheel',
+                                          type(e).__name__))
+        place(wheel_launcher(tool['module'], wheel), staged)
+    else:
+        raise Refused('unknown kind %r in tools.json' % kind)
     os.makedirs(os.path.dirname(dst), exist_ok=True)
     os.replace(staged, dst)
     if kind == 'wheel':
@@ -250,8 +294,11 @@ def stamp_path(prefix, name):
 
 
 def read_stamp(prefix, name):
+    f = open_regular(stamp_path(prefix, name))
+    if f is None:
+        return None
     try:
-        with open(stamp_path(prefix, name)) as f:
+        with f:
             stamp = json.load(f)
     except (OSError, ValueError):
         return None
@@ -308,8 +355,12 @@ def main():
                 leave(name, 'your existing %s was not installed by this bootstrap, so it is kept and never run; '
                             'move it aside to install the pinned %s' % (dst, tool['version']))
                 continue
-            stamp, launcher = read_stamp(prefix, name), sha256_of(dst)
-            if os.path.lexists(dst) and (not stamp or not launcher or stamp.get('launcher') != launcher):
+            stamp = read_stamp(prefix, name)
+            entry_type, launcher = launcher_entry(dst) if os.path.lexists(dst) else (None, None)
+            if os.path.lexists(dst) and (not stamp or entry_type not in LAUNCHER_TYPES or not launcher or
+                                         stamp.get('launcher_type') not in LAUNCHER_TYPES or
+                                         stamp.get('launcher_type') != entry_type or
+                                         stamp.get('launcher') != launcher):
                 leave(name, 'your existing %s is not the copy this bootstrap installed there (or its record is too '
                             'old to tell), so it is kept and never run; move it aside to install the pinned %s'
                             % (dst, tool['version']))
@@ -352,9 +403,14 @@ def main():
             finally:
                 shutil.rmtree(step, ignore_errors=True)
                 shutil.rmtree(os.path.join(prefix, 'lib', 'openwiz-vps', 'staged'), ignore_errors=True)
+            entry_type, launcher = launcher_entry(dst)
+            if entry_type not in LAUNCHER_TYPES or not launcher:
+                failed = True
+                leave(name, 'installed %s has an unrecognised entry type' % dst)
+                continue
             stamp = stamp_path(prefix, name)
             place(json.dumps({'version': tool['version'], 'sha256': file['sha256'],
-                              'launcher': sha256_of(dst)}).encode(), stamp)
+                              'launcher_type': entry_type, 'launcher': launcher}).encode(), stamp)
             os.chmod(stamp, 0o644)
             installed += 1
             available.add(name)

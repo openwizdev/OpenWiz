@@ -1,0 +1,16 @@
+Red run, fix round 1 (R1 to R4), before the fix: python3 tools/release/test_candidate.py Rehearsal
+
+FAIL: test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish (__main__.Rehearsal.test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish) (case='a receipt whose version is not 0.minor.patch')
+AssertionError: Lists differ: [(1, ['rehearsal_stale'], []), (1, ['rehearsal_stale'], [])] != [(1, ['rehearsal_unreadable'], []), (1, ['rehearsal_unreadable'], [])]
+FAIL: test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish (__main__.Rehearsal.test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish) (case='a receipt whose version is 1.0.0')
+AssertionError: Lists differ: [(1, ['rehearsal_stale'], []), (1, ['rehearsal_stale'], [])] != [(1, ['rehearsal_unreadable'], []), (1, ['rehearsal_unreadable'], [])]
+FAIL: test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish (__main__.Rehearsal.test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish) (case='a receipt of small, deeply nested JSON')
+AssertionError: Lists differ: [(None, ['RecursionError: maximum recursion[184 chars] [])] != [(1, ['rehearsal_unreadable'], []), (1, ['r[22 chars] [])]
+FAIL: test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish (__main__.Rehearsal.test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish) (case='an encrypted receipt member')
+AssertionError: Lists differ: [(None, ["RuntimeError: File 'rehearsal.jso[152 chars] [])] != [(1, ['rehearsal_unreadable'], []), (1, ['r[22 chars] [])]
+FAIL: test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish (__main__.Rehearsal.test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish) (case='a receipt member in an unknown compression')
+AssertionError: Lists differ: [(None, ['NotImplementedError: That compres[110 chars] [])] != [(1, ['rehearsal_unreadable'], []), (1, ['r[22 chars] [])]
+FAIL: test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish (__main__.Rehearsal.test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish) (case='a receipt member of broken deflate data')
+AssertionError: Lists differ: [(None, ['zlib.error: Error -3 while decomp[118 chars] [])] != [(1, ['rehearsal_unreadable'], []), (1, ['r[22 chars] [])]
+Ran 1 test in 144.361s
+FAILED (failures=6)

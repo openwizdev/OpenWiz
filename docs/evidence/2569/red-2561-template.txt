@@ -1,0 +1,70 @@
+test_without_the_live_opt_in_start_and_wake_start_no_harness (__main__.Template.test_without_the_live_opt_in_start_and_wake_start_no_harness) ... 
+  test_without_the_live_opt_in_start_and_wake_start_no_harness (__main__.Template.test_without_the_live_opt_in_start_and_wake_start_no_harness) (live='') ... FAIL
+  test_without_the_live_opt_in_start_and_wake_start_no_harness (__main__.Template.test_without_the_live_opt_in_start_and_wake_start_no_harness) (live='0') ... FAIL
+  test_without_the_live_opt_in_start_and_wake_start_no_harness (__main__.Template.test_without_the_live_opt_in_start_and_wake_start_no_harness) (live='yes') ... FAIL
+test_without_the_live_opt_in_start_and_wake_start_no_harness (__main__.Template.test_without_the_live_opt_in_start_and_wake_start_no_harness) ... FAIL
+
+======================================================================
+FAIL: test_without_the_live_opt_in_start_and_wake_start_no_harness (__main__.Template.test_without_the_live_opt_in_start_and_wake_start_no_harness) (live='')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/template/test_driver.py", line 193, in test_without_the_live_opt_in_start_and_wake_start_no_harness
+    self.assertEqual((code, out.get('error')),
+AssertionError: Tuples differ: (0, None) != (1, 'the template starts no harness unless OPENWIZ_TEMPLATE_LIVE=1 is set')
+
+First differing element 0:
+0
+1
+
+- (0, None)
++ (1, 'the template starts no harness unless OPENWIZ_TEMPLATE_LIVE=1 is set') : {'run': 'run-6925c2f7ea41'}
+
+======================================================================
+FAIL: test_without_the_live_opt_in_start_and_wake_start_no_harness (__main__.Template.test_without_the_live_opt_in_start_and_wake_start_no_harness) (live='0')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/template/test_driver.py", line 193, in test_without_the_live_opt_in_start_and_wake_start_no_harness
+    self.assertEqual((code, out.get('error')),
+AssertionError: Tuples differ: (0, None) != (1, 'the template starts no harness unless OPENWIZ_TEMPLATE_LIVE=1 is set')
+
+First differing element 0:
+0
+1
+
+- (0, None)
++ (1, 'the template starts no harness unless OPENWIZ_TEMPLATE_LIVE=1 is set') : {'run': 'run-127fdd8fbb28'}
+
+======================================================================
+FAIL: test_without_the_live_opt_in_start_and_wake_start_no_harness (__main__.Template.test_without_the_live_opt_in_start_and_wake_start_no_harness) (live='yes')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/template/test_driver.py", line 193, in test_without_the_live_opt_in_start_and_wake_start_no_harness
+    self.assertEqual((code, out.get('error')),
+AssertionError: Tuples differ: (0, None) != (1, 'the template starts no harness unless OPENWIZ_TEMPLATE_LIVE=1 is set')
+
+First differing element 0:
+0
+1
+
+- (0, None)
++ (1, 'the template starts no harness unless OPENWIZ_TEMPLATE_LIVE=1 is set') : {'run': 'run-88598afe75cf'}
+
+======================================================================
+FAIL: test_without_the_live_opt_in_start_and_wake_start_no_harness (__main__.Template.test_without_the_live_opt_in_start_and_wake_start_no_harness)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/template/test_driver.py", line 199, in test_without_the_live_opt_in_start_and_wake_start_no_harness
+    self.assertEqual((code, out.get('error')),
+AssertionError: Tuples differ: (0, None) != (1, 'the template starts no harness unless OPENWIZ_TEMPLATE_LIVE=1 is set')
+
+First differing element 0:
+0
+1
+
+- (0, None)
++ (1, 'the template starts no harness unless OPENWIZ_TEMPLATE_LIVE=1 is set') : {'run': 'run-017eb62ebf03', 'woke': True}
+
+----------------------------------------------------------------------
+Ran 1 test in 0.311s
+
+FAILED (failures=4)

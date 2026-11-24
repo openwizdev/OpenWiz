@@ -1,0 +1,23 @@
+# Red run for #2895 at the test-only commit: env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/vps/test_hosts.py
+# 37 refusing agent-CLI stubs first on PATH from a private temp dir; fake keychain tools only; synthetic; no host or keychain reached.
+..FF.............
+======================================================================
+FAIL: test_the_key_probe_says_why_a_keychain_only_key_skips (__main__.KeyProbe.test_the_key_probe_says_why_a_keychain_only_key_skips) (host='conductor')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 136, in test_the_key_probe_says_why_a_keychain_only_key_skips
+    self.assertEqual(len(texts), 1, 'one why string in the probe')
+AssertionError: 0 != 1 : one why string in the probe
+
+======================================================================
+FAIL: test_the_key_probe_says_why_a_keychain_only_key_skips (__main__.KeyProbe.test_the_key_probe_says_why_a_keychain_only_key_skips) (host='cursor')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 136, in test_the_key_probe_says_why_a_keychain_only_key_skips
+    self.assertEqual(len(texts), 1, 'one why string in the probe')
+AssertionError: 0 != 1 : one why string in the probe
+
+----------------------------------------------------------------------
+Ran 16 tests in 2.233s
+
+FAILED (failures=2)

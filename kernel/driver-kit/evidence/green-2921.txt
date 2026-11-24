@@ -1,0 +1,5 @@
+# green for openwizdev/openwiz#2921: driver-kit and Devin driver suites behind agent CLI stubs with env -u OPENWIZ_GITHUB_APP_KEY
+kernel/driver-kit/test_kit.py exit=0 Ran 35 tests in 386.909s OK
+kernel/driver-kit/test_hostkey.py exit=0 Ran 25 tests in 29.157s OK
+kernel/driver-kit/test_stubs.py exit=0 Ran 3 tests in 0.397s OK
+adapters/devin/test_driver.py exit=0 Ran 6 tests in 2.698s OK

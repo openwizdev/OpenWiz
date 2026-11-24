@@ -136,7 +136,7 @@ def unreadable(path, plain, error):
 
 
 def copy(folder, skills, wanted, source, plain):
-    placed, notes, unwritable = [], [], None
+    placed, notes, cleanup, unwritable = [], [], [], None
     for name in wanted:
         try:
             landed, trouble = place(folder, skills, name, source, plain)
@@ -147,12 +147,12 @@ def copy(folder, skills, wanted, source, plain):
         if landed:
             placed.append(name)
         if trouble:
-            notes.append(trouble)
+            (cleanup if landed else notes).append(trouble)
     if unwritable:
         notes.insert(0, f'OpenWiz could not write {folder} ({unwritable}), so {plain} got {len(placed)} of '
                         f'{len(wanted)} skills. Make it writable with chmod u+rwx -- {shlex.quote(str(folder))}, '
                         'then run this again.')
-    return placed, ' '.join(notes) or None
+    return placed, ' '.join(notes) or None, ' '.join(cleanup) or None
 
 
 def install_skills(build, value, root, home, codex_home=None):
@@ -178,7 +178,9 @@ def install_skills(build, value, root, home, codex_home=None):
                 guard_parent(base, plain)
                 skipped = check(base / 'skills', names, plain)
                 wanted = [n for n in names if n not in {s['skill'] for s in skipped}]
-                placed, failed = copy(base / 'skills', skills, wanted, value['source'], plain) if wanted else ([], None)
+                placed, failed, cleanup = (copy(base / 'skills', skills, wanted, value['source'], plain) if wanted
+                                           else ([], None, None))
+                failed = ' '.join(filter(None, (failed, cleanup))) or None
                 row.update(state='installed' if len(placed) == len(names) else 'partial' if placed else 'refused',
                            next=failed or (f'{plain} finds these skills next time it starts.' if not skipped else
                            f'{plain} did not get {len(skipped)} skill(s); each one below says why and what to do.'))
@@ -195,10 +197,11 @@ def install_skills(build, value, root, home, codex_home=None):
         return dict(result, outcome='refused', reason='No agent here took OpenWiz\'s skills (see each row), so '
                                                       'the canonical folder was not written either.'), 5
     whole = all(row['state'] in ('installed', 'absent') for row in rows)
+    placed, cleanup = [], None
     try:
         skipped = check(canonical, names, 'OpenWiz\'s own skills folder')
-        placed, failed = copy(canonical, skills, [n for n in names if n not in {s['skill'] for s in skipped}],
-                              value['source'], 'OpenWiz\'s own skills folder')
+        placed, failed, cleanup = copy(canonical, skills, [n for n in names if n not in {s['skill'] for s in skipped}],
+                                       value['source'], 'OpenWiz\'s own skills folder')
     except installer.Refused as refusal:
         skipped, failed = [], (f'{canonical} is a link or not a folder of yours ({refusal}), so OpenWiz did not '
                                'write its own copy there; the agents above still got their skills. Make it a real '
@@ -209,7 +212,9 @@ def install_skills(build, value, root, home, codex_home=None):
         result['canonical_skipped'] = skipped
     if failed:
         result['canonical_refused'] = failed
-    whole = whole and not skipped and not failed
+    if cleanup:
+        result['canonical_cleanup'] = cleanup
+    whole = whole and len(placed) == len(names)
     return dict(result, outcome='installed' if whole else 'partial',
                 reason='Copied the skills into every agent here.' if whole else
                 'Copied the skills where it was safe; the rows say what was skipped and why.'), 0

@@ -1,0 +1,73 @@
+#2562 main merge, green at ebe47292 (merge of main at df714db0), with the no-op agent CLI stubs first on PATH
+
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/driver-kit/test_kit.py
+test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos ... ok
+test_a_declared_driver_gets_no_note ... ok
+test_a_driver_whose_processes_live_only_during_each_call_passes_all_five_on_linux_and_macos ... ok
+test_a_failed_process_watch_fails_the_key_check ... ok
+test_a_failed_start_check_still_stops_its_run ... ok
+test_a_helper_without_a_visible_environment_row_is_not_trusted ... ok
+test_a_hidden_process_costs_a_retry_once_and_one_older_than_the_kit_none ... /usr/lib/python3.11/subprocess.py:1125: ResourceWarning: subprocess 38009 is still running
+test_a_host_that_answers_a_redirect_fails_start_and_the_redirect_is_never_followed ... /usr/lib/python3.11/subprocess.py:822: ResourceWarning: unclosed file <_io.BufferedReader name=3>
+test_a_key_host_driver_that_uses_only_the_helper_passes_all_five ... ok
+test_a_path_diagnostic_never_prints_the_active_canary ... ok
+test_a_refusal_holding_a_credential_never_reaches_the_output ... ok
+test_a_script_whose_path_holds_a_space_is_scanned_on_linux_and_macos ... ok
+test_a_word_the_readme_does_not_list_may_be_refused_and_the_rest_runs_without_effort ... ok
+test_changing_only_the_effort_changes_what_the_kit_saw ... ok
+test_each_effort_driver_prints_its_own_start_line ... ok
+test_each_effort_form_samples_its_one_main_start_and_no_other_start ... ok
+test_each_key_host_effort_driver_prints_its_own_start_line ... ok
+test_each_planted_driver_fails_its_check ... ok
+test_each_planted_key_driver_fails_with_its_own_line ... ok
+test_each_status_contract_credential_format_is_caught ... ok
+test_effort_given_only_to_a_one_shot_host_command_during_start_is_seen ... ok
+test_effort_that_first_shows_after_starts_verdict_is_no_receipt ... ok
+test_no_harness_outside_the_fixtures_is_on_the_tests_path ... ok
+test_on_macos_a_key_in_an_argument_or_another_variable_is_caught ... ok
+test_probe_only_hides_environments_from_the_kits_own_listing_only ... ok
+test_template_and_schema_refuse_the_same_starts ... ok
+test_template_passes_all_five ... ok
+test_the_canary_never_reaches_the_driver ... ok
+test_the_effort_flag_names_the_value_the_kit_sends ... ok
+test_the_effort_word_in_another_input_is_no_receipt ... ok
+test_the_fixed_undeclared_driver_passes_all_five_with_the_note_on_stderr ... ok
+test_the_kit_trusts_only_its_own_interpreter_not_one_on_path ... ok
+test_the_kits_visibility_probe_signals_ready_through_the_macos_shim_and_runs_until_its_stdin_closes ... ok
+test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries ... ok
+test_the_setting_is_the_effort_placeholder_and_a_list_follows_the_setting ... ok
+test_without_proc_as_on_macos_a_driver_whose_run_stays_in_the_kits_group_passes_all_five ... ok
+test_without_proc_as_on_macos_effort_on_a_command_line_is_seen ... ok
+test_without_proc_as_on_macos_the_template_passes_all_five ... ok
+test_without_proc_or_the_runs_visible_environment_stop_and_token_fail_unverified ... ok
+test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without ... ok
+Ran 40 tests in 295.415s
+OK
+
+The new tests, three times each (both process views run inside each):
+Ran 4 tests: OK, OK, OK
+
+kernel/driver-kit/test_hostkey.py: Ran 25 tests in 29.620s OK 
+adapters/boat/test_driver.py: Ran 39 tests in 72.634s FAILED (failures=3) 
+adapters/cloudroom/test_driver.py: Ran 28 tests in 24.542s FAILED (failures=2) 
+adapters/devin/test_driver.py: Ran 6 tests in 2.579s FAILED (failures=1) 
+adapters/local/test_driver.py: Ran 23 tests in 65.617s OK 
+adapters/openclaw/test_driver.py: Ran 14 tests in 6.623s OK 
+adapters/template/test_driver.py: Ran 21 tests in 23.349s OK 
+
+The boat, cloudroom and devin failures are their own expected kit lines: each now declares effort (or its can't form), so the kit's start line gains '; effort: ...', and boat's push-fix line gains the 'effort: start refused medium without the refusal text:' prefix. Those test files are outside this ticket's paths.
+
+EF9 (#2855 at e5c8ac9) on a scratch merge, with its fake acpx giving the queue owner no --session-options and its kit test expecting '; effort: medium reached a process the run started':
+adapters/openclaw/test_driver.py OpenClaw.test_kit_passes_all_five: OK, OK, OK; the whole suite: Ran 21 tests, OK.
+The same with the kit's effort start a plain call (in-flight sampling off): fail start: effort: medium never reached a process the run started.
+
+Lead ruling and grant round, at aa51107f, stubs first on PATH:
+kernel/driver-kit/test_kit.py: Ran 41 tests in 295.659s OK 
+kernel/driver-kit/test_hostkey.py: Ran 25 tests in 29.631s OK 
+adapters/boat/test_driver.py: Ran 39 tests in 73.981s OK 
+adapters/cloudroom/test_driver.py: Ran 28 tests in 24.514s OK 
+adapters/devin/test_driver.py: Ran 6 tests in 2.639s OK 
+adapters/local/test_driver.py: Ran 23 tests in 65.691s OK 
+adapters/openclaw/test_driver.py: Ran 14 tests in 6.589s OK 
+adapters/template/test_driver.py: Ran 21 tests in 23.391s OK 
+The non-effort refusal: Kit.test_a_refusal_that_is_not_about_effort_is_reported_plainly passes (red in red-2562-plain-refusal.txt); boat's test_the_kits_start_check_names_the_push_fix passes with its line unchanged.

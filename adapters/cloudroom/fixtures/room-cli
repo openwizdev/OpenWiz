@@ -44,7 +44,10 @@ def mark(tid):
 
 def turn(thread, prompt):
     try:
-        p = subprocess.Popen([thread['provider'], '--model', thread['model'], '-p', prompt], start_new_session=True,
+        command = [thread['provider'], '--model', thread['model'], '-p', prompt]
+        if thread['provider'] == 'fake-harness' and thread.get('reasoning'):
+            command += ['--reasoning-level', thread['reasoning']]
+        p = subprocess.Popen(command, start_new_session=True,
                              env=dict(os.environ, FAKE_ROOM_THREAD=mark(thread['id']).partition('=')[2],
                                       **({'FAKE_ROOM_REASONING_LEVEL': thread['reasoning']} if thread.get('reasoning')
                                          else {})),

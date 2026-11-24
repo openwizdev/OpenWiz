@@ -2,7 +2,7 @@
   "host": "Conductor",
   "driver": "adapters/conductor/driver",
   "needs": ["curl", "gh"],
-  "signed_in": [["python3", "-I", "-c", "import sys, os; sys.exit(0 if any(n == 'CONDUCTOR_API_KEY' for n in os.environ) else 1)"], ["env", "GH_TELEMETRY=0", "gh", "config", "get", "-h", "github.com", "user"]],
+  "signed_in": [["python3", "-I", "-c", "import sys, os; why = 'A key kept only in the keychain entry openwiz-conductor records skipped: not signed in, on purpose: neither Linux nor macOS has a keychain existence check that is provably free of an OS prompt, so this probe checks only that the name CONDUCTOR_API_KEY is set, never its value (docs/evidence/2895/approach.md).'; sys.exit(0 if any(n == 'CONDUCTOR_API_KEY' for n in os.environ) else 1)"], ["env", "GH_TELEMETRY=0", "gh", "config", "get", "-h", "github.com", "user"]],
   "cost": "paid",
   "runs": [{"harness": "claude", "model": "opus-5-5-1m"}],
   "wait": 900

@@ -4,6 +4,8 @@ For Jake, once, on the VPS. Spec #2474 ("VPS session files"). Everything below i
 
 **No real `heads.py` run may happen, with or without `--post`, until both #2689 (receipt writer fixes) and #2755 (frozen-head command fixes) have merged.**
 
+A machine with an earlier bootstrap install waits for #2929 before re-running the bootstrap; a fresh install isn't affected.
+
 ## The session, in order
 
 1. **Bootstrap** the free tools into `~/.local` (#2580): first `kernel/live-rig/vps/bootstrap.sh --dry-run` to read the plan, then `kernel/live-rig/vps/bootstrap.sh`. It never signs in or spends.

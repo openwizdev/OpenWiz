@@ -1,0 +1,28 @@
+test_a_checkout_executable_outside_the_fixtures_is_refused_as_a_harness (__main__.Kit.test_a_checkout_executable_outside_the_fixtures_is_refused_as_a_harness) ... FAIL
+
+======================================================================
+FAIL: test_a_checkout_executable_outside_the_fixtures_is_refused_as_a_harness (__main__.Kit.test_a_checkout_executable_outside_the_fixtures_is_refused_as_a_harness)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 247, in test_a_checkout_executable_outside_the_fixtures_is_refused_as_a_harness
+    with self.assertRaisesRegex(AssertionError, 'codex on the PATH is .*outside the fixtures'):
+AssertionError: AssertionError not raised
+
+----------------------------------------------------------------------
+Ran 1 test in 0.002s
+
+FAILED (failures=1)
+test_a_checkout_executable_outside_the_fixtures_is_refused_as_a_harness (__main__.Template.test_a_checkout_executable_outside_the_fixtures_is_refused_as_a_harness) ... FAIL
+
+======================================================================
+FAIL: test_a_checkout_executable_outside_the_fixtures_is_refused_as_a_harness (__main__.Template.test_a_checkout_executable_outside_the_fixtures_is_refused_as_a_harness)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/template/test_driver.py", line 209, in test_a_checkout_executable_outside_the_fixtures_is_refused_as_a_harness
+    with self.assertRaisesRegex(AssertionError, 'codex on the PATH is .*outside the fixtures'):
+AssertionError: AssertionError not raised
+
+----------------------------------------------------------------------
+Ran 1 test in 0.002s
+
+FAILED (failures=1)

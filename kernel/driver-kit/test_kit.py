@@ -19,28 +19,37 @@ sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.abspath(__file__))
 FIXTURES = os.path.join(HERE, 'fixtures')
 TEMPLATE = os.path.join(HERE, '..', '..', 'adapters', 'template', 'driver')
+BASE = os.path.join(FIXTURES, 'base', 'driver')
 NO_PROC = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'fixtures', 'no-proc')
 REPO = os.path.realpath(os.path.join(HERE, '..', '..'))
 HARNESSES = ('claude', 'claude-code', 'codex', 'gemini', 'opencode', 'openclaw', 'cursor-agent', 'amp', 'aider',
              'goose')
 TOOLS = ('sh', 'ps', 'lsof', 'awk', 'sleep', 'dirname', 'true')
 TOKEN = 'gh' + 'p_' + 'Synthetic0Kit0Value' * 2 + '00'
+STARTED = 'pass start: the run posted builder status note 2'
+NOT_DECLARED = 'note start: effort: not declared yet; required from EF14\n'
 PASS = ['pass version: openwiz:records v1, and the schema is driver v1',
-        'pass start: the run posted builder status note 2',
+        STARTED,
         'pass wake: the run edited builder status note 2',
         'pass stop: the run ended, and a wake after it is refused',
         'pass token: no login or token passed through the driver']
+CANT = STARTED + "; effort: a start with it was refused, as the README's Effort: line says"
+CANT_PASS = [PASS[0], CANT] + PASS[2:]
 PLANTED = {
-    'token-in-args': PASS[:4] + ['fail token: a process the driver started holds a credential on its command line'],
-    'token-in-env': PASS[:4] + ['fail token: a process the driver started holds a credential in OPENWIZ_GITHUB, '
-                                'which the kit never gave it'],
-    'echoes-token': PASS[:4] + ['fail token: the driver printed a credential'],
-    'takes-token': PASS[:4] + ['fail token: start took a token field instead of refusing it'],
-    'stop-leaves-run': PASS[:3] + ['fail stop: a process the run started still runs after stop', PASS[4]],
-    'wake-does-nothing': PASS[:2] + ['fail wake: builder status note 2 did not change after the wake'] + PASS[3:],
-    'old-records': ['fail version: it names no openwiz:records v1'] + PASS[1:],
-    'error-without-next': PASS[:3] + ['fail stop: next is not a string',
-                                      'fail token: its answer to a token field: next is not a string'],
+    'token-in-args': CANT_PASS[:4] + ['fail token: a process the driver started holds a credential on its command '
+                                      'line'],
+    'token-in-env': CANT_PASS[:4] + ['fail token: a process the driver started holds a credential in OPENWIZ_GITHUB, '
+                                     'which the kit never gave it'],
+    'echoes-token': CANT_PASS[:4] + ['fail token: the driver printed a credential'],
+    'takes-token': [PASS[0], 'fail start: effort: its can does not list effort, but a start with it was taken',
+                    'fail wake: not run: start failed', 'fail stop: not run: start failed',
+                    'fail token: start took a token field instead of refusing it'],
+    'stop-leaves-run': CANT_PASS[:3] + ['fail stop: a process the run started still runs after stop', PASS[4]],
+    'wake-does-nothing': CANT_PASS[:2] + ['fail wake: builder status note 2 did not change after the wake']
+    + PASS[3:],
+    'old-records': ['fail version: it names no openwiz:records v1'] + CANT_PASS[1:],
+    'error-without-next': CANT_PASS[:3] + ['fail stop: next is not a string',
+                                           'fail token: its answer to a token field: next is not a string'],
 }
 
 
@@ -49,6 +58,7 @@ KEY_PASS = PASS[4] + ", and on start, wake and stop the devin key reached its ho
 KEY_HOST = os.path.join(FIXTURES, 'key-host', 'driver')
 NOT_RUN = ['fail wake: not run: start failed', 'fail stop: not run: start failed']
 NEVER = "fail token: the devin key never reached the kit's fake host"
+CHECKS = ('version', 'start', 'wake', 'stop', 'token')
 IN_ARGS = 'a process the driver started holds a credential on its command line'
 NO_HEADER = "a request reached the kit's fake host without the devin key in the helper's header"
 SCRIPT = "names DEVIN_API_KEY, the key's variable"
@@ -89,6 +99,44 @@ PLANTED_KEY = {
     'key-helper-loader-env': PASS[:4] + ["fail token: a process that is not the key helper asked the kit's fake host "
                                          "for the key; " + NEVER[len('fail token: '):]],
 }
+EFFORT_FAIL = [PASS[0], 'fail start: effort: %s'] + NOT_RUN
+EFFORT = {
+    'effort': [PASS[0], STARTED + '; effort: medium reached a process the run started'] + PASS[2:],
+    'effort-one-shot': [PASS[0], STARTED + '; effort: medium reached a process the run started'] + PASS[2:],
+    'effort-refused': [PASS[0], STARTED + '; effort: refused for fake-harness with the refusal text, as the README '
+                       'says'] + PASS[2:],
+    'effort-cant': [PASS[0], STARTED + "; effort: a start with it was refused, as the README's Effort: line says"]
+    + PASS[2:],
+    'planted/effort-dropped': EFFORT_FAIL + [PASS[4]],
+    'planted/effort-wrong-next': [PASS[0], 'fail start: harness fake-harness cannot run at effort medium; next: start '
+                                  'it again without the effort'] + NOT_RUN + [PASS[4]],
+    'planted/effort-no-readme-line': EFFORT_FAIL + [PASS[4]],
+    'planted/effort-taken-without-can': EFFORT_FAIL + [PASS[4]],
+    'planted/effort-no-readme': EFFORT_FAIL + [PASS[4]],
+    'planted/effort-refuses-listed': EFFORT_FAIL + [PASS[4]],
+    'planted/effort-word-elsewhere': EFFORT_FAIL + [PASS[4]],
+    'planted/effort-cant-harness-taken': EFFORT_FAIL + [PASS[4]],
+}
+EFFORT_WHY = {
+    'planted/effort-dropped': 'medium never reached a process the run started',
+    'planted/effort-no-readme-line': "its can lists effort, but its README has no Effort: line naming the flag",
+    'planted/effort-taken-without-can': 'its can does not list effort, but a start with it was taken',
+    'planted/effort-no-readme': "its can lists effort, but its README has no Effort: line naming the flag",
+    'planted/effort-refuses-listed': 'start refused medium for fake-harness, but its README says that harness takes '
+                                     'medium',
+    'planted/effort-word-elsewhere': 'medium never reached a process the run started',
+    'planted/effort-cant-harness-taken': "its README says fake-harness can't set effort, but a start with it was taken",
+}
+HARNESS_EFFORTS = {'effort': 2, 'planted/effort-taken-without-can': 1, 'planted/effort-cant-harness-taken': 1}
+EFFORT_KEY = {
+    'effort-key-host': [PASS[0], "pass start: the run posted builder status note 3; effort: medium reached the kit's "
+                        "fake devin host", 'pass wake: the run edited builder status note 3', PASS[3], KEY_PASS],
+    'planted/effort-dropped-key-host': [PASS[0], "fail start: effort: medium never reached the kit's fake devin host"]
+    + NOT_RUN + [KEY_PASS],
+    'planted/effort-key-host-starts-then-refuses': [PASS[0], "fail start: effort: start refused medium with the "
+                                                    "refusal text after it sent the kit's fake devin host a start "
+                                                    "request"] + NOT_RUN + [KEY_PASS],
+}
 LINUX_ONLY = {'key-undumpable-child': PASS[:4] + ['fail token: a process of the driver hides its details, so the kit '
                                                   'cannot check it']}
 HOST_SCHEMA = {'type': 'object', 'required': ['origin', 'variable', 'keychain', 'header'],
@@ -102,10 +150,48 @@ HOST_NAME = {'type': 'string', 'pattern': '^(?=.{1,40}$)[a-z0-9]+(-[a-z0-9]+)*$'
 CONTRACT_FORMATS = ['token=', 'key=', 'secret=', 'password=', 'sig=', 'password:', 'Bearer', 'gh?_', 'github_pat_',
                     'AKIA', 'xox?-', 'sk-']
 
+LOCAL = os.path.join(REPO, 'adapters', 'local', 'driver')
+KIMI = 'https://github.com/MoonshotAI/kimi-code/blob/9a82686b0e91c532f4d49da0bc088a0eac9bdede/docs/en/'
+PI = 'https://github.com/badlogic/pi-mono/blob/8209929fb553e7a8c91dc0894569f9ec43dd201f/packages/coding-agent/docs/'
+OPENCODE = ('https://github.com/anomalyco/opencode/blob/6d04312b71ac33e7c150234d7087da01388ff2ab/services/site/src/'
+            'docs/v1/content/')
+KILO = 'https://github.com/Kilo-Org/kilocode/blob/bfdec5496922452222223c01b4cc6c89305b0279/'
+CRUSH = 'https://github.com/charmbracelet/catwalk/blob/v3.2.9/internal/providers/configs/'
+REAL_MODELS = {
+    'kimi-code/kimi-for-coding': KIMI + 'reference/kimi-command.md#L127',
+    'kimi-code/kimi-for-coding-highspeed': KIMI + 'configuration/config-files.md#L50',
+    'azure/gpt-5.4': PI + 'providers.md#L140',
+    'openrouter/typesafe/jev-1.13': PI + 'codemode.md#L95',
+    'anthropic/claude-sonnet-5-5': OPENCODE + 'commands.mdx#L26',
+    'openrouter/google/gemini-3.8-flash': OPENCODE + 'troubleshooting.mdx#L239',
+    'openrouter/anthropic/claude-sonnet-4-20250514': KILO + 'packages/kilo-docs/pages/ai-providers/openrouter.md#L55',
+    'openrouter/openai/gpt-5': KILO + 'specs/v2/config.md#L261',
+    'openrouter/anthropic/claude-sonnet-4.6': CRUSH + 'openrouter.json#L7',
+    'openrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free': CRUSH + 'openrouter.json#L2145',
+    'fireworks/accounts/fireworks/models/nemotron-lightning-3p5-30b-a3b': CRUSH + 'fireworks.json#L337',
+}
+BAD_MODELS = ['/x', 'x/', 'x//y', 'x/../y', 'x/./y', 'x/ /y', 'x/' + 'm' * 99, '..', 'x/.y', 'x/-y',
+              'https://host.example/x', 'x/y\n', 'x\\y']
+
+
+def efforts(path):
+    if not os.path.exists(path):
+        return []
+    with open(path) as f:
+        return [a[a.index('--effort') + 1] for a in map(json.loads, f) if '--effort' in a]
+
 
 def started_at(pid):
     with open('/proc/%s/stat' % pid) as f:
         return int(f.read().rpartition(')')[2].split()[19])
+
+
+def template_expected():
+    with open(os.path.join(os.path.dirname(TEMPLATE), 'README.md')) as f:
+        line = any(x.startswith('Effort:') for x in f.read().splitlines())
+    if 'effort' in module(TEMPLATE).VERSION['can']:
+        return [PASS[0], STARTED + '; effort: medium reached a process the run started'] + PASS[2:], ''
+    return (CANT_PASS, '') if line else (PASS, NOT_DECLARED)
 
 
 def planted(name):
@@ -127,13 +213,14 @@ def pinned_path(folder, *fixtures):
         if shutil.which(name):
             os.symlink(shutil.which(name), os.path.join(tools, name))
     os.symlink(sys.executable, os.path.join(tools, 'python3'))
-    return no_real_harness(os.pathsep.join(fixtures + (tools,)))
+    return no_real_harness(os.pathsep.join(fixtures + (tools,)), fixtures)
 
 
-def no_real_harness(path):
+def no_real_harness(path, fixtures=(FIXTURES,)):
+    allowed = {os.path.realpath(f) for f in fixtures}
     for name in HARNESSES:
         found = shutil.which(name, path=path)
-        if found and not os.path.realpath(found).startswith(REPO + os.sep):
+        if found and os.path.dirname(os.path.realpath(found)) not in allowed:
             raise AssertionError('%s on the PATH is %s, outside the fixtures: a test could launch a real harness'
                                  % (name, found))
     return path
@@ -154,7 +241,7 @@ class Kit(unittest.TestCase):
         self.folder = tempfile.mkdtemp()
         self.mark = secrets.token_hex(8)
         self.env = dict(os.environ, KIT_TRACKER=tracker(self.folder), KIT_TEST=self.mark, GH_TOKEN=TOKEN,
-                        OPENWIZ_TEMPLATE_STATE=os.path.join(self.folder, 'state'),
+                        OPENWIZ_TEMPLATE_STATE=os.path.join(self.folder, 'state'), OPENWIZ_TEMPLATE_LIVE='1',
                         PATH=pinned_path(self.folder, FIXTURES))
 
     def left(self):
@@ -175,12 +262,13 @@ class Kit(unittest.TestCase):
             except OSError:
                 pass
 
-    def kit(self, driver, python=sys.executable, wait='8', **env):
+    def kit(self, driver, python=sys.executable, wait='8', harness='fake-harness', guard=True, extra=(), script='kit.py', **env):
         env = dict(self.env, **env)
-        no_real_harness(env['PATH'])
-        p = subprocess.run([python, '-I', os.path.join(HERE, 'kit.py'), '--driver', driver,
-                            '--repo', 'example/site', '--ticket', '7', '--harness', 'fake-harness',
-                            '--model', 'Synthetic 1', '--tracker', self.env['KIT_TRACKER'], '--wait', wait],
+        if guard:
+            no_real_harness(env['PATH'])
+        p = subprocess.run([python, '-I', os.path.join(HERE, script), '--driver', driver,
+                            '--repo', 'example/site', '--ticket', '7', '--harness', harness,
+                            '--model', 'Synthetic 1', '--tracker', self.env['KIT_TRACKER'], '--wait', wait] + list(extra),
                            env=env, capture_output=True, text=True, timeout=120,
                            cwd=os.path.join(HERE, '..', '..'))
         return p.returncode, p.stdout.splitlines(), p.stderr
@@ -446,22 +534,30 @@ class Kit(unittest.TestCase):
         os.makedirs(kit)
         for name in ('kit.py', 'schema.json'):
             shutil.copy(os.path.join(HERE, name), kit)
+        shutil.copytree(FIXTURES, os.path.join(kit, 'fixtures'))
         shutil.copytree(os.path.join(HERE, '..', 'records-kit'), os.path.join(self.folder, 'kernel', 'records-kit'))
         shutil.copy(os.path.join(HERE, '..', 'records.v1.md'), os.path.join(self.folder, 'kernel'))
+        tpl = os.path.join(self.folder, 'adapters', 'template')
+        os.makedirs(tpl)
+        shutil.copy(TEMPLATE, tpl)
+        env = dict(self.env, PATH=pinned_path(os.path.join(self.folder, 'kit-path'), os.path.join(kit, 'fixtures')))
         bare = os.path.join(self.folder, 'bare')
         os.makedirs(bare)
         for name in ('driver', 'schema.json'):
-            shutil.copy(os.path.join(os.path.dirname(TEMPLATE), name), bare)
+            shutil.copy(os.path.join(os.path.dirname(BASE), name), bare)
         for driver, want in ((KEY_HOST, 2), (TEMPLATE, 2), (os.path.join(bare, 'driver'), 0)):
             with self.subTest(driver):
                 p = subprocess.run([sys.executable, '-I', os.path.join(kit, 'kit.py'), '--driver', driver, '--repo',
                                     'example/site', '--ticket', '7', '--harness', 'fake-harness', '--model', 'm',
-                                    '--tracker', self.env['KIT_TRACKER'], '--wait', '8'], env=self.env,
+                                    '--tracker', self.env['KIT_TRACKER'], '--wait', '8'], env=env,
                                    capture_output=True, text=True, timeout=120)
                 self.assertEqual(p.returncode, want, p.stdout + p.stderr)
+                note = {KEY_HOST: '', TEMPLATE: template_expected()[1]}.get(driver, NOT_DECLARED)
                 if want:
-                    self.assertEqual(p.stderr, 'kit.py: the key helper kernel/driver-kit/hostkey.py is missing, so '
-                                               'the kit cannot check host keys\n')
+                    self.assertEqual(p.stderr, note + 'kit.py: the key helper kernel/driver-kit/hostkey.py is missing, '
+                                                      'so the kit cannot check host keys\n')
+                else:
+                    self.assertEqual(p.stderr, note)
 
     def test_a_host_that_answers_a_redirect_fails_start_and_the_redirect_is_never_followed(self):
         kit = module(os.path.join(HERE, 'kit.py'))
@@ -506,11 +602,225 @@ class Kit(unittest.TestCase):
                 self.assertEqual((schema, helper), (schema, schema))
 
     def test_template_passes_all_five(self):
-        self.assertEqual(self.kit(TEMPLATE)[:2], (0, PASS))
+        self.assertEqual(self.kit(TEMPLATE), (0,) + template_expected())
+
+    def test_the_fixed_undeclared_driver_passes_all_five_with_the_note_on_stderr(self):
+        self.assertEqual(self.kit(BASE), (0, PASS, NOT_DECLARED))
+
+    def test_a_declared_driver_gets_no_note(self):
+        for name in ('effort', 'effort-cant'):
+            with self.subTest(name):
+                self.tearDown()
+                self.setUp()
+                self.assertEqual(self.kit(os.path.join(FIXTURES, name, 'driver'))[::2], (0, ''))
+
+    def test_each_effort_driver_prints_its_own_start_line(self):
+        for name, lines in EFFORT.items():
+            with self.subTest(name):
+                self.tearDown()
+                self.setUp()
+                args = os.path.join(self.folder, 'args')
+                if name in EFFORT_WHY:
+                    lines = [x % EFFORT_WHY[name] if x.startswith('fail start') else x for x in lines]
+                code, out, err = self.kit(os.path.join(FIXTURES, name, 'driver'), FAKE_ARGS=args)
+                self.assertEqual((code, out), (0 if all(x.startswith('pass') for x in lines) else 1, lines), err)
+                self.assertEqual(efforts(args), ['medium'] * HARNESS_EFFORTS.get(name, 0), name)
+
+    def test_a_refusal_that_is_not_about_effort_is_reported_plainly(self):
+        cases = {'planted/effort-refuses-every-start': 'fail start: the sandbox cannot push to example/site; next: '
+                                                       'give the connected account write access',
+                 'planted/effort-wrong-next': 'fail start: harness fake-harness cannot run at effort medium; next: '
+                                              'start it again without the effort'}
+        once = [{'sampled': 1, 'effort': True, 'token': False, 'canary': False},
+                {'sampled': 0, 'effort': False, 'token': True, 'canary': False}]
+        for name, line in cases.items():
+            with self.subTest(name):
+                self.tearDown()
+                self.setUp()
+                calls = os.path.join(self.folder, 'calls')
+                code, out, err = self.kit(os.path.join(FIXTURES, name, 'driver'),
+                                          script=os.path.join('fixtures', 'recorded-kit'), KIT_CALLS=calls)
+                with open(calls) as f:
+                    self.assertEqual(json.load(f), once, 'the kit sent a second start after an effort refusal')
+                self.assertEqual((code, out), (1, [PASS[0], line] + NOT_RUN + [PASS[4]]), err)
+                self.assertEqual(self.left(), [])
+
+    def test_an_effort_refusal_that_may_have_left_a_run_starts_no_other(self):
+        room = os.path.join(REPO, 'adapters', 'cloudroom')
+        wrapper = os.path.join(self.folder, 'room')
+        os.mkdir(wrapper)
+        with open(os.path.join(wrapper, 'room-cli'), 'w') as f:
+            f.write('#!%s -I\nimport os, sys\nargs, env = sys.argv[1:], dict(os.environ)\n'
+                    'if args[:2] == ["thread", "spawn"] and "--reasoning-level" in args:\n'
+                    '    env["FAKE_ROOM_RECEIPT"] = "Synthetic lost receipt"\n'
+                    'os.execve(sys.executable, [sys.executable, %r] + args, env)\n'
+                    % (sys.executable, os.path.join(room, 'fixtures', 'room-cli')))
+        os.chmod(os.path.join(wrapper, 'room-cli'), 0o700)
+        log = os.path.join(self.folder, 'room.log')
+        code, out, err = self.kit(os.path.join(room, 'driver'), PATH=wrapper + os.pathsep + self.env['PATH'],
+                                  ROOM_PROJECT_ID='prj_syn_0001', ROOM_THREAD_ID='thr_syn_parent', FAKE_ROOM_LOG=log,
+                                  FAKE_ROOM_HOST='cloud', OPENWIZ_CLOUDROOM_STATE=os.path.join(self.folder, 'room'))
+        with open(log) as f:
+            calls = [c[:2] for c in (json.loads(line) for line in f) if c[:2] in (['thread', 'spawn'],
+                                                                                  ['thread', 'archive'])]
+        with open(log + '.threads') as f:
+            active = [t for t, v in json.load(f).items() if not v.get('archived')]
+        self.assertEqual(code, 1, err)
+        self.assertEqual(calls, [['thread', 'spawn']], 'the kit started a second run')
+        self.assertRegex(out[1], r'^fail start: run (run-\S+): .*; next: stop \1, which ends any thread it started, '
+                                 r'then start a new run$')
+        self.assertEqual(len(active), 1)
+
+    def test_without_proc_as_on_macos_effort_on_a_command_line_is_seen(self):
+        for name in ('effort', 'planted/effort-dropped'):
+            with self.subTest(name):
+                self.tearDown()
+                self.setUp()
+                lines = [x % EFFORT_WHY.get(name, '') if x.startswith('fail start') else x for x in EFFORT[name]]
+                code, out, err = self.kit(os.path.join(FIXTURES, name, 'driver'), os.path.join(NO_PROC, 'python3'),
+                                          PATH=NO_PROC + os.pathsep + self.env['PATH'], NO_PROC_PYTHON=sys.executable)
+                self.assertEqual((code, out), (int(name != 'effort'), lines), err)
+
+    def test_the_effort_flag_names_the_value_the_kit_sends(self):
+        args = os.path.join(self.folder, 'args')
+        code, out, err = self.kit(os.path.join(FIXTURES, 'effort', 'driver'), extra=['--effort', 'xhigh'],
+                                  FAKE_ARGS=args)
+        self.assertEqual((code, out[1]), (0, STARTED + '; effort: xhigh reached a process the run started'), err)
+        self.assertEqual(efforts(args), ['xhigh', 'xhigh'])
+        code, out, err = self.kit(BASE, extra=['--effort', 'Not A Word'])
+        self.assertEqual((code, out), (2, []), err)
+
+    def test_changing_only_the_effort_changes_what_the_kit_saw(self):
+        for word in ('low', 'high'):
+            with self.subTest(word):
+                self.tearDown()
+                self.setUp()
+                args = os.path.join(self.folder, 'args')
+                code, out, err = self.kit(os.path.join(FIXTURES, 'effort', 'driver'), extra=['--effort', word],
+                                          FAKE_ARGS=args)
+                self.assertEqual((code, out[1]), (0, STARTED + '; effort: %s reached a process the run started'
+                                                  % word), err)
+                self.assertEqual(efforts(args), [word, word])
+
+    def test_the_effort_word_in_another_input_is_no_receipt(self):
+        why = 'fail start: effort: medium never reached a process the run started'
+        for name, extra in (('planted/effort-dropped', ['--model', 'medium']), ('planted/effort-word-elsewhere', [])):
+            with self.subTest(name):
+                self.tearDown()
+                self.setUp()
+                code, out, err = self.kit(os.path.join(FIXTURES, name, 'driver'), extra=extra)
+                self.assertEqual((code, out), (1, [PASS[0], why] + NOT_RUN + [PASS[4]]), err)
+
+    def test_a_word_the_readme_does_not_list_may_be_refused_and_the_rest_runs_without_effort(self):
+        args = os.path.join(self.folder, 'args')
+        code, out, err = self.kit(os.path.join(FIXTURES, 'effort', 'driver'), extra=['--effort', 'turbo'],
+                                  FAKE_ARGS=args)
+        self.assertEqual((code, out), (0, [PASS[0], STARTED + '; effort: refused turbo with the refusal text, a word '
+                                           'its README does not list for fake-harness'] + PASS[2:]), err)
+        self.assertEqual(efforts(args), [])
+
+    def test_the_setting_is_the_effort_placeholder_and_a_list_follows_the_setting(self):
+        kit = module(os.path.join(HERE, 'kit.py'))
+        cases = [('`--effort <level>`', ('argv', '--effort', 'medium'), None),
+                 ('`set -s <run> effort <effort>`, for each level `claude-agent-acp` 0.95 lists',
+                  ('argv', 'effort', 'medium'), None),
+                 ('`-c model_reasoning_effort=<level>`, for low and high, with any harness',
+                  ('argv', '-c', 'model_reasoning_effort=medium'), ['low', 'high']),
+                 ('passed as `--effort <level>`, for low, medium, high, xhigh and max, with any harness',
+                  ('argv', '--effort', 'medium'), ['low', 'medium', 'high', 'xhigh', 'max']),
+                 ('the `effort` field of the start request', ('field', 'effort'), None)]
+        for text, want, words in cases:
+            with self.subTest(text):
+                self.assertEqual((kit.setting(text, 'medium'), kit.listed(text)), (want, words))
+
+    def test_effort_given_only_to_a_one_shot_host_command_during_start_is_seen(self):
+        args = os.path.join(self.folder, 'args')
+        code, out, err = self.kit(os.path.join(FIXTURES, 'effort-one-shot', 'driver'), FAKE_ARGS=args)
+        self.assertEqual((code, out), (0, EFFORT['effort-one-shot']), err)
+        with open(args) as f:
+            calls = [json.loads(x) for x in f]
+        self.assertEqual([c for c in calls if c[:2] == ['thread', 'spawn']],
+                         [['thread', 'spawn', '--reasoning-level', 'medium']])
+        self.assertEqual(efforts(args), [])
+
+    def test_effort_that_first_shows_after_starts_verdict_is_no_receipt(self):
+        late = os.path.join(self.folder, 'late')
+        code, out, err = self.kit(os.path.join(FIXTURES, 'planted', 'effort-only-at-cleanup', 'driver'), FAKE_LATE=late)
+        self.assertEqual((code, out), (1, [EFFORT_FAIL[0], EFFORT_FAIL[1] % 'medium never reached a process the run '
+                                           'started'] + EFFORT_FAIL[2:] + [PASS[4]]), err)
+        with open(late) as f:
+            self.assertEqual(len(f.read().split()), 1, "the kit's cleanup stop did not run")
+
+    def test_each_key_host_effort_driver_prints_its_own_start_line(self):
+        for name, lines in EFFORT_KEY.items():
+            with self.subTest(name):
+                self.tearDown()
+                self.setUp()
+                code, out, host = self.keyed(os.path.join(FIXTURES, name, 'driver'))
+                self.assertEqual((code, out), (0 if all(x.startswith('pass') for x in lines) else 1, lines))
+
+    def stock_copies(self):
+        with open(TEMPLATE) as f:
+            source = f.read()
+        launch = "    return [req['harness'], '--model', req['model']] + effort + ['-p', prompt]\n"
+        older = re.sub(r"    if os.environ.get\('OPENWIZ_TEMPLATE_LIVE'\).*?live check'\)\n", '', source, flags=re.S)
+        self.assertNotEqual(older, source)
+        copies = {}
+        tighter = source.replace(launch + '\n\n', launch + '\n')
+        for name, text in (('current', source), ('older', older), ('tighter', tighter)):
+            self.assertIn(launch, text)
+            copies[name] = os.path.join(self.folder, 'copy-' + name)
+            os.mkdir(copies[name])
+            shutil.copy2(os.path.join(os.path.dirname(TEMPLATE), 'schema.json'), copies[name])
+            with open(os.path.join(copies[name], 'driver'), 'w') as f:
+                f.write(text)
+            os.chmod(os.path.join(copies[name], 'driver'), 0o700)
+        return {k: os.path.join(v, 'driver') for k, v in copies.items()}
+
+    def test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness(self):
+        copies, real, ran = self.stock_copies(), os.path.join(self.folder, 'real'), os.path.join(self.folder, 'ran')
+        os.mkdir(real)
+        for name in ('claude', 'codex', 'synthetic-harness'):
+            with open(os.path.join(real, name), 'w') as f:
+                f.write('#!/bin/sh\necho %s >> %s\n' % (name, ran))
+            os.chmod(os.path.join(real, name), 0o700)
+        cases = [('current', live, name) for live in ('', '1') for name in ('claude', 'codex', 'synthetic-harness')]
+        cases += [('older', '', 'claude'), ('older', '', 'synthetic-harness'), ('tighter', '', 'claude'),
+                  ('tighter', '1', 'synthetic-harness')]
+        for copy, live, name in cases:
+            with self.subTest(copy=copy, live=live, harness=name):
+                self.tearDown()
+                self.setUp()
+                if os.path.exists(ran):
+                    os.remove(ran)
+                code, out, err = self.kit(copies[copy], wait='2', harness=name, guard=False,
+                                          PATH=real + os.pathsep + self.env['PATH'], OPENWIZ_TEMPLATE_LIVE=live)
+                self.assertFalse(os.path.exists(ran), 'the kit started a real %s through the template' % name)
+                self.assertEqual((code, out), (2, []), err)
+                self.assertIn('kit.py: the driver still holds the template\'s command, and harness %s is not one of '
+                              'the kit\'s fixtures' % name, err)
+
+    def test_the_kit_treats_only_a_driver_holding_the_templates_command_as_the_template(self):
+        kit = module(os.path.join(HERE, 'kit.py'))
+        copies = self.stock_copies()
+        with open(TEMPLATE) as f:
+            source = f.read()
+        edited = os.path.join(self.folder, 'edited')
+        with open(edited, 'w') as f:
+            f.write(source.replace("return [req['harness'], '--model'", "return ['my-host', req['harness'], '--model'"))
+        renamed = os.path.join(self.folder, 'renamed')
+        with open(renamed, 'w') as f:
+            f.write(source.replace("'driver': 'template'", "'driver': 'example'"))
+        cloudroom = os.path.join(HERE, '..', '..', 'adapters', 'cloudroom', 'driver')
+        for driver, held in ((TEMPLATE, True), (renamed, True), (os.path.join(self.folder, 'missing'), True),
+                             (copies['older'], True), (copies['tighter'], True), (edited, False), (cloudroom, False)):
+            with self.subTest(driver=os.path.basename(os.path.dirname(driver)) + '/' + os.path.basename(driver)):
+                self.assertEqual(kit.holds_template_command(driver), held)
 
     def test_without_proc_as_on_macos_the_template_passes_all_five(self):
         macos = {'PATH': NO_PROC + os.pathsep + self.env['PATH'], 'NO_PROC_PYTHON': sys.executable}
-        self.assertEqual(self.kit(TEMPLATE, os.path.join(NO_PROC, 'python3'), **macos)[:2], (0, PASS))
+        self.assertEqual(self.kit(TEMPLATE, os.path.join(NO_PROC, 'python3'), **macos)[:2],
+                         (0, template_expected()[0]))
         for name in ('stop-leaves-run', 'token-in-env'):
             with self.subTest(name):
                 self.tearDown()
@@ -543,6 +853,49 @@ class Kit(unittest.TestCase):
                 code, out, err = self.kit(os.path.join(FIXTURES, 'short-lived-driver'), python, **env)
                 self.assertEqual((code, out), (0, PASS), err)
 
+    def test_each_effort_form_samples_its_one_main_start_and_no_other_start(self):
+        plain, main = {'sampled': 0, 'effort': True, 'token': False, 'canary': False}, \
+            {'sampled': 1, 'effort': False, 'token': False, 'canary': False}
+        probe = dict(main, sampled=0, token=True)
+        forms = {'taken': (os.path.join(FIXTURES, 'effort', 'driver'), [dict(main, effort=True), probe]),
+                 'refused': (os.path.join(FIXTURES, 'effort-refused', 'driver'),
+                             [dict(plain, sampled=1), main, probe]),
+                 'undeclared': (BASE, [plain, main, probe]),
+                 'key-host': (os.path.join(FIXTURES, 'effort-key-host', 'driver'),
+                              [dict(plain, canary=True), dict(main, effort=True), probe, dict(main, canary=True)])}
+        for form, (driver, starts) in forms.items():
+            with self.subTest(form=form):
+                self.tearDown()
+                self.setUp()
+                calls = os.path.join(self.folder, 'calls')
+                if form == 'key-host':
+                    code, out, _ = self.keyed(driver, script=os.path.join('fixtures', 'recorded-kit'), KIT_CALLS=calls)
+                else:
+                    code, out, _ = self.kit(driver, script=os.path.join('fixtures', 'recorded-kit'), KIT_CALLS=calls)
+                self.assertEqual([line.partition(':')[0] for line in out], ['pass ' + n for n in CHECKS], out)
+                with open(calls) as f:
+                    self.assertEqual(json.load(f), starts)
+
+    def test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos(self):
+        macos = {'PATH': NO_PROC + os.pathsep + self.env['PATH'], 'NO_PROC_PYTHON': sys.executable}
+        for form in ('undeclared', 'refused', 'key-host'):
+            for python, env in ((sys.executable, {}), (os.path.join(NO_PROC, 'python3'), macos)):
+                with self.subTest(form=form, python=python):
+                    self.tearDown()
+                    self.setUp()
+                    starts = os.path.join(self.folder, 'starts')
+                    driver = os.path.join(FIXTURES, 'start-child', form, 'driver')
+                    if form == 'key-host':
+                        code, out, _ = self.keyed(driver, python=python, FAKE_STARTS=starts, **env)
+                    else:
+                        code, out, _ = self.kit(driver, python, FAKE_STARTS=starts, **env)
+                    self.assertEqual([line.partition(':')[0] for line in out],
+                                     ['pass ' + n for n in CHECKS[:4]] + ['fail token'], out)
+                    self.assertEqual(out[4], 'fail token: ' + IN_ARGS)
+                    with open(starts) as f:
+                        self.assertEqual(len(f.read().split()), 2 if form == 'key-host' else 1,
+                                         "a start ran other than the main start and the key host's effort start")
+
     def test_the_kits_visibility_probe_signals_ready_through_the_macos_shim_and_runs_until_its_stdin_closes(self):
         p = subprocess.run([os.path.join(NO_PROC, 'python3')] + module(os.path.join(HERE, 'kit.py')).PROBE,
                            input='', env=dict(self.env, NO_PROC_PYTHON=sys.executable), capture_output=True,
@@ -555,15 +908,16 @@ class Kit(unittest.TestCase):
                  'NO_PROC_PROBE_ONLY': "ps -E never showed a process of this run, so the kit cannot tell which "
                                        "processes the driver started"}
         for hide, why in cases.items():
-            for name in ('template', 'stop-leaves-run', 'token-in-env'):
+            for name in ('base', 'stop-leaves-run', 'token-in-env'):
                 with self.subTest(hide=hide, driver=name):
                     self.tearDown()
                     self.setUp()
-                    driver = TEMPLATE if name == 'template' else os.path.join(FIXTURES, 'planted', name)
+                    driver = BASE if name == 'base' else os.path.join(FIXTURES, 'planted', name)
                     code, out, err = self.kit(driver, os.path.join(NO_PROC, 'python3'), **{hide: '1'},
                                               PATH=NO_PROC + os.pathsep + self.env['PATH'],
                                               NO_PROC_PYTHON=sys.executable)
-                    self.assertEqual((code, out), (1, PASS[:3] + ['fail stop: ' + why, 'fail token: ' + why]), err)
+                    start = PASS[:3] if name == 'base' else CANT_PASS[:3]
+                    self.assertEqual((code, out), (1, start + ['fail stop: ' + why, 'fail token: ' + why]), err)
                     self.assertEqual(bool(self.left()), name == 'stop-leaves-run',
                                      "the driver's own stop lost its baseline under the kit's hidden view")
 
@@ -587,7 +941,14 @@ class Kit(unittest.TestCase):
         with open(os.path.join(sleepy, 'fake-harness'), 'w') as f:
             f.write('#!%s\nimport time\ntime.sleep(120)\n' % sys.executable)
         os.chmod(os.path.join(sleepy, 'fake-harness'), 0o700)
-        code, out, err = self.kit(TEMPLATE, wait='2', PATH=sleepy + os.pathsep + self.env['PATH'])
+        wrapper = os.path.join(self.folder, 'wrapper')
+        with open(wrapper, 'w') as f:
+            f.write('#!%s\nimport importlib.machinery, importlib.util, sys\nsys.dont_write_bytecode = True\n'
+                    'spec = importlib.util.spec_from_loader("t", importlib.machinery.SourceFileLoader("t", %r))\n'
+                    't = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(t)\nt.main()\n'
+                    % (sys.executable, os.path.realpath(BASE)))
+        os.chmod(wrapper, 0o700)
+        code, out, err = self.kit(wrapper, wait='2', PATH=sleepy + os.pathsep + self.env['PATH'])
         self.assertEqual((code, out), (1, [PASS[0], 'fail start: no builder status note appeared within 2 seconds',
                                            'fail wake: not run: start failed', 'fail stop: not run: start failed',
                                            PASS[4]]), err)
@@ -609,7 +970,15 @@ class Kit(unittest.TestCase):
         self.assertIsNone(shutil.which('claude', path=self.env['PATH']), 'the PATH reaches a real claude')
         self.assertEqual(shutil.which('fake-harness', path=self.env['PATH']), os.path.join(FIXTURES, 'fake-harness'))
         with self.assertRaisesRegex(AssertionError, 'could launch a real harness'):
-            self.kit(TEMPLATE, PATH=outside + os.pathsep + self.env['PATH'])
+            self.kit(BASE, PATH=outside + os.pathsep + self.env['PATH'])
+
+    def test_a_checkout_executable_outside_the_fixtures_is_refused_as_a_harness(self):
+        local = os.path.join(self.folder, 'local')
+        os.mkdir(local)
+        os.symlink(os.path.realpath(TEMPLATE), os.path.join(local, 'codex'))
+        self.assertTrue(os.path.realpath(shutil.which('codex', path=local)).startswith(REPO + os.sep))
+        with self.assertRaisesRegex(AssertionError, 'codex on the PATH is .*outside the fixtures'):
+            no_real_harness(local)
 
     def test_each_planted_driver_fails_its_check(self):
         for name, lines in PLANTED.items():
@@ -628,7 +997,7 @@ class Kit(unittest.TestCase):
                 self.assertFalse(any(sample in v for v in self.env.values()))
                 code, out, err = self.kit(os.path.join(FIXTURES, 'planted', 'refuses-with-credential'))
                 self.assertNotIn(sample, '\n'.join(out) + err)
-                self.assertEqual((code, out), (1, PASS[:3] + [
+                self.assertEqual((code, out), (1, CANT_PASS[:3] + [
                     'fail stop: its stop output held a credential, which the kit does not show',
                     'fail token: the driver printed a credential; its answer to a token field: its start output '
                     'held a credential, which the kit does not show']))
@@ -643,7 +1012,7 @@ class Kit(unittest.TestCase):
                 self.env['KIT_LEAK'] = name
                 self.assertFalse(any(sample in v for v in self.env.values()))
                 code, out, err = self.kit(os.path.join(FIXTURES, 'planted', 'leaks-format'))
-                self.assertEqual((code, out), (1, PASS[:4] + ['fail token: the driver printed a credential']))
+                self.assertEqual((code, out), (1, CANT_PASS[:4] + ['fail token: the driver printed a credential']))
                 self.assertNotIn(sample, '\n'.join(out) + err)
 
     def test_template_and_schema_refuse_the_same_starts(self):
@@ -655,7 +1024,7 @@ class Kit(unittest.TestCase):
                  json.dumps(dict(good, ticket=0)), json.dumps(dict(good, ticket='7')),
                  json.dumps(dict(good, ticket=True)), json.dumps(dict(good, repository='a/b/c')),
                  json.dumps(dict(good, skill='Build')), json.dumps(dict(good, skill='b' * 61)),
-                 json.dumps(dict(good, harness='/usr/bin/true')), json.dumps(dict(good, model='m' * 61)),
+                 json.dumps(dict(good, harness='/usr/bin/true')), json.dumps(dict(good, model='m' * 101)),
                  json.dumps(dict(good, model='m\n')), json.dumps([good]), 'not json',
                  json.dumps(good)[:-1] + ', "ticket": 8}']
         schema = kit.load_schema()['commands']['start']['input']
@@ -668,6 +1037,127 @@ class Kit(unittest.TestCase):
                 p = subprocess.run([TEMPLATE, 'start'], input=case, env=self.env, capture_output=True, text=True,
                                    timeout=60)
                 self.assertEqual((p.returncode == 0), valid, p.stdout)
+
+    def model_start(self, model):
+        start = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'synthetic-none',
+                 'model': model}
+        sys.path.insert(0, HERE)
+        import kit
+        schema = kit.invalid(start, kit.load_schema()['commands']['start']['input'])
+        p = subprocess.run([LOCAL, 'start'], input=json.dumps(start), capture_output=True, text=True, timeout=60,
+                           env=dict(self.env, OPENWIZ_LOCAL_STATE=os.path.join(self.folder, 'local')))
+        return schema, p.returncode, json.loads(p.stdout)['error'], kit.holds_credential(model)
+
+    def test_real_provider_qualified_models_pass_the_schema_and_the_local_driver(self):
+        for model, source in REAL_MODELS.items():
+            with self.subTest(model, source=source):
+                self.assertEqual(self.model_start(model),
+                                 (None, 1, 'harness synthetic-none is not one this driver runs', False))
+
+    def test_bad_model_shapes_are_refused_by_the_schema_and_the_local_driver(self):
+        for model in BAD_MODELS:
+            with self.subTest(model):
+                schema, code, error, _ = self.model_start(model)
+                self.assertRegex(schema, '^model (does not match|has the wrong length)')
+                self.assertEqual((code, error), (1, 'model is not valid'))
+        self.assertEqual(self.model_start('m' * 100)[:3],
+                         (None, 1, 'harness synthetic-none is not one this driver runs'))
+
+    def test_a_credential_sent_as_a_provider_qualified_model_is_still_refused(self):
+        for model in ('s' + 'k-' + 'Synthetic0Model0Value00', 'openrouter/s' + 'k-' + 'Synthetic0Model0Value00'):
+            with self.subTest(model):
+                self.assertEqual(self.model_start(model)[1:],
+                                 (1, 'model looks like a credential, so nothing was saved or started', True))
+
+    def test_key_check_nested_probe_uses_synthetic_repo_and_model(self):
+        kit = module(os.path.join(HERE, 'kit.py'))
+        driver = os.path.join(FIXTURES, 'key-host-probe', 'driver')
+        cases = [('outer repo differs', 'other/throwaway', 'Synthetic 1'),
+                 ('outer model differs', 'example/site', 'Other Model 2')]
+        for label, repo, model in cases:
+            with self.subTest(label):
+                self.tearDown()
+                self.setUp()
+                answers = [
+                    {'method': 'GET', 'path': '/v1/repositories', 'status': 200, 'body': {'repository': repo}},
+                    {'method': 'GET', 'path': '/v1/models', 'status': 200, 'body': {'model': model}},
+                ]
+                host = kit.FakeHost(answers=answers, test_key=KEY)
+                self.addCleanup(host.close)
+                env = dict(self.env, DEVIN_API_KEY=KEY, OPENWIZ_HOSTKEY_TEST_ORIGIN=host.origin)
+                no_real_harness(env['PATH'])
+                p = subprocess.run([sys.executable, '-I', os.path.join(HERE, 'kit.py'), '--driver', driver,
+                                    '--repo', repo, '--ticket', '7', '--harness', 'fake-harness',
+                                    '--model', model, '--tracker', self.env['KIT_TRACKER'], '--wait', '8'],
+                                   env=env, capture_output=True, text=True, timeout=120,
+                                   cwd=os.path.join(HERE, '..', '..'))
+                self.assertEqual((p.returncode, p.stdout.splitlines()), (0, PASS[:4] + [KEY_PASS]), p.stderr)
+                self.assertNotIn('kit-canary-', p.stdout + p.stderr)
+                self.assertNotIn(KEY, p.stdout + p.stderr)
+
+    def test_key_host_fixture_echoes_request_uuid_on_create(self):
+        kit = module(os.path.join(HERE, 'kit.py'))
+        driver = os.path.join(FIXTURES, 'key-host-echo', 'driver')
+        answers = [{'method': 'POST', 'path': '/v1/runs/[^/]+/start', 'status': 200,
+                    'body': {'id': '{{request.id}}'}}]
+        host = kit.FakeHost(answers=answers, test_key=KEY)
+        self.addCleanup(host.close)
+        code, out, err = self.kit(driver, DEVIN_API_KEY=KEY, OPENWIZ_HOSTKEY_TEST_ORIGIN=host.origin)
+        self.assertEqual((code, out), (0, PASS[:4] + [KEY_PASS]), err)
+        self.assertNotIn('kit-canary-', '\n'.join(out) + err)
+        self.assertNotIn(KEY, '\n'.join(out) + err)
+
+    def test_malformed_echo_placeholder_in_kit_host_json_is_refused(self):
+        kit = module(os.path.join(HERE, 'kit.py'))
+        bad_dir = os.path.join(self.folder, 'bad-echo')
+        os.makedirs(os.path.join(bad_dir, 'fixtures'))
+        shutil.copy(os.path.join(FIXTURES, 'key-host', 'README.md'), os.path.join(bad_dir, 'README.md'))
+        driver = os.path.join(bad_dir, 'driver')
+        with open(driver, 'w') as f:
+            f.write('#!%s\nimport importlib.machinery, importlib.util, sys\nsys.dont_write_bytecode = True\n'
+                    's = importlib.util.spec_from_loader("kh", importlib.machinery.SourceFileLoader("kh", %r))\n'
+                    'm = importlib.util.module_from_spec(s)\ns.loader.exec_module(m)\nm.t.main()\n'
+                    % (sys.executable, KEY_HOST))
+        os.chmod(driver, 0o700)
+        with open(os.path.join(bad_dir, 'fixtures', 'kit-host.json'), 'w') as f:
+            json.dump({'answers': [{'method': 'POST', 'path': '/v1/runs/[^/]+/start', 'status': 200,
+                                    'body': {'id': '{{other.id}}'}}]}, f)
+        host = kit.FakeHost(test_key=KEY)
+        self.addCleanup(host.close)
+        code, out, err = self.kit(driver, DEVIN_API_KEY=KEY, OPENWIZ_HOSTKEY_TEST_ORIGIN=host.origin)
+        self.assertEqual(code, 2, '\n'.join(out) + err)
+        self.assertIn("cannot read the driver's fixtures/kit-host.json:", err)
+        self.assertIn('malformed echo placeholder', err)
+        malformed = [
+            {'id': '{{}}'}, {'id': '{{request}}'}, {'id': '{{request.}}'}, {'id': '{{request..id}}'},
+            {'id': '{{other.id}}'}, {'id': '{{start}}'}, {'id': '{{start.unknown}}'}, {'id': '{{start.model.sub}}'},
+            {'id': '{{request.id'}, {'id': 'request.id}}'}, {'id': 'prefix-{{request.id}}'},
+            {'id': '{{request.id!}}'}, {'{{request.id}}': 'value'}, [{'nested': '{{request.1bad}}'}],
+        ]
+        for body in malformed:
+            with self.subTest(body=body):
+                with self.assertRaisesRegex(ValueError, 'malformed echo placeholder'):
+                    kit.FakeHost(answers=[{'method': 'POST', 'path': '/v1/runs', 'status': 200, 'body': body}])
+
+    def test_echo_placeholder_nested_and_fails_closed_when_missing(self):
+        import urllib.error
+        import urllib.request
+        kit = module(os.path.join(HERE, 'kit.py'))
+        answers = [{'method': 'POST', 'path': '/v1/runs', 'status': 200,
+                    'body': {'id': '{{request.meta.id}}', 'ticket': '{{request.ticket}}'}}]
+        host = kit.FakeHost(answers=answers)
+        self.addCleanup(host.close)
+        for bad in (b'{"meta": {}, "ticket": 7}', b'{"meta": "scalar", "ticket": 7}', b'[1, 2]', b'not-json', b''):
+            with self.subTest(bad=bad):
+                req = urllib.request.Request(host.origin + '/v1/runs', data=bad, method='POST')
+                with self.assertRaises(urllib.error.HTTPError) as ctx:
+                    urllib.request.urlopen(req, timeout=10)
+                self.assertEqual(ctx.exception.code, 400)
+        payload = json.dumps({'meta': {'id': '{{request.ticket}}'}, 'ticket': 7}).encode()
+        req = urllib.request.Request(host.origin + '/v1/runs', data=payload, method='POST')
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(json.loads(resp.read().decode()), {'id': '{{request.ticket}}', 'ticket': 7})
 
 
 if __name__ == '__main__':

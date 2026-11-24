@@ -1,0 +1,11 @@
+Red run at base d6ebfa1c with the new proof (synthetic, local):
+$ python3 -I tools/install/tests/setup-onboard-contract/test_contract.py
+FAIL: test_operator_edges_follow_the_store_at_every_code_point (__main__.Hosts.test_operator_edges_follow_the_store_at_every_code_point)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/ow/tools/install/tests/setup-onboard-contract/test_contract.py", line 310, in test_operator_edges_follow_the_store_at_every_code_point
+    self.assertIsNone(re.search(r'\\[sSdDwWbB]', pattern), 'engine-dependent class')
+AssertionError: <re.Match object; span=(3, 5), match='\\s'> is not None : engine-dependent class
+
+Ran 28 tests
+FAILED (failures=1)

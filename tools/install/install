@@ -367,13 +367,15 @@ def remove(root, state_root, yes, home, codex_home=None):
     path = root / 'install.lock'
     if not owned(root, stat.S_ISDIR) or not (yes or os.path.lexists(path)):
         return remove_unlocked(root, state, state_root, yes, home, codex_home)
-    flags, made, held = os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK, True, False
+    flags, made, held = os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK, yes, False
     try:
         try:
-            lock = os.open(path, flags | os.O_CREAT | os.O_EXCL, 0o600)
+            lock = os.open(path, flags | (os.O_CREAT | os.O_EXCL if yes else 0), 0o600)
         except FileExistsError:
             lock, made = os.open(path, flags), False
     except OSError as error:
+        if not yes and isinstance(error, FileNotFoundError):
+            return remove_unlocked(root, state, state_root, yes, home, codex_home)
         raise installer.Refused('install remove could not open %s as its lock (%s), so nothing was changed'
                                 % (path, error.strerror)) from None
     try:

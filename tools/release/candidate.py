@@ -12,6 +12,7 @@ import sys
 import tempfile
 import time
 import urllib.error
+import zipfile
 
 sys.dont_write_bytecode = True
 
@@ -75,6 +76,7 @@ VERSION = re.compile(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)')
 HEADING = re.compile(r'## (' + VERSION.pattern + r') · ([0-9]{4}-[0-9]{2}-[0-9]{2})')
 TARGET_MET = 1800
 WORKFLOWS = {'ci': '.github/workflows/ci.yml', 'privacy': '.github/workflows/privacy.yml'}
+PACKAGES = '.github/workflows/packages.yml'
 O16, O17 = 1284, 1285
 AUTHORITY = re.compile(r'Release kit authority: scope ([0-9a-f]{64})')
 RISK_PATTERNS = {
@@ -939,6 +941,119 @@ def required_check(gate, commit):
                 'check_runs': sorted(r.get('id') for r in own)}
 
 
+def rehearsal_run(commit):
+    try:
+        runs = [r for r in check_runs(commit) if isinstance(r, dict) and r.get('name') == 'rehearsal']
+        workflows = pages(f'repos/{PUBLIC}/actions/workflows/packages.yml/runs?head_sha={commit}&per_page=100',
+                          'workflow_runs')
+    except (Blocked, Refused, ValueError):
+        return ['unreadable'], None
+    if not runs:
+        return ['missing'], None
+    trusted = [w for w in workflows if isinstance(w, dict) and w.get('path') == PACKAGES
+               and w.get('head_sha') == commit]
+    if not trusted or any(not isinstance(r.get('app'), dict) or r['app'].get('slug') != 'github-actions'
+                          for r in runs):
+        return ['untrusted'], None
+
+    def own(workflow):
+        return [r for r in runs if isinstance(r.get('check_suite'), dict)
+                and r['check_suite'].get('id') == workflow.get('check_suite_id')]
+    trusted = [w for w in trusted if not (own(w) and all(r.get('status') == 'completed'
+                                                          and r.get('conclusion') == 'skipped' for r in own(w)))]
+    if not trusted:
+        return ['missing'], None
+    latest = max(trusted, key=lambda w: (str(w.get('created_at')), w.get('run_attempt') or 0))
+    if (latest.get('status') != 'completed' or latest.get('conclusion') != 'success' or not own(latest)
+            or any(r.get('head_sha') != commit or r.get('status') != 'completed' or r.get('conclusion') != 'success'
+                   for r in own(latest))):
+        return ['failed'], None
+    if type(latest.get('id')) is not int:
+        return ['unreadable'], None
+    return [], {'workflow_run': {k: latest.get(k) for k in ('id', 'run_attempt', 'path', 'head_sha', 'conclusion',
+                                                             'check_suite_id')},
+                'check_runs': sorted(r.get('id') for r in own(latest))}
+
+
+def rehearsal_receipt(rehearse, body, run_id, artifacts, target, archive):
+    import zlib
+    commit, name = body['source']['commit'], f"openwiz-rehearsal-{body['release_version']}-{target}"
+    found = [a for a in artifacts if isinstance(a, dict) and a.get('name') == name and a.get('expired') is False
+             and type(a.get('id')) is int and isinstance(a.get('workflow_run'), dict)
+             and a['workflow_run'].get('id') == run_id and a['workflow_run'].get('head_sha') == commit]
+    if not found:
+        return 'missing', None
+    artifact = max(found, key=lambda a: (str(a.get('created_at')), a['id']))
+    listed = artifact.get('digest')
+    if not isinstance(listed, str) or not listed.startswith('sha256:') or not digest(listed[len('sha256:'):]):
+        return 'unreadable', None
+    try:
+        data = gh('api', f"repos/{PUBLIC}/actions/artifacts/{artifact['id']}/zip")
+        if sha(data) != listed[len('sha256:'):]:
+            return 'unreadable', None
+        with zipfile.ZipFile(io.BytesIO(data)) as archive_file:
+            members = archive_file.infolist()
+            if [m.filename for m in members] != ['rehearsal.json'] or members[0].file_size > 65536:
+                return 'unreadable', None
+            receipt = strict(archive_file.read('rehearsal.json'))
+    except (Refused, ValueError, KeyError, OSError, EOFError, RuntimeError, zipfile.BadZipFile, zipfile.LargeZipFile,
+            zlib.error):
+        return 'unreadable', None
+    fields = 'schema version source target archive_sha256 manifest_sha256 status steps'
+    if not isinstance(receipt, dict) or set(receipt) != set(fields.split()):
+        return 'unreadable', None
+    steps = receipt['steps']
+    if (receipt['schema'] != rehearse.SCHEMA or receipt['target'] != target or not isinstance(receipt['version'], str)
+            or re.fullmatch(r'0\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)', receipt['version']) is None
+            or not digest(receipt['source'], 40)
+            or any(receipt[k] is not None and not digest(receipt[k]) for k in ('archive_sha256', 'manifest_sha256'))
+            or not isinstance(steps, list) or not steps
+            or any(not isinstance(s, dict) or set(s) != {'name', 'status'} for s in steps)
+            or [s['name'] for s in steps] != list(rehearse.STEPS[:len(steps)])
+            or [s['status'] for s in steps[:-1]] != ['pass'] * (len(steps) - 1)):
+        return 'unreadable', None
+    if receipt['status'] == 'pass' and (len(steps) != len(rehearse.STEPS) or steps[-1]['status'] != 'pass'):
+        return 'unreadable', None
+    if receipt['status'] == 'fail' and steps[-1]['status'] == 'fail':
+        return 'failed', None
+    if receipt['status'] != 'pass':
+        return 'unreadable', None
+    if receipt['version'] != body['release_version'] or receipt['source'] != commit \
+            or receipt['archive_sha256'] != archive:
+        return 'stale', None
+    return None, {'target': target, 'artifact_id': artifact['id'], 'digest': listed,
+                  'receipt_sha256': canonical(receipt)}
+
+
+def rehearsal_reasons(record, state):
+    body = record['candidate']
+    found, evidence = rehearsal_run(body['source']['commit'])
+    if found:
+        return ['rehearsal_' + r for r in found]
+    run_id = evidence['workflow_run']['id']
+    try:
+        artifacts = pages(f'repos/{PUBLIC}/actions/runs/{run_id}/artifacts?per_page=100', 'artifacts')
+    except (Refused, ValueError):
+        return ['rehearsal_unreadable']
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('rehearse', HERE.parent / 'rehearsal' / 'rehearse.py')
+    rehearse = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(rehearse)
+    archives = {r['target']: r['sha256'] for r in body['artifacts'] if r['role'] == 'archive'}
+    reasons, kept = [], []
+    for target in TARGETS:
+        reason, row = rehearsal_receipt(rehearse, body, run_id, artifacts, target, archives.get(target))
+        if reason is None:
+            kept.append(row)
+        elif 'rehearsal_' + reason not in reasons:
+            reasons.append('rehearsal_' + reason)
+    if reasons:
+        return reasons
+    state.write('evidence/rehearsal.json', dict(evidence, candidate_sha256=record['candidate_sha256'],
+                                                 receipts=kept, checked_at=now()))
+    return []
+
+
 def scan_artifacts(body, folder, literals):
     import subprocess
     if literals is None or not Path(literals).is_file():
@@ -1278,6 +1393,7 @@ def evaluate(args):
         with tempfile.TemporaryDirectory(prefix='release-candidate-') as scratch:
             found, unreadable = first_write_reasons(record['candidate'], Path(args.artifacts), scratch)
             reasons += found
+            reasons += rehearsal_reasons(record, state)
     record['gates'].update(made)
     phase(record, 'checks', started, now())
     state.write('record.json', record)
@@ -1455,6 +1571,9 @@ def publish(args):
                 ready(body, args.artifacts, scratch, tag)
                 work = tagging_clone(scratch, body['source']['commit'])
                 name, email = tagger(work, body['source']['commit'])
+                rehearsed = rehearsal_reasons(record, state)
+                if rehearsed:
+                    raise Blocked(rehearsed)
                 remote_git(work, '-c', 'user.name=' + name, '-c', 'user.email=' + email, '-c', 'tag.gpgSign=false',
                            'tag', '-a', tag, body['source']['commit'], '-m', 'OpenWiz ' + body['release_version'])
                 intended = remote_git(work, 'rev-parse', '--verify', f'refs/tags/{tag}').decode().strip()

@@ -1,0 +1,47 @@
+{
+  "harness": "kilo",
+  "program": "kilo",
+  "start": [
+    "run",
+    "--format",
+    "json",
+    "--model",
+    "{model}",
+    "{mode}",
+    "{prompt}"
+  ],
+  "wake": [
+    "run",
+    "--format",
+    "json",
+    "--session",
+    "{session}",
+    "--model",
+    "{model}",
+    "{mode}",
+    "{prompt}"
+  ],
+  "session": {
+    "json": [
+      "sessionID"
+    ]
+  },
+  "modes": {
+    "default": [],
+    "auto": [
+      "--auto"
+    ]
+  },
+  "env": {
+    "KILO_NO_DAEMON": "1"
+  },
+  "effort": "none: kilo run --variant is silently ignored for a model without that variant (Kilo CLI v7.8.32, packages/opencode/src/session/llm/request.ts lines 98-101)",
+  "login": "kilo's own login, saved by `kilo auth login` under ~/.local/share/kilo (auth.json)",
+  "daemon": "KILO_NO_DAEMON=1 prevents daemon attachment. HR1 guarantees stop cleanup on Linux. On macOS, a detached persistent background process Kilo starts may outlive stop if orphaned before it is recorded and its output is closed or redirected. Live check #2443 covers this platform claim.",
+  "signed_out": [
+    "authentication token may be missing or expired",
+    "Kilo credentials are required",
+    "\\bPAID_MODEL_AUTH_REQUIRED\\b"
+  ],
+  "login_command": "kilo auth login"
+}
