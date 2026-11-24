@@ -1,5 +1,13 @@
 # OpenWiz 0.1.1 Linux rehearsal
 
+## November 24, third run
+
+The candidate, Packages run and installer inputs were the same as in the first November 24 run. Authenticated Git access to the fresh private repository passed before the rehearsal began. The Linux archive and manifest passed verification at 12:20 UTC. The installer activated the expected build four seconds later. The local project, personal GitHub identity and harness passed setup at 12:24 UTC. The confirmation request was verified at 12:25 UTC.
+
+After the user confirmed the one-file design, the reply was saved and read back, and the updated record was pushed. At 12:57 UTC the installed confirmation helper exited 2 with `refused: exact reply is not saved`. A later GitHub read showed the exact reply at the pushed PR head. The failed invocation did not record the SHA it read. The request remained open, and the heartbeat, build, review and merge were unreached.
+
+Teardown finished at 12:58 UTC. The private repository was archived with zero open issues or pull requests. The environment passed the final clean check and the native crontab matched its original contents.
+
 ## November 24, second run
 
 The rerun used the same November 24 inputs listed below. The fresh Linux home passed the clean check. The private repository was created 5 seconds later, and the helper verified both Linux files after another 3 seconds. The installer activated the expected build and the CLI reported its sealed source. The local model list offered Claude Code.
