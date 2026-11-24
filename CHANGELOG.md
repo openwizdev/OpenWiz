@@ -2,7 +2,7 @@
 
 All OpenWiz versions, newest first. How versions work: [RELEASING.md](https://github.com/openwizdev/OpenWiz/blob/main/RELEASING.md).
 
-## 0.1.1 · 2026-11-23
+## 0.1.1 · 2026-11-24
 
 **OpenWiz 0.1.1: OpenWiz no longer needs CloudRoom: install it and run your first fleet on your own computer, with the Claude Code or Codex you're already signed in to**
 
