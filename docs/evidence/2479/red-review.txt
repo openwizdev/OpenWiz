@@ -1,0 +1,110 @@
+test_a_cost_other_than_none_is_skipped_as_cost_after_the_status_command (__main__.Local.test_a_cost_other_than_none_is_skipped_as_cost_after_the_status_command) ...
+  test_a_cost_other_than_none_is_skipped_as_cost_after_the_status_command (__main__.Local.test_a_cost_other_than_none_is_skipped_as_cost_after_the_status_command) [paid] ... FAIL
+  test_a_cost_other_than_none_is_skipped_as_cost_after_the_status_command (__main__.Local.test_a_cost_other_than_none_is_skipped_as_cost_after_the_status_command) [unknown] ... FAIL
+test_a_missing_program_is_skipped_with_its_exact_line_and_runs_no_status_command_or_kit (__main__.Local.test_a_missing_program_is_skipped_with_its_exact_line_and_runs_no_status_command_or_kit) ... ok
+test_gh_not_signed_in_is_skipped_with_its_exact_line_and_starts_no_kit (__main__.Local.test_gh_not_signed_in_is_skipped_with_its_exact_line_and_starts_no_kit) ... FAIL
+test_gh_signed_in_runs_the_kit_once_and_never_asks_claude_or_codex (__main__.Local.test_gh_signed_in_runs_the_kit_once_and_never_asks_claude_or_codex) ...
+  test_gh_signed_in_runs_the_kit_once_and_never_asks_claude_or_codex (__main__.Local.test_gh_signed_in_runs_the_kit_once_and_never_asks_claude_or_codex) (installed=('claude', 'codex', 'gh')) ... FAIL
+  test_gh_signed_in_runs_the_kit_once_and_never_asks_claude_or_codex (__main__.Local.test_gh_signed_in_runs_the_kit_once_and_never_asks_claude_or_codex) (installed=('claude', 'gh')) ... FAIL
+test_the_config_is_the_tickets_local_host_with_its_one_cited_status_command (__main__.Local.test_the_config_is_the_tickets_local_host_with_its_one_cited_status_command) ... FAIL
+
+======================================================================
+FAIL: test_a_cost_other_than_none_is_skipped_as_cost_after_the_status_command (__main__.Local.test_a_cost_other_than_none_is_skipped_as_cost_after_the_status_command) [paid]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/hosts/test_local.py", line 224, in test_a_cost_other_than_none_is_skipped_as_cost_after_the_status_command
+    self.assertEqual((code, out), (0, ['skipped local claude: cost']), err)
+AssertionError: Tuples differ: (0, ['skipped local claude: not signed in: claude']) != (0, ['skipped local claude: cost'])
+
+First differing element 1:
+['skipped local claude: not signed in: claude']
+['skipped local claude: cost']
+
+- (0, ['skipped local claude: not signed in: claude'])
+?                             ^  ------------------
+
++ (0, ['skipped local claude: cost'])
+?                             ^ +
+ :
+
+======================================================================
+FAIL: test_a_cost_other_than_none_is_skipped_as_cost_after_the_status_command (__main__.Local.test_a_cost_other_than_none_is_skipped_as_cost_after_the_status_command) [unknown]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/hosts/test_local.py", line 224, in test_a_cost_other_than_none_is_skipped_as_cost_after_the_status_command
+    self.assertEqual((code, out), (0, ['skipped local claude: cost']), err)
+AssertionError: Tuples differ: (0, ['skipped local claude: not signed in: claude']) != (0, ['skipped local claude: cost'])
+
+First differing element 1:
+['skipped local claude: not signed in: claude']
+['skipped local claude: cost']
+
+- (0, ['skipped local claude: not signed in: claude'])
+?                             ^  ------------------
+
++ (0, ['skipped local claude: cost'])
+?                             ^ +
+ :
+
+======================================================================
+FAIL: test_gh_not_signed_in_is_skipped_with_its_exact_line_and_starts_no_kit (__main__.Local.test_gh_not_signed_in_is_skipped_with_its_exact_line_and_starts_no_kit)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/hosts/test_local.py", line 201, in test_gh_not_signed_in_is_skipped_with_its_exact_line_and_starts_no_kit
+    self.assertEqual((code, out), (0, ['skipped local claude: not signed in: env']), err)
+AssertionError: Tuples differ: (0, ['skipped local claude: not signed in: claude']) != (0, ['skipped local claude: not signed in: env'])
+
+First differing element 1:
+['skipped local claude: not signed in: claude']
+['skipped local claude: not signed in: env']
+
+- (0, ['skipped local claude: not signed in: claude'])
+?                                            -----
+
++ (0, ['skipped local claude: not signed in: env'])
+?                                             ++
+ :
+
+======================================================================
+FAIL: test_gh_signed_in_runs_the_kit_once_and_never_asks_claude_or_codex (__main__.Local.test_gh_signed_in_runs_the_kit_once_and_never_asks_claude_or_codex) (installed=('claude', 'codex', 'gh'))
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/hosts/test_local.py", line 192, in test_gh_signed_in_runs_the_kit_once_and_never_asks_claude_or_codex
+    self.assertEqual((code, out), (0, ['ran local claude: 5 of 5']), err)
+AssertionError: Tuples differ: (0, ['skipped local claude: not signed in: claude']) != (0, ['ran local claude: 5 of 5'])
+
+First differing element 1:
+['skipped local claude: not signed in: claude']
+['ran local claude: 5 of 5']
+
+- (0, ['skipped local claude: not signed in: claude'])
++ (0, ['ran local claude: 5 of 5']) :
+
+======================================================================
+FAIL: test_gh_signed_in_runs_the_kit_once_and_never_asks_claude_or_codex (__main__.Local.test_gh_signed_in_runs_the_kit_once_and_never_asks_claude_or_codex) (installed=('claude', 'gh'))
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/hosts/test_local.py", line 192, in test_gh_signed_in_runs_the_kit_once_and_never_asks_claude_or_codex
+    self.assertEqual((code, out), (0, ['ran local claude: 5 of 5']), err)
+AssertionError: Tuples differ: (0, ['skipped local claude: not installed: codex']) != (0, ['ran local claude: 5 of 5'])
+
+First differing element 1:
+['skipped local claude: not installed: codex']
+['ran local claude: 5 of 5']
+
+- (0, ['skipped local claude: not installed: codex'])
++ (0, ['ran local claude: 5 of 5']) :
+
+======================================================================
+FAIL: test_the_config_is_the_tickets_local_host_with_its_one_cited_status_command (__main__.Local.test_the_config_is_the_tickets_local_host_with_its_one_cited_status_command)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/hosts/test_local.py", line 175, in test_the_config_is_the_tickets_local_host_with_its_one_cited_status_command
+    self.assertEqual(config, {'host': 'local', 'driver': 'adapters/local/driver', 'needs': NEEDS,
+AssertionError: {'hos[64 chars]e', 'codex', 'gh'], 'signed_in': [['claude', '[215 chars] 900} != {'hos[64 chars]e', 'gh'], 'signed_in': [['env', 'GH_TELEMETRY[142 chars] 900}
+Diff is 894 characters long. Set self.maxDiff to None to see it.
+
+----------------------------------------------------------------------
+Ran 5 tests
+
+FAILED (failures=6)

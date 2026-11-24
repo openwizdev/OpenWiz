@@ -1,5 +1,5 @@
 # #2570 red: the new short-lived-driver test against 5ee2af9's kit, run behind 34 agent CLI stubs; the checkout path reads <checkout>.
-test_a_driver_whose_processes_live_only_during_each_call_passes_all_five_on_linux_and_macos (kernel.driver-kit.test_kit.Kit.test_a_driver_whose_processes_live_only_during_each_call_passes_all_five_on_linux_and_macos) ... 
+test_a_driver_whose_processes_live_only_during_each_call_passes_all_five_on_linux_and_macos (kernel.driver-kit.test_kit.Kit.test_a_driver_whose_processes_live_only_during_each_call_passes_all_five_on_linux_and_macos) ...
   test_a_driver_whose_processes_live_only_during_each_call_passes_all_five_on_linux_and_macos (kernel.driver-kit.test_kit.Kit.test_a_driver_whose_processes_live_only_during_each_call_passes_all_five_on_linux_and_macos) (python='<checkout>/kernel/driver-kit/../../kernel/driver-kit/fixtures/no-proc/python3') ... FAIL
 
 ======================================================================
@@ -24,7 +24,7 @@ First differing element 0:
 -   'fail stop: ps -E never showed a process of this run, so the kit cannot tell '
 -   'which processes the driver started',
 -   'fail token: ps -E never showed a process of this run, so the kit cannot '
--   'tell which processes the driver started']) : 
+-   'tell which processes the driver started']) :
 
 ----------------------------------------------------------------------
 Ran 1 test

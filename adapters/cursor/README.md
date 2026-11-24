@@ -2,6 +2,8 @@
 
 Login: held by Cursor
 
+Effort: the host can't set it (the driver uses the Cloud Agents API's model ID and sends no separate effort setting). A start that carries `effort` is refused before contacting Cursor.
+
 - The key is your own `CURSOR_API_KEY`, or the keychain entry `openwiz-cursor-cloud` when that variable is unset.
 - OpenWiz never stores it. Removing it from your environment or keychain only stops OpenWiz using it here; the key stays valid at Cursor until you revoke it in Cursor's dashboard (API Keys). If it may have leaked, revoke it there.
 

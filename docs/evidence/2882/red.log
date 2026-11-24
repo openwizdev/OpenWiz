@@ -1,0 +1,187 @@
+FFFFFFFF
+======================================================================
+FAIL: test_a_clean_checkout_supplies_a_complete_observation_the_guard_admits (__main__.Supply.test_a_clean_checkout_supplies_a_complete_observation_the_guard_admits)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/ci-overload/test_supply.py", line 109, in test_a_clean_checkout_supplies_a_complete_observation_the_guard_admits
+    observation = self.written(answers())
+                  ^^^^^^^^^^^^^^^^^^^^^^^
+  File "<checkout>/tools/ci-overload/test_supply.py", line 101, in written
+    self.assertEqual((result.returncode, result.stdout, result.stderr), (0, '', ''))
+AssertionError: Tuples differ: (1, '', 'Traceback (most recent call last)[162 chars]'\n') != (0, '', '')
+
+First differing element 0:
+1
+0
+
++ (0, '', '')
+- (1,
+-  '',
+-  'Traceback (most recent call last):\n'
+-  '  File "/tmp/SYNTHETIC/checkout/tools/ci-overload/supply.py", line 11, in '
+-  '<module>\n'
+-  '    import collect_ci\n'
+-  "ModuleNotFoundError: No module named 'collect_ci'\n")
+
+======================================================================
+FAIL: test_a_failing_reader_exits_1_and_writes_nothing (__main__.Supply.test_a_failing_reader_exits_1_and_writes_nothing) (case='no budgets')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/ci-overload/test_supply.py", line 171, in test_a_failing_reader_exits_1_and_writes_nothing
+    self.assertEqual((result.returncode, result.stdout, result.stderr), (1, '', line))
+AssertionError: Tuples differ: (1, '', 'Traceback (most recent call last):\n  Fil[154 chars]'\n') != (1, '', 'supply: the queue read failed\n')
+
+First differing element 2:
+'Traceback (most recent call last):\n  Fil[153 chars]\'\n'
+'supply: the queue read failed\n'
+
++ (1, '', 'supply: the queue read failed\n')
+- (1,
+-  '',
+-  'Traceback (most recent call last):\n'
+-  '  File "/tmp/SYNTHETIC/checkout/tools/ci-overload/supply.py", line 11, in '
+-  '<module>\n'
+-  '    import collect_ci\n'
+-  "ModuleNotFoundError: No module named 'collect_ci'\n")
+
+======================================================================
+FAIL: test_a_failing_reader_exits_1_and_writes_nothing (__main__.Supply.test_a_failing_reader_exits_1_and_writes_nothing) (case='no run listing')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/ci-overload/test_supply.py", line 171, in test_a_failing_reader_exits_1_and_writes_nothing
+    self.assertEqual((result.returncode, result.stdout, result.stderr), (1, '', line))
+AssertionError: Tuples differ: (1, '', 'Traceback (most recent call last):\n  Fil[154 chars]'\n') != (1, '', 'supply: the queue read failed\n')
+
+First differing element 2:
+'Traceback (most recent call last):\n  Fil[153 chars]\'\n'
+'supply: the queue read failed\n'
+
++ (1, '', 'supply: the queue read failed\n')
+- (1,
+-  '',
+-  'Traceback (most recent call last):\n'
+-  '  File "/tmp/SYNTHETIC/checkout/tools/ci-overload/supply.py", line 11, in '
+-  '<module>\n'
+-  '    import collect_ci\n'
+-  "ModuleNotFoundError: No module named 'collect_ci'\n")
+
+======================================================================
+FAIL: test_a_failing_reader_exits_1_and_writes_nothing (__main__.Supply.test_a_failing_reader_exits_1_and_writes_nothing) (case='no reader')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/ci-overload/test_supply.py", line 171, in test_a_failing_reader_exits_1_and_writes_nothing
+    self.assertEqual((result.returncode, result.stdout, result.stderr), (1, '', line))
+AssertionError: Tuples differ: (1, '', 'Traceback (most recent call last):\n  Fil[132 chars]'\n') != (1, '', 'supply: the queue reader could not be imported\n')
+
+First differing element 2:
+'Traceback (most recent call last):\n  Fil[131 chars]\'\n'
+'supply: the queue reader could not be imported\n'
+
++ (1, '', 'supply: the queue reader could not be imported\n')
+- (1,
+-  '',
+-  'Traceback (most recent call last):\n'
+-  '  File "/tmp/SYNTHETIC/lone/supply.py", line 11, in <module>\n'
+-  '    import collect_ci\n'
+-  "ModuleNotFoundError: No module named 'collect_ci'\n")
+
+======================================================================
+FAIL: test_a_partial_read_keeps_its_known_exhaustion (__main__.Supply.test_a_partial_read_keeps_its_known_exhaustion)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/ci-overload/test_supply.py", line 150, in test_a_partial_read_keeps_its_known_exhaustion
+    answer = self.guard(self.written(answered)['observed_at'])
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "<checkout>/tools/ci-overload/test_supply.py", line 101, in written
+    self.assertEqual((result.returncode, result.stdout, result.stderr), (0, '', ''))
+AssertionError: Tuples differ: (1, '', 'Traceback (most recent call last)[162 chars]'\n') != (0, '', '')
+
+First differing element 0:
+1
+0
+
++ (0, '', '')
+- (1,
+-  '',
+-  'Traceback (most recent call last):\n'
+-  '  File "/tmp/SYNTHETIC/checkout/tools/ci-overload/supply.py", line 11, in '
+-  '<module>\n'
+-  '    import collect_ci\n'
+-  "ModuleNotFoundError: No module named 'collect_ci'\n")
+
+======================================================================
+FAIL: test_an_unestablished_page_run_or_attempt_writes_complete_false (__main__.Supply.test_an_unestablished_page_run_or_attempt_writes_complete_false) (case='missing_page')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/ci-overload/test_supply.py", line 139, in test_an_unestablished_page_run_or_attempt_writes_complete_false
+    observation = self.written(answered)
+                  ^^^^^^^^^^^^^^^^^^^^^^
+  File "<checkout>/tools/ci-overload/test_supply.py", line 101, in written
+    self.assertEqual((result.returncode, result.stdout, result.stderr), (0, '', ''))
+AssertionError: Tuples differ: (1, '', 'Traceback (most recent call last)[162 chars]'\n') != (0, '', '')
+
+First differing element 0:
+1
+0
+
++ (0, '', '')
+- (1,
+-  '',
+-  'Traceback (most recent call last):\n'
+-  '  File "/tmp/SYNTHETIC/checkout/tools/ci-overload/supply.py", line 11, in '
+-  '<module>\n'
+-  '    import collect_ci\n'
+-  "ModuleNotFoundError: No module named 'collect_ci'\n")
+
+======================================================================
+FAIL: test_an_unestablished_page_run_or_attempt_writes_complete_false (__main__.Supply.test_an_unestablished_page_run_or_attempt_writes_complete_false) (case='older_attempt')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/ci-overload/test_supply.py", line 139, in test_an_unestablished_page_run_or_attempt_writes_complete_false
+    observation = self.written(answered)
+                  ^^^^^^^^^^^^^^^^^^^^^^
+  File "<checkout>/tools/ci-overload/test_supply.py", line 101, in written
+    self.assertEqual((result.returncode, result.stdout, result.stderr), (0, '', ''))
+AssertionError: Tuples differ: (1, '', 'Traceback (most recent call last)[162 chars]'\n') != (0, '', '')
+
+First differing element 0:
+1
+0
+
++ (0, '', '')
+- (1,
+-  '',
+-  'Traceback (most recent call last):\n'
+-  '  File "/tmp/SYNTHETIC/checkout/tools/ci-overload/supply.py", line 11, in '
+-  '<module>\n'
+-  '    import collect_ci\n'
+-  "ModuleNotFoundError: No module named 'collect_ci'\n")
+
+======================================================================
+FAIL: test_an_unestablished_page_run_or_attempt_writes_complete_false (__main__.Supply.test_an_unestablished_page_run_or_attempt_writes_complete_false) (case='unknown_status')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/ci-overload/test_supply.py", line 139, in test_an_unestablished_page_run_or_attempt_writes_complete_false
+    observation = self.written(answered)
+                  ^^^^^^^^^^^^^^^^^^^^^^
+  File "<checkout>/tools/ci-overload/test_supply.py", line 101, in written
+    self.assertEqual((result.returncode, result.stdout, result.stderr), (0, '', ''))
+AssertionError: Tuples differ: (1, '', 'Traceback (most recent call last)[162 chars]'\n') != (0, '', '')
+
+First differing element 0:
+1
+0
+
++ (0, '', '')
+- (1,
+-  '',
+-  'Traceback (most recent call last):\n'
+-  '  File "/tmp/SYNTHETIC/checkout/tools/ci-overload/supply.py", line 11, in '
+-  '<module>\n'
+-  '    import collect_ci\n'
+-  "ModuleNotFoundError: No module named 'collect_ci'\n")
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.198s
+
+FAILED (failures=8)

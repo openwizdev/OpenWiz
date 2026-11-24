@@ -1,0 +1,82 @@
+test_boat_missing_is_skipped_and_runs_no_status_command (__main__.BoatHost.test_boat_missing_is_skipped_and_runs_no_status_command) ... ok
+test_boat_signed_out_is_skipped_and_reads_nothing_more (__main__.BoatHost.test_boat_signed_out_is_skipped_and_reads_nothing_more) ... ok
+test_gh_missing_is_skipped_and_runs_no_status_command (__main__.BoatHost.test_gh_missing_is_skipped_and_runs_no_status_command) ... ok
+test_gh_signed_out_is_skipped (__main__.BoatHost.test_gh_signed_out_is_skipped) ... FAIL
+test_signed_in_everywhere_is_skipped_as_cost_and_starts_nothing (__main__.BoatHost.test_signed_in_everywhere_is_skipped_as_cost_and_starts_nothing) ... FAIL
+test_the_config_checks_only_the_cited_read_only_status_commands (__main__.BoatHost.test_the_config_checks_only_the_cited_read_only_status_commands) ... FAIL
+
+======================================================================
+FAIL: test_gh_signed_out_is_skipped (__main__.BoatHost.test_gh_signed_out_is_skipped)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/hosts/test_boat.py", line 131, in test_gh_signed_out_is_skipped
+    self.assertEqual(self.rig(signed_in=('boat',)), [STATUS['boat'], STATUS['gh']])
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "kernel/live-rig/hosts/test_boat.py", line 91, in rig
+    self.assertEqual((p.returncode, p.stdout.splitlines()),
+AssertionError: Tuples differ: (0, [[30 chars]signed in: gh', 'skipped boat.dev codex: not signed in: gh']) != (0, [[30 chars]signed in: env', 'skipped boat.dev codex: not signed in: env'])
+
+First differing element 1:
+['ski[25 chars] signed in: gh', 'skipped boat.dev codex: not signed in: gh']
+['ski[25 chars] signed in: env', 'skipped boat.dev codex: not signed in: env']
+
+  (0,
+-  ['skipped boat.dev claude: not signed in: gh',
+?                                            ^^
+
++  ['skipped boat.dev claude: not signed in: env',
+?                                            ^^^
+
+-   'skipped boat.dev codex: not signed in: gh'])
+?                                           ^^
+
++   'skipped boat.dev codex: not signed in: env'])
+?                                           ^^^
+ :
+
+======================================================================
+FAIL: test_signed_in_everywhere_is_skipped_as_cost_and_starts_nothing (__main__.BoatHost.test_signed_in_everywhere_is_skipped_as_cost_and_starts_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/hosts/test_boat.py", line 123, in test_signed_in_everywhere_is_skipped_as_cost_and_starts_nothing
+    self.assertEqual(self.rig(), [STATUS['boat'], STATUS['gh']])
+                     ^^^^^^^^^^
+  File "kernel/live-rig/hosts/test_boat.py", line 91, in rig
+    self.assertEqual((p.returncode, p.stdout.splitlines()),
+AssertionError: Tuples differ: (0, [[21 chars]ude: not signed in: gh', 'skipped boat.dev cod[19 chars]gh']) != (0, [[21 chars]ude: cost', 'skipped boat.dev codex: cost'])
+
+First differing element 1:
+['ski[17 chars]ude: not signed in: gh', 'skipped boat.dev cod[18 chars] gh']
+['ski[17 chars]ude: cost', 'skipped boat.dev codex: cost']
+
++ (0, ['skipped boat.dev claude: cost', 'skipped boat.dev codex: cost'])
+- (0,
+-  ['skipped boat.dev claude: not signed in: gh',
+-   'skipped boat.dev codex: not signed in: gh']) :
+
+======================================================================
+FAIL: test_the_config_checks_only_the_cited_read_only_status_commands (__main__.BoatHost.test_the_config_checks_only_the_cited_read_only_status_commands)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/hosts/test_boat.py", line 118, in test_the_config_checks_only_the_cited_read_only_status_commands
+    self.assertEqual(config['signed_in'], [STATUS['boat'], GH_PROBE])
+AssertionError: Lists differ: [['bo[24 chars]], ['gh', 'auth', 'status', '--hostname', 'git[33 chars]sh']] != [['bo[24 chars]], ['env', 'GH_TELEMETRY=0', 'gh', 'config', '[29 chars]er']]
+
+First differing element 1:
+['gh', 'auth', 'status', '--hostname', 'github.com', '--active', '--no-refresh']
+['env', 'GH_TELEMETRY=0', 'gh', 'config', 'get', '-h', 'github.com', 'user']
+
+  [['boat', 'status', '--check'],
++  ['env', 'GH_TELEMETRY=0', 'gh', 'config', 'get', '-h', 'github.com', 'user']]
+-  ['gh',
+-   'auth',
+-   'status',
+-   '--hostname',
+-   'github.com',
+-   '--active',
+-   '--no-refresh']]
+
+----------------------------------------------------------------------
+Ran 6 tests
+
+FAILED (failures=3)

@@ -1,0 +1,7 @@
+test_a_read_only_canonical_backup_is_cleanup_advice_and_the_install_is_whole (test_linked_config.LinkedConfig.test_a_read_only_canonical_backup_is_cleanup_advice_and_the_install_is_whole) ... ok
+test_a_preview_whose_lock_vanishes_before_it_opens_stays_read_only (test_linked_config.LockedRemove.test_a_preview_whose_lock_vanishes_before_it_opens_stays_read_only) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.838s
+
+OK

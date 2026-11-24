@@ -144,7 +144,8 @@ class Cursor(unittest.TestCase):
                            env=self.env, capture_output=True, text=True, timeout=300)
         self.assertEqual((p.returncode, p.stdout.splitlines()), (0, [
             'pass version: openwiz:records v1, and the schema is driver v1',
-            'pass start: the run posted builder status note 1',
+            "pass start: the run posted builder status note 1; effort: a start with it was refused, as the README's "
+            'Effort: line says',
             'pass wake: the run edited builder status note 1',
             'pass stop: the run ended, and a wake after it is refused',
             'pass token: no login or token passed through the driver, and on start, wake and stop the %s key '

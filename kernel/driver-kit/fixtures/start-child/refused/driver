@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+import importlib.machinery, importlib.util, os, sys
+sys.dont_write_bytecode = True
+HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+def load(name, *where):
+    spec = importlib.util.spec_from_loader(name, importlib.machinery.SourceFileLoader(name, os.path.join(HERE, *where)))
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m
+
+
+d = load('effort', '..', '..', 'effort', 'driver')
+
+
+def refuse(t, req):
+    raise t.Refused('harness %s cannot run at effort %s' % (req['harness'], req['effort']), d.REFUSAL)
+
+
+d.refuse = refuse
+load('child', '..', 'child.py').wrap(d.apply(d.template())).main()

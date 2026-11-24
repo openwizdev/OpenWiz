@@ -1,0 +1,5 @@
+# Base journey test (before this change) run with PATH=<python3, sh, room-cli, gh, git only; no ldd>
+FAIL: test_from_the_line_to_a_first_fleet_on_a_cold_consumer (tools.install.tests.journey.test_base_journey.InstallJourney.test_from_the_line_to_a_first_fleet_on_a_cold_consumer)
+AssertionError: 5 != 0 : {"schema":"openwiz.preflight.v1","ready":false,"target":"x86_64-unknown-linux-gnu","checks":[{"id":"python","state":"ok","next":"Python 3.11 is enough."},{"id":"target","state":"ok","next":"Supported."},{"id":"disk","state":"ok","next":"Enough free space."},{"id":"glibc","state":"refused","next":"OpenWiz's Linux build needs glibc 2.34 or later; could not read the glibc version from ldd --version."},{"id":"room-cli","state":"ok","next":"Found on PATH; setup checks it."},{"id":"gh","state":"ok","next":"Found on PATH; setup checks it."},{"id":"git","state":"ok","next":"Found on PATH; setup checks it."}],"reason":"Read this machine only, running only ldd --version; nothing was installed."}
+Ran 1 test in 0.150s
+FAILED (failures=1)

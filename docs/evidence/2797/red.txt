@@ -1,0 +1,95 @@
+FFFFF
+======================================================================
+FAIL: test_revoke_names_the_failed_private_folder_check (__main__.Revoke.test_revoke_names_the_failed_private_folder_check) (guidance='the private token directory must be a 0700 directory you own')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 1027, in test_revoke_names_the_failed_private_folder_check
+    self.assertEqual((done.returncode, done.stdout, done.stderr),
+AssertionError: Tuples differ: (1, '[40 chars]ked (no token found)\n') != (1, '[40 chars]ked (the private token directory must be a 070[19 chars])\n')
+
+First differing element 2:
+'open[32 chars]ked (no token found)\n'
+'open[32 chars]ked (the private token directory must be a 070[18 chars]n)\n'
+
+- (1, '', 'openwiz: openwiz[bot] token not revoked (no token found)\n')
++ (1,
++  '',
++  'openwiz: openwiz[bot] token not revoked (the private token directory must be '
++  'a 0700 directory you own)\n') : catches: revoke calls an unsafe token folder empty
+
+======================================================================
+FAIL: test_revoke_names_the_failed_private_folder_check (__main__.Revoke.test_revoke_names_the_failed_private_folder_check) (guidance='the private token directory must be a real directory, through no symlink')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 1027, in test_revoke_names_the_failed_private_folder_check
+    self.assertEqual((done.returncode, done.stdout, done.stderr),
+AssertionError: Tuples differ: (1, '[40 chars]ked (no token found)\n') != (1, '[40 chars]ked (the private token directory must be a rea[31 chars])\n')
+
+First differing element 2:
+'open[32 chars]ked (no token found)\n'
+'open[32 chars]ked (the private token directory must be a rea[30 chars]k)\n'
+
+- (1, '', 'openwiz: openwiz[bot] token not revoked (no token found)\n')
++ (1,
++  '',
++  'openwiz: openwiz[bot] token not revoked (the private token directory must be '
++  'a real directory, through no symlink)\n') : catches: revoke calls an unsafe token folder empty
+
+======================================================================
+FAIL: test_revoke_names_the_failed_private_folder_check (__main__.Revoke.test_revoke_names_the_failed_private_folder_check) (guidance='the private token directory must sit in folders only you or root can change')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 1027, in test_revoke_names_the_failed_private_folder_check
+    self.assertEqual((done.returncode, done.stdout, done.stderr),
+AssertionError: Tuples differ: (1, '[40 chars]ked (no token found)\n') != (1, '[40 chars]ked (the private token directory must sit in f[34 chars])\n')
+
+First differing element 2:
+'open[32 chars]ked (no token found)\n'
+'open[32 chars]ked (the private token directory must sit in f[33 chars]e)\n'
+
+- (1, '', 'openwiz: openwiz[bot] token not revoked (no token found)\n')
++ (1,
++  '',
++  'openwiz: openwiz[bot] token not revoked (the private token directory must '
++  'sit in folders only you or root can change)\n') : catches: revoke calls an unsafe token folder empty
+
+======================================================================
+FAIL: test_revoke_names_the_failed_private_folder_check (__main__.Revoke.test_revoke_names_the_failed_private_folder_check) (guidance='the private token directory must be outside every Git working tree')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 1027, in test_revoke_names_the_failed_private_folder_check
+    self.assertEqual((done.returncode, done.stdout, done.stderr),
+AssertionError: Tuples differ: (1, '[40 chars]ked (no token found)\n') != (1, '[40 chars]ked (the private token directory must be outsi[25 chars])\n')
+
+First differing element 2:
+'open[32 chars]ked (no token found)\n'
+'open[32 chars]ked (the private token directory must be outsi[24 chars]e)\n'
+
+- (1, '', 'openwiz: openwiz[bot] token not revoked (no token found)\n')
++ (1,
++  '',
++  'openwiz: openwiz[bot] token not revoked (the private token directory must be '
++  'outside every Git working tree)\n') : catches: revoke calls an unsafe token folder empty
+
+======================================================================
+FAIL: test_revoke_names_the_failed_private_folder_check (__main__.Revoke.test_revoke_names_the_failed_private_folder_check) (guidance='the private token directory must be an absolute path')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 1027, in test_revoke_names_the_failed_private_folder_check
+    self.assertEqual((done.returncode, done.stdout, done.stderr),
+AssertionError: Tuples differ: (1, '[39 chars]oked (no token found)\n') != (1, '[39 chars]oked (the private token directory must be an absolute path)\n')
+
+First differing element 2:
+'open[30 chars]voked (no token found)\n'
+'open[30 chars]voked (the private token directory must be an absolute path)\n'
+
+- (1, '', 'openwiz: openwiz[bot] token not revoked (no token found)\n')
++ (1,
++  '',
++  'openwiz: openwiz[bot] token not revoked (the private token directory must be '
++  'an absolute path)\n') : catches: revoke calls an unsafe token folder empty
+
+----------------------------------------------------------------------
+Ran 1 test in 1.004s
+
+FAILED (failures=5)

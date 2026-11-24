@@ -76,7 +76,8 @@ class Driver(unittest.TestCase):
                            env=self.env, capture_output=True, text=True, timeout=300)
         self.assertEqual((p.returncode, p.stdout.splitlines()), (0, [
             'pass version: openwiz:records v1, and the schema is driver v1',
-            'pass start: the run posted builder status note 1',
+            'pass start: the run posted builder status note 1; effort: a start with it was refused, as the README\'s '
+            'Effort: line says',
             'pass wake: the run edited builder status note 1',
             'pass stop: the run ended, and a wake after it is refused',
             'pass token: no login or token passed through the driver, and on start, wake and stop the devin key '
@@ -172,6 +173,12 @@ class Driver(unittest.TestCase):
             lines = f.read().splitlines()
         login = lines.index('Login: held by Devin')
         self.assertEqual((lines[login + 1], lines[login + 2][:35]), ('', "Effort: the host can't set it (Devi"))
+
+
+    def test_a_provider_qualified_model_passes_the_pattern_and_meets_devins_own_modes(self):
+        code, out = self.call('start', dict(START, model='kimi-code/kimi-for-coding'))
+        self.assertEqual((code, out['error']), (1, 'model is not a Devin mode'))
+        self.assertEqual(self.calls(), [])
 
 
 if __name__ == '__main__':

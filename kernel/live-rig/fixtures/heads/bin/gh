@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-import base64, hashlib, json, os, sys
+import base64, hashlib, json, os, sys, urllib.parse
 
 args = sys.argv[1:]
 host = args[-1] if args[-2:-1] == ['--hostname'] else None
 args = args[:-2] if host else args
-auth = sorted(k for k in ('GH_TOKEN', 'GITHUB_TOKEN', 'GH_ENTERPRISE_TOKEN', 'GITHUB_ENTERPRISE_TOKEN', 'GH_HOST')
-              if k in os.environ)
+host = host or os.environ.get('GH_HOST')
+auth = sorted(k for k in ('GH_TOKEN', 'GITHUB_TOKEN', 'GH_ENTERPRISE_TOKEN', 'GITHUB_ENTERPRISE_TOKEN') if k in os.environ)
 stdin = '' if sys.stdin is None or sys.stdin.isatty() else sys.stdin.read()
 with open(os.environ['HEADS_GH_LOG'], 'a') as f:
     f.write(json.dumps({'args': args, 'stdin': stdin, 'hostname': host, 'auth': auth}) + '\n')
@@ -72,9 +72,8 @@ if args[:2] == ['api', '-i']:
     if comments is None:
         print('HTTP/2.0 404 Not Found\r\n\r\n{"message": "Not Found"}')
         sys.exit(1)
-    paged = number in os.environ.get('HEADS_PAGED', '').split(',')
-    comments = comments[:1] if paged and page == 1 else comments[1:] if paged else comments
-    link = 'Link: <https://api.github.com/%s&page=2>; rel="next"\r\n' % path if paged and page == 1 else ''
+    link = 'Link: <https://api.github.com/%s&page=2>; rel="next"\r\n' % path if page == 1 and len(comments) > 100 else ''
+    comments = comments[100:] if page == 2 else comments[:100]
     body = json.dumps(comments)
     tag = 'W/"%s"' % hashlib.sha256(body.encode()).hexdigest()
     if etag == tag:
@@ -96,8 +95,14 @@ if args[:1] == ['api'] and len(args) == 2 and args[1].startswith(fork + 'content
     text = state('contents').get(branch + ':' + rel)
     answer({'content': base64.b64encode(text.encode()).decode()}) if text else fail('Not Found')
 if args[:1] == ['api'] and len(args) == 2 and args[1].startswith('repos/openwizdev/WizMarket/pulls?head='):
-    head = args[1].split('head=', 1)[1].split('&')[0]
-    answer([{'html_url': u} for h, u in state('pulls').items() if h == head])
+    query = urllib.parse.parse_qs(args[1].split('?', 1)[1])
+    answer([p for p in state('pulls').get(query['head'][0], []) if query['state'][0] in ('all', p['state'])])
+if args[:1] == ['api'] and len(args) == 2 and args[1].startswith('repos/openwizdev/OpenWiz/issues/') and \
+        '/comments?' in args[1]:
+    query = {k: v[0] for k, v in urllib.parse.parse_qs(args[1].split('?', 1)[1]).items()}
+    found = [c for c in state('comments').get(args[1].split('/')[4], []) if c['updated_at'] >= query.get('since', '')]
+    page = int(query.get('page', '1'))
+    answer(found[(page - 1) * 100:page * 100])
 
 
 def lose(method):
@@ -109,8 +114,12 @@ if args[:2] == ['api', '-X'] and args[4:] == ['--input', '-']:
     method, path, sent = args[2], args[3], json.loads(stdin or '{}')
     if method == 'POST' and path.startswith('repos/openwizdev/OpenWiz/issues/') and path.endswith('/comments'):
         number = path.split('/')[4]
-        answer({'html_url': 'https://github.com/openwizdev/OpenWiz/pull/%s#issuecomment-%d' % (
-            number, 900 + counter('comment'))})
+        url = 'https://github.com/openwizdev/OpenWiz/pull/%s#issuecomment-%d' % (number, 900 + counter('comment'))
+        state('comments', lambda c: c.setdefault(number, []).append({'html_url': url, 'body': sent['body'],
+                                                                       'user': {'login': login}, 'updated_at': os.environ.get(
+                                                                           'HEADS_NOW', '2030-01-02T03:04:05Z')}))
+        lose('comment')
+        answer({'html_url': url})
     if (method, path) == ('POST', 'repos/openwizdev/WizMarket/forks'):
         answer({'full_name': login + '/WizMarket'})
     if (method, path) == ('POST', 'repos/%s/WizMarket/git/refs' % login):
@@ -129,6 +138,8 @@ if args[:2] == ['api', '-X'] and args[4:] == ['--input', '-']:
         if os.environ.get('HEADS_REFUSE') == 'pulls':
             fail('Server Error')
         url = 'https://github.com/openwizdev/WizMarket/pull/%d' % (40 + counter('pull'))
-        state('pulls', lambda p: p.update({sent['head']: url}))
+        state('pulls', lambda p: p.setdefault(sent['head'], []).append({
+            'html_url': url, 'state': 'open', 'head': {'label': sent['head']}, 'base': {'ref': sent['base']},
+            'title': sent['title'], 'body': sent['body']}))
         answer({'html_url': url})
 sys.exit('gh: the fake refuses %s' % ' '.join(args[:4]))

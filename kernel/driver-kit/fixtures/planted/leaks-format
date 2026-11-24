@@ -11,8 +11,7 @@ FORMATS = {
 }
 
 if __name__ == '__main__':
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', '..', 'adapters', 'template',
-                        'driver')
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'base', 'driver')
     spec = importlib.util.spec_from_loader('template', importlib.machinery.SourceFileLoader('template', path))
     t = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(t)

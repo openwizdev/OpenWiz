@@ -1,0 +1,66 @@
+# Red run (#2481, the gh probe ruling: test expects gh config get -h github.com user, config still has gh auth status) on 1b033c59 plus the test: PATH=<37 refusing stubs>:$PATH env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/hosts/test_cloudroom.py
+test_gh_missing_is_skipped_and_runs_no_status_command (__main__.CloudroomHost.test_gh_missing_is_skipped_and_runs_no_status_command) ... ok
+test_gh_signed_out_is_skipped (__main__.CloudroomHost.test_gh_signed_out_is_skipped) ... FAIL
+test_room_cli_missing_is_skipped_and_runs_no_status_command (__main__.CloudroomHost.test_room_cli_missing_is_skipped_and_runs_no_status_command) ... ok
+test_room_cli_signed_out_is_skipped_and_reads_nothing_more (__main__.CloudroomHost.test_room_cli_signed_out_is_skipped_and_reads_nothing_more) ... ok
+test_signed_in_everywhere_is_skipped_as_cost_and_starts_nothing (__main__.CloudroomHost.test_signed_in_everywhere_is_skipped_as_cost_and_starts_nothing) ... FAIL
+test_the_config_checks_only_the_cited_read_only_status_commands (__main__.CloudroomHost.test_the_config_checks_only_the_cited_read_only_status_commands) ... FAIL
+
+======================================================================
+FAIL: test_gh_signed_out_is_skipped (__main__.CloudroomHost.test_gh_signed_out_is_skipped)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/hosts/test_cloudroom.py", line 126, in test_gh_signed_out_is_skipped
+    self.assertEqual(self.rig(signed_in=('room-cli',)), [STATUS['room-cli'], STATUS['gh']])
+AssertionError: Lists differ: ['roo[13 chars], 'gh auth status --hostname github.com --active --no-refresh'] != ['roo[13 chars], 'gh config get -h github.com user']
+
+First differing element 1:
+'gh auth status --hostname github.com --active --no-refresh'
+'gh config get -h github.com user'
+
++ ['room-cli status', 'gh config get -h github.com user']
+- ['room-cli status',
+-  'gh auth status --hostname github.com --active --no-refresh']
+
+======================================================================
+FAIL: test_signed_in_everywhere_is_skipped_as_cost_and_starts_nothing (__main__.CloudroomHost.test_signed_in_everywhere_is_skipped_as_cost_and_starts_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/hosts/test_cloudroom.py", line 118, in test_signed_in_everywhere_is_skipped_as_cost_and_starts_nothing
+    self.assertEqual(self.rig(), [STATUS['room-cli'], STATUS['gh']])
+                     ^^^^^^^^^^
+  File "<checkout>/kernel/live-rig/hosts/test_cloudroom.py", line 81, in rig
+    self.assertEqual((p.returncode, p.stdout.splitlines()),
+AssertionError: Tuples differ: (0, ['skipped Cloudroom claude: not signed in: gh']) != (0, ['skipped Cloudroom claude: cost'])
+
+First differing element 1:
+['skipped Cloudroom claude: not signed in: gh']
+['skipped Cloudroom claude: cost']
+
+- (0, ['skipped Cloudroom claude: not signed in: gh'])
+?                                 ^  --------------
+
++ (0, ['skipped Cloudroom claude: cost'])
+?                                 ^ +
+ :
+
+======================================================================
+FAIL: test_the_config_checks_only_the_cited_read_only_status_commands (__main__.CloudroomHost.test_the_config_checks_only_the_cited_read_only_status_commands)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/hosts/test_cloudroom.py", line 109, in test_the_config_checks_only_the_cited_read_only_status_commands
+    self.assertEqual([' '.join(c) for c in config['signed_in']], [STATUS['room-cli'], STATUS['gh']])
+AssertionError: Lists differ: ['roo[13 chars], 'gh auth status --hostname github.com --active --no-refresh'] != ['roo[13 chars], 'gh config get -h github.com user']
+
+First differing element 1:
+'gh auth status --hostname github.com --active --no-refresh'
+'gh config get -h github.com user'
+
++ ['room-cli status', 'gh config get -h github.com user']
+- ['room-cli status',
+-  'gh auth status --hostname github.com --active --no-refresh']
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.316s
+
+FAILED (failures=3)

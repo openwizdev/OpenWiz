@@ -12,6 +12,9 @@ VERSION = {'driver': 'cursor', 'records': ['openwiz:records v1'],
 START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
          'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
          'model': r'[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}'}
+START_WITH_EFFORT = dict(START, effort=r'[a-z][a-z0-9-]{0,19}')
+CANT_SET_EFFORT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster "
+                   "to run it at the host's default")
 RUN = {'run': r'run-[0-9a-f]{12}'}
 HARNESS = 'cursor'
 SIGN_IN = 'check your Cursor API key and where you keep it, as adapters/cursor/README.md says'
@@ -36,6 +39,8 @@ def read(fields):
         req = json.loads(sys.stdin.read(), object_pairs_hook=unique)
     except ValueError:
         raise Refused('the input is not JSON', 'send one JSON object on stdin, as `driver schema` shows')
+    if fields is START and isinstance(req, dict) and 'effort' in req:
+        fields = START_WITH_EFFORT
     if not isinstance(req, dict) or set(req) != set(fields):
         raise Refused('the input needs exactly ' + ', '.join(fields), 'send only those fields; never a login')
     for key, pattern in fields.items():
@@ -182,6 +187,8 @@ def ending(agent, known):
 
 def start():
     req = read(START)
+    if 'effort' in req:
+        raise Refused("Cursor can't run harness %s at effort %s" % (req['harness'], req['effort']), CANT_SET_EFFORT)
     if req['harness'] != HARNESS:
         raise Refused('Cursor cloud agents run only Cursor\'s own agent, not %s' % req['harness'],
                       'start again with harness cursor, or use a driver for %s' % req['harness'])

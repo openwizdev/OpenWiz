@@ -25,7 +25,7 @@ SECRET = 'gh' + 'p_' + 'Synthetic0Rig0Value' * 2 + '00'
 KEYS = ['host', 'harness', 'model', 'date', 'driver_commit', 'kit_commit', 'outcome', 'skipped', 'kit_exit',
         'stdout', 'seconds']
 PASS = ['pass version: openwiz:records v1, and the schema is driver v1',
-        'pass start: the run posted builder status note 2',
+        'pass start: the run posted builder status note 2; effort: medium reached a process the run started',
         'pass wake: the run edited builder status note 2',
         'pass stop: the run ended, and a wake after it is refused',
         'pass token: no login or token passed through the driver']
@@ -39,9 +39,10 @@ AGENT_CLIS = ['claude', 'codex', 'cursor-agent', 'agent', 'pi', 'opencode', 'cop
               'qwen', 'cline', 'kilo', 'crush', 'vibe', 'auggie', 'kiro-cli', 'junie', 'amp', 'agy', 'oz', 'sculpt',
               'hermes', 'acpx', 'droid']
 COPIED = ['kernel/live-rig/rig.py', 'kernel/live-rig/fixtures/hosts', 'kernel/driver-kit/kit.py',
-          'kernel/driver-kit/schema.json',
-          'kernel/driver-kit/fixtures/planted', 'kernel/records-kit/check.py', 'kernel/records.v1.md',
-          'adapters/template/driver', 'adapters/template/schema.json']
+          'kernel/driver-kit/hostkey.py', 'kernel/driver-kit/hosts.json', 'kernel/driver-kit/schema.json',
+          'kernel/driver-kit/fixtures/base', 'kernel/driver-kit/fixtures/planted', 'kernel/records-kit/check.py',
+          'kernel/records.v1.md', 'adapters/template/driver', 'adapters/template/README.md',
+          'adapters/template/schema.json']
 
 
 def git(cwd, *args):
@@ -68,6 +69,8 @@ class Rig(unittest.TestCase):
         for name in ('planted', 'quoting'):
             os.makedirs(os.path.join(self.checkout, 'adapters', name))
             shutil.copy2(os.path.join(FAKES, name + '-driver'), os.path.join(self.checkout, 'adapters', name, 'driver'))
+        shutil.copy2(os.path.join(ROOT, 'adapters', 'template', 'README.md'),
+                     os.path.join(self.checkout, 'adapters', 'quoting', 'README.md'))
         git(self.checkout, 'init', '-q')
         git(self.checkout, 'add', '-A')
         git(self.checkout, 'commit', '-q', '-m', 'fixture checkout')
@@ -224,7 +227,7 @@ class Rig(unittest.TestCase):
         self.assertEqual(self.record('fixture-quoting')['stdout'].splitlines(),
                          [PASS[0], 'fail start: withheld', 'fail wake: not run: start failed',
                           'fail stop: not run: start failed', PASS[4]])
-        self.assertIn('fail start: cannot start %s in %s/adapters/quoting\n' % (REPO, os.path.realpath(
+        self.assertIn('fail start: cannot start %s in %s/adapters/quoting; next: fix the fixture\n' % (REPO, os.path.realpath(
             self.checkout)), err)
 
     def test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes(self):

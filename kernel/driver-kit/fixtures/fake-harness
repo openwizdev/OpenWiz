@@ -3,6 +3,9 @@ import json, os, re, subprocess, sys, time
 
 path, args = os.environ['KIT_TRACKER'], sys.argv[1:]
 if not os.environ.get('FAKE_WORKER'):
+    if os.environ.get('FAKE_ARGS'):
+        with open(os.environ['FAKE_ARGS'], 'a') as f:
+            f.write(json.dumps(args) + '\n')
     subprocess.Popen([sys.executable] + sys.argv, env=dict(os.environ, FAKE_WORKER=str(os.getpid())),
                      start_new_session=not os.environ.get('FAKE_SAME_GROUP'))
     sys.exit(0)

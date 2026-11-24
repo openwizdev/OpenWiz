@@ -94,7 +94,7 @@ class Driver(unittest.TestCase):
                            env=env, capture_output=True, text=True, timeout=120)
         self.assertEqual((p.returncode, p.stdout.splitlines()), (0, [
             'pass version: openwiz:records v1, and the schema is driver v1',
-            'pass start: the run posted builder status note 1',
+            'pass start: the run posted builder status note 1; effort: medium reached a process the run started',
             'pass wake: the run edited builder status note 1',
             'pass stop: the run ended, and a wake after it is refused',
             'pass token: no login or token passed through the driver']), p.stderr)
@@ -171,18 +171,76 @@ class Driver(unittest.TestCase):
                 self.assertNotIn(['thread', 'spawn'], [c[:2] for c in self.calls()])
                 self.assertEqual(self.started(), [])
 
+    def lookup_failed(self, harness='gemini', said='room-cli gave an error the driver does not repeat'):
+        return {'error': 'Cloudroom did not list the levels of harness %s: %s; nothing was saved or started'
+                         % (harness, said),
+                'next': 'check `room-cli provider models %s`, then start again' % driver.provider(dict(harness=harness))}
+
     def test_a_lookup_diagnostic_never_reaches_the_answer(self):
-        credential = 'synthetic-demo-credential-' + self.mark
-        for unknown in ('gemini', credential):
-            with self.subTest(unknown=unknown):
+        credential = 'GH_TOKEN=synthetic-demo-credential-' + self.mark
+        line = 'Unknown provider gemini. See room-cli provider list.'
+        says = {'a mismatched name carrying it': 'Unknown provider %s. See room-cli provider list.\n' % credential,
+                'after the right line': line + ' ' + credential + '\n',
+                'before the right line': credential + ' ' + line + '\n',
+                'on the next line': line + '\n' + credential + '\n',
+                'the credential on stdout, the right line on stderr': line + '\n'}
+        for name, say in says.items():
+            with self.subTest(name):
                 self.fresh()
-                code, out = self.call('start', dict(START, harness='gemini', effort='medium'), GH_TOKEN=credential,
-                                      FAKE_ROOM_UNKNOWN=unknown)
-                self.assertEqual((code, out), (1, {
-                    'error': 'Cloudroom did not list the levels of harness gemini: room-cli gave an error the driver '
-                             'does not repeat; nothing was saved or started',
-                    'next': 'check `room-cli provider models gemini`, then start again'}))
+                code, out = self.call('start', dict(START, harness='gemini', effort='medium'), FAKE_ROOM_MODELS_SAY=say,
+                                      FAKE_ROOM_MODELS_OUT=credential if 'stdout' in name else '')
+                self.assertEqual((code, out), (1, self.lookup_failed()))
+                self.assertNotIn('synthetic-demo-credential', json.dumps(out))
                 self.assertEqual(self.calls(), [['provider', 'models', 'gemini', '--json']])
+                self.assertEqual(self.started(), [])
+
+    def test_an_unknown_provider_gets_the_exact_refusal(self):
+        for harness, say in (('gemini', None), ('gemini', 'Unknown provider gemini. See room-cli provider list.'),
+                             ('synthetic-harness', None), ('claude', 'Unknown provider claude-code. See room-cli '
+                                                                     'provider list.\n')):
+            with self.subTest(harness=harness, say=say):
+                self.fresh()
+                code, out = self.call('start', dict(START, harness=harness, effort='medium'),
+                                      **({} if say is None else {'FAKE_ROOM_MODELS_SAY': say}))
+                self.assertEqual((code, out), (1, {
+                    'error': "Cloudroom does not know harness %s, so it can't set effort medium for it; nothing was "
+                             'saved or started' % harness, 'next': CANT}))
+                self.assertEqual(self.calls(), [['provider', 'models', driver.provider(dict(harness=harness)), '--json']])
+                self.assertEqual(self.started(), [])
+
+    def test_a_credential_shaped_harness_with_an_effort_never_reaches_the_lookup(self):
+        value = 'sk' + '-synthetic0marker0value00' + self.mark
+        code, out = self.call('start', dict(START, harness=value, effort='medium'))
+        self.assertEqual(code, 1, out)
+        self.assertIn('harness looks like a credential', out['error'])
+        self.assertNotIn(value, json.dumps(out))
+        self.assertEqual((self.calls(), self.started()), ([], []))
+
+    def test_a_genuine_lookup_failure_keeps_its_fixed_words(self):
+        line = 'Unknown provider %s. See room-cli provider list.\n'
+        cases = {'another provider': (dict(FAKE_ROOM_MODELS_SAY=line % 'codex'), None),
+                 'a longer name': (dict(FAKE_ROOM_MODELS_SAY=line % 'gemini2'), None),
+                 'a shorter name': (dict(FAKE_ROOM_MODELS_SAY=line % 'gemin'), None),
+                 'another case': (dict(FAKE_ROOM_MODELS_SAY=line % 'Gemini'), None),
+                 "Cloudroom's name for a harness that has one": (dict(FAKE_ROOM_MODELS_SAY=line % 'gemini'), 'claude'),
+                 'the harness name for a provider Cloudroom names otherwise': (
+                     dict(FAKE_ROOM_MODELS_SAY=line % 'claude'), 'claude'),
+                 'another exit code': (dict(FAKE_ROOM_MODELS_SAY=line % 'gemini', FAKE_ROOM_MODELS_EXIT='2'), None),
+                 'an answer on stdout too': (dict(FAKE_ROOM_MODELS_SAY=line % 'gemini', FAKE_ROOM_MODELS_OUT='[]'), None),
+                 'the line on stdout only': (dict(FAKE_ROOM_MODELS_SAY='', FAKE_ROOM_MODELS_OUT=line % 'gemini'), None),
+                 'no answer': (dict(FAKE_ROOM_MODELS_SAY=''), None),
+                 'signed out': (dict(FAKE_ROOM_MODELS_SAY='Synthetic: not signed in\n'), None)}
+        for name, (env, harness) in cases.items():
+            with self.subTest(name):
+                self.fresh()
+                harness = harness or 'gemini'
+                code, out = self.call('start', dict(START, harness=harness, effort='medium'), **env)
+                said = ('room-cli is not signed in' if name == 'signed out' else
+                        'room-cli gave no answer' if name == 'no answer' else
+                        'room-cli gave an error the driver does not repeat')
+                self.assertEqual((code, out), (1, self.lookup_failed(harness, said)))
+                self.assertNotEqual(out['next'], CANT)
+                self.assertNotIn(['thread', 'spawn'], [c[:2] for c in self.calls()])
                 self.assertEqual(self.started(), [])
 
     def test_version_lists_effort_and_the_readme_says_how(self):
@@ -673,6 +731,13 @@ class Driver(unittest.TestCase):
         self.assertEqual(calls, [('thread', 'archive', 'thr_syn_0001')])
         self.assertIn(run, e.exception.args[0])
         self.assertIn('stop %s' % run, e.exception.args[1])
+
+
+    def test_a_provider_qualified_model_reaches_spawn(self):
+        code, out = self.call('start', dict(START, model='openrouter/anthropic/claude-sonnet-4.6'))
+        self.assertEqual(code, 0, out)
+        spawn = self.calls()[0]
+        self.assertEqual(spawn[spawn.index('--model') + 1], 'openrouter/anthropic/claude-sonnet-4.6')
 
 
 if __name__ == '__main__':

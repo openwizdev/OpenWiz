@@ -12,14 +12,14 @@ WRITABLE = 'make OPENWIZ_LOCAL_STATE (or ~/.local/state/openwiz-local) a folder 
 VERSION = {'driver': 'local', 'records': ['openwiz:records v1'], 'can': ['start', 'wake', 'stop', 'many-at-once']}
 START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
          'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
-         'model': r'[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}'}
+         'model': r'(?=.{1,100}$)[A-Za-z0-9][A-Za-z0-9 ._:@+-]*(/[A-Za-z0-9][A-Za-z0-9 ._:@+-]*)*'}
 RUN = {'run': r'run-[0-9a-f]{12}'}
 HARNESSES = {'claude': lambda model, mode, prompt: ['-p', prompt, '--model', model, '--permission-mode', mode],
              'codex': lambda model, mode, prompt: ['exec', '--model', model, '--sandbox', mode, prompt]}
 MODE_ROW = '| Harness permission mode |'
 ROWS = os.path.join(HERE, 'harnesses')
 ROW_FIELDS = ('harness', 'program', 'start', 'wake', 'session', 'modes', 'env', 'effort', 'login', 'daemon')
-OPTIONAL_ROW_FIELDS = ('signed_out', 'login_command')
+OPTIONAL_ROW_FIELDS = ('signed_out', 'login_command', 'login_env')
 PLACEHOLDERS = ('{prompt}', '{model}', '{session}', '{mode}', '{effort}')
 SESSION = r'[A-Za-z0-9._:-]{1,100}'
 EFFORT = r'[a-z][a-z0-9-]{0,19}'
@@ -132,6 +132,27 @@ def sign_in(row):
     if 'login_command' in row and not (plain(row['login_command']) and len(row['login_command']) <= 200):
         raise Broken('login_command', 'it is not one line of up to 200 characters, with no placeholder and nothing '
                                       'credential-shaped')
+    if 'login_env' in row:
+        # PRIVACY: login_env is a variable's name only; the driver never reads, passes or prints its value.
+        name = row['login_env']
+        if not isinstance(name, str) or not re.fullmatch(r'[A-Z][A-Z0-9_]{1,63}', name):
+            raise Broken('login_env', 'it is not one variable name: a capital, then 1 to 63 capitals, digits or _')
+        if holds_credential(name):
+            raise Broken('login_env', 'it looks like a credential; login_env names a variable, never its value')
+        if 'login_command' not in row:
+            raise Broken('login_command', 'a row with login_env names the command the user runs to sign in')
+        if isinstance(row['env'], dict) and name in row['env']:
+            raise Broken('login_env', "the row's env sets it; only the user sets it, for the CLI")
+        if len(not_signed_in(row)) > 300:
+            raise Broken('login_env', "with it, the not-signed-in next passes D3's 300 characters; shorten "
+                                      'login_command, login_env or program')
+
+
+def not_signed_in(row):
+    if 'login_env' in row:
+        return 'sign in with %s, or set %s for %s yourself, then start again' % (
+            row['login_command'], row['login_env'], row['program'])
+    return 'sign in yourself with `%s` on this machine, then start again' % row['login_command']
 
 
 def arguments(row, field, needs):
@@ -178,8 +199,8 @@ def check_row(row, name):
     if 'effort' not in row:
         raise Broken('effort', 'it has no effort form; give an effort map or "none: <one line why>"')
     if not set(ROW_FIELDS) <= set(row) <= set(ROW_FIELDS + OPTIONAL_ROW_FIELDS):
-        raise Broken('fields', 'it needs exactly %s, and may have %s' % (', '.join(ROW_FIELDS),
-                                                                         ' and '.join(OPTIONAL_ROW_FIELDS)))
+        raise Broken('fields', 'it needs exactly %s; optional: %s' % (', '.join(ROW_FIELDS),
+                                                                      ', '.join(OPTIONAL_ROW_FIELDS)))
     if isinstance(row['harness'], str) and row['harness'] in HARNESSES:
         raise Broken('harness', '%s is built in, and no row may use a built-in name' % row['harness'])
     if not isinstance(row['harness'], str) or row['harness'] != name or not re.fullmatch(START['harness'], name):
@@ -525,6 +546,32 @@ def record_kept(run, kept):
         pass
 
 
+def lsof_failed_record(run, supervisor):
+    return os.path.join(STATE, '%s.%d.nolsof' % (run, supervisor))
+
+
+def record_lsof_failed(run):
+    try:
+        with open(lsof_failed_record(run, os.getpid()), 'w') as f:
+            json.dump({'supervisor_since': since(os.getpid())}, f)
+        return True
+    except OSError:
+        return False
+
+
+def lsof_failed_in(run, supervisors):
+    for pid, started in supervisors:
+        try:
+            with open(lsof_failed_record(run, pid)) as f:
+                if json.load(f)['supervisor_since'] == started:
+                    return True
+        except FileNotFoundError:
+            continue
+        except (OSError, ValueError, KeyError, TypeError):
+            return True
+    return False
+
+
 def recorded_by(run, supervisors):
     recorded = {}
     for pid, started in supervisors:
@@ -539,7 +586,7 @@ def recorded_by(run, supervisors):
 
 
 def look_after_the_turn_on_macos(run, harness, output):
-    kept, looks = {}, 0
+    kept, looks, marked = {}, 0, False
     while True:
         children_left = any_child_running_after_reaping(harness)
         scanned = looks % LOOKS_PER_OUTPUT_CHECK == 0
@@ -547,6 +594,8 @@ def look_after_the_turn_on_macos(run, harness, output):
         if not children_left and not now and not scanned:
             now = members({os.getpid()}, kept, writing_to(output))
         looks += 1
+        if LSOF_COULD_NOT_CHECK and not marked:
+            marked = record_lsof_failed(run)
         if now != kept:
             kept = now
             record_kept(run, kept)
@@ -691,6 +740,8 @@ def running(turn):
 
 def end(turns, run):
     kept = [(t['supervisor'], t['supervisor_since']) for t in turns if t and t['supervisor_since'] is not None]
+    if lsof_failed_in(run, kept):
+        LSOF_COULD_NOT_CHECK.append(run)
     for sig, wait in ((signal.SIGTERM, GRACE), (signal.SIGKILL, 2)):
         sent, deadline = set(), time.monotonic() + wait
         while time.monotonic() < deadline:
@@ -776,10 +827,8 @@ def ended_at_once(run, turn, row=None):
         return
     end([turn], run)
     if signed_out and row and 'login_command' in row:
-        fix = 'sign in yourself with `%s` on this machine, then start again; %s has the turn\'s output' % (
-            row['login_command'], log_path(run))
-        fix = fix if len(fix) <= 300 else 'sign in yourself with `%s` on this machine, then start again' % (
-            row['login_command'])
+        fix = '%s; %s has the turn\'s output' % (not_signed_in(row), log_path(run))
+        fix = fix if len(fix) <= 300 else not_signed_in(row)
     else:
         fix = 'read %s, fix what it says there, then start again' % log_path(run)
     raise Refused('run %s: the first turn ended at once: %s (exit %s)' % (run, why, 'unknown' if code is None else code),
@@ -878,6 +927,11 @@ def answer(cmd):
             except OSError:
                 kept = False
             end(state['turns'], run)
+            for name in (lsof_failed_record(run, t['supervisor']) for t in state['turns'] if t):
+                try:
+                    os.remove(name)
+                except OSError:
+                    pass
             if not kept:
                 raise Refused('run %s has ended, but the driver could not save that it is stopped' % run,
                               WRITABLE + ', then stop it again')
