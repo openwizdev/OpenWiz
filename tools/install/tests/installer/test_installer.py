@@ -260,7 +260,9 @@ class Preflight(Installer):
                   [python, mac, disk, missing] + found[1:], ''),
                  (('Linux', 'x86_64'), ('room-cli', 'gh', 'git', 'ldd'), 0, 'x86_64-unknown-linux-gnu',
                   [python] + linux + found, ', running only ldd --version'),
-                 (('Linux', 'aarch64'), ('room-cli', 'gh', 'git', 'ldd'), 5, None,
+                 (('Linux', 'aarch64'), ('room-cli', 'gh', 'git', 'ldd'), 0, 'aarch64-unknown-linux-gnu',
+                  [python] + linux + found, ', running only ldd --version'),
+                 (('Linux', 'armv7l'), ('room-cli', 'gh', 'git', 'ldd'), 5, None,
                   [python, refused] + linux[1:] + found, ', running only ldd --version'))
         for host, tools, code, target, checks, ldd in cases:
             with self.subTest(host=host, tools=tools):
