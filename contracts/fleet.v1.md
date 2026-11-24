@@ -1344,6 +1344,32 @@ Synthetic values only.
 }
 ```
 
+## OpenWiz rows
+
+Every repository set up for OpenWiz records which matched set wrote its records in one `## OpenWiz` section of `docs/agents/fleet.md` (D1, ADR 0021; #3138 MS0, consumed by #3140 MS2 and #3142 MS4).
+
+Prose may come before the table; the section's first Markdown table must be exactly:
+
+```md
+## OpenWiz
+
+| Setting | Value |
+| --- | --- |
+| OpenWiz | `0.1.2` |
+| WizSkills | `0.5.0` |
+| Records contract | `v1` |
+```
+
+- **Heading:** at most one `## OpenWiz` heading in `docs/agents/fleet.md`. More than one `## OpenWiz` heading is refused.
+- **Header:** `| Setting | Value |`, followed by `| --- | --- |` (cells trimmed of surrounding spaces; separator cells of three or more `-`).
+- **Rows:** exactly three rows, in this order: `OpenWiz`, `WizSkills`, `Records contract`. No missing row, no extra row, no duplicate row and no other order.
+- **Value forms:** each value cell is plain text or one inline code span (`` `...` ``), trimmed of surrounding spaces. After removing an optional enclosing pair of single backticks:
+  - `OpenWiz`: kernel semver `MAJOR.MINOR.PATCH` matching `^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$` (no leading `v`, no leading zeroes, no spaces).
+  - `WizSkills`: WizSkills semver `MAJOR.MINOR.PATCH` matching `^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$` (no leading `v`, no leading zeroes, no spaces).
+  - `Records contract`: `v<N>` matching `^v[1-9][0-9]*$` (lowercase `v` followed by a positive whole number with no leading zero, matching [records v1](records.v1.md)'s D3 version; `v0` is invalid).
+- **Writers** (`setup` and `openwiz update`, #3140): write the three rows in the exact backticked form shown above, matching the installed [release manifest](release-manifest.v1.md), and change nothing outside the `## OpenWiz` section.
+- **Refusal and fail-closed reading:** `setup`'s settings check (#3140) refuses a missing `## OpenWiz` section, duplicate headings, a broken header, or any missing, extra, reordered or malformed row, naming what is wrong. The app (#3142) reads these rows from `HEAD:docs/agents/fleet.md` and treats a missing section or any missing or malformed row (including `v0`) as unsupported under [records v1](records.v1.md)'s D2 support window: one update banner, and all records shown as unknown, never empty or done.
+
 ## Not in version 1
 
 Open, for later tickets or Jake; none is guessed in the meantime:

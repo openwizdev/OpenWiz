@@ -1,1 +1,62 @@
-{}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:openwiz:schema:release-manifest:v1",
+  "title": "openwiz.release-manifest.v1",
+  "description": "One OpenWiz release manifest pinning the kernel version, the WizSkills release (equal to wizskills.lock), and the records-contract version they write. See release-manifest.v1.md for equality and strict reading rules.",
+  "$ref": "#/$defs/manifest",
+  "$defs": {
+    "semver": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "git_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "wizskills_pin": {
+      "type": "object",
+      "required": [
+        "version",
+        "commit",
+        "tree"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "$ref": "#/$defs/semver"
+        },
+        "commit": {
+          "$ref": "#/$defs/git_sha"
+        },
+        "tree": {
+          "$ref": "#/$defs/git_sha"
+        }
+      }
+    },
+    "manifest": {
+      "type": "object",
+      "required": [
+        "schema",
+        "kernel_version",
+        "wizskills",
+        "records_contract"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "const": "openwiz.release-manifest.v1"
+        },
+        "kernel_version": {
+          "$ref": "#/$defs/semver"
+        },
+        "wizskills": {
+          "$ref": "#/$defs/wizskills_pin"
+        },
+        "records_contract": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}
