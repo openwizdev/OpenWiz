@@ -107,6 +107,13 @@ class Cursor(unittest.TestCase):
         except FileNotFoundError:
             return {}
 
+    def on_disk(self):
+        folder, found = self.env['OPENWIZ_CURSOR_STATE'], ''
+        for name in sorted(os.listdir(folder)) if os.path.isdir(folder) else []:
+            with open(os.path.join(folder, name)) as f:
+                found += name + '\n' + f.read()
+        return found
+
     def logged(self, count=0):
         deadline = time.monotonic() + 10
         while True:
@@ -157,7 +164,8 @@ class Cursor(unittest.TestCase):
         for part in ('example/site', '#7', 'build-ticket skill', lock['version'], lock['commit'], lock['tree']):
             self.assertIn(part, body['prompt']['text'])
         with open(os.path.join(self.env['OPENWIZ_CURSOR_STATE'], out['run'] + '.json')) as f:
-            self.assertEqual(json.load(f)['agent'], body['agentId'])
+            self.assertEqual(json.load(f), {'agent': body['agentId'], 'stopped': False, 'starting': False, 'request':
+                             {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket'}})
         self.assertEqual(list(self.agents()), [body['agentId']])
 
     def test_the_key_never_passes_through_the_driver(self):
@@ -201,7 +209,13 @@ class Cursor(unittest.TestCase):
         self.assertIn('key helper refused', err['error'])
         self.assertIn('nothing was sent', err['error'])
         self.assertNotIn('unknown', err['error'])
-        self.assertEqual((self.calls(), self.agents()), ([], {}))
+        self.assertEqual((self.calls(), self.agents(), self.on_disk()), ([], {}, ''))
+
+    def test_a_key_pasted_into_the_model_is_refused_and_never_saved(self):
+        code, err = self.driver('start', dict(START, model=self.key))
+        self.assertEqual(code, 1, err)
+        self.assertIn('nothing was sent', err['error'])
+        self.assertEqual((self.calls(), self.on_disk()), ([], ''))
 
     def test_the_tests_read_no_other_process_environment(self):
         with open(os.path.abspath(__file__)) as f:
@@ -332,7 +346,25 @@ class Cursor(unittest.TestCase):
         self.assertEqual(code, 1, err)
         self.assertIn('adapters/cursor/README.md', err['next'])
         self.assertNotIn('told to fail', json.dumps(err))
-        self.assertEqual(self.agents(), {})
+        self.assertEqual((self.agents(), self.on_disk()), ({}, ''))
+
+    def test_a_lost_create_whose_cleanup_the_helper_refuses_stays_stoppable(self):
+        open(self.hold, 'w').close()
+        self.fault({'POST /agents': 'lost-keyless'})
+        code, err = self.driver('start', START)
+        self.assertEqual(code, 1, err)
+        self.assertNotIn('nothing was sent', err['error'])
+        self.assertIn('unknown', err['error'])
+        run = re.search(r'run-[0-9a-f]{12}', err['error'] + err['next']).group()
+        self.assertIn('stop', err['next'])
+        [agent] = self.agents()
+        self.assertIn(agent, self.on_disk())
+        with open(self.key_file, 'w') as f:
+            f.write(self.key)
+        self.fault({})
+        self.assertEqual(self.driver('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
+        self.assertTrue(self.agents()[agent]['archived'])
+        self.assertEqual(self.running(), [])
 
 
 if __name__ == '__main__':

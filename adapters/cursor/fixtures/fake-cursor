@@ -121,7 +121,9 @@ class Cursor(http.server.BaseHTTPRequestHandler):
             with open(STATE + '.new', 'w') as f:
                 json.dump(AGENTS, f)
             os.replace(STATE + '.new', STATE)
-        if fault == 'lost':
+        if fault == 'lost-keyless':
+            open(KEY_FILE, 'w').close()
+        if fault in ('lost', 'lost-keyless'):
             return self.drop()
         self.reply(code, answer)
 
