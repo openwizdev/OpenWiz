@@ -50,7 +50,7 @@ def read(fields):
     return req
 
 
-def ask(method, path, body=None, also=()):
+def ask(method, path, body=None, ok=(200,)):
     request = {'host': HOST, 'method': method, 'path': path}
     if body is not None:
         request['body'] = body
@@ -62,28 +62,83 @@ def ask(method, path, body=None, also=()):
         raise Refused('the key helper gave no answer', 'run kernel/driver-kit/hostkey.py by hand to see why')
     if p.returncode:
         raise Refused('the key helper refused: ' + out['error'], out['next'])
-    if not (200 <= out['status'] < 300 or out['status'] in also):
+    if out['status'] not in ok:
         raise Refused('Tembo answered %d to %s %s' % (out['status'], method, path.partition('?')[0]),
                       'check your key and Tembo\'s status, then retry')
     return out['status'], out['body']
 
 
+def unreadable(status, method, path):
+    return 'Tembo answered %d to %s %s in a form the driver cannot read' % (status, method, path.partition('?')[0])
+
+
+def is_str(v):
+    return isinstance(v, str)
+
+
+def not_found(status, found):
+    return status == 404 and isinstance(found, dict) and set(found) == {'error'} and is_str(found['error'])
+
+
 def repository(full):
     owner, name = full.split('/')
-    _, found = ask('GET', '/v1/repositories?' + urllib.parse.urlencode({'search': name, 'limit': 100}))
-    for r in (found or {}).get('items') or []:
-        if isinstance(r, dict) and isinstance(r.get('id'), str) and str(r.get('owner')).lower() == owner.lower() \
-                and str(r.get('name')).lower() == name.lower():
+    path = '/v1/repositories?' + urllib.parse.urlencode({'search': name, 'limit': 100})
+    status, found = ask('GET', path)
+    items = found.get('items') if isinstance(found, dict) else None
+    if not isinstance(items, list) or not all(
+            isinstance(r, dict) and is_str(r.get('id')) and is_str(r.get('name'))
+            and (r.get('owner') is None or is_str(r['owner'])) for r in items):
+        raise Refused(unreadable(status, 'GET', path), 'check Tembo\'s status, then retry')
+    for r in items:
+        if is_str(r['owner']) and r['owner'].lower() == owner.lower() and r['name'].lower() == name.lower():
             return r['id']
     raise Refused('Tembo has no connected repository ' + full,
                   'connect %s to Tembo (Settings, Integrations, GitHub), then start again' % full)
 
 
 def session(run):
-    status, found = ask('GET', '/v1/sessions/' + run, also=(404,))
-    if status == 404 or not isinstance(found, dict):
+    path = '/v1/sessions/' + run
+    status, found = ask('GET', path, ok=(200, 404))
+    if not_found(status, found):
         return 'unknown'
-    return 'stopped' if found.get('level') == 0 else 'live'
+    if status != 200 or not isinstance(found, dict) or found.get('id') != run \
+            or type(found.get('level')) is not int or found['level'] not in (0, 1):
+        raise Refused('run %s: %s' % (run, unreadable(status, 'GET', path)), 'check run %s on Tembo, then retry' % run)
+    return 'stopped' if found['level'] == 0 else 'live'
+
+
+def create(run, body):
+    status, made = ask('POST', '/v1/sessions', body, ok=(201,))
+    if not isinstance(made, dict) or made.get('id') != run or type(made.get('level')) is not int \
+            or made['level'] != 1:
+        raise Refused(unreadable(status, 'POST', '/v1/sessions'), '')
+
+
+def message(run):
+    status, sent = ask('POST', '/v1/messages', {'sessionId': run, 'content': WOKEN, 'deliveryMode': 'queue'},
+                       ok=(201,))
+    m = sent.get('message') if isinstance(sent, dict) else None
+    s = sent.get('session') if isinstance(sent, dict) else None
+    if not (isinstance(m, dict) and is_str(m.get('id')) and m.get('sessionId') == run and isinstance(s, dict)
+            and s.get('id') == run):
+        raise Refused(unreadable(status, 'POST', '/v1/messages'), '')
+
+
+def end(run):
+    path = '/v1/sessions/%s/stop?cancelQueued=true' % run
+    status, done = ask('POST', path, ok=(200, 404))
+    counts = ('cancelledSessions', 'cancelledJobs', 'stoppedRuntimeSessions', 'interruptedRuntimeTurns',
+              'cancelledRuntimeTurns')
+    if not (not_found(status, done) or status == 200 and isinstance(done, dict)
+            and all(type(done.get(k)) is int and done[k] >= 0 for k in counts)):
+        raise Refused(unreadable(status, 'POST', path), '')
+    path = '/v1/sessions/' + run
+    status, done = ask('DELETE', path, ok=(200, 404))
+    if not_found(status, done):
+        if session(run) == 'live':
+            raise Refused('Tembo answered 404 to DELETE %s, yet the run is still live' % path, '')
+    elif not (isinstance(done, dict) and done.get('deleted') is True and done.get('id') == run):
+        raise Refused(unreadable(status, 'DELETE', path), '')
 
 
 def answer(cmd):
@@ -95,19 +150,19 @@ def answer(cmd):
     if cmd == 'start':
         req = read(START)
         agent = AGENTS.get(req['harness'])
+        if 'effort' in req and req['effort'] not in EFFORTS.get(agent, ()):
+            raise Refused('Tembo cannot set effort %s for harness %s' % (req['effort'], req['harness']), NO_EFFORT)
         if agent is None:
             raise Refused('harness %s is not one Tembo runs for OpenWiz' % req['harness'],
                           'use claude-code (or claude) or codex')
-        if 'effort' in req and req['effort'] not in EFFORTS.get(agent, ()):
-            raise Refused('Tembo cannot set effort %s for harness %s' % (req['effort'], req['harness']), NO_EFFORT)
         repo, run = repository(req['repository']), str(uuid.uuid4())
-        create = {'id': run, 'description': 'Build the ticket: %s#%d, with the %s skill.'
+        body = {'id': run, 'description': 'Build the ticket: %s#%d, with the %s skill.'
                   % (req['repository'], req['ticket'], req['skill']),
                   'agent': '%s:%s' % (agent, req['model']), 'codeRepositoryIds': [repo], 'queueRightAway': True}
         if 'effort' in req:
-            create['agentOptions'] = {'reasoningLevel': req['effort']}
+            body['agentOptions'] = {'reasoningLevel': req['effort']}
         try:
-            ask('POST', '/v1/sessions', create)
+            create(run, body)
         except Refused as e:
             raise Refused('run %s may have started: %s' % (run, e.args[0]),
                           'stop run %s with `driver stop`, then start again' % run)
@@ -118,13 +173,20 @@ def answer(cmd):
         if state != 'live':
             raise Refused(('Tembo has no run %s' if state == 'unknown' else 'run %s is stopped') % run,
                           'start a new run')
-        ask('POST', '/v1/messages', {'sessionId': run, 'content': WOKEN, 'deliveryMode': 'queue'})
+        try:
+            message(run)
+        except Refused as e:
+            raise Refused('run %s may not have been woken: %s' % (run, e.args[0]),
+                          'check run %s on Tembo before you wake it again' % run)
         return {'run': run, 'woke': True}
     if cmd == 'stop':
         run = read(RUN)['run']
         if session(run) == 'live':
-            ask('POST', '/v1/sessions/%s/stop?cancelQueued=true' % run, also=(404,))
-            ask('DELETE', '/v1/sessions/' + run, also=(404,))
+            try:
+                end(run)
+            except Refused as e:
+                raise Refused('run %s may not have stopped: %s' % (run, e.args[0]),
+                              'check run %s on Tembo, then stop it again' % run)
         return {'run': run, 'stopped': True}
     raise Refused('unknown command', 'run one of: version, schema, start, wake, stop')
 
