@@ -905,7 +905,7 @@ class OwnSettings(unittest.TestCase):
         problems = []
         module('own_settings', skills / 'setup/scripts/settings.py').fleet(text, problems)
         self.assertEqual(problems, [], 'the pinned setup check')
-        flags = re.compile(r'`--provider (\S+) --model (\S+) --reasoning-level (\S+)`')
+        flags = re.compile(r'`--provider (\S+)(?: --model (\S+))? --reasoning-level (\S+)`')
         choice = lambda cell: dict(zip(('provider', 'model', 'effort'), flags.fullmatch(cell).groups()))
         rows = {row[0]: row for row in table_rows(text, 'Models')}
         role = {name: choice((rows['Builder'] if rows.get(name, [0, 'follows Builder'])[1] == 'follows Builder'
