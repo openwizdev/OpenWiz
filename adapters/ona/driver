@@ -73,14 +73,22 @@ def ask(method, body):
     return out['status'], out['body']
 
 
-def ok(method, body, unsure="check your key and Ona's status, then retry"):
-    status, found = ask(method, body)
-    if status == 200 and isinstance(found, dict):
+def acknowledged(status, found):
+    return status == 200 and isinstance(found, dict) and 'code' not in found
+
+
+def check(method, status, found, unsure="check your key and Ona's status, then retry"):
+    if acknowledged(status, found):
         return found
     refused = status != 200 and isinstance(found, dict) and isinstance(found.get('code'), str)
-    shape = '' if refused else ' in a shape OpenWiz does not know'
+    shape = '' if refused else ' with an error object' if status == 200 and isinstance(found, dict) else \
+        ' in a shape OpenWiz does not know'
     raise Refused('Ona answered %d to POST %s%s' % (status, method, shape),
                   "check your key and Ona's status, then retry" if refused else unsure)
+
+
+def ok(method, body, unsure="check your key and Ona's status, then retry"):
+    return check(method, *ask(method, body), unsure)
 
 
 def missing(status, found):
@@ -119,14 +127,19 @@ def environments(state):
 def stop_environment(env):
     path = ENVIRONMENT + 'StopEnvironment'
     status, found = ask(path, {'environmentId': env})
-    if status == 200 and isinstance(found, dict) or missing(status, found):
+    if acknowledged(status, found) or missing(status, found):
         return
-    again, found = ask(ENVIRONMENT + 'GetEnvironment', {'environmentId': env})
-    found = found.get('environment') if again == 200 and isinstance(found, dict) else None
+    again, raw = ask(ENVIRONMENT + 'GetEnvironment', {'environmentId': env})
+    found = raw.get('environment') if acknowledged(again, raw) else None
     state = found.get('status') if isinstance(found, dict) and found.get('id') == env else None
-    if not (missing(again, found) or isinstance(state, dict) and state.get('phase') in GONE):
+    if not (missing(again, raw) or isinstance(state, dict) and state.get('phase') in GONE):
         raise Refused('Ona answered %d to POST %s for environment %s' % (status, path, env),
                       "stop that environment in Ona's dashboard, then retry")
+
+
+def begun(run, e):
+    return Refused('run %s may have started: %s' % (run, e.args[0]),
+                   'stop run %s with `driver stop`, then start again' % run)
 
 
 def unsure(run, e):
@@ -155,17 +168,21 @@ def answer(cmd):
                 raise Refused('Ona cannot set effort %s for harness codex' % req['effort'], NO_EFFORT)
             settings['reasoningEffort'] = 'CODEX_REASONING_EFFORT_' + EFFORTS[req['effort']]
         lost = 'look for a new OpenWiz run in Ona, stop it, then retry'
-        started = ok(AGENT + 'StartAgent', {
+        status, started = ask(AGENT + 'StartAgent', {
             'agentId': CODEX, 'codeContext': {'contextUrl': {'url': 'https://github.com/' + req['repository']}},
-            'name': 'OpenWiz: %s#%d' % (req['repository'], req['ticket']), 'codexSettings': settings}, lost)
-        run = started.get('agentExecutionId')
-        if not (isinstance(run, str) and re.fullmatch(RUN['run'], run)):
+            'name': 'OpenWiz: %s#%d' % (req['repository'], req['ticket']), 'codexSettings': settings})
+        run = started.get('agentExecutionId') if isinstance(started, dict) else None
+        named = isinstance(run, str) and re.fullmatch(RUN['run'], run)
+        try:
+            check(AGENT + 'StartAgent', status, started, lost)
+        except Refused as e:
+            raise begun(run, e) if named else e
+        if not named:
             raise Refused('Ona named no run for the start', lost)
         try:
             send(run, 'Build the ticket: %s#%d, with the %s skill.' % (req['repository'], req['ticket'], req['skill']))
         except Refused as e:
-            raise Refused('run %s may have started: %s' % (run, e.args[0]),
-                          'stop run %s with `driver stop`, then start again' % run)
+            raise begun(run, e)
         return {'run': run}
     if cmd == 'wake':
         run = read(RUN)['run']
