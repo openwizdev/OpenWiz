@@ -780,16 +780,15 @@ class Kit:
         try:
             kind, v = self.call('start', request, env, canary)
             with host.lock:
-                posted = any(line.startswith('POST ') for line, _, _ in host.requests)
+                start_posts = [body for line, _, body in host.requests if line.startswith('POST ')]
             if kind == 'ok':
                 self.call('stop', {'run': v['run']}, env, canary)
                 self.wait(lambda: not any(True for _ in self.started()))
         finally:
             host.close()
-        with host.lock:
-            bodies = [body for _, _, body in host.requests]
         field = self.setting and self.setting[0] == 'field' and self.setting[1]
-        return kind, v, posted, bool(field) and any(holds_field(b, field, request['effort']) for b in bodies)
+        reached = bool(field) and len(start_posts) == 1 and holds_field(start_posts[0], field, request['effort'])
+        return kind, v, bool(start_posts), reached
 
     def key_hosts(self):
         try:
