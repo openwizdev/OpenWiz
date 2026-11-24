@@ -17,6 +17,7 @@ sys.dont_write_bytecode = True
 INSTALL = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(INSTALL))
 import test_install
+import test_pull
 import pull
 
 spec = importlib.util.spec_from_loader('install_entry', SourceFileLoader('install_entry', str(INSTALL / 'install')))
@@ -376,6 +377,124 @@ class Path_(Installer):
         self.assertEqual(link.read_text(), 'synthetic user program')
         code, value = self.run_entry('link', '--root', str(self.base / 'nothing'), '--yes')
         self.assertEqual(code, 5)
+
+
+class EarlyChannel(Installer):
+    def publish_pro(self, assets_root, version, source='1' * 40, tamper_sums=False):
+        archive_name = f'openwiz-{version}-{TARGET}.tar.gz'
+        manifest, archive, _ = self.bundle(version=version, source=source,
+                                           mutate=lambda m: m.update(archive=archive_name))
+        raw, data = manifest.read_bytes(), archive.read_bytes()
+        tag_dir = assets_root / ('v' + version)
+        tag_dir.mkdir(parents=True, exist_ok=True)
+        (tag_dir / (NAME + '.sha256')).write_bytes(
+            f'{test_install.sha(raw)}  {NAME}.manifest.json\n'.encode())
+        (tag_dir / (NAME + '.manifest.json')).write_bytes(raw)
+        (tag_dir / archive_name).write_bytes(data)
+        sums = (f'{test_install.sha(raw)}  openwiz-{version}-{TARGET}.manifest.json\n'
+                f'{"0" * 64 if tamper_sums else test_install.sha(data)}  {archive_name}\n')
+        (tag_dir / 'SHA256SUMS').write_bytes(sums.encode())
+        return archive_name
+
+    def setup_fake_gh(self, cfg):
+        gh_path, cfg_path = test_pull.write_fake_gh(self.base, cfg)
+        old_env = os.environ.get('FAKE_PRO_GH')
+        os.environ['FAKE_PRO_GH'] = cfg_path
+        self.addCleanup(lambda: os.environ.pop('FAKE_PRO_GH', None) if old_env is None
+                        else os.environ.__setitem__('FAKE_PRO_GH', old_env))
+        os.environ['PATH'] = str(Path(gh_path).parent) + os.pathsep + '/usr/bin:/bin'
+        return cfg_path
+
+    def test_early_download_install_status_public_supersede_and_remove(self):
+        assets_root = self.base / 'pro-assets'
+        archive_rc = self.publish_pro(assets_root, '0.1.2-rc.1', source='a' * 40)
+        self.publish('v0.1.0', '0.1.0')
+        self.feed('v0.1.0')
+        cfg_path = self.setup_fake_gh({
+            'logged_in': True, 'status': 200, 'assets': str(assets_root),
+            'releases': [{'tag_name': 'v0.1.2-rc.1', 'prerelease': True, 'draft': False}],
+        })
+        dl = self.base / 'dl-early'
+        code, value = self.run_entry('download', '--early', '--target', TARGET, '--dir', str(dl))
+        self.assertEqual((code, value['outcome'], value['version'], value['channel'], value['origin']),
+                         (0, 'downloaded', '0.1.2-rc.1', 'early', 'early'), value)
+        self.assertEqual(sorted(p.name for p in dl.iterdir()),
+                         sorted([NAME + '.sha256', NAME + '.manifest.json', archive_rc, 'channel.json']))
+
+        code, value = self.run_entry('install', '--assets', str(dl), '--target', TARGET, '--root', str(self.root))
+        self.assertEqual((code, value['outcome'], value['version']), (0, 'installed', '0.1.2-rc.1'), value)
+        self.assertEqual((self.root / 'channel.json').read_text(),
+                         '{"schema":"openwiz.update-channel.v1","channel":"early"}\n')
+        code, value = self.run_entry('status', '--root', str(self.root))
+        self.assertEqual((code, value['outcome'], value['version'], value['channel']),
+                         (0, 'installed', '0.1.2-rc.1', 'early'), value)
+
+        # Public 0.1.2 is newer than 0.1.2-rc.1: download --early picks public and keeps early channel.
+        pub_archive = f'openwiz-0.1.2-{TARGET}.tar.gz'
+        manifest, archive, _ = self.bundle(version='0.1.2', source='b' * 40,
+                                           mutate=lambda m: m.update(archive=pub_archive))
+        raw, data = manifest.read_bytes(), archive.read_bytes()
+        prefix = '/openwizdev/OpenWiz/releases/download/v0.1.2/'
+        sums = f'{test_install.sha(raw)}  openwiz-0.1.2-{TARGET}.manifest.json\n{test_install.sha(data)}  {pub_archive}\n'
+        Host.routes.update({
+            prefix + NAME + '.sha256': f'{test_install.sha(raw)}  {NAME}.manifest.json\n'.encode(),
+            prefix + NAME + '.manifest.json': raw, prefix + pub_archive: data, prefix + 'SHA256SUMS': sums.encode(),
+        })
+        self.feed('v0.1.0', 'v0.1.2')
+        dl_pub = self.base / 'dl-early-pub'
+        code, value = self.run_entry('download', '--early', '--target', TARGET, '--dir', str(dl_pub))
+        self.assertEqual((code, value['version'], value['channel'], value['origin']),
+                         (0, '0.1.2', 'early', 'public'), value)
+        code, value = self.run_entry('install', '--assets', str(dl_pub), '--target', TARGET, '--root', str(self.root))
+        self.assertEqual((code, value['version']), (0, '0.1.2'), value)
+        self.assertEqual(self.run_entry('status', '--root', str(self.root))[1]['channel'], 'early')
+
+        # install remove deletes the early channel.json and leaves no empty root.
+        code, value = self.run_entry('remove', '--root', str(self.root))
+        self.assertEqual((code, value['outcome']), (0, 'preview'), value)
+        self.assertIn(str(self.root / 'channel.json'), value['delete'])
+        code, value = self.run_entry('remove', '--root', str(self.root), '--yes')
+        self.assertEqual((code, value['outcome']), (0, 'removed'), value)
+        self.assertFalse(self.root.exists())
+
+        # Verify tampered SHA256SUMS on early release is refused and creates no download folder.
+        self.publish_pro(assets_root, '0.1.3-rc.1', source='c' * 40, tamper_sums=True)
+        Path(cfg_path).write_text(json.dumps({
+            'logged_in': True, 'status': 200, 'assets': str(assets_root),
+            'releases': [{'tag_name': 'v0.1.3-rc.1', 'prerelease': True, 'draft': False}],
+        }))
+        bad_dl = self.base / 'dl-bad-early'
+        code, value = self.run_entry('download', '--early', '--target', TARGET, '--dir', str(bad_dl))
+        self.assertEqual((code, value['outcome']), (5, 'refused'), value)
+        self.assertIn('SHA256SUMS does not match', value['reason'])
+        self.assertFalse(bad_dl.exists())
+
+    def test_early_download_refusals_and_default_unchanged(self):
+        # Without --early, prerelease tags are rejected as usage errors (exit 2).
+        code, _ = self.run_entry('download', '--target', TARGET, '--dir', str(self.base / 'dl-rc'),
+                                 '--version', 'v0.1.2-rc.1')
+        self.assertEqual(code, 2)
+
+        # Missing gh -> clear refusal saying how to log in.
+        empty_bin = self.base / 'empty-bin'
+        empty_bin.mkdir()
+        os.environ['PATH'] = str(empty_bin)
+        code, value = self.run_entry('download', '--early', '--target', TARGET, '--dir', str(self.base / 'dl-nogh'))
+        self.assertEqual((code, value['outcome']), (5, 'refused'), value)
+        self.assertIn('gh auth login', value['reason'])
+
+        # Logged-out gh -> clear refusal saying how to log in.
+        cfg_path = self.setup_fake_gh({'logged_in': False})
+        code, value = self.run_entry('download', '--early', '--target', TARGET, '--dir', str(self.base / 'dl-out'))
+        self.assertEqual((code, value['outcome']), (5, 'refused'), value)
+        self.assertIn('gh auth login', value['reason'])
+
+        # 404 (no Pro access) -> clear refusal naming OpenWiz Pro and https://openwiz.dev/pro/.
+        Path(cfg_path).write_text(json.dumps({'logged_in': True, 'status': 404}))
+        code, value = self.run_entry('download', '--early', '--target', TARGET, '--dir', str(self.base / 'dl-404'))
+        self.assertEqual((code, value['outcome']), (5, 'refused'), value)
+        self.assertIn('OpenWiz Pro', value['reason'])
+        self.assertIn('https://openwiz.dev/pro/', value['reason'])
 
 
 if __name__ == '__main__':

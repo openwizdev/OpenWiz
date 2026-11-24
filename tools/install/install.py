@@ -20,6 +20,12 @@ an archive is run while validating or installing it.
 """
 
 TARGETS = ('aarch64-apple-darwin', 'x86_64-apple-darwin', 'x86_64-unknown-linux-gnu')
+VERSION_RE = re.compile(r'0\.[0-9]+\.[0-9]+')
+EARLY_VERSION_RE = re.compile(r'0\.[0-9]+\.[0-9]+(?:-rc\.[0-9]+)?')
+CHANNELS = {
+    'packaged': b'{"schema":"openwiz.update-channel.v1","channel":"packaged"}\n',
+    'early': b'{"schema":"openwiz.update-channel.v1","channel":"early"}\n',
+}
 PROGRAMS = {'openwiz'}
 REQUIRED = PROGRAMS | {'runtime/openwiz-build.txt', 'runtime/install.py', 'runtime/pull.py',
     'runtime/skills/setup/SKILL.md', 'runtime/skills/grill/SKILL.md',
@@ -77,13 +83,14 @@ def safe(path, legacy=False):
     return path
 
 
-def manifest_at(path, checksum, target, selected=False):
+def manifest_at(path, checksum, target, selected=False, allow_prerelease=False):
     data = path.read_bytes()
     require(len(data) <= 4 * 1024 * 1024 and sha(data) == checksum, 'manifest checksum mismatch')
     value = json.loads(data, object_pairs_hook=unique)
     shape(value, 'schema version source target setup_api archive archive_sha256 archive_bytes assets')
     require(value['schema'] == 'openwiz.install.v1', 'unsupported manifest schema')
-    require(isinstance(value['version'], str) and re.fullmatch(r'0\.[0-9]+\.[0-9]+', value['version']), 'invalid version')
+    version_re = EARLY_VERSION_RE if (allow_prerelease or selected) else VERSION_RE
+    require(isinstance(value['version'], str) and version_re.fullmatch(value['version']), 'invalid version')
     require(digest(value['source'], 40), 'invalid source identity')
     require(target in TARGETS and value['target'] == target, 'unsupported or mismatched target')
     require(type(value['setup_api']) is int and value['setup_api'] == 1, 'incompatible setup API')
@@ -258,9 +265,11 @@ def activate_link(build, root):
 
 
 def install(manifest, archive, manifest_sha256, root, target, state_root=None,
-            free_bytes=lambda path: shutil.disk_usage(path).free, activate=activate_link, stage_only=False):
+            free_bytes=lambda path: shutil.disk_usage(path).free, activate=activate_link, stage_only=False,
+            channel='packaged'):
+    require(channel in CHANNELS, 'unsupported update channel')
     manifest, archive, root = Path(manifest), Path(archive), Path(root)
-    value, assets, raw = manifest_at(manifest, manifest_sha256, target)
+    value, assets, raw = manifest_at(manifest, manifest_sha256, target, allow_prerelease=(channel == 'early'))
     require(archive.stat().st_size == value['archive_bytes'], 'archive size mismatch')
     hasher = hashlib.sha256()
     with archive.open('rb') as stream:
@@ -291,12 +300,12 @@ def install(manifest, archive, manifest_sha256, root, target, state_root=None,
             require(selected.is_absolute() and selected.parent == builds and digest(selected.name, 40), 'foreign current selection')
             if selected != builds / value['source']:
                 private(selected)
-        channel = root / 'channel.json'
-        require(channel.exists() or not link.is_symlink(), 'source installation requires an explicit channel migration')
-        channel_bytes = b'{"schema":"openwiz.update-channel.v1","channel":"packaged"}\n'
-        if channel.exists() or channel.is_symlink():
-            private(channel, False)
-            require(channel.read_bytes() == channel_bytes, 'existing update channel requires explicit migration')
+        channel_file = root / 'channel.json'
+        require(channel_file.exists() or not link.is_symlink(), 'source installation requires an explicit channel migration')
+        channel_bytes = CHANNELS[channel]
+        if channel_file.exists() or channel_file.is_symlink():
+            private(channel_file, False)
+            require(channel_file.read_bytes() == channel_bytes, 'existing update channel requires explicit migration')
         build = builds / value['source']
         with tarfile.open(archive, 'r:gz') as tar:
             members = []
@@ -363,8 +372,8 @@ def install(manifest, archive, manifest_sha256, root, target, state_root=None,
                         os.chmod(build, stat.S_IMODE(damaged_meta.st_mode))
                     raise
         if not stage_only:
-            if not channel.exists():
-                write(channel, channel_bytes)
+            if not channel_file.exists():
+                write(channel_file, channel_bytes)
                 sync(root)
             activate(build, root)
         return {'schema': 'openwiz.install-result.v1', 'version': value['version'], 'source': value['source'],
@@ -378,6 +387,7 @@ def main():
         parser.add_argument('--' + flag, required=True)
     parser.add_argument('--state-root')
     parser.add_argument('--stage-only', action='store_true')
+    parser.add_argument('--channel', choices=tuple(CHANNELS), default='packaged')
     args = vars(parser.parse_args())
     try:
         result = install(**args)

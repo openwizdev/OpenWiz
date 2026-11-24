@@ -21,14 +21,16 @@ DESCRIPTION = """OpenWiz's install entry (#1109): the commands the install skill
       Reads this machine only: Python, the supported target, free disk space,
       on Linux the glibc version (from ldd --version; 2.34 or later), and
       whether room-cli, gh and git are on PATH. It runs none of those three.
-  install download --target TARGET --dir PRIVATE_DIR [--version vX.Y.Z]
+  install download --target TARGET --dir PRIVATE_DIR [--version vX.Y.Z] [--early]
       Fetches a release's checksum file, manifest and archive from
       github.com/openwizdev/OpenWiz/releases into a new private folder, within
       their declared sizes, and checks the manifest against the checksum.
       Without --version it takes the latest release; when latest is a 404 (the
       newest release is a pre-release), the newest tag in the releases feed.
+      With --early it also checks prereleases tagged v<version>-rc.<n> from
+      openwizpro/WizPro through gh and picks whichever is newer by semver.
       A refusal names the failure, such as "release asset 404 at URL".
-  install install --assets PRIVATE_DIR --target TARGET --root ROOT [--state-root STATE]
+  install install --assets PRIVATE_DIR --target TARGET --root ROOT [--state-root STATE] [--early]
       Installs those downloaded files with the verified offline installer
       (install.py, contracts/install.v1.md) and selects the build only when
       every file matched. A refusal keeps the last good build selected. A
@@ -83,6 +85,7 @@ TOOLS = (('room-cli', 'Optional: CloudRoom is needed only if you pick it as the 
          ('gh', 'Install the GitHub CLI and run gh auth login.'),
          ('git', 'Install git.'))
 ARCHIVE_NAME = re.compile(r'openwiz-0\.[0-9]+\.[0-9]+-[a-z0-9_]+-[a-z0-9_-]+\.tar\.gz')
+EARLY_ARCHIVE_NAME = re.compile(r'openwiz-0\.[0-9]+\.[0-9]+(?:-rc\.[0-9]+)?-[a-z0-9_]+-[a-z0-9_-]+\.tar\.gz')
 
 
 class Usage(Exception):
@@ -159,16 +162,27 @@ def write_private(path, data):
         handle.write(data)
 
 
-def download(target, folder, fetch, version=None):
+def download(target, folder, fetch, version=None, early=False, which=shutil.which):
     name = 'openwiz-' + target
-    sums, raw, manifest, _ = pull.published(target, fetch, version)
-    installer.require(ARCHIVE_NAME.fullmatch(manifest['archive']), 'invalid published archive name')
-    prefix = pull.BASE + 'download/v' + manifest['version'] + '/'
-    archive = fetch(prefix + manifest['archive'], manifest['archive_bytes'])
+    if early:
+        found, origin, asset_fetch = pull.published_early(target, fetch=fetch, version=version, which=which)
+        sums, raw, manifest, _ = found
+        installer.require(EARLY_ARCHIVE_NAME.fullmatch(manifest['archive']), 'invalid published archive name')
+        prefix = '' if origin == 'early' else pull.BASE + 'download/v' + manifest['version'] + '/'
+        location = (pull.PRO_REPO + '/v' + manifest['version'] + '/' + manifest['archive']
+                    if origin == 'early' else prefix + manifest['archive'])
+    else:
+        origin = 'public'
+        asset_fetch = fetch
+        sums, raw, manifest, _ = pull.published(target, fetch, version)
+        installer.require(ARCHIVE_NAME.fullmatch(manifest['archive']), 'invalid published archive name')
+        prefix = pull.BASE + 'download/v' + manifest['version'] + '/'
+        location = prefix + manifest['archive']
+    archive = asset_fetch(prefix + manifest['archive'], manifest['archive_bytes'])
     installer.require(len(archive) == manifest['archive_bytes'], 'incomplete archive download')
     installer.require(installer.sha(archive) == manifest['archive_sha256'], 'archive checksum mismatch at '
-                      + prefix + manifest['archive'])
-    listed = release_sums(fetch(prefix + 'SHA256SUMS', 64 * 1024))
+                      + location)
+    listed = release_sums(asset_fetch(prefix + 'SHA256SUMS', 64 * 1024))
     for file, data in (('openwiz-%s-%s.manifest.json' % (manifest['version'], target), raw),
                        (manifest['archive'], archive)):
         installer.require(file in listed, 'SHA256SUMS does not list ' + file)
@@ -177,9 +191,15 @@ def download(target, folder, fetch, version=None):
     write_private(folder / (name + '.sha256'), sums)
     write_private(folder / (name + '.manifest.json'), raw)
     write_private(folder / manifest['archive'], archive)
-    return {'schema': 'openwiz.download.v1', 'outcome': 'downloaded', 'version': manifest['version'],
-            'source': manifest['source'], 'target': target, 'dir': str(folder),
-            'reason': 'Downloaded and checked every file against its published checksums; nothing is installed yet.'}
+    if early:
+        write_private(folder / 'channel.json', installer.CHANNELS['early'])
+    result = {'schema': 'openwiz.download.v1', 'outcome': 'downloaded', 'version': manifest['version'],
+              'source': manifest['source'], 'target': target, 'dir': str(folder),
+              'reason': 'Downloaded and checked every file against its published checksums; nothing is installed yet.'}
+    if early:
+        result['channel'] = 'early'
+        result['origin'] = origin
+    return result
 
 
 def release_sums(data):
@@ -191,10 +211,12 @@ def release_sums(data):
     return listed
 
 
-def release_version(value):
-    match = re.fullmatch(r'v?(0\.[0-9]+\.[0-9]+)', value)
+def release_version(value, early=False):
+    pattern = r'v?(0\.[0-9]+\.[0-9]+(?:-rc\.[0-9]+)?)' if early else r'v?(0\.[0-9]+\.[0-9]+)'
+    match = re.fullmatch(pattern, value)
     if not match:
-        raise argparse.ArgumentTypeError('expected a release tag such as v0.1.0')
+        raise Usage('argument --version: expected a release tag such as '
+                    + ('v0.1.0-rc.1' if early else 'v0.1.0'))
     return match[1]
 
 
@@ -223,20 +245,31 @@ def prepare_parent(root):
                           'an install parent folder is a link or not yours')
 
 
-def install(assets, target, root, state_root):
+def install(assets, target, root, state_root, early=False):
     assets = Path(assets)
     installer.require(target in installer.TARGETS, 'unsupported package target')
     name = 'openwiz-' + target
     installer.private(assets)
+    channel_file = assets / 'channel.json'
+    if channel_file.exists() or channel_file.is_symlink():
+        installer.private(channel_file, False)
+        raw_channel = channel_file.read_bytes()
+        installer.require(raw_channel in installer.CHANNELS.values(), 'invalid downloaded channel metadata')
+        downloaded_channel = 'early' if raw_channel == installer.CHANNELS['early'] else 'packaged'
+    else:
+        downloaded_channel = 'packaged'
+    channel = 'early' if early else downloaded_channel
     sums = (assets / (name + '.sha256')).read_bytes()
     match = re.fullmatch(rb'([0-9a-f]{64})  ' + re.escape((name + '.manifest.json').encode()) + rb'\n', sums)
     installer.require(match, 'invalid published manifest checksum')
     manifest_file = assets / (name + '.manifest.json')
-    manifest = installer.manifest_at(manifest_file, match[1].decode('ascii'), target)[0]
-    installer.require(ARCHIVE_NAME.fullmatch(manifest['archive']), 'invalid published archive name')
+    manifest = installer.manifest_at(manifest_file, match[1].decode('ascii'), target,
+                                     allow_prerelease=(channel == 'early'))[0]
+    archive_re = EARLY_ARCHIVE_NAME if channel == 'early' else ARCHIVE_NAME
+    installer.require(archive_re.fullmatch(manifest['archive']), 'invalid published archive name')
     prepare_parent(root)
     result = installer.install(manifest_file, assets / manifest['archive'], match[1].decode('ascii'),
-                               Path(root), target, state_root=state_root)
+                               Path(root), target, state_root=state_root, channel=channel)
     program, path, state = link_state(root)
     where = 'openwiz is at %s' % program
     return dict(result, outcome='installed', openwiz=str(program), next=(
@@ -306,9 +339,14 @@ def selected(root, state_root=None):
     installer.require(value['source'] == build.name, 'the selected build is not its own source')
     installer.verify_installed(build, assets, raw)
     channel = root / 'channel.json'
-    known = (channel.exists() and not channel.is_symlink()
-             and channel.read_bytes() == b'{"schema":"openwiz.update-channel.v1","channel":"packaged"}\n')
-    return build, state, value, ('packaged' if known else 'unknown')
+    channel_name = 'unknown'
+    if channel.exists() and not channel.is_symlink():
+        raw_channel = channel.read_bytes()
+        for cname, expected in installer.CHANNELS.items():
+            if raw_channel == expected:
+                channel_name = cname
+                break
+    return build, state, value, channel_name
 
 
 def status(root, state_root):
@@ -409,7 +447,7 @@ def remove_unlocked(root, state, state_root, yes, home, codex_home, made=None):
     delete = [path for path, kind in ((link, stat.S_ISLNK), (root / 'install.lock', stat.S_ISREG))
               if owned(path, kind)]
     channel = root / 'channel.json'
-    if owned(channel, stat.S_ISREG) and channel.read_bytes() == CHANNEL:
+    if owned(channel, stat.S_ISREG) and channel.read_bytes() in installer.CHANNELS.values():
         delete.append(channel)
     delete += [root / 'skills' / name for name in marked_skills(root / 'skills')]
     delete += [builds / name for name in installer.entries(builds) if verified_build(builds / name)]
@@ -460,12 +498,14 @@ def main(argv=None, fetch=pull.fetch_bytes, host=None, stdout=None):
     d = commands.add_parser('download')
     d.add_argument('--target', required=True)
     d.add_argument('--dir', required=True)
-    d.add_argument('--version', type=release_version)
+    d.add_argument('--version')
+    d.add_argument('--early', action='store_true')
     i = commands.add_parser('install')
     i.add_argument('--assets', required=True)
     i.add_argument('--target', required=True)
     i.add_argument('--root', required=True)
     i.add_argument('--state-root')
+    i.add_argument('--early', action='store_true')
     n = commands.add_parser('link')
     n.add_argument('--root', required=True)
     n.add_argument('--state-root')
@@ -482,6 +522,8 @@ def main(argv=None, fetch=pull.fetch_bytes, host=None, stdout=None):
     k.add_argument('--state-root')
     try:
         args = parser.parse_args(sys.argv[1:] if argv is None else argv)
+        if args.command == 'download' and args.version is not None:
+            args.version = release_version(args.version, early=args.early)
     except Usage as usage:
         print(json.dumps({'schema': 'openwiz.install-error.v1', 'outcome': 'usage', 'reason': str(usage)}), file=out)
         return 2
@@ -494,9 +536,9 @@ def main(argv=None, fetch=pull.fetch_bytes, host=None, stdout=None):
                     return None
             value, code = preflight(host or (platform.system(), platform.machine()), shutil.which, disk)
         elif args.command == 'download':
-            value, code = download(args.target, args.dir, fetch, args.version), 0
+            value, code = download(args.target, args.dir, fetch, args.version, early=args.early), 0
         elif args.command == 'install':
-            value, code = install(args.assets, args.target, args.root, args.state_root), 0
+            value, code = install(args.assets, args.target, args.root, args.state_root, early=args.early), 0
         elif args.command == 'skills':
             build, _, manifest, _ = selected(args.root, args.state_root)
             value, code = harness.install_skills(build, manifest, args.root, Path.home(),
