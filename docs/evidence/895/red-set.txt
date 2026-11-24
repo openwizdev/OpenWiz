@@ -1,0 +1,22 @@
+running 4 tests
+test b2_planner::fleet_rules_contracts_preserve_original_cases ... FAILED
+test b2_planner::cases::md3_models_table_reviews_wait_or_fall_back_to_the_builder ... ok
+test b2_planner::cases::b2_authority_contracts_preserve_all_proofs ... ok
+test b2_planner::cases::b2_review_and_lifecycle_contracts_preserve_all_proofs ... ok
+
+failures:
+
+---- b2_planner::fleet_rules_contracts_preserve_original_cases stdout ----
+TA2 case: b2_planner::b2_1196_all_conditional_tables_are_strict_and_other_family
+
+thread 'b2_planner::fleet_rules_contracts_preserve_original_cases' panicked at tests/fleet/b2_planner.rs:232:9:
+assertion `left == right` failed: set kept the fall-back rows
+  left: []
+ right: ["| Reviewer fall-back 1 | Antigravity | Gemini 4 Neon | High | `--provider antigravity --reasoning-level high` |", "| Reviewer fall-back 2 | Codex | Sol 6.2 | Medium | `--provider codex --model gpt-6.2-sol --reasoning-level medium` |"]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    b2_planner::fleet_rules_contracts_preserve_original_cases
+
+test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 157 filtered out; finished in 0.24s

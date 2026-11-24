@@ -210,6 +210,39 @@ fn b2_1196_all_conditional_tables_are_strict_and_other_family() {
     ] {
         assert!(Rules::parse(&bad, &flags()).is_err(), "{case}");
     }
+    fallback_rows_survive_set(fleet);
+}
+
+fn fallback_rows_survive_set(fleet: &str) {
+    use openwiz_core::models::{Choice, Role, write};
+    let fallbacks = |text: &str| -> Vec<String> {
+        text.lines()
+            .filter(|l| l.starts_with("| Reviewer fall-back "))
+            .map(str::to_owned)
+            .collect()
+    };
+    assert_eq!(fallbacks(fleet).len(), 2);
+    let mut text = fleet.to_owned();
+    for effort in ["high", "low"] {
+        let asked = write::Asked::Choice(Choice::named("antigravity", "default", effort).unwrap());
+        text = write::set(&text, Role::Builder, &asked, &flags())
+            .unwrap_or_else(|e| panic!("set refused: {e}"))
+            .text
+            .unwrap();
+        assert_eq!(
+            fallbacks(&text),
+            fallbacks(fleet),
+            "set kept the fall-back rows"
+        );
+        assert!(
+            text.contains(&format!(
+                "`--provider antigravity --reasoning-level {effort}`"
+            )),
+            "set wrote no --model"
+        );
+        assert!(!text.contains("--model default"), "no row names a model");
+        assert!(Rules::parse(&text, &flags()).is_ok());
+    }
 }
 
 fn b2_1196_setup_template_can_produce_the_strict_rules() {
