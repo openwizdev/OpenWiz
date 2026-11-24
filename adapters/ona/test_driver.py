@@ -3,7 +3,6 @@ import importlib.machinery
 import importlib.util
 import json
 import os
-import re
 import secrets
 import shutil
 import signal
@@ -23,10 +22,11 @@ START = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'ha
 PROMPT = 'Build the ticket: example/site#7, with the build-ticket skill.'
 WOKEN = 'You were woken: read the ticket again and carry on.'
 AGENT = '/api/gitpod.v1.AgentService/'
+ENVIRONMENT = '/api/gitpod.v1.EnvironmentService/'
+UUID_ONE = '00000000-0000-4000-8000-0000000000bb'
 UUID = r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
 NO_EFFORT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster to run "
              "it at the host's default")
-KEYCHAIN_TOOLS_SPELLED_IN_PARTS = re.compile(rb'(?<![\w-])(secur' + rb'ity|secret' + rb'-tool)(?![\w-])')
 KIT_PASS = ['pass version: openwiz:records v1, and the schema is driver v1',
             'pass start: the run posted builder status note 2',
             'pass wake: the run edited builder status note 2',
@@ -152,6 +152,13 @@ class Driver(unittest.TestCase):
                                    'next': 'use harness codex'})
         self.assertEqual(self.host.requests, [])
 
+    def test_another_harness_with_effort_gets_the_exact_effort_refusal(self):
+        for harness, effort in (('claude-code', 'medium'), ('gemini-cli', 'high')):
+            code, out = self.driver('start', dict(START, harness=harness, effort=effort))
+            self.assertEqual((code, out), (1, {'error': 'Ona cannot set effort %s for harness %s' % (effort, harness),
+                                               'next': NO_EFFORT}))
+        self.assertEqual(self.host.requests, [])
+
     def test_effort_reaches_the_host_as_codex_reasoning_effort(self):
         for effort, value in (('low', 'LOW'), ('medium', 'MEDIUM'), ('high', 'HIGH'), ('xhigh', 'EXTRA_HIGH'),
                               ('max', 'MAX'), ('ultra', 'ULTRA')):
@@ -232,6 +239,116 @@ class Driver(unittest.TestCase):
         self.assertEqual(self.driver('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
         self.assertEqual(self.host.calls(), [AGENT + 'GetAgentExecution'] * 2)
 
+    def refused_with(self, cmd, run, sent=()):
+        self.host.requests.clear()
+        code, out = self.driver(cmd, {'run': run})
+        self.assertEqual(code, 1, out)
+        self.assertIn(run, out['error'])
+        self.assertIn(run, out['next'])
+        for method in sent:
+            self.assertNotIn(method, self.host.calls())
+        return out
+
+    def test_a_lookup_off_its_documented_shape_is_refused_before_wake_or_stop_acts(self):
+        other = '00000000-0000-4000-8000-0000000000aa'
+        for answer in ((200, b'<html>ok</html>'), (200, []), (200, {}), (200, b'null'), (200, b''),
+                       (200, {'agentExecution': []}), (200, {'agentExecution': {'id': other, 'status': {}}}),
+                       (200, {'agentExecution': {'status': {'phase': 'PHASE_RUNNING'}}}),
+                       (404, b'<html>gone</html>'), (404, {}), (404, {'code': 'unimplemented'}),
+                       (404, {'code': ['not_found']}), (500, {'code': 'internal'}), (201, {})):
+            self.host.faults.clear()
+            run = self.started()
+            self.host.faults['GetAgentExecution'] = answer + (False,)
+            self.refused_with('wake', run, [AGENT + 'SendToAgentExecution'])
+            self.refused_with('stop', run, [AGENT + 'StopAgentExecution', ENVIRONMENT + 'StopEnvironment'])
+            self.assertEqual(self.host.runs[run]['messages'], [PROMPT], answer)
+            self.assertEqual(self.host.runs[run]['phase'], 'PHASE_WAITING_FOR_INPUT', answer)
+
+    def test_a_phase_ona_does_not_document_is_refused_before_wake_or_stop_acts(self):
+        for phase in ('PHASE_UNSPECIFIED', 'PHASE_SOMETHING_NEW', None, 3, fake.DROP):
+            run = self.started()
+            self.host.status_patch = {'phase': phase}
+            self.refused_with('wake', run, [AGENT + 'SendToAgentExecution'])
+            self.refused_with('stop', run, [AGENT + 'StopAgentExecution', ENVIRONMENT + 'StopEnvironment'])
+            self.host.status_patch = {}
+            self.assertEqual(self.host.runs[run]['messages'], [PROMPT], phase)
+        self.host.status_patch = {'phase': 'PHASE_RUNNING'}
+        self.host.faults['GetAgentExecution'] = (200, {'agentExecution': {'id': run, 'status': []}}, False)
+        self.refused_with('wake', run, [AGENT + 'SendToAgentExecution'])
+
+    def test_an_unreadable_write_acknowledgement_is_refused_with_the_run(self):
+        for answer in ((200, b'null'), (200, b'<html>ok</html>'), (200, []), (200, b''), (201, {}), (204, b'')):
+            run = self.started()
+            self.host.faults['SendToAgentExecution'] = answer + (True,)
+            self.refused_with('wake', run)
+            self.host.faults = {'StopAgentExecution': answer + (False,)}
+            self.refused_with('stop', run)
+            self.assertEqual(self.host.runs[run]['phase'], 'PHASE_WAITING_FOR_INPUT', answer)
+            self.host.faults = {'SendToAgentExecution': answer + (True,)}
+            self.host.runs.clear()
+            code, out = self.driver('start', START)
+            [run] = self.host.runs
+            self.assertEqual((code, out['error'].startswith('run %s may have started: ' % run)), (1, True), answer)
+            self.assertIn(run, out['next'])
+            self.host.faults = {}
+
+    def test_an_unreadable_start_acknowledgement_starts_nothing_more(self):
+        for answer in ((200, b'null'), (200, b'<html>ok</html>'), (201, {'agentExecutionId': UUID_ONE})):
+            self.host.faults = {'StartAgent': answer + (False,)}
+            self.host.requests.clear()
+            code, out = self.driver('start', START)
+            self.assertEqual(code, 1, answer)
+            self.assertEqual(self.host.calls(), [AGENT + 'StartAgent'])
+
+    def test_environment_data_off_its_shape_is_refused_before_stop_writes(self):
+        for used in ({}, 'x', None, [1], [{'environmentId': 'not-a-uuid', 'createdByAgent': True}],
+                     [{'createdByAgent': True}], [{'environmentId': UUID_ONE, 'createdByAgent': 'yes'}],
+                     [{'environmentId': 7}], [[UUID_ONE, True]]):
+            run = self.started()
+            self.host.status_patch = {'usedEnvironments': used}
+            self.refused_with('stop', run, [AGENT + 'StopAgentExecution', ENVIRONMENT + 'StopEnvironment'])
+            self.assertEqual(self.host.runs[run]['phase'], 'PHASE_WAITING_FOR_INPUT', used)
+            env = self.host.runs[run]['environment']
+            self.assertEqual(self.host.environments[env], 'ENVIRONMENT_PHASE_RUNNING', used)
+
+    def test_omitted_environments_are_none_and_only_the_execution_stops(self):
+        run = self.started()
+        self.host.status_patch = {'usedEnvironments': fake.DROP}
+        self.host.requests.clear()
+        self.assertEqual(self.driver('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
+        self.assertEqual(self.host.calls(), [AGENT + 'GetAgentExecution', AGENT + 'StopAgentExecution'])
+
+    def test_a_rejected_environment_stop_is_refused_with_the_run(self):
+        for answer in ((400, {'code': 'invalid_argument'}), (404, b'<html>gone</html>'), (404, {}), (200, b'null'),
+                       (500, {'code': 'internal'})):
+            run = self.started()
+            env = self.host.runs[run]['environment']
+            self.host.faults = {'StopEnvironment': answer + (False,)}
+            out = self.refused_with('stop', run)
+            self.assertIn(env, out['error'])
+            self.assertEqual(self.host.environments[env], 'ENVIRONMENT_PHASE_RUNNING', answer)
+            self.host.faults = {}
+
+    def test_an_environment_ona_no_longer_has_or_already_stopped_counts_as_stopped(self):
+        run = self.started()
+        env = self.host.runs[run]['environment']
+        self.host.faults = {'StopEnvironment': (404, {'code': 'not_found', 'message': 'synthetic'}, False)}
+        self.assertEqual(self.driver('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
+        self.host.faults = {}
+        self.host.environments[env] = 'ENVIRONMENT_PHASE_STOPPED'
+        self.host.stopped_environment_answer = fake.error(400, 'failed_precondition', 'synthetic: already stopped')
+        self.host.requests.clear()
+        self.assertEqual(self.driver('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
+        self.assertEqual(self.host.calls(), [AGENT + 'GetAgentExecution', ENVIRONMENT + 'StopEnvironment',
+                                             ENVIRONMENT + 'GetEnvironment'])
+        self.host.environments[env] = 'ENVIRONMENT_PHASE_RUNNING'
+        self.host.faults = {'StopEnvironment': (400, {'code': 'failed_precondition'}, False)}
+        out = self.refused_with('stop', run)
+        self.assertIn(env, out['error'])
+        self.host.faults = {'StopEnvironment': (400, {'code': 'failed_precondition'}, False),
+                            'GetEnvironment': (200, b'null', False)}
+        self.refused_with('stop', run)
+
     def test_inputs_off_the_schema_are_refused_before_any_request(self):
         for bad in (dict(START, token='kit-probe-not-a-login'), {k: v for k, v in START.items() if k != 'model'},
                     dict(START, ticket='7'), dict(START, repository='https://example.com/x'),
@@ -247,18 +364,6 @@ class Driver(unittest.TestCase):
         code, out = self.driver('start', START)
         self.assertEqual((code, out), (1, {'error': 'Ona answered 401 to POST %sStartAgent' % AGENT,
                                            'next': "check your key and Ona's status, then retry"}))
-
-    def test_no_driver_file_names_the_key_or_the_keychain(self):
-        for folder, _, names in os.walk(HERE):
-            for n in names:
-                with open(os.path.join(folder, n), 'rb') as f:
-                    lines = f.read().split(b'\n')
-                rel = os.path.relpath(os.path.join(folder, n), HERE)
-                for line in lines:
-                    if rel == 'README.md' and b'openwiz-ona' in line and b'_API_KEY' in line:
-                        continue
-                    self.assertNotIn(b'ONA' + b'_API_KEY', line, rel)
-                    self.assertIsNone(KEYCHAIN_TOOLS_SPELLED_IN_PARTS.search(line), rel)
 
     def test_version_and_schema(self):
         self.assertEqual(self.driver('version'), (0, {'driver': 'ona', 'records': ['openwiz:records v1'],

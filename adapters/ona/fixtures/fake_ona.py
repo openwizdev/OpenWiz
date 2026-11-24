@@ -7,6 +7,7 @@ import threading
 import time
 import uuid
 
+DROP = object()
 KEY_PATH = '/.openwiz/hostkey-test-key'
 CODEX = '00000000-0000-0000-0000-000000007800'
 AGENT = '/api/gitpod.v1.AgentService/'
@@ -31,6 +32,7 @@ class FakeOna:
         self.served_key = key if served_key is None else served_key
         self.refuse_efforts = refuse_efforts
         self.requests, self.runs, self.environments = [], {}, {}
+        self.faults, self.status_patch, self.stopped_environment_answer = {}, {}, (200, {})
         self.lock = threading.Lock()
         host = self
 
@@ -56,11 +58,14 @@ class FakeOna:
                         if not isinstance(body_in, dict):
                             code, body = error(400, 'invalid_argument', 'synthetic: the body is not an object')
                         else:
-                            code, body = host.route(self.path, body_in)
+                            fault = host.faults.get(self.path.rsplit('/', 1)[-1])
+                            if fault and fault[2]:
+                                host.route(self.path, body_in)
+                            code, body = fault[:2] if fault else host.route(self.path, body_in)
                 self.reply(code, body)
 
             def reply(self, code, body):
-                data = json.dumps(body).encode()
+                data = body if isinstance(body, bytes) else json.dumps(body).encode()
                 self.send_response(code)
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Content-Length', str(len(data)))
@@ -140,14 +145,18 @@ class FakeOna:
             run, failed = self._run(body, {'agentExecutionId'})
             if failed:
                 return failed
-            return 200, {'agentExecution': {
+            out = {'agentExecution': {
                 'id': body['agentExecutionId'],
                 'metadata': {'name': run['start']['name'], 'annotations': {}},
                 'spec': {'agentId': CODEX, 'codeContext': run['start']['codeContext'],
                          'codexSettings': run['start'].get('codexSettings', {})},
-                'status': {'phase': run['phase'], 'conversationUrl': 'https://app.ona.com/synthetic',
-                           'usedEnvironments': [{'environmentId': run['environment'], 'createdByAgent': True},
-                                                {'environmentId': '00000000-0000-4000-8000-00000000e0e0'}]}}}
+                'status': dict({'phase': run['phase'], 'conversationUrl': 'https://app.ona.com/synthetic',
+                                'usedEnvironments': [{'environmentId': run['environment'], 'createdByAgent': True},
+                                                     {'environmentId': '00000000-0000-4000-8000-00000000e0e0'}]},
+                               **self.status_patch)}}
+            out['agentExecution']['status'] = {k: v for k, v in out['agentExecution']['status'].items()
+                                               if v is not DROP}
+            return 200, out
         if path == AGENT + 'SendToAgentExecution':
             run, failed = self._run(body, {'agentExecutionId', 'userInput'})
             if failed:
@@ -174,6 +183,13 @@ class FakeOna:
         if path == ENVIRONMENT + 'StopEnvironment':
             if set(body) != {'environmentId'} or body['environmentId'] not in self.environments:
                 return error(404, 'not_found', 'synthetic: environment not found')
+            if self.environments[body['environmentId']] == 'ENVIRONMENT_PHASE_STOPPED':
+                return self.stopped_environment_answer
             self.environments[body['environmentId']] = 'ENVIRONMENT_PHASE_STOPPED'
             return 200, {}
+        if path == ENVIRONMENT + 'GetEnvironment':
+            if set(body) != {'environmentId'} or body['environmentId'] not in self.environments:
+                return error(404, 'not_found', 'synthetic: environment not found')
+            return 200, {'environment': {'id': body['environmentId'],
+                                         'status': {'phase': self.environments[body['environmentId']]}}}
         return error(404, 'unimplemented', 'synthetic: no such method')
