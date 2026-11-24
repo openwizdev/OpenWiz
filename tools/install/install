@@ -73,7 +73,7 @@ import harness
 import pull
 
 HOSTS = {('Darwin', 'arm64'): 'aarch64-apple-darwin', ('Darwin', 'x86_64'): 'x86_64-apple-darwin',
-         ('Linux', 'x86_64'): 'x86_64-unknown-linux-gnu'}
+         ('Linux', 'aarch64'): 'aarch64-unknown-linux-gnu', ('Linux', 'x86_64'): 'x86_64-unknown-linux-gnu'}
 NOTES = {('Darwin', 'x86_64'): 'Supported. CloudRoom has no Intel Mac build, so on this Mac, agents run on this'
          ' computer or on boat.dev.'}
 DISK = 512 * 1024 * 1024
