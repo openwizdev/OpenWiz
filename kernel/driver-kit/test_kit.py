@@ -133,6 +133,8 @@ EFFORT_KEY = {
                         "fake devin host", 'pass wake: the run edited builder status note 3', PASS[3], KEY_PASS],
     'planted/effort-dropped-key-host': [PASS[0], "fail start: effort: medium never reached the kit's fake devin host"]
     + NOT_RUN + [KEY_PASS],
+    'planted/effort-cleanup-only': [PASS[0], "fail start: effort: medium never reached the kit's fake devin host"]
+    + NOT_RUN + [KEY_PASS],
     'planted/effort-key-host-starts-then-refuses': [PASS[0], "fail start: effort: start refused medium with the "
                                                     "refusal text after it sent the kit's fake devin host a start "
                                                     "request"] + NOT_RUN + [KEY_PASS],
@@ -750,6 +752,15 @@ class Kit(unittest.TestCase):
                 self.setUp()
                 code, out, host = self.keyed(os.path.join(FIXTURES, name, 'driver'))
                 self.assertEqual((code, out), (0 if all(x.startswith('pass') for x in lines) else 1, lines))
+
+    def test_effort_on_another_key_host_request_does_not_count(self):
+        name = 'planted/effort-cleanup-only'
+        for mode in ('cleanup-post', 'start-get', 'start-second-post'):
+            with self.subTest(mode):
+                self.tearDown()
+                self.setUp()
+                code, out, _ = self.keyed(os.path.join(FIXTURES, name, 'driver'), KIT_EFFORT_RECEIPT=mode)
+                self.assertEqual((code, out), (1, EFFORT_KEY[name]))
 
     def test_without_proc_as_on_macos_the_template_passes_all_five(self):
         macos = {'PATH': NO_PROC + os.pathsep + self.env['PATH'], 'NO_PROC_PYTHON': sys.executable}

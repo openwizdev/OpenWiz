@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+import importlib.machinery
+import importlib.util
+import os
+import sys
+
+sys.dont_write_bytecode = True
+path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'effort-key-host', 'driver')
+spec = importlib.util.spec_from_loader('base', importlib.machinery.SourceFileLoader('base', path))
+d = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(d)
+
+mode = os.environ.get('KIT_EFFORT_RECEIPT', 'cleanup-delete')
+launch, end = d.k.t.launch, d.k.t.end
+
+
+def keyed_launch(req, run, woken):
+    result = launch(req, run, woken)
+    if not woken and 'effort' in req:
+        effort = {'effort': req['effort']}
+        if mode == 'start-get':
+            d.k.ask('GET', d.k.path(run, 'metadata'), effort)
+        if mode == 'start-second-post':
+            d.k.ask('POST', d.k.path(run, 'metadata'), effort)
+    return result
+
+
+def keyed_end(turns, run):
+    req = d.k.t.saved(run)['request']
+    if 'effort' in req:
+        effort = {'effort': req['effort']}
+        if mode == 'cleanup-delete':
+            d.k.ask('DELETE', d.k.path(run), effort)
+            return d.k.end(turns, run)
+        if mode == 'cleanup-post':
+            d.k.ask('POST', d.k.path(run, 'cleanup'), effort)
+    return end(turns, run)
+
+
+d.k.body = lambda req: {'ticket': req['ticket']}
+d.k.t.launch, d.k.t.end = keyed_launch, keyed_end
+d.k.t.main()
