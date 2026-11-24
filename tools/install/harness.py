@@ -1,9 +1,11 @@
+import json
 import os
 from pathlib import Path
 import re
 import shlex
 import shutil
 import stat
+import tempfile
 
 import install as installer
 
@@ -138,6 +140,36 @@ def copy(folder, skills, wanted, source, plain):
     return placed, None
 
 
+BESIDE = ('contracts', '.claude-plugin')
+
+
+def manifest(names):
+    return (json.dumps({'name': 'openwiz', 'skills': ['./skills/' + n for n in names]}, indent=2) + '\n').encode()
+
+
+def beside(base, build, names, source, plain):
+    with tempfile.TemporaryDirectory(prefix='openwiz-beside-') as temporary:
+        plugin = Path(temporary) / '.claude-plugin'
+        plugin.mkdir()
+        (plugin / 'plugin.json').write_bytes(manifest(names))
+        origins = {'contracts': build / 'runtime', '.claude-plugin': Path(temporary)}
+        skipped = []
+        for name in BESIDE:
+            if not (origins[name] / name).is_dir():
+                continue
+            try:
+                found = check(base, [name], plain)
+                if not found:
+                    place(base, origins[name], [name], source)
+                skipped += found
+            except (OSError, installer.Refused) as error:
+                why = error.strerror if isinstance(error, OSError) and error.strerror else str(error)
+                skipped.append({'skill': name, 'path': str(base / name),
+                                'next': f'OpenWiz could not write {base / name} ({why}), so {plain}\'s skills cannot '
+                                        f'read it. Make {base} writable, then run this again.'})
+        return skipped
+
+
 def install_skills(build, value, root, home, codex_home=None):
     skills = build / 'runtime/skills'
     installer.private(skills)
@@ -162,7 +194,10 @@ def install_skills(build, value, root, home, codex_home=None):
                 skipped = check(base / 'skills', names, plain)
                 wanted = [n for n in names if n not in {s['skill'] for s in skipped}]
                 placed, failed = copy(base / 'skills', skills, wanted, value['source'], plain) if wanted else ([], None)
-                row.update(state='installed' if len(placed) == len(names) else 'partial' if placed else 'refused',
+                if placed and not failed:
+                    skipped += beside(base, build, names, value['source'], plain)
+                row.update(state='installed' if len(placed) == len(names) and not skipped
+                           else 'partial' if placed else 'refused',
                            next=failed or (f'{plain} finds these skills next time it starts.' if not skipped else
                            f'{plain} did not get {len(skipped)} skill(s); each one below says why and what to do.'))
                 if skipped:
@@ -182,6 +217,8 @@ def install_skills(build, value, root, home, codex_home=None):
         skipped = check(canonical, names, 'OpenWiz\'s own skills folder')
         placed, failed = copy(canonical, skills, [n for n in names if n not in {s['skill'] for s in skipped}],
                               value['source'], 'OpenWiz\'s own skills folder')
+        if placed and not failed:
+            skipped += beside(Path(root), build, names, value['source'], 'OpenWiz\'s own skills folder')
     except installer.Refused as refusal:
         skipped, failed = [], (f'{canonical} is a link or not a folder of yours ({refusal}), so OpenWiz did not '
                                'write its own copy there; the agents above still got their skills. Make it a real '
