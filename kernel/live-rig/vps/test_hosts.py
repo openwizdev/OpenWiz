@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import ast
 import importlib.machinery
 import importlib.util
 import json
@@ -32,6 +33,9 @@ CONFIGS = {
                   'harness': 'claude'},
     'cursor': {'host': 'Cursor', 'driver': 'adapters/cursor/driver', 'tool': 'curl', 'key': 'CURSOR_API_KEY', 'harness': 'cursor'},
 }
+KEYCHAIN = {'conductor': 'openwiz-conductor', 'cursor': 'openwiz-cursor-cloud'}
+KEYCHAIN_TOOLS = ['secret-tool', 'security', 'gdbus', 'busctl', 'dbus-send', 'kwallet-query']
+APPROACH = 'docs/evidence/2895/approach.md'
 GH_PROBE = ['env', 'GH_TELEMETRY=0', 'gh', 'config', 'get', '-h', 'github.com', 'user']
 BILLS = {'hermes': 'unknown', 'pane': 'unknown', 'factory': 'unknown', 'conductor': 'unknown', 'cursor': 'unknown'}
 SKIPS = {
@@ -43,9 +47,11 @@ SKIPS = {
     'factory': {'tool missing': 'not installed: droid', 'gh missing': 'not installed: gh', 'tool signed out': 'cost',
                 'key name unset': 'not signed in: python3', 'gh signed out': 'not signed in: env', 'signed in': 'cost'},
     'conductor': {'tool missing': 'not installed: curl', 'gh missing': 'not installed: gh', 'tool signed out': 'cost',
-                  'key name unset': 'not signed in: python3', 'gh signed out': 'not signed in: env', 'signed in': 'cost'},
+                  'key name unset': 'not signed in: python3', 'key in keychain only': 'not signed in: python3',
+                  'gh signed out': 'not signed in: env', 'signed in': 'cost'},
     'cursor': {'tool missing': 'not installed: curl', 'gh missing': 'not installed: gh', 'tool signed out': 'cost',
-               'key name unset': 'not signed in: python3', 'gh signed out': 'not signed in: env', 'signed in': 'cost'},
+               'key name unset': 'not signed in: python3', 'key in keychain only': 'not signed in: python3',
+               'gh signed out': 'not signed in: env', 'signed in': 'cost'},
 }
 
 
@@ -84,6 +90,54 @@ class Configs(unittest.TestCase):
                 self.assertEqual([c for c in config['signed_in'] if c[0] == 'gh' or
                                   c[0] == 'env' and 'gh' in c], [GH_PROBE])
                 self.assertFalse(any(c[:3] == ['claude', 'auth', 'status'] for c in config['signed_in']))
+
+
+class KeyProbe(unittest.TestCase):
+    def probe(self, host):
+        with open(os.path.join(HOSTS, host + '.json')) as f:
+            config = json.load(f)
+        probes = [c for c in config['signed_in'] if c[0] == 'python3']
+        self.assertEqual(len(probes), 1)
+        self.assertEqual(probes[0][:3], ['python3', '-I', '-c'])
+        self.assertEqual(len(probes[0]), 4)
+        return probes[0][3]
+
+    def test_the_key_probe_compares_names_only_and_starts_nothing(self):
+        for host, entry in sorted(KEYCHAIN.items()):
+            with self.subTest(host=host):
+                tree = ast.parse(self.probe(host))
+                variable = CONFIGS[host]['key']
+                environ = []
+                for node in ast.walk(tree):
+                    self.assertNotIsInstance(node, (ast.Subscript, ast.ImportFrom, ast.Lambda, ast.Starred))
+                    if isinstance(node, ast.Import):
+                        self.assertLessEqual({a.name for a in node.names}, {'os', 'sys'})
+                    if isinstance(node, ast.Attribute):
+                        self.assertIn((getattr(node.value, 'id', None), node.attr), {('os', 'environ'), ('sys', 'exit')})
+                        if node.attr == 'environ':
+                            environ.append(node)
+                    if isinstance(node, ast.Call):
+                        name = node.func.id if isinstance(node.func, ast.Name) else ast.unparse(node.func)
+                        self.assertIn(name, {'any', 'sys.exit'})
+                    if isinstance(node, ast.Compare):
+                        self.assertEqual([type(o) for o in node.ops], [ast.Eq])
+                        self.assertEqual([getattr(c, 'value', None) for c in node.comparators], [variable])
+                    if isinstance(node, ast.Name):
+                        self.assertNotIn(node.id, {'open', 'exec', 'eval', 'getattr', '__import__', 'vars'})
+                iters = [g.iter for g in ast.walk(tree) if isinstance(g, ast.comprehension)]
+                self.assertTrue(environ)
+                self.assertTrue(all(any(e is i for i in iters) for e in environ), 'os.environ only as names to iterate')
+
+    def test_the_key_probe_says_why_a_keychain_only_key_skips(self):
+        for host, entry in sorted(KEYCHAIN.items()):
+            with self.subTest(host=host):
+                texts = [n.value for n in ast.walk(ast.parse(self.probe(host)))
+                         if isinstance(n, ast.Constant) and isinstance(n.value, str) and n.value != CONFIGS[host]['key']]
+                self.assertEqual(len(texts), 1, 'one why string in the probe')
+                why = texts[0]
+                for word in (entry, 'skipped: not signed in', 'prompt', APPROACH):
+                    self.assertIn(word, why)
+        self.assertTrue(os.path.isfile(os.path.join(ROOT, APPROACH)))
 
 
 class Skips(unittest.TestCase):
@@ -126,6 +180,13 @@ class Skips(unittest.TestCase):
                             '{ echo "%s refused" >> "%s"; exit 2; }\n' % (only, name, self.log))
                 f.write('exit %d\n' % (1 if out else 0))
             os.chmod(os.path.join(fakes, name), 0o755)
+        if situation == 'key in keychain only':
+            # SAFETY: fake keychain tools that answer as if the entry existed, and print the planted value, so a probe
+            # that called one would pass, log the call, or leak the value; never a real keychain.
+            for name in KEYCHAIN_TOOLS:
+                with open(os.path.join(fakes, name), 'w') as f:
+                    f.write('#!/bin/sh\necho "%s $*" >> "%s"\necho "%s"\nexit 0\n' % (name, self.log, SECRET))
+                os.chmod(os.path.join(fakes, name), 0o755)
         for name, real in (('env', shutil.which('env')), ('git', shutil.which('git')),
                            ('python3', sys.executable)):
             os.symlink(real, os.path.join(fakes, name))
@@ -135,7 +196,7 @@ class Skips(unittest.TestCase):
         want = CONFIGS[host]
         env = {'PATH': self.path_of_stubs_then_fakes(situation, want['tool']), 'HOME': self.folder, 'LANG': 'C.UTF-8'}
         for key in ('FACTORY_API_KEY', 'CONDUCTOR_API_KEY', 'CURSOR_API_KEY'):
-            if situation != 'key name unset':
+            if situation not in ('key name unset', 'key in keychain only'):
                 env[key] = SECRET
         out = os.path.join(self.folder, 'out-' + host + '-' + situation.replace(' ', '-'))
         p = subprocess.run([sys.executable, '-I', os.path.join(self.checkout, 'kernel', 'live-rig', 'rig.py'),
@@ -162,6 +223,17 @@ class Skips(unittest.TestCase):
                                      [('skipped', why, None)])
                     for text in (p.stdout, p.stderr, json.dumps(records)):
                         self.assertNotIn(SECRET, text)
+
+    def test_a_keychain_only_key_skips_and_no_keychain_tool_is_called(self):
+        for host in sorted(KEYCHAIN):
+            with self.subTest(host=host):
+                p, records = self.rig(host, 'key in keychain only')
+                self.assertEqual([r['skipped'] for r in records], ['not signed in: python3'])
+                calls = []
+                if os.path.isfile(self.log):
+                    with open(self.log) as f:
+                        calls = f.read().splitlines()
+                self.assertEqual([c for c in calls if c.split()[0] in KEYCHAIN_TOOLS], [])
 
     def test_status_checks_call_only_read_only_status_commands(self):
         for host in SKIPS:

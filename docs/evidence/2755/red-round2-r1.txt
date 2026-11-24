@@ -1,0 +1,27 @@
+test_a_blocked_override_value_is_never_fetched_from_the_environment (__main__.Heads.test_a_blocked_override_value_is_never_fetched_from_the_environment) ... refused h: no receipt: refused
+FAIL
+
+======================================================================
+FAIL: test_a_blocked_override_value_is_never_fetched_from_the_environment (__main__.Heads.test_a_blocked_override_value_is_never_fetched_from_the_environment)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_heads.py", line 410, in test_a_blocked_override_value_is_never_fetched_from_the_environment
+    self.assertEqual(sorted(set(fetched) & set(AUTH)), [])
+AssertionError: Lists differ: ['GH_ENTERPRISE_TOKEN', 'GH_HOST', 'GH_TOK[42 chars]KEN'] != []
+
+First list contains 5 additional elements.
+First extra element 0:
+'GH_ENTERPRISE_TOKEN'
+
++ []
+- ['GH_ENTERPRISE_TOKEN',
+-  'GH_HOST',
+-  'GH_TOKEN',
+-  'GITHUB_ENTERPRISE_TOKEN',
+-  'GITHUB_TOKEN']
+
+----------------------------------------------------------------------
+Ran 1 test in 2.227s
+
+FAILED (failures=1)
+exit 1

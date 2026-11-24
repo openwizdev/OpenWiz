@@ -1,0 +1,23 @@
+# Green run for #2895: env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/vps/test_hosts.py
+# 37 refusing agent-CLI stubs first on PATH from a private temp dir; fake keychain tools only; synthetic; no host or keychain reached.
+test_the_five_configs_load_through_rig_load_host (__main__.Configs.test_the_five_configs_load_through_rig_load_host) ... ok
+test_the_key_probe_compares_names_only_and_starts_nothing (__main__.KeyProbe.test_the_key_probe_compares_names_only_and_starts_nothing) ... ok
+test_the_key_probe_says_why_a_keychain_only_key_skips (__main__.KeyProbe.test_the_key_probe_says_why_a_keychain_only_key_skips) ... ok
+test_every_row_cites_the_driver_readme_and_the_tools_docs_and_says_whether_it_bills (__main__.Page.test_every_row_cites_the_driver_readme_and_the_tools_docs_and_says_whether_it_bills) ... ok
+test_factory_and_pane_use_the_bootstrapped_tools (__main__.Page.test_factory_and_pane_use_the_bootstrapped_tools) ... ok
+test_pane_doctor_follows_daemon_start_and_registration_of_the_same_checkout (__main__.Page.test_pane_doctor_follows_daemon_start_and_registration_of_the_same_checkout) ... ok
+test_the_page_blocks_real_runs_until_both_fixes_merge (__main__.Page.test_the_page_blocks_real_runs_until_both_fixes_merge) ... ok
+test_the_page_has_exactly_one_row_per_host_in_hosts (__main__.Page.test_the_page_has_exactly_one_row_per_host_in_hosts) ... ok
+test_the_page_holds_names_never_values (__main__.Page.test_the_page_holds_names_never_values) ... ok
+test_the_page_names_each_hand_check_the_probes_cannot_make (__main__.Page.test_the_page_names_each_hand_check_the_probes_cannot_make) ... ok
+test_the_paid_command_is_given_once_with_post_and_no_shell_placeholder (__main__.Page.test_the_paid_command_is_given_once_with_post_and_no_shell_placeholder) ... ok
+test_the_session_is_written_out_in_order (__main__.Page.test_the_session_is_written_out_in_order) ... ok
+test_the_status_column_names_the_no_prompt_github_probe (__main__.Page.test_the_status_column_names_the_no_prompt_github_probe) ... ok
+test_a_keychain_only_key_skips_and_no_keychain_tool_is_called (__main__.Skips.test_a_keychain_only_key_skips_and_no_keychain_tool_is_called) ... ok
+test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) ... ok
+test_status_checks_call_only_read_only_status_commands (__main__.Skips.test_status_checks_call_only_read_only_status_commands) ... ok
+
+----------------------------------------------------------------------
+Ran 16 tests in 2.429s
+
+OK

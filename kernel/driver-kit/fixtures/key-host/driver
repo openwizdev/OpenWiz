@@ -4,7 +4,7 @@ sys.dont_write_bytecode = True
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', '..')
 HELPER = os.path.join(ROOT, 'kernel', 'driver-kit', 'hostkey.py')
 spec = importlib.util.spec_from_loader('template', importlib.machinery.SourceFileLoader(
-    'template', os.path.join(ROOT, 'adapters', 'template', 'driver')))
+    'template', os.path.join(ROOT, 'kernel', 'driver-kit', 'fixtures', 'base', 'driver')))
 t = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(t)
 HOST = 'devin'

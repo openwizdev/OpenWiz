@@ -586,6 +586,32 @@ class Receipt(unittest.TestCase):
         self.one_line(p, 1, 'the receipt could not be written')
         self.assertEqual(files(self.out), ['receipts'])
 
+    def test_pass_start_accepts_the_kits_effort_suffix_and_refuses_other_suffixes(self):
+        good = [
+            '; effort: medium reached a process the run started',
+            "; effort: medium reached the kit's fake devin host",
+            '; effort: refused for fake-harness with the refusal text, as the README says',
+            '; effort: refused turbo with the refusal text, a word its README does not list for fake-harness',
+            "; effort: a start with it was refused, as the README's Effort: line says",
+        ]
+        base = record('5-of-5.json')
+        for suffix in good:
+            with self.subTest(good=suffix):
+                self.fresh()
+                rec = dict(base, stdout=base['stdout'].replace('note 1000000001\n', 'note 1000000001%s\n' % suffix, 1))
+                p = self.run_receipt(rec)
+                self.assertEqual(p.returncode, 0, p.stderr)
+        for bad in ('; effort: arbitrary text', '; extra: note'):
+            with self.subTest(bad_start=bad):
+                self.fresh()
+                rec = dict(base, stdout=base['stdout'].replace('note 1000000001\n', 'note 1000000001%s\n' % bad, 1))
+                self.refused(rec, "the start line is not kit.py's passing start line")
+        self.fresh()
+        wake = dict(base, stdout=base['stdout'].replace(
+            'edited builder status note 1000000001\n',
+            'edited builder status note 1000000001; effort: medium reached a process the run started\n', 1))
+        self.refused(wake, "the wake line is not kit.py's passing wake line")
+
 
 class WizMarket(unittest.TestCase):
 
