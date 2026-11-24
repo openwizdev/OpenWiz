@@ -846,15 +846,12 @@ def exited(run, turn):
         time.sleep(0.05)
 
 
-# Linux only: a turn's own commands go first under memory pressure, and a CPU quota sizes their workers.
 CGROUP, PROC_CGROUP = '/sys/fs/cgroup', '/proc/self/cgroup'
 OOM_FIRST = 500
 CPU_VARIABLES = ('OMP_NUM_THREADS', 'PYTHON_CPU_COUNT', 'CARGO_BUILD_JOBS')
 
 
 def cpu_quota():
-    """The driver's cgroup CPU quota, rounded up to whole CPUs: the tightest of its cgroup and every parent, or
-    None when none sets one (cgroup v2 cpu.max, else v1 cpu.cfs_quota_us and cpu.cfs_period_us)."""
     try:
         with open(PROC_CGROUP) as f:
             lines = [entry.rstrip('\n').split(':', 2) for entry in f]
@@ -884,8 +881,6 @@ def cpu_quota():
 
 
 def shells_go_first(path, previous):
-    """Write the owner-only helper a turn's shells source: it raises the shell's own oom_score_adj (raising needs no
-    privilege, and never lowers one already higher), then sources the owner's previous file, if any."""
     lines = ['# OpenWiz local driver: this turn\'s shells go first under memory pressure, never the harness.',
              '{ read -r adj < /proc/self/oom_score_adj && [ "$adj" -lt %d ] && echo %d > /proc/self/oom_score_adj; } '
              '2>/dev/null' % (OOM_FIRST, OOM_FIRST)]
@@ -899,7 +894,6 @@ def shells_go_first(path, previous):
 
 
 def agent_environment(run, harness, overlay):
-    """What a Linux turn adds to its harness's environment; nothing on macOS. The owner's own values win."""
     if not LINUX:
         return {}
     owner = dict(os.environ, **overlay)
