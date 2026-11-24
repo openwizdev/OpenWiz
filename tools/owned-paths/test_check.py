@@ -46,15 +46,17 @@ else:
 '''
 
 
-def run(scenario):
-    fleet = json.loads((FIXTURES / f'{scenario}.json').read_text()).get('fleet')
+def run(scenario, data=None):
+    data = data or json.loads((FIXTURES / f'{scenario}.json').read_text())
+    fleet = data.get('fleet')
     fleet = HERE.parents[1] / fleet if fleet else FIXTURES / 'fleet.md'
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
+        (tmp / 'scenario.json').write_text(json.dumps(data))
         (tmp / 'gh').write_text(FAKE_GH)
         (tmp / 'gh').chmod(0o755)
         env = dict(os.environ, PATH=f'{tmp}{os.pathsep}{os.environ["PATH"]}',
-                   FAKE_GH_SCENARIO=str(FIXTURES / f'{scenario}.json'),
+                   FAKE_GH_SCENARIO=str(tmp / 'scenario.json'),
                    FAKE_GH_FLEET=str(fleet), FAKE_GH_LOG=str(tmp / 'log'))
         r = subprocess.run([sys.executable, '-I', str(CHECK), '--repo', 'example/project', '--pr', '42'],
                            capture_output=True, text=True, env=env, timeout=60)
@@ -63,9 +65,9 @@ def run(scenario):
 
 
 class Check(unittest.TestCase):
-    def verdict(self, scenario):
-        s = json.loads((FIXTURES / f'{scenario}.json').read_text())
-        r, calls = run(scenario)
+    def verdict(self, scenario, s=None):
+        s = s or json.loads((FIXTURES / f'{scenario}.json').read_text())
+        r, calls = run(scenario, s)
         out = r.stdout + r.stderr
         self.assertEqual(r.returncode, s['exit'], out)
         for line in s['out']:
@@ -114,6 +116,30 @@ class Check(unittest.TestCase):
 
     def test_and_its_tests_admits_nothing_else(self):
         self.verdict('its-tests-not')
+
+    def test_an_annotation_before_an_exclusion_admits_no_tests(self):
+        s = json.loads((FIXTURES / 'its-tests.json').read_text())
+        s['issues']['7']['body'] = (
+            '## Owned paths\n\n'
+            '- `tools/install/harness.py` and its tests (installer) are excluded from this change\n'
+            '- `tools/release/test.py` and its tests in `example/project` (shared) are excluded from this change\n'
+            '- `tools/install/setup/init.py`, plus its tests (shared: the staging only)\n'
+            '- `crates/core/src/widget.rs` and its tests in `example/project` (the runner)\n'
+            '- `tools/plain/run.py` and its tests (review notes (CI))\n'
+            '- `tools/excluded/run.py` and its tests (notes (CI)) are excluded from this change\n')
+        s['pr']['files'][0]['nodes'] = [{'path': p} for p in (
+            'crates/core/src/widget_tests.rs', 'tools/install/harness.py', 'tools/install/setup/init.test.mjs',
+            'tools/install/test_install.py', 'tools/release/test_release.py', 'tools/plain/test_run.py',
+            'tools/excluded/test_run.py')]
+        s['exit'], s['absent'] = 1, ['tests of `tools/install/harness.py`', 'tests of `tools/release/test.py`',
+                                     'tests of `tools/excluded/run.py`']
+        s['out'] = ['owned: crates/core/src/widget_tests.rs (tests of `crates/core/src/widget.rs`)',
+                    'owned: tools/install/harness.py (by `tools/install/harness.py`)',
+                    'owned: tools/install/setup/init.test.mjs (tests of `tools/install/setup/init.py`)',
+                    'owned: tools/plain/test_run.py (tests of `tools/plain/run.py`)',
+                    'OUT: tools/install/test_install.py (ticket #7)', 'OUT: tools/release/test_release.py (ticket #7)',
+                    'OUT: tools/excluded/test_run.py (ticket #7)', 'owned-paths: 3 file(s) outside']
+        self.verdict('annotated-exclusion', s)
 
     def test_an_unreadable_pull_request_is_an_error_not_a_pass(self):
         self.verdict('unreadable')

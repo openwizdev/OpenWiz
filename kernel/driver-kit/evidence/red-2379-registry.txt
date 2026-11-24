@@ -1,0 +1,303 @@
+# #2379: the registry schema test against the red scaffold helper (6a16e77b), given a path argument: it reads hosts.json with no checks.
+test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) ... 
+  test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{}] ... FAIL
+  test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [[{'origin': 'https://api.devin.ai', 'variable': 'DEVIN_API_KEY', 'keychain': 'openwiz-devin', 'header': 'authorization-bearer'}]] ... FAIL
+  test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{'devin': [1]}] ... FAIL
+  test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{'Devin': {'origin': 'https://api.devin.ai', 'variable': 'DEVIN_API_KEY', 'keychain': 'openwiz-devin', 'header': 'authorization-bearer'}}] ... FAIL
+  test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{'ddddddddddddddddddddddddddddddddddddddddd': {'origin': 'https://api.devin.ai', 'variable': 'DEVIN_API_KEY', 'keychain': 'openwiz-devin', 'header': 'authorization-bearer'}}] ... FAIL
+  test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{'devin': {'origin': 'https://api.devin.ai', 'variable': 'DEVIN_API_KEY', 'keychain': 'openwiz-devin', 'header': 'authorization-bearer', 'extra': 'x'}}] ... FAIL
+  test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{'devin': {'origin': 'x'}}] ... FAIL
+  test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{'devin': {'origin': 'http://api.devin.ai', 'variable': 'DEVIN_API_KEY', 'keychain': 'openwiz-devin', 'header': 'authorization-bearer'}}] ... FAIL
+  test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{'devin': {'origin': 'https://api.devin.ai/', 'variable': 'DEVIN_API_KEY', 'keychain': 'openwiz-devin', 'header': 'authorization-bearer'}}] ... FAIL
+  test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{'devin': {'origin': 'https://api.devin.ai:443', 'variable': 'DEVIN_API_KEY', 'keychain': 'openwiz-devin', 'header': 'authorization-bearer'}}] ... FAIL
+  test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{'devin': {'origin': 'https://API.devin.ai', 'variable': 'DEVIN_API_KEY', 'keychain': 'openwiz-devin', 'header': 'authorization-bearer'}}] ... FAIL
+  test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{'devin': {'origin': 'https://localhost', 'variable': 'DEVIN_API_KEY', 'keychain': 'openwiz-devin', 'header': 'authorization-bearer'}}] ... FAIL
+  test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{'devin': {'origin': 'https://api.devin.ai', 'variable': 'DEVIN_API_KEY', 'keychain': 'openwiz-devin', 'header': 'x-api-key'}}] ... FAIL
+  test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{'devin': {'origin': 'https://api.devin.ai', 'variable': 'devin_api_key', 'keychain': 'openwiz-devin', 'header': 'authorization-bearer'}}] ... FAIL
+  test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{'devin': {'origin': 'https://api.devin.ai', 'variable': 'DEVIN_API_KEY', 'keychain': 'openwiz devin', 'header': 'authorization-bearer'}}] ... FAIL
+  test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{'devin': {'origin': 'https://api.devin.ai', 'variable': 7, 'keychain': 'openwiz-devin', 'header': 'authorization-bearer'}}] ... FAIL
+  test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [raw:{"devin": {"origin": NaN}}] ... FAIL
+  test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [raw:not json] ... ERROR
+
+======================================================================
+ERROR: test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [raw:not json]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 187, in test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries
+    helper = hostkey.registry(path) == value
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/hostkey.py", line 14, in registry
+    return json.load(f)
+           ^^^^^^^^^^^^
+  File "/usr/lib/python3.11/json/__init__.py", line 293, in load
+    return loads(fp.read(),
+           ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/json/decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+======================================================================
+FAIL: test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 190, in test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries
+    self.assertEqual((schema, helper), (schema, schema))
+AssertionError: Tuples differ: (False, True) != (False, False)
+
+First differing element 1:
+True
+False
+
+- (False, True)
++ (False, False)
+
+======================================================================
+FAIL: test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [[{'origin': 'https://api.devin.ai', 'variable': 'DEVIN_API_KEY', 'keychain': 'openwiz-devin', 'header': 'authorization-bearer'}]]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 190, in test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries
+    self.assertEqual((schema, helper), (schema, schema))
+AssertionError: Tuples differ: (False, True) != (False, False)
+
+First differing element 1:
+True
+False
+
+- (False, True)
++ (False, False)
+
+======================================================================
+FAIL: test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{'devin': [1]}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 190, in test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries
+    self.assertEqual((schema, helper), (schema, schema))
+AssertionError: Tuples differ: (False, True) != (False, False)
+
+First differing element 1:
+True
+False
+
+- (False, True)
++ (False, False)
+
+======================================================================
+FAIL: test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{'Devin': {'origin': 'https://api.devin.ai', 'variable': 'DEVIN_API_KEY', 'keychain': 'openwiz-devin', 'header': 'authorization-bearer'}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 190, in test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries
+    self.assertEqual((schema, helper), (schema, schema))
+AssertionError: Tuples differ: (False, True) != (False, False)
+
+First differing element 1:
+True
+False
+
+- (False, True)
++ (False, False)
+
+======================================================================
+FAIL: test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{'ddddddddddddddddddddddddddddddddddddddddd': {'origin': 'https://api.devin.ai', 'variable': 'DEVIN_API_KEY', 'keychain': 'openwiz-devin', 'header': 'authorization-bearer'}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 190, in test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries
+    self.assertEqual((schema, helper), (schema, schema))
+AssertionError: Tuples differ: (False, True) != (False, False)
+
+First differing element 1:
+True
+False
+
+- (False, True)
++ (False, False)
+
+======================================================================
+FAIL: test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{'devin': {'origin': 'https://api.devin.ai', 'variable': 'DEVIN_API_KEY', 'keychain': 'openwiz-devin', 'header': 'authorization-bearer', 'extra': 'x'}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 190, in test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries
+    self.assertEqual((schema, helper), (schema, schema))
+AssertionError: Tuples differ: (False, True) != (False, False)
+
+First differing element 1:
+True
+False
+
+- (False, True)
++ (False, False)
+
+======================================================================
+FAIL: test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{'devin': {'origin': 'x'}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 190, in test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries
+    self.assertEqual((schema, helper), (schema, schema))
+AssertionError: Tuples differ: (False, True) != (False, False)
+
+First differing element 1:
+True
+False
+
+- (False, True)
++ (False, False)
+
+======================================================================
+FAIL: test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{'devin': {'origin': 'http://api.devin.ai', 'variable': 'DEVIN_API_KEY', 'keychain': 'openwiz-devin', 'header': 'authorization-bearer'}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 190, in test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries
+    self.assertEqual((schema, helper), (schema, schema))
+AssertionError: Tuples differ: (False, True) != (False, False)
+
+First differing element 1:
+True
+False
+
+- (False, True)
++ (False, False)
+
+======================================================================
+FAIL: test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{'devin': {'origin': 'https://api.devin.ai/', 'variable': 'DEVIN_API_KEY', 'keychain': 'openwiz-devin', 'header': 'authorization-bearer'}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 190, in test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries
+    self.assertEqual((schema, helper), (schema, schema))
+AssertionError: Tuples differ: (False, True) != (False, False)
+
+First differing element 1:
+True
+False
+
+- (False, True)
++ (False, False)
+
+======================================================================
+FAIL: test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{'devin': {'origin': 'https://api.devin.ai:443', 'variable': 'DEVIN_API_KEY', 'keychain': 'openwiz-devin', 'header': 'authorization-bearer'}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 190, in test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries
+    self.assertEqual((schema, helper), (schema, schema))
+AssertionError: Tuples differ: (False, True) != (False, False)
+
+First differing element 1:
+True
+False
+
+- (False, True)
++ (False, False)
+
+======================================================================
+FAIL: test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{'devin': {'origin': 'https://API.devin.ai', 'variable': 'DEVIN_API_KEY', 'keychain': 'openwiz-devin', 'header': 'authorization-bearer'}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 190, in test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries
+    self.assertEqual((schema, helper), (schema, schema))
+AssertionError: Tuples differ: (False, True) != (False, False)
+
+First differing element 1:
+True
+False
+
+- (False, True)
++ (False, False)
+
+======================================================================
+FAIL: test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{'devin': {'origin': 'https://localhost', 'variable': 'DEVIN_API_KEY', 'keychain': 'openwiz-devin', 'header': 'authorization-bearer'}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 190, in test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries
+    self.assertEqual((schema, helper), (schema, schema))
+AssertionError: Tuples differ: (False, True) != (False, False)
+
+First differing element 1:
+True
+False
+
+- (False, True)
++ (False, False)
+
+======================================================================
+FAIL: test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{'devin': {'origin': 'https://api.devin.ai', 'variable': 'DEVIN_API_KEY', 'keychain': 'openwiz-devin', 'header': 'x-api-key'}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 190, in test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries
+    self.assertEqual((schema, helper), (schema, schema))
+AssertionError: Tuples differ: (False, True) != (False, False)
+
+First differing element 1:
+True
+False
+
+- (False, True)
++ (False, False)
+
+======================================================================
+FAIL: test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{'devin': {'origin': 'https://api.devin.ai', 'variable': 'devin_api_key', 'keychain': 'openwiz-devin', 'header': 'authorization-bearer'}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 190, in test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries
+    self.assertEqual((schema, helper), (schema, schema))
+AssertionError: Tuples differ: (False, True) != (False, False)
+
+First differing element 1:
+True
+False
+
+- (False, True)
++ (False, False)
+
+======================================================================
+FAIL: test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{'devin': {'origin': 'https://api.devin.ai', 'variable': 'DEVIN_API_KEY', 'keychain': 'openwiz devin', 'header': 'authorization-bearer'}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 190, in test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries
+    self.assertEqual((schema, helper), (schema, schema))
+AssertionError: Tuples differ: (False, True) != (False, False)
+
+First differing element 1:
+True
+False
+
+- (False, True)
++ (False, False)
+
+======================================================================
+FAIL: test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [{'devin': {'origin': 'https://api.devin.ai', 'variable': 7, 'keychain': 'openwiz-devin', 'header': 'authorization-bearer'}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 190, in test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries
+    self.assertEqual((schema, helper), (schema, schema))
+AssertionError: Tuples differ: (False, True) != (False, False)
+
+First differing element 1:
+True
+False
+
+- (False, True)
++ (False, False)
+
+======================================================================
+FAIL: test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) [raw:{"devin": {"origin": NaN}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 190, in test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries
+    self.assertEqual((schema, helper), (schema, schema))
+AssertionError: Tuples differ: (False, True) != (False, False)
+
+First differing element 1:
+True
+False
+
+- (False, True)
++ (False, False)
+
+----------------------------------------------------------------------
+Ran 1 test in 0.031s
+
+FAILED (failures=17, errors=1)

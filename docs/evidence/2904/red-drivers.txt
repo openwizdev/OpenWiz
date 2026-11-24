@@ -1,0 +1,20 @@
+== adapters/template/test_driver.py -k provider_qualified (driver START at main's pattern)
+FAIL: test_a_provider_qualified_model_reaches_the_harness (__main__.Template.test_a_provider_qualified_model_reaches_the_harness)
+AssertionError: 1 != 0 : {'error': 'model is not valid', 'next': 'fix model as `driver schema` shows'}
+FAILED (failures=1)
+== adapters/boat/test_driver.py -k provider_qualified (driver START at main's pattern)
+FAIL: test_a_provider_qualified_model_reaches_boat (__main__.Boat.test_a_provider_qualified_model_reaches_boat)
+AssertionError: 1 != 0 : {'error': 'model is not valid', 'next': 'fix model as `driver schema` shows'}
+FAILED (failures=1)
+== adapters/cloudroom/test_driver.py -k provider_qualified (driver START at main's pattern)
+FAIL: test_a_provider_qualified_model_reaches_spawn (__main__.Driver.test_a_provider_qualified_model_reaches_spawn)
+AssertionError: 1 != 0 : {'error': 'model is not valid', 'next': 'fix model as `driver schema` shows'}
+FAILED (failures=1)
+== adapters/devin/test_driver.py -k provider_qualified (driver START at main's pattern)
+FAIL: test_a_provider_qualified_model_passes_the_pattern_and_meets_devins_own_modes (__main__.Driver.test_a_provider_qualified_model_passes_the_pattern_and_meets_devins_own_modes)
+AssertionError: Tuples differ: (1, 'model is not valid') != (1, 'model is not a Devin mode')
+FAILED (failures=1)
+== adapters/openclaw/test_driver.py -k provider_qualified (driver START at main's pattern)
+FAIL: test_a_provider_qualified_model_reaches_acpx (__main__.OpenClaw.test_a_provider_qualified_model_reaches_acpx)
+AssertionError: 1 != 0 : {'error': 'model is not valid', 'next': 'fix model as `driver schema` shows'}
+FAILED (failures=1)

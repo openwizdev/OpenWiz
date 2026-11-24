@@ -1,0 +1,39 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/test_receipt.py   (before receipt.py refuses withheld lines)
+test_a_fail_line_with_exit_0_writes_nothing (__main__.Receipt.test_a_fail_line_with_exit_0_writes_nothing) ... ok
+test_a_listing_that_is_not_this_runs_writes_nothing (__main__.Receipt.test_a_listing_that_is_not_this_runs_writes_nothing) ... ok
+test_a_machine_path_writes_nothing (__main__.Receipt.test_a_machine_path_writes_nothing) ... ok
+test_a_malformed_record_writes_nothing (__main__.Receipt.test_a_malformed_record_writes_nothing) ... ok
+test_a_missing_or_extra_line_writes_nothing (__main__.Receipt.test_a_missing_or_extra_line_writes_nothing) ... ok
+test_a_planted_credential_writes_nothing (__main__.Receipt.test_a_planted_credential_writes_nothing) ... ok
+test_a_secret_from_the_environment_writes_nothing (__main__.Receipt.test_a_secret_from_the_environment_writes_nothing) ... ok
+test_a_withheld_line_writes_nothing (__main__.Receipt.test_a_withheld_line_writes_nothing) ... FAIL
+test_an_unmapped_host_writes_nothing (__main__.Receipt.test_an_unmapped_host_writes_nothing) ... ok
+test_five_of_five_gives_the_byte_exact_receipt (__main__.Receipt.test_five_of_five_gives_the_byte_exact_receipt) ... ok
+test_four_of_five_writes_nothing (__main__.Receipt.test_four_of_five_writes_nothing) ... ok
+test_lines_out_of_order_write_nothing (__main__.Receipt.test_lines_out_of_order_write_nothing) ... ok
+test_listings_json_maps_the_three_drivers (__main__.Receipt.test_listings_json_maps_the_three_drivers) ... ok
+test_mapped_hosts_name_their_listing (__main__.Receipt.test_mapped_hosts_name_their_listing) ... ok
+test_receipt_matches_wizmarkets_own_valid_fixture (__main__.Receipt.test_receipt_matches_wizmarkets_own_valid_fixture) ... ok
+test_run_by_must_be_a_login (__main__.Receipt.test_run_by_must_be_a_login) ... ok
+test_skipped_record_writes_nothing (__main__.Receipt.test_skipped_record_writes_nothing) ... ok
+test_start_and_wake_must_be_kits_text (__main__.Receipt.test_start_and_wake_must_be_kits_text) ... ok
+test_the_first_receipt_is_kept (__main__.Receipt.test_the_first_receipt_is_kept) ... ok
+test_the_token_line_must_be_kits_only_passing_line (__main__.Receipt.test_the_token_line_must_be_kits_only_passing_line) ... ok
+test_our_copy_of_the_fixture_is_wizmarkets (__main__.WizMarket.test_our_copy_of_the_fixture_is_wizmarkets) ... skipped 'skipped: no WizMarket checkout reachable (set WIZMARKET to one)'
+test_wizmarkets_checker_accepts_the_receipt (__main__.WizMarket.test_wizmarkets_checker_accepts_the_receipt) ... skipped 'skipped: no WizMarket checkout reachable (set WIZMARKET to one)'
+
+======================================================================
+FAIL: test_a_withheld_line_writes_nothing (__main__.Receipt.test_a_withheld_line_writes_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/test_receipt.py", line 154, in test_a_withheld_line_writes_nothing
+    self.refused(record('5-of-5.json', stdout='\n'.join(withheld) + '\n'), 'withheld')
+  File "kernel/live-rig/test_receipt.py", line 72, in refused
+    self.assertEqual(p.returncode, 1, p.stderr)
+AssertionError: 0 != 1 : 
+
+----------------------------------------------------------------------
+Ran 22 tests in <seconds>s
+
+FAILED (failures=1, skipped=2)
+exit 1

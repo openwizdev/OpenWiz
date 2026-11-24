@@ -1,0 +1,7 @@
+env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/vps/test_hosts.py Page.test_the_page_blocks_real_runs_until_both_fixes_merge
+.
+----------------------------------------------------------------------
+Ran 1 test
+
+OK
+Exit 0

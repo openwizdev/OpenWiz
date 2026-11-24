@@ -1,7 +1,7 @@
 use std::{ffi::OsString, io::Write, process::Command};
 
 pub const USAGE: &str = "  openwiz init [--repository OWNER/NAME] [--state-dir DIR] [--json]\n  openwiz init --yes --operation ID [--repository OWNER/NAME] [--state-dir DIR] [--json]\n";
-pub const HELP: &str = "Place the factory's private brain from the repository's GitHub visibility\nPrivate code keeps the brain in its own .openwiz/brain; public code gets a private\ncompanion OWNER/NAME-brain linked back to it. There is no placement question.\nThe preview reads GitHub through your gh login and saves one proposal; it writes\nnothing on GitHub. --yes --operation applies exactly that proposal: create and link\nthe companion, create the openwiz label, open one visible pull request with the\nbrain's records. An uncertain apply is reconciled by applying the same operation.\nChange the location later through the brain_location setting, with the same rules.\n";
+pub const HELP: &str = "Place the factory's private brain from the repository's GitHub visibility\nPrivate code keeps the brain in its own .openwiz/brain; public code gets a private\ncompanion OWNER/NAME-brain linked back to it. There is no placement question.\nThe preview reads GitHub through your gh login and saves one proposal; it writes\nnothing on GitHub. --yes --operation applies exactly that proposal: create and link\nthe companion, create the openwiz label and records v1's five workflow labels,\nopen one visible pull request with the brain's records. An uncertain apply is\nreconciled by applying the same operation. Change the location later through the\nbrain_location setting, with the same rules.\n";
 
 const OPTIONS: [&str; 3] = ["--repository", "--state-dir", "--operation"];
 
@@ -125,7 +125,8 @@ fn text(report: &serde_json::Value, out: &mut dyn Write) -> std::io::Result<()> 
         let what = match effect["kind"].as_str() {
             Some("create_companion") => "Create the private companion",
             Some("link_companion") => "Link the companion to the code",
-            Some("create_label") => "Create the openwiz label",
+            Some("create_label") => "Create the missing openwiz and workflow labels",
+            Some("merge_pull_request") => "Merge the brain's pull request",
             _ => "Open the brain's pull request",
         };
         writeln!(

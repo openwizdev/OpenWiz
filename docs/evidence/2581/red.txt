@@ -1,0 +1,332 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/vps/test_hosts.py   # red: no host configs, no page yet; agent-CLI refusal stubs first on PATH
+FF.FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+======================================================================
+FAIL: test_the_five_configs_load_through_rig_load_host (__main__.Configs.test_the_five_configs_load_through_rig_load_host)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 76, in test_the_five_configs_load_through_rig_load_host
+    self.assertEqual(host_names(), sorted(CONFIGS))
+AssertionError: Lists differ: [] != ['conductor', 'cursor', 'factory', 'hermes', 'pane']
+
+Second list contains 5 additional elements.
+First extra element 0:
+'conductor'
+
+- []
++ ['conductor', 'cursor', 'factory', 'hermes', 'pane']
+
+======================================================================
+FAIL: test_every_row_cites_the_driver_readme_and_the_tools_docs_and_says_whether_it_bills (__main__.Page.test_every_row_cites_the_driver_readme_and_the_tools_docs_and_says_whether_it_bills)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 184, in test_every_row_cites_the_driver_readme_and_the_tools_docs_and_says_whether_it_bills
+    self.assertEqual(sorted(self.rows), sorted(CONFIGS))
+AssertionError: Lists differ: [] != ['conductor', 'cursor', 'factory', 'hermes', 'pane']
+
+Second list contains 5 additional elements.
+First extra element 0:
+'conductor'
+
+- []
++ ['conductor', 'cursor', 'factory', 'hermes', 'pane']
+
+======================================================================
+FAIL: test_the_page_holds_names_never_values (__main__.Page.test_the_page_holds_names_never_values)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 204, in test_the_page_holds_names_never_values
+    self.assertTrue(self.page, 'no sign-in page')
+AssertionError: '' is not true : no sign-in page
+
+======================================================================
+FAIL: test_the_session_is_written_out_in_order (__main__.Page.test_the_session_is_written_out_in_order)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 200, in test_the_session_is_written_out_in_order
+    self.assertNotIn(-1, at, steps)
+AssertionError: -1 unexpectedly found in [-1, -1, -1] : ['kernel/live-rig/vps/bootstrap.sh', 'gh auth login', 'python3 -I kernel/live-rig/heads.py --tickets kernel/live-rig/vps/live-tickets.json --hosts kernel/live-rig/vps/hosts --settings ']
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='hermes', situation='tool missing')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='hermes', situation='gh missing')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='hermes', situation='tool out')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='hermes', situation='no key')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='hermes', situation='gh out')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='hermes', situation='signed in')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='pane', situation='tool missing')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='pane', situation='gh missing')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='pane', situation='tool out')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='pane', situation='no key')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='pane', situation='gh out')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='pane', situation='signed in')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='factory', situation='tool missing')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='factory', situation='gh missing')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='factory', situation='tool out')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='factory', situation='no key')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='factory', situation='gh out')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='factory', situation='signed in')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='conductor', situation='tool missing')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='conductor', situation='gh missing')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='conductor', situation='tool out')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='conductor', situation='no key')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='conductor', situation='gh out')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='conductor', situation='signed in')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='cursor', situation='tool missing')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='cursor', situation='gh missing')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='cursor', situation='tool out')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='cursor', situation='no key')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='cursor', situation='gh out')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (__main__.Skips.test_each_config_gives_its_exact_skip_line_and_starts_nothing) (host='cursor', situation='signed in')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 151, in test_each_config_gives_its_exact_skip_line_and_starts_nothing
+    self.assertEqual(p.returncode, 0, p.stderr)
+AssertionError: 2 != 0 : rig.py: cannot read --hosts: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/hosts'
+
+
+======================================================================
+FAIL: test_status_checks_call_only_read_only_status_commands (__main__.Skips.test_status_checks_call_only_read_only_status_commands)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_hosts.py", line 165, in test_status_checks_call_only_read_only_status_commands
+    self.assertEqual(calls, READ_ONLY)
+AssertionError: Items in the second set but not the first:
+'runpane repos list --json'
+'gh auth status'
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.969s
+
+FAILED (failures=35)

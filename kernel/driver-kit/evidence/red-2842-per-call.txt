@@ -1,0 +1,107 @@
+# red for openwizdev/openwiz#2842 R1 (folded into #2763): the per-call case against a scratch kit whose key check calls wake and stop without sampling (self.sampled(op, ...) -> self.call(op, ...)); start, still sampled, passes
+# env -u OPENWIZ_GITHUB_APP_KEY python3 -m unittest kernel/driver-kit/test_kit.py -k one_call (agent CLIs stubbed first on PATH)
+FFFF
+======================================================================
+FAIL: test_a_child_that_lives_only_during_one_call_is_seen_for_each_of_start_wake_and_stop (kernel.driver-kit.test_kit.Kit.test_a_child_that_lives_only_during_one_call_is_seen_for_each_of_start_wake_and_stop) [wake] (python='/usr/bin/python3')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<scratch>/kernel/driver-kit/test_kit.py", line 283, in test_a_child_that_lives_only_during_one_call_is_seen_for_each_of_start_wake_and_stop
+    self.assertEqual((code, out), (1, PASS[:4] + ['fail token: the file %s, which a process of the '
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[345 chars]er']) != (1, ['pass version: openwiz:records v1, an[341 chars]le"])
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+-   'pass token: no login or token passed through the driver, and on start, wake '
+-   'and stop the devin key reached its host only from the key helper, in its '
+-   'header'])
++   'fail token: the file '
++   '../../../../../../<tmp>/state/one-call-reader.py, which a process of '
++   "the driver ran, names DEVIN_API_KEY, the key's variable"])
+
+======================================================================
+FAIL: test_a_child_that_lives_only_during_one_call_is_seen_for_each_of_start_wake_and_stop (kernel.driver-kit.test_kit.Kit.test_a_child_that_lives_only_during_one_call_is_seen_for_each_of_start_wake_and_stop) [wake] (python='<scratch>/kernel/driver-kit/../../kernel/driver-kit/fixtures/no-proc/python3')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<scratch>/kernel/driver-kit/test_kit.py", line 283, in test_a_child_that_lives_only_during_one_call_is_seen_for_each_of_start_wake_and_stop
+    self.assertEqual((code, out), (1, PASS[:4] + ['fail token: the file %s, which a process of the '
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[345 chars]er']) != (1, ['pass version: openwiz:records v1, an[341 chars]le"])
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+-   'pass token: no login or token passed through the driver, and on start, wake '
+-   'and stop the devin key reached its host only from the key helper, in its '
+-   'header'])
++   'fail token: the file '
++   '../../../../../../<tmp>/state/one-call-reader.py, which a process of '
++   "the driver ran, names DEVIN_API_KEY, the key's variable"])
+
+======================================================================
+FAIL: test_a_child_that_lives_only_during_one_call_is_seen_for_each_of_start_wake_and_stop (kernel.driver-kit.test_kit.Kit.test_a_child_that_lives_only_during_one_call_is_seen_for_each_of_start_wake_and_stop) [stop] (python='/usr/bin/python3')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<scratch>/kernel/driver-kit/test_kit.py", line 283, in test_a_child_that_lives_only_during_one_call_is_seen_for_each_of_start_wake_and_stop
+    self.assertEqual((code, out), (1, PASS[:4] + ['fail token: the file %s, which a process of the '
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[345 chars]er']) != (1, ['pass version: openwiz:records v1, an[341 chars]le"])
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+-   'pass token: no login or token passed through the driver, and on start, wake '
+-   'and stop the devin key reached its host only from the key helper, in its '
+-   'header'])
++   'fail token: the file '
++   '../../../../../../<tmp>/state/one-call-reader.py, which a process of '
++   "the driver ran, names DEVIN_API_KEY, the key's variable"])
+
+======================================================================
+FAIL: test_a_child_that_lives_only_during_one_call_is_seen_for_each_of_start_wake_and_stop (kernel.driver-kit.test_kit.Kit.test_a_child_that_lives_only_during_one_call_is_seen_for_each_of_start_wake_and_stop) [stop] (python='<scratch>/kernel/driver-kit/../../kernel/driver-kit/fixtures/no-proc/python3')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<scratch>/kernel/driver-kit/test_kit.py", line 283, in test_a_child_that_lives_only_during_one_call_is_seen_for_each_of_start_wake_and_stop
+    self.assertEqual((code, out), (1, PASS[:4] + ['fail token: the file %s, which a process of the '
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[345 chars]er']) != (1, ['pass version: openwiz:records v1, an[341 chars]le"])
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+-   'pass token: no login or token passed through the driver, and on start, wake '
+-   'and stop the devin key reached its host only from the key helper, in its '
+-   'header'])
++   'fail token: the file '
++   '../../../../../../<tmp>/state/one-call-reader.py, which a process of '
++   "the driver ran, names DEVIN_API_KEY, the key's variable"])
+
+----------------------------------------------------------------------
+Ran 1 test in 74.674s
+
+FAILED (failures=4)

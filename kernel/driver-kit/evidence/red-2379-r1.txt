@@ -1,0 +1,126 @@
+# #2379: the macOS key-leak test against the kit before its key check (230e3a1a).
+test_on_macos_a_key_in_an_argument_or_another_variable_is_caught (__main__.Kit.test_on_macos_a_key_in_an_argument_or_another_variable_is_caught) ... /tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpyfzk0sq4/tracker.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpyfzk0sq4/state/run-5f4a69acba4c.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpyfzk0sq4/state/run-5f4a69acba4c.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+
+  test_on_macos_a_key_in_an_argument_or_another_variable_is_caught (__main__.Kit.test_on_macos_a_key_in_an_argument_or_another_variable_is_caught) [key-in-args] ... FAIL
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpq9a8n4yk/tracker.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpq9a8n4yk/state/run-cfcf714c6ce3.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpq9a8n4yk/state/run-cfcf714c6ce3.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+  test_on_macos_a_key_in_an_argument_or_another_variable_is_caught (__main__.Kit.test_on_macos_a_key_in_an_argument_or_another_variable_is_caught) [key-in-env] ... FAIL
+
+======================================================================
+FAIL: test_on_macos_a_key_in_an_argument_or_another_variable_is_caught (__main__.Kit.test_on_macos_a_key_in_an_argument_or_another_variable_is_caught) [key-in-args]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 163, in test_on_macos_a_key_in_an_argument_or_another_variable_is_caught
+    self.assertEqual((code, out), (1, PLANTED_KEY[name]))
+AssertionError: Tuples differ: (1, [[299 chars]mand line']) != (1, [[299 chars]mand line; a process holds the devin key on its command line'])
+
+First differing element 1:
+['pas[294 chars]mmand line']
+['pas[294 chars]mmand line; a process holds the devin key on its command line']
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+    'fail token: a process the driver started holds a credential on its command '
+-   'line'])
++   'line; a process holds the devin key on its command line'])
+
+======================================================================
+FAIL: test_on_macos_a_key_in_an_argument_or_another_variable_is_caught (__main__.Kit.test_on_macos_a_key_in_an_argument_or_another_variable_is_caught) [key-in-env]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 163, in test_on_macos_a_key_in_an_argument_or_another_variable_is_caught
+    self.assertEqual((code, out), (1, PLANTED_KEY[name]))
+AssertionError: Tuples differ: (1, [[328 chars]ve it']) != (1, [[328 chars]ve it; a process the driver started holds the [45 chars]EY'])
+
+First differing element 1:
+['pas[324 chars]ve it']
+['pas[324 chars]ve it; a process the driver started holds the [44 chars]KEY']
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+    'fail token: a process the driver started holds a credential in '
+-   'OPENWIZ_COPY, which the kit never gave it'])
++   'OPENWIZ_COPY, which the kit never gave it; a process the driver started '
++   'holds the devin key in OPENWIZ_COPY, not in DEVIN_API_KEY'])
+
+----------------------------------------------------------------------
+Ran 1 test in 4.094s
+
+FAILED (failures=2)
+
+# #2379: the missing-helper test against the kit that loaded the helper at import (5acba612).
+test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without (__main__.Kit.test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without) ... 
+  test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without (__main__.Kit.test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without) [/tmp/openwiz/kernel/driver-kit/fixtures/key-host/driver] ... FAIL
+  test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without (__main__.Kit.test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without) [/tmp/openwiz/kernel/driver-kit/../../adapters/template/driver] ... FAIL
+  test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without (__main__.Kit.test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without) [/tmp/tmpdn8fdope/bare/driver] ... FAIL
+
+======================================================================
+FAIL: test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without (__main__.Kit.test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without) [/tmp/openwiz/kernel/driver-kit/fixtures/key-host/driver]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 182, in test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without
+    self.assertEqual(p.returncode, want, p.stdout + p.stderr)
+AssertionError: 1 != 2 : Traceback (most recent call last):
+  File "/tmp/tmpdn8fdope/kernel/driver-kit/kit.py", line 25, in <module>
+    _spec.loader.exec_module(hostkey)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/tmpdn8fdope/kernel/driver-kit/hostkey.py'
+
+
+======================================================================
+FAIL: test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without (__main__.Kit.test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without) [/tmp/openwiz/kernel/driver-kit/../../adapters/template/driver]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 182, in test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without
+    self.assertEqual(p.returncode, want, p.stdout + p.stderr)
+AssertionError: 1 != 2 : Traceback (most recent call last):
+  File "/tmp/tmpdn8fdope/kernel/driver-kit/kit.py", line 25, in <module>
+    _spec.loader.exec_module(hostkey)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/tmpdn8fdope/kernel/driver-kit/hostkey.py'
+
+
+======================================================================
+FAIL: test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without (__main__.Kit.test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without) [/tmp/tmpdn8fdope/bare/driver]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 182, in test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without
+    self.assertEqual(p.returncode, want, p.stdout + p.stderr)
+AssertionError: 1 != 0 : Traceback (most recent call last):
+  File "/tmp/tmpdn8fdope/kernel/driver-kit/kit.py", line 25, in <module>
+    _spec.loader.exec_module(hostkey)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/tmpdn8fdope/kernel/driver-kit/hostkey.py'
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.156s
+
+FAILED (failures=3)

@@ -1,0 +1,53 @@
+# #2379 second fix round: green: the key helper's and the kit's own tests at the hand-back, run with no-op stubs for every agent CLI first on PATH.
+test_a_body_strict_json_cannot_hold_comes_back_null_with_its_status (__main__.Helper.test_a_body_strict_json_cannot_hold_comes_back_null_with_its_status) ... ok
+test_a_good_request_reaches_the_registered_host_with_the_key_only_in_its_header (__main__.Helper.test_a_good_request_reaches_the_registered_host_with_the_key_only_in_its_header) ... ok
+test_a_host_not_in_the_registry_is_refused (__main__.Helper.test_a_host_not_in_the_registry_is_refused) ... ok
+test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ... ok
+test_a_key_that_fits_inside_the_helpers_own_texts_is_never_printed (__main__.Helper.test_a_key_that_fits_inside_the_helpers_own_texts_is_never_printed) ... ok
+test_a_method_outside_the_three_is_refused (__main__.Helper.test_a_method_outside_the_three_is_refused) ... ok
+test_a_non_json_answer_comes_back_as_a_null_body (__main__.Helper.test_a_non_json_answer_comes_back_as_a_null_body) ... ok
+test_a_redirect_comes_back_as_its_status_and_is_never_followed (__main__.Helper.test_a_redirect_comes_back_as_its_status_and_is_never_followed) ... ok
+test_a_request_that_holds_the_key_is_refused_before_it_is_sent (__main__.Helper.test_a_request_that_holds_the_key_is_refused_before_it_is_sent) ... ok
+test_an_answer_that_holds_the_key_is_dropped (__main__.Helper.test_an_answer_that_holds_the_key_is_dropped) ... ok
+test_an_unreachable_host_is_an_error_without_the_key (__main__.Helper.test_an_unreachable_host_is_an_error_without_the_key) ... ok
+test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) ... ok
+test_every_output_path_including_its_fallbacks_holds_no_key (__main__.Helper.test_every_output_path_including_its_fallbacks_holds_no_key) ... ok
+test_get_and_delete_with_no_body_and_a_query (__main__.Helper.test_get_and_delete_with_no_body_and_a_query) ... ok
+test_input_that_is_not_exactly_the_request_is_refused (__main__.Helper.test_input_that_is_not_exactly_the_request_is_refused) ... ok
+test_native_tls_configuration_from_the_environment_never_reaches_the_helper (__main__.Helper.test_native_tls_configuration_from_the_environment_never_reaches_the_helper) ... ok
+test_the_helper_ignores_proxy_variables (__main__.Helper.test_the_helper_ignores_proxy_variables) ... ok
+test_the_helper_runs_only_in_isolated_mode (__main__.Helper.test_the_helper_runs_only_in_isolated_mode) ... ok
+test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) ... ok
+test_under_the_override_no_production_key_is_ever_read (__main__.Helper.test_under_the_override_no_production_key_is_ever_read) ... ok
+test_a_failed_or_empty_keychain_is_a_missing_key (__main__.Keychain.test_a_failed_or_empty_keychain_is_a_missing_key) ... ok
+test_an_empty_variable_reads_the_keychain_from_its_trusted_path_with_a_minimal_environment (__main__.Keychain.test_an_empty_variable_reads_the_keychain_from_its_trusted_path_with_a_minimal_environment) ... ok
+test_the_variable_wins_and_no_tool_runs (__main__.Keychain.test_the_variable_wins_and_no_tool_runs) ... ok
+test_tls_is_verified_with_the_system_defaults_and_ignores_cert_variables (__main__.Keychain.test_tls_is_verified_with_the_system_defaults_and_ignores_cert_variables) ... ok
+test_under_the_test_override_neither_production_source_is_read (__main__.Keychain.test_under_the_test_override_neither_production_source_is_read) ... ok
+
+----------------------------------------------------------------------
+Ran 25 tests in 29.623s
+
+OK
+test_a_failed_process_watch_fails_the_key_check (__main__.Kit.test_a_failed_process_watch_fails_the_key_check) ... ok
+test_a_host_that_answers_a_redirect_fails_start_and_the_redirect_is_never_followed (__main__.Kit.test_a_host_that_answers_a_redirect_fails_start_and_the_redirect_is_never_followed) ... ok
+test_a_key_host_driver_that_uses_only_the_helper_passes_all_five (__main__.Kit.test_a_key_host_driver_that_uses_only_the_helper_passes_all_five) ... ok
+test_a_refusal_holding_a_credential_never_reaches_the_output (__main__.Kit.test_a_refusal_holding_a_credential_never_reaches_the_output) ... ok
+test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) ... ok
+test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) ... ok
+test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) ... ok
+test_on_macos_a_key_in_an_argument_or_another_variable_is_caught (__main__.Kit.test_on_macos_a_key_in_an_argument_or_another_variable_is_caught) ... ok
+test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) ... ok
+test_template_passes_all_five (__main__.Kit.test_template_passes_all_five) ... ok
+test_the_canary_never_reaches_the_driver (__main__.Kit.test_the_canary_never_reaches_the_driver) ... ok
+test_the_kits_visibility_probe_signals_ready_through_the_macos_shim_and_runs_until_its_stdin_closes (__main__.Kit.test_the_kits_visibility_probe_signals_ready_through_the_macos_shim_and_runs_until_its_stdin_closes) ... ok
+test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) ... ok
+test_without_proc_as_on_macos_a_driver_whose_run_stays_in_the_kits_group_passes_all_five (__main__.Kit.test_without_proc_as_on_macos_a_driver_whose_run_stays_in_the_kits_group_passes_all_five) ... ok
+test_without_proc_as_on_macos_the_template_passes_all_five (__main__.Kit.test_without_proc_as_on_macos_the_template_passes_all_five) ... ok
+test_without_proc_or_the_runs_visible_environment_stop_and_token_fail_unverified (__main__.Kit.test_without_proc_or_the_runs_visible_environment_stop_and_token_fail_unverified) ... ok
+test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without (__main__.Kit.test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without) ... ok
+
+----------------------------------------------------------------------
+Ran 17 tests in 196.399s
+
+OK

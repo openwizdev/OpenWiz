@@ -1,0 +1,19 @@
+# Each review fix reverted alone in a scratch copy, then its test run (the scratch copies are never committed): python3 -I docs/evidence/2580/reverse.py kernel/live-rig/vps
+R5 reverted, test_fixture_install_into_home_prefix: exit 1
+  AssertionError: Items in the first set but not the second:
+  FAILED (failures=1)
+R6 reverted, test_wrong_version_keeps_the_working_tool: exit 1
+  AssertionError: 1 != 0
+  FAILED (failures=1)
+R2 prefix reverted, test_home_only_installer_is_refused_under_another_prefix: exit 1
+  AssertionError: 1 != 0 : already there python3 3.11.2
+  FAILED (failures=1)
+R2 launcher reverted, test_existing_launcher_is_never_replaced: exit 1
+  AssertionError: 'left out fakeagent: your existing <tmp> is kept (it does not name 3.2.1); move it aside to install the pinned one' not found in ['left out gatedtool: its only download needs a paid account']
+  FAILED (failures=1)
+R4 reverted, test_dry_run_prints_every_step_and_writes_nothing: exit 1
+  AssertionError: 1795393204825550332 != 1000000000000000000 : something was made or removed in TMPDIR
+  FAILED (failures=1)
+R1 reverted, test_real_tools_plan_offline_on_refusing_downloads: exit 1
+  AssertionError: 1 != 0 : already there python3 3.11.2
+  FAILED (failures=1)

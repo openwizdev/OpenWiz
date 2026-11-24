@@ -1,0 +1,10 @@
+# #2570 green: the new short-lived-driver test at the fix, run behind 34 agent CLI stubs; the checkout path reads <checkout>.
+test_a_driver_whose_processes_live_only_during_each_call_passes_all_five_on_linux_and_macos (kernel.driver-kit.test_kit.Kit.test_a_driver_whose_processes_live_only_during_each_call_passes_all_five_on_linux_and_macos) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test
+
+OK
+# The whole kit suite at the fix, with lsof installed as on CI's ubuntu-24.04: Ran 23 tests, OK. test_hostkey.py: Ran 25 tests, OK.
+# Rerun at 51ad12b5 (code unchanged since the green commit; only the changelog line added), with lsof: test_kit.py Ran 23 tests OK; test_hostkey.py Ran 25 tests OK.
+# After merging KY1's moved branch at 7199135 (merge 312d6ec), with lsof: test_kit.py Ran 26 tests OK; test_hostkey.py Ran 25 tests OK.

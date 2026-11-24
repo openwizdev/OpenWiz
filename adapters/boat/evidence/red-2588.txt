@@ -1,0 +1,302 @@
+#2588 red, before the fix, on the local merge of #2321 (f54f17b) and #2659 (21a3513), with the fixture and test changes only.
+A private folder of no-op stubs for every agent CLI (each prints a refusal and exits 1) is first on PATH; the tests use only fixtures/bin/boat.
+
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/boat/test_driver.py -k effort -k version -k levels
+FFFFFFFFFFFFFFFFFFFFF.F
+======================================================================
+FAIL: test_a_start_whose_levels_cannot_be_read_starts_nothing (__main__.Boat.test_a_start_whose_levels_cannot_be_read_starts_nothing) [fails]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/boat/test_driver.py", line 386, in test_a_start_whose_levels_cannot_be_read_starts_nothing
+    self.assertIn('nothing was saved or started', out['error'])
+AssertionError: 'nothing was saved or started' not found in 'the input needs exactly repository, ticket, skill, harness, model'
+
+======================================================================
+FAIL: test_a_start_whose_levels_cannot_be_read_starts_nothing (__main__.Boat.test_a_start_whose_levels_cannot_be_read_starts_nothing) [no level list]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/boat/test_driver.py", line 386, in test_a_start_whose_levels_cannot_be_read_starts_nothing
+    self.assertIn('nothing was saved or started', out['error'])
+AssertionError: 'nothing was saved or started' not found in 'the input needs exactly repository, ticket, skill, harness, model'
+
+======================================================================
+FAIL: test_a_start_whose_levels_cannot_be_read_starts_nothing (__main__.Boat.test_a_start_whose_levels_cannot_be_read_starts_nothing) [diagnostic]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/boat/test_driver.py", line 386, in test_a_start_whose_levels_cannot_be_read_starts_nothing
+    self.assertIn('nothing was saved or started', out['error'])
+AssertionError: 'nothing was saved or started' not found in 'the input needs exactly repository, ticket, skill, harness, model'
+
+======================================================================
+FAIL: test_a_start_whose_levels_cannot_be_read_starts_nothing (__main__.Boat.test_a_start_whose_levels_cannot_be_read_starts_nothing) (effort='Medium')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/boat/test_driver.py", line 395, in test_a_start_whose_levels_cannot_be_read_starts_nothing
+    self.assertEqual((code, out), (1, {'error': 'effort is not valid',
+AssertionError: Tuples differ: (1, {'error': 'the input needs exactly repository, ticke[71 chars]in'}) != (1, {'error': 'effort is not valid', 'next': 'fix effort[23 chars]ws'})
+
+First differing element 1:
+{'error': 'the input needs exactly repository, ticke[70 chars]gin'}
+{'error': 'effort is not valid', 'next': 'fix effort[22 chars]ows'}
+
+  (1,
+-  {'error': 'the input needs exactly repository, ticket, skill, harness, model',
+-   'next': 'send only those fields; never a login'})
++  {'error': 'effort is not valid',
++   'next': 'fix effort as `driver schema` shows'})
+
+======================================================================
+FAIL: test_a_start_whose_levels_cannot_be_read_starts_nothing (__main__.Boat.test_a_start_whose_levels_cannot_be_read_starts_nothing) (effort='medium high')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/boat/test_driver.py", line 395, in test_a_start_whose_levels_cannot_be_read_starts_nothing
+    self.assertEqual((code, out), (1, {'error': 'effort is not valid',
+AssertionError: Tuples differ: (1, {'error': 'the input needs exactly repository, ticke[71 chars]in'}) != (1, {'error': 'effort is not valid', 'next': 'fix effort[23 chars]ws'})
+
+First differing element 1:
+{'error': 'the input needs exactly repository, ticke[70 chars]gin'}
+{'error': 'effort is not valid', 'next': 'fix effort[22 chars]ows'}
+
+  (1,
+-  {'error': 'the input needs exactly repository, ticket, skill, harness, model',
+-   'next': 'send only those fields; never a login'})
++  {'error': 'effort is not valid',
++   'next': 'fix effort as `driver schema` shows'})
+
+======================================================================
+FAIL: test_a_start_whose_levels_cannot_be_read_starts_nothing (__main__.Boat.test_a_start_whose_levels_cannot_be_read_starts_nothing) (effort='')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/boat/test_driver.py", line 395, in test_a_start_whose_levels_cannot_be_read_starts_nothing
+    self.assertEqual((code, out), (1, {'error': 'effort is not valid',
+AssertionError: Tuples differ: (1, {'error': 'the input needs exactly repository, ticke[71 chars]in'}) != (1, {'error': 'effort is not valid', 'next': 'fix effort[23 chars]ws'})
+
+First differing element 1:
+{'error': 'the input needs exactly repository, ticke[70 chars]gin'}
+{'error': 'effort is not valid', 'next': 'fix effort[22 chars]ows'}
+
+  (1,
+-  {'error': 'the input needs exactly repository, ticket, skill, harness, model',
+-   'next': 'send only those fields; never a login'})
++  {'error': 'effort is not valid',
++   'next': 'fix effort as `driver schema` shows'})
+
+======================================================================
+FAIL: test_a_start_whose_levels_cannot_be_read_starts_nothing (__main__.Boat.test_a_start_whose_levels_cannot_be_read_starts_nothing) (effort='xxxxxxxxxxxxxxxxxxxxx')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/boat/test_driver.py", line 395, in test_a_start_whose_levels_cannot_be_read_starts_nothing
+    self.assertEqual((code, out), (1, {'error': 'effort is not valid',
+AssertionError: Tuples differ: (1, {'error': 'the input needs exactly repository, ticke[71 chars]in'}) != (1, {'error': 'effort is not valid', 'next': 'fix effort[23 chars]ws'})
+
+First differing element 1:
+{'error': 'the input needs exactly repository, ticke[70 chars]gin'}
+{'error': 'effort is not valid', 'next': 'fix effort[22 chars]ows'}
+
+  (1,
+-  {'error': 'the input needs exactly repository, ticket, skill, harness, model',
+-   'next': 'send only those fields; never a login'})
++  {'error': 'effort is not valid',
++   'next': 'fix effort as `driver schema` shows'})
+
+======================================================================
+FAIL: test_a_start_whose_levels_cannot_be_read_starts_nothing (__main__.Boat.test_a_start_whose_levels_cannot_be_read_starts_nothing) (effort=5)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/boat/test_driver.py", line 395, in test_a_start_whose_levels_cannot_be_read_starts_nothing
+    self.assertEqual((code, out), (1, {'error': 'effort is not valid',
+AssertionError: Tuples differ: (1, {'error': 'the input needs exactly repository, ticke[71 chars]in'}) != (1, {'error': 'effort is not valid', 'next': 'fix effort[23 chars]ws'})
+
+First differing element 1:
+{'error': 'the input needs exactly repository, ticke[70 chars]gin'}
+{'error': 'effort is not valid', 'next': 'fix effort[22 chars]ows'}
+
+  (1,
+-  {'error': 'the input needs exactly repository, ticket, skill, harness, model',
+-   'next': 'send only those fields; never a login'})
++  {'error': 'effort is not valid',
++   'next': 'fix effort as `driver schema` shows'})
+
+======================================================================
+FAIL: test_a_start_whose_levels_cannot_be_read_starts_nothing (__main__.Boat.test_a_start_whose_levels_cannot_be_read_starts_nothing) (effort=None)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/boat/test_driver.py", line 395, in test_a_start_whose_levels_cannot_be_read_starts_nothing
+    self.assertEqual((code, out), (1, {'error': 'effort is not valid',
+AssertionError: Tuples differ: (1, {'error': 'the input needs exactly repository, ticke[71 chars]in'}) != (1, {'error': 'effort is not valid', 'next': 'fix effort[23 chars]ws'})
+
+First differing element 1:
+{'error': 'the input needs exactly repository, ticke[70 chars]gin'}
+{'error': 'effort is not valid', 'next': 'fix effort[22 chars]ows'}
+
+  (1,
+-  {'error': 'the input needs exactly repository, ticket, skill, harness, model',
+-   'next': 'send only those fields; never a login'})
++  {'error': 'effort is not valid',
++   'next': 'fix effort as `driver schema` shows'})
+
+======================================================================
+FAIL: test_an_effort_boat_cannot_set_is_refused_and_starts_nothing (__main__.Boat.test_an_effort_boat_cannot_set_is_refused_and_starts_nothing) (harness='claude', model='claude-opus-5-5', effort='minimal')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/boat/test_driver.py", line 370, in test_an_effort_boat_cannot_set_is_refused_and_starts_nothing
+    self.assertEqual(out['next'], CANT)
+AssertionError: 'send only those fields; never a login' != "this host can't set effort: remove the e[81 chars]ault"
+- send only those fields; never a login
++ this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default
+
+
+======================================================================
+FAIL: test_an_effort_boat_cannot_set_is_refused_and_starts_nothing (__main__.Boat.test_an_effort_boat_cannot_set_is_refused_and_starts_nothing) (harness='claude', model='syn-claude-small', effort='xhigh')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/boat/test_driver.py", line 370, in test_an_effort_boat_cannot_set_is_refused_and_starts_nothing
+    self.assertEqual(out['next'], CANT)
+AssertionError: 'send only those fields; never a login' != "this host can't set effort: remove the e[81 chars]ault"
+- send only those fields; never a login
++ this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default
+
+
+======================================================================
+FAIL: test_an_effort_boat_cannot_set_is_refused_and_starts_nothing (__main__.Boat.test_an_effort_boat_cannot_set_is_refused_and_starts_nothing) (harness='claude', model='syn-claude-plain', effort='low')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/boat/test_driver.py", line 370, in test_an_effort_boat_cannot_set_is_refused_and_starts_nothing
+    self.assertEqual(out['next'], CANT)
+AssertionError: 'send only those fields; never a login' != "this host can't set effort: remove the e[81 chars]ault"
+- send only those fields; never a login
++ this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default
+
+
+======================================================================
+FAIL: test_an_effort_boat_cannot_set_is_refused_and_starts_nothing (__main__.Boat.test_an_effort_boat_cannot_set_is_refused_and_starts_nothing) (harness='claude', model='syn-unlisted', effort='medium')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/boat/test_driver.py", line 370, in test_an_effort_boat_cannot_set_is_refused_and_starts_nothing
+    self.assertEqual(out['next'], CANT)
+AssertionError: 'send only those fields; never a login' != "this host can't set effort: remove the e[81 chars]ault"
+- send only those fields; never a login
++ this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default
+
+
+======================================================================
+FAIL: test_an_effort_boat_cannot_set_is_refused_and_starts_nothing (__main__.Boat.test_an_effort_boat_cannot_set_is_refused_and_starts_nothing) (harness='codex', model='claude-opus-5-5', effort='medium')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/boat/test_driver.py", line 370, in test_an_effort_boat_cannot_set_is_refused_and_starts_nothing
+    self.assertEqual(out['next'], CANT)
+AssertionError: 'send only those fields; never a login' != "this host can't set effort: remove the e[81 chars]ault"
+- send only those fields; never a login
++ this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default
+
+
+======================================================================
+FAIL: test_an_effort_boat_cannot_set_is_refused_and_starts_nothing (__main__.Boat.test_an_effort_boat_cannot_set_is_refused_and_starts_nothing) (harness='opencode', model='syn-open-one', effort='medium')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/boat/test_driver.py", line 370, in test_an_effort_boat_cannot_set_is_refused_and_starts_nothing
+    self.assertEqual(out['next'], CANT)
+AssertionError: 'send only those fields; never a login' != "this host can't set effort: remove the e[81 chars]ault"
+- send only those fields; never a login
++ this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default
+
+
+======================================================================
+FAIL: test_an_effort_boat_cannot_set_is_refused_and_starts_nothing (__main__.Boat.test_an_effort_boat_cannot_set_is_refused_and_starts_nothing) (harness='pi', model='syn-pi', effort='medium')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/boat/test_driver.py", line 370, in test_an_effort_boat_cannot_set_is_refused_and_starts_nothing
+    self.assertEqual(out['next'], CANT)
+AssertionError: 'send only those fields; never a login' != "this host can't set effort: remove the e[81 chars]ault"
+- send only those fields; never a login
++ this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default
+
+
+======================================================================
+FAIL: test_an_effort_boat_cannot_set_is_refused_and_starts_nothing (__main__.Boat.test_an_effort_boat_cannot_set_is_refused_and_starts_nothing) (harness='kimi', model='syn-kimi', effort='low')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/boat/test_driver.py", line 370, in test_an_effort_boat_cannot_set_is_refused_and_starts_nothing
+    self.assertEqual(out['next'], CANT)
+AssertionError: 'send only those fields; never a login' != "this host can't set effort: remove the e[81 chars]ault"
+- send only those fields; never a login
++ this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default
+
+
+======================================================================
+FAIL: test_an_effort_reaches_boat_as_reasoning_effort (__main__.Boat.test_an_effort_reaches_boat_as_reasoning_effort) (harness='claude', model='claude-opus-5-5', effort='medium')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/boat/test_driver.py", line 334, in test_an_effort_reaches_boat_as_reasoning_effort
+    turns, helps, texts = self.start_and_wake(dict(REQUEST, harness=harness, model=model, effort=effort),
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<checkout>/adapters/boat/test_driver.py", line 317, in start_and_wake
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+
+======================================================================
+FAIL: test_an_effort_reaches_boat_as_reasoning_effort (__main__.Boat.test_an_effort_reaches_boat_as_reasoning_effort) (harness='claude', model='syn-claude-also', effort='max')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/boat/test_driver.py", line 334, in test_an_effort_reaches_boat_as_reasoning_effort
+    turns, helps, texts = self.start_and_wake(dict(REQUEST, harness=harness, model=model, effort=effort),
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<checkout>/adapters/boat/test_driver.py", line 317, in start_and_wake
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+
+======================================================================
+FAIL: test_an_effort_reaches_boat_as_reasoning_effort (__main__.Boat.test_an_effort_reaches_boat_as_reasoning_effort) (harness='codex', model='syn-codex-second', effort='xhigh')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/boat/test_driver.py", line 334, in test_an_effort_reaches_boat_as_reasoning_effort
+    turns, helps, texts = self.start_and_wake(dict(REQUEST, harness=harness, model=model, effort=effort),
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<checkout>/adapters/boat/test_driver.py", line 317, in start_and_wake
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+
+======================================================================
+FAIL: test_an_effort_reaches_boat_as_reasoning_effort (__main__.Boat.test_an_effort_reaches_boat_as_reasoning_effort) (harness='kimi', model='syn-kimi', effort='none')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/boat/test_driver.py", line 334, in test_an_effort_reaches_boat_as_reasoning_effort
+    turns, helps, texts = self.start_and_wake(dict(REQUEST, harness=harness, model=model, effort=effort),
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<checkout>/adapters/boat/test_driver.py", line 317, in start_and_wake
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+
+======================================================================
+FAIL: test_version_lists_effort_and_the_readme_says_how (__main__.Boat.test_version_lists_effort_and_the_readme_says_how)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/boat/test_driver.py", line 400, in test_version_lists_effort_and_the_readme_says_how
+    self.assertEqual(self.driver('version', {}), (0, {
+AssertionError: Tuples differ: (0, {[65 chars]rt', 'wake', 'stop', 'many-at-once', 'own-sandbox']}) != (0, {[65 chars]rt', 'wake', 'stop', 'many-at-once', 'own-sandbox', 'effort']})
+
+First differing element 1:
+{'dri[60 chars]art', 'wake', 'stop', 'many-at-once', 'own-sandbox']}
+{'dri[60 chars]art', 'wake', 'stop', 'many-at-once', 'own-sandbox', 'effort']}
+
+  (0,
+-  {'can': ['start', 'wake', 'stop', 'many-at-once', 'own-sandbox'],
++  {'can': ['start', 'wake', 'stop', 'many-at-once', 'own-sandbox', 'effort'],
+?                                                                 ++++++++++
+
+    'driver': 'boat',
+    'records': ['openwiz:records v1']})
+
+----------------------------------------------------------------------
+Ran 5 tests in 1.553s
+
+FAILED (failures=22)
+
+$ the kit's start check of #2562's draft head (7636b62), on the same fixture: kit.py --driver adapters/boat/driver --harness claude --model claude-opus-5-5
+exit 0
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 1
+pass wake: the run edited builder status note 1
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+stderr: note start: effort: not declared yet; required from EF14

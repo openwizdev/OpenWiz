@@ -1,0 +1,1490 @@
+# The synthetic test key after "Bearer" is shown as <synthetic key>.
+test_a_good_request_reaches_the_registered_host_with_the_key_only_in_its_header (__main__.Helper.test_a_good_request_reaches_the_registered_host_with_the_key_only_in_its_header) ... ok
+test_a_host_not_in_the_registry_is_refused (__main__.Helper.test_a_host_not_in_the_registry_is_refused) ... 
+  test_a_host_not_in_the_registry_is_refused (__main__.Helper.test_a_host_not_in_the_registry_is_refused) [nothost] ... FAIL
+  test_a_host_not_in_the_registry_is_refused (__main__.Helper.test_a_host_not_in_the_registry_is_refused) [Devin] ... FAIL
+  test_a_host_not_in_the_registry_is_refused (__main__.Helper.test_a_host_not_in_the_registry_is_refused) [devin ] ... FAIL
+  test_a_host_not_in_the_registry_is_refused (__main__.Helper.test_a_host_not_in_the_registry_is_refused) [] ... FAIL
+  test_a_host_not_in_the_registry_is_refused (__main__.Helper.test_a_host_not_in_the_registry_is_refused) [https://api.devin.ai] ... FAIL
+  test_a_host_not_in_the_registry_is_refused (__main__.Helper.test_a_host_not_in_the_registry_is_refused) [__proto__] ... FAIL
+test_a_key_that_is_not_one_printable_line_is_refused_without_its_value (__main__.Helper.test_a_key_that_is_not_one_printable_line_is_refused_without_its_value) ... 
+  test_a_key_that_is_not_one_printable_line_is_refused_without_its_value (__main__.Helper.test_a_key_that_is_not_one_printable_line_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value\n'] ... FAIL
+  test_a_key_that_is_not_one_printable_line_is_refused_without_its_value (__main__.Helper.test_a_key_that_is_not_one_printable_line_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value x'] ... FAIL
+  test_a_key_that_is_not_one_printable_line_is_refused_without_its_value (__main__.Helper.test_a_key_that_is_not_one_printable_line_is_refused_without_its_value) ['a\rb'] ... FAIL
+  test_a_key_that_is_not_one_printable_line_is_refused_without_its_value (__main__.Helper.test_a_key_that_is_not_one_printable_line_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value\t'] ... FAIL
+  test_a_key_that_is_not_one_printable_line_is_refused_without_its_value (__main__.Helper.test_a_key_that_is_not_one_printable_line_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Valueé'] ... FAIL
+test_a_method_outside_the_three_is_refused (__main__.Helper.test_a_method_outside_the_three_is_refused) ... 
+  test_a_method_outside_the_three_is_refused (__main__.Helper.test_a_method_outside_the_three_is_refused) [PUT] ... FAIL
+  test_a_method_outside_the_three_is_refused (__main__.Helper.test_a_method_outside_the_three_is_refused) [get] ... FAIL
+  test_a_method_outside_the_three_is_refused (__main__.Helper.test_a_method_outside_the_three_is_refused) [PATCH] ... FAIL
+  test_a_method_outside_the_three_is_refused (__main__.Helper.test_a_method_outside_the_three_is_refused) [GET ] ... FAIL
+  test_a_method_outside_the_three_is_refused (__main__.Helper.test_a_method_outside_the_three_is_refused) [CONNECT] ... FAIL
+  test_a_method_outside_the_three_is_refused (__main__.Helper.test_a_method_outside_the_three_is_refused) [1] ... FAIL
+test_a_missing_key_names_the_variable_and_the_entry (__main__.Helper.test_a_missing_key_names_the_variable_and_the_entry) ... 
+  test_a_missing_key_names_the_variable_and_the_entry (__main__.Helper.test_a_missing_key_names_the_variable_and_the_entry) [None] ... FAIL
+  test_a_missing_key_names_the_variable_and_the_entry (__main__.Helper.test_a_missing_key_names_the_variable_and_the_entry) [] ... FAIL
+test_a_non_json_answer_comes_back_as_a_null_body (__main__.Helper.test_a_non_json_answer_comes_back_as_a_null_body) ... 
+  test_a_non_json_answer_comes_back_as_a_null_body (__main__.Helper.test_a_non_json_answer_comes_back_as_a_null_body) [b'{"n": NaN}'] ... FAIL
+test_a_redirect_comes_back_as_its_status_and_is_never_followed (__main__.Helper.test_a_redirect_comes_back_as_its_status_and_is_never_followed) ... ok
+test_an_answer_that_holds_the_key_is_dropped (__main__.Helper.test_an_answer_that_holds_the_key_is_dropped) ... 
+  test_an_answer_that_holds_the_key_is_dropped (__main__.Helper.test_an_answer_that_holds_the_key_is_dropped) [b'{"echo": "Bearer <synthetic key>"}'] ... FAIL
+  test_an_answer_that_holds_the_key_is_dropped (__main__.Helper.test_an_answer_that_holds_the_key_is_dropped) [b'<p>synthetic-host-key-Kit0ValueKit0ValueKit0Value</p>'] ... FAIL
+  test_an_answer_that_holds_the_key_is_dropped (__main__.Helper.test_an_answer_that_holds_the_key_is_dropped) [b'{"k": "\\u0073ynthetic-ho\\u0073t-key-Kit0ValueKit0ValueKit0Value"}'] ... FAIL
+  test_an_answer_that_holds_the_key_is_dropped (__main__.Helper.test_an_answer_that_holds_the_key_is_dropped) [b'{"synthetic-host-key-Kit0ValueKit0ValueKit0Value": 1}'] ... FAIL
+test_an_unreachable_host_is_an_error_without_the_key (__main__.Helper.test_an_unreachable_host_is_an_error_without_the_key) ... FAIL
+test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) ... 
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [v1/runs] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [https://evil.example/v1] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [//evil.example/v1] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1//runs] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/%2F%2Fevil.example] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/../x] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/..] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/%2e%2e/x] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1\x] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/%5Cx] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/user@evil.example] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/%40x] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1#frag] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/%23x] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/https:/evil.example] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1:8443/x] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/%3Ax] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1
+X-Evil: 1] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1
+x] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1 ] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/%0d%0ax] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/%00] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1 x] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/é] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/<x>] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/%] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/%zz] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/%252e%252e] ... FAIL
+  test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa] ... FAIL
+test_get_and_delete_with_no_body_and_a_query (__main__.Helper.test_get_and_delete_with_no_body_and_a_query) ... ok
+test_input_that_is_not_exactly_the_request_is_refused (__main__.Helper.test_input_that_is_not_exactly_the_request_is_refused) ... 
+  test_input_that_is_not_exactly_the_request_is_refused (__main__.Helper.test_input_that_is_not_exactly_the_request_is_refused) [not json] ... FAIL
+  test_input_that_is_not_exactly_the_request_is_refused (__main__.Helper.test_input_that_is_not_exactly_the_request_is_refused) [[]] ... FAIL
+  test_input_that_is_not_exactly_the_request_is_refused (__main__.Helper.test_input_that_is_not_exactly_the_request_is_refused) [{"host": "devin"}] ... FAIL
+  test_input_that_is_not_exactly_the_request_is_refused (__main__.Helper.test_input_that_is_not_exactly_the_request_is_refused) [{"host": "devin", "method": "POST", "path": "/v3/organizations/org-syn1/sessions", "body": {"prompt": "hi"}, "token": "x"}] ... FAIL
+  test_input_that_is_not_exactly_the_request_is_refused (__main__.Helper.test_input_that_is_not_exactly_the_request_is_refused) [{"host": 1, "method": "POST", "path": "/v3/organizations/org-syn1/sessions", "body": {"prompt": "hi"}}] ... FAIL
+  test_input_that_is_not_exactly_the_request_is_refused (__main__.Helper.test_input_that_is_not_exactly_the_request_is_refused) [{"host": "devin", "method": "POST", "path": "/v3/organizations/org-syn1/sessions", "body": {"prompt": "hi"}, "host": "devin"}] ... FAIL
+  test_input_that_is_not_exactly_the_request_is_refused (__main__.Helper.test_input_that_is_not_exactly_the_request_is_refused) [{"host": "devin", "method": "POST", "path": "/v3/organizations/org-syn1/sessions", "body": [1]}] ... FAIL
+  test_input_that_is_not_exactly_the_request_is_refused (__main__.Helper.test_input_that_is_not_exactly_the_request_is_refused) [{"host": "devin", "method": "POST", "path": "/v3/organizations/org-syn1/sessions", "body": null}] ... FAIL
+  test_input_that_is_not_exactly_the_request_is_refused (__main__.Helper.test_input_that_is_not_exactly_the_request_is_refused) [{"host": "devin", "method": "POST", "path": "/v3/organizations/org-syn1/sessions", "body": {"prompt": "hi", "n": NaN}}] ... FAIL
+  test_input_that_is_not_exactly_the_request_is_refused (__main__.Helper.test_input_that_is_not_exactly_the_request_is_refused) [{"host": "devin", "method": "POST", "path": 7, "body": {"prompt": "hi"}}] ... FAIL
+test_the_helper_ignores_proxy_variables (__main__.Helper.test_the_helper_ignores_proxy_variables) ... ok
+test_the_helper_runs_only_in_isolated_mode (__main__.Helper.test_the_helper_runs_only_in_isolated_mode) ... FAIL
+test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) ... 
+  test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [http://127.0.0.2:43399] ... FAIL
+  test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [https://127.0.0.1:43399] ... FAIL
+  test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [http://localhost:43399] ... FAIL
+  test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [http://[::1]:43399] ... FAIL
+  test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [http://127.0.0.1] ... FAIL
+  test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [http://127.0.0.1:0] ... FAIL
+  test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [http://127.0.0.1:65536] ... FAIL
+  test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [http://127.0.0.1:043399] ... FAIL
+  test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [http://127.0.0.1:43399/] ... FAIL
+  test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [http://127.0.0.1:43399/x] ... FAIL
+  test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [http://u@127.0.0.1:43399] ... FAIL
+  test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [ http://127.0.0.1:43399] ... FAIL
+  test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [http://127.0.0.1:43399
+] ... FAIL
+  test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [HTTP://127.0.0.1:43399] ... FAIL
+  test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [http://127.0.0.1.evil.example:43399] ... FAIL
+  test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [] ... FAIL
+test_a_failed_or_empty_keychain_is_a_missing_key (__main__.Keychain.test_a_failed_or_empty_keychain_is_a_missing_key) ... 
+  test_a_failed_or_empty_keychain_is_a_missing_key (__main__.Keychain.test_a_failed_or_empty_keychain_is_a_missing_key) [{'TOOL_EXIT': '1'}] ... FAIL
+  test_a_failed_or_empty_keychain_is_a_missing_key (__main__.Keychain.test_a_failed_or_empty_keychain_is_a_missing_key) [{'TOOL_KEY': '/tmp/tmpfdd3hpck/none'}] ... FAIL
+  test_a_failed_or_empty_keychain_is_a_missing_key (__main__.Keychain.test_a_failed_or_empty_keychain_is_a_missing_key) [{'PATH': '/tmp/tmpfdd3hpck'}] ... FAIL
+test_an_empty_variable_reads_the_keychain_through_a_pipe (__main__.Keychain.test_an_empty_variable_reads_the_keychain_through_a_pipe) ... 
+  test_an_empty_variable_reads_the_keychain_through_a_pipe (__main__.Keychain.test_an_empty_variable_reads_the_keychain_through_a_pipe) [linux] ... FAIL
+  test_an_empty_variable_reads_the_keychain_through_a_pipe (__main__.Keychain.test_an_empty_variable_reads_the_keychain_through_a_pipe) [darwin] ... FAIL
+test_the_keychain_is_never_read_under_the_test_override (__main__.Keychain.test_the_keychain_is_never_read_under_the_test_override) ... FAIL
+test_the_variable_wins_and_no_tool_runs (__main__.Keychain.test_the_variable_wins_and_no_tool_runs) ... ok
+test_tls_is_verified_with_the_system_defaults_and_ignores_cert_variables (__main__.Keychain.test_tls_is_verified_with_the_system_defaults_and_ignores_cert_variables) ... FAIL
+
+======================================================================
+FAIL: test_a_host_not_in_the_registry_is_refused (__main__.Helper.test_a_host_not_in_the_registry_is_refused) [nothost]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 124, in test_a_host_not_in_the_registry_is_refused
+    self.refused(dict(GOOD, host=host), 'host is not in kernel/driver-kit/hosts.json')
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[246 chars]\'\n' != ''
+- Traceback (most recent call last):
+-   File "/tmp/openwiz/kernel/driver-kit/hostkey.py", line 44, in <module>
+-     main()
+-   File "/tmp/openwiz/kernel/driver-kit/hostkey.py", line 33, in main
+-     entry = registry()[req['host']]
+-             ~~~~~~~~~~^^^^^^^^^^^^^
+- KeyError: 'nothost'
+
+
+======================================================================
+FAIL: test_a_host_not_in_the_registry_is_refused (__main__.Helper.test_a_host_not_in_the_registry_is_refused) [Devin]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 124, in test_a_host_not_in_the_registry_is_refused
+    self.refused(dict(GOOD, host=host), 'host is not in kernel/driver-kit/hosts.json')
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[244 chars]\'\n' != ''
+- Traceback (most recent call last):
+-   File "/tmp/openwiz/kernel/driver-kit/hostkey.py", line 44, in <module>
+-     main()
+-   File "/tmp/openwiz/kernel/driver-kit/hostkey.py", line 33, in main
+-     entry = registry()[req['host']]
+-             ~~~~~~~~~~^^^^^^^^^^^^^
+- KeyError: 'Devin'
+
+
+======================================================================
+FAIL: test_a_host_not_in_the_registry_is_refused (__main__.Helper.test_a_host_not_in_the_registry_is_refused) [devin ]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 124, in test_a_host_not_in_the_registry_is_refused
+    self.refused(dict(GOOD, host=host), 'host is not in kernel/driver-kit/hosts.json')
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[245 chars]\'\n' != ''
+- Traceback (most recent call last):
+-   File "/tmp/openwiz/kernel/driver-kit/hostkey.py", line 44, in <module>
+-     main()
+-   File "/tmp/openwiz/kernel/driver-kit/hostkey.py", line 33, in main
+-     entry = registry()[req['host']]
+-             ~~~~~~~~~~^^^^^^^^^^^^^
+- KeyError: 'devin '
+
+
+======================================================================
+FAIL: test_a_host_not_in_the_registry_is_refused (__main__.Helper.test_a_host_not_in_the_registry_is_refused) []
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 124, in test_a_host_not_in_the_registry_is_refused
+    self.refused(dict(GOOD, host=host), 'host is not in kernel/driver-kit/hosts.json')
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[239 chars]\'\n' != ''
+- Traceback (most recent call last):
+-   File "/tmp/openwiz/kernel/driver-kit/hostkey.py", line 44, in <module>
+-     main()
+-   File "/tmp/openwiz/kernel/driver-kit/hostkey.py", line 33, in main
+-     entry = registry()[req['host']]
+-             ~~~~~~~~~~^^^^^^^^^^^^^
+- KeyError: ''
+
+
+======================================================================
+FAIL: test_a_host_not_in_the_registry_is_refused (__main__.Helper.test_a_host_not_in_the_registry_is_refused) [https://api.devin.ai]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 124, in test_a_host_not_in_the_registry_is_refused
+    self.refused(dict(GOOD, host=host), 'host is not in kernel/driver-kit/hosts.json')
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[259 chars]\'\n' != ''
+- Traceback (most recent call last):
+-   File "/tmp/openwiz/kernel/driver-kit/hostkey.py", line 44, in <module>
+-     main()
+-   File "/tmp/openwiz/kernel/driver-kit/hostkey.py", line 33, in main
+-     entry = registry()[req['host']]
+-             ~~~~~~~~~~^^^^^^^^^^^^^
+- KeyError: 'https://api.devin.ai'
+
+
+======================================================================
+FAIL: test_a_host_not_in_the_registry_is_refused (__main__.Helper.test_a_host_not_in_the_registry_is_refused) [__proto__]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 124, in test_a_host_not_in_the_registry_is_refused
+    self.refused(dict(GOOD, host=host), 'host is not in kernel/driver-kit/hosts.json')
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[248 chars]\'\n' != ''
+- Traceback (most recent call last):
+-   File "/tmp/openwiz/kernel/driver-kit/hostkey.py", line 44, in <module>
+-     main()
+-   File "/tmp/openwiz/kernel/driver-kit/hostkey.py", line 33, in main
+-     entry = registry()[req['host']]
+-             ~~~~~~~~~~^^^^^^^^^^^^^
+- KeyError: '__proto__'
+
+
+======================================================================
+FAIL: test_a_key_that_is_not_one_printable_line_is_refused_without_its_value (__main__.Helper.test_a_key_that_is_not_one_printable_line_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value\n']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 203, in test_a_key_that_is_not_one_printable_line_is_refused_without_its_value
+    code, out = self.run_helper(GOOD, DEVIN_API_KEY=bad)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 69, in run_helper
+    self.assertNotIn(KEY, text)
+AssertionError: 'synthetic-host-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in 'Traceback (most recent call last):\n  File "/tmp/openwiz/kernel/driver-kit/hostkey.py", line 44, in <module>\n    main()\n  File "/tmp/openwiz/kernel/driver-kit/hostkey.py", line 35, in main\n    status, raw = send(origin, req[\'method\'], req[\'path\'], req.get(\'body\'), find_key(entry, os.environ))\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "/tmp/openwiz/kernel/driver-kit/hostkey.py", line 25, in send\n    conn.request(method, path, body=None if body is None else json.dumps(body),\n  File "/usr/lib/python3.11/http/client.py", line 1311, in request\n    self._send_request(method, url, body, headers, encode_chunked)\n  File "/usr/lib/python3.11/http/client.py", line 1352, in _send_request\n    self.putheader(hdr, value)\n  File "/usr/lib/python3.11/http/client.py", line 1289, in putheader\n    raise ValueError(\'Invalid header value %r\' % (values[i],))\nValueError: Invalid header value b\'Bearer <synthetic key>\\n\'\n'
+
+======================================================================
+FAIL: test_a_key_that_is_not_one_printable_line_is_refused_without_its_value (__main__.Helper.test_a_key_that_is_not_one_printable_line_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value x']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 204, in test_a_key_that_is_not_one_printable_line_is_refused_without_its_value
+    self.assertEqual(code, 1)
+AssertionError: 0 != 1
+
+======================================================================
+FAIL: test_a_key_that_is_not_one_printable_line_is_refused_without_its_value (__main__.Helper.test_a_key_that_is_not_one_printable_line_is_refused_without_its_value) ['a\rb']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 203, in test_a_key_that_is_not_one_printable_line_is_refused_without_its_value
+    code, out = self.run_helper(GOOD, DEVIN_API_KEY=bad)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[946 chars]\'\n' != ''
+Diff is 996 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_a_key_that_is_not_one_printable_line_is_refused_without_its_value (__main__.Helper.test_a_key_that_is_not_one_printable_line_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value\t']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 204, in test_a_key_that_is_not_one_printable_line_is_refused_without_its_value
+    self.assertEqual(code, 1)
+AssertionError: 0 != 1
+
+======================================================================
+FAIL: test_a_key_that_is_not_one_printable_line_is_refused_without_its_value (__main__.Helper.test_a_key_that_is_not_one_printable_line_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Valueé']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 204, in test_a_key_that_is_not_one_printable_line_is_refused_without_its_value
+    self.assertEqual(code, 1)
+AssertionError: 0 != 1
+
+======================================================================
+FAIL: test_a_method_outside_the_three_is_refused (__main__.Helper.test_a_method_outside_the_three_is_refused) [PUT]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 119, in test_a_method_outside_the_three_is_refused
+    self.refused(dict(GOOD, method=method), 'method is not GET, POST or DELETE')
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_a_method_outside_the_three_is_refused (__main__.Helper.test_a_method_outside_the_three_is_refused) [get]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 119, in test_a_method_outside_the_three_is_refused
+    self.refused(dict(GOOD, method=method), 'method is not GET, POST or DELETE')
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 501, 'body': None}
+
+======================================================================
+FAIL: test_a_method_outside_the_three_is_refused (__main__.Helper.test_a_method_outside_the_three_is_refused) [PATCH]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 119, in test_a_method_outside_the_three_is_refused
+    self.refused(dict(GOOD, method=method), 'method is not GET, POST or DELETE')
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_a_method_outside_the_three_is_refused (__main__.Helper.test_a_method_outside_the_three_is_refused) [GET ]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 119, in test_a_method_outside_the_three_is_refused
+    self.refused(dict(GOOD, method=method), 'method is not GET, POST or DELETE')
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_a_method_outside_the_three_is_refused (__main__.Helper.test_a_method_outside_the_three_is_refused) [CONNECT]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 119, in test_a_method_outside_the_three_is_refused
+    self.refused(dict(GOOD, method=method), 'method is not GET, POST or DELETE')
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 501, 'body': None}
+
+======================================================================
+FAIL: test_a_method_outside_the_three_is_refused (__main__.Helper.test_a_method_outside_the_three_is_refused) [1]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 119, in test_a_method_outside_the_three_is_refused
+    self.refused(dict(GOOD, method=method), 'method is not GET, POST or DELETE')
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[1144 chars]\'\n' != ''
+Diff is 1200 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_a_missing_key_names_the_variable_and_the_entry (__main__.Helper.test_a_missing_key_names_the_variable_and_the_entry) [None]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 196, in test_a_missing_key_names_the_variable_and_the_entry
+    out = self.refused(GOOD, 'no key', DEVIN_API_KEY=value)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_a_missing_key_names_the_variable_and_the_entry (__main__.Helper.test_a_missing_key_names_the_variable_and_the_entry) []
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 196, in test_a_missing_key_names_the_variable_and_the_entry
+    out = self.refused(GOOD, 'no key', DEVIN_API_KEY=value)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_a_non_json_answer_comes_back_as_a_null_body (__main__.Helper.test_a_non_json_answer_comes_back_as_a_null_body) [b'{"n": NaN}']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 185, in test_a_non_json_answer_comes_back_as_a_null_body
+    self.assertEqual(self.run_helper(GOOD, OPENWIZ_HOSTKEY_TEST_ORIGIN=host.origin),
+AssertionError: Tuples differ: (0, {'status': 404, 'body': {'n': nan}}) != (0, {'status': 404, 'body': None})
+
+First differing element 1:
+{'status': 404, 'body': {'n': nan}}
+{'status': 404, 'body': None}
+
+- (0, {'body': {'n': nan}, 'status': 404})
+?              ^^ ^^^^^^^
+
++ (0, {'body': None, 'status': 404})
+?              ^^ ^
+
+
+======================================================================
+FAIL: test_an_answer_that_holds_the_key_is_dropped (__main__.Helper.test_an_answer_that_holds_the_key_is_dropped) [b'{"echo": "Bearer <synthetic key>"}']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 177, in test_an_answer_that_holds_the_key_is_dropped
+    code, out = self.run_helper(GOOD, OPENWIZ_HOSTKEY_TEST_ORIGIN=host.origin)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 69, in run_helper
+    self.assertNotIn(KEY, text)
+AssertionError: 'synthetic-host-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in '{"status": 500, "body": {"echo": "Bearer <synthetic key>"}}\n'
+
+======================================================================
+FAIL: test_an_answer_that_holds_the_key_is_dropped (__main__.Helper.test_an_answer_that_holds_the_key_is_dropped) [b'<p>synthetic-host-key-Kit0ValueKit0ValueKit0Value</p>']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 178, in test_an_answer_that_holds_the_key_is_dropped
+    self.assertEqual(code, 1)
+AssertionError: 0 != 1
+
+======================================================================
+FAIL: test_an_answer_that_holds_the_key_is_dropped (__main__.Helper.test_an_answer_that_holds_the_key_is_dropped) [b'{"k": "\\u0073ynthetic-ho\\u0073t-key-Kit0ValueKit0ValueKit0Value"}']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 177, in test_an_answer_that_holds_the_key_is_dropped
+    code, out = self.run_helper(GOOD, OPENWIZ_HOSTKEY_TEST_ORIGIN=host.origin)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 69, in run_helper
+    self.assertNotIn(KEY, text)
+AssertionError: 'synthetic-host-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in '{"status": 500, "body": {"k": "synthetic-host-key-Kit0ValueKit0ValueKit0Value"}}\n'
+
+======================================================================
+FAIL: test_an_answer_that_holds_the_key_is_dropped (__main__.Helper.test_an_answer_that_holds_the_key_is_dropped) [b'{"synthetic-host-key-Kit0ValueKit0ValueKit0Value": 1}']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 177, in test_an_answer_that_holds_the_key_is_dropped
+    code, out = self.run_helper(GOOD, OPENWIZ_HOSTKEY_TEST_ORIGIN=host.origin)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 69, in run_helper
+    self.assertNotIn(KEY, text)
+AssertionError: 'synthetic-host-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in '{"status": 500, "body": {"synthetic-host-key-Kit0ValueKit0ValueKit0Value": 1}}\n'
+
+======================================================================
+FAIL: test_an_unreachable_host_is_an_error_without_the_key (__main__.Helper.test_an_unreachable_host_is_an_error_without_the_key)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 191, in test_an_unreachable_host_is_an_error_without_the_key
+    self.refused(GOOD, 'could not reach the host', OPENWIZ_HOSTKEY_TEST_ORIGIN='http://127.0.0.1:%d' % port)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[1499 chars]ed\n' != ''
+Diff is 1565 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [v1/runs]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) []
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [https://evil.example/v1]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [//evil.example/v1]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1//runs]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/%2F%2Fevil.example]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/../x]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/..]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/%2e%2e/x]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1\x]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/%5Cx]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/user@evil.example]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/%40x]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1#frag]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/%23x]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/https:/evil.example]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1:8443/x]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/%3Ax]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1
+X-Evil: 1]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[1130 chars]')\n' != ''
+Diff is 1178 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1
+x]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[1119 chars]')\n' != ''
+Diff is 1168 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1 ]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[1122 chars]')\n' != ''
+Diff is 1171 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[1122 chars]')\n' != ''
+Diff is 1171 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/%0d%0ax]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/%00]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1 x]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[1115 chars]')\n' != ''
+Diff is 1166 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/é]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[1199 chars]8)\n' != ''
+Diff is 1250 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/<x>]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/%]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/%zz]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/v1/%252e%252e]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) [/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 139, in test_each_path_escape_is_refused_before_any_network_call
+    self.refused(dict(GOOD, path=path), why)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_input_that_is_not_exactly_the_request_is_refused (__main__.Helper.test_input_that_is_not_exactly_the_request_is_refused) [not json]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 114, in test_input_that_is_not_exactly_the_request_is_refused
+    self.refused(None, why, raw)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[763 chars]0)\n' != ''
+Diff is 824 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_input_that_is_not_exactly_the_request_is_refused (__main__.Helper.test_input_that_is_not_exactly_the_request_is_refused) [[]]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 114, in test_input_that_is_not_exactly_the_request_is_refused
+    self.refused(None, why, raw)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[283 chars]tr\n' != ''
+- Traceback (most recent call last):
+-   File "/tmp/openwiz/kernel/driver-kit/hostkey.py", line 44, in <module>
+-     main()
+-   File "/tmp/openwiz/kernel/driver-kit/hostkey.py", line 33, in main
+-     entry = registry()[req['host']]
+-                        ~~~^^^^^^^^
+- TypeError: list indices must be integers or slices, not str
+
+
+======================================================================
+FAIL: test_input_that_is_not_exactly_the_request_is_refused (__main__.Helper.test_input_that_is_not_exactly_the_request_is_refused) [{"host": "devin"}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 114, in test_input_that_is_not_exactly_the_request_is_refused
+    self.refused(None, why, raw)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[327 chars]\'\n' != ''
+- Traceback (most recent call last):
+-   File "/tmp/openwiz/kernel/driver-kit/hostkey.py", line 44, in <module>
+-     main()
+-   File "/tmp/openwiz/kernel/driver-kit/hostkey.py", line 35, in main
+-     status, raw = send(origin, req['method'], req['path'], req.get('body'), find_key(entry, os.environ))
+-                                ~~~^^^^^^^^^^
+- KeyError: 'method'
+
+
+======================================================================
+FAIL: test_input_that_is_not_exactly_the_request_is_refused (__main__.Helper.test_input_that_is_not_exactly_the_request_is_refused) [{"host": "devin", "method": "POST", "path": "/v3/organizations/org-syn1/sessions", "body": {"prompt": "hi"}, "token": "x"}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 114, in test_input_that_is_not_exactly_the_request_is_refused
+    self.refused(None, why, raw)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_input_that_is_not_exactly_the_request_is_refused (__main__.Helper.test_input_that_is_not_exactly_the_request_is_refused) [{"host": 1, "method": "POST", "path": "/v3/organizations/org-syn1/sessions", "body": {"prompt": "hi"}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 114, in test_input_that_is_not_exactly_the_request_is_refused
+    self.refused(None, why, raw)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[236 chars] 1\n' != ''
+- Traceback (most recent call last):
+-   File "/tmp/openwiz/kernel/driver-kit/hostkey.py", line 44, in <module>
+-     main()
+-   File "/tmp/openwiz/kernel/driver-kit/hostkey.py", line 33, in main
+-     entry = registry()[req['host']]
+-             ~~~~~~~~~~^^^^^^^^^^^^^
+- KeyError: 1
+
+
+======================================================================
+FAIL: test_input_that_is_not_exactly_the_request_is_refused (__main__.Helper.test_input_that_is_not_exactly_the_request_is_refused) [{"host": "devin", "method": "POST", "path": "/v3/organizations/org-syn1/sessions", "body": {"prompt": "hi"}, "host": "devin"}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 114, in test_input_that_is_not_exactly_the_request_is_refused
+    self.refused(None, why, raw)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_input_that_is_not_exactly_the_request_is_refused (__main__.Helper.test_input_that_is_not_exactly_the_request_is_refused) [{"host": "devin", "method": "POST", "path": "/v3/organizations/org-syn1/sessions", "body": [1]}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 114, in test_input_that_is_not_exactly_the_request_is_refused
+    self.refused(None, why, raw)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_input_that_is_not_exactly_the_request_is_refused (__main__.Helper.test_input_that_is_not_exactly_the_request_is_refused) [{"host": "devin", "method": "POST", "path": "/v3/organizations/org-syn1/sessions", "body": null}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 114, in test_input_that_is_not_exactly_the_request_is_refused
+    self.refused(None, why, raw)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_input_that_is_not_exactly_the_request_is_refused (__main__.Helper.test_input_that_is_not_exactly_the_request_is_refused) [{"host": "devin", "method": "POST", "path": "/v3/organizations/org-syn1/sessions", "body": {"prompt": "hi", "n": NaN}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 114, in test_input_that_is_not_exactly_the_request_is_refused
+    self.refused(None, why, raw)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_input_that_is_not_exactly_the_request_is_refused (__main__.Helper.test_input_that_is_not_exactly_the_request_is_refused) [{"host": "devin", "method": "POST", "path": 7, "body": {"prompt": "hi"}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 114, in test_input_that_is_not_exactly_the_request_is_refused
+    self.refused(None, why, raw)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[1125 chars]\'\n' != ''
+Diff is 1181 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_the_helper_runs_only_in_isolated_mode (__main__.Helper.test_the_helper_runs_only_in_isolated_mode)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 211, in test_the_helper_runs_only_in_isolated_mode
+    self.assertEqual(code, 1)
+AssertionError: 0 != 1
+
+======================================================================
+FAIL: test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [http://127.0.0.2:43399]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 150, in test_the_test_override_is_honoured_only_for_loopback_http_with_a_port
+    self.refused(GOOD, 'OPENWIZ_HOSTKEY_TEST_ORIGIN is not http://127.0.0.1:<port>',
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[1499 chars]ed\n' != ''
+Diff is 1565 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [https://127.0.0.1:43399]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 150, in test_the_test_override_is_honoured_only_for_loopback_http_with_a_port
+    self.refused(GOOD, 'OPENWIZ_HOSTKEY_TEST_ORIGIN is not http://127.0.0.1:<port>',
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[1684 chars]2)\n' != ''
+Diff is 1753 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [http://localhost:43399]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 150, in test_the_test_override_is_honoured_only_for_loopback_http_with_a_port
+    self.refused(GOOD, 'OPENWIZ_HOSTKEY_TEST_ORIGIN is not http://127.0.0.1:<port>',
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [http://[::1]:43399]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 150, in test_the_test_override_is_honoured_only_for_loopback_http_with_a_port
+    self.refused(GOOD, 'OPENWIZ_HOSTKEY_TEST_ORIGIN is not http://127.0.0.1:<port>',
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[727 chars]\'\n' != ''
+Diff is 773 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [http://127.0.0.1]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 150, in test_the_test_override_is_honoured_only_for_loopback_http_with_a_port
+    self.refused(GOOD, 'OPENWIZ_HOSTKEY_TEST_ORIGIN is not http://127.0.0.1:<port>',
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[718 chars]\'\n' != ''
+Diff is 764 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [http://127.0.0.1:0]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 150, in test_the_test_override_is_honoured_only_for_loopback_http_with_a_port
+    self.refused(GOOD, 'OPENWIZ_HOSTKEY_TEST_ORIGIN is not http://127.0.0.1:<port>',
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[1499 chars]ed\n' != ''
+Diff is 1565 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [http://127.0.0.1:65536]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 150, in test_the_test_override_is_honoured_only_for_loopback_http_with_a_port
+    self.refused(GOOD, 'OPENWIZ_HOSTKEY_TEST_ORIGIN is not http://127.0.0.1:<port>',
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[1499 chars]ed\n' != ''
+Diff is 1565 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [http://127.0.0.1:043399]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 150, in test_the_test_override_is_honoured_only_for_loopback_http_with_a_port
+    self.refused(GOOD, 'OPENWIZ_HOSTKEY_TEST_ORIGIN is not http://127.0.0.1:<port>',
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [http://127.0.0.1:43399/]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 150, in test_the_test_override_is_honoured_only_for_loopback_http_with_a_port
+    self.refused(GOOD, 'OPENWIZ_HOSTKEY_TEST_ORIGIN is not http://127.0.0.1:<port>',
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[724 chars]\'\n' != ''
+Diff is 770 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [http://127.0.0.1:43399/x]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 150, in test_the_test_override_is_honoured_only_for_loopback_http_with_a_port
+    self.refused(GOOD, 'OPENWIZ_HOSTKEY_TEST_ORIGIN is not http://127.0.0.1:<port>',
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[725 chars]\'\n' != ''
+Diff is 771 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [http://u@127.0.0.1:43399]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 150, in test_the_test_override_is_honoured_only_for_loopback_http_with_a_port
+    self.refused(GOOD, 'OPENWIZ_HOSTKEY_TEST_ORIGIN is not http://127.0.0.1:<port>',
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[1711 chars]wn\n' != ''
+Diff is 1779 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [ http://127.0.0.1:43399]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 150, in test_the_test_override_is_honoured_only_for_loopback_http_with_a_port
+    self.refused(GOOD, 'OPENWIZ_HOSTKEY_TEST_ORIGIN is not http://127.0.0.1:<port>',
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [http://127.0.0.1:43399
+]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 150, in test_the_test_override_is_honoured_only_for_loopback_http_with_a_port
+    self.refused(GOOD, 'OPENWIZ_HOSTKEY_TEST_ORIGIN is not http://127.0.0.1:<port>',
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [HTTP://127.0.0.1:43399]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 150, in test_the_test_override_is_honoured_only_for_loopback_http_with_a_port
+    self.refused(GOOD, 'OPENWIZ_HOSTKEY_TEST_ORIGIN is not http://127.0.0.1:<port>',
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 79, in refused
+    self.assertEqual((code, sorted(out)), (1, ['error', 'next']), out)
+AssertionError: Tuples differ: (0, ['body', 'status']) != (1, ['error', 'next'])
+
+First differing element 0:
+0
+1
+
+- (0, ['body', 'status'])
++ (1, ['error', 'next']) : {'status': 200, 'body': {}}
+
+======================================================================
+FAIL: test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) [http://127.0.0.1.evil.example:43399]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 150, in test_the_test_override_is_honoured_only_for_loopback_http_with_a_port
+    self.refused(GOOD, 'OPENWIZ_HOSTKEY_TEST_ORIGIN is not http://127.0.0.1:<port>',
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[1711 chars]wn\n' != ''
+Diff is 1779 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) []
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 150, in test_the_test_override_is_honoured_only_for_loopback_http_with_a_port
+    self.refused(GOOD, 'OPENWIZ_HOSTKEY_TEST_ORIGIN is not http://127.0.0.1:<port>',
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 78, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 70, in run_helper
+    self.assertEqual(p.stderr, '')
+AssertionError: 'Traceback (most recent call last):\n  Fil[718 chars]\'\n' != ''
+Diff is 764 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_a_failed_or_empty_keychain_is_a_missing_key (__main__.Keychain.test_a_failed_or_empty_keychain_is_a_missing_key) [{'TOOL_EXIT': '1'}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 262, in test_a_failed_or_empty_keychain_is_a_missing_key
+    with self.assertRaises(self.hostkey.Refused) as caught:
+AssertionError: Refused not raised
+
+======================================================================
+FAIL: test_a_failed_or_empty_keychain_is_a_missing_key (__main__.Keychain.test_a_failed_or_empty_keychain_is_a_missing_key) [{'TOOL_KEY': '/tmp/tmpfdd3hpck/none'}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 262, in test_a_failed_or_empty_keychain_is_a_missing_key
+    with self.assertRaises(self.hostkey.Refused) as caught:
+AssertionError: Refused not raised
+
+======================================================================
+FAIL: test_a_failed_or_empty_keychain_is_a_missing_key (__main__.Keychain.test_a_failed_or_empty_keychain_is_a_missing_key) [{'PATH': '/tmp/tmpfdd3hpck'}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 262, in test_a_failed_or_empty_keychain_is_a_missing_key
+    with self.assertRaises(self.hostkey.Refused) as caught:
+AssertionError: Refused not raised
+
+======================================================================
+FAIL: test_an_empty_variable_reads_the_keychain_through_a_pipe (__main__.Keychain.test_an_empty_variable_reads_the_keychain_through_a_pipe) [linux]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 253, in test_an_empty_variable_reads_the_keychain_through_a_pipe
+    self.assertEqual(self.lookup(platform, DEVIN_API_KEY=''), KEY)
+AssertionError: '' != 'synthetic-host-key-Kit0ValueKit0ValueKit0Value'
++ synthetic-host-key-Kit0ValueKit0ValueKit0Value
+
+======================================================================
+FAIL: test_an_empty_variable_reads_the_keychain_through_a_pipe (__main__.Keychain.test_an_empty_variable_reads_the_keychain_through_a_pipe) [darwin]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 253, in test_an_empty_variable_reads_the_keychain_through_a_pipe
+    self.assertEqual(self.lookup(platform, DEVIN_API_KEY=''), KEY)
+AssertionError: '' != 'synthetic-host-key-Kit0ValueKit0ValueKit0Value'
++ synthetic-host-key-Kit0ValueKit0ValueKit0Value
+
+======================================================================
+FAIL: test_the_keychain_is_never_read_under_the_test_override (__main__.Keychain.test_the_keychain_is_never_read_under_the_test_override)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 267, in test_the_keychain_is_never_read_under_the_test_override
+    with self.assertRaises(self.hostkey.Refused) as caught:
+AssertionError: Refused not raised
+
+======================================================================
+FAIL: test_tls_is_verified_with_the_system_defaults_and_ignores_cert_variables (__main__.Keychain.test_tls_is_verified_with_the_system_defaults_and_ignores_cert_variables)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 291, in test_tls_is_verified_with_the_system_defaults_and_ignores_cert_variables
+    with self.assertRaises(self.hostkey.Refused) as caught:
+AssertionError: Refused not raised
+
+----------------------------------------------------------------------
+Ran 20 tests in 20.329s
+
+FAILED (failures=90)

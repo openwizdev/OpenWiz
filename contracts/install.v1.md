@@ -84,8 +84,8 @@ For the future public-source release path, the [release candidate contract](rele
 `tools/install/install skills --root ROOT [--state-root STATE]` puts the
 selected build's skills where the user's agent finds them. It reads only the
 build `status` verifies: every file under its `runtime/skills/`, with its
-installed mode. It copies each skill folder into one canonical folder,
-`<ROOT>/skills/`, and then into each harness below that is present. A harness is
+installed mode. It copies each skill folder into each harness below that is
+present first, and then into one canonical folder, `<ROOT>/skills/`, last. A harness is
 present when its folder is a real directory this user owns. An absent harness
 is reported `absent`, naming its folder and what to do next, and nothing is
 created for it (#2168).
@@ -93,7 +93,7 @@ created for it (#2168).
 | Harness | Present when this is a directory | Skills copy |
 | --- | --- | --- |
 | `claude-code` | `~/.claude` | `~/.claude/skills/<skill>/` |
-| `codex` | `~/.codex` (or `$CODEX_HOME` when set) | `~/.codex/skills/<skill>/` |
+| `codex` | `~/.codex` (or `$CODEX_HOME` when set) | `~/.codex/skills/<skill>/` (or `$CODEX_HOME/skills/<skill>/` when set) |
 | `cursor` | `~/.cursor` | `~/.cursor/skills/<skill>/` |
 | `opencode` | `~/.config/opencode` | `~/.config/opencode/skills/<skill>/` |
 | `grok` | `~/.grok` | `~/.grok/skills/<skill>/` |
@@ -103,9 +103,11 @@ that mark is there. Each harness and each skill stands alone (#2183). Before
 any write, the step checks every destination. A same-named skill without the
 mark is the user's own. It is never touched: that skill is skipped in that
 harness only, and listed in the row's `skipped` with its folder and the next
-step. A stray staging or backup folder for a skill is handled the same way. A
-link or a folder that isn't the user's refuses that harness's row only. Other
-skills and harnesses still install. When no harness can take any skill (none is
+step. A stray staging or backup folder for a skill is handled the same way, and
+so is a linked skill: a skill folder that is a link, or isn't the user's, is
+kept and listed in `skipped`. A harness folder or its skills folder that is a
+link, or isn't the user's, refuses that harness's row only. Other skills and
+harnesses still install. When no harness can take any skill (none is
 present, or every one is refused), nothing is written, not even the canonical
 folder, and the step exits 5 with `outcome: refused`. A repeated run gives the
 same files. Other skills in those folders, and skills a newer build no longer
@@ -113,13 +115,17 @@ ships, stay. The result is one `openwiz.skills-install.v1` JSON object:
 version, source, canonical folder, skill names and one row per
 harness (`installed`, `partial`, `absent` or `refused`, its folder, a plain
 `next`, and `skipped` when a skill was skipped), plus `canonical_skipped` for
-a skill skipped in the canonical folder. `outcome` is `installed`
-(exit 0) only when every present harness got every skill, `partial` (exit 0)
-when something was skipped or refused, and `refused` (exit 5) when nothing was
-written.
+a skill skipped in the canonical folder and `canonical_refused`, the plain
+reason, when the canonical folder is a link, isn't the user's or can't be
+written; the harness copies already made stay. `outcome` is `installed`
+(exit 0) only when every present harness got every skill and the canonical
+folder got every skill, `partial` (exit 0) when something was skipped or
+refused, `canonical_skipped` and `canonical_refused` included, and `refused`
+(exit 5) when nothing was written.
 
 The step needs no Rust, Cargo, Node or npm. It doesn't put anything on `PATH`.
 The installed command is the build's own `openwiz`, beside its `runtime/`,
 reached through `<ROOT>/current/openwiz`. Its `init` uses the packaged setup
 runtime and the user's `gh` login to set up the repository's `openwiz` label
-and brain records ([cli.v1](cli.v1.md)).
+and records v1's five workflow labels (`spec`, `ready-for-agent`,
+`ready-for-human`, `needs-info` and `held`), and its brain records ([cli.v1](cli.v1.md)).

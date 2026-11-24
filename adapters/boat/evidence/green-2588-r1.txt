@@ -1,0 +1,56 @@
+#2588 R1-R4 fix, green at 854708e (the fix commit), on the red commit 2111842's tests.
+A private folder of no-op stubs for every agent CLI and boat (each prints a refusal and exits 1) is first on PATH; the tests use only fixtures/bin/boat and the recorded help text.
+
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/boat/test_driver.py -v
+test_a_bad_settle_setting_refuses_start_and_never_blocks_stop (__main__.Boat.test_a_bad_settle_setting_refuses_start_and_never_blocks_stop) ... ok
+test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Boat.test_a_credential_shaped_start_field_is_refused_before_anything_starts) ... ok
+test_a_failed_stop_is_never_undone_by_a_wake (__main__.Boat.test_a_failed_stop_is_never_undone_by_a_wake) ... ok
+test_a_first_turn_that_hits_a_usage_limit_or_does_nothing_fails_start (__main__.Boat.test_a_first_turn_that_hits_a_usage_limit_or_does_nothing_fails_start) ... ok
+test_a_pushable_repository_starts_after_one_dry_run_push (__main__.Boat.test_a_pushable_repository_starts_after_one_dry_run_push) ... ok
+test_a_start_not_fully_saved_is_never_woken (__main__.Boat.test_a_start_not_fully_saved_is_never_woken) ... ok
+test_a_start_that_cannot_push_fails_fast_naming_the_fix (__main__.Boat.test_a_start_that_cannot_push_fails_fast_naming_the_fix) ... ok
+test_a_start_that_fails_leaves_no_sandbox_running (__main__.Boat.test_a_start_that_fails_leaves_no_sandbox_running) ... ok
+test_a_start_whose_levels_cannot_be_read_starts_nothing (__main__.Boat.test_a_start_whose_levels_cannot_be_read_starts_nothing) ... ok
+test_a_wake_after_the_turn_ended_prompts_the_saved_conversation (__main__.Boat.test_a_wake_after_the_turn_ended_prompts_the_saved_conversation) ... ok
+test_a_wake_never_resumes_a_stopped_sandbox_and_stop_ends_it (__main__.Boat.test_a_wake_never_resumes_a_stopped_sandbox_and_stop_ends_it) ... ok
+test_a_working_first_turn_answers_within_the_settle_time (__main__.Boat.test_a_working_first_turn_answers_within_the_settle_time) ... ok
+test_a_writable_repository_that_has_an_old_probe_branch_starts (__main__.Boat.test_a_writable_repository_that_has_an_old_probe_branch_starts) ... ok
+test_an_effort_boat_cannot_set_is_refused_and_starts_nothing (__main__.Boat.test_an_effort_boat_cannot_set_is_refused_and_starts_nothing) ... ok
+test_an_effort_reaches_boat_as_reasoning_effort (__main__.Boat.test_an_effort_reaches_boat_as_reasoning_effort) ... ok
+test_an_unexpected_error_leaves_nothing_running (__main__.Boat.test_an_unexpected_error_leaves_nothing_running) ... ok
+test_boat_diagnostics_never_reach_the_drivers_answer (__main__.Boat.test_boat_diagnostics_never_reach_the_drivers_answer) ... ok
+test_boat_output_never_reaches_a_wake_or_stop_answer (__main__.Boat.test_boat_output_never_reaches_a_wake_or_stop_answer) ... ok
+test_kit_passes_all_five (__main__.Boat.test_kit_passes_all_five) ... ok
+test_known_boat_guidance_reaches_the_answer_from_stderr (__main__.Boat.test_known_boat_guidance_reaches_the_answer_from_stderr) ... ok
+test_no_effort_runs_at_the_hosts_default (__main__.Boat.test_no_effort_runs_at_the_hosts_default) ... ok
+test_on_macos_the_driver_never_asks_ps_for_any_process_environment (__main__.Boat.test_on_macos_the_driver_never_asks_ps_for_any_process_environment) ... ok
+test_simultaneous_wakes_start_one_turn (__main__.Boat.test_simultaneous_wakes_start_one_turn) ... /usr/lib/python3.11/unittest/case.py:579: ResourceWarning: unclosed file <_io.BufferedReader name=5>
+  if method() is not None:
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/usr/lib/python3.11/unittest/case.py:579: ResourceWarning: unclosed file <_io.BufferedReader name=6>
+  if method() is not None:
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_start_installs_the_pinned_skills_or_refuses (__main__.Boat.test_start_installs_the_pinned_skills_or_refuses) ... ok
+test_stop_and_failure_cleanup_never_open_another_process_environment (__main__.Boat.test_stop_and_failure_cleanup_never_open_another_process_environment) ... ok
+test_stop_ends_a_worker_the_prompt_left_in_a_clean_environment (__main__.Boat.test_stop_ends_a_worker_the_prompt_left_in_a_clean_environment) ... ok
+test_stop_ends_the_run_when_it_cannot_save (__main__.Boat.test_stop_ends_the_run_when_it_cannot_save) ... ok
+test_the_driver_reads_the_level_list_boat_1_0_105_prints (__main__.Boat.test_the_driver_reads_the_level_list_boat_1_0_105_prints) ... ok
+test_the_kits_start_check_names_the_push_fix (__main__.Boat.test_the_kits_start_check_names_the_push_fix) ... ok
+test_the_push_refusal_fits_driver_v1_for_the_longest_repository_name (__main__.Boat.test_the_push_refusal_fits_driver_v1_for_the_longest_repository_name) ... ok
+test_the_push_refusal_holds_when_the_check_answers_odd_bytes_or_cannot_run (__main__.Boat.test_the_push_refusal_holds_when_the_check_answers_odd_bytes_or_cannot_run) ... ok
+test_the_tests_track_only_their_own_processes (__main__.Boat.test_the_tests_track_only_their_own_processes) ... ok
+test_version_lists_effort_and_the_readme_says_how (__main__.Boat.test_version_lists_effort_and_the_readme_says_how) ... ok
+test_wake_checks_its_save_before_and_after_spawn (__main__.Boat.test_wake_checks_its_save_before_and_after_spawn) ... ok
+test_without_proc_as_on_macos_a_failed_wake_ends_only_its_own_turn (__main__.Boat.test_without_proc_as_on_macos_a_failed_wake_ends_only_its_own_turn) ... ok
+test_without_proc_as_on_macos_a_wake_that_cannot_save_ends_only_its_own_turn (__main__.Boat.test_without_proc_as_on_macos_a_wake_that_cannot_save_ends_only_its_own_turn) ... ok
+test_without_proc_as_on_macos_stop_ends_a_worker_the_turn_hands_off_as_it_exits (__main__.Boat.test_without_proc_as_on_macos_stop_ends_a_worker_the_turn_hands_off_as_it_exits) ... ok
+test_without_proc_as_on_macos_stop_ends_a_worker_writing_the_log_after_its_supervisor_is_gone (__main__.Boat.test_without_proc_as_on_macos_stop_ends_a_worker_writing_the_log_after_its_supervisor_is_gone) ... ok
+test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild (__main__.Boat.test_without_proc_as_on_macos_the_kit_passes_and_stop_ends_each_grandchild) ... ok
+
+----------------------------------------------------------------------
+Ran 39 tests in 73.269s
+
+OK
+
+Undo checks, by hand and not committed: with catalog() back to 'found or None', test_a_start_whose_levels_cannot_be_read_starts_nothing fails 2 subtests (no model rows, truncated); with the out-of-list effort branch disabled, test_an_effort_boat_cannot_set_is_refused_and_starts_nothing fails 1 subtest (gemini, medium).

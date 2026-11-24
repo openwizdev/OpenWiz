@@ -1,9 +1,0 @@
-Review R1 at d6bd161f: the form applies the `feedback` label, and GitHub applies only labels that already exist.
-
-Red, first read (2026-11-20, about 11:44Z):
-$ gh api repos/openwizdev/OpenWiz/labels/feedback
-{"message":"Not Found","documentation_url":"https://docs.github.com/rest/issues/labels#get-a-label","status":"404"}gh: Not Found (HTTP 404)
-
-Someone with push access then created the label outside this pull request (no public record of who). Read again (about 11:45Z):
-$ gh api repos/openwizdev/OpenWiz/labels/feedback --jq '{name, description}'
-{"description":"A user report from the feedback skill or the site form; untrusted public data","name":"feedback"}

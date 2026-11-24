@@ -1,0 +1,54 @@
+# Red run (#2304, R1): python3 -I adapters/local/test_driver.py -k padded, against the driver at c551d6f8. Padded or spaced row labels are missed, so a conflict or a duplicate starts a run.
+test_padded_row_labels_count_as_the_same_row (__main__.Local.test_padded_row_labels_count_as_the_same_row) ... 
+  test_padded_row_labels_count_as_the_same_row (__main__.Local.test_padded_row_labels_count_as_the_same_row) [example/padded] ... FAIL
+  test_padded_row_labels_count_as_the_same_row (__main__.Local.test_padded_row_labels_count_as_the_same_row) [example/spaced] ... FAIL
+  test_padded_row_labels_count_as_the_same_row (__main__.Local.test_padded_row_labels_count_as_the_same_row) [example/twice-padded] ... FAIL
+test_padded_row_labels_count_as_the_same_row (__main__.Local.test_padded_row_labels_count_as_the_same_row) ... FAIL
+
+======================================================================
+FAIL: test_padded_row_labels_count_as_the_same_row (__main__.Local.test_padded_row_labels_count_as_the_same_row) [example/padded]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 535, in test_padded_row_labels_count_as_the_same_row
+    self.assertIn(says, self.refused(harness, repository)['error'])
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "adapters/local/test_driver.py", line 463, in refused
+    self.assertEqual(code, 1, err)
+AssertionError: 0 != 1 : {'run': 'run-0123456789ab'}
+
+======================================================================
+FAIL: test_padded_row_labels_count_as_the_same_row (__main__.Local.test_padded_row_labels_count_as_the_same_row) [example/spaced]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 535, in test_padded_row_labels_count_as_the_same_row
+    self.assertIn(says, self.refused(harness, repository)['error'])
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "adapters/local/test_driver.py", line 463, in refused
+    self.assertEqual(code, 1, err)
+AssertionError: 0 != 1 : {'run': 'run-0123456789ab'}
+
+======================================================================
+FAIL: test_padded_row_labels_count_as_the_same_row (__main__.Local.test_padded_row_labels_count_as_the_same_row) [example/twice-padded]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 535, in test_padded_row_labels_count_as_the_same_row
+    self.assertIn(says, self.refused(harness, repository)['error'])
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "adapters/local/test_driver.py", line 463, in refused
+    self.assertEqual(code, 1, err)
+AssertionError: 0 != 1 : {'run': 'run-0123456789ab'}
+
+======================================================================
+FAIL: test_padded_row_labels_count_as_the_same_row (__main__.Local.test_padded_row_labels_count_as_the_same_row)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 536, in test_padded_row_labels_count_as_the_same_row
+    self.no_new_turn(0)
+  File "adapters/local/test_driver.py", line 159, in no_new_turn
+    self.assertEqual(len(self.logged()), count, 'a turn was started')
+AssertionError: 3 != 0 : a turn was started
+
+----------------------------------------------------------------------
+Ran 1 test in 6.853s
+
+FAILED (failures=4)

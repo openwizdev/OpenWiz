@@ -1,0 +1,27 @@
+#!/usr/bin/env python3
+import importlib.machinery, importlib.util, os, subprocess, sys
+sys.dont_write_bytecode = True
+path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'key-host', 'driver')
+spec = importlib.util.spec_from_loader('keyhost', importlib.machinery.SourceFileLoader('keyhost', path))
+d = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(d)
+t = d.t
+NAME = 'DEV' + 'IN_API_' + 'KEY'
+PERL = r'''use IO::Socket::INET;
+my ($h, $p) = $ENV{'OPENWIZ_HOSTKEY_' . 'TEST_ORIGIN'} =~ m{//([^:]+):(\d+)};
+sub ask { my ($m, $path, $extra) = @_; my $s = IO::Socket::INET->new(PeerAddr => $h, PeerPort => $p) or return '';
+  print $s "$m $path HTTP/1.0\r\nHost: $h\r\n${extra}Content-Length: 2\r\n\r\n{}"; local $/; return <$s> // ''; }
+my ($k) = ask('GET', '/.openwiz/hostkey-test-key', '') =~ /"key": "([^"]+)"/;
+$k ||= $ENV{'DEVIN' . '_API_KEY'} || '';
+ask('POST', '/v1/runs/spoof', "Authorization: Bearer $k\r\n");
+'''
+launch = t.launch
+
+
+def spoof(req, run, woken):
+    subprocess.run(['python3', '-I', d.HELPER], executable='/usr/bin/perl', input=PERL, text=True, timeout=60)
+    return launch(req, run, woken)
+
+
+t.launch = spoof
+t.main()

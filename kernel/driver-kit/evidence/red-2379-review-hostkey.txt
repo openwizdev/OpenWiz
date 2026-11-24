@@ -1,0 +1,572 @@
+# #2379 review round: the helper's tests for R1, R2, R7, R8, R10 and R11 against head 9dcaa375's helper. The synthetic test keys appear as written in the tests.
+test_a_body_strict_json_cannot_hold_comes_back_null_with_its_status (__main__.Helper.test_a_body_strict_json_cannot_hold_comes_back_null_with_its_status) ...
+  test_a_body_strict_json_cannot_hold_comes_back_null_with_its_status (__main__.Helper.test_a_body_strict_json_cannot_hold_comes_back_null_with_its_status) [b'{"n": 1e400}'] ... FAIL
+  test_a_body_strict_json_cannot_hold_comes_back_null_with_its_status (__main__.Helper.test_a_body_strict_json_cannot_hold_comes_back_null_with_its_status) [b'[-1e999]'] ... FAIL
+test_a_good_request_reaches_the_registered_host_with_the_key_only_in_its_header (__main__.Helper.test_a_good_request_reaches_the_registered_host_with_the_key_only_in_its_header) ... FAIL
+test_a_host_not_in_the_registry_is_refused (__main__.Helper.test_a_host_not_in_the_registry_is_refused) ... ok
+test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ...
+  test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value\n'] ... FAIL
+  test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value x'] ... FAIL
+  test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['a\rb'] ... FAIL
+  test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value\t'] ... FAIL
+  test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Valueé'] ... FAIL
+  test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['short-key-15chr'] ... FAIL
+  test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value"q'] ... FAIL
+  test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value\\'] ... FAIL
+  test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value:'] ... FAIL
+  test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'] ... FAIL
+test_a_key_that_fits_inside_the_helpers_own_texts_is_never_printed (__main__.Helper.test_a_key_that_fits_inside_the_helpers_own_texts_is_never_printed) ...
+  test_a_key_that_fits_inside_the_helpers_own_texts_is_never_printed (__main__.Helper.test_a_key_that_fits_inside_the_helpers_own_texts_is_never_printed) [held] ... FAIL
+  test_a_key_that_fits_inside_the_helpers_own_texts_is_never_printed (__main__.Helper.test_a_key_that_fits_inside_the_helpers_own_texts_is_never_printed) [the] ... FAIL
+test_a_method_outside_the_three_is_refused (__main__.Helper.test_a_method_outside_the_three_is_refused) ... ok
+test_a_non_json_answer_comes_back_as_a_null_body (__main__.Helper.test_a_non_json_answer_comes_back_as_a_null_body) ... ok
+test_a_redirect_comes_back_as_its_status_and_is_never_followed (__main__.Helper.test_a_redirect_comes_back_as_its_status_and_is_never_followed) ... ok
+test_a_request_that_holds_the_key_is_refused_before_it_is_sent (__main__.Helper.test_a_request_that_holds_the_key_is_refused_before_it_is_sent) ...
+  test_a_request_that_holds_the_key_is_refused_before_it_is_sent (__main__.Helper.test_a_request_that_holds_the_key_is_refused_before_it_is_sent) [{'host': 'devin', 'method': 'POST', 'path': '/v1/synthetic-host-key-Kit0ValueKit0ValueKit0Value', 'body': {'prompt': 'hi'}}] ... FAIL
+  test_a_request_that_holds_the_key_is_refused_before_it_is_sent (__main__.Helper.test_a_request_that_holds_the_key_is_refused_before_it_is_sent) [{'host': 'devin', 'method': 'POST', 'path': '/v1?k=synthetic-host-key-Kit0ValueKit0ValueKit0Value', 'body': {'prompt': 'hi'}}] ... FAIL
+  test_a_request_that_holds_the_key_is_refused_before_it_is_sent (__main__.Helper.test_a_request_that_holds_the_key_is_refused_before_it_is_sent) [{'host': 'devin', 'method': 'POST', 'path': '/v1/%73ynthetic-ho%73t-key-Kit0ValueKit0ValueKit0Value', 'body': {'prompt': 'hi'}}] ... FAIL
+  test_a_request_that_holds_the_key_is_refused_before_it_is_sent (__main__.Helper.test_a_request_that_holds_the_key_is_refused_before_it_is_sent) [{'host': 'devin', 'method': 'POST', 'path': '/v3/organizations/org-syn1/sessions', 'body': {'k': 'synthetic-host-key-Kit0ValueKit0ValueKit0Value'}}] ... FAIL
+  test_a_request_that_holds_the_key_is_refused_before_it_is_sent (__main__.Helper.test_a_request_that_holds_the_key_is_refused_before_it_is_sent) [{'host': 'devin', 'method': 'POST', 'path': '/v3/organizations/org-syn1/sessions', 'body': {'synthetic-host-key-Kit0ValueKit0ValueKit0Value': 1}}] ... FAIL
+  test_a_request_that_holds_the_key_is_refused_before_it_is_sent (__main__.Helper.test_a_request_that_holds_the_key_is_refused_before_it_is_sent) [{'host': 'devin', 'method': 'POST', 'path': '/v3/organizations/org-syn1/sessions', 'body': {'k': ['xsynthetic-host-key-Kit0ValueKit0ValueKit0Valuey']}}] ... FAIL
+test_an_answer_that_holds_the_key_is_dropped (__main__.Helper.test_an_answer_that_holds_the_key_is_dropped) ...
+  test_an_answer_that_holds_the_key_is_dropped (__main__.Helper.test_an_answer_that_holds_the_key_is_dropped) [b'{"echo": "Bearer <synthetic key>"}'] ... FAIL
+  test_an_answer_that_holds_the_key_is_dropped (__main__.Helper.test_an_answer_that_holds_the_key_is_dropped) [b'<p>synthetic-host-key-Kit0ValueKit0ValueKit0Value</p>'] ... FAIL
+  test_an_answer_that_holds_the_key_is_dropped (__main__.Helper.test_an_answer_that_holds_the_key_is_dropped) [b'{"k": "\\u0073ynthetic-ho\\u0073t-key-Kit0ValueKit0ValueKit0Value"}'] ... FAIL
+  test_an_answer_that_holds_the_key_is_dropped (__main__.Helper.test_an_answer_that_holds_the_key_is_dropped) [b'{"synthetic-host-key-Kit0ValueKit0ValueKit0Value": 1}'] ... FAIL
+test_an_unreachable_host_is_an_error_without_the_key (__main__.Helper.test_an_unreachable_host_is_an_error_without_the_key) ... ok
+test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) ... ok
+test_every_output_path_including_its_fallbacks_holds_no_key (__main__.Helper.test_every_output_path_including_its_fallbacks_holds_no_key) ...
+  test_every_output_path_including_its_fallbacks_holds_no_key (__main__.Helper.test_every_output_path_including_its_fallbacks_holds_no_key) [['the-answer-held-the-key']] ... ERROR
+  test_every_output_path_including_its_fallbacks_holds_no_key (__main__.Helper.test_every_output_path_including_its_fallbacks_holds_no_key) [['the answer held the key']] ... ERROR
+  test_every_output_path_including_its_fallbacks_holds_no_key (__main__.Helper.test_every_output_path_including_its_fallbacks_holds_no_key) [['helper did not print']] ... ERROR
+test_get_and_delete_with_no_body_and_a_query (__main__.Helper.test_get_and_delete_with_no_body_and_a_query) ...
+  test_get_and_delete_with_no_body_and_a_query (__main__.Helper.test_get_and_delete_with_no_body_and_a_query) [GET] ... FAIL
+  test_get_and_delete_with_no_body_and_a_query (__main__.Helper.test_get_and_delete_with_no_body_and_a_query) [DELETE] ... FAIL
+test_input_that_is_not_exactly_the_request_is_refused (__main__.Helper.test_input_that_is_not_exactly_the_request_is_refused) ... ok
+test_native_tls_configuration_from_the_environment_never_reaches_the_helper (__main__.Helper.test_native_tls_configuration_from_the_environment_never_reaches_the_helper) ... FAIL
+test_the_helper_ignores_proxy_variables (__main__.Helper.test_the_helper_ignores_proxy_variables) ... FAIL
+test_the_helper_runs_only_in_isolated_mode (__main__.Helper.test_the_helper_runs_only_in_isolated_mode) ... ok
+test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) ... ok
+test_under_the_override_no_production_key_is_ever_read (__main__.Helper.test_under_the_override_no_production_key_is_ever_read) ...
+  test_under_the_override_no_production_key_is_ever_read (__main__.Helper.test_under_the_override_no_production_key_is_ever_read) [{'OPENWIZ_HOSTKEY_TEST_KEY': None}] ... FAIL
+  test_under_the_override_no_production_key_is_ever_read (__main__.Helper.test_under_the_override_no_production_key_is_ever_read) [{'OPENWIZ_HOSTKEY_TEST_KEY': ''}] ... FAIL
+  test_under_the_override_no_production_key_is_ever_read (__main__.Helper.test_under_the_override_no_production_key_is_ever_read) [{'OPENWIZ_HOSTKEY_TEST_KEY': None, 'DEVIN_API_KEY': None}] ... FAIL
+test_under_the_override_no_production_key_is_ever_read (__main__.Helper.test_under_the_override_no_production_key_is_ever_read) ... FAIL
+test_a_failed_or_empty_keychain_is_a_missing_key (__main__.Keychain.test_a_failed_or_empty_keychain_is_a_missing_key) ...
+  test_a_failed_or_empty_keychain_is_a_missing_key (__main__.Keychain.test_a_failed_or_empty_keychain_is_a_missing_key) [{'tool_exit': 1}] ... ERROR
+  test_a_failed_or_empty_keychain_is_a_missing_key (__main__.Keychain.test_a_failed_or_empty_keychain_is_a_missing_key) [{'key_file': 'none'}] ... ERROR
+test_an_empty_variable_reads_the_keychain_from_its_trusted_path_with_a_minimal_environment (__main__.Keychain.test_an_empty_variable_reads_the_keychain_from_its_trusted_path_with_a_minimal_environment) ... FAIL
+test_the_variable_wins_and_no_tool_runs (__main__.Keychain.test_the_variable_wins_and_no_tool_runs) ... ERROR
+test_tls_is_verified_with_the_system_defaults_and_ignores_cert_variables (__main__.Keychain.test_tls_is_verified_with_the_system_defaults_and_ignores_cert_variables) ... ok
+test_under_the_test_override_neither_production_source_is_read (__main__.Keychain.test_under_the_test_override_neither_production_source_is_read) ...
+  test_under_the_test_override_neither_production_source_is_read (__main__.Keychain.test_under_the_test_override_neither_production_source_is_read) [{}] ... ERROR
+  test_under_the_test_override_neither_production_source_is_read (__main__.Keychain.test_under_the_test_override_neither_production_source_is_read) [{'DEVIN_API_KEY': 'synthetic-production-key-Kit0ValueKit0ValueKit0Value'}] ... ERROR
+test_under_the_test_override_neither_production_source_is_read (__main__.Keychain.test_under_the_test_override_neither_production_source_is_read) ... ERROR
+
+======================================================================
+ERROR: test_every_output_path_including_its_fallbacks_holds_no_key (__main__.Helper.test_every_output_path_including_its_fallbacks_holds_no_key) [['the-answer-held-the-key']]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 268, in test_every_output_path_including_its_fallbacks_holds_no_key
+    text, code = hostkey.render({'status': 200, 'body': {'k': keys[0]}}, keys)
+                 ^^^^^^^^^^^^^^
+AttributeError: module 'hostkey' has no attribute 'render'
+
+======================================================================
+ERROR: test_every_output_path_including_its_fallbacks_holds_no_key (__main__.Helper.test_every_output_path_including_its_fallbacks_holds_no_key) [['the answer held the key']]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 268, in test_every_output_path_including_its_fallbacks_holds_no_key
+    text, code = hostkey.render({'status': 200, 'body': {'k': keys[0]}}, keys)
+                 ^^^^^^^^^^^^^^
+AttributeError: module 'hostkey' has no attribute 'render'
+
+======================================================================
+ERROR: test_every_output_path_including_its_fallbacks_holds_no_key (__main__.Helper.test_every_output_path_including_its_fallbacks_holds_no_key) [['helper did not print']]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 268, in test_every_output_path_including_its_fallbacks_holds_no_key
+    text, code = hostkey.render({'status': 200, 'body': {'k': keys[0]}}, keys)
+                 ^^^^^^^^^^^^^^
+AttributeError: module 'hostkey' has no attribute 'render'
+
+======================================================================
+ERROR: test_a_failed_or_empty_keychain_is_a_missing_key (__main__.Keychain.test_a_failed_or_empty_keychain_is_a_missing_key) [{'tool_exit': 1}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 353, in test_a_failed_or_empty_keychain_is_a_missing_key
+    self.lookup(**kw)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 302, in lookup
+    old, tools = sys.platform, dict(self.hostkey.TOOLS)
+                                    ^^^^^^^^^^^^^^^^^^
+AttributeError: module 'hostkey' has no attribute 'TOOLS'
+
+======================================================================
+ERROR: test_a_failed_or_empty_keychain_is_a_missing_key (__main__.Keychain.test_a_failed_or_empty_keychain_is_a_missing_key) [{'key_file': 'none'}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 353, in test_a_failed_or_empty_keychain_is_a_missing_key
+    self.lookup(**kw)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 302, in lookup
+    old, tools = sys.platform, dict(self.hostkey.TOOLS)
+                                    ^^^^^^^^^^^^^^^^^^
+AttributeError: module 'hostkey' has no attribute 'TOOLS'
+
+======================================================================
+ERROR: test_the_variable_wins_and_no_tool_runs (__main__.Keychain.test_the_variable_wins_and_no_tool_runs)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 319, in test_the_variable_wins_and_no_tool_runs
+    self.assertEqual(self.lookup(DEVIN_API_KEY='from-the-variable'), 'from-the-variable')
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 302, in lookup
+    old, tools = sys.platform, dict(self.hostkey.TOOLS)
+                                    ^^^^^^^^^^^^^^^^^^
+AttributeError: module 'hostkey' has no attribute 'TOOLS'
+
+======================================================================
+ERROR: test_under_the_test_override_neither_production_source_is_read (__main__.Keychain.test_under_the_test_override_neither_production_source_is_read) [{}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 360, in test_under_the_test_override_neither_production_source_is_read
+    self.lookup(OPENWIZ_HOSTKEY_TEST_ORIGIN='http://127.0.0.1:9', **env)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 302, in lookup
+    old, tools = sys.platform, dict(self.hostkey.TOOLS)
+                                    ^^^^^^^^^^^^^^^^^^
+AttributeError: module 'hostkey' has no attribute 'TOOLS'
+
+======================================================================
+ERROR: test_under_the_test_override_neither_production_source_is_read (__main__.Keychain.test_under_the_test_override_neither_production_source_is_read) [{'DEVIN_API_KEY': 'synthetic-production-key-Kit0ValueKit0ValueKit0Value'}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 360, in test_under_the_test_override_neither_production_source_is_read
+    self.lookup(OPENWIZ_HOSTKEY_TEST_ORIGIN='http://127.0.0.1:9', **env)
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 302, in lookup
+    old, tools = sys.platform, dict(self.hostkey.TOOLS)
+                                    ^^^^^^^^^^^^^^^^^^
+AttributeError: module 'hostkey' has no attribute 'TOOLS'
+
+======================================================================
+ERROR: test_under_the_test_override_neither_production_source_is_read (__main__.Keychain.test_under_the_test_override_neither_production_source_is_read)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 363, in test_under_the_test_override_neither_production_source_is_read
+    self.assertEqual(self.lookup(OPENWIZ_HOSTKEY_TEST_ORIGIN='http://127.0.0.1:9', DEVIN_API_KEY=PRODUCTION,
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 302, in lookup
+    old, tools = sys.platform, dict(self.hostkey.TOOLS)
+                                    ^^^^^^^^^^^^^^^^^^
+AttributeError: module 'hostkey' has no attribute 'TOOLS'
+
+======================================================================
+FAIL: test_a_body_strict_json_cannot_hold_comes_back_null_with_its_status (__main__.Helper.test_a_body_strict_json_cannot_hold_comes_back_null_with_its_status) [b'{"n": 1e400}']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 210, in test_a_body_strict_json_cannot_hold_comes_back_null_with_its_status
+    self.assertEqual(self.run_helper(GOOD, OPENWIZ_HOSTKEY_TEST_ORIGIN=host.origin),
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 82, in run_helper
+    return p.returncode, json.loads(p.stdout, parse_constant=lambda name: self.fail('the answer is not strict '
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/json/__init__.py", line 359, in loads
+    return cls(**kw).decode(s)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/json/decoder.py", line 353, in raw_decode
+    obj, end = self.scan_once(s, idx)
+               ^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 82, in <lambda>
+    return p.returncode, json.loads(p.stdout, parse_constant=lambda name: self.fail('the answer is not strict '
+                                                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: the answer is not strict JSON: Infinity
+
+======================================================================
+FAIL: test_a_body_strict_json_cannot_hold_comes_back_null_with_its_status (__main__.Helper.test_a_body_strict_json_cannot_hold_comes_back_null_with_its_status) [b'[-1e999]']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 210, in test_a_body_strict_json_cannot_hold_comes_back_null_with_its_status
+    self.assertEqual(self.run_helper(GOOD, OPENWIZ_HOSTKEY_TEST_ORIGIN=host.origin),
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 82, in run_helper
+    return p.returncode, json.loads(p.stdout, parse_constant=lambda name: self.fail('the answer is not strict '
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/json/__init__.py", line 359, in loads
+    return cls(**kw).decode(s)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/json/decoder.py", line 353, in raw_decode
+    obj, end = self.scan_once(s, idx)
+               ^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 82, in <lambda>
+    return p.returncode, json.loads(p.stdout, parse_constant=lambda name: self.fail('the answer is not strict '
+                                                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: the answer is not strict JSON: -Infinity
+
+======================================================================
+FAIL: test_a_good_request_reaches_the_registered_host_with_the_key_only_in_its_header (__main__.Helper.test_a_good_request_reaches_the_registered_host_with_the_key_only_in_its_header)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 95, in test_a_good_request_reaches_the_registered_host_with_the_key_only_in_its_header
+    code, out = self.run_helper(GOOD)
+                ^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 81, in run_helper
+    self.assertNotIn(PRODUCTION, repr(headers), 'a production key reached the loopback fake')
+AssertionError: 'synthetic-production-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in "[('Host', '127.0.0.1:41527'), ('Accept-Encoding', 'identity'), ('Content-Length', '16'), ('Authorization', 'Bearer <synthetic key>'), ('Accept', 'application/json'), ('User-Agent', 'openwiz-hostkey/1'), ('Content-Type', 'application/json')]" : a production key reached the loopback fake
+
+======================================================================
+FAIL: test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value\n']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 248, in test_a_key_outside_the_supported_format_is_refused_without_its_value
+    code, out = self.run_helper(GOOD, **{TEST_KEY: bad})
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 81, in run_helper
+    self.assertNotIn(PRODUCTION, repr(headers), 'a production key reached the loopback fake')
+AssertionError: 'synthetic-production-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in "[('Host', '127.0.0.1:33117'), ('Accept-Encoding', 'identity'), ('Content-Length', '16'), ('Authorization', 'Bearer <synthetic key>'), ('Accept', 'application/json'), ('User-Agent', 'openwiz-hostkey/1'), ('Content-Type', 'application/json')]" : a production key reached the loopback fake
+
+======================================================================
+FAIL: test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value x']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 248, in test_a_key_outside_the_supported_format_is_refused_without_its_value
+    code, out = self.run_helper(GOOD, **{TEST_KEY: bad})
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 81, in run_helper
+    self.assertNotIn(PRODUCTION, repr(headers), 'a production key reached the loopback fake')
+AssertionError: 'synthetic-production-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in "[('Host', '127.0.0.1:33117'), ('Accept-Encoding', 'identity'), ('Content-Length', '16'), ('Authorization', 'Bearer <synthetic key>'), ('Accept', 'application/json'), ('User-Agent', 'openwiz-hostkey/1'), ('Content-Type', 'application/json')]" : a production key reached the loopback fake
+
+======================================================================
+FAIL: test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['a\rb']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 248, in test_a_key_outside_the_supported_format_is_refused_without_its_value
+    code, out = self.run_helper(GOOD, **{TEST_KEY: bad})
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 81, in run_helper
+    self.assertNotIn(PRODUCTION, repr(headers), 'a production key reached the loopback fake')
+AssertionError: 'synthetic-production-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in "[('Host', '127.0.0.1:33117'), ('Accept-Encoding', 'identity'), ('Content-Length', '16'), ('Authorization', 'Bearer <synthetic key>'), ('Accept', 'application/json'), ('User-Agent', 'openwiz-hostkey/1'), ('Content-Type', 'application/json')]" : a production key reached the loopback fake
+
+======================================================================
+FAIL: test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value\t']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 248, in test_a_key_outside_the_supported_format_is_refused_without_its_value
+    code, out = self.run_helper(GOOD, **{TEST_KEY: bad})
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 81, in run_helper
+    self.assertNotIn(PRODUCTION, repr(headers), 'a production key reached the loopback fake')
+AssertionError: 'synthetic-production-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in "[('Host', '127.0.0.1:33117'), ('Accept-Encoding', 'identity'), ('Content-Length', '16'), ('Authorization', 'Bearer <synthetic key>'), ('Accept', 'application/json'), ('User-Agent', 'openwiz-hostkey/1'), ('Content-Type', 'application/json')]" : a production key reached the loopback fake
+
+======================================================================
+FAIL: test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Valueé']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 248, in test_a_key_outside_the_supported_format_is_refused_without_its_value
+    code, out = self.run_helper(GOOD, **{TEST_KEY: bad})
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 81, in run_helper
+    self.assertNotIn(PRODUCTION, repr(headers), 'a production key reached the loopback fake')
+AssertionError: 'synthetic-production-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in "[('Host', '127.0.0.1:33117'), ('Accept-Encoding', 'identity'), ('Content-Length', '16'), ('Authorization', 'Bearer <synthetic key>'), ('Accept', 'application/json'), ('User-Agent', 'openwiz-hostkey/1'), ('Content-Type', 'application/json')]" : a production key reached the loopback fake
+
+======================================================================
+FAIL: test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['short-key-15chr']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 248, in test_a_key_outside_the_supported_format_is_refused_without_its_value
+    code, out = self.run_helper(GOOD, **{TEST_KEY: bad})
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 81, in run_helper
+    self.assertNotIn(PRODUCTION, repr(headers), 'a production key reached the loopback fake')
+AssertionError: 'synthetic-production-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in "[('Host', '127.0.0.1:33117'), ('Accept-Encoding', 'identity'), ('Content-Length', '16'), ('Authorization', 'Bearer <synthetic key>'), ('Accept', 'application/json'), ('User-Agent', 'openwiz-hostkey/1'), ('Content-Type', 'application/json')]" : a production key reached the loopback fake
+
+======================================================================
+FAIL: test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value"q']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 248, in test_a_key_outside_the_supported_format_is_refused_without_its_value
+    code, out = self.run_helper(GOOD, **{TEST_KEY: bad})
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 81, in run_helper
+    self.assertNotIn(PRODUCTION, repr(headers), 'a production key reached the loopback fake')
+AssertionError: 'synthetic-production-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in "[('Host', '127.0.0.1:33117'), ('Accept-Encoding', 'identity'), ('Content-Length', '16'), ('Authorization', 'Bearer <synthetic key>'), ('Accept', 'application/json'), ('User-Agent', 'openwiz-hostkey/1'), ('Content-Type', 'application/json')]" : a production key reached the loopback fake
+
+======================================================================
+FAIL: test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value\\']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 248, in test_a_key_outside_the_supported_format_is_refused_without_its_value
+    code, out = self.run_helper(GOOD, **{TEST_KEY: bad})
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 81, in run_helper
+    self.assertNotIn(PRODUCTION, repr(headers), 'a production key reached the loopback fake')
+AssertionError: 'synthetic-production-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in "[('Host', '127.0.0.1:33117'), ('Accept-Encoding', 'identity'), ('Content-Length', '16'), ('Authorization', 'Bearer <synthetic key>'), ('Accept', 'application/json'), ('User-Agent', 'openwiz-hostkey/1'), ('Content-Type', 'application/json')]" : a production key reached the loopback fake
+
+======================================================================
+FAIL: test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['synthetic-host-key-Kit0ValueKit0ValueKit0Value:']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 248, in test_a_key_outside_the_supported_format_is_refused_without_its_value
+    code, out = self.run_helper(GOOD, **{TEST_KEY: bad})
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 81, in run_helper
+    self.assertNotIn(PRODUCTION, repr(headers), 'a production key reached the loopback fake')
+AssertionError: 'synthetic-production-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in "[('Host', '127.0.0.1:33117'), ('Accept-Encoding', 'identity'), ('Content-Length', '16'), ('Authorization', 'Bearer <synthetic key>'), ('Accept', 'application/json'), ('User-Agent', 'openwiz-hostkey/1'), ('Content-Type', 'application/json')]" : a production key reached the loopback fake
+
+======================================================================
+FAIL: test_a_key_outside_the_supported_format_is_refused_without_its_value (__main__.Helper.test_a_key_outside_the_supported_format_is_refused_without_its_value) ['xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 248, in test_a_key_outside_the_supported_format_is_refused_without_its_value
+    code, out = self.run_helper(GOOD, **{TEST_KEY: bad})
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 81, in run_helper
+    self.assertNotIn(PRODUCTION, repr(headers), 'a production key reached the loopback fake')
+AssertionError: 'synthetic-production-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in "[('Host', '127.0.0.1:33117'), ('Accept-Encoding', 'identity'), ('Content-Length', '16'), ('Authorization', 'Bearer <synthetic key>'), ('Accept', 'application/json'), ('User-Agent', 'openwiz-hostkey/1'), ('Content-Type', 'application/json')]" : a production key reached the loopback fake
+
+======================================================================
+FAIL: test_a_key_that_fits_inside_the_helpers_own_texts_is_never_printed (__main__.Helper.test_a_key_that_fits_inside_the_helpers_own_texts_is_never_printed) [held]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 262, in test_a_key_that_fits_inside_the_helpers_own_texts_is_never_printed
+    self.assertNotIn(key, p.stdout)
+AssertionError: 'held' unexpectedly found in '{"error": "the answer held the key, so the helper did not print it", "next": "report it to OpenWiz"}\n'
+
+======================================================================
+FAIL: test_a_key_that_fits_inside_the_helpers_own_texts_is_never_printed (__main__.Helper.test_a_key_that_fits_inside_the_helpers_own_texts_is_never_printed) [the]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 262, in test_a_key_that_fits_inside_the_helpers_own_texts_is_never_printed
+    self.assertNotIn(key, p.stdout)
+AssertionError: 'the' unexpectedly found in '{"error": "the answer held the key, so the helper did not print it", "next": "report it to OpenWiz"}\n'
+
+======================================================================
+FAIL: test_a_request_that_holds_the_key_is_refused_before_it_is_sent (__main__.Helper.test_a_request_that_holds_the_key_is_refused_before_it_is_sent) [{'host': 'devin', 'method': 'POST', 'path': '/v1/synthetic-host-key-Kit0ValueKit0ValueKit0Value', 'body': {'prompt': 'hi'}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 204, in test_a_request_that_holds_the_key_is_refused_before_it_is_sent
+    self.refused(request, 'the request holds the key')
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 86, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 81, in run_helper
+    self.assertNotIn(PRODUCTION, repr(headers), 'a production key reached the loopback fake')
+AssertionError: 'synthetic-production-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in "[('Host', '127.0.0.1:38953'), ('Accept-Encoding', 'identity'), ('Content-Length', '16'), ('Authorization', 'Bearer <synthetic key>'), ('Accept', 'application/json'), ('User-Agent', 'openwiz-hostkey/1'), ('Content-Type', 'application/json')]" : a production key reached the loopback fake
+
+======================================================================
+FAIL: test_a_request_that_holds_the_key_is_refused_before_it_is_sent (__main__.Helper.test_a_request_that_holds_the_key_is_refused_before_it_is_sent) [{'host': 'devin', 'method': 'POST', 'path': '/v1?k=synthetic-host-key-Kit0ValueKit0ValueKit0Value', 'body': {'prompt': 'hi'}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 204, in test_a_request_that_holds_the_key_is_refused_before_it_is_sent
+    self.refused(request, 'the request holds the key')
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 86, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 81, in run_helper
+    self.assertNotIn(PRODUCTION, repr(headers), 'a production key reached the loopback fake')
+AssertionError: 'synthetic-production-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in "[('Host', '127.0.0.1:38953'), ('Accept-Encoding', 'identity'), ('Content-Length', '16'), ('Authorization', 'Bearer <synthetic key>'), ('Accept', 'application/json'), ('User-Agent', 'openwiz-hostkey/1'), ('Content-Type', 'application/json')]" : a production key reached the loopback fake
+
+======================================================================
+FAIL: test_a_request_that_holds_the_key_is_refused_before_it_is_sent (__main__.Helper.test_a_request_that_holds_the_key_is_refused_before_it_is_sent) [{'host': 'devin', 'method': 'POST', 'path': '/v1/%73ynthetic-ho%73t-key-Kit0ValueKit0ValueKit0Value', 'body': {'prompt': 'hi'}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 204, in test_a_request_that_holds_the_key_is_refused_before_it_is_sent
+    self.refused(request, 'the request holds the key')
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 86, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 81, in run_helper
+    self.assertNotIn(PRODUCTION, repr(headers), 'a production key reached the loopback fake')
+AssertionError: 'synthetic-production-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in "[('Host', '127.0.0.1:38953'), ('Accept-Encoding', 'identity'), ('Content-Length', '16'), ('Authorization', 'Bearer <synthetic key>'), ('Accept', 'application/json'), ('User-Agent', 'openwiz-hostkey/1'), ('Content-Type', 'application/json')]" : a production key reached the loopback fake
+
+======================================================================
+FAIL: test_a_request_that_holds_the_key_is_refused_before_it_is_sent (__main__.Helper.test_a_request_that_holds_the_key_is_refused_before_it_is_sent) [{'host': 'devin', 'method': 'POST', 'path': '/v3/organizations/org-syn1/sessions', 'body': {'k': 'synthetic-host-key-Kit0ValueKit0ValueKit0Value'}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 204, in test_a_request_that_holds_the_key_is_refused_before_it_is_sent
+    self.refused(request, 'the request holds the key')
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 86, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 81, in run_helper
+    self.assertNotIn(PRODUCTION, repr(headers), 'a production key reached the loopback fake')
+AssertionError: 'synthetic-production-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in "[('Host', '127.0.0.1:38953'), ('Accept-Encoding', 'identity'), ('Content-Length', '16'), ('Authorization', 'Bearer <synthetic key>'), ('Accept', 'application/json'), ('User-Agent', 'openwiz-hostkey/1'), ('Content-Type', 'application/json')]" : a production key reached the loopback fake
+
+======================================================================
+FAIL: test_a_request_that_holds_the_key_is_refused_before_it_is_sent (__main__.Helper.test_a_request_that_holds_the_key_is_refused_before_it_is_sent) [{'host': 'devin', 'method': 'POST', 'path': '/v3/organizations/org-syn1/sessions', 'body': {'synthetic-host-key-Kit0ValueKit0ValueKit0Value': 1}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 204, in test_a_request_that_holds_the_key_is_refused_before_it_is_sent
+    self.refused(request, 'the request holds the key')
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 86, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 81, in run_helper
+    self.assertNotIn(PRODUCTION, repr(headers), 'a production key reached the loopback fake')
+AssertionError: 'synthetic-production-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in "[('Host', '127.0.0.1:38953'), ('Accept-Encoding', 'identity'), ('Content-Length', '16'), ('Authorization', 'Bearer <synthetic key>'), ('Accept', 'application/json'), ('User-Agent', 'openwiz-hostkey/1'), ('Content-Type', 'application/json')]" : a production key reached the loopback fake
+
+======================================================================
+FAIL: test_a_request_that_holds_the_key_is_refused_before_it_is_sent (__main__.Helper.test_a_request_that_holds_the_key_is_refused_before_it_is_sent) [{'host': 'devin', 'method': 'POST', 'path': '/v3/organizations/org-syn1/sessions', 'body': {'k': ['xsynthetic-host-key-Kit0ValueKit0ValueKit0Valuey']}}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 204, in test_a_request_that_holds_the_key_is_refused_before_it_is_sent
+    self.refused(request, 'the request holds the key')
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 86, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 81, in run_helper
+    self.assertNotIn(PRODUCTION, repr(headers), 'a production key reached the loopback fake')
+AssertionError: 'synthetic-production-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in "[('Host', '127.0.0.1:38953'), ('Accept-Encoding', 'identity'), ('Content-Length', '16'), ('Authorization', 'Bearer <synthetic key>'), ('Accept', 'application/json'), ('User-Agent', 'openwiz-hostkey/1'), ('Content-Type', 'application/json')]" : a production key reached the loopback fake
+
+======================================================================
+FAIL: test_an_answer_that_holds_the_key_is_dropped (__main__.Helper.test_an_answer_that_holds_the_key_is_dropped) [b'{"echo": "Bearer <synthetic key>"}']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 186, in test_an_answer_that_holds_the_key_is_dropped
+    code, out = self.run_helper(GOOD, OPENWIZ_HOSTKEY_TEST_ORIGIN=host.origin)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 71, in run_helper
+    self.assertNotIn(KEY, text)
+AssertionError: 'synthetic-host-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in '{"status": 500, "body": {"echo": "Bearer <synthetic key>"}}\n'
+
+======================================================================
+FAIL: test_an_answer_that_holds_the_key_is_dropped (__main__.Helper.test_an_answer_that_holds_the_key_is_dropped) [b'<p>synthetic-host-key-Kit0ValueKit0ValueKit0Value</p>']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 187, in test_an_answer_that_holds_the_key_is_dropped
+    self.assertEqual(code, 1)
+AssertionError: 0 != 1
+
+======================================================================
+FAIL: test_an_answer_that_holds_the_key_is_dropped (__main__.Helper.test_an_answer_that_holds_the_key_is_dropped) [b'{"k": "\\u0073ynthetic-ho\\u0073t-key-Kit0ValueKit0ValueKit0Value"}']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 186, in test_an_answer_that_holds_the_key_is_dropped
+    code, out = self.run_helper(GOOD, OPENWIZ_HOSTKEY_TEST_ORIGIN=host.origin)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 71, in run_helper
+    self.assertNotIn(KEY, text)
+AssertionError: 'synthetic-host-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in '{"status": 500, "body": {"k": "synthetic-host-key-Kit0ValueKit0ValueKit0Value"}}\n'
+
+======================================================================
+FAIL: test_an_answer_that_holds_the_key_is_dropped (__main__.Helper.test_an_answer_that_holds_the_key_is_dropped) [b'{"synthetic-host-key-Kit0ValueKit0ValueKit0Value": 1}']
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 186, in test_an_answer_that_holds_the_key_is_dropped
+    code, out = self.run_helper(GOOD, OPENWIZ_HOSTKEY_TEST_ORIGIN=host.origin)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 71, in run_helper
+    self.assertNotIn(KEY, text)
+AssertionError: 'synthetic-host-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in '{"status": 500, "body": {"synthetic-host-key-Kit0ValueKit0ValueKit0Value": 1}}\n'
+
+======================================================================
+FAIL: test_get_and_delete_with_no_body_and_a_query (__main__.Helper.test_get_and_delete_with_no_body_and_a_query) [GET]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 108, in test_get_and_delete_with_no_body_and_a_query
+    code, out = self.run_helper({'host': 'devin', 'method': method, 'path': '/v1/runs/run-1?a=b&c=d'})
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 81, in run_helper
+    self.assertNotIn(PRODUCTION, repr(headers), 'a production key reached the loopback fake')
+AssertionError: 'synthetic-production-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in "[('Host', '127.0.0.1:45781'), ('Accept-Encoding', 'identity'), ('Authorization', 'Bearer <synthetic key>'), ('Accept', 'application/json'), ('User-Agent', 'openwiz-hostkey/1')]" : a production key reached the loopback fake
+
+======================================================================
+FAIL: test_get_and_delete_with_no_body_and_a_query (__main__.Helper.test_get_and_delete_with_no_body_and_a_query) [DELETE]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 108, in test_get_and_delete_with_no_body_and_a_query
+    code, out = self.run_helper({'host': 'devin', 'method': method, 'path': '/v1/runs/run-1?a=b&c=d'})
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 81, in run_helper
+    self.assertNotIn(PRODUCTION, repr(headers), 'a production key reached the loopback fake')
+AssertionError: 'synthetic-production-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in "[('Host', '127.0.0.1:45781'), ('Accept-Encoding', 'identity'), ('Authorization', 'Bearer <synthetic key>'), ('Accept', 'application/json'), ('User-Agent', 'openwiz-hostkey/1')]" : a production key reached the loopback fake
+
+======================================================================
+FAIL: test_native_tls_configuration_from_the_environment_never_reaches_the_helper (__main__.Helper.test_native_tls_configuration_from_the_environment_never_reaches_the_helper)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 230, in test_native_tls_configuration_from_the_environment_never_reaches_the_helper
+    self.assertNotEqual(seen['helper'], int(ssl.TLSVersion.TLSv1_3), 'the helper took the planted TLS minimum')
+AssertionError: 772 == 772 : the helper took the planted TLS minimum
+
+======================================================================
+FAIL: test_the_helper_ignores_proxy_variables (__main__.Helper.test_the_helper_ignores_proxy_variables)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 175, in test_the_helper_ignores_proxy_variables
+    code, out = self.run_helper(GOOD, HTTP_PROXY=proxy.origin, HTTPS_PROXY=proxy.origin, ALL_PROXY=proxy.origin,
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 81, in run_helper
+    self.assertNotIn(PRODUCTION, repr(headers), 'a production key reached the loopback fake')
+AssertionError: 'synthetic-production-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in "[('Host', '127.0.0.1:32935'), ('Accept-Encoding', 'identity'), ('Content-Length', '16'), ('Authorization', 'Bearer <synthetic key>'), ('Accept', 'application/json'), ('User-Agent', 'openwiz-hostkey/1'), ('Content-Type', 'application/json')]" : a production key reached the loopback fake
+
+======================================================================
+FAIL: test_under_the_override_no_production_key_is_ever_read (__main__.Helper.test_under_the_override_no_production_key_is_ever_read) [{'OPENWIZ_HOSTKEY_TEST_KEY': None}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 193, in test_under_the_override_no_production_key_is_ever_read
+    out = self.refused(GOOD, 'no test key in OPENWIZ_HOSTKEY_TEST_KEY', **env)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 86, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 81, in run_helper
+    self.assertNotIn(PRODUCTION, repr(headers), 'a production key reached the loopback fake')
+AssertionError: 'synthetic-production-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in "[('Host', '127.0.0.1:43593'), ('Accept-Encoding', 'identity'), ('Content-Length', '16'), ('Authorization', 'Bearer <synthetic key>'), ('Accept', 'application/json'), ('User-Agent', 'openwiz-hostkey/1'), ('Content-Type', 'application/json')]" : a production key reached the loopback fake
+
+======================================================================
+FAIL: test_under_the_override_no_production_key_is_ever_read (__main__.Helper.test_under_the_override_no_production_key_is_ever_read) [{'OPENWIZ_HOSTKEY_TEST_KEY': ''}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 193, in test_under_the_override_no_production_key_is_ever_read
+    out = self.refused(GOOD, 'no test key in OPENWIZ_HOSTKEY_TEST_KEY', **env)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 86, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 81, in run_helper
+    self.assertNotIn(PRODUCTION, repr(headers), 'a production key reached the loopback fake')
+AssertionError: 'synthetic-production-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in "[('Host', '127.0.0.1:43593'), ('Accept-Encoding', 'identity'), ('Content-Length', '16'), ('Authorization', 'Bearer <synthetic key>'), ('Accept', 'application/json'), ('User-Agent', 'openwiz-hostkey/1'), ('Content-Type', 'application/json')]" : a production key reached the loopback fake
+
+======================================================================
+FAIL: test_under_the_override_no_production_key_is_ever_read (__main__.Helper.test_under_the_override_no_production_key_is_ever_read) [{'OPENWIZ_HOSTKEY_TEST_KEY': None, 'DEVIN_API_KEY': None}]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 193, in test_under_the_override_no_production_key_is_ever_read
+    out = self.refused(GOOD, 'no test key in OPENWIZ_HOSTKEY_TEST_KEY', **env)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 86, in refused
+    code, out = self.run_helper(request, raw, **env)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 81, in run_helper
+    self.assertNotIn(PRODUCTION, repr(headers), 'a production key reached the loopback fake')
+AssertionError: 'synthetic-production-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in "[('Host', '127.0.0.1:43593'), ('Accept-Encoding', 'identity'), ('Content-Length', '16'), ('Authorization', 'Bearer <synthetic key>'), ('Accept', 'application/json'), ('User-Agent', 'openwiz-hostkey/1'), ('Content-Type', 'application/json')]" : a production key reached the loopback fake
+
+======================================================================
+FAIL: test_under_the_override_no_production_key_is_ever_read (__main__.Helper.test_under_the_override_no_production_key_is_ever_read)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 195, in test_under_the_override_no_production_key_is_ever_read
+    code, out = self.run_helper(GOOD)
+                ^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 81, in run_helper
+    self.assertNotIn(PRODUCTION, repr(headers), 'a production key reached the loopback fake')
+AssertionError: 'synthetic-production-key-Kit0ValueKit0ValueKit0Value' unexpectedly found in "[('Host', '127.0.0.1:43593'), ('Accept-Encoding', 'identity'), ('Content-Length', '16'), ('Authorization', 'Bearer <synthetic key>'), ('Accept', 'application/json'), ('User-Agent', 'openwiz-hostkey/1'), ('Content-Type', 'application/json')]" : a production key reached the loopback fake
+
+======================================================================
+FAIL: test_an_empty_variable_reads_the_keychain_from_its_trusted_path_with_a_minimal_environment (__main__.Keychain.test_an_empty_variable_reads_the_keychain_from_its_trusted_path_with_a_minimal_environment)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_hostkey.py", line 332, in test_an_empty_variable_reads_the_keychain_from_its_trusted_path_with_a_minimal_environment
+    self.assertEqual(self.tool_calls(), '', 'a keychain tool found on the caller\'s PATH ran')
+AssertionError: '/tmp/tmp41s7khvd/bin/secret-tool lookup service openwiz-devin\n' != ''
+- /tmp/tmp41s7khvd/bin/secret-tool lookup service openwiz-devin
+ : a keychain tool found on the caller's PATH ran
+
+----------------------------------------------------------------------
+Ran 25 tests in 23.426s
+
+FAILED (failures=34, errors=9)

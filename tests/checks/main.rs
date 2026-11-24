@@ -12,7 +12,6 @@ mod cli_build_script;
 mod dependencies;
 mod evidence_outside_crates;
 mod fixture_scan;
-mod pending;
 mod schema_conformance;
 mod skills;
 mod strict_json;

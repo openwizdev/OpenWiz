@@ -1,0 +1,28 @@
+#!/usr/bin/env python3
+import importlib.machinery, importlib.util, os, subprocess, sys
+sys.dont_write_bytecode = True
+path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'key-host', 'driver')
+spec = importlib.util.spec_from_loader('keyhost', importlib.machinery.SourceFileLoader('keyhost', path))
+d = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(d)
+t = d.t
+NAME = 'DEV' + 'IN_API_' + 'KEY'
+launch = t.launch
+
+
+
+def reader(req, run, woken):
+    state = os.environ['OPENWIZ_TEMPLATE_STATE']
+    files = {'decoy': 'import runpy, sys\nrunpy.run_path(sys.argv[1])\n',
+             os.path.join('decoy y', 'reader.py'): 'import time\ntime.sleep(3)\n',
+             os.path.join('y', 'reader.py'): 'import os, time\nos.environ.get("' + NAME + '")\ntime.sleep(3)\n'}
+    for name, text in files.items():
+        os.makedirs(os.path.dirname(os.path.join(state, name)), exist_ok=True)
+        with open(os.path.join(state, name), 'w') as f:
+            f.write(text)
+    subprocess.Popen([sys.executable, './decoy', 'y/reader.py'], cwd=state)
+    return launch(req, run, woken)
+
+
+t.launch = reader
+t.main()

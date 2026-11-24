@@ -31,7 +31,7 @@ JOURNAL = 'openwiz.init-journal.v1'
 MAX_JOURNAL = 16
 ASSUMPTIONS = ['A command outcome is not a live proof; live brain creation is observed only under its own kit.']
 HEX32 = re.compile('[0-9a-f]{32}')
-ORDER = ('create_companion', 'link_companion', 'create_label', 'open_pull_request')
+ORDER = ('create_companion', 'link_companion', 'create_label', 'open_pull_request', 'merge_pull_request')
 
 
 class Exit(Exception):
@@ -277,8 +277,10 @@ def journal_read(setup):
     store.require(type(value) is dict and value.get('schema') == JOURNAL and set(value) == {'schema', 'operations'}
                   and type(value['operations']) is dict, 'init journal is invalid')
     for key, entry in value['operations'].items():
-        store.require(HEX32.fullmatch(key) and type(entry) is dict and set(entry) == {'rows', 'pull', 'wrote'}
-                      and type(entry['rows']) is list and type(entry['wrote']) is bool, 'init journal is invalid')
+        store.require(HEX32.fullmatch(key) and type(entry) is dict
+                      and set(entry) in ({'rows', 'pull', 'wrote'}, {'rows', 'pull', 'wrote', 'own'})
+                      and type(entry['rows']) is list and type(entry['wrote']) is bool
+                      and type(entry.get('own', {})) is dict, 'init journal is invalid')
         for row in entry['rows']:
             store.require(type(row) is dict and set(row) == {'kind', 'repository', 'phase', 'effect_count',
                                                             'attempts', 'reconciliation'}
@@ -324,7 +326,8 @@ def disclosed(plan, rows):
             'link_companion': f'Link {b} to {code} (its homepage), exposing nothing in {code}.',
             'create_label': f'Create the labels {", ".join(plan.missing)} on {code} for specs and tickets; '
                             'labels already there are kept as they are.',
-            'open_pull_request': f'Open a visible pull request on {b} proposing {FOLDER} (records only).'}
+            'open_pull_request': f'Open a visible pull request on {b} proposing {FOLDER} (records only).',
+            'merge_pull_request': f'Merge that pull request once it reads back, because {b} is new in this apply.'}
     return [text[r['kind']] for r in rows] or [f'Reuse the existing brain proposal on {b}; nothing new is written.']
 
 
@@ -350,6 +353,8 @@ def needed(plan):
                       'nothing was written.')
     if existing is None:
         row('open_pull_request', b)
+        if rows[0]['kind'] == 'create_companion':
+            row('merge_pull_request', b)
     return rows, existing
 
 
@@ -456,6 +461,9 @@ def apply(setup, plan, operation_id):
         except Unread:
             stop(6, 'uncertain', 'effect_uncertain',
                  'A GitHub read was lost; apply the same operation to reconcile it before anything else.')
+        if entry['pull']['state'] == 'merged':
+            save('applied', 'Brain merged into its new private companion.', brain=True)
+            return result(plan, operation, 'applied', 'brain_merged', report(plan.brain), entry)
         save('applied', 'Brain proposed. Merge its pull request to accept it.', brain=True)
         return result(plan, operation, 'applied', 'brain_proposed', report(plan.brain), entry)
 
@@ -467,13 +475,29 @@ def proposed(plan):
     return found is not None
 
 
+def merged(plan):
+    found = plan.proposal()
+    return found['state'] == 'merged'
+
+
+def made_here(entry):
+    own = entry.get('own') or {}
+    return (type(own.get('companion')) is int and type(own.get('pull')) is dict
+            and own['pull'].get('number') == (entry['pull'] or {}).get('number'))
+
+
 def effect(plan, row, entry, journal, save):
+    if row['kind'] == 'merge_pull_request' and row['attempts'] == 0 and not made_here(entry):
+        entry['rows'].remove(row)
+        save()
+        return True
     present = {'create_companion': plan.companion, 'link_companion': plan.linked,
-               'create_label': plan.label, 'open_pull_request': lambda: proposed(plan)}[row['kind']]
+               'create_label': plan.label, 'open_pull_request': lambda: proposed(plan),
+               'merge_pull_request': lambda: merged(plan)}[row['kind']]
     if row['attempts'] > 0:
         row['reconciliation'] = 'provider_read_back'
     if present():
-        if row['kind'] == 'open_pull_request':
+        if row['kind'] in ('open_pull_request', 'merge_pull_request'):
             entry['pull'] = plan.pull()
         if row['attempts'] == 0:
             entry['rows'].remove(row)
@@ -496,6 +520,9 @@ def effect(plan, row, entry, journal, save):
         save()
         return True
     row['phase'] = 'refused'
+    if row['kind'] == 'merge_pull_request':
+        save()
+        return True
     raise Refusal('companion_denied' if row['kind'] == 'create_companion' else 'effect_denied',
                   f"GitHub refused {row['kind'].replace('_', ' ')} (HTTP {status}); no private content "
                   'was published.')
@@ -507,8 +534,12 @@ def write(plan, row, entry, save):
     if kind == 'create_companion':
         owner, name = b.split('/')
         path = 'user/repos' if plan.owner_type == 'User' else f'orgs/{owner}/repos'
-        return gh.call('POST', path, {'name': name, 'private': True, 'description': marker(code),
-                                      'auto' '_init': True, 'has_issues': False, 'has_wiki': False})[0]
+        status, value = gh.call('POST', path, {'name': name, 'private': True, 'description': marker(code),
+                                               'auto' '_init': True, 'has_issues': False, 'has_wiki': False})
+        if (status in range(200, 300) and type(value) is dict and same(value.get('full_name'), b)
+                and type(value.get('id')) is int):
+            entry.setdefault('own', {})['companion'] = value['id']
+        return status
     if kind == 'link_companion':
         return gh.call('PATCH', f'repos/{b}', {'homepage': link(code)})[0]
     if kind == 'create_label':
@@ -530,7 +561,10 @@ def write(plan, row, entry, save):
             if status not in range(200, 300):
                 return status
         return 201
-    base = plan.destination()['default_branch']
+    destination = plan.destination()
+    base = destination['default_branch']
+    if kind == 'merge_pull_request':
+        return merge(plan, entry, destination)
     status, ref = gh.call('GET', f'repos/{b}/git/ref/heads/{quote(BRANCH)}')
     if status == 404:
         status, head = gh.call('GET', f'repos/{b}/git/ref/heads/{quote(base)}')
@@ -570,10 +604,39 @@ def write(plan, row, entry, save):
                                                          'base': base, 'body': body})
     if status in range(200, 300) and type(value) is dict and type(value.get('number')) is int:
         entry['pull'] = {'number': value['number'], 'state': 'open'}
+        sha = (value.get('head') or {}).get('sha') if type(value.get('head')) is dict else None
+        if isinstance(sha, str):
+            entry.setdefault('own', {})['pull'] = {'number': value['number'], 'sha': sha}
     elif status is not None and status < 500:
         return status
     else:
         return None
+    return status
+
+
+def merge(plan, entry, destination):
+    gh, b, base = plan.gh, plan.brain['brain_repository'], destination['default_branch']
+    if not made_here(entry):
+        return 409
+    own = entry['own']
+    if destination.get('id') != own['companion']:
+        return 409
+    number = own['pull']['number']
+    status, pull = gh.call('GET', f'repos/{b}/pulls/{number}')
+    if status != 200 or type(pull) is not dict:
+        return None
+    head, target = (pull.get(k) if type(pull.get(k)) is dict else {} for k in ('head', 'base'))
+    if (pull.get('number') != number or pull.get('state') != 'open' or pull.get('merged_at') is not None
+            or head.get('ref') != BRANCH or target.get('ref') != base or head.get('sha') != own['pull']['sha']):
+        return 409
+    status, value = gh.call('PUT', f'repos/{b}/pulls/{number}/merge',
+                            {'merge_method': 'merge', 'sha': head['sha'],
+                             'commit_title': 'Accept the OpenWiz brain'})
+    if status is None or status >= 500 or (status == 200 and (type(value) is not dict
+                                                              or value.get('merged') is not True)):
+        return None
+    if status == 200:
+        entry['pull'] = {'number': number, 'state': 'merged'}
     return status
 
 

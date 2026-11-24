@@ -31,7 +31,7 @@ jobs:
             /.github/actions/changelog/
             /.github/workflows/changelog.yml
       - name: Report checkout failure
-        if: ${{ always() && steps.checkout.outcome != 'success' }}
+        if: ${{ failure() && steps.checkout.outcome == 'failure' }}
         run: |
           echo "::error::Changelog checkout failed or exceeded 2 minutes; inspect the checkout log before retrying."
           exit 1

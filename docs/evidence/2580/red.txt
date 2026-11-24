@@ -1,0 +1,76 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/vps/test_bootstrap.py   # agent-CLI refusal stubs first on PATH
+test_checksum_mismatch_is_refused_and_nothing_from_it_runs (__main__.BootstrapTest.test_checksum_mismatch_is_refused_and_nothing_from_it_runs) ... FAIL
+test_dry_run_prints_every_step_and_changes_nothing (__main__.BootstrapTest.test_dry_run_prints_every_step_and_changes_nothing) ... FAIL
+test_fixture_install_into_temp_prefix (__main__.BootstrapTest.test_fixture_install_into_temp_prefix) ... FAIL
+test_missing_system_tool_is_left_out_with_its_reason (__main__.BootstrapTest.test_missing_system_tool_is_left_out_with_its_reason) ... FAIL
+test_real_tools_dry_run_lists_every_tool_and_touches_nothing (__main__.BootstrapTest.test_real_tools_dry_run_lists_every_tool_and_touches_nothing) ... FAIL
+test_second_run_installs_nothing (__main__.BootstrapTest.test_second_run_installs_nothing) ... FAIL
+test_every_tool_names_its_source_exact_version_checksum_and_why (__main__.ToolsJsonTest.test_every_tool_names_its_source_exact_version_checksum_and_why) ... ERROR
+
+======================================================================
+ERROR: test_every_tool_names_its_source_exact_version_checksum_and_why (__main__.ToolsJsonTest.test_every_tool_names_its_source_exact_version_checksum_and_why)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_bootstrap.py", line 271, in test_every_tool_names_its_source_exact_version_checksum_and_why
+    with open(TOOLS) as f:
+         ^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/vps/tools.json'
+
+======================================================================
+FAIL: test_checksum_mismatch_is_refused_and_nothing_from_it_runs (__main__.BootstrapTest.test_checksum_mismatch_is_refused_and_nothing_from_it_runs)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_bootstrap.py", line 233, in test_checksum_mismatch_is_refused_and_nothing_from_it_runs
+    self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+AssertionError: 127 != 1 : bash: <checkout>/kernel/live-rig/vps/bootstrap.sh: No such file or directory
+
+
+======================================================================
+FAIL: test_dry_run_prints_every_step_and_changes_nothing (__main__.BootstrapTest.test_dry_run_prints_every_step_and_changes_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_bootstrap.py", line 183, in test_dry_run_prints_every_step_and_changes_nothing
+    self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+AssertionError: 127 != 0 : bash: <checkout>/kernel/live-rig/vps/bootstrap.sh: No such file or directory
+
+
+======================================================================
+FAIL: test_fixture_install_into_temp_prefix (__main__.BootstrapTest.test_fixture_install_into_temp_prefix)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_bootstrap.py", line 208, in test_fixture_install_into_temp_prefix
+    self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+AssertionError: 127 != 0 : bash: <checkout>/kernel/live-rig/vps/bootstrap.sh: No such file or directory
+
+
+======================================================================
+FAIL: test_missing_system_tool_is_left_out_with_its_reason (__main__.BootstrapTest.test_missing_system_tool_is_left_out_with_its_reason)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_bootstrap.py", line 261, in test_missing_system_tool_is_left_out_with_its_reason
+    self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+AssertionError: 127 != 0 : bash: <checkout>/kernel/live-rig/vps/bootstrap.sh: No such file or directory
+
+
+======================================================================
+FAIL: test_real_tools_dry_run_lists_every_tool_and_touches_nothing (__main__.BootstrapTest.test_real_tools_dry_run_lists_every_tool_and_touches_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_bootstrap.py", line 198, in test_real_tools_dry_run_lists_every_tool_and_touches_nothing
+    self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+AssertionError: 127 != 0 : bash: <checkout>/kernel/live-rig/vps/bootstrap.sh: No such file or directory
+
+
+======================================================================
+FAIL: test_second_run_installs_nothing (__main__.BootstrapTest.test_second_run_installs_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_bootstrap.py", line 247, in test_second_run_installs_nothing
+    self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
+AssertionError: 127 != 0 : bash: <checkout>/kernel/live-rig/vps/bootstrap.sh: No such file or directory
+
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.045s
+
+FAILED (failures=6, errors=1)

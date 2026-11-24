@@ -1,0 +1,487 @@
+$ python3 -I tools/github-app/test_app_select.py   # red (round 1): route map, named-mode preflight and the selector boundary, against 303e52af
+FFFFFFFFFFFFFFFFFFFFFFFFF.F
+======================================================================
+FAIL: test_a_missing_unsafe_or_unclear_config_refuses_before_any_call (__main__.SelectorTests.test_a_missing_unsafe_or_unclear_config_refuses_before_any_call) [missing]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 242, in test_a_missing_unsafe_or_unclear_config_refuses_before_any_call
+    self.assert_refused(self.select(url, request("synthetic-owner/alpha")), calls, 1, "unavailable")
+  File "tools/github-app/test_app_select.py", line 163, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", sentence))
+AssertionError: Tuples differ: (1, '[268 chars] to an owner-only (0600) file naming one App s[112 chars].\n') != (1, '[268 chars] to a file you own with no group or other perm[119 chars].\n')
+
+First differing element 2:
+'App [91 chars] to an owner-only (0600) file naming one App s[111 chars]y.\n'
+'App [91 chars] to a file you own with no group or other perm[118 chars]e.\n'
+
+Diff is 696 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_a_missing_unsafe_or_unclear_config_refuses_before_any_call (__main__.SelectorTests.test_a_missing_unsafe_or_unclear_config_refuses_before_any_call) [group-readable]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 242, in test_a_missing_unsafe_or_unclear_config_refuses_before_any_call
+    self.assert_refused(self.select(url, request("synthetic-owner/alpha")), calls, 1, "unavailable")
+  File "tools/github-app/test_app_select.py", line 163, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", sentence))
+AssertionError: Tuples differ: (1, '[268 chars] to an owner-only (0600) file naming one App s[112 chars].\n') != (1, '[268 chars] to a file you own with no group or other perm[119 chars].\n')
+
+First differing element 2:
+'App [91 chars] to an owner-only (0600) file naming one App s[111 chars]y.\n'
+'App [91 chars] to a file you own with no group or other perm[118 chars]e.\n'
+
+Diff is 696 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_a_missing_unsafe_or_unclear_config_refuses_before_any_call (__main__.SelectorTests.test_a_missing_unsafe_or_unclear_config_refuses_before_any_call) [both keys]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 242, in test_a_missing_unsafe_or_unclear_config_refuses_before_any_call
+    self.assert_refused(self.select(url, request("synthetic-owner/alpha")), calls, 1, "unavailable")
+  File "tools/github-app/test_app_select.py", line 163, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", sentence))
+AssertionError: Tuples differ: (1, '[268 chars] to an owner-only (0600) file naming one App s[112 chars].\n') != (1, '[268 chars] to a file you own with no group or other perm[119 chars].\n')
+
+First differing element 2:
+'App [91 chars] to an owner-only (0600) file naming one App s[111 chars]y.\n'
+'App [91 chars] to a file you own with no group or other perm[118 chars]e.\n'
+
+Diff is 696 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_a_missing_unsafe_or_unclear_config_refuses_before_any_call (__main__.SelectorTests.test_a_missing_unsafe_or_unclear_config_refuses_before_any_call) [not JSON]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 242, in test_a_missing_unsafe_or_unclear_config_refuses_before_any_call
+    self.assert_refused(self.select(url, request("synthetic-owner/alpha")), calls, 1, "unavailable")
+  File "tools/github-app/test_app_select.py", line 163, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", sentence))
+AssertionError: Tuples differ: (1, '[268 chars] to an owner-only (0600) file naming one App s[112 chars].\n') != (1, '[268 chars] to a file you own with no group or other perm[119 chars].\n')
+
+First differing element 2:
+'App [91 chars] to an owner-only (0600) file naming one App s[111 chars]y.\n'
+'App [91 chars] to a file you own with no group or other perm[118 chars]e.\n'
+
+Diff is 696 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_a_missing_unsafe_or_unclear_config_refuses_before_any_call (__main__.SelectorTests.test_a_missing_unsafe_or_unclear_config_refuses_before_any_call) [resolved mode is gone]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 242, in test_a_missing_unsafe_or_unclear_config_refuses_before_any_call
+    self.assert_refused(self.select(url, request("synthetic-owner/alpha")), calls, 1, "unavailable")
+  File "tools/github-app/test_app_select.py", line 163, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", sentence))
+AssertionError: Tuples differ: (0, '{"schema": "openwiz.token-service.v1"[161 chars], '') != (1, '{"schema": "openwiz.token-service.v1"[396 chars].\n')
+
+First differing element 0:
+0
+1
+
+Diff is 852 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_a_missing_unsafe_or_unclear_config_refuses_before_any_call (__main__.SelectorTests.test_a_missing_unsafe_or_unclear_config_refuses_before_any_call) [no routes]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 242, in test_a_missing_unsafe_or_unclear_config_refuses_before_any_call
+    self.assert_refused(self.select(url, request("synthetic-owner/alpha")), calls, 1, "unavailable")
+  File "tools/github-app/test_app_select.py", line 163, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", sentence))
+AssertionError: Tuples differ: (1, '[268 chars] to an owner-only (0600) file naming one App s[112 chars].\n') != (1, '[268 chars] to a file you own with no group or other perm[119 chars].\n')
+
+First differing element 2:
+'App [91 chars] to an owner-only (0600) file naming one App s[111 chars]y.\n'
+'App [91 chars] to a file you own with no group or other perm[118 chars]e.\n'
+
+Diff is 696 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_a_missing_unsafe_or_unclear_config_refuses_before_any_call (__main__.SelectorTests.test_a_missing_unsafe_or_unclear_config_refuses_before_any_call) [a route's extra key]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 242, in test_a_missing_unsafe_or_unclear_config_refuses_before_any_call
+    self.assert_refused(self.select(url, request("synthetic-owner/alpha")), calls, 1, "unavailable")
+  File "tools/github-app/test_app_select.py", line 163, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", sentence))
+AssertionError: Tuples differ: (1, '[268 chars] to an owner-only (0600) file naming one App s[112 chars].\n') != (1, '[268 chars] to a file you own with no group or other perm[119 chars].\n')
+
+First differing element 2:
+'App [91 chars] to an owner-only (0600) file naming one App s[111 chars]y.\n'
+'App [91 chars] to a file you own with no group or other perm[118 chars]e.\n'
+
+Diff is 696 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_a_missing_unsafe_or_unclear_config_refuses_before_any_call (__main__.SelectorTests.test_a_missing_unsafe_or_unclear_config_refuses_before_any_call) [a route's missing state]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 242, in test_a_missing_unsafe_or_unclear_config_refuses_before_any_call
+    self.assert_refused(self.select(url, request("synthetic-owner/alpha")), calls, 1, "unavailable")
+  File "tools/github-app/test_app_select.py", line 163, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", sentence))
+AssertionError: Tuples differ: (1, '[268 chars] to an owner-only (0600) file naming one App s[112 chars].\n') != (1, '[268 chars] to a file you own with no group or other perm[119 chars].\n')
+
+First differing element 2:
+'App [91 chars] to an owner-only (0600) file naming one App s[111 chars]y.\n'
+'App [91 chars] to a file you own with no group or other perm[118 chars]e.\n'
+
+Diff is 696 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_a_missing_unsafe_or_unclear_config_refuses_before_any_call (__main__.SelectorTests.test_a_missing_unsafe_or_unclear_config_refuses_before_any_call) [pattern *]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 242, in test_a_missing_unsafe_or_unclear_config_refuses_before_any_call
+    self.assert_refused(self.select(url, request("synthetic-owner/alpha")), calls, 1, "unavailable")
+  File "tools/github-app/test_app_select.py", line 163, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", sentence))
+AssertionError: Tuples differ: (1, '[268 chars] to an owner-only (0600) file naming one App s[112 chars].\n') != (1, '[268 chars] to a file you own with no group or other perm[119 chars].\n')
+
+First differing element 2:
+'App [91 chars] to an owner-only (0600) file naming one App s[111 chars]y.\n'
+'App [91 chars] to a file you own with no group or other perm[118 chars]e.\n'
+
+Diff is 696 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_a_missing_unsafe_or_unclear_config_refuses_before_any_call (__main__.SelectorTests.test_a_missing_unsafe_or_unclear_config_refuses_before_any_call) [pattern */alpha]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 242, in test_a_missing_unsafe_or_unclear_config_refuses_before_any_call
+    self.assert_refused(self.select(url, request("synthetic-owner/alpha")), calls, 1, "unavailable")
+  File "tools/github-app/test_app_select.py", line 163, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", sentence))
+AssertionError: Tuples differ: (1, '[268 chars] to an owner-only (0600) file naming one App s[112 chars].\n') != (1, '[268 chars] to a file you own with no group or other perm[119 chars].\n')
+
+First differing element 2:
+'App [91 chars] to an owner-only (0600) file naming one App s[111 chars]y.\n'
+'App [91 chars] to a file you own with no group or other perm[118 chars]e.\n'
+
+Diff is 696 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_a_missing_unsafe_or_unclear_config_refuses_before_any_call (__main__.SelectorTests.test_a_missing_unsafe_or_unclear_config_refuses_before_any_call) [pattern synthetic-owner/al*]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 242, in test_a_missing_unsafe_or_unclear_config_refuses_before_any_call
+    self.assert_refused(self.select(url, request("synthetic-owner/alpha")), calls, 1, "unavailable")
+  File "tools/github-app/test_app_select.py", line 163, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", sentence))
+AssertionError: Tuples differ: (1, '[268 chars] to an owner-only (0600) file naming one App s[112 chars].\n') != (1, '[268 chars] to a file you own with no group or other perm[119 chars].\n')
+
+First differing element 2:
+'App [91 chars] to an owner-only (0600) file naming one App s[111 chars]y.\n'
+'App [91 chars] to a file you own with no group or other perm[118 chars]e.\n'
+
+Diff is 696 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_a_missing_unsafe_or_unclear_config_refuses_before_any_call (__main__.SelectorTests.test_a_missing_unsafe_or_unclear_config_refuses_before_any_call) [pattern synthetic-owner]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 242, in test_a_missing_unsafe_or_unclear_config_refuses_before_any_call
+    self.assert_refused(self.select(url, request("synthetic-owner/alpha")), calls, 1, "unavailable")
+  File "tools/github-app/test_app_select.py", line 163, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", sentence))
+AssertionError: Tuples differ: (1, '[268 chars] to an owner-only (0600) file naming one App s[112 chars].\n') != (1, '[268 chars] to a file you own with no group or other perm[119 chars].\n')
+
+First differing element 2:
+'App [91 chars] to an owner-only (0600) file naming one App s[111 chars]y.\n'
+'App [91 chars] to a file you own with no group or other perm[118 chars]e.\n'
+
+Diff is 696 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_a_missing_unsafe_or_unclear_config_refuses_before_any_call (__main__.SelectorTests.test_a_missing_unsafe_or_unclear_config_refuses_before_any_call) [pattern synthetic-owner/*/x]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 242, in test_a_missing_unsafe_or_unclear_config_refuses_before_any_call
+    self.assert_refused(self.select(url, request("synthetic-owner/alpha")), calls, 1, "unavailable")
+  File "tools/github-app/test_app_select.py", line 163, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", sentence))
+AssertionError: Tuples differ: (1, '[268 chars] to an owner-only (0600) file naming one App s[112 chars].\n') != (1, '[268 chars] to a file you own with no group or other perm[119 chars].\n')
+
+First differing element 2:
+'App [91 chars] to an owner-only (0600) file naming one App s[111 chars]y.\n'
+'App [91 chars] to a file you own with no group or other perm[118 chars]e.\n'
+
+Diff is 696 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_a_missing_unsafe_or_unclear_config_refuses_before_any_call (__main__.SelectorTests.test_a_missing_unsafe_or_unclear_config_refuses_before_any_call) [repeated key]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 242, in test_a_missing_unsafe_or_unclear_config_refuses_before_any_call
+    self.assert_refused(self.select(url, request("synthetic-owner/alpha")), calls, 1, "unavailable")
+  File "tools/github-app/test_app_select.py", line 163, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", sentence))
+AssertionError: Tuples differ: (1, '[268 chars] to an owner-only (0600) file naming one App s[112 chars].\n') != (1, '[268 chars] to a file you own with no group or other perm[119 chars].\n')
+
+First differing element 2:
+'App [91 chars] to an owner-only (0600) file naming one App s[111 chars]y.\n'
+'App [91 chars] to a file you own with no group or other perm[118 chars]e.\n'
+
+Diff is 696 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_a_missing_unsafe_or_unclear_config_refuses_before_any_call (__main__.SelectorTests.test_a_missing_unsafe_or_unclear_config_refuses_before_any_call) [relative]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 242, in test_a_missing_unsafe_or_unclear_config_refuses_before_any_call
+    self.assert_refused(self.select(url, request("synthetic-owner/alpha")), calls, 1, "unavailable")
+  File "tools/github-app/test_app_select.py", line 163, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", sentence))
+AssertionError: Tuples differ: (1, '[268 chars] to an owner-only (0600) file naming one App s[112 chars].\n') != (1, '[268 chars] to a file you own with no group or other perm[119 chars].\n')
+
+First differing element 2:
+'App [91 chars] to an owner-only (0600) file naming one App s[111 chars]y.\n'
+'App [91 chars] to a file you own with no group or other perm[118 chars]e.\n'
+
+Diff is 696 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_a_missing_unsafe_or_unclear_config_refuses_before_any_call (__main__.SelectorTests.test_a_missing_unsafe_or_unclear_config_refuses_before_any_call) [no candidates]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 242, in test_a_missing_unsafe_or_unclear_config_refuses_before_any_call
+    self.assert_refused(self.select(url, request("synthetic-owner/alpha")), calls, 1, "unavailable")
+  File "tools/github-app/test_app_select.py", line 163, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", sentence))
+AssertionError: Tuples differ: (1, '[268 chars] to an owner-only (0600) file naming one App s[112 chars].\n') != (1, '[268 chars] to a file you own with no group or other perm[119 chars].\n')
+
+First differing element 2:
+'App [91 chars] to an owner-only (0600) file naming one App s[111 chars]y.\n'
+'App [91 chars] to a file you own with no group or other perm[118 chars]e.\n'
+
+Diff is 696 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_a_missing_unsafe_or_unclear_config_refuses_before_any_call (__main__.SelectorTests.test_a_missing_unsafe_or_unclear_config_refuses_before_any_call) [named state missing]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 242, in test_a_missing_unsafe_or_unclear_config_refuses_before_any_call
+    self.assert_refused(self.select(url, request("synthetic-owner/alpha")), calls, 1, "unavailable")
+  File "tools/github-app/test_app_select.py", line 163, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", sentence))
+AssertionError: Tuples differ: (1, '[268 chars] to an owner-only (0600) file naming one App s[112 chars].\n') != (1, '[268 chars] to a file you own with no group or other perm[119 chars].\n')
+
+First differing element 2:
+'App [91 chars] to an owner-only (0600) file naming one App s[111 chars]y.\n'
+'App [91 chars] to a file you own with no group or other perm[118 chars]e.\n'
+
+Diff is 696 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_a_missing_unsafe_or_unclear_config_refuses_before_any_call (__main__.SelectorTests.test_a_missing_unsafe_or_unclear_config_refuses_before_any_call) [symlink]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 250, in test_a_missing_unsafe_or_unclear_config_refuses_before_any_call
+    self.assert_refused(self.select(url, request("synthetic-owner/alpha")), calls, 1, "unavailable")
+  File "tools/github-app/test_app_select.py", line 163, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", sentence))
+AssertionError: Tuples differ: (1, '[268 chars] to an owner-only (0600) file naming one App s[112 chars].\n') != (1, '[268 chars] to a file you own with no group or other perm[119 chars].\n')
+
+First differing element 2:
+'App [91 chars] to an owner-only (0600) file naming one App s[111 chars]y.\n'
+'App [91 chars] to a file you own with no group or other perm[118 chars]e.\n'
+
+Diff is 696 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_an_unmatched_or_split_route_refuses_and_mints_nothing (__main__.SelectorTests.test_an_unmatched_or_split_route_refuses_and_mints_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 202, in test_an_unmatched_or_split_route_refuses_and_mints_nothing
+    self.assert_refused(self.select(url, request("synthetic-owner/alpha", "synthetic-owner/beta")),
+  File "tools/github-app/test_app_select.py", line 163, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", sentence))
+AssertionError: Tuples differ: (1, '[268 chars] to an owner-only (0600) file naming one App s[112 chars].\n') != (1, '[268 chars] to a file you own with no group or other perm[119 chars].\n')
+
+First differing element 2:
+'App [91 chars] to an owner-only (0600) file naming one App s[111 chars]y.\n'
+'App [91 chars] to a file you own with no group or other perm[118 chars]e.\n'
+
+Diff is 696 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_every_mode_refuses_an_invalid_request_before_any_service_call (__main__.SelectorTests.test_every_mode_refuses_an_invalid_request_before_any_service_call) (config=['state_dir'], refusal='one-owner')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 216, in test_every_mode_refuses_an_invalid_request_before_any_service_call
+    self.assert_refused(self.select(url, message), calls, 2, refusal, sentence="")
+  File "tools/github-app/test_app_select.py", line 165, in assert_refused
+    self.assertEqual(self.service_calls(), [], "no service call")
+AssertionError: Lists differ: [['/usr/bin/python3', '-I', '/code/openwiz[139 chars]29']] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+['/usr/bin/python3', '-I', 'tools/github-app/token-service.py', 'mint', '--state-dir', '/tmp/openwiz-app-select-XXXX/state-a', '--api-base', 'http://127.0.0.1:PORT']
+
++ []
+- [['/usr/bin/python3',
+-   '-I',
+-   'tools/github-app/token-service.py',
+-   'mint',
+-   '--state-dir',
+-   '/tmp/openwiz-app-select-XXXX/state-a',
+-   '--api-base',
+-   'http://127.0.0.1:PORT']] : no service call
+
+======================================================================
+FAIL: test_every_mode_refuses_an_invalid_request_before_any_service_call (__main__.SelectorTests.test_every_mode_refuses_an_invalid_request_before_any_service_call) (config=['state_dir'], refusal='usage')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 216, in test_every_mode_refuses_an_invalid_request_before_any_service_call
+    self.assert_refused(self.select(url, message), calls, 2, refusal, sentence="")
+  File "tools/github-app/test_app_select.py", line 165, in assert_refused
+    self.assertEqual(self.service_calls(), [], "no service call")
+AssertionError: Lists differ: [['/usr/bin/python3', '-I', '/code/openwiz[325 chars]11']] != []
+
+First list contains 2 additional elements.
+First extra element 0:
+['/usr/bin/python3', '-I', 'tools/github-app/token-service.py', 'mint', '--state-dir', '/tmp/openwiz-app-select-XXXX/state-a', '--api-base', 'http://127.0.0.1:PORT']
+
++ []
+- [['/usr/bin/python3',
+-   '-I',
+-   'tools/github-app/token-service.py',
+-   'mint',
+-   '--state-dir',
+-   '/tmp/openwiz-app-select-XXXX/state-a',
+-   '--api-base',
+-   'http://127.0.0.1:PORT'],
+-  ['/usr/bin/python3',
+-   '-I',
+-   'tools/github-app/token-service.py',
+-   'mint',
+-   '--state-dir',
+-   '/tmp/openwiz-app-select-XXXX/state-a',
+-   '--api-base',
+-   'http://127.0.0.1:PORT']] : no service call
+
+======================================================================
+FAIL: test_every_mode_refuses_an_invalid_request_before_any_service_call (__main__.SelectorTests.test_every_mode_refuses_an_invalid_request_before_any_service_call) (config=['state_dir'], refusal='usage')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 216, in test_every_mode_refuses_an_invalid_request_before_any_service_call
+    self.assert_refused(self.select(url, message), calls, 2, refusal, sentence="")
+  File "tools/github-app/test_app_select.py", line 165, in assert_refused
+    self.assertEqual(self.service_calls(), [], "no service call")
+AssertionError: Lists differ: [['/usr/bin/python3', '-I', '/code/openwiz[511 chars]97']] != []
+
+First list contains 3 additional elements.
+First extra element 0:
+['/usr/bin/python3', '-I', 'tools/github-app/token-service.py', 'mint', '--state-dir', '/tmp/openwiz-app-select-XXXX/state-a', '--api-base', 'http://127.0.0.1:PORT']
+
+Diff is 656 characters long. Set self.maxDiff to None to see it. : no service call
+
+======================================================================
+FAIL: test_every_mode_refuses_an_invalid_request_before_any_service_call (__main__.SelectorTests.test_every_mode_refuses_an_invalid_request_before_any_service_call) (config=['routes'], refusal='one-owner')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 216, in test_every_mode_refuses_an_invalid_request_before_any_service_call
+    self.assert_refused(self.select(url, message), calls, 2, refusal, sentence="")
+  File "tools/github-app/test_app_select.py", line 163, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", sentence))
+AssertionError: Tuples differ: (1, '{"schema": "openwiz.token-service.v1"[389 chars].\n') != (2, '{"schema": "openwiz.token-service.v1"[115 chars], '')
+
+First differing element 0:
+1
+2
+
+- (1,
++ (2,
+   '{"schema": "openwiz.token-service.v1", "kind": "refusal", "refusal": '
++  '"one-owner", "message": "Token refused: the repositories must share one '
++  'owner."}\n',
++  '')
+-  '"unavailable", "message": "Token refused: the service cannot read its App '
+-  'state or reach GitHub."}\n',
+-  'App selector refused: set OPENWIZ_APP_SELECT_CONFIG (default '
+-  '~/.config/openwiz/app-select.json) to an owner-only (0600) file naming one '
+-  'App state as "state_dir", or listing "candidates" of which exactly one App '
+-  'is installed on every requested repository.\n')
+
+======================================================================
+FAIL: test_every_mode_refuses_an_invalid_request_before_any_service_call (__main__.SelectorTests.test_every_mode_refuses_an_invalid_request_before_any_service_call) (config=['routes'], refusal='usage')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 216, in test_every_mode_refuses_an_invalid_request_before_any_service_call
+    self.assert_refused(self.select(url, message), calls, 2, refusal, sentence="")
+  File "tools/github-app/test_app_select.py", line 163, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", sentence))
+AssertionError: Tuples differ: (1, '{"schema": "openwiz.token-service.v1"[389 chars].\n') != (2, '{"schema": "openwiz.token-service.v1"[124 chars], '')
+
+First differing element 0:
+1
+2
+
+- (1,
++ (2,
+   '{"schema": "openwiz.token-service.v1", "kind": "refusal", "refusal": '
++  '"usage", "message": "Token refused: the request is not one valid '
++  'token-service request."}\n',
++  '')
+-  '"unavailable", "message": "Token refused: the service cannot read its App '
+-  'state or reach GitHub."}\n',
+-  'App selector refused: set OPENWIZ_APP_SELECT_CONFIG (default '
+-  '~/.config/openwiz/app-select.json) to an owner-only (0600) file naming one '
+-  'App state as "state_dir", or listing "candidates" of which exactly one App '
+-  'is installed on every requested repository.\n')
+
+======================================================================
+FAIL: test_every_mode_refuses_an_invalid_request_before_any_service_call (__main__.SelectorTests.test_every_mode_refuses_an_invalid_request_before_any_service_call) (config=['routes'], refusal='usage')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 216, in test_every_mode_refuses_an_invalid_request_before_any_service_call
+    self.assert_refused(self.select(url, message), calls, 2, refusal, sentence="")
+  File "tools/github-app/test_app_select.py", line 163, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", sentence))
+AssertionError: Tuples differ: (1, '{"schema": "openwiz.token-service.v1"[389 chars].\n') != (2, '{"schema": "openwiz.token-service.v1"[124 chars], '')
+
+First differing element 0:
+1
+2
+
+- (1,
++ (2,
+   '{"schema": "openwiz.token-service.v1", "kind": "refusal", "refusal": '
++  '"usage", "message": "Token refused: the request is not one valid '
++  'token-service request."}\n',
++  '')
+-  '"unavailable", "message": "Token refused: the service cannot read its App '
+-  'state or reach GitHub."}\n',
+-  'App selector refused: set OPENWIZ_APP_SELECT_CONFIG (default '
+-  '~/.config/openwiz/app-select.json) to an owner-only (0600) file naming one '
+-  'App state as "state_dir", or listing "candidates" of which exactly one App '
+-  'is installed on every requested repository.\n')
+
+======================================================================
+FAIL: test_the_route_map_reaches_the_mapped_app (__main__.SelectorTests.test_the_route_map_reaches_the_mapped_app)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_app_select.py", line 186, in test_the_route_map_reaches_the_mapped_app
+    self.assert_minted_by(self.select(url, request("synthetic-owner/beta")), url, "b")
+  File "tools/github-app/test_app_select.py", line 154, in assert_minted_by
+    self.assertEqual((done.returncode, done.stderr), (0, ""))
+AssertionError: Tuples differ: (1, 'App selector refused: set OPENWIZ_APP[216 chars].\n') != (0, '')
+
+First differing element 0:
+1
+0
+
++ (0, '')
+- (1,
+-  'App selector refused: set OPENWIZ_APP_SELECT_CONFIG (default '
+-  '~/.config/openwiz/app-select.json) to an owner-only (0600) file naming one '
+-  'App state as "state_dir", or listing "candidates" of which exactly one App '
+-  'is installed on every requested repository.\n')
+
+----------------------------------------------------------------------
+Ran 5 tests in 16.527s
+
+FAILED (failures=26)
+
+$ R1 probe: the old resolved config under the new boundary hook
+selector touches: [['SELECTOR', 'open'], ['SELECTOR', 'urllib.Request'], ['SELECTOR', 'urllib.Request'], ['SELECTOR', 'open'], ['SELECTOR', 'urllib.Request'], ['SELECTOR', 'urllib.Request']]

@@ -1,6 +1,6 @@
 # #2058 red, before the fix: python3 -I adapters/local/test_driver.py -k credential_shaped
 # Synthetic markers are replaced with <synthetic-marker> here.
-test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Local.test_a_credential_shaped_start_field_is_refused_before_anything_starts) ... 
+test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Local.test_a_credential_shaped_start_field_is_refused_before_anything_starts) ...
   test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Local.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (field='model', value='<synthetic-marker>') ... FAIL
   test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Local.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (field='model', value='<synthetic-marker>') ... FAIL
   test_a_credential_shaped_start_field_is_refused_before_anything_starts (__main__.Local.test_a_credential_shaped_start_field_is_refused_before_anything_starts) (field='model', value='<synthetic-marker>') ... FAIL

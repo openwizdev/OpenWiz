@@ -958,7 +958,8 @@ def scan_artifacts(body, folder, literals):
                 shutil.copytree(build / part, tree / target / part)
         try:
             done = subprocess.run([sys.executable, '-I', str(HERE.parent / 'privacy-check/check.py'), '--tree', str(tree),
-                                   '--literals', str(literals), '--require-literals'],
+                                   '--literals', str(literals), '--require-literals',
+                                   *(x for target in TARGETS for x in ('--runtime-root', target))],
                                   stdin=subprocess.DEVNULL, capture_output=True, timeout=300)
         except (OSError, subprocess.TimeoutExpired):
             return ['unreadable']
@@ -1608,18 +1609,28 @@ def install_attempt(state, target, reason, at, evidence):
     folder.mkdir(mode=0o700, parents=True, exist_ok=True)
     outcome = {'status': 'blocked' if reason else 'passed', 'reasons': [reason] if reason else [], 'at': at}
     data = (json.dumps(dict(evidence, **outcome), indent=1, sort_keys=True, ensure_ascii=False) + '\n').encode('utf-8')
-    while True:
-        taken = [int(f.stem) for f in folder.iterdir() if ATTEMPT.fullmatch(f.name)]
-        name = f'evidence/install-{target}/{max(taken, default=0) + 1}.json'
-        try:
-            fd = os.open(state.file(name), os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
-        except FileExistsError:
-            continue
+    fd, temporary = tempfile.mkstemp(prefix='.attempt-', suffix='.tmp', dir=folder)
+    try:
         with os.fdopen(fd, 'wb') as stream:
             stream.write(data)
             stream.flush()
             os.fsync(stream.fileno())
-        return dict(outcome, target=target, evidence={'record': name, 'sha256': sha(data)})
+        while True:
+            taken = [int(f.stem) for f in folder.iterdir() if ATTEMPT.fullmatch(f.name)]
+            name = f'evidence/install-{target}/{max(taken, default=0) + 1}.json'
+            try:
+                os.link(temporary, state.file(name))
+            except FileExistsError:
+                continue
+            break
+    finally:
+        os.unlink(temporary)
+    directory = os.open(folder, os.O_RDONLY)
+    try:
+        os.fsync(directory)
+    finally:
+        os.close(directory)
+    return dict(outcome, target=target, evidence={'record': name, 'sha256': sha(data)})
 
 
 def install_attempts(state):

@@ -131,7 +131,7 @@ models show|list|set
 Exit codes:
   0  a result was printed, complete or partial
   1  a read failed
-  1  ls, show, --help: the output could not be written or flushed;
+  1  ls, show and the help commands: the output could not be written or flushed;
      some of it may already be on stdout
   2  usage error, or a request out of bounds
   3  show: the session was not found
@@ -139,9 +139,11 @@ Exit codes:
   13 models: nothing can be offered right now; the report says why
   1  models show|list|set: fleet.md missing, unreadable or refused, or a failed write
   5  models set: not offered, or not writable to the Models table; nothing was changed
-{fleets_exit_codes}{fleet_exit_codes}On an error, stdout is empty unless ls, show or --help fails to write or flush output;
-some output may already be on stdout in that case.
-In either case, stderr has one line starting with \"openwiz: \".
+{fleets_exit_codes}{fleet_exit_codes}On an error, stdout is empty unless ls, show or a help command fails to write or
+flush output, when some of it may already be on stdout, or unless --json was given.
+With --json, a handled failure with no outcome report of its own prints
+openwiz.cli-error.v1 on stdout; a failed write or flush is the exception and
+prints no JSON error. Diagnostics may appear on stderr either way.
 ",
         default = ops::ListRequest::default().limit,
         kib = FINAL_OUTPUT_MAX_BYTES / 1024,
@@ -736,4 +738,22 @@ fn hinnant_civil_from_days(days: i64) -> (i64, i64, i64) {
     let month = if mp < 10 { mp + 3 } else { mp - 9 };
     let year = yoe + era * 400 + i64::from(month <= 2);
     (year, month, day)
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn help_qualifies_the_json_error_and_stderr_promises() {
+        let help = super::help();
+        assert!(
+            help.contains(
+                "With --json, a handled failure with no outcome report of its own prints\n\
+                 openwiz.cli-error.v1 on stdout; a failed write or flush is the exception and\n\
+                 prints no JSON error. Diagnostics may appear on stderr either way.\n"
+            ),
+            "{help}"
+        );
+        assert!(!help.contains("printed nothing else"), "{help}");
+        assert!(!help.contains("stderr has one line"), "{help}");
+    }
 }

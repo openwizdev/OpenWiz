@@ -1,0 +1,169 @@
+# #2379 third fix round: the kit's tests for R3, R4 and R17 against 2292b17's kit, run behind agent CLI stubs.
+test_a_failed_process_watch_fails_the_key_check (__main__.Kit.test_a_failed_process_watch_fails_the_key_check) ... ok
+test_a_helper_without_a_visible_environment_row_is_not_trusted (__main__.Kit.test_a_helper_without_a_visible_environment_row_is_not_trusted) ...
+  test_a_helper_without_a_visible_environment_row_is_not_trusted (__main__.Kit.test_a_helper_without_a_visible_environment_row_is_not_trusted) [good] ... FAIL
+test_a_host_that_answers_a_redirect_fails_start_and_the_redirect_is_never_followed (__main__.Kit.test_a_host_that_answers_a_redirect_fails_start_and_the_redirect_is_never_followed) ... ok
+test_a_key_host_driver_that_uses_only_the_helper_passes_all_five (__main__.Kit.test_a_key_host_driver_that_uses_only_the_helper_passes_all_five) ... ok
+test_a_path_diagnostic_never_prints_the_active_canary (__main__.Kit.test_a_path_diagnostic_never_prints_the_active_canary) ... FAIL
+test_a_refusal_holding_a_credential_never_reaches_the_output (__main__.Kit.test_a_refusal_holding_a_credential_never_reaches_the_output) ... ok
+test_a_script_whose_path_holds_a_space_is_scanned_on_linux_and_macos (__main__.Kit.test_a_script_whose_path_holds_a_space_is_scanned_on_linux_and_macos) ...
+  test_a_script_whose_path_holds_a_space_is_scanned_on_linux_and_macos (__main__.Kit.test_a_script_whose_path_holds_a_space_is_scanned_on_linux_and_macos) [/tmp/openwiz/kernel/driver-kit/../../kernel/driver-kit/fixtures/no-proc/python3] ... FAIL
+test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) ... ok
+test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) ...
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-runtime-missing-path] ... FAIL
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-relative-helper] ... FAIL
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-helper-loader-env] ... FAIL
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-undumpable-child] ... FAIL
+test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) ... ok
+test_on_macos_a_key_in_an_argument_or_another_variable_is_caught (__main__.Kit.test_on_macos_a_key_in_an_argument_or_another_variable_is_caught) ... ok
+test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) ... ok
+test_template_passes_all_five (__main__.Kit.test_template_passes_all_five) ... ok
+test_the_canary_never_reaches_the_driver (__main__.Kit.test_the_canary_never_reaches_the_driver) ... ok
+test_the_kit_trusts_only_its_own_interpreter_not_one_on_path (__main__.Kit.test_the_kit_trusts_only_its_own_interpreter_not_one_on_path) ... FAIL
+test_the_kits_visibility_probe_signals_ready_through_the_macos_shim_and_runs_until_its_stdin_closes (__main__.Kit.test_the_kits_visibility_probe_signals_ready_through_the_macos_shim_and_runs_until_its_stdin_closes) ... ok
+test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) ... ok
+test_without_proc_as_on_macos_a_driver_whose_run_stays_in_the_kits_group_passes_all_five (__main__.Kit.test_without_proc_as_on_macos_a_driver_whose_run_stays_in_the_kits_group_passes_all_five) ... ok
+test_without_proc_as_on_macos_the_template_passes_all_five (__main__.Kit.test_without_proc_as_on_macos_the_template_passes_all_five) ... ok
+test_without_proc_or_the_runs_visible_environment_stop_and_token_fail_unverified (__main__.Kit.test_without_proc_or_the_runs_visible_environment_stop_and_token_fail_unverified) ... ok
+test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without (__main__.Kit.test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without) ... ok
+
+======================================================================
+FAIL: test_a_helper_without_a_visible_environment_row_is_not_trusted (__main__.Kit.test_a_helper_without_a_visible_environment_row_is_not_trusted) [good]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 245, in test_a_helper_without_a_visible_environment_row_is_not_trusted
+    self.assertEqual(k.trusted_helper(1, 2), name == 'good')
+AssertionError: False != True
+
+======================================================================
+FAIL: test_a_path_diagnostic_never_prints_the_active_canary (__main__.Kit.test_a_path_diagnostic_never_prints_the_active_canary)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 267, in test_a_path_diagnostic_never_prints_the_active_canary
+    self.assertFalse(any(canary in leak for leak in k.leaks), k.leaks)
+AssertionError: True is not false : ["the file ../kit-canary-<random>/reader, which a process of the driver ran, names DEVIN_API_KEY, the key's variable", "the driver's file kit-canary-<random>/reader names DEVIN_API_KEY, the key's variable"]
+
+======================================================================
+FAIL: test_a_script_whose_path_holds_a_space_is_scanned_on_linux_and_macos (__main__.Kit.test_a_script_whose_path_holds_a_space_is_scanned_on_linux_and_macos) [/tmp/openwiz/kernel/driver-kit/../../kernel/driver-kit/fixtures/no-proc/python3]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 212, in test_a_script_whose_path_holds_a_space_is_scanned_on_linux_and_macos
+    self.assertEqual((code, out), (1, PASS[:4] + ['fail token: the file %s, which a process of the driver '
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[345 chars]er']) != (1, ['pass version: openwiz:records v1, an[345 chars]le"])
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+-   'pass token: no login or token passed through the driver, and on start, wake '
+-   'and stop the devin key reached its host only from the key helper, in its '
+-   'header'])
++   'fail token: the file ../../../../../../tmpwqwl1q_u/state/a spaced '
++   'folder/reader, which a process of the driver ran, names DEVIN_API_KEY, the '
++   "key's variable"])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-runtime-missing-path]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 275, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (0 if all(x.startswith('pass') for x in lines) else 1, lines))
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[345 chars]er']) != (1, ['pass version: openwiz:records v1, an[285 chars]it'])
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
++   'fail token: the kit could not resolve a file a process of the driver ran, '
++   'so it cannot check it'])
+-   'pass token: no login or token passed through the driver, and on start, wake '
+-   'and stop the devin key reached its host only from the key helper, in its '
+-   'header'])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-relative-helper]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 275, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (0 if all(x.startswith('pass') for x in lines) else 1, lines))
+AssertionError: Tuples differ: (1, [[236 chars]ken: the devin key reached the kit's fake host[124 chars]er"]) != (1, [[236 chars]ken: a process that is not the key helper aske[115 chars]er"])
+
+First differing element 1:
+['pas[232 chars]ken: the devin key reached the kit's fake host[123 chars]der"]
+['pas[232 chars]ken: a process that is not the key helper aske[114 chars]der"]
+
+Diff is 665 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-helper-loader-env]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 275, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (0 if all(x.startswith('pass') for x in lines) else 1, lines))
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[345 chars]er']) != (1, ['pass version: openwiz:records v1, an[325 chars]st"])
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
++   "fail token: a process that is not the key helper asked the kit's fake host "
++   "for the key; the devin key never reached the kit's fake host"])
+-   'pass token: no login or token passed through the driver, and on start, wake '
+-   'and stop the devin key reached its host only from the key helper, in its '
+-   'header'])
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-undumpable-child]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 275, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (0 if all(x.startswith('pass') for x in lines) else 1, lines))
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[345 chars]er']) != (1, ['pass version: openwiz:records v1, an[271 chars]it'])
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
++   'fail token: a process of the driver hides its details, so the kit cannot '
++   'check it'])
+-   'pass token: no login or token passed through the driver, and on start, wake '
+-   'and stop the devin key reached its host only from the key helper, in its '
+-   'header'])
+
+======================================================================
+FAIL: test_the_kit_trusts_only_its_own_interpreter_not_one_on_path (__main__.Kit.test_the_kit_trusts_only_its_own_interpreter_not_one_on_path)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/openwiz/kernel/driver-kit/test_kit.py", line 227, in test_the_kit_trusts_only_its_own_interpreter_not_one_on_path
+    self.assertEqual(set(p.stdout.split()), own, p.stderr)
+AssertionError: Items in the first set but not the second:
+'/tmp/tmp77l70a8v/bin/python3' :
+
+----------------------------------------------------------------------
+Ran 21 tests in 267.074s
+
+FAILED (failures=8)

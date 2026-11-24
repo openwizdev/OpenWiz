@@ -1,0 +1,159 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY cargo test -p openwiz-cli --lib help_qualifies  (at red commit)
+
+running 1 test
+test tests::help_qualifies_the_json_error_and_stderr_promises ... FAILED
+
+failures:
+
+---- tests::help_qualifies_the_json_error_and_stderr_promises stdout ----
+
+thread 'tests::help_qualifies_the_json_error_and_stderr_promises' panicked at crates/cli/src/lib.rs:747:9:
+openwiz: CloudRoom inventory and approved fleet actions.
+
+Usage:
+  openwiz ls [-l] [-a] [--hidden] [--limit N] [--offset N] [--json]
+  openwiz show <id> [--json]
+  openwiz models [--json] [--host NAME]
+  openwiz models show [--json] [--host NAME]
+  openwiz models list [--save] [--json]
+  openwiz models set <role> <provider> <model> <effort> [--json] [--host NAME]
+  openwiz models set <small-builder|fixer> follows-builder [--json] [--host NAME]
+  openwiz fleets [--json]
+  openwiz fleet <spec> [--json]
+  openwiz fleet tick --dry-run [--json]
+  openwiz fleet due --github-only [--json]
+  openwiz loop off <name> [--json]
+  openwiz loop on <name> [--json]
+  openwiz loop validate <path>... [--catalog] [--json]
+  openwiz loop export --project <project> [--out <dir>] [--json]
+  openwiz loop plan <path>... --project <project> [--adopt <id>=<loop>]... [--json]
+  openwiz loop apply <id> --project <project> [--from <path>] [--adopt <id>=<loop>] [--json]
+  openwiz init [--repository OWNER/NAME] [--state-dir DIR] [--json]
+  openwiz init --yes --operation ID [--repository OWNER/NAME] [--state-dir DIR] [--json]
+  openwiz github token --repository OWNER/NAME [--read]
+  openwiz help --agent
+  openwiz help
+  openwiz --help
+
+  help --agent  compact JSON catalogue of shipped commands, flags, effects,
+                success schemas and exits; no source calls or state changes
+
+  ls          sessions, grouped under /factories/<project>/
+  -l          also read each session on the page with thread show, for its
+              reported configuration (model and effort)
+  -a          include archived sessions
+  --hidden    include hidden sessions
+  --limit N   sessions per page, 0 to 200 (default 100)
+  --offset N  skip the first N sessions (default 0)
+  --json      print the openwiz.inventory.v1 envelope instead of text
+  show <id>   one session, with its final output (at most 4 KiB), never a log tail
+
+Order: most recently updated first, then by session id; sessions whose update time is unknown come last.
+
+ls and show can read and show room-cli --version.
+Any version runs; one other than the run's own live-tested version is marked untested, or not live-tested while it has none.
+Live-tested: the reads with v127.
+Each read stops after 15 seconds and is not retried; a run stops after 30 seconds.
+A result is complete or partial: its gaps say what is missing.
+
+models
+  With the cloud host, reads the options from one CloudRoom cloud status read, which
+  may answer from a saved copy. Other hosts show OpenWiz's current choices for the
+  Claude Code and Codex programs on PATH. --host NAME overrides the saved project
+  host, with cloud as the fallback. Nothing is marked default. --json prints
+  openwiz.cloud-options.v1.
+models show|list|set
+  Run from the project root; they read docs/agents/fleet.md (contracts/models.v1.md).
+  show: each role's harness, model and effort, what it follows, and each family's
+  review and fix round; no cloud status read. list: the options above with the
+  recommended choice per role; --save writes docs/agents/models-offered.json.
+  show and set accept --host NAME. Show reads the roles for every host.
+  set: checks the choice against the CloudRoom list for cloud, or accepts settable
+  IDs for an installed harness for other hosts. It rewrites the role's row and
+  matching older rows, writes the snapshot and prints what changed. The
+  follows-builder form skips the catalogue. Roles: orchestrator, builder,
+  reviewer, small-builder, fixer. --json prints openwiz.models-show.v1,
+  openwiz.models-list.v1 or openwiz.models-set.v1.
+loop off/on <name>
+  Switch one OpenWiz loop by its exact name or ID, recording the trusted operator
+  and time. Off admits no new check or agent; existing effects are kept. Requires
+  verified local repository/project and operator context; otherwise refuses.
+  Waits up to 30 seconds for a running pass; if still busy, retry the command.
+loop validate/export/plan/apply
+  Loop files in the WizLoops format, with Cloudroom as the adapter
+  (contracts/loop-cli.v1.md). validate checks loop files and names each
+  problem by file and field. plan prints the exact room-cli commands and the
+  differences against room-cli loop list, and changes nothing. apply runs
+  only those commands for one id, once, then reads the loop back and reports
+  any difference; an unclear outcome exits 6 and is never retried.
+fleets
+  Every fleet in this repository: each open issue with sub-issues (a spec), its tickets
+  and their blockers, read from GitHub through the gh on PATH, in the repository gh finds
+  from the current directory. Each ticket's state is worked out from facts only, and each
+  fleet shows its progress: its tickets by state, "4 of 11 merged", and how many are
+  moving (building, in review or changes requested) or blocked. "Needs you" lists each
+  ticket with a needs-info or held label. Merged means its pull request's merge was read
+  back on its base, never an approval, a ready pull request or a closed issue. What it
+  can't settle is unknown, with its reason, and a read that fails makes the result
+  partial: its gaps name each read that isn't complete. Read-only: only gh's reads on
+  OpenWiz's allowlist run, never room-cli, and the version is reported, never a gate.
+  --json      print the openwiz.fleet.v1 envelope (its fleets view) instead of text
+fleet <spec>
+  One fleet: the spec issue <spec> and its tickets (its sub-issues), read from GitHub
+  through gh, in the repository of the working directory. Each ticket's state, its
+  blockers (in any version), owned paths, relies on, pull request, CI and the
+  reviewer's verdict, and the "needs you" items. Merged means the pull request's
+  merge commit was read back on its base: never an approval, a ready pull request or
+  a closed issue. Unknowns stay unknown, with their reasons; a failed read makes the
+  answer partial. Reads gh's version, repo view, issue view, pr view, pr checks
+  and api compare; room-cli's version, CloudRoom projects, threads and Cloud workspaces.
+  Builders are placed only through the verified thread, branch and pull request chain.
+  --json prints openwiz.fleet.v1.
+fleet tick --dry-run
+  Plan every fleet from GitHub, CloudRoom and OpenWiz start records, and print the
+  plan. It reads only: no locks, writes, starts or messages. Only judgment items are
+  printed; --json prints the whole openwiz.fleet-tick.v1 plan. Without --dry-run it
+  refuses: the executing tick was retired.
+fleet due --github-only
+  A read-only GitHub candidate check for a loop sandbox without room-cli. One line
+  per distinct candidate spec/ticket pair; silent when idle. A failed global read
+  exits 1. The agent it wakes verifies CloudRoom facts before acting.
+  --json prints openwiz.fleet-due.v1 candidates, including an empty list.
+github token --repository OWNER/NAME [--read]
+  Mints one GitHub App installation token (about an hour) for the installation
+  that covers OWNER/NAME, from the App key in the OPENWIZ_GITHUB_APP_KEY secret
+  and the App id in OPENWIZ_GITHUB_APP_ID. A user's own App (the default) mints
+  only on its owner's account; OPENWIZ_GITHUB_APP_MODE=factory is the explicit
+  setting for the factory's App and its named installations. Prints only the
+  token on stdout and `expires_at <unix seconds>` on stderr; stores nothing.
+  --read asks for the read-only profile. Exits 0 printed, 1 key, App id, mode
+  or GitHub unavailable, 2 usage, 3 repository not installed, 5 refused.
+
+Exit codes:
+  0  a result was printed, complete or partial
+  1  a read failed
+  1  ls, show and the help commands: the output could not be written or flushed;
+     some of it may already be on stdout
+  2  usage error, or a request out of bounds
+  3  show: the session was not found
+  0  models: options were printed
+  13 models: nothing can be offered right now; the report says why
+  1  models show|list|set: fleet.md missing, unreadable or refused, or a failed write
+  5  models set: not offered, or not writable to the Models table; nothing was changed
+  0  fleets: every fleet was printed, complete or partial (its gaps say what is missing)
+  0  fleet: the fleet was printed, complete or partial
+  1  fleet: the spec or its ticket list couldn't be read; nothing was printed
+On an error, stdout is empty unless ls, show or a help command fails to write or
+flush output, when some of it may already be on stdout, or unless --json was given.
+With --json, an error that printed nothing else prints openwiz.cli-error.v1 on stdout.
+Either way, stderr has one line starting with "openwiz: ".
+
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    tests::help_qualifies_the_json_error_and_stderr_promises
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 23 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p openwiz-cli --lib`

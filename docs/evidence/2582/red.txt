@@ -1,0 +1,175 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/test_heads.py   # agent-CLI refusal stubs first on PATH; red: no heads.py yet
+test_a_fetched_commit_that_is_not_the_frozen_head_is_refused_and_runs_no_kit (__main__.Heads.test_a_fetched_commit_that_is_not_the_frozen_head_is_refused_and_runs_no_kit) ... FAIL
+test_a_host_not_signed_in_is_skipped_and_starts_no_kit (__main__.Heads.test_a_host_not_signed_in_is_skipped_and_starts_no_kit) ... FAIL
+test_a_paid_host_without_its_allow_cost_is_skipped_and_starts_no_kit (__main__.Heads.test_a_paid_host_without_its_allow_cost_is_skipped_and_starts_no_kit) ... 
+  test_a_paid_host_without_its_allow_cost_is_skipped_and_starts_no_kit (__main__.Heads.test_a_paid_host_without_its_allow_cost_is_skipped_and_starts_no_kit) (extra=[]) ... FAIL
+  test_a_paid_host_without_its_allow_cost_is_skipped_and_starts_no_kit (__main__.Heads.test_a_paid_host_without_its_allow_cost_is_skipped_and_starts_no_kit) (extra=['--allow-cost', 'fixture-five']) ... FAIL
+test_a_planted_credential_is_refused_before_anything_is_printed_or_posted (__main__.Heads.test_a_planted_credential_is_refused_before_anything_is_printed_or_posted) ... FAIL
+test_a_ticket_with_no_frozen_head_line_from_a_record_author_is_skipped_and_starts_no_kit (__main__.Heads.test_a_ticket_with_no_frozen_head_line_from_a_record_author_is_skipped_and_starts_no_kit) ... 
+  test_a_ticket_with_no_frozen_head_line_from_a_record_author_is_skipped_and_starts_no_kit (__main__.Heads.test_a_ticket_with_no_frozen_head_line_from_a_record_author_is_skipped_and_starts_no_kit) (run=1) ... FAIL
+  test_a_ticket_with_no_frozen_head_line_from_a_record_author_is_skipped_and_starts_no_kit (__main__.Heads.test_a_ticket_with_no_frozen_head_line_from_a_record_author_is_skipped_and_starts_no_kit) (run=2) ... FAIL
+test_a_ticket_with_no_frozen_head_line_from_a_record_author_is_skipped_and_starts_no_kit (__main__.Heads.test_a_ticket_with_no_frozen_head_line_from_a_record_author_is_skipped_and_starts_no_kit) ... ERROR
+test_an_allow_cost_naming_no_listed_host_and_a_bad_tickets_file_exit_2 (__main__.Heads.test_an_allow_cost_naming_no_listed_host_and_a_bad_tickets_file_exit_2) ... ok
+test_five_of_five_gives_the_exact_pr_comment_receipt_and_record_and_writes_nothing_to_github (__main__.Heads.test_five_of_five_gives_the_exact_pr_comment_receipt_and_record_and_writes_nothing_to_github) ... FAIL
+test_four_of_five_gives_a_comment_and_no_receipt (__main__.Heads.test_four_of_five_gives_a_comment_and_no_receipt) ... FAIL
+test_post_reaches_only_the_fake_gh_with_one_comment_per_run_and_one_wizmarket_pull_request (__main__.Heads.test_post_reaches_only_the_fake_gh_with_one_comment_per_run_and_one_wizmarket_pull_request) ... FAIL
+test_the_vps_live_tickets_file_names_the_five_live_checks_their_build_prs_and_listing_ids (__main__.Heads.test_the_vps_live_tickets_file_names_the_five_live_checks_their_build_prs_and_listing_ids) ... ERROR
+
+======================================================================
+ERROR: test_a_ticket_with_no_frozen_head_line_from_a_record_author_is_skipped_and_starts_no_kit (__main__.Heads.test_a_ticket_with_no_frozen_head_line_from_a_record_author_is_skipped_and_starts_no_kit)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_heads.py", line 181, in test_a_ticket_with_no_frozen_head_line_from_a_record_author_is_skipped_and_starts_no_kit
+    self.assertEqual(reads[0], ['api', '-i', path])
+                     ~~~~~^^^
+IndexError: list index out of range
+
+======================================================================
+ERROR: test_the_vps_live_tickets_file_names_the_five_live_checks_their_build_prs_and_listing_ids (__main__.Heads.test_the_vps_live_tickets_file_names_the_five_live_checks_their_build_prs_and_listing_ids)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_heads.py", line 315, in test_the_vps_live_tickets_file_names_the_five_live_checks_their_build_prs_and_listing_ids
+    spec.loader.exec_module(heads)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '<checkout>/kernel/live-rig/heads.py'
+
+======================================================================
+FAIL: test_a_fetched_commit_that_is_not_the_frozen_head_is_refused_and_runs_no_kit (__main__.Heads.test_a_fetched_commit_that_is_not_the_frozen_head_is_refused_and_runs_no_kit)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_heads.py", line 192, in test_a_fetched_commit_that_is_not_the_frozen_head_is_refused_and_runs_no_kit
+    self.assertEqual((code, out), (1, 'skipped fixture-five: git fetched %s, not the frozen head %s\n' % (
+AssertionError: Tuples differ: (2, '') != (1, 'skipped fixture-five: git fetched 09e[42 chars]2\n')
+
+First differing element 0:
+2
+1
+
+- (2, '')
++ (1,
++  'skipped fixture-five: git fetched 09e40e78527b, not the frozen head '
++  'ddbd5a4679f2\n') : python3: can't open file '<temp>/checkout/kernel/live-rig/heads.py': [Errno 2] No such file or directory
+
+
+======================================================================
+FAIL: test_a_host_not_signed_in_is_skipped_and_starts_no_kit (__main__.Heads.test_a_host_not_signed_in_is_skipped_and_starts_no_kit)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_heads.py", line 199, in test_a_host_not_signed_in_is_skipped_and_starts_no_kit
+    self.assertEqual((code, out), (0, 'skipped fixture-signed-out: not signed in: heads-signed-out\n'), err)
+AssertionError: Tuples differ: (2, '') != (0, 'skipped fixture-signed-out: not signed in: heads-signed-out\n')
+
+First differing element 0:
+2
+0
+
+- (2, '')
++ (0, 'skipped fixture-signed-out: not signed in: heads-signed-out\n') : python3: can't open file '<temp>/checkout/kernel/live-rig/heads.py': [Errno 2] No such file or directory
+
+
+======================================================================
+FAIL: test_a_paid_host_without_its_allow_cost_is_skipped_and_starts_no_kit (__main__.Heads.test_a_paid_host_without_its_allow_cost_is_skipped_and_starts_no_kit) (extra=[])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_heads.py", line 207, in test_a_paid_host_without_its_allow_cost_is_skipped_and_starts_no_kit
+    self.assertEqual((code, out), (0, 'skipped fixture-paid: cost\n'), err)
+AssertionError: Tuples differ: (2, '') != (0, 'skipped fixture-paid: cost\n')
+
+First differing element 0:
+2
+0
+
+- (2, '')
++ (0, 'skipped fixture-paid: cost\n') : python3: can't open file '<temp>/checkout/kernel/live-rig/heads.py': [Errno 2] No such file or directory
+
+
+======================================================================
+FAIL: test_a_paid_host_without_its_allow_cost_is_skipped_and_starts_no_kit (__main__.Heads.test_a_paid_host_without_its_allow_cost_is_skipped_and_starts_no_kit) (extra=['--allow-cost', 'fixture-five'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_heads.py", line 207, in test_a_paid_host_without_its_allow_cost_is_skipped_and_starts_no_kit
+    self.assertEqual((code, out), (0, 'skipped fixture-paid: cost\n'), err)
+AssertionError: Tuples differ: (2, '') != (0, 'skipped fixture-paid: cost\n')
+
+First differing element 0:
+2
+0
+
+- (2, '')
++ (0, 'skipped fixture-paid: cost\n') : python3: can't open file '<temp>/checkout/kernel/live-rig/heads.py': [Errno 2] No such file or directory
+
+
+======================================================================
+FAIL: test_a_planted_credential_is_refused_before_anything_is_printed_or_posted (__main__.Heads.test_a_planted_credential_is_refused_before_anything_is_printed_or_posted)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_heads.py", line 287, in test_a_planted_credential_is_refused_before_anything_is_printed_or_posted
+    self.assertEqual(code, 1, err)
+AssertionError: 2 != 1 : python3: can't open file '<temp>/checkout/kernel/live-rig/heads.py': [Errno 2] No such file or directory
+
+
+======================================================================
+FAIL: test_a_ticket_with_no_frozen_head_line_from_a_record_author_is_skipped_and_starts_no_kit (__main__.Heads.test_a_ticket_with_no_frozen_head_line_from_a_record_author_is_skipped_and_starts_no_kit) (run=1)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_heads.py", line 178, in test_a_ticket_with_no_frozen_head_line_from_a_record_author_is_skipped_and_starts_no_kit
+    self.assertEqual((code, out), (0, 'skipped fixture-nohead: no frozen head\n'), err)
+AssertionError: Tuples differ: (2, '') != (0, 'skipped fixture-nohead: no frozen head\n')
+
+First differing element 0:
+2
+0
+
+- (2, '')
++ (0, 'skipped fixture-nohead: no frozen head\n') : python3: can't open file '<temp>/checkout/kernel/live-rig/heads.py': [Errno 2] No such file or directory
+
+
+======================================================================
+FAIL: test_a_ticket_with_no_frozen_head_line_from_a_record_author_is_skipped_and_starts_no_kit (__main__.Heads.test_a_ticket_with_no_frozen_head_line_from_a_record_author_is_skipped_and_starts_no_kit) (run=2)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_heads.py", line 178, in test_a_ticket_with_no_frozen_head_line_from_a_record_author_is_skipped_and_starts_no_kit
+    self.assertEqual((code, out), (0, 'skipped fixture-nohead: no frozen head\n'), err)
+AssertionError: Tuples differ: (2, '') != (0, 'skipped fixture-nohead: no frozen head\n')
+
+First differing element 0:
+2
+0
+
+- (2, '')
++ (0, 'skipped fixture-nohead: no frozen head\n') : python3: can't open file '<temp>/checkout/kernel/live-rig/heads.py': [Errno 2] No such file or directory
+
+
+======================================================================
+FAIL: test_five_of_five_gives_the_exact_pr_comment_receipt_and_record_and_writes_nothing_to_github (__main__.Heads.test_five_of_five_gives_the_exact_pr_comment_receipt_and_record_and_writes_nothing_to_github)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_heads.py", line 212, in test_five_of_five_gives_the_exact_pr_comment_receipt_and_record_and_writes_nothing_to_github
+    self.assertEqual(code, 0, err)
+AssertionError: 2 != 0 : python3: can't open file '<temp>/checkout/kernel/live-rig/heads.py': [Errno 2] No such file or directory
+
+
+======================================================================
+FAIL: test_four_of_five_gives_a_comment_and_no_receipt (__main__.Heads.test_four_of_five_gives_a_comment_and_no_receipt)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_heads.py", line 241, in test_four_of_five_gives_a_comment_and_no_receipt
+    self.assertEqual(code, 1, err)
+AssertionError: 2 != 1 : python3: can't open file '<temp>/checkout/kernel/live-rig/heads.py': [Errno 2] No such file or directory
+
+
+======================================================================
+FAIL: test_post_reaches_only_the_fake_gh_with_one_comment_per_run_and_one_wizmarket_pull_request (__main__.Heads.test_post_reaches_only_the_fake_gh_with_one_comment_per_run_and_one_wizmarket_pull_request)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_heads.py", line 253, in test_post_reaches_only_the_fake_gh_with_one_comment_per_run_and_one_wizmarket_pull_request
+    self.assertEqual(code, 1, err)
+AssertionError: 2 != 1 : python3: can't open file '<temp>/checkout/kernel/live-rig/heads.py': [Errno 2] No such file or directory
+
+
+----------------------------------------------------------------------
+Ran 10 tests in 1.172s
+
+FAILED (failures=10, errors=2)
