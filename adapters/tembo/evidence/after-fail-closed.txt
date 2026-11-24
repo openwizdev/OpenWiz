@@ -1,0 +1,29 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/tembo/test_driver.py (after the fail-closed fix), 35 agent CLIs stubbed first on PATH; the one failure is the nested kit key check, blocked on the kit ticket (create-id echo)
+............F.........
+======================================================================
+FAIL: test_kit_passes_all_five_on_the_fake_host (__main__.Driver.test_kit_passes_all_five_on_the_fake_host)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/tembo/test_driver.py", line 114, in test_kit_passes_all_five_on_the_fake_host
+    self.assertEqual((out, err), (KIT_PASS, ''))
+AssertionError: Tuples differ: (['pa[220 chars]ed', "fail token: start failed against the kit[56 chars], '') != (['pa[220 chars]ed', 'pass token: no login or token passed thr[117 chars], '')
+
+First differing element 0:
+['pas[219 chars]ed', "fail token: start failed against the kit[51 chars]top"]
+['pas[219 chars]ed', 'pass token: no login or token passed thr[112 chars]der']
+
+  (['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+-   "fail token: start failed against the kit's fake host, so the kit could not "
+-   'check wake and stop'],
++   'pass token: no login or token passed through the driver, and on start, wake '
++   'and stop the tembo key reached its host only from the key helper, in its '
++   'header'],
+   '')
+
+----------------------------------------------------------------------
+Ran 22 tests in <t>s
+
+FAILED (failures=1)
