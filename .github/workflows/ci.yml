@@ -154,6 +154,7 @@ jobs:
           python3 -I tools/install/tests/init/test_init.py
           python3 -I -B tools/install/setup/test_github_login.py
           python3 -I tools/install/tests/skills-linked-config/test_linked_config.py
+          python3 -I tools/install/tests/installed-contracts/test_installed_contracts.py
       - name: The GitHub App
         if: matrix.part == 2
         run: |
