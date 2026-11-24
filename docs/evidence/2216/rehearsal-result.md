@@ -1,5 +1,15 @@
 # OpenWiz 0.1.1 Linux rehearsal
 
+## November 24, fifth run
+
+The release branch at `9c7c82853c5a08dcd4899b72a44b3ed7e3acea9a` includes the installed contract fix. All three native packages built. The sealed Linux archive SHA-256 was `74734dc5a5e0b11cf2cc9e7cbc9aaae983cd652a764bea50050d487b9b9e94fc`. The WizSkills pin was unchanged from the first November 24 run. [Packages run](https://github.com/openwizdev/OpenWiz/actions/runs/45466509394)
+
+Private Git access passed at 19:06 UTC. Confirmation read back the exact pushed revision at 19:08 UTC. Both Linux files verified, the CLI activated at the expected source, and the installed skills included the checkpoint contract and plugin manifest. Install finished at 19:13 UTC. Local setup and model readback finished at 19:14 UTC.
+
+The live first-fleet plan check exited 1 at 19:15 UTC. The rehearsal ticket placed a dependency declaration inside its Links section. The checker required a link line or the word `none`. A separate offline replay passed the installed checker with the declaration moved before that heading and the section containing `none`. The installed checkpoint check also accepted the captured spec.
+
+The heartbeat, builder, reviewer and merge were unreached. Teardown finished at 19:18 UTC. The private repository was archived with zero open issues or pull requests, the final clean check passed and the native crontab matched its baseline.
+
 ## November 24, fourth run
 
 Private Git access from a fresh Linux home passed at 18:05 UTC. The confirmation check compared the pushed file bytes with GitHub's blob at the immutable commit. The installed decision helper read that same commit on each head check and resolved the request at 18:06 UTC. Both Linux checksums passed. The installer activated the expected build at 18:07 UTC, and the local project and model settings passed readback by 18:09 UTC.
