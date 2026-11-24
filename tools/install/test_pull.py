@@ -330,7 +330,6 @@ class Pull(unittest.TestCase):
                         else os.environ.__setitem__('FAKE_PRO_GH', old_env))
         which = lambda name: gh_path if name == 'gh' else None
 
-        # Install 0.1.2-rc.1 on the early channel.
         res = subprocess.run([sys.executable, str(HERE / 'install.py'), '--manifest', str(rc1[0]),
                               '--archive', str(rc1[1]), '--manifest-sha256', fixture.sha(raw_rc1),
                               '--root', str(f.root), '--target', target, '--channel', 'early'],
@@ -339,7 +338,6 @@ class Pull(unittest.TestCase):
         self.assertEqual((f.root / 'channel.json').read_text(),
                          '{"schema":"openwiz.update-channel.v1","channel":"early"}\n')
 
-        # 0.1.2-rc.2 (early) > 0.1.1 (public); draft v0.1.3-rc.1 and non-prerelease v0.1.3 are ignored.
         cand = pull.discover(target, fetch=pub_fetch, root=f.root, which=which)
         self.assertEqual((cand['version'], cand['channel'], cand['origin']), ('0.1.2-rc.2', 'early', 'early'))
         staged = pull.stage(target, cand['version'], cand['source'], cand['manifest_sha256'],
@@ -350,7 +348,6 @@ class Pull(unittest.TestCase):
                         '--root', str(f.root), '--target', target, '--channel', 'early'],
                        check=True, capture_output=True)
 
-        # Public 0.1.2 ships (> 0.1.2-rc.2): member is never left behind the public release.
         current_pub.update(bundle=pub_new, version='0.1.2')
         cand = pull.discover(target, fetch=pub_fetch, root=f.root, which=which)
         self.assertEqual((cand['version'], cand['channel'], cand['origin']), ('0.1.2', 'early', 'public'))
@@ -364,12 +361,10 @@ class Pull(unittest.TestCase):
         self.assertEqual((f.root / 'channel.json').read_text(),
                          '{"schema":"openwiz.update-channel.v1","channel":"early"}\n')
 
-        # Rollback to 0.1.2-rc.2 is refused.
         with self.assertRaisesRegex(pull.Refused, 'published version must advance'):
             pull.stage(target, '0.1.2-rc.2', '2' * 40, fixture.sha(raw_rc2),
                        f.root, f.root / 'state', fetch=pub_fetch, which=which)
 
-        # Next RC 0.1.3-rc.1 publishes (> 0.1.2): early channel advances again.
         cfg['releases'].append({'tag_name': 'v0.1.3-rc.1', 'prerelease': True, 'draft': False})
         Path(cfg_path).write_text(json.dumps(cfg))
         cand = pull.discover(target, fetch=pub_fetch, root=f.root, which=which)

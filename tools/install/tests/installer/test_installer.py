@@ -429,7 +429,6 @@ class EarlyChannel(Installer):
         self.assertEqual((code, value['outcome'], value['version'], value['channel']),
                          (0, 'installed', '0.1.2-rc.1', 'early'), value)
 
-        # Public 0.1.2 is newer than 0.1.2-rc.1: download --early picks public and keeps early channel.
         pub_archive = f'openwiz-0.1.2-{TARGET}.tar.gz'
         manifest, archive, _ = self.bundle(version='0.1.2', source='b' * 40,
                                            mutate=lambda m: m.update(archive=pub_archive))
@@ -449,7 +448,6 @@ class EarlyChannel(Installer):
         self.assertEqual((code, value['version']), (0, '0.1.2'), value)
         self.assertEqual(self.run_entry('status', '--root', str(self.root))[1]['channel'], 'early')
 
-        # install remove deletes the early channel.json and leaves no empty root.
         code, value = self.run_entry('remove', '--root', str(self.root))
         self.assertEqual((code, value['outcome']), (0, 'preview'), value)
         self.assertIn(str(self.root / 'channel.json'), value['delete'])
@@ -457,7 +455,6 @@ class EarlyChannel(Installer):
         self.assertEqual((code, value['outcome']), (0, 'removed'), value)
         self.assertFalse(self.root.exists())
 
-        # Verify tampered SHA256SUMS on early release is refused and creates no download folder.
         self.publish_pro(assets_root, '0.1.3-rc.1', source='c' * 40, tamper_sums=True)
         Path(cfg_path).write_text(json.dumps({
             'logged_in': True, 'status': 200, 'assets': str(assets_root),
@@ -470,12 +467,10 @@ class EarlyChannel(Installer):
         self.assertFalse(bad_dl.exists())
 
     def test_early_download_refusals_and_default_unchanged(self):
-        # Without --early, prerelease tags are rejected as usage errors (exit 2).
         code, _ = self.run_entry('download', '--target', TARGET, '--dir', str(self.base / 'dl-rc'),
                                  '--version', 'v0.1.2-rc.1')
         self.assertEqual(code, 2)
 
-        # Missing gh -> clear refusal saying how to log in.
         empty_bin = self.base / 'empty-bin'
         empty_bin.mkdir()
         os.environ['PATH'] = str(empty_bin)
@@ -483,13 +478,11 @@ class EarlyChannel(Installer):
         self.assertEqual((code, value['outcome']), (5, 'refused'), value)
         self.assertIn('gh auth login', value['reason'])
 
-        # Logged-out gh -> clear refusal saying how to log in.
         cfg_path = self.setup_fake_gh({'logged_in': False})
         code, value = self.run_entry('download', '--early', '--target', TARGET, '--dir', str(self.base / 'dl-out'))
         self.assertEqual((code, value['outcome']), (5, 'refused'), value)
         self.assertIn('gh auth login', value['reason'])
 
-        # 404 (no Pro access) -> clear refusal naming OpenWiz Pro and https://openwiz.dev/pro/.
         Path(cfg_path).write_text(json.dumps({'logged_in': True, 'status': 404}))
         code, value = self.run_entry('download', '--early', '--target', TARGET, '--dir', str(self.base / 'dl-404'))
         self.assertEqual((code, value['outcome']), (5, 'refused'), value)
