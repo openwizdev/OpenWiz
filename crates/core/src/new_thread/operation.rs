@@ -437,17 +437,6 @@ pub struct NewThreadPreview {
 
 pub const PREVIEW_SCHEMA_ID: &str = "openwiz.new-thread-preview.v1";
 
-pub fn preview_new_thread(
-    client: &dyn NewThreadClient,
-    clock: &dyn Clock,
-    request: &NewThreadRequest,
-) -> Result<NewThreadPreview, InvalidRequest> {
-    preview_new_thread_with(client, &NoAttachments, clock, request).map_err(|e| match e {
-        NewThreadError::Invalid(why) => why,
-        NewThreadError::Store(StoreError(why)) => InvalidRequest(why),
-    })
-}
-
 pub fn preview_new_thread_with(
     client: &dyn NewThreadClient,
     attachments: &dyn StagedAttachments,
