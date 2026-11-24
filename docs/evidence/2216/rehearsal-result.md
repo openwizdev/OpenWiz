@@ -1,5 +1,13 @@
 # OpenWiz 0.1.1 Linux rehearsal
 
+## November 24, fourth run
+
+Private Git access from a fresh Linux home passed at 18:05 UTC. The confirmation check compared the pushed file bytes with GitHub's blob at the immutable commit. The installed decision helper read that same commit on each head check and resolved the request at 18:06 UTC. Both Linux checksums passed. The installer activated the expected build at 18:07 UTC, and the local project and model settings passed readback by 18:09 UTC.
+
+At 18:10 UTC the installed ticket-plan approval command exited 2 with `approve: unreadable input: cannot read the checkpoint forms from contracts/checkpoints.v1.md`. The shell checker looks up the document relative to its installed script. The document existed in the source checkout and was absent from the expected installed location. The heartbeat, builder, review and merge were unreached.
+
+Teardown finished at 18:11 UTC. The private repository was archived with zero open issues and pull requests. The final environment check passed and the native crontab matched its saved baseline.
+
 ## November 24, third run
 
 The candidate, Packages run and installer inputs were the same as in the first November 24 run. Authenticated Git access to the fresh private repository passed before the rehearsal began. The Linux archive and manifest passed verification at 12:20 UTC. The installer activated the expected build four seconds later. The local project, personal GitHub identity and harness passed setup at 12:24 UTC. The confirmation request was verified at 12:25 UTC.
