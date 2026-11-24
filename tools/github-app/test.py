@@ -1857,5 +1857,5 @@ with patch("datetime.datetime", DeviceClock), patch("time.time", return_value=fi
 
 if __name__ == "__main__":
     sys.path.insert(0, str(HERE))
-    from test_pr_opener import PrOpenerTests  # noqa: F401
+    from test_pr_opener import PrOpenerTests  # noqa: F401 -- discovered by unittest.main()
     unittest.main(verbosity=2)

@@ -244,7 +244,7 @@ class PrOpenerTests(unittest.TestCase):
         )
 
     def test_mint_requests_single_repo_exact_permissions_and_opens_pr(self):
-        """catches: minting wider permissions or multiple repos, or failing to open PR and revoke token"""
+        # SECURITY: catches: minting wider permissions or multiple repos, or failing to open PR and revoke token
         with tempfile.TemporaryDirectory(prefix="openwiz-pr-opener-") as tmp, fake_github() as (api, calls, state):
             summary = Path(tmp) / "summary.md"
             proc = self.run_opener(api, {"OPENWIZ_PR_DRAFT": "true"}, summary_path=summary)
@@ -267,7 +267,7 @@ class PrOpenerTests(unittest.TestCase):
             self.assertIn("#42", summary.read_text(encoding="utf-8"))
 
     def test_existing_pr_for_head_is_left_alone_and_token_revoked(self):
-        """catches: opening a duplicate pull request when an open PR already exists for head"""
+        # SECURITY: catches: opening a duplicate pull request or failing to revoke token when PR already exists
         with tempfile.TemporaryDirectory(prefix="openwiz-pr-opener-") as tmp, fake_github() as (api, calls, state):
             state["existing_prs"] = [{"number": 77, "head": {"ref": "room/demo-branch"}, "base": {"ref": "main"}}]
             summary = Path(tmp) / "summary.md"
@@ -278,7 +278,7 @@ class PrOpenerTests(unittest.TestCase):
             self.assertIn("#77", summary.read_text(encoding="utf-8"))
 
     def test_wider_grant_or_wrong_repo_stops_and_revokes(self):
-        """catches: accepting a wider permission grant or extra repository instead of stopping and revoking"""
+        # SECURITY: catches: accepting a wider permission grant or extra repository instead of stopping and revoking
         bad_grants = [
             {"permissions": dict(EXACT_PERMS, issues="write")},
             {"permissions": dict(EXACT_PERMS, contents="write")},
@@ -296,7 +296,7 @@ class PrOpenerTests(unittest.TestCase):
                 self.assertEqual(len(revokes), 1, f"must revoke on {patch}")
 
     def test_token_revoked_on_missing_branch_and_pr_failure(self):
-        """catches: leaving a live installation token unrevoked when branch lookup or PR creation fails"""
+        # SECURITY: catches: leaving a live installation token unrevoked when branch lookup or PR creation fails
         for patch in ({"branch_exists": False}, {"create_status": 422}):
             with fake_github() as (api, calls, state):
                 state.update(patch)
@@ -307,7 +307,7 @@ class PrOpenerTests(unittest.TestCase):
                 self.assertEqual(revokes[0][2].get("Authorization"), "Bearer " + state["token"])
 
     def test_no_token_or_key_in_output_args_or_files(self):
-        """catches: leaking the App key, JWT, or installation token to stdout, stderr, files, or PATH openssl"""
+        # SECURITY: catches: leaking the App key, JWT, or installation token to stdout, stderr, files, or PATH openssl
         with tempfile.TemporaryDirectory(prefix="openwiz-pr-opener-") as tmp, fake_github() as (api, calls, state):
             fake_bin = Path(tmp) / "bin"
             fake_bin.mkdir()
@@ -329,7 +329,7 @@ class PrOpenerTests(unittest.TestCase):
             self.assertEqual(files, ["bin", "summary.md"])
 
     def test_ref_and_input_guards_fail_closed_before_network(self):
-        """catches: running on a non-main ref or accepting an invalid head, title, or draft"""
+        # SECURITY: catches: running on a non-main ref or accepting an invalid head, title, or draft
         bad_cases = [
             {"GITHUB_REF": "refs/heads/room/evil", "OPENWIZ_PR_REF": "refs/heads/room/evil"},
             {"OPENWIZ_PR_REF": "refs/heads/room/evil"},
@@ -351,7 +351,7 @@ class PrOpenerTests(unittest.TestCase):
                 self.assertEqual(calls, [], f"must not call network for {overrides}")
 
     def test_no_secret_in_subprocess_args_or_env(self):
-        """catches: passing the App key or installation token in a child process argument or environment"""
+        # SECURITY: catches: passing the App key or installation token in a child process argument or environment
         import importlib.util
         spec = importlib.util.spec_from_file_location("pr_opener_under_test", SCRIPT)
         mod = importlib.util.module_from_spec(spec)
@@ -377,7 +377,7 @@ class PrOpenerTests(unittest.TestCase):
             self.assertNotIn(secret, joined)
 
     def test_workflow_guard_passes_and_catches_planted_breaks(self):
-        """catches: workflow regressions in trigger, environment, main-ref guard, run: interpolation, or unpinned uses:"""
+        # SECURITY: catches: workflow regressions in trigger, environment, main-ref guard, run: interpolation, or unpinned uses:
         pinned = pinned_repo_actions(ROOT)
         text = WORKFLOW.read_text(encoding="utf-8")
         self.assertEqual(check_workflow_text(text, pinned), [])
