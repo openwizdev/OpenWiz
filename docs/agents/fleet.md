@@ -4,17 +4,19 @@ The fleet skills read this file. Keep every table's headings, columns and rows u
 
 ## Models
 
-Each role's model, under the [models contract](../../contracts/models.v1.md). The Builder starts each ticket and the Small builder each ticket with an exact `polish`, `huntr` or `proposal` label; the Orchestrator starts a spec's fleet thread. A pull request is reviewed by the Reviewer, or by the Builder when the Reviewer is of the pull request's builder's family (ADR 0008); otherwise the review waits. Change a role with `openwiz models set` and commit it: agents started after it reaches `main` use it; an agent already started keeps its model.
+Each role's model, under the [models contract](../../contracts/models.v1.md). The Builder starts each ticket and the Small builder each ticket with an exact `polish`, `huntr` or `proposal` label; the Orchestrator starts a spec's fleet thread. Every pull request is reviewed first by the Reviewer (`Opus 5.5 Medium`). Only when a Claude start is refused or stops on a positively reported usage limit does the fleet fall back to `Reviewer fall-back 1` (`Gemini 4 Neon, High`, through Antigravity, in a fresh thread that did not build the pull request), and only when Antigravity also refuses does it fall back to `Reviewer fall-back 2` (`Codex Sol 6.2 Medium`). The verdict names its reviewer's model and effort in its first lines (for example `reviewer: Neon High`). A review already started keeps its reviewer. The thread that built a pull request never reviews it. The next review goes back to Opus 5.5 Medium as soon as Claude has usage. Change a role with `openwiz models set` and commit it: agents started after it reaches `main` use it; an agent already started keeps its model.
 
 | Role | Harness | Model | Effort | `room-cli thread spawn` flags |
 | --- | --- | --- | --- | --- |
 | Orchestrator | Claude Code | Opus 5.5 | Medium | `--provider claude-code --model claude-opus-5-5 --reasoning-level medium` |
-| Builder | Claude Code | Opus 5.5 | Medium | `--provider claude-code --model claude-opus-5-5 --reasoning-level medium` |
-| Reviewer | Codex | Sol 6.2 | Medium | `--provider codex --model gpt-6.2-sol --reasoning-level medium` |
+| Builder | Antigravity | Gemini 4 Neon | Medium | `--provider antigravity --reasoning-level medium` |
+| Reviewer | Claude Code | Opus 5.5 | Medium | `--provider claude-code --model claude-opus-5-5 --reasoning-level medium` |
 | Small builder | follows Builder | | | |
 | Fixer | follows Builder | | | |
+| Reviewer fall-back 1 | Antigravity | Gemini 4 Neon | High | `--provider antigravity --reasoning-level high` |
+| Reviewer fall-back 2 | Codex | Sol 6.2 | Medium | `--provider codex --model gpt-6.2-sol --reasoning-level medium` |
 
-Source: Jake, 2026-11-19 (J255: builders Opus 5.5 Medium, reviewers Codex Sol 6.2 Medium; [private record](https://github.com/jparker2006/ClosedWiz/issues/3065#issuecomment-7031528626)); the Fixer as J119 (2026-11-15; [private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6906276883)); the Orchestrator as the Builder, which starts the fleet thread today.
+Source: Jake, 2026-11-24 (#895: builders and fixers Gemini 4 Neon Medium through Antigravity; first-choice reviewer Opus 5.5 Medium; fall-back 1 Gemini 4 Neon High through Antigravity on positively reported Claude usage limit; fall-back 2 Codex Sol 6.2 Medium when Antigravity also refuses); earlier J255 (2026-11-19; [private record](https://github.com/jparker2006/ClosedWiz/issues/3065#issuecomment-7031528626)) and J119 (2026-11-15; [private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6906276883)).
 
 **Kept for older skills:** the five tables below, from `## Builder` to `## Fixer`, are what the pinned WizSkills release reads. Keep them equal to this table (`openwiz models set` does; `openwiz models show` warns when they differ) until they go in #2205.
 
@@ -42,7 +44,7 @@ Codex runs at the default service tier: no fast mode, no `--service-tier` overri
 
 ## Reviewer for Claude-built
 
-One per pull request, from the other model family than the builder (ADR 0008). It reviews the exact head and never edits. If it can't start, the review waits; it is never swapped for another model.
+One per pull request, from the other model family than the builder (ADR 0008). It reviews the exact head and never edits. If it can't start, the review waits; it is never swapped for another model except along the recorded reviewer fall-back order in `## Models` when a start is refused or stops on a positively reported usage limit.
 
 | Setting | Value | `room-cli thread spawn` flag |
 | --- | --- | --- |

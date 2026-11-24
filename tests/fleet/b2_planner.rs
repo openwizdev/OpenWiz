@@ -172,27 +172,44 @@ fn b2_1196_all_conditional_tables_are_strict_and_other_family() {
     }
     let wrong = RULES.replace("--provider claude-code", "--provider codex");
     assert!(Rules::parse(&wrong, &flags()).is_err());
-    let rules = Rules::parse(include_str!("../../docs/agents/fleet.md"), &flags()).unwrap();
-    assert_eq!(rules.builder().harness, "claude-code");
-    assert_eq!(rules.builder().model, "claude-opus-5-5");
+    let fleet = include_str!("../../docs/agents/fleet.md");
+    let rules = Rules::parse(fleet, &flags()).unwrap();
+    assert_eq!(rules.builder().harness, "antigravity");
+    assert_eq!(rules.builder().model, "default");
     assert_eq!(rules.builder().effort, "medium");
-    assert_eq!(rules.small_builder().harness, "claude-code");
-    assert_eq!(rules.small_builder().model, "claude-opus-5-5");
+    assert_eq!(rules.small_builder().harness, "antigravity");
+    assert_eq!(rules.small_builder().model, "default");
     assert_eq!(rules.small_builder().effort, "medium");
-    assert_eq!(
-        rules
-            .reviewer_for(openwiz_core::fleet::tick::BuilderFamily::Claude)
-            .unwrap()
-            .harness,
-        "codex"
-    );
-    assert_eq!(
-        rules
-            .reviewer_for(openwiz_core::fleet::tick::BuilderFamily::Gpt)
-            .unwrap()
-            .harness,
-        "claude-code"
-    );
+    let reviewer = rules
+        .reviewer_for(openwiz_core::fleet::tick::BuilderFamily::Gpt)
+        .unwrap();
+    assert_eq!(reviewer.harness, "claude-code");
+    assert_eq!(reviewer.model, "claude-opus-5-5");
+    assert_eq!(reviewer.effort, "medium");
+    for (case, bad) in [
+        (
+            "skipped fallback index",
+            fleet.replacen("Reviewer fall-back 1", "Reviewer fall-back 2", 1),
+        ),
+        (
+            "fallback follows builder",
+            fleet.replacen(
+                "| Reviewer fall-back 1 | Antigravity | Gemini 4 Neon | High | `--provider antigravity --reasoning-level high` |",
+                "| Reviewer fall-back 1 | follows Builder | | | |",
+                1,
+            ),
+        ),
+        (
+            "missing reasoning-level",
+            fleet.replacen(
+                "`--provider antigravity --reasoning-level medium`",
+                "`--provider antigravity`",
+                1,
+            ),
+        ),
+    ] {
+        assert!(Rules::parse(&bad, &flags()).is_err(), "{case}");
+    }
 }
 
 fn b2_1196_setup_template_can_produce_the_strict_rules() {
