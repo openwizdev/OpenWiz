@@ -161,6 +161,26 @@ impl Repository {
     pub fn current(&self) -> Result<Vec<Definition>, String> {
         self.definitions(&self.verified_default()?)
     }
+    pub fn current_for_observation(&self) -> Result<Vec<Definition>, String> {
+        let default = self.verified_default()?;
+        let entry = git(&self.0, &["ls-tree", "-z", default.trim(), "--", "loops"])?;
+        if entry.is_empty() {
+            return Ok(Vec::new());
+        }
+        let entry = entry.strip_suffix(&[0]).ok_or("invalid loop root entry")?;
+        let entry = std::str::from_utf8(entry).map_err(|_| "invalid loop root entry")?;
+        let (info, name) = entry.split_once('\t').ok_or("invalid loop root entry")?;
+        let fields = info.split(' ').collect::<Vec<_>>();
+        if name != "loops"
+            || fields.len() != 3
+            || fields[0] != "040000"
+            || fields[1] != "tree"
+            || !revision(fields[2])
+        {
+            return Err("loop root must be a committed tree".into());
+        }
+        self.definitions(&default)
+    }
     fn verified_default(&self) -> Result<String, String> {
         let default = text(git(
             &self.0,
