@@ -26,7 +26,6 @@
     "ci/rust-tests.sh",
     "contracts/**",
     "crates/**",
-    "deploy/**",
     "docs/*",
     "docs/adr/**",
     "docs/agents/**",

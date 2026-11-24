@@ -151,33 +151,6 @@ fn revision(s: &str) -> bool {
             .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
 }
 impl Repository {
-    pub fn matches_repository(&self, repository: &str) -> Result<bool, String> {
-        let config = text(git(
-            &self.0,
-            &["config", "--local", "--no-includes", "--null", "--list"],
-        )?)?;
-        let urls: Vec<_> = config
-            .split_terminator('\0')
-            .filter_map(|entry| entry.strip_prefix("remote.origin.url\n"))
-            .collect();
-        let [url] = urls.as_slice() else {
-            return Ok(false);
-        };
-        Ok([
-            "https://github.com/",
-            "ssh://git@github.com/",
-            "git@github.com:",
-        ]
-        .iter()
-        .any(|prefix| {
-            url.strip_prefix(prefix).is_some_and(|path| {
-                path.strip_suffix(".git")
-                    .unwrap_or(path)
-                    .eq_ignore_ascii_case(repository)
-            })
-        }))
-    }
-
     pub fn blob_bytes(&self, id: &str) -> Result<Vec<u8>, String> {
         if !revision(id) {
             return Err("invalid immutable definition revision".to_owned());
@@ -187,26 +160,6 @@ impl Repository {
 
     pub fn current(&self) -> Result<Vec<Definition>, String> {
         self.definitions(&self.verified_default()?)
-    }
-    pub fn current_for_observation(&self) -> Result<Vec<Definition>, String> {
-        let default = self.verified_default()?;
-        let entry = git(&self.0, &["ls-tree", "-z", default.trim(), "--", "loops"])?;
-        if entry.is_empty() {
-            return Ok(Vec::new());
-        }
-        let entry = entry.strip_suffix(&[0]).ok_or("invalid loop root entry")?;
-        let entry = std::str::from_utf8(entry).map_err(|_| "invalid loop root entry")?;
-        let (info, name) = entry.split_once('\t').ok_or("invalid loop root entry")?;
-        let fields = info.split(' ').collect::<Vec<_>>();
-        if name != "loops"
-            || fields.len() != 3
-            || fields[0] != "040000"
-            || fields[1] != "tree"
-            || !revision(fields[2])
-        {
-            return Err("loop root must be a committed tree".into());
-        }
-        self.definitions(&default)
     }
     fn verified_default(&self) -> Result<String, String> {
         let default = text(git(
