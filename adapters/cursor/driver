@@ -139,6 +139,14 @@ def saved(run, state=None):
         raise Refused('no run ' + run, 'check the run id that `driver start` printed')
 
 
+def forget(run):
+    for ext in ('.json', '.lock'):
+        try:
+            os.remove(path(run, ext))
+        except OSError:
+            pass
+
+
 def lock(run):
     try:
         fcntl.flock(os.open(path(run, '.lock'), os.O_RDONLY | os.O_CREAT, 0o600), fcntl.LOCK_EX)
@@ -147,6 +155,13 @@ def lock(run):
 
 
 def end(agent, known=True):
+    try:
+        return ending(agent, known)
+    except Refused as e:
+        return ['ending agent %s (%s)' % (agent, e.args[0].replace('nothing was sent to Cursor: ', ''))]
+
+
+def ending(agent, known):
     code, answer = api('GET', '/agents/' + agent)
     if code == 404:
         return [] if known else ['whether agent %s was ever created (Cursor shows none yet, and a late create is not ruled out)' % agent]
@@ -172,16 +187,20 @@ def start():
                       'start again with harness cursor, or use a driver for %s' % req['harness'])
     pins = pinned_skills()
     run, agent = 'run-' + secrets.token_hex(6), 'bc-' + str(uuid.uuid4())
-    state = {'request': req, 'agent': agent, 'stopped': False, 'starting': True}
+    state = {'agent': agent, 'stopped': False, 'starting': True}
     try:
         saved(run, state)
         lock(run)
     except (OSError, Refused):
         raise Refused('the driver cannot save runs in its state folder; nothing was started', FIX_STATE)
-    code, answer = api('POST', '/agents', {
-        'prompt': {'text': prompt(req, pins)}, 'model': {'id': req['model']},
-        'repos': [{'url': 'https://github.com/' + req['repository']}], 'name': 'openwiz-' + run,
-        'agentId': agent, 'autoCreatePR': False})
+    try:
+        code, answer = api('POST', '/agents', {
+            'prompt': {'text': prompt(req, pins)}, 'model': {'id': req['model']},
+            'repos': [{'url': 'https://github.com/' + req['repository']}], 'name': 'openwiz-' + run,
+            'agentId': agent, 'autoCreatePR': False})
+    except Refused:
+        forget(run)
+        raise
     if code is None or code >= 500 or code == 409:
         failed = end(agent, known=False)
         try:
@@ -196,14 +215,11 @@ def start():
         raise Refused('Cursor gave no answer to the start of run %s, so the driver archived its agent; its outcome '
                       'is unknown' % run, 'read the ticket for what its agent did before you start again')
     if code not in (200, 201):
-        try:
-            saved(run, dict(state, stopped=True, starting=False))
-        except OSError:
-            pass
+        forget(run)
         raise refused(code, answer, 'create the agent; nothing was started',
                       'check the repository is connected to Cursor and the model is one Cursor lists, then start again')
     try:
-        saved(run, dict(state, starting=False))
+        saved(run, dict(state, starting=False, request={k: req[k] for k in ('repository', 'ticket', 'skill')}))
     except OSError:
         if end(agent):
             raise Refused('run %s created agent %s but could not save it, nor confirm ending it; its outcome is '

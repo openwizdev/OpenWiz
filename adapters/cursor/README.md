@@ -3,7 +3,7 @@
 Login: held by Cursor
 
 - The key is your own `CURSOR_API_KEY`, or the keychain entry `openwiz-cursor-cloud` when that variable is unset.
-- OpenWiz never stores it. Remove it from your environment or keychain to revoke it.
+- OpenWiz never stores it. Removing it from your environment or keychain only stops OpenWiz using it here; the key stays valid at Cursor until you revoke it in Cursor's dashboard (API Keys). If it may have leaked, revoke it there.
 
 A [driver v1](../../kernel/driver.v1.md) that runs each builder as one [Cursor cloud agent](https://cursor.com/docs/cloud-agent), on its own Cursor-hosted machine, through Cursor's Cloud Agents API (v1, public beta). One Python file, standard library only. **Platforms:** Linux and macOS, Python 3.9 or later. Runs are saved in `$OPENWIZ_CURSOR_STATE` (default `~/.local/state/openwiz-cursor`), owner-only.
 
@@ -11,7 +11,7 @@ Every Cursor call goes through the kit's key helper, [`hostkey.py`](../../kernel
 
 | Command | What it does on Cursor |
 | --- | --- |
-| `start` | Saves the run with a new agent id (`bc-<uuid>`), then `POST /v1/agents` with that `agentId`, the repository, the model and a prompt. The prompt names the ticket and the skill, and has the agent fetch the WizSkills release OpenWiz pins (`wizskills.lock`) and check its commit and tree before it follows the skill: Cursor's machine has none of your own skills. It answers once Cursor has created the agent. If Cursor gives no answer, the driver archives the agent by the id it saved and says the outcome is unknown. If Cursor shows no such agent yet, a late create isn't ruled out: the driver says so, and a later `stop` of that run archives the agent once Cursor shows it. |
+| `start` | Saves the run with a new agent id (`bc-<uuid>`) and its flags only, then `POST /v1/agents` with that `agentId`, the repository, the model and a prompt. The prompt names the ticket and the skill, and has the agent fetch the WizSkills release OpenWiz pins (`wizskills.lock`) and check its commit and tree before it follows the skill: Cursor's machine has none of your own skills. It answers once Cursor has created the agent, and only then saves the repository, ticket and skill a wake needs. If the helper or Cursor refuses the create, the run's files are removed. If Cursor gives no answer, the driver archives the agent by the id it saved and says the outcome is unknown. If Cursor shows no such agent yet, a late create isn't ruled out: the driver says so, and a later `stop` of that run archives the agent once Cursor shows it. The same holds when the helper refuses that cleanup. |
 | `wake` | While the agent's run is active, nothing: that agent is awake and reads the ticket itself. Otherwise `POST /v1/agents/{id}/runs`: a follow-up run on the same agent, with its conversation and workspace, which edits its own status note. A wake after `stop`, or on an archived agent, is refused. |
 | `stop` | Cancels the agent's latest run (`POST .../runs/{runId}/cancel`), then archives the agent (`POST /v1/agents/{id}/archive`). It never deletes an agent: archiving can be undone at cursor.com/agents. If Cursor doesn't confirm both, the answer says so and names the agent. |
 
