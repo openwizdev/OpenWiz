@@ -1,0 +1,37 @@
+# red, before the driver change: the new effort tests on the synthetic acpx, then the effort part of
+# the kit's start check (EF2's kit.py, at the head of its pull request) on this driver
+$ python3 -I adapters/openclaw/test_driver.py
+FAIL: test_an_effort_for_a_harness_it_cannot_set_it_for_is_refused_with_the_refusal_text (__main__.OpenClaw.test_an_effort_for_a_harness_it_cannot_set_it_for_is_refused_with_the_refusal_text) (harness='droid')
+AssertionError: Tuples differ: (1, 'send only those fields; never a login') != (1, "this host can't set effort: remove the e[82 chars]ult")
+FAIL: test_an_effort_for_a_harness_it_cannot_set_it_for_is_refused_with_the_refusal_text (__main__.OpenClaw.test_an_effort_for_a_harness_it_cannot_set_it_for_is_refused_with_the_refusal_text) (harness='opencode')
+AssertionError: Tuples differ: (1, 'send only those fields; never a login') != (1, "this host can't set effort: remove the e[82 chars]ult")
+FAIL: test_an_effort_for_a_harness_it_cannot_set_it_for_is_refused_with_the_refusal_text (__main__.OpenClaw.test_an_effort_for_a_harness_it_cannot_set_it_for_is_refused_with_the_refusal_text) (harness='zz-unknown-agent')
+AssertionError: Tuples differ: (1, 'send only those fields; never a login') != (1, "this host can't set effort: remove the e[82 chars]ult")
+FAIL: test_an_effort_for_a_harness_it_cannot_set_it_for_is_refused_with_the_refusal_text (__main__.OpenClaw.test_an_effort_for_a_harness_it_cannot_set_it_for_is_refused_with_the_refusal_text) (harness='gemini')
+AssertionError: Tuples differ: (1, 'send only those fields; never a login') != (1, "this host can't set effort: remove the e[82 chars]ult")
+FAIL: test_an_effort_out_of_shape_is_refused_before_acpx_runs (__main__.OpenClaw.test_an_effort_out_of_shape_is_refused_before_acpx_runs) (effort='Medium')
+AssertionError: Tuples differ: (1, 'the input needs exactly repository, ticket, skill, harness, model') != (1, 'effort is not valid')
+FAIL: test_an_effort_out_of_shape_is_refused_before_acpx_runs (__main__.OpenClaw.test_an_effort_out_of_shape_is_refused_before_acpx_runs) (effort='aaaaaaaaaaaaaaaaaaaaa')
+AssertionError: Tuples differ: (1, 'the input needs exactly repository, ticket, skill, harness, model') != (1, 'effort is not valid')
+FAIL: test_an_effort_out_of_shape_is_refused_before_acpx_runs (__main__.OpenClaw.test_an_effort_out_of_shape_is_refused_before_acpx_runs) (effort=7)
+AssertionError: Tuples differ: (1, 'the input needs exactly repository, ticket, skill, harness, model') != (1, 'effort is not valid')
+FAIL: test_an_effort_the_adapter_rejects_is_refused_and_starts_nothing (__main__.OpenClaw.test_an_effort_the_adapter_rejects_is_refused_and_starts_nothing)
+AssertionError: Tuples differ: (1, 'send only those fields; never a login') != (1, "this host can't set effort: remove the e[82 chars]ult")
+FAIL: test_the_effort_default_is_refused_before_acpx_runs (__main__.OpenClaw.test_the_effort_default_is_refused_before_acpx_runs)
+AssertionError: Tuples differ: (1, 'send only those fields; never a login') != (1, "this host can't set effort: remove the e[82 chars]ult")
+FAIL: test_the_effort_reaches_the_adapter_before_the_first_prompt_and_stays_on_a_wake (__main__.OpenClaw.test_the_effort_reaches_the_adapter_before_the_first_prompt_and_stays_on_a_wake) (harness='claude')
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+FAIL: test_the_effort_reaches_the_adapter_before_the_first_prompt_and_stays_on_a_wake (__main__.OpenClaw.test_the_effort_reaches_the_adapter_before_the_first_prompt_and_stays_on_a_wake) (harness='codex')
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+FAIL: test_version_lists_effort_and_the_readme_says_how_it_is_passed (__main__.OpenClaw.test_version_lists_effort_and_the_readme_says_how_it_is_passed)
+AssertionError: Tuples differ: (0, {[38 chars]nwiz:records v1'], 'can': ['start', 'wake', 'stop']}) != (0, {[38 chars]nwiz:records v1'], 'can': ['start', 'wake', 'stop', 'effort']})
+Ran 21 tests in 7.095s
+FAILED (failures=12)
+$ python3 -I kernel/driver-kit/kit.py --driver adapters/openclaw/driver --repo example/site --ticket 7 --harness claude --model claude-opus-5-5 (EF2 kit)
+exit 0
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 1
+pass wake: the run edited builder status note 1
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+note start: effort: not declared yet; required from EF14

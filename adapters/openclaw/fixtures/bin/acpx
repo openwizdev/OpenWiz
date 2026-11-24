@@ -6,6 +6,8 @@ GLOBAL = {'--agent', '--cwd', '--model', '--auth-policy', '--permission-policy',
           '--format'}
 DIAGNOSTIC = 'synthetic acpx diagnostic'
 MARKS = ('KIT_TEST', 'OPENWIZ_RUN', 'OPENWIZ_KIT_RUN')
+OPTIONS = {'claude-agent-acp': ('effort', ('low', 'medium', 'high', 'xhigh', 'max')),
+           'codex-acp': ('reasoning_effort', ('minimal', 'low', 'medium', 'high', 'xhigh'))}
 
 
 def say(text, code=0):
@@ -120,7 +122,9 @@ def owner(key, ttl):
             continue
         if os.environ.get('FAKE_TURNS'):
             with open(os.environ['FAKE_TURNS'], 'a') as f:
-                f.write('%d %s\n' % (os.getpid(), 'woken' if woken else 'first'))
+                config = update(lambda s: s[key].get('config', {}))
+                f.write('%d %s %s\n' % (os.getpid(), 'woken' if woken else 'first',
+                                        json.dumps(config, separators=(',', ':'))))
         while os.environ.get('FAKE_HOLD') and os.path.exists(os.environ['FAKE_HOLD']):
             if update(lambda s: (s[key]['cancels'], s[key]['open'])) != (cancels, True):
                 break
@@ -154,12 +158,14 @@ def main():
     if not rest:
         say('no command', 2)
     key = '%s %s' % (agent, os.path.abspath(opts.get('--cwd', '.')))
-    what = rest[1] if rest[:1] == ['sessions'] and len(rest) > 1 else rest[0] if rest[:1] == ['cancel'] else 'prompt'
+    what = rest[1] if rest[:1] == ['sessions'] and len(rest) > 1 else rest[0] if rest[:1] in (['cancel'], ['set']) \
+        else 'prompt'
     if what in os.environ.get('FAKE_ACPX_FAIL', '').split(','):
         say('authentication required', 1)
     if rest[:3] == ['sessions', 'new', '--name'] and len(rest) == 4:
         update(lambda s: s.update({key + ' ' + rest[3]: {'open': True, 'note': None, 'cancels': 0, 'queue': [],
-                                                         'owner': None, 'model': opts.get('--model', '-')}}))
+                                                         'owner': None, 'model': opts.get('--model', '-'),
+                                                         'config': {}}}))
         say('session ' + rest[3])
     if rest[:2] == ['sessions', 'close'] and len(rest) == 3:
         def close(s):
@@ -179,6 +185,20 @@ def main():
                 s[key + ' ' + rest[2]]['cancels'] += 1
         update(cancel)
         say('cancelled')
+    if rest[:2] == ['set', '-s'] and len(rest) == 5:
+        option = next((o for a, o in OPTIONS.items() if any(a in part for part in ran)), (None, ()))
+
+        def choose(s):
+            session = s.get(key + ' ' + rest[2])
+            if not session or not session['open']:
+                say('NO_SESSION: run sessions new first', 4)
+            if rest[3] != option[0]:
+                say('Unknown config option: ' + rest[3], 1)
+            if rest[4] not in option[1]:
+                say('Invalid value for config option %s: %s' % (rest[3], rest[4]), 1)
+            session['config'][rest[3]] = rest[4]
+        update(choose)
+        say('set')
     if len(rest) != 4 or rest[0] != '-s' or rest[2] != '--no-wait':
         say('unexpected arguments', 2)
     name, text = key + ' ' + rest[1], rest[3]
@@ -192,7 +212,8 @@ def main():
             env = {k: v for k, v in os.environ.items()
                    if not (os.environ.get('FAKE_CLEAN') and k.startswith(MARKS))}
             session['owner'] = subprocess.Popen(
-                [sys.executable, os.path.abspath(__file__), '--owner', name, opts.get('--ttl', '300')],
+                [sys.executable, os.path.abspath(__file__), '--owner', name, opts.get('--ttl', '300'),
+                 '--session-options', json.dumps(session.get('config', {}), separators=(',', ':'))],
                 start_new_session=True, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL).pid
     update(queue)
