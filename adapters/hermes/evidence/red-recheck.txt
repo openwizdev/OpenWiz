@@ -1,0 +1,50 @@
+# Red run (re-check R2, R6): python3 -I adapters/hermes/test_driver.py at 25f39ba1's driver and cleanup, with the re-check's two proofs. PATH is fixtures/bin, /usr/bin and /bin only. Process ids shown as <pid>.
+test_hermes_gets_only_the_environment_it_needs (__main__.Hermes.test_hermes_gets_only_the_environment_it_needs) ... FAIL
+test_cleanup_reads_no_process_before_it_knows_the_process_is_ours (__main__.Hermes.test_cleanup_reads_no_process_before_it_knows_the_process_is_ours) ... FAIL
+
+======================================================================
+FAIL: test_hermes_gets_only_the_environment_it_needs (__main__.Hermes.test_hermes_gets_only_the_environment_it_needs)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+    self.assertLessEqual(set(seen), CHILD_ENV_ALLOWED, 'a caller variable reached Hermes')
+AssertionError: {'OPENWIZ_KIT_RUN', 'LC_APPLICATION_SETTING', 'LANG', 'PATH', 'HOME', 'LC_ALL', 'OPENWIZ_RUN'} not less than or equal to {'OPENWIZ_KIT_RUN', 'PATH', 'LANG', 'HOME', 'LC_ALL', 'OPENWIZ_RUN'} : a caller variable reached Hermes
+
+======================================================================
+FAIL: test_cleanup_reads_no_process_before_it_knows_the_process_is_ours (__main__.Hermes.test_cleanup_reads_no_process_before_it_knows_the_process_is_ours)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+    self.assertEqual(strays, [], 'cleanup read a process before it knew the process was ours')
+AssertionError: Lists differ: ['/proc/<pid>/cmdline', '/proc/<pid>/cmdline', '/p[416 chars]ine'] != []
+
+First list contains 22 additional elements.
+First extra element 0:
+'/proc/<pid>/cmdline'
+
++ []
+- ['/proc/<pid>/cmdline',
+-  '/proc/<pid>/cmdline',
+-  '/proc/<pid>/cmdline',
+-  '/proc/<pid>/cmdline',
+-  '/proc/<pid>/cmdline',
+-  '/proc/<pid>/cmdline',
+-  '/proc/<pid>/cmdline',
+-  '/proc/<pid>/cmdline',
+-  '/proc/<pid>/cmdline',
+-  '/proc/<pid>/cmdline',
+-  '/proc/<pid>/cmdline',
+-  '/proc/<pid>/cmdline',
+-  '/proc/<pid>/cmdline',
+-  '/proc/<pid>/cmdline',
+-  '/proc/<pid>/stat',
+-  '/proc/<pid>/cmdline',
+-  '/proc/<pid>/stat',
+-  '/proc/<pid>/cmdline',
+-  '/proc/<pid>/stat',
+-  '/proc/<pid>/cmdline',
+-  '/proc/<pid>/stat',
+-  '/proc/<pid>/cmdline'] : cleanup read a process before it knew the process was ours
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.150s
+
+FAILED (failures=2)
