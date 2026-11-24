@@ -1,0 +1,17 @@
+The release job was cancelled at the old 25-minute limit.
+This merge takes the 40-minute limit from main without changing ticket code.
+
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/driver-kit/test_kit.py
+Ran 52 tests
+OK
+
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/driver-kit/test_hostkey.py
+Ran 25 tests
+OK
+
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/driver-kit/test_stubs.py
+Ran 3 tests
+OK
+
+$ cargo fmt --check
+OK
