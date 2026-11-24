@@ -1,6 +1,14 @@
 # OpenWiz 0.1.1 Linux rehearsal
 
-## November 24
+## November 24, second run
+
+The rerun used the same November 24 inputs listed below. The fresh Linux home passed the clean check. The private repository was created 5 seconds later, and the helper verified both Linux files after another 3 seconds. The installer activated the expected build and the CLI reported its sealed source. The local model list offered Claude Code.
+
+Cloning the private repository then exited 128 because Git could not obtain a GitHub username. The rehearsal environment had an authenticated GitHub CLI but omitted its Git credential helper. A read-only Git lookup succeeded after registering that helper during diagnosis. The run stopped before first-fleet setup. The heartbeat, builder, review and merge were unreached.
+
+Teardown finished 28 seconds after the clone failure. The final environment check passed, the private repository was archived with zero open issues or pull requests, and the crontab matched the saved baseline.
+
+## November 24, first run
 
 **Failed at first-fleet setup.** The corrected helper verified both Linux files. OpenWiz 0.1.1 installed and activated at the sealed source revision. GitHub's REST quota then ran out before the first fleet started.
 
