@@ -658,7 +658,7 @@ class Local(unittest.TestCase):
         return env, waits, models
 
     def test_usage_limit_waits_and_resumes_once_on_same_model(self):
-        reset_iso = '2026-11-24T17:35:20Z'  # 1795460120 = FAKE_NOW (1795460000) + 120s
+        reset_iso = '2026-11-23T18:55:20Z'  # 1795460120 = FAKE_NOW (1795460000) + 120s
         env, waits, models = self.limit_env([
             {'exit': 1, 'post_note': True,
              'line': 'Claude AI usage limit reached. Resets at %s (%s)' % (reset_iso, OPAQUE)},
@@ -696,7 +696,7 @@ class Local(unittest.TestCase):
         self.assertEqual(read(waits).splitlines(), ['140.0'])
 
     def test_wake_during_limit_wait_refuses_with_reset_time_and_stop_ends_wait(self):
-        reset_iso = '2026-11-24T17:35:20Z'
+        reset_iso = '2026-11-23T18:55:20Z'
         hold = os.path.join(self.folder, 'hold-wait')
         open(hold, 'w').close()
         env, waits, _ = self.limit_env([
@@ -738,7 +738,7 @@ class Local(unittest.TestCase):
             'claude synthetic-1 first', 'claude synthetic-1 woken', 'claude synthetic-1 woken'])
 
     def test_limit_beyond_six_hours_does_not_wait_and_first_turn_reports_limit(self):
-        far_iso = '2026-11-25T00:33:20Z'  # 1795460000 + 7*3600 = 1795485200
+        far_iso = '2026-11-24T01:53:20Z'  # 1795460000 + 7*3600 = 1795485200
         env, waits, _ = self.limit_env([
             {'exit': 1, 'post_note': True,
              'line': 'Claude AI usage limit reached. Resets at %s (%s)' % (far_iso, OPAQUE)},
@@ -760,7 +760,7 @@ class Local(unittest.TestCase):
         self.assertNotIn(OPAQUE, json.dumps(err))
 
         # First-turn check in start reports a usage limit with its reset time, while normal failures stay unchanged.
-        near_iso = '2026-11-24T17:35:20Z'
+        near_iso = '2026-11-23T18:55:20Z'
         env2, _, _ = self.limit_env([
             {'exit': 1, 'immediate': True,
              'line': 'Claude AI usage limit reached. Resets at %s (%s)' % (near_iso, OPAQUE)},
@@ -782,12 +782,12 @@ class Local(unittest.TestCase):
         spec = importlib.util.spec_from_loader('local', importlib.machinery.SourceFileLoader('local', DRIVER))
         drv = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(drv)
-        now = 1795460000.0  # 2026-11-24T17:33:20Z
+        now = 1795460000.0  # 2026-11-23T18:53:20Z
         self.assertTrue(hasattr(drv, 'detect_limit'), 'driver has no detect_limit')
         for text, expected_kind, expected_reset in (
             ('Claude AI usage limit reached|1795460120', 'limit', 1795460120.0),
             ('Rate limit exceeded. Try again in 2 minutes.', 'limit', now + 120.0),
-            ('You hit your usage limit; resets at 5:35pm UTC', 'limit', 1795460100.0),
+            ('You hit your usage limit; resets at 6:55pm UTC', 'limit', 1795460100.0),
             ('API Error: 529 Overloaded', 'overload', None),
             ('Ordinary syntax error on line 4', None, None),
         ):
