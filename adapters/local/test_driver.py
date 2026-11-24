@@ -26,7 +26,7 @@ NO_LSOF = ('driver: lsof could not run or failed, so the driver could not check 
            "run's output file open; it ended only the turns' process groups and the processes their "
            'supervisors recorded')
 PASS = ['pass version: openwiz:records v1, and the schema is driver v1',
-        'pass start: the run posted builder status note 1',
+        'pass start: the run posted builder status note 1; effort: medium reached a process the run started',
         'pass wake: the run edited builder status note 1',
         'pass stop: the run ended, and a wake after it is refused',
         'pass token: no login or token passed through the driver']
@@ -665,14 +665,16 @@ class Local(unittest.TestCase):
 
     def documented(self, help_file, listed):
         with open(os.path.join(HERE, 'fixtures', 'help', help_file)) as f:
-            return re.split(r',\s*(?:or\s+)?', re.search(listed, f.read()).group(1))
+            found = re.search(listed, f.read())
+        self.assertIsNotNone(found, '%s does not hold the CLI\'s own effort lines' % help_file)
+        return re.split(r',\s*(?:or\s+)?', found.group(1))
 
-    def test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused(self):
-        claude = self.documented('claude.txt', r'--effort: .*?Options: (.*?)\. ')
+    def test_every_level_each_cli_documents_reaches_it(self):
+        claude = self.documented('claude.txt', r'--effort <level> .*\n +\((.*?)\)')
         codex = self.documented('codex-exec.txt', r'model_reasoning_effort: .*?such as (.*?)\. ')
-        self.assertEqual((claude, codex), (['low', 'medium', 'high', 'xhigh', 'max', 'ultracode'],
+        self.assertEqual((claude, codex), (['low', 'medium', 'high', 'xhigh', 'max'],
                                            ['low', 'medium', 'high', 'xhigh', 'max', 'ultra']))
-        passed = [('claude', level) for level in claude if level != 'ultracode'] + [('codex', l) for l in codex]
+        passed = [('claude', level) for level in claude] + [('codex', l) for l in codex]
         for harness, level in passed:
             with self.subTest(harness=harness, level=level):
                 code, out = self.start(harness, repository='example/quick', effort=level)

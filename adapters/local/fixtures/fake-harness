@@ -10,7 +10,7 @@ HELP = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'help', name + 
 
 def documented():
     with open(HELP) as f:
-        listed = re.search(r'Options: (.*?)\. ' if name == 'claude' else r'such as (.*?)\. ', f.read()).group(1)
+        listed = re.search(r'--effort <level> .*\n +\((.*?)\)' if name == 'claude' else r'such as (.*?)\. ', f.read()).group(1)
     return re.split(r',\s*(?:or\s+)?', listed)
 
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import contextlib, importlib.machinery, importlib.util, json, os, shlex, shutil, signal, socket, subprocess, sys, tempfile, threading, time
+import contextlib, importlib.machinery, importlib.util, json, os, re, shlex, shutil, signal, socket, subprocess, sys, tempfile, threading, time
 
 sys.dont_write_bytecode = True
 USAGE = '''usage: test_harnesses.py            the planted rows, then every row in adapters/local/harnesses/
@@ -22,7 +22,7 @@ STUBS = ('claude codex cursor-agent agent pi opencode copilot goose gemini kimi 
 CANT_SET_EFFORT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster "
                    "to run it at the host's default")
 PASS = ['pass version: openwiz:records v1, and the schema is driver v1',
-        'pass start: the run posted builder status note 1',
+        'pass start: the run posted builder status note 1; effort: medium reached a process the run started',
         'pass wake: the run edited builder status note 1',
         'pass stop: the run ended, and a wake after it is refused',
         'pass token: no login or token passed through the driver']
@@ -184,6 +184,14 @@ class RunningHubOutsideEveryRun:
             p.wait()
 
 
+def effort_cell(said):
+    flags = [s.split() for s in re.findall(r'`(-[^` ]* [a-z][a-z0-9-]*)`', said)]
+    words = list(dict.fromkeys(word for flag, word in flags if flag == flags[0][0]))
+    if not words or '<' in said:
+        return "can't (its README says none)" if said == 'none' else said
+    return '`%s <level>`, for %s' % (flags[0][0], ' and '.join([', '.join(words[:-1])] * (len(words) > 1) + words[-1:]))
+
+
 class ThrowawayMachine:
 
     def __init__(self, rows, name, program=None, fake=None, mode=None, names=(), clone_says=None):
@@ -194,6 +202,7 @@ class ThrowawayMachine:
                            ('../../kernel', os.path.join(HERE, '..', '..', 'kernel'))):
             os.symlink(os.path.abspath(real), os.path.join(checkout, link))
         self.driver_path = os.path.join(checkout, 'driver')
+        self.readmes = os.path.join(HERE, 'README.md'), os.path.join(rows, name, 'README.md')
         self.name, self.state, self.record = name, os.path.join(self.folder, 'state'), os.path.join(self.folder, 'rec')
         stubs, binary, repo = (os.path.join(self.folder, d) for d in ('stubs', 'bin', 'repos/example/site/docs/agents'))
         for d in (stubs, binary, repo):
@@ -318,12 +327,32 @@ class ThrowawayMachine:
         return code == 1 and kit.invalid(out, ERROR) is None and says(out) and \
             (self.runs(), len(self.records())) == before
 
+    def stage_effort(self):
+        said = []
+        for readme in self.readmes:
+            with open(readme) as f:
+                said.append(next(line for line in f.read().splitlines() if line.startswith('Effort: ')))
+        with open(os.path.join(os.path.dirname(self.driver_path), 'README.md'), 'w') as f:
+            f.write('%s\n\n| Harness | Effort |\n| --- | --- |\n| `%s` | %s |\n' % (
+                said[0], self.name, effort_cell(said[1][len('Effort: '):])))
+
     def kit(self):
+        self.stage_effort()
         p = subprocess.run([sys.executable, '-I', os.path.join(KIT_DIR, 'kit.py'), '--driver', self.driver_path,
                             '--repo', 'example/site', '--ticket', '7', '--harness', self.name, '--model', 'synthetic-1',
                             '--tracker', self.tracker, '--wait', '15'], env=self.env, capture_output=True, text=True,
                            timeout=300)
         return p.stdout.splitlines()
+
+
+def passes(name, row):
+    if isinstance(row['effort'], str):
+        effort = 'refused for %s with the refusal text, as the README says' % name
+    elif 'medium' in row['effort']:
+        return PASS
+    else:
+        effort = 'refused medium with the refusal text, a word its README does not list for %s' % name
+    return [PASS[0], PASS[1].partition('; effort: ')[0] + '; effort: ' + effort] + PASS[2:]
 
 
 def until(ready, wait=5):
@@ -492,7 +521,7 @@ def check(rows, name):
         with ThrowawayMachine(rows, name, row['program'], fake, next(iter(row['modes'])), sorted(names)) as env:
             check_precheck(env, row)
             lines = env.kit()
-            if lines != PASS:
+            if lines != passes(name, row):
                 raise Fail('kit', next((x for x in lines if not x.startswith('pass ')),
                                        'it gave %d lines' % len(lines)))
             check_turns(env, row)

@@ -1,0 +1,19 @@
+$ python3 -I adapters/local/test_driver.py -k documents
+test_every_level_each_cli_documents_reaches_it (__main__.Local.test_every_level_each_cli_documents_reaches_it) ... FAIL
+
+======================================================================
+FAIL: test_every_level_each_cli_documents_reaches_it (__main__.Local.test_every_level_each_cli_documents_reaches_it)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/local/test_driver.py", line 673, in test_every_level_each_cli_documents_reaches_it
+    claude = self.documented('claude.txt', r'--effort <level> .*\n +\((.*?)\)')
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<checkout>/adapters/local/test_driver.py", line 669, in documented
+    self.assertIsNotNone(found, '%s does not hold the CLI\'s own effort lines' % help_file)
+AssertionError: unexpectedly None : claude.txt does not hold the CLI's own effort lines
+
+----------------------------------------------------------------------
+Ran 1 test in 0.004s
+
+FAILED (failures=1)
+exit 1
