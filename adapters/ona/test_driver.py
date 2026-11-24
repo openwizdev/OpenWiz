@@ -349,6 +349,64 @@ class Driver(unittest.TestCase):
                             'GetEnvironment': (200, b'null', False)}
         self.refused_with('stop', run)
 
+    def test_a_200_connect_error_object_is_a_refusal_never_a_write(self):
+        for envelope in ({'code': 'unavailable', 'message': 'synthetic-host-text'}, {'code': 'internal'},
+                         {'code': 'not_found', 'message': 'synthetic-host-text', 'details': []}, {'code': 7}):
+            self.host.faults = {}
+            run = self.started()
+            env = self.host.runs[run]['environment']
+            self.host.faults = {'SendToAgentExecution': (200, envelope, False)}
+            out = self.refused_with('wake', run)
+            self.assertEqual(out['error'], 'run %s: Ona answered 200 to POST %sSendToAgentExecution with an error '
+                                            'object' % (run, AGENT))
+            self.host.faults = {'StopAgentExecution': (200, envelope, False)}
+            self.refused_with('stop', run, [ENVIRONMENT + 'StopEnvironment'])
+            self.assertEqual(self.host.runs[run]['phase'], 'PHASE_WAITING_FOR_INPUT', envelope)
+            self.host.faults = {'StopEnvironment': (200, envelope, False)}
+            out = self.refused_with('stop', run)
+            self.assertIn(env, out['error'])
+            self.assertEqual(self.host.environments[env], 'ENVIRONMENT_PHASE_RUNNING', envelope)
+            self.host.faults = {'SendToAgentExecution': (200, envelope, False)}
+            self.host.runs.clear()
+            code, out = self.driver('start', START)
+            [run] = self.host.runs
+            self.assertEqual((code, out), (1, {
+                'error': 'run %s may have started: Ona answered 200 to POST %sSendToAgentExecution with an error '
+                         'object' % (run, AGENT),
+                'next': 'stop run %s with `driver stop`, then start again' % run}), envelope)
+            self.assertNotIn('synthetic-host-text', json.dumps(out))
+
+    def test_an_ambiguous_start_that_names_a_run_keeps_its_id_and_sends_no_prompt(self):
+        for answer in ((201, {'agentExecutionId': UUID_ONE}),
+                       (503, {'code': 'unavailable', 'agentExecutionId': UUID_ONE}),
+                       (200, {'code': 'internal', 'message': 'synthetic-host-text', 'agentExecutionId': UUID_ONE})):
+            self.host.faults = {'StartAgent': answer + (False,)}
+            self.host.requests.clear()
+            code, out = self.driver('start', START)
+            self.assertEqual(code, 1, answer)
+            self.assertTrue(out['error'].startswith('run %s may have started: Ona answered %d to POST %sStartAgent'
+                                                    % (UUID_ONE, answer[0], AGENT)), out)
+            self.assertEqual(out['next'], 'stop run %s with `driver stop`, then start again' % UUID_ONE)
+            self.assertNotIn('synthetic-host-text', json.dumps(out))
+            self.assertEqual(self.host.calls(), [AGENT + 'StartAgent'], answer)
+        for answer in ((201, {'agentExecutionId': 'not-a-uuid'}), (201, {'agentExecutionId': 7}), (201, [UUID_ONE])):
+            self.host.faults = {'StartAgent': answer + (False,)}
+            code, out = self.driver('start', START)
+            self.assertEqual((code, out['next']), (1, 'look for a new OpenWiz run in Ona, stop it, then retry'))
+
+    def test_an_environment_ona_answers_not_found_after_a_refused_stop_counts_as_stopped(self):
+        run = self.started()
+        refused = (400, {'code': 'failed_precondition'}, False)
+        self.host.faults = {'StopEnvironment': refused,
+                            'GetEnvironment': (404, {'code': 'not_found', 'message': 'synthetic'}, False)}
+        self.host.requests.clear()
+        self.assertEqual(self.driver('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
+        self.assertEqual(self.host.calls()[-2:], [ENVIRONMENT + 'StopEnvironment', ENVIRONMENT + 'GetEnvironment'])
+        for gone in ((404, {}), (404, {'code': 'unimplemented'}), (404, b'<html>gone</html>'),
+                     (200, {'code': 'not_found'})):
+            self.host.faults = {'StopEnvironment': refused, 'GetEnvironment': gone + (False,)}
+            self.refused_with('stop', run)
+
     def test_inputs_off_the_schema_are_refused_before_any_request(self):
         for bad in (dict(START, token='kit-probe-not-a-login'), {k: v for k, v in START.items() if k != 'model'},
                     dict(START, ticket='7'), dict(START, repository='https://example.com/x'),
