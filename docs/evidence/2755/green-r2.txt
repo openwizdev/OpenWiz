@@ -1,0 +1,7 @@
+test_post_reaches_only_the_fake_gh_with_one_comment_per_run_and_one_wizmarket_pull_request (__main__.Heads.test_post_reaches_only_the_fake_gh_with_one_comment_per_run_and_one_wizmarket_pull_request) ... ok
+test_a_post_retried_after_a_lost_write_finishes_it_without_a_second_kit_run_comment_or_branch (__main__.Heads.test_a_post_retried_after_a_lost_write_finishes_it_without_a_second_kit_run_comment_or_branch) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 125.193s
+
+OK

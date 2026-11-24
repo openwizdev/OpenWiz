@@ -1,0 +1,4 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/local/harnesses/kilo/test_row.py
+# HR1 at a25493fd, before its revision 4 (signed_out, login_command); agent-CLI stubs first on PATH
+fail kilo test_row.py: not signed in: a D3 error saying so, whose next names kilo auth login
+exit 1

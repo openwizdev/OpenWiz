@@ -1,0 +1,27 @@
+test_a_lost_comment_answer_is_found_on_resume_and_a_closed_earlier_pull_request_is_never_adopted (__main__.Heads.test_a_lost_comment_answer_is_found_on_resume_and_a_closed_earlier_pull_request_is_never_adopted) ... FAIL
+test_a_post_retried_after_a_lost_write_finishes_it_without_a_second_kit_run_comment_or_branch (__main__.Heads.test_a_post_retried_after_a_lost_write_finishes_it_without_a_second_kit_run_comment_or_branch) ... FAIL
+
+======================================================================
+FAIL: test_a_lost_comment_answer_is_found_on_resume_and_a_closed_earlier_pull_request_is_never_adopted (__main__.Heads.test_a_lost_comment_answer_is_found_on_resume_and_a_closed_earlier_pull_request_is_never_adopted)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_heads.py", line 375, in test_a_lost_comment_answer_is_found_on_resume_and_a_closed_earlier_pull_request_is_never_adopted
+    self.assertEqual(self.heads(['fixture-five'], *extra[:-1])[1], ''.join([
+AssertionError: '' != 'would finish the publish an earlier --pos[1156 chars]et\n'
+Diff is 1229 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_a_post_retried_after_a_lost_write_finishes_it_without_a_second_kit_run_comment_or_branch (__main__.Heads.test_a_post_retried_after_a_lost_write_finishes_it_without_a_second_kit_run_comment_or_branch)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_heads.py", line 343, in test_a_post_retried_after_a_lost_write_finishes_it_without_a_second_kit_run_comment_or_branch
+    self.assertEqual(self.heads(hosts, *extra)[1], 'would finish the publish an earlier --post left unfinished:\n'
+AssertionError: '' != 'would finish the publish an earlier --pos[67 chars]et\n'
++ would finish the publish an earlier --post left unfinished:
++ would open a pull request on openwizdev/WizMarket
+
+
+----------------------------------------------------------------------
+Ran 2 tests in 63.331s
+
+FAILED (failures=2)

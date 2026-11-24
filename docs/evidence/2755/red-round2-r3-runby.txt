@@ -1,0 +1,26 @@
+# Variant run: the same test without the appended-text plant, so the changed run-by login is the first new plant.
+test_a_lost_comment_answer_is_found_on_resume_and_a_closed_earlier_pull_request_is_never_adopted (__main__.Heads.test_a_lost_comment_answer_is_found_on_resume_and_a_closed_earlier_pull_request_is_never_adopted) ... FAIL
+
+======================================================================
+FAIL: test_a_lost_comment_answer_is_found_on_resume_and_a_closed_earlier_pull_request_is_never_adopted (__main__.Heads.test_a_lost_comment_answer_is_found_on_resume_and_a_closed_earlier_pull_request_is_never_adopted)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_heads.py", line 370, in test_a_lost_comment_answer_is_found_on_resume_and_a_closed_earlier_pull_request_is_never_adopted
+    self.assertEqual(self.heads(['fixture-five'], *extra)[:2], (2, ''))
+AssertionError: Tuples differ: (0, 'finishing the publish an earlier --po[145 chars]1\n') != (2, '')
+
+First differing element 0:
+0
+2
+
++ (2, '')
+- (0,
+-  'finishing the publish an earlier --post left unfinished\n'
+-  'posted https://github.com/openwizdev/OpenWiz/pull/201#issuecomment-901\n'
+-  'posted https://github.com/openwizdev/WizMarket/pull/41\n')
+
+----------------------------------------------------------------------
+Ran 1 test in 11.411s
+
+FAILED (failures=1)
+exit 1

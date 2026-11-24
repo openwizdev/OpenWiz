@@ -1,0 +1,33 @@
+{
+  "kind": "facts",
+  "about": "A valid agent-route report with the four plain sections, a valid facts line and the marker last.",
+  "input": {
+    "number": 9120,
+    "author": "synthetic-user",
+    "pull_request": false,
+    "title": "Plan page hides the approve button on a narrow phone",
+    "body": "What I ran:\nopenwiz ls\n\nWhat happened:\nOn a 360-pixel screen the approve button sits under the footer.\n\nWhat I expected:\nThe approve button stays above the footer.\n\nLog (secrets removed):\n    [path removed]: layout overflow\n    token=[secret removed]\n\nOpenWiz feedback facts {\"v\":1,\"kind\":\"bug\",\"area\":\"launch-fleet\",\"openwiz\":\"0.1.1\",\"wizskills\":\"0.4.0\",\"skill\":\"feedback@0.4.0\",\"os\":\"linux\",\"arch\":\"x86_64\",\"host\":\"cloudroom\",\"driver\":\"cloudroom\",\"harness\":\"claude-code\",\"model\":\"claude-opus-5-5\",\"log_lines\":2,\"redactions\":2}\n\nOpenWiz feedback operation 3f2a9c4e1b7d40a6958e0c2d7b1a4f63",
+    "labels": [],
+    "milestone": null,
+    "comments": []
+  },
+  "expect": {
+    "is_report": true,
+    "facts": {
+      "v": 1,
+      "kind": "bug",
+      "area": "launch-fleet",
+      "openwiz": "0.1.1",
+      "wizskills": "0.4.0",
+      "skill": "feedback@0.4.0",
+      "os": "linux",
+      "arch": "x86_64",
+      "host": "cloudroom",
+      "driver": "cloudroom",
+      "harness": "claude-code",
+      "model": "claude-opus-5-5",
+      "log_lines": 2,
+      "redactions": 2
+    }
+  }
+}

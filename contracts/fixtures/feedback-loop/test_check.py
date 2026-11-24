@@ -159,6 +159,143 @@ class PlantedBreaks(unittest.TestCase):
         self.refused(template('          required: true\n', '          required: true\n' + second),
                      'template: the public-words checkbox must confirm exactly the approved confirmation')
 
+    def test_the_template_includes_optional_version_and_setup_fields(self):
+        form = check.parse_yaml((ROOT / '.github/ISSUE_TEMPLATE/feedback.yml').read_text(encoding='utf-8'))
+        ids = [(f.get('id'), f.get('type'), f.get('validations', {}).get('required') is True) for f in form['body']]
+        self.assertEqual(ids, [
+            (None, 'markdown', False),
+            ('what-happened', 'textarea', True),
+            ('expected', 'textarea', True),
+            ('steps', 'textarea', False),
+            ('version', 'input', False),
+            ('setup', 'input', False),
+            ('public-words', 'checkboxes', False),
+        ])
+        self.refused(template('    id: version\n', '    id: os-version\n'),
+                     "template: the template fields must be exactly "
+                     "[{'type': 'markdown', 'id': None, 'required': False}, "
+                     "{'type': 'textarea', 'id': 'what-happened', 'required': True}, "
+                     "{'type': 'textarea', 'id': 'expected', 'required': True}, "
+                     "{'type': 'textarea', 'id': 'steps', 'required': False}, "
+                     "{'type': 'input', 'id': 'version', 'required': False}, "
+                     "{'type': 'input', 'id': 'setup', 'required': False}, "
+                     "{'type': 'checkboxes', 'id': 'public-words', 'required': True}], "
+                     "found [{'type': 'markdown', 'id': None, 'required': False}, "
+                     "{'type': 'textarea', 'id': 'what-happened', 'required': True}, "
+                     "{'type': 'textarea', 'id': 'expected', 'required': True}, "
+                     "{'type': 'textarea', 'id': 'steps', 'required': False}, "
+                     "{'type': 'input', 'id': 'os-version', 'required': False}, "
+                     "{'type': 'input', 'id': 'setup', 'required': False}, "
+                     "{'type': 'checkboxes', 'id': 'public-words', 'required': True}]")
+
+    def _replace_facts_line(self, new_line):
+        def edit(d):
+            lines = d['input']['body'].split('\n')
+            lines[-3] = new_line
+            d['input']['body'] = '\n'.join(lines)
+        return case('report-with-facts', edit)
+
+    def _expect_facts_refused(self, edit):
+        found = planted(edit)
+        self.assertEqual(len(found), 2, found)
+        self.assertTrue(found[0].startswith('report-with-facts.json: facts is None, the case expects '), found[0])
+        self.assertEqual(found[1], 'fixtures: no facts case')
+
+    def test_facts_line_refuses_unknown_key(self):
+        self._expect_facts_refused(
+            self._replace_facts_line('OpenWiz feedback facts {"v":1,"extra":"bad"}'))
+
+    def test_facts_line_refuses_repeated_key(self):
+        self._expect_facts_refused(
+            self._replace_facts_line('OpenWiz feedback facts {"v":1,"kind":"bug","kind":"idea"}'))
+
+    def test_facts_line_refuses_wrong_key_order(self):
+        self._expect_facts_refused(
+            self._replace_facts_line('OpenWiz feedback facts {"v":1,"area":"cli","kind":"bug"}'))
+
+    def test_facts_line_refuses_value_outside_pattern_or_type(self):
+        bad_lines = [
+            'OpenWiz feedback facts {"v":2}',
+            'OpenWiz feedback facts {"v":true}',
+            'OpenWiz feedback facts {"kind":"bug"}',
+            'OpenWiz feedback facts {"v":1,"kind":"feature"}',
+            'OpenWiz feedback facts {"v":1,"area":"Launch_Fleet"}',
+            'OpenWiz feedback facts {"v":1,"openwiz":"0.1"}',
+            'OpenWiz feedback facts {"v":1,"skill":"0.4.0"}',
+            'OpenWiz feedback facts {"v":1,"os":"freebsd"}',
+            'OpenWiz feedback facts {"v":1,"arch":"riscv64"}',
+            'OpenWiz feedback facts {"v":1,"model":"claude opus"}',
+            'OpenWiz feedback facts {"v":1,"log_lines":41}',
+            'OpenWiz feedback facts {"v":1,"redactions":10000}',
+            'OpenWiz feedback facts {"v":1,"log_lines":true}',
+            'OpenWiz feedback facts {"v": 1}',
+            'OpenWiz feedback facts {"v":1,"host":"cl\u00f6ud"}',
+        ]
+        for line in bad_lines:
+            with self.subTest(line=line):
+                self._expect_facts_refused(self._replace_facts_line(line))
+
+    def test_facts_line_refuses_wrong_place(self):
+        def move_to_top(d):
+            lines = d['input']['body'].split('\n')
+            facts = lines[-3]
+            d['input']['body'] = facts + '\n\n' + '\n'.join(lines[:-4]) + '\n\n' + lines[-1]
+        self._expect_facts_refused(case('report-with-facts', move_to_top))
+
+        def no_blank_above(d):
+            lines = d['input']['body'].split('\n')
+            del lines[-4]
+            d['input']['body'] = '\n'.join(lines)
+        self._expect_facts_refused(case('report-with-facts', no_blank_above))
+
+        def no_marker(d):
+            lines = d['input']['body'].split('\n')
+            d['input']['labels'] = ['feedback']
+            d['input']['body'] = '\n'.join(lines[:-2])
+        self._expect_facts_refused(case('report-with-facts', no_marker))
+
+    def test_facts_line_refuses_two_facts_lines(self):
+        def duplicate(d):
+            lines = d['input']['body'].split('\n')
+            d['input']['body'] = 'OpenWiz feedback facts {"v":1}\n\n' + '\n'.join(lines)
+        self._expect_facts_refused(case('report-with-facts', duplicate))
+
+    def test_facts_line_refuses_line_over_1024_characters(self):
+        long_facts = 'OpenWiz feedback facts {"v":1,"openwiz":"0.0.' + ('0' * 1000) + '"}'
+        self.assertGreater(len(long_facts), 1024)
+        self._expect_facts_refused(self._replace_facts_line(long_facts))
+
+    def test_facts_line_refuses_private_looking_values(self):
+        bad_lines = [
+            'OpenWiz feedback facts {"v":1,"model":"192.168.1.1"}',
+            'OpenWiz feedback facts {"v":1,"model":"ghp_synthetic000000"}',
+            'OpenWiz feedback facts {"v":1,"model":"sk-synthetic000000"}',
+            'OpenWiz feedback facts {"v":1,"model":"thr_synthetic123"}',
+        ]
+        for line in bad_lines:
+            with self.subTest(line=line):
+                self._expect_facts_refused(self._replace_facts_line(line))
+
+    def test_facts_line_refuses_log_counts_without_log_section_or_with_wrong_count(self):
+        def strip_log_keep_log_lines(d):
+            d['input']['body'] = (
+                'What happened:\nThe approve button sits under the footer.\n\n'
+                'OpenWiz feedback facts {"v":1,"log_lines":0}\n\n'
+                'OpenWiz feedback operation 3f2a9c4e1b7d40a6958e0c2d7b1a4f63'
+            )
+        self._expect_facts_refused(case('report-with-facts', strip_log_keep_log_lines))
+
+        def strip_log_keep_redactions(d):
+            d['input']['body'] = (
+                'What happened:\nThe approve button sits under the footer.\n\n'
+                'OpenWiz feedback facts {"v":1,"redactions":0}\n\n'
+                'OpenWiz feedback operation 3f2a9c4e1b7d40a6958e0c2d7b1a4f63'
+            )
+        self._expect_facts_refused(case('report-with-facts', strip_log_keep_redactions))
+
+        self._expect_facts_refused(
+            self._replace_facts_line('OpenWiz feedback facts {"v":1,"log_lines":3,"redactions":2}'))
+
 
 if __name__ == '__main__':
     unittest.main()
