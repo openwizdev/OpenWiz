@@ -3,14 +3,14 @@
 Login: stays on your machine
 Effort: passed as each harness's own flag, as the table below says, on the start's turn and every wake's; any other harness or level is refused with driver v1's refusal text before anything is saved, cloned or started, and a start without an effort runs at the harness's default.
 
-| Harness | Effort (as each CLI's reference lists it, recorded in `fixtures/help/`) |
+| Harness | Effort (`claude`'s levels as its `--help` lists them, `codex`'s as its configuration reference does, since `codex exec --help` lists none; both recorded in `fixtures/help/`) |
 | --- | --- |
 | `claude` | `--effort <level>`, with `CLAUDE_CODE_EFFORT_LEVEL` set to the same level (it outranks the flag), for `low`, `medium`, `high`, `xhigh` and `max` |
 | `codex` | `codex exec -c model_reasoning_effort=<level>`, for `low`, `medium`, `high`, `xhigh`, `max` and `ultra` |
 | a harness row | its row's `effort` form ([harness-row.md](harness-row.md), section 4): the levels its row maps, as its README's `Effort:` line says; a row whose form is `none` can't |
 | any other harness | can't (the driver runs no other harness) |
 
-Both CLIs say the levels a model takes depend on the model, and Claude Code runs a level a model doesn't support at the highest one below it; the driver passes exactly the level it was sent and can't see a model's own list. `ultracode` is not passed: Claude Code documents it as a mode that runs at `xhigh`, not an effort level.
+Both CLIs say the levels a model takes depend on the model, and Claude Code runs a level a model doesn't support at the highest one below it; the driver passes exactly the level it was sent and can't see a model's own list. `ultracode` is not passed: `claude --help` doesn't list it, and Claude Code documents it as a mode that runs at `xhigh`, not an effort level.
 
 The default host: a [driver v1](../../kernel/driver.v1.md) that runs builders on the machine it runs on, your computer or a VPS, with the harnesses you have already signed into. One Python file, standard library only. **Platforms:** Linux and macOS, Python 3.9 or later (it finds a run's processes through `/proc` on Linux, and through each turn's process group, `ps`'s process table and `lsof`'s list of processes writing to the run's log on macOS, never another process's environment). On macOS, a process that leaves its turn's group, closes or redirects its output (as a daemon does), and is orphaned before the supervisor's next look is out of reach of `stop`. If `lsof` can't run there, or fails other than by finding nothing, macOS uses only the turn groups and the processes the supervisors recorded: a detached worker they never recorded can survive `stop`, even while it holds the log open, and `stop` says on stderr that it could not check the run's output file.
 
