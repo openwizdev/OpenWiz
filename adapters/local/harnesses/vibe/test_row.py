@@ -10,6 +10,8 @@ ROWS = os.path.dirname(HERE)
 with open(os.path.join(HERE, 'row.json')) as f:
     ROW = json.load(f)
 MODE = next(iter(ROW['modes']))
+CANT_SET_EFFORT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster "
+                   "to run it at the host's default")
 
 
 def machine():
@@ -38,9 +40,13 @@ def both_diagnostic_lines_read_as_signed_out():
     return all(th.local.signed_out_by_row(ROW, line) for line in lines) and not th.local.signed_out_by_row(ROW, quoted)
 
 
-def off_refused():
+def every_effort_refused_starting_nothing():
+    return all(machine_refuses(level) for level in ('low', 'medium', 'high', 'xhigh', 'max', 'off'))
+
+
+def machine_refuses(level):
     with machine() as env:
-        return env.start_refused_starting_nothing(lambda out: out['next'] == th.CANT_SET_EFFORT, effort='off',
+        return env.start_refused_starting_nothing(lambda out: out['next'] == CANT_SET_EFFORT, effort=level,
                                                   FAKE_CLI_RECORD_ONLY='1')
 
 
@@ -58,7 +64,7 @@ def pattern_reads_the_entry_id_not_a_nested_one():
 def main():
     ok = True
     for check in (not_installed, a_history_quoting_the_diagnostics_still_starts, both_diagnostic_lines_read_as_signed_out,
-                  off_refused, pattern_reads_the_entry_id_not_a_nested_one):
+                  every_effort_refused_starting_nothing, pattern_reads_the_entry_id_not_a_nested_one):
         passed = check()
         print('%s %s' % ('pass' if passed else 'fail', check.__name__.replace('_', ' ')))
         ok = ok and passed

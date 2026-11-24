@@ -1,0 +1,9 @@
+Red run for review finding R2: Vibe gives high, xhigh and max the same thinking budget on some models without saying so, so the row must declare effort none and refuse every explicit effort, starting nothing. row.json still maps low to max, so those starts are taken. 40 no-op stubs for the known agent CLIs were first on PATH; no real agent CLI ran.
+
+$ python3 -I adapters/local/harnesses/vibe/test_row.py
+pass not installed
+pass a history quoting the diagnostics still starts
+pass both diagnostic lines read as signed out
+fail every effort refused starting nothing
+pass pattern reads the entry id not a nested one
+exit 1
