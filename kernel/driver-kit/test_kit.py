@@ -102,6 +102,29 @@ HOST_NAME = {'type': 'string', 'pattern': '^(?=.{1,40}$)[a-z0-9]+(-[a-z0-9]+)*$'
 CONTRACT_FORMATS = ['token=', 'key=', 'secret=', 'password=', 'sig=', 'password:', 'Bearer', 'gh?_', 'github_pat_',
                     'AKIA', 'xox?-', 'sk-']
 
+LOCAL = os.path.join(REPO, 'adapters', 'local', 'driver')
+KIMI = 'https://github.com/MoonshotAI/kimi-code/blob/9a82686b0e91c532f4d49da0bc088a0eac9bdede/docs/en/'
+PI = 'https://github.com/badlogic/pi-mono/blob/8209929fb553e7a8c91dc0894569f9ec43dd201f/packages/coding-agent/docs/'
+OPENCODE = ('https://github.com/anomalyco/opencode/blob/6d04312b71ac33e7c150234d7087da01388ff2ab/services/site/src/'
+            'docs/v1/content/')
+KILO = 'https://github.com/Kilo-Org/kilocode/blob/bfdec5496922452222223c01b4cc6c89305b0279/'
+CRUSH = 'https://github.com/charmbracelet/catwalk/blob/v3.2.9/internal/providers/configs/'
+REAL_MODELS = {
+    'kimi-code/kimi-for-coding': KIMI + 'reference/kimi-command.md#L127',
+    'kimi-code/kimi-for-coding-highspeed': KIMI + 'configuration/config-files.md#L50',
+    'azure/gpt-5.4': PI + 'providers.md#L140',
+    'openrouter/typesafe/jev-1.13': PI + 'codemode.md#L95',
+    'anthropic/claude-sonnet-5-5': OPENCODE + 'commands.mdx#L26',
+    'openrouter/google/gemini-3.8-flash': OPENCODE + 'troubleshooting.mdx#L239',
+    'openrouter/anthropic/claude-sonnet-4-20250514': KILO + 'packages/kilo-docs/pages/ai-providers/openrouter.md#L55',
+    'openrouter/openai/gpt-5': KILO + 'specs/v2/config.md#L261',
+    'openrouter/anthropic/claude-sonnet-4.6': CRUSH + 'openrouter.json#L7',
+    'openrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free': CRUSH + 'openrouter.json#L2145',
+    'fireworks/accounts/fireworks/models/nemotron-lightning-3p5-30b-a3b': CRUSH + 'fireworks.json#L337',
+}
+BAD_MODELS = ['/x', 'x/', 'x//y', 'x/../y', 'x/./y', 'x/ /y', 'x/' + 'm' * 99, '..', 'x/.y', 'x/-y',
+              'https://host.example/x', 'x/y\n', 'x\\y']
+
 
 def started_at(pid):
     with open('/proc/%s/stat' % pid) as f:
@@ -250,6 +273,88 @@ class Kit(unittest.TestCase):
                 rel = os.path.relpath(script, os.path.realpath(os.path.dirname(driver)))
                 self.assertEqual((code, out), (1, PASS[:4] + ['fail token: the file %s, which a process of the driver '
                                                              'ran, %s' % (rel, SCRIPT)]))
+
+    def test_a_relative_script_without_a_prefix_or_behind_a_decoy_is_scanned_on_linux_and_macos(self):
+        macos = {'PATH': NO_PROC + os.pathsep + self.env['PATH'], 'NO_PROC_PYTHON': sys.executable}
+        cases = {'key-runtime-relative-spaced': ('shared scripts', 'reader.py'),
+                 'key-runtime-decoy-run': ('y', 'reader.py')}
+        for name, script in cases.items():
+            driver = os.path.join(FIXTURES, 'planted', name, 'driver')
+            for python, env in ((sys.executable, {}), (os.path.join(NO_PROC, 'python3'), macos)):
+                with self.subTest(name, python=python):
+                    self.tearDown()
+                    self.setUp()
+                    env = dict(env, PATH=NO_PROC + os.pathsep + self.env['PATH']) if env else {}
+                    code, out, _ = self.keyed(driver, python=python, **env)
+                    path = os.path.realpath(os.path.join(self.folder, 'state', *script))
+                    rel = os.path.relpath(path, os.path.realpath(os.path.dirname(driver)))
+                    self.assertEqual((code, out), (1, PASS[:4] + ['fail token: the file %s, which a process of the '
+                                                                 'driver ran, %s' % (rel, SCRIPT)]))
+
+    def test_a_child_that_lives_only_during_one_call_is_seen_for_each_of_start_wake_and_stop(self):
+        macos = {'PATH': NO_PROC + os.pathsep + self.env['PATH'], 'NO_PROC_PYTHON': sys.executable}
+        driver = os.path.join(FIXTURES, 'planted', 'key-runtime-one-call', 'driver')
+        for call in ('start', 'wake', 'stop'):
+            for python, env in ((sys.executable, {}), (os.path.join(NO_PROC, 'python3'), macos)):
+                with self.subTest(call, python=python):
+                    self.tearDown()
+                    self.setUp()
+                    env = dict(env, PATH=NO_PROC + os.pathsep + self.env['PATH']) if env else {}
+                    code, out, _ = self.keyed(driver, python=python, KIT_ONE_CALL=call, **env)
+                    path = os.path.realpath(os.path.join(self.folder, 'state', 'one-call-reader.py'))
+                    rel = os.path.relpath(path, os.path.realpath(os.path.dirname(driver)))
+                    self.assertEqual((code, out), (1, PASS[:4] + ['fail token: the file %s, which a process of the '
+                                                                 'driver ran, %s' % (rel, SCRIPT)]))
+
+    @unittest.skipIf(os.geteuid() == 0, 'root lists every folder')
+    def test_a_relative_script_in_a_folder_the_kit_cannot_list_is_still_found_in_macos_text(self):
+        kit = module(os.path.join(HERE, 'kit.py'))
+        k = kit.Kit.__new__(kit.Kit)
+        k.lock, k.leaks = threading.RLock(), []
+        cwd = os.path.join(self.folder, 'unlisted')
+        os.makedirs(os.path.join(cwd, 'Shared Scripts'))
+        script = os.path.join(cwd, 'Shared Scripts', 'reader.py')
+        with open(script, 'w') as f:
+            f.write('\n')
+        os.chmod(cwd, 0o311)
+        self.addCleanup(os.chmod, cwd, 0o700)
+        self.assertEqual(list(k.text_files('python3 Shared Scripts/reader.py', cwd)), [script])
+        self.assertEqual(k.leaks, [])
+
+    def test_a_word_under_a_missing_folder_costs_one_lookup_in_macos_text(self):
+        kit = module(os.path.join(HERE, 'kit.py'))
+        k = kit.Kit.__new__(kit.Kit)
+        k.lock, k.leaks = threading.RLock(), []
+        looked, real = [], kit.os.path.exists
+        kit.os.path.exists = lambda path: looked.append(path) or real(path)
+        try:
+            found = list(k.text_files('python3 /nonexistent/openwiz/v1 ' + 'word ' * 500, self.folder))
+        finally:
+            kit.os.path.exists = real
+        self.assertEqual(found, [])
+        self.assertLessEqual(len(looked), 510, 'the search kept growing under a folder that does not exist')
+
+    @unittest.skipUnless(os.path.isdir('/proc/self'), 'reads /proc')
+    def test_a_live_marked_process_whose_folder_cannot_be_read_fails_the_check(self):
+        kit = module(os.path.join(HERE, 'kit.py'))
+        child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'])
+        self.addCleanup(child.wait)
+        self.addCleanup(child.kill)
+        k = kit.Kit.__new__(kit.Kit)
+        k.lock, k.leaks, k.mark = threading.RLock(), [], 'OPENWIZ_KIT_RUN=synthetic'
+        k.table = lambda: {str(child.pid): (os.getpid(), os.getuid(), [k.mark], [sys.executable, ''], 0, 0)}
+
+        def unreadable(pid, tries=kit.HIDDEN_TRIES):
+            raise OSError(5, 'Input/output error')
+        k.folder_of = unreadable
+        self.assertEqual(list(k.run_processes()), [])
+        self.assertEqual(k.leaks, ["the kit could not read a process of the driver's working folder, so it cannot "
+                                   "check it"])
+        child.kill()
+        child.wait()
+        k.leaks = []
+        self.assertEqual(list(k.run_processes()), [])
+        self.assertEqual(k.leaks, [], 'a process that has exited is skipped')
 
     def test_the_kit_trusts_only_its_own_interpreter_not_one_on_path(self):
         fake = os.path.join(self.folder, 'bin')
@@ -573,7 +678,7 @@ class Kit(unittest.TestCase):
                  json.dumps(dict(good, ticket=0)), json.dumps(dict(good, ticket='7')),
                  json.dumps(dict(good, ticket=True)), json.dumps(dict(good, repository='a/b/c')),
                  json.dumps(dict(good, skill='Build')), json.dumps(dict(good, skill='b' * 61)),
-                 json.dumps(dict(good, harness='/usr/bin/true')), json.dumps(dict(good, model='m' * 61)),
+                 json.dumps(dict(good, harness='/usr/bin/true')), json.dumps(dict(good, model='m' * 101)),
                  json.dumps(dict(good, model='m\n')), json.dumps([good]), 'not json',
                  json.dumps(good)[:-1] + ', "ticket": 8}']
         schema = kit.load_schema()['commands']['start']['input']
@@ -586,6 +691,37 @@ class Kit(unittest.TestCase):
                 p = subprocess.run([TEMPLATE, 'start'], input=case, env=self.env, capture_output=True, text=True,
                                    timeout=60)
                 self.assertEqual((p.returncode == 0), valid, p.stdout)
+
+    def model_start(self, model):
+        start = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'synthetic-none',
+                 'model': model}
+        sys.path.insert(0, HERE)
+        import kit
+        schema = kit.invalid(start, kit.load_schema()['commands']['start']['input'])
+        p = subprocess.run([LOCAL, 'start'], input=json.dumps(start), capture_output=True, text=True, timeout=60,
+                           env=dict(self.env, OPENWIZ_LOCAL_STATE=os.path.join(self.folder, 'local')))
+        return schema, p.returncode, json.loads(p.stdout)['error'], kit.holds_credential(model)
+
+    def test_real_provider_qualified_models_pass_the_schema_and_the_local_driver(self):
+        for model, source in REAL_MODELS.items():
+            with self.subTest(model, source=source):
+                self.assertEqual(self.model_start(model),
+                                 (None, 1, 'harness synthetic-none is not one this driver runs', False))
+
+    def test_bad_model_shapes_are_refused_by_the_schema_and_the_local_driver(self):
+        for model in BAD_MODELS:
+            with self.subTest(model):
+                schema, code, error, _ = self.model_start(model)
+                self.assertRegex(schema, '^model (does not match|has the wrong length)')
+                self.assertEqual((code, error), (1, 'model is not valid'))
+        self.assertEqual(self.model_start('m' * 100)[:3],
+                         (None, 1, 'harness synthetic-none is not one this driver runs'))
+
+    def test_a_credential_sent_as_a_provider_qualified_model_is_still_refused(self):
+        for model in ('s' + 'k-' + 'Synthetic0Model0Value00', 'openrouter/s' + 'k-' + 'Synthetic0Model0Value00'):
+            with self.subTest(model):
+                self.assertEqual(self.model_start(model)[1:],
+                                 (1, 'model looks like a credential, so nothing was saved or started', True))
 
 
 if __name__ == '__main__':

@@ -1,0 +1,34 @@
+$ python3 -I tools/github-app/test_agent_token.py -v FinalRound.test_a_mint_that_loses_its_folder_keeps_its_token_for_a_later_revoke
+test_a_mint_that_loses_its_folder_keeps_its_token_for_a_later_revoke (__main__.FinalRound.test_a_mint_that_loses_its_folder_keeps_its_token_for_a_later_revoke) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in N s
+
+OK
+$ python3 -I tools/github-app/test_agent_token.py
+Ran 76 tests in N s
+
+OK
+
+$ python3 -I tools/github-app/test_agent_token.py -v FinalRound.test_a_refused_emergency_delete_reports_kept_only_when_a_copy_is_findable
+test_a_refused_emergency_delete_reports_kept_only_when_a_copy_is_findable (__main__.FinalRound.test_a_refused_emergency_delete_reports_kept_only_when_a_copy_is_findable) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in N s
+
+OK
+$ python3 -I tools/github-app/test_agent_token.py -v FinalRound.test_a_mint_that_loses_its_folder_keeps_its_token_for_a_later_revoke
+test_a_mint_that_loses_its_folder_keeps_its_token_for_a_later_revoke (__main__.FinalRound.test_a_mint_that_loses_its_folder_keeps_its_token_for_a_later_revoke) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in N s
+
+OK
+$ python3 -I tools/github-app/test_agent_token.py
+Ran 77 tests in N s
+
+OK
+$ python3 -I tools/github-app/test_token_service.py
+Ran 11 tests in N s
+
+OK

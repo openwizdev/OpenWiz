@@ -1,0 +1,15 @@
+{
+  "host": "boat.dev",
+  "driver": "adapters/boat/driver",
+  "needs": ["boat", "gh"],
+  "signed_in": [
+    ["boat", "status", "--check"],
+    ["env", "GH_TELEMETRY=0", "gh", "config", "get", "-h", "github.com", "user"]
+  ],
+  "cost": "unknown",
+  "runs": [
+    {"harness": "claude", "model": "opus-5-5"},
+    {"harness": "codex", "model": "gpt-5.4-mini"}
+  ],
+  "wait": 900
+}

@@ -1,0 +1,11 @@
+{
+  "host": "local",
+  "driver": "adapters/local/driver",
+  "needs": ["claude", "gh"],
+  "signed_in": [
+    ["env", "GH_TELEMETRY=0", "gh", "config", "get", "-h", "github.com", "user"]
+  ],
+  "cost": "none",
+  "runs": [{"harness": "claude", "model": "claude-opus-5-5"}],
+  "wait": 900
+}

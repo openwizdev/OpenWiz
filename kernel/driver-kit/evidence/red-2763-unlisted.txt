@@ -1,0 +1,22 @@
+# red for openwizdev/openwiz#2763 (self-review finding): the first fix's folder-listing pruning drops a script in a folder the kit cannot list
+# env -u OPENWIZ_GITHUB_APP_KEY python3 -m unittest kernel/driver-kit/test_kit.py -k cannot_list (agent CLIs stubbed first on PATH)
+F
+======================================================================
+FAIL: test_a_relative_script_in_a_folder_the_kit_cannot_list_is_still_found_in_macos_text (kernel.driver-kit.test_kit.Kit.test_a_relative_script_in_a_folder_the_kit_cannot_list_is_still_found_in_macos_text)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/kernel/driver-kit/test_kit.py", line 298, in test_a_relative_script_in_a_folder_the_kit_cannot_list_is_still_found_in_macos_text
+    self.assertEqual(list(k.text_files('python3 Shared Scripts/reader.py', cwd)), [script])
+AssertionError: Lists differ: [] != ['/tmp/<tmp>/unlisted/Shared Scripts/reader.py']
+
+Second list contains 1 additional elements.
+First extra element 0:
+'/tmp/<tmp>/unlisted/Shared Scripts/reader.py'
+
+- []
++ ['/tmp/<tmp>/unlisted/Shared Scripts/reader.py']
+
+----------------------------------------------------------------------
+Ran 1 test in 0.028s
+
+FAILED (failures=1)

@@ -174,5 +174,11 @@ class Driver(unittest.TestCase):
         self.assertEqual((lines[login + 1], lines[login + 2][:35]), ('', "Effort: the host can't set it (Devi"))
 
 
+    def test_a_provider_qualified_model_passes_the_pattern_and_meets_devins_own_modes(self):
+        code, out = self.call('start', dict(START, model='kimi-code/kimi-for-coding'))
+        self.assertEqual((code, out['error']), (1, 'model is not a Devin mode'))
+        self.assertEqual(self.calls(), [])
+
+
 if __name__ == '__main__':
     unittest.main()

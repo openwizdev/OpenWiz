@@ -100,6 +100,9 @@ if sys.argv[1:2] == ['exec'] and 'openwiz-push-ok' in ' '.join(sys.argv) and os.
 if sys.argv[1:2] == [os.environ.get('STDERR_FOR')]:
     if os.environ['STDERR_HOW'] == 'code':
         print('Error: provider_not_configured (synthetic detail %%s)' %% os.environ['FAKE_MARKER'], file=sys.stderr)
+    elif os.environ['STDERR_HOW'] == 'signed-out':
+        print(json.dumps({'event': 'error', 'error': 'Synthetic: login expired', 'code': 'auth_failed'}), flush=True)
+        print('Error: provider_not_configured (synthetic detail %%s)' %% os.environ['FAKE_MARKER'], file=sys.stderr)
     else:
         print(json.dumps({'event': 'error', 'error': 'Synthetic failure', 'code': 'internal_error'}), flush=True)
         print('Synthetic: login expired, session ' + os.environ['FAKE_MARKER'], file=sys.stderr)
@@ -835,13 +838,16 @@ class Boat(unittest.TestCase):
         marker = 'sk-' + 'Synthetic0Host0Marker' + self.mark
         path = self.odd_boat()
         for cmd, how, says in (('new', 'code', 'Agents & Proxying'), ('prompt', 'code', 'Agents & Proxying'),
-                               ('new', 'mixed', 'sign in to boat'), ('prompt', 'mixed', 'sign in to boat')):
+                               ('new', 'mixed', 'sign in to boat'), ('prompt', 'mixed', 'sign in to boat'),
+                               ('new', 'signed-out', 'sign in to boat')):
             with self.subTest(cmd=cmd, how=how):
                 code, err = self.driver('start', REQUEST, PATH=path, STDERR_FOR=cmd, STDERR_HOW=how, FAKE_MARKER=marker)
                 self.assertEqual(code, 1, err)
                 self.assertIn(says, err['next'] if how == 'code' else json.dumps(err))
                 if how == 'code':
                     self.assertIn('provider_not_configured', err['error'])
+                else:
+                    self.assertNotIn('provider_not_configured', json.dumps(err))
                 self.assertNotIn(marker, json.dumps(err))
                 self.assertNotIn('Synthetic', json.dumps(err))
                 self.assertNotIn('running', self.sandboxes().values())
@@ -1021,6 +1027,13 @@ class Boat(unittest.TestCase):
             'pass wake: the run edited builder status note 1',
             'pass stop: the run ended, and a wake after it is refused',
             'pass token: no login or token passed through the driver']), p.stderr)
+
+    def test_a_provider_qualified_model_reaches_boat(self):
+        calls, prompts = os.path.join(self.folder, 'calls'), os.path.join(self.folder, 'prompts')
+        request = dict(REQUEST, harness='kimi', model='kimi-code/kimi-for-coding')
+        turns = self.start_and_wake(request, calls, prompts)[0]
+        self.assertEqual(turns[0][turns[0].index('--model') + 1], 'kimi-code/kimi-for-coding')
+
 
 if __name__ == '__main__':
     unittest.main()

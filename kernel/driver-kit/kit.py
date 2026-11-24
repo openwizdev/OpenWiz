@@ -12,6 +12,7 @@ import subprocess
 import sys
 import threading
 import time
+import unicodedata
 
 sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -156,6 +157,10 @@ def holds_credential(text):
 def started_at(pid):
     with open('/proc/%s/stat' % pid) as f:
         return int(f.read().rpartition(')')[2].split()[19])
+
+
+def folded(name):
+    return unicodedata.normalize('NFD', name).casefold()
 
 
 def shown(name, *values):
@@ -490,6 +495,9 @@ class Kit:
                         self.leak('a process of the driver hides its details, so the kit cannot check it')
                     continue
                 except OSError:
+                    if self.running(pid):
+                        self.leak("the kit could not read a process of the driver's working folder, so it cannot "
+                                  "check it")
                     continue
                 yield cmd[:-1], cwd
             return
@@ -518,20 +526,26 @@ class Kit:
                 self.leak('the kit could not resolve a file a process of the driver ran, so it cannot check it')
 
     def text_files(self, text, cwd):
-        words, i = text.split(' '), 1
-        while i < len(words):
-            pathlike = words[i].startswith(PATH_ARGUMENT)
-            found = next(((j, path) for j in range(len(words) if pathlike else i + 1, i, -1)
-                          for path in [os.path.join(cwd, os.path.expanduser(' '.join(words[i:j])))]
-                          if os.path.exists(path)), None)
-            if found:
-                if os.path.isfile(found[1]):
-                    yield found[1]
-                i = found[0]
-                continue
-            if pathlike:
+        words, listings = text.split(' '), {}
+        for i in range(1, len(words)):
+            resolved = False
+            for j in range(i + 1, len(words) + 1):
+                path = os.path.join(cwd, os.path.expanduser(' '.join(words[i:j])))
+                if os.path.exists(path):
+                    resolved = True
+                    if os.path.isfile(path):
+                        yield path
+                    continue
+                folder, name = os.path.split(path)
+                if folder not in listings:
+                    try:
+                        listings[folder] = [folded(n) for n in os.listdir(folder)]
+                    except OSError:
+                        listings[folder] = None if os.path.isdir(folder) else []
+                if listings[folder] is not None and not any(n.startswith(folded(name)) for n in listings[folder]):
+                    break
+            if not resolved and words[i].startswith(PATH_ARGUMENT):
                 self.leak('the kit could not resolve a file a process of the driver ran, so it cannot check it')
-            i += 1
 
     def _scan(self, canary):
         if canary:

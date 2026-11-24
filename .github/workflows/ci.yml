@@ -122,6 +122,7 @@ jobs:
           python3 -I kernel/records-kit/test_check.py
           python3 -I kernel/driver-kit/test_kit.py
           python3 -I kernel/driver-kit/test_hostkey.py
+          env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/driver-kit/test_stubs.py
           python3 -I adapters/local/test_driver.py
           python3 -I adapters/local/test_harnesses.py
           python3 -I adapters/boat/test_driver.py
@@ -132,6 +133,7 @@ jobs:
           python3 -I adapters/openclaw/test_driver.py
           python3 -I contracts/fixtures/feedback-loop/test_check.py
           python3 -I tools/bench/first-fleet/test_bench.py
+          python3 -I tools/ci-overload/test_supply.py
       - name: The live-check rig's tests
         if: matrix.part == 2
         run: |

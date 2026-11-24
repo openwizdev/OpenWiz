@@ -988,8 +988,7 @@ class Revoke(Helper):
         setups = {"no folder": lambda: None,
                   "empty folder": lambda: self.private.mkdir(mode=0o700),
                   "expired token": lambda: (self.minted().write_text(json.dumps(expired))),
-                  "not a token": lambda: (self.minted().write_text(json.dumps({"token": "a b"}))),
-                  "loose folder": lambda: (self.minted(), self.private.chmod(0o755))}
+                  "not a token": lambda: (self.minted().write_text(json.dumps({"token": "a b"})))}
         for name, setup in setups.items():
             with self.subTest(name):
                 shutil.rmtree(self.private, True)
@@ -998,6 +997,39 @@ class Revoke(Helper):
                 self.assertEqual((done.returncode, done.stdout, done.stderr), (1, "", NO_TOKEN))
                 self.assertEqual(api.seen, [])
                 self.assert_never_exposed(done)
+
+    def test_revoke_names_the_failed_private_folder_check(self):
+        held = self.minted()
+        before = sha(held.read_text())
+        self.private.chmod(0o755)
+        link = self.root / "linked"
+        link.symlink_to(self.private)
+        unsafe_parent = self.root / "shared"
+        unsafe_parent.mkdir()
+        (unsafe_parent / "private").mkdir(mode=0o700)
+        unsafe_parent.chmod(0o777)
+        worktree = self.root / "worktree"
+        (worktree / ".git").mkdir(parents=True)
+        (worktree / "private").mkdir(mode=0o700)
+        cases = (
+            (self.private, "the private token directory must be a 0700 directory you own"),
+            (link, "the private token directory must be a real directory, through no symlink"),
+            (unsafe_parent / "private",
+             "the private token directory must sit in folders only you or root can change"),
+            (worktree / "private", "the private token directory must be outside every Git working tree"),
+            (Path("relative-private"), "the private token directory must be an absolute path"),
+        )
+        api = self.api()
+        for folder, guidance in cases:
+            with self.subTest(guidance=guidance):
+                done = self.revoke(api, OPENWIZ_AGENT_TOKEN_DIR=str(folder))
+                self.assert_never_exposed(done)
+                self.assertEqual((done.returncode, done.stdout, done.stderr),
+                                 (1, "", f"openwiz: openwiz[bot] token not revoked ({guidance})\n"),
+                                 "catches: revoke calls an unsafe token folder empty")
+                self.assertEqual(api.seen, [])
+                self.assertEqual(list(self.private.iterdir()), [held])
+                self.assertEqual(sha(held.read_text()), before)
 
     def test_revoke_https_goes_only_to_the_configured_api_base(self):
         # comment-ok: catches: a revoke that follows a proxy setting or an arbitrary base, sending the
@@ -1448,6 +1480,107 @@ class FinalRound(Helper):
                              "the fresh token it could not store is revoked")
             self.assertNotIn(TOKEN2, err)
 
+    def test_a_mint_that_loses_its_folder_keeps_its_token_for_a_later_revoke(self):
+        # comment-ok: catches: a mint whose folder was deleted in flight and whose emergency DELETE GitHub
+        # refused leaving the fresh token live with no copy, so no later revoke or mint can find it; or the
+        # copy being written through a symlink planted where the folder was.
+        went = "openwiz: agent-token: the private token directory went away, so the new token was "
+        fresh = [("DELETE", sha(f"Bearer {TOKEN2}"))]
+        for later, status, said in (
+                ("revoke", 401, "not revoked (GitHub refused); the token is kept for a later revoke\n"),
+                ("mint", 401, "not revoked (GitHub refused); the token is kept for a later revoke\n"),
+                ("nothing", 204, "revoked\n"),
+                ("a symlink in its place", 401, "not revoked (GitHub refused): suspend the installation\n")):
+            with self.subTest(later=later):
+                elsewhere, planted = self.root / "elsewhere", later == "a symlink in its place"
+                shutil.rmtree(self.private, True)
+                for left in ("gate", "gate.started", "calls.log"):
+                    (self.root / left).unlink(missing_ok=True)
+                self.answers(answer(token=TOKEN2), answer())
+                first, copies = self.api(status=status), []
+                first.during = lambda: copies.append(len(self.side_files()))
+                self.env["OPENWIZ_GITHUB_API_BASE"] = first.base()
+                minting, gate = self.gated()
+                shutil.rmtree(self.private)
+                if planted:
+                    elsewhere.mkdir(mode=0o700)
+                    self.private.symlink_to(elsewhere)
+                    self.addCleanup(self.private.unlink)
+                gate.touch()
+                out, err = minting.communicate(timeout=30)
+                self.assertEqual((minting.returncode, out), (2, ""))
+                self.assertEqual(copies, [0 if planted else 1],
+                                 "the copy is saved before the emergency DELETE is sent, never through a symlink")
+                self.assertEqual(self.deletes(first), fresh)
+                self.assertEqual(err, went + said)
+                sides = self.side_files()
+                self.assertEqual(len(sides), status != 204 and not planted, "kept until GitHub answers 204")
+                self.assertEqual(list(elsewhere.glob("*")), [], "nothing is written where the symlink points")
+                self.assertFalse(self.token_file().exists(), "the refused mint leaves no usable cache")
+                done = [types.SimpleNamespace(stdout=out, stderr=err)]
+                if sides:
+                    self.assertEqual(json.loads(sides[0].read_text())["token"], TOKEN2)
+                    self.assertEqual((sides[0].stat().st_mode & 0o777, self.private.stat().st_mode & 0o777),
+                                     (0o600, 0o700), "owner-only copy in an owner-only folder")
+                    api = self.api()
+                    self.env["OPENWIZ_GITHUB_API_BASE"] = api.base()
+                    done.append(self.start() if later == "mint" else self.revoke(api))
+                    self.assertEqual((done[1].returncode, done[1].stderr), (0, ""))
+                    self.assertEqual(self.deletes(api), fresh, f"a later {later} finds and revokes it")
+                    self.assertEqual(self.side_files(), [])
+                    self.assertEqual(self.token_file().exists(), later == "mint")
+                self.assert_never_exposed(*done)
+
+    def test_a_refused_emergency_delete_reports_kept_only_when_a_copy_is_findable(self):
+        # comment-ok: catches: a refused emergency DELETE reporting the token kept from a save made before
+        # the call, after the folder or its copy was removed while the DELETE was pending, so a later
+        # revoke finds nothing while the owner is told a retry is possible.
+        went = "openwiz: agent-token: the private token directory went away, so the new token was not revoked "
+        fresh = [("DELETE", sha(f"Bearer {TOKEN2}"))]
+        elsewhere = self.root / "elsewhere"
+
+        def unsafe():
+            shutil.rmtree(self.private)
+            elsewhere.mkdir(mode=0o700)
+            self.private.symlink_to(elsewhere)
+
+        for pending, gone, kept in (
+                ("the folder removed", lambda: shutil.rmtree(self.private), True),
+                ("the copy removed", lambda: [path.unlink() for path in self.side_files()], True),
+                ("a symlink in the folder's place", unsafe, False)):
+            with self.subTest(pending=pending):
+                if self.private.is_symlink():
+                    self.private.unlink()
+                shutil.rmtree(self.private, True)
+                for left in ("gate", "gate.started", "calls.log"):
+                    (self.root / left).unlink(missing_ok=True)
+                self.answers(answer(token=TOKEN2), answer())
+                refusing = self.api(status=401)
+                refusing.during = gone
+                self.env["OPENWIZ_GITHUB_API_BASE"] = refusing.base()
+                minting, gate = self.gated()
+                shutil.rmtree(self.private)
+                gate.touch()
+                out, err = minting.communicate(timeout=30)
+                self.assertEqual((minting.returncode, out), (2, ""))
+                self.assertEqual(self.deletes(refusing), fresh)
+                self.assertEqual(err, went + ("(GitHub refused); the token is kept for a later revoke\n" if kept
+                                              else "(GitHub refused): suspend the installation\n"))
+                self.assertEqual(list(elsewhere.glob("*")), [], "nothing is written where the symlink points")
+                done = [types.SimpleNamespace(stdout=out, stderr=err)]
+                if kept:
+                    sides = self.side_files()
+                    self.assertEqual([json.loads(side.read_text())["token"] for side in sides], [TOKEN2])
+                    self.assertEqual((sides[0].stat().st_mode & 0o777, self.private.stat().st_mode & 0o777),
+                                     (0o600, 0o700), "owner-only copy in an owner-only folder")
+                    api = self.api()
+                    done.append(self.revoke(api))
+                    self.assertEqual((done[1].returncode, done[1].stderr), (0, ""))
+                    self.assertEqual(self.deletes(api), fresh, "a later revoke finds and revokes it")
+                    self.assertEqual(self.side_files(), [])
+                self.assert_never_exposed(*done)
+        self.private.unlink()
+
     @unittest.skipUnless(os.path.isdir("/proc/self/fd"), "needs /proc/self/fd")
     def test_r9_no_child_inherits_a_readable_credential_handle(self):
         # comment-ok: catches: a run handing its children an open, readable copy of the token, which a
@@ -1739,6 +1872,39 @@ class SystemGh(Helper):
         self.assert_withheld(*self.run_gh(self.table(), at_seal=write_copy), "the gh this run chose was changed",
                              looked=False)
         self.assertEqual(written, [rogue], "the copy really held other bytes when it was sealed")
+
+    def test_a_system_gh_whose_copy_reports_a_missing_seal_gets_nothing(self):
+        # comment-ok: catches: skipping or weakening the seal read-back so a copy reported incompletely sealed reaches the token lookup
+        helper = self.helper_module
+        rows = self.table()
+        self.assertIsNotNone(self.bind(rows))
+        real_seal, real_fcntl = helper.sealed_gh, fcntl.fcntl
+        get_seals = getattr(fcntl, "F_GET_SEALS", 1034)
+        seal_bits = (("seal", 1), ("shrink", 2), ("grow", 4), ("write", 8))
+        all_seals = 1 | 2 | 4 | 8
+
+        for missing, bit in (*seal_bits, ("none", 0)):
+            with self.subTest(missing=missing):
+                read_back = []
+
+                def report_seals(fd, command, *args):
+                    result = real_fcntl(fd, command, *args)
+                    if command == get_seals:
+                        read_back.append(result & all_seals)
+                        return result & ~bit
+                    return result
+
+                def seal_with_report(*args):
+                    with mock.patch.object(helper.fcntl, "fcntl", report_seals):
+                        return real_seal(*args)
+
+                with mock.patch.object(helper, "sealed_gh", seal_with_report):
+                    outcome = self.run_gh(rows)
+                if bit:
+                    self.assert_withheld(*outcome, "the gh this run chose was changed", looked=False)
+                else:
+                    self.assert_ran_checked(*outcome)
+                self.assertEqual(read_back, [all_seals], "one read-back of a fully sealed copy")
 
     def test_the_token_reaches_no_output_log_or_file_outside_the_private_directory(self):
         # comment-ok: catches: a leak check that can't see a seeded leak, or a token that a run writes to stdout,

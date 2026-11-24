@@ -6,7 +6,7 @@ STATE = os.environ.get('OPENWIZ_OPENCLAW_STATE') or os.path.expanduser('~/.local
 VERSION = {'driver': 'openclaw', 'records': ['openwiz:records v1'], 'can': ['start', 'wake', 'stop']}
 START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
          'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
-         'model': r'[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}'}
+         'model': r'(?=.{1,100}$)[A-Za-z0-9][A-Za-z0-9 ._:@+-]*(/[A-Za-z0-9][A-Za-z0-9 ._:@+-]*)*'}
 RUN = {'run': r'run-[0-9a-f]{12}'}
 GRACE = 10
 AGENTS = {'claude': 'npx -y --package=@agentclientprotocol/claude-agent-acp@^0.95.0 -- claude-agent-acp',

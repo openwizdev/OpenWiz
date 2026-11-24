@@ -1,0 +1,5 @@
+# R1 red: new fixture, Ctrl+C on the first line after the swap, against e1d85d93 tools/install/install.py
+FAIL: test_a_repair_interrupted_just_after_the_swap_keeps_the_replacements_mode (tools.install.tests.journey.test_journey.InstallJourney.test_a_repair_interrupted_just_after_the_swap_keeps_the_replacements_mode)
+AssertionError: 0 != 448
+Ran 1 test in 1.218s
+FAILED (failures=1)

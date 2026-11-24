@@ -4,7 +4,7 @@ A **harness row** is how one more agent CLI runs on the [local driver](README.md
 
 ## 1. The row
 
-A row is `adapters/local/harnesses/<harness>/row.json`, read with standard-library JSON, never run as code. It is one JSON object with each key once, with exactly these fields, plus the two optional ones below:
+A row is `adapters/local/harnesses/<harness>/row.json`, read with standard-library JSON, never run as code. It is one JSON object with each key once, with exactly these fields, plus the three optional ones below:
 
 | Field | What it holds |
 | --- | --- |
@@ -19,6 +19,7 @@ A row is `adapters/local/harnesses/<harness>/row.json`, read with standard-libra
 | `daemon` | `none`, or one line naming the background process the CLI may start and how stop ends it. On macOS, `stop` cannot reach a process that leaves its turn's process group, closes or redirects its output and is orphaned before the supervisor's next look (the local README's limit), so a row whose service does that holds on Linux only |
 | `signed_out` (optional) | A list of fixed, case-insensitive patterns, specific to this CLI, that mean it isn't signed in; each is matched anywhere in a line of the first turn's own output (never the clone's), a JSON line included |
 | `login_command` (optional; required with `signed_out`) | The exact command the user runs to sign in, such as `example-cli login`. `login` keeps its meaning: where the login lives |
+| `login_env` (optional; needs `login_command`) | The NAME of one environment variable the user may set for the CLI instead of signing in, such as `EXAMPLE_CLI_API_KEY`; never its value |
 
 - **Placeholders.** A placeholder fills a whole argument, never part of one (`--model={model}` breaks the row), and appears at most once in a list. `{prompt}`, `{model}` and `{session}` each become one argument. `{mode}` splices the approved mode's fixed arguments, and `{effort}` the requested effort's (section 4). A fixed argument holds no placeholder.
 - **Start** holds `{prompt}`, `{model}` and `{mode}`. **Wake** holds `{prompt}`, `{mode}` and `{session}`: wake must hold `{session}`. Start holds `{session}` only when the session is chosen.
@@ -29,6 +30,7 @@ A row is `adapters/local/harnesses/<harness>/row.json`, read with standard-libra
   - A reported id (`json` or `pattern`) is read from the first turn's own output in the run's log, never the clone's, once the turn has printed it, then saved. That first line decides: when its value is not a valid session id (`null` or an unmatched group included), no later line is read. When there is no valid id yet, wake refuses with a D3 error and starts nothing, even while the first turn still runs.
 - **Modes:** each key is a mode value (a letter, then up to 39 letters, digits, `_` or `-`), each value a list of fixed arguments (it may be empty). The owner approves one mode per repository and harness, as for a built-in, and the driver passes only that mode's arguments.
 - **Signed out:** each `signed_out` pattern is one line, compiles as a regular expression, holds no placeholder and nothing credential-shaped. No pattern is a program: the driver only matches it. A row's pattern matches anywhere in a line of the turn's output, case-insensitively, inside a JSON line too; the driver's own sign-in diagnostics keep their line-start rule. `login_command` is one line of up to 200 characters, with no placeholder and nothing credential-shaped; the driver never runs it.
+- **Login env:** `login_env` matches `^[A-Z][A-Z0-9_]{1,63}$`, passes the kit's `holds_credential` as a name, and is not a name in the row's `env`. The row's not-signed-in `next` (section 3) must fit D3's 300 characters, or the row is refused. The driver never reads, checks, passes or prints the variable's value: the CLI gets it only from the environment the user ran the driver in (driver v1 N2).
 - **No credential in an argument:** every fixed argument in `start`, `wake`, `modes` and `effort` passes the kit's `holds_credential`, alone, as a flag and its value (`--flag=value` and `--flag value`), and in the start and wake lines with each mode and effort spliced in. The driver saves these arguments with the run and passes them in the process's argv, so a row that breaks this is refused naming only its field.
 - **Env:** each name is capitals, digits and `_`, starting with a capital and not with `OPENWIZ_`; each value is one line that passes the kit's `holds_credential`, alone and as `NAME=value`. The driver adds `env`, and a requested effort's `env` setting, to the harness's own environment only: the turn's supervisor and the tools it uses to find and stop processes keep the driver's environment.
 
@@ -49,7 +51,7 @@ A row ticket owns only its folder. No row edits the driver, this file, the local
 - It loads a row only for the harness that a start names, and only when that harness isn't built in. A row that is missing, has a repeated key or breaks this contract is a D3 error that names the row file, never its contents, and starts nothing. The "use one of" error lists the built-ins plus the row folders.
 - The row's `program` must be on `PATH`, and the approved mode must be one of its `modes`; otherwise `start` refuses and starts nothing.
 - A turn gets the row's `env` added to its environment, and only the approved mode's arguments.
-- When a first turn that ended at once printed a line its row's `signed_out` matches (or one of the driver's own sign-in diagnostics), `start` fails, even when the turn exited 0, with `the harness is not signed in`, a D3 error, and its `next` names the row's `login_command`, never a generic failure.
+- When a first turn that ended at once printed a line its row's `signed_out` matches (or one of the driver's own sign-in diagnostics), `start` fails, even when the turn exited 0, with `the harness is not signed in`, a D3 error, and its `next` names the row's `login_command`, never a generic failure. With `login_env`, that `next` is `sign in with <login_command>, or set <login_env> for <program> yourself, then start again`, followed by `; <log> has the turn's output` only while the whole `next` fits in 300 characters.
 - What stays the same: stop (it ends the whole process tree), the approvals, the fleet.md `Harness permission mode` row, the first-turn watch and the credential check.
 
 ## 4. Effort (J318)
@@ -80,11 +82,11 @@ A start with an effort never falls back to a default. Built-in `claude` and `cod
 5. needs the wake turn to have got the same session id as the start turn;
 6. needs the turn to have got each `env` value;
 7. needs the background process, when the row declares one, to have ended after stop, and none when it declares `none`;
-8. for a row with `signed_out`, needs a first turn whose fake prints its signed-out line to fail `start` with `the harness is not signed in` and a `next` naming the row's `login_command`;
+8. for a row with `signed_out`, needs a first turn whose fake prints its signed-out line to fail `start` with `the harness is not signed in` and a `next` naming the row's `login_command`; with `login_env`, needs that exact `next` with a canary value set under the name, the value in the CLI's environment, and the value in no answer, state file or argv;
 9. for each listed effort value, needs a start carrying it to put its arguments on the fake's command line or its setting in the fake's environment; and needs a start with an effort the row can't take to refuse with the `next` above and start nothing;
 10. runs the row's `test_row.py`, if there is one.
 
-It prints one line per row: `pass <row>: ...`, or `fail <row>: <rule>: <reason>`, where the rule is `row.json <field>` for a contract rule, or `folder`, `kit`, `session`, `env`, `daemon`, `signed_out`, `effort` or `test_row.py`. A folder with no `row.json` gives `fail <row>: row.json is missing`. The kit's files are not changed.
+It prints one line per row: `pass <row>: ...`, or `fail <row>: <rule>: <reason>`, where the rule is `row.json <field>` for a contract rule, or `folder`, `kit`, `session`, `env`, `daemon`, `signed_out`, `login_env`, `effort` or `test_row.py`. A folder with no `row.json` gives `fail <row>: row.json is missing`. The kit's files are not changed.
 
 ## 6. The fake library
 

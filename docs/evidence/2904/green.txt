@@ -1,0 +1,35 @@
+test_a_credential_sent_as_a_provider_qualified_model_is_still_refused (__main__.Kit.test_a_credential_sent_as_a_provider_qualified_model_is_still_refused) ... ok
+test_bad_model_shapes_are_refused_by_the_schema_and_the_local_driver (__main__.Kit.test_bad_model_shapes_are_refused_by_the_schema_and_the_local_driver) ... ok
+test_real_provider_qualified_models_pass_the_schema_and_the_local_driver (__main__.Kit.test_real_provider_qualified_models_pass_the_schema_and_the_local_driver) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 1.536s
+
+OK
+
+## Each model at this head: schema check and adapters/local/driver start
+"kimi-code/kimi-for-coding"                                            schema: ok                       driver: harness synthetic-none is not one this driver runs
+"kimi-code/kimi-for-coding-highspeed"                                  schema: ok                       driver: harness synthetic-none is not one this driver runs
+"azure/gpt-5.4"                                                        schema: ok                       driver: harness synthetic-none is not one this driver runs
+"openrouter/typesafe/jev-1.13"                                         schema: ok                       driver: harness synthetic-none is not one this driver runs
+"anthropic/claude-sonnet-5-5"                                          schema: ok                       driver: harness synthetic-none is not one this driver runs
+"openrouter/google/gemini-3.8-flash"                                   schema: ok                       driver: harness synthetic-none is not one this driver runs
+"openrouter/anthropic/claude-sonnet-4-20250514"                        schema: ok                       driver: harness synthetic-none is not one this driver runs
+"openrouter/openai/gpt-5"                                              schema: ok                       driver: harness synthetic-none is not one this driver runs
+"openrouter/anthropic/claude-sonnet-4.6"                               schema: ok                       driver: harness synthetic-none is not one this driver runs
+"openrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"        schema: ok                       driver: harness synthetic-none is not one this driver runs
+"fireworks/accounts/fireworks/models/nemotron-lightning-3p5-30b-a3b"   schema: ok                       driver: harness synthetic-none is not one this driver runs
+"/x"                                                                   schema: refused                  driver: model is not valid
+"x/"                                                                   schema: refused                  driver: model is not valid
+"x//y"                                                                 schema: refused                  driver: model is not valid
+"x/../y"                                                               schema: refused                  driver: model is not valid
+"x/./y"                                                                schema: refused                  driver: model is not valid
+"x/ /y"                                                                schema: refused                  driver: model is not valid
+"x/mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm" schema: refused                  driver: model is not valid
+".."                                                                   schema: refused                  driver: model is not valid
+"x/.y"                                                                 schema: refused                  driver: model is not valid
+"x/-y"                                                                 schema: refused                  driver: model is not valid
+"https://host.example/x"                                               schema: refused                  driver: model is not valid
+"x/y\n"                                                                schema: refused                  driver: model is not valid
+"x\\y"                                                                 schema: refused                  driver: model is not valid
+"mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm" schema: ok                       driver: harness synthetic-none is not one this driver runs

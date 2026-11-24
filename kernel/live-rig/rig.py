@@ -19,7 +19,7 @@ HOST_KEYS = ('host', 'driver', 'needs', 'signed_in', 'cost', 'runs', 'wait')
 NAME = r'[A-Za-z0-9][A-Za-z0-9._-]{0,59}'
 PROGRAM = r'[A-Za-z0-9][A-Za-z0-9._+-]{0,59}'
 KIT_HARNESS = r'[a-z0-9][a-z0-9._-]{0,59}'
-KIT_MODEL = r'[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}'
+KIT_MODEL = r'(?=.{1,100}$)[A-Za-z0-9][A-Za-z0-9 ._:@+-]*(/[A-Za-z0-9][A-Za-z0-9 ._:@+-]*)*'
 REPO = r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}'
 STATUS_SECONDS = 30
 CHECK_LINE = re.compile(r'(pass|fail) (version|start|wake|stop|token): ')

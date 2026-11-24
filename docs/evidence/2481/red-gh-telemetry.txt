@@ -1,0 +1,76 @@
+# Red run (#2481 R1, at fc3bb087 with the updated fixture)
+PATH=<37 refusing stubs>:$PATH env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/hosts/test_cloudroom.py
+Exit: 1
+test_gh_missing_is_skipped_and_runs_no_status_command (__main__.CloudroomHost.test_gh_missing_is_skipped_and_runs_no_status_command) ... ok
+test_gh_signed_out_runs_with_telemetry_disabled (__main__.CloudroomHost.test_gh_signed_out_runs_with_telemetry_disabled) ... FAIL
+test_room_cli_missing_is_skipped_and_runs_no_status_command (__main__.CloudroomHost.test_room_cli_missing_is_skipped_and_runs_no_status_command) ... ok
+test_room_cli_signed_out_stops_before_gh (__main__.CloudroomHost.test_room_cli_signed_out_stops_before_gh) ... ok
+test_the_config_checks_only_the_cited_read_only_status_commands (__main__.CloudroomHost.test_the_config_checks_only_the_cited_read_only_status_commands) ... FAIL
+test_unknown_cost_skips_the_kit (__main__.CloudroomHost.test_unknown_cost_skips_the_kit) ... FAIL
+
+======================================================================
+FAIL: test_gh_signed_out_runs_with_telemetry_disabled (__main__.CloudroomHost.test_gh_signed_out_runs_with_telemetry_disabled)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/hosts/test_cloudroom.py", line 135, in test_gh_signed_out_runs_with_telemetry_disabled
+    self.rig('not signed in: env', signed_out='gh', expected_probes=[STATUS['room-cli'], STATUS['gh']])
+  File "<checkout>/kernel/live-rig/hosts/test_cloudroom.py", line 100, in rig
+    self.assertEqual(probes, expected_probes)
+AssertionError: Lists differ: ['room-cli status', 'GH_TELEMETRY=1 gh config get -h github.com user'] != ['room-cli status', 'GH_TELEMETRY=0 gh config get -h github.com user']
+
+First differing element 1:
+'GH_TELEMETRY=1 gh config get -h github.com user'
+'GH_TELEMETRY=0 gh config get -h github.com user'
+
+- ['room-cli status', 'GH_TELEMETRY=1 gh config get -h github.com user']
+?                                   ^
+
++ ['room-cli status', 'GH_TELEMETRY=0 gh config get -h github.com user']
+?                                   ^
+
+
+======================================================================
+FAIL: test_the_config_checks_only_the_cited_read_only_status_commands (__main__.CloudroomHost.test_the_config_checks_only_the_cited_read_only_status_commands)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/hosts/test_cloudroom.py", line 125, in test_the_config_checks_only_the_cited_read_only_status_commands
+    self.assertEqual(config['signed_in'], [ROOM_STATUS, GH_STATUS])
+AssertionError: Lists differ: [['ro[17 chars]], ['gh', 'config', 'get', '-h', 'github.com', 'user']] != [['ro[17 chars]], ['env', 'GH_TELEMETRY=0', 'gh', 'config', '[29 chars]er']]
+
+First differing element 1:
+['gh', 'config', 'get', '-h', 'github.com', 'user']
+['env', 'GH_TELEMETRY=0', 'gh', 'config', 'get', '-h', 'github.com', 'user']
+
++ [['room-cli', 'status'],
+- [['room-cli', 'status'], ['gh', 'config', 'get', '-h', 'github.com', 'user']]
+? ^  ^^^^^^^^    ^^^^^^ -  -
+
++  ['env', 'GH_TELEMETRY=0', 'gh', 'config', 'get', '-h', 'github.com', 'user']]
+? ^  ^^^    ^^^^^^^^^^^^^^
+
+
+======================================================================
+FAIL: test_unknown_cost_skips_the_kit (__main__.CloudroomHost.test_unknown_cost_skips_the_kit)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/hosts/test_cloudroom.py", line 129, in test_unknown_cost_skips_the_kit
+    self.rig('cost')
+  File "<checkout>/kernel/live-rig/hosts/test_cloudroom.py", line 101, in rig
+    self.assertEqual((p.returncode, p.stdout.splitlines()),
+AssertionError: Tuples differ: (0, ['skipped Cloudroom claude: not signed in: gh']) != (0, ['skipped Cloudroom claude: cost'])
+
+First differing element 1:
+['skipped Cloudroom claude: not signed in: gh']
+['skipped Cloudroom claude: cost']
+
+- (0, ['skipped Cloudroom claude: not signed in: gh'])
+?                                 ^  --------------
+
++ (0, ['skipped Cloudroom claude: cost'])
+?                                 ^ +
+ :
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.397s
+
+FAILED (failures=3)
