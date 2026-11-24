@@ -1,5 +1,28 @@
 # OpenWiz 0.1.1 Linux rehearsal
 
+## November 24
+
+**Failed at first-fleet setup.** The corrected helper verified both Linux files. OpenWiz 0.1.1 installed and activated at the sealed source revision. GitHub's REST quota then ran out before the first fleet started.
+
+| Input | Value |
+| --- | --- |
+| Candidate source | `7d84a578e94e8cdb338d80769d1e82e0cd1f067a` |
+| Packages run | `45301203909` |
+| Linux archive SHA-256 | `7893292759f06c29ecd5f508e6212a62e0e6e1f3d1776d8fa982baa96cf7a972` |
+| WizSkills | `9ef6e13ff38c565b553a906d8e013e4eaef22f09` |
+| Rehearsal helper | `e1b505a394aa2e93ff56683d4ce51d2bfce15cc0` |
+
+| Step | Result and elapsed wall time |
+| --- | --- |
+| Initial checks and disposable repository | Clean environment verified. Created a private repository about 5 seconds later. |
+| Staging | Verified the manifest and the archive in about 3 seconds. |
+| Installation | Activated the sealed build in about 4 seconds. |
+| Local setup | Listed a local Claude Code model, verified the personal GitHub login and merged the project settings. After about 2 minutes 36 seconds, setup reported that CloudRoom was unnecessary but could no longer read the GitHub identity or project. First-fleet continuation exited 5. A direct GitHub read returned HTTP 403 and the core quota showed zero requests remaining. |
+| Heartbeat, builder, reviewer, merge, final clean check | Unreached. |
+| Teardown | Closed the setup issue, archived the private repository and verified zero open issues and pull requests. The host crontab matched its original contents. Teardown checks finished about 3 minutes after the stop. |
+
+## November 23
+
 The November 23 rehearsal stopped at candidate staging, before install. The clean Linux first-fleet gate is open.
 
 | Input | Value |
