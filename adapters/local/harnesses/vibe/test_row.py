@@ -25,17 +25,17 @@ def not_installed():
             lambda out: 'not installed' in out['error'] and out['next'].startswith('install vibe '))
 
 
-def not_signed_in():
+def a_history_quoting_the_diagnostics_still_starts():
     with machine() as env:
-        code, out = env.start(FAKE_CLI_SIGNED_OUT='1')
-        logs = [f for f in os.listdir(env.state) if f.endswith('.log')]
-        if len(logs) != 1:
-            return False
-        with open(os.path.join(env.state, logs[0])) as f:
-            log = f.read()
-        return code == 1 and th.kit.invalid(out, th.ERROR) is None and \
-            out['error'].endswith('the harness is not signed in (exit 1)') and 'vibe --setup' in out['next'] and \
-            'Missing MISTRAL_API_KEY' in log
+        code, out = env.start(FAKE_VIBE_QUOTES_DIAGNOSTICS='1', FAKE_CLI_RECORD_ONLY='1')
+        return code == 0 and out.get('run', '').startswith('run-')
+
+
+def both_diagnostic_lines_read_as_signed_out():
+    lines = ('Error: Missing MISTRAL_API_KEY environment variable for mistral provider',
+             "Error: Can't read MISTRAL_API_KEY from the system keyring for mistral provider (no keyring)")
+    quoted = json.dumps([{'content': line} for line in lines], indent=2)
+    return all(th.local.signed_out_by_row(ROW, line) for line in lines) and not th.local.signed_out_by_row(ROW, quoted)
 
 
 def off_refused():
@@ -57,7 +57,8 @@ def pattern_reads_the_entry_id_not_a_nested_one():
 
 def main():
     ok = True
-    for check in (not_installed, not_signed_in, off_refused, pattern_reads_the_entry_id_not_a_nested_one):
+    for check in (not_installed, a_history_quoting_the_diagnostics_still_starts, both_diagnostic_lines_read_as_signed_out,
+                  off_refused, pattern_reads_the_entry_id_not_a_nested_one):
         passed = check()
         print('%s %s' % ('pass' if passed else 'fail', check.__name__.replace('_', ' ')))
         ok = ok and passed

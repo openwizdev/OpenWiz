@@ -14,9 +14,17 @@ MODES = (['--auto-approve'], ['--approval-policy', 'accept-edits'], ['--approval
 LEVELS = ('low', 'medium', 'high', 'xhigh', 'max')
 
 
+MISSING = 'Error: Missing MISTRAL_API_KEY environment variable for mistral provider'
+KEYRING = "Error: Can't read MISTRAL_API_KEY from the system keyring for mistral provider (no keyring)"
+
+
 def history(sid, prompt):
-    return json.dumps([{'id': 'entry-1', 'session_id': sid, 'turn_id': 'turn-1', 'type': 'message',
-                        'role': 'user', 'content': prompt}], indent=2)
+    entries = [{'id': 'entry-1', 'session_id': sid, 'turn_id': 'turn-1', 'type': 'message', 'role': 'user',
+                'content': prompt}]
+    if os.environ.get('FAKE_VIBE_QUOTES_DIAGNOSTICS'):
+        entries += [{'id': 'entry-%d' % i, 'session_id': sid, 'turn_id': 'turn-1', 'type': 'message',
+                     'role': 'assistant', 'content': text} for i, text in ((2, MISSING), (3, KEYRING))]
+    return json.dumps(entries, indent=2)
 
 
 if sys.argv[1:] == ['--help']:
@@ -40,4 +48,4 @@ if session is None and args[:1] == ['--thinking'] and len(args) == 2 and args[1]
 if args:
     fake_cli.refuse()
 fake_cli.turn(prompt, model, session, lambda sid: history(sid, prompt), daemon='tree',
-              signed_out='Error: Missing MISTRAL_API_KEY environment variable for mistral provider')
+              signed_out=MISSING)

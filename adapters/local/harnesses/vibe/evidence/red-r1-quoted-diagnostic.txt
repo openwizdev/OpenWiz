@@ -1,0 +1,11 @@
+Red run for review finding R1: a successful first turn whose JSON history quotes Vibe's sign-in diagnostics is refused as signed out, because row.json's signed_out patterns are not anchored to Vibe's own 'Error: ' line. Synthetic fake only; 40 no-op stubs for the known agent CLIs were first on PATH; no real agent CLI ran.
+
+$ python3 -I adapters/local/harnesses/vibe/test_row.py
+pass not installed
+fail a history quoting the diagnostics still starts
+fail both diagnostic lines read as signed out
+pass off refused
+pass pattern reads the entry id not a nested one
+exit 1
+
+The driver's answer to that start: run <id>: the first turn ended at once: the harness is not signed in (exit 0)
