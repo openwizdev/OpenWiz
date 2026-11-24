@@ -241,6 +241,119 @@ class Driver(unittest.TestCase):
                     self.assertNotIn(b'TEMBO' + b'_API_KEY', line, rel)
                     self.assertIsNone(KEYCHAIN_TOOLS_SPELLED_IN_PARTS.search(line), rel)
 
+    def unreadable(self, method, path, code):
+        return 'Tembo answered %d to %s %s in a form the driver cannot read' % (code, method, path)
+
+    def test_a_session_answer_off_its_documented_shape_refuses_wake_and_stop(self):
+        run = self.started()
+        other = '00000000-0000-4000-8000-0000000000fe'
+        path = '/v1/sessions/' + run
+        for code, body in ((200, None), (200, {}), (200, []), (200, {'id': run, 'level': False}),
+                           (200, {'id': run, 'level': True}), (200, {'id': run, 'level': '0'}),
+                           (200, {'id': run, 'level': 0.0}), (200, {'id': run, 'level': -1}),
+                           (200, {'id': run, 'level': 2}), (200, {'id': run}), (200, {'level': 0}),
+                           (200, {'id': other, 'level': 0}), (204, None), (404, None), (404, {}),
+                           (404, {'error': 1}), (404, {'error': 'gone', 'id': run}), (404, 'gone')):
+            self.host.replies = {('GET', path): (code, body, False)}
+            self.host.requests.clear()
+            want = (1, {'error': 'run %s: ' % run + self.unreadable('GET', path, code),
+                        'next': 'check run %s on Tembo, then retry' % run}) if code != 204 else \
+                (1, {'error': 'Tembo answered 204 to GET ' + path, 'next': "check your key and Tembo's status, then retry"})
+            for cmd in ('wake', 'stop'):
+                self.assertEqual(self.driver(cmd, {'run': run}), want, (code, body))
+            self.assertEqual(self.posts(), [], (code, body))
+        self.assertEqual((self.host.sessions[run]['level'], self.host.sessions[run]['messages']), (1, []))
+
+    def test_an_unreadable_repository_list_refuses_start(self):
+        good = {'id': REPO, 'owner': 'example', 'name': 'site', 'url': 'synthetic'}
+        for code, body in ((200, None), (200, {}), (200, []), (200, {'items': None}), (200, {'items': {}}),
+                           (200, {'items': [None]}), (200, {'items': [dict(good, id=1)]}),
+                           (200, {'items': [dict(good, name=None)]}), (200, {'items': [dict(good, owner=7)]}),
+                           (200, {'items': [good, 'x']}), (201, {'items': [good]})):
+            self.host.replies = {('GET', '/v1/repositories'): (code, body, False)}
+            want = {'error': self.unreadable('GET', '/v1/repositories', code),
+                    'next': "check Tembo's status, then retry"} if code == 200 else \
+                {'error': 'Tembo answered 201 to GET /v1/repositories', 'next': "check your key and Tembo's status, then retry"}
+            self.assertEqual(self.driver('start', START), (1, want), (code, body))
+        self.host.replies = {('GET', '/v1/repositories'): (200, {'items': [], 'nextCursor': None}, False)}
+        self.assertEqual(self.driver('start', START), (1, {
+            'error': 'Tembo has no connected repository example/site',
+            'next': 'connect example/site to Tembo (Settings, Integrations, GitHub), then start again'}))
+        self.assertEqual((self.posts(), self.host.sessions), ([], {}))
+
+    def test_a_create_answer_that_does_not_confirm_the_run_names_it_in_the_refusal(self):
+        other = '00000000-0000-4000-8000-0000000000fe'
+        for code, answer in ((201, None), (201, {}), (201, lambda b: {'id': other, 'level': 1}),
+                             (201, lambda b: {'id': b['id']}), (201, lambda b: {'id': b['id'], 'level': True}),
+                             (201, lambda b: {'id': b['id'], 'level': 0}), (200, lambda b: {'id': b['id'], 'level': 1}),
+                             (202, None)):
+            self.host.replies = {('POST', '/v1/sessions'): (code, answer, True)}
+            before = set(self.host.sessions)
+            code_out, out = self.driver('start', START)
+            [run] = set(self.host.sessions) - before
+            why = self.unreadable('POST', '/v1/sessions', code) if code == 201 else \
+                'Tembo answered %d to POST /v1/sessions' % code
+            self.assertEqual((code_out, out), (1, {'error': 'run %s may have started: %s' % (run, why),
+                                                   'next': 'stop run %s with `driver stop`, then start again' % run}))
+
+    def test_a_wake_message_tembo_does_not_acknowledge_is_refused_with_its_run(self):
+        run = self.started()
+        other = '00000000-0000-4000-8000-0000000000fe'
+
+        def ack(message=None, session=None):
+            return lambda b: {'hotPath': None, 'job': None,
+                              'message': dict({'id': '00000000-0000-4000-9000-000000000001', 'sessionId': run,
+                                               'content': b['content']}, **(message or {})),
+                              'session': dict({'id': run, 'title': 'synthetic'}, **(session or {}))}
+        for code, answer in ((201, None), (201, {}), (201, {'id': '00000000-0000-4000-9000-000000000001',
+                                                            'sessionId': run}),
+                             (201, ack({'sessionId': other})), (201, ack({'sessionId': None})),
+                             (201, ack({'id': 5})), (201, ack(session={'id': other})),
+                             (201, lambda b: dict(ack()(b), message=None)), (200, ack())):
+            self.host.replies = {('POST', '/v1/messages'): (code, answer, False)}
+            why = self.unreadable('POST', '/v1/messages', code) if code == 201 else \
+                'Tembo answered %d to POST /v1/messages' % code
+            self.assertEqual(self.driver('wake', {'run': run}), (1, {
+                'error': 'run %s may not have been woken: %s' % (run, why),
+                'next': 'check run %s on Tembo before you wake it again' % run}), (code, answer))
+        self.host.replies = {}
+        self.assertEqual(self.driver('wake', {'run': run}), (0, {'run': run, 'woke': True}))
+
+    def test_a_stop_or_archive_tembo_does_not_confirm_is_refused_with_its_run(self):
+        run = self.started()
+        other = '00000000-0000-4000-8000-0000000000fe'
+        stop, archive = '/v1/sessions/%s/stop' % run, '/v1/sessions/' + run
+        counts = {'cancelledSessions': 1, 'cancelledJobs': 0, 'stoppedRuntimeSessions': 1,
+                  'interruptedRuntimeTurns': 1, 'cancelledRuntimeTurns': 0}
+        cases = [(('POST', stop), 200, None), (('POST', stop), 200, {}), (('POST', stop), 200, dict(counts, cancelledJobs=-1)),
+                 (('POST', stop), 200, dict(counts, cancelledJobs=True)), (('POST', stop), 200, dict(counts, cancelledJobs=None)),
+                 (('POST', stop), 404, None), (('POST', stop), 204, None),
+                 (('DELETE', archive), 200, {'deleted': False, 'id': run}), (('DELETE', archive), 200, None),
+                 (('DELETE', archive), 200, {'deleted': 1, 'id': run}), (('DELETE', archive), 200, {'deleted': True}),
+                 (('DELETE', archive), 200, {'deleted': True, 'id': other}), (('DELETE', archive), 404, {}),
+                 (('DELETE', archive), 204, None)]
+        for (method, path), code, body in cases:
+            self.host.replies = {(method, path): (code, body, False)}
+            why = self.unreadable(method, path, code) if code in (200, 404) else \
+                'Tembo answered %d to %s %s' % (code, method, path)
+            self.assertEqual(self.driver('stop', {'run': run}), (1, {
+                'error': 'run %s may not have stopped: %s' % (run, why),
+                'next': 'check run %s on Tembo, then stop it again' % run}), (method, code, body))
+            self.assertEqual(self.host.sessions[run]['level'], 1)
+        self.host.replies = {('DELETE', archive): (404, {'error': 'Session resource not found'}, False)}
+        self.assertEqual(self.driver('stop', {'run': run}), (1, {
+            'error': 'run %s may not have stopped: Tembo answered 404 to DELETE %s, yet the run is still live'
+                     % (run, archive), 'next': 'check run %s on Tembo, then stop it again' % run}))
+        self.host.replies = {('DELETE', archive): (404, {'error': 'Session resource not found'}, True)}
+        self.assertEqual(self.driver('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
+        self.assertEqual(self.host.sessions[run]['level'], 0)
+
+    def test_an_effort_on_a_harness_tembo_does_not_run_gets_the_effort_refusal(self):
+        code, out = self.driver('start', dict(START, harness='gemini-cli', effort='high'))
+        self.assertEqual((code, out), (1, {'error': 'Tembo cannot set effort high for harness gemini-cli',
+                                           'next': NO_EFFORT}))
+        self.assertEqual(self.host.requests, [])
+
     def test_version_and_schema(self):
         self.assertEqual(self.driver('version'), (0, {'driver': 'tembo', 'records': ['openwiz:records v1'],
                                                        'can': ['start', 'wake', 'stop', 'effort']}))

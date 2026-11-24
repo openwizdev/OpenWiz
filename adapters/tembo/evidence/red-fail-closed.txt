@@ -1,0 +1,127 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/tembo/test_driver.py (fail-closed proofs before the driver fix), 35 agent CLIs stubbed first on PATH
+F..FFFF.F.............
+======================================================================
+FAIL: test_a_create_answer_that_does_not_confirm_the_run_names_it_in_the_refusal (__main__.Driver.test_a_create_answer_that_does_not_confirm_the_run_names_it_in_the_refusal)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/tembo/test_driver.py", line 296, in test_a_create_answer_that_does_not_confirm_the_run_names_it_in_the_refusal
+    self.assertEqual((code_out, out), (1, {'error': 'run %s may have started: %s' % (run, why),
+AssertionError: Tuples differ: (0, {'run': '041cfc56-4132-4ab8-ba7b-29219cb472de'}) != (1, {'error': 'run 041cfc56-4132-4ab8-ba7b[196 chars]in'})
+
+First differing element 0:
+0
+1
+
+- (0, {'run': '041cfc56-4132-4ab8-ba7b-29219cb472de'})
++ (1,
++  {'error': 'run 041cfc56-4132-4ab8-ba7b-29219cb472de may have started: Tembo '
++            'answered 201 to POST /v1/sessions in a form the driver cannot read',
++   'next': 'stop run 041cfc56-4132-4ab8-ba7b-29219cb472de with `driver stop`, '
++           'then start again'})
+
+======================================================================
+FAIL: test_a_session_answer_off_its_documented_shape_refuses_wake_and_stop (__main__.Driver.test_a_session_answer_off_its_documented_shape_refuses_wake_and_stop)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/tembo/test_driver.py", line 263, in test_a_session_answer_off_its_documented_shape_refuses_wake_and_stop
+    self.assertEqual(self.driver(cmd, {'run': run}), want, (code, body))
+AssertionError: Tuples differ: (1, {'error': 'Tembo has no run c393ed21-ef30-48e2-bb3d-[37 chars]un'}) != (1, {'error': 'run c393ed21-ef30-48e2-bb3d-dd63a884a62d:[186 chars]ry'})
+
+First differing element 1:
+{'error': 'Tembo has no run c393ed21-ef30-48e2-bb3d-[36 chars]run'}
+{'error': 'run c393ed21-ef30-48e2-bb3d-dd63a884a62d:[185 chars]try'}
+
+  (1,
+-  {'error': 'Tembo has no run c393ed21-ef30-48e2-bb3d-dd63a884a62d',
+-   'next': 'start a new run'})
++  {'error': 'run c393ed21-ef30-48e2-bb3d-dd63a884a62d: Tembo answered 200 to '
++            'GET /v1/sessions/c393ed21-ef30-48e2-bb3d-dd63a884a62d in a form '
++            'the driver cannot read',
++   'next': 'check run c393ed21-ef30-48e2-bb3d-dd63a884a62d on Tembo, then '
++           'retry'}) : (200, None)
+
+======================================================================
+FAIL: test_a_stop_or_archive_tembo_does_not_confirm_is_refused_with_its_run (__main__.Driver.test_a_stop_or_archive_tembo_does_not_confirm_is_refused_with_its_run)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/tembo/test_driver.py", line 339, in test_a_stop_or_archive_tembo_does_not_confirm_is_refused_with_its_run
+    self.assertEqual(self.driver('stop', {'run': run}), (1, {
+AssertionError: Tuples differ: (0, {'run': 'bf225959-4977-4152-a987-9a6e1[22 chars]rue}) != (1, {'error': 'run bf225959-4977-4152-a987[235 chars]in'})
+
+First differing element 0:
+0
+1
+
+- (0, {'run': 'bf225959-4977-4152-a987-9a6e1ba566e1', 'stopped': True})
++ (1,
++  {'error': 'run bf225959-4977-4152-a987-9a6e1ba566e1 may not have stopped: '
++            'Tembo answered 200 to POST '
++            '/v1/sessions/bf225959-4977-4152-a987-9a6e1ba566e1/stop in a form '
++            'the driver cannot read',
++   'next': 'check run bf225959-4977-4152-a987-9a6e1ba566e1 on Tembo, then stop '
++           'it again'}) : ('POST', 200, None)
+
+======================================================================
+FAIL: test_a_wake_message_tembo_does_not_acknowledge_is_refused_with_its_run (__main__.Driver.test_a_wake_message_tembo_does_not_acknowledge_is_refused_with_its_run)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/tembo/test_driver.py", line 316, in test_a_wake_message_tembo_does_not_acknowledge_is_refused_with_its_run
+    self.assertEqual(self.driver('wake', {'run': run}), (1, {
+AssertionError: Tuples differ: (0, {'run': '8ce63dac-9c17-4bf3-a8a1-9e4d5[19 chars]rue}) != (1, {'error': 'run 8ce63dac-9c17-4bf3-a8a1[201 chars]in'})
+
+First differing element 0:
+0
+1
+
+- (0, {'run': '8ce63dac-9c17-4bf3-a8a1-9e4d5b265bc6', 'woke': True})
++ (1,
++  {'error': 'run 8ce63dac-9c17-4bf3-a8a1-9e4d5b265bc6 may not have been woken: '
++            'Tembo answered 201 to POST /v1/messages in a form the driver '
++            'cannot read',
++   'next': 'check run 8ce63dac-9c17-4bf3-a8a1-9e4d5b265bc6 on Tembo before you '
++           'wake it again'}) : (201, None)
+
+======================================================================
+FAIL: test_an_effort_on_a_harness_tembo_does_not_run_gets_the_effort_refusal (__main__.Driver.test_an_effort_on_a_harness_tembo_does_not_run_gets_the_effort_refusal)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/tembo/test_driver.py", line 353, in test_an_effort_on_a_harness_tembo_does_not_run_gets_the_effort_refusal
+    self.assertEqual((code, out), (1, {'error': 'Tembo cannot set effort high for harness gemini-cli',
+AssertionError: Tuples differ: (1, {'error': 'harness gemini-cli is not one Tembo runs [57 chars]ex'}) != (1, {'error': 'Tembo cannot set effort high for harness [145 chars]lt"})
+
+First differing element 1:
+{'error': 'harness gemini-cli is not one Tembo runs [56 chars]dex'}
+{'error': 'Tembo cannot set effort high for harness [144 chars]ult"}
+
+  (1,
+-  {'error': 'harness gemini-cli is not one Tembo runs for OpenWiz',
+-   'next': 'use claude-code (or claude) or codex'})
++  {'error': 'Tembo cannot set effort high for harness gemini-cli',
++   'next': "this host can't set effort: remove the effort for this harness in "
++           "your Models table or Roster to run it at the host's default"})
+
+======================================================================
+FAIL: test_an_unreadable_repository_list_refuses_start (__main__.Driver.test_an_unreadable_repository_list_refuses_start)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/tembo/test_driver.py", line 277, in test_an_unreadable_repository_list_refuses_start
+    self.assertEqual(self.driver('start', START), (1, want), (code, body))
+AssertionError: Tuples differ: (1, {'error': 'Tembo has no connected repository example/site'[89 chars]in'}) != (1, {'error': 'Tembo answered 200 to GET /v1/repositories in a[70 chars]ry"})
+
+First differing element 1:
+{'error': 'Tembo has no connected repository example/site'[88 chars]ain'}
+{'error': 'Tembo answered 200 to GET /v1/repositories in a[69 chars]try"}
+
+  (1,
+-  {'error': 'Tembo has no connected repository example/site',
+-   'next': 'connect example/site to Tembo (Settings, Integrations, GitHub), '
+-           'then start again'})
++  {'error': 'Tembo answered 200 to GET /v1/repositories in a form the driver '
++            'cannot read',
++   'next': "check Tembo's status, then retry"}) : (200, None)
+
+----------------------------------------------------------------------
+Ran 22 tests in 15.407s
+
+FAILED (failures=6)
+exit 1

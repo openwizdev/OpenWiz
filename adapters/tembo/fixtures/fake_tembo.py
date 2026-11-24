@@ -23,7 +23,7 @@ class FakeTembo:
     def __init__(self, key, tracker, repositories=REPOSITORIES, lose_start=False, served_key=None):
         self.key, self.tracker, self.repositories, self.lose_start = key, tracker, repositories, lose_start
         self.served_key = key if served_key is None else served_key
-        self.requests, self.sessions = [], {}
+        self.requests, self.sessions, self.replies = [], {}, {}
         self.lock = threading.Lock()
         host = self
 
@@ -99,6 +99,14 @@ class FakeTembo:
                           'isCompleted': False, 'isFailed': False, 'inProgress': s['state'] == 'inProgress'}}
 
     def route(self, method, target, body):
+        for (m, pattern), (code, answer, perform) in self.replies.items():
+            if m == method and re.fullmatch(pattern, target.partition('?')[0]):
+                if perform:
+                    self.answer(method, target, body)
+                return code, answer(body) if callable(answer) else answer
+        return self.answer(method, target, body)
+
+    def answer(self, method, target, body):
         path, _, query = target.partition('?')
         q = urllib.parse.parse_qs(query)
         if method == 'GET' and path == '/v1/repositories':
@@ -148,5 +156,8 @@ class FakeTembo:
             s['messages'].append(body['content'])
             s['state'] = 'inProgress'
             self._note(s, body['content'])
-            return 201, {'id': '00000000-0000-4000-9000-%012d' % len(s['messages']), 'sessionId': body['sessionId']}
+            message = {'id': '00000000-0000-4000-9000-%012d' % len(s['messages']), 'sessionId': body['sessionId'],
+                       'content': body['content'], 'role': 'user', 'isQueued': True}
+            return 201, {'hotPath': None, 'job': None, 'message': message,
+                         'session': {'id': body['sessionId'], 'title': 'synthetic'}}
         return 404, {'error': 'Not Found'}
