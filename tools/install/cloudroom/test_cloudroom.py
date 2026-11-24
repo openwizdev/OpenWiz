@@ -1277,5 +1277,96 @@ class Packaged(Base):
         self.assertEqual(calls.read_text(), 'cloud status --json\n' * 2, 'one login read per check, nothing else')
 
 
+class CloudThread(Base):
+    ENV = {'ROOM_THREAD_ID': 'thr_syn_cloud_0001', 'ROOM_PROJECT_ID': 'prj_syn_cloud_0001'}
+
+    def make_host(self, name, system='Linux', machine='aarch64', env=None, launcher='file'):
+        base = self.base / name
+        base.mkdir()
+        host = FakeHost(base, system, machine)
+        host.environ = dict(self.ENV if env is None else env)
+        (host.root / 'dev/fuse').unlink(missing_ok=True)
+        (host.root / 'usr/bin/fusermount3').unlink(missing_ok=True)
+        path = host.root / 'usr/local/bin/room-cli'
+        if launcher == 'file':
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text('#!/bin/sh\nexit 0\n')
+            path.chmod(0o755)
+        elif launcher == 'symlink':
+            target = host.root / 'usr/local/lib/cloudroom/cloudroom'
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text('#!/bin/sh\nexit 0\n')
+            target.chmod(0o755)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.symlink_to(target)
+        elif launcher == 'nonexec':
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text('#!/bin/sh\nexit 0\n')
+            path.chmod(0o644)
+        elif launcher == 'dir':
+            path.mkdir(parents=True)
+        elif launcher == 'dangling':
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.symlink_to(host.root / 'usr/local/lib/cloudroom/missing')
+        return host, base / 'state'
+
+    def test_cloud_thread_is_verified_without_desktop_install_or_login_call(self):
+        for machine, launcher in (('aarch64', 'file'), ('aarch64', 'symlink'), ('x86_64', 'symlink')):
+            with self.subTest(machine=machine, launcher=launcher):
+                host, state = self.make_host(f'cloud-{machine}-{launcher}', machine=machine, launcher=launcher)
+                self.assertEqual(cloudroom.status(host, state)['code'], 'cloudroom_login_verified')
+                self.assertFalse(state.exists(), 'status writes nothing')
+                preview = cloudroom.install(host, state)
+                self.assertEqual((preview['code'], preview['operation'], preview['opened']),
+                                 ('cloudroom_reused', None, None))
+                confirm = cloudroom.install(host, state, yes=True)
+                self.assertEqual((confirm['code'], confirm['operation'], confirm['opened']),
+                                 ('cloudroom_reused', None, None))
+                signed = cloudroom.sign_in(host, state)
+                self.assertEqual((signed['code'], signed['opened']), ('cloudroom_login_verified', None))
+                self.assertEqual((host.calls, host.fetched, host.opened), ([], [], []))
+
+    def test_partial_or_invalid_cloud_thread_signals_fail_closed(self):
+        cases = [
+            ('no-thread-id', 'Linux', 'aarch64', {'ROOM_PROJECT_ID': 'prj_syn_0001'}, 'file', 'cloudroom_unsupported'),
+            ('no-project-id', 'Linux', 'aarch64', {'ROOM_THREAD_ID': 'thr_syn_0001'}, 'file', 'cloudroom_unsupported'),
+            ('empty-thread-id', 'Linux', 'aarch64', {'ROOM_THREAD_ID': '', 'ROOM_PROJECT_ID': 'prj_syn_0001'},
+             'file', 'cloudroom_unsupported'),
+            ('dash-thread-id', 'Linux', 'aarch64', {'ROOM_THREAD_ID': '-thr_syn', 'ROOM_PROJECT_ID': 'prj_syn_0001'},
+             'file', 'cloudroom_unsupported'),
+            ('space-project-id', 'Linux', 'aarch64', {'ROOM_THREAD_ID': 'thr_syn', 'ROOM_PROJECT_ID': 'prj syn'},
+             'file', 'cloudroom_unsupported'),
+            ('non-ascii-id', 'Linux', 'aarch64', {'ROOM_THREAD_ID': 'thr_syn_\u00e9', 'ROOM_PROJECT_ID': 'prj_syn'},
+             'file', 'cloudroom_unsupported'),
+            ('overlong-id', 'Linux', 'aarch64', {'ROOM_THREAD_ID': 'a' * 129, 'ROOM_PROJECT_ID': 'prj_syn_0001'},
+             'file', 'cloudroom_unsupported'),
+            ('no-launcher-arm64', 'Linux', 'aarch64', self.ENV, 'none', 'cloudroom_unsupported'),
+            ('no-launcher-x64', 'Linux', 'x86_64', self.ENV, 'none', 'cloudroom_not_installed'),
+            ('nonexec-launcher', 'Linux', 'aarch64', self.ENV, 'nonexec', 'cloudroom_unsupported'),
+            ('dir-launcher', 'Linux', 'aarch64', self.ENV, 'dir', 'cloudroom_unsupported'),
+            ('dangling-launcher', 'Linux', 'aarch64', self.ENV, 'dangling', 'cloudroom_unsupported'),
+            ('darwin-arm64', 'Darwin', 'arm64', self.ENV, 'file', 'cloudroom_not_installed'),
+            ('darwin-x64', 'Darwin', 'x86_64', self.ENV, 'file', 'cloudroom_unsupported'),
+        ]
+        for label, system, machine, env, launcher, expected in cases:
+            with self.subTest(label):
+                host, state = self.make_host(f'bad-{label}', system=system, machine=machine, env=env, launcher=launcher)
+                self.assertEqual(cloudroom.status(host, state)['code'], expected)
+                self.assertEqual(host.calls, [])
+
+    def test_desktop_launcher_and_blocked_destination_keep_precedence_in_cloud_thread(self):
+        host, state = self.make_host('desktop-wins', machine='x86_64', launcher='symlink')
+        host.launcher('signed-out')
+        self.assertEqual(cloudroom.status(host, state)['code'], 'cloudroom_login_missing')
+        self.assertEqual(host.calls, [[str(host.home / '.local/bin/room-cli'), 'cloud', 'status', '--json']])
+
+        blocked_host, blocked_state = self.make_host('blocked-wins', machine='aarch64', launcher='symlink')
+        blocked_host.plant_appimage()
+        self.assertEqual(cloudroom.status(blocked_host, blocked_state)['code'], 'cloudroom_destination_blocked')
+        self.assertEqual(cloudroom.install(blocked_host, blocked_state)['code'], 'cloudroom_destination_blocked')
+        with self.assertRaises(cloudroom.Refused):
+            cloudroom.sign_in(blocked_host, blocked_state)
+
+
 if __name__ == '__main__':
     unittest.main()

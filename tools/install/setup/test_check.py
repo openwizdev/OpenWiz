@@ -324,6 +324,34 @@ class IntelMac(unittest.TestCase):
         self.assertEqual(self.cloudroom.status(self.host(), self.base / 'state')['code'], 'cloudroom_reused')
 
 
+class CloudThread(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.base = Path(self.tmp.name)
+        spec = importlib.util.spec_from_file_location('cloudroom_3173', HERE.parent / 'cloudroom/cloudroom.py')
+        self.cloudroom = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.cloudroom)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_a_cloud_thread_passes_the_cloudroom_check(self):
+        home = self.base / 'home/synthetic'
+        home.mkdir(parents=True)
+        launcher = self.base / 'usr/local/bin/room-cli'
+        launcher.parent.mkdir(parents=True)
+        launcher.write_text('#!/bin/sh\nexit 0\n')
+        launcher.chmod(0o755)
+        host = self.cloudroom.Host('Linux', 'aarch64', home=home, root=self.base)
+        host.environ = {'ROOM_THREAD_ID': 'thr_syn_cloud_0001', 'ROOM_PROJECT_ID': 'prj_syn_cloud_0001'}
+        code = self.cloudroom.status(host, self.base / 'state')['code']
+        self.assertEqual(code, 'cloudroom_login_verified')
+        results = {c: next(iter(NEXT_MUST_NAME[c])) for c in NEXT_MUST_NAME}
+        results['cloudroom'] = code
+        step = check_answering(self.base / 'state', results)['next']['cloudroom']
+        self.assertTrue(step.startswith('None:'), step)
+
+
 class SetupSignerIsFixed(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
