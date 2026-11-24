@@ -9,15 +9,17 @@
 
 You make the decisions: answer a few questions. The agents run the factory: they write the spec and the tickets, build, review and merge. You watch it ship.
 
-**Status:** OpenWiz 0.1.0 ("OpenWiz 0.01") is out: the [release](https://github.com/openwizdev/OpenWiz/releases/tag/v0.1.0) installs on macOS on Apple silicon and on Linux on x86_64 (glibc 2.34 or later). Intel Macs are not supported for 0.1.0: the install needs CloudRoom, and CloudRoom offers no Intel Mac build today, though the `openwiz` program itself runs there. OpenWiz builds itself, in public, in this repo.
+This branch documents **OpenWiz 0.1.1**. Check the [published releases](https://github.com/openwizdev/OpenWiz/releases) for availability. If the release you install is 0.1.0, follow its [CloudRoom setup guide](https://github.com/openwizdev/OpenWiz/blob/v0.1.0/docs/install.md).
 
 ## Quick start
 
-You need [CloudRoom](https://cloudroom.dev), signed in: the 0.1.0 install sets up through it. You also need Python 3.9 or later, `git`, and the GitHub CLI (`gh`). Then paste this line into your coding agent (Claude Code, Codex or another):
+For 0.1.1 you need Python 3.9 or later, Git, and the GitHub CLI. Use macOS on Apple silicon or Intel, or x86_64 Linux with glibc 2.34 or later. Choose where agents run: this computer with Claude Code or Codex, boat.dev, or CloudRoom. Only the CloudRoom host needs a CloudRoom login. On an Intel Mac, choose this computer or boat.dev.
+
+Paste this line into your coding agent:
 
 > Install OpenWiz from github.com/openwizdev/OpenWiz
 
-Your agent follows the [install skill](https://github.com/openwizdev/WizSkills/blob/maint/0.2/skills/install/SKILL.md). It checks your computer, installs the verified prebuilt release (no Rust or Node), puts OpenWiz's skills into your agents, and checks each connection. Nothing starts until you approve a plan. People: see the [install guide](docs/install.md) for every step and command. OpenWiz is free. Your model and host charges are your own.
+Your agent verifies the prebuilt release, connects GitHub and installs the skills. You choose whether to start a first fleet after its plan passes the checks. OpenWiz is free. Your model and host charges are your own. [Install guide](docs/install.md) · [Pinned install skill](https://github.com/openwizdev/WizSkills/blob/v0.4.2/skills/install/SKILL.md)
 
 ## How it works
 
