@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import ctypes, fcntl, importlib.machinery, importlib.util, io, json, os, re, secrets, shutil, signal, subprocess, sys, time, uuid
-import tempfile
+import math, shlex, tempfile
 
 sys.dont_write_bytecode = True
 
@@ -846,9 +846,80 @@ def exited(run, turn):
         time.sleep(0.05)
 
 
+# Linux only: a turn's own commands go first under memory pressure, and a CPU quota sizes their workers.
+CGROUP, PROC_CGROUP = '/sys/fs/cgroup', '/proc/self/cgroup'
+OOM_FIRST = 500
+CPU_VARIABLES = ('OMP_NUM_THREADS', 'PYTHON_CPU_COUNT', 'CARGO_BUILD_JOBS')
+
+
+def cpu_quota():
+    """The driver's cgroup CPU quota, rounded up to whole CPUs: the tightest of its cgroup and every parent, or
+    None when none sets one (cgroup v2 cpu.max, else v1 cpu.cfs_quota_us and cpu.cfs_period_us)."""
+    try:
+        with open(PROC_CGROUP) as f:
+            lines = [entry.rstrip('\n').split(':', 2) for entry in f]
+    except OSError:
+        return None
+    found = []
+    for _, controllers, path in (entry for entry in lines if len(entry) == 3):
+        v2 = controllers == ''
+        if not v2 and 'cpu' not in controllers.split(','):
+            continue
+        parts = [p for p in path.split('/') if p and p not in ('.', '..')]
+        for depth in range(len(parts), -1, -1):
+            folder = os.path.join(CGROUP, *([] if v2 else [controllers]) + parts[:depth])
+            try:
+                if v2:
+                    with open(os.path.join(folder, 'cpu.max')) as f:
+                        quota, period = f.read().split()
+                else:
+                    with open(os.path.join(folder, 'cpu.cfs_quota_us')) as f, \
+                            open(os.path.join(folder, 'cpu.cfs_period_us')) as g:
+                        quota, period = f.read().strip(), g.read().strip()
+                if quota.isdigit() and period.isdigit() and int(quota) > 0 and int(period) > 0:
+                    found.append(math.ceil(int(quota) / int(period)))
+            except (OSError, ValueError):
+                continue
+    return min(found) if found else None
+
+
+def shells_go_first(path, previous):
+    """Write the owner-only helper a turn's shells source: it raises the shell's own oom_score_adj (raising needs no
+    privilege, and never lowers one already higher), then sources the owner's previous file, if any."""
+    lines = ['# OpenWiz local driver: this turn\'s shells go first under memory pressure, never the harness.',
+             '{ read -r adj < /proc/self/oom_score_adj && [ "$adj" -lt %d ] && echo %d > /proc/self/oom_score_adj; } '
+             '2>/dev/null' % (OOM_FIRST, OOM_FIRST)]
+    lines.append('. %s' % shlex.quote(previous) if previous and previous != path else ':')
+    new = path + '.new'
+    with open(os.open(new, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), 'w') as f:
+        f.write('\n'.join(lines) + '\n')
+    os.chmod(new, 0o600)
+    os.replace(new, path)
+    return path
+
+
+def agent_environment(run, harness, overlay):
+    """What a Linux turn adds to its harness's environment; nothing on macOS. The owner's own values win."""
+    if not LINUX:
+        return {}
+    owner = dict(os.environ, **overlay)
+    added = {'BASH_ENV': shells_go_first(os.path.join(STATE, run + '.bash-env'), owner.get('BASH_ENV'))}
+    if harness == 'claude':
+        added['CLAUDE_ENV_FILE'] = shells_go_first(os.path.join(STATE, run + '.claude-env'),
+                                                   owner.get('CLAUDE_ENV_FILE'))
+    cpus = cpu_quota()
+    if cpus:
+        added.update({name: str(cpus) for name in CPU_VARIABLES if name not in owner})
+    return added
+
+
 def launch(state, run, woken):
     req = state['request']
     cmd, extra = command(state, woken)
+    try:
+        extra = dict(extra, **agent_environment(run, req['harness'], extra))
+    except OSError as e:
+        raise Refused('could not write this turn\'s shell helper: %s' % e.strerror, WRITABLE)
     try:
         log = open_log(run)
         output_from = os.fstat(log).st_size
