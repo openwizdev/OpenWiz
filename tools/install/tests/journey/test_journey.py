@@ -813,7 +813,8 @@ class InstallJourney(unittest.TestCase):
         for host, target in ((('Darwin', 'arm64'), 'aarch64-apple-darwin'),
                              (('Darwin', 'x86_64'), 'x86_64-apple-darwin'),
                              (('Linux', 'x86_64'), 'x86_64-unknown-linux-gnu'),
-                             (('Linux', 'aarch64'), None), (('Windows', 'AMD64'), None)):
+                             (('Linux', 'aarch64'), 'aarch64-unknown-linux-gnu'),
+                             (('Linux', 'armv7l'), None), (('Windows', 'AMD64'), None)):
             out = io.StringIO()
             code = install.main(['preflight'], host=host, stdout=out)
             report = json.loads(out.getvalue())
