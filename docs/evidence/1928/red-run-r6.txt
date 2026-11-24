@@ -1,6 +1,0 @@
-$ python3 -I contracts/fixtures/write-driver/check.py
-fail admission/ready.json: expected {"exit": 0, "read": "ready: yes", "environ": ["PATH"]}, read {"exit": 0, "read": "ready: yes", "environ": ["*", "PATH", "other"]}
-fail admission/no-start-record.json: expected {"exit": 1, "read": "ready: no: no launch-fleet start record from a record author", "environ": ["PATH"]}, read {"exit": 1, "read": "ready: no: no launch-fleet start record from a record author", "environ": ["*", "PATH", "other"]}
-fail admission/start-by-other-account.json: expected {"exit": 1, "read": "ready: no: no launch-fleet start record from a record author", "environ": ["PATH"]}, read {"exit": 1, "read": "ready: no: no launch-fleet start record from a record author", "environ": ["*", "PATH", "other"]}
-fail admission/caller-signs-and-hooks.json: expected {"exit": 0, "read": "ready: yes", "signer": false, "hook": false, "environ": ["PATH"]}, read {"exit": 0, "read": "ready: yes", "environ": ["*", "PATH", "other"], "signer": false, "hook": false}
-72 fixtures, 4 failures

@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+import os, sys
+here = os.path.dirname(os.path.realpath(__file__))
+if sys.argv[1:] == ['start']:
+    quoted = here if os.environ['HEADS_QUOTE'] == '<path>' else os.environ['HEADS_QUOTE']
+    sys.stdout.write('{"error": "cannot start for %s", "next": "fix the fixture"}\n' % quoted)
+    sys.exit(1)
+template = os.path.join(here, '..', 'template', 'driver')
+os.execv(sys.executable, [sys.executable, '-I', template] + sys.argv[1:])

@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import types
 import unittest
 
 sys.dont_write_bytecode = True
@@ -49,10 +50,13 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(ROOT / 'tools/install'))
 import package
 import build_products
+import entry as rl6_entry
 rl4 = load('release_candidate_rl4_fixture', HERE / 'test_product_identity.py')
 RUNTIME = dict(rl4.RUNTIME, **{f'skills/{name}': f'Synthetic {name}.\n'.encode() for name in (
     'setup/SKILL.md', 'grill/SKILL.md', 'to-tickets/SKILL.md', 'launch-fleet/SKILL.md')},
     **{'skills/launch-fleet/scripts/fleet.sh': b'#!/bin/sh\necho synthetic\n'})
+RELEASED_CONTRACTS = {'contracts/alpha.v1.md': b'Synthetic alpha contract.\n',
+                      'contracts/beta.v1.md': b'Synthetic beta contract.\n'}
 RUNTIME['tools/install/cloudroom/cloudroom.py'] = b'# Synthetic CloudRoom setup tool.\n'
 rl4.PACKAGED['tools/install/cloudroom/cloudroom.py'] = 'runtime/cloudroom/cloudroom.py'
 RUNTIME['tools/install/setup/init.py'] = b'# Synthetic init runtime.\n'
@@ -330,15 +334,20 @@ class World(unittest.TestCase):
             receipts = rl4.build(binaries, self.head, target, work, version)
             identity, record = build_products.collect(self.repo, binaries, build / f'products-{target}', version,
                                                       self.head, target, receipts['program'])
-            (build / f'identity-{target}.json').write_text(json.dumps(identity))
-            out = build / f'bundle-{target}'
-            package.assemble(build / f'products-{target}', build / f'identity-{target}.json', out)
-            self.product_rows += record['products']
             runtime = next(p for p in record['products'] if p['identity']['product'] == 'runtime')
             selection = sorted([repository, name] for repository, name in
                                ([p, 'runtime/' + p] if p.startswith('skills/') else [p, rl4.PACKAGED[p]]
                                 for p in RUNTIME))
+            selection = sorted(selection + [[p, 'runtime/' + p] for p in getattr(self, 'released', {})])
+            if getattr(self, 'released', None):
+                selection = sorted(selection + [['wizskills.lock', 'runtime/wizskills.lock']])
             assert sha(rl4.canonical({'source': self.head, 'selection': selection})) == runtime['build_receipt']['sha256']
+            if getattr(self, 'swapped', None):
+                selection = self.swap_packaged(build / f'products-{target}', identity, runtime, selection, *self.swapped)
+            (build / f'identity-{target}.json').write_text(json.dumps(identity))
+            out = build / f'bundle-{target}'
+            package.assemble(build / f'products-{target}', build / f'identity-{target}.json', out)
+            self.product_rows += record['products']
             self.product_receipts.append({
                 'target': target, 'selection': selection,
                 **{kind: {'name': receipts[kind].name, 'utf8': receipts[kind].read_text()} for kind in ('program',)}})
@@ -660,6 +669,77 @@ class Candidate(World):
         for attempt in status['install_attempts']:
             saved = self.state / attempt['evidence']['record']
             self.assertEqual(sha(saved.read_bytes()), attempt['evidence']['sha256'])
+
+    def test_install_status_never_reads_a_held_or_interrupted_attempt_record(self):
+        import candidate
+        state = candidate.State(self.root / 'attempts')
+        state.write('record.json', {'candidate_sha256': 'c' * 64, 'publication': {'status': 'complete'}, 'timing': {
+            'original_ship_at': 10, 'preparation_started_at': 5, 'finished_at': 90, 'phases': []}})
+        evidence = {'target': LINUX, 'downloads': [], 'steps': []}
+
+        def shown():
+            code, result = self.cli('status', '--state', state.path)
+            return code, result['status'], [(a['attempts'], a['status'], a['reasons'], a['evidence']['record'])
+                                            for a in result.get('install_attempts', [])] or result.get('reasons')
+        first = candidate.install_attempt(state, LINUX, None, 100, evidence)
+        code = candidate.install_attempt.__code__
+
+        def at_each_line(watch):
+            def tracer(frame, event, arg):
+                if frame.f_code is not code:
+                    return None
+                def line(frame, event, arg):
+                    if event == 'line':
+                        watch(frame.f_lineno)
+                    return line
+                return line
+            return tracer
+
+        held = []
+
+        sys.settrace(at_each_line(lambda _: held.append(shown())))
+        try:
+            second = candidate.install_attempt(state, LINUX, 'install_refused', 200, evidence)
+        finally:
+            sys.settrace(None)
+        one = (0, 'complete', [(1, 'passed', [], first['evidence']['record'])])
+        two = (0, 'incomplete', [(2, 'blocked', ['install_refused'], second['evidence']['record'])])
+        self.assertGreater(len(held), 3)
+        self.assertEqual(held, [one] * held.count(one) + [two] * held.count(two))
+        self.assertIn(one, held)
+        self.assertEqual(shown(), two)
+        interrupted = 0
+        for at, stop in enumerate(sorted({n for _, _, n in code.co_lines() if n}), 300):
+            fired = []
+
+            def interrupt(lineno):
+                if lineno == stop and not fired:
+                    fired.append(lineno)
+                    raise KeyboardInterrupt
+            sys.settrace(at_each_line(interrupt))
+            try:
+                candidate.install_attempt(state, LINUX, 'install_refused', at, evidence)
+            except KeyboardInterrupt:
+                interrupted += 1
+            finally:
+                sys.settrace(None)
+            got, status, rows = shown()
+            self.assertEqual((got, status, [row[1:3] for row in rows]),
+                             (0, 'incomplete', [('blocked', ['install_refused'])]), f'status after an interrupt at {stop}')
+            [(attempts, _, _, record)] = rows
+            self.assertIn((attempts, record), ((2, second['evidence']['record']),
+                                               (3, f'evidence/install-{LINUX}/3.json')))
+            if attempts == 3:
+                saved = state.file(record)
+                self.assertEqual(json.loads(saved.read_bytes())['at'], at)
+                saved.unlink()
+        self.assertGreater(interrupted, 3)
+        third = candidate.install_attempt(state, LINUX, 'install_refused', 400, evidence)
+        folder = state.file(f'evidence/install-{LINUX}')
+        self.assertEqual(sorted(p.name for p in folder.iterdir() if candidate.ATTEMPT.fullmatch(p.name)),
+                         ['1.json', '2.json', '3.json'])
+        self.assertEqual((first['evidence']['record'], third['evidence']['record']),
+                         (f'evidence/install-{LINUX}/1.json', f'evidence/install-{LINUX}/3.json'))
 
     def test_missing_ship_or_exact_changelog_approval_refuses_before_any_write(self):
         self.smoke_kit()
@@ -997,11 +1077,27 @@ class Candidate(World):
         self.assertEqual(self.receipt('products', 'ci'), (0, {'status': 'recorded', 'gate': 'products'}))
         self.assertEqual(self.writes(), [])
 
+    def swap_packaged(self, products, identity, runtime, selection, first, second):
+        names = ('runtime/' + first, 'runtime/' + second)
+        data = [(products / name).read_bytes() for name in names]
+        for name, bytes_ in zip(names, reversed(data)):
+            (products / name).write_bytes(bytes_)
+        rows = {row['path']: row for row in identity['assets']}
+        a, b = (rows[name] for name in names)
+        for key in ('sha256', 'bytes'):
+            a[key], b[key] = b[key], a[key]
+        runtime['payload_sha256'] = build_products.payload([r for r in identity['assets'] if r['path'].startswith('runtime/')])
+        selection = [pair for pair in selection if pair[0] not in (first, second)]
+        selection = sorted(selection + [[first, names[1]], [second, names[0]]])
+        runtime['build_receipt']['sha256'] = sha(rl4.canonical({'source': self.head, 'selection': selection}))
+        return selection
+
     def lock_mode(self):
         install = self.repo / '.wizskills'
         install.mkdir()
-        for path, data in RUNTIME.items():
-            if path.startswith('skills/'):
+        self.released = RELEASED_CONTRACTS
+        for path, data in {**RUNTIME, **RELEASED_CONTRACTS}.items():
+            if path.startswith(('skills/', 'contracts/')):
                 (install / path).parent.mkdir(parents=True, exist_ok=True)
                 (install / path).write_bytes(data)
         (install / 'README.md').write_text('Synthetic WizSkills.\n')
@@ -1026,6 +1122,18 @@ class Candidate(World):
         self.assertEqual(self.receipt('products', 'ci'), (0, {'status': 'recorded', 'gate': 'products'}))
         skill = install / 'skills/synthetic/SKILL.md'
         skill.write_bytes(skill.read_bytes() + b'Edited after packaging.\n')
+        self.blocked(self.receipt('products', 'ci'), 'products_unverified')
+        self.assertEqual(self.writes(), [])
+
+    def test_r1_a_locked_contract_packaged_at_another_contracts_path_is_refused(self):
+        self.lock_mode()
+        self.swapped = ('contracts/alpha.v1.md', 'contracts/beta.v1.md')
+        self.smoke_kit()
+        self.artifacts()
+        self.made = self.body()
+        self.assertEqual(self.prepare()[0], 0)
+        self.decisions()
+        self.checks()
         self.blocked(self.receipt('products', 'ci'), 'products_unverified')
         self.assertEqual(self.writes(), [])
 
@@ -1326,6 +1434,23 @@ class Candidate(World):
         self.assertEqual(json.loads((self.releases / 'v0.1.0' / 'meta.json').read_text())['title'], 'OpenWiz 0.01')
         self.assertEqual(self.record()['publication']['status'], 'complete')
         self.assertEqual(self.git(self.remote, 'tag', '-l', '--format=%(contents:subject)', 'v0.1.0'), 'OpenWiz 0.1.0')
+
+    def test_2278_publishing_0_1_1_creates_and_reads_back_openwiz_0_1_1(self):
+        self.ready_public('0.1.1')
+        code, out = self.publish()
+        self.assertEqual((code, out['status']), (0, 'published'), out)
+        created = next(c['args'] for c in self.calls() if c['action'] == 'release')
+        self.assertEqual(created[created.index('--title') + 1], 'OpenWiz 0.1.1')
+        self.assertEqual(json.loads((self.releases / 'v0.1.1' / 'meta.json').read_text())['title'], 'OpenWiz 0.1.1')
+        self.assertEqual(self.record()['publication']['status'], 'complete')
+        self.assertEqual(self.git(self.remote, 'tag', '-l', '--format=%(contents:subject)', 'v0.1.1'), 'OpenWiz 0.1.1')
+
+    def test_2527_from_0_1_1_on_a_release_is_named_by_its_version(self):
+        candidate = load('release_candidate_public_name', HERE / 'candidate.py')
+        self.assertEqual(candidate.public_name('0.1.0'), 'OpenWiz 0.01')
+        for version in ('0.1.1', '0.1.2'):
+            with self.subTest(version=version):
+                self.assertEqual(candidate.public_name(version), 'OpenWiz ' + version)
 
     def test_1836_a_0_1_0_release_read_back_under_another_name_is_incomplete(self):
         self.ready_public()
@@ -2022,8 +2147,7 @@ class Notes(World):
     def test_rl6_the_approved_changelog_passes_as_is(self):
         raw = (ROOT / 'changes/notes/0.0.12.md').read_bytes()
         self.assertEqual(sha(raw), 'e690a1652787865d67cb557fc1a2a59588b87a21a067b2e547b90a709f5e6e3d')
-        current, cut = (ROOT / 'CHANGELOG.md').read_bytes(), raw.index(b'\n\n', raw.index(b'All OpenWiz versions')) + 2
-        self.assertTrue(current.startswith(raw[:cut]) and current.endswith(raw[cut:]))
+        kept_history((ROOT / 'CHANGELOG.md').read_bytes(), raw)
         self.untagged(raw.decode())
         (self.repo / 'changes/notes').mkdir()
         (self.repo / 'changes/notes/0.0.12.md').write_bytes(raw)
@@ -2073,6 +2197,35 @@ class Notes(World):
                 self.untagged(HISTORY)
                 (code, out), _ = self.curated(text, included)
                 self.assertEqual((code, out['reasons']), (1, [reason]))
+
+    def test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history(self):
+        raw = (ROOT / 'changes/notes/0.0.12.md').read_bytes()
+        cut = raw.index(b'\n\n', raw.index(b'All OpenWiz versions')) + 2
+        newer = (section('0.1.1') + '\n' + section('0.1.0') + '\n').encode()
+        kept_history(raw, raw)
+        kept_history(raw[:cut] + newer + raw[cut:], raw)
+        see = b'(https://github.com/openwizdev/OpenWiz/issues/1).\n'
+        tag = b'(https://github.com/openwizdev/OpenWiz/issues/1).\n\n[Full release](https://github.com/openwizdev/OpenWiz/releases/tag/'
+        linked = newer.replace(see, tag + b'v0.1.0)\n', 1)
+        linked = linked[:linked.index(b'## 0.1.0')] + linked[linked.index(b'## 0.1.0'):].replace(see, tag + b'v0.0.12)\n')
+        self.assertEqual(kept_history(raw[:cut] + linked + raw[cut:], raw), [(0, 1, 1), (0, 1, 0)])
+        whole, order = 'is not whole version sections', 'are not newest first and newer than the kept history'
+        for name, planted, reason in (
+                ('a stray paragraph', b'Synthetic stray paragraph.\n\n', whole),
+                ('a broken section', newer.replace(b'**Use 0.1.0**', b'Use 0.1.0'),
+                 'entry: 0.1.0 needs its bold headline here'),
+                ('an older version', (section('0.0.11') + '\n').encode(), order),
+                ('oldest first', (section('0.1.0') + '\n' + section('0.1.1') + '\n').encode(), order),
+                ('no blank line before the history', newer[:-1], whole),
+                ('a CR in the headline', newer.replace(b'**Use 0.1.0**', b'**Use\r0.1.0**'),
+                 'entry: curated notes are LF text ending in one newline'),
+                ('an off-repository footer link', newer.replace(b'internals.\n- See [the ticket](https://github.com/'
+                                                                b'openwizdev/OpenWiz/issues/1).\n\n## 0.1.0',
+                                                                b'internals.\n\n[Full release](https://example.invalid/'
+                                                                b'v0.1.1)\n\n## 0.1.0'),
+                 'entry: curated link is not to openwizdev/OpenWiz: https://example.invalid/v0.1.1')):
+            with self.subTest(case=name), self.assertRaisesRegex(AssertionError, re.escape(reason)):
+                kept_history(raw[:cut] + planted + raw[cut:], raw)
 
     def test_rl6_moved_lines_take_their_version_from_the_ticket_they_moved_to(self):
         moved = b'kind: fixed\n\nFixture-tested: The moved line.\n'
@@ -2126,6 +2279,41 @@ class Notes(World):
         self.assertEqual(code, 0, out)
 
 
+def kept_history(current, raw):
+    cut = raw.index(b'\n\n', raw.index(b'All OpenWiz versions')) + 2
+    if not (current.startswith(raw[:cut]) and current.endswith(raw[cut:])):
+        raise AssertionError('the approved changelog bytes moved')
+    inserted = current[cut:len(current) - len(raw) + cut].decode('utf-8')
+    if not inserted:
+        return []
+    if not (inserted.startswith('## ') and inserted.endswith('\n\n')):
+        raise AssertionError('inserted changelog text is not whole version sections')
+    lines = inserted[:-2].split('\n')
+    starts = [i for i, line in enumerate(lines) if line.startswith('## ')]
+    found = []
+    for k, start in enumerate(starts):
+        end = starts[k + 1] - 1 if k + 1 < len(starts) else len(lines)
+        if k + 1 < len(starts) and lines[end] != '':
+            raise AssertionError('inserted changelog sections are not separated by one blank line')
+        try:
+            found.append(tuple(map(int, rl6_entry.curated_section(lines[start:end]).split('.'))))
+        except rl6_entry.Refused as error:
+            raise AssertionError(f'inserted changelog text: {error}') from None
+    kept = [tuple(map(int, v)) for v in re.findall(rb'^## ([0-9]+)\.([0-9]+)\.([0-9]+) ', raw[cut:], re.M)]
+    order = found + kept[:1]
+    if not all(x > y for x, y in zip(order, order[1:])):
+        raise AssertionError('inserted changelog versions are not newest first and newer than the kept history')
+    for k, start in enumerate(starts):
+        end = starts[k + 1] - 1 if k + 1 < len(starts) else len(lines)
+        older = ['v%d.%d.%d' % v for v in found[k + 1:] + kept]
+        try:
+            rl6_entry.curated(raw[:cut].decode('utf-8') + '\n'.join(lines[start:end]) + '\n',
+                              ['%d.%d.%d' % found[k]], older)
+        except rl6_entry.Refused as error:
+            raise AssertionError(f'inserted changelog text: {error}') from None
+    return found
+
+
 def section(version):
     return (f"## {version} · 2026-11-20\n\n**Use {version}**\n\n**What's new for you**\n\n"
             f"- You can use {version} part one.\n- You can use {version} part two.\n\n"
@@ -2142,6 +2330,76 @@ HISTORY = ('# Changelog\n\nAll synthetic versions, newest first.\n\n'
 
 def re_headings(text):
     return [line for line in text.splitlines() if line.startswith('## ')]
+
+
+class ArchivePrivacy(unittest.TestCase):
+    PLANTED = ('thr_' + 'planted0001', '/home/' + 'plantedname/notes', 'prj_' + 'planted42', 'robin' + '@' + 'mail.invalid')
+    CONTRACT = 'runtime/contracts/open-development.v1.md'
+
+    def setUp(self):
+        import candidate
+        self.candidate = candidate
+        self.tmp = tempfile.TemporaryDirectory(prefix='release-d2-archive-')
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.folder = self.root / 'artifacts'
+        self.folder.mkdir()
+        for target in TARGETS:
+            (self.folder / f'openwiz-{VERSION}-{target}.manifest.json').write_text('{}\n')
+        self.literals = self.root / 'literals.txt'
+        self.literals.write_text('synthetic-private-term-zq\n')
+
+    def bad(self, planted=None):
+        return ''.join('Bad: a planted case.\n\n```bad\n' + x + '\n```\n\n' for x in planted or self.PLANTED)
+
+    def scan(self, files, overlap=None):
+        def stage(manifest, archive, checksum, target, keep=None):
+            if overlap:
+                overlap.wait(30)
+            build = Path(keep) / ('build-' + target)
+            for name, text in files.items():
+                (build / name).parent.mkdir(parents=True, exist_ok=True)
+                (build / name).write_text(text)
+            return build
+        scan = self.candidate.scan_artifacts
+        scan = types.FunctionType(scan.__code__, {**vars(self.candidate), 'stage': stage})
+        return scan({'release_version': VERSION}, self.folder, self.literals)
+
+    def test_d2_the_contracts_planted_bad_blocks_pass_at_its_runtime_path(self):
+        self.assertEqual(self.scan({self.CONTRACT: '# Contract\n\n' + self.bad() + '```good\nclean\n```\n',
+                                    'runtime/install.py': '# clean\n'}), [])
+
+    def test_d2_a_planted_string_outside_a_bad_block_in_the_contract_is_still_a_finding(self):
+        for planted in self.PLANTED:
+            for outside in (planted + '\n', '```good\n' + planted + '\n```\n', '```bad\nok\n```\n' + planted + '\n'):
+                with self.subTest(planted=planted, outside=outside):
+                    self.assertEqual(self.scan({self.CONTRACT: self.bad() + outside}), ['finding'])
+
+    def test_d2_a_bad_block_in_any_other_runtime_file_is_still_a_finding(self):
+        for name in ('runtime/contracts/agent-status.v1.md', 'runtime/skills/triage/SKILL.md',
+                     'runtime/install.py', 'runtime/open-development.v1.md'):
+            for planted in self.PLANTED:
+                with self.subTest(name=name, planted=planted):
+                    self.assertEqual(self.scan({self.CONTRACT: self.bad(), name: self.bad([planted])}), ['finding'])
+
+    def test_d2_another_member_ending_in_the_contracts_name_gets_no_exemption(self):
+        for name in ('runtime/skills/synthetic/contracts/open-development.v1.md', 'runtime/runtime/contracts/open-development.v1.md',
+                     'runtime/contracts/x-open-development.v1.md', 'runtime/skills/open-development.v1.md'):
+            with self.subTest(name=name):
+                self.assertEqual(self.scan({name: self.bad()}), ['finding'])
+
+    def test_d2_scans_running_at_once_each_see_only_their_own_files(self):
+        import threading
+        overlap, found = threading.Barrier(2), {}
+        files = {'clean': {self.CONTRACT: self.bad()}, 'dirty': {self.CONTRACT: self.bad(), 'runtime/install.py': self.bad()}}
+        threads = [threading.Thread(target=lambda name=name: found.__setitem__(name, self.scan(files[name], overlap)))
+                   for name in files]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        self.assertEqual(found, {'clean': [], 'dirty': ['finding']})
+        self.assertEqual(self.candidate.stage.__qualname__, 'stage')
 
 
 if __name__ == '__main__':

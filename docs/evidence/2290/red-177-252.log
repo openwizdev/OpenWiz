@@ -1,0 +1,4 @@
+# Red run on main: cargo test -p openwiz-tests --test proof help_documents_the_commands (help text omitted)
+thread 'p04_partial_failures::help_documents_the_commands_the_order_and_the_exit_codes' (11545) panicked at tests/proof/p04_partial_failures.rs:597:13:
+--help: help should contain "  1  ls, show and the help commands: the output could not be written or flushed;\n     some of it may already be on stdout":
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 108 filtered out; finished in 0.00s

@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+import importlib.machinery, importlib.util, os, subprocess, sys
+sys.dont_write_bytecode = True
+path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'key-host', 'driver')
+spec = importlib.util.spec_from_loader('keyhost', importlib.machinery.SourceFileLoader('keyhost', path))
+d = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(d)
+t = d.t
+NAME = 'DEV' + 'IN_API_' + 'KEY'
+
+
+def unused():
+    return subprocess.run(['secret-tool', 'lookup', 'service', 'openwiz-devin'], capture_output=True).stdout
+t.main()

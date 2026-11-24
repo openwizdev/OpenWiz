@@ -79,11 +79,11 @@ pub fn help() -> String {
 Usage:
   openwiz ls [-l] [-a] [--hidden] [--limit N] [--offset N] [--json]
   openwiz show <id> [--json]
-  openwiz models [--json]
-  openwiz models show [--json]
+  openwiz models [--json] [--host NAME]
+  openwiz models show [--json] [--host NAME]
   openwiz models list [--save] [--json]
-  openwiz models set <role> <provider> <model> <effort> [--json]
-  openwiz models set <small-builder|fixer> follows-builder [--json]
+  openwiz models set <role> <provider> <model> <effort> [--json] [--host NAME]
+  openwiz models set <small-builder|fixer> follows-builder [--json] [--host NAME]
 {fleets_usage}{fleet_usage}{tick_usage}{loops_usage}{loop_files_usage}{init_usage}{github_usage}  openwiz help --agent
   openwiz help
   openwiz --help
@@ -110,25 +110,28 @@ Each read stops after {read} seconds and is not retried; a run stops after {budg
 A result is complete or partial: its gaps say what is missing.
 
 models
-  The Cloud harnesses, models and efforts CloudRoom offers right now, from one cloud status
-  read, as reported (it may answer from a saved copy); harnesses it lists but OpenWiz
-  cannot offer, with the reason. Nothing is marked default. --json prints
+  With the cloud host, reads the options from one CloudRoom cloud status read, which
+  may answer from a saved copy. Other hosts show OpenWiz's current choices for the
+  Claude Code and Codex programs on PATH. --host NAME overrides the saved project
+  host, with cloud as the fallback. Nothing is marked default. --json prints
   openwiz.cloud-options.v1.
 models show|list|set
   Run from the project root; they read docs/agents/fleet.md (contracts/models.v1.md).
   show: each role's harness, model and effort, what it follows, and each family's
   review and fix round; no cloud status read. list: the options above with the
   recommended choice per role; --save writes docs/agents/models-offered.json.
-  set: checks the choice against one cloud status read, rewrites the role's row
-  (and the older tables' matching rows), writes the snapshot and prints what
-  changed, for you to commit; follows-builder reads nothing. Roles: orchestrator,
-  builder, reviewer, small-builder, fixer. --json prints openwiz.models-show.v1,
+  show and set accept --host NAME. Show reads the roles for every host.
+  set: checks the choice against the CloudRoom list for cloud, or accepts settable
+  IDs for an installed harness for other hosts. It rewrites the role's row and
+  matching older rows, writes the snapshot and prints what changed. The
+  follows-builder form skips the catalogue. Roles: orchestrator, builder,
+  reviewer, small-builder, fixer. --json prints openwiz.models-show.v1,
   openwiz.models-list.v1 or openwiz.models-set.v1.
 {loops_help}{loop_files_help}{fleets_help}{fleet_help}{tick_help}{github_help}
 Exit codes:
   0  a result was printed, complete or partial
   1  a read failed
-  1  ls, show, --help: the output could not be written or flushed;
+  1  ls, show and the help commands: the output could not be written or flushed;
      some of it may already be on stdout
   2  usage error, or a request out of bounds
   3  show: the session was not found
@@ -136,9 +139,11 @@ Exit codes:
   13 models: nothing can be offered right now; the report says why
   1  models show|list|set: fleet.md missing, unreadable or refused, or a failed write
   5  models set: not offered, or not writable to the Models table; nothing was changed
-{fleets_exit_codes}{fleet_exit_codes}On an error, stdout is empty unless ls, show or --help fails to write or flush output;
-some output may already be on stdout in that case.
-In either case, stderr has one line starting with \"openwiz: \".
+{fleets_exit_codes}{fleet_exit_codes}On an error, stdout is empty unless ls, show or a help command fails to write or
+flush output, when some of it may already be on stdout, or unless --json was given.
+With --json, a handled failure with no outcome report of its own prints
+openwiz.cli-error.v1 on stdout; a failed write or flush is the exception and
+prints no JSON error. Diagnostics may appear on stderr either way.
 ",
         default = ops::ListRequest::default().limit,
         kib = FINAL_OUTPUT_MAX_BYTES / 1024,
@@ -733,4 +738,22 @@ fn hinnant_civil_from_days(days: i64) -> (i64, i64, i64) {
     let month = if mp < 10 { mp + 3 } else { mp - 9 };
     let year = yoe + era * 400 + i64::from(month <= 2);
     (year, month, day)
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn help_qualifies_the_json_error_and_stderr_promises() {
+        let help = super::help();
+        assert!(
+            help.contains(
+                "With --json, a handled failure with no outcome report of its own prints\n\
+                 openwiz.cli-error.v1 on stdout; a failed write or flush is the exception and\n\
+                 prints no JSON error. Diagnostics may appear on stderr either way.\n"
+            ),
+            "{help}"
+        );
+        assert!(!help.contains("printed nothing else"), "{help}");
+        assert!(!help.contains("stderr has one line"), "{help}");
+    }
 }

@@ -1,0 +1,123 @@
+# Red run (#2480, no boat.json yet) at 75ebf957: env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/hosts/test_boat.py
+test_boat_missing_is_skipped_and_runs_no_status_command (__main__.BoatHost.test_boat_missing_is_skipped_and_runs_no_status_command) ... FAIL
+test_boat_signed_out_is_skipped_and_reads_nothing_more (__main__.BoatHost.test_boat_signed_out_is_skipped_and_reads_nothing_more) ... FAIL
+test_gh_missing_is_skipped_and_runs_no_status_command (__main__.BoatHost.test_gh_missing_is_skipped_and_runs_no_status_command) ... FAIL
+test_gh_signed_out_is_skipped (__main__.BoatHost.test_gh_signed_out_is_skipped) ... FAIL
+test_signed_in_everywhere_is_skipped_as_cost_and_starts_nothing (__main__.BoatHost.test_signed_in_everywhere_is_skipped_as_cost_and_starts_nothing) ... FAIL
+test_the_config_checks_only_the_cited_read_only_status_commands (__main__.BoatHost.test_the_config_checks_only_the_cited_read_only_status_commands) ... FAIL
+
+======================================================================
+FAIL: test_boat_missing_is_skipped_and_runs_no_status_command (__main__.BoatHost.test_boat_missing_is_skipped_and_runs_no_status_command)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/hosts/test_boat.py", line 127, in test_boat_missing_is_skipped_and_runs_no_status_command
+    self.assertEqual(self.rig(missing=('boat',)), [])
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "kernel/live-rig/hosts/test_boat.py", line 82, in rig
+    self.assertEqual((p.returncode, p.stdout.splitlines()),
+AssertionError: Tuples differ: (2, []) != (0, ['skipped boat.dev claude: not install[53 chars]at'])
+
+First differing element 0:
+2
+0
+
+- (2, [])
++ (0,
++  ['skipped boat.dev claude: not installed: boat',
++   'skipped boat.dev codex: not installed: boat']) : rig.py: no host config names boat.dev
+
+
+======================================================================
+FAIL: test_boat_signed_out_is_skipped_and_reads_nothing_more (__main__.BoatHost.test_boat_signed_out_is_skipped_and_reads_nothing_more)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/hosts/test_boat.py", line 119, in test_boat_signed_out_is_skipped_and_reads_nothing_more
+    self.assertEqual(self.rig(signed_in=('gh',)), [STATUS['boat']])
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "kernel/live-rig/hosts/test_boat.py", line 82, in rig
+    self.assertEqual((p.returncode, p.stdout.splitlines()),
+AssertionError: Tuples differ: (2, []) != (0, ['skipped boat.dev claude: not signed [53 chars]at'])
+
+First differing element 0:
+2
+0
+
+- (2, [])
++ (0,
++  ['skipped boat.dev claude: not signed in: boat',
++   'skipped boat.dev codex: not signed in: boat']) : rig.py: no host config names boat.dev
+
+
+======================================================================
+FAIL: test_gh_missing_is_skipped_and_runs_no_status_command (__main__.BoatHost.test_gh_missing_is_skipped_and_runs_no_status_command)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/hosts/test_boat.py", line 131, in test_gh_missing_is_skipped_and_runs_no_status_command
+    self.assertEqual(self.rig(missing=('gh',)), [])
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "kernel/live-rig/hosts/test_boat.py", line 82, in rig
+    self.assertEqual((p.returncode, p.stdout.splitlines()),
+AssertionError: Tuples differ: (2, []) != (0, ['skipped boat.dev claude: not install[49 chars]gh'])
+
+First differing element 0:
+2
+0
+
+- (2, [])
++ (0,
++  ['skipped boat.dev claude: not installed: gh',
++   'skipped boat.dev codex: not installed: gh']) : rig.py: no host config names boat.dev
+
+
+======================================================================
+FAIL: test_gh_signed_out_is_skipped (__main__.BoatHost.test_gh_signed_out_is_skipped)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/hosts/test_boat.py", line 123, in test_gh_signed_out_is_skipped
+    self.assertEqual(self.rig(signed_in=('boat',)), [STATUS['boat'], STATUS['gh']])
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "kernel/live-rig/hosts/test_boat.py", line 82, in rig
+    self.assertEqual((p.returncode, p.stdout.splitlines()),
+AssertionError: Tuples differ: (2, []) != (0, ['skipped boat.dev claude: not signed [49 chars]gh'])
+
+First differing element 0:
+2
+0
+
+- (2, [])
++ (0,
++  ['skipped boat.dev claude: not signed in: gh',
++   'skipped boat.dev codex: not signed in: gh']) : rig.py: no host config names boat.dev
+
+
+======================================================================
+FAIL: test_signed_in_everywhere_is_skipped_as_cost_and_starts_nothing (__main__.BoatHost.test_signed_in_everywhere_is_skipped_as_cost_and_starts_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/hosts/test_boat.py", line 115, in test_signed_in_everywhere_is_skipped_as_cost_and_starts_nothing
+    self.assertEqual(self.rig(), [STATUS['boat'], STATUS['gh']])
+                     ^^^^^^^^^^
+  File "kernel/live-rig/hosts/test_boat.py", line 82, in rig
+    self.assertEqual((p.returncode, p.stdout.splitlines()),
+AssertionError: Tuples differ: (2, []) != (0, ['skipped boat.dev claude: cost', 'skipped boat.dev codex: cost'])
+
+First differing element 0:
+2
+0
+
+- (2, [])
++ (0, ['skipped boat.dev claude: cost', 'skipped boat.dev codex: cost']) : rig.py: no host config names boat.dev
+
+
+======================================================================
+FAIL: test_the_config_checks_only_the_cited_read_only_status_commands (__main__.BoatHost.test_the_config_checks_only_the_cited_read_only_status_commands)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/hosts/test_boat.py", line 104, in test_the_config_checks_only_the_cited_read_only_status_commands
+    self.assertTrue(os.path.isfile(os.path.join(HERE, 'boat.json')), 'kernel/live-rig/hosts/boat.json is missing')
+AssertionError: False is not true : kernel/live-rig/hosts/boat.json is missing
+
+----------------------------------------------------------------------
+Ran 6 tests in 1.096s
+
+FAILED (failures=6)

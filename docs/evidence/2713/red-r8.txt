@@ -1,0 +1,27 @@
+# R8 red at the R7 fix (no lock yet), the new overlap test:
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/vps/test_bootstrap.py BootstrapTest.test_overlapping_repins_leave_one_verified_install   # 37 agent-CLI refusal stubs first on PATH
+test_overlapping_repins_leave_one_verified_install (__main__.BootstrapTest.test_overlapping_repins_leave_one_verified_install) ... FAIL
+
+======================================================================
+FAIL: test_overlapping_repins_leave_one_verified_install (__main__.BootstrapTest.test_overlapping_repins_leave_one_verified_install)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_bootstrap.py", line 402, in test_overlapping_repins_leave_one_verified_install
+    self.assertEqual(proc.wait(timeout=120), 0, read(out) + read(err))
+AssertionError: 1 != 0 : already there python3 <version>
+already there git 2.43.0
+already there curl 8.23.0
+already there gh 2.105.0
+already there fakedroid 1.17.2
+already there fakeapp 2.4.246
+Traceback (most recent call last):
+  File "<string>", line 333, in <module>
+  File "<string>", line 307, in main
+  File "<string>", line 212, in install
+FileNotFoundError: [Errno 2] No such file or directory: '<fixture-home>/.local/lib/openwiz-vps/staged/runpane' -> '<fixture-home>/.local/bin/runpane'
+
+
+----------------------------------------------------------------------
+Ran 1 tests in <t>s
+
+FAILED (failures=1)

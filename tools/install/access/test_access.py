@@ -338,6 +338,126 @@ class Access(unittest.TestCase):
                 self.assertEqual(result['observation']['code'], 'access_unavailable')
                 self.assertEqual(result['operation']['phase'], 'uncertain')
 
+    def test_deeply_nested_or_truncated_provider_answers_keep_the_fixed_code(self):
+        class Truncated(BaseHTTPRequestHandler):
+            protocol_version = 'HTTP/1.1'
+            def log_message(self, *_):
+                pass
+            def do_GET(self):
+                self.send_response(200)
+                if self.path == '/chunked':
+                    self.send_header('Transfer-Encoding', 'chunked')
+                    self.end_headers()
+                    self.wfile.write(b'400\r\n{"keys": [')
+                else:
+                    self.send_header('Content-Length', str(len(keys) + 64))
+                    self.end_headers()
+                    self.wfile.write(keys)
+                self.close_connection = True
+        keys = json.dumps({'keys': self.provider.keys}).encode()
+        server = HTTPServer(('127.0.0.1', 0), Truncated)
+        worker = threading.Thread(target=server.serve_forever, daemon=True)
+        worker.start()
+        cut = f'http://127.0.0.1:{server.server_port}'
+        answers = {'nested': lambda: (200, b'[' * 100_000),
+                   'truncated': lambda: access.Http().request('GET', cut + '/chunked', {}),
+                   'short': lambda: access.Http().request('GET', cut + '/short', {})}
+        recorded = self.provider.request
+        operation = self.preview()
+        try:
+            for case, answer in answers.items():
+                with self.subTest(case=case):
+                    def request(method, url, headers, body=None):
+                        reply = recorded(method, url, headers, body)
+                        return answer() if url.endswith('/cdn-cgi/access/certs') else reply
+                    with patch.object(self.provider, 'request', request):
+                        result = self.apply(operation)
+                    self.assertEqual(result['observation']['code'], 'access_unavailable')
+                    self.assertEqual(result['operation']['phase'], 'uncertain')
+        finally:
+            server.shutdown()
+            server.server_close()
+            worker.join()
+
+    def test_status_reports_only_the_observation_of_its_own_operation_and_route(self):
+        first = self.preview()
+        self.assertEqual(self.apply(first)['observation']['code'], 'access_cloudflare_verified')
+        self.p['host'] = 'second.synthetic.invalid'
+        self.save()
+        second = self.preview()
+        self.assertNotEqual(second['operation_id'], first['operation_id'])
+        self.provider.offline = True
+        self.assertEqual(self.apply(second)['observation']['code'], 'access_unavailable')
+        status = lambda operation: access.execute(['status', '--state-dir', str(self.state),
+                                                   '--operation', operation['operation_id']])
+        self.assertEqual(status(second)['observation']['code'], 'access_unavailable')
+        self.assertIsNone(status(first)['observation'], 'the second route\'s result is not the first operation\'s')
+
+    def test_pruning_the_checked_operation_never_hands_its_observation_to_an_older_check(self):
+        project = ['--repository', 'synthetic-owner/synthetic-repo', '--operator', 'Synthetic Operator',
+                   '--service-issue', '7', '--harness', 'claude-code', '--model', 'claude-opus-5-5',
+                   '--effort', 'medium', '--host', 'local']
+        def setup_preview():
+            subprocess.run([sys.executable, '-I', '-B', str(ROOT / 'tools/install/setup/setup.py'), 'prepare',
+                            '--state-dir', str(self.state), *project], check=True, capture_output=True,
+                           env={'PATH': '/usr/bin:/bin', 'HOME': str(self.root)}, timeout=30)
+        def access_preview():
+            self.p['host'] = 'third.synthetic.invalid'
+            self.save()
+            self.preview()
+        for pruner in (access_preview, setup_preview):
+            with self.subTest(pruner=pruner.__name__):
+                self.state = self.root / pruner.__name__
+                self.p = selected()
+                self.provider = Recording(self.p, self.secrets)
+                self.provider.owner_report = lambda: {'schema': 'openwiz.setup.v1', 'operations':
+                                                      access.store.Store(str(self.state)).read()['operations']}
+                self.p['host'] = 'second.synthetic.invalid'
+                self.save()
+                pruned = self.preview()
+                self.p['host'] = 'openwiz.synthetic.invalid'
+                self.save()
+                kept = self.preview()
+                self.assertEqual(self.apply(kept)['operation']['phase'], 'applied')
+                self.p['host'] = 'second.synthetic.invalid'
+                self.save()
+                owner_report, self.provider = self.provider.owner_report, Recording(self.p, self.secrets)
+                self.provider.owner_report = owner_report
+                self.assertEqual(self.apply(pruned)['operation']['phase'], 'applied')
+                def fill(value):
+                    value['operations'] += [{**value['operations'][0], 'operation_id': f'{n:032x}',
+                                             'phase': 'proposed', 'reason': 'Synthetic unchecked proposal.'}
+                                            for n in range(access.store.MAX_OPERATIONS - len(value['operations']))]
+                access.store.Store(str(self.state)).update(fill)
+                pruner()
+                saved = access.store.Store(str(self.state)).read()['operations']
+                self.assertNotIn(pruned['operation_id'], [o['operation_id'] for o in saved])
+                status = access.execute(['status', '--state-dir', str(self.state), '--operation', kept['operation_id']])
+                self.assertIsNone(status['observation'], 'the pruned later check\'s result is not the kept operation\'s')
+
+    def test_tailscale_cli_runs_only_from_a_fixed_location_with_a_fixed_environment(self):
+        planted, fixed = self.root / 'planted', self.root / 'fixed'
+        planted.mkdir()
+        fixed.mkdir()
+        marker = self.root / 'planted-ran'
+        for folder, script in [(planted, f'touch {marker}\necho {{}}'),
+                               (fixed, f'env > {self.root / "fixed-env"}\necho \'{{"Synthetic": true}}\'')]:
+            (folder / 'tailscale').write_text('#!/bin/sh\n' + script + '\n')
+            (folder / 'tailscale').chmod(0o700)
+        environment = {'PATH': f'{planted}:/usr/bin:/bin', 'SYNTHETIC_INHERITED': 'planted'}
+        with patch.dict(os.environ, environment), \
+                patch.object(access, 'TAILSCALE', (str(self.root / 'missing/tailscale'),), create=True):
+            with self.assertRaises(access.Unverified) as refused:
+                access.local_tailscale('status')
+        self.assertEqual(refused.exception.code, 'access_unavailable')
+        self.assertFalse(marker.exists(), 'a tailscale found on PATH must never run')
+        with patch.dict(os.environ, environment), \
+                patch.object(access, 'TAILSCALE', (str(self.root / 'missing/tailscale'), str(fixed / 'tailscale')),
+                             create=True):
+            self.assertEqual(access.local_tailscale('serve'), {'Synthetic': True})
+        self.assertFalse(marker.exists())
+        self.assertNotIn('SYNTHETIC_INHERITED', (self.root / 'fixed-env').read_text())
+
     def test_transport_never_follows_redirects_or_ambient_proxies(self):
         paths = []
         class Handler(BaseHTTPRequestHandler):

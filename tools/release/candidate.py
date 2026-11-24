@@ -54,6 +54,7 @@ ATTEMPT = re.compile(r'[1-9][0-9]*\.json')
 TARGETS = ('aarch64-apple-darwin', 'x86_64-apple-darwin', 'x86_64-unknown-linux-gnu')
 PRODUCTS = ('cli', 'runtime')
 METHODS = {'cli': {'embedded-record', 'native-query'}, 'runtime': {'tracked-tree'}}
+RELEASED = ('skills/', 'contracts/')
 RISKS = ('send', 'new', 'app_permissions', 'spending')
 GATES = ('cutover', 'ci', 'privacy', 'claims', 'products', 'smoke') + RISKS
 CLASSES = {'cutover': {'source-inspection'}, 'ci': {'ci'}, 'privacy': {'source-inspection', 'ci'},
@@ -874,8 +875,11 @@ def verify_products(record, inputs, ctx):
                 runtime = [a for a in assets if a['path'].startswith('runtime/')]
                 selection = row['selection']
                 if (not isinstance(selection, list) or selection != sorted(selection)
-                        or any(not isinstance(pair, list) or len(pair) != 2 for pair in selection)
-                        or sorted(name for _, name in selection) != sorted(a['path'] for a in runtime)):
+                        or any(not isinstance(pair, list) or len(pair) != 2
+                               or not all(isinstance(part, str) for part in pair) for pair in selection)
+                        or sorted(name for _, name in selection) != sorted(a['path'] for a in runtime)
+                        or any(name != 'runtime/' + repo for repo, name in selection
+                               if repo.startswith(RELEASED) or name.startswith(tuple('runtime/' + r for r in RELEASED)))):
                     return ['unverified']
                 if 'install' not in installed:
                     installed['install'] = rl4.install_locked(ctx['work'], source, tempfile.mkdtemp(dir=scratch))
@@ -954,7 +958,8 @@ def scan_artifacts(body, folder, literals):
                 shutil.copytree(build / part, tree / target / part)
         try:
             done = subprocess.run([sys.executable, '-I', str(HERE.parent / 'privacy-check/check.py'), '--tree', str(tree),
-                                   '--literals', str(literals), '--require-literals'],
+                                   '--literals', str(literals), '--require-literals',
+                                   *(x for target in TARGETS for x in ('--runtime-root', target))],
                                   stdin=subprocess.DEVNULL, capture_output=True, timeout=300)
         except (OSError, subprocess.TimeoutExpired):
             return ['unreadable']
@@ -1604,18 +1609,28 @@ def install_attempt(state, target, reason, at, evidence):
     folder.mkdir(mode=0o700, parents=True, exist_ok=True)
     outcome = {'status': 'blocked' if reason else 'passed', 'reasons': [reason] if reason else [], 'at': at}
     data = (json.dumps(dict(evidence, **outcome), indent=1, sort_keys=True, ensure_ascii=False) + '\n').encode('utf-8')
-    while True:
-        taken = [int(f.stem) for f in folder.iterdir() if ATTEMPT.fullmatch(f.name)]
-        name = f'evidence/install-{target}/{max(taken, default=0) + 1}.json'
-        try:
-            fd = os.open(state.file(name), os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
-        except FileExistsError:
-            continue
+    fd, temporary = tempfile.mkstemp(prefix='.attempt-', suffix='.tmp', dir=folder)
+    try:
         with os.fdopen(fd, 'wb') as stream:
             stream.write(data)
             stream.flush()
             os.fsync(stream.fileno())
-        return dict(outcome, target=target, evidence={'record': name, 'sha256': sha(data)})
+        while True:
+            taken = [int(f.stem) for f in folder.iterdir() if ATTEMPT.fullmatch(f.name)]
+            name = f'evidence/install-{target}/{max(taken, default=0) + 1}.json'
+            try:
+                os.link(temporary, state.file(name))
+            except FileExistsError:
+                continue
+            break
+    finally:
+        os.unlink(temporary)
+    directory = os.open(folder, os.O_RDONLY)
+    try:
+        os.fsync(directory)
+    finally:
+        os.close(directory)
+    return dict(outcome, target=target, evidence={'record': name, 'sha256': sha(data)})
 
 
 def install_attempts(state):

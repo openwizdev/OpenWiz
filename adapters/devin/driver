@@ -1,0 +1,220 @@
+#!/usr/bin/env python3
+# SECURITY: every Devin call goes through the kit's key helper (driver v1 N4). This file sends it only a host name,
+# a method, a path and a body, never a key or an address, and never reads the key itself.
+import fcntl, json, os, re, subprocess, sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+HELPER = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'hostkey.py')
+HOST = 'devin'
+STATE = os.environ.get('OPENWIZ_DEVIN_STATE') or os.path.expanduser('~/.local/state/openwiz-devin')
+VERSION = {'driver': 'devin', 'records': ['openwiz:records v1'], 'can': ['start', 'wake', 'stop']}
+START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
+         'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'devin',
+         'model': r'(?=.{1,100}$)[A-Za-z0-9][A-Za-z0-9 ._:@+-]*(/[A-Za-z0-9][A-Za-z0-9 ._:@+-]*)*'}
+SESSION = r'devin-[a-z0-9]{1,94}'
+EFFORT = re.compile(r'[a-z][a-z0-9-]{0,19}')
+UNCERTAIN_CREATE = ('look in Devin for a new session on this ticket and terminate it there (or keep it and track it by '
+                    'hand), then start again: retrying now can start a second session')
+REFUSED_BEFORE_SENDING = ('no key in either ', 'the key in ', "the kit's fake host gave no test key",
+                          'OPENWIZ_HOSTKEY_TEST_ORIGIN is not', 'the helper runs only in', 'native TLS loaded',
+                          'kernel/driver-kit/hosts.json is not', 'the request holds the key')
+CANT_SET_EFFORT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster "
+                   "to run it at the host's default")
+RUN = {'run': SESSION}
+ORG = re.compile(r'org-[A-Za-z0-9]{1,64}')
+MODES = ('normal', 'fast', 'fusion', 'lite', 'ultra', 'fast-ultra', 'swe-2-medium', 'swe-2-high', 'swe-2-max')
+NO_LIVE_SESSION = (404, 410)
+SAVE = 'make OPENWIZ_DEVIN_STATE (or ~/.local/state/openwiz-devin) a folder you can write'
+
+
+class Refused(Exception):
+    pass
+
+
+def unique(pairs):
+    if len({k for k, _ in pairs}) != len(pairs):
+        raise Refused('a key is repeated', 'send each key once')
+    return dict(pairs)
+
+
+def read(fields):
+    try:
+        req = json.loads(sys.stdin.read(), object_pairs_hook=unique)
+    except ValueError:
+        raise Refused('the input is not JSON', 'send one JSON object on stdin, as `driver schema` shows')
+    if fields is START and isinstance(req, dict) and 'effort' in req:
+        word = req['effort'] if isinstance(req['effort'], str) and EFFORT.fullmatch(req['effort']) else \
+            '(not one plain word)'
+        raise Refused('Devin can\'t run harness devin at effort %s: its sessions API takes no effort' % word,
+                      CANT_SET_EFFORT)
+    if not isinstance(req, dict) or set(req) != set(fields):
+        raise Refused('the input needs exactly ' + ', '.join(fields), 'send only those fields; never a login')
+    for key, pattern in fields.items():
+        v = req[key]
+        if not (type(v) is int and v > 0 if pattern is None else isinstance(v, str) and re.fullmatch(pattern, v)):
+            raise Refused(key + ' is not valid', 'fix ' + key + ' as `driver schema` shows; harness is devin')
+    if 'model' in req and req['model'] != 'default' and req['model'] not in MODES:
+        raise Refused('model is not a Devin mode', 'use default or one of: ' + ', '.join(MODES))
+    return req
+
+
+def organization():
+    org = os.environ.get('DEVIN_ORG_ID', '')
+    if not ORG.fullmatch(org):
+        raise Refused('DEVIN_ORG_ID is not set to a Devin organization id (org-...)',
+                      'set DEVIN_ORG_ID to your organization id from Devin\'s settings')
+    return org
+
+
+def unknown_create(why):
+    return Refused('the new session\'s outcome is unknown: ' + why, UNCERTAIN_CREATE)
+
+
+def ask(method, path, body=None, creating=False):
+    request = {'host': HOST, 'method': method, 'path': path}
+    if body is not None:
+        request['body'] = body
+    try:
+        p = subprocess.run([sys.executable, '-I', HELPER], input=json.dumps(request), capture_output=True,
+                           text=True, timeout=120)
+        out = json.loads(p.stdout)
+    except (OSError, subprocess.TimeoutExpired, ValueError):
+        if creating:
+            raise unknown_create('the key helper gave no answer')
+        raise Refused('the key helper kernel/driver-kit/hostkey.py gave no answer', 'run it by hand to see why')
+    if p.returncode and creating and not str(out.get('error')).startswith(REFUSED_BEFORE_SENDING):
+        raise unknown_create('Devin may have made it, but the key helper got no answer it could pass on')
+    if p.returncode:
+        raise Refused(('the key helper refused: ' + str(out.get('error')))[:300], str(out.get('next'))[:300])
+    status, answer = out['status'], out['body']
+    if status in (401, 403):
+        raise Refused('Devin refused the key (%d)' % status, 'check your Devin key and its session permission, '
+                      'as adapters/devin/README.md says')
+    return status, answer
+
+
+def failed(what, status):
+    return Refused('Devin answered %d to %s' % (status, what), 'check Devin\'s status, then retry')
+
+
+def prompt(req, woken):
+    what = 'You were woken: read the ticket again and carry on' if woken else 'Build the ticket'
+    return '%s: %s#%d, with the %s skill.' % (what, req['repository'], req['ticket'], req['skill'])
+
+
+def lock(run):
+    if not os.path.exists(os.path.join(STATE, run + '.json')):
+        raise Refused('no run ' + run, 'check the run id that `driver start` printed')
+    try:
+        fcntl.flock(os.open(os.path.join(STATE, run + '.lock'), os.O_RDONLY | os.O_CREAT, 0o600), fcntl.LOCK_EX)
+    except OSError:
+        raise Refused('the driver cannot lock run %s in its state folder' % run, SAVE)
+
+
+def save(path, state):
+    with open(path + '.new', 'w') as f:
+        json.dump(state, f)
+    os.replace(path + '.new', path)
+
+
+def saved(run):
+    try:
+        with open(os.path.join(STATE, run + '.json')) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        raise Refused('the driver cannot read run %s' % run, SAVE)
+
+
+def start():
+    req, org = read(START), organization()
+    body = {'prompt': prompt(req, False)}
+    if req['model'] != 'default':
+        body['devin_mode'] = req['model']
+    try:
+        os.makedirs(STATE, mode=0o700, exist_ok=True)
+        pending = os.path.join(STATE, 'starting-%d' % os.getpid())
+        save(pending, {})
+    except OSError:
+        raise Refused('the driver cannot save runs in its state folder; nothing was started', SAVE)
+    try:
+        status, answer = ask('POST', '/v3/organizations/%s/sessions' % org, body, creating=True)
+        if 400 <= status < 500 and status != 408:
+            raise Refused('Devin refused the new session (%d), so nothing was started' % status,
+                          'check your Devin organization and its session limits, then start again')
+        if not 200 <= status < 300:
+            raise unknown_create('Devin answered %d' % status)
+        run = answer.get('session_id') if isinstance(answer, dict) else None
+        if not (isinstance(run, str) and re.fullmatch(SESSION, run)):
+            raise unknown_create('Devin answered no session id the driver can keep')
+    finally:
+        try:
+            os.remove(pending)
+        except OSError:
+            pass
+    try:
+        save(os.path.join(STATE, run + '.json'), {'request': req, 'org': org, 'stopped': False, 'ended': False})
+    except OSError:
+        try:
+            ended = 200 <= ask('DELETE', '/v3/organizations/%s/sessions/%s' % (org, run))[0] < 300
+        except Refused:
+            ended = False
+        raise Refused('the driver could not save session %s, %s; its outcome is unknown'
+                      % (run, 'so it terminated it' if ended else 'and could not terminate it'),
+                      'terminate it in Devin if it still runs, and read the ticket before you start again')
+    return {'run': run}
+
+
+def wake_or_stop(cmd):
+    run = read(RUN)['run']
+    lock(run)
+    state = saved(run)
+    path = '/v3/organizations/%s/sessions/%s' % (state['org'], run)
+    if cmd == 'wake':
+        if state['stopped']:
+            raise Refused('run %s is stopped' % run, 'start a new run')
+        status = ask('POST', path + '/messages', {'message': prompt(state['request'], True)})[0]
+        if not 200 <= status < 300:
+            raise failed('the wake message', status)
+        return {'run': run, 'woke': True}
+    if state['ended']:
+        return {'run': run, 'stopped': True}
+    try:
+        save(os.path.join(STATE, run + '.json'), dict(state, stopped=True))
+    except OSError:
+        raise Refused('the driver cannot save that run %s is stopping; nothing was sent' % run, SAVE)
+    status = ask('DELETE', path)[0]
+    if not (200 <= status < 300 or status in NO_LIVE_SESSION):
+        raise failed('the terminate', status)
+    try:
+        save(os.path.join(STATE, run + '.json'), dict(state, stopped=True, ended=True))
+    except OSError:
+        raise Refused('session %s was terminated, but the driver could not save that' % run, SAVE)
+    return {'run': run, 'stopped': True}
+
+
+def answer(cmd):
+    if cmd == 'version':
+        return VERSION
+    if cmd == 'schema':
+        with open(os.path.join(HERE, 'schema.json')) as f:
+            return json.load(f)
+    if cmd == 'start':
+        return start()
+    if cmd in ('wake', 'stop'):
+        return wake_or_stop(cmd)
+    raise Refused('unknown command', 'run one of: version, schema, start, wake, stop')
+
+
+def main():
+    try:
+        out, code = answer(sys.argv[1] if len(sys.argv) == 2 else ''), 0
+    except Refused as e:
+        out, code = {'error': e.args[0], 'next': e.args[1]}, 1
+    except Exception as e:
+        out, code = {'error': 'the driver failed: ' + type(e).__name__, 'next': 'read its code, fix it, retry'}, 1
+    print(json.dumps(out))
+    sys.exit(code)
+
+
+if __name__ == '__main__':
+    main()

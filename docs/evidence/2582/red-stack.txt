@@ -1,0 +1,33 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/test_heads.py  # at the merge of #2572 bb91163 and #2641 a1ae40f, before the fixture update
+
+======================================================================
+FAIL: test_five_of_five_gives_the_exact_pr_comment_receipt_and_record_and_writes_nothing_to_github (__main__.Heads.test_five_of_five_gives_the_exact_pr_comment_receipt_and_record_and_writes_nothing_to_github)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_heads.py", line 215, in test_five_of_five_gives_the_exact_pr_comment_receipt_and_record_and_writes_nothing_to_github
+    self.assertEqual(code, 0, err)
+AssertionError: 1 != 0 : pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 2
+pass wake: the run edited builder status note 2
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+
+
+======================================================================
+FAIL: test_post_reaches_only_the_fake_gh_with_one_comment_per_run_and_one_wizmarket_pull_request (__main__.Heads.test_post_reaches_only_the_fake_gh_with_one_comment_per_run_and_one_wizmarket_pull_request)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_heads.py", line 258, in test_post_reaches_only_the_fake_gh_with_one_comment_per_run_and_one_wizmarket_pull_request
+    self.assertEqual(out.splitlines(), [
+AssertionError: Lists differ: ['ran[111 chars]', 'refused fixture-five: no receipt: receipt.[161 chars]902'] != ['ran[111 chars]', 'ran fixture-four: 4 of 5 at 5cc969099cf4',[127 chars]/41']
+
+First differing element 2:
+'refused fixture-five: no receipt: receipt.[42 chars]oken'
+'ran fixture-four: 4 of 5 at 5cc969099cf4'
+
+Diff is 643 characters long. Set self.maxDiff to None to see it.
+
+----------------------------------------------------------------------
+Ran 13 tests in 107.752s
+
+FAILED (failures=2)

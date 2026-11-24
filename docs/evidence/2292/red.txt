@@ -1,0 +1,37 @@
+# #2292 red, before the fixes, at ae10e283 plus the new tests
+
+$ python3 -I adapters/local/test_driver.py -k quick_clean -k lsof_cannot
+FAIL: test_a_quick_clean_first_turn_starts (__main__.Local.test_a_quick_clean_first_turn_starts) [ordinary words]
+AssertionError: 1 != 0 : {"error": "run run-<id>: the first turn ended at once: the harness is not signed in (exit 0)", "next": "read <tmp>/state/run-<id>.log, fix what it says there, then start again"}
+FAIL: test_a_quick_clean_first_turn_starts (__main__.Local.test_a_quick_clean_first_turn_starts) [relative state]
+AssertionError: 1 != 0 : {"error": "run run-<id>: the first turn ended at once: the harness failed (exit unknown)", "next": "read state/run-<id>.log, fix what it says there, then start again"}
+FAIL: test_without_proc_as_on_macos_stop_says_when_lsof_cannot_check_the_output_file (__main__.Local.test_without_proc_as_on_macos_stop_says_when_lsof_cannot_check_the_output_file) (lsof_fails=True)
+AssertionError: False != True :
+Ran 2 tests in 7.633s
+FAILED (failures=3)
+
+$ python3 -I adapters/template/test_driver.py -k lsof_cannot
+FAIL: test_without_proc_as_on_macos_stop_says_when_lsof_cannot_check_the_output_file (__main__.Template.test_without_proc_as_on_macos_stop_says_when_lsof_cannot_check_the_output_file) (lsof_fails=True)
+AssertionError: False != True :
+Ran 1 test in 1.299s
+FAILED (failures=1)
+
+$ python3 -I adapters/boat/test_driver.py -k odd_bytes -k from_stderr -k wake_that_cannot_save
+FAIL: test_known_boat_guidance_reaches_the_answer_from_stderr (__main__.Boat.test_known_boat_guidance_reaches_the_answer_from_stderr) (cmd='new', how='code')
+AssertionError: 'Agents & Proxying' not found in 'run `boat new` by hand to read what it says, then start again; if `boat list` shows a sandbox named openwiz-run-<id>, stop it first'
+FAIL: test_known_boat_guidance_reaches_the_answer_from_stderr (__main__.Boat.test_known_boat_guidance_reaches_the_answer_from_stderr) (cmd='prompt', how='code')
+AssertionError: 'Agents & Proxying' not found in 'read <tmp>/state/run-<id>.0.log for what boat said, then start again'
+FAIL: test_known_boat_guidance_reaches_the_answer_from_stderr (__main__.Boat.test_known_boat_guidance_reaches_the_answer_from_stderr) (cmd='new', how='mixed')
+AssertionError: 'sign in to boat' not found in '{"error": "boat new failed: boat gave an error the driver does not repeat", "next": "run `boat new` by hand to read what it says, then start again; if `boat list` shows a sandbox named openwiz-run-<id>, stop it first"}'
+FAIL: test_known_boat_guidance_reaches_the_answer_from_stderr (__main__.Boat.test_known_boat_guidance_reaches_the_answer_from_stderr) (cmd='prompt', how='mixed')
+AssertionError: 'sign in to boat' not found in '{"error": "boat prompt failed: boat gave an error the driver does not repeat", "next": "read <tmp>/state/run-<id>.0.log for what boat said, then start again"}'
+FAIL: test_the_push_refusal_holds_when_the_check_answers_odd_bytes_or_cannot_run (__main__.Boat.test_the_push_refusal_holds_when_the_check_answers_odd_bytes_or_cannot_run) [odd bytes]
+AssertionError: Tuples differ: (1, {'error': 'the driver failed: UnicodeDecodeError', 'next[65 chars]ng'}) != (1, {'error': 'the sandbox cannot push to example/site: the [167 chars]in"})
+FAIL: test_the_push_refusal_holds_when_the_check_answers_odd_bytes_or_cannot_run (__main__.Boat.test_the_push_refusal_holds_when_the_check_answers_odd_bytes_or_cannot_run) [exec fails]
+AssertionError: Tuples differ: (1, {'error': 'the driver failed: OSError', 'next': 'read it[54 chars]ng'}) != (1, {'error': 'the sandbox cannot push to example/site: the [167 chars]in"})
+FAIL: test_the_push_refusal_holds_when_the_check_answers_odd_bytes_or_cannot_run (__main__.Boat.test_the_push_refusal_holds_when_the_check_answers_odd_bytes_or_cannot_run)
+AssertionError: 1 != 0 : {'error': 'the driver failed: UnicodeDecodeError', 'next': 'read its code and fix it; check `boat list` for what is running'}
+FAIL: test_without_proc_as_on_macos_a_wake_that_cannot_save_ends_only_its_own_turn (__main__.Boat.test_without_proc_as_on_macos_a_wake_that_cannot_save_ends_only_its_own_turn)
+AssertionError: False is not true : the failed wake ended an earlier turn's worker
+Ran 3 tests in 3.748s
+FAILED (failures=8)

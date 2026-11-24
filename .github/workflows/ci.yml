@@ -121,15 +121,32 @@ jobs:
         run: |
           python3 -I kernel/records-kit/test_check.py
           python3 -I kernel/driver-kit/test_kit.py
+          python3 -I kernel/driver-kit/test_hostkey.py
+          env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/driver-kit/test_stubs.py
           python3 -I adapters/local/test_driver.py
+          python3 -I adapters/local/test_harnesses.py
           python3 -I adapters/boat/test_driver.py
           python3 -I kernel/records/model/test_model.py
           python3 -I adapters/template/test_driver.py
           python3 -I adapters/cloudroom/test_driver.py
+          python3 -I adapters/devin/test_driver.py
+          python3 -I adapters/openclaw/test_driver.py
           python3 -I adapters/pane/test_driver.py
-          python3 -I contracts/fixtures/write-driver/check.py
           python3 -I contracts/fixtures/feedback-loop/test_check.py
-          python3 -I contracts/fixtures/ask-a-wiz/test_fixtures.py
+          python3 -I tools/bench/first-fleet/test_bench.py
+          python3 -I tools/ci-overload/test_supply.py
+      - name: The live-check rig's tests
+        if: matrix.part == 2
+        run: |
+          stubs=$(mktemp -d)
+          for cli in claude codex cursor-agent agent pi opencode copilot goose gemini kimi qwen cline kilo crush \
+              vibe auggie kiro-cli junie amp agy oz sculpt hermes acpx droid; do
+            printf '#!/bin/sh\necho "%s: refused, CI never starts an agent CLI" >&2\nexit 1\n' "$cli" > "$stubs/$cli"
+            chmod +x "$stubs/$cli"
+          done
+          for test in kernel/live-rig/test_*.py kernel/live-rig/*/test_*.py; do
+            if [ -e "$test" ]; then PATH="$stubs:$PATH" env -u OPENWIZ_GITHUB_APP_KEY python3 -I "$test"; fi
+          done
       # #555: fail on any carried contract that differs from the pinned
       # WizSkills release by one byte.
       - name: The WizSkills installer
@@ -155,12 +172,20 @@ jobs:
           python3 -I tools/install/tests/init/test_init.py
           python3 -I -B tools/install/setup/test_github_login.py
           python3 -I tools/install/tests/skills-linked-config/test_linked_config.py
+          python3 -I tools/rehearsal/test_rehearse.py
       - name: The GitHub App
         if: matrix.part == 2
         run: |
           python3 -I tools/github-app/test.py
           python3 -I contracts/fixtures/token-service/test_fixtures.py
+          python3 -I tools/github-app/test_agent_token.py
           python3 -I tools/github-app/test_token_service.py
+          python3 -I tools/github-app/test_app_select.py
+      - name: The importer and skills-eval tests
+        if: matrix.part == 2
+        run: |
+          python3 -I tools/open-import/test_import.py
+          python3 -I tools/skills-eval/test.py
       - name: Save the Cargo cache
         if: github.event_name == 'push' && matrix.part == 2
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

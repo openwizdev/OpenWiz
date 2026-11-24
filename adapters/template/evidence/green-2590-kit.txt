@@ -1,0 +1,27 @@
+# Kit run (#2590), by hand: the kit from #2562's draft head 7636b62 (the effort part of start), on a throwaway local merge of this branch with it; not committed there. Both template forms, through test_kit.py's own fixture tracker and fake harness. Stubs for every agent CLI first on PATH.
+
+$ kit.py --driver adapters/template/driver (passing form, --effort medium by default)
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 2; effort: medium reached a process the run started
+pass wake: the run edited builder status note 2
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+exit 0; stderr: ''
+
+$ kit.py --driver <copy>/driver (the can't form: effort dropped from can, the README's Effort: line switched, as the template's README says)
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 3; effort: a start with it was refused, as the README's Effort: line says
+pass wake: the run edited builder status note 3
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+exit 0; stderr: ''
+
+$ kit.py --driver adapters/template/driver --effort turbo (a word the template does not pass)
+pass version: openwiz:records v1, and the schema is driver v1
+fail start: effort: start refused turbo for fake-harness, but its README does not say that harness can't
+fail wake: not run: start failed
+fail stop: not run: start failed
+pass token: no login or token passed through the driver
+exit 1; stderr: ''
+
+# The third run is expected to fail under #2562's kit: it accepts the refusal text only for a harness the README marks can't, and the template refuses an unlisted word for every harness. The kit's default is medium, which the template passes.

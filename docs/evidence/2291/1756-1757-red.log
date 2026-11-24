@@ -1,0 +1,17 @@
+# main behaviour: mid-day :60 accepted; out-of-range integer preambles read back
+loop_files::polish_tests::export_keeps_integer_params_beyond_i64 --- FAILED
+failures:
+---- loop_files::polish_tests::timestamps_follow_rfc3339_in_both_directions stdout ----
+thread 'loop_files::polish_tests::timestamps_follow_rfc3339_in_both_directions' (10004) panicked at crates/adapters/cloudroom/src/loop_files.rs:3167:13:
+assertion `left == right` failed: 2030-01-02T03:04:60Z
+  left: []
+ right: [Refusal { code: "bad-at", field: "trigger.at", message: "must be an RFC 3339 time with seconds and an offset" }]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+---- loop_files::polish_tests::export_keeps_integer_params_beyond_i64 stdout ----
+thread 'loop_files::polish_tests::export_keeps_integer_params_beyond_i64' (10003) panicked at crates/adapters/cloudroom/src/loop_files.rs:3106:13:
+18446744073709551616
+failures:
+    loop_files::polish_tests::export_keeps_integer_params_beyond_i64
+    loop_files::polish_tests::timestamps_follow_rfc3339_in_both_directions
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 31 filtered out; finished in 0.00s
+error: test failed, to rerun pass `-p openwiz-adapter-cloudroom --lib`

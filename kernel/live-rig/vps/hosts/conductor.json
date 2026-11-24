@@ -1,0 +1,9 @@
+{
+  "host": "Conductor",
+  "driver": "adapters/conductor/driver",
+  "needs": ["curl", "gh"],
+  "signed_in": [["python3", "-I", "-c", "import sys, os; sys.exit(0 if any(n == 'CONDUCTOR_API_KEY' for n in os.environ) else 1)"], ["env", "GH_TELEMETRY=0", "gh", "config", "get", "-h", "github.com", "user"]],
+  "cost": "paid",
+  "runs": [{"harness": "claude", "model": "opus-5-5-1m"}],
+  "wait": 900
+}

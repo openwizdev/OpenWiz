@@ -32,6 +32,7 @@ mod models;
 #[path = "../../contracts/fixtures/models/models_contract.rs"]
 mod models_contract;
 mod models_forms;
+mod models_local;
 mod process;
 mod results;
 mod review;
@@ -126,10 +127,10 @@ fn cp1_catalogue_covers_the_public_command_flag_and_schema_matrix() {
         ("help.agent", "--agent"),
         ("ls", "-l -a --hidden --limit --offset --json --help"),
         ("show", "--json --help"),
-        ("models", "--json --help"),
-        ("models.show", "--json --help"),
+        ("models", "--json --host --help"),
+        ("models.show", "--json --host --help"),
         ("models.list", "--save --json --help"),
-        ("models.set", "--json --help"),
+        ("models.set", "--json --host --help"),
         ("fleets", "--json --help"),
         ("fleet", "--json"),
         ("fleet.tick.preview", "--dry-run --json"),

@@ -1,0 +1,9 @@
+{
+  "host": "fixture-signed-out",
+  "driver": "adapters/template/driver",
+  "needs": ["fake-harness", "heads-signed-out"],
+  "signed_in": [["heads-signed-out", "status"]],
+  "cost": "paid",
+  "runs": [{"harness": "fake-harness", "model": "synthetic-1"}],
+  "wait": 8
+}

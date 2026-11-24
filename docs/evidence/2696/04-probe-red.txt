@@ -1,0 +1,110 @@
+env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/vps/test_hosts.py Configs.test_the_five_configs_load_through_rig_load_host Page.test_the_status_column_names_the_no_prompt_github_probe
+FFFFFF
+======================================================================
+FAIL: test_the_five_configs_load_through_rig_load_host (__main__.Configs.test_the_five_configs_load_through_rig_load_host) (host='hermes')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/vps/test_hosts.py", line 82, in test_the_five_configs_load_through_rig_load_host
+    self.assertEqual(config['signed_in'][-1], GH_PROBE)
+AssertionError: Lists differ: ['gh', 'auth', 'status', '--hostname', 'github.com', '--active', '--no-refresh'] != ['env', 'GH_TELEMETRY=0', 'gh', 'config', 'get', '-h', 'github.com', 'user']
+
+First differing element 0:
+'gh'
+'env'
+
+Second list contains 1 additional elements.
+First extra element 7:
+'user'
+
+- ['gh', 'auth', 'status', '--hostname', 'github.com', '--active', '--no-refresh']
++ ['env', 'GH_TELEMETRY=0', 'gh', 'config', 'get', '-h', 'github.com', 'user']
+
+======================================================================
+FAIL: test_the_five_configs_load_through_rig_load_host (__main__.Configs.test_the_five_configs_load_through_rig_load_host) (host='pane')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/vps/test_hosts.py", line 82, in test_the_five_configs_load_through_rig_load_host
+    self.assertEqual(config['signed_in'][-1], GH_PROBE)
+AssertionError: Lists differ: ['gh', 'auth', 'status', '--hostname', 'github.com', '--active', '--no-refresh'] != ['env', 'GH_TELEMETRY=0', 'gh', 'config', 'get', '-h', 'github.com', 'user']
+
+First differing element 0:
+'gh'
+'env'
+
+Second list contains 1 additional elements.
+First extra element 7:
+'user'
+
+- ['gh', 'auth', 'status', '--hostname', 'github.com', '--active', '--no-refresh']
++ ['env', 'GH_TELEMETRY=0', 'gh', 'config', 'get', '-h', 'github.com', 'user']
+
+======================================================================
+FAIL: test_the_five_configs_load_through_rig_load_host (__main__.Configs.test_the_five_configs_load_through_rig_load_host) (host='factory')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/vps/test_hosts.py", line 82, in test_the_five_configs_load_through_rig_load_host
+    self.assertEqual(config['signed_in'][-1], GH_PROBE)
+AssertionError: Lists differ: ['gh', 'auth', 'status', '--hostname', 'github.com', '--active', '--no-refresh'] != ['env', 'GH_TELEMETRY=0', 'gh', 'config', 'get', '-h', 'github.com', 'user']
+
+First differing element 0:
+'gh'
+'env'
+
+Second list contains 1 additional elements.
+First extra element 7:
+'user'
+
+- ['gh', 'auth', 'status', '--hostname', 'github.com', '--active', '--no-refresh']
++ ['env', 'GH_TELEMETRY=0', 'gh', 'config', 'get', '-h', 'github.com', 'user']
+
+======================================================================
+FAIL: test_the_five_configs_load_through_rig_load_host (__main__.Configs.test_the_five_configs_load_through_rig_load_host) (host='conductor')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/vps/test_hosts.py", line 82, in test_the_five_configs_load_through_rig_load_host
+    self.assertEqual(config['signed_in'][-1], GH_PROBE)
+AssertionError: Lists differ: ['gh', 'auth', 'status', '--hostname', 'github.com', '--active', '--no-refresh'] != ['env', 'GH_TELEMETRY=0', 'gh', 'config', 'get', '-h', 'github.com', 'user']
+
+First differing element 0:
+'gh'
+'env'
+
+Second list contains 1 additional elements.
+First extra element 7:
+'user'
+
+- ['gh', 'auth', 'status', '--hostname', 'github.com', '--active', '--no-refresh']
++ ['env', 'GH_TELEMETRY=0', 'gh', 'config', 'get', '-h', 'github.com', 'user']
+
+======================================================================
+FAIL: test_the_five_configs_load_through_rig_load_host (__main__.Configs.test_the_five_configs_load_through_rig_load_host) (host='cursor')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/vps/test_hosts.py", line 82, in test_the_five_configs_load_through_rig_load_host
+    self.assertEqual(config['signed_in'][-1], GH_PROBE)
+AssertionError: Lists differ: ['gh', 'auth', 'status', '--hostname', 'github.com', '--active', '--no-refresh'] != ['env', 'GH_TELEMETRY=0', 'gh', 'config', 'get', '-h', 'github.com', 'user']
+
+First differing element 0:
+'gh'
+'env'
+
+Second list contains 1 additional elements.
+First extra element 7:
+'user'
+
+- ['gh', 'auth', 'status', '--hostname', 'github.com', '--active', '--no-refresh']
++ ['env', 'GH_TELEMETRY=0', 'gh', 'config', 'get', '-h', 'github.com', 'user']
+
+======================================================================
+FAIL: test_the_status_column_names_the_no_prompt_github_probe (__main__.Page.test_the_status_column_names_the_no_prompt_github_probe)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/vps/test_hosts.py", line 258, in test_the_status_column_names_the_no_prompt_github_probe
+    self.assertTrue('The GitHub probe is `' + ' '.join(GH_PROBE) + '`' in legend)
+AssertionError: False is not true
+
+----------------------------------------------------------------------
+Ran 2 tests
+
+FAILED (failures=6)
+Exit 1

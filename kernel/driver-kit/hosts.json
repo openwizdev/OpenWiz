@@ -1,0 +1,8 @@
+{
+  "devin": {
+    "origin": "https://api.devin.ai",
+    "variable": "DEVIN_API_KEY",
+    "keychain": "openwiz-devin",
+    "header": "authorization-bearer"
+  }
+}

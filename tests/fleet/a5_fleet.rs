@@ -4,6 +4,7 @@ mod world;
 #[path = "a5_agents_cli.rs"]
 mod cli_agents;
 
+use std::path::Path;
 use std::process::Command;
 use std::time::Duration;
 
@@ -892,6 +893,11 @@ fn a_read_that_hangs_times_out_and_the_rest_is_still_shown() {
     assert_eq!(
         states(&got),
         vec![(2, unread(&["r9"])), (3, known("blocked"))]
+    );
+    let pid = ran.hung.expect("the fake hung");
+    assert!(
+        !Path::new("/proc").join(pid.trim()).exists(),
+        "the stopped read {pid} is still there"
     );
 }
 

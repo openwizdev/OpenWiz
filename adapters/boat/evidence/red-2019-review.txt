@@ -1,0 +1,14 @@
+# Red run (#2019 review R2): python3 -I adapters/boat/test_driver.py -k old_probe_branch, against the driver at 3e78bda7, with the fake GitHub already holding a branch named openwiz-push-check.
+F
+======================================================================
+FAIL: test_a_writable_repository_that_has_an_old_probe_branch_starts (__main__.Boat.test_a_writable_repository_that_has_an_old_probe_branch_starts)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/boat/test_driver.py", line 575, in test_a_writable_repository_that_has_an_old_probe_branch_starts
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': "the sandbox cannot push to example/site: install boat.dev's GitHub App on this repository, with write access", 'next': "install boat.dev's GitHub App on example/site with write access, then start again"}
+
+----------------------------------------------------------------------
+Ran 1 test
+
+FAILED (failures=1)

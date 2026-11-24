@@ -186,6 +186,10 @@ class Download(Installer):
                     self.assertFalse(folder.exists())
 
 
+OPTIONAL_ROOM_CLI = {'id': 'room-cli', 'state': 'missing', 'next': 'Optional: CloudRoom is needed only if you'
+                     ' pick it as the host; then install the CloudRoom app and sign in, which provides room-cli.'}
+
+
 class Preflight(Installer):
     def ldd(self, line):
         folder = self.base / ('bin-' + str(self.counter))
@@ -222,27 +226,51 @@ class Preflight(Installer):
         self.assertEqual(self.glibc(('Darwin', 'arm64'))[2], [])
 
 
-    def test_an_intel_mac_passes_the_platform_check_but_stops_because_cloudroom_has_no_intel_build(self):
-        folder = self.base / 'tools'
+    def tools(self, *names):
+        folder = self.base / ('tools-' + str(self.counter))
+        self.counter += 1
         folder.mkdir()
-        for tool in ('room-cli', 'gh', 'git'):
+        for tool in names:
             (folder / tool).write_text('#!/bin/sh\nexit 0\n')
             (folder / tool).chmod(0o755)
         os.environ['PATH'] = str(folder)
-        code, value = self.run_entry('preflight', host=('Darwin', 'arm64'))
-        self.assertEqual((code, value['ready']), (0, True), value)
+
+    def test_an_intel_mac_without_room_cli_reads_ready_and_says_where_agents_run(self):
+        self.tools('gh', 'git')
         code, value = self.run_entry('preflight', host=('Darwin', 'x86_64'))
+        self.assertEqual((code, value['ready'], value['target']), (0, True, 'x86_64-apple-darwin'), value)
         target = [c for c in value['checks'] if c['id'] == 'target']
-        self.assertEqual((code, value['ready'], value['target'], len(target), target[0]['state']),
-                         (5, False, 'x86_64-apple-darwin', 1, 'ok'), value)
-        self.assertEqual([c['id'] for c in value['checks'] if c['state'] != 'ok'], [], value)
-        for words in ('Intel Mac', 'needs CloudRoom', 'no Intel Mac build'):
-            self.assertIn(words, target[0]['next'])
-        code, value = self.run_entry('preflight', host=('Linux', 'aarch64'))
-        refused = [c['next'] for c in value['checks'] if c['id'] == 'target']
-        self.assertEqual((code, len(refused)), (5, 1), value)
-        self.assertIn('Apple silicon', refused[0])
-        self.assertNotIn('Intel', refused[0])
+        self.assertEqual(target, [{'id': 'target', 'state': 'ok', 'next': 'Supported. CloudRoom has no Intel Mac'
+                                   ' build, so on this Mac, agents run on this computer or on boat.dev.'}], value)
+        self.assertEqual([c for c in value['checks'] if c['state'] != 'ok'], [OPTIONAL_ROOM_CLI], value)
+
+    def test_apple_silicon_and_linux_preflight_output_keeps_its_checks_and_calls_room_cli_optional(self):
+        python = {'id': 'python', 'state': 'ok', 'next': 'Python %d.%d is enough.' % sys.version_info[:2]}
+        disk = {'id': 'disk', 'state': 'ok', 'next': 'Enough free space.'}
+        found = [{'id': tool, 'state': 'ok', 'next': 'Found on PATH; setup checks it.'}
+                 for tool in ('room-cli', 'gh', 'git')]
+        missing = OPTIONAL_ROOM_CLI
+        mac = {'id': 'target', 'state': 'ok', 'next': 'Supported.'}
+        linux = [mac, disk, {'id': 'glibc', 'state': 'ok', 'next': 'glibc 2.36 is enough.'}]
+        refused = {'id': 'target', 'state': 'refused',
+                   'next': 'OpenWiz installs on macOS on Apple silicon and on Linux on x86_64.'}
+        cases = ((('Darwin', 'arm64'), ('room-cli', 'gh', 'git'), 0, 'aarch64-apple-darwin',
+                  [python, mac, disk] + found, ''),
+                 (('Darwin', 'arm64'), ('gh', 'git'), 0, 'aarch64-apple-darwin',
+                  [python, mac, disk, missing] + found[1:], ''),
+                 (('Linux', 'x86_64'), ('room-cli', 'gh', 'git', 'ldd'), 0, 'x86_64-unknown-linux-gnu',
+                  [python] + linux + found, ', running only ldd --version'),
+                 (('Linux', 'aarch64'), ('room-cli', 'gh', 'git', 'ldd'), 5, None,
+                  [python, refused] + linux[1:] + found, ', running only ldd --version'))
+        for host, tools, code, target, checks, ldd in cases:
+            with self.subTest(host=host, tools=tools):
+                self.tools(*tools)
+                if 'ldd' in tools:
+                    (Path(os.environ['PATH']) / 'ldd').write_text(
+                        '#!/bin/sh\necho "ldd (Debian GLIBC 2.36-9) 2.36"\n')
+                self.assertEqual(self.run_entry('preflight', host=host), (code, {
+                    'schema': 'openwiz.preflight.v1', 'ready': code == 0, 'target': target, 'checks': checks,
+                    'reason': 'Read this machine only' + ldd + '; nothing was installed.'}))
 
 
 class Repair(Installer):

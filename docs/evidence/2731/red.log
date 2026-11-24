@@ -1,0 +1,108 @@
+Mutation: remove only the F_GET_SEALS predicate from sealed_gh in a scratch copy.
+Run: python3 -I tools/github-app/test_agent_token.py SystemGh.test_a_system_gh_whose_copy_reports_a_missing_seal_gets_nothing
+Exit: 1. Temporary paths and file descriptor numbers are synthetic.
+
+FFFFF
+======================================================================
+FAIL: test_a_system_gh_whose_copy_reports_a_missing_seal_gets_nothing (__main__.SystemGh.test_a_system_gh_whose_copy_reports_a_missing_seal_gets_nothing) (missing='seal')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/synthetic/scratch/tools/github-app/test_agent_token.py", line 1771, in test_a_system_gh_whose_copy_reports_a_missing_seal_gets_nothing
+    self.assert_withheld(*outcome, "the gh this run chose was changed", looked=False)
+  File "/synthetic/scratch/tools/github-app/test_agent_token.py", line 1616, in assert_withheld
+    self.assertEqual((code, ran), (128, []), "no gh runs with the token")
+AssertionError: Tuples differ: ('exec intercepted', [('/proc/self/fd/99', [118 chars]ue)]) != (128, [])
+
+First differing element 0:
+'exec intercepted'
+128
+
++ (128, [])
+- ('exec intercepted',
+-  [('/proc/self/fd/99',
+-    '#!/bin/sh\n# synthetic system gh\nexit 0\n',
+-    ['/synthetic/system/gh', 'pr', 'list'],
+-    True)]) : no gh runs with the token
+
+======================================================================
+FAIL: test_a_system_gh_whose_copy_reports_a_missing_seal_gets_nothing (__main__.SystemGh.test_a_system_gh_whose_copy_reports_a_missing_seal_gets_nothing) (missing='shrink')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/synthetic/scratch/tools/github-app/test_agent_token.py", line 1771, in test_a_system_gh_whose_copy_reports_a_missing_seal_gets_nothing
+    self.assert_withheld(*outcome, "the gh this run chose was changed", looked=False)
+  File "/synthetic/scratch/tools/github-app/test_agent_token.py", line 1616, in assert_withheld
+    self.assertEqual((code, ran), (128, []), "no gh runs with the token")
+AssertionError: Tuples differ: ('exec intercepted', [('/proc/self/fd/99',[119 chars]ue)]) != (128, [])
+
+First differing element 0:
+'exec intercepted'
+128
+
++ (128, [])
+- ('exec intercepted',
+-  [('/proc/self/fd/99',
+-    '#!/bin/sh\n# synthetic system gh\nexit 0\n',
+-    ['/synthetic/system/gh', 'pr', 'list'],
+-    True)]) : no gh runs with the token
+
+======================================================================
+FAIL: test_a_system_gh_whose_copy_reports_a_missing_seal_gets_nothing (__main__.SystemGh.test_a_system_gh_whose_copy_reports_a_missing_seal_gets_nothing) (missing='grow')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/synthetic/scratch/tools/github-app/test_agent_token.py", line 1771, in test_a_system_gh_whose_copy_reports_a_missing_seal_gets_nothing
+    self.assert_withheld(*outcome, "the gh this run chose was changed", looked=False)
+  File "/synthetic/scratch/tools/github-app/test_agent_token.py", line 1616, in assert_withheld
+    self.assertEqual((code, ran), (128, []), "no gh runs with the token")
+AssertionError: Tuples differ: ('exec intercepted', [('/proc/self/fd/99',[119 chars]ue)]) != (128, [])
+
+First differing element 0:
+'exec intercepted'
+128
+
++ (128, [])
+- ('exec intercepted',
+-  [('/proc/self/fd/99',
+-    '#!/bin/sh\n# synthetic system gh\nexit 0\n',
+-    ['/synthetic/system/gh', 'pr', 'list'],
+-    True)]) : no gh runs with the token
+
+======================================================================
+FAIL: test_a_system_gh_whose_copy_reports_a_missing_seal_gets_nothing (__main__.SystemGh.test_a_system_gh_whose_copy_reports_a_missing_seal_gets_nothing) (missing='write')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/synthetic/scratch/tools/github-app/test_agent_token.py", line 1771, in test_a_system_gh_whose_copy_reports_a_missing_seal_gets_nothing
+    self.assert_withheld(*outcome, "the gh this run chose was changed", looked=False)
+  File "/synthetic/scratch/tools/github-app/test_agent_token.py", line 1616, in assert_withheld
+    self.assertEqual((code, ran), (128, []), "no gh runs with the token")
+AssertionError: Tuples differ: ('exec intercepted', [('/proc/self/fd/99',[119 chars]ue)]) != (128, [])
+
+First differing element 0:
+'exec intercepted'
+128
+
++ (128, [])
+- ('exec intercepted',
+-  [('/proc/self/fd/99',
+-    '#!/bin/sh\n# synthetic system gh\nexit 0\n',
+-    ['/synthetic/system/gh', 'pr', 'list'],
+-    True)]) : no gh runs with the token
+
+======================================================================
+FAIL: test_a_system_gh_whose_copy_reports_a_missing_seal_gets_nothing (__main__.SystemGh.test_a_system_gh_whose_copy_reports_a_missing_seal_gets_nothing) (missing='none')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/synthetic/scratch/tools/github-app/test_agent_token.py", line 1774, in test_a_system_gh_whose_copy_reports_a_missing_seal_gets_nothing
+    self.assertEqual(read_back, [all_seals], "one read-back of a fully sealed copy")
+AssertionError: Lists differ: [] != [15]
+
+Second list contains 1 additional elements.
+First extra element 0:
+15
+
+- []
++ [15] : one read-back of a fully sealed copy
+
+----------------------------------------------------------------------
+Ran 1 test in 0.504s
+
+FAILED (failures=5)

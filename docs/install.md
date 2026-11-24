@@ -12,7 +12,7 @@ Using Grok Bot? See [Grok Bot + OpenWiz](grok-bot.md).
 
 ## Before you start
 
-- **A supported computer:** macOS on Apple silicon, or Linux on x86_64 with glibc 2.34 or later (`ldd --version` shows it). Linux on ARM is not supported. **Intel Macs are not supported for 0.1.0:** OpenWiz 0.1.0 needs CloudRoom, and CloudRoom offers no Intel Mac build today, so an Intel Mac cannot complete the 0.1.0 install yet. The `openwiz` program itself runs there, and preflight still accepts an Intel Mac. On Linux older than glibc 2.39, `openwiz` may print a `GLIBC_2.39` warning and still work.
+- **A supported computer:** macOS on Apple silicon, or Linux on x86_64 with glibc 2.34 or later (`ldd --version` shows it). Linux on ARM is not supported. **An Intel Mac installs from 0.1.1 on, with no CloudRoom:** preflight reads it ready. CloudRoom has no Intel Mac build, so on an Intel Mac, agents run on this computer or on boat.dev. On Linux older than glibc 2.39, `openwiz` may print a `GLIBC_2.39` warning and still work.
 - **Python 3.9 or later, `git`, and the GitHub CLI** (`gh`, signed in with `gh auth login`).
 - **CloudRoom,** installed, opened once and signed in. Opening it once creates its `room-cli`.
 
@@ -20,7 +20,7 @@ Using Grok Bot? See [Grok Bot + OpenWiz](grok-bot.md).
 
 The agent runs each command itself and reads its JSON. `<root>` is the install folder, by default `~/.local/lib/openwiz`: use a new or empty folder that holds nothing else, because the installer also accepts a folder that already has other files in it. If you give `install install` a separate `--state-root`, it too must be a new or empty folder used by OpenWiz alone, never one shared with another app. `<target>` is `aarch64-apple-darwin`, `x86_64-apple-darwin` or `x86_64-unknown-linux-gnu`.
 
-1. **Preflight.** It clones this repository at the `v0.1.0` tag into a private temporary folder as `$openwiz` (`git clone --depth 1 --branch v0.1.0 https://github.com/openwizdev/OpenWiz "$openwiz"`) and checks this computer: Python, a supported system, free disk space, and whether `room-cli`, `gh` and `git` are installed. It reads only; anything missing comes with its next step. On an Intel Mac it stops here, as "Before you start" says.
+1. **Preflight.** It clones this repository at the `v0.1.0` tag into a private temporary folder as `$openwiz` (`git clone --depth 1 --branch v0.1.0 https://github.com/openwizdev/OpenWiz "$openwiz"`) and checks this computer: Python, a supported system, free disk space, and whether `room-cli`, `gh` and `git` are installed. It reads only; anything missing comes with its next step. An Intel Mac passes it with no CloudRoom, as "Before you start" says.
 
    ```sh
    python3 -I "$openwiz"/tools/install/install preflight

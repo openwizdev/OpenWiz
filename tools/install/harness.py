@@ -79,31 +79,42 @@ def ours(path):
     return MARKED.fullmatch(text) is not None
 
 
-def place(folder, skills, names, source):
+def discard(path, plain, name, landed):
+    try:
+        shutil.rmtree(path)
+    except OSError as error:
+        done = f'{plain} got OpenWiz\'s {name}, but' if landed else f'{plain} did not get OpenWiz\'s {name}:'
+        quoted = shlex.quote(str(path))
+        return (f'{done} OpenWiz could not delete {path}, a copy it set aside ({error.strerror}). Delete it '
+                f'with chmod -R u+rwx -- {quoted} && rm -rf -- {quoted}, then run this again.')
+    return None
+
+
+def place(folder, skills, name, source, plain):
     folder.mkdir(mode=0o700, exist_ok=True)
-    for name in names:
-        (stage, old), target = leftovers(folder, name), folder / name
-        for leftover in (stage, old):
-            if owned_dir(leftover):
-                shutil.rmtree(leftover)
-        stage.mkdir(mode=0o700)
-        fd = os.open(stage / MARK, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    (stage, old), target = leftovers(folder, name), folder / name
+    for leftover in (stage, old):
+        if owned_dir(leftover):
+            trouble = discard(leftover, plain, name, False)
+            if trouble:
+                return False, trouble
+    stage.mkdir(mode=0o700)
+    fd = os.open(stage / MARK, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(fd, 'wb') as handle:
+        handle.write(mark(source))
+    for path in sorted((skills / name).rglob('*')):
+        if path.is_dir() or path == skills / name / MARK:
+            continue
+        copy = stage / path.relative_to(skills / name)
+        copy.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        fd = os.open(copy, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                     stat.S_IMODE(path.lstat().st_mode))
         with os.fdopen(fd, 'wb') as handle:
-            handle.write(mark(source))
-        for path in sorted((skills / name).rglob('*')):
-            if path.is_dir() or path == skills / name / MARK:
-                continue
-            copy = stage / path.relative_to(skills / name)
-            copy.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-            fd = os.open(copy, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
-                         stat.S_IMODE(path.lstat().st_mode))
-            with os.fdopen(fd, 'wb') as handle:
-                handle.write(path.read_bytes())
-        if owned_dir(target):
-            os.rename(target, old)
-        os.rename(stage, target)
-        if owned_dir(old):
-            shutil.rmtree(old)
+            handle.write(path.read_bytes())
+    if owned_dir(target):
+        os.rename(target, old)
+    os.rename(stage, target)
+    return True, discard(old, plain, name, True) if owned_dir(old) else None
 
 
 def guard_parent(base, plain):
@@ -125,17 +136,23 @@ def unreadable(path, plain, error):
 
 
 def copy(folder, skills, wanted, source, plain):
-    placed = []
-    try:
-        for name in wanted:
-            place(folder, skills, [name], source)
+    placed, notes, cleanup, unwritable = [], [], [], None
+    for name in wanted:
+        try:
+            landed, trouble = place(folder, skills, name, source, plain)
+        except (OSError, installer.Refused) as error:
+            landed, trouble = False, None
+            unwritable = unwritable or (error.strerror if isinstance(error, OSError) and error.strerror
+                                        else str(error))
+        if landed:
             placed.append(name)
-    except (OSError, installer.Refused) as error:
-        why = error.strerror if isinstance(error, OSError) and error.strerror else str(error)
-        return placed, (f'OpenWiz could not write {folder} ({why}), so {plain} got {len(placed)} of '
+        if trouble:
+            (cleanup if landed else notes).append(trouble)
+    if unwritable:
+        notes.insert(0, f'OpenWiz could not write {folder} ({unwritable}), so {plain} got {len(placed)} of '
                         f'{len(wanted)} skills. Make it writable with chmod u+rwx -- {shlex.quote(str(folder))}, '
                         'then run this again.')
-    return placed, None
+    return placed, ' '.join(notes) or None, ' '.join(cleanup) or None
 
 
 def install_skills(build, value, root, home, codex_home=None):
@@ -161,7 +178,9 @@ def install_skills(build, value, root, home, codex_home=None):
                 guard_parent(base, plain)
                 skipped = check(base / 'skills', names, plain)
                 wanted = [n for n in names if n not in {s['skill'] for s in skipped}]
-                placed, failed = copy(base / 'skills', skills, wanted, value['source'], plain) if wanted else ([], None)
+                placed, failed, cleanup = (copy(base / 'skills', skills, wanted, value['source'], plain) if wanted
+                                           else ([], None, None))
+                failed = ' '.join(filter(None, (failed, cleanup))) or None
                 row.update(state='installed' if len(placed) == len(names) else 'partial' if placed else 'refused',
                            next=failed or (f'{plain} finds these skills next time it starts.' if not skipped else
                            f'{plain} did not get {len(skipped)} skill(s); each one below says why and what to do.'))
@@ -178,10 +197,11 @@ def install_skills(build, value, root, home, codex_home=None):
         return dict(result, outcome='refused', reason='No agent here took OpenWiz\'s skills (see each row), so '
                                                       'the canonical folder was not written either.'), 5
     whole = all(row['state'] in ('installed', 'absent') for row in rows)
+    placed, cleanup = [], None
     try:
         skipped = check(canonical, names, 'OpenWiz\'s own skills folder')
-        placed, failed = copy(canonical, skills, [n for n in names if n not in {s['skill'] for s in skipped}],
-                              value['source'], 'OpenWiz\'s own skills folder')
+        placed, failed, cleanup = copy(canonical, skills, [n for n in names if n not in {s['skill'] for s in skipped}],
+                                       value['source'], 'OpenWiz\'s own skills folder')
     except installer.Refused as refusal:
         skipped, failed = [], (f'{canonical} is a link or not a folder of yours ({refusal}), so OpenWiz did not '
                                'write its own copy there; the agents above still got their skills. Make it a real '
@@ -192,7 +212,9 @@ def install_skills(build, value, root, home, codex_home=None):
         result['canonical_skipped'] = skipped
     if failed:
         result['canonical_refused'] = failed
-    whole = whole and not skipped and not failed
+    if cleanup:
+        result['canonical_cleanup'] = cleanup
+    whole = whole and len(placed) == len(names)
     return dict(result, outcome='installed' if whole else 'partial',
                 reason='Copied the skills into every agent here.' if whole else
                 'Copied the skills where it was safe; the rows say what was skipped and why.'), 0

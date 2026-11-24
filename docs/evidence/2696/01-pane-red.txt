@@ -1,0 +1,15 @@
+env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/vps/test_hosts.py Page.test_pane_doctor_follows_daemon_start_and_registration_of_the_same_checkout
+F
+======================================================================
+FAIL: test_pane_doctor_follows_daemon_start_and_registration_of_the_same_checkout (__main__.Page.test_pane_doctor_follows_daemon_start_and_registration_of_the_same_checkout)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/vps/test_hosts.py", line 220, in test_pane_doctor_follows_daemon_start_and_registration_of_the_same_checkout
+    self.assertLess(commands.index(register), commands.index(doctors[0]), 'register before running doctor')
+AssertionError: 41 not less than 13 : register before running doctor
+
+----------------------------------------------------------------------
+Ran 1 test
+
+FAILED (failures=1)
+Exit 1

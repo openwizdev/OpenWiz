@@ -1,0 +1,257 @@
+# #2379: green: the key helper's and the kit's own tests at the hand-back.
+test_a_good_request_reaches_the_registered_host_with_the_key_only_in_its_header (__main__.Helper.test_a_good_request_reaches_the_registered_host_with_the_key_only_in_its_header) ... ok
+test_a_host_not_in_the_registry_is_refused (__main__.Helper.test_a_host_not_in_the_registry_is_refused) ... ok
+test_a_key_that_is_not_one_printable_line_is_refused_without_its_value (__main__.Helper.test_a_key_that_is_not_one_printable_line_is_refused_without_its_value) ... ok
+test_a_key_with_quotes_or_backslashes_is_still_never_echoed (__main__.Helper.test_a_key_with_quotes_or_backslashes_is_still_never_echoed) ... ok
+test_a_method_outside_the_three_is_refused (__main__.Helper.test_a_method_outside_the_three_is_refused) ... ok
+test_a_missing_key_names_the_variable_and_the_entry (__main__.Helper.test_a_missing_key_names_the_variable_and_the_entry) ... ok
+test_a_non_json_answer_comes_back_as_a_null_body (__main__.Helper.test_a_non_json_answer_comes_back_as_a_null_body) ... ok
+test_a_redirect_comes_back_as_its_status_and_is_never_followed (__main__.Helper.test_a_redirect_comes_back_as_its_status_and_is_never_followed) ... ok
+test_an_answer_that_holds_the_key_is_dropped (__main__.Helper.test_an_answer_that_holds_the_key_is_dropped) ... ok
+test_an_unreachable_host_is_an_error_without_the_key (__main__.Helper.test_an_unreachable_host_is_an_error_without_the_key) ... ok
+test_each_path_escape_is_refused_before_any_network_call (__main__.Helper.test_each_path_escape_is_refused_before_any_network_call) ... ok
+test_get_and_delete_with_no_body_and_a_query (__main__.Helper.test_get_and_delete_with_no_body_and_a_query) ... ok
+test_input_that_is_not_exactly_the_request_is_refused (__main__.Helper.test_input_that_is_not_exactly_the_request_is_refused) ... ok
+test_the_helper_ignores_proxy_variables (__main__.Helper.test_the_helper_ignores_proxy_variables) ... ok
+test_the_helper_runs_only_in_isolated_mode (__main__.Helper.test_the_helper_runs_only_in_isolated_mode) ... ok
+test_the_test_override_is_honoured_only_for_loopback_http_with_a_port (__main__.Helper.test_the_test_override_is_honoured_only_for_loopback_http_with_a_port) ... ok
+test_a_failed_or_empty_keychain_is_a_missing_key (__main__.Keychain.test_a_failed_or_empty_keychain_is_a_missing_key) ... ok
+test_an_empty_variable_reads_the_keychain_through_a_pipe (__main__.Keychain.test_an_empty_variable_reads_the_keychain_through_a_pipe) ... ok
+test_the_keychain_is_never_read_under_the_test_override (__main__.Keychain.test_the_keychain_is_never_read_under_the_test_override) ... ok
+test_the_variable_wins_and_no_tool_runs (__main__.Keychain.test_the_variable_wins_and_no_tool_runs) ... ok
+test_tls_is_verified_with_the_system_defaults_and_ignores_cert_variables (__main__.Keychain.test_tls_is_verified_with_the_system_defaults_and_ignores_cert_variables) ... ok
+
+----------------------------------------------------------------------
+Ran 21 tests in 19.217s
+
+OK
+test_a_host_that_answers_a_redirect_fails_start_and_the_redirect_is_never_followed (__main__.Kit.test_a_host_that_answers_a_redirect_fails_start_and_the_redirect_is_never_followed) ... /tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp0hymnnha/tracker.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp0hymnnha/state/run-061a7719eb6c.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp0hymnnha/state/run-cbf89c2e6717.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp0hymnnha/state/run-061a7719eb6c.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp0hymnnha/state/run-cbf89c2e6717.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_a_key_host_driver_that_uses_only_the_helper_passes_all_five (__main__.Kit.test_a_key_host_driver_that_uses_only_the_helper_passes_all_five) ... /tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp_tn2lf6s/tracker.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp_tn2lf6s/state/run-2371190c9429.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp_tn2lf6s/state/run-2371190c9429.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp_tn2lf6s/state/run-03ca36462b8c.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp_tn2lf6s/state/run-03ca36462b8c.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmppwgmy3fa/tracker.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmppwgmy3fa/state/run-b329eb709aee.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmppwgmy3fa/state/run-b329eb709aee.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmppwgmy3fa/state/run-21b607addc3d.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmppwgmy3fa/state/run-21b607addc3d.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_a_refusal_holding_a_credential_never_reaches_the_output (__main__.Kit.test_a_refusal_holding_a_credential_never_reaches_the_output) ... ok
+test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) ... ok
+test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) ... /tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp80nof9te/tracker.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp80nof9te/state/run-cc4cd217bde9.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp80nof9te/state/run-cc4cd217bde9.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp80nof9te/state/run-28688a2f4a29.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp80nof9te/state/run-28688a2f4a29.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpk8dux8bu/tracker.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpk8dux8bu/state/run-985b6c7e9c13.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpk8dux8bu/state/run-985b6c7e9c13.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpk8dux8bu/state/run-883922495a6e.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpk8dux8bu/state/run-883922495a6e.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpfyw3w_7a/tracker.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpfyw3w_7a/state/run-623b77a62c7a.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpfyw3w_7a/state/run-5dc76eb6687d.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpfyw3w_7a/state/run-5dc76eb6687d.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpfyw3w_7a/state/run-623b77a62c7a.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpvm9myfqb/tracker.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpvm9myfqb/state/run-43df72810e5f.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpvm9myfqb/state/run-bf6f3e91ab23.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpvm9myfqb/state/run-bf6f3e91ab23.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpvm9myfqb/state/run-43df72810e5f.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpei0w1e1s/tracker.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpei0w1e1s/state/run-56c794066460.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpei0w1e1s/state/run-56c794066460.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpei0w1e1s/state/run-1d26f84ad279.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpei0w1e1s/state/run-1d26f84ad279.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpswkcltvr/tracker.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpswkcltvr/state/run-3d57f2d03ae6.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpswkcltvr/state/run-f7a69485bd6c.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpswkcltvr/state/run-f7a69485bd6c.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpswkcltvr/state/run-3d57f2d03ae6.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp57g68tn3/tracker.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp57g68tn3/state/run-5e77986c5ee3.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp57g68tn3/state/run-0e03112db7dd.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp57g68tn3/state/run-0e03112db7dd.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp57g68tn3/state/run-5e77986c5ee3.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp6i9sgav6/tracker.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp6i9sgav6/state/run-a77abea396a9.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp6i9sgav6/state/run-8cf3291f642b.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp6i9sgav6/state/run-a77abea396a9.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp6i9sgav6/state/run-8cf3291f642b.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpbpyv4p24/tracker.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpbpyv4p24/state/run-151105e78e3e.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpbpyv4p24/state/run-cc98eb70cc60.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpbpyv4p24/state/run-cc98eb70cc60.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpbpyv4p24/state/run-151105e78e3e.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) ... ok
+test_on_macos_a_key_in_an_argument_or_another_variable_is_caught (__main__.Kit.test_on_macos_a_key_in_an_argument_or_another_variable_is_caught) ... /tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpm7g7flg0/tracker.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpm7g7flg0/state/run-5e7cff06987e.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpm7g7flg0/state/run-b73188b2bd09.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpm7g7flg0/state/run-b73188b2bd09.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpm7g7flg0/state/run-5e7cff06987e.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpzw250azh/tracker.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpzw250azh/state/run-cb7337f8e327.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpzw250azh/state/run-cb7337f8e327.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpzw250azh/state/run-47168d1c0131.lock' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/openwiz/kernel/driver-kit/test_kit.py:126: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpzw250azh/state/run-47168d1c0131.json' mode='r' encoding='UTF-8'>
+  for text in ['\n'.join(out) + err] + [open(os.path.join(d, n), errors='replace').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) ... ok
+test_template_passes_all_five (__main__.Kit.test_template_passes_all_five) ... ok
+test_the_kits_visibility_probe_signals_ready_through_the_macos_shim_and_runs_until_its_stdin_closes (__main__.Kit.test_the_kits_visibility_probe_signals_ready_through_the_macos_shim_and_runs_until_its_stdin_closes) ... ok
+test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) ... ok
+test_without_proc_as_on_macos_a_driver_whose_run_stays_in_the_kits_group_passes_all_five (__main__.Kit.test_without_proc_as_on_macos_a_driver_whose_run_stays_in_the_kits_group_passes_all_five) ... ok
+test_without_proc_as_on_macos_the_template_passes_all_five (__main__.Kit.test_without_proc_as_on_macos_the_template_passes_all_five) ... ok
+test_without_proc_or_the_runs_visible_environment_stop_and_token_fail_unverified (__main__.Kit.test_without_proc_or_the_runs_visible_environment_stop_and_token_fail_unverified) ... ok
+test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without (__main__.Kit.test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without) ... ok
+
+----------------------------------------------------------------------
+Ran 15 tests in 94.346s
+
+OK

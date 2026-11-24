@@ -1,0 +1,11 @@
+ERROR: test_deeply_nested_or_truncated_provider_answers_keep_the_fixed_code (__main__.Access.test_deeply_nested_or_truncated_provider_answers_keep_the_fixed_code) (case='nested')
+RecursionError: maximum recursion depth exceeded while decoding a JSON array from a unicode string
+ERROR: test_deeply_nested_or_truncated_provider_answers_keep_the_fixed_code (__main__.Access.test_deeply_nested_or_truncated_provider_answers_keep_the_fixed_code) (case='truncated')
+http.client.IncompleteRead: IncompleteRead(10 bytes read, 1014 more expected)
+http.client.IncompleteRead: IncompleteRead(0 bytes read)
+FAIL: test_status_reports_only_the_observation_of_its_own_operation_and_route (__main__.Access.test_status_reports_only_the_observation_of_its_own_operation_and_route)
+AssertionError: {'at': <ms>, 'code': 'access_unavailable', 'revision': 0} is not None : the second route's result is not the first operation's
+FAIL: test_tailscale_cli_runs_only_from_a_fixed_location_with_a_fixed_environment (__main__.Access.test_tailscale_cli_runs_only_from_a_fixed_location_with_a_fixed_environment)
+AssertionError: Unverified not raised
+Ran 22 tests
+FAILED (failures=2, errors=2)

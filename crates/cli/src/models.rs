@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io::{Read, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use openwiz_adapter_cloudroom::allowlist::{Invocation, SpawnArgs};
@@ -11,10 +11,13 @@ use openwiz_core::models::{
     read,
 };
 use openwiz_core::new_thread::operation::NewThreadClient;
-use openwiz_core::new_thread::options::{CloudOptions, OptionsState, cloud_options};
+use openwiz_core::new_thread::options::{
+    CloudOptions, J255_CLAUDE_MODEL, J255_CODEX_MODEL, J255_EFFORT, OptionsSource, OptionsState,
+    cloud_options, local_options,
+};
 use openwiz_core::ops::Clock;
-use rustix::fd::AsFd;
-use rustix::fs::{AtFlags, CWD, FileType, Gid, Mode, OFlags, Uid, XattrFlags};
+use rustix::fd::{AsFd, OwnedFd};
+use rustix::fs::{Access, AtFlags, CWD, FileType, Gid, Mode, OFlags, Uid, XattrFlags};
 use rustix::io::Errno;
 use serde_json::{Value, json};
 
@@ -41,15 +44,37 @@ pub fn run_models_in(
     stdout: &mut dyn Write,
     stderr: &mut dyn Write,
 ) -> i32 {
+    let lister: Option<AclLister> = if std::env::consts::OS == "macos" {
+        Some(&macos_ls)
+    } else {
+        None
+    };
+    run_models_listing_acls(args, root, client, clock, lister, stdout, stderr)
+}
+
+pub fn run_models_listing_acls(
+    args: &[String],
+    root: &Path,
+    client: &dyn NewThreadClient,
+    clock: &dyn Clock,
+    lister: Option<AclLister>,
+    stdout: &mut dyn Write,
+    stderr: &mut dyn Write,
+) -> i32 {
     if matches!(
         args.first().map(String::as_str),
         Some("show" | "list" | "set")
     ) {
-        return run_form(args, root, client, clock, stdout, stderr);
+        let acl = lister.map(|lister| AclCheck {
+            lister,
+            dir: root.join("docs/agents"),
+        });
+        return run_form(args, root, client, clock, acl, stdout, stderr);
     }
-    let mut json = false;
-    for arg in args {
-        match arg.as_str() {
+    let (mut json, mut host) = (false, None);
+    let mut args_iter = args.iter().map(String::as_str);
+    while let Some(arg) = args_iter.next() {
+        match arg {
             "--help" | "-h" => {
                 let _ = stdout.write_all(
                     crate::response::help(
@@ -61,19 +86,17 @@ pub fn run_models_in(
                 return EXIT_OK;
             }
             "--json" => json = true,
+            "--host" => {
+                if let Err(why) = parse_host(&mut host, args_iter.next()) {
+                    return usage(stderr, &why);
+                }
+            }
             other => {
-                let _ = writeln!(
-                    stderr,
-                    "openwiz: models takes only --json, not {}; nothing was read (see openwiz \
-                     --help)",
-                    clean(other)
-                );
-                return EXIT_USAGE;
+                return usage(stderr, &format!("models has no option {}", clean(other)));
             }
         }
     }
-    let deadline = clock.monotonic() + READ_TIMEOUT;
-    let options = cloud_options(client.catalogue(deadline), client.cli_levels(), clock.now());
+    let options = read_options(client, clock, host);
     let printed = if json {
         let mut out = serde_json::to_string_pretty(&options)
             .unwrap_or_else(|e| format!("{{\"error\": \"{e}\"}}"));
@@ -88,6 +111,80 @@ pub fn run_models_in(
         OptionsState::Offered => EXIT_OK,
         OptionsState::NoOptions { .. } => EXIT_NO_OPTIONS,
     }
+}
+
+fn usage(stderr: &mut dyn Write, why: &str) -> i32 {
+    let _ = writeln!(
+        stderr,
+        "openwiz: {why}; nothing was read (see openwiz --help)"
+    );
+    EXIT_USAGE
+}
+
+fn valid_host(name: &str) -> bool {
+    name.len() <= 40
+        && name != "cloudroom"
+        && name.split('-').all(|part| {
+            !part.is_empty()
+                && part
+                    .bytes()
+                    .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit())
+        })
+}
+
+fn parse_host<'a>(host: &mut Option<&'a str>, value: Option<&'a str>) -> Result<(), String> {
+    if host.is_some() {
+        return Err("models takes --host once".to_owned());
+    }
+    *host = Some(value.filter(|name| valid_host(name)).ok_or_else(|| {
+        "models --host needs cloud, local, boat or a valid driver name".to_owned()
+    })?);
+    Ok(())
+}
+
+fn saved_host() -> Option<String> {
+    let dir = crate::state::default_state_dir(&|name| std::env::var_os(name)).ok()?;
+    let saved: Value =
+        serde_json::from_reader(File::open(dir.join("setup/state.json")).ok()?).ok()?;
+    if saved["schema"] != "openwiz.setup-state.v1" {
+        return None;
+    }
+    saved["project"]["host"]
+        .as_str()
+        .filter(|name| valid_host(name))
+        .map(ToOwned::to_owned)
+}
+
+fn read_options(
+    client: &dyn NewThreadClient,
+    clock: &dyn Clock,
+    host: Option<&str>,
+) -> CloudOptions {
+    let saved = if host.is_none() { saved_host() } else { None };
+    if host
+        .or(saved.as_deref())
+        .is_some_and(|name| name != "cloud")
+    {
+        let path = std::env::var_os("PATH");
+        let installed = |program: &str| {
+            path.as_ref().is_some_and(|path| {
+                std::env::split_paths(path).any(|dir| {
+                    let candidate = dir.join(program);
+                    candidate.is_file() && rustix::fs::access(&candidate, Access::EXEC_OK).is_ok()
+                })
+            })
+        };
+        return local_options(installed("claude"), installed("codex"), clock.now());
+    }
+    read_cloud_options(client, clock)
+}
+
+fn read_cloud_options(client: &dyn NewThreadClient, clock: &dyn Clock) -> CloudOptions {
+    cloud_options(
+        client.catalogue(clock.monotonic() + READ_TIMEOUT),
+        client.cli_levels(),
+        clock.now(),
+    )
 }
 
 pub fn render_options(options: &CloudOptions) -> String {
@@ -138,12 +235,14 @@ enum Parsed {
 const SET_USAGE: &str = "models set takes <role> <provider> <model> <effort>, or \
                          <small-builder|fixer> follows-builder";
 
-fn parse_form(args: &[String]) -> Result<(Parsed, bool), String> {
+fn parse_form(args: &[String]) -> Result<(Parsed, bool, Option<&str>), String> {
     let form = args[0].as_str();
-    let (mut json, mut save, mut words) = (false, false, Vec::new());
-    for arg in &args[1..] {
-        match arg.as_str() {
-            "--help" | "-h" => return Ok((Parsed::Help, false)),
+    let (mut json, mut save, mut words, mut host) = (false, false, Vec::new(), None);
+    let mut args_iter = args[1..].iter().map(String::as_str);
+    while let Some(arg) = args_iter.next() {
+        match arg {
+            "--help" | "-h" => return Ok((Parsed::Help, false, None)),
+            "--host" if form != "list" => parse_host(&mut host, args_iter.next())?,
             "--json" if !json => json = true,
             "--save" if form == "list" && !save => save = true,
             "--json" | "--save" => return Err(format!("models {form} takes {arg} once")),
@@ -176,7 +275,7 @@ fn parse_form(args: &[String]) -> Result<(Parsed, bool), String> {
         }
         _ => return Err(SET_USAGE.to_owned()),
     };
-    Ok((parsed, json))
+    Ok((parsed, json, host))
 }
 
 fn run_form(
@@ -184,30 +283,18 @@ fn run_form(
     root: &Path,
     client: &dyn NewThreadClient,
     clock: &dyn Clock,
+    acl: Option<AclCheck<'_>>,
     stdout: &mut dyn Write,
     stderr: &mut dyn Write,
 ) -> i32 {
-    let (parsed, json) = match parse_form(args) {
+    let (parsed, json, host) = match parse_form(args) {
         Ok(parsed) => parsed,
-        Err(why) => {
-            let _ = writeln!(
-                stderr,
-                "openwiz: {why}; nothing was read (see openwiz --help)"
-            );
-            return EXIT_USAGE;
-        }
+        Err(why) => return usage(stderr, &why),
     };
     let form = args[0].as_str();
     let fleet = || {
         std::fs::read_to_string(root.join(FLEET_FILE))
             .map_err(|e| format!("cannot read {FLEET_FILE}: {e}"))
-    };
-    let read_options = || {
-        cloud_options(
-            client.catalogue(clock.monotonic() + READ_TIMEOUT),
-            client.cli_levels(),
-            clock.now(),
-        )
     };
     let outcome = match parsed {
         Parsed::Help => {
@@ -227,8 +314,8 @@ fn run_form(
         }),
         Parsed::List { save } => {
             let checkout = save.then(|| Checkout::open(root));
-            let options = read_options();
-            let agents = checkout.map(|checkout| checkout.and_then(|c| Agents::open(&c)));
+            let options = read_options(client, clock, None);
+            let agents = checkout.map(|checkout| checkout.and_then(|c| Agents::open(&c, acl)));
             let text = match &agents {
                 Some(agents) => agents.as_ref().ok().and_then(|a| a.read(FLEET_FILE).ok()),
                 None => fleet().ok(),
@@ -239,7 +326,8 @@ fn run_form(
             let saved = save && offered;
             let written = match agents {
                 Some(agents) if saved => {
-                    agents.and_then(|agents| put(&agents, SNAPSHOT_FILE, &document(&snapshot)))
+                    let text = document(&snapshot);
+                    agents.and_then(|agents| put_all(&agents, &[(SNAPSHOT_FILE, &text)]))
                 }
                 _ => Ok(()),
             };
@@ -262,11 +350,13 @@ fn run_form(
             })
         }
         Parsed::Set { role, asked } => Checkout::open(root)
-            .and_then(|checkout| Agents::open(&checkout))
+            .and_then(|checkout| Agents::open(&checkout, acl))
             .and_then(|agents| {
                 agents.lock()?;
                 let text = agents.read(FLEET_FILE)?;
-                run_set(&text, role, asked, &agents, json, &read_options)
+                run_set(&text, role, asked, &agents, json, &|| {
+                    read_options(client, clock, host)
+                })
             }),
     };
     match outcome {
@@ -334,8 +424,8 @@ fn run_set(
         };
         Ok((code, out))
     };
-    let (chosen, options) = match asked {
-        None => (Asked::Follows, None),
+    let (chosen, options, unlisted) = match asked {
+        None => (Asked::Follows, None, false),
         Some([p, m, e]) => {
             let options = read_options();
             if let OptionsState::NoOptions { text, .. } = &options.state {
@@ -348,7 +438,13 @@ fn run_set(
                 );
             }
             let offered = json!(offered_harnesses(&options));
-            if !is_offered(&options, p, m, e) {
+            let listed = is_offered(&options, p, m, e);
+            let installed = options.source == Some(OptionsSource::Local)
+                && options
+                    .harnesses
+                    .iter()
+                    .any(|harness| harness.provider == *p);
+            if !listed && !installed {
                 let why = format!("not offered: {p} {m} {e}; nothing was changed");
                 return refused(EXIT_REFUSED, "refused", "not_offered", why, offered);
             }
@@ -358,7 +454,7 @@ fn run_set(
                 );
                 return refused(EXIT_REFUSED, "refused", "not_writable", why, offered);
             };
-            (Asked::Choice(choice), Some(options))
+            (Asked::Choice(choice), Some(options), !listed)
         }
     };
     let result = set(text, role, &chosen, &spawn_flags()?)?;
@@ -367,32 +463,35 @@ fn run_set(
             "{FLEET_FILE} changed while set ran, so nothing was written; run it again"
         ));
     }
-    let mut files = Vec::new();
-    if let Some(options) = &options {
+    let offered = options.as_ref().map(|options| {
         let current = read_fleet(result.text.as_deref().unwrap_or(text)).ok();
-        put(
-            agents,
-            SNAPSHOT_FILE,
-            &document(&snapshot(options, current.as_ref())),
-        )?;
-        files.push(SNAPSHOT_FILE);
+        document(&snapshot(options, current.as_ref()))
+    });
+    let mut writes = Vec::new();
+    if let Some(offered) = &offered {
+        writes.push((SNAPSHOT_FILE, offered.as_str()));
     }
     if let Some(new) = &result.text {
-        put(agents, FLEET_FILE, new)?;
-        files.insert(0, FLEET_FILE);
+        writes.push((FLEET_FILE, new.as_str()));
     }
+    put_all(agents, &writes)?;
+    let mut files: Vec<&str> = writes.iter().map(|(rel, _)| *rel).collect();
+    files.reverse();
     let outcome = if result.text.is_some() {
         "changed"
     } else {
         "unchanged"
     };
-    let report = json!({
+    let mut report = json!({
         "schema": "openwiz.models-set.v1", "outcome": outcome, "role": role,
         "asked": asked_doc, "before": before, "after": result.after,
         "models_table_added": result.models_table_added, "older_tables": result.older_tables,
         "files": files, "warnings": result.warnings, "refusal": null, "offered": null,
     });
     if json {
+        if unlisted {
+            report["listed"] = json!(false);
+        }
         return Ok((EXIT_OK, document(&report)));
     }
     let mut out = format!(
@@ -467,8 +566,8 @@ fn snapshot(options: &CloudOptions, current: Option<&Show>) -> Value {
         "unavailable": options.unavailable,
         "recommended": {
             "orchestrator": orchestrator,
-            "builder": recommend(Choice::named("claude-code", "claude-opus-5-5", "medium"), j255),
-            "reviewer": recommend(Choice::named("codex", "gpt-6.2-sol", "medium"), j255),
+            "builder": recommend(Choice::named("claude-code", J255_CLAUDE_MODEL, J255_EFFORT), j255),
+            "reviewer": recommend(Choice::named("codex", J255_CODEX_MODEL, J255_EFFORT), j255),
         },
     })
 }
@@ -599,10 +698,10 @@ impl Checkout {
     }
 }
 
-struct Agents(File);
+struct Agents<'a>(File, Option<AclCheck<'a>>);
 
-impl Agents {
-    fn open(checkout: &Checkout) -> Result<Self, String> {
+impl<'a> Agents<'a> {
+    fn open(checkout: &Checkout, acl: Option<AclCheck<'a>>) -> Result<Self, String> {
         let flags = OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC;
         let refused = |dir: &str| {
             format!(
@@ -612,7 +711,7 @@ impl Agents {
         let docs = rustix::fs::openat(&checkout.0, "docs", flags, Mode::empty())
             .map_err(|_| refused("docs"))?;
         rustix::fs::openat(&docs, "agents", flags, Mode::empty())
-            .map(|fd| Agents(File::from(fd)))
+            .map(|fd| Agents(File::from(fd), acl))
             .map_err(|_| refused("docs/agents"))
     }
 
@@ -626,6 +725,45 @@ impl Agents {
         Ok(text)
     }
 
+    fn keep_acl(&self, rel: &str, fd: Option<&OwnedFd>) -> Result<(), String> {
+        let (Some(check), Some(fd)) = (&self.1, fd) else {
+            return Ok(());
+        };
+        let unchecked = |why: String| {
+            format!(
+                "cannot write {rel}: cannot check its macOS extended ACL ({why}); nothing was written"
+            )
+        };
+        let path = check.dir.join(name(rel));
+        let unmoved = || {
+            let open = rustix::fs::fstat(fd).map_err(|e| unchecked(e.to_string()))?;
+            let here = rustix::fs::lstat(&path).map_err(|e| unchecked(e.to_string()))?;
+            match (open.st_dev, open.st_ino) == (here.st_dev, here.st_ino) {
+                true => Ok(()),
+                false => Err(unchecked("it moved while it was checked".to_owned())),
+            }
+        };
+        unmoved()?;
+        let listed = (check.lister)(&path).map_err(|e| unchecked(format!("cannot run ls: {e}")))?;
+        unmoved()?;
+        if !listed.status.success() {
+            return Err(unchecked(format!("ls failed: {}", listed.status)));
+        }
+        if !listed.stderr.is_empty() {
+            return Err(unchecked("ls warned while it listed the file".to_owned()));
+        }
+        match String::from_utf8(listed.stdout)
+            .ok()
+            .and_then(|l| extended_acl(&l))
+        {
+            Some(false) => Ok(()),
+            Some(true) => Err(format!(
+                "cannot write {rel}: it has a macOS extended ACL, which openwiz cannot keep; nothing was written"
+            )),
+            None => Err(unchecked("ls printed no listing openwiz reads".to_owned())),
+        }
+    }
+
     fn lock(&self) -> Result<(), String> {
         self.0
             .lock()
@@ -637,7 +775,59 @@ fn name(rel: &str) -> &str {
     rel.rsplit('/').next().unwrap_or(rel)
 }
 
-fn put(agents: &Agents, rel: &str, text: &str) -> Result<(), String> {
+struct Staged<'r> {
+    rel: &'r str,
+    temporary: String,
+    existing: Option<OwnedFd>,
+}
+
+fn put_all(agents: &Agents, files: &[(&str, &str)]) -> Result<(), String> {
+    let mut staged = Vec::new();
+    let mut result = Ok(());
+    for &(rel, text) in files {
+        match stage(agents, rel, text) {
+            Ok(one) => staged.push(one),
+            Err(e) => {
+                result = Err(e);
+                break;
+            }
+        }
+    }
+    let result = result
+        .and_then(|()| staged.iter().try_for_each(|one| unchanged(agents, one)))
+        .and_then(|()| {
+            staged.iter().try_for_each(|one| {
+                rustix::fs::renameat(&agents.0, &one.temporary, &agents.0, name(one.rel))
+                    .map_err(|e| format!("cannot write {}: {e}", one.rel))
+            })
+        });
+    if result.is_err() {
+        for one in &staged {
+            let _ = rustix::fs::unlinkat(&agents.0, &one.temporary, AtFlags::empty());
+        }
+    }
+    result
+}
+
+fn unchanged(agents: &Agents, one: &Staged) -> Result<(), String> {
+    let rel = one.rel;
+    let changed =
+        || format!("cannot write {rel}: it changed while openwiz wrote it; nothing was written");
+    let here = rustix::fs::statat(&agents.0, name(rel), AtFlags::SYMLINK_NOFOLLOW);
+    match (&one.existing, here) {
+        (None, Err(Errno::NOENT)) => Ok(()),
+        (Some(fd), Ok(here)) => {
+            let open = rustix::fs::fstat(fd).map_err(|_| changed())?;
+            if (open.st_dev, open.st_ino) != (here.st_dev, here.st_ino) {
+                return Err(changed());
+            }
+            agents.keep_acl(rel, Some(fd))
+        }
+        _ => Err(changed()),
+    }
+}
+
+fn stage<'r>(agents: &Agents, rel: &'r str, text: &str) -> Result<Staged<'r>, String> {
     static NEXT: AtomicU64 = AtomicU64::new(0);
     let fail = |e: std::io::Error| format!("cannot write {rel}: {e}");
     let dir = &agents.0;
@@ -655,6 +845,7 @@ fn put(agents: &Agents, rel: &str, text: &str) -> Result<(), String> {
             return Err(format!("cannot write {rel}: it is not a regular file"));
         }
     }
+    agents.keep_acl(rel, existing.as_ref())?;
     let n = NEXT.fetch_add(1, Ordering::Relaxed);
     let temporary = format!(".{target}.openwiz-{}-{n}", std::process::id());
     let create =
@@ -672,15 +863,36 @@ fn put(agents: &Agents, rel: &str, text: &str) -> Result<(), String> {
         let mut file = File::from(fd);
         file.write_all(text.as_bytes())?;
         file.sync_all()
-    })
-    .and_then(|()| Ok(rustix::fs::renameat(dir, &temporary, dir, target)?));
-    written.map_err(|e| {
-        let _ = rustix::fs::unlinkat(dir, &temporary, AtFlags::empty());
-        fail(e)
-    })
+    });
+    match written {
+        Ok(()) => Ok(Staged {
+            rel,
+            temporary,
+            existing,
+        }),
+        Err(e) => {
+            let _ = rustix::fs::unlinkat(dir, &temporary, AtFlags::empty());
+            Err(fail(e))
+        }
+    }
 }
 
 const ACCESS_ACL: &str = "system.posix_acl_access";
+pub type AclLister<'a> = &'a dyn Fn(&Path) -> std::io::Result<std::process::Output>;
+
+struct AclCheck<'a> {
+    lister: AclLister<'a>,
+    dir: PathBuf,
+}
+
+fn macos_ls(path: &Path) -> std::io::Result<std::process::Output> {
+    std::process::Command::new("/bin/ls")
+        .arg("-lde")
+        .arg(path)
+        .env_clear()
+        .stdin(std::process::Stdio::null())
+        .output()
+}
 
 fn access_like(staged: impl AsFd, target: impl AsFd) -> std::io::Result<()> {
     let want = rustix::fs::fstat(&target)?;
@@ -714,6 +926,24 @@ fn access_acl(fd: impl AsFd) -> std::io::Result<Option<Vec<u8>>> {
     let size = rustix::fs::fgetxattr(&fd, ACCESS_ACL, &mut acl[..])?;
     acl.truncate(size);
     Ok(Some(acl))
+}
+
+fn extended_acl(listing: &str) -> Option<bool> {
+    let mut lines = listing.lines();
+    let mode = lines.next()?.split(' ').next()?;
+    if !mode.starts_with('-') || !(10..=11).contains(&mode.len()) {
+        return None;
+    }
+    let mut entries = 0;
+    for line in lines {
+        let (at, _) = line.trim_start().split_once(": ")?;
+        at.parse::<u32>().ok()?;
+        entries += 1;
+    }
+    match (mode.ends_with('+'), entries) {
+        (true, 0) => None,
+        (_, n) => Some(n > 0),
+    }
 }
 
 fn emit(stdout: &mut dyn Write, stderr: &mut dyn Write, (code, text): (i32, String)) -> i32 {

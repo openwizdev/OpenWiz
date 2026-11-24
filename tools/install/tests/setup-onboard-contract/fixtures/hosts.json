@@ -1,0 +1,1569 @@
+{
+  "unlisted_local_set": {
+    "schema": "openwiz.models-set.v1",
+    "outcome": "changed",
+    "role": "reviewer",
+    "asked": {
+      "provider": "codex",
+      "model": "synthetic/demo",
+      "effort": "medium"
+    },
+    "before": {
+      "follows": null,
+      "choice": {
+        "provider": "codex",
+        "model": "gpt-6.2-sol",
+        "effort": "medium",
+        "family": "gpt",
+        "names": {
+          "harness": "Codex",
+          "model": "Sol 6.2",
+          "effort": "Medium"
+        }
+      }
+    },
+    "after": {
+      "follows": null,
+      "choice": {
+        "provider": "codex",
+        "model": "synthetic/demo",
+        "effort": "medium",
+        "family": "gpt",
+        "names": {
+          "harness": "Codex",
+          "model": "synthetic/demo",
+          "effort": "Medium"
+        }
+      }
+    },
+    "models_table_added": false,
+    "older_tables": [],
+    "files": [
+      "docs/agents/fleet.md",
+      "docs/agents/models-offered.json"
+    ],
+    "warnings": [],
+    "refusal": null,
+    "offered": null,
+    "listed": false
+  },
+  "models_host_selection": {
+    "fresh-local": {"document": {"host": "local"}, "options": "local-claude-code-and-codex", "valid": true},
+    "fresh-boat": {"document": {"host": "boat"}, "options": "local-codex-only", "valid": true},
+    "fresh-driver": {"document": {"host": "synthetic-driver"}, "options": "local-none-installed", "valid": true},
+    "fresh-cloud": {"document": {"host": "cloud"}, "options": "cloudroom-unmarked", "valid": true},
+    "legacy-cloud-default": {"document": {}, "options": "cloudroom-unmarked", "valid": true},
+    "saved-local": {"document": {"saved_host": "local"}, "options": "local-codex-only", "valid": true},
+    "saved-cloud": {"document": {"saved_host": "cloud"}, "options": "cloudroom-unmarked", "valid": true},
+    "explicit-cloud-over-saved-local": {"document": {"host": "cloud", "saved_host": "local"}, "options": "cloudroom-unmarked", "valid": true},
+    "explicit-local-over-saved-cloud": {"document": {"host": "local", "saved_host": "cloud"}, "options": "local-claude-code-and-codex", "valid": true},
+    "first-local-falls-back-to-cloud": {"document": {"host": "local"}, "options": "cloudroom-unmarked", "valid": false},
+    "saved-local-falls-back-to-cloud": {"document": {"saved_host": "local"}, "options": "cloudroom-unmarked", "valid": false},
+    "cloud-default-uses-local": {"document": {}, "options": "local-codex-only", "valid": false},
+    "cloud-override-uses-local": {"document": {"host": "cloud", "saved_host": "local"}, "options": "local-codex-only", "valid": false},
+    "invalid-host": {"document": {"host": "cloudroom"}, "options": "local-codex-only", "valid": false}
+  },
+  "setup_reports": {
+    "local-ready-without-cloudroom": {
+      "document": {
+        "schema": "openwiz.setup.v1",
+        "ready": true,
+        "components": [
+          {
+            "id": "cloudroom",
+            "state": "unknown",
+            "reason": "cloudroom_not_needed",
+            "next": "None: your agents run on local, not CloudRoom, so CloudRoom is not needed."
+          },
+          {
+            "id": "harness",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "personal_github",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "github_app",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "project",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "remote_access",
+            "state": "missing",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          }
+        ],
+        "engine": "unselected",
+        "cost": {
+          "provenance": "unknown",
+          "credits": null,
+          "window_s": null,
+          "monthly_projection": null,
+          "free_allowance": null,
+          "reason": "Synthetic: no measurement."
+        },
+        "operations": [],
+        "host": "local"
+      },
+      "valid": true
+    },
+    "boat-ready-without-cloudroom": {
+      "document": {
+        "schema": "openwiz.setup.v1",
+        "ready": true,
+        "components": [
+          {
+            "id": "cloudroom",
+            "state": "unknown",
+            "reason": "cloudroom_not_needed",
+            "next": "None: your agents run on boat, not CloudRoom, so CloudRoom is not needed."
+          },
+          {
+            "id": "harness",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "personal_github",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "github_app",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "project",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "remote_access",
+            "state": "missing",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          }
+        ],
+        "engine": "unselected",
+        "cost": {
+          "provenance": "unknown",
+          "credits": null,
+          "window_s": null,
+          "monthly_projection": null,
+          "free_allowance": null,
+          "reason": "Synthetic: no measurement."
+        },
+        "operations": [],
+        "host": "boat"
+      },
+      "valid": true
+    },
+    "other-driver-ready-without-cloudroom": {
+      "document": {
+        "schema": "openwiz.setup.v1",
+        "ready": true,
+        "components": [
+          {
+            "id": "cloudroom",
+            "state": "unknown",
+            "reason": "cloudroom_not_needed",
+            "next": "None: your agents run on syn-driver-2, not CloudRoom, so CloudRoom is not needed."
+          },
+          {
+            "id": "harness",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "personal_github",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "github_app",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "project",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "remote_access",
+            "state": "missing",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          }
+        ],
+        "engine": "unselected",
+        "cost": {
+          "provenance": "unknown",
+          "credits": null,
+          "window_s": null,
+          "monthly_projection": null,
+          "free_allowance": null,
+          "reason": "Synthetic: no measurement."
+        },
+        "operations": [],
+        "host": "syn-driver-2"
+      },
+      "valid": true
+    },
+    "local-harness-missing-not-ready": {
+      "document": {
+        "schema": "openwiz.setup.v1",
+        "ready": false,
+        "components": [
+          {
+            "id": "cloudroom",
+            "state": "unknown",
+            "reason": "cloudroom_not_needed",
+            "next": "None: your agents run on local, not CloudRoom, so CloudRoom is not needed."
+          },
+          {
+            "id": "harness",
+            "state": "missing",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "personal_github",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "github_app",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "project",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "remote_access",
+            "state": "missing",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          }
+        ],
+        "engine": "unselected",
+        "cost": {
+          "provenance": "unknown",
+          "credits": null,
+          "window_s": null,
+          "monthly_projection": null,
+          "free_allowance": null,
+          "reason": "Synthetic: no measurement."
+        },
+        "operations": [],
+        "host": "local"
+      },
+      "valid": true
+    },
+    "local-harness-missing-claims-ready": {
+      "document": {
+        "schema": "openwiz.setup.v1",
+        "ready": true,
+        "components": [
+          {
+            "id": "cloudroom",
+            "state": "unknown",
+            "reason": "cloudroom_not_needed",
+            "next": "None: your agents run on local, not CloudRoom, so CloudRoom is not needed."
+          },
+          {
+            "id": "harness",
+            "state": "missing",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "personal_github",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "github_app",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "project",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "remote_access",
+            "state": "missing",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          }
+        ],
+        "engine": "unselected",
+        "cost": {
+          "provenance": "unknown",
+          "credits": null,
+          "window_s": null,
+          "monthly_projection": null,
+          "free_allowance": null,
+          "reason": "Synthetic: no measurement."
+        },
+        "operations": [],
+        "host": "local"
+      },
+      "valid": false
+    },
+    "local-project-refused-claims-ready": {
+      "document": {
+        "schema": "openwiz.setup.v1",
+        "ready": true,
+        "components": [
+          {
+            "id": "cloudroom",
+            "state": "unknown",
+            "reason": "cloudroom_not_needed",
+            "next": "None: your agents run on local, not CloudRoom, so CloudRoom is not needed."
+          },
+          {
+            "id": "harness",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "personal_github",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "github_app",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "project",
+            "state": "refused",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "remote_access",
+            "state": "missing",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          }
+        ],
+        "engine": "unselected",
+        "cost": {
+          "provenance": "unknown",
+          "credits": null,
+          "window_s": null,
+          "monthly_projection": null,
+          "free_allowance": null,
+          "reason": "Synthetic: no measurement."
+        },
+        "operations": [],
+        "host": "local"
+      },
+      "valid": false
+    },
+    "local-cloudroom-read-anyway": {
+      "document": {
+        "schema": "openwiz.setup.v1",
+        "ready": true,
+        "components": [
+          {
+            "id": "cloudroom",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "harness",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "personal_github",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "github_app",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "project",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "remote_access",
+            "state": "missing",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          }
+        ],
+        "engine": "unselected",
+        "cost": {
+          "provenance": "unknown",
+          "credits": null,
+          "window_s": null,
+          "monthly_projection": null,
+          "free_allowance": null,
+          "reason": "Synthetic: no measurement."
+        },
+        "operations": [],
+        "host": "local"
+      },
+      "valid": false
+    },
+    "local-not-needed-but-missing": {
+      "document": {
+        "schema": "openwiz.setup.v1",
+        "ready": true,
+        "components": [
+          {
+            "id": "cloudroom",
+            "state": "missing",
+            "reason": "cloudroom_not_needed",
+            "next": "None: your agents run on local, not CloudRoom, so CloudRoom is not needed."
+          },
+          {
+            "id": "harness",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "personal_github",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "github_app",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "project",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "remote_access",
+            "state": "missing",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          }
+        ],
+        "engine": "unselected",
+        "cost": {
+          "provenance": "unknown",
+          "credits": null,
+          "window_s": null,
+          "monthly_projection": null,
+          "free_allowance": null,
+          "reason": "Synthetic: no measurement."
+        },
+        "operations": [],
+        "host": "local"
+      },
+      "valid": false
+    },
+    "cloud-ready": {
+      "document": {
+        "schema": "openwiz.setup.v1",
+        "ready": true,
+        "components": [
+          {
+            "id": "cloudroom",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "harness",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "personal_github",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "github_app",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "project",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "remote_access",
+            "state": "missing",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          }
+        ],
+        "engine": "unselected",
+        "cost": {
+          "provenance": "unknown",
+          "credits": null,
+          "window_s": null,
+          "monthly_projection": null,
+          "free_allowance": null,
+          "reason": "Synthetic: no measurement."
+        },
+        "operations": [],
+        "host": "cloud"
+      },
+      "valid": true
+    },
+    "unnamed-host-ready": {
+      "document": {
+        "schema": "openwiz.setup.v1",
+        "ready": true,
+        "components": [
+          {
+            "id": "cloudroom",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "harness",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "personal_github",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "github_app",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "project",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "remote_access",
+            "state": "missing",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          }
+        ],
+        "engine": "unselected",
+        "cost": {
+          "provenance": "unknown",
+          "credits": null,
+          "window_s": null,
+          "monthly_projection": null,
+          "free_allowance": null,
+          "reason": "Synthetic: no measurement."
+        },
+        "operations": []
+      },
+      "valid": true
+    },
+    "cloud-ready-without-cloudroom": {
+      "document": {
+        "schema": "openwiz.setup.v1",
+        "ready": true,
+        "components": [
+          {
+            "id": "cloudroom",
+            "state": "unknown",
+            "reason": "cloudroom_not_needed",
+            "next": "None: your agents run on cloud, not CloudRoom, so CloudRoom is not needed."
+          },
+          {
+            "id": "harness",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "personal_github",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "github_app",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "project",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "remote_access",
+            "state": "missing",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          }
+        ],
+        "engine": "unselected",
+        "cost": {
+          "provenance": "unknown",
+          "credits": null,
+          "window_s": null,
+          "monthly_projection": null,
+          "free_allowance": null,
+          "reason": "Synthetic: no measurement."
+        },
+        "operations": [],
+        "host": "cloud"
+      },
+      "valid": false
+    },
+    "unnamed-host-ready-without-cloudroom": {
+      "document": {
+        "schema": "openwiz.setup.v1",
+        "ready": true,
+        "components": [
+          {
+            "id": "cloudroom",
+            "state": "unknown",
+            "reason": "cloudroom_not_needed",
+            "next": "None: your agents run on None, not CloudRoom, so CloudRoom is not needed."
+          },
+          {
+            "id": "harness",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "personal_github",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "github_app",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "project",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "remote_access",
+            "state": "missing",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          }
+        ],
+        "engine": "unselected",
+        "cost": {
+          "provenance": "unknown",
+          "credits": null,
+          "window_s": null,
+          "monthly_projection": null,
+          "free_allowance": null,
+          "reason": "Synthetic: no measurement."
+        },
+        "operations": []
+      },
+      "valid": false
+    },
+    "cloud-ready-cloudroom-missing": {
+      "document": {
+        "schema": "openwiz.setup.v1",
+        "ready": true,
+        "components": [
+          {
+            "id": "cloudroom",
+            "state": "missing",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "harness",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "personal_github",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "github_app",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "project",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "remote_access",
+            "state": "missing",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          }
+        ],
+        "engine": "unselected",
+        "cost": {
+          "provenance": "unknown",
+          "credits": null,
+          "window_s": null,
+          "monthly_projection": null,
+          "free_allowance": null,
+          "reason": "Synthetic: no measurement."
+        },
+        "operations": [],
+        "host": "cloud"
+      },
+      "valid": false
+    },
+    "cloud-not-needed-not-ready": {
+      "document": {
+        "schema": "openwiz.setup.v1",
+        "ready": false,
+        "components": [
+          {
+            "id": "cloudroom",
+            "state": "unknown",
+            "reason": "cloudroom_not_needed",
+            "next": "None: your agents run on cloud, not CloudRoom, so CloudRoom is not needed."
+          },
+          {
+            "id": "harness",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "personal_github",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "github_app",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "project",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "remote_access",
+            "state": "missing",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          }
+        ],
+        "engine": "unselected",
+        "cost": {
+          "provenance": "unknown",
+          "credits": null,
+          "window_s": null,
+          "monthly_projection": null,
+          "free_allowance": null,
+          "reason": "Synthetic: no measurement."
+        },
+        "operations": [],
+        "host": "cloud"
+      },
+      "valid": false
+    },
+    "host-uppercase": {
+      "document": {
+        "schema": "openwiz.setup.v1",
+        "ready": true,
+        "components": [
+          {
+            "id": "cloudroom",
+            "state": "unknown",
+            "reason": "cloudroom_not_needed",
+            "next": "None: your agents run on Local, not CloudRoom, so CloudRoom is not needed."
+          },
+          {
+            "id": "harness",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "personal_github",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "github_app",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "project",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "remote_access",
+            "state": "missing",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          }
+        ],
+        "engine": "unselected",
+        "cost": {
+          "provenance": "unknown",
+          "credits": null,
+          "window_s": null,
+          "monthly_projection": null,
+          "free_allowance": null,
+          "reason": "Synthetic: no measurement."
+        },
+        "operations": [],
+        "host": "Local"
+      },
+      "valid": false
+    },
+    "host-trailing-newline": {
+      "document": {
+        "schema": "openwiz.setup.v1",
+        "ready": true,
+        "components": [
+          {
+            "id": "cloudroom",
+            "state": "unknown",
+            "reason": "cloudroom_not_needed",
+            "next": "None: your agents run on local\n, not CloudRoom, so CloudRoom is not needed."
+          },
+          {
+            "id": "harness",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "personal_github",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "github_app",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "project",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "remote_access",
+            "state": "missing",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          }
+        ],
+        "engine": "unselected",
+        "cost": {
+          "provenance": "unknown",
+          "credits": null,
+          "window_s": null,
+          "monthly_projection": null,
+          "free_allowance": null,
+          "reason": "Synthetic: no measurement."
+        },
+        "operations": [],
+        "host": "local\n"
+      },
+      "valid": false
+    },
+    "host-empty": {
+      "document": {
+        "schema": "openwiz.setup.v1",
+        "ready": true,
+        "components": [
+          {
+            "id": "cloudroom",
+            "state": "unknown",
+            "reason": "cloudroom_not_needed",
+            "next": "None: your agents run on , not CloudRoom, so CloudRoom is not needed."
+          },
+          {
+            "id": "harness",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "personal_github",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "github_app",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "project",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "remote_access",
+            "state": "missing",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          }
+        ],
+        "engine": "unselected",
+        "cost": {
+          "provenance": "unknown",
+          "credits": null,
+          "window_s": null,
+          "monthly_projection": null,
+          "free_allowance": null,
+          "reason": "Synthetic: no measurement."
+        },
+        "operations": [],
+        "host": ""
+      },
+      "valid": false
+    },
+    "host-named-cloudroom": {
+      "document": {
+        "schema": "openwiz.setup.v1",
+        "ready": true,
+        "components": [
+          {
+            "id": "cloudroom",
+            "state": "unknown",
+            "reason": "cloudroom_not_needed",
+            "next": "None: your agents run on cloudroom, not CloudRoom, so CloudRoom is not needed."
+          },
+          {
+            "id": "harness",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "personal_github",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "github_app",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "project",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "remote_access",
+            "state": "missing",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          }
+        ],
+        "engine": "unselected",
+        "cost": {
+          "provenance": "unknown",
+          "credits": null,
+          "window_s": null,
+          "monthly_projection": null,
+          "free_allowance": null,
+          "reason": "Synthetic: no measurement."
+        },
+        "operations": [],
+        "host": "cloudroom"
+      },
+      "valid": false
+    },
+    "host-too-long": {
+      "document": {
+        "schema": "openwiz.setup.v1",
+        "ready": true,
+        "components": [
+          {
+            "id": "cloudroom",
+            "state": "unknown",
+            "reason": "cloudroom_not_needed",
+            "next": "None: your agents run on aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, not CloudRoom, so CloudRoom is not needed."
+          },
+          {
+            "id": "harness",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "personal_github",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "github_app",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "project",
+            "state": "verified",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          },
+          {
+            "id": "remote_access",
+            "state": "missing",
+            "reason": "Synthetic reason.",
+            "next": "Nothing to do."
+          }
+        ],
+        "engine": "unselected",
+        "cost": {
+          "provenance": "unknown",
+          "credits": null,
+          "window_s": null,
+          "monthly_projection": null,
+          "free_allowance": null,
+          "reason": "Synthetic: no measurement."
+        },
+        "operations": [],
+        "host": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "valid": false
+    }
+  },
+  "prepared_projects": {
+    "cloud-nine-keys": {
+      "document": {
+        "repository": "synthetic-owner/synthetic-repo",
+        "project": "syn_project_1",
+        "operator": "Synthetic Operator",
+        "service_issue": 7,
+        "answer_thread": "syn_thread_1",
+        "harness": "claude-code",
+        "model": "claude-opus-5-5",
+        "effort": "medium",
+        "runtime": null
+      },
+      "valid": true
+    },
+    "cloud-pinned-runtime": {
+      "document": {
+        "repository": "synthetic-owner/synthetic-repo",
+        "project": "syn_project_1",
+        "operator": "Synthetic Operator",
+        "service_issue": 7,
+        "answer_thread": "syn_thread_1",
+        "harness": "claude-code",
+        "model": "claude-opus-5-5",
+        "effort": "medium",
+        "runtime": "0.1.1 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "valid": true
+    },
+    "local-without-cloudroom-ids": {
+      "document": {
+        "repository": "synthetic-owner/synthetic-repo",
+        "project": null,
+        "operator": "Synthetic Operator",
+        "service_issue": 7,
+        "answer_thread": null,
+        "harness": "claude-code",
+        "model": "claude-opus-5-5",
+        "effort": "medium",
+        "runtime": null,
+        "host": "local"
+      },
+      "valid": true
+    },
+    "boat-without-cloudroom-ids": {
+      "document": {
+        "repository": "synthetic-owner/synthetic-repo",
+        "project": null,
+        "operator": "Synthetic Operator",
+        "service_issue": 7,
+        "answer_thread": null,
+        "harness": "codex",
+        "model": "gpt-6.2-sol",
+        "effort": "medium",
+        "runtime": null,
+        "host": "boat"
+      },
+      "valid": true
+    },
+    "other-driver-without-cloudroom-ids": {
+      "document": {
+        "repository": "synthetic-owner/synthetic-repo",
+        "project": null,
+        "operator": "Synthetic Operator",
+        "service_issue": 7,
+        "answer_thread": null,
+        "harness": "claude-code",
+        "model": "claude-opus-5-5",
+        "effort": "medium",
+        "runtime": null,
+        "host": "syn-driver-2"
+      },
+      "valid": true
+    },
+    "local-with-cloudroom-project": {
+      "document": {
+        "repository": "synthetic-owner/synthetic-repo",
+        "project": "syn_project_1",
+        "operator": "Synthetic Operator",
+        "service_issue": 7,
+        "answer_thread": null,
+        "harness": "claude-code",
+        "model": "claude-opus-5-5",
+        "effort": "medium",
+        "runtime": null,
+        "host": "local"
+      },
+      "valid": false
+    },
+    "local-with-answer-thread": {
+      "document": {
+        "repository": "synthetic-owner/synthetic-repo",
+        "project": null,
+        "operator": "Synthetic Operator",
+        "service_issue": 7,
+        "answer_thread": "syn_thread_1",
+        "harness": "claude-code",
+        "model": "claude-opus-5-5",
+        "effort": "medium",
+        "runtime": null,
+        "host": "local"
+      },
+      "valid": false
+    },
+    "local-ids-left-out": {
+      "document": {
+        "repository": "synthetic-owner/synthetic-repo",
+        "operator": "Synthetic Operator",
+        "service_issue": 7,
+        "harness": "claude-code",
+        "model": "claude-opus-5-5",
+        "effort": "medium",
+        "runtime": null,
+        "host": "local"
+      },
+      "valid": false
+    },
+    "cloud-spelled-out": {
+      "document": {
+        "repository": "synthetic-owner/synthetic-repo",
+        "project": "syn_project_1",
+        "operator": "Synthetic Operator",
+        "service_issue": 7,
+        "answer_thread": "syn_thread_1",
+        "harness": "claude-code",
+        "model": "claude-opus-5-5",
+        "effort": "medium",
+        "runtime": null,
+        "host": "cloud"
+      },
+      "valid": false
+    },
+    "cloud-without-project": {
+      "document": {
+        "repository": "synthetic-owner/synthetic-repo",
+        "project": null,
+        "operator": "Synthetic Operator",
+        "service_issue": 7,
+        "answer_thread": "syn_thread_1",
+        "harness": "claude-code",
+        "model": "claude-opus-5-5",
+        "effort": "medium",
+        "runtime": null
+      },
+      "valid": false
+    },
+    "cloud-without-answer-thread": {
+      "document": {
+        "repository": "synthetic-owner/synthetic-repo",
+        "project": "syn_project_1",
+        "operator": "Synthetic Operator",
+        "service_issue": 7,
+        "answer_thread": null,
+        "harness": "claude-code",
+        "model": "claude-opus-5-5",
+        "effort": "medium",
+        "runtime": null
+      },
+      "valid": false
+    },
+    "cloudroom-driver-name": {
+      "document": {
+        "repository": "synthetic-owner/synthetic-repo",
+        "project": null,
+        "operator": "Synthetic Operator",
+        "service_issue": 7,
+        "answer_thread": null,
+        "harness": "claude-code",
+        "model": "claude-opus-5-5",
+        "effort": "medium",
+        "runtime": null,
+        "host": "cloudroom"
+      },
+      "valid": false
+    },
+    "local-uppercase-host": {
+      "document": {
+        "repository": "synthetic-owner/synthetic-repo",
+        "project": null,
+        "operator": "Synthetic Operator",
+        "service_issue": 7,
+        "answer_thread": null,
+        "harness": "claude-code",
+        "model": "claude-opus-5-5",
+        "effort": "medium",
+        "runtime": null,
+        "host": "Local"
+      },
+      "valid": false
+    },
+    "cloud-extra-key": {
+      "document": {
+        "repository": "synthetic-owner/synthetic-repo",
+        "project": "syn_project_1",
+        "operator": "Synthetic Operator",
+        "service_issue": 7,
+        "answer_thread": "syn_thread_1",
+        "harness": "claude-code",
+        "model": "claude-opus-5-5",
+        "effort": "medium",
+        "runtime": null,
+        "extra": "x"
+      },
+      "valid": false
+    }
+  },
+  "offered_lists": {
+    "local-claude-code-and-codex": {
+      "document": {
+        "schema": "openwiz.cloud-options.v1",
+        "read_at": 1700000000000,
+        "label": "Installed local harnesses with OpenWiz's current choices",
+        "state": {
+          "kind": "offered"
+        },
+        "harnesses": [
+          {
+            "harness": "claude-code",
+            "provider": "claude-code",
+            "models": [
+              {
+                "model": "claude-opus-5-5",
+                "efforts": [
+                  "medium"
+                ]
+              }
+            ],
+            "attachments": null,
+            "steer": null
+          },
+          {
+            "harness": "codex",
+            "provider": "codex",
+            "models": [
+              {
+                "model": "gpt-6.2-sol",
+                "efforts": [
+                  "medium"
+                ]
+              }
+            ],
+            "attachments": null,
+            "steer": null
+          }
+        ],
+        "unavailable": [],
+        "source": "local"
+      },
+      "valid": true
+    },
+    "local-codex-only": {
+      "document": {
+        "schema": "openwiz.cloud-options.v1",
+        "read_at": 1700000000000,
+        "label": "Installed local harnesses with OpenWiz's current choices",
+        "state": {
+          "kind": "offered"
+        },
+        "harnesses": [
+          {
+            "harness": "codex",
+            "provider": "codex",
+            "models": [
+              {
+                "model": "gpt-6.2-sol",
+                "efforts": [
+                  "medium"
+                ]
+              }
+            ],
+            "attachments": null,
+            "steer": null
+          }
+        ],
+        "unavailable": [],
+        "source": "local"
+      },
+      "valid": true
+    },
+    "local-none-installed": {
+      "document": {
+        "schema": "openwiz.cloud-options.v1",
+        "read_at": 1700000000000,
+        "label": "Installed local harnesses with OpenWiz's current choices",
+        "state": {
+          "kind": "no_options",
+          "reason": "harnesses_not_reported",
+          "text": "No Claude Code or Codex program is installed on this computer."
+        },
+        "harnesses": [],
+        "unavailable": [],
+        "source": "local"
+      },
+      "valid": true
+    },
+    "cloudroom-unmarked": {
+      "document": {
+        "schema": "openwiz.cloud-options.v1",
+        "read_at": 1700000000000,
+        "label": "as reported by CloudRoom; it may answer from a saved copy",
+        "state": {
+          "kind": "offered"
+        },
+        "harnesses": [
+          {
+            "harness": "claude-code",
+            "provider": "claude-code",
+            "models": [
+              {
+                "model": "claude-opus-5-5",
+                "efforts": [
+                  "medium"
+                ]
+              }
+            ],
+            "attachments": null,
+            "steer": null
+          },
+          {
+            "harness": "codex",
+            "provider": "codex",
+            "models": [
+              {
+                "model": "gpt-6.2-sol",
+                "efforts": [
+                  "medium"
+                ]
+              }
+            ],
+            "attachments": null,
+            "steer": null
+          }
+        ],
+        "unavailable": []
+      },
+      "valid": true
+    },
+    "cloudroom-spelled-out": {
+      "document": {
+        "schema": "openwiz.cloud-options.v1",
+        "read_at": 1700000000000,
+        "label": "as reported by CloudRoom; it may answer from a saved copy",
+        "state": {
+          "kind": "offered"
+        },
+        "harnesses": [
+          {
+            "harness": "claude-code",
+            "provider": "claude-code",
+            "models": [
+              {
+                "model": "claude-opus-5-5",
+                "efforts": [
+                  "medium"
+                ]
+              }
+            ],
+            "attachments": null,
+            "steer": null
+          },
+          {
+            "harness": "codex",
+            "provider": "codex",
+            "models": [
+              {
+                "model": "gpt-6.2-sol",
+                "efforts": [
+                  "medium"
+                ]
+              }
+            ],
+            "attachments": null,
+            "steer": null
+          }
+        ],
+        "unavailable": [],
+        "source": "cloudroom"
+      },
+      "valid": false
+    },
+    "source-another-host": {
+      "document": {
+        "schema": "openwiz.cloud-options.v1",
+        "read_at": 1700000000000,
+        "label": "as reported by CloudRoom; it may answer from a saved copy",
+        "state": {
+          "kind": "offered"
+        },
+        "harnesses": [
+          {
+            "harness": "codex",
+            "provider": "codex",
+            "models": [
+              {
+                "model": "gpt-6.2-sol",
+                "efforts": [
+                  "medium"
+                ]
+              }
+            ],
+            "attachments": null,
+            "steer": null
+          }
+        ],
+        "unavailable": [],
+        "source": "boat"
+      },
+      "valid": false
+    },
+    "source-empty": {
+      "document": {
+        "schema": "openwiz.cloud-options.v1",
+        "read_at": 1700000000000,
+        "label": "as reported by CloudRoom; it may answer from a saved copy",
+        "state": {
+          "kind": "offered"
+        },
+        "harnesses": [
+          {
+            "harness": "codex",
+            "provider": "codex",
+            "models": [
+              {
+                "model": "gpt-6.2-sol",
+                "efforts": [
+                  "medium"
+                ]
+              }
+            ],
+            "attachments": null,
+            "steer": null
+          }
+        ],
+        "unavailable": [],
+        "source": ""
+      },
+      "valid": false
+    }
+  }
+}

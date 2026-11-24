@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+import json, os, sys
+here = os.path.dirname(os.path.realpath(__file__))
+if sys.argv[1:] == ['start']:
+    repository = json.load(sys.stdin)['repository']
+    print(json.dumps({'error': 'cannot start %s in %s' % (repository, here), 'next': 'fix the fixture'}))
+    sys.exit(1)
+template = os.path.join(here, '..', 'template', 'driver')
+os.execv(sys.executable, [sys.executable, '-I', template] + sys.argv[1:])

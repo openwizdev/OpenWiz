@@ -1,0 +1,43 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I tools/install/tests/init/test_init.py
+FAIL: test_a_companion_created_in_this_apply_merges_its_brain_proposal_once (__main__.Init.test_a_companion_created_in_this_apply_merges_its_brain_proposal_once)
+AssertionError: Lists differ: ['cre[29 chars]on', 'create_label', 'open_pull_request'] != ['cre[29 chars]on', 'create_label', 'open_pull_request', 'merge_pull_request']
+FAIL: test_an_existing_companion_or_private_code_leaves_the_proposal_open_for_the_user (__main__.Init.test_an_existing_companion_or_private_code_leaves_the_proposal_open_for_the_user) [companion made after the preview]
+AssertionError: 'merge_pull_request' not found in ['create_companion', 'link_companion', 'create_label', 'open_pull_request']
+FAIL: test_lost_replies_stay_uncertain_until_read_back_then_complete_once (__main__.Init.test_lost_replies_stay_uncertain_until_read_back_then_complete_once) (mode='lose', path='user/repos')
+AssertionError: 'open' != 'merged'
+FAIL: test_lost_replies_stay_uncertain_until_read_back_then_complete_once (__main__.Init.test_lost_replies_stay_uncertain_until_read_back_then_complete_once) (mode='lose', path='repos/synthetic-owner/synthetic-app-brain')
+AssertionError: 'open' != 'merged'
+FAIL: test_lost_replies_stay_uncertain_until_read_back_then_complete_once (__main__.Init.test_lost_replies_stay_uncertain_until_read_back_then_complete_once) (mode='lose', path='repos/synthetic-owner/synthetic-app/labels')
+AssertionError: 'open' != 'merged'
+FAIL: test_lost_replies_stay_uncertain_until_read_back_then_complete_once (__main__.Init.test_lost_replies_stay_uncertain_until_read_back_then_complete_once) (mode='lose', path='repos/synthetic-owner/synthetic-app-brain/contents/')
+AssertionError: 'open' != 'merged'
+FAIL: test_lost_replies_stay_uncertain_until_read_back_then_complete_once (__main__.Init.test_lost_replies_stay_uncertain_until_read_back_then_complete_once) (mode='lose', path='repos/synthetic-owner/synthetic-app-brain/pulls')
+AssertionError: 'open' != 'merged'
+FAIL: test_lost_replies_stay_uncertain_until_read_back_then_complete_once (__main__.Init.test_lost_replies_stay_uncertain_until_read_back_then_complete_once) (mode='lose', path='repos/synthetic-owner/synthetic-app-brain/pulls/1/merge')
+AssertionError: 0 != 6 : <init_result elided>
+FAIL: test_lost_replies_stay_uncertain_until_read_back_then_complete_once (__main__.Init.test_lost_replies_stay_uncertain_until_read_back_then_complete_once) (mode='drop', path='user/repos')
+AssertionError: 'open' != 'merged'
+FAIL: test_lost_replies_stay_uncertain_until_read_back_then_complete_once (__main__.Init.test_lost_replies_stay_uncertain_until_read_back_then_complete_once) (mode='drop', path='repos/synthetic-owner/synthetic-app-brain')
+AssertionError: 'open' != 'merged'
+FAIL: test_lost_replies_stay_uncertain_until_read_back_then_complete_once (__main__.Init.test_lost_replies_stay_uncertain_until_read_back_then_complete_once) (mode='drop', path='repos/synthetic-owner/synthetic-app/labels')
+AssertionError: 'open' != 'merged'
+FAIL: test_lost_replies_stay_uncertain_until_read_back_then_complete_once (__main__.Init.test_lost_replies_stay_uncertain_until_read_back_then_complete_once) (mode='drop', path='repos/synthetic-owner/synthetic-app-brain/contents/')
+AssertionError: 'open' != 'merged'
+FAIL: test_lost_replies_stay_uncertain_until_read_back_then_complete_once (__main__.Init.test_lost_replies_stay_uncertain_until_read_back_then_complete_once) (mode='drop', path='repos/synthetic-owner/synthetic-app-brain/pulls')
+AssertionError: 'open' != 'merged'
+FAIL: test_lost_replies_stay_uncertain_until_read_back_then_complete_once (__main__.Init.test_lost_replies_stay_uncertain_until_read_back_then_complete_once) (mode='drop', path='repos/synthetic-owner/synthetic-app-brain/pulls/1/merge')
+AssertionError: 0 != 6 : <init_result elided>
+FAIL: test_the_contract_refuses_a_merge_outside_a_companion_created_in_the_same_apply (__main__.Init.test_the_contract_refuses_a_merge_outside_a_companion_created_in_the_same_apply) [no creation]
+AssertionError: Lists differ: [] != ['phase_effect_mismatch:merge_pull_request']
+FAIL: test_the_contract_refuses_a_merge_outside_a_companion_created_in_the_same_apply (__main__.Init.test_the_contract_refuses_a_merge_outside_a_companion_created_in_the_same_apply) [creation uncertain]
+AssertionError: Lists differ: [] != ['phase_effect_mismatch:merge_pull_request']
+FAIL: test_the_contract_refuses_a_merge_outside_a_companion_created_in_the_same_apply (__main__.Init.test_the_contract_refuses_a_merge_outside_a_companion_created_in_the_same_apply) [creation only proposed]
+AssertionError: Lists differ: [] != ['phase_effect_mismatch:merge_pull_request']
+FAIL: test_the_contract_refuses_a_merge_outside_a_companion_created_in_the_same_apply (__main__.Init.test_the_contract_refuses_a_merge_outside_a_companion_created_in_the_same_apply) [creation of another repository]
+AssertionError: Lists differ: [] != ['phase_effect_mismatch:merge_pull_request']
+FAIL: test_the_contract_refuses_a_merge_outside_a_companion_created_in_the_same_apply (__main__.Init.test_the_contract_refuses_a_merge_outside_a_companion_created_in_the_same_apply) [pull request still open]
+AssertionError: Lists differ: [] != ['phase_effect_mismatch:merge_pull_request']
+FAIL: test_the_contract_refuses_a_merge_outside_a_companion_created_in_the_same_apply (__main__.Init.test_the_contract_refuses_a_merge_outside_a_companion_created_in_the_same_apply) [private code]
+AssertionError: Lists differ: [] != ['phase_effect_mismatch:merge_pull_request']
+Ran 21 tests in 34.632s
+FAILED (failures=20)

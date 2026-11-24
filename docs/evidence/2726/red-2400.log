@@ -1,0 +1,51 @@
+## mutant 1: status() drops install_attempts (candidate.py: return report(state.read()))
+## new test:
+F
+======================================================================
+FAIL: test_install_status_never_reads_a_held_or_interrupted_attempt_record (test_candidate.Candidate.test_install_status_never_reads_a_held_or_interrupted_attempt_record)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/release/test_candidate.py", line 707, in test_install_status_never_reads_a_held_or_interrupted_attempt_record
+    self.assertEqual(held, [one] * held.count(one) + [two] * held.count(two))
+AssertionError: Lists differ: [(0, 'complete', None), (0, 'complete', No[482 chars]one)] != []
+
+First list contains 23 additional elements.
+First extra element 0:
+(0, 'complete', None)
+
++ []
+exit 1
+## the test at the base, same mutant:
+.
+----------------------------------------------------------------------
+Ran 1 test in 0.146s
+
+OK
+exit 0
+
+## mutant 2: install_attempt writes N.json in place, in two parts (no temporary file and link)
+## new test:
+F
+======================================================================
+FAIL: test_install_status_never_reads_a_held_or_interrupted_attempt_record (test_candidate.Candidate.test_install_status_never_reads_a_held_or_interrupted_attempt_record)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/release/test_candidate.py", line 707, in test_install_status_never_reads_a_held_or_interrupted_attempt_record
+    self.assertEqual(held, [one] * held.count(one) + [two] * held.count(two))
+AssertionError: Lists differ: [(0, [622 chars]]), (1, 'refused', ['JSONDecodeError']), (1, '[650 chars]')])] != [(0, [622 chars]]), (0, 'incomplete', [(2, 'blocked', ['instal[502 chars]')])]
+
+First differing element 7:
+(1, 'refused', ['JSONDecodeError'])
+(0, 'incomplete', [(2, 'blocked', ['instal[61 chars]n')])
+
+First list contains 4 additional elements.
+First extra element 12:
+(0, 'incomplete', [(2, 'blocked', ['install_refused'], 'evidence/install-x86_64-unknown-linux-gnu/2.json')])
+exit 1
+## unmutated:
+.
+----------------------------------------------------------------------
+Ran 1 test in 2.877s
+
+OK
+exit 0

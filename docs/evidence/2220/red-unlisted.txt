@@ -1,0 +1,68 @@
+running 1 test
+test models_local::local_set_reports_unlisted_choices_and_refuses_unsettable_ones ... FAILED
+
+failures:
+
+---- models_local::local_set_reports_unlisted_choices_and_refuses_unsettable_ones stdout ----
+
+thread 'models_local::local_set_reports_unlisted_choices_and_refuses_unsettable_ones' (21303) panicked at tests/cli-agent/models_local.rs:56:5:
+assertion `left == right` failed: stdout: {
+  "after": null,
+  "asked": {
+    "effort": "medium",
+    "model": "synthetic-vendor/demo",
+    "provider": "codex"
+  },
+  "before": {
+    "choice": {
+      "effort": "medium",
+      "family": "gpt",
+      "model": "gpt-6.2-sol",
+      "names": {
+        "effort": "Medium",
+        "harness": "Codex",
+        "model": "Sol 6.2"
+      },
+      "provider": "codex"
+    },
+    "follows": null
+  },
+  "files": [],
+  "models_table_added": false,
+  "offered": [
+    {
+      "harness": "codex",
+      "models": [
+        {
+          "efforts": [
+            "medium"
+          ],
+          "model": "gpt-6.2-sol"
+        }
+      ],
+      "provider": "codex"
+    }
+  ],
+  "older_tables": [],
+  "outcome": "refused",
+  "refusal": {
+    "reason": "not_offered",
+    "text": "not offered: codex synthetic-vendor/demo medium; nothing was changed"
+  },
+  "role": "reviewer",
+  "schema": "openwiz.models-set.v1",
+  "warnings": []
+}
+
+stderr:
+  left: Some(5)
+ right: Some(0)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    models_local::local_set_reports_unlisted_choices_and_refuses_unsettable_ones
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 119 filtered out; finished in 1.48s
+
+error: test failed, to rerun pass `-p openwiz-tests --test cli-agent`

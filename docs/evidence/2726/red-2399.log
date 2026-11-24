@@ -1,0 +1,21 @@
+FF
+======================================================================
+FAIL: test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history (test_candidate.Notes.test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history) (case='a CR in the headline')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/release/test_candidate.py", line 2216, in test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history
+    with self.subTest(case=name), self.assertRaisesRegex(AssertionError, re.escape(reason)):
+AssertionError: AssertionError not raised
+
+======================================================================
+FAIL: test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history (test_candidate.Notes.test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history) (case='an off-repository footer link')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/release/test_candidate.py", line 2216, in test_rl6_the_changelog_inserts_only_well_formed_newer_sections_over_the_approved_history
+    with self.subTest(case=name), self.assertRaisesRegex(AssertionError, re.escape(reason)):
+AssertionError: AssertionError not raised
+
+----------------------------------------------------------------------
+Ran 1 test in 0.177s
+
+FAILED (failures=2)

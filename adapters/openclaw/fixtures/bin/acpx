@@ -1,0 +1,203 @@
+#!/usr/bin/env python3
+import fcntl, json, os, subprocess, sys, time
+
+ARGS, STATE = sys.argv[1:], os.environ.get('FAKE_ACPX_STATE', '')
+GLOBAL = {'--agent', '--cwd', '--model', '--auth-policy', '--permission-policy', '--non-interactive-permissions', '--ttl',
+          '--format'}
+DIAGNOSTIC = 'synthetic acpx diagnostic'
+MARKS = ('KIT_TEST', 'OPENWIZ_RUN', 'OPENWIZ_KIT_RUN')
+
+
+def say(text, code=0):
+    print(DIAGNOSTIC + ': ' + text)
+    print(DIAGNOSTIC + ': ' + text, file=sys.stderr)
+    sys.exit(code)
+
+
+def update(change):
+    with open(STATE + '.lock', 'w') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            with open(STATE) as f:
+                state = json.load(f)
+        except FileNotFoundError:
+            state = {}
+        out = change(state)
+        with open(STATE + '.new', 'w') as f:
+            json.dump(state, f)
+        os.replace(STATE + '.new', STATE)
+        return out
+
+
+def config(path):
+    try:
+        with open(path) as f:
+            loaded = json.load(f)
+    except (OSError, ValueError):
+        return {}
+    return loaded if isinstance(loaded, dict) else {}
+
+
+def split(line):
+    parts, part, quote, escaping, has = [], '', None, False, False
+    for ch in line:
+        if escaping:
+            part, escaping, has = part + ch, False, True
+        elif ch == '\\' and quote != "'":
+            escaping = True
+        elif quote:
+            quote = None if ch == quote else quote
+            part, has = part + ('' if quote is None else ch), True
+        elif ch in '\'"':
+            quote, has = ch, True
+        elif ch.isspace():
+            parts, part, has = (parts + [part], '', False) if has else (parts, part, has)
+        else:
+            part, has = part + ch, True
+    return parts + [part] if has else parts
+
+
+def resolve(opts, name):
+    cwd = os.path.abspath(opts.get('--cwd', '.'))
+    found = [config(os.path.join(os.path.expanduser('~'), '.acpx', 'config.json')),
+             config(os.path.join(cwd, '.acpxrc.json'))]
+    agents = dict(kv for c in found if isinstance(c.get('agents'), dict) for kv in c['agents'].items())
+    auth = sorted(k for c in found if isinstance(c.get('auth'), dict) for k in c['auth'])
+    if '--agent' in opts:
+        ran = split(opts['--agent'])
+    elif name in agents:
+        ran = agents[name].get('argv') or split(agents[name].get('command', ''))
+    else:
+        ran = ['built-in', name]
+    return ran, auth
+
+
+def alive(pid):
+    try:
+        with open('/proc/%d/stat' % pid) as f:
+            return f.read().rpartition(')')[2].split()[0] != 'Z'
+    except (OSError, TypeError):
+        return False
+
+
+def note(session, skill):
+    path, now = os.environ['KIT_TRACKER'], time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+    woken = session['note'] is not None
+    body = '\n'.join(['<!-- openwiz:status v1 -->', 'agent: builder', 'state: working', 'harness: Fake',
+                      'model: ' + session['model'], 'skills: %s@0.1.2' % skill,
+                      'step: ' + ('woke and read the ticket again' if woken else 'started the throwaway ticket'),
+                      'time: ' + now]) + '\n'
+    with open(path) as f:
+        tracker = json.load(f)
+    if not woken:
+        session['note'] = 1 + max([c['id'] for c in tracker['comments']], default=0)
+        tracker['comments'].append({'id': session['note'], 'author': 'example-bot[bot]', 'updated_at': now,
+                                    'body': body})
+    else:
+        [c for c in tracker['comments'] if c['id'] == session['note']][0].update(body=body, updated_at=now)
+    with open(path + '.%d' % os.getpid(), 'w') as f:
+        json.dump(tracker, f)
+    os.replace(path + '.%d' % os.getpid(), path)
+    return woken
+
+
+def owner(key, ttl):
+    idle = time.monotonic()
+    while True:
+        def take(s):
+            session = s[key]
+            if not session['open'] or not session['queue']:
+                return session['open'], None, None
+            skill = session['queue'].pop(0)
+            return True, note(session, skill), session['cancels']
+        open_, woken, cancels = update(take)
+        if not open_:
+            return
+        if woken is None:
+            if time.monotonic() - idle > ttl:
+                return
+            time.sleep(0.05)
+            continue
+        if os.environ.get('FAKE_TURNS'):
+            with open(os.environ['FAKE_TURNS'], 'a') as f:
+                f.write('%d %s\n' % (os.getpid(), 'woken' if woken else 'first'))
+        while os.environ.get('FAKE_HOLD') and os.path.exists(os.environ['FAKE_HOLD']):
+            if update(lambda s: (s[key]['cancels'], s[key]['open'])) != (cancels, True):
+                break
+            time.sleep(0.05)
+        idle = time.monotonic()
+
+
+def main():
+    if ARGS[:1] == ['--owner']:
+        return owner(ARGS[1], float(ARGS[2]))
+    if ARGS == ['--version']:
+        say('0.22.0')
+    opts, rest = {}, list(ARGS)
+    while rest and rest[0].startswith('--'):
+        flag = rest.pop(0)
+        if flag in GLOBAL and rest:
+            opts[flag] = rest.pop(0)
+        else:
+            say('unknown option ' + flag, 2)
+    if '--agent' in opts:
+        agent = opts['--agent']
+    elif rest:
+        agent, rest = rest[0], rest[1:]
+    else:
+        say('no agent', 2)
+    ran, auth = resolve(opts, agent)
+    if os.environ.get('FAKE_ACPX_CALLS'):
+        with open(os.environ['FAKE_ACPX_CALLS'], 'a') as f:
+            f.write(json.dumps({'args': ARGS, 'home': os.path.expanduser('~'), 'ran': ran, 'auth': auth}) + '\n')
+    rest = rest[1:] if rest[:1] == ['prompt'] else rest
+    if not rest:
+        say('no command', 2)
+    key = '%s %s' % (agent, os.path.abspath(opts.get('--cwd', '.')))
+    what = rest[1] if rest[:1] == ['sessions'] and len(rest) > 1 else rest[0] if rest[:1] == ['cancel'] else 'prompt'
+    if what in os.environ.get('FAKE_ACPX_FAIL', '').split(','):
+        say('authentication required', 1)
+    if rest[:3] == ['sessions', 'new', '--name'] and len(rest) == 4:
+        update(lambda s: s.update({key + ' ' + rest[3]: {'open': True, 'note': None, 'cancels': 0, 'queue': [],
+                                                         'owner': None, 'model': opts.get('--model', '-')}}))
+        say('session ' + rest[3])
+    if rest[:2] == ['sessions', 'close'] and len(rest) == 3:
+        def close(s):
+            if key + ' ' + rest[2] not in s:
+                say('no session ' + rest[2], 1)
+            s[key + ' ' + rest[2]]['open'] = False
+        update(close)
+        say('closed')
+    if rest[:2] == ['cancel', '-s'] and len(rest) == 3:
+        if os.environ.get('FAKE_REMAP_ON_CANCEL'):
+            with open(os.path.join(os.path.abspath(opts.get('--cwd', '.')), '.acpxrc.json'), 'w') as f:
+                json.dump({'agents': {'claude': {'argv': ['synthetic-gateway-bridge']}},
+                           'auth': {'synthetic-project-method': 'synthetic-not-a-login'}}, f)
+
+        def cancel(s):
+            if key + ' ' + rest[2] in s:
+                s[key + ' ' + rest[2]]['cancels'] += 1
+        update(cancel)
+        say('cancelled')
+    if len(rest) != 4 or rest[0] != '-s' or rest[2] != '--no-wait':
+        say('unexpected arguments', 2)
+    name, text = key + ' ' + rest[1], rest[3]
+
+    def queue(s):
+        session = s.get(name)
+        if not session or not session['open']:
+            say('NO_SESSION: run sessions new first', 4)
+        session['queue'].append(text.split(' skill')[0].split()[-1])
+        if not alive(session['owner']):
+            env = {k: v for k, v in os.environ.items()
+                   if not (os.environ.get('FAKE_CLEAN') and k.startswith(MARKS))}
+            session['owner'] = subprocess.Popen(
+                [sys.executable, os.path.abspath(__file__), '--owner', name, opts.get('--ttl', '300')],
+                start_new_session=True, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL).pid
+    update(queue)
+    say('prompt queued')
+
+
+if __name__ == '__main__':
+    main()

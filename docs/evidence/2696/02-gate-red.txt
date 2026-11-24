@@ -1,0 +1,15 @@
+env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/vps/test_hosts.py Page.test_the_page_blocks_real_runs_until_both_fixes_merge
+F
+======================================================================
+FAIL: test_the_page_blocks_real_runs_until_both_fixes_merge (__main__.Page.test_the_page_blocks_real_runs_until_both_fixes_merge)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/vps/test_hosts.py", line 229, in test_the_page_blocks_real_runs_until_both_fixes_merge
+    self.assertIsNotNone(warning, 'put the real-run gate above the session steps')
+AssertionError: unexpectedly None : put the real-run gate above the session steps
+
+----------------------------------------------------------------------
+Ran 1 test
+
+FAILED (failures=1)
+Exit 1

@@ -57,7 +57,8 @@ DESCRIPTION = """OpenWiz's install entry (#1109): the commands the install skill
       (docs/install.md, "Remove it"); with --yes it deletes them, then removes
       each folder left empty. Anything else stays, links are never followed,
       and each agent's skill folder holding OpenWiz copies is listed to clean
-      by hand. It refuses while an install or update holds ROOT/install.lock.
+      by hand. It holds ROOT/install.lock while it works (with --yes, making
+      it if missing) and refuses while an install or update holds it.
       Prints "not installed" and exits 1 when nothing is OpenWiz's.
 
 Every command prints one JSON object. Exit codes: 0 done, 1 failed,
@@ -73,11 +74,12 @@ import pull
 
 HOSTS = {('Darwin', 'arm64'): 'aarch64-apple-darwin', ('Darwin', 'x86_64'): 'x86_64-apple-darwin',
          ('Linux', 'x86_64'): 'x86_64-unknown-linux-gnu'}
-NO_CLOUDROOM = {('Darwin', 'x86_64'): "This Intel Mac runs openwiz, but OpenWiz's install needs CloudRoom, which has"
-                " no Intel Mac build today; stop here and install on an Apple silicon Mac or Linux on x86_64."}
+NOTES = {('Darwin', 'x86_64'): 'Supported. CloudRoom has no Intel Mac build, so on this Mac, agents run on this'
+         ' computer or on boat.dev.'}
 DISK = 512 * 1024 * 1024
 GLIBC = (2, 34)
-TOOLS = (('room-cli', 'Install the CloudRoom app and sign in; it provides room-cli.'),
+TOOLS = (('room-cli', 'Optional: CloudRoom is needed only if you pick it as the host; then install the CloudRoom'
+                       ' app and sign in, which provides room-cli.'),
          ('gh', 'Install the GitHub CLI and run gh auth login.'),
          ('git', 'Install git.'))
 ARCHIVE_NAME = re.compile(r'openwiz-0\.[0-9]+\.[0-9]+-[a-z0-9_]+-[a-z0-9_-]+\.tar\.gz')
@@ -122,7 +124,7 @@ def preflight(host, which, disk):
          'next': 'Python %d.%d is enough.' % sys.version_info[:2] if sys.version_info >= (3, 9)
          else 'Install Python 3.9 or later.'},
         {'id': 'target', 'state': 'ok' if target else 'refused',
-         'next': NO_CLOUDROOM.get(host, 'Supported.') if target else
+         'next': NOTES.get(host, 'Supported.') if target else
          'OpenWiz installs on macOS on Apple silicon and on Linux on x86_64.'},
     ]
     free = disk()
@@ -135,8 +137,7 @@ def preflight(host, which, disk):
         found = which(tool) is not None
         checks.append({'id': tool, 'state': 'ok' if found else 'missing',
                        'next': 'Found on PATH; setup checks it.' if found else missing})
-    ready = host not in NO_CLOUDROOM and all(check['state'] == 'ok' for check in checks
-                                             if check['id'] not in dict(TOOLS))
+    ready = all(check['state'] == 'ok' for check in checks if check['id'] not in dict(TOOLS))
     return {'schema': 'openwiz.preflight.v1', 'ready': ready, 'target': target, 'checks': checks,
             'reason': 'Read this machine only' + (', running only ldd --version' if host[0] == 'Linux' else '')
             + '; nothing was installed.'}, 0 if ready else 5
@@ -363,21 +364,39 @@ def remove(root, state_root, yes, home, codex_home=None):
     installer.require(state.is_absolute(), 'the state root must be an absolute path')
     installer.path_guard(root)
     installer.path_guard(state)
-    if not owned(root / 'install.lock', stat.S_ISREG):
+    path = root / 'install.lock'
+    if not owned(root, stat.S_ISDIR) or not (yes or os.path.lexists(path)):
         return remove_unlocked(root, state, state_root, yes, home, codex_home)
-    lock = os.open(root / 'install.lock', os.O_RDWR | os.O_NOFOLLOW)
+    flags, made, held = os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK, yes, False
     try:
+        try:
+            lock = os.open(path, flags | (os.O_CREAT | os.O_EXCL if yes else 0), 0o600)
+        except FileExistsError:
+            lock, made = os.open(path, flags), False
+    except OSError as error:
+        if not yes and isinstance(error, FileNotFoundError):
+            return remove_unlocked(root, state, state_root, yes, home, codex_home)
+        raise installer.Refused('install remove could not open %s as its lock (%s), so nothing was changed'
+                                % (path, error.strerror)) from None
+    try:
+        info = os.fstat(lock)
+        installer.require(stat.S_ISREG(info.st_mode) and info.st_uid == os.getuid() and info.st_nlink == 1
+                          and info.st_mode & 0o077 == 0, '%s is not a private file of yours, so install remove '
+                          'will not use it as its lock; nothing was changed' % path)
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             raise installer.Refused('an install or update is running at %s; nothing was changed. Run install '
                                     'remove again once it finishes' % root) from None
-        return remove_unlocked(root, state, state_root, yes, home, codex_home)
+        held = True
+        return remove_unlocked(root, state, state_root, yes, home, codex_home, path if made else None)
     finally:
+        if made and held and os.path.lexists(path) and os.path.samestat(os.lstat(path), os.fstat(lock)):
+            os.unlink(path)
         os.close(lock)
 
 
-def remove_unlocked(root, state, state_root, yes, home, codex_home):
+def remove_unlocked(root, state, state_root, yes, home, codex_home, made=None):
     builds = state / 'service/builds'
     for folder in (state / 'service', builds, root / 'skills'):
         installer.require(not os.path.lexists(folder) or owned(folder, stat.S_ISDIR),
@@ -395,6 +414,8 @@ def remove_unlocked(root, state, state_root, yes, home, codex_home):
     delete += [root / 'skills' / name for name in marked_skills(root / 'skills')]
     delete += [builds / name for name in installer.entries(builds) if verified_build(builds / name)]
     delete += [state / name for name in SETTINGS if os.path.lexists(state / name)]
+    if made in delete:
+        delete.remove(made)
     folders = (root / 'skills', builds, state / 'service', state, root)
     rows = []
     for name, relative, _ in harness.HARNESSES:
@@ -412,6 +433,9 @@ def remove_unlocked(root, state, state_root, yes, home, codex_home):
         return dict(value, outcome='preview', next='Run install remove --root %s%s --yes to delete exactly these; '
                     'anything else stays.%s' % (shlex.quote(str(root)), ' --state-root ' + shlex.quote(str(state))
                                                 if state_root else '', hand)), 0
+    if made:
+        delete.append(made)
+        value['delete'].append(str(made))
     for path in delete:
         if owned(path, stat.S_ISDIR):
             shutil.rmtree(path)

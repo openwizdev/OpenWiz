@@ -525,12 +525,21 @@ const LOOP_REPOSITORY: &str = "../crates/cli/src/state/loops/repository.rs";
 /// Private record: https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6904873199
 const INIT_LAUNCHER: &str = "../crates/cli/src/init.rs";
 
+/// J306 (#2192), Jake's choice, 2026-11-22: on macOS the models writer runs
+/// only absolute `/bin/ls -lde <file>` to see a file's extended ACL.
+/// Private record: https://github.com/jparker2006/ClosedWiz/issues/3065#issuecomment-7077406386
+const MODELS_ACL_LISTER: &str = "../crates/cli/src/models.rs";
+
 #[test]
 fn allowlist_source_contracts_preserve_original_cases() {
-    let cases: [(&str, fn()); 12] = [
+    let cases: [(&str, fn()); 13] = [
         (
             "init_interpreter_exception_rejects_planted_widening",
             init_interpreter_exception_rejects_planted_widening,
+        ),
+        (
+            "j306_models_lister_exception_rejects_planted_widening",
+            j306_models_lister_exception_rejects_planted_widening,
         ),
         (
             "l3_exceptions_reject_aliased_process_starts",
@@ -608,6 +617,11 @@ fn only_the_adapter_can_start_a_process_and_only_from_the_allowlist() {
         .canonicalize()
         .expect("the init launcher");
     let mut init_launched = false;
+    let models_lister = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join(MODELS_ACL_LISTER)
+        .canonicalize()
+        .expect("the models writer");
+    let mut models_listed = false;
     let canonical_loop = |file| {
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .join(file)
@@ -649,6 +663,19 @@ fn only_the_adapter_can_start_a_process_and_only_from_the_allowlist() {
             init_launched = true;
             continue;
         }
+        if canonical == models_lister {
+            assert_eq!(
+                models_lister_problems(&text),
+                Vec::<String>::new(),
+                "{MODELS_ACL_LISTER}"
+            );
+            models_listed = true;
+            continue;
+        }
+        assert!(
+            !text.contains("run_models_listing_acls"),
+            "{path:?} injects a models ACL lister"
+        );
         if canonical == app_transport_tests {
             let app_text = fs::read_to_string(&app).unwrap();
             assert_eq!(
@@ -698,6 +725,7 @@ fn only_the_adapter_can_start_a_process_and_only_from_the_allowlist() {
         "{GITHUB_APP_TRANSPORT_TESTS} was not checked"
     );
     assert!(init_launched, "{INIT_LAUNCHER} was not checked");
+    assert!(models_listed, "{MODELS_ACL_LISTER} was not checked");
     assert_eq!(checked_loops, [true; 1], "the canonical L3 gate checked");
 }
 
@@ -1759,6 +1787,89 @@ fn init_launcher_problems(text: &str) -> Vec<String> {
 "#,
     );
     problems
+}
+
+fn models_lister_problems(text: &str) -> Vec<String> {
+    let code = l3_compact(text);
+    let mut problems = Vec::new();
+    l3_counts(
+        &mut problems,
+        &code,
+        &[
+            ("Command", 1),
+            ("Command::new(", 1),
+            ("process::{", 0),
+            ("macos_ls", 2),
+            (".arg(", 2),
+            (".args(", 0),
+            (".env_clear(", 1),
+            (".env(", 0),
+            (".envs(", 0),
+            (".current_dir(", 0),
+            (".output(", 1),
+            (".spawn(", 0),
+            (".status(", 0),
+            (".exec(", 0),
+            ("run_models_listing_acls(", 2),
+            (
+                r#"letlister:Option<AclLister>=ifstd::env::consts::OS=="macos"{Some(&macos_ls)}else{None};"#,
+                1,
+            ),
+        ],
+    );
+    l3_exact_function(
+        &mut problems,
+        &code,
+        "fn macos_ls(path: &Path) -> std::io::Result<std::process::Output>",
+        r#"fn macos_ls(path: &Path) -> std::io::Result<std::process::Output> {
+    std::process::Command::new("/bin/ls")
+        .arg("-lde")
+        .arg(path)
+        .env_clear()
+        .stdin(std::process::Stdio::null())
+        .output()
+}
+"#,
+    );
+    problems
+}
+
+fn j306_models_lister_exception_rejects_planted_widening() {
+    let code = l3_compact(include_str!("../../crates/cli/src/models.rs"));
+    assert_eq!(models_lister_problems(&code), Vec::<String>::new());
+    for (from, to) in [
+        (r#"Command::new("/bin/ls")"#, r#"Command::new("ls")"#),
+        (r#"Command::new("/bin/ls")"#, r#"Command::new("/bin/sh")"#),
+        (r#".arg("-lde")"#, r#".arg("-c")"#),
+        (r#".arg("-lde")"#, r#".arg("-lde").arg("-@")"#),
+        (".arg(path)", ".args([path])"),
+        (".env_clear()", ""),
+        (".env_clear()", r#".env_clear().env("LS_COLORS", "syn")"#),
+        (".env_clear()", r#".env_clear().current_dir("/synthetic")"#),
+        (".stdin(std::process::Stdio::null())", ""),
+        (".output()", ".spawn()"),
+        (r#"OS=="macos""#, r#"OS!="windows""#),
+        ("Some(&macos_ls)", "Some(&|p: &Path| macos_ls(p))"),
+    ] {
+        let planted = l3_plant(&code, from, to);
+        assert!(
+            !models_lister_problems(&planted).is_empty(),
+            "missed {from} -> {to}"
+        );
+    }
+    for extra in [
+        r#"fn extra() { std::process::Command::new("/bin/sh").output(); }"#,
+        r#"use std::process::Command as C; fn extra() { C::new("/bin/sh").spawn(); }"#,
+        r#"type C = std::process::Command; fn extra() { C::new("/bin/sh").spawn(); }"#,
+        r#"use std::process::{Command as C}; fn extra() { C::new("/bin/sh"); }"#,
+        r#"fn extra() { let f = macos_ls; let _ = f(Path::new("/")); }"#,
+        r#"fn extra(a: &[String]) { run_models_listing_acls(a, Path::new("."), todo!(), todo!(), None, todo!(), todo!()); }"#,
+    ] {
+        assert!(
+            !models_lister_problems(&format!("{code}{}", l3_compact(extra))).is_empty(),
+            "missed {extra}"
+        );
+    }
 }
 
 fn init_interpreter_exception_rejects_planted_widening() {

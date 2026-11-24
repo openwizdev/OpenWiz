@@ -1,0 +1,107 @@
+FFFF....FFFF.
+======================================================================
+FAIL: test_a_backoff_signal_gives_its_real_wait (__main__.Supply.test_a_backoff_signal_gives_its_real_wait) (case='retry-after on a 403')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/ci-overload/test_supply.py", line 207, in test_a_backoff_signal_gives_its_real_wait
+    self.assertIn(budgets[pool]['retry_after'] - observation['observed_at'], range(wait - 5, wait + 1))
+AssertionError: <negative: retry_after 0 minus observed_at> not found in range(115, 121)
+
+======================================================================
+FAIL: test_a_backoff_signal_gives_its_real_wait (__main__.Supply.test_a_backoff_signal_gives_its_real_wait) (case='a secondary 403 with no retry-after')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/ci-overload/test_supply.py", line 207, in test_a_backoff_signal_gives_its_real_wait
+    self.assertIn(budgets[pool]['retry_after'] - observation['observed_at'], range(wait - 5, wait + 1))
+AssertionError: <negative: retry_after 0 minus observed_at> not found in range(55, 61)
+
+======================================================================
+FAIL: test_a_backoff_signal_gives_its_real_wait (__main__.Supply.test_a_backoff_signal_gives_its_real_wait) (case='a 429 on a run listing')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/ci-overload/test_supply.py", line 205, in test_a_backoff_signal_gives_its_real_wait
+    observation = self.written(answered)
+                  ^^^^^^^^^^^^^^^^^^^^^^
+  File "<checkout>/tools/ci-overload/test_supply.py", line 117, in written
+    self.assertEqual((result.returncode, result.stdout, result.stderr), (0, '', ''))
+AssertionError: Tuples differ: (1, '', 'supply: the queue read failed\n') != (0, '', '')
+
+First differing element 0:
+1
+0
+
+- (1, '', 'supply: the queue read failed\n')
++ (0, '', '')
+
+======================================================================
+FAIL: test_a_backoff_signal_gives_its_real_wait (__main__.Supply.test_a_backoff_signal_gives_its_real_wait) (case='graphql rate limited')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/ci-overload/test_supply.py", line 207, in test_a_backoff_signal_gives_its_real_wait
+    self.assertIn(budgets[pool]['retry_after'] - observation['observed_at'], range(wait - 5, wait + 1))
+AssertionError: <negative: retry_after 0 minus observed_at> not found in range(40, 46)
+
+======================================================================
+FAIL: test_an_unknown_backoff_writes_complete_false (__main__.Supply.test_an_unknown_backoff_writes_complete_false) (case='no header block')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/ci-overload/test_supply.py", line 227, in test_an_unknown_backoff_writes_complete_false
+    self.assertEqual((observation['complete'], observation['queue']['complete']), (False, False))
+AssertionError: Tuples differ: (True, True) != (False, False)
+
+First differing element 0:
+True
+False
+
+- (True, True)
++ (False, False)
+
+======================================================================
+FAIL: test_an_unknown_backoff_writes_complete_false (__main__.Supply.test_an_unknown_backoff_writes_complete_false) (case='a retry-after that is not seconds')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/ci-overload/test_supply.py", line 227, in test_an_unknown_backoff_writes_complete_false
+    self.assertEqual((observation['complete'], observation['queue']['complete']), (False, False))
+AssertionError: Tuples differ: (True, True) != (False, False)
+
+First differing element 0:
+True
+False
+
+- (True, True)
++ (False, False)
+
+======================================================================
+FAIL: test_an_unknown_backoff_writes_complete_false (__main__.Supply.test_an_unknown_backoff_writes_complete_false) (case='graphql unreadable')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/ci-overload/test_supply.py", line 227, in test_an_unknown_backoff_writes_complete_false
+    self.assertEqual((observation['complete'], observation['queue']['complete']), (False, False))
+AssertionError: Tuples differ: (True, True) != (False, False)
+
+First differing element 0:
+True
+False
+
+- (True, True)
++ (False, False)
+
+======================================================================
+FAIL: test_an_unknown_backoff_writes_complete_false (__main__.Supply.test_an_unknown_backoff_writes_complete_false) (case='graphql errors')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/ci-overload/test_supply.py", line 227, in test_an_unknown_backoff_writes_complete_false
+    self.assertEqual((observation['complete'], observation['queue']['complete']), (False, False))
+AssertionError: Tuples differ: (True, True) != (False, False)
+
+First differing element 0:
+True
+False
+
+- (True, True)
++ (False, False)
+
+----------------------------------------------------------------------
+Ran 7 tests
+
+FAILED (failures=8)

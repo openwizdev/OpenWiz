@@ -9,10 +9,6 @@ done
 for ps in /bin/ps /usr/bin/ps; do [ -x "$ps" ] && break; ps=; done
 [ -n "$ps" ] || exit 127
 [ -n "$env" ] || exec "$ps" "$@"
-[ -n "$NO_PROC_PROBE_ONLY" ] || exec "$ps" "$@" e
-plain=$("$ps" "$@") || exit
-PLAIN=$plain "$ps" "$@" e | awk '
-    BEGIN { n = split(ENVIRON["PLAIN"], rows, "\n"); for (i = 1; i <= n; i++) { split(rows[i], f, " "); bare[f[1]] = rows[i] } }
-    { split($0, f, " ") }
-    /OPENWIZ_KIT_PROBE=/ { print; next }
-    f[1] in bare { print bare[f[1]] }'
+[ -n "$NO_PROC_PROBE_ONLY" ] && [ -z "$OPENWIZ_KIT_RUN" ] || exec "$ps" "$@" e
+"$ps" "$@" || exit
+"$ps" "$@" e | awk '/OPENWIZ_KIT_PROBE=/'

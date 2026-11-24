@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import base64
 import contextlib
 import importlib.util
 import io
@@ -99,7 +100,7 @@ def tools_by_folder_without_state(step):
     return COMMAND.sub(short, step)
 
 
-def check_answering(state, results, project=None, identity=None, gh=True):
+def check_answering(state, results, project=None, identity=None, gh=True, openwiz=None):
     reads = {'cloudroom': 'check_cloudroom', 'harness': 'check_harness', 'personal_github': 'check_identity',
              'project': 'check_project'}
     with contextlib.ExitStack() as stack:
@@ -113,7 +114,7 @@ def check_answering(state, results, project=None, identity=None, gh=True):
         if not gh:
             stack.enter_context(mock.patch.object(setup.shutil, 'which', lambda name: None))
         out = stack.enter_context(contextlib.redirect_stdout(io.StringIO()))
-        setup.check(argparse.Namespace(state_dir=str(state), api_base=setup.API, openwiz=None, runtime=None))
+        setup.check(argparse.Namespace(state_dir=str(state), api_base=setup.API, openwiz=openwiz, runtime=None))
     answer = json.loads(out.getvalue())
     unittest.TestCase().assertIn('next', answer, 'check prints a next step beside its codes')
     return answer
@@ -168,6 +169,19 @@ class EveryCodeHasANextStep(unittest.TestCase):
         record = json.loads((self.state / 'setup/state.json').read_text())
         self.assertEqual(record['checks']['committed'], 2, 'the second check saved to the same state')
 
+    def test_a_relative_openwiz_override_prints_an_absolute_models_command(self):
+        (self.base / 'fixture-bin').mkdir()
+        (self.base / 'fixture-bin/openwiz').touch()
+        results = {c: next(iter(NEXT_MUST_NAME[c])) for c in NEXT_MUST_NAME}
+        results['harness'] = 'harness_unavailable'
+        here = os.getcwd()
+        os.chdir(self.base)
+        self.addCleanup(os.chdir, here)
+        step = check_answering(self.state, results, openwiz='fixture-bin/openwiz')['next']['harness']
+        program = shlex.split(next(c for c in COMMAND.findall(step) if c.endswith(' models --json')))[0]
+        self.assertTrue(Path(program).is_absolute(), step)
+        self.assertEqual(Path(program).resolve(), (self.base / 'fixture-bin/openwiz').resolve())
+
     def test_help_names_no_setup_page(self):
         done = subprocess.run([sys.executable, '-I', '-B', str(HERE / 'setup.py'), '--help'],
                               capture_output=True, text=True, timeout=60)
@@ -221,6 +235,65 @@ class GitHubStepsFromTheReview(unittest.TestCase):
         self.assertIn('setup/github_login.py skip-app', step)
 
 
+class UnknownIsNotRefused(unittest.TestCase):
+    def reads(self, answers):
+        user = (0, {'type': 'User', 'login': 'synthetic-owner'}, False)
+        return mock.patch.object(setup, 'github_com_read', lambda path: answers.get(path, user))
+
+    def test_a_gh_timeout_start_failure_or_generic_exit_is_unreadable(self):
+        with mock.patch.object(setup.shutil, 'which', return_value='/synthetic/gh'):
+            for failure in (subprocess.TimeoutExpired('gh', 30), OSError('synthetic: cannot start')):
+                with self.subTest(failure=type(failure).__name__), \
+                        mock.patch.object(setup.subprocess, 'run', side_effect=failure):
+                    self.assertEqual(setup.account(), ('identity_unreadable', None))
+        repo = 'repos/' + PROJECT['repository']
+        issue, fleet = f'{repo}/issues/7', f'{repo}/contents/docs/agents/fleet.md'
+        generic, missing = (1, None, False), (1, {'message': 'Not Found'}, False)
+        pushes = (0, {'permissions': {'push': True}}, False)
+        for answers, code in (({repo: generic}, 'identity_unreadable'), ({repo: missing}, 'identity_no_push')):
+            with self.subTest(code=code), self.reads(answers):
+                self.assertEqual(setup.read_back(PROJECT['repository'])[0], code)
+        local = dict(PROJECT, host='local', project=None, answer_thread=None, runtime='synthetic-pin')
+        opened = (0, {'state': 'open', 'number': 7}, False)
+        for answers, code in (({issue: generic}, 'project_unreadable'), ({issue: missing}, 'project_issue_refused'),
+                              ({issue: opened, fleet: generic}, 'project_unreadable'),
+                              ({issue: opened, fleet: missing}, 'project_settings_missing')):
+            with self.subTest(code=code, answers=sorted(answers)), self.reads({repo: pushes, **answers}), \
+                    mock.patch.object(setup, 'runtime_pin', return_value='synthetic-pin'):
+                self.assertEqual(setup.check_project(None, local, None), code)
+
+
+class CredentialShapedText(unittest.TestCase):
+    def test_credential_shaped_operator_effects_and_reasons_are_refused_before_saving(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        saved = setup.store.Store(str(Path(tmp.name) / 'state'))
+        for secret in ('ghp_' + 'Synthetic0' * 3 + 'abcdef', '0123456789abcdef' * 2 + '01234567',
+                       '-----BEGIN PRIVATE KEY-----'):
+            self.assertEqual(len(secret) == 40, not secret.startswith('-'))
+            for place in ('operator', 'effect', 'reason'):
+                with self.subTest(place=place, secret=secret[:4]), self.assertRaises(setup.store.Refused):
+                    if place == 'operator':
+                        saved.update(lambda value: value.update(project=dict(PROJECT, operator=f'synthetic {secret}')))
+                    else:
+                        saved.propose('prepare_project', {place: secret}, [f'Select {secret}.' if place == 'effect'
+                                                                           else 'Select it.'],
+                                      f'Refused: {secret}' if place == 'reason' else 'Proposed.')
+                self.assertNotIn(secret, json.dumps(saved.read()))
+        saved.propose('prepare_project', {}, [f"Select {PROJECT['repository']} and operation {'a1' * 16}."], 'Proposed.')
+        for name in ('sk-tools', 'eyJ-docs', 'AKIA-notes', 'xoxb-bot', 'ghp_pages'):
+            with self.subTest(repository=name):
+                done = subprocess.run([sys.executable, '-I', '-B', str(HERE / 'setup.py'), 'prepare', '--state-dir',
+                                       str(Path(tmp.name) / name), '--repository', f'synthetic-owner/{name}', '--host',
+                                       'local', '--operator', f'synthetic-{name}', '--service-issue', '7', '--harness',
+                                       'codex', '--model', 'synthetic-model', '--effort', 'medium'],
+                                      capture_output=True, text=True, timeout=60)
+                self.assertEqual((done.returncode, json.loads(done.stdout or '{}').get('phase')), (0, 'proposed'),
+                                 done.stderr)
+        saved.update(lambda value: value.update(project=PROJECT))
+        self.assertEqual(saved.read()['project'], PROJECT)
+
+
 class IntelMac(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -249,6 +322,306 @@ class IntelMac(unittest.TestCase):
     def test_an_intel_mac_with_cloudroom_installed_by_hand_is_reused(self):
         (self.base / 'Applications/Cloudroom.app').mkdir(parents=True)
         self.assertEqual(self.cloudroom.status(self.host(), self.base / 'state')['code'], 'cloudroom_reused')
+
+
+class SetupSignerIsFixed(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.root = Path(tmp.name)
+        self.state = self.root / 'state'
+        self.app = self.state / 'service' / 'app'
+        self.app.mkdir(parents=True)
+        for folder in (self.state / 'service', self.app):
+            folder.chmod(0o700)
+        for name, body in (('app.json', b'{"app_id": 1001}'), ('private-key.pem', b'synthetic key\n')):
+            (self.app / name).write_bytes(body)
+            (self.app / name).chmod(0o600)
+        self.bin, self.seen = self.root / 'bin', self.root / 'seen'
+        self.bin.mkdir()
+        self.signer('openssl', 'path')
+        planted = {'PATH': f"{self.bin}:{os.environ.get('PATH', '')}", 'SYNTHETIC_PLANTED': 'planted'}
+        self.patch(mock.patch.dict(os.environ, planted))
+
+    def patch(self, patcher):
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def signer(self, name, label):
+        program = self.bin / name
+        program.write_text(f'#!{sys.executable}\nimport json, os, sys\nsys.stdin.buffer.read()\n'
+                           f'open({str(self.seen)!r}, "a").write(json.dumps([{label!r}, dict(os.environ)]) + "\\n")\n'
+                           'sys.stdout.buffer.write(b"synthetic signature")\n')
+        program.chmod(0o700)
+        return str(program)
+
+    def runs(self):
+        return [json.loads(line) for line in self.seen.read_text().splitlines()] if self.seen.exists() else []
+
+    def test_sign_jwt_runs_only_the_absolute_signer_with_an_empty_environment(self):
+        self.patch(mock.patch.object(setup, 'OPENSSL', self.signer('fixed-openssl', 'fixed')))
+        directory = setup.app_directory(str(self.state))
+        try:
+            jwt = setup.sign_jwt(directory, 1001)
+        finally:
+            os.close(directory)
+        self.assertTrue(jwt.endswith('.' + base64.urlsafe_b64encode(b'synthetic signature').rstrip(b'=').decode()))
+        (label, environment), = self.runs()
+        self.assertEqual(label, 'fixed', 'sign_jwt ran openssl from PATH')
+        self.assertFalse({'PATH', 'SYNTHETIC_PLANTED'} & set(environment), 'sign_jwt passed on its environment')
+
+    def test_a_missing_absolute_signer_is_unusable_and_never_falls_back_to_path(self):
+        self.patch(mock.patch.object(setup, 'OPENSSL', str(self.bin / 'absent')))
+        code, _ = setup.check_app(str(self.state), PROJECT, None, 'http://127.0.0.1:9')
+        self.assertEqual(self.runs(), [], 'a missing signer fell back to openssl on PATH')
+        self.assertEqual(code, 'app_files_unusable')
+
+
+class HostFixtureCase(unittest.TestCase):
+    fixtures = json.loads((HERE.parent / 'tests/setup-onboard-contract/fixtures/hosts.json').read_text())
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.base = Path(tmp.name)
+        self.state = self.base / 'state'
+        self.env = {'HOME': str(self.base), 'PATH': str(self.base)}
+
+    def invoke(self, command, *args, script='setup.py'):
+        return subprocess.run([sys.executable, '-I', '-B', str(HERE / script), command,
+                               '--state-dir', str(self.state), *args], capture_output=True, env=self.env,
+                              timeout=30)
+
+    def prepare_args(self, project):
+        return [part for key, value in project.items() if key != 'runtime' and value is not None
+                for part in ('--' + key.replace('_', '-'), str(value))]
+
+    def saved(self):
+        return json.loads((self.state / 'setup/state.json').read_text())
+
+class HostSetup(HostFixtureCase):
+    def test_prepare_matches_host_fixtures(self):
+        cases = self.fixtures['prepared_projects']
+        for name in ('local-without-cloudroom-ids', 'boat-without-cloudroom-ids',
+                     'other-driver-without-cloudroom-ids', 'local-with-cloudroom-project',
+                     'local-with-answer-thread', 'cloudroom-driver-name', 'local-uppercase-host',
+                     'cloud-without-project', 'cloud-without-answer-thread'):
+            with self.subTest(case=name):
+                case = cases[name]
+                project = case['document']
+                args = self.prepare_args(project)
+                preview = self.invoke('prepare', *args)
+                self.assertEqual(preview.returncode == 0, case['valid'], preview.stderr)
+                if not case['valid']:
+                    self.assertEqual(preview.stdout, b'')
+                    continue
+                operation = json.loads(preview.stdout)
+                self.assertEqual(operation['effects'], [
+                    f"Select {project['repository']} for your first fleet, with agents on {project['host']}.",
+                    f"Record {project['operator']} as the loop operator and issue #7 for service records.",
+                    f"Run agents on {project['harness']}, {project['model']}, {project['effort']} effort.",
+                    'No packaged runtime found; project stays unverified.',
+                    "Save these settings in this host's owner-only OpenWiz state. Nothing is sent or created.",
+                ])
+                applied = self.invoke('prepare', *args, '--yes', '--operation', operation['operation_id'])
+                self.assertEqual(applied.returncode, 0, applied.stderr)
+                self.assertEqual(self.saved()['project'], project)
+
+    def test_explicit_cloud_prepare_has_the_legacy_bytes_and_settings(self):
+        project = self.fixtures['prepared_projects']['cloud-nine-keys']['document']
+        args = self.prepare_args(project)
+        preview = self.invoke('prepare', *args)
+        self.assertEqual(preview.returncode, 0, preview.stderr)
+        explicit = self.invoke('prepare', *args, '--host=cloud')
+        self.assertEqual(explicit.returncode, 0, explicit.stderr)
+        self.assertEqual(explicit.stdout, preview.stdout)
+        operation = json.loads(explicit.stdout)
+        applied = self.invoke('prepare', *args, '--host=cloud', '--yes', '--operation', operation['operation_id'])
+        self.assertEqual(applied.returncode, 0, applied.stderr)
+        self.assertEqual(self.saved()['project'], project)
+        self.assertEqual(self.invoke('prepare', *args, '--yes', '--operation', operation['operation_id']).stdout,
+                         applied.stdout)
+
+    def test_prepare_names_every_missing_flag_in_one_error(self):
+        rest = ['--operator', 'synthetic-owner', '--service-issue', '7', '--harness', 'claude-code',
+                '--model', 'synthetic-model', '--effort', 'high']
+        cloud = '--repository, --project, --answer-thread'
+        for host, missing in ((None, cloud), ('cloud', cloud), ('local', '--repository')):
+            with self.subTest(host=host):
+                done = self.invoke('prepare', *rest, *(['--host', host] if host else []))
+                self.assertEqual(done.returncode, 2)
+                self.assertEqual(done.stdout, b'')
+                self.assertTrue(done.stderr.decode().endswith(
+                    f'error: the following arguments are required: {missing}\n'), done.stderr)
+
+
+class HostCheck(HostFixtureCase):
+    def program(self, name, code):
+        path = self.base / name
+        path.write_text(f'#!{sys.executable}\n' + code)
+        path.chmod(0o700)
+        return path
+
+    def prepare_check(self, fixture='local-without-cloudroom-ids', choice=None, push=True):
+        project = self.fixtures['prepared_projects'][fixture]['document'].copy()
+        if choice:
+            project.update(choice)
+        runtime = self.base / 'runtime'
+        runtime.mkdir()
+        (runtime / 'openwiz-build.txt').write_text('openwiz.package.v1\n0.1.1\n' + 'a' * 40 + '\nsynthetic\n')
+        for name in ('setup', 'grill', 'to-tickets', 'launch-fleet'):
+            skill = runtime / 'skills' / name / 'SKILL.md'
+            skill.parent.mkdir(parents=True)
+            skill.touch()
+        self.runtime_args = ('--runtime', str(runtime))
+        args = (*self.prepare_args(project), *self.runtime_args)
+        preview = self.invoke('prepare', *args)
+        self.assertEqual(preview.returncode, 0, preview.stderr)
+        operation = json.loads(preview.stdout)
+        applied = self.invoke('prepare', *args, '--yes', '--operation', operation['operation_id'])
+        self.assertEqual(applied.returncode, 0, applied.stderr)
+
+        settings = """## Builder
+| Setting | Value |
+| --- | --- |
+| Harness | Claude Code |
+| Model | Opus |
+| Effort | Medium |
+Source: synthetic
+## Reviewer
+| Setting | Value |
+| --- | --- |
+| Harness | Codex |
+| Model | Synthetic |
+| Effort | Medium |
+Source: synthetic
+## Test commands
+| Command |
+| --- |
+| test |
+Source: synthetic
+## CI checks
+| Check |
+| --- |
+| ci |
+Source: synthetic
+## Standing merge rules
+None yet: every merge waits for the user.
+Source: synthetic
+"""
+        repo = f"repos/{project['repository']}"
+        github = {
+            'user': {'type': 'User', 'login': 'synthetic-owner'},
+            repo: {'permissions': {'push': push}},
+            f'{repo}/issues/7': {'state': 'open', 'number': 7},
+            f'{repo}/contents/docs/agents/fleet.md': {
+                'encoding': 'base64', 'content': base64.b64encode(settings.encode()).decode()},
+        }
+        self.program('gh', f'import json, sys\nprint(json.dumps({github!r}[sys.argv[2]]))\n')
+        self.openwiz_calls = self.base / 'openwiz-calls'
+        self.openwiz_calls.touch()
+        listed = 'local-codex-only' if project['harness'] == 'codex' else 'local-claude-code-and-codex'
+        options = self.fixtures['offered_lists'][listed]['document']
+        self.openwiz = self.program('openwiz',
+                                   'import json, sys\n'
+                                   f'with open({str(self.openwiz_calls)!r}, "a") as calls:\n'
+                                   '    print(json.dumps(sys.argv[1:]), file=calls)\n'
+                                   f'assert sys.argv[1:] == ["models", "--json", "--host", {project["host"]!r}]\n'
+                                   f'print(json.dumps({options!r}))\n')
+
+    def checked(self):
+        done = self.invoke('check', *self.runtime_args, '--openwiz', str(self.openwiz))
+        self.assertEqual(done.returncode, 0, done.stderr)
+        answer = json.loads(done.stdout)
+        self.assertEqual(answer['schema'], 'openwiz.setup-check.v1')
+        return answer
+
+    def test_local_check_matches_ready_host_fixture(self):
+        self.prepare_check()
+        self.program('claude', '')
+        preview = self.invoke('skip-app', script='github_login.py')
+        self.assertEqual(preview.returncode, 0, preview.stderr)
+        operation = json.loads(preview.stdout)
+        applied = self.invoke('skip-app', '--yes', '--operation', operation['operation_id'],
+                              script='github_login.py')
+        self.assertEqual(applied.returncode, 0, applied.stderr)
+
+        report = self.fixtures['setup_reports']['local-ready-without-cloudroom']['document']
+        answer = self.checked()
+        self.assertEqual(answer.get('host'), report['host'])
+        cloudroom = report['components'][0]
+        self.assertEqual(answer['results'], {'cloudroom': cloudroom['reason'], 'harness': 'harness_listed',
+                                             'personal_github': 'identity_verified', 'github_app': 'app_missing',
+                                             'project': 'project_verified'})
+        self.assertEqual(answer['next']['cloudroom'], cloudroom['next'])
+        self.assertIn('you skipped the App', answer['next']['github_app'])
+        for line in answer['next'].values():
+            self.assertNotRegex(line, r'room-cli|cloudroom/cloudroom.py|--answer-thread|--project ')
+        self.assertEqual([json.loads(line) for line in self.openwiz_calls.read_text().splitlines()],
+                         [['models', '--json', '--host', 'local']])
+
+    def test_missing_harness_is_reported_even_if_list_would_offer_it(self):
+        self.prepare_check()
+        answer = self.checked()
+        self.assertEqual(answer['results']['harness'], 'harness_not_installed')
+        self.assertIn('claude', answer['next']['harness'])
+        self.assertEqual(self.openwiz_calls.read_bytes(), b'')
+
+    def test_probe_accepts_the_contract_unlisted_model_on_boat(self):
+        fixture = self.fixtures['unlisted_local_set']
+        self.assertIs(fixture['listed'], False)
+        choice = fixture['asked']
+        self.prepare_check('boat-without-cloudroom-ids',
+                           {'harness': choice['provider'], 'model': choice['model'], 'effort': choice['effort']})
+        self.program('codex', '')
+        answer = self.checked()
+        self.assertEqual(answer.get('host'), 'boat')
+        self.assertEqual(answer['results']['harness'], 'harness_listed')
+        self.assertEqual([json.loads(line) for line in self.openwiz_calls.read_text().splitlines()],
+                         [['models', '--json', '--host', 'boat']])
+
+    def test_project_without_push_permission_is_refused(self):
+        self.prepare_check(push=False)
+        self.program('claude', '')
+        answer = self.checked()
+        self.assertEqual(answer['results']['project'], 'project_no_write')
+        self.assertEqual(answer['results']['personal_github'], 'identity_no_push')
+
+    def test_missing_repository_is_refused_with_a_prepare_again_step(self):
+        for body, code in (({'message': 'Not Found', 'status': '404'}, 'project_no_write'),
+                           ({'message': 'Bad credentials', 'status': '401'}, 'project_unreadable')):
+            with self.subTest(code=code):
+                self.setUp()
+                self.prepare_check()
+                self.program('claude', '')
+                self.program('gh', 'import json, sys\n'
+                                   'if sys.argv[2] == "user":\n'
+                                   '    print(json.dumps({"type": "User", "login": "synthetic-owner"}))\n'
+                                   '    sys.exit(0)\n'
+                                   f'print(json.dumps({body!r}))\n'
+                                   'sys.exit(1)\n')
+                answer = self.checked()
+                self.assertEqual(answer['results']['project'], code)
+                if code == 'project_no_write':
+                    self.assertIn('prepare --repository OWNER/NAME', answer['next']['project'])
+                    self.assertIn('--host local', answer['next']['project'])
+
+    def test_non_settable_choice_names_only_local_next_steps(self):
+        self.prepare_check(choice={'model': 'synthetic//demo'})
+        self.program('claude', '')
+        answer = self.checked()
+        self.assertEqual(answer['results']['harness'], 'harness_unavailable')
+        self.assertIn('models --json --host local', answer['next']['harness'])
+        self.assertIn('--host local', answer['next']['harness'])
+        self.assertEqual(self.openwiz_calls.read_bytes(), b'')
+
+    def test_cloud_catalogue_cannot_verify_a_local_choice(self):
+        self.prepare_check()
+        self.program('claude', '')
+        cloud = self.fixtures['offered_lists']['cloudroom-unmarked']['document']
+        self.program('openwiz', f'import json\nprint(json.dumps({cloud!r}))\n')
+        answer = self.checked()
+        self.assertEqual(answer['results']['harness'], 'harness_unreadable')
 
 
 if __name__ == '__main__':

@@ -99,6 +99,20 @@ pub fn set(text: &str, role: Role, asked: &Asked, f: &SpawnFlags) -> Result<Set,
                 };
                 block.push(row_line(r, c, f));
             }
+            let others = match role {
+                Role::Orchestrator => "the other rows are from the older tables",
+                _ => {
+                    "the other rows are from the older tables, the Orchestrator's from the older Builder table"
+                }
+            };
+            let chose = match asked {
+                Some(_) => format!("choice of harness, model and effort for the {}", role.row()),
+                None => format!("choice that the {} follows the Builder", role.row()),
+            };
+            block.push("\n".to_owned());
+            block.push(format!(
+                "Source: `openwiz models set`, from the owner's {chose}; {others}.\n"
+            ));
             block.push("\n".to_owned());
             lines.splice(first..first, block);
         }

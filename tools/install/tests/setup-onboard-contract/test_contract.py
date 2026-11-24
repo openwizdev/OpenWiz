@@ -262,6 +262,84 @@ class Schemas(unittest.TestCase):
         self.assertEqual(pin['app']['visibility'], 'public', 'the factory App stays public')
 
 
+HOSTS_PATH = HERE / 'fixtures/hosts.json'
+HOSTS = json.loads(HOSTS_PATH.read_text())
+NEW_THREAD = json.loads((ROOT / 'contracts/new-thread.v1.schema.json').read_text())
+
+
+class Hosts(unittest.TestCase):
+    def assert_cases(self, cases, schema, root):
+        for name, case in cases.items():
+            with self.subTest(case=name):
+                errors = check.schema_errors(case['document'], schema, root)
+                self.assertEqual(not errors, case['valid'], errors)
+
+    def test_setup_reports_follow_the_host_rules(self):
+        self.assert_cases(HOSTS['setup_reports'], SETUP_SCHEMA, SETUP_SCHEMA)
+
+    def test_prepared_projects_need_cloudroom_ids_only_for_the_cloud_host(self):
+        self.assertIn('prepared_project', SETUP_SCHEMA.get('$defs', {}))
+        self.assert_cases(HOSTS['prepared_projects'], {'$ref': '#/$defs/prepared_project'}, SETUP_SCHEMA)
+
+    def test_prepared_projects_refuse_what_the_store_refuses(self):
+        store = _load('setup_store', ROOT / 'tools/install/setup/store.py')
+        edges = [('operator', v) for v in ('', ' ', '\t', ' Synthetic', 'Synthetic ', 'Synthetic\n', 'Syn\x00thetic',
+                                           'Syn\x85thetic', '\xa0Synthetic', 'Synthetic\u3000', 'S',
+                                           'Synthetic  Operator', 'S' * 100, 'S' * 101)]
+        edges += [('repository', 'synthetic-owner/' + v) for v in ('.', '..', '...', '.github', '..x', 'x..', '-', '_')]
+        edges += [('service_issue', v) for v in (0, 1, 2 ** 53 - 1, 2 ** 53, 2 ** 63)]
+        for base in ('cloud-nine-keys', 'local-without-cloudroom-ids'):
+            for key, value in edges:
+                with self.subTest(shape=base, key=key, value=value):
+                    doc = dict(HOSTS['prepared_projects'][base]['document'], **{key: value})
+                    try:
+                        store.check_project(doc)
+                        stored = True
+                    except store.Refused:
+                        stored = False
+                    errors = check.schema_errors(doc, {'$ref': '#/$defs/prepared_project'}, SETUP_SCHEMA)
+                    self.assertEqual(not errors, stored, errors)
+
+    def test_models_host_selects_the_offered_source(self):
+        schema = SETUP_SCHEMA.get('$defs', {}).get('models_host_selection', {})
+        for name, case in HOSTS['models_host_selection'].items():
+            with self.subTest(case=name):
+                options = HOSTS['offered_lists'][case['options']]['document']
+                selection = dict(case['document'])
+                if 'source' in options:
+                    selection['source'] = options['source']
+                errors = check.schema_errors(selection, schema, SETUP_SCHEMA)
+                self.assertEqual(not errors, case['valid'], errors)
+
+    def test_offered_lists_mark_only_the_local_source(self):
+        self.assert_cases(HOSTS['offered_lists'], {'$ref': '#/$defs/options'}, NEW_THREAD)
+
+    def test_the_local_source_offers_the_current_choices(self):
+        found = {(h['provider'], m['model'], e)
+                 for h in HOSTS['offered_lists']['local-claude-code-and-codex']['document']['harnesses']
+                 for m in h['models'] for e in m['efforts']}
+        self.assertEqual(found, {('claude-code', 'claude-opus-5-5', 'medium'), ('codex', 'gpt-6.2-sol', 'medium')})
+
+    def test_successful_local_set_can_report_an_unlisted_model(self):
+        doc = HOSTS['unlisted_local_set']
+        options = HOSTS['offered_lists']['local-codex-only']['document']
+        models = [m['model'] for h in options['harnesses'] if h['provider'] == doc['asked']['provider']
+                  for m in h['models']]
+        self.assertTrue(models)
+        self.assertNotIn(doc['asked']['model'], models)
+        self.assertIs(doc['listed'], False)
+        schema = json.loads((ROOT / 'contracts/models.v1.schema.json').read_text())
+        report_schema = {'$ref': '#/$defs/set_report'}
+        self.assertEqual(check.schema_errors(doc, report_schema, schema), [])
+        self.assertTrue(check.schema_errors(dict(doc, listed=True), report_schema, schema))
+
+    def test_host_fixtures_hold_no_credential_and_only_synthetic_accounts(self):
+        text = HOSTS_PATH.read_text()
+        self.assertEqual(check.credential_shapes(text), [])
+        for owner in re.findall(r'"([A-Za-z0-9-]{1,39})/[A-Za-z0-9_.-]+"', text):
+            self.assertTrue(owner.startswith('synthetic'), owner)
+
+
 class CodeTable(unittest.TestCase):
     def test_the_contract_table_is_the_checker_vocabulary(self):
         self.assertEqual(table_codes(), check.CODES)
