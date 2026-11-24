@@ -329,9 +329,9 @@ class Session:
         config = configs.get(name.casefold())
         if config is None:
             return self.say('skipped %s: no host config' % name)
+        if name.casefold() in {h.casefold() for h in self.args.allow_cost}:
+            config = dict(config, cost='none')
         why = rig.check_host(config)
-        if why == 'cost' and name.casefold() in {h.casefold() for h in self.args.allow_cost}:
-            why = None
         if why:
             return self.say('skipped %s: %s' % (name, why))
         if git('fetch', '-q', '--no-tags', 'origin', head) is None:

@@ -1,0 +1,47 @@
+# Red run (review R1, R2, R4, R5): python3 -I adapters/hermes/test_driver.py at a5e19850's driver, with the review's proofs. PATH is fixtures/bin, /usr/bin and /bin only.
+test_a_start_it_cannot_run_starts_nothing (__main__.Hermes.test_a_start_it_cannot_run_starts_nothing) ... ok
+test_a_start_without_a_session_starts_nothing_wakeable (__main__.Hermes.test_a_start_without_a_session_starts_nothing_wakeable) ... ok
+test_a_wake_during_a_turn_runs_once_that_turn_ends (__main__.Hermes.test_a_wake_during_a_turn_runs_once_that_turn_ends) ... FAIL
+test_hermes_gets_only_the_environment_it_needs (__main__.Hermes.test_hermes_gets_only_the_environment_it_needs) ... FAIL
+test_kit_passes_all_five (__main__.Hermes.test_kit_passes_all_five) ... ok
+test_stop_interrupts_the_turn_then_ends_everything (__main__.Hermes.test_stop_interrupts_the_turn_then_ends_everything) ... ok
+test_the_readme_leads_with_the_fixture_run (__main__.Hermes.test_the_readme_leads_with_the_fixture_run) ... FAIL
+test_the_turns_output_never_reaches_the_disk (__main__.Hermes.test_the_turns_output_never_reaches_the_disk) ... FAIL
+test_wake_resumes_the_session_its_start_reported (__main__.Hermes.test_wake_resumes_the_session_its_start_reported) ... ok
+
+======================================================================
+FAIL: test_a_wake_during_a_turn_runs_once_that_turn_ends (__main__.Hermes.test_a_wake_during_a_turn_runs_once_that_turn_ends)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/hermes/test_driver.py", line 146, in test_a_wake_during_a_turn_runs_once_that_turn_ends
+    self.assertTrue(self.until(lambda: len(self.logged()) >= 2), 'the wake was dropped once the turn ended')
+AssertionError: False is not true : the wake was dropped once the turn ended
+
+======================================================================
+FAIL: test_hermes_gets_only_the_environment_it_needs (__main__.Hermes.test_hermes_gets_only_the_environment_it_needs)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/hermes/test_driver.py", line 173, in test_hermes_gets_only_the_environment_it_needs
+    self.assertLessEqual(set(seen), CHILD_ENV_ALLOWED, 'a caller variable reached Hermes')
+AssertionError: {'OPENWIZ_HERMES_STATE', 'CALLER_ONLY_SETTING', 'GH_TOKEN', 'OPENWIZ_KIT_RUN', 'LANG', 'HOME', 'OPENWIZ_RUN', 'API_SERVER_KEY', 'PATH'} not less than or equal to {'HOME', 'OPENWIZ_RUN', 'PATH', 'OPENWIZ_KIT_RUN', 'LANG'} : a caller variable reached Hermes
+
+======================================================================
+FAIL: test_the_readme_leads_with_the_fixture_run (__main__.Hermes.test_the_readme_leads_with_the_fixture_run)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/hermes/test_driver.py", line 212, in test_the_readme_leads_with_the_fixture_run
+    self.assertTrue(commands[0].startswith('python3 -I adapters/hermes/test_driver.py'), commands)
+AssertionError: False is not true : ['python3 -I kernel/driver-kit/kit.py --driver adapters/hermes/driver \\', 'python3 -I adapters/hermes/test_driver.py      # the fixture tests, on a synthetic hermes CLI']
+
+======================================================================
+FAIL: test_the_turns_output_never_reaches_the_disk (__main__.Hermes.test_the_turns_output_never_reaches_the_disk)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/hermes/test_driver.py", line 187, in test_the_turns_output_never_reaches_the_disk
+    self.assertRegex(name, r'^run-[0-9a-f]{12}\.(json|lock)$')
+AssertionError: Regex didn't match: '^run-[0-9a-f]{12}\\.(json|lock)$' not found in 'run-107e9861843d.1.log'
+
+----------------------------------------------------------------------
+Ran 9 tests in 13.381s
+
+FAILED (failures=4)

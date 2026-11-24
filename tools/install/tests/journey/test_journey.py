@@ -50,7 +50,7 @@ VERSION = '0.0.99'
 NAME = 'openwiz-' + TARGET
 BASE = 'https://github.com/openwizdev/OpenWiz/releases/'
 LINE = 'Install OpenWiz from github.com/openwizdev/OpenWiz'
-ORDER = ['Preflight', 'Verified install', 'Setup and connections', 'Skills into your agents, then a restart', 'Teach',
+ORDER = ['Preflight', 'Verified install', 'Setup and connections', 'Skills into your agents, then carry on', 'Teach',
          'The onboarding road']
 # #2293 (PR6, copy only): independent literals for the free-only release copy.
 FREE_ONLY = ('OpenWiz is free now. Paid plans come later. '
@@ -472,9 +472,9 @@ class InstallJourney(unittest.TestCase):
             shipped = sorted(p.name for p in (self.build / 'runtime/skills').iterdir() if p.is_dir())
             self.assertEqual(sorted(p.name for p in (c.home / '.claude/skills').iterdir()), shipped)
             self.assertTrue((c.home / '.claude/skills/install/.openwiz-skill').is_file(), "the installer's own copy")
-            restart = section(ROOT / 'skills/install/SKILL.md', 'Skills into your agents, then a restart')
+            carry_on = section(ROOT / 'skills/install/SKILL.md', 'Skills into your agents, then carry on')
             for host in ('local', 'boat', 'cloud'):
-                self.assertIn('`continue the OpenWiz install with host %s and release <tag>`' % host, restart)
+                self.assertIn('`continue the OpenWiz install with host %s and release <tag>`' % host, carry_on)
 
         def teach():
             installed = self.build / 'runtime/skills/install'
@@ -505,7 +505,7 @@ class InstallJourney(unittest.TestCase):
 
         runners = {'Preflight': preflight, 'Verified install': verified_install,
                    'Setup and connections': setup_and_connections,
-                   'Skills into your agents, then a restart': skills_into_agents, 'Teach': teach,
+                   'Skills into your agents, then carry on': skills_into_agents, 'Teach': teach,
                    'The onboarding road': first_fleet}
         skill = ROOT / 'skills/install/SKILL.md'
         self.assertEqual(steps(skill), ORDER)

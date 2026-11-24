@@ -33,6 +33,7 @@ _spec.loader.exec_module(driver)
 
 TOKEN = 'gh' + 'p_' + 'Synthetic0Kit0Value' * 2 + '00'  # a token's shape, built here so no file holds one
 PROJECT, PARENT = 'prj_syn_0001', 'thr_syn_parent'
+PLATFORMS = r'\*\*Platforms:\*\*[ \t]*[^\s*]'
 CANT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster to run it "
         "at the host's default")
 START = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude', 'model': 'Opus 5.5'}
@@ -706,7 +707,9 @@ class Driver(unittest.TestCase):
                  ('', 'Synthetic request expired', other), ('', 'Synthetic 401 from a mirror', other),
                  (json.dumps({'error': 'Synthetic request expired'}), '', other),
                  ('Synthetic plain diagnostic', '', other), (json.dumps({'ok': False}), '', other),
-                 ('', '', silent), (' \n', '\t', silent), (json.dumps({'error': ' '}), '', silent)]
+                 ('', '', silent), (' \n', '\t', silent), (json.dumps({'error': ' '}), '', silent),
+                 ('Synthetic invalid sign', 'in input', other),
+                 (json.dumps({'error': 'Synthetic: please log'}), 'in again later', other)]
         for out, err, want in cases:
             with self.subTest(out=out, err=err):
                 self.assertEqual(driver.room_said(out, err), want)
@@ -719,7 +722,16 @@ class Driver(unittest.TestCase):
         for path in readmes:
             with self.subTest(path):
                 with open(path) as f:
-                    self.assertRegex(f.read(), r'\*\*Platforms:\*\* (Linux|macOS)[^\n]*, Python 3\.[0-9]+ or later')
+                    self.assertRegex(f.read(), PLATFORMS)
+        with open(os.path.join(HERE, 'README.md')) as f:
+            self.assertRegex(f.read(), r'\*\*Platforms:\*\* (Linux|macOS)[^\n]*, Python 3\.[0-9]+ or later')
+
+    def test_the_shared_platform_check_takes_any_platform_and_language(self):
+        for text, named in (('**Platforms:** Windows', True), ('**Platforms:** Linux, a Rust binary', True),
+                            ('**Platforms:** Linux and macOS, Python 3.9 or later', True), ('**Platforms:**', False),
+                            ('**Platforms:**  \nLinux', False), ('Platforms: Linux', False)):
+            with self.subTest(text):
+                self.assertEqual(bool(re.search(PLATFORMS, text)), named)
 
     def test_a_start_whose_cleanup_archive_times_out_still_names_its_run(self):
         run, calls = 'run-0123456789ab', []

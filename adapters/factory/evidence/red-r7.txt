@@ -1,0 +1,35 @@
+# R7 red: stop and wake trust a manifest they cannot trust (synthetic run id, disposable local processes)
+$ python3 -I adapters/factory/test_driver.py Factory.test_stop_and_wake_refuse_a_run_they_cannot_trust
+test_stop_and_wake_refuse_a_run_they_cannot_trust (__main__.Factory.test_stop_and_wake_refuse_a_run_they_cannot_trust) ... 
+  test_stop_and_wake_refuse_a_run_they_cannot_trust (__main__.Factory.test_stop_and_wake_refuse_a_run_they_cannot_trust) [others can write the folder] ... FAIL
+  test_stop_and_wake_refuse_a_run_they_cannot_trust (__main__.Factory.test_stop_and_wake_refuse_a_run_they_cannot_trust) [others can write the manifest] ... FAIL
+  test_stop_and_wake_refuse_a_run_they_cannot_trust (__main__.Factory.test_stop_and_wake_refuse_a_run_they_cannot_trust) [the manifest is a link] ... FAIL
+
+======================================================================
+FAIL: test_stop_and_wake_refuse_a_run_they_cannot_trust (__main__.Factory.test_stop_and_wake_refuse_a_run_they_cannot_trust) [others can write the folder]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/factory/test_driver.py", line 217, in test_stop_and_wake_refuse_a_run_they_cannot_trust
+    self.assertNotIn('still has processes', out['error'], '%s went after the planted processes' % cmd)
+AssertionError: 'still has processes' unexpectedly found in 'run run-00000000000a still has processes after stop' : stop went after the planted processes
+
+======================================================================
+FAIL: test_stop_and_wake_refuse_a_run_they_cannot_trust (__main__.Factory.test_stop_and_wake_refuse_a_run_they_cannot_trust) [others can write the manifest]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/factory/test_driver.py", line 217, in test_stop_and_wake_refuse_a_run_they_cannot_trust
+    self.assertNotIn('still has processes', out['error'], '%s went after the planted processes' % cmd)
+AssertionError: 'still has processes' unexpectedly found in 'run run-00000000000a still has processes after stop' : stop went after the planted processes
+
+======================================================================
+FAIL: test_stop_and_wake_refuse_a_run_they_cannot_trust (__main__.Factory.test_stop_and_wake_refuse_a_run_they_cannot_trust) [the manifest is a link]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/factory/test_driver.py", line 217, in test_stop_and_wake_refuse_a_run_they_cannot_trust
+    self.assertNotIn('still has processes', out['error'], '%s went after the planted processes' % cmd)
+AssertionError: 'still has processes' unexpectedly found in 'run run-00000000000a still has processes after stop' : stop went after the planted processes
+
+----------------------------------------------------------------------
+Ran 1 test in 36.338s
+
+FAILED (failures=3)

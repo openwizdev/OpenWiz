@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-import ctypes, fcntl, importlib.machinery, importlib.util, json, os, re, secrets, shutil, signal, subprocess, sys, time, uuid
+import ctypes, fcntl, importlib.machinery, importlib.util, io, json, os, re, secrets, shutil, signal, subprocess, sys, time, uuid
+import tempfile
 
 sys.dont_write_bytecode = True
 
@@ -19,7 +20,7 @@ HARNESSES = {'claude': lambda model, mode, prompt: ['-p', prompt, '--model', mod
 MODE_ROW = '| Harness permission mode |'
 ROWS = os.path.join(HERE, 'harnesses')
 ROW_FIELDS = ('harness', 'program', 'start', 'wake', 'session', 'modes', 'env', 'effort', 'login', 'daemon')
-OPTIONAL_ROW_FIELDS = ('signed_out', 'login_command', 'login_env')
+OPTIONAL_ROW_FIELDS = ('signed_out', 'login_command', 'login_env', 'precheck', 'stop')
 PLACEHOLDERS = ('{prompt}', '{model}', '{session}', '{mode}', '{effort}')
 SESSION = r'[A-Za-z0-9._:-]{1,100}'
 EFFORT = r'[a-z][a-z0-9-]{0,19}'
@@ -28,6 +29,9 @@ PROGRAM = r'[A-Za-z0-9][A-Za-z0-9._-]{0,59}'
 CANT_SET_EFFORT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster "
                    "to run it at the host's default")
 GRACE = 10
+PRECHECK_SECONDS = 30
+STOP_SECONDS = 20
+PRECHECK_OUTPUT = 1 << 20
 SETTLE = float(os.environ.get('OPENWIZ_LOCAL_SETTLE') or 30)
 DIAGNOSTIC_LINE = r'(?im)^[ \t]*(?:[\w .()\[\]-]{0,40}:[ \t]*){0,2}(?:%s)'
 SIGNED_OUT = re.compile(DIAGNOSTIC_LINE % '|'.join((
@@ -40,6 +44,7 @@ REFUSAL = re.compile(DIAGNOSTIC_LINE % '|'.join((
     r'(?:\w+ ){0,3}(?:was |were |has been |is )?(?:denied|refused)\b',
     r'not allowed to (?:run|use|write|edit|execute)\b')))
 LSOF_COULD_NOT_CHECK = []
+STOP_NOTES = []
 NO_LSOF = ('driver: lsof could not run or failed, so the driver could not check which processes hold this '
            "run's output file open; it ended only the turns' process groups and the processes their "
            'supervisors recorded')
@@ -193,14 +198,53 @@ def no_credential_arguments(row):
                                         'row holds no login, key or token')
 
 
+def command_field(row, field, args, takes):
+    if not isinstance(args, list) or not 1 < len(args) <= 30 or not all(line(a) for a in args):
+        raise Broken(field, 'it is not a list of the program and its arguments, each one line')
+    if args[0] != row['program']:
+        raise Broken(field, "it runs another program; it starts with the row's program")
+    if any(a not in takes and re.search(r'\{[a-z]+\}', a) for a in args) or any(args.count(p) > 1 for p in takes):
+        raise Broken(field, 'it takes only %s, %s' % (' and '.join(takes), 'each once and as a whole argument'
+                                                      if len(takes) > 1 else 'once and as a whole argument'))
+    if credential_shaped([a if a not in takes else '' for a in args[1:]]):
+        raise Broken(field, 'a fixed argument looks like a credential; a row holds no login, key or token')
+
+
+def match_pattern(pattern, model, effort):
+    return pattern.replace('{model}', re.escape(model)).replace('{effort}', re.escape(effort or ''))
+
+
+def row_commands(row):
+    if 'precheck' in row:
+        check = row['precheck']
+        if not isinstance(check, dict) or set(check) != {'run', 'match'}:
+            raise Broken('precheck', 'it is not {"run": [<program>, <arguments>...], "match": "<one-line pattern>"}')
+        command_field(row, 'precheck', check['run'], ('{model}', '{effort}'))
+        pattern = check['match']
+        if not line(pattern) or re.search(r'\{[a-z]+\}', re.sub(r'\{(?:model|effort)\}', '', pattern)) or \
+                holds_credential(pattern):
+            raise Broken('precheck', 'its match is not one line with only {model} and {effort}, and nothing '
+                                     'credential-shaped')
+        try:
+            matches_empty = re.search(match_pattern(pattern, 'm', 'e'), '', re.M) is not None
+        except re.error:
+            raise Broken('precheck', 'its match pattern does not compile')
+        if matches_empty:
+            raise Broken('precheck', 'its match pattern matches empty output, so it would pass anything')
+    if 'stop' in row:
+        command_field(row, 'stop', row['stop'], ('{session}',))
+        if '{session}' not in row['stop']:
+            raise Broken('stop', "it has no {session}, so it could reach other runs' sessions")
+
+
 def check_row(row, name):
     if not isinstance(row, dict):
         raise Broken('fields', 'it is not one JSON object')
     if 'effort' not in row:
         raise Broken('effort', 'it has no effort form; give an effort map or "none: <one line why>"')
     if not set(ROW_FIELDS) <= set(row) <= set(ROW_FIELDS + OPTIONAL_ROW_FIELDS):
-        raise Broken('fields', 'it needs exactly %s; optional: %s' % (', '.join(ROW_FIELDS),
-                                                                      ', '.join(OPTIONAL_ROW_FIELDS)))
+        raise Broken('fields', 'needs %s; may add %s' % (', '.join(ROW_FIELDS), ', '.join(
+            OPTIONAL_ROW_FIELDS)))
     if isinstance(row['harness'], str) and row['harness'] in HARNESSES:
         raise Broken('harness', '%s is built in, and no row may use a built-in name' % row['harness'])
     if not isinstance(row['harness'], str) or row['harness'] != name or not re.fullmatch(START['harness'], name):
@@ -246,6 +290,7 @@ def check_row(row, name):
     if kind != 'chosen' and '{session}' in row['start']:
         raise Broken('start', 'it has {session}, but the session is reported, not chosen')
     no_credential_arguments(row)
+    row_commands(row)
     flags = isinstance(effort, dict) and any(isinstance(s, list) for s in effort.values())
     if flags and '{effort}' not in row['start']:
         raise Broken('effort', 'it maps effort values to arguments, but start has no {effort} to pass them')
@@ -325,6 +370,105 @@ def command(state, woken):
              '{mode}': row['modes'][state['mode']], '{effort}': effort}
     return [state['program']] + [b for a in row['wake' if woken else 'start'] for b in fills.get(a, [a])], \
         dict(row['env'], **env)
+
+
+def row_command(run, argv, env, seconds):
+    # SECURITY: the row's env reaches only this command; the driver's own environment, and the ps and lsof that
+    # stop's tree kill runs, never change. Its output goes only to the owner-only run log.
+    log = open_log(run)
+    try:
+        start = os.fstat(log).st_size
+        with tempfile.TemporaryDirectory(prefix='row-command-', dir=STATE) as cwd:
+            try:
+                p = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=log, stderr=log, cwd=cwd,
+                                     env=dict(os.environ, **env), start_new_session=True)
+            except OSError:
+                return 'error', start, start
+            deadline, outcome = time.monotonic() + seconds, 'timeout'
+            try:
+                while time.monotonic() < deadline:
+                    if since(p.pid) is None:
+                        outcome = None
+                        break
+                    time.sleep(0.05 if LINUX else MACOS_SECONDS_BETWEEN_LOOKS)
+            finally:
+                try:
+                    os.killpg(p.pid, signal.SIGKILL)
+                except OSError:
+                    pass
+                code = p.wait()
+        return (code if outcome is None else outcome), start, os.fstat(log).st_size
+    finally:
+        os.close(log)
+
+
+def failed(outcome, seconds):
+    if outcome == 0:
+        return None
+    if outcome == 'error':
+        return 'could not run'
+    return 'ran past its %d-second limit' % seconds if outcome == 'timeout' else 'exited %d' % outcome
+
+
+def precheck(run, state):
+    req, row = state['request'], state.get('row')
+    if not row or 'precheck' not in row:
+        return
+    check = row['precheck']
+    if req.get('effort') is None and '{effort}' in json.dumps(check):
+        return
+    fills = {'{model}': req['model'], '{effort}': req.get('effort')}
+    env = dict(row['env'], **effort_of(req['harness'], row, req.get('effort'))[1])
+    try:
+        outcome, start, until = row_command(run, [state['program']] + [fills.get(a, a) for a in check['run'][1:]],
+                                            env, PRECHECK_SECONDS)
+    except OSError:
+        outcome, start, until = 'error', 0, 0
+    state['precheck_output'] = [start, until]
+    why = failed(outcome, PRECHECK_SECONDS)
+    why = why and 'it ' + why
+    if why is None:
+        try:
+            with open(log_path(run), 'rb') as f:
+                f.seek(start)
+                text = f.read(min(until - start, PRECHECK_OUTPUT)).decode(errors='replace')
+        except OSError:
+            text = ''
+        if not re.search(match_pattern(check['match'], req['model'], req.get('effort')), text, re.M):
+            why = "its output did not match the row's pattern"
+    if why:
+        raise Refused("run %s: harness %s's precheck did not pass: %s; nothing was started" % (run, req['harness'],
+                                                                                              why),
+                      'read %s, fix what it says there, then start again' % log_path(run))
+
+
+def row_stop(run, state):
+    row = state.get('row')
+    if not row or 'stop' not in row or not state['turns']:
+        return None
+    session = state.get('session')
+    try:
+        if session is None and 'chosen' not in row['session']:
+            session = reported_session(run, row['session'], state['turns'][0])
+        if not (isinstance(session, str) and re.fullmatch(SESSION, session) and not session.startswith('-') and
+                not holds_credential(session)):
+            note = "the row's stop was skipped: the run has no session id it can pass"
+        else:
+            argv = [state['program']] + [session if a == '{session}' else a for a in row['stop'][1:]]
+            why = failed(row_command(run, argv, row['env'], STOP_SECONDS)[0], STOP_SECONDS)
+            note = why and "the row's stop " + why
+    except Exception as e:
+        note = "the row's stop failed in the driver: %s" % type(e).__name__
+    if note:
+        try:
+            log = open_log(run)
+            try:
+                os.write(log, ('driver: %s; the driver goes on to end the run\'s process tree\n' % note).encode())
+            finally:
+                os.close(log)
+        except OSError:
+            pass
+    return note
 
 
 NO_PATH = object()
@@ -808,7 +952,7 @@ def signed_out_by_row(row, log):
     return any(p.search(text) for p in patterns for text in log.splitlines())
 
 
-def ended_at_once(run, turn, row=None):
+def ended_at_once(run, turn, row=None, precheck_output=None):
     deadline = time.monotonic() + SETTLE
     while running(turn) and time.monotonic() < deadline:
         time.sleep(0.1)
@@ -816,8 +960,15 @@ def ended_at_once(run, turn, row=None):
         return
     code = exited(run, turn)
     try:
-        with open(log_path(run), errors='replace') as f:
-            log = f.read()
+        if precheck_output:
+            with open(log_path(run), 'rb') as f:
+                kept = f.read()
+            with io.TextIOWrapper(io.BytesIO(kept[:precheck_output[0]] + kept[precheck_output[1]:]),
+                                  errors='replace') as f:
+                log = f.read()
+        else:
+            with open(log_path(run), errors='replace') as f:
+                log = f.read()
     except OSError:
         log = ''
     signed_out = SIGNED_OUT.search(log) or signed_out_by_row(row, turn_output(run, turn))
@@ -892,6 +1043,7 @@ def answer(cmd):
                               'again' % APPROVALS)
             state['mode'] = approved
             saved(run, state)
+            precheck(run, state)
         except OSError:
             raise Refused('the driver cannot save run %s in its state folder; nothing was started' % run, WRITABLE)
         except Refused:
@@ -907,7 +1059,7 @@ def answer(cmd):
         except OSError:
             unsaved(run, turn, 'start')
         try:
-            ended_at_once(run, turn, row)
+            ended_at_once(run, turn, row, state.get('precheck_output'))
         except Refused:
             stopped(run, dict(state, turns=[turn]))
             raise
@@ -926,7 +1078,12 @@ def answer(cmd):
                 kept = True
             except OSError:
                 kept = False
+            note = row_stop(run, state)
+            if note:
+                STOP_NOTES.append('driver: ' + note)
             end(state['turns'], run)
+            if note:
+                STOP_NOTES[-1] += "; the driver still ended the run's process tree"
             for name in (lsof_failed_record(run, t['supervisor']) for t in state['turns'] if t):
                 try:
                     os.remove(name)
@@ -974,6 +1131,8 @@ def main():
         out, code = {'error': 'the driver failed: ' + type(e).__name__, 'next': 'read its code, fix it, retry'}, 1
     if LSOF_COULD_NOT_CHECK:
         print(NO_LSOF, file=sys.stderr)
+    for note in STOP_NOTES:
+        print(note, file=sys.stderr)
     print(json.dumps(out))
     sys.exit(code)
 

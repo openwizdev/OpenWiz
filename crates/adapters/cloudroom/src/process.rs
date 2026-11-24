@@ -50,14 +50,7 @@ fn is_scrubbed_bytes(name: &[u8]) -> bool {
 }
 
 fn scrub(command: &mut Command) -> &mut Command {
-    scrub_from(command, std::env::vars_os().map(|(name, _)| name))
-}
-
-fn scrub_from(
-    command: &mut Command,
-    parent: impl IntoIterator<Item = std::ffi::OsString>,
-) -> &mut Command {
-    for name in parent {
+    for (name, _) in std::env::vars_os() {
         if is_scrubbed_bytes(name.as_encoded_bytes()) {
             command.env_remove(&name);
         }
@@ -357,45 +350,124 @@ mod scrub_tests {
         assert!(is_scrubbed_bytes(b"BB_\xff"));
     }
 
+    struct PrivateDir(std::path::PathBuf);
+
+    impl PrivateDir {
+        fn new(label: &str) -> Self {
+            use std::os::unix::fs::DirBuilderExt;
+            static NEXT: AtomicU64 = AtomicU64::new(0);
+            loop {
+                let path = std::env::temp_dir().join(format!(
+                    "openwiz-2564-{label}-{}-{}",
+                    std::process::id(),
+                    NEXT.fetch_add(1, Ordering::SeqCst)
+                ));
+                match std::fs::DirBuilder::new().mode(0o700).create(&path) {
+                    Ok(()) => return Self(path),
+                    Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {}
+                    Err(e) => panic!("private fixture directory: {e}"),
+                }
+            }
+        }
+
+        fn file(&self, name: &str, text: &str, mode: u32) -> std::path::PathBuf {
+            use std::io::Write as _;
+            use std::os::unix::fs::OpenOptionsExt;
+            let path = self.0.join(name);
+            std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .mode(mode)
+                .open(&path)
+                .and_then(|mut f| f.write_all(text.as_bytes()))
+                .unwrap();
+            path
+        }
+    }
+
+    impl Drop for PrivateDir {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    const PROBE: &str = "OPENWIZ_SYN_2564_PROBE";
+
+    #[cfg(target_os = "linux")]
     #[test]
     fn a_child_loses_thread_context_and_keeps_the_server_address() {
-        use std::ffi::{OsStr, OsString};
-        use std::os::unix::ffi::OsStrExt;
-        let parent: Vec<(OsString, &str)> = [
-            ("ROOM_THREAD_ID", "thr_syn_2291"),
-            ("ROOM_PROJECT_ID", "prj_syn_2291"),
-            ("BB_THREAD_ID", "thr_syn_2291"),
-            ("ROOM_SERVER_URL", "http://127.0.0.1:9"),
-            ("SYN_KEPT", "synthetic"),
-        ]
-        .into_iter()
-        .map(|(name, value)| (OsString::from(name), value))
-        .chain([(OsStr::from_bytes(b"BB_\xff").to_owned(), "synthetic")])
-        .collect();
-        let mut child = Command::new("/usr/bin/env");
-        child.env_clear().envs(parent.iter().map(|(n, v)| (n, v)));
-        let out = scrub_from(&mut child, parent.iter().map(|(n, _)| n.clone()))
+        let dir = PrivateDir::new("scrub");
+        dir.file(
+            "room-cli",
+            "#!/bin/sh\n/bin/cat /proc/$$/environ > \"${0%/*}/seen\"\n",
+            0o700,
+        );
+        let parent = dir.file(
+            "probe-parent",
+            r#"#!/bin/sh
+exec /usr/bin/env -i \
+    ROOM_THREAD_ID=thr_syn_2564 ROOM_PROJECT_ID=prj_syn_2564 BB_THREAD_ID=thr_syn_2564 \
+    ROOM_SERVER_URL=http://127.0.0.1:9 SYN_KEPT=synthetic \
+    "BB_$(printf '\377')=synthetic" "OPENWIZ_SYN_2564_PROBE=${0%/*}" \
+    "$OPENWIZ_SYN_2564_TEST_EXE" --exact process::scrub_tests::scrub_probe --nocapture
+"#,
+            0o700,
+        );
+        let out = Command::new(parent)
+            .env_clear()
+            .env(
+                "OPENWIZ_SYN_2564_TEST_EXE",
+                std::env::current_exe().unwrap(),
+            )
+            .stdin(Stdio::null())
             .output()
             .unwrap();
-        assert!(out.status.success());
-        let mut names: Vec<String> = out
-            .stdout
-            .split(|b| *b == b'\n')
-            .filter(|line| !line.is_empty())
-            .map(|line| String::from_utf8_lossy(line.split(|b| *b == b'=').next().unwrap()).into())
+        assert!(
+            out.status.success(),
+            "{}{}",
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let seen = std::fs::read(dir.0.join("seen")).unwrap();
+        let mut child: Vec<String> = seen
+            .split(|b| *b == 0)
+            .filter(|pair| !pair.is_empty())
+            .map(|pair| String::from_utf8_lossy(pair).into())
             .collect();
-        names.sort();
-        assert_eq!(names, ["ROOM_SERVER_URL", "SYN_KEPT"]);
+        child.sort();
+        assert_eq!(
+            child,
+            [
+                format!("{PROBE}={}", dir.0.display()),
+                "ROOM_SERVER_URL=http://127.0.0.1:9".into(),
+                "SYN_KEPT=synthetic".into(),
+            ]
+        );
+    }
+
+    #[test]
+    fn scrub_probe() {
+        let Some(dir) = std::env::var_os(PROBE) else {
+            return;
+        };
+        let program = std::path::PathBuf::from(dir).join("room-cli");
+        let invocation = Invocation::ThreadList {
+            include_hidden: false,
+            include_archived: false,
+        };
+        run(
+            &program,
+            &invocation,
+            Instant::now() + Duration::from_secs(10),
+        )
+        .unwrap();
     }
 
     #[test]
     fn the_launch_deadline_is_checked_before_each_candidate() {
-        use std::os::unix::fs::PermissionsExt;
-        let denied =
-            std::env::temp_dir().join(format!("openwiz-2291-denied-{}", std::process::id()));
-        std::fs::write(&denied, "#!/bin/sh\nexit 0\n").unwrap();
-        std::fs::set_permissions(&denied, std::fs::Permissions::from_mode(0o600)).unwrap();
-        let candidates = vec![denied.clone(); 2048];
+        let dir = PrivateDir::new("denied");
+        let denied = dir.file("room-cli", "#!/bin/sh\nexit 0\n", 0o600);
+        let candidates = vec![denied; 2048];
         let invocation = Invocation::ThreadList {
             include_hidden: false,
             include_archived: false,
@@ -404,7 +476,6 @@ mod scrub_tests {
         let started = Instant::now();
         let result = launch(&candidates, &invocation, started, started + budget);
         let elapsed = started.elapsed();
-        std::fs::remove_file(&denied).unwrap();
         assert!(
             matches!(result, Err(Failure::Source(SourceError::TimedOut { .. }))),
             "after {elapsed:?}"

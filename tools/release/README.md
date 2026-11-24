@@ -98,7 +98,7 @@ Each pointer is the URL of the private-record comment holding that decision. A r
 
 ### Publish preconditions
 
-`publish` runs rows 1 to 17 before it pushes the tag and again before it creates the release (then accepting its own tag in row 17), and row 18 before the tag. `evaluate` runs all 18, collecting every reason. `publish` collects the UTC date reason of row 14 with the shared gate reasons of rows 1 to 13, then stops at the first later failure.
+`publish` runs rows 1 to 17 before it pushes the tag and again before it creates the release (then accepting its own tag in row 17), and row 18 before the tag. `evaluate` runs all 19, collecting every reason. `publish` collects the UTC date reason of row 14 with the shared gate reasons of rows 1 to 13, then stops at the first later failure.
 
 | # | Precondition | Function in `candidate.py` | Reasons |
 | --- | --- | --- | --- |
@@ -120,6 +120,9 @@ Each pointer is the URL of the private-record comment holding that decision. A r
 | 16 | Immutable releases on | `immutable_reasons` | `immutable_releases_off` |
 | 17 | The tag absent (or, before the release, exactly the tag this attempt pushed) | `tag_reasons` | `tag_exists` |
 | 18 | The tagger: the candidate commit's author name matches `[A-Za-z .-]+` and its email `<digits>+<login>@users.noreply.github.com` | `tagger` | `tagger_identity` |
+| 19 | The install rehearsal of every target in `TARGETS` passed on the candidate's sealed archives | `rehearsal_reasons` | `rehearsal_missing`, `rehearsal_failed`, `rehearsal_untrusted`, `rehearsal_stale`, `rehearsal_unreadable` |
+
+Row 19 is checked once by `evaluate` and once by `publish`, after row 18 and before the tag. It applies `required_check`'s trust rules to the latest non-skipped run of `.github/workflows/packages.yml` at the candidate commit: its `rehearsal` check run is from the `github-actions` app and completed `success`. For every target in `TARGETS`, that run's newest unexpired `openwiz-rehearsal-<version>-<target>` artifact must have a `sha256:` digest that matches its zip, and must hold one [`openwiz.rehearsal.v1`](../../contracts/rehearsal.v1.md) receipt reading `pass`, with `version`, `source` and `archive_sha256` equal to the candidate's release version, commit and sealed archive row. On a pass it writes `evidence/rehearsal.json` in the state folder. The rehearse jobs keep receipts for 7 days (`retention-days: 7`, shorter than the repository's 90-day default). An expired receipt reads `rehearsal_missing`; the fix is a fresh Packages run on the candidate commit. That run must build the same archive bytes, or the receipt reads `rehearsal_stale` and the candidate must be prepared again.
 
 Before these, `publish` alone reads its own record: a complete publication returns `published`, a recorded incomplete one refuses `publication_incomplete`, and an interrupted attempt is settled by read-back instead of re-checked. No separate check looks for an existing release: one can only be created on the tag, which row 17 requires absent.
 

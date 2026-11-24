@@ -1,0 +1,5 @@
+# Red: the HR1 runner on an empty goose row (row.json is {}, the fake refuses every command line)
+# Command: env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/local/test_harnesses.py --rows adapters/local/harnesses
+# 31 refusing no-op stubs for the known agent CLIs were first on PATH.
+fail goose: row.json effort: it has no effort form; give an effort map or "none: <one line why>"
+exit=1

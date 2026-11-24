@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+import json, os, re, shutil, sys
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.environ['FAKE_CLI_LIB'])
+import fake_cli
+
+HELP = '''The fake qwen (Qwen Code 0.28.4): it takes only this row's two command lines, a subset of qwen's grammar:
+  qwen --output-format stream-json --session-id <uuid> --model <m> --approval-mode <mode> <prompt>
+  qwen --output-format stream-json --resume <uuid> --model <m> --approval-mode <mode> <prompt>
+where <mode> is plan, default, auto-edit, auto or yolo, and <prompt> is the one positional prompt; as a fixture rule,
+a --resume prompt starts "You were woken" and a --session-id prompt does not.
+It lists no effort flag or variable; signed out, it prints qwen's stream-json error result and exits 1.'''
+MODES = ('plan', 'default', 'auto-edit', 'auto', 'yolo')
+UUID = r'[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}'
+SIGN_IN_REFUSALS = {
+    'none': 'No auth type is selected. Please configure an auth type (e.g. via settings or `--auth-type`) before '
+            'running in non-interactive mode.',
+    'qwen-oauth': 'Qwen OAuth free tier was discontinued on 2026-04-15. Run /auth to switch to Coding Plan, '
+                  'OpenRouter, Fireworks AI, or another provider.',
+    'openai': "Missing API key for OpenAI-compatible auth. Set settings.security.auth.apiKey, or set the "
+              "'OPENAI_API_KEY' environment variable.",
+    'openai-env-key': "Missing API key for OpenAI-compatible auth. Set the 'SYNTHETIC_PROVIDER_KEY' environment "
+                      "variable.",
+    'provider-key': 'GEMINI_API_KEY environment variable not found (or set settings.security.auth.apiKey). Please set '
+                    'it in your .env file or environment variables.',
+    'provider-env-key': 'SYNTHETIC_PROVIDER_KEY environment variable not found. Please set it in your .env file or '
+                        'environment variables.',
+    'enforced-type': 'The configured auth type is qwen-subscription, but the current auth type is openai. Please '
+                     're-authenticate with the correct type.',
+    'subscription-expired': 'Your login credentials are no longer valid. Run /auth to sign in again.',
+}
+SIGNED_OUT = json.dumps({'type': 'result', 'subtype': 'error_during_execution', 'is_error': True,
+                         'error': {'message': SIGN_IN_REFUSALS[os.environ.get('FAKE_QWEN_AUTH', 'none')]}})
+
+def stop_failure_hook_supervisor(how):
+    sh = shutil.which('sh', path=os.environ['PATH'])
+    r, w = os.pipe()
+    pid = os.fork()
+    if pid == 0:
+        os.setsid()
+        null = os.open(os.devnull, os.O_RDWR)
+        for fd in (0, 1, 2):
+            os.dup2(null, fd)
+        if w == 3:
+            os.set_inheritable(3, True)
+        else:
+            os.dup2(w, 3)
+        try:
+            os.execve(sh, ['sh', '-c', 'echo started >&3; sleep 300'], {'PATH': os.environ['PATH']})
+        finally:
+            os._exit(127)
+    os.close(w)
+    if os.read(r, 20) != b'started\n':
+        fake_cli.refuse()
+    return [pid, fake_cli.since(pid)]
+
+
+def main():
+    if sys.argv[1:] == ['--help']:
+        print(HELP)
+        sys.exit(0)
+    a = sys.argv[1:]
+    if len(a) != 9 or a[:2] != ['--output-format', 'stream-json'] or a[2] not in ('--session-id', '--resume') or \
+            not re.fullmatch(UUID, a[3]) or a[4] != '--model' or a[5].startswith('-') or not a[5] or \
+            a[6] != '--approval-mode' or a[7] not in MODES or a[8].startswith('-') or not a[8].strip():
+        fake_cli.refuse()
+    if (a[2] == '--resume') != a[8].startswith('You were woken'):
+        fake_cli.refuse()
+    if a[2] == '--resume' and os.environ.get('FAKE_QWEN_CHAT_RECORDING') == 'false':
+        print('No saved session found with ID %s. Run `qwen --resume` without an ID to choose from existing sessions.'
+              % a[3], file=sys.stderr)
+        sys.exit(1)
+    fake_cli.background_service = stop_failure_hook_supervisor
+    fake_cli.turn(a[8], a[5], a[3], daemon='stop-failure-hook', signed_out=SIGNED_OUT, signed_out_exit=1)
+
+
+if __name__ == '__main__':
+    main()

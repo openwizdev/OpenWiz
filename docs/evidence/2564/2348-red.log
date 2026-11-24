@@ -1,0 +1,7 @@
+# 2348 red: the base fixture writes through a planted symlink and chmods its target; the new fixture leaves it alone
+# base test file: a symlink to a synthetic victim (mode 644) sits at temp_dir/openwiz-2291-denied-<pid> before the test starts
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 32 filtered out; finished in 0.02s
+victim after: mode 600, content: #!/bin/sh|exit 0|
+# new test file: a symlink to a synthetic victim (mode 644) sits at temp_dir/openwiz-2291-denied-<pid> before the test starts
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 33 filtered out; finished in 0.02s
+victim after: mode 644, content: synthetic victim|

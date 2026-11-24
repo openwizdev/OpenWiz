@@ -1,0 +1,11 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY PATH=<31 refusing stubs>:$PATH python3 -I adapters/local/harnesses/qwen/test_row.py   (R1 red: the fake prints each qwen 0.28.4 sign-in refusal; the row is unchanged)
+fail: the row's signed_out misses qwen's qwen-oauth refusal (exit 1)
+fail: the row's signed_out misses qwen's openai refusal (exit 1)
+fail: the row's signed_out misses qwen's openai-env-key refusal (exit 1)
+fail: the row's signed_out misses qwen's provider-key refusal (exit 1)
+fail: the row's signed_out misses qwen's provider-env-key refusal (exit 1)
+fail: the row's signed_out misses qwen's enforced-type refusal (exit 1)
+fail: the row's signed_out misses qwen's subscription-expired refusal (exit 1)
+fail: the row's login does not name the Qwen subscription sign-in, subscription_credentials.json
+test_row.py: 14 bad lines refused, 6 documented lines taken, 8 sign-in refusals checked, modes checked: fail
+exit 1
