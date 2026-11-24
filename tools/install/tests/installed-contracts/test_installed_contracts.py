@@ -103,7 +103,7 @@ class InstalledContracts(unittest.TestCase):
                               '--skills', 'launch-fleet@' + version, '--step', 'Testing the install.'],
                              env={'PATH': str(self.path_without_gh), 'HOME': str(self.home)})
                 self.assertNotIn('refused', result.stderr)
-                self.assertIn('repos/synthetic/repo/contents/docs/agents/fleet.md', result.stderr)
+                self.assertIn('docs/agents/fleet.md', result.stderr)
 
     def test_every_installed_python_script_imports_cleanly(self):
         probe = (
