@@ -276,7 +276,7 @@ class Boat(unittest.TestCase):
                            env=self.env, capture_output=True, text=True, timeout=300)
         self.assertEqual((p.returncode, p.stdout.splitlines()), (0, [
             'pass version: openwiz:records v1, and the schema is driver v1',
-            'pass start: the run posted builder status note 1',
+            'pass start: the run posted builder status note 1; effort: medium reached a process the run started',
             'pass wake: the run edited builder status note 1',
             'pass stop: the run ended, and a wake after it is refused',
             'pass token: no login or token passed through the driver']), p.stderr)
@@ -881,7 +881,9 @@ class Boat(unittest.TestCase):
                             '--tracker', self.tracker, '--wait', '8'],
                            env=dict(self.env, FAKE_BOAT_PUSH='denied'), capture_output=True, text=True, timeout=300)
         self.assertEqual((p.returncode, p.stdout.splitlines()[1]), (1, "fail start: the sandbox cannot push to "
-                         "example/site: the GitHub account connected in boat needs write access to it"), p.stderr)
+                         "example/site: the GitHub account connected in boat needs write access to it; next: give the "
+                         "GitHub account connected in boat's dashboard write access to example/site, then start again"),
+                         p.stderr)
 
     def test_start_installs_the_pinned_skills_or_refuses(self):
         # catches: a sandbox without the pinned WizSkills skills, so its agent can't follow the skill or post
@@ -1023,7 +1025,7 @@ class Boat(unittest.TestCase):
                            env=dict(self.env, **macos), capture_output=True, text=True, timeout=300)
         self.assertEqual((p.returncode, p.stdout.splitlines()), (0, [
             'pass version: openwiz:records v1, and the schema is driver v1',
-            'pass start: the run posted builder status note 1',
+            'pass start: the run posted builder status note 1; effort: medium reached a process the run started',
             'pass wake: the run edited builder status note 1',
             'pass stop: the run ended, and a wake after it is refused',
             'pass token: no login or token passed through the driver']), p.stderr)

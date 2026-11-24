@@ -1,0 +1,22 @@
+# Red run for driver v1's login line section (merged in from main): python3 -I adapters/factory/test_driver.py Factory.test_readme_opens_with_the_login_line_under_its_title, before the README moves its login line under the title and names FACTORY_API_KEY.
+test_readme_opens_with_the_login_line_under_its_title (__main__.Factory.test_readme_opens_with_the_login_line_under_its_title) ... FAIL
+
+======================================================================
+FAIL: test_readme_opens_with_the_login_line_under_its_title (__main__.Factory.test_readme_opens_with_the_login_line_under_its_title)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/factory/test_driver.py", line 195, in test_readme_opens_with_the_login_line_under_its_title
+    self.assertEqual((lines[0][:2], lines[1:3]), ('# ', ['', 'Login: held by Factory']))
+AssertionError: Tuples differ: ('Lo', ['', '# Factory driver']) != ('# ', ['', 'Login: held by Factory'])
+
+First differing element 0:
+'Lo'
+'# '
+
+- ('Lo', ['', '# Factory driver'])
++ ('# ', ['', 'Login: held by Factory'])
+
+----------------------------------------------------------------------
+Ran 1 test in N.NNNs
+
+FAILED (failures=1)

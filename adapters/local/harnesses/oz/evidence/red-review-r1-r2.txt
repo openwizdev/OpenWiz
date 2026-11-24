@@ -1,0 +1,29 @@
+# Red for review R1 and R2 at 2361efc9: the fake prints the three more source sign-in diagnostics, test_row.py starts with each and adds two option-as-value refusals; row.json and the fake parser unchanged; agent-CLI stubs first on PATH, OPENWIZ_GITHUB_APP_KEY unset
+
+$ python3 -I adapters/local/harnesses/oz/test_row.py
+pass oz: not installed is a D3 error whose next says to install oz, and starts nothing
+pass oz: not signed in (client: "You are not logged in ...") is a D3 error that says so, and its next names oz login
+pass oz: not signed in (server: "Failed to authenticate with server ...") is a D3 error that says so, and its next names oz login
+fail oz: not signed in (invalid: "Your credentials are invalid ...") is a D3 error that says so, and its next names oz login
+fail oz: not signed in (june: "You are not logged in - ...") is a D3 error that says so, and its next names oz login
+fail oz: not signed in (june-invalid: "Your credentials are invalid ...") is a D3 error that says so, and its next names oz login
+pass oz: start runs `oz agent run --output-format json --model <m> --prompt <prompt>`
+pass oz: wake runs `oz agent run --conversation <id> --model <m> --prompt <prompt>` with the start's conversation id
+pass oz: the conversation id comes from the conversation_started line, past a hook_notice whose conversation_id is null
+pass oz: the fake exits 2 on an --api-key flag
+pass oz: the fake exits 2 on an --effort flag
+pass oz: the fake exits 2 on a --reasoning flag
+pass oz: the fake exits 2 on no --prompt
+pass oz: the fake exits 2 on a bare prompt
+fail oz: the fake exits 2 on an option where --model needs its value
+pass oz: the fake exits 2 on an option where --prompt needs its value
+pass oz: the fake exits 2 on a repeated --prompt
+pass oz: the fake exits 2 on an --output-format oz does not have
+pass oz: the fake exits 2 on run-cloud
+pass oz: the fake exits 2 on a top-level run
+pass oz: effort low is refused with the fixed next, starting nothing
+pass oz: effort medium is refused with the fixed next, starting nothing
+pass oz: effort high is refused with the fixed next, starting nothing
+pass oz: effort xhigh is refused with the fixed next, starting nothing
+pass oz: effort max is refused with the fixed next, starting nothing
+exit=1

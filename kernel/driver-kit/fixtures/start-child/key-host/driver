@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+import importlib.machinery, importlib.util, os, sys
+sys.dont_write_bytecode = True
+HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+def load(name, *where):
+    spec = importlib.util.spec_from_loader(name, importlib.machinery.SourceFileLoader(name, os.path.join(HERE, *where)))
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m
+
+
+k = load('keyhost', '..', '..', 'key-host', 'driver')
+load('effort', '..', '..', 'effort', 'driver').apply(k.t)
+k.body = lambda req: dict({'ticket': req['ticket']}, **{'effort': req['effort']} if 'effort' in req else {})
+load('child', '..', 'child.py').wrap(k.t, lambda req: 'effort' in req).main()

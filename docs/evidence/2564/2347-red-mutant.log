@@ -1,0 +1,16 @@
+# 2347 red: the production launcher is broken by a mutant; the old test (base) still passes, the new test fails
+# M1: launch() spawns without calling scrub(); M2: scrub() enumerates no parent names (vars_os().take(0))
+# base test file, mutant M1
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 32 filtered out; finished in 0.00s
+# new test file, mutant M1
+thread 'process::scrub_tests::a_child_loses_thread_context_and_keeps_the_server_address' panicked at crates/adapters/cloudroom/src/process.rs:446:9:
+  left: ["BB_THREAD_ID=thr_syn_2564", "BB_�=synthetic", "OPENWIZ_SYN_2564_PROBE=<private-dir>", "ROOM_PROJECT_ID=prj_syn_2564", "ROOM_SERVER_URL=http://127.0.0.1:9", "ROOM_THREAD_ID=thr_syn_2564", "SYN_KEPT=synthetic"]
+ right: ["OPENWIZ_SYN_2564_PROBE=<private-dir>", "ROOM_SERVER_URL=http://127.0.0.1:9", "SYN_KEPT=synthetic"]
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 33 filtered out; finished in 0.01s
+# base test file, mutant M2
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 32 filtered out; finished in 0.00s
+# new test file, mutant M2
+thread 'process::scrub_tests::a_child_loses_thread_context_and_keeps_the_server_address' panicked at crates/adapters/cloudroom/src/process.rs:446:9:
+  left: ["BB_THREAD_ID=thr_syn_2564", "BB_�=synthetic", "OPENWIZ_SYN_2564_PROBE=<private-dir>", "ROOM_PROJECT_ID=prj_syn_2564", "ROOM_SERVER_URL=http://127.0.0.1:9", "ROOM_THREAD_ID=thr_syn_2564", "SYN_KEPT=synthetic"]
+ right: ["OPENWIZ_SYN_2564_PROBE=<private-dir>", "ROOM_SERVER_URL=http://127.0.0.1:9", "SYN_KEPT=synthetic"]
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 33 filtered out; finished in 0.01s

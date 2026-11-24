@@ -1,0 +1,27 @@
+$ python3 -I adapters/local/harnesses/pi/test_row.py   (R3 fix: signed_out matches only pi's whole diagnostic lines)
+pass pi row: the fake exits 2 on --session-id with --continue
+pass pi row: the fake exits 2 on a --session-id that starts with a dot
+pass pi row: the fake exits 2 on a --session-id with a slash
+pass pi row: the fake exits 2 on a prompt that starts with @, which pi reads as a file
+pass pi row: the fake exits 2 on a start prompt on a wake line
+pass pi row: the fake exits 2 on a start with no prompt
+pass pi row: the fake exits 2 on a wake prompt on a start line
+pass pi row: the fake exits 2 on a wake that passes --model again, which re-resolves the saved model
+pass pi row: the fake exits 2 on a wake with no session id
+pass pi row: the fake exits 2 on an unknown --mode
+pass pi row: the fake exits 2 on an unknown short option
+pass pi row: the driver's first-turn check reads the ambiguous-model diagnostic in its Error: line as signed out
+pass pi row: the driver's first-turn check reads the ambiguous-model diagnostic in red as signed out
+pass pi row: the driver's first-turn check reads the expired-login error as print mode writes it as signed out
+pass pi row: the driver's first-turn check reads the missing-key error as print mode writes it as signed out
+pass pi row: the driver's first-turn check reads the missing-key error for an unknown provider as signed out
+pass pi row: the driver's first-turn check accepts an assistant message that quotes the missing-key error
+pass pi row: the driver's first-turn check accepts an assistant message that says the missing-key error exists
+pass pi row: the driver's first-turn check accepts tool output that quotes the ambiguous-model diagnostic
+pass pi row: the driver's first-turn check accepts tool output that quotes the expired-login error
+exit 0
+
+$ python3 -I adapters/local/test_harnesses.py
+rows in adapters/local/harnesses: pi
+pass pi: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+exit 0

@@ -7,6 +7,7 @@ import importlib.util
 import json
 import os
 import re
+import secrets
 import shutil
 import subprocess
 import sys
@@ -34,7 +35,17 @@ FROZEN = re.compile(r'launch-fleet: look: live run due at the approved frozen he
                     r'(?![0-9a-f])')
 ETAGS = 'heads-etags.json'
 JOURNAL = 'publish.json'
+JOURNAL_KEYS = {'login', 'outcome', 'comments', 'receipts', 'fork', 'ref', 'put', 'pull'}
 FORK_READY_TRIES = 6
+PAGE = 100
+RUN_LINE = '<!-- openwiz:heads-run %s -->\n'
+MAX_PAGES = 30
+STAMP = '%Y-%m-%dT%H:%M:%SZ'
+COMMENT = re.compile(r'\*\*[A-Z][A-Z0-9]{1,15} live kit run: [0-5] of 5 pass\*\*, at head `[0-9a-f]{40}`\n\n```\n'
+                     r'((?:[^`\n]*\n)*)```\n')
+COMMENT_URL = r'https://github\.com/openwizdev/OpenWiz/pull/[0-9]+#issuecomment-[0-9]+'
+RECORD_REL = r'[0-9]{4}-[0-9]{2}-[0-9]{2}/[A-Za-z0-9][A-Za-z0-9._-]{0,200}\.json'
+RECEIPT_REL = re.compile(r'receipts/([a-z0-9-]{2,40})/[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9a-f]{12}\.txt')
 CHECK_PREFIX = re.compile(r'^(?:pass|fail) (?:version|start|wake|stop|token): ', re.M)
 GH_OVERRIDES = ('GH_TOKEN', 'GITHUB_TOKEN', 'GH_ENTERPRISE_TOKEN', 'GITHUB_ENTERPRISE_TOKEN', 'GH_HOST')
 SHAPES = []
@@ -63,7 +74,7 @@ def load_tickets(path):
 
 def git(*args, cwd=None):
     # SECURITY: replace refs are ignored, so a checkout can never show another commit's tree under the head's name.
-    env = dict(os.environ, GIT_NO_REPLACE_OBJECTS='1', GIT_TERMINAL_PROMPT='0')
+    env = dict(stored_login_env(), GIT_NO_REPLACE_OBJECTS='1', GIT_TERMINAL_PROMPT='0')
     try:
         p = subprocess.run(['git', '-C', cwd or ROOT] + list(args), stdin=subprocess.DEVNULL, capture_output=True,
                            text=True, timeout=600, env=env)
@@ -81,9 +92,14 @@ def record_authors():
     return {a.lower() for a in authors}
 
 
+def stored_login_env():
+    # SECURITY: every gh call, the kit's included, goes as the person's stored github.com login, never an override.
+    # SECURITY: names are filtered before any value is read, so a blocked override's value never enters this process.
+    return dict({k: os.environ[k] for k in list(os.environ) if k not in GH_OVERRIDES}, GH_HOST='github.com')
+
+
 def gh(args, send=None):
-    # SECURITY: every read and write goes as the person's stored github.com login, never a token or host override.
-    env = {k: v for k, v in os.environ.items() if k not in GH_OVERRIDES}
+    env = stored_login_env()
     try:
         return subprocess.run(['gh'] + args + ['--hostname', 'github.com'], input=None if send is None else json.dumps(send),
                               stdin=subprocess.DEVNULL if send is None else None, capture_output=True, text=True,
@@ -103,7 +119,7 @@ def gh_json(args, send=None):
 
 
 def read_comments(number, cache):
-    path = 'repos/%s/issues/%d/comments?per_page=100' % (OPENWIZ, number)
+    path = 'repos/%s/issues/%d/comments?per_page=%d' % (OPENWIZ, number, PAGE)
     saved = cache.get(path)
     if not (isinstance(saved, dict) and set(saved) == {'etag', 'comments', 'more'}):
         saved = None
@@ -112,14 +128,15 @@ def read_comments(number, cache):
     lines = head.splitlines()
     status = lines[0].split()[1] if lines and len(lines[0].split()) > 1 else ''
     headers = {k.strip().lower(): v.strip() for k, _, v in (h.partition(':') for h in lines[1:])}
+    linked = bool(re.search(r'rel="(?:next|last)"', headers.get('link', '')))
     if status == '304' and saved:
-        found, more = saved['comments'], saved['more']
+        found, more = saved['comments'], saved['more'] or linked or len(saved['comments']) >= PAGE
     elif status == '200' and p.returncode == 0:
         try:
             found = [{'id': c['id'], 'login': c['user']['login'], 'body': c['body'] or ''} for c in json.loads(body)]
         except (ValueError, KeyError, TypeError):
             raise Refused('GitHub gave an unreadable answer for #%d' % number)
-        more = bool(re.search(r'rel="(?:next|last)"', headers.get('link', '')))
+        more = linked
         if headers.get('etag'):
             cache[path] = {'etag': headers['etag'], 'comments': found, 'more': more}
     else:
@@ -144,10 +161,90 @@ def run_kit(driver, entry, wait, settings, login):
     command = [sys.executable, '-I', rig.KIT, '--driver', driver, '--repo', settings['repo'],
                '--ticket', str(settings['ticket']), '--harness', entry['harness'], '--model', entry['model'],
                '--wait', str(wait)]
-    p = subprocess.run(command, cwd=ROOT, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True)
+    p = subprocess.run(command, cwd=ROOT, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True,
+                       env=stored_login_env())
     sys.stderr.write(p.stdout)
     sys.stderr.flush()
     return p.returncode, rig.record_stdout(p.stdout, settings, login)
+
+
+def receipt_py(record, listing, login, folder):
+    return subprocess.run([sys.executable, '-I', os.path.join(HERE, 'receipt.py'), record, '--listing', listing,
+                           '--run-by', login, '-o', folder], stdin=subprocess.DEVNULL, capture_output=True, text=True,
+                          env=stored_login_env())
+
+
+def rebuilt_receipt(out, r, login):
+    folder = tempfile.mkdtemp()
+    try:
+        p = receipt_py(os.path.join(out, r['record']), r['listing'], login, folder)
+        if p.returncode != 0:
+            return None
+        with open(p.stdout.strip()) as f:
+            return os.path.relpath(p.stdout.strip(), folder), f.read()
+    except OSError:
+        return None
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
+
+
+def check_journal(plan, settings, out):
+    def ok(value, pattern):
+        return isinstance(value, str) and re.fullmatch(pattern, value) is not None
+
+    def stamp(value):
+        try:
+            return value is None or bool(datetime.datetime.strptime(value, STAMP))
+        except (TypeError, ValueError):
+            return False
+
+    def index(value, top=None):
+        return type(value) is int and value >= 0 and (top is None or value < top)
+
+    if not (isinstance(plan, dict) and set(plan) == JOURNAL_KEYS and ok(plan['login'], r'[A-Za-z0-9-]{1,39}') and
+            plan['outcome'] in (0, 1) and type(plan['outcome']) is int and type(plan['ref']) is bool and
+            isinstance(plan['comments'], list) and plan['comments'] and
+            isinstance(plan['receipts'], list) and isinstance(plan['put'], list) and
+            (plan['fork'] is None or ok(plan['fork'], r'[A-Za-z0-9-]{1,39}/WizMarket')) and
+            (plan['pull'] is None or ok(plan['pull'], r'https://github\.com/openwizdev/WizMarket/pull/[0-9]+'))):
+        raise Refused('%s is not a publish heads.py wrote' % JOURNAL)
+    for c in plan['comments']:
+        if not (isinstance(c, dict) and set(c) == {'pr', 'body', 'run', 'tried', 'url'} and
+                index(c['pr']) and c['pr'] > 0 and
+                isinstance(c['body'], str) and ok(c['run'], r'[0-9a-f]{32}') and stamp(c['tried']) and
+                (c['url'] is None or ok(c['url'], COMMENT_URL))):
+            raise Refused('%s holds a comment heads.py did not plan' % JOURNAL)
+        lines = COMMENT.fullmatch(c['body'])
+        if c['url'] is None and (lines is None or holds_credential_after_check_names(c['body']) or
+                                 rig.record_stdout(lines.group(1), settings, plan['login']) != lines.group(1)):
+            raise Refused('%s holds a comment that is not public kit output, so nothing is posted' % JOURNAL)
+    for r in plan['receipts']:
+        if not (isinstance(r, dict) and set(r) == {'rel', 'text', 'listing', 'pr', 'comment', 'record'} and
+                ok(r['record'], RECORD_REL) and
+                ok(r['rel'], RECEIPT_REL.pattern) and RECEIPT_REL.fullmatch(r['rel']).group(1) == r['listing'] and
+                index(r['pr']) and r['pr'] > 0 and index(r['comment'], len(plan['comments'])) and
+                isinstance(r['text'], str)):
+            raise Refused('%s holds a receipt heads.py did not plan' % JOURNAL)
+        if holds_credential_after_check_names(r['text']):
+            raise Refused('%s holds a receipt with a credential, so nothing is posted' % JOURNAL)
+        # SECURITY: a receipt is published only as receipt.py rebuilds it from its run record under the verified login.
+        if rebuilt_receipt(out, r, plan['login']) != (r['rel'], r['text']) or \
+                not receipt_matches_comment(os.path.join(out, r['record']), r, plan['comments'][r['comment']]):
+            raise Refused('%s holds a receipt that is not its run record\'s receipt, so nothing is posted' % JOURNAL)
+    if not all(isinstance(rel, str) for rel in plan['put']) or \
+            not set(plan['put']) <= {r['rel'] for r in plan['receipts']}:
+        raise Refused('%s puts a file it does not plan' % JOURNAL)
+
+
+def receipt_matches_comment(record, r, comment):
+    try:
+        rec = rig.read_json(record, 'the run record')
+        lines = COMMENT.fullmatch(comment['body'])
+        return comment['pr'] == r['pr'] and lines is not None and lines.group(1) == rec['stdout'] and \
+            comment['body'].split('\n', 1)[0].endswith(
+                ' live kit run: 5 of 5 pass**, at head `%s`' % rec['driver_commit'])
+    except (Refused, TypeError, KeyError):
+        return False
 
 
 def comment_for(ticket, passed, head, stdout):
@@ -164,7 +261,8 @@ def save(path, plan):
 class Session:
     def __init__(self, args):
         self.args, self.failed, self.login, self.folder, self.read = args, False, None, None, {}
-        self.plan = {'comments': [], 'receipts': [], 'fork': None, 'ref': False, 'put': [], 'pull': None}
+        self.plan = {'login': None, 'outcome': None, 'comments': [], 'receipts': [], 'fork': None, 'ref': False,
+                     'put': [], 'pull': None}
 
     def say(self, line):
         print(line, flush=True)
@@ -188,15 +286,13 @@ class Session:
         if not self.args.post:
             self.say('would post on %s#%d:' % (OPENWIZ, pr))
             print(text, end='', flush=True)
-        self.plan['comments'].append({'pr': pr, 'body': text, 'url': None})
+        self.plan['comments'].append({'pr': pr, 'body': text, 'run': secrets.token_hex(16), 'tried': None, 'url': None})
         return len(self.plan['comments']) - 1
 
     def receipt(self, host, ticket, record_path, comment):
         if self.folder is None:
             self.folder = tempfile.mkdtemp(dir=self.args.out, prefix='wizmarket-')
-        p = subprocess.run([sys.executable, '-I', os.path.join(HERE, 'receipt.py'), record_path, '--listing',
-                            ticket['listing'], '--run-by', self.run_by(), '-o', self.folder],
-                           stdin=subprocess.DEVNULL, capture_output=True, text=True)
+        p = receipt_py(record_path, ticket['listing'], self.run_by(), self.folder)
         if p.returncode != 0:
             why = (p.stderr.strip().splitlines() or ['exit %d' % p.returncode])[-1]
             self.refuse(host, 'no receipt: ' + why)
@@ -213,7 +309,7 @@ class Session:
             self.say('would add %s to %s:' % (rel, WIZMARKET))
             print(text, end='', flush=True)
         self.plan['receipts'].append({'rel': rel, 'text': text, 'listing': ticket['listing'], 'pr': ticket['pr'],
-                                      'comment': comment})
+                                      'comment': comment, 'record': os.path.relpath(record_path, self.args.out)})
 
     def host(self, name, ticket, configs, settings, kit_head, authors, cache):
         number = ticket['ticket']
@@ -233,9 +329,9 @@ class Session:
         config = configs.get(name.casefold())
         if config is None:
             return self.say('skipped %s: no host config' % name)
+        if name.casefold() in {h.casefold() for h in self.args.allow_cost}:
+            config = dict(config, cost='none')
         why = rig.check_host(config)
-        if why == 'cost' and name.casefold() in {h.casefold() for h in self.args.allow_cost}:
-            why = None
         if why:
             return self.say('skipped %s: %s' % (name, why))
         if git('fetch', '-q', '--no-tags', 'origin', head) is None:
@@ -290,15 +386,54 @@ class Publish:
         save(self.path, self.plan)
 
     def run(self):
+        if gh_json(['api', 'user']).get('login') != self.plan['login']:
+            raise Refused('gh is signed in as another login than this publish was planned under, so nothing is posted')
         for c in self.plan['comments']:
+            if c['url'] is not None:
+                continue
+            body = c['body'] + RUN_LINE % c['run']
+            if c['tried']:
+                c['url'] = self.posted(c, body)
             if c['url'] is None:
-                c['url'] = gh_json(['api', '-X', 'POST', 'repos/%s/issues/%d/comments' % (OPENWIZ, c['pr']), '--input',
-                                    '-'], {'body': c['body']})['html_url']
+                c['tried'] = datetime.datetime.now(datetime.timezone.utc).strftime(STAMP)
                 save(self.path, self.plan)
-                print('posted ' + c['url'], flush=True)
+                c['url'] = gh_json(['api', '-X', 'POST', 'repos/%s/issues/%d/comments' % (OPENWIZ, c['pr']), '--input',
+                                    '-'], {'body': body})['html_url']
+            save(self.path, self.plan)
+            print('posted ' + c['url'], flush=True)
         if self.plan['receipts']:
             self.wizmarket(self.plan['receipts'])
         os.remove(self.path)
+
+    def posted(self, c, body):
+        # SECURITY: run identity is this run's marker under the stored login on any page, never a body match or a clock.
+        marker, mine = RUN_LINE.strip() % c['run'], []
+        for page in range(1, MAX_PAGES + 1):
+            found = gh_json(['api', 'repos/%s/issues/%d/comments?per_page=%d&page=%d' % (OPENWIZ, c['pr'], PAGE, page)])
+            if not (isinstance(found, list) and all(isinstance(f, dict) for f in found)):
+                raise Refused('cannot tell whether the earlier comment on #%d was posted, so nothing is posted' % c['pr'])
+            mine += [f for f in found if isinstance(f.get('user'), dict) and f['user'].get('login') == self.plan['login']
+                     and isinstance(f.get('body'), str) and marker in f['body']]
+            if len(found) < PAGE:
+                break
+        else:
+            raise Refused('#%d has more comments than heads.py reads, so nothing is posted' % c['pr'])
+        if len(mine) > 1:
+            raise Refused('#%d holds this run\'s comment more than once' % c['pr'])
+        if mine and mine[0]['body'] != body:
+            raise Refused('an earlier comment of this run on #%d was changed, so nothing is posted' % c['pr'])
+        url = mine[0].get('html_url') if mine else None
+        if mine and not (isinstance(url, str) and re.fullmatch(COMMENT_URL, url) and
+                         url.split('/pull/')[1].split('#')[0] == str(c['pr'])):
+            raise Refused('#%d gave an unreadable comment address, so nothing is posted' % c['pr'])
+        return url
+
+    @staticmethod
+    def intended(found, head, title, body):
+        return [p['html_url'] for p in found if isinstance(p, dict) and p.get('state') == 'open' and
+                p.get('title') == title and p.get('body') == body and isinstance(p.get('head'), dict) and
+                p['head'].get('label') == head and isinstance(p.get('base'), dict) and p['base'].get('ref') == 'main'
+                ] if isinstance(found, list) else []
 
     def wizmarket(self, receipts):
         title = 'Kit receipts: 5 of 5 for %s' % ', '.join(sorted({r['listing'] for r in receipts}))
@@ -338,10 +473,11 @@ class Publish:
             except (ValueError, KeyError, TypeError):
                 url = None
             if url is None:
-                found = gh_json(['api', 'repos/%s/pulls?head=%s&state=all' % (WIZMARKET, urllib.parse.quote(head, safe=':'))])
-                if not (isinstance(found, list) and len(found) == 1):
+                found = self.intended(gh_json(['api', 'repos/%s/pulls?head=%s&state=open' % (
+                    WIZMARKET, urllib.parse.quote(head, safe=':'))]), head, title, body)
+                if len(found) != 1:
                     raise Refused('gh could not open the WizMarket pull request (exit %d)' % p.returncode)
-                url = found[0]['html_url']
+                url = found[0]
             self.step('pull', url)
         print('posted ' + self.plan['pull'], flush=True)
 
@@ -352,6 +488,19 @@ class Publish:
             return base64.b64decode(json.loads(p.stdout)['content']).decode() if p.returncode == 0 else None
         except (ValueError, KeyError, TypeError):
             return None
+
+
+def preview(plan):
+    print('would finish the publish an earlier --post left unfinished:')
+    for c in plan['comments']:
+        if c['url'] is None:
+            print('would post on %s#%d:\n%s' % (OPENWIZ, c['pr'], c['body']), end='')
+    for r in plan['receipts']:
+        if r['rel'] not in plan['put']:
+            print('would add %s to %s:\n%s' % (r['rel'], WIZMARKET, r['text']), end='')
+    if plan['receipts'] and plan['pull'] is None:
+        print('would open a pull request on %s' % WIZMARKET)
+    sys.stdout.flush()
 
 
 def run(args):
@@ -368,11 +517,14 @@ def run(args):
     os.makedirs(args.out, exist_ok=True)
     journal = os.path.join(args.out, JOURNAL)
     if os.path.exists(journal):
+        plan = rig.read_json(journal, JOURNAL)
+        check_journal(plan, settings, args.out)
         if not args.post:
-            raise Refused('--out holds %s, an unfinished publish; rerun with --post to finish it' % JOURNAL)
+            preview(plan)
+            return plan['outcome']
         print('finishing the publish an earlier --post left unfinished', flush=True)
-        Publish(journal, rig.read_json(journal, JOURNAL)).run()
-        return 0
+        Publish(journal, plan).run()
+        return plan['outcome']
     cache_path = os.path.join(args.out, ETAGS)
     cache = rig.read_json(cache_path, ETAGS) if os.path.exists(cache_path) else {}
     session = Session(args)
@@ -384,6 +536,8 @@ def run(args):
             json.dump(cache, f)
         os.replace(cache_path + '.part', cache_path)
     if args.post and session.plan['comments']:
+        session.plan.update(login=session.run_by(), outcome=1 if session.failed else 0)
+        check_journal(session.plan, settings, args.out)
         save(journal, session.plan)
         Publish(journal, session.plan).run()
     return 1 if session.failed else 0

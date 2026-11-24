@@ -1,0 +1,7 @@
+# Red: the archive test against a fake that does not archive a thread started without --no-archive-after-execute; 42 agent-CLI stubs first on PATH, OPENWIZ_GITHUB_APP_KEY unset
+
+$ python3 -I adapters/local/harnesses/amp/test_row.py
+pass amp: mode default starts `amp -x <prompt> --stream-json --no-archive-after-execute --model synthetic-1` and wakes `amp threads continue <thread id> -x <prompt> --stream-json`
+pass amp: mode allow-all starts `amp -x <prompt> --stream-json --no-archive-after-execute --model synthetic-1 --dangerously-allow-all` and wakes `amp threads continue <thread id> -x <prompt> --stream-json --dangerously-allow-all`
+fail amp: without --no-archive-after-execute, amp archives the started thread and the wake fails: the kit passed
+exit=1

@@ -1595,6 +1595,253 @@ class FinalRound(Helper):
         self.assert_never_exposed(done)
 
 
+class SnapshotByName(Helper):
+    api, minted, inside_run, deletes = Revoke.api, Revoke.minted, RevokeReview.inside_run, FinalRound.deletes
+
+    def test_a_fallback_retires_an_unreadable_run_snapshot_by_name(self):
+        # comment-ok: catches: a fallback that skips a run snapshot it cannot read, leaving it under its
+        # active name, so once it is readable again after GitHub refused the revoke the run's gh gets the token.
+        self.minted()
+        refusing = self.api(status=401)
+        inner = (f'chmod 000 "$OPENWIZ_AGENT_TOKEN_RUN"; OPENWIZ_TOKEN_SERVICE_READBACK=failed "$PY" -I "$H" '
+                 f'start {" ".join(REQ)}; chmod 600 "$OPENWIZ_AGENT_TOKEN_RUN" 2>/dev/null; gh pr list')
+        done = self.inside_run(inner, refusing)
+        self.assertEqual(self.deletes(refusing), [("DELETE", sha(f"Bearer {TOKEN}"))])
+        self.assertEqual((done.returncode, self.calls("gh")), (128, []), "the retired snapshot is never served")
+        self.assertEqual(list(self.private.glob("run-*")), [])
+        self.assert_never_exposed(done)
+
+    WANTED = {"requester": "builder-1", "repositories": [REPO], "permissions": WRITE}
+
+    def loaded(self):
+        helper = load_helper()
+        private = helper.Private(self.env, create=True)
+        self.addCleanup(os.close, private.fd)
+        cache = helper.cache_name(self.WANTED)
+        self.assertEqual(cache, self.token_file().name, "the test and the helper name one request")
+        return helper, private, cache
+
+    def test_a_snapshot_write_never_replaces_a_snapshot_already_at_its_name(self):
+        # comment-ok: catches: a snapshot write that replaces a file already at its name, so a run whose
+        # saved path a later run's name collides with is handed that later run's token.
+        for branch in ("cached", "minted"):
+            with self.subTest(branch):
+                shutil.rmtree(self.private, True)
+                self.minted()
+                helper, private, cache = self.loaded()
+                name = helper.snapshot_prefix(cache) + "0" * 16 + ".json"
+                helper.token_for(private, self.WANTED, self.env, snapshot=name)
+                first = hashlib.sha256((self.private / name).read_bytes()).hexdigest()
+                if branch == "cached":
+                    (self.private / cache).write_text(json.dumps(
+                        {"token": TOKEN2, "expires_at": int(time.time()) + 3600, **self.WANTED}))
+                else:
+                    (self.private / cache).unlink()
+                    self.answers(answer(token=TOKEN2))
+                refused = False
+                try:
+                    helper.token_for(private, self.WANTED, self.env, snapshot=name)
+                except (helper.Refused, FileExistsError):
+                    refused = True
+                self.assertEqual((refused, hashlib.sha256((self.private / name).read_bytes()).hexdigest()),
+                                 (True, first),
+                                 "the second write is refused and the first snapshot is unchanged")
+
+    def test_a_later_run_never_takes_the_name_a_live_run_had_retired(self):
+        # comment-ok: catches: a later run taking the snapshot name a still-running run saved, once a
+        # fallback retired it, so the first run's saved path serves the later run's token.
+        self.minted()
+        helper = load_helper()
+        refusing = self.api(status=401)
+        env = dict(self.env, OPENWIZ_GITHUB_API_BASE=refusing.base())
+        real, forced, seen = helper.secrets.token_hex, ["ab" * 8], {}
+
+        def token_hex(size):
+            return forced.pop() if forced and size == 8 else real(size)
+
+        def later_child(command, child, **kwargs):
+            seen["later"] = child.get(helper.RUN_MARK)
+            reason, token = helper.snapshot_token(seen["first"][helper.RUN_MARK], seen["first"],
+                                                  check=lambda snapshot, env: None)
+            seen["served"] = (reason, token and sha(token))
+            return 0
+
+        def first_child(command, child, **kwargs):
+            seen["first"] = dict(child)
+            helper.start(list(REQ), dict(env, OPENWIZ_TOKEN_SERVICE_READBACK="failed"))
+            self.answers(answer(token=TOKEN2))
+            forced.append("ab" * 8)
+            with mock.patch.object(helper, "execute", later_child):
+                return helper.run([*REQ, "--", "true"], dict(env))
+
+        with mock.patch.object(helper.secrets, "token_hex", token_hex), \
+                mock.patch.object(helper, "execute", first_child), \
+                mock.patch.object(helper.sys, "stderr"):
+            self.assertEqual(helper.run([*REQ, "--", "true"], dict(env)), 0)
+        first = seen["first"][helper.RUN_MARK]
+        self.assertTrue(first.endswith("ab" * 8 + ".json"), "the first run took the forced name")
+        self.assertEqual(seen["served"], ("no current token", None),
+                         "the first run's saved path serves nothing after its snapshot was retired")
+        self.assertTrue(seen["later"] and seen["later"] != first, "the later run got a name of its own")
+        self.assertEqual(sorted(p.name for p in self.private.iterdir() if not p.name.startswith(("token-", "kept-"))),
+                         [], "each run removes its snapshot and its reservation")
+
+    def test_a_later_run_never_takes_the_path_of_a_retired_snapshot_named_before_the_upgrade(self):
+        # comment-ok: catches: an upgraded run whose snapshot name has the shape a pre-upgrade run's
+        # random name had, so once pre-upgrade code retires a still-running legacy run's snapshot
+        # without claiming a slot, a later run can draw that same name and serve its token there.
+        for retired_by in ("upgraded fallback", "pre-upgrade retire"):
+            with self.subTest(retired_by):
+                shutil.rmtree(self.private, True)
+                cache = self.minted()
+                helper, private, cache_file = self.loaded()
+                legacy = self.private / ("run-" + cache.name[len("token-"):][:16] + "ab" * 8 + ".json")
+                legacy.write_text(json.dumps({"token": TOKEN, "expires_at": int(time.time()) + 3600,
+                                              "request": cache.name}))
+                legacy.chmod(0o600)
+                if retired_by == "upgraded fallback":
+                    refusing = self.api(status=401)
+                    self.helper("start", *REQ, OPENWIZ_TOKEN_SERVICE_READBACK="failed",
+                                OPENWIZ_GITHUB_API_BASE=refusing.base())
+                else:
+                    with helper.locked(private):
+                        helper.drop(private, cache_file, cache_file, retire=True)
+                        helper.drop(private, legacy.name, cache_file, retire=True)
+                    self.assertEqual(list(self.private.glob("slot-*")), [], "pre-upgrade retire claims no slot")
+                self.assertFalse(legacy.exists(), "the legacy snapshot was retired")
+                self.answers(answer(token=TOKEN2))
+                real, seen = helper.secrets.token_hex, {}
+
+                def later_child(command, child, **kwargs):
+                    seen["later"] = child.get(helper.RUN_MARK)
+                    reason, token = helper.snapshot_token(
+                        str(legacy), dict(self.env, **{helper.RUN_MARK: str(legacy)}),
+                        check=lambda snapshot, env: None)
+                    seen["served"] = (legacy.exists(), reason, token and sha(token))
+                    return 0
+
+                with mock.patch.object(helper.secrets, "token_hex", lambda size: "ab" * 8 if size == 8 else real(size)), \
+                        mock.patch.object(helper, "execute", later_child), \
+                        mock.patch.object(helper.sys, "stderr"):
+                    self.assertEqual(helper.run([*REQ, "--", "true"], dict(self.env)), 0)
+                self.assertTrue(seen["later"], "the later run was handed a snapshot")
+                self.assertEqual((seen["later"] != str(legacy), seen["served"]),
+                                 (True, (False, "no current token", None)),
+                                 "the legacy run's retired path stays empty and serves nothing while a later run runs")
+
+    def test_a_run_that_cannot_reserve_a_free_name_is_refused(self):
+        # comment-ok: catches: a run that goes on under a name another run still holds once every
+        # name it draws is taken, instead of stopping with no token handed over.
+        self.minted()
+        helper, private, cache = self.loaded()
+        with mock.patch.object(helper.secrets, "token_hex", lambda size: "cd" * size):
+            name = helper.reserve(private, cache)
+            with self.assertRaises(helper.Refused):
+                helper.reserve(private, cache)
+        self.assertEqual([p.name for p in self.private.glob("slot-*")], [helper.slot_name(name)])
+
+    def test_a_fallback_or_revoke_retires_a_readable_snapshot_named_before_the_upgrade(self):
+        # comment-ok: catches: a fallback or revoke that selects snapshots by name alone, so a run started
+        # before the upgrade, whose snapshot has a random name, keeps serving a token that was retired.
+        for route in ("fallback", "revoke"):
+            with self.subTest(route):
+                shutil.rmtree(self.private, True)
+                cache = self.minted()
+                until = int(time.time()) + 3600
+                legacy = self.private / ("run-" + "f0" * 16 + ".json")
+                other = self.private / ("run-" + "0f" * 16 + ".json")
+                legacy.write_text(json.dumps({"token": TOKEN, "expires_at": until, "request": cache.name}))
+                other.write_text(json.dumps({"token": "synthetic-agent-token-3", "expires_at": until,
+                                             "request": "token-" + "0" * 32 + ".json"}))
+                legacy.chmod(0o600)
+                other.chmod(0o600)
+                refusing = self.api(status=401)
+                args = ("start", *REQ) if route == "fallback" else ("revoke", *REQ)
+                done = self.helper(*args, OPENWIZ_TOKEN_SERVICE_READBACK="failed",
+                                   OPENWIZ_GITHUB_API_BASE=refusing.base())
+                self.assertEqual(self.deletes(refusing), [("DELETE", sha(f"Bearer {TOKEN}"))])
+                self.assertEqual(sorted(p.name for p in self.private.glob("run-*")), [other.name],
+                                 "the request's legacy snapshot is retired, and another request's is left")
+                api = self.api()
+                later = self.helper("revoke", *REQ, OPENWIZ_GITHUB_API_BASE=api.base())
+                self.assertEqual((later.returncode, later.stderr), (0, ""), "the kept copy is still revocable")
+                self.assertEqual(self.deletes(api), [("DELETE", sha(f"Bearer {TOKEN}"))])
+                self.assert_never_exposed(done, later)
+
+    def test_a_read_that_fails_never_leaves_a_retired_name_active(self):
+        # comment-ok: catches: a retirement that reads a snapshot or the cache entry before it removes
+        # active names, so one read-time I/O error escapes and every active name stays in place.
+        for route in ("fallback", "revoke"):
+            for bad in ("run-", "token-"):
+                with self.subTest(route=route, unreadable=bad):
+                    shutil.rmtree(self.private, True)
+                    self.minted()
+                    helper, private, cache = self.loaded()
+                    name = helper.snapshot_prefix(cache) + "0" * 16 + ".json"
+                    helper.token_for(private, self.WANTED, self.env, snapshot=name)
+                    broken = os.stat(self.private / (name if bad == "run-" else cache)).st_ino
+                    read = helper.Private.read
+
+                    def failing(folder, entry, broken=broken, read=read):
+                        try:
+                            found = os.stat(entry, dir_fd=folder.fd).st_ino
+                        except OSError:
+                            found = None
+                        if found == broken:
+                            raise OSError(5, "synthetic read failure")
+                        return read(folder, entry)
+
+                    refusing = self.api(status=401)
+                    env = dict(self.env, OPENWIZ_GITHUB_API_BASE=refusing.base(),
+                               OPENWIZ_TOKEN_SERVICE_READBACK="failed")
+                    escaped = None
+                    with mock.patch.object(helper.Private, "read", failing), \
+                            mock.patch.object(helper.sys, "stderr"):
+                        try:
+                            if route == "fallback":
+                                helper.token_for(private, self.WANTED, env)
+                            else:
+                                helper.revoke_request(private, refusing.base(), cache)
+                        except OSError as error:
+                            escaped = error.errno
+                    active = sorted(p.name for p in self.private.iterdir()
+                                    if p.name.startswith(("token-", "run-")))
+                    self.assertEqual((escaped, active), (None, []), "no error escapes and no active name is left")
+                    self.assertEqual(self.deletes(refusing), [("DELETE", sha(f"Bearer {TOKEN}"))])
+
+    def test_a_pre_upgrade_helper_still_retires_an_upgraded_run_snapshot(self):
+        # comment-ok: catches: revoke trusting a pre-upgrade run channel's answer alone, so an
+        # upgraded run's disjoint-shaped snapshot (readable or mode 000) stays active after GitHub
+        # refuses the revoke.
+        for mode in (0o600, 0):
+            with self.subTest(mode=oct(mode)):
+                shutil.rmtree(self.private, True)
+                self.minted()
+                helper, private, cache_file = self.loaded()
+                name = helper.reserve(private, cache_file)
+                helper.token_for(private, self.WANTED, self.env, snapshot=name)
+                snapshot = self.private / name
+                snapshot.chmod(mode)
+                refusing = self.api(status=401)
+                env = dict(self.env, OPENWIZ_GITHUB_API_BASE=refusing.base())
+                with mock.patch.object(helper, "ask_run", return_value="GitHub refused"), \
+                        mock.patch.object(helper.sys, "stderr"):
+                    self.assertEqual(helper.revoke(list(REQ), env), 1)
+                if snapshot.exists():
+                    snapshot.chmod(0o600)
+                reason, served = helper.snapshot_token(
+                    str(snapshot), dict(env, **{helper.RUN_MARK: str(snapshot)}),
+                    check=lambda path, env: None)
+                self.assertEqual((snapshot.exists(), reason, served and sha(served)),
+                                 (False, "no current token", None),
+                                 "upgraded revoke retires the snapshot even after an old run channel answered")
+                if mode == 0o600:
+                    api = self.api()
+                    later = self.helper("revoke", *REQ, OPENWIZ_GITHUB_API_BASE=api.base())
+                    self.assertEqual((later.returncode, later.stderr), (0, ""), "the kept copy is still revocable")
+                    self.assertEqual(self.deletes(api), [("DELETE", sha(f"Bearer {TOKEN}"))])
+                    self.assert_never_exposed(later)
+
 
 def live_token_in(path):
     return json.loads(path.read_text()).get("token") if path.exists() else None

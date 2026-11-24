@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+import importlib.machinery, importlib.util, os, sys, uuid
+sys.dont_write_bytecode = True
+path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'key-host', 'driver')
+spec = importlib.util.spec_from_loader('keyhost', importlib.machinery.SourceFileLoader('keyhost', path))
+d = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(d)
+t = d.t
+base_launch = d.launch
+
+
+def echo_launch(req, run, woken):
+    if woken:
+        d.ask('POST', d.path(run, 'wake'), d.body(req))
+    else:
+        cid = str(uuid.uuid4())
+        reply = d.ask('POST', d.path(run, 'start'), {'id': cid, 'ticket': req['ticket']})
+        if not isinstance(reply, dict) or reply.get('id') != cid:
+            raise t.Refused('host create reply id did not match sent uuid', 'check the host create reply')
+    return base_launch(req, run, woken)
+
+
+t.launch = echo_launch
+if __name__ == '__main__':
+    t.main()

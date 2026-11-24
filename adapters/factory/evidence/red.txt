@@ -1,0 +1,48 @@
+# Red run: python3 -I adapters/factory/test_driver.py, against adapters/factory/driver as a copy of adapters/template/driver (only its name and state folder changed), before the Factory code. PATH is fixtures/bin, /usr/bin and /bin only: the synthetic droid, never Factory.
+test_kit_passes_all_five (__main__.Factory.test_kit_passes_all_five) ... FAIL
+test_other_harness_is_refused_before_anything_runs (__main__.Factory.test_other_harness_is_refused_before_anything_runs) ... FAIL
+test_wake_without_a_session_starts_nothing (__main__.Factory.test_wake_without_a_session_starts_nothing) ... FAIL
+
+======================================================================
+FAIL: test_kit_passes_all_five (__main__.Factory.test_kit_passes_all_five)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/factory/test_driver.py", line 90, in test_kit_passes_all_five
+    self.assertEqual((p.returncode, p.stdout.splitlines()), (0, [
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[218 chars]er']) != (0, ['pass version: openwiz:records v1, an[245 chars]er'])
+
+First differing element 0:
+1
+0
+
+- (1,
++ (0,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+-   'fail start: no builder status note appeared within 8 seconds',
+-   'fail wake: not run: start failed',
+-   'fail stop: not run: start failed',
++   'pass start: the run posted builder status note 1',
++   'pass wake: the run edited builder status note 1',
++   'pass stop: the run ended, and a wake after it is refused',
+    'pass token: no login or token passed through the driver']) : 
+
+======================================================================
+FAIL: test_other_harness_is_refused_before_anything_runs (__main__.Factory.test_other_harness_is_refused_before_anything_runs)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/factory/test_driver.py", line 102, in test_other_harness_is_refused_before_anything_runs
+    self.assertIn('droid', out['next'])
+AssertionError: 'droid' not found in 'install claude and sign in to it yourself, then start again'
+
+======================================================================
+FAIL: test_wake_without_a_session_starts_nothing (__main__.Factory.test_wake_without_a_session_starts_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/factory/test_driver.py", line 115, in test_wake_without_a_session_starts_nothing
+    self.assertEqual(code, 1, err)
+AssertionError: 0 != 1 : {'run': 'run-0123456789ab', 'woke': True}
+
+----------------------------------------------------------------------
+Ran 3 tests in N.NNNs
+
+FAILED (failures=3)

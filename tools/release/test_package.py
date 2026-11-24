@@ -192,12 +192,17 @@ class Package(unittest.TestCase):
                 executable = path.endswith('/driver')
                 self.assertEqual(assets['runtime/' + path]['mode'], '0700' if executable else '0600', path)
                 self.assertEqual(os.access(adapters.parent / path, os.X_OK), executable, path)
+            fixtures = adapters.parent / 'kernel/driver-kit/fixtures'
+            fixtures.mkdir()
+            shutil.copy2(ROOT / 'kernel/driver-kit/fixtures/fake-harness', fixtures)
+            (fixtures / 'devin').symlink_to('fake-harness')
+            fixture_path = os.pathsep.join((str(fixtures), os.environ['PATH']))
             # The installed kit's first check, `version`, passes against the installed driver.
             checked = subprocess.run([sys.executable, '-I', 'kernel/driver-kit/kit.py', '--driver', 'adapters/boat/driver',
-                                      '--repo', 'synthetic/throwaway', '--ticket', '1', '--harness', 'absent-harness',
+                                      '--repo', 'synthetic/throwaway', '--ticket', '1', '--harness', 'fake-harness',
                                       '--model', 'synthetic', '--tracker', str(root / 'tracker.json'), '--wait', '1'],
                                      cwd=adapters.parent, capture_output=True, text=True, timeout=120,
-                                     env={'PATH': os.environ['PATH']})
+                                     env={'PATH': fixture_path, 'OPENWIZ_TEMPLATE_LIVE': '1'})
             self.assertEqual(checked.stdout.splitlines()[:1],
                              ['pass version: openwiz:records v1, and the schema is driver v1'], checked.stderr)
             devin = subprocess.run([str(adapters / 'devin/driver'), 'start'], input=json.dumps(
@@ -211,7 +216,7 @@ class Package(unittest.TestCase):
                                     '--repo', 'synthetic/throwaway', '--ticket', '1', '--harness', 'devin',
                                     '--model', 'default', '--tracker', str(root / 'tracker.json'), '--wait', '1'],
                                    cwd=adapters.parent, capture_output=True, text=True, timeout=300,
-                                   env={'PATH': os.environ['PATH'], 'HOME': str(root), 'DEVIN_ORG_ID': 'org-syn0001',
+                                   env={'PATH': fixture_path, 'HOME': str(root), 'DEVIN_ORG_ID': 'org-syn0001',
                                         'OPENWIZ_HOSTKEY_TEST_ORIGIN': 'http://127.0.0.1:9'})
             self.assertEqual(keyed.stdout.splitlines()[-1:], [
                 'pass token: no login or token passed through the driver, and on start, wake and stop the devin key '

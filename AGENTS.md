@@ -10,10 +10,7 @@ OpenWiz runs coding agents in fleets: the user approves a plan, and agents build
 
 ## Public and private
 
-- This repository and everything on it (files, commits, branches, issues, pull requests, comments) is public. The private repository `jparker2006/ClosedWiz` keeps grills, exact decision words, live evidence, machine details and orchestration state.
-- Never put in a public record: a thread id, anyone's exact words from a decision, credentials, real identifiers or personal facts, or live session content. Fixtures and examples are synthetic.
-- A public decision gives who decided, the date, the decision in plain words and a `[private record](https://github.com/jparker2006/ClosedWiz/issues/<N>#issuecomment-<C>)` link to the comment holding the words.
-- The full rules are the [open development contract](contracts/open-development.v1.md). The `build-ticket` skill says when to read it; release, publish, privacy-check and importer work always needs it.
+Everything on this repository is public; private records live in `jparker2006/ClosedWiz`. Before any public write, read the [public-writes card](docs/agents/public-writes.md); `python3 -I skills/launch-fleet/scripts/context.py <role>` prints it with your role's settings. Release, publishing, privacy-check and importer work also needs the full [open development contract](contracts/open-development.v1.md).
 
 ## Where things are
 

@@ -1,0 +1,4 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/local/test_harnesses.py --rows adapters/local/harnesses
+# row.json env is {} (no KILO_NO_DAEMON); agent-CLI stubs first on PATH
+fail kilo: daemon: the background process the row declares still runs after stop
+exit 1

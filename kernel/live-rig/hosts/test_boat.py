@@ -72,7 +72,16 @@ class BoatHost(unittest.TestCase):
             os.chmod(os.path.join(self.stubs, name), 0o700)
         self.path = os.pathsep.join([self.stubs, self.fakes, tools])
 
-    def rig(self, signed_in=('boat', 'gh'), missing=()):
+    def rig(self, signed_in=('boat', 'gh'), missing=(), cost=None):
+        if cost is not None:
+            path = os.path.join(self.checkout, 'kernel', 'live-rig', 'hosts', 'boat.json')
+            with open(path) as f:
+                config = json.load(f)
+            config['cost'] = cost
+            with open(path, 'w') as f:
+                json.dump(config, f)
+            git(self.checkout, 'commit', '-qam', 'allow fixture-only probes')
+            self.head = git(self.checkout, 'rev-parse', 'HEAD')
         for name, command in STATUS.items():
             if name in missing:
                 continue
@@ -120,15 +129,15 @@ class BoatHost(unittest.TestCase):
 
     def test_signed_in_everywhere_is_skipped_as_cost_and_starts_nothing(self):
         self.why = 'cost'
-        self.assertEqual(self.rig(), [STATUS['boat'], STATUS['gh']])
+        self.assertEqual(self.rig(), [])
 
     def test_boat_signed_out_is_skipped_and_reads_nothing_more(self):
         self.why = 'not signed in: boat'
-        self.assertEqual(self.rig(signed_in=('gh',)), [STATUS['boat']])
+        self.assertEqual(self.rig(signed_in=('gh',), cost='none'), [STATUS['boat']])
 
     def test_gh_signed_out_is_skipped(self):
-        self.why = 'not signed in: env'
-        self.assertEqual(self.rig(signed_in=('boat',)), [STATUS['boat'], STATUS['gh']])
+        self.why = 'not signed in: gh'
+        self.assertEqual(self.rig(signed_in=('boat',), cost='none'), [STATUS['boat'], STATUS['gh']])
 
     def test_boat_missing_is_skipped_and_runs_no_status_command(self):
         self.why = 'not installed: boat'

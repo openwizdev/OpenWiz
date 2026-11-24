@@ -1,0 +1,28 @@
+# Red: test_row.py against the empty agy row (row.json is {}, no fake); agent-CLI stubs first on PATH, OPENWIZ_GITHUB_APP_KEY unset
+
+$ python3 -I adapters/local/harnesses/agy/test_row.py
+fail agy: the fake is executable and takes the documented start line, exiting 0
+fail agy: the fake exits 2 on --mode=default, a mode agy --mode does not take
+fail agy: the fake exits 2 on --permission-mode, which agy does not have
+fail agy: the fake exits 2 on --effort turbo, not an effort level
+fail agy: the fake exits 2 on --output-format yaml, not an output format
+fail agy: the fake exits 2 on --input-format stream-json, which drops a -p prompt
+fail agy: the fake exits 2 on --conversation with no id
+fail agy: the fake exits 2 on no -p prompt
+fail agy: the fake exits 2 without AGY_CLI_DISABLE_AUTO_UPDATE=true
+fail agy: not installed is a D3 error that names agy, and starts nothing
+fail agy: not signed in is a D3 error that says so, its next names agy, and the log keeps agy's own line
+fail agy: mode auto starts `agy -p <prompt> --output-format stream-json --model <m> --mode=auto`
+fail agy: mode accept-edits starts `agy -p <prompt> --output-format stream-json --model <m> --mode=accept-edits`
+fail agy: mode dangerously-skip-permissions starts `agy -p <prompt> --output-format stream-json --model <m> --dangerously-skip-permissions`
+fail agy: mode settings starts `agy -p <prompt> --output-format stream-json --model <m>`
+fail agy: wake resumes with `agy -p <prompt> --conversation <the init event's id> --output-format stream-json --model <m> --mode=accept-edits`
+fail agy: each turn gets AGY_CLI_DISABLE_AUTO_UPDATE=true
+fail agy: effort low ends the start line with --effort low
+fail agy: effort medium ends the start line with --effort medium
+fail agy: effort high ends the start line with --effort high
+fail agy: effort xhigh ends the start line with --effort xhigh
+fail agy: effort max ends the start line with --effort max
+fail agy: a wake passes the start's effort again, since agy's --effort lasts one invocation
+fail agy: an effort agy has no level for is refused with the fixed next, starting nothing
+exit=1

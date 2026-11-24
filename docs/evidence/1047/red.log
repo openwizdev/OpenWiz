@@ -1,0 +1,31 @@
+# Red runs before the fix (#1047)
+
+## 1. tools/open-import/test_import.py on untouched main
+
+Command: python3 -I -B tools/open-import/test_import.py
+Exit: 1
+Summary:
+  Ran 24 tests in 22.169s
+  FAILED (failures=48)
+
+Representative failures:
+- test_planted_private_content_refuses_before_destination_changes (path='ci/shard/README.md', rule='T3'):
+  AssertionError: 'T3' not found in 'unlisted source paths: 1; review the carriage list\n'
+- test_reviewed_carriage_patch_excludes_private_retired:
+  AssertionError: 1 != 0 : unlisted patch carriage
+- test_tree_parent_bytes_preservation_repeat_and_no_private_objects:
+  AssertionError: 1 != 0 : unlisted source paths: 7; review the carriage list
+
+Cause: 7 deleted paths remain in REVIEWED_CARRIAGE and CLASSIFIED_2405
+(ci/shard/README.md, ci/shard/shard.py, ci/shard/test.py, ci/shard/times.tsv,
+ci/main-batch/shadow.py, tools/live-smoke/restriction.py,
+tools/live-smoke/test_restriction.py).
+
+## 2. tools/skills-eval/test.py deliberate break check
+
+Command: python3 -I tools/skills-eval/test.py (with planted assertion mismatch in scratch copy)
+Exit: 1
+Summary:
+  Ran 2 tests in 0.013s
+  FAILED (failures=2)
+  AssertionError: Lists differ: [] != ['planted']

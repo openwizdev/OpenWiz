@@ -78,20 +78,21 @@ def pinned_path(folder, *fixtures):
     os.symlink(sys.executable, os.path.join(tools, 'python3'))
     guarded = stub_path(path=tools)
     stub_dir = guarded.split(os.pathsep, 1)[0]
-    return os.pathsep.join((*fixtures, guarded)), stub_dir
+    path = os.pathsep.join((*fixtures, guarded))
+    no_real_harness(path, stub_dir, fixtures)
+    return path, stub_dir
 
 
-def no_real_harness(path, stub_dir):
+def no_real_harness(path, stub_dir, fixtures=(os.path.join(HERE, 'fixtures'),)):
     if stub_dir not in path.split(os.pathsep):
         raise AssertionError('the shared stub directory is missing from PATH')
-    stub_dir = os.path.realpath(stub_dir)
+    allowed = {os.path.realpath(stub_dir)} | {os.path.realpath(f) for f in fixtures}
     for name in os.listdir(stub_dir):
         found = shutil.which(name, path=path)
-        if found:
-            resolved = os.path.realpath(found)
-            if not (os.path.dirname(resolved) == stub_dir or resolved.startswith(REPO + os.sep)):
-                raise AssertionError('%s on PATH is outside the fixtures and stubs: a test could launch a real harness'
-                                     % name)
+        if found and os.path.dirname(os.path.realpath(found)) not in allowed:
+            raise AssertionError('%s on the PATH is %s, outside the fixtures and stubs: a test could launch a real harness'
+                                 % (name, found))
+    return path
 
 
 def alive(pid):
@@ -128,7 +129,8 @@ class Template(unittest.TestCase):
         self.addCleanup(shutil.rmtree, self.stub_dir)
         no_real_harness(path, self.stub_dir)
         self.env = dict(os.environ, KIT_TEST=self.mark, FAKE_TURNS=self.turns, FAKE_HOLD=self.hold,
-                        OPENWIZ_TEMPLATE_STATE=os.path.join(self.folder, 'state'), PATH=path)
+                        OPENWIZ_TEMPLATE_STATE=os.path.join(self.folder, 'state'), OPENWIZ_TEMPLATE_LIVE='1',
+                        PATH=path)
 
     def tearDown(self):
         os.chmod(self.folder, 0o700)
@@ -209,6 +211,36 @@ class Template(unittest.TestCase):
                          os.path.join(HERE, 'fixtures', 'fake-harness'))
         with self.assertRaisesRegex(AssertionError, 'could launch a real harness'):
             self.call('start', dict(START, harness='claude'), PATH=outside + os.pathsep + self.env['PATH'])
+
+    def test_without_the_live_opt_in_start_and_wake_start_no_harness(self):
+        for live in ('', '0', 'yes'):
+            with self.subTest(live=live):
+                code, out = self.call('start', START, OPENWIZ_TEMPLATE_LIVE=live)
+                self.assertEqual((code, out.get('error')),
+                                 (1, 'the template starts no harness unless OPENWIZ_TEMPLATE_LIVE=1 is set'), out)
+        code, run = self.call('start', START)
+        self.assertEqual(code, 0, run)
+        self.logged(1)
+        code, out = self.call('wake', run, OPENWIZ_TEMPLATE_LIVE='')
+        self.assertEqual((code, out.get('error')),
+                         (1, 'the template starts no harness unless OPENWIZ_TEMPLATE_LIVE=1 is set'), out)
+        self.assertEqual(len(self.logged()), 1, 'a turn started without the live opt-in')
+        self.assertEqual(self.call('stop', run), (0, dict(run, stopped=True)))
+
+    def test_a_checkout_executable_outside_the_fixtures_is_refused_as_a_harness(self):
+        local = os.path.join(self.folder, 'local')
+        os.mkdir(local)
+        os.symlink(os.path.realpath(DRIVER), os.path.join(local, 'codex'))
+        self.assertTrue(os.path.realpath(shutil.which('codex', path=local)).startswith(REPO + os.sep))
+        with self.assertRaisesRegex(AssertionError, 'codex on the PATH is .*outside the fixtures'):
+            no_real_harness(local + os.pathsep + self.stub_dir, self.stub_dir)
+
+    def test_the_readmes_start_example_answers_as_documented(self):
+        with open(os.path.join(HERE, 'README.md')) as f:
+            found = re.search(r"^echo '(\{.*\})' \\\n *\| adapters/template/driver start +# (.*)$", f.read(), re.M)
+        self.assertIsNotNone(found, 'the README has no start example')
+        self.assertEqual(self.call('start', json.loads(found.group(1)), OPENWIZ_TEMPLATE_LIVE='')[1],
+                         json.loads(found.group(2)))
 
     def args(self, count=0):
         deadline = time.monotonic() + 10
