@@ -230,16 +230,24 @@ class Driver(unittest.TestCase):
             self.assertNotIn('synthetic-session-value', json.dumps(self.driver(cmd, {'run': run})[1]))
 
     def test_no_driver_file_names_the_key_or_the_keychain(self):
+        with open(os.path.join(ROOT, 'kernel', 'driver-kit', 'hosts.json')) as f:
+            entry = json.load(f)['tembo']
+        variable, keychain = entry['variable'].encode(), entry['keychain'].encode()
+        disclosed = []
         for folder, _, names in os.walk(HERE):
             for n in names:
                 with open(os.path.join(folder, n), 'rb') as f:
                     lines = f.read().split(b'\n')
                 rel = os.path.relpath(os.path.join(folder, n), HERE)
                 for line in lines:
-                    if rel == 'README.md' and b'openwiz-tembo' in line and b'_API_KEY' in line:
-                        continue
-                    self.assertNotIn(b'TEMBO' + b'_API_KEY', line, rel)
+                    if variable in line or keychain in line:
+                        disclosed.append((rel, line))
                     self.assertIsNone(KEYCHAIN_TOOLS_SPELLED_IN_PARTS.search(line), rel)
+        self.assertEqual(len(disclosed), 1, disclosed)
+        [(rel, line)] = disclosed
+        self.assertEqual(rel, 'README.md')
+        self.assertIn(b'`' + variable + b'`', line)
+        self.assertIn(b'`' + keychain + b'`', line)
 
     def unreadable(self, method, path, code):
         return 'Tembo answered %d to %s %s in a form the driver cannot read' % (code, method, path)
