@@ -46,6 +46,16 @@ def broken(*args):
 t.launch = broken
 t.main()
 '''
+FAKE_CGROUP = '''import importlib.machinery, importlib.util, os, sys
+sys.dont_write_bytecode = True
+spec = importlib.util.spec_from_loader('local', importlib.machinery.SourceFileLoader('local', %r))
+t = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(t)
+t.PROC_CGROUP = os.path.join(os.environ['FAKE_CGROUP'], 'proc')
+t.CGROUP = os.path.join(os.environ['FAKE_CGROUP'], 'sys')
+t.main()
+'''
+CPU = ('OMP_NUM_THREADS', 'PYTHON_CPU_COUNT', 'CARGO_BUILD_JOBS')
 
 
 def alive(pid):
@@ -91,7 +101,8 @@ class Local(unittest.TestCase):
             json.dump({'record_authors': ['Example-Bot[bot]'], 'comments': []}, f)
         self.mark = secrets.token_hex(8)
         self.log = os.path.join(self.folder, 'turns')
-        self.env = dict(os.environ, KIT_TRACKER=self.tracker, LOCAL_TEST=self.mark, GH_TOKEN=TOKEN, FAKE_TURNS=self.log,
+        self.env = dict({k: v for k, v in os.environ.items() if k not in CPU + ('BASH_ENV', 'CLAUDE_ENV_FILE')},
+                        KIT_TRACKER=self.tracker, LOCAL_TEST=self.mark, GH_TOKEN=TOKEN, FAKE_TURNS=self.log,
                         FAKE_REPOS=repos, OPENWIZ_LOCAL_SETTLE='2',
                         OPENWIZ_LOCAL_STATE=os.path.join(self.folder, 'state'),
                         PATH=self.bin + os.pathsep + os.environ.get('PATH', ''))
@@ -615,6 +626,81 @@ class Local(unittest.TestCase):
                 self.assertEqual(self.start(harness, repository=aligned)[0], 0)
                 self.until(lambda: len(self.logged()) and self.logged()[-1][4] == mode)
         self.assertEqual([t[4] for t in self.logged()], ['acceptEdits', 'workspace-write'])
+
+    def probed(self, harness='claude', env=None, program=DRIVER):
+        probe = os.path.join(self.folder, 'probe-%s.json' % secrets.token_hex(4))
+        env = dict(env or self.env, FAKE_PROBE=probe)
+        code, out = self.start(harness, env, program)
+        self.assertEqual(code, 0, out)
+        self.until(lambda: os.path.exists(probe) and os.path.getsize(probe))
+        self.assertEqual(self.driver('stop', out, env)[0], 0)
+        with open(probe) as f:
+            return json.load(f)
+
+    def cgroup(self, proc, files):
+        folder = tempfile.mkdtemp(dir=self.folder)
+        with open(os.path.join(folder, 'proc'), 'w') as f:
+            f.write(proc)
+        for path, text in files.items():
+            os.makedirs(os.path.dirname(os.path.join(folder, 'sys', path)), exist_ok=True)
+            with open(os.path.join(folder, 'sys', path), 'w') as f:
+                f.write(text)
+        program = os.path.join(self.folder, 'fake-cgroup')
+        with open(program, 'w') as f:
+            f.write('#!/usr/bin/env python3\n' + FAKE_CGROUP % DRIVER)
+        os.chmod(program, 0o700)
+        return dict(self.env, FAKE_CGROUP=folder), program
+
+    def test_on_linux_a_turns_shells_go_first_under_memory_pressure_and_the_harness_keeps_its_default(self):
+        with open('/proc/self/oom_score_adj') as f:
+            default = f.read().strip()
+        if int(default) >= 500 and not os.environ.get('CI'):
+            self.skipTest('this host already starts processes at oom_score_adj 500 or more')
+        self.assertLess(int(default), 500, 'this host already starts processes at 500 or more')
+        owner = os.path.join(self.folder, 'owner-bash-env')
+        with open(owner, 'w') as f:
+            f.write('export FAKE_OWNER_MARK=owner-kept\n')
+        for harness in ('claude', 'codex'):
+            with self.subTest(harness):
+                probe = self.probed(harness, dict(self.env, BASH_ENV=owner))
+                self.assertEqual(probe['harness'], default, "the harness's own oom_score_adj changed")
+                self.assertEqual(probe['bash'], '500', "a turn's shell does not go first")
+                self.assertEqual(probe['owner'], 'owner-kept', "the owner's BASH_ENV was lost")
+                self.assertEqual(probe['claude'], '500' if harness == 'claude' else None)
+                helper = probe['BASH_ENV']
+                self.assertTrue(helper.startswith(self.env['OPENWIZ_LOCAL_STATE'] + os.sep), helper)
+                self.assertEqual(os.stat(helper).st_mode & 0o777, 0o600)
+
+    def test_a_cpu_quota_sizes_the_turns_workers_and_an_owner_set_value_wins(self):
+        for name, proc, files in (
+                ('v2', '0::/agents/run\n', {'agents/run/cpu.max': '200000 100000\n'}),
+                ('v2 parent', '0::/agents/run\n', {'agents/cpu.max': '150000 100000\n',
+                                                     'agents/run/cpu.max': 'max 100000\n'}),
+                ('v1', '4:cpu,cpuacct:/agents\n1:name=systemd:/agents\n',
+                 {'cpu,cpuacct/agents/cpu.cfs_quota_us': '200000\n', 'cpu,cpuacct/agents/cpu.cfs_period_us': '100000\n'})):
+            with self.subTest(name):
+                env, program = self.cgroup(proc, files)
+                self.assertEqual({k: self.probed(env=env, program=program)[k] for k in CPU}, dict.fromkeys(CPU, '2'))
+        env, program = self.cgroup('0::/agents\n', {'agents/cpu.max': '200000 100000\n'})
+        probe = self.probed(env=dict(env, OMP_NUM_THREADS='7'), program=program)
+        self.assertEqual({k: probe[k] for k in CPU}, {'OMP_NUM_THREADS': '7', 'PYTHON_CPU_COUNT': '2',
+                                                       'CARGO_BUILD_JOBS': '2'})
+
+    def test_with_no_cpu_quota_or_without_proc_as_on_macos_the_turn_environment_is_unchanged(self):
+        for name, proc, files in (('max', '0::/agents\n', {'agents/cpu.max': 'max 100000\n'}),
+                                  ('none', '0::/agents\n', {}),
+                                  ('v1 unlimited', '4:cpu,cpuacct:/a\n', {'cpu,cpuacct/a/cpu.cfs_quota_us': '-1\n',
+                                                                         'cpu,cpuacct/a/cpu.cfs_period_us': '100000\n'})):
+            with self.subTest(name):
+                env, program = self.cgroup(proc, files)
+                probe = self.probed(env=env, program=program)
+                self.assertEqual({k: probe[k] for k in CPU}, dict.fromkeys(CPU))
+        env, program = self.cgroup('0::/agents\n', {'agents/cpu.max': '200000 100000\n'})
+        macos = dict(env, PATH=NO_PROC + os.pathsep + self.env['PATH'], NO_PROC_PYTHON=sys.executable)
+        probe = self.probed(env=macos, program=program)
+        self.assertEqual({k: probe[k] for k in CPU + ('BASH_ENV', 'CLAUDE_ENV_FILE')}, dict.fromkeys(CPU + ('BASH_ENV', 'CLAUDE_ENV_FILE')))
+        with open('/proc/self/oom_score_adj') as f:
+            self.assertEqual(probe['bash'], f.read().strip())
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
