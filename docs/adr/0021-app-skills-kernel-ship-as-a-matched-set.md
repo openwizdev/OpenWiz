@@ -1,7 +1,5 @@
 # The app, the skills and the kernel ship as a matched set
 
-**Status: proposed** (D1-D3 below wait on Jake's word).
-
 On 2026-11-24 the app at openwiz.dev/app showed contradictions on a real
 factory: a spec was "9 of 11 done" and had "no tickets" in the same view. The
 cause that day was the app's own read, which went over GitHub's per-query
@@ -54,14 +52,14 @@ against itself.
 - Hand-written app fixtures stay only for the app's own failure cases (GitHub
   limits, partial reads), not for the record shapes.
 
-## Open: one ask to Jake
+## Settled
 
-- **D1** Where a repository says what wrote it: rows in `docs/agents/fleet.md`
-  (recommended; setup already owns that file) or a new `.openwiz/manifest.json`.
-- **D2** The support window: current and previous records contract
-  (recommended), or every version forever.
-- **D3** Records-contract versioning: its own whole number, bumped only on
-  breaking changes (recommended), or tied to the OpenWiz version.
+- **D1** A repository says what wrote its records in rows of
+  `docs/agents/fleet.md`, which `setup` writes.
+- **D2** The app reads the current and the previous records contract;
+  anything else gets one clear "update your skills" banner.
+- **D3** The records contract has its own whole-number version, bumped only on
+  breaking changes (expand, then contract).
 
-Source: P0 brief from the orchestrator, 2026-11-24 (Jake's call to pin the
-three parts); private record to follow on Jake's word.
+Source: Jake, 2026-11-24: accepted D1-D3 as recommended and placed the work in
+0.1.2 ([private record](https://github.com/jparker2006/ClosedWiz/issues/3065#issuecomment-7139385706)).
