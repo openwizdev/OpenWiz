@@ -308,7 +308,7 @@ class Check(unittest.TestCase):
         self.verdict(self.call('--tree', self.tree), rule)
 
     def test_hosted_workflows(self):
-        labels = ('ubuntu-latest', 'ubuntu-24.04', 'ubuntu-slim', 'macos-15', 'macos-15-intel')
+        labels = ('ubuntu-latest', 'ubuntu-24.04', 'ubuntu-24.04-arm', 'ubuntu-slim', 'macos-15', 'macos-15-intel')
         for label in labels:
             for runner in (label, '[' + label + ']', "'" + label + "'"):
                 self.workflow('on: push\njobs:\n  test:\n    runs-on: ' + runner + '\n    steps:\n      - run: echo ok\n')

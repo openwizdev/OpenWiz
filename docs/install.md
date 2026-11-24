@@ -8,13 +8,13 @@ Check which OpenWiz release GitHub offers before choosing a host. This guide des
 
 ## Before you start
 
-- Use macOS on Apple silicon or Intel, or x86_64 Linux with glibc 2.34 or later. On Linux, `ldd --version` shows the glibc version. Linux ARM has no 0.1.1 package.
+- Use macOS on Apple silicon or Intel, or Linux on x86_64 or ARM64 (aarch64) with glibc 2.34 or later. On Linux, `ldd --version` shows the glibc version.
 - Install Python 3.9 or later, Git and the GitHub CLI. Sign in to GitHub yourself with `gh auth login`.
 - Choose where your agents run. On **this computer**, sign in to Claude Code or Codex. For **boat.dev**, sign in with the host as prompted. For **CloudRoom**, install and sign in to CloudRoom. On an Intel Mac, the available hosts are this computer and boat.dev.
 
 ## What the agent does
 
-1. **Check the machine.** The agent reads the chosen release, clones its tag and runs the installer’s preflight. It reports the target, free space and required tools. The local and boat.dev paths can proceed without `room-cli`.
+1. **Check the machine.** The agent reads the chosen release, clones its tag and runs the installer’s preflight. It reports the target, free space and required tools. The four 0.1.1 targets are `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-gnu` and `aarch64-unknown-linux-gnu`. The pinned skill still describes Linux ARM as refused. On ARM64 Linux, run the 0.1.1 preflight below and use the target it reports. The local and boat.dev paths can proceed without `room-cli`.
 
 2. **Install the verified package.** The agent uses the same tag for the installer, manifest and download. The example below is for the published v0.1.1 assets. Set `openwiz` to a new temporary clone path, `target` to the target printed by preflight, `assets` to a new private download folder and `root` to the install folder (default `~/.local/lib/openwiz`).
 

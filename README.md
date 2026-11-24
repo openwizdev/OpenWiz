@@ -13,7 +13,7 @@ This branch documents **OpenWiz 0.1.1**. Check the [published releases](https://
 
 ## Quick start
 
-For 0.1.1 you need Python 3.9 or later, Git, and the GitHub CLI. Use macOS on Apple silicon or Intel, or x86_64 Linux with glibc 2.34 or later. Choose where agents run: this computer with Claude Code or Codex, boat.dev, or CloudRoom. Only the CloudRoom host needs a CloudRoom login. On an Intel Mac, choose this computer or boat.dev.
+For 0.1.1 you need Python 3.9 or later, Git, and the GitHub CLI. Use macOS on Apple silicon or Intel, or Linux on x86_64 or ARM64 (aarch64) with glibc 2.34 or later. Choose where agents run: this computer with Claude Code or Codex, boat.dev, or CloudRoom. Only the CloudRoom host needs a CloudRoom login. On an Intel Mac, choose this computer or boat.dev.
 
 Paste this line into your coding agent:
 

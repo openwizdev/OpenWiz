@@ -252,15 +252,21 @@ class Preflight(Installer):
         missing = OPTIONAL_ROOM_CLI
         mac = {'id': 'target', 'state': 'ok', 'next': 'Supported.'}
         linux = [mac, disk, {'id': 'glibc', 'state': 'ok', 'next': 'glibc 2.36 is enough.'}]
+        linux_arm = [{'id': 'target', 'state': 'ok',
+                      'next': 'Supported. CloudRoom has no Linux ARM desktop build; outside a CloudRoom sandbox,'
+                      ' agents run on this computer or on boat.dev.'},
+                     disk, {'id': 'glibc', 'state': 'ok', 'next': 'glibc 2.36 is enough.'}]
         refused = {'id': 'target', 'state': 'refused',
-                   'next': 'OpenWiz installs on macOS on Apple silicon and on Linux on x86_64.'}
+                   'next': 'OpenWiz installs on macOS (Apple silicon or Intel) and on Linux (x86_64 or aarch64).'}
         cases = ((('Darwin', 'arm64'), ('room-cli', 'gh', 'git'), 0, 'aarch64-apple-darwin',
                   [python, mac, disk] + found, ''),
                  (('Darwin', 'arm64'), ('gh', 'git'), 0, 'aarch64-apple-darwin',
                   [python, mac, disk, missing] + found[1:], ''),
                  (('Linux', 'x86_64'), ('room-cli', 'gh', 'git', 'ldd'), 0, 'x86_64-unknown-linux-gnu',
                   [python] + linux + found, ', running only ldd --version'),
-                 (('Linux', 'aarch64'), ('room-cli', 'gh', 'git', 'ldd'), 5, None,
+                 (('Linux', 'aarch64'), ('room-cli', 'gh', 'git', 'ldd'), 0, 'aarch64-unknown-linux-gnu',
+                  [python] + linux_arm + found, ', running only ldd --version'),
+                 (('Linux', 'armv7l'), ('room-cli', 'gh', 'git', 'ldd'), 5, None,
                   [python, refused] + linux[1:] + found, ', running only ldd --version'))
         for host, tools, code, target, checks, ldd in cases:
             with self.subTest(host=host, tools=tools):
