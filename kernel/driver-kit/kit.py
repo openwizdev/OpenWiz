@@ -787,7 +787,7 @@ class Kit:
         finally:
             host.close()
         field = self.setting and self.setting[0] == 'field' and self.setting[1]
-        reached = bool(field) and len(start_posts) == 1 and holds_field(start_posts[0], field, request['effort'])
+        reached = bool(field) and bool(start_posts) and holds_field(start_posts[0], field, request['effort'])
         return kind, v, bool(start_posts), reached
 
     def key_hosts(self):
