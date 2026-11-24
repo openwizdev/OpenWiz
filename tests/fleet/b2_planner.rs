@@ -189,7 +189,7 @@ fn b2_1196_all_conditional_tables_are_strict_and_other_family() {
     for (case, bad) in [
         (
             "skipped fallback index",
-            fleet.replacen("Reviewer fall-back 1", "Reviewer fall-back 2", 1),
+            fleet.replacen("| Reviewer fall-back 1 |", "| Reviewer fall-back 2 |", 1),
         ),
         (
             "fallback follows builder",

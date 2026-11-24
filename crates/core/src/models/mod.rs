@@ -357,6 +357,9 @@ fn flags<'a>(cell: &'a str, f: &SpawnFlags) -> Result<[&'a str; 3], String> {
         {
             Ok([p, m, e])
         }
+        [a, p, c, e] if [a, c] == [&f.provider, &f.effort] && is_id(p) && is_id(e) => {
+            Ok([p, "default", e])
+        }
         _ => Err(format!("bad flags {inner:?}")),
     }
 }
@@ -393,9 +396,19 @@ fn models_table(
     }
     let mut out = Vec::new();
     let mut next = 0;
+    let mut next_fallback = 1usize;
     for (i, row) in rows.iter().enumerate().skip(2) {
         if row.len() != 5 {
             return Err("a Models row without five cells".into());
+        }
+        if next >= 3 && row[0] == format!("Reviewer fall-back {next_fallback}") {
+            if row[1] == FOLLOWS && row[2..].iter().all(String::is_empty) {
+                return Err(format!("{} cannot follow", row[0]));
+            }
+            choice([&row[1], &row[2], &row[3]], flags(&row[4], f)?)?;
+            next = Role::ALL.len();
+            next_fallback += 1;
+            continue;
         }
         let at = Role::ALL[next..]
             .iter()
