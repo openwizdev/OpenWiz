@@ -18,6 +18,7 @@ jobs:
     outputs:
       tag: ${{ steps.latest.outputs.tag }}
       version: ${{ steps.latest.outputs.version }}
+      rehearsal: ${{ steps.latest.outputs.rehearsal }}
     env:
       GH_TOKEN: ${{ github.token }}
       REPO: ${{ github.repository }}
@@ -31,6 +32,12 @@ jobs:
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "latest published release: $tag"
+          if gh api "repos/$REPO/contents/tools/rehearsal/rehearse.py?ref=$tag" --silent 2>/dev/null; then
+            echo "rehearsal=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "rehearsal=no" >> "$GITHUB_OUTPUT"
+            echo "::notice::$tag has no tools/rehearsal/rehearse.py, so there is nothing to rehearse; neutral, not red"
+          fi
       - name: Download its assets
         env:
           TAG: ${{ steps.latest.outputs.tag }}
@@ -45,6 +52,7 @@ jobs:
   rehearse-linux:
     name: rehearse x86_64-unknown-linux-gnu
     needs: release
+    if: needs.release.outputs.rehearsal == 'yes'
     runs-on: ubuntu-24.04
     container: debian:12
     timeout-minutes: 15
@@ -63,11 +71,10 @@ jobs:
         with:
           ref: ${{ needs.release.outputs.tag }}
           persist-credentials: false
-      - name: The release's commit and its rehearsal
+      - name: The release's commit
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           echo "SOURCE=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
-          test -f tools/rehearsal/rehearse.py || { echo "the release's tag has no tools/rehearsal/rehearse.py" >&2; exit 1; }
       - name: The install skill at the wizskills.lock commit
         run: python3 -I tools/wizskills/install.py
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -89,6 +96,7 @@ jobs:
   rehearse-macos:
     name: rehearse ${{ matrix.target }}
     needs: release
+    if: needs.release.outputs.rehearsal == 'yes'
     strategy:
       fail-fast: false
       matrix:
@@ -107,10 +115,9 @@ jobs:
         with:
           ref: ${{ needs.release.outputs.tag }}
           persist-credentials: false
-      - name: The release's commit and its rehearsal
+      - name: The release's commit
         run: |
           echo "SOURCE=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
-          test -f tools/rehearsal/rehearse.py || { echo "the release's tag has no tools/rehearsal/rehearse.py" >&2; exit 1; }
       - name: The install skill at the wizskills.lock commit
         run: /usr/bin/python3 -I tools/wizskills/install.py
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -144,6 +151,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       REPO: ${{ github.repository }}
       TAG: ${{ needs.release.outputs.tag }}
+      REHEARSAL: ${{ needs.release.outputs.rehearsal }}
       RELEASE: ${{ needs.release.result }}
       LINUX: ${{ needs.rehearse-linux.result }}
       MACOS: ${{ needs.rehearse-macos.result }}
@@ -154,7 +162,11 @@ jobs:
           run="$GITHUB_SERVER_URL/$REPO/actions/runs/$GITHUB_RUN_ID"
           open=$(gh issue list --repo "$REPO" --state open --search 'author:app/github-actions in:title "Daily install check failed"' \
             --json number,title --jq "[.[] | select(.title == \"$title\") | .number] | sort | .[]")
-          echo "release: $RELEASE; rehearse-linux: $LINUX; rehearse-macos: $MACOS; open: ${open:-none}"
+          echo "release: $RELEASE; rehearsal: ${REHEARSAL:-unknown}; rehearse-linux: $LINUX; rehearse-macos: $MACOS; open: ${open:-none}"
+          if [ "$RELEASE" = success ] && [ "$REHEARSAL" = no ]; then
+            echo "neutral: $TAG has no tools/rehearsal/rehearse.py; the tracking issue is left as it is"
+            exit 0
+          fi
           if [ "$RELEASE" = success ] && [ "$LINUX" = success ] && [ "$MACOS" = success ]; then
             for n in $open; do
               gh issue comment "$n" --repo "$REPO" --body "Passed on every target for ${TAG}: $run"
