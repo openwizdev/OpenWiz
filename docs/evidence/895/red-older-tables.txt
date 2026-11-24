@@ -1,0 +1,24 @@
+..F
+======================================================================
+FAIL: test_openwizs_own_models_table_is_its_one_source_and_the_pinned_skills_start_it (__main__.OwnSettings.test_openwizs_own_models_table_is_its_one_source_and_the_pinned_skills_start_it)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/install/tests/journey/test_journey.py", line 916, in test_openwizs_own_models_table_is_its_one_source_and_the_pinned_skills_start_it
+    self.assertEqual([title for title in OLDER_TABLES if '\n## %s\n' % title in text], [], 'older tables left')
+AssertionError: Lists differ: ['Builder', 'Builder for small tickets', '[57 chars]xer'] != []
+
+First list contains 5 additional elements.
+First extra element 0:
+'Builder'
+
++ []
+- ['Builder',
+-  'Builder for small tickets',
+-  'Reviewer for Claude-built',
+-  'Reviewer for GPT-built',
+-  'Fixer'] : older tables left
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.033s
+
+FAILED (failures=1)
