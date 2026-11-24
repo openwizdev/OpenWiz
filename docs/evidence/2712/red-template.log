@@ -1,0 +1,15 @@
+test_without_proc_as_on_macos_stop_warns_when_lsof_failed_in_a_supervisor_that_has_exited (__main__.Template.test_without_proc_as_on_macos_stop_warns_when_lsof_failed_in_a_supervisor_that_has_exited) ... FAIL
+
+======================================================================
+FAIL: test_without_proc_as_on_macos_stop_warns_when_lsof_failed_in_a_supervisor_that_has_exited (__main__.Template.test_without_proc_as_on_macos_stop_warns_when_lsof_failed_in_a_supervisor_that_has_exited)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/template/test_driver.py", line 346, in test_without_proc_as_on_macos_stop_warns_when_lsof_failed_in_a_supervisor_that_has_exited
+    self.assertTrue(os.path.exists(output), 'the output file was removed before stop')
+AssertionError: False is not true : the output file was removed before stop
+
+----------------------------------------------------------------------
+Ran 1 test in 1.787s
+
+FAILED (failures=1)
+exit 1

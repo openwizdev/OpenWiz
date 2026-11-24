@@ -1,0 +1,23 @@
+env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/vps/test_hosts.py Page.test_factory_and_pane_use_the_bootstrapped_tools
+FF
+======================================================================
+FAIL: test_factory_and_pane_use_the_bootstrapped_tools (__main__.Page.test_factory_and_pane_use_the_bootstrapped_tools) (host='factory')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/vps/test_hosts.py", line 238, in test_factory_and_pane_use_the_bootstrapped_tools
+    self.assertNotRegex(sign_in, r'(?i)\b(?:re)?install\b')
+AssertionError: Regex matched: 'Install' matches '(?i)\\b(?:re)?install\\b' in "Install and sign in as [Droid's quickstart](https://docs.factory.com/droid-cli/quickstart) says (run `droid`, finish the browser device pairing). Make an API key on [Factory's settings page](https://app.factory.ai/settings/api-keys). Make the skills your fleet runs available to Droid."
+
+======================================================================
+FAIL: test_factory_and_pane_use_the_bootstrapped_tools (__main__.Page.test_factory_and_pane_use_the_bootstrapped_tools) (host='pane')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/live-rig/vps/test_hosts.py", line 238, in test_factory_and_pane_use_the_bootstrapped_tools
+    self.assertNotRegex(sign_in, r'(?i)\b(?:re)?install\b')
+AssertionError: Regex matched: 'Install' matches '(?i)\\b(?:re)?install\\b' in 'Install Pane and open the app, or start its daemon with `pane --daemon-headless` in a separate terminal and leave it running. Set `CHECKOUT` to the absolute path of the throwaway checkout. Register it with `runpane repos add --path "$CHECKOUT"`. Check that the daemon finds `claude` on its PATH for that checkout with `runpane agents doctor --agent claude --repo "$CHECKOUT" --json`.'
+
+----------------------------------------------------------------------
+Ran 1 test
+
+FAILED (failures=2)
+Exit 1

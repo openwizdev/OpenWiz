@@ -64,8 +64,12 @@ spec.loader.exec_module(kit)
 sys.exit(kit.main(sys.argv[1:]))
 '''
 LEAVES_A_WORKER = '''#!%s -I
-import os, sys
-if sys.argv[1:] == ['start'] and os.fork() == 0:
+import os, subprocess, sys
+driver = %r
+if sys.argv[1:] != ['start']:
+    os.execv(driver, [driver] + sys.argv[1:])
+start = subprocess.run([driver, 'start'])
+if start.returncode == 0 and os.fork() == 0:
     os.setsid()
     if os.fork() == 0:
         null = os.open(os.devnull, os.O_RDWR)
@@ -75,7 +79,7 @@ if sys.argv[1:] == ['start'] and os.fork() == 0:
             f.write('%%d\\n' %% os.getpid())
         os.execv(sys.executable, [sys.executable, '-c', 'import time; time.sleep(30)'])
     os._exit(0)
-os.execv(%r, [%r] + sys.argv[1:])
+sys.exit(start.returncode)
 '''
 REQUEST = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude',
            'model': 'opus-5-5-1m'}
@@ -186,7 +190,8 @@ class Conductor(unittest.TestCase):
             outside.wait()
         self.assertEqual((p.returncode, p.stdout.splitlines()), (0, [
             'pass version: openwiz:records v1, and the schema is driver v1',
-            'pass start: the run posted builder status note 1',
+            'pass start: the run posted builder status note 1; effort: a start with it was refused, as the README\'s '
+            'Effort: line says',
             'pass wake: the run edited builder status note 1',
             'pass stop: the run ended, and a wake after it is refused',
             'pass token: no login or token passed through the driver, and on start, wake and stop the conductor key '
@@ -198,7 +203,7 @@ class Conductor(unittest.TestCase):
         worker = os.path.join(self.folder, 'worker')
         leaves = os.path.join(self.folder, 'leaves-a-worker')
         with open(leaves, 'w') as f:
-            f.write(LEAVES_A_WORKER % (sys.executable, worker, DRIVER, DRIVER))
+            f.write(LEAVES_A_WORKER % (sys.executable, DRIVER, worker))
         os.chmod(leaves, 0o700)
         try:
             p = self.kit(leaves, 3)
@@ -213,7 +218,8 @@ class Conductor(unittest.TestCase):
         self.assertIn('fail stop: a process the run started still runs after stop', p.stdout, p.stdout + p.stderr)
 
     def test_start_wake_and_stop_reach_one_workspace(self):
-        code, out = self.driver('start', REQUEST)
+        model = 'example/provider/opus-5-5-1m'
+        code, out = self.driver('start', dict(REQUEST, model=model))
         self.assertEqual(code, 0, out)
         run = out['run']
         self.assertEqual(self.driver('wake', {'run': run}), (0, {'run': run, 'woke': True}))
@@ -221,6 +227,8 @@ class Conductor(unittest.TestCase):
         self.assertEqual(self.calls()[0], [
             ('POST', '/v0/workspaces'), ('POST', '/v0/sessions/se_fake0001/messages'),
             ('POST', '/v0/sessions/se_fake0001/cancel'), ('POST', '/v0/workspaces/ws_fake0001/archive')])
+        with open(self.log) as f:
+            self.assertEqual(json.loads(next(f))['body']['model'], model)
         self.assertEqual(self.workspaces()['ws_fake0001'], {
             'name': 'openwiz-' + run, 'repositoryUrl': 'https://github.com/example/site', 'agent': 'claude',
             'status': 'archived'})

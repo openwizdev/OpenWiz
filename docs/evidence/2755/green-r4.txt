@@ -1,0 +1,7 @@
+test_a_full_or_paged_comment_window_is_refused_after_one_read_even_from_the_saved_etag (__main__.Heads.test_a_full_or_paged_comment_window_is_refused_after_one_read_even_from_the_saved_etag) ... ok
+test_a_ticket_with_no_frozen_head_line_from_a_record_author_is_skipped_and_starts_no_kit (__main__.Heads.test_a_ticket_with_no_frozen_head_line_from_a_record_author_is_skipped_and_starts_no_kit) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.672s
+
+OK

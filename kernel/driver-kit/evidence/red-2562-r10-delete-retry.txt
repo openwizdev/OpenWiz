@@ -1,0 +1,59 @@
+red at a79fc568 (kit unfixed), removing plain retry and R11-R13 machinery
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/driver-kit/test_kit.py -v Kit.test_an_effort_refusal_that_may_have_left_a_run_starts_no_other Kit.test_a_refusal_that_is_not_about_effort_is_reported_plainly
+test_an_effort_refusal_that_may_have_left_a_run_starts_no_other (__main__.Kit.test_an_effort_refusal_that_may_have_left_a_run_starts_no_other) ... FAIL
+test_a_refusal_that_is_not_about_effort_is_reported_plainly (__main__.Kit.test_a_refusal_that_is_not_about_effort_is_reported_plainly) ... 
+  test_a_refusal_that_is_not_about_effort_is_reported_plainly (__main__.Kit.test_a_refusal_that_is_not_about_effort_is_reported_plainly) [planted/effort-refuses-every-start] ... FAIL
+  test_a_refusal_that_is_not_about_effort_is_reported_plainly (__main__.Kit.test_a_refusal_that_is_not_about_effort_is_reported_plainly) [planted/effort-wrong-next] ... FAIL
+
+======================================================================
+FAIL: test_an_effort_refusal_that_may_have_left_a_run_starts_no_other (__main__.Kit.test_an_effort_refusal_that_may_have_left_a_run_starts_no_other)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 557, in test_an_effort_refusal_that_may_have_left_a_run_starts_no_other
+    self.assertRegex(out[1], r'^fail start: run (run-\S+): .*; next: stop \1, which ends any thread it started, '
+AssertionError: Regex didn't match: '^fail start: run (run-\\S+): .*; next: stop \\1, which ends any thread it started, then start a new run$' not found in "fail start: effort: start refused medium without the refusal text: run run-1782db4a3f2b: Cloudroom's answer to the start names no thread of this project; it may have left a run, so the kit started none without effort; next: stop run-1782db4a3f2b, which ends any thread it started, then start a new run"
+
+======================================================================
+FAIL: test_a_refusal_that_is_not_about_effort_is_reported_plainly (__main__.Kit.test_a_refusal_that_is_not_about_effort_is_reported_plainly) [planted/effort-refuses-every-start]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 531, in test_a_refusal_that_is_not_about_effort_is_reported_plainly
+    self.assertEqual(json.load(f), once, 'the kit sent a second start after an effort refusal')
+AssertionError: Lists differ: [{'sa[68 chars]ed': 1, 'effort': False, 'token': False, 'cana[72 chars]lse}] != [{'sa[68 chars]ed': 0, 'effort': False, 'token': True, 'canary': False}]
+
+First differing element 1:
+{'sampled': 1, 'effort': False, 'token': False, 'canary': False}
+{'sampled': 0, 'effort': False, 'token': True, 'canary': False}
+
+First list contains 1 additional elements.
+First extra element 2:
+{'sampled': 0, 'effort': False, 'token': True, 'canary': False}
+
+  [{'canary': False, 'effort': True, 'sampled': 1, 'token': False},
+-  {'canary': False, 'effort': False, 'sampled': 1, 'token': False},
+   {'canary': False, 'effort': False, 'sampled': 0, 'token': True}] : the kit sent a second start after an effort refusal
+
+======================================================================
+FAIL: test_a_refusal_that_is_not_about_effort_is_reported_plainly (__main__.Kit.test_a_refusal_that_is_not_about_effort_is_reported_plainly) [planted/effort-wrong-next]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 531, in test_a_refusal_that_is_not_about_effort_is_reported_plainly
+    self.assertEqual(json.load(f), once, 'the kit sent a second start after an effort refusal')
+AssertionError: Lists differ: [{'sa[68 chars]ed': 1, 'effort': False, 'token': False, 'cana[72 chars]lse}] != [{'sa[68 chars]ed': 0, 'effort': False, 'token': True, 'canary': False}]
+
+First differing element 1:
+{'sampled': 1, 'effort': False, 'token': False, 'canary': False}
+{'sampled': 0, 'effort': False, 'token': True, 'canary': False}
+
+First list contains 1 additional elements.
+First extra element 2:
+{'sampled': 0, 'effort': False, 'token': True, 'canary': False}
+
+  [{'canary': False, 'effort': True, 'sampled': 1, 'token': False},
+-  {'canary': False, 'effort': False, 'sampled': 1, 'token': False},
+   {'canary': False, 'effort': False, 'sampled': 0, 'token': True}] : the kit sent a second start after an effort refusal
+
+----------------------------------------------------------------------
+Ran 2 tests in 9.081s
+
+FAILED (failures=3)

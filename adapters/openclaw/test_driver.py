@@ -341,5 +341,12 @@ class OpenClaw(unittest.TestCase):
         self.assertTrue(self.until(lambda: not owned()), 'the turn it could not save still runs')
 
 
+    def test_a_provider_qualified_model_reaches_acpx(self):
+        code, out = self.driver('start', dict(REQUEST, model='openrouter/anthropic/claude-sonnet-4.6'))
+        self.assertEqual(code, 0, out)
+        first = self.acpx()[0]
+        self.assertEqual(first[first.index('--model') + 1], 'openrouter/anthropic/claude-sonnet-4.6')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

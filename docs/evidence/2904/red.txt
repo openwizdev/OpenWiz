@@ -1,0 +1,277 @@
+test_a_credential_sent_as_a_provider_qualified_model_is_still_refused (__main__.Kit.test_a_credential_sent_as_a_provider_qualified_model_is_still_refused) ... 
+  test_a_credential_sent_as_a_provider_qualified_model_is_still_refused (__main__.Kit.test_a_credential_sent_as_a_provider_qualified_model_is_still_refused) [openrouter/<synthetic credential shape>] ... FAIL
+test_bad_model_shapes_are_refused_by_the_schema_and_the_local_driver (__main__.Kit.test_bad_model_shapes_are_refused_by_the_schema_and_the_local_driver) ... FAIL
+test_real_provider_qualified_models_pass_the_schema_and_the_local_driver (__main__.Kit.test_real_provider_qualified_models_pass_the_schema_and_the_local_driver) ... 
+  test_real_provider_qualified_models_pass_the_schema_and_the_local_driver (__main__.Kit.test_real_provider_qualified_models_pass_the_schema_and_the_local_driver) [kimi-code/kimi-for-coding] (source='https://github.com/MoonshotAI/kimi-code/blob/9a82686b0e91c532f4d49da0bc088a0eac9bdede/docs/en/reference/kimi-command.md#L127') ... FAIL
+  test_real_provider_qualified_models_pass_the_schema_and_the_local_driver (__main__.Kit.test_real_provider_qualified_models_pass_the_schema_and_the_local_driver) [kimi-code/kimi-for-coding-highspeed] (source='https://github.com/MoonshotAI/kimi-code/blob/9a82686b0e91c532f4d49da0bc088a0eac9bdede/docs/en/configuration/config-files.md#L50') ... FAIL
+  test_real_provider_qualified_models_pass_the_schema_and_the_local_driver (__main__.Kit.test_real_provider_qualified_models_pass_the_schema_and_the_local_driver) [azure/gpt-5.4] (source='https://github.com/badlogic/pi-mono/blob/8209929fb553e7a8c91dc0894569f9ec43dd201f/packages/coding-agent/docs/providers.md#L140') ... FAIL
+  test_real_provider_qualified_models_pass_the_schema_and_the_local_driver (__main__.Kit.test_real_provider_qualified_models_pass_the_schema_and_the_local_driver) [openrouter/typesafe/jev-1.13] (source='https://github.com/badlogic/pi-mono/blob/8209929fb553e7a8c91dc0894569f9ec43dd201f/packages/coding-agent/docs/codemode.md#L95') ... FAIL
+  test_real_provider_qualified_models_pass_the_schema_and_the_local_driver (__main__.Kit.test_real_provider_qualified_models_pass_the_schema_and_the_local_driver) [anthropic/claude-sonnet-5-5] (source='https://github.com/anomalyco/opencode/blob/6d04312b71ac33e7c150234d7087da01388ff2ab/services/site/src/docs/v1/content/commands.mdx#L26') ... FAIL
+  test_real_provider_qualified_models_pass_the_schema_and_the_local_driver (__main__.Kit.test_real_provider_qualified_models_pass_the_schema_and_the_local_driver) [openrouter/google/gemini-3.8-flash] (source='https://github.com/anomalyco/opencode/blob/6d04312b71ac33e7c150234d7087da01388ff2ab/services/site/src/docs/v1/content/troubleshooting.mdx#L239') ... FAIL
+  test_real_provider_qualified_models_pass_the_schema_and_the_local_driver (__main__.Kit.test_real_provider_qualified_models_pass_the_schema_and_the_local_driver) [openrouter/anthropic/claude-sonnet-4-20250514] (source='https://github.com/Kilo-Org/kilocode/blob/bfdec5496922452222223c01b4cc6c89305b0279/packages/kilo-docs/pages/ai-providers/openrouter.md#L55') ... FAIL
+  test_real_provider_qualified_models_pass_the_schema_and_the_local_driver (__main__.Kit.test_real_provider_qualified_models_pass_the_schema_and_the_local_driver) [openrouter/openai/gpt-5] (source='https://github.com/Kilo-Org/kilocode/blob/bfdec5496922452222223c01b4cc6c89305b0279/specs/v2/config.md#L261') ... FAIL
+  test_real_provider_qualified_models_pass_the_schema_and_the_local_driver (__main__.Kit.test_real_provider_qualified_models_pass_the_schema_and_the_local_driver) [openrouter/anthropic/claude-sonnet-4.6] (source='https://github.com/charmbracelet/catwalk/blob/v3.2.9/internal/providers/configs/openrouter.json#L7') ... FAIL
+  test_real_provider_qualified_models_pass_the_schema_and_the_local_driver (__main__.Kit.test_real_provider_qualified_models_pass_the_schema_and_the_local_driver) [openrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free] (source='https://github.com/charmbracelet/catwalk/blob/v3.2.9/internal/providers/configs/openrouter.json#L2145') ... FAIL
+  test_real_provider_qualified_models_pass_the_schema_and_the_local_driver (__main__.Kit.test_real_provider_qualified_models_pass_the_schema_and_the_local_driver) [fireworks/accounts/fireworks/models/nemotron-lightning-3p5-30b-a3b] (source='https://github.com/charmbracelet/catwalk/blob/v3.2.9/internal/providers/configs/fireworks.json#L337') ... FAIL
+
+======================================================================
+FAIL: test_a_credential_sent_as_a_provider_qualified_model_is_still_refused (__main__.Kit.test_a_credential_sent_as_a_provider_qualified_model_is_still_refused) [openrouter/<synthetic credential shape>]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 641, in test_a_credential_sent_as_a_provider_qualified_model_is_still_refused
+    self.assertEqual(self.model_start(model)[1:],
+AssertionError: Tuples differ: (1, 'model is not valid', True) != (1, 'model looks like a credential, so nothing was saved or started', True)
+
+First differing element 1:
+'model is not valid'
+'model looks like a credential, so nothing was saved or started'
+
+- (1, 'model is not valid', True)
++ (1, 'model looks like a credential, so nothing was saved or started', True)
+
+======================================================================
+FAIL: test_bad_model_shapes_are_refused_by_the_schema_and_the_local_driver (__main__.Kit.test_bad_model_shapes_are_refused_by_the_schema_and_the_local_driver)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 635, in test_bad_model_shapes_are_refused_by_the_schema_and_the_local_driver
+    self.assertEqual(self.model_start('m' * 100)[:3],
+AssertionError: Tuples differ: ('model does not match ^[A-Za-z0-9][A-Za-z[40 chars]lid') != (None, 1, 'harness synthetic-none is not o[16 chars]uns')
+
+First differing element 0:
+'model does not match ^[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}$'
+None
+
++ (None, 1, 'harness synthetic-none is not one this driver runs')
+- ('model does not match ^[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}$',
+-  1,
+-  'model is not valid')
+
+======================================================================
+FAIL: test_real_provider_qualified_models_pass_the_schema_and_the_local_driver (__main__.Kit.test_real_provider_qualified_models_pass_the_schema_and_the_local_driver) [kimi-code/kimi-for-coding] (source='https://github.com/MoonshotAI/kimi-code/blob/9a82686b0e91c532f4d49da0bc088a0eac9bdede/docs/en/reference/kimi-command.md#L127')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 626, in test_real_provider_qualified_models_pass_the_schema_and_the_local_driver
+    self.assertEqual(self.model_start(model),
+AssertionError: Tuples differ: ('model does not match ^[A-Za-z0-9][A-Za-z[47 chars]alse) != (None, 1, 'harness synthetic-none is not o[23 chars]alse)
+
+First differing element 0:
+'model does not match ^[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}$'
+None
+
++ (None, 1, 'harness synthetic-none is not one this driver runs', False)
+- ('model does not match ^[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}$',
+-  1,
+-  'model is not valid',
+-  False)
+
+======================================================================
+FAIL: test_real_provider_qualified_models_pass_the_schema_and_the_local_driver (__main__.Kit.test_real_provider_qualified_models_pass_the_schema_and_the_local_driver) [kimi-code/kimi-for-coding-highspeed] (source='https://github.com/MoonshotAI/kimi-code/blob/9a82686b0e91c532f4d49da0bc088a0eac9bdede/docs/en/configuration/config-files.md#L50')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 626, in test_real_provider_qualified_models_pass_the_schema_and_the_local_driver
+    self.assertEqual(self.model_start(model),
+AssertionError: Tuples differ: ('model does not match ^[A-Za-z0-9][A-Za-z[47 chars]alse) != (None, 1, 'harness synthetic-none is not o[23 chars]alse)
+
+First differing element 0:
+'model does not match ^[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}$'
+None
+
++ (None, 1, 'harness synthetic-none is not one this driver runs', False)
+- ('model does not match ^[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}$',
+-  1,
+-  'model is not valid',
+-  False)
+
+======================================================================
+FAIL: test_real_provider_qualified_models_pass_the_schema_and_the_local_driver (__main__.Kit.test_real_provider_qualified_models_pass_the_schema_and_the_local_driver) [azure/gpt-5.4] (source='https://github.com/badlogic/pi-mono/blob/8209929fb553e7a8c91dc0894569f9ec43dd201f/packages/coding-agent/docs/providers.md#L140')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 626, in test_real_provider_qualified_models_pass_the_schema_and_the_local_driver
+    self.assertEqual(self.model_start(model),
+AssertionError: Tuples differ: ('model does not match ^[A-Za-z0-9][A-Za-z[47 chars]alse) != (None, 1, 'harness synthetic-none is not o[23 chars]alse)
+
+First differing element 0:
+'model does not match ^[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}$'
+None
+
++ (None, 1, 'harness synthetic-none is not one this driver runs', False)
+- ('model does not match ^[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}$',
+-  1,
+-  'model is not valid',
+-  False)
+
+======================================================================
+FAIL: test_real_provider_qualified_models_pass_the_schema_and_the_local_driver (__main__.Kit.test_real_provider_qualified_models_pass_the_schema_and_the_local_driver) [openrouter/typesafe/jev-1.13] (source='https://github.com/badlogic/pi-mono/blob/8209929fb553e7a8c91dc0894569f9ec43dd201f/packages/coding-agent/docs/codemode.md#L95')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 626, in test_real_provider_qualified_models_pass_the_schema_and_the_local_driver
+    self.assertEqual(self.model_start(model),
+AssertionError: Tuples differ: ('model does not match ^[A-Za-z0-9][A-Za-z[47 chars]alse) != (None, 1, 'harness synthetic-none is not o[23 chars]alse)
+
+First differing element 0:
+'model does not match ^[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}$'
+None
+
++ (None, 1, 'harness synthetic-none is not one this driver runs', False)
+- ('model does not match ^[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}$',
+-  1,
+-  'model is not valid',
+-  False)
+
+======================================================================
+FAIL: test_real_provider_qualified_models_pass_the_schema_and_the_local_driver (__main__.Kit.test_real_provider_qualified_models_pass_the_schema_and_the_local_driver) [anthropic/claude-sonnet-5-5] (source='https://github.com/anomalyco/opencode/blob/6d04312b71ac33e7c150234d7087da01388ff2ab/services/site/src/docs/v1/content/commands.mdx#L26')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 626, in test_real_provider_qualified_models_pass_the_schema_and_the_local_driver
+    self.assertEqual(self.model_start(model),
+AssertionError: Tuples differ: ('model does not match ^[A-Za-z0-9][A-Za-z[47 chars]alse) != (None, 1, 'harness synthetic-none is not o[23 chars]alse)
+
+First differing element 0:
+'model does not match ^[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}$'
+None
+
++ (None, 1, 'harness synthetic-none is not one this driver runs', False)
+- ('model does not match ^[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}$',
+-  1,
+-  'model is not valid',
+-  False)
+
+======================================================================
+FAIL: test_real_provider_qualified_models_pass_the_schema_and_the_local_driver (__main__.Kit.test_real_provider_qualified_models_pass_the_schema_and_the_local_driver) [openrouter/google/gemini-3.8-flash] (source='https://github.com/anomalyco/opencode/blob/6d04312b71ac33e7c150234d7087da01388ff2ab/services/site/src/docs/v1/content/troubleshooting.mdx#L239')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 626, in test_real_provider_qualified_models_pass_the_schema_and_the_local_driver
+    self.assertEqual(self.model_start(model),
+AssertionError: Tuples differ: ('model does not match ^[A-Za-z0-9][A-Za-z[47 chars]alse) != (None, 1, 'harness synthetic-none is not o[23 chars]alse)
+
+First differing element 0:
+'model does not match ^[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}$'
+None
+
++ (None, 1, 'harness synthetic-none is not one this driver runs', False)
+- ('model does not match ^[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}$',
+-  1,
+-  'model is not valid',
+-  False)
+
+======================================================================
+FAIL: test_real_provider_qualified_models_pass_the_schema_and_the_local_driver (__main__.Kit.test_real_provider_qualified_models_pass_the_schema_and_the_local_driver) [openrouter/anthropic/claude-sonnet-4-20250514] (source='https://github.com/Kilo-Org/kilocode/blob/bfdec5496922452222223c01b4cc6c89305b0279/packages/kilo-docs/pages/ai-providers/openrouter.md#L55')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 626, in test_real_provider_qualified_models_pass_the_schema_and_the_local_driver
+    self.assertEqual(self.model_start(model),
+AssertionError: Tuples differ: ('model does not match ^[A-Za-z0-9][A-Za-z[47 chars]alse) != (None, 1, 'harness synthetic-none is not o[23 chars]alse)
+
+First differing element 0:
+'model does not match ^[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}$'
+None
+
++ (None, 1, 'harness synthetic-none is not one this driver runs', False)
+- ('model does not match ^[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}$',
+-  1,
+-  'model is not valid',
+-  False)
+
+======================================================================
+FAIL: test_real_provider_qualified_models_pass_the_schema_and_the_local_driver (__main__.Kit.test_real_provider_qualified_models_pass_the_schema_and_the_local_driver) [openrouter/openai/gpt-5] (source='https://github.com/Kilo-Org/kilocode/blob/bfdec5496922452222223c01b4cc6c89305b0279/specs/v2/config.md#L261')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 626, in test_real_provider_qualified_models_pass_the_schema_and_the_local_driver
+    self.assertEqual(self.model_start(model),
+AssertionError: Tuples differ: ('model does not match ^[A-Za-z0-9][A-Za-z[47 chars]alse) != (None, 1, 'harness synthetic-none is not o[23 chars]alse)
+
+First differing element 0:
+'model does not match ^[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}$'
+None
+
++ (None, 1, 'harness synthetic-none is not one this driver runs', False)
+- ('model does not match ^[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}$',
+-  1,
+-  'model is not valid',
+-  False)
+
+======================================================================
+FAIL: test_real_provider_qualified_models_pass_the_schema_and_the_local_driver (__main__.Kit.test_real_provider_qualified_models_pass_the_schema_and_the_local_driver) [openrouter/anthropic/claude-sonnet-4.6] (source='https://github.com/charmbracelet/catwalk/blob/v3.2.9/internal/providers/configs/openrouter.json#L7')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 626, in test_real_provider_qualified_models_pass_the_schema_and_the_local_driver
+    self.assertEqual(self.model_start(model),
+AssertionError: Tuples differ: ('model does not match ^[A-Za-z0-9][A-Za-z[47 chars]alse) != (None, 1, 'harness synthetic-none is not o[23 chars]alse)
+
+First differing element 0:
+'model does not match ^[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}$'
+None
+
++ (None, 1, 'harness synthetic-none is not one this driver runs', False)
+- ('model does not match ^[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}$',
+-  1,
+-  'model is not valid',
+-  False)
+
+======================================================================
+FAIL: test_real_provider_qualified_models_pass_the_schema_and_the_local_driver (__main__.Kit.test_real_provider_qualified_models_pass_the_schema_and_the_local_driver) [openrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free] (source='https://github.com/charmbracelet/catwalk/blob/v3.2.9/internal/providers/configs/openrouter.json#L2145')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 626, in test_real_provider_qualified_models_pass_the_schema_and_the_local_driver
+    self.assertEqual(self.model_start(model),
+AssertionError: Tuples differ: ('model does not match ^[A-Za-z0-9][A-Za-z[47 chars]alse) != (None, 1, 'harness synthetic-none is not o[23 chars]alse)
+
+First differing element 0:
+'model does not match ^[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}$'
+None
+
++ (None, 1, 'harness synthetic-none is not one this driver runs', False)
+- ('model does not match ^[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}$',
+-  1,
+-  'model is not valid',
+-  False)
+
+======================================================================
+FAIL: test_real_provider_qualified_models_pass_the_schema_and_the_local_driver (__main__.Kit.test_real_provider_qualified_models_pass_the_schema_and_the_local_driver) [fireworks/accounts/fireworks/models/nemotron-lightning-3p5-30b-a3b] (source='https://github.com/charmbracelet/catwalk/blob/v3.2.9/internal/providers/configs/fireworks.json#L337')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/driver-kit/test_kit.py", line 626, in test_real_provider_qualified_models_pass_the_schema_and_the_local_driver
+    self.assertEqual(self.model_start(model),
+AssertionError: Tuples differ: ('model does not match ^[A-Za-z0-9][A-Za-z[47 chars]alse) != (None, 1, 'harness synthetic-none is not o[23 chars]alse)
+
+First differing element 0:
+'model does not match ^[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}$'
+None
+
++ (None, 1, 'harness synthetic-none is not one this driver runs', False)
+- ('model does not match ^[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}$',
+-  1,
+-  'model is not valid',
+-  False)
+
+----------------------------------------------------------------------
+Ran 3 tests in 1.127s
+
+FAILED (failures=13)
+
+## Each model at this head: schema check and adapters/local/driver start
+"kimi-code/kimi-for-coding"                                            schema: refused                  driver: model is not valid
+"kimi-code/kimi-for-coding-highspeed"                                  schema: refused                  driver: model is not valid
+"azure/gpt-5.4"                                                        schema: refused                  driver: model is not valid
+"openrouter/typesafe/jev-1.13"                                         schema: refused                  driver: model is not valid
+"anthropic/claude-sonnet-5-5"                                          schema: refused                  driver: model is not valid
+"openrouter/google/gemini-3.8-flash"                                   schema: refused                  driver: model is not valid
+"openrouter/anthropic/claude-sonnet-4-20250514"                        schema: refused                  driver: model is not valid
+"openrouter/openai/gpt-5"                                              schema: refused                  driver: model is not valid
+"openrouter/anthropic/claude-sonnet-4.6"                               schema: refused                  driver: model is not valid
+"openrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"        schema: refused                  driver: model is not valid
+"fireworks/accounts/fireworks/models/nemotron-lightning-3p5-30b-a3b"   schema: refused                  driver: model is not valid
+"/x"                                                                   schema: refused                  driver: model is not valid
+"x/"                                                                   schema: refused                  driver: model is not valid
+"x//y"                                                                 schema: refused                  driver: model is not valid
+"x/../y"                                                               schema: refused                  driver: model is not valid
+"x/./y"                                                                schema: refused                  driver: model is not valid
+"x/ /y"                                                                schema: refused                  driver: model is not valid
+"x/mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm" schema: refused                  driver: model is not valid
+".."                                                                   schema: refused                  driver: model is not valid
+"x/.y"                                                                 schema: refused                  driver: model is not valid
+"x/-y"                                                                 schema: refused                  driver: model is not valid
+"https://host.example/x"                                               schema: refused                  driver: model is not valid
+"x/y\n"                                                                schema: refused                  driver: model is not valid
+"x\\y"                                                                 schema: refused                  driver: model is not valid
+"mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm" schema: refused                  driver: model is not valid

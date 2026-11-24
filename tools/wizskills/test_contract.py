@@ -92,8 +92,10 @@ def package_errors(package, rules):
         errors.add('changelog')
     elif (plugin.get('version') != sections[0][0]
           or plugin.get('version') != lock.get('version')
-          or not re.fullmatch(rules['version_pattern'], sections[0][0])):
+          or not all(re.fullmatch(rules['version_pattern'], v) for v, _ in sections)):
         errors.add('version')
+    elif [d for _, d in sections] != sorted((d for _, d in sections), reverse=True):
+        errors.add('changelog')
     return sorted(errors)
 
 
@@ -160,6 +162,19 @@ class ContractTests(unittest.TestCase):
                 else:
                     parent[key] = case['value']
                 self.assertEqual(package_errors(changed, rules), case['errors'])
+
+    def test_historical_changelog_headings_are_checked(self):
+        rules = self.rules()
+        package = read_json((FIXTURES / 'package.json').read_text())
+        current = '# Changelog\n\n## 0.1.0 - 2030-01-02\n\n- Synthetic change.\n\n'
+        for name, earlier, errors in (
+                ('non-SemVer earlier heading', '## not-semver - 2030-01-01', ['version']),
+                ('earlier section dated later', '## 0.1.0-rc.1 - 2030-01-03', ['changelog']),
+                ('earlier section on the same day', '## 0.1.0-rc.1 - 2030-01-02', [])):
+            with self.subTest(name=name):
+                changed = copy.deepcopy(package)
+                changed['files']['CHANGELOG.md'] = f'{current}{earlier}\n\n- Earlier change.\n'
+                self.assertEqual(package_errors(changed, rules), errors)
 
     def test_standalone_resolution_examples_and_safe_diagnostics(self):
         rules = self.rules()

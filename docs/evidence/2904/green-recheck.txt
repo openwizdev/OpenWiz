@@ -1,0 +1,31 @@
+# MG1 (#2904) CI diagnosis and verification log
+
+## Red CI diagnosis at f4fededd0f1111984effdd11c60f21562d9002a5
+- lint, changelog, privacy, rust, release (1), release (2): SUCCESS.
+- owned-paths: FAILURE at 2026-11-24T06:11:54Z, 7m25s before the F4 supporting-edit grant comment was recorded on #2904 at 2026-11-24T06:19:19Z.
+- ci and web-test: FAILURE solely due to owned-paths.
+- Post-grant verification: `python3 -I tools/owned-paths/check.py --repo openwizdev/OpenWiz --pr 2932` -> exit 0 (`owned-paths: ok: 27 file(s) inside the owned paths and grants of ticket #2904`).
+
+## Schema byte-copy and grammar semantics
+- `kernel/driver-kit/schema.json` sha256: `78b13503e4a1a7c124ad677469a7ef2eb636ec0d004aa2f1ad7b53bbfa993445`
+- Byte-identical copies verified: `adapters/{boat,cloudroom,devin,local,openclaw,template}/schema.json` (6 of 6).
+- `schema.json` (`pattern` + `maxLength: 100`) and `re.fullmatch` on `START['model']` / `KIT_MODEL` across all 6 drivers and `kernel/live-rig/rig.py`: 0 mismatches across valid, boundary (100/101), traversal, option-like, URL, newline, control, and `~` cases.
+
+## Local test runs (refusing stubs first on PATH, env -u OPENWIZ_GITHUB_APP_KEY, no live drivers)
+- `python3 -I kernel/driver-kit/test_kit.py`: Ran 29 tests, OK
+- `python3 -I kernel/driver-kit/test_hostkey.py`: Ran 25 tests, OK
+- `python3 -I adapters/local/test_driver.py`: Ran 23 tests, OK
+- `python3 -I adapters/local/test_harnesses.py`: exit 0 (rows in adapters/local/harnesses: none yet)
+- `python3 -I adapters/boat/test_driver.py`: Ran 40 tests, OK
+- `python3 -I adapters/template/test_driver.py`: Ran 22 tests, OK
+- `python3 -I adapters/cloudroom/test_driver.py`: Ran 29 tests, OK
+- `python3 -I adapters/devin/test_driver.py`: Ran 7 tests, OK
+- `python3 -I adapters/openclaw/test_driver.py`: Ran 15 tests, OK
+- `python3 -I kernel/live-rig/test_rig.py`: Ran 15 tests, OK
+- `python3 -I tools/comment-check/test_check.py`: Ran 10 tests, OK
+- `python3 -I docs/evidence/1817/test_ci_step.py`: Ran 4 tests, OK
+- `python3 -I tools/comment-check/check.py diff --base origin/main`: ok
+- `python3 -I tools/owned-paths/test_check.py`: Ran 15 tests, OK
+- `python3 -I tools/privacy-check/test_check.py`: Ran 48 tests, OK
+- `sh .githooks/test.sh --fixtures-only`: ok
+- `python3 -I .github/actions/changelog/test_check.py`: Ran 12 tests, OK

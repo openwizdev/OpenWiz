@@ -587,7 +587,7 @@ fn help_documents_the_commands_the_order_and_the_exit_codes() {
             "  0  a result was printed, complete or partial",
             "  1  a read failed",
             "  1  ls, show and the help commands: the output could not be written or flushed;\n     some of it may already be on stdout",
-            "On an error, stdout is empty unless ls, show or a help command fails to write or\nflush output, when some of it may already be on stdout, or unless --json was given.\nWith --json, an error that printed nothing else prints openwiz.cli-error.v1 on stdout.\nEither way, stderr has one line starting with \"openwiz: \".",
+            "On an error, stdout is empty unless ls, show or a help command fails to write or\nflush output, when some of it may already be on stdout, or unless --json was given.\nWith --json, a handled failure with no outcome report of its own prints\nopenwiz.cli-error.v1 on stdout; a failed write or flush is the exception and\nprints no JSON error. Diagnostics may appear on stderr either way.",
             "  2  usage error, or a request out of bounds",
             "  3  show: the session was not found",
             "ls and show can read and show room-cli --version.",

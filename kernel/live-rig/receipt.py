@@ -6,7 +6,6 @@ import importlib.util
 import json
 import os
 import re
-import stat
 import subprocess
 import sys
 import tempfile
@@ -28,6 +27,13 @@ KIT_PASS = {'version': 'pass version: openwiz:records v1, and the schema is driv
 KIT_NOTE_PASS = {'start': 'pass start: the run posted builder status note ',
                  'wake': 'pass wake: the run edited builder status note '}
 NOTE_ID = re.compile(r'[0-9]+\Z', re.ASCII)
+START_EFFORT = re.compile(
+    r'; effort: (?:'
+    r'[a-z][a-z0-9-]{0,19} reached (?:a process the run started|the kit\'s fake [a-z0-9]+(?:-[a-z0-9]+)* host)'
+    r'|refused for [a-z0-9][a-z0-9._-]{0,59} with the refusal text, as the README says'
+    r'|refused [a-z][a-z0-9-]{0,19} with the refusal text, a word its README does not list for [a-z0-9][a-z0-9._-]{0,59}'
+    r'|a start with it was refused, as the README\'s Effort: line says'
+    r')\Z', re.ASCII)
 HEX40 = re.compile(r'[0-9a-f]{40}\Z', re.ASCII)
 DATE = re.compile(r'[0-9]{4}-[0-9]{2}-[0-9]{2}\Z', re.ASCII)
 PUBLIC_TOKEN = re.compile(r'[a-z0-9][a-z0-9._-]{0,59}\Z', re.ASCII)
@@ -73,37 +79,35 @@ def kit():
 def git(*args):
     env = {k: v for k, v in os.environ.items() if not k.startswith('GIT_')}
     try:
-        p = subprocess.run(['git', '-C', ROOT, '-c', 'core.fsmonitor=false'] + list(args), stdin=subprocess.DEVNULL,
-                           capture_output=True, env=env, timeout=60)
+        p = subprocess.run(['git', '--no-replace-objects', '-C', ROOT, '-c', 'core.fsmonitor=false'] + list(args),
+                           stdin=subprocess.DEVNULL, capture_output=True, env=env, timeout=60)
     except (OSError, subprocess.TimeoutExpired):
         raise Refused(UNREAD_HOSTS)
     if p.returncode:
         raise Refused(UNREAD_HOSTS)
-    return p.stdout.decode('utf-8', 'surrogateescape')
+    return p.stdout
 
 
 def configured():
-    if git('rev-parse', '--show-toplevel').strip() != ROOT:
+    if git('rev-parse', '--show-toplevel').decode('utf-8', 'surrogateescape').strip() != ROOT:
         raise Refused(UNREAD_HOSTS)
-    changed = set(git('diff', '--name-only', '-z', '--no-renames', 'HEAD', '--', *HOST_FOLDERS).split('\0'))
+    head = git('rev-parse', '--verify', 'HEAD^{commit}').decode('ascii').strip()
     rig = source('rig', RIG)
     triples = set()
-    for entry in git('ls-files', '-s', '-z', '--', *HOST_FOLDERS).split('\0'):
-        meta, _, rel = entry.partition('\t')
-        if not rel.endswith('.json') or os.path.dirname(rel) not in HOST_FOLDERS or rel in changed:
-            continue
-        path = os.path.join(ROOT, rel)
-        if meta.split(' ')[0] not in ('100644', '100755') or os.path.realpath(path) != path:
-            continue
-        try:
-            if not stat.S_ISREG(os.lstat(path).st_mode):
+    for folder in HOST_FOLDERS:
+        for entry in git('ls-tree', '-z', head, folder + '/').split(b'\0'):
+            meta, _, rel = entry.decode('utf-8', 'surrogateescape').partition('\t')
+            mode, kind, oid = (meta.split(' ') + ['', '', ''])[:3]
+            if (kind, os.path.dirname(rel)) != ('blob', folder) or mode not in ('100644', '100755'):
                 continue
-            host = rig.load_host(path)
-        except OSError:
-            continue
-        except rig.Refused:
-            raise Refused(BAD_HOST)
-        triples.update((host['host'], r['harness'], r['model']) for r in host['runs'])
+            if not rel.endswith('.json'):
+                continue
+            try:
+                text = git('cat-file', 'blob', oid).decode('utf-8')
+                host = rig._valid(json.loads(text, object_pairs_hook=rig._unique), os.path.basename(rel))
+            except (ValueError, RecursionError, rig.Refused):
+                raise Refused(BAD_HOST)
+            triples.update((host['host'], r['harness'], r['model']) for r in host['runs'])
     return triples
 
 
@@ -197,9 +201,12 @@ def kit_lines(stdout):
     for name, line in zip(CHECKS, lines):
         if name in KIT_NOTE_PASS:
             prefix = KIT_NOTE_PASS[name]
-            if not (line.startswith(prefix) and NOTE_ID.match(line[len(prefix):])):
+            rest = line[len(prefix):] if line.startswith(prefix) else ''
+            note, sep, suffix = rest.partition('; ')
+            if not (line.startswith(prefix) and NOTE_ID.match(note)
+                    and (not sep or (name == 'start' and START_EFFORT.match('; ' + suffix)))):
                 raise Refused("the %s line is not kit.py's passing %s line" % (name, name))
-            notes.add(line[len(prefix):])
+            notes.add(note)
             line = prefix + '<note>'
         elif line != KIT_PASS[name]:
             raise Refused("the %s line is not kit.py's passing %s line" % (name, name))

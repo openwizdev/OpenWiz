@@ -1,0 +1,7 @@
+test_a_lost_comment_answer_is_found_on_resume_and_a_closed_earlier_pull_request_is_never_adopted (__main__.Heads.test_a_lost_comment_answer_is_found_on_resume_and_a_closed_earlier_pull_request_is_never_adopted) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 22.526s
+
+OK
+exit 0

@@ -1,0 +1,100 @@
+FFF
+======================================================================
+FAIL: test_a_mint_that_loses_its_folder_keeps_its_token_for_a_later_revoke (__main__.FinalRound.test_a_mint_that_loses_its_folder_keeps_its_token_for_a_later_revoke) (later='revoke')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 1473, in test_a_mint_that_loses_its_folder_keeps_its_token_for_a_later_revoke
+    self.assertEqual(copies, [1], "the copy is saved before the emergency DELETE is sent")
+AssertionError: Lists differ: [0] != [1]
+
+First differing element 0:
+0
+1
+
+- [0]
++ [1] : the copy is saved before the emergency DELETE is sent
+
+======================================================================
+FAIL: test_a_mint_that_loses_its_folder_keeps_its_token_for_a_later_revoke (__main__.FinalRound.test_a_mint_that_loses_its_folder_keeps_its_token_for_a_later_revoke) (later='mint')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 1473, in test_a_mint_that_loses_its_folder_keeps_its_token_for_a_later_revoke
+    self.assertEqual(copies, [1], "the copy is saved before the emergency DELETE is sent")
+AssertionError: Lists differ: [0] != [1]
+
+First differing element 0:
+0
+1
+
+- [0]
++ [1] : the copy is saved before the emergency DELETE is sent
+
+======================================================================
+FAIL: test_a_mint_that_loses_its_folder_keeps_its_token_for_a_later_revoke (__main__.FinalRound.test_a_mint_that_loses_its_folder_keeps_its_token_for_a_later_revoke) (later='nothing')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 1473, in test_a_mint_that_loses_its_folder_keeps_its_token_for_a_later_revoke
+    self.assertEqual(copies, [1], "the copy is saved before the emergency DELETE is sent")
+AssertionError: Lists differ: [0] != [1]
+
+First differing element 0:
+0
+1
+
+- [0]
++ [1] : the copy is saved before the emergency DELETE is sent
+
+----------------------------------------------------------------------
+Ran 1 test in 2.008s
+
+FAILED (failures=3)
+
+$ python3 -I tools/github-app/test_agent_token.py FinalRound.test_a_refused_emergency_delete_reports_kept_only_when_a_copy_is_findable
+FFF
+======================================================================
+FAIL: test_a_refused_emergency_delete_reports_kept_only_when_a_copy_is_findable (__main__.FinalRound.test_a_refused_emergency_delete_reports_kept_only_when_a_copy_is_findable) (pending='the folder removed')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 1541, in test_a_refused_emergency_delete_reports_kept_only_when_a_copy_is_findable
+    self.assertEqual([json.loads(side.read_text())["token"] for side in sides], [TOKEN2])
+AssertionError: Lists differ: [] != ['synthetic-agent-token-2']
+
+Second list contains 1 additional elements.
+First extra element 0:
+'synthetic-agent-token-2'
+
+- []
++ ['synthetic-agent-token-2']
+
+======================================================================
+FAIL: test_a_refused_emergency_delete_reports_kept_only_when_a_copy_is_findable (__main__.FinalRound.test_a_refused_emergency_delete_reports_kept_only_when_a_copy_is_findable) (pending='the copy removed')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 1541, in test_a_refused_emergency_delete_reports_kept_only_when_a_copy_is_findable
+    self.assertEqual([json.loads(side.read_text())["token"] for side in sides], [TOKEN2])
+AssertionError: Lists differ: [] != ['synthetic-agent-token-2']
+
+Second list contains 1 additional elements.
+First extra element 0:
+'synthetic-agent-token-2'
+
+- []
++ ['synthetic-agent-token-2']
+
+======================================================================
+FAIL: test_a_refused_emergency_delete_reports_kept_only_when_a_copy_is_findable (__main__.FinalRound.test_a_refused_emergency_delete_reports_kept_only_when_a_copy_is_findable) (pending="a symlink in the folder's place")
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/github-app/test_agent_token.py", line 1535, in test_a_refused_emergency_delete_reports_kept_only_when_a_copy_is_findable
+    self.assertEqual(err, went + ("(GitHub refused); the token is kept for a later revoke\n" if kept
+AssertionError: 'open[84 chars]voked (GitHub refused); the token is kept for a later revoke\n' != 'open[84 chars]voked (GitHub refused): suspend the installation\n'
+- openwiz: agent-token: the private token directory went away, so the new token was not revoked (GitHub refused); the token is kept for a later revoke
+?                                                                                                               ^      ----------------- ^   ^^^^^^ ^^
++ openwiz: agent-token: the private token directory went away, so the new token was not revoked (GitHub refused): suspend the installation
+?                                                                                                               ^^^^^^^^^     +++  ^   ^ ^
+
+
+----------------------------------------------------------------------
+Ran 1 test in N s
+
+FAILED (failures=3)
