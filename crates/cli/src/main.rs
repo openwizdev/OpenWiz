@@ -102,6 +102,10 @@ fn dispatch_args(args: &[OsString], stdout: &mut dyn Write, stderr: &mut dyn Wri
             ),
             None => EXIT_USAGE,
         },
+        Some("pro") => match utf8(&args[1..], "nothing was opened", stderr) {
+            Some(args) => openwiz_cli::pro::run_system(&args, terminal, stdout, stderr),
+            None => EXIT_USAGE,
+        },
         _ => match utf8(args, "nothing was read", stderr) {
             Some(args) => openwiz_cli::run(
                 &args,

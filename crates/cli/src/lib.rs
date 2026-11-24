@@ -6,6 +6,7 @@ pub mod init;
 pub mod loop_files;
 pub mod loops;
 pub mod models;
+pub mod pro;
 pub mod response;
 pub mod state;
 
@@ -84,7 +85,7 @@ Usage:
   openwiz models list [--save] [--json]
   openwiz models set <role> <provider> <model> <effort> [--json] [--host NAME]
   openwiz models set <small-builder|fixer> follows-builder [--json] [--host NAME]
-{fleets_usage}{fleet_usage}{tick_usage}{loops_usage}{loop_files_usage}{init_usage}{github_usage}  openwiz help --agent
+{fleets_usage}{fleet_usage}{tick_usage}{loops_usage}{loop_files_usage}{init_usage}{github_usage}{pro_usage}  openwiz help --agent
   openwiz help
   openwiz --help
 
@@ -127,7 +128,7 @@ models show|list|set
   follows-builder form skips the catalogue. Roles: orchestrator, builder,
   reviewer, small-builder, fixer. --json prints openwiz.models-show.v1,
   openwiz.models-list.v1 or openwiz.models-set.v1.
-{loops_help}{loop_files_help}{fleets_help}{fleet_help}{tick_help}{github_help}
+{loops_help}{loop_files_help}{fleets_help}{fleet_help}{tick_help}{github_help}{pro_help}
 Exit codes:
   0  a result was printed, complete or partial
   1  a read failed
@@ -154,6 +155,8 @@ prints no JSON error. Diagnostics may appear on stderr either way.
         init_usage = init::USAGE,
         github_usage = github_token::USAGE,
         github_help = github_token::HELP,
+        pro_usage = pro::USAGE,
+        pro_help = pro::HELP,
         fleets_usage = fleets::USAGE,
         fleet_usage = fleet::USAGE,
         tick_usage = fleet::tick::USAGE,
@@ -271,6 +274,9 @@ pub fn run(
 ) -> i32 {
     if args.first().is_some_and(|a| a == "github") {
         return github_token::run(&args[1..], github_token::Context::system(), stdout, stderr);
+    }
+    if args.first().is_some_and(|a| a == "pro") {
+        return pro::run_system(&args[1..], false, stdout, stderr);
     }
     let command = match parse(args) {
         Ok(command) => command,

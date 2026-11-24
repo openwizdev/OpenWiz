@@ -341,6 +341,7 @@ class Path_(Installer):
         code, value = self.run_entry('install', '--assets', str(self.assets()), '--target', TARGET, '--root', str(self.root))
         self.assertEqual(value['openwiz'], str(self.root / 'current/openwiz'))
         self.assertIn('install link --root ' + str(self.root), value['next'])
+        self.assertTrue(value['next'].endswith('\nOpenWiz Pro: run openwiz pro.'), value['next'])
         link = self.home / '.local/bin/openwiz'
         code, value = self.run_entry('link', '--root', str(self.root))
         self.assertEqual((code, value['outcome'], value['link'], value['to']),
