@@ -1,3 +1,9 @@
+"""Proofs for the records, release-manifest and fleet OpenWiz contracts.
+
+Needs `jsonschema` (Draft 2020-12). A stock Python has no such module.
+How to run it: docs/evidence/3239/README.md.
+"""
+
 import json
 import re
 import unittest
@@ -267,32 +273,81 @@ class ReleaseManifestSchemaTests(unittest.TestCase):
         self.assertEqual(parse_openwiz_table(table)["WizSkills"], "0.6.0-rc.1")
 
 
+INDEX_HEADING = "## Indexed record forms (v1)"
+RECORD_FORMS = (
+    "Status note",
+    "Decision request",
+    "Decision answer",
+    "Plan links",
+    "Labels",
+    "Fleet OpenWiz rows",
+    "Fleet record authors",
+    "Fleet models",
+)
+
+
+def parse_index_rows(markdown: str) -> list[list[str]]:
+    lines = markdown.replace("\r\n", "\n").splitlines()
+    try:
+        start = lines.index(INDEX_HEADING)
+    except ValueError:
+        raise ValueError(f"missing {INDEX_HEADING}") from None
+    end = len(lines)
+    for idx in range(start + 1, len(lines)):
+        if lines[idx].startswith("## "):
+            end = idx
+            break
+    section = lines[start + 1:end]
+    table = []
+    for line in section:
+        if line.startswith("|"):
+            table.append(line)
+        elif table:
+            break
+    if len(table) < 3:
+        raise ValueError("index table is missing its header or rows")
+
+    def cells(line: str) -> list[str]:
+        if not (line.startswith("|") and line.endswith("|")):
+            raise ValueError(f"malformed index row: {line}")
+        return [cell.strip() for cell in line[1:-1].split("|")]
+
+    header = cells(table[0])
+    if header[:2] != ["Record form", "Own marker / version"]:
+        raise ValueError(f"unexpected index header: {header}")
+    rows = []
+    for line in table[2:]:
+        parsed = cells(line)
+        if len(parsed) < 5 or not parsed[0]:
+            raise ValueError(f"index row has no record form: {line}")
+        rows.append(parsed)
+    return rows
+
+
 class RecordsContractTests(unittest.TestCase):
     def test_records_v1_indexes_every_app_record_form_and_rules(self):
         self.assertTrue(RECORDS_DOC_PATH.is_file(), "contracts/records.v1.md missing")
         text = RECORDS_DOC_PATH.read_text(encoding="utf-8")
-        required_tokens = [
-            "openwiz.records.v1",
-            "<!-- openwiz:status v1 -->",
-            "openwiz.decisions.v1",
-            "openwiz decision answer v1",
-            "openwiz.plan-links.v1",
-            "`spec`",
-            "`ready-for-agent`",
-            "`ready-for-human`",
-            "`needs-info`",
-            "`held`",
-            "`wayfind:map`",
-            "## OpenWiz",
-            "Record authors",
-            "openwiz.models.v1",
-            "openwiz update",
-            "D2",
-            "D3",
-        ]
-        for token in required_tokens:
+        rows = parse_index_rows(text)
+        self.assertEqual([row[0] for row in rows], list(RECORD_FORMS))
+        by_name = {row[0]: row for row in rows}
+        for name, row in by_name.items():
+            with self.subTest(form=name):
+                self.assertTrue(row[1].strip(), f"{name} has an empty marker or version cell")
+        self.assertEqual(by_name["Labels"][1], "no own marker (kernel records v1 section 1)")
+        self.assertIn("the app is the source of `wayfind:map`", by_name["Labels"][3])
+        self.assertEqual(by_name["Plan links"][4], "native `blockedBy` links")
+        self.assertIn("writer-side form", by_name["Plan links"][1])
+        self.assertEqual(by_name["Fleet OpenWiz rows"][4], "read from #3142")
+        self.assertNotIn(
+            "docs/adr/0021-app-skills-kernel-ship-as-a-matched-set.md",
+            text,
+            "records contract still cites the missing ADR path",
+        )
+        self.assertIn("openwizdev/OpenWiz#3136", text, "records contract does not cite #3136")
+        for token in ("openwiz update", "D2", "D3"):
             with self.subTest(token=token):
-                self.assertTrue(token in text, f"contracts/records.v1.md missing {token}")
+                self.assertIn(token, text)
 
     def test_records_v1_index_table_covers_grill_templates_and_models_offered(self):
         lines = RECORDS_DOC_PATH.read_text(encoding="utf-8").splitlines()
@@ -331,9 +386,26 @@ class FleetOpenWizRowsTests(unittest.TestCase):
     def test_fleet_contract_has_openwiz_rows_section_and_example(self):
         text = FLEET_DOC_PATH.read_text(encoding="utf-8")
         self.assertTrue(
-            "## OpenWiz rows" in text,
-            "contracts/fleet.v1.md missing ## OpenWiz rows section",
+            "## OpenWiz` rows a repository records" in text,
+            "scope line does not name the OpenWiz rows",
         )
+        self.assertTrue(
+            "**Revision, 2026-11-24:** added `## OpenWiz rows`" in text,
+            "no dated revision note for ## OpenWiz rows",
+        )
+        self.assertNotIn(
+            "docs/adr/0021-app-skills-kernel-ship-as-a-matched-set.md",
+            text,
+            "fleet contract still cites the missing ADR path",
+        )
+        self.assertIn("openwizdev/OpenWiz#3136", text)
+        manifest = MANIFEST_DOC_PATH.read_text(encoding="utf-8")
+        self.assertNotIn(
+            "docs/adr/0021-app-skills-kernel-ship-as-a-matched-set.md",
+            manifest,
+            "release manifest still cites the missing ADR path",
+        )
+        self.assertIn("openwizdev/OpenWiz#3136", manifest)
         match = re.search(r"```md\n(## OpenWiz\n.*?)```", text, re.DOTALL)
         self.assertIsNotNone(match, "no ## OpenWiz markdown example in contracts/fleet.v1.md")
         parsed = parse_openwiz_table(match.group(1))
