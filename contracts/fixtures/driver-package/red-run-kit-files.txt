@@ -1,0 +1,93 @@
+.FFFFF.F
+======================================================================
+FAIL: test_package_schema_is_checked_against_the_installed_kit (__main__.DriverPackageFixtures.test_package_schema_is_checked_against_the_installed_kit)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/driver-package/test_fixtures.py", line 261, in test_package_schema_is_checked_against_the_installed_kit
+    self.assertTrue(kit_schema.is_file(), "the install has no kit schema to check a package against")
+AssertionError: False is not true : the install has no kit schema to check a package against
+
+======================================================================
+FAIL: test_packaged_drivers_find_every_kit_file_they_use (__main__.DriverPackageFixtures.test_packaged_drivers_find_every_kit_file_they_use) (use='credential')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/driver-package/test_fixtures.py", line 247, in test_packaged_drivers_find_every_kit_file_they_use
+    self.assertEqual((0, json.dumps(answer) + "\n"), run(probe, use))
+AssertionError: Tuples differ: (0, '[true, false]\n') != (1, '')
+
+First differing element 0:
+0
+1
+
+- (0, '[true, false]\n')
++ (1, '')
+
+======================================================================
+FAIL: test_packaged_drivers_find_every_kit_file_they_use (__main__.DriverPackageFixtures.test_packaged_drivers_find_every_kit_file_they_use) (use='key_helper')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/driver-package/test_fixtures.py", line 247, in test_packaged_drivers_find_every_kit_file_they_use
+    self.assertEqual((0, json.dumps(answer) + "\n"), run(probe, use))
+AssertionError: Tuples differ: (0, '"host is not in kernel/driver-kit/hosts.json"\n') != (1, '')
+
+First differing element 0:
+0
+1
+
+- (0, '"host is not in kernel/driver-kit/hosts.json"\n')
++ (1, '')
+
+======================================================================
+FAIL: test_packaged_drivers_find_every_kit_file_they_use (__main__.DriverPackageFixtures.test_packaged_drivers_find_every_kit_file_they_use) (use='skills_pin')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/driver-package/test_fixtures.py", line 247, in test_packaged_drivers_find_every_kit_file_they_use
+    self.assertEqual((0, json.dumps(answer) + "\n"), run(probe, use))
+AssertionError: Tuples differ: (0, '["commit", "tree", "version"]\n') != (1, '')
+
+First differing element 0:
+0
+1
+
+- (0, '["commit", "tree", "version"]\n')
++ (1, '')
+
+======================================================================
+FAIL: test_packaged_drivers_find_every_kit_file_they_use (__main__.DriverPackageFixtures.test_packaged_drivers_find_every_kit_file_they_use) (use='build_stamp')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/driver-package/test_fixtures.py", line 247, in test_packaged_drivers_find_every_kit_file_they_use
+    self.assertEqual((0, json.dumps(answer) + "\n"), run(probe, use))
+AssertionError: Tuples differ: (0, '"openwiz.package.v1\\n"\n') != (1, '')
+
+First differing element 0:
+0
+1
+
+- (0, '"openwiz.package.v1\\n"\n')
++ (1, '')
+
+======================================================================
+FAIL: test_todays_drivers_answer_as_they_do_in_the_checkout (__main__.DriverPackageFixtures.test_todays_drivers_answer_as_they_do_in_the_checkout) (driver='cloudroom')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/driver-package/test_fixtures.py", line 256, in test_todays_drivers_answer_as_they_do_in_the_checkout
+    self.assertEqual(run(source, "start", stdin="{}"), run(driver, "start", stdin="{}"))
+AssertionError: Tuples differ: (1, '{"error": "the input needs exactly repository, ticket, s[93 chars]}\n') != (1, '{"error": "the driver kit\'s credential check is missing[165 chars]}\n')
+
+First differing element 1:
+'{"error": "the input needs exactly repository, ticket, s[92 chars]"}\n'
+'{"error": "the driver kit\'s credential check is missing[164 chars]"}\n'
+
+  (1,
+-  '{"error": "the input needs exactly repository, ticket, skill, harness, '
+-  'model, and optionally effort", "next": "send only those fields; never a '
+-  'login"}\n')
++  '{"error": "the driver kit\'s credential check is missing, so no start field '
++  'can be checked; nothing was saved or started", "next": "run the driver from '
++  'an OpenWiz checkout or release that carries kernel/driver-kit/kit.py"}\n')
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.880s
+
+FAILED (failures=6)

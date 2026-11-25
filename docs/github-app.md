@@ -174,7 +174,8 @@ The token service mints agents' one-hour `openwiz[bot]` installation tokens on t
 owner's machine, beside the key. It listens on no port. An agent runs it per token:
 through the owner's machine pairing from a cloud thread, or locally from a local
 thread. The request goes on standard input and the answer comes back as one JSON
-line on standard output.
+line on standard output. The answer holds the token only **sealed** to the one-time
+public key in the request, so a kept copy of the output holds no usable token.
 
 Run these commands **as the owner, on the machine that holds the App's state**. Pass the
 same `--state-dir` as setup (by default `~/.local/state/openwiz`):
@@ -199,6 +200,11 @@ python3 -I tools/github-app/token-service.py stop --state-dir "$HOME/.local/stat
   GitHub's grant is checked against the request. A wider or different grant, or a
   request outside the installation or profile, gets the contract's refusal and never
   a token.
+- **Sealing.** Each request carries `answer_key`, an RSA 3072-bit public key made for
+  that request. The service encrypts the token to it with `/usr/bin/openssl` (RSA-OAEP,
+  SHA-256), passing the key and the token through pipes, and answers `sealed_token`.
+  Any other key is a `usage` refusal before GitHub is called. A minted token it can't
+  seal is revoked at GitHub and answered `unavailable`.
 - **Time left.** The expiry is checked on a fresh clock after GitHub answers. The
   token must have more than five minutes plus ten seconds left (for the log write and
   the pipe), and at most 65 minutes. A slow exchange can't hand over a token already
@@ -212,8 +218,8 @@ python3 -I tools/github-app/token-service.py stop --state-dir "$HOME/.local/stat
   permissions granted, the outcome and the expiry. It never holds a token. A log
   that others can read, or a symlink in its place, makes every mint `unavailable`.
   The line is written before the token is handed over.
-- **Never exposed.** No token or key reaches the command line, standard error or any
-  file but the key's own. Standard error stays empty except for the stopped
+- **Never exposed.** No plaintext token reaches the command line, standard output,
+  standard error or any file, and no key but the key's own file. Standard error stays empty except for the stopped
   service's one sentence.
 - **Tests.** `python3 -I tools/github-app/test_token_service.py` runs every
   `contracts/fixtures/token-service/requests.json` case and the guards above against
@@ -340,13 +346,18 @@ python3 -I tools/github-app/agent-token.py run $REQ -- git push origin HEAD
   owner's machine) and `OPENWIZ_TOKEN_SERVICE_ROUTE` (`pairing` for a cloud thread,
   `local` on the owner's machine). The pairing route is **off** until
   `OPENWIZ_TOKEN_SERVICE_READBACK` is exactly `passed`, which the owner sets only after
-  GA5's live read-back finds no pairing log or `mac run` result record keeping a
-  token. With `OPENWIZ_TOKEN_SERVICE` unset, `start` and `run` change nothing and
+  GA5's live read-back finds that a kept pairing log or `mac run` result record holds
+  only the sealed answer. With `OPENWIZ_TOKEN_SERVICE` unset, `start` and `run` change nothing and
   print nothing.
-- **How the token crosses.** The request goes on standard input; the token comes
-  back only as the piped standard output of one `room-cli mac run --stdin` call (or
-  the local call), read straight into the private file. The call's standard error is
-  discarded. No token is ever on a command line, in a terminal or in a log.
+- **How the token crosses.** For each request the helper makes a one-time RSA 3072-bit
+  key pair with `/usr/bin/openssl` and sends the public half as `answer_key`, on standard
+  input. The private half stays in the helper's memory: no file, argument or environment
+  variable holds it, and openssl reads it through a pipe. The token comes back only
+  sealed to that key, as the piped standard output of one `room-cli mac run --stdin`
+  call (or the local call). The helper opens it, checks it and writes it to the private
+  file; the private key is then dropped. An answer it can't open is `bad-answer`; when
+  it can't make a key it makes no call and falls back as `unreachable`. The call's
+  standard error is discarded. No token is ever on a command line, in a terminal or in a log.
 - **The private files.** One cache file (0600) per requester and scope, so agents on one
   account never share or replace each other's tokens, in a 0700 directory you own,
   outside every Git working tree and reached through no symlink: `OPENWIZ_AGENT_TOKEN_DIR`,
