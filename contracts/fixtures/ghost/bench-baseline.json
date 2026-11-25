@@ -1,0 +1,51 @@
+{
+  "schema": "openwiz.ghost.v1",
+  "kind": "bench_baseline",
+  "p90_latency_ms_max": 150,
+  "acceptance_rate_min": 1.0,
+  "chars_saved_per_message_min": 17.0,
+  "recorded": {
+    "messages": 6,
+    "shown": 8,
+    "accepted": 8,
+    "acceptance_rate": 1.0,
+    "chars_saved_per_message": 17.0,
+    "suggestions_per_message": 1.3333,
+    "p50_latency_ms": 1.0,
+    "p90_latency_ms": 1.0,
+    "per_surface": {
+      "openwiz-app": {
+        "messages": 3,
+        "shown": 3,
+        "accepted": 3,
+        "acceptance_rate": 1.0,
+        "chars_saved_per_message": 16.3333,
+        "suggestions_per_message": 1.0
+      },
+      "t3-code": {
+        "messages": 1,
+        "shown": 2,
+        "accepted": 2,
+        "acceptance_rate": 1.0,
+        "chars_saved_per_message": 25.0,
+        "suggestions_per_message": 2.0
+      },
+      "bb-plugin": {
+        "messages": 1,
+        "shown": 1,
+        "accepted": 1,
+        "acceptance_rate": 1.0,
+        "chars_saved_per_message": 18.0,
+        "suggestions_per_message": 1.0
+      },
+      "cli": {
+        "messages": 1,
+        "shown": 2,
+        "accepted": 2,
+        "acceptance_rate": 1.0,
+        "chars_saved_per_message": 10.0,
+        "suggestions_per_message": 2.0
+      }
+    }
+  }
+}
