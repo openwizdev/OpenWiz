@@ -4,7 +4,7 @@ Paste this line into your coding agent:
 
 > Install OpenWiz from github.com/openwizdev/OpenWiz
 
-Check which OpenWiz release GitHub offers before choosing a host. This guide describes 0.1.1 once its release assets are available. If you install 0.1.0, its agents run on CloudRoom. [Published releases](https://github.com/openwizdev/OpenWiz/releases) · [0.1.0 instructions](https://github.com/openwizdev/OpenWiz/blob/v0.1.0/docs/install.md)
+Check which OpenWiz release GitHub offers before choosing a host. This guide describes 0.1.1 once its release assets are available. If you install 0.1.0, follow its maintained install skill (WizSkills `maint/0.2`). [Published releases](https://github.com/openwizdev/OpenWiz/releases) · [0.1.0 install skill](https://github.com/openwizdev/WizSkills/blob/33eef93ba30cd8db256f6fe270e3ed28747a79bd/skills/install/SKILL.md)
 
 ## Before you start
 

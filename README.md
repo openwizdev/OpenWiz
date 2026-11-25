@@ -9,7 +9,7 @@
 
 You make the decisions: answer a few questions. The agents run the factory: they write the spec and the tickets, build, review and merge. You watch it ship.
 
-This branch documents **OpenWiz 0.1.1**. Check the [published releases](https://github.com/openwizdev/OpenWiz/releases) for availability. If the release you install is 0.1.0, follow its [CloudRoom setup guide](https://github.com/openwizdev/OpenWiz/blob/v0.1.0/docs/install.md).
+This branch documents **OpenWiz 0.1.1**. Check the [published releases](https://github.com/openwizdev/OpenWiz/releases) for availability. If the release you install is 0.1.0, follow its [install skill](https://github.com/openwizdev/WizSkills/blob/33eef93ba30cd8db256f6fe270e3ed28747a79bd/skills/install/SKILL.md) (WizSkills `maint/0.2`).
 
 ## Quick start
 
