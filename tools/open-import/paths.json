@@ -76,7 +76,6 @@
     "tools/owned-paths/**",
     "tools/wizskills/**",
     "docs/cleanup/docs-table.md",
-    "docs/cleanup/wave2-table.md",
     "docs/cli-parts/**",
     "docs/decisions/public-offer.md",
     "docs/live-checks/**",
