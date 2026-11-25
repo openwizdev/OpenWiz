@@ -16,7 +16,7 @@ on:
     branches: [main]
   # Every merge to main, which also saves the Cargo caches pull requests read.
   push:
-    branches: [main]
+    branches: [main, 'release-*']
 
 permissions:
   contents: read
@@ -143,6 +143,7 @@ jobs:
           cargo build --locked --jobs 2 -p openwiz-cli --bins
           python3 -I tools/release/test_package.py
           python3 -I tools/release/test_product_identity.py
+          python3 -I tools/release/test_glibc.py
       - name: The installer
         if: matrix.part == 2
         run: |
