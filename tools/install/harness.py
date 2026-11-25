@@ -1,9 +1,11 @@
+import json
 import os
 from pathlib import Path
 import re
 import shlex
 import shutil
 import stat
+import tempfile
 
 import install as installer
 
@@ -155,6 +157,41 @@ def copy(folder, skills, wanted, source, plain):
     return placed, ' '.join(notes) or None, ' '.join(cleanup) or None
 
 
+BESIDE = ('contracts', '.claude-plugin')
+
+
+def manifest(names):
+    return (json.dumps({'name': 'openwiz', 'skills': ['./skills/' + n for n in names]}, indent=2) + '\n').encode()
+
+
+def beside(base, build, names, source, plain):
+    with tempfile.TemporaryDirectory(prefix='openwiz-beside-') as temporary:
+        plugin = Path(temporary) / '.claude-plugin'
+        plugin.mkdir()
+        (plugin / 'plugin.json').write_bytes(manifest(names))
+        origins = {'contracts': build / 'runtime', '.claude-plugin': Path(temporary)}
+        skipped = []
+        for name in BESIDE:
+            if not (origins[name] / name).is_dir():
+                continue
+            try:
+                found = check(base, [name], plain)
+                if not found:
+                    landed, trouble = place(base, origins[name], name, source, plain)
+                    if not landed:
+                        skipped.append({'skill': name, 'path': str(base / name),
+                                        'next': trouble or f'OpenWiz could not write {base / name}, so {plain}\'s '
+                                                           f'skills cannot read it. Make {base} writable, then run '
+                                                           f'this again.'})
+                skipped += found
+            except (OSError, installer.Refused) as error:
+                why = error.strerror if isinstance(error, OSError) and error.strerror else str(error)
+                skipped.append({'skill': name, 'path': str(base / name),
+                                'next': f'OpenWiz could not write {base / name} ({why}), so {plain}\'s skills cannot '
+                                        f'read it. Make {base} writable, then run this again.'})
+        return skipped
+
+
 def install_skills(build, value, root, home, codex_home=None):
     skills = build / 'runtime/skills'
     installer.private(skills)
@@ -181,7 +218,10 @@ def install_skills(build, value, root, home, codex_home=None):
                 placed, failed, cleanup = (copy(base / 'skills', skills, wanted, value['source'], plain) if wanted
                                            else ([], None, None))
                 failed = ' '.join(filter(None, (failed, cleanup))) or None
-                row.update(state='installed' if len(placed) == len(names) else 'partial' if placed else 'refused',
+                if placed and not failed:
+                    skipped += beside(base, build, names, value['source'], plain)
+                row.update(state='installed' if len(placed) == len(names) and not skipped
+                           else 'partial' if placed else 'refused',
                            next=failed or (f'{plain} finds these skills next time it starts.' if not skipped else
                            f'{plain} did not get {len(skipped)} skill(s); each one below says why and what to do.'))
                 if skipped:
@@ -202,6 +242,8 @@ def install_skills(build, value, root, home, codex_home=None):
         skipped = check(canonical, names, 'OpenWiz\'s own skills folder')
         placed, failed, cleanup = copy(canonical, skills, [n for n in names if n not in {s['skill'] for s in skipped}],
                                        value['source'], 'OpenWiz\'s own skills folder')
+        if placed and not failed:
+            skipped += beside(Path(root), build, names, value['source'], 'OpenWiz\'s own skills folder')
     except installer.Refused as refusal:
         skipped, failed = [], (f'{canonical} is a link or not a folder of yours ({refusal}), so OpenWiz did not '
                                'write its own copy there; the agents above still got their skills. Make it a real '
@@ -214,7 +256,7 @@ def install_skills(build, value, root, home, codex_home=None):
         result['canonical_refused'] = failed
     if cleanup:
         result['canonical_cleanup'] = cleanup
-    whole = whole and len(placed) == len(names)
+    whole = whole and len(placed) == len(names) and not skipped
     return dict(result, outcome='installed' if whole else 'partial',
                 reason='Copied the skills into every agent here.' if whole else
                 'Copied the skills where it was safe; the rows say what was skipped and why.'), 0
