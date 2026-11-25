@@ -24,6 +24,8 @@ The smallest [driver v1](../../kernel/driver.v1.md): one Python file, standard l
 5. Add `many-at-once` or `own-sandbox` to `can` only when your host does that.
 6. Run the kit against it on a throwaway ticket, on its real host, and put the output on the pull request.
 
+A new driver touches no shared file: CI runs every `test_*.py` in its folder, and fails without a `test_driver.py`. Add `release.json` only if the driver should ship: exactly `{"extra_files": [...]}`, naming any tracked regular files it ships beyond `driver` and `schema.json` (else `[]`).
+
 Keep `schema.json` byte for byte the kit's `kernel/driver-kit/schema.json`: the kit checks it.
 
 Its own tests: `python3 -I adapters/template/test_driver.py`. They run with `PATH` set to `fixtures/` and a folder of only the few system tools they use, never your own `PATH`, and stop with an error if a harness name such as `claude` or `codex` resolves anywhere outside `fixtures/`, even elsewhere in the repository: a real harness on your machine is never launched by a test. Keep that in the tests of a driver you copy from here, for every driver and kit run they make.

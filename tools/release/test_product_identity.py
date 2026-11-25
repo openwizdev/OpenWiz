@@ -52,7 +52,7 @@ PACKAGED = {'tools/install/install.py': 'runtime/install.py', 'tools/install/pul
 # #1148: contracts/release-candidate.v1.md, "Minimum product identity (RL4)".
 RECORD = b'OPENWIZ_PRODUCT_V1:'
 PROGRAMS = {'cli': 'openwiz'}
-TARGETS = ('aarch64-apple-darwin', 'x86_64-apple-darwin', 'x86_64-unknown-linux-gnu')
+TARGETS = ('aarch64-apple-darwin', 'x86_64-apple-darwin', 'x86_64-unknown-linux-gnu', 'aarch64-unknown-linux-gnu')
 
 
 def canonical(value):
@@ -78,7 +78,8 @@ def program(target, *records, appended=b''):
         size = 64 + 56 + len(body)
         header = bytearray(64)
         header[:7] = b'\x7fELF\x02\x01\x01'
-        struct.pack_into('<HHIQQQIHHHHHH', header, 16, 2, 62, 1, 0, 64, 0, 0, 64, 56, 1, 0, 0, 0)
+        machine = 183 if target.startswith('aarch64') else 62
+        struct.pack_into('<HHIQQQIHHHHHH', header, 16, 2, machine, 1, 0, 64, 0, 0, 64, 56, 1, 0, 0, 0)
         segment = struct.pack('<IIQQQQQQ', 1, 5, 0, 0, 0, size, size, 0x1000)
     else:
         size = 32 + 72 + len(body)

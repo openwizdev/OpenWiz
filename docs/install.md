@@ -22,7 +22,7 @@ Using Grok Bot? See [Grok Bot + OpenWiz](grok-bot.md).
 
 ## What happens, in order
 
-The agent runs each command itself and reads its JSON. `<root>` is the install folder, by default `~/.local/lib/openwiz`: use a new or empty folder that holds nothing else, because the installer also accepts a folder that already has other files in it. If you give `install install` a separate `--state-root`, it too must be a new or empty folder used by OpenWiz alone, never one shared with another app. `<target>` is `aarch64-apple-darwin`, `x86_64-apple-darwin` or `x86_64-unknown-linux-gnu`.
+The agent runs each command itself and reads its JSON. `<root>` is the install folder, by default `~/.local/lib/openwiz`: use a new or empty folder that holds nothing else, because the installer also accepts a folder that already has other files in it. If you give `install install` a separate `--state-root`, it too must be a new or empty folder used by OpenWiz alone, never one shared with another app. `<target>` is `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-gnu` or `aarch64-unknown-linux-gnu`.
 
 1. **Preflight.** It clones this repository at the `v0.1.1` tag into a private temporary folder as `$openwiz` (`git clone --depth 1 --branch v0.1.1 https://github.com/openwizdev/OpenWiz "$openwiz"`) and checks this computer: Python, a supported system, free disk space, and whether `room-cli`, `gh` and `git` are installed. It reads only; anything missing comes with its next step. A missing `room-cli` never stops it: it says CloudRoom is optional, needed only if you pick it. On an Intel Mac it reads ready and notes that agents run on this computer or on boat.dev.
 
@@ -37,7 +37,7 @@ The agent runs each command itself and reads its JSON. `<root>` is the install f
    python3 -I "$openwiz"/tools/install/install install --assets <that folder> --target <target> --root <root>
    ```
 
-   `install` prints `"activated": true`, the version, and the `build` and `state_root` folders, written below as `<build>` and `<state>`. `download` reads GitHub's Latest release, which will be OpenWiz 0.1.1 once it is out; if it refuses with "could not be completed safely", check the [releases page](https://github.com/openwizdev/OpenWiz/releases). The same three files are under `https://github.com/openwizdev/OpenWiz/releases/download/v0.1.1/`: `openwiz-<target>.sha256`, `openwiz-<target>.manifest.json` and `openwiz-0.1.1-<target>.tar.gz`. Put them in a new private folder (mode 700, files 600) and run `install install --assets` on it; it checks every hash the same way.
+   `install` prints `"activated": true`, the version, and the `build` and `state_root` folders, written below as `<build>` and `<state>`. `download` reads GitHub's Latest release, which will be OpenWiz 0.1.1 once it is out; if it refuses with "could not be completed safely", check the [releases page](https://github.com/openwizdev/OpenWiz/releases). The same three files will be under `https://github.com/openwizdev/OpenWiz/releases/download/v0.1.1/` once 0.1.1 is out: `openwiz-<target>.sha256`, `openwiz-<target>.manifest.json` and `openwiz-0.1.1-<target>.tar.gz`. Put them in a new private folder (mode 700, files 600) and run `install install --assets` on it; it checks every hash the same way.
 
    Then it proves the build: `<root>/current/openwiz --build-identity` prints the version (`0.1.1`) and the source commit. The `openwiz` program lives there, not on your `PATH`: typing `openwiz` alone says "command not found".
 

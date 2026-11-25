@@ -1,0 +1,70 @@
+{
+  "schema": "openwiz.ghost.v1",
+  "kind": "context_pack",
+  "revision": "ctx-syn-0001",
+  "skill": {
+    "phrases": [
+      "all recs",
+      "approve #42 and merge",
+      "ship magic-link sign-in",
+      "the seat billing spec",
+      "looks good, merge it"
+    ],
+    "tone": "short, direct, lowercase",
+    "never_suggest": [
+      "force push"
+    ]
+  },
+  "glossary": [
+    {
+      "term": "fleet",
+      "meaning": "The builders and reviewers working on one approved spec."
+    },
+    {
+      "term": "grill",
+      "meaning": "Structured Q&A rounds settling design choices before a spec."
+    },
+    {
+      "term": "plan graph",
+      "meaning": "Approved tickets with owned paths and blocking links."
+    }
+  ],
+  "open_work": {
+    "specs": [
+      {
+        "number": 12,
+        "title": "the seat billing spec"
+      }
+    ],
+    "tickets": [
+      {
+        "number": 42,
+        "title": "magic-link sign-in",
+        "action": "approve #42 and merge"
+      }
+    ],
+    "grills": [
+      {
+        "code": "J1",
+        "question": "Use magic-link sign-in as the default onboarding flow?",
+        "recommended": "all recs"
+      }
+    ]
+  },
+  "conversation": {
+    "session_id": "thr_syn_demo_01",
+    "agent": "orchestrator",
+    "turns": [
+      {
+        "role": "user",
+        "text": "where are we on magic-link sign-in?",
+        "asks_user": false
+      },
+      {
+        "role": "agent",
+        "text": "Ticket #42 (magic-link sign-in) is green and grill J1 is ready. Approve #42 and take all recs for J1?",
+        "asks_user": true
+      }
+    ]
+  }
+}

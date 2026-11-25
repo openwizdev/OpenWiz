@@ -121,24 +121,17 @@ jobs:
         run: |
           python3 -I kernel/driver-kit/test_kit.py
           python3 -I tools/ci-overload/test_supply.py
-          python3 -I adapters/hermes/test_driver.py
           python3 -I tools/bench/first-fleet/test_bench.py
           python3 -I kernel/records-kit/test_check.py
+          python3 -I ci/test_ci_driver_tests.py
+          env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/driver-kit/test_stubs.py
+          python3 -I contracts/fixtures/feedback-loop/test_check.py
       - name: The kernel kits' tests (part 2)
         if: matrix.part == 4
         run: |
-          python3 -I adapters/local/test_harnesses.py
+          python3 -I ci/driver-tests.py
           python3 -I kernel/records/model/test_model.py
-          python3 -I adapters/boat/test_driver.py
-          python3 -I adapters/local/test_driver.py
-          python3 -I adapters/cloudroom/test_driver.py
           python3 -I kernel/driver-kit/test_hostkey.py
-          python3 -I adapters/template/test_driver.py
-          python3 -I adapters/openclaw/test_driver.py
-          python3 -I adapters/factory/test_driver.py
-          python3 -I adapters/devin/test_driver.py
-          env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/driver-kit/test_stubs.py
-          python3 -I contracts/fixtures/feedback-loop/test_check.py
       - name: The live-check rig's tests
         if: matrix.part == 2
         run: |
@@ -178,6 +171,7 @@ jobs:
           python3 -I -B tools/install/setup/test_github_login.py
           python3 -I tools/install/tests/skills-linked-config/test_linked_config.py
           python3 -I tools/rehearsal/test_rehearse.py
+          python3 -I tools/install/tests/installed-contracts/test_installed_contracts.py
       - name: The GitHub App
         if: matrix.part == 2
         run: |
