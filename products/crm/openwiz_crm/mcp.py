@@ -1,10 +1,3 @@
-"""Newline-delimited JSON-RPC MCP server for the local CRM.
-
-The server speaks protocol versions 2024-11-05, 2025-03-26 and 2025-06-18.
-It reads one JSON object per line on stdin and writes one JSON object per
-line on stdout. It does not open a network connection.
-"""
-
 import json
 import os
 import sqlite3

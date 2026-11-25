@@ -1,10 +1,3 @@
-"""SQLite store for people, companies, deals, activities and custom objects.
-
-Records share one table. Fields are metadata, and values are JSON, so a custom
-field does not need a migration. The process that opens this file does not
-contact Salesforce, HubSpot or any other network service.
-"""
-
 import json
 import math
 import re

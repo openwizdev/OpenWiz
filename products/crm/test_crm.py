@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-"""Proofs for the local CRM. Synthetic records only. No network."""
-
 import json
 import subprocess
 import sys

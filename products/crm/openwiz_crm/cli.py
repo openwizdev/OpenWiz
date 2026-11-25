@@ -1,5 +1,3 @@
-"""JSON command line for the local CRM. stdout is one JSON object."""
-
 import argparse
 import json
 import os

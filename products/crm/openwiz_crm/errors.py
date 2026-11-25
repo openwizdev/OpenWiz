@@ -1,6 +1,3 @@
-"""Errors an agent can handle without reading a traceback."""
-
-
 class CrmError(Exception):
     def __init__(self, code, message):
         super().__init__(message)
