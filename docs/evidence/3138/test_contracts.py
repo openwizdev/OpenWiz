@@ -247,6 +247,31 @@ class RecordsContractTests(unittest.TestCase):
             with self.subTest(token=token):
                 self.assertTrue(token in text, f"contracts/records.v1.md missing {token}")
 
+    def test_records_v1_index_table_covers_grill_templates_and_models_offered(self):
+        lines = RECORDS_DOC_PATH.read_text(encoding="utf-8").splitlines()
+        start = next(
+            (i for i, line in enumerate(lines) if line.startswith("| Record form |")),
+            None,
+        )
+        self.assertIsNotNone(start, "index table missing")
+        rows = {}
+        for line in lines[start + 2 :]:
+            if not line.startswith("|"):
+                break
+            cells = [c.strip() for c in line[1:-1].split("|")]
+            rows[cells[0]] = cells
+        expected = {
+            "Grill file": ("# Grill: ", "## Round", "docs/grills/"),
+            "Spec and ticket templates": ("## Changelog headline", "kernel/records.v1.md"),
+            "Models-offered snapshot": ("openwiz.models-offered.v1", "models-offered.json"),
+        }
+        for name, markers in expected.items():
+            with self.subTest(row=name):
+                self.assertIn(name, rows, f"index table missing row {name!r}")
+                joined = " | ".join(rows[name])
+                for marker in markers:
+                    self.assertIn(marker, joined, f"row {name!r} missing {marker!r}")
+
 
 class FleetOpenWizRowsTests(unittest.TestCase):
     def test_fleet_contract_has_openwiz_rows_section_and_example(self):
