@@ -18,7 +18,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 WORKFLOW = ROOT / ".github/workflows/pr-opener.yml"
 SCRIPT = HERE / "pr-opener.py"
-EXACT_PERMS = {"pull_requests": "write", "contents": "read"}
+EXACT_PERMS = {"pull_requests": "write", "contents": "read", "metadata": "read"}
 SHA_USES = re.compile(r"^\s*-?\s*uses:\s*([^\s#]+)")
 
 
@@ -277,12 +277,23 @@ class PrOpenerTests(unittest.TestCase):
             self.assertEqual(len([c for c in calls if c[0] == "DELETE" and c[1] == "/installation/token"]), 1)
             self.assertIn("#77", summary.read_text(encoding="utf-8"))
 
+    def test_metadata_read_is_requested_and_accepted_for_pr_open(self):
+        # SECURITY: catches: refusing GitHub's implicit metadata: read floor or failing to request exact three-key grant
+        with fake_github() as (api, calls, state):
+            state["permissions"] = {"pull_requests": "write", "contents": "read", "metadata": "read"}
+            proc = self.run_opener(api)
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            mints = [c for c in calls if c[0] == "POST" and c[1].endswith("/access_tokens")]
+            self.assertEqual(mints[0][3]["permissions"], {"pull_requests": "write", "contents": "read", "metadata": "read"})
+            self.assertEqual(len([c for c in calls if c[0] == "POST" and c[1].endswith("/pulls")]), 1)
+
     def test_wider_grant_or_wrong_repo_stops_and_revokes(self):
         # SECURITY: catches: accepting a wider permission grant or extra repository instead of stopping and revoking
         bad_grants = [
             {"permissions": dict(EXACT_PERMS, issues="write")},
             {"permissions": dict(EXACT_PERMS, contents="write")},
-            {"permissions": dict(EXACT_PERMS, metadata="read")},
+            {"permissions": dict(EXACT_PERMS, metadata="write")},
+            {"permissions": {"pull_requests": "write", "contents": "read"}},
             {"repositories": [{"full_name": "synthetic-owner/work"}, {"full_name": "synthetic-owner/other"}]},
             {"repository_selection": "all"},
         ]
