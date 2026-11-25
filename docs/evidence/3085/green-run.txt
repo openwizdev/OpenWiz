@@ -1,0 +1,16 @@
+Green run (#3085), same proofs after the fix. The one agent-token failure, [unreadable], also fails on the base commit in this sandbox: the process holds CAP_DAC_READ_SEARCH, so a mode-0 file stays readable.
+
+== contracts/fixtures/token-service/test_fixtures.py
+Ran 19 tests
+OK
+== tools/github-app/test_token_service.py
+Ran 14 tests
+OK
+== tools/github-app/test_app_select.py
+Ran 5 tests
+OK
+== tools/github-app/test_agent_token.py
+FAIL: test_r1_an_unreadable_or_corrupt_cache_file_is_never_deleted_or_replaced (__main__.RevokeReview.test_r1_an_unreadable_or_corrupt_cache_file_is_never_delet
+AssertionError: '' != "openwiz: no openwiz[bot] token (unreacha[36 chars]nt\n"
+Ran 90 tests
+FAILED (failures=1)

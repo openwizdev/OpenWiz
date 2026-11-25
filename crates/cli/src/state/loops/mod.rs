@@ -58,15 +58,6 @@ impl Context {
     ) -> Result<Value, SwitchError> {
         self.switch_with_deadline(target, enabled, clock, None)
     }
-    pub fn switch_with_clock_until(
-        &self,
-        target: &str,
-        enabled: bool,
-        clock: &dyn openwiz_core::ops::Clock,
-        deadline: Instant,
-    ) -> Result<Value, SwitchError> {
-        self.switch_with_deadline(target, enabled, clock, Some(deadline))
-    }
     fn switch_with_deadline(
         &self,
         target: &str,

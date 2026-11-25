@@ -17,6 +17,8 @@ sh .githooks/test.sh --fixtures-only
 
 Inputs combine in one run. Exit 0 is no refusal, 1 a refusal, 2 bad arguments. Each refusal names its contract rule, input and line, never the matched text. A missing, empty or unreadable literals list refuses under `--require-literals`; each result says whether literals were used. Without `--base`, history is checked from the contract's public anchor; `--upstream REF` narrows it to the commits after the merge-base with an already published REF. Every commit's message, identities and tree are checked, so deleting a private file at the tip doesn't clear history.
 
+Commit author and committer emails (rule `C3`) must be GitHub noreply addresses (`<id>+<login>@users.noreply.github.com`, `<login>@users.noreply.github.com`, or `<n>+<name>[bot]@users.noreply.github.com` for bots); `noreply@github.com` is allowed for the committer field only (GitHub web-flow and merge-queue commits). Refusals name the commit and field (`commit-N-author` or `commit-N-committer`), never the email address.
+
 The contract's `bad` blocks are skipped only at `contracts/open-development.v1.md`. The release candidate's D2 scan stages each archive's runtime at `<target>/runtime/` and passes `--runtime-root <target>` for each target, so the contract shipped at exactly `<target>/runtime/contracts/open-development.v1.md` gets the same rule; every other file, and every other path ending in that name, is scanned as before. `--runtime-root` needs `--tree`, applies only to it, and takes one plain path segment.
 
 Workflows are read as a safe YAML subset; anything it doesn't recognise refuses, and every job needs an allowlisted runner.

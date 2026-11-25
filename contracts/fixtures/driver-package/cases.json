@@ -1,0 +1,12 @@
+{
+  "good": null,
+  "wrong-checksum": "archive-sha256",
+  "extra-file": "extra-file",
+  "missing-file": "missing-file",
+  "link": "member-type",
+  "wrong-mode": "member-mode",
+  "wrong-driver-name": "driver-name",
+  "changed-schema": "kit-schema",
+  "off-repository": "asset-repository",
+  "wrong-file-hash": "member-sha256"
+}

@@ -1,0 +1,9 @@
+{
+  "driver": "synthetic-host",
+  "repository": "example-publisher/example-driver",
+  "version": "1.2.3",
+  "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "asset_url": "https://github.com/example-publisher/example-driver/releases/download/v1.2.3/driver.tar.gz",
+  "kit_commit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "sha256": "aad4ee550afc095ce483550b308e3779655907e46e1a689bef3a85203dbfab63"
+}

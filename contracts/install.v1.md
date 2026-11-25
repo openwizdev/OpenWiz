@@ -2,7 +2,7 @@
 
 `openwiz.install.v1` describes exactly one version/source/target bundle. Supported
 targets are `aarch64-apple-darwin`, `x86_64-apple-darwin`,
-`aarch64-unknown-linux-gnu` and `x86_64-unknown-linux-gnu` (both Linux targets
+`x86_64-unknown-linux-gnu` and `aarch64-unknown-linux-gnu` (both Linux targets
 require glibc 2.34 or later). A target describes the built programs, not the host
 running an offline verifier. Native execution on each host needs live evidence.
 The manifest's setup API must be 1. Unknown/duplicate fields, assets and archive
@@ -98,6 +98,13 @@ created for it (#2168).
 | `cursor` | `~/.cursor` | `~/.cursor/skills/<skill>/` |
 | `opencode` | `~/.config/opencode` | `~/.config/opencode/skills/<skill>/` |
 | `grok` | `~/.grok` | `~/.grok/skills/<skill>/` |
+
+Beside each skills folder it writes (`<ROOT>/` and each present harness's
+folder) it also writes what the installed skills' scripts read from there
+(#2216): the build's `runtime/contracts/` as `contracts/`, and
+`.claude-plugin/plugin.json` listing the build's skills as `./skills/<skill>`.
+Each is handled like a skill copy: marked, replaced only when marked, and a
+same-named folder of the user's is kept and listed in the row's `skipped`.
 
 Each copy is marked with an `.openwiz-skill` file and is replaced only when
 that mark is there. Each harness and each skill stands alone (#2183). Before

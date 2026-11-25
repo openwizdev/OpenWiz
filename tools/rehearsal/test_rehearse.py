@@ -22,7 +22,8 @@ import release
 RUNNER = HERE / 'rehearse.py'
 SKILLS = ROOT / '.wizskills/skills'
 SOURCE = '1' * 40
-TARGET = {('Linux', 'x86_64'): 'x86_64-unknown-linux-gnu', ('Darwin', 'arm64'): 'aarch64-apple-darwin',
+TARGET = {('Linux', 'x86_64'): 'x86_64-unknown-linux-gnu', ('Linux', 'aarch64'): 'aarch64-unknown-linux-gnu',
+          ('Darwin', 'arm64'): 'aarch64-apple-darwin',
           ('Darwin', 'x86_64'): 'x86_64-apple-darwin'}.get((platform.system(), platform.machine()))
 STEPS = ['preflight', 'install', 'build_identity', 'setup', 'skills', 'first_fleet_dry_run']
 BREAKS = {
