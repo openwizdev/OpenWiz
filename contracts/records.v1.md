@@ -1,23 +1,23 @@
 # OpenWiz records contract, version 1 (`openwiz.records.v1`)
 
-An index over every GitHub and repository record form the app (`openwiz.dev/app`) reads today, together with the app's support window (D2) and the records-contract versioning rule (D3). Version 1 changes no existing record shape: each record form keeps its own contract and its own marker version.
+An index over the GitHub and repository record forms below, together with the app's support window (D2) and the records-contract versioning rule (D3). Version 1 changes no existing record shape: each record form keeps its own contract and its own marker version.
 
 **Contract first** (#3138, MS0 of spec #3137). Downstream consumers: MS1 (#3139) generates golden fixtures for every record form listed here from the real WizSkills writers into `fixtures/records/v1/`; MS2 (#3140) writes and checks the `## OpenWiz` rows in `docs/agents/fleet.md`; MS4 (#3142) reads those rows in the app and enforces the D2 support window; MS5 (#3143) replays every supported release's golden fixtures through the app in WizSite CI.
 
-Authority: ADR 0021 (`docs/adr/0021-app-skills-kernel-ship-as-a-matched-set.md`). Jake, 2026-11-24: approved D1-D3 for 0.1.2 ([private record](https://github.com/jparker2006/ClosedWiz/issues/3065#issuecomment-7139385706)).
+Authority: ADR 0021 ([openwizdev/OpenWiz#3136](https://github.com/openwizdev/OpenWiz/pull/3136)), until that pull request merges. Jake, 2026-11-24: approved D1-D3 for 0.1.2 ([private record](https://github.com/jparker2006/ClosedWiz/issues/3065#issuecomment-7139385706)).
 
 ## Indexed record forms (v1)
 
-Every record form the app reads today belongs to records contract `v1`. Each carries its own marker or versioned shape; an unknown marker version in any record reads as unknown, never as empty, zero, done or a guess.
+Every record form below belongs to records contract `v1`. The app reads each one today, except Fleet OpenWiz rows, which it reads from #3142. Each carries its own marker or versioned shape; an unknown marker version in any record reads as unknown, never as empty, zero, done or a guess.
 
 | Record form | Own marker / version | Where it lives | Source contract | What the app reads |
 | --- | --- | --- | --- | --- |
 | Status note | `<!-- openwiz:status v1 -->` (`openwiz:status v1`) | Issue comments by a record author | [`kernel/records.v1.md`](../kernel/records.v1.md) section 2 (`openwizdev/WizSkills` `contracts/agent-status.v1.md`) | `agent` (`builder`, `reviewer`, `fleet`), `state` (`working`, `asking`, `done`, `stopped`), `harness`, `model`, `skills`, `step`, `time`; live claim and lease rules |
 | Decision request | JSON fenced block with `"schema": "openwiz.decisions.v1"` | Issue or pull request comments by a record author | [`decisions.v1.md`](decisions.v1.md) (`openwiz.decisions.v1`) | `kind` (`grill_round`, `grill_confirmation`, `spec_confirmation`, `plan_approval`), `id`, `status`, `fingerprint`, `risk`, and each variant's required fields |
 | Decision answer | First line `openwiz decision answer v1` | Issue or pull request comments by the signed-in owner | `openwizdev/WizSite` `contracts/app-records.v1.md` (`openwiz.app-records.v1`) and [`decisions.v1.md`](decisions.v1.md) | Context JSON line and answer segment written and reconciled by the app |
-| Plan links | `## Links` section (`openwiz.plan-links.v1`) | Ticket issue bodies, paired with GitHub native `blockedBy` links | [`plan-links.v1.md`](plan-links.v1.md) (`openwiz.plan-links.v1`) and [`kernel/records.v1.md`](../kernel/records.v1.md) section 4 | `- #<n> real: <behaviour>`, `- #<n> file: <paths>`, long form `<owner>/<repo>#<n>`, or `none` |
-| Labels | `openwiz:records v1` labels | Open spec and ticket issues | [`kernel/records.v1.md`](../kernel/records.v1.md) section 1 | `spec`, `ready-for-agent`, `ready-for-human`, `needs-info`, `held`, and `wayfind:map` (excluded from Specs). No agent-progress label (`building`, `in-review`, `merged`, etc.) is ever set or read (L1) |
-| Fleet OpenWiz rows | `## OpenWiz` table (`v1`) | `HEAD:docs/agents/fleet.md` | [`fleet.v1.md`](fleet.v1.md#openwiz-rows) | `OpenWiz`, `WizSkills` and `Records contract` rows identifying the set that wrote the repository's records (D1) |
+| Plan links | `## Links` section (`openwiz.plan-links.v1`), the writer-side form | Ticket issue bodies, paired with GitHub native `blockedBy` links | [`plan-links.v1.md`](plan-links.v1.md) (`openwiz.plan-links.v1`) and [`kernel/records.v1.md`](../kernel/records.v1.md) section 4 | native `blockedBy` links |
+| Labels | no own marker (kernel records v1 section 1) | Open spec and ticket issues | [`kernel/records.v1.md`](../kernel/records.v1.md) section 1; the app is the source of `wayfind:map` | `spec`, `ready-for-agent`, `ready-for-human`, `needs-info`, `held`, and `wayfind:map` (excluded from Specs). No agent-progress label (`building`, `in-review`, `merged`, etc.) is ever set or read (L1) |
+| Fleet OpenWiz rows | `## OpenWiz` table (`v1`) | `HEAD:docs/agents/fleet.md` | [`fleet.v1.md`](fleet.v1.md#openwiz-rows) | read from #3142 |
 | Fleet record authors | `## GitHub identity` table (`Record authors` row, `v1`) | `HEAD:docs/agents/fleet.md` | `docs/agents/fleet.md` (`## GitHub identity`) | Allowed comment authors for status notes and decision records (`openwiz[bot]`, owner login) |
 | Fleet models | `## Models` table (`openwiz.models.v1`) and legacy `## Builder`..`## Fixer` tables | `HEAD:docs/agents/fleet.md` | [`models.v1.md`](models.v1.md) (`openwiz.models.v1`) | Role choices (`Orchestrator`, `Builder`, `Reviewer`, `Small builder`, `Fixer`) and follow rules |
 | Models-offered snapshot | JSON object with `"schema": "openwiz.models-offered.v1"` | `HEAD:docs/agents/models-offered.json` (optional) | [`models.v1.md`](models.v1.md) ("The offered-models snapshot") | `read_at`, `label`, `state`, `harnesses`, `unavailable`, and `recommended` choices shown on the Models page |
