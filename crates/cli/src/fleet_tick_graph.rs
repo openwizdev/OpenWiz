@@ -20,12 +20,11 @@ use std::time::Instant;
 #[derive(Clone, Copy)]
 enum PlanningDeadline {
     Initial(Instant),
-    Fixed(Instant),
 }
 impl PlanningDeadline {
     fn at(self) -> Instant {
         match self {
-            Self::Initial(deadline) | Self::Fixed(deadline) => deadline,
+            Self::Initial(deadline) => deadline,
         }
     }
     fn with_work(self, work_items: usize) -> Result<Instant> {
@@ -35,7 +34,6 @@ impl PlanningDeadline {
                     work_items,
                 ))
                 .ok_or("planning deadline overflow"),
-            Self::Fixed(deadline) => Ok(deadline),
         }
     }
 }
@@ -155,26 +153,6 @@ impl World {
             Rc::default(),
             inventory,
         )
-    }
-    pub fn refresh(
-        &self,
-        gh: &TickReads,
-        room: &CloudRoomSource,
-        state: &Path,
-        deadline: Instant,
-        spec: Option<Number>,
-    ) -> Result<Self> {
-        let mut world = Self::read_scoped(
-            gh,
-            Some(room),
-            state,
-            PlanningDeadline::Fixed(deadline),
-            spec,
-            self.cache.clone(),
-            Inventory::read(gh, deadline)?,
-        )?;
-        world.orchestrator = self.orchestrator.clone();
-        Ok(world)
     }
     fn read_scoped(
         gh: &TickReads,
@@ -605,7 +583,7 @@ impl World {
             .collect::<Vec<_>>();
         let work = jobs.len().saturating_add(comment_pages);
         let deadline = budget.with_work(work)?;
-        let agent_work = if read_agents && matches!(budget, PlanningDeadline::Initial(_)) {
+        let agent_work = if read_agents {
             self.agent_work(&agent_specs, deadline)
         } else {
             0
@@ -1472,21 +1450,5 @@ mod budget_tests {
             PlanningDeadline::Initial(original).with_work(5).unwrap(),
             observed - Duration::from_secs(90)
         );
-    }
-
-    #[test]
-    fn refresh_cannot_extend_or_reset_even_an_expired_deadline() {
-        let observed = Instant::now();
-        for deadline in [
-            observed - Duration::from_secs(5),
-            observed + Duration::from_secs(30),
-        ] {
-            assert_eq!(
-                PlanningDeadline::Fixed(deadline)
-                    .with_work(usize::MAX)
-                    .unwrap(),
-                deadline
-            );
-        }
     }
 }

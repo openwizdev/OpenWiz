@@ -21,7 +21,6 @@
     "ci/test_ci_driver_tests.py",
     "contracts/**",
     "crates/**",
-    "deploy/**",
     "docs/*",
     "docs/adr/**",
     "docs/agents/**",
