@@ -241,10 +241,10 @@ step are fixed public text.
 ## The sign-in screen and the powered-by line
 
 The local setup web page left in #1264; `tools/install/setup/setup.py check`
-reports the `cloudroom` component's state, reason and next step directly. Sign-in
-still happens once, in CloudRoom's own window (`tools/install/cloudroom/cloudroom.py sign-in`),
+reports `results.cloudroom` and `next.cloudroom` under `openwiz.setup-check.v1`.
+Sign-in still happens once, in CloudRoom's own window (`tools/install/cloudroom/cloudroom.py sign-in`),
 and OpenWiz never asks for, sees or stores a CloudRoom password or token. It
-reports signed in only when the state is verified.
+reports signed in only for `cloudroom_login_verified`.
 
 **Powered-by line:** when a surface displays the CloudRoom step, its powered-by
 line is exactly `Powered by CloudRoom`, plain text, no logo or link, once on the
