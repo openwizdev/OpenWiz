@@ -1,0 +1,22 @@
+test_bad_suggestion_shape_shows_nothing (__main__.BrowserTests.test_bad_suggestion_shape_shows_nothing) ... ok
+test_composing_tab_is_not_taken (__main__.BrowserTests.test_composing_tab_is_not_taken) ... ok
+test_duplicate_response_key_shows_nothing (__main__.BrowserTests.test_duplicate_response_key_shows_nothing) ... ok
+test_enter_does_not_accept (__main__.BrowserTests.test_enter_does_not_accept) ... ok
+test_golden_recall_cases_show_in_the_composer (__main__.BrowserTests.test_golden_recall_cases_show_in_the_composer) ... ok
+test_server_text_is_what_shows (__main__.BrowserTests.test_server_text_is_what_shows) ... ok
+test_shift_tab_is_not_taken (__main__.BrowserTests.test_shift_tab_is_not_taken) ... ok
+test_stale_reply_is_dropped (__main__.BrowserTests.test_stale_reply_is_dropped) ... ok
+test_tab_without_a_ghost_moves_focus (__main__.BrowserTests.test_tab_without_a_ghost_moves_focus) ... ok
+test_tap_accepts_a_word_and_long_press_accepts_all (__main__.BrowserTests.test_tap_accepts_a_word_and_long_press_accepts_all) ... ok
+test_word_accept_keeps_the_leading_space (__main__.BrowserTests.test_word_accept_keeps_the_leading_space) ... ok
+test_bad_route_payload_does_not_call_the_engine (__main__.GuardTests.test_bad_route_payload_does_not_call_the_engine) ... ok
+test_duplicate_key_is_refused (__main__.GuardTests.test_duplicate_key_is_refused) ... ok
+test_non_loopback_host_is_refused_before_connect (__main__.GuardTests.test_non_loopback_host_is_refused_before_connect) ... ok
+test_proxy_env_is_not_used_for_loopback (__main__.GuardTests.test_proxy_env_is_not_used_for_loopback) ... ok
+test_unknown_route_is_refused_before_connect (__main__.GuardTests.test_unknown_route_is_refused_before_connect) ... ok
+
+----------------------------------------------------------------------
+Ran 16 tests in 7.915s
+
+OK
+recorded [{"case":"grill_code_j1","text":"J1","ghost":" all recs","requests":1,"outcomes":["shown"]},{"case":"ticket_approve_42","text":"approve #4","ghost":"2 and merge","requests":1,"outcomes":["shown"]},{"case":"ship_magic_link","text":"ship magic","ghost":"-link sign-in","requests":1,"outcomes":["shown"]},{"case":"phrase_all_recs","text":"all r","ghost":"ecs","requests":1,"outcomes":["shown"]},{"case":"spec_seat_billing","text":"the seat bil","ghost":"ling spec","requests":1,"outcomes":["shown"]},{"case":"unknown_zzq","text":"zzq","ghost":null,"requests":1,"outcomes":[]},{"case":"typed_through","text":"all r","ghost":"ecs","requests":1,"outcomes":["shown"]},{"case":"typed_through","text":"all re","ghost":"cs","requests":0,"outcomes":["typed_through"]},{"case":"typed_through","text":"all rec","ghost":"s","requests":0,"outcomes":["typed_through"]},{"case":"word_accept_and_accept_all","text":"approve #4","ghost":"2 and merge","requests":1,"outcomes":["shown"]},{"case":"word_accept_and_accept_all","text":"approve #42 ","ghost":"and merge","requests":0,"outcomes":["accepted_word"]},{"case":"word_accept_and_accept_all","text":"approve #42 and ","ghost":"merge","requests":0,"outcomes":["accepted_word"]},{"case":"word_accept_and_accept_all","text":"approve #42 and merge","ghost":null,"requests":0,"outcomes":["accepted_all"]},{"case":"dismiss_esc_until_next_word","text":"J1","ghost":" all recs","requests":1,"outcomes":["shown"]},{"case":"dismiss_esc_until_next_word","text":"J1","ghost":null,"requests":0,"outcomes":["dismissed"]},{"case":"dismiss_esc_until_next_word","text":"J1 ","ghost":null,"requests":0,"outcomes":[]},{"case":"dismiss_esc_until_next_word","text":"J1 ok","ghost":null,"requests":1,"outcomes":[]},{"case":"typed_over_contradicts_ghost","text":"approve #4","ghost":"2 and merge","requests":1,"outcomes":["shown"]},{"case":"typed_over_contradicts_ghost","text":"approve #49","ghost":null,"requests":1,"outcomes":["typed_over"]}]

@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "OpenWiz ghost text for T3 Code",
+  "version": "0.2.0",
+  "description": "Shows OpenWiz ghost text in T3 Code's composer.",
+  "permissions": ["storage"],
+  "host_permissions": ["http://127.0.0.1/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "OpenWiz ghost text"
+  },
+  "options_ui": {
+    "page": "options.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["extension.js", "sidecar.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
