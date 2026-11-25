@@ -216,6 +216,19 @@ class Pull(unittest.TestCase):
         code, value = status()
         self.assertEqual((code, value.get('source'), value.get('version')), (0, '2' * 40, '0.0.99'), value)
 
+    def test_cli_refusal_ends_with_the_shared_help_line(self):
+        spec = importlib.util.spec_from_file_location('install', Path(__file__).with_name('install.py'))
+        installer = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(installer)
+        result = subprocess.run([sys.executable, '-I', str(HERE / 'pull.py'), 'stage', fixture.TARGETS[2],
+                                 '0.0.99', '1' * 40, '0' * 64, '/nonexistent-openwiz-root',
+                                 '/nonexistent-openwiz-state'], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stderr.splitlines(), [
+            'package pull: refused; last-good build retained',
+            installer.INSTALL_HELP,
+        ])
+
 
 if __name__ == '__main__':
     unittest.main()

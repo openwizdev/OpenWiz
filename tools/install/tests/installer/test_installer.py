@@ -78,9 +78,10 @@ class Installer(test_install.Bundles):
         self.root = self.home / '.local/lib/openwiz'
 
     def run_entry(self, *argv, host=None):
-        out = io.StringIO()
+        out, err = io.StringIO(), io.StringIO()
         with redirect_stdout(out):
-            code = entry.main(list(argv), host=host)
+            code = entry.main(list(argv), host=host, stderr=err)
+        self.last_stderr = err.getvalue()
         return code, json.loads(out.getvalue())
 
     def publish(self, tag, version='0.1.0'):
@@ -382,6 +383,22 @@ class Path_(Installer):
         self.assertEqual(link.read_text(), 'synthetic user program')
         code, value = self.run_entry('link', '--root', str(self.base / 'nothing'), '--yes')
         self.assertEqual(code, 5)
+        self.assertEqual(self.last_stderr.splitlines(), [entry.installer.INSTALL_HELP])
+
+    def test_help_line_appears_on_refusals_only_and_keeps_json_stdout_clean(self):
+        help_line = 'Stuck? Free 15-min setup help: https://openwiz.dev/help/'
+        self.assertEqual(entry.installer.INSTALL_HELP, help_line)
+        code, value = self.run_entry('preflight', host=('Darwin', 'arm64'))
+        self.assertEqual((code, value['ready'], self.last_stderr), (0, True, ''))
+        code, value = self.run_entry('preflight', host=('Linux', 'armv7l'))
+        self.assertEqual((code, value['ready']), (5, False))
+        self.assertEqual(self.last_stderr.splitlines(), [help_line])
+        self.feed()
+        code, value = self.run_entry('download', '--target', TARGET, '--dir', str(self.base / 'dl'))
+        self.assertEqual((code, value['outcome']), (5, 'refused'))
+        self.assertEqual(self.last_stderr.splitlines(), [help_line])
+        code, value = self.run_entry('status', '--root', str(self.root))
+        self.assertEqual((code, value['outcome'], self.last_stderr), (1, 'not installed', ''))
 
 
 if __name__ == '__main__':

@@ -209,6 +209,23 @@ class Install(Bundles):
         self.run_install(b)
         self.assertEqual(os.readlink(self.root / 'current'), str(self.root / 'state/service/builds' / ('2' * 40)))
 
+    def test_refused_install_ends_with_the_help_line_and_success_has_none(self):
+        spec = importlib.util.spec_from_file_location('installer', HERE / 'install.py')
+        installer = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(installer)
+        self.assertEqual(installer.INSTALL_HELP, 'Stuck? Free 15-min setup help: https://openwiz.dev/help/')
+        good = self.bundle()
+        ok = subprocess.run([sys.executable, str(HERE / 'install.py'), '--manifest', str(good[0]),
+                             '--archive', str(good[1]), '--manifest-sha256', sha(good[0].read_bytes()),
+                             '--root', str(self.root), '--target', TARGETS[2]], capture_output=True, text=True)
+        self.assertEqual((ok.returncode, ok.stderr), (0, ''))
+        bad = self.run_install(self.bundle(source='2' * 40, mutate=lambda m: m.update(target='unsupported')), ok=False)
+        self.assertEqual(bad.returncode, 1)
+        self.assertEqual(bad.stderr.splitlines(), [
+            'openwiz-install: refused; last-good selection and owner settings retained',
+            installer.INSTALL_HELP,
+        ])
+
 
 SKILLS = {'runtime/skills/grill/SKILL.md': b'---\nname: grill\n---\nSynthetic grill.\n',
           'runtime/skills/setup/SKILL.md': b'---\nname: setup\n---\nSynthetic setup.\n',
