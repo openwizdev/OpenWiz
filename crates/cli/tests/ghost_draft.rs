@@ -153,6 +153,14 @@ fn wait_calls(log: &Path, n: usize) -> Vec<String> {
     }
 }
 
+struct Release(PathBuf);
+
+impl Drop for Release {
+    fn drop(&mut self) {
+        let _ = fs::write(&self.0, b"");
+    }
+}
+
 fn asking() -> Value {
     json!({
         "session_id": "thr_syn_demo_01",
@@ -172,7 +180,9 @@ fn asking_turn_precomputes_one_harness_call() {
     fs::write(dir.join("notes.txt"), b"keep").expect("sentinel");
     let hold = PathBuf::from(format!("{}.hold", cli.display()));
     fs::write(&hold, b"").expect("hold");
+    let go = PathBuf::from(format!("{}.go", cli.display()));
     let mut engine = Engine::start(&settings(cli.to_str().expect("utf8")), &pack_bytes());
+    let _release = Release(go.clone());
     let turns = engine.request("turns", &asking());
     assert_eq!(
         turns["status"], 200,
@@ -184,7 +194,6 @@ fn asking_turn_precomputes_one_harness_call() {
         "turns response left the contract: {:?}",
         schema_errors("turns_response", &turns["body"])
     );
-    let go = PathBuf::from(format!("{}.go", cli.display()));
     assert!(
         !go.exists(),
         "the harness was released before the turns reply"
@@ -357,11 +366,22 @@ fn inner_egress() {
     }
     let dir = std::env::current_dir().expect("cwd");
     fs::write(dir.join("notes.txt"), b"keep").expect("sentinel");
-    let nets = || {
-        ["tcp", "tcp6", "udp", "udp6"]
-            .map(|name| fs::read_to_string(format!("/proc/self/net/{name}")).unwrap_or_default())
+    let sockets = || {
+        let mut found = Vec::new();
+        if let Ok(dir) = fs::read_dir("/proc/self/fd") {
+            for entry in dir.flatten() {
+                if let Ok(target) = fs::read_link(entry.path()) {
+                    let text = target.to_string_lossy().into_owned();
+                    if text.starts_with("socket:") {
+                        found.push(text);
+                    }
+                }
+            }
+        }
+        found.sort();
+        found
     };
-    let before = nets();
+    let before = sockets();
     let cli = install_harness(&dir);
     let mut relative = Engine::start(&settings("claude"), &pack_bytes());
     let refused = relative.request("turns", &asking());
@@ -400,7 +420,7 @@ fn inner_egress() {
             "unexpected file {name}"
         );
     }
-    assert_eq!(nets(), before, "the engine opened a socket");
+    assert_eq!(sockets(), before, "the engine opened a socket");
     drop(engine);
 }
 

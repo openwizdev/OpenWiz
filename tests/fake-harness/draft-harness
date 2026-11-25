@@ -20,13 +20,19 @@ def pairs(items):
 
 
 def net_count():
+    """Socket fds of this process. The net tables are shared by the machine."""
     total = 0
-    for name in ("tcp", "tcp6", "udp", "udp6"):
+    try:
+        names = os.listdir("/proc/self/fd")
+    except OSError:
+        return -1
+    for name in names:
         try:
-            lines = open("/proc/self/net/" + name, encoding="utf-8").read().splitlines()
+            target = os.readlink("/proc/self/fd/" + name)
         except OSError:
-            return -1
-        total += max(0, len(lines) - 1)
+            continue
+        if target.startswith("socket:"):
+            total += 1
     return total
 
 
