@@ -1,0 +1,33 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/driver-kit/test_kit.py Kit.test_key_host_effort_on_creation_still_counts_when_start_also_posts_a_prompt
+test_key_host_effort_on_creation_still_counts_when_start_also_posts_a_prompt (__main__.Kit.test_key_host_effort_on_creation_still_counts_when_start_also_posts_a_prompt) ... FAIL
+
+======================================================================
+FAIL: test_key_host_effort_on_creation_still_counts_when_start_also_posts_a_prompt (__main__.Kit.test_key_host_effort_on_creation_still_counts_when_start_also_posts_a_prompt)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 760, in test_key_host_effort_on_creation_still_counts_when_start_also_posts_a_prompt
+    self.assertEqual((code, out), (0, EFFORT_KEY['effort-key-host']))
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[324 chars]er']) != (0, ['pass version: openwiz:records v1, an[395 chars]er'])
+
+First differing element 0:
+1
+0
+
+- (1,
++ (0,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+-   "fail start: effort: medium never reached the kit's fake devin host",
+-   'fail wake: not run: start failed',
+-   'fail stop: not run: start failed',
++   'pass start: the run posted builder status note 3; effort: medium reached '
++   "the kit's fake devin host",
++   'pass wake: the run edited builder status note 3',
++   'pass stop: the run ended, and a wake after it is refused',
+    'pass token: no login or token passed through the driver, and on start, wake '
+    'and stop the devin key reached its host only from the key helper, in its '
+    'header'])
+
+----------------------------------------------------------------------
+Ran 1 test
+
+FAILED (failures=1)
