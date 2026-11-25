@@ -2342,9 +2342,14 @@ class Notes(World):
 
 def kept_history(current, raw):
     cut = raw.index(b'\n\n', raw.index(b'All OpenWiz versions')) + 2
-    if not (current.startswith(raw[:cut]) and current.endswith(raw[cut:])):
+    preambles = (
+        raw[:cut],
+        raw[:cut].replace(b'/blob/main/RELEASING.md)', b'/blob/main/tools/release/public/RELEASING.md)'),
+    )
+    preamble = next((p for p in preambles if current.startswith(p)), None)
+    if preamble is None or not current.endswith(raw[cut:]):
         raise AssertionError('the approved changelog bytes moved')
-    inserted = current[cut:len(current) - len(raw) + cut].decode('utf-8')
+    inserted = current[len(preamble):len(current) - len(raw) + cut].decode('utf-8')
     if not inserted:
         return []
     if not (inserted.startswith('## ') and inserted.endswith('\n\n')):
@@ -2364,12 +2369,20 @@ def kept_history(current, raw):
     order = found + kept[:1]
     if not all(x > y for x, y in zip(order, order[1:])):
         raise AssertionError('inserted changelog versions are not newest first and newer than the kept history')
+    groups = []
     for k, start in enumerate(starts):
         end = starts[k + 1] - 1 if k + 1 < len(starts) else len(lines)
-        older = ['v%d.%d.%d' % v for v in found[k + 1:] + kept]
+        sec = lines[start:end]
+        if groups and sec[-1].endswith(f'/releases/tag/v{".".join(map(str, found[groups[-1][0]]))})'):
+            groups[-1].append(k)
+        else:
+            groups.append([k])
+    for group in groups:
+        g_start, g_end = starts[group[0]], (starts[group[-1] + 1] - 1 if group[-1] + 1 < len(starts) else len(lines))
+        older = ['v%d.%d.%d' % v for v in found[group[-1] + 1:] + kept]
         try:
-            rl6_entry.curated(raw[:cut].decode('utf-8') + '\n'.join(lines[start:end]) + '\n',
-                              ['%d.%d.%d' % found[k]], older)
+            rl6_entry.curated(preamble.decode('utf-8') + '\n'.join(lines[g_start:g_end]) + '\n',
+                              ['%d.%d.%d' % found[i] for i in group], older)
         except rl6_entry.Refused as error:
             raise AssertionError(f'inserted changelog text: {error}') from None
     return found

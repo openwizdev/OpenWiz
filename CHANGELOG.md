@@ -1,6 +1,6 @@
 # Changelog
 
-All OpenWiz versions, newest first. How versions work: [RELEASING.md](tools/release/public/RELEASING.md).
+All OpenWiz versions, newest first. How versions work: [RELEASING.md](https://github.com/openwizdev/OpenWiz/blob/main/tools/release/public/RELEASING.md).
 
 ## 0.1.0 · 2026-11-21
 
