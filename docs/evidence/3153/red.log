@@ -1,0 +1,72 @@
+running 6 tests
+test inner_egress ... ok
+test asking_turn_precomputes_one_harness_call ... FAILED
+test a_turn_that_does_not_ask_spawns_nothing ... FAILED
+test harness_failure_is_not_retried_or_sent ... FAILED
+
+running 1 test
+test inner_egress ... test bad_requests_are_refused_and_do_not_spawn ... FAILED
+
+thread 'inner_egress' (8821) panicked at crates/cli/tests/ghost_draft.rs:368:5:
+assertion `left == right` failed: a relative cli name was not refused
+  left: Number(501)
+ right: 503
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+FAILED
+
+failures:
+
+failures:
+    inner_egress
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+test configured_cli_only_and_nothing_written_or_sent ... FAILED
+
+failures:
+
+---- asking_turn_precomputes_one_harness_call stdout ----
+
+thread 'asking_turn_precomputes_one_harness_call' (8807) panicked at crates/cli/tests/ghost_draft.rs:177:5:
+assertion `left == right` failed: an asking turn did not queue a precomputed draft
+  left: Number(501)
+ right: 200
+
+---- a_turn_that_does_not_ask_spawns_nothing stdout ----
+
+thread 'a_turn_that_does_not_ask_spawns_nothing' (8806) panicked at crates/cli/tests/ghost_draft.rs:260:5:
+assertion `left == right` failed
+  left: Number(501)
+ right: 200
+
+---- harness_failure_is_not_retried_or_sent stdout ----
+
+thread 'harness_failure_is_not_retried_or_sent' (8810) panicked at crates/cli/tests/ghost_draft.rs:278:5:
+assertion `left == right` failed
+  left: Number(501)
+ right: 200
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- bad_requests_are_refused_and_do_not_spawn stdout ----
+
+thread 'bad_requests_are_refused_and_do_not_spawn' (8808) panicked at crates/cli/tests/ghost_draft.rs:334:9:
+assertion `left == right` failed: {"id":"req-x","id":"req-y","route":"turns","body":{}} -> {"body":{"refusal":{"code":"not_implemented","message":"Draft is not built yet."}},"id":"req-y","status":501}
+  left: Number(501)
+ right: 400
+
+---- configured_cli_only_and_nothing_written_or_sent stdout ----
+
+thread 'configured_cli_only_and_nothing_written_or_sent' (8809) panicked at crates/cli/tests/ghost_draft.rs:439:5:
+inner egress case failed: exit status: 101
+
+
+failures:
+    a_turn_that_does_not_ask_spawns_nothing
+    asking_turn_precomputes_one_harness_call
+    bad_requests_are_refused_and_do_not_spawn
+    configured_cli_only_and_nothing_written_or_sent
+    harness_failure_is_not_retried_or_sent
+
+test result: FAILED. 1 passed; 5 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p openwiz-cli --test ghost_draft`

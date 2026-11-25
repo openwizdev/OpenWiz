@@ -1,0 +1,76 @@
+#!/usr/bin/python3 -I
+"""Synthetic draft harness: one JSON prompt on stdin, one JSON object on stdout.
+Sibling files of argv[0] (.log, .hold, .go, .fail) belong to the test.
+"""
+import json
+import os
+import sys
+import time
+
+sys.dont_write_bytecode = True
+
+
+def pairs(items):
+    obj = {}
+    for key, value in items:
+        if key in obj:
+            raise ValueError("duplicate")
+        obj[key] = value
+    return obj
+
+
+def net_count():
+    total = 0
+    for name in ("tcp", "tcp6", "udp", "udp6"):
+        try:
+            lines = open("/proc/self/net/" + name, encoding="utf-8").read().splitlines()
+        except OSError:
+            return -1
+        total += max(0, len(lines) - 1)
+    return total
+
+
+def main():
+    argv0 = sys.argv[0]
+    raw = sys.stdin.buffer.read(1 << 20)
+    rev, turn, marker = "", "", "bad"
+    if len(raw) < 1 << 20:
+        try:
+            body = json.loads(raw.decode("utf-8"), object_pairs_hook=pairs)
+        except (UnicodeError, ValueError, json.JSONDecodeError):
+            body = None
+        pack = body.get("pack") if isinstance(body, dict) else None
+        turns = body.get("turns") if isinstance(body, dict) else None
+        if (
+            isinstance(body, dict)
+            and body.get("schema") == "openwiz.ghost.v1"
+            and body.get("kind") == "draft_prompt"
+            and isinstance(pack, dict)
+            and isinstance(turns, list)
+        ):
+            revision = pack.get("revision")
+            rev = revision if isinstance(revision, str) else ""
+            texts = [
+                item.get("text")
+                for item in turns
+                if isinstance(item, dict) and isinstance(item.get("text"), str)
+            ]
+            turn = "|".join(texts)
+            tone = pack.get("skill", {}).get("tone") if isinstance(pack.get("skill"), dict) else None
+            marker = "ok" if isinstance(tone, str) and tone else "partial"
+    with open(argv0 + ".log", "a", encoding="utf-8") as log:
+        log.write(f"call\t{argv0}\t{marker}\trev={rev}\tturn={turn}\tnet={net_count()}\n")
+    if os.path.exists(argv0 + ".hold"):
+        deadline = time.monotonic() + 20
+        while not os.path.exists(argv0 + ".go"):
+            if time.monotonic() > deadline:
+                return 3
+            time.sleep(0.02)
+    if marker != "ok" or os.path.exists(argv0 + ".fail"):
+        return 2
+    sys.stdout.write('{"text":"J1 all recs, approve #42 and merge."}\n')
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
