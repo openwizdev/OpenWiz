@@ -658,7 +658,7 @@ class Local(unittest.TestCase):
         return env, waits, models
 
     def test_usage_limit_waits_and_resumes_once_on_same_model(self):
-        reset_iso = '2026-11-23T18:55:20Z'  # 1795460120 = FAKE_NOW (1795460000) + 120s
+        reset_iso = '2026-11-23T18:55:20Z'
         env, waits, models = self.limit_env([
             {'exit': 1, 'post_note': True,
              'line': 'Claude AI usage limit reached. Resets at %s (%s)' % (reset_iso, OPAQUE)},
@@ -673,10 +673,9 @@ class Local(unittest.TestCase):
         self.assertEqual(len(comments), 1, 'status note was duplicated instead of edited')
         self.assertIn('model: synthetic-1', comments[0]['body'])
         self.assertEqual(read(models).splitlines(), ['claude synthetic-1 first', 'claude synthetic-1 woken'])
-        self.assertEqual(read(waits).splitlines(), ['140.0'])  # 120s + 15s + 5s jitter
+        self.assertEqual(read(waits).splitlines(), ['140.0'])
         self.assertEqual(self.driver('stop', out, env, prog), (0, dict(out, stopped=True)))
 
-        # Second limit on the resumed turn does not trigger another automatic resume.
         self.tearDown()
         self.setUp()
         env, waits, models = self.limit_env([
@@ -738,7 +737,7 @@ class Local(unittest.TestCase):
             'claude synthetic-1 first', 'claude synthetic-1 woken', 'claude synthetic-1 woken'])
 
     def test_limit_beyond_six_hours_does_not_wait_and_first_turn_reports_limit(self):
-        far_iso = '2026-11-24T01:53:20Z'  # 1795460000 + 7*3600 = 1795485200
+        far_iso = '2026-11-24T01:53:20Z'
         env, waits, _ = self.limit_env([
             {'exit': 1, 'post_note': True,
              'line': 'Claude AI usage limit reached. Resets at %s (%s)' % (far_iso, OPAQUE)},
@@ -759,7 +758,6 @@ class Local(unittest.TestCase):
         self.assertIn(far_iso, err['next'])
         self.assertNotIn(OPAQUE, json.dumps(err))
 
-        # First-turn check in start reports a usage limit with its reset time, while normal failures stay unchanged.
         near_iso = '2026-11-23T18:55:20Z'
         env2, _, _ = self.limit_env([
             {'exit': 1, 'immediate': True,
@@ -772,7 +770,6 @@ class Local(unittest.TestCase):
         self.assertIn(near_iso, err['error'])
         self.assertNotIn(OPAQUE, json.dumps(err))
 
-        # Normal failure is unchanged.
         code, err = self.start('claude', repository='example/broken')
         self.assertEqual(code, 1, err)
         self.assertIn('the harness failed (exit 3)', err['error'])
@@ -782,7 +779,7 @@ class Local(unittest.TestCase):
         spec = importlib.util.spec_from_loader('local', importlib.machinery.SourceFileLoader('local', DRIVER))
         drv = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(drv)
-        now = 1795460000.0  # 2026-11-23T18:53:20Z
+        now = 1795460000.0
         self.assertTrue(hasattr(drv, 'detect_limit'), 'driver has no detect_limit')
         for text, expected_kind, expected_reset in (
             ('Claude AI usage limit reached|1795460120', 'limit', 1795460120.0),
