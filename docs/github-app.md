@@ -502,20 +502,20 @@ Perform these steps on your own GitHub login in **Settings → Environments**:
 ### Usage
 
 Agents dispatch the workflow against `main`, passing untrusted inputs as JSON on
-stdin (`head` must match `room/**` and already exist):
+stdin with `--json` (`head` must match `room/**` and already exist):
 
 ```sh
-gh workflow run pr-opener.yml --ref main <<'EOF'
+gh workflow run pr-opener.yml --ref main --json <<'EOF'
 {"head":"room/example-branch","title":"#1234: example title","body":"Closes #1234\n","draft":"false"}
 EOF
 ```
 
 `tools/github-app/pr-opener.py` signs the App JWT with `/usr/bin/openssl` over a
 pipe descriptor, mints an installation token scoped to this one repository with
-`pull_requests: write` and `contents: read`, verifies GitHub granted that exact
-scope, leaves any existing open pull request for `head` alone, records only the
-pull request number in the job summary, and revokes the token
-(`DELETE /installation/token`) before exit on both success and failure.
+`pull_requests: write`, `contents: read` and `metadata: read`, verifies GitHub
+granted that exact scope, leaves any existing open pull request for `head`
+alone, records only the pull request number in the job summary, and revokes the
+token (`DELETE /installation/token`) before exit on both success and failure.
 
 ## Fixture proof
 

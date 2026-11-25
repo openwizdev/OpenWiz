@@ -14,7 +14,7 @@ import urllib.request
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import app
 
-PR_PERMISSIONS = {"pull_requests": "write", "contents": "read"}
+PR_PERMISSIONS = {"pull_requests": "write", "contents": "read", "metadata": "read"}
 TOKEN_RE = re.compile(r"[A-Za-z0-9._~+/-]{1,16384}=*")
 SEGMENT_RE = re.compile(r"[A-Za-z0-9._-]+")
 MAX_BODY = 65536
