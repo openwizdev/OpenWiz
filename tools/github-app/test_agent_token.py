@@ -2381,6 +2381,7 @@ class ActionsRoute(unittest.TestCase):
         state = {"mode": mode, "dispatches": [], "deleted": [], "redirect_auth": [],
                  "artifacts": [], "logs": [], "rate_hits": 0, "poll_count": 0}
         owner_repo = "synthetic-owner/private-ops"
+        other_pub = self.helper.one_time_key()[1] if mode == "unopenable" else None
 
         def seal_to(token, key):
             sealed = b""
@@ -2434,7 +2435,6 @@ class ActionsRoute(unittest.TestCase):
                                                "sealed_token": "A" * 512, "expires_at": int(time.time()) + 3600,
                                                "repositories": ["other/repo"], "permissions": WRITE}))
                 elif state["mode"] == "unopenable":
-                    _, other_pub = self.server.helper.one_time_key()
                     raw = make_zip(json.dumps({"schema": "openwiz.token-service.v1", "kind": "answer",
                                                "sealed_token": seal_to(TOKEN, other_pub),
                                                "expires_at": int(time.time()) + 3600,

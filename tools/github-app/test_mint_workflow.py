@@ -9,6 +9,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 
 HERE = Path(__file__).resolve().parent
@@ -175,7 +176,7 @@ class MintWorkflowExecution(unittest.TestCase):
         script = max(blocks, key=len)
         private_key, answer_key = helper.one_time_key()
         self.assertIsNotNone(private_key)
-        app_pem = ts.throwaway_key()
+        app_pem = ts.openssl("genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:2048")
         request = {
             "schema": "openwiz.token-service.v1",
             "kind": "request",
@@ -190,7 +191,8 @@ class MintWorkflowExecution(unittest.TestCase):
             os.symlink(ROOT, work / "openwiz")
             summary = work / "summary.md"
             summary.write_text("")
-            with ts.fake_github(app_pem, ["synthetic-owner/work"]) as (url, calls, _fake):
+            with ts.fake_github(app_pem, ["synthetic-owner/work"]) as (url, calls, fake):
+                fake["expires_at"] = int(time.time()) + 3600
                 base_env = {
                     "PATH": os.environ.get("PATH", os.defpath),
                     "GITHUB_REF": "refs/heads/feature",
