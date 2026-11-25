@@ -485,7 +485,6 @@ class LinuxArm(Bundles):
         for rel, data in files.items():
             self.assertEqual((root / 'current' / rel).read_bytes(), data)
 
-        # Offering the ARM archive under x86_64-unknown-linux-gnu must be refused.
         bad_assets = self.base / 'arm-offered-as-x86'
         bad_assets.mkdir(mode=0o700)
         x86_alias = 'openwiz-x86_64-unknown-linux-gnu'
@@ -504,7 +503,6 @@ class LinuxArm(Bundles):
         self.assertEqual(bad.returncode, 5, bad.stdout + bad.stderr)
         self.assertFalse((bad_root / 'current').exists())
 
-        # Direct offline installer also refuses unsupported ARM variants.
         for bad_target in ('armv7-unknown-linux-gnueabihf', 'aarch64-unknown-linux-musl'):
             with self.subTest(bad_target=bad_target):
                 self.root = self.base / ('refuse-' + bad_target)
