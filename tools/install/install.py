@@ -27,6 +27,7 @@ CHANNELS = {
     'packaged': b'{"schema":"openwiz.update-channel.v1","channel":"packaged"}\n',
     'early': b'{"schema":"openwiz.update-channel.v1","channel":"early"}\n',
 }
+EARLY_RELEASE_SCHEMA = 'openwiz.early-release.v1'
 PROGRAMS = {'openwiz'}
 REQUIRED = PROGRAMS | {'runtime/openwiz-build.txt', 'runtime/install.py', 'runtime/pull.py',
     'runtime/skills/setup/SKILL.md', 'runtime/skills/grill/SKILL.md',
@@ -84,14 +85,13 @@ def safe(path, legacy=False):
     return path
 
 
-def manifest_at(path, checksum, target, selected=False, allow_prerelease=False):
+def manifest_at(path, checksum, target, selected=False):
     data = path.read_bytes()
     require(len(data) <= 4 * 1024 * 1024 and sha(data) == checksum, 'manifest checksum mismatch')
     value = json.loads(data, object_pairs_hook=unique)
     shape(value, 'schema version source target setup_api archive archive_sha256 archive_bytes assets')
     require(value['schema'] == 'openwiz.install.v1', 'unsupported manifest schema')
-    version_re = EARLY_VERSION_RE if (allow_prerelease or selected) else VERSION_RE
-    require(isinstance(value['version'], str) and version_re.fullmatch(value['version']), 'invalid version')
+    require(isinstance(value['version'], str) and VERSION_RE.fullmatch(value['version']), 'invalid version')
     require(digest(value['source'], 40), 'invalid source identity')
     require(target in TARGETS and value['target'] == target, 'unsupported or mismatched target')
     require(type(value['setup_api']) is int and value['setup_api'] == 1, 'incompatible setup API')
@@ -221,7 +221,39 @@ def repair_backups(builds, source, raw):
     return found
 
 
-ROOT_ENTRIES = re.compile(r'current|channel\.json|install\.lock|skills|contracts|\.claude-plugin|state|\.current-[0-9]+')
+def replace_private(path, data, prefix):
+    temporary = path.parent / (prefix + str(os.getpid()))
+    temporary.unlink(missing_ok=True)
+    write(temporary, data)
+    try:
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def early_release_bytes(version, source):
+    return (json.dumps({'schema': EARLY_RELEASE_SCHEMA, 'version': version, 'source': source},
+                       separators=(',', ':')) + '\n').encode('ascii')
+
+
+def read_early_release(path, expected_version=None, expected_source=None):
+    private(path, False)
+    data = json.loads(path.read_bytes(), object_pairs_hook=unique)
+    shape(data, 'schema version source')
+    require(data['schema'] == EARLY_RELEASE_SCHEMA, 'unsupported early release metadata')
+    require(isinstance(data['version'], str) and RC_VERSION_RE.fullmatch(data['version']),
+            'invalid early release version')
+    require(digest(data['source'], 40), 'invalid early release source')
+    if expected_version is not None:
+        require(data['version'].split('-rc.', 1)[0] == expected_version,
+                'early release version does not match manifest version')
+    if expected_source is not None:
+        require(data['source'] == expected_source, 'early release source does not match manifest source')
+    return data['version']
+
+
+ROOT_ENTRIES = re.compile(r'current|channel\.json|early-release\.json|install\.lock|skills|contracts|\.claude-plugin|state'
+                          r'|\.(?:current|channel|early-release)-[0-9]+')
 STATE_ENTRIES = (('', re.compile(r'setup|cloudroom|service')),
                  ('service', re.compile(r'config\.json|app|state\.json|loops|clone|builds')),
                  ('service/builds', re.compile(r'[0-9a-f]{40}|\.stage-[A-Za-z0-9_]+|\.damaged-[0-9]+-[0-9a-f]{40}')))
@@ -267,10 +299,15 @@ def activate_link(build, root):
 
 def install(manifest, archive, manifest_sha256, root, target, state_root=None,
             free_bytes=lambda path: shutil.disk_usage(path).free, activate=activate_link, stage_only=False,
-            channel='packaged'):
+            channel='packaged', release_version=None):
     require(channel in CHANNELS, 'unsupported update channel')
     manifest, archive, root = Path(manifest), Path(archive), Path(root)
-    value, assets, raw = manifest_at(manifest, manifest_sha256, target, allow_prerelease=(channel == 'early'))
+    value, assets, raw = manifest_at(manifest, manifest_sha256, target)
+    if release_version is not None:
+        require(channel == 'early' and isinstance(release_version, str)
+                and RC_VERSION_RE.fullmatch(release_version), 'invalid early release version')
+        require(release_version.split('-rc.', 1)[0] == value['version'],
+                'early release version does not match manifest version')
     require(archive.stat().st_size == value['archive_bytes'], 'archive size mismatch')
     hasher = hashlib.sha256()
     with archive.open('rb') as stream:
@@ -304,9 +341,14 @@ def install(manifest, archive, manifest_sha256, root, target, state_root=None,
         channel_file = root / 'channel.json'
         require(channel_file.exists() or not link.is_symlink(), 'source installation requires an explicit channel migration')
         channel_bytes = CHANNELS[channel]
+        migrate_packaged = False
         if channel_file.exists() or channel_file.is_symlink():
             private(channel_file, False)
-            require(channel_file.read_bytes() == channel_bytes, 'existing update channel requires explicit migration')
+            existing_channel = channel_file.read_bytes()
+            if channel == 'early' and existing_channel == CHANNELS['packaged']:
+                migrate_packaged = True
+            else:
+                require(existing_channel == channel_bytes, 'existing update channel requires explicit migration')
         build = builds / value['source']
         with tarfile.open(archive, 'r:gz') as tar:
             members = []
@@ -373,12 +415,26 @@ def install(manifest, archive, manifest_sha256, root, target, state_root=None,
                         os.chmod(build, stat.S_IMODE(damaged_meta.st_mode))
                     raise
         if not stage_only:
+            early_file = root / 'early-release.json'
             if not channel_file.exists():
                 write(channel_file, channel_bytes)
+                if release_version:
+                    replace_private(early_file, early_release_bytes(release_version, value['source']),
+                                    '.early-release-')
                 sync(root)
-            activate(build, root)
-        return {'schema': 'openwiz.install-result.v1', 'version': value['version'], 'source': value['source'],
-                'target': target, 'build': str(build), 'state_root': str(state_root),
+                activate(build, root)
+            else:
+                activate(build, root)
+                if migrate_packaged:
+                    replace_private(channel_file, channel_bytes, '.channel-')
+                if release_version:
+                    replace_private(early_file, early_release_bytes(release_version, value['source']),
+                                    '.early-release-')
+                elif early_file.exists() and not early_file.is_symlink():
+                    early_file.unlink()
+                sync(root)
+        return {'schema': 'openwiz.install-result.v1', 'version': release_version or value['version'],
+                'source': value['source'], 'target': target, 'build': str(build), 'state_root': str(state_root),
                 'activated': not stage_only, 'repaired': repair}
 
 
@@ -389,6 +445,7 @@ def main():
     parser.add_argument('--state-root')
     parser.add_argument('--stage-only', action='store_true')
     parser.add_argument('--channel', choices=tuple(CHANNELS), default='packaged')
+    parser.add_argument('--release-version')
     args = vars(parser.parse_args())
     try:
         result = install(**args)

@@ -386,18 +386,20 @@ class Path_(Installer):
 
 
 class EarlyChannel(Installer):
-    def publish_pro(self, assets_root, version, source='1' * 40, tamper_sums=False):
-        archive_name = f'openwiz-{version}-{TARGET}.tar.gz'
-        manifest, archive, _ = self.bundle(version=version, source=source,
+    def publish_pro(self, assets_root, rc_version, source='1' * 40, tamper_sums=False, manifest_version=None):
+        base = manifest_version or rc_version.split('-rc.', 1)[0]
+        archive_name = f'openwiz-{base}-{TARGET}.tar.gz'
+        manifest, archive, _ = self.bundle(version=base, source=source,
                                            mutate=lambda m: m.update(archive=archive_name))
         raw, data = manifest.read_bytes(), archive.read_bytes()
-        tag_dir = assets_root / ('v' + version)
+        tag_dir = assets_root / ('v' + rc_version)
         tag_dir.mkdir(parents=True, exist_ok=True)
         (tag_dir / (NAME + '.sha256')).write_bytes(
             f'{test_install.sha(raw)}  {NAME}.manifest.json\n'.encode())
         (tag_dir / (NAME + '.manifest.json')).write_bytes(raw)
+        (tag_dir / f'openwiz-{base}-{TARGET}.manifest.json').write_bytes(raw)
         (tag_dir / archive_name).write_bytes(data)
-        sums = (f'{test_install.sha(raw)}  openwiz-{version}-{TARGET}.manifest.json\n'
+        sums = (f'{test_install.sha(raw)}  openwiz-{base}-{TARGET}.manifest.json\n'
                 f'{"0" * 64 if tamper_sums else test_install.sha(data)}  {archive_name}\n')
         (tag_dir / 'SHA256SUMS').write_bytes(sums.encode())
         return archive_name
@@ -420,12 +422,19 @@ class EarlyChannel(Installer):
             'logged_in': True, 'status': 200, 'assets': str(assets_root),
             'releases': [{'tag_name': 'v0.1.2-rc.1', 'prerelease': True, 'draft': False}],
         })
+        packaged_assets = self.assets('packaged-assets')
+        code, value = self.run_entry('install', '--assets', str(packaged_assets), '--target', TARGET,
+                                     '--root', str(self.root))
+        self.assertEqual((code, value['outcome']), (0, 'installed'), value)
+        self.assertEqual(self.run_entry('status', '--root', str(self.root))[1]['channel'], 'packaged')
+
         dl = self.base / 'dl-early'
         code, value = self.run_entry('download', '--early', '--target', TARGET, '--dir', str(dl))
         self.assertEqual((code, value['outcome'], value['version'], value['channel'], value['origin']),
                          (0, 'downloaded', '0.1.2-rc.1', 'early', 'early'), value)
         self.assertEqual(sorted(p.name for p in dl.iterdir()),
-                         sorted([NAME + '.sha256', NAME + '.manifest.json', archive_rc, 'channel.json']))
+                         sorted([NAME + '.sha256', NAME + '.manifest.json', archive_rc,
+                                 'channel.json', 'early-release.json']))
 
         code, value = self.run_entry('install', '--assets', str(dl), '--target', TARGET, '--root', str(self.root))
         self.assertEqual((code, value['outcome'], value['version']), (0, 'installed', '0.1.2-rc.1'), value)
@@ -434,6 +443,16 @@ class EarlyChannel(Installer):
         code, value = self.run_entry('status', '--root', str(self.root))
         self.assertEqual((code, value['outcome'], value['version'], value['channel']),
                          (0, 'installed', '0.1.2-rc.1', 'early'), value)
+
+        code, value = self.run_entry('install', '--assets', str(packaged_assets), '--target', TARGET,
+                                     '--root', str(self.root))
+        self.assertEqual((code, value['outcome']), (5, 'refused'), value)
+        self.assertIn('explicit migration', value['reason'])
+
+        dl_pinned = self.base / 'dl-early-pinned'
+        code, value = self.run_entry('download', '--early', '--target', TARGET, '--dir', str(dl_pinned),
+                                     '--version', 'v0.1.2-rc.1')
+        self.assertEqual((code, value['outcome'], value['version']), (0, 'downloaded', '0.1.2-rc.1'), value)
 
         pub_archive = f'openwiz-0.1.2-{TARGET}.tar.gz'
         manifest, archive, _ = self.bundle(version='0.1.2', source='b' * 40,
@@ -471,6 +490,17 @@ class EarlyChannel(Installer):
         self.assertEqual((code, value['outcome']), (5, 'refused'), value)
         self.assertIn('SHA256SUMS does not match', value['reason'])
         self.assertFalse(bad_dl.exists())
+
+        self.publish_pro(assets_root, '0.1.4-rc.1', source='d' * 40, manifest_version='0.1.3')
+        Path(cfg_path).write_text(json.dumps({
+            'logged_in': True, 'status': 200, 'assets': str(assets_root),
+            'releases': [{'tag_name': 'v0.1.4-rc.1', 'prerelease': True, 'draft': False}],
+        }))
+        mismatch_dl = self.base / 'dl-mismatch-early'
+        code, value = self.run_entry('download', '--early', '--target', TARGET, '--dir', str(mismatch_dl))
+        self.assertEqual((code, value['outcome']), (5, 'refused'), value)
+        self.assertIn('published version does not match its tag', value['reason'])
+        self.assertFalse(mismatch_dl.exists())
 
     def test_early_download_refusals_and_default_unchanged(self):
         code, _ = self.run_entry('download', '--target', TARGET, '--dir', str(self.base / 'dl-rc'),

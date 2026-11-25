@@ -281,17 +281,19 @@ class Pull(unittest.TestCase):
         target = fixture.TARGETS[2]
         assets_root = f.base / 'pro-assets'
 
-        def populate_pro(version, source):
-            b = f.bundle(version=version, source=source)
+        def populate_pro(rc_version, source):
+            base = rc_version.split('-rc.', 1)[0]
+            archive_name = f'openwiz-{base}-{target}.tar.gz'
+            b = f.bundle(version=base, source=source, mutate=lambda m: m.update(archive=archive_name))
             raw, arch = b[0].read_bytes(), b[1].read_bytes()
-            tag_dir = assets_root / ('v' + version)
+            tag_dir = assets_root / ('v' + rc_version)
             tag_dir.mkdir(parents=True, exist_ok=True)
             (tag_dir / f'openwiz-{target}.sha256').write_bytes(
                 f'{fixture.sha(raw)}  openwiz-{target}.manifest.json\n'.encode())
             (tag_dir / f'openwiz-{target}.manifest.json').write_bytes(raw)
-            (tag_dir / f'openwiz-{version}-{target}.manifest.json').write_bytes(raw)
-            (tag_dir / 'bundle.tar.gz').write_bytes(arch)
-            (tag_dir / 'SHA256SUMS').write_bytes(release_sums(raw, arch, target, version))
+            (tag_dir / f'openwiz-{base}-{target}.manifest.json').write_bytes(raw)
+            (tag_dir / archive_name).write_bytes(arch)
+            (tag_dir / 'SHA256SUMS').write_bytes(release_sums(raw, arch, target, base, archive_name))
             return b, raw, arch
 
         rc1, raw_rc1, _ = populate_pro('0.1.2-rc.1', '1' * 40)
@@ -332,7 +334,8 @@ class Pull(unittest.TestCase):
 
         res = subprocess.run([sys.executable, str(HERE / 'install.py'), '--manifest', str(rc1[0]),
                               '--archive', str(rc1[1]), '--manifest-sha256', fixture.sha(raw_rc1),
-                              '--root', str(f.root), '--target', target, '--channel', 'early'],
+                              '--root', str(f.root), '--target', target, '--channel', 'early',
+                              '--release-version', '0.1.2-rc.1'],
                              capture_output=True, text=True)
         self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
         self.assertEqual((f.root / 'channel.json').read_text(),
@@ -345,8 +348,13 @@ class Pull(unittest.TestCase):
         self.assertEqual((staged['version'], staged['activated']), ('0.1.2-rc.2', False))
         subprocess.run([sys.executable, str(HERE / 'install.py'), '--manifest', str(rc2[0]),
                         '--archive', str(rc2[1]), '--manifest-sha256', fixture.sha(raw_rc2),
-                        '--root', str(f.root), '--target', target, '--channel', 'early'],
+                        '--root', str(f.root), '--target', target, '--channel', 'early',
+                        '--release-version', '0.1.2-rc.2'],
                        check=True, capture_output=True)
+
+        with self.assertRaisesRegex(pull.Refused, 'published version must advance'):
+            pull.stage(target, '0.1.2-rc.1', '1' * 40, fixture.sha(raw_rc1),
+                       f.root, f.root / 'state', fetch=pub_fetch, which=which)
 
         current_pub.update(bundle=pub_new, version='0.1.2')
         cand = pull.discover(target, fetch=pub_fetch, root=f.root, which=which)
@@ -360,6 +368,7 @@ class Pull(unittest.TestCase):
                        check=True, capture_output=True)
         self.assertEqual((f.root / 'channel.json').read_text(),
                          '{"schema":"openwiz.update-channel.v1","channel":"early"}\n')
+        self.assertFalse((f.root / 'early-release.json').exists())
 
         with self.assertRaisesRegex(pull.Refused, 'published version must advance'):
             pull.stage(target, '0.1.2-rc.2', '2' * 40, fixture.sha(raw_rc2),

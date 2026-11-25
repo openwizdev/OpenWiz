@@ -89,7 +89,6 @@ TOOLS = (('room-cli', 'Optional: CloudRoom is needed only if you pick it as the 
          ('gh', 'Install the GitHub CLI and run gh auth login.'),
          ('git', 'Install git.'))
 ARCHIVE_NAME = re.compile(r'openwiz-0\.[0-9]+\.[0-9]+-[a-z0-9_]+-[a-z0-9_-]+\.tar\.gz')
-EARLY_ARCHIVE_NAME = re.compile(r'openwiz-0\.[0-9]+\.[0-9]+(?:-rc\.[0-9]+)?-[a-z0-9_]+-[a-z0-9_-]+\.tar\.gz')
 
 
 class Usage(Exception):
@@ -169,16 +168,17 @@ def write_private(path, data):
 def download(target, folder, fetch, version=None, early=False, which=shutil.which):
     name = 'openwiz-' + target
     if early:
-        found, origin, asset_fetch = pull.published_early(target, fetch=fetch, version=version, which=which)
+        found, origin, asset_fetch, release_ver = pull.published_early(target, fetch=fetch, version=version, which=which)
         sums, raw, manifest, _ = found
-        installer.require(EARLY_ARCHIVE_NAME.fullmatch(manifest['archive']), 'invalid published archive name')
+        installer.require(ARCHIVE_NAME.fullmatch(manifest['archive']), 'invalid published archive name')
         prefix = '' if origin == 'early' else pull.BASE + 'download/v' + manifest['version'] + '/'
-        location = (pull.PRO_REPO + '/v' + manifest['version'] + '/' + manifest['archive']
+        location = (pull.PRO_REPO + '/v' + release_ver + '/' + manifest['archive']
                     if origin == 'early' else prefix + manifest['archive'])
     else:
         origin = 'public'
         asset_fetch = fetch
         sums, raw, manifest, _ = pull.published(target, fetch, version)
+        release_ver = manifest['version']
         installer.require(ARCHIVE_NAME.fullmatch(manifest['archive']), 'invalid published archive name')
         prefix = pull.BASE + 'download/v' + manifest['version'] + '/'
         location = prefix + manifest['archive']
@@ -197,7 +197,10 @@ def download(target, folder, fetch, version=None, early=False, which=shutil.whic
     write_private(folder / manifest['archive'], archive)
     if early:
         write_private(folder / 'channel.json', installer.CHANNELS['early'])
-    result = {'schema': 'openwiz.download.v1', 'outcome': 'downloaded', 'version': manifest['version'],
+        if pull.is_prerelease(release_ver):
+            write_private(folder / 'early-release.json',
+                          installer.early_release_bytes(release_ver, manifest['source']))
+    result = {'schema': 'openwiz.download.v1', 'outcome': 'downloaded', 'version': release_ver,
               'source': manifest['source'], 'target': target, 'dir': str(folder),
               'reason': 'Downloaded and checked every file against its published checksums; nothing is installed yet.'}
     if early:
@@ -267,13 +270,18 @@ def install(assets, target, root, state_root, early=False):
     match = re.fullmatch(rb'([0-9a-f]{64})  ' + re.escape((name + '.manifest.json').encode()) + rb'\n', sums)
     installer.require(match, 'invalid published manifest checksum')
     manifest_file = assets / (name + '.manifest.json')
-    manifest = installer.manifest_at(manifest_file, match[1].decode('ascii'), target,
-                                     allow_prerelease=(channel == 'early'))[0]
-    archive_re = EARLY_ARCHIVE_NAME if channel == 'early' else ARCHIVE_NAME
-    installer.require(archive_re.fullmatch(manifest['archive']), 'invalid published archive name')
+    manifest = installer.manifest_at(manifest_file, match[1].decode('ascii'), target)[0]
+    installer.require(ARCHIVE_NAME.fullmatch(manifest['archive']), 'invalid published archive name')
+    early_file = assets / 'early-release.json'
+    release_ver = None
+    if early_file.exists() or early_file.is_symlink():
+        installer.require(channel == 'early', 'early release metadata requires the early channel')
+        release_ver = installer.read_early_release(early_file, expected_version=manifest['version'],
+                                                   expected_source=manifest['source'])
     prepare_parent(root)
     result = installer.install(manifest_file, assets / manifest['archive'], match[1].decode('ascii'),
-                               Path(root), target, state_root=state_root, channel=channel)
+                               Path(root), target, state_root=state_root, channel=channel,
+                               release_version=release_ver)
     program, path, state = link_state(root)
     where = 'openwiz is at %s' % program
     return dict(result, outcome='installed', openwiz=str(program), next=(
@@ -350,6 +358,11 @@ def selected(root, state_root=None):
             if raw_channel == expected:
                 channel_name = cname
                 break
+    early_file = root / 'early-release.json'
+    if channel_name == 'early' and (early_file.exists() or early_file.is_symlink()):
+        release_ver = installer.read_early_release(early_file, expected_version=value['version'],
+                                                   expected_source=value['source'])
+        value = dict(value, version=release_ver)
     return build, state, value, channel_name
 
 
@@ -464,6 +477,13 @@ def remove_unlocked(root, state, state_root, yes, home, codex_home, made=None):
     channel = root / 'channel.json'
     if owned(channel, stat.S_ISREG) and channel.read_bytes() in installer.CHANNELS.values():
         delete.append(channel)
+    early_file = root / 'early-release.json'
+    if owned(early_file, stat.S_ISREG):
+        try:
+            installer.read_early_release(early_file)
+            delete.append(early_file)
+        except (installer.Refused, OSError, ValueError):
+            pass
     delete += [root / 'skills' / name for name in marked_skills(root / 'skills')]
     delete += [root / name for name in marked_beside(root)]
     delete += [builds / name for name in installer.entries(builds) if verified_build(builds / name)]

@@ -15,7 +15,7 @@ import urllib.request
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from install import (CHANNELS, EARLY_VERSION_RE, Refused, TARGETS, VERSION_RE,
-                     install, manifest_at, private, require, sha, unique)
+                     install, manifest_at, private, read_early_release, require, sha, unique)
 
 DESCRIPTION = """Fixed published-release transport. No source checkout, build, push or shell."""
 
@@ -69,6 +69,17 @@ def semver_key(version):
 
 def is_prerelease(version):
     return '-rc.' in version
+
+
+def base_version(version):
+    return version.split('-rc.', 1)[0]
+
+
+def installed_version(root, old):
+    early_file = Path(root) / 'early-release.json'
+    if not early_file.exists() and not early_file.is_symlink():
+        return old['version']
+    return read_early_release(early_file, expected_version=old['version'], expected_source=old['source'])
 
 
 def read_channel(root):
@@ -156,11 +167,11 @@ def pro_fetcher(tag, gh_bin):
     return lambda name, limit: fetch_pro_asset(tag, name, limit, gh_bin)
 
 
-def load(raw, checksum, target, selected=False, allow_prerelease=False):
+def load(raw, checksum, target, selected=False):
     with tempfile.TemporaryDirectory(prefix='openwiz-package-manifest-') as temporary:
         file = Path(temporary) / 'manifest.json'
         file.write_bytes(raw)
-        return manifest_at(file, checksum, target, selected, allow_prerelease=allow_prerelease)[0]
+        return manifest_at(file, checksum, target, selected)[0]
 
 
 def published(target, fetch=fetch_bytes, version=None):
@@ -188,10 +199,10 @@ def published_early(target, fetch=fetch_bytes, version=None, which=shutil.which)
             require(RC_TAG_RE.fullmatch(tag), 'invalid release version')
             require(version in rc_versions, f'early release {tag} not found in {PRO_REPO}')
             early_fetch = pro_fetcher(tag, gh_bin)
-            found = manifest_from('', target, early_fetch, allow_prerelease=True)
-            require(found[2]['version'] == version, 'published version does not match its tag ' + tag)
-            return found, 'early', early_fetch
-        return published(target, fetch, version), 'public', fetch
+            found = manifest_from('', target, early_fetch)
+            require(found[2]['version'] == base_version(version), 'published version does not match its tag ' + tag)
+            return found, 'early', early_fetch, version
+        return published(target, fetch, version), 'public', fetch, version
     best_early = max(rc_versions, key=semver_key) if rc_versions else None
     try:
         public_found = published(target, fetch)
@@ -202,21 +213,21 @@ def published_early(target, fetch=fetch_bytes, version=None, which=shutil.which)
     if best_early is not None and (public_found is None or semver_key(best_early) > semver_key(public_found[2]['version'])):
         tag = 'v' + best_early
         early_fetch = pro_fetcher(tag, gh_bin)
-        found = manifest_from('', target, early_fetch, allow_prerelease=True)
-        require(found[2]['version'] == best_early, 'published version does not match its tag ' + tag)
-        return found, 'early', early_fetch
+        found = manifest_from('', target, early_fetch)
+        require(found[2]['version'] == base_version(best_early), 'published version does not match its tag ' + tag)
+        return found, 'early', early_fetch, best_early
     require(public_found is not None, f'no published or early release found for {target}')
-    return public_found, 'public', fetch
+    return public_found, 'public', fetch, public_found[2]['version']
 
 
-def manifest_from(prefix, target, fetch, allow_prerelease=False):
+def manifest_from(prefix, target, fetch):
     name = 'openwiz-' + target
     sums = fetch(prefix + name + '.sha256', 256)
     match = re.fullmatch(rb'([0-9a-f]{64})  ' + re.escape((name + '.manifest.json').encode()) + rb'\n', sums)
     require(match, 'invalid published manifest checksum')
     checksum = match[1].decode('ascii')
     raw = fetch(prefix + name + '.manifest.json', 4 * 1024 * 1024)
-    return sums, raw, load(raw, checksum, target, allow_prerelease=allow_prerelease), checksum
+    return sums, raw, load(raw, checksum, target), checksum
 
 
 def discover(target, fetch=fetch_bytes, channel=None, root=None, which=shutil.which):
@@ -224,9 +235,9 @@ def discover(target, fetch=fetch_bytes, channel=None, root=None, which=shutil.wh
         channel = (read_channel(root) or 'packaged') if root else 'packaged'
     require(channel in CHANNELS, 'unsupported update channel')
     if channel == 'early':
-        found, origin, _ = published_early(target, fetch=fetch, which=which)
+        found, origin, _, release_version = published_early(target, fetch=fetch, which=which)
         manifest, checksum = found[2:]
-        return {'schema': 'openwiz.package-candidate.v1', 'version': manifest['version'],
+        return {'schema': 'openwiz.package-candidate.v1', 'version': release_version,
                 'source': manifest['source'], 'target': target, 'manifest_sha256': checksum,
                 'channel': 'early', 'origin': origin}
     manifest, checksum = published(target, fetch)[2:]
@@ -250,8 +261,10 @@ def stage(target, version, source, checksum, root, state_root, fetch=fetch_bytes
     private(selected / 'install-manifest.json', False)
     old_raw = (selected / 'install-manifest.json').read_bytes()
     old = load(old_raw, sha(old_raw), target, selected=True)
-    require(semver_key(version) > semver_key(old['version']), 'published version must advance')
-    name = f'openwiz-{version}-{target}.manifest.json'
+    old_version = installed_version(root, old) if is_early else old['version']
+    require(semver_key(version) > semver_key(old_version), 'published version must advance')
+    manifest_version = base_version(version)
+    name = f'openwiz-{manifest_version}-{target}.manifest.json'
     if is_early and is_prerelease(version):
         gh_bin = gh_binary(which)
         gh_auth_check(gh_bin)
@@ -261,8 +274,8 @@ def stage(target, version, source, checksum, root, state_root, fetch=fetch_bytes
         asset_fetch = fetch
         prefix = BASE + 'download/v' + version + '/'
     raw = asset_fetch(prefix + name, 4 * 1024 * 1024)
-    manifest = load(raw, checksum, target, allow_prerelease=is_early)
-    require(manifest['version'] == version and manifest['source'] == source, 'published identity changed')
+    manifest = load(raw, checksum, target)
+    require(manifest['version'] == manifest_version and manifest['source'] == source, 'published identity changed')
     bundle = asset_fetch(prefix + manifest['archive'], manifest['archive_bytes'])
     listed = {}
     for line in asset_fetch(prefix + 'SHA256SUMS', 64 * 1024).decode('ascii', 'replace').splitlines():
@@ -281,7 +294,7 @@ def stage(target, version, source, checksum, root, state_root, fetch=fetch_bytes
         archive.write_bytes(bundle)
         archive.chmod(0o600)
         return install(manifest_file, archive, checksum, root, target, state_root=state_root, stage_only=True,
-                       channel=root_channel)
+                       channel=root_channel, release_version=version if is_prerelease(version) else None)
 
 
 def main():
