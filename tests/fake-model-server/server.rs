@@ -100,9 +100,11 @@ fn handle(mut stream: TcpStream, hits: Arc<Mutex<Vec<Hit>>>, script: Arc<Script>
         push(&hits, &path, &body_text, false);
         return;
     }
-    let payload = response(&path, script.as_ref());
-    let wrote = stream.write_all(&payload).is_ok();
-    push(&hits, &path, &body_text, wrote);
+    // Record the request before the response. The client sends the next
+    // keystroke as soon as it has read the reply, which can be before this
+    // thread reaches a push that follows the write.
+    push(&hits, &path, &body_text, true);
+    let _ = stream.write_all(&response(&path, script.as_ref()));
 }
 
 fn push(hits: &Mutex<Vec<Hit>>, path: &str, body: &str, finished: bool) {

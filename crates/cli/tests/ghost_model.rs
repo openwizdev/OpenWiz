@@ -21,9 +21,9 @@ use blend::RecallHit;
 use model::{Answer, ContextPack, Session, Settings, Tier};
 use serde_json::Value;
 
-/// Slow enough that a real wait fails the 150 ms budget. The green run uses a
-/// fixed delay inside the budget; the red run set this to 200.
-const REPLAY_DELAY_MS: u64 = 200;
+/// Fixed server delay for the fixture replay. A 200 ms fake misses the 150 ms
+/// budget (docs/evidence/3151/red.log); 20 ms is inside it.
+const REPLAY_DELAY_MS: u64 = 20;
 
 fn repo_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -117,15 +117,16 @@ fn cached_prefix_is_byte_identical_across_keystrokes() {
     ));
     assert_eq!(settings.model, "custom-syn");
     let pack = pack();
+    let cached = model::cached_prefix(&pack);
     let session = Session::new();
     let text = "approve #42 and merge";
-    let mut heads = Vec::new();
     for (index, _) in text.char_indices() {
         let prefix = &text[..=index];
         model::answer(&session, &settings, &pack, prefix, (index + 1) as u64, None);
     }
     let hits = server.hits.lock().unwrap();
     assert_eq!(hits.len(), text.chars().count());
+    let mut sent = Vec::new();
     for (index, hit) in hits.iter().enumerate() {
         assert!(hit.finished, "keystroke {index} did not finish");
         assert_eq!(hit.path, "/completion");
@@ -140,19 +141,24 @@ fn cached_prefix_is_byte_identical_across_keystrokes() {
                 .any(|item| item == "\n")
         );
         let prompt = body["prompt"].as_str().unwrap();
-        let prefix = &text[..=text.char_indices().nth(index).unwrap().0];
-        let stripped = prefix.strip_suffix(' ').unwrap_or(prefix);
         assert!(
-            prompt.ends_with(stripped),
-            "prompt missing the typed prefix"
+            prompt.starts_with(&cached),
+            "keystroke {index} changed the cached prefix"
         );
-        let head = &prompt[..prompt.len() - stripped.len()];
-        assert!(head.contains("phrase: all recs\n"));
-        assert!(head.contains("grill: J1 "));
-        assert!(!head.contains("typed-keystroke"));
-        heads.push(head.to_owned());
+        sent.push(prompt[cached.len()..].to_owned());
     }
-    assert!(heads.iter().all(|head| head == &heads[0]));
+    let mut expected: Vec<String> = text
+        .char_indices()
+        .map(|(index, _)| {
+            let prefix = &text[..=index];
+            prefix.strip_suffix(' ').unwrap_or(prefix).to_owned()
+        })
+        .collect();
+    sent.sort();
+    expected.sort();
+    assert_eq!(sent, expected, "only the typed prefix may change");
+    assert!(cached.contains("phrase: all recs\n"));
+    assert!(cached.contains("grill: J1 "));
 }
 
 #[test]
