@@ -15,7 +15,7 @@ One JSON object with exactly these keys, each once:
 | `schema` | `"openwiz.rehearsal.v1"` |
 | `version` | The version the run built, `0.<minor>.<patch>`; the version the rehearsal required, not the one the package claims |
 | `source` | The run's source commit, 40 lowercase hex; the commit the rehearsal required |
-| `target` | One of `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-gnu` |
+| `target` | One of `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu` |
 | `archive_sha256` | The SHA-256, 64 lowercase hex, of the exact archive file rehearsed (`openwiz-<version>-<target>.tar.gz` in the run's `packages/` folder), or `null` when that folder held no single archive for the target |
 | `manifest_sha256` | The SHA-256 of `openwiz-<target>.manifest.json` in the same folder, or `null` when it is missing |
 | `status` | `"pass"` or `"fail"` |

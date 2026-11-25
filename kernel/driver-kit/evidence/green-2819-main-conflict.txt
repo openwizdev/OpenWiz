@@ -1,0 +1,17 @@
+main conflicted with this branch in kernel/driver-kit/test_kit.py: both sides added
+tests at the same place. The merge keeps both; the ticket's kit.py change is unchanged.
+
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/driver-kit/test_kit.py
+Ran 59 tests
+OK
+
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/driver-kit/test_hostkey.py
+Ran 25 tests
+OK
+
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/driver-kit/test_stubs.py
+Ran 3 tests
+OK
+
+$ cargo fmt --check
+OK

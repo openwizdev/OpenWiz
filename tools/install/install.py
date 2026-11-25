@@ -19,8 +19,9 @@ Checksums establish integrity, not a signed publisher identity. No program from
 an archive is run while validating or installing it.
 """
 
-TARGETS = ('aarch64-apple-darwin', 'x86_64-apple-darwin', 'x86_64-unknown-linux-gnu')
+TARGETS = ('aarch64-apple-darwin', 'x86_64-apple-darwin', 'x86_64-unknown-linux-gnu', 'aarch64-unknown-linux-gnu')
 VERSION_RE = re.compile(r'0\.[0-9]+\.[0-9]+')
+RC_VERSION_RE = re.compile(r'0\.[0-9]+\.[0-9]+-rc\.[0-9]+')
 EARLY_VERSION_RE = re.compile(r'0\.[0-9]+\.[0-9]+(?:-rc\.[0-9]+)?')
 CHANNELS = {
     'packaged': b'{"schema":"openwiz.update-channel.v1","channel":"packaged"}\n',
@@ -220,7 +221,7 @@ def repair_backups(builds, source, raw):
     return found
 
 
-ROOT_ENTRIES = re.compile(r'current|channel\.json|install\.lock|skills|state|\.current-[0-9]+')
+ROOT_ENTRIES = re.compile(r'current|channel\.json|install\.lock|skills|contracts|\.claude-plugin|state|\.current-[0-9]+')
 STATE_ENTRIES = (('', re.compile(r'setup|cloudroom|service')),
                  ('service', re.compile(r'config\.json|app|state\.json|loops|clone|builds')),
                  ('service/builds', re.compile(r'[0-9a-f]{40}|\.stage-[A-Za-z0-9_]+|\.damaged-[0-9]+-[0-9a-f]{40}')))
