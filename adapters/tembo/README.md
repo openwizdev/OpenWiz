@@ -2,12 +2,13 @@
 
 Login: held by Tembo
 
-Effort: passed as Tembo's `agentOptions.reasoningLevel` session setting, for Codex only:
+Effort: passed as the `reasoningLevel` field of the session's agent options, for the harnesses in the table.
 
 | Harness | Effort |
 | --- | --- |
-| Codex | passed as `agentOptions.reasoningLevel`: `low`, `medium`, `high` or `xhigh` |
-| Claude Code | can't (Tembo documents no reasoning levels for Claude Code) |
+| `codex` | `reasoningLevel`, for low, medium, high and xhigh |
+| `claude` | can't (Tembo documents no reasoning levels for Claude Code) |
+| `claude-code` | can't (Tembo documents no reasoning levels for Claude Code) |
 
 Any other harness or value is refused with driver v1's effort refusal, and nothing runs.
 

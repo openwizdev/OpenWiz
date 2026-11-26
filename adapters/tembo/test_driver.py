@@ -27,7 +27,8 @@ NO_EFFORT = ("this host can't set effort: remove the effort for this harness in 
              "it at the host's default")
 KEYCHAIN_TOOLS_SPELLED_IN_PARTS = re.compile(rb'(?<![\w-])(secur' + rb'ity|secret' + rb'-tool)(?![\w-])')
 KIT_PASS = ['pass version: openwiz:records v1, and the schema is driver v1',
-            'pass start: the run posted builder status note 2',
+            'pass start: the run posted builder status note 2; effort: refused for claude-code with the '
+            'refusal text, as the README says',
             'pass wake: the run edited builder status note 2',
             'pass stop: the run ended, and a wake after it is refused',
             'pass token: no login or token passed through the driver, and on start, wake and stop the tembo '
