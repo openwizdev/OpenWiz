@@ -228,7 +228,8 @@ class SshDriver(unittest.TestCase):
         self.addCleanup(self.call, 'stop', {'run': out['run']})
         config = self.logged()[0]
         config = config[config.index('-F') + 1]
-        text = open(config).read().splitlines()
+        with open(config) as handle:
+            text = handle.read().splitlines()
         user = next(i for i, line in enumerate(text) if home in line)
         system = next(i for i, line in enumerate(text) if '/etc/ssh/ssh_config' in line)
         self.assertLess(user, system)

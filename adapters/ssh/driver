@@ -9,6 +9,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -98,20 +99,17 @@ def include_path(path):
     return '"' + path + '"'
 
 
-def client_config():
+def client_config(run):
     ensure()
     lines = []
-    for path in ('/etc/ssh/ssh_config', os.path.expanduser('~/.ssh/config')):
+    for path in (os.path.expanduser('~/.ssh/config'), '/etc/ssh/ssh_config'):
         if os.path.isfile(path):
             lines.append('Include ' + include_path(path))
     lines.extend(['Match final', '    SendEnv -*', ''])
-    path = os.path.join(STATE, 'ssh-config')
-    temporary = path + '.tmp'
-    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    descriptor, path = tempfile.mkstemp(prefix=run + '.', suffix='.ssh-config', dir=STATE)
+    os.chmod(path, 0o600)
     with os.fdopen(descriptor, 'w') as handle:
         handle.write('\n'.join(lines))
-    os.chmod(temporary, 0o600)
-    os.replace(temporary, path)
     return path
 
 
@@ -121,7 +119,7 @@ def command(req, run, woken):
     mapping = {'{prompt}': prompt, '{model}': req['model'], '{session}': run}
     remote = [mapping.get(arg, arg) for arg in argument_template()]
     parts = ['env', 'OPENWIZ_SSH_RUN=%s' % run, req['harness']] + remote
-    argv = ['ssh', '-F', client_config(), '-o', 'BatchMode=yes', '-o', 'ClearAllForwardings=yes',
+    argv = ['ssh', '-F', client_config(run), '-o', 'BatchMode=yes', '-o', 'ClearAllForwardings=yes',
             '-o', 'ForwardAgent=no', destination(), '--', ' '.join(shlex.quote(part) for part in parts)]
     secrets_found = secret_values()
     if leaked(parts, secrets_found) or leaked(argv, secrets_found):
@@ -248,6 +246,23 @@ def carries(pid, run):
         return False
 
 
+def remote_stop(run):
+    marker = 'OPENWIZ_SSH_RUN=%s' % run
+    script = 'pkill -TERM -f -- ' + shlex.quote(marker) + ' || true'
+    try:
+        argv = ['ssh', '-F', client_config(run + '-stop'), '-o', 'BatchMode=yes',
+                '-o', 'ClearAllForwardings=yes', '-o', 'ForwardAgent=no', destination(), '--', script]
+    except Refused:
+        return
+    if leaked(argv, secret_values()):
+        return
+    try:
+        subprocess.run(argv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL, timeout=15, start_new_session=True)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+
 def end(run, records):
     for sig, pause in ((signal.SIGTERM, 0.2), (signal.SIGKILL, 0.2)):
         victims = {record['pid'] for record in records if isinstance(record, dict) and ours(record) is True}
@@ -306,7 +321,12 @@ def wake(run):
             return {'run': run, 'woke': True}
         record = launch(command(state['request'], run, True))
         state['pids'] = [item for item in state['pids'] if ours(item) is True] + [record]
-        write_json(path_of(run), state)
+        try:
+            write_json(path_of(run), state)
+        except OSError:
+            end(run, [record])
+            raise Refused('run %s woke but could not be saved, so it was ended' % run,
+                          'check OPENWIZ_SSH_STATE, then look for a leftover ssh before waking again')
         return {'run': run, 'woke': True}
     finally:
         os.close(descriptor)
@@ -320,9 +340,11 @@ def stop(run):
         try:
             write_json(path_of(run), state)
         except OSError:
+            remote_stop(run)
             end(run, state['pids'])
             raise Refused('run %s has ended, but the driver could not save that it is stopped' % run,
                           'make OPENWIZ_SSH_STATE a folder you can write, then stop it again')
+        remote_stop(run)
         end(run, state['pids'])
         return {'run': run, 'stopped': True}
     finally:
