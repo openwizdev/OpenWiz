@@ -1,16 +1,3 @@
-//! A deterministic inner loop for one unit of work.
-//!
-//! The local driver still treats a harness exit of 0 as finished, and it keeps
-//! a turn's whole output. This loop is the measured alternative: a model may
-//! stop only when a configured program exits 0, a red result names only the
-//! unit that failed, a hard-to-reverse action stays unapplied even when the
-//! model is confident, and the brief is a byte budget. Context files are
-//! read when a tool touches their directory. A handoff is a short summary.
-//!
-//! Exit codes on hooks follow the usual lifecycle rule: 0 allows, 2 blocks, and
-//! any other code does not block. A Stop hook, and the check program, can keep
-//! the loop from reporting done.
-
 use std::fs;
 use std::io::Write;
 use std::path::{Component, Path, PathBuf};
@@ -28,32 +15,22 @@ pub const SAFETY_TURNS: u32 = 10_000;
 
 #[derive(Clone, Debug)]
 pub struct Config {
-    /// Run the check program before accepting a stop. When this is off, a turn
-    /// with no tool call is done, which is the driver's rule.
     pub check: bool,
-    /// Red checks before the loop escalates. The last red is not sent back.
     pub max_reds: u32,
-    /// A second red with the same evidence stalls. A count cannot see a stall.
     pub stall_same_evidence: bool,
     pub tool_output_max_bytes: Option<usize>,
     pub compact_at_bytes: Option<usize>,
     pub compact_tail: usize,
-    /// Attach `AGENTS.md` / `CLAUDE.md` for a directory a tool touches, and
-    /// for its parents, not for the rest of the tree.
     pub just_in_time_context: bool,
-    /// Walk the workspace and attach every context file and `SKILL.md`.
-    /// This is the preload this loop refuses by default.
     pub preload_all: bool,
     pub context_file_max_bytes: Option<usize>,
     pub condense_handoff: bool,
     pub handoff_max_bytes: usize,
-    /// Identical failing tool calls before the loop stalls.
     pub max_identical_tool_failures: Option<u32>,
     pub max_turns: Option<u32>,
     pub hooks: Vec<Hook>,
     pub blast_radius: bool,
     pub learn: bool,
-    /// Eval-only stop for a profile that has no budget of its own.
     pub measurement_ceiling: Option<u32>,
 }
 
@@ -101,8 +78,6 @@ pub fn gated() -> Config {
     }
 }
 
-/// Every context file and skill body, up front. Measured so the just-in-time
-/// brief can be compared with it. Not the default.
 pub fn preloaded() -> Config {
     let mut config = baseline();
     config.preload_all = true;
@@ -163,10 +138,7 @@ pub struct Reply {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Call {
-    /// `write`, `delete`, or `bash`.
     pub op: String,
-    /// JSON object. `path` and `body` for a write, `path` for a delete,
-    /// `argv` for bash.
     pub input: String,
 }
 

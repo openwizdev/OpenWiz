@@ -1,10 +1,3 @@
-//! Measured harness loop. The numbers in the test output are what the commands
-//! below produce. Model tokens are not measured: this tree has no tokenizer.
-//!
-//! ```sh
-//! cargo test -p openwiz-tests --test harness-eval -- --nocapture
-//! ```
-
 mod harness;
 
 use std::fs;
@@ -809,8 +802,6 @@ fn measure() -> Report {
         let root = dir(name);
         let task = task(&root, body);
         let before = run(&baseline(), &task, &mut model());
-        // The oracle reads the workspace, so score the baseline before the
-        // gated run is allowed to make the check pass.
         baseline_false += u32::from(false_done(&before, &task));
         let after = run(&gated(), &task, &mut model());
         wall_before += before.wall;
