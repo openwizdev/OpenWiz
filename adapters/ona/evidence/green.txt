@@ -1,0 +1,25 @@
+$ python3 -I adapters/ona/test_driver.py   (agent CLI stubs first on PATH; KY1 at 4a8dfe81 and EF1 at 371c9cbf merged in)
+test_a_host_error_is_a_fixed_refusal (__main__.Driver.test_a_host_error_is_a_fixed_refusal) ... ok
+test_a_lost_prompt_names_its_run_so_stop_can_end_it (__main__.Driver.test_a_lost_prompt_names_its_run_so_stop_can_end_it) ... ok
+test_a_refused_start_sends_nothing_more (__main__.Driver.test_a_refused_start_sends_nothing_more) ... ok
+test_an_effort_ona_has_no_value_for_is_refused_and_starts_nothing (__main__.Driver.test_an_effort_ona_has_no_value_for_is_refused_and_starts_nothing) ... ok
+test_effort_reaches_the_host_as_codex_reasoning_effort (__main__.Driver.test_effort_reaches_the_host_as_codex_reasoning_effort) ... ok
+test_every_request_reaches_the_host_with_the_key_header_only (__main__.Driver.test_every_request_reaches_the_host_with_the_key_header_only) ... ok
+test_inputs_off_the_schema_are_refused_before_any_request (__main__.Driver.test_inputs_off_the_schema_are_refused_before_any_request) ... ok
+test_kit_passes_all_five_on_the_fake_host (__main__.Driver.test_kit_passes_all_five_on_the_fake_host) ... ok
+test_models_map_to_ona_codex_models_and_others_are_refused (__main__.Driver.test_models_map_to_ona_codex_models_and_others_are_refused) ... ok
+test_no_driver_file_names_the_key_or_the_keychain (__main__.Driver.test_no_driver_file_names_the_key_or_the_keychain) ... ok
+test_no_effort_sends_none (__main__.Driver.test_no_effort_sends_none) ... ok
+test_only_codex_runs (__main__.Driver.test_only_codex_runs) ... ok
+test_start_starts_codex_on_the_repository_then_sends_the_prompt (__main__.Driver.test_start_starts_codex_on_the_repository_then_sends_the_prompt) ... ok
+test_stop_ends_the_execution_and_its_environment_and_wake_after_is_refused (__main__.Driver.test_stop_ends_the_execution_and_its_environment_and_wake_after_is_refused) ... ok
+test_unknown_run (__main__.Driver.test_unknown_run) ... ok
+test_version_and_schema (__main__.Driver.test_version_and_schema) ... ok
+test_wake_of_a_running_execution_queues_the_message (__main__.Driver.test_wake_of_a_running_execution_queues_the_message) ... ok
+test_wake_sends_to_the_same_execution_once_its_turn_has_finished (__main__.Driver.test_wake_sends_to_the_same_execution_once_its_turn_has_finished) ... ok
+
+----------------------------------------------------------------------
+Ran 18 tests in 17.618s
+
+OK
+exit 0

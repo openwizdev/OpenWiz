@@ -4,5 +4,11 @@
     "variable": "DEVIN_API_KEY",
     "keychain": "openwiz-devin",
     "header": "authorization-bearer"
+  },
+  "ona": {
+    "origin": "https://app.ona.com",
+    "variable": "ONA_API_KEY",
+    "keychain": "openwiz-ona",
+    "header": "authorization-bearer"
   }
 }
