@@ -1,0 +1,12 @@
+Red run for review finding R3: Vibe's keyring diagnostic continues after the bracket, and the row's signed_out pattern still ends there. Synthetic fake only; no-op stubs for the known agent CLIs were first on PATH; no real agent CLI ran.
+
+$ python3 -I adapters/local/harnesses/vibe/test_row.py
+pass not installed
+pass a history quoting the diagnostics still starts
+fail both diagnostic lines read as signed out
+fail a locked keyring reads as not signed in
+pass every effort refused starting nothing
+pass pattern reads the entry id not a nested one
+exit 1
+
+The driver's answer to that start: run <id>: the first turn ended at once: the harness failed (exit 1)

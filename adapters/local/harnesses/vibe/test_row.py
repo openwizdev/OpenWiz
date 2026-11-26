@@ -33,11 +33,22 @@ def a_history_quoting_the_diagnostics_still_starts():
         return code == 0 and out.get('run', '').startswith('run-')
 
 
+MISSING = 'Error: Missing MISTRAL_API_KEY environment variable for mistral provider'
+KEYRING = ("Error: Can't read MISTRAL_API_KEY from the system keyring for mistral provider (no keyring). "
+           'Unlock the system keyring or approve its prompt, or set the MISTRAL_API_KEY environment variable')
+
+
 def both_diagnostic_lines_read_as_signed_out():
-    lines = ('Error: Missing MISTRAL_API_KEY environment variable for mistral provider',
-             "Error: Can't read MISTRAL_API_KEY from the system keyring for mistral provider (no keyring)")
+    lines = (MISSING, KEYRING)
     quoted = json.dumps([{'content': line} for line in lines], indent=2)
     return all(th.local.signed_out_by_row(ROW, line) for line in lines) and not th.local.signed_out_by_row(ROW, quoted)
+
+
+def a_locked_keyring_reads_as_not_signed_in():
+    with machine() as env:
+        code, out = env.start(FAKE_CLI_SIGNED_OUT='1', FAKE_VIBE_KEYRING='1')
+        return (code == 1 and 'the harness is not signed in' in out.get('error', '') and
+                ROW['login_command'] in out.get('next', ''))
 
 
 def every_effort_refused_starting_nothing():
@@ -64,7 +75,8 @@ def pattern_reads_the_entry_id_not_a_nested_one():
 def main():
     ok = True
     for check in (not_installed, a_history_quoting_the_diagnostics_still_starts, both_diagnostic_lines_read_as_signed_out,
-                  every_effort_refused_starting_nothing, pattern_reads_the_entry_id_not_a_nested_one):
+                  a_locked_keyring_reads_as_not_signed_in, every_effort_refused_starting_nothing,
+                  pattern_reads_the_entry_id_not_a_nested_one):
         passed = check()
         print('%s %s' % ('pass' if passed else 'fail', check.__name__.replace('_', ' ')))
         ok = ok and passed

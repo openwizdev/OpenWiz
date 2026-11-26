@@ -14,7 +14,8 @@ MODES = (['--auto-approve'], ['--approval-policy', 'accept-edits'], ['--approval
 
 
 MISSING = 'Error: Missing MISTRAL_API_KEY environment variable for mistral provider'
-KEYRING = "Error: Can't read MISTRAL_API_KEY from the system keyring for mistral provider (no keyring)"
+KEYRING = ("Error: Can't read MISTRAL_API_KEY from the system keyring for mistral provider (no keyring). "
+           'Unlock the system keyring or approve its prompt, or set the MISTRAL_API_KEY environment variable')
 
 
 def history(sid, prompt):
@@ -45,4 +46,4 @@ args = args[len(mode):]
 if args:
     fake_cli.refuse()
 fake_cli.turn(prompt, model, session, lambda sid: history(sid, prompt), daemon='tree',
-              signed_out=MISSING)
+              signed_out=KEYRING if os.environ.get('FAKE_VIBE_KEYRING') else MISSING)
