@@ -173,12 +173,21 @@ def coverage(metric, at, cost):
     return found
 
 
-def delta_rules(delta, at):
+def measured(value):
+    return type(value) in (int, float)
+
+
+def delta_rules(this, last, delta, at):
     found = []
+    numeric = sum(measured(row["value"]) for row in (this, last))
     if delta["total_count"] != 2:
         found.append(f"{at}: total_count is not 2")
     if delta["known_count"] > delta["total_count"]:
         found.append(f"{at}: known_count above total_count")
+    if delta["known_count"] != numeric:
+        found.append(f"{at}: known_count is not the numeric weeks")
+    if numeric == 2 and measured(delta["value"]) and not math.isclose(delta["value"], this["value"] - last["value"]):
+        found.append(f"{at}: value is not this week minus last week")
     if delta["state"] in ("known", "partial") and delta["known_count"] != 2:
         found.append(f"{at}: a numeric delta counts both weeks")
     if not direction_holds(delta):
@@ -200,7 +209,8 @@ def outside(doc):
         for name, metric in metrics.items():
             found += coverage(metric, f"$.metrics.{side}.{name}", name in COST)
     for name, delta in doc["week_over_week"].items():
-        found += delta_rules(delta, f"$.week_over_week.{name}")
+        found += delta_rules(doc["metrics"]["this_week"][name], doc["metrics"]["last_week"][name],
+                             delta, f"$.week_over_week.{name}")
     return found
 
 
@@ -332,6 +342,10 @@ class Proof(unittest.TestCase):
         report["week_over_week"]["merged_prs"]["total_count"] = 1
         self.assertEqual(self.validate(report), [])
         self.assertIn("total_count is not 2", "\n".join(outside(report)))
+        report = json.loads(json.dumps(self.valid["report-partial.json"]))
+        self.assertEqual(report["week_over_week"]["cost_per_merged_pr_usd"]["known_count"], 1)
+        report["week_over_week"]["cost_per_merged_pr_usd"]["known_count"] = 0
+        self.assertIn("known_count is not the numeric weeks", "\n".join(outside(report)))
 
     def test_fixtures_use_synthetic_identifiers_only(self):
         blobs = [self.contract, SCHEMA_PATH.read_text(encoding="utf-8")]

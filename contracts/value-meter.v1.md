@@ -11,8 +11,8 @@ proves the documents agree, never that a meter has run.
 
 Where this prose and [`value-meter.v1.schema.json`](value-meter.v1.schema.json)
 disagree, the contract is wrong and must be fixed. Rules a schema cannot see (duplicate keys, window arithmetic,
-`known_count` against `total_count`, cost-state coverage, a delta
-`total_count` of 2, and direction against the sign of the value) are stated
+`known_count` against `total_count`, how many weeks are numeric, cost-state coverage, a delta
+`total_count` of 2, the subtraction of the two weeks, and direction against the sign of the value) are stated
 here and checked by `contracts/fixtures/value-meter/test_fixtures.py`.
 
 ## The pin
@@ -182,8 +182,9 @@ VM4 computes these. The contract only fixes the outcomes.
    or the window's read is incomplete. The reason for a complete empty window
    is `no merged pull requests in the window`.
 5. `week_over_week` is one delta per headline. `total_count` is `2`.
-   `known_count` is how many of the two weeks have a numeric value.
-   `value` is this week minus last week. `direction` is `up` when the value
+   `known_count` is how many of the two weeks have a numeric value,
+   including a measured `0`. One numeric week and one unknown week is
+   `known_count` 1. `value` is this week minus last week. `direction` is `up` when the value
    is positive, `down` when negative, `flat` when zero, and `unknown` only
    when `state` is `unknown`. The money delta uses gross `value`, not the net.
    State is `unknown` when either week is `unknown`. State is `partial` when

@@ -132,7 +132,7 @@
       "state": "unknown",
       "value": null,
       "direction": "unknown",
-      "known_count": 0,
+      "known_count": 1,
       "total_count": 2,
       "reason": "this week has no known USD cost"
     }
