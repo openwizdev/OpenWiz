@@ -61,6 +61,7 @@ if session is None:
 elif not os.path.exists(os.path.join(home, session)):
     refuse('session %s not found' % session)
 kind = 'woken' if '-s' in args else 'first'
+effort = option('--reasoning-effort') or '-'
 if os.environ.get('FAKE_ENV_LOG'):
     with open(os.environ['FAKE_ENV_LOG'], 'w') as f:
         json.dump(dict(os.environ), f)
@@ -71,6 +72,6 @@ worker = subprocess.Popen([sys.executable] + sys.argv, start_new_session=True, s
                           env=dict(os.environ, FAKE_WORKER=str(os.getpid()), FAKE_SESSION=session, FAKE_KIND=kind))
 if os.environ.get('FAKE_TURNS'):
     with open(os.environ['FAKE_TURNS'], 'a') as f:
-        f.write('%d %d %s %s\n' % (os.getpid(), worker.pid, session, kind))
+        f.write('%d %d %s %s %s\n' % (os.getpid(), worker.pid, session, kind, effort))
 print(json.dumps({'type': 'result', 'subtype': 'success', 'is_error': False, 'duration_ms': 5, 'num_turns': 1,
                   'result': 'Synthetic turn.', 'session_id': session}))

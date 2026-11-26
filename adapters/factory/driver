@@ -3,10 +3,15 @@ import ctypes, fcntl, json, os, re, secrets, shutil, signal, stat, subprocess, s
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATE = os.path.abspath(os.environ.get('OPENWIZ_FACTORY_STATE') or os.path.expanduser('~/.local/state/openwiz-factory'))
-VERSION = {'driver': 'factory', 'records': ['openwiz:records v1'], 'can': ['start', 'wake', 'stop']}
+VERSION = {'driver': 'factory', 'records': ['openwiz:records v1'],
+           'can': ['start', 'wake', 'stop', 'effort']}
 START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
          'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
          'model': r'[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}'}
+EFFORT = {'effort': r'[a-z][a-z0-9-]{0,19}'}
+LEVELS = ('none', 'dynamic', 'off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max')
+CANT_SET_EFFORT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster to "
+                   "run it at the host's default")
 RUN = {'run': r'run-[0-9a-f]{12}'}
 HARNESS = 'droid'
 SESSION = r'[A-Za-z0-9][A-Za-z0-9-]{0,99}'
@@ -25,24 +30,33 @@ def unique(pairs):
 
 
 def read(fields):
+    need = [k for k in fields if k != 'effort']
     try:
         req = json.loads(sys.stdin.read(), object_pairs_hook=unique)
     except ValueError:
         raise Refused('the input is not JSON', 'send one JSON object on stdin, as `driver schema` shows')
-    if not isinstance(req, dict) or set(req) != set(fields):
-        raise Refused('the input needs exactly ' + ', '.join(fields), 'send only those fields; never a login')
+    if not isinstance(req, dict) or not set(need) <= set(req) <= set(fields):
+        carried = ', and may carry effort' if 'effort' in fields else ''
+        raise Refused('the input needs exactly ' + ', '.join(need) + carried, 'send only those fields; never a login')
     for key, pattern in fields.items():
+        if key not in req:
+            continue
         v = req[key]
         if not (type(v) is int and v > 0 if pattern is None else isinstance(v, str) and re.fullmatch(pattern, v)):
             raise Refused(key + ' is not valid', 'fix ' + key + ' as `driver schema` shows')
     return req
 
 
+def effort_taken(req):
+    return req['harness'] == HARNESS and req['effort'] in LEVELS and not req['model'].startswith('custom:')
+
+
 def command(req, session, work):
     what = 'You were woken: read the ticket again and carry on' if session else 'Build the ticket'
     prompt = '%s: %s#%d, with the %s skill.' % (what, req['repository'], req['ticket'], req['skill'])
-    return (['droid', 'exec', '--cwd', work, '-m', req['model'], '--auto', 'medium', '-o', 'json']
-            + (['-s', session] if session else []) + [prompt])
+    level = ['--reasoning-effort', req['effort']] if 'effort' in req else []
+    return (['droid', 'exec', '--cwd', work, '-m', req['model']] + level
+            + ['--auto', 'medium', '-o', 'json'] + (['-s', session] if session else []) + [prompt])
 
 
 def session_file(run, n):
@@ -304,7 +318,10 @@ def answer(cmd):
         with open(os.path.join(HERE, 'schema.json')) as f:
             return json.load(f)
     if cmd == 'start':
-        req, run = read(START), 'run-' + secrets.token_hex(6)
+        req, run = read(dict(START, **EFFORT)), 'run-' + secrets.token_hex(6)
+        if 'effort' in req and not effort_taken(req):
+            raise Refused('harness %s cannot run model %s at effort %s'
+                          % (req['harness'], req['model'], req['effort']), CANT_SET_EFFORT)
         if req['harness'] != HARNESS:
             raise Refused('Factory runs only its own agent, not %s' % req['harness'],
                           'start again with harness droid, and pick its model with model')

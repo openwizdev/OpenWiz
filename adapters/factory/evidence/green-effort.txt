@@ -1,0 +1,42 @@
+# Green (openwizdev/OpenWiz#2609): adapters/factory/test_driver.py after the driver
+# passes --reasoning-effort and the README declares it. PATH is the synthetic
+# droid in adapters/factory/fixtures/bin, then a folder holding only python3.
+# No Factory host. Run: env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/factory/test_driver.py
+
+test_a_custom_model_with_no_effort_still_starts_at_the_host_default ... ok
+test_a_listed_effort_reaches_droid_on_start_and_wake ... ok
+test_an_effort_droid_cannot_take_is_refused_and_nothing_starts ... ok
+test_an_effort_word_outside_the_schema_is_refused_as_input ... ok
+test_kit_passes_all_five ... ok
+test_other_harness_is_refused_before_anything_runs ... ok
+test_readme_opens_with_the_login_line_under_its_title ... ok
+test_relative_state_still_runs_the_turn ... ok
+test_state_is_owner_only ... ok
+test_state_keeps_only_the_session_id ... ok
+test_state_others_can_read_is_refused_before_anything_runs ... ok
+test_stop_and_wake_refuse_a_run_they_cannot_trust ... ok
+test_stop_on_a_tampered_folder_ends_nothing_and_says_so ... ok
+test_stop_on_a_tampered_folder_never_signals_a_process_matched_by_its_command_line ... ok
+test_turn_inherits_the_callers_environment_unchanged ... ok
+test_version_lists_effort ... ok
+test_wake_without_a_session_starts_nothing ... ok
+
+Ran 17 tests in 6.932s
+
+OK
+
+# The kit, inside test_kit_passes_all_five, on the same fixtures:
+# python3 -I kernel/driver-kit/kit.py --driver adapters/factory/driver \
+#   --repo example/site --ticket 7 --harness droid --model synthetic-model-1 \
+#   --tracker <temporary> --wait 8
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 1; effort: medium reached a process the run started
+pass wake: the run edited builder status note 1
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+stderr: empty
+exit: 0
+
+# schema copy: cmp adapters/factory/schema.json kernel/driver-kit/schema.json
+schema: identical
+exit: 0

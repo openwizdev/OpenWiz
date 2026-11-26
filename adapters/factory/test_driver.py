@@ -105,12 +105,12 @@ class Factory(unittest.TestCase):
                             '--ticket', '7', '--harness', 'droid', '--model', 'synthetic-model-1',
                             '--tracker', self.tracker, '--wait', '8'],
                            env=self.env, capture_output=True, text=True, timeout=300)
-        self.assertEqual((p.returncode, p.stdout.splitlines()), (0, [
+        self.assertEqual((p.returncode, p.stdout.splitlines(), p.stderr), (0, [
             'pass version: openwiz:records v1, and the schema is driver v1',
-            'pass start: the run posted builder status note 1',
+            'pass start: the run posted builder status note 1; effort: medium reached a process the run started',
             'pass wake: the run edited builder status note 1',
             'pass stop: the run ended, and a wake after it is refused',
-            'pass token: no login or token passed through the driver']), p.stderr)
+            'pass token: no login or token passed through the driver'], ''))
 
     def test_other_harness_is_refused_before_anything_runs(self):
         code, out = self.call('start', dict(REQUEST, harness='claude'))
@@ -152,7 +152,8 @@ class Factory(unittest.TestCase):
         session = self.logged()[0][2]
         self.assertEqual(self.call('wake', out), (0, dict(out, woke=True)))
         self.assertTrue(self.until(lambda: len(self.logged()) == 2), 'the wake ran no turn')
-        self.assertEqual(self.logged()[1][2:], (session, 'woken'))
+        self.assertEqual(self.logged()[0][3:], ('first', '-'))
+        self.assertEqual(self.logged()[1][2:], (session, 'woken', '-'))
         kept = b''
         for root, _, files in os.walk(self.env['OPENWIZ_FACTORY_STATE']):
             for name in files:
@@ -273,10 +274,71 @@ class Factory(unittest.TestCase):
         self.assertTrue(self.until(lambda: len(self.logged()) == 1), 'droid never ran its turn')
         self.assertTrue(os.path.isdir(os.path.join(self.folder, 'relative-state', 'work', out['run'])))
 
+    def test_a_listed_effort_reaches_droid_on_start_and_wake(self):
+        levels = ('none', 'dynamic', 'off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max')
+        for effort in levels:
+            with self.subTest(effort=effort):
+                calls = os.path.join(self.folder, 'calls-' + effort)
+                code, out = self.call('start', dict(REQUEST, effort=effort), FAKE_TURNS=calls)
+                self.assertEqual(code, 0, out)
+                self.assertTrue(self.until(lambda: len(self.rows(calls)) == 1), calls)
+                code, woke = self.call('wake', out, FAKE_TURNS=calls)
+                self.assertEqual((code, woke.get('woke')), (0, True), woke)
+                self.assertTrue(self.until(lambda: len(self.rows(calls)) == 2), calls)
+                rows = self.rows(calls)
+                self.assertEqual([row[3:] for row in rows], [['first', effort], ['woken', effort]])
+                self.assertEqual(rows[0][2], rows[1][2])
+
+    def rows(self, path):
+        try:
+            with open(path) as f:
+                return [line.split() for line in f]
+        except FileNotFoundError:
+            return []
+
+    def test_an_effort_droid_cannot_take_is_refused_and_nothing_starts(self):
+        cant = ("this host can't set effort: remove the effort for this harness in your Models table or Roster to "
+                "run it at the host's default")
+        cases = (dict(REQUEST, effort='ultra'), dict(REQUEST, effort='thinking'),
+                 dict(REQUEST, harness='claude', effort='medium'),
+                 dict(REQUEST, model='custom:synthetic-0', effort='medium'),
+                 dict(REQUEST, model='custom:synthetic-0', effort='max'))
+        for req in cases:
+            with self.subTest(harness=req['harness'], model=req['model'], effort=req['effort']):
+                calls = os.path.join(self.folder, 'refused-%s-%s' % (req['effort'], req['harness']))
+                code, out = self.call('start', req, FAKE_TURNS=calls)
+                self.assertEqual((code, out['next']), (1, cant), out)
+                self.assertIn(req['harness'], out['error'])
+                self.assertIn(req['effort'], out['error'])
+                time.sleep(0.2)
+                self.assertEqual((self.rows(calls), self.marked(),
+                                  os.path.exists(self.env['OPENWIZ_FACTORY_STATE'])), ([], [], False))
+
+    def test_a_custom_model_with_no_effort_still_starts_at_the_host_default(self):
+        calls = os.path.join(self.folder, 'custom-default')
+        code, out = self.call('start', dict(REQUEST, model='custom:synthetic-0'), FAKE_TURNS=calls)
+        self.assertEqual(code, 0, out)
+        self.assertTrue(self.until(lambda: len(self.rows(calls)) == 1), calls)
+        self.assertEqual(self.rows(calls)[0][3:], ['first', '-'])
+
+    def test_an_effort_word_outside_the_schema_is_refused_as_input(self):
+        code, out = self.call('start', dict(REQUEST, effort='Medium'))
+        self.assertEqual((code, out), (1, {'error': 'effort is not valid',
+                                            'next': 'fix effort as `driver schema` shows'}))
+        self.assertFalse(os.path.exists(self.env['OPENWIZ_FACTORY_STATE']))
+
+    def test_version_lists_effort(self):
+        self.assertEqual(self.call('version', None), (0, {
+            'driver': 'factory', 'records': ['openwiz:records v1'],
+            'can': ['start', 'wake', 'stop', 'effort']}))
+
     def test_readme_opens_with_the_login_line_under_its_title(self):
         with open(os.path.join(HERE, 'README.md')) as f:
             lines = f.read().splitlines()
-        self.assertEqual((lines[0][:2], lines[1:3]), ('# ', ['', 'Login: held by Factory']))
+        self.assertEqual((lines[0][:2], lines[1:5]), ('# ', [
+            '', 'Login: held by Factory', '',
+            'Effort: passed as `--reasoning-effort <level>`, for none, dynamic, off, minimal, low, medium, high, '
+            'xhigh and max.']))
         self.assertIn('`FACTORY_API_KEY`', '\n'.join(lines))
         self.assertIn('**Platforms:** Linux only, Python 3.9 or later', '\n'.join(lines))
 
