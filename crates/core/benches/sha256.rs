@@ -1,6 +1,3 @@
-//! SHA-256 used for prompt, start and fleet-fingerprint digests.
-//! Release numbers: `cargo bench --bench sha256 -p openwiz-core`
-
 use std::hint::black_box;
 use std::time::{Duration, Instant};
 

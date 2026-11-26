@@ -106,7 +106,6 @@ fn every_cut_gives_the_whole_inputs_hash() {
     assert_eq!(Sha256Hasher::default().finish(), sha256_hex(b""));
 }
 
-/// The hasher before the in-place padding and one-allocation hex encoding.
 mod previous {
     const K: [u32; 64] = [
         0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4,

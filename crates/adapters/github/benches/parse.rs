@@ -1,6 +1,3 @@
-//! Hot-path JSON reads: fleet tick documents and issue view.
-//! Release numbers: `cargo bench --bench parse -p openwiz-adapter-github`
-
 use std::hint::black_box;
 use std::time::{Duration, Instant};
 

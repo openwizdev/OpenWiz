@@ -1,8 +1,3 @@
-//! One JSON walk that keeps each object key once and returns the `Value` a
-//! second `serde_json` parse would have built. Fleet and issue reads used to
-//! walk the bytes twice: once to refuse a repeated key, then again to build
-//! the value.
-
 use serde::de::{self, Deserialize, Deserializer, MapAccess, SeqAccess, Visitor};
 use serde_json::{Map, Value};
 use std::fmt;
@@ -97,14 +92,12 @@ pub(crate) mod oracle {
     use serde_json::Value;
     use std::fmt;
 
-    /// Which of the two old parses refused the bytes.
     #[derive(Debug, PartialEq, Eq)]
     pub(crate) enum Pass {
         First,
         Second,
     }
 
-    /// The previous reader: a discarding duplicate-key walk, then `Value`.
     pub(crate) fn two_pass(refuse_fraction: bool, bytes: &[u8]) -> Result<Value, Pass> {
         if refuse_fraction {
             serde_json::from_slice::<openwiz_core::new_thread::read::StrictJson>(bytes)
@@ -235,7 +228,6 @@ pub(crate) mod oracle {
         }
     }
 
-    /// The discarding duplicate-key walk `document` used to run before `Value`.
     struct OldKeysOnce;
 
     impl<'de> Deserialize<'de> for OldKeysOnce {

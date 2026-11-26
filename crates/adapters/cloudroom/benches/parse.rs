@@ -1,6 +1,3 @@
-//! Hot-path CloudRoom list reads.
-//! Release numbers: `cargo bench --bench parse -p openwiz-adapter-cloudroom`
-
 use std::hint::black_box;
 use std::time::{Duration, Instant};
 
