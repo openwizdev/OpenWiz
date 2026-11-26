@@ -338,6 +338,19 @@ class Cursor(unittest.TestCase):
         [agent] = self.agents().values()
         self.assertTrue(agent['archived'])
 
+    def test_stopping_again_does_not_archive_an_agent_cursor_already_archived(self):
+        code, out = self.driver('start', START)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.driver('stop', out), (0, dict(out, stopped=True)))
+        [agent] = self.agents()
+        archive = 'POST /agents/%s/archive' % agent
+        before = [c['call'] for c in self.calls()]
+        self.assertEqual(before.count(archive), 1)
+        self.assertEqual(self.driver('stop', out), (0, dict(out, stopped=True)))
+        after = [c['call'] for c in self.calls()]
+        self.assertEqual(after, before + ['GET /agents/' + agent])
+        self.assertEqual(after.count(archive), 1, 'stop archived an agent Cursor already shows as archived')
+
     def test_a_stop_that_cannot_save_still_archives_and_no_wake_reopens_it(self):
         open(self.hold, 'w').close()
         code, out = self.driver('start', START)
