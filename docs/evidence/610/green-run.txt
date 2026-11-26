@@ -1,0 +1,6 @@
+test_a_loopback_api_base_is_refused_without_the_synthetic_setting (__main__.HardeningTests.test_a_loopback_api_base_is_refused_without_the_synthetic_setting) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.751s
+
+OK

@@ -398,7 +398,8 @@ class Sealed(Helper):
         self.addCleanup(github.__exit__, None, None, None)
         fake["expires_at"] = int(time.time()) + 3600
         wrapped = self.root / "wrapped.py"
-        wrapped.write_text(f"import runpy, sys\nsys.argv = {[str(SERVICE_TESTS.SERVICE), 'mint', '--state-dir', str(fixture.state), '--api-base', url]!r}\n"
+        wrapped.write_text("import os, runpy, sys\nos.environ['OPENWIZ_SYNTHETIC_GITHUB'] = '1'\n"
+                           f"sys.argv = {[str(SERVICE_TESTS.SERVICE), 'mint', '--state-dir', str(fixture.state), '--api-base', url]!r}\n"
                            "runpy.run_path(sys.argv[0], run_name='__main__')\n")
         (self.bin / "python3").unlink()
         self.pairing = self.root / "pairing.log"

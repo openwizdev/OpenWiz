@@ -1,0 +1,25 @@
+test_a_loopback_api_base_is_refused_without_the_synthetic_setting (__main__.HardeningTests.test_a_loopback_api_base_is_refused_without_the_synthetic_setting) ... FAIL
+
+======================================================================
+FAIL: test_a_loopback_api_base_is_refused_without_the_synthetic_setting (__main__.HardeningTests.test_a_loopback_api_base_is_refused_without_the_synthetic_setting)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/agent/repos/OpenWiz/tools/github-app/test.py", line 501, in test_a_loopback_api_base_is_refused_without_the_synthetic_setting
+    self.assertEqual((result.returncode, len(calls), result.stdout, result.stderr),
+AssertionError: Tuples differ: (0, 3, b'synthetic-installation-token\n1795698342\n', b'') != (1, 0, b'', b'App token refused: check PC [59 chars].\n')
+
+First differing element 0:
+0
+1
+
+- (0, 3, b'synthetic-installation-token\n1795698342\n', b'')
++ (1,
++  0,
++  b'',
++  b'App token refused: check PC state permissions, App installation and GitHub a'
++  b'vailability.\n')
+
+----------------------------------------------------------------------
+Ran 1 test in 0.687s
+
+FAILED (failures=1)

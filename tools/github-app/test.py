@@ -23,6 +23,7 @@ import unittest
 from unittest import mock
 
 HERE = Path(__file__).resolve().parent
+os.environ["OPENWIZ_SYNTHETIC_GITHUB"] = "1"
 PERMISSIONS = {name: "read" for name in (
     "metadata", "contents", "issues", "pull_requests", "checks", "actions")}
 SERVICE = dict(PERMISSIONS, contents="write", issues="write", pull_requests="write")
@@ -490,6 +491,31 @@ class GuardTests(KeyFixture):
 
 
 class HardeningTests(KeyFixture):
+    def test_a_loopback_api_base_is_refused_without_the_synthetic_setting(self):
+        refused = (b"App token refused: check PC state permissions, App installation and "
+                   b"GitHub availability.\n")
+        with fake_github(self.pem) as (endpoint, calls, _behavior):
+            bare = {k: v for k, v in os.environ.items()
+                    if k != "OPENWIZ_SYNTHETIC_GITHUB" and not k.startswith("OPENWIZ_GITHUB_APP_")}
+            result = self.token(endpoint, env=bare)
+            self.assertEqual((result.returncode, len(calls), result.stdout, result.stderr),
+                             (1, 0, b"", refused))
+            sent = self.token(endpoint, env=dict(bare, OPENWIZ_SYNTHETIC_GITHUB="1"))
+            self.assertEqual(sent.returncode, 0, sent.stderr)
+            self.assertTrue(any(headers.get("Authorization", "").startswith("Bearer ")
+                                for _path, headers, _body in calls))
+        saved = os.environ.pop("OPENWIZ_SYNTHETIC_GITHUB", None)
+        try:
+            spec = importlib.util.spec_from_file_location("app_610", HERE / "app.py")
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            self.assertEqual(module.api_base("https://api.github.com"), "https://api.github.com")
+            with self.assertRaises(ValueError):
+                module.api_base("http://127.0.0.1:9")
+        finally:
+            if saved is not None:
+                os.environ["OPENWIZ_SYNTHETIC_GITHUB"] = saved
+
     def test_a_token_refused_after_minting_is_revoked_and_a_good_one_kept(self):
         later = (datetime.now(timezone.utc) + timedelta(hours=2)).isoformat()
         for name, change in (("write permissions", {"permissions": SERVICE}), ("too long", {"expires_at": later}),
@@ -1708,6 +1734,7 @@ class AgentTokenTests(KeyFixture):
 
     def run_tool(self, script, endpoint, *extra, now=None, env=None, repositories=("synthetic-owner/work",)):
         base = {"PATH": f"{self.bin}{os.pathsep}{os.environ.get('PATH', os.defpath)}",
+                "OPENWIZ_SYNTHETIC_GITHUB": "1",
                 **{k: os.environ[k] for k in ("HOME", "LANG") if k in os.environ}, **(env or {})}
         args = ["--state-dir", str(self.state), "--installation-id", "2002", "--api-base", endpoint,
                 *[a for r in repositories for a in ("--repository", r)], *extra]

@@ -168,6 +168,7 @@ class ServiceFixture(unittest.TestCase):
         text = request if isinstance(request, str) else json.dumps(request)
         self.clock.write_text(str(NOW))
         environment = {k: v for k, v in os.environ.items() if k != "OPENWIZ_GITHUB_APP_MODE"}
+        environment["OPENWIZ_SYNTHETIC_GITHUB"] = "1"
         return subprocess.run(["python3", "-I", "-c", AUDIT if audit else CLOCK, *([str(audit)] if audit else []),
                                str(self.clock), str(SERVICE), "mint",
                                "--state-dir", str(self.state), "--api-base", endpoint],
