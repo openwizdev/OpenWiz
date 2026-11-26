@@ -1,0 +1,389 @@
+#!/usr/bin/env python3
+import ctypes, fcntl, json, os, re, secrets, select, shutil, signal, subprocess, sys, threading, time
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+STATE = os.environ.get('OPENWIZ_HERMES_STATE') or os.path.expanduser('~/.local/state/openwiz-hermes')
+VERSION = {'driver': 'hermes', 'records': ['openwiz:records v1'], 'can': ['start', 'wake', 'stop']}
+START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
+         'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
+         'model': r'[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}'}
+RUN = {'run': r'run-[0-9a-f]{12}'}
+TERMINATE_GRACE_SECONDS = 10
+INTERRUPT_SETTLE_SECONDS = 10
+SESSION_WAIT_SECONDS = 60
+HERMES_SKILL_FOR_HARNESS = {'claude': 'claude-code', 'codex': 'codex', 'hermes': None}
+SESSION = r'[A-Za-z0-9][A-Za-z0-9._:-]{0,199}'
+CHILD_ENV = ('HOME', 'USER', 'LOGNAME', 'SHELL', 'PATH', 'LANG', 'LANGUAGE', 'TZ', 'TERM', 'TMPDIR', 'HERMES_HOME',
+             'LC_ALL', 'LC_CTYPE', 'LC_COLLATE', 'LC_MESSAGES', 'LC_MONETARY', 'LC_NUMERIC', 'LC_TIME',
+             'LC_ADDRESS', 'LC_IDENTIFICATION', 'LC_MEASUREMENT', 'LC_NAME', 'LC_PAPER', 'LC_TELEPHONE',
+             'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_STATE_HOME', 'XDG_CACHE_HOME', 'XDG_RUNTIME_DIR',
+             'SSH_AUTH_SOCK', 'OPENWIZ_KIT_RUN')
+
+
+class Refused(Exception):
+    pass
+
+
+def unique(pairs):
+    if len({k for k, _ in pairs}) != len(pairs):
+        raise Refused('a key is repeated', 'send each key once')
+    return dict(pairs)
+
+
+def read(fields):
+    try:
+        req = json.loads(sys.stdin.read(), object_pairs_hook=unique)
+    except ValueError:
+        raise Refused('the input is not JSON', 'send one JSON object on stdin, as `driver schema` shows')
+    if not isinstance(req, dict) or set(req) != set(fields):
+        raise Refused('the input needs exactly ' + ', '.join(fields), 'send only those fields; never a login')
+    for key, pattern in fields.items():
+        v = req[key]
+        if not (type(v) is int and v > 0 if pattern is None else isinstance(v, str) and re.fullmatch(pattern, v)):
+            raise Refused(key + ' is not valid', 'fix ' + key + ' as `driver schema` shows')
+    return req
+
+
+def command(req, session):
+    what = 'You were woken: read the ticket again and carry on' if session else 'Build the ticket'
+    prompt = '%s: %s#%d, with the %s skill.' % (what, req['repository'], req['ticket'], req['skill'])
+    cmd = ['hermes', 'chat', '--oneshot', '--format', 'stream-json', '--source', 'tool']
+    tool = HERMES_SKILL_FOR_HARNESS[req['harness']]
+    if tool:
+        cmd += ['-s', tool]
+        prompt += (' Do the work through your %s skill: run the %s CLI with the model %s, and have it run the '
+                   '%s skill there.' % (tool, req['harness'], req['model'], req['skill']))
+    else:
+        cmd += ['-m', req['model']]
+    return cmd + (['--resume', session] if session else []) + ['-q', prompt]
+
+
+def since(pid):
+    try:
+        with open('/proc/%d/stat' % pid) as f:
+            fields = f.read().rpartition(')')[2].split()
+    except OSError:
+        return None
+    return None if fields[0] == 'Z' else int(fields[19])
+
+
+def descendants(pid):
+    children = {}
+    for p in filter(str.isdigit, os.listdir('/proc')):
+        try:
+            with open('/proc/%s/stat' % p) as f:
+                fields = f.read().rpartition(')')[2].split()
+        except OSError:
+            continue
+        if fields[0] != 'Z':
+            children.setdefault(int(fields[1]), []).append(int(p))
+    found, todo = set(), [pid]
+    while todo:
+        for c in children.get(todo.pop(), []):
+            if c not in found:
+                found.add(c)
+                todo.append(c)
+    return found
+
+
+# SECURITY: Hermes gets only these names from the caller's environment; a credential stays behind.
+def child_env(run):
+    kept = {name: os.environ[name] for name in CHILD_ENV if name in os.environ}
+    return dict(kept, OPENWIZ_RUN=run)
+
+
+def drain(stream, report):
+    found = None
+    for line in stream:
+        if report and found is None:
+            try:
+                event = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(event, dict) and event.get('type') == 'system' and event.get('subtype') == 'init':
+                sid = event.get('session_id')
+                found = sid if isinstance(sid, str) and re.fullmatch(SESSION, sid) else ''
+                tell({'session': found or None})
+    if report and found is None:
+        tell({'session': None})
+
+
+def tell(answer):
+    try:
+        print(json.dumps(answer), flush=True)
+        os.dup2(os.open(os.devnull, os.O_WRONLY), 1)
+    except OSError:
+        pass
+
+
+def spawn(cmd):
+    return subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+
+
+def read_output(harness, report):
+    threading.Thread(target=drain, args=(harness.stdout, report), daemon=True).start()
+
+
+def pending_turn(run, harness):
+    try:
+        fd = os.open(os.path.join(STATE, run + '.lock'), os.O_RDONLY)
+    except OSError:
+        return None
+    try:
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                if saved(run).get('stopped'):
+                    return None
+                time.sleep(0.05)
+        state = saved(run)
+        if state['stopped'] or not state.get('wake_pending'):
+            return None
+        last = state['turns'][-1]
+        if last['pid'] != harness:
+            return None
+        nxt = spawn(command(state['request'], state['session']))
+        read_output(nxt, False)
+        turn = dict(last, pid=nxt.pid, since=since(nxt.pid))
+        try:
+            saved(run, dict(state, turns=state['turns'] + [turn], wake_pending=False))
+        except OSError:
+            nxt.kill()
+            return None
+        return nxt.pid
+    except (OSError, ValueError, KeyError, Refused):
+        return None
+    finally:
+        os.close(fd)
+
+
+def supervise(state, run, first, cmd):
+    global STATE
+    STATE = state
+    if ctypes.CDLL(None, use_errno=True).prctl(36, 1, 0, 0, 0) != 0:
+        print(json.dumps({'error': 'this host cannot keep a turn\'s processes together'}), flush=True)
+        return
+    try:
+        child = spawn(cmd)
+    except OSError as e:
+        print(json.dumps({'error': e.strerror}), flush=True)
+        return
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+    harness = child.pid
+    print(json.dumps({'pid': harness, 'since': since(harness)}), flush=True)
+    if not first:
+        os.dup2(os.open(os.devnull, os.O_WRONLY), 1)
+    read_output(child, first)
+    while True:
+        try:
+            pid, _ = os.wait()
+        except ChildProcessError:
+            return
+        if pid == harness:
+            harness = pending_turn(run, harness) or harness
+
+
+def answer_line(stream, deadline):
+    while time.monotonic() < deadline:
+        ready, _, _ = select.select([stream], [], [], max(0, deadline - time.monotonic()))
+        if ready:
+            return stream.readline()
+    return b''
+
+
+def launch(req, run, session):
+    if not shutil.which('hermes'):
+        raise Refused('hermes is not installed here',
+                      'install Hermes and set up its model yourself (hermes setup), then start again')
+    try:
+        sup = subprocess.Popen([sys.executable, '-I', os.path.abspath(__file__), '--turn', STATE, run,
+                                '0' if session else '1'] + command(req, session),
+                               env=child_env(run), start_new_session=True,
+                               stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                               bufsize=0)
+    except OSError as e:
+        raise Refused('hermes did not start: %s' % e.strerror, 'check that `hermes chat` runs by hand')
+    with sup.stdout:
+        line = sup.stdout.readline()
+        try:
+            turn = json.loads(line)
+        except ValueError:
+            turn = {'error': 'its supervisor did not answer'}
+        if 'pid' not in turn:
+            raise Refused('hermes did not start: %s' % turn['error'], 'check that `hermes chat` runs by hand')
+        turn = {'pid': turn['pid'], 'since': turn['since'], 'supervisor': sup.pid,
+                'supervisor_since': since(sup.pid)}
+        if session:
+            return turn
+        try:
+            reported = json.loads(answer_line(sup.stdout, time.monotonic() + SESSION_WAIT_SECONDS) or 'null')
+        except ValueError:
+            reported = None
+    turn['session'] = reported.get('session') if isinstance(reported, dict) else None
+    if not turn['session']:
+        end([turn], run)
+        raise Refused('hermes did not report a session for run %s, so the driver ended its turn' % run,
+                      'run `hermes chat --oneshot -q hello` by hand to see why, then start again')
+    return turn
+
+
+def running(turn, run):
+    return bool(turn) and turn['since'] is not None and since(turn['pid']) == turn['since']
+
+
+def end(turns, run):
+    kept = [(t['supervisor'], t['supervisor_since']) for t in turns if t and t['supervisor_since'] is not None]
+    steps = ((signal.SIGINT, INTERRUPT_SETTLE_SECONDS), (signal.SIGTERM, TERMINATE_GRACE_SECONDS), (signal.SIGKILL, 2))
+    for sig, wait in steps:
+        sent, deadline = set(), time.monotonic() + wait
+        while time.monotonic() < deadline:
+            kept = [(p, t) for p, t in kept if since(p) == t]
+            if not kept:
+                return
+            pinned = {}
+            for p in set().union(*(descendants(s) for s, _ in kept)) - sent:
+                try:
+                    pinned[p] = os.pidfd_open(p)
+                except OSError:
+                    pass
+            under = set().union(*(descendants(s) for s, _ in kept))
+            for p, fd in pinned.items():
+                try:
+                    if p in under:
+                        sent.add(p)
+                        signal.pidfd_send_signal(fd, sig)
+                except OSError:
+                    pass
+                finally:
+                    os.close(fd)
+            time.sleep(0.1)
+    raise Refused('run %s still has processes after stop' % run,
+                  'stop it again, or end its processes by hand: they run under process %s'
+                  % ', '.join(str(p) for p, _ in kept))
+
+
+def lock(run):
+    if not os.path.exists(os.path.join(STATE, run + '.json')):
+        raise Refused('no run ' + run, 'check the run id that `driver start` printed')
+    try:
+        fcntl.flock(os.open(os.path.join(STATE, run + '.lock'), os.O_RDONLY | os.O_CREAT, 0o600), fcntl.LOCK_EX)
+    except OSError:
+        raise Refused('the driver cannot lock run %s in its state folder' % run,
+                      'make OPENWIZ_HERMES_STATE (or ~/.local/state/openwiz-hermes) a folder you can write')
+
+
+def saved(run, state=None):
+    path = os.path.join(STATE, run + '.json')
+    if state is not None:
+        os.makedirs(STATE, mode=0o700, exist_ok=True)
+        with open(path + '.new', 'w') as f:
+            json.dump(state, f)
+        os.replace(path + '.new', path)
+        return state
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except FileNotFoundError:
+        raise Refused('no run ' + run, 'check the run id that `driver start` printed')
+
+
+def unsaved(run, turn, cmd):
+    try:
+        end([turn], run)
+    except Refused:
+        raise Refused('run %s began a turn it could not save, and could not confirm the turn ended; its outcome is '
+                      'unknown' % run, 'end process %d and everything under it by hand, and read the ticket for '
+                      'what its agent did, before you %s it again' % (turn['supervisor'], cmd))
+    raise Refused('run %s began a turn it could not save, so the driver ended it; its outcome is unknown' % run,
+                  'read the ticket for what its agent did before you %s it again' % cmd)
+
+
+def answer(cmd):
+    if cmd == 'version':
+        return VERSION
+    if cmd == 'schema':
+        with open(os.path.join(HERE, 'schema.json')) as f:
+            return json.load(f)
+    if cmd == 'start':
+        req, run = read(START), 'run-' + secrets.token_hex(6)
+        if req['harness'] not in HERMES_SKILL_FOR_HARNESS:
+            raise Refused('Hermes cannot run harness ' + req['harness'],
+                          'use one of: ' + ', '.join(HERMES_SKILL_FOR_HARNESS))
+        state = {'request': req, 'session': None, 'turns': [], 'stopped': False, 'starting': True}
+        try:
+            saved(run, state)
+            os.close(os.open(os.path.join(STATE, run + '.lock'), os.O_WRONLY | os.O_CREAT, 0o600))
+        except OSError:
+            raise Refused('the driver cannot save runs in its state folder; nothing was started',
+                          'make OPENWIZ_HERMES_STATE (or ~/.local/state/openwiz-hermes) a folder you can write')
+        try:
+            turn = launch(req, run, None)
+        except Refused:
+            try:
+                saved(run, dict(state, stopped=True))
+            except OSError:
+                pass
+            raise
+        try:
+            saved(run, dict(state, session=turn['session'], turns=[turn], starting=False))
+        except OSError:
+            unsaved(run, turn, 'start')
+        return {'run': run}
+    if cmd in ('wake', 'stop'):
+        run = read(RUN)['run']
+        lock(run)
+        state = saved(run)
+        if cmd == 'stop':
+            try:
+                saved(run, dict(state, stopped=True))
+                kept = True
+            except OSError:
+                kept = False
+            end(state['turns'], run)
+            if not kept:
+                raise Refused('run %s has ended, but the driver could not save that it is stopped' % run,
+                              'make OPENWIZ_HERMES_STATE (or ~/.local/state/openwiz-hermes) a folder you can '
+                              'write, then stop it again')
+            return {'run': run, 'stopped': True}
+        if state['stopped']:
+            raise Refused('run %s is stopped' % run, 'start a new run')
+        if state.get('starting'):
+            raise Refused('run %s never finished starting' % run, 'stop it, then start a new run')
+        if state['turns'] and running(state['turns'][-1], run):
+            try:
+                saved(run, dict(state, wake_pending=True))
+            except OSError:
+                raise Refused('the driver cannot save run %s, so this wake was not queued' % run,
+                              'make OPENWIZ_HERMES_STATE (or ~/.local/state/openwiz-hermes) a folder you can write')
+            return {'run': run, 'woke': True}
+        try:
+            saved(run, state)
+        except OSError:
+            raise Refused('the driver cannot save run %s; nothing was started' % run,
+                          'make OPENWIZ_HERMES_STATE (or ~/.local/state/openwiz-hermes) a folder you can write')
+        turn = launch(state['request'], run, state['session'])
+        try:
+            saved(run, dict(state, turns=state['turns'] + [turn], wake_pending=False))
+        except OSError:
+            unsaved(run, turn, 'wake')
+        return {'run': run, 'woke': True}
+    raise Refused('unknown command', 'run one of: version, schema, start, wake, stop')
+
+
+def main():
+    if len(sys.argv) > 5 and sys.argv[1] == '--turn':
+        return supervise(sys.argv[2], sys.argv[3], sys.argv[4] == '1', sys.argv[5:])
+    try:
+        out, code = answer(sys.argv[1] if len(sys.argv) == 2 else ''), 0
+    except Refused as e:
+        out, code = {'error': e.args[0], 'next': e.args[1]}, 1
+    except Exception as e:
+        out, code = {'error': 'the driver failed: ' + type(e).__name__, 'next': 'read its code, fix it, retry'}, 1
+    print(json.dumps(out))
+    sys.exit(code)
+
+
+if __name__ == '__main__':
+    main()

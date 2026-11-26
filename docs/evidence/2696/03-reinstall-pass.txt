@@ -1,0 +1,7 @@
+env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/vps/test_hosts.py Page.test_factory_and_pane_use_the_bootstrapped_tools Page.test_pane_doctor_follows_daemon_start_and_registration_of_the_same_checkout
+..
+----------------------------------------------------------------------
+Ran 2 tests
+
+OK
+Exit 0

@@ -1,0 +1,143 @@
+# red for openwizdev/openwiz#2921 at f589c160 + new tests and fixtures, before the kit fix
+# env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/driver-kit/test_kit.py <4 new tests> (agent CLIs stubbed first on PATH)
+test_key_check_nested_probe_uses_synthetic_repo_and_model (__main__.Kit.test_key_check_nested_probe_uses_synthetic_repo_and_model) ... 
+  test_key_check_nested_probe_uses_synthetic_repo_and_model (__main__.Kit.test_key_check_nested_probe_uses_synthetic_repo_and_model) [outer repo differs] ... FAIL
+  test_key_check_nested_probe_uses_synthetic_repo_and_model (__main__.Kit.test_key_check_nested_probe_uses_synthetic_repo_and_model) [outer model differs] ... FAIL
+test_key_host_fixture_echoes_request_uuid_on_create (__main__.Kit.test_key_host_fixture_echoes_request_uuid_on_create) ... FAIL
+test_malformed_echo_placeholder_in_kit_host_json_is_refused (__main__.Kit.test_malformed_echo_placeholder_in_kit_host_json_is_refused) ... FAIL
+test_echo_placeholder_nested_and_fails_closed_when_missing (__main__.Kit.test_echo_placeholder_nested_and_fails_closed_when_missing) ... 
+  test_echo_placeholder_nested_and_fails_closed_when_missing (__main__.Kit.test_echo_placeholder_nested_and_fails_closed_when_missing) (bad=b'{"meta": {}, "ticket": 7}') ... FAIL
+  test_echo_placeholder_nested_and_fails_closed_when_missing (__main__.Kit.test_echo_placeholder_nested_and_fails_closed_when_missing) (bad=b'{"meta": "scalar", "ticket": 7}') ... FAIL
+  test_echo_placeholder_nested_and_fails_closed_when_missing (__main__.Kit.test_echo_placeholder_nested_and_fails_closed_when_missing) (bad=b'[1, 2]') ... FAIL
+  test_echo_placeholder_nested_and_fails_closed_when_missing (__main__.Kit.test_echo_placeholder_nested_and_fails_closed_when_missing) (bad=b'not-json') ... FAIL
+  test_echo_placeholder_nested_and_fails_closed_when_missing (__main__.Kit.test_echo_placeholder_nested_and_fails_closed_when_missing) (bad=b'') ... FAIL
+test_echo_placeholder_nested_and_fails_closed_when_missing (__main__.Kit.test_echo_placeholder_nested_and_fails_closed_when_missing) ... FAIL
+
+======================================================================
+FAIL: test_key_check_nested_probe_uses_synthetic_repo_and_model (__main__.Kit.test_key_check_nested_probe_uses_synthetic_repo_and_model) [outer repo differs]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/kernel/driver-kit/test_kit.py", line 694, in test_key_check_nested_probe_uses_synthetic_repo_and_model
+    self.assertEqual((p.returncode, p.stdout.splitlines()), (0, PASS[:4] + [KEY_PASS]), p.stderr)
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[284 chars]op"]) != (0, ['pass version: openwiz:records v1, an[345 chars]er'])
+
+First differing element 0:
+1
+0
+
+- (1,
++ (0,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+-   "fail token: start failed against the kit's fake host, so the kit could not "
+-   'check wake and stop'])
++   'pass token: no login or token passed through the driver, and on start, wake '
++   'and stop the devin key reached its host only from the key helper, in its '
++   'header']) : 
+
+======================================================================
+FAIL: test_key_check_nested_probe_uses_synthetic_repo_and_model (__main__.Kit.test_key_check_nested_probe_uses_synthetic_repo_and_model) [outer model differs]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/kernel/driver-kit/test_kit.py", line 694, in test_key_check_nested_probe_uses_synthetic_repo_and_model
+    self.assertEqual((p.returncode, p.stdout.splitlines()), (0, PASS[:4] + [KEY_PASS]), p.stderr)
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[284 chars]op"]) != (0, ['pass version: openwiz:records v1, an[345 chars]er'])
+
+First differing element 0:
+1
+0
+
+- (1,
++ (0,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+-   "fail token: start failed against the kit's fake host, so the kit could not "
+-   'check wake and stop'])
++   'pass token: no login or token passed through the driver, and on start, wake '
++   'and stop the devin key reached its host only from the key helper, in its '
++   'header']) : 
+
+======================================================================
+FAIL: test_key_host_fixture_echoes_request_uuid_on_create (__main__.Kit.test_key_host_fixture_echoes_request_uuid_on_create)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/kernel/driver-kit/test_kit.py", line 706, in test_key_host_fixture_echoes_request_uuid_on_create
+    self.assertEqual((code, out), (0, PASS[:4] + [KEY_PASS]), err)
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[253 chars]op"]) != (0, ['pass version: openwiz:records v1, an[345 chars]er'])
+
+First differing element 0:
+1
+0
+
+Diff is 688 characters long. Set self.maxDiff to None to see it. : 
+
+======================================================================
+FAIL: test_malformed_echo_placeholder_in_kit_host_json_is_refused (__main__.Kit.test_malformed_echo_placeholder_in_kit_host_json_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/kernel/driver-kit/test_kit.py", line 728, in test_malformed_echo_placeholder_in_kit_host_json_is_refused
+    self.assertEqual(code, 2, '\n'.join(out) + err)
+AssertionError: 0 != 2 : pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 2
+pass wake: the run edited builder status note 2
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver, and on start, wake and stop the devin key reached its host only from the key helper, in its header
+
+======================================================================
+FAIL: test_echo_placeholder_nested_and_fails_closed_when_missing (__main__.Kit.test_echo_placeholder_nested_and_fails_closed_when_missing) (bad=b'{"meta": {}, "ticket": 7}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/kernel/driver-kit/test_kit.py", line 753, in test_echo_placeholder_nested_and_fails_closed_when_missing
+    with self.assertRaises(urllib.error.HTTPError) as ctx:
+AssertionError: HTTPError not raised
+
+======================================================================
+FAIL: test_echo_placeholder_nested_and_fails_closed_when_missing (__main__.Kit.test_echo_placeholder_nested_and_fails_closed_when_missing) (bad=b'{"meta": "scalar", "ticket": 7}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/kernel/driver-kit/test_kit.py", line 753, in test_echo_placeholder_nested_and_fails_closed_when_missing
+    with self.assertRaises(urllib.error.HTTPError) as ctx:
+AssertionError: HTTPError not raised
+
+======================================================================
+FAIL: test_echo_placeholder_nested_and_fails_closed_when_missing (__main__.Kit.test_echo_placeholder_nested_and_fails_closed_when_missing) (bad=b'[1, 2]')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/kernel/driver-kit/test_kit.py", line 753, in test_echo_placeholder_nested_and_fails_closed_when_missing
+    with self.assertRaises(urllib.error.HTTPError) as ctx:
+AssertionError: HTTPError not raised
+
+======================================================================
+FAIL: test_echo_placeholder_nested_and_fails_closed_when_missing (__main__.Kit.test_echo_placeholder_nested_and_fails_closed_when_missing) (bad=b'not-json')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/kernel/driver-kit/test_kit.py", line 753, in test_echo_placeholder_nested_and_fails_closed_when_missing
+    with self.assertRaises(urllib.error.HTTPError) as ctx:
+AssertionError: HTTPError not raised
+
+======================================================================
+FAIL: test_echo_placeholder_nested_and_fails_closed_when_missing (__main__.Kit.test_echo_placeholder_nested_and_fails_closed_when_missing) (bad=b'')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/kernel/driver-kit/test_kit.py", line 753, in test_echo_placeholder_nested_and_fails_closed_when_missing
+    with self.assertRaises(urllib.error.HTTPError) as ctx:
+AssertionError: HTTPError not raised
+
+======================================================================
+FAIL: test_echo_placeholder_nested_and_fails_closed_when_missing (__main__.Kit.test_echo_placeholder_nested_and_fails_closed_when_missing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/kernel/driver-kit/test_kit.py", line 760, in test_echo_placeholder_nested_and_fails_closed_when_missing
+    self.assertEqual(json.loads(resp.read().decode()), {'id': '{{request.ticket}}', 'ticket': 7})
+AssertionError: {'id': '{{request.meta.id}}', 'ticket': '{{request.ticket}}'} != {'id': '{{request.ticket}}', 'ticket': 7}
+- {'id': '{{request.meta.id}}', 'ticket': '{{request.ticket}}'}
++ {'id': '{{request.ticket}}', 'ticket': 7}
+
+----------------------------------------------------------------------
+Ran 4 tests in 6.368s
+
+FAILED (failures=10)

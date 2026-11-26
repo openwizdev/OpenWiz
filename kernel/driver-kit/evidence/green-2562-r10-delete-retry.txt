@@ -1,0 +1,42 @@
+green at afda929b (R10 deletion round: plain retry and R11-R13 machinery removed); lsof installed
+each suite run as: env -u OPENWIZ_GITHUB_APP_KEY python3 -I <suite>
+== kernel/driver-kit/test_kit.py
+----------------------------------------------------------------------
+Ran 42 tests in 342.652s
+
+OK
+== kernel/driver-kit/test_hostkey.py
+----------------------------------------------------------------------
+Ran 25 tests in 29.607s
+
+OK
+== adapters/boat/test_driver.py
+----------------------------------------------------------------------
+Ran 39 tests in 77.082s
+
+OK
+== adapters/cloudroom/test_driver.py
+----------------------------------------------------------------------
+Ran 28 tests in 24.581s
+
+OK
+== adapters/devin/test_driver.py
+----------------------------------------------------------------------
+Ran 6 tests in 2.617s
+
+OK
+== adapters/local/test_driver.py
+----------------------------------------------------------------------
+Ran 23 tests in 67.574s
+
+OK
+== adapters/openclaw/test_driver.py
+----------------------------------------------------------------------
+Ran 14 tests in 6.631s
+
+OK
+== adapters/template/test_driver.py
+----------------------------------------------------------------------
+Ran 21 tests in 24.774s
+
+OK

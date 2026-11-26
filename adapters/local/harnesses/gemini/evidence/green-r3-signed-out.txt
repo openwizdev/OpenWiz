@@ -1,0 +1,7 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/local/harnesses/gemini/test_row.py   # 31 refusing stubs first on PATH
+test_row.py: 15 refusals and 4 signed-out first turns checked, 0 failed
+exit 0
+
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/local/test_harnesses.py --rows adapters/local/harnesses   # 31 refusing stubs first on PATH
+pass gemini: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+exit 0

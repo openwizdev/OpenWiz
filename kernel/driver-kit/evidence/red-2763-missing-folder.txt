@@ -1,0 +1,15 @@
+# red for openwizdev/openwiz#2763 (self-review finding): under a missing folder the macOS path search keeps growing to the end of the command text
+# env -u OPENWIZ_GITHUB_APP_KEY python3 -m unittest kernel/driver-kit/test_kit.py -k missing_folder (agent CLIs stubbed first on PATH)
+F
+======================================================================
+FAIL: test_a_word_under_a_missing_folder_costs_one_lookup_in_macos_text (kernel.driver-kit.test_kit.Kit.test_a_word_under_a_missing_folder_costs_one_lookup_in_macos_text)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/kernel/driver-kit/test_kit.py", line 312, in test_a_word_under_a_missing_folder_costs_one_lookup_in_macos_text
+    self.assertLessEqual(len(looked), 510, 'the search kept growing under a folder that does not exist')
+AssertionError: 1003 not less than or equal to 510 : the search kept growing under a folder that does not exist
+
+----------------------------------------------------------------------
+Ran 1 test in 0.032s
+
+FAILED (failures=1)

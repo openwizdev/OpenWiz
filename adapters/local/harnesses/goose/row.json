@@ -1,0 +1,47 @@
+{
+  "harness": "goose",
+  "program": "goose",
+  "start": [
+    "run",
+    "-n",
+    "{session}",
+    "--model",
+    "{model}",
+    "--output-format",
+    "json",
+    "{mode}",
+    "-t",
+    "{prompt}"
+  ],
+  "wake": [
+    "run",
+    "-n",
+    "{session}",
+    "--resume",
+    "--model",
+    "{model}",
+    "--output-format",
+    "json",
+    "{mode}",
+    "-t",
+    "{prompt}"
+  ],
+  "session": {
+    "chosen": "uuid"
+  },
+  "modes": {
+    "auto": []
+  },
+  "env": {
+    "GOOSE_MODE": "auto"
+  },
+  "effort": "none: goose's generic effort setting, GOOSE_THINKING_EFFORT, is silently dropped for a model without thinking (aaif-goose/goose v1.60.2, crates/goose-providers/src/ollama.rs reasoning_effort)",
+  "login": "goose's own login: `goose configure` saves the provider and model in ~/.config/goose/config.yaml and the provider key in the system keyring (or ~/.config/goose/secrets.yaml without one)",
+  "daemon": "goose's developer shell: a command the agent backgrounds keeps running after its shell exits, in that shell's own process group with its output on goose's pipes; stop ends it on Linux, where the supervisor adopts it as subreaper. Linux only",
+  "signed_out": [
+    "No provider configured\\. Run 'goose configure' first",
+    "No model configured\\. Run 'goose configure' first",
+    "Error Configuration value not found: [A-Z0-9_]*_(API_KEY|TOKEN)\\."
+  ],
+  "login_command": "goose configure"
+}

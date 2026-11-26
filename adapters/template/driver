@@ -6,7 +6,7 @@ STATE = os.environ.get('OPENWIZ_TEMPLATE_STATE') or os.path.expanduser('~/.local
 VERSION = {'driver': 'template', 'records': ['openwiz:records v1'], 'can': ['start', 'wake', 'stop', 'effort']}
 START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
          'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
-         'model': r'[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}'}
+         'model': r'(?=.{1,100}$)[A-Za-z0-9][A-Za-z0-9 ._:@+-]*(/[A-Za-z0-9][A-Za-z0-9 ._:@+-]*)*'}
 RUN = {'run': r'run-[0-9a-f]{12}'}
 EFFORT = {'effort': r'[a-z][a-z0-9-]{0,19}'}
 EFFORTS = {'fake-harness': ('--effort', ('low', 'medium', 'high', 'xhigh', 'max'))}
@@ -48,6 +48,10 @@ def read(fields):
 
 
 def command(req, woken):
+    if os.environ.get('OPENWIZ_TEMPLATE_LIVE') != '1':
+        raise Refused('the template starts no harness unless OPENWIZ_TEMPLATE_LIVE=1 is set',
+                      'write your own command for your harness, '
+                      'or set OPENWIZ_TEMPLATE_LIVE=1 on purpose for a live check')
     what = 'You were woken: read the ticket again and carry on' if woken else 'Build the ticket'
     prompt = '%s: %s#%d, with the %s skill.' % (what, req['repository'], req['ticket'], req['skill'])
     effort = [EFFORTS[req['harness']][0], req['effort']] if 'effort' in req else []
@@ -137,6 +141,32 @@ def record_kept(run, kept):
         pass
 
 
+def lsof_failed_record(run, supervisor):
+    return os.path.join(STATE, '%s.%d.nolsof' % (run, supervisor))
+
+
+def record_lsof_failed(run):
+    try:
+        with open(lsof_failed_record(run, os.getpid()), 'w') as f:
+            json.dump({'supervisor_since': since(os.getpid())}, f)
+        return True
+    except OSError:
+        return False
+
+
+def lsof_failed_in(run, supervisors):
+    for pid, started in supervisors:
+        try:
+            with open(lsof_failed_record(run, pid)) as f:
+                if json.load(f)['supervisor_since'] == started:
+                    return True
+        except FileNotFoundError:
+            continue
+        except (OSError, ValueError, KeyError, TypeError):
+            return True
+    return False
+
+
 def recorded_by(run, supervisors):
     recorded = {}
     for pid, started in supervisors:
@@ -151,7 +181,7 @@ def recorded_by(run, supervisors):
 
 
 def look_after_the_turn_on_macos(run, output):
-    kept, looks = {}, 0
+    kept, looks, marked = {}, 0, False
     while True:
         children_left = any_child_running_after_reaping()
         scanned = looks % LOOKS_PER_OUTPUT_CHECK == 0
@@ -159,15 +189,16 @@ def look_after_the_turn_on_macos(run, output):
         if not children_left and not now and not scanned:
             now = members({os.getpid()}, kept, writing_to(output))
         looks += 1
+        if LSOF_COULD_NOT_CHECK and not marked:
+            marked = record_lsof_failed(run)
         if now != kept:
             kept = now
             record_kept(run, kept)
         if not children_left and not kept:
-            for name in (supervisor_record(run, os.getpid()), output):
-                try:
-                    os.remove(name)
-                except OSError:
-                    pass
+            try:
+                os.remove(supervisor_record(run, os.getpid()))
+            except OSError:
+                pass
             return
         time.sleep(MACOS_SECONDS_BETWEEN_LOOKS)
 
@@ -238,11 +269,12 @@ def any_child_running_after_reaping():
 
 
 def launch(req, run, woken):
+    cmd = command(req, woken)
     if not shutil.which(req['harness']):
         raise Refused('harness %s is not installed here' % req['harness'],
                       'install %s and sign in to it yourself, then start again' % req['harness'])
     try:
-        sup = subprocess.Popen([sys.executable, '-I', os.path.abspath(__file__), '--turn'] + command(req, woken),
+        sup = subprocess.Popen([sys.executable, '-I', os.path.abspath(__file__), '--turn'] + cmd,
                                env=dict(os.environ, OPENWIZ_RUN=run), start_new_session=True,
                                stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         with sup.stdout:
@@ -264,6 +296,8 @@ def running(turn, run):
 
 def end(turns, run):
     kept = [(t['supervisor'], t['supervisor_since']) for t in turns if t and t['supervisor_since'] is not None]
+    if lsof_failed_in(run, kept):
+        LSOF_COULD_NOT_CHECK.append(run)
     for sig, wait in ((signal.SIGTERM, GRACE), (signal.SIGKILL, 2)):
         sent, deadline = set(), time.monotonic() + wait
         while time.monotonic() < deadline:
@@ -379,6 +413,12 @@ def answer(cmd):
             except OSError:
                 kept = False
             end(state['turns'], run)
+            for name in (n for t in state['turns'] if t
+                         for n in (lsof_failed_record(run, t['supervisor']), turn_output(run, t['supervisor']))):
+                try:
+                    os.remove(name)
+                except OSError:
+                    pass
             if not kept:
                 raise Refused('run %s has ended, but the driver could not save that it is stopped' % run,
                               'make OPENWIZ_TEMPLATE_STATE (or ~/.local/state/openwiz-template) a folder you can '

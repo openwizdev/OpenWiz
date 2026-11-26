@@ -1,0 +1,7 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY PATH=<31 refusing stubs>:$PATH python3 -I test_row.py
+fail: the fake allowed ['-p', 'Work on the ticket with the build-ticket skill.', '--output-format', 'stream-json', '-m', ''] (exit 0)
+fail: the fake allowed ['-p', 'Work on the ticket with the build-ticket skill.', '--output-format', 'stream-json', '-m', ' \t'] (exit 0)
+fail: the fake allowed ['--model', ' ', '--output-format', 'stream-json', '--prompt', 'Work on the ticket with the build-ticket skill.'] (exit 0)
+fail: the fake allowed ['-S', 'fake-1', '-p', 'You were woken. Carry on with the build-ticket skill.', '-m', ''] (exit 0)
+fail
+exit 1

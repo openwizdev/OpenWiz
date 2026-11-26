@@ -22,6 +22,9 @@ NO_PROC = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'fixtures', 'no
 
 TOKEN = 'gh' + 'p_' + 'Synthetic0Local0Value' * 2 + '00'
 OPAQUE = 'opaque-fixture-value-7Kq2Zr9w'
+NO_LSOF = ('driver: lsof could not run or failed, so the driver could not check which processes hold this '
+           "run's output file open; it ended only the turns' process groups and the processes their "
+           'supervisors recorded')
 PASS = ['pass version: openwiz:records v1, and the schema is driver v1',
         'pass start: the run posted builder status note 1',
         'pass wake: the run edited builder status note 1',
@@ -457,6 +460,26 @@ class Local(unittest.TestCase):
                 self.assertEqual((p.returncode, json.loads(p.stdout)), (0, dict(out, stopped=True)))
                 self.assertEqual('could not check' in p.stderr, broken, p.stderr)
                 self.assertNotIn(OPAQUE, p.stderr)
+
+    def test_without_proc_as_on_macos_stop_warns_when_lsof_failed_in_a_supervisor_that_has_exited(self):
+        folder, pids = self.harness_handing_off_as_it_exits('claude')
+        broken = os.path.join(self.folder, 'broken-lsof')
+        os.mkdir(broken)
+        with open(os.path.join(broken, 'lsof'), 'w') as f:
+            f.write('#!/bin/sh\necho "lsof: synthetic failure %s" >&2\nexit 1\n' % OPAQUE)
+        os.chmod(os.path.join(broken, 'lsof'), 0o700)
+        macos = dict(self.env, PATH=os.pathsep.join((broken, folder, NO_PROC, self.env['PATH'])),
+                     NO_PROC_PYTHON=sys.executable)
+        code, out = self.start(env=macos)
+        self.assertEqual(code, 0, out)
+        self.handed_off(pids)
+        with open(os.path.join(self.env['OPENWIZ_LOCAL_STATE'], out['run'] + '.json')) as f:
+            supervisor = json.load(f)['turns'][0]['supervisor']
+        self.until(lambda: not alive(supervisor))
+        p = subprocess.run([DRIVER, 'stop'], input=json.dumps(out), env=macos, capture_output=True, text=True, timeout=60)
+        self.assertEqual((p.returncode, json.loads(p.stdout)), (0, dict(out, stopped=True)))
+        self.assertEqual([l for l in p.stderr.splitlines() if 'could not check' in l], [NO_LSOF], p.stderr)
+        self.assertNotIn(OPAQUE, p.stderr)
 
     def asked_ps_for_environments(self, calls):
         with open(calls) as f:

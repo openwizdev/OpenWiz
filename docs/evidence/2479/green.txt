@@ -1,0 +1,10 @@
+test_a_cost_other_than_none_is_skipped_as_cost_after_the_status_command (__main__.Local.test_a_cost_other_than_none_is_skipped_as_cost_after_the_status_command) ... ok
+test_a_missing_program_is_skipped_with_its_exact_line_and_runs_no_status_command_or_kit (__main__.Local.test_a_missing_program_is_skipped_with_its_exact_line_and_runs_no_status_command_or_kit) ... ok
+test_gh_not_signed_in_is_skipped_with_its_exact_line_and_starts_no_kit (__main__.Local.test_gh_not_signed_in_is_skipped_with_its_exact_line_and_starts_no_kit) ... ok
+test_gh_signed_in_runs_the_kit_once_and_never_asks_claude_or_codex (__main__.Local.test_gh_signed_in_runs_the_kit_once_and_never_asks_claude_or_codex) ... ok
+test_the_config_is_the_tickets_local_host_with_its_one_cited_status_command (__main__.Local.test_the_config_is_the_tickets_local_host_with_its_one_cited_status_command) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests
+
+OK

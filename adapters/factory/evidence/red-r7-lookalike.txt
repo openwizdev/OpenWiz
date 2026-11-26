@@ -1,0 +1,16 @@
+# R7 (fix once more) red: stop on a tampered folder signals a same-user process matched only by its command line (synthetic, fixtures only)
+$ python3 -I adapters/factory/test_driver.py Factory.test_stop_on_a_tampered_folder_never_signals_a_process_matched_by_its_command_line
+test_stop_on_a_tampered_folder_never_signals_a_process_matched_by_its_command_line (__main__.Factory.test_stop_on_a_tampered_folder_never_signals_a_process_matched_by_its_command_line) ... FAIL
+
+======================================================================
+FAIL: test_stop_on_a_tampered_folder_never_signals_a_process_matched_by_its_command_line (__main__.Factory.test_stop_on_a_tampered_folder_never_signals_a_process_matched_by_its_command_line)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/factory/test_driver.py", line 215, in test_stop_on_a_tampered_folder_never_signals_a_process_matched_by_its_command_line
+    self.assertTrue(alive(lookalike.pid) and alive(child), 'stop signalled a process matched by command line')
+AssertionError: False is not true : stop signalled a process matched by command line
+
+----------------------------------------------------------------------
+Ran 1 test in 0.153s
+
+FAILED (failures=1)

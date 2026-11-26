@@ -1,0 +1,74 @@
+{
+  "harness": "agy",
+  "program": "agy",
+  "start": [
+    "-p",
+    "{prompt}",
+    "--output-format",
+    "stream-json",
+    "--model",
+    "{model}",
+    "{mode}",
+    "{effort}"
+  ],
+  "wake": [
+    "-p",
+    "{prompt}",
+    "--conversation",
+    "{session}",
+    "--output-format",
+    "stream-json",
+    "--model",
+    "{model}",
+    "{mode}",
+    "{effort}"
+  ],
+  "session": {
+    "json": [
+      "conversation_id"
+    ]
+  },
+  "modes": {
+    "auto": [
+      "--mode=auto"
+    ],
+    "accept-edits": [
+      "--mode=accept-edits"
+    ],
+    "dangerously-skip-permissions": [
+      "--dangerously-skip-permissions"
+    ],
+    "settings": []
+  },
+  "env": {
+    "AGY_CLI_DISABLE_AUTO_UPDATE": "true"
+  },
+  "effort": {
+    "low": [
+      "--effort",
+      "low"
+    ],
+    "medium": [
+      "--effort",
+      "medium"
+    ],
+    "high": [
+      "--effort",
+      "high"
+    ],
+    "xhigh": [
+      "--effort",
+      "xhigh"
+    ],
+    "max": [
+      "--effort",
+      "max"
+    ]
+  },
+  "login": "Antigravity CLI's own sign-in, saved in the OS keyring by an interactive `agy` session, or GEMINI_API_KEY with modelProvider gemini that you set yourself; the row never reads, sets or stores a key",
+  "daemon": "agy 1.5.14 runs its language server inside the one agy binary and may start MCP servers, terminal commands, daemon tasks and swarm workers under the turn; stop ends them with the run's process tree",
+  "signed_out": [
+    "\\bauthentication required\\. run '[^']+' to log in"
+  ],
+  "login_command": "agy"
+}

@@ -19,7 +19,7 @@ Checksums establish integrity, not a signed publisher identity. No program from
 an archive is run while validating or installing it.
 """
 
-TARGETS = ('aarch64-apple-darwin', 'x86_64-apple-darwin', 'x86_64-unknown-linux-gnu')
+TARGETS = ('aarch64-apple-darwin', 'x86_64-apple-darwin', 'x86_64-unknown-linux-gnu', 'aarch64-unknown-linux-gnu')
 PROGRAMS = {'openwiz'}
 REQUIRED = PROGRAMS | {'runtime/openwiz-build.txt', 'runtime/install.py', 'runtime/pull.py',
     'runtime/skills/setup/SKILL.md', 'runtime/skills/grill/SKILL.md',
@@ -178,7 +178,7 @@ def verify_installed(build, assets, raw):
 def damaged(build, assets, raw):
     try:
         verify_installed(build, assets, raw)
-        return False
+        return None
     except (Refused, OSError):
         meta = build.lstat()
         require(stat.S_ISDIR(meta.st_mode) and meta.st_uid == os.getuid(), 'a foreign build is in the way')
@@ -191,7 +191,15 @@ def damaged(build, assets, raw):
         except BaseException:
             os.chmod(build, stat.S_IMODE(meta.st_mode))
             raise
-        return True
+        return meta
+
+
+def same_directory(path, meta):
+    try:
+        now = path.lstat()
+    except OSError:
+        return False
+    return (now.st_dev, now.st_ino) == (meta.st_dev, meta.st_ino)
 
 
 def repair_backups(builds, source, raw):
@@ -205,7 +213,7 @@ def repair_backups(builds, source, raw):
     return found
 
 
-ROOT_ENTRIES = re.compile(r'current|channel\.json|install\.lock|skills|state|\.current-[0-9]+')
+ROOT_ENTRIES = re.compile(r'current|channel\.json|install\.lock|skills|contracts|\.claude-plugin|state|\.current-[0-9]+')
 STATE_ENTRIES = (('', re.compile(r'setup|cloudroom|service')),
                  ('service', re.compile(r'config\.json|app|state\.json|loops|clone|builds')),
                  ('service/builds', re.compile(r'[0-9a-f]{40}|\.stage-[A-Za-z0-9_]+|\.damaged-[0-9]+-[0-9a-f]{40}')))
@@ -303,51 +311,57 @@ def install(manifest, archive, manifest_sha256, root, target, state_root=None,
                 require(member.size == item['bytes'] and member.mode == int(item['mode'], 8), 'archive asset metadata mismatch')
                 seen.add(path)
             require(seen == set(assets), 'incomplete archive')
-            repair = (build.exists() or build.is_symlink()) and damaged(build, assets, raw)
+            damaged_meta = damaged(build, assets, raw) if build.exists() or build.is_symlink() else None
+            repair = damaged_meta is not None
             if repair or not (build.exists() or build.is_symlink()):
-                backups = repair_backups(builds, value['source'], raw)
-                needed = sum(item['bytes'] for item in assets.values()) + len(raw)
-                require(free_bytes(builds) >= needed, 'insufficient disk space')
-                temporary = Path(tempfile.mkdtemp(prefix='.stage-', dir=builds))
                 try:
-                    for member in members:
-                        item = assets[member.name]
-                        stream = tar.extractfile(member)
-                        hasher = hashlib.sha256()
-                        destination = temporary / member.name
-                        for parent in reversed(destination.parent.relative_to(temporary).parents):
-                            directory(temporary / parent)
-                        directory(destination.parent)
-                        with destination.open('xb') as out:
-                            os.chmod(destination, int(item['mode'], 8))
-                            for chunk in iter(lambda: stream.read(1024 * 1024), b''):
-                                hasher.update(chunk)
-                                out.write(chunk)
-                            out.flush()
-                            os.fsync(out.fileno())
-                        require(hasher.hexdigest() == item['sha256'], 'asset checksum mismatch')
-                    write(temporary / 'install-manifest.json', raw)
-                    verify_installed(temporary, assets, raw)
-                    for parent, _, _ in os.walk(temporary, topdown=False):
-                        sync(Path(parent))
-                    if repair:
-                        aside = builds / ('.damaged-%d-%s' % (os.getpid(), value['source']))
-                        os.rename(build, aside)
-                        try:
+                    backups = repair_backups(builds, value['source'], raw)
+                    needed = sum(item['bytes'] for item in assets.values()) + len(raw)
+                    require(free_bytes(builds) >= needed, 'insufficient disk space')
+                    temporary = Path(tempfile.mkdtemp(prefix='.stage-', dir=builds))
+                    try:
+                        for member in members:
+                            item = assets[member.name]
+                            stream = tar.extractfile(member)
+                            hasher = hashlib.sha256()
+                            destination = temporary / member.name
+                            for parent in reversed(destination.parent.relative_to(temporary).parents):
+                                directory(temporary / parent)
+                            directory(destination.parent)
+                            with destination.open('xb') as out:
+                                os.chmod(destination, int(item['mode'], 8))
+                                for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+                                    hasher.update(chunk)
+                                    out.write(chunk)
+                                out.flush()
+                                os.fsync(out.fileno())
+                            require(hasher.hexdigest() == item['sha256'], 'asset checksum mismatch')
+                        write(temporary / 'install-manifest.json', raw)
+                        verify_installed(temporary, assets, raw)
+                        for parent, _, _ in os.walk(temporary, topdown=False):
+                            sync(Path(parent))
+                        if repair:
+                            aside = builds / ('.damaged-%d-%s' % (os.getpid(), value['source']))
+                            os.rename(build, aside)
+                            try:
+                                os.rename(temporary, build)
+                            except BaseException:
+                                os.rename(aside, build)
+                                raise
+                            backups.append(aside)
+                        else:
                             os.rename(temporary, build)
-                        except BaseException:
-                            os.rename(aside, build)
-                            raise
-                        backups.append(aside)
-                    else:
-                        os.rename(temporary, build)
-                    sync(builds)
-                    verify_installed(build, assets, raw)
-                    for backup in backups:
-                        shutil.rmtree(backup, ignore_errors=True)
-                finally:
-                    if temporary.exists():
-                        shutil.rmtree(temporary)
+                        sync(builds)
+                        verify_installed(build, assets, raw)
+                        for backup in backups:
+                            shutil.rmtree(backup, ignore_errors=True)
+                    finally:
+                        if temporary.exists():
+                            shutil.rmtree(temporary)
+                except BaseException:
+                    if damaged_meta is not None and same_directory(build, damaged_meta):
+                        os.chmod(build, stat.S_IMODE(damaged_meta.st_mode))
+                    raise
         if not stage_only:
             if not channel.exists():
                 write(channel, channel_bytes)

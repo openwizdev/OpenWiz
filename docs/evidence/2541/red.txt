@@ -1,0 +1,36 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 tools/wizskills/test_contract.py
+.FF...
+======================================================================
+FAIL: test_historical_changelog_headings_are_checked (__main__.ContractTests.test_historical_changelog_headings_are_checked) (name='non-SemVer earlier heading')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/wizskills/test_contract.py", line 175, in test_historical_changelog_headings_are_checked
+    self.assertEqual(package_errors(changed, rules), errors)
+AssertionError: Lists differ: [] != ['version']
+
+Second list contains 1 additional elements.
+First extra element 0:
+'version'
+
+- []
++ ['version']
+
+======================================================================
+FAIL: test_historical_changelog_headings_are_checked (__main__.ContractTests.test_historical_changelog_headings_are_checked) (name='earlier section dated later')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tools/wizskills/test_contract.py", line 175, in test_historical_changelog_headings_are_checked
+    self.assertEqual(package_errors(changed, rules), errors)
+AssertionError: Lists differ: [] != ['changelog']
+
+Second list contains 1 additional elements.
+First extra element 0:
+'changelog'
+
+- []
++ ['changelog']
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.006s
+
+FAILED (failures=2)

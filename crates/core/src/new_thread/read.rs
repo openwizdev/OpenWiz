@@ -7,7 +7,6 @@ use crate::envelope::SourceInfo;
 use crate::messaging::send::UncertainReason;
 use crate::messaging::{InvalidRequest, OpId, sha256_hex};
 use crate::model::{Fact, Timestamp};
-use crate::prompt::{OpKind, OpRef};
 
 use super::effects::{Effect, EffectKind, Effects};
 use super::outcome::{FailReason, Gap, Outcome, RefusalReason};
@@ -507,20 +506,6 @@ fn gap(json: &Json, path: &str) -> Read<Gap> {
     Ok(Gap {
         subject: o.field("subject", text)?,
         detail: o.field("detail", text)?,
-    })
-}
-
-pub const OP_REF_KEYS: &[&str] = &["kind", "op_id"];
-
-pub fn op_ref(json: &StrictJson) -> Result<OpRef, ReadError> {
-    let o = Object::read(&json.0, "claim", OP_REF_KEYS)?;
-    let kinds = [
-        ("messaging", OpKind::Send),
-        ("new_thread", OpKind::NewThread),
-    ];
-    Ok(OpRef {
-        kind: o.field("kind", |v, p| label(v, p, &kinds))?,
-        op_id: o.field("op_id", |v, p| checked(v, p, OpId::parse))?,
     })
 }
 

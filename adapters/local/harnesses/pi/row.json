@@ -1,0 +1,40 @@
+{
+  "harness": "pi",
+  "program": "pi",
+  "start": [
+    "-p",
+    "--mode",
+    "json",
+    "--session-id",
+    "{session}",
+    "--model",
+    "{model}",
+    "{mode}",
+    "--",
+    "{prompt}"
+  ],
+  "wake": [
+    "--session-id",
+    "{session}",
+    "-p",
+    "{mode}",
+    "--",
+    "{prompt}"
+  ],
+  "session": {
+    "chosen": "uuid"
+  },
+  "modes": {
+    "full-access": []
+  },
+  "env": {},
+  "effort": "none: pi 1.6.0 --thinking clamps a level the model can't take to another level with no warning or error (packages/ai/src/models.ts clampThinkingLevel, earendil-works/pi v1.6.0)",
+  "login": "pi's own login, saved by `pi auth login <provider>` in ~/.pi/agent/auth.json, or a provider API-key variable you set yourself",
+  "daemon": "pi's bash tool runs each command in its own process group, so a command it backgrounds can outlive the turn; stop ends it with the process tree",
+  "signed_out": [
+    "^No API key found for (?:the selected model|\\S+)\\.$",
+    "^Authentication failed for \"[^\"]+\"\\. Credentials may have expired or network is unavailable\\. Run '/login [^']+' to re-authenticate\\.$",
+    "^(?:\\x1b\\[[0-9;]*m)?Error: Model \"[^\"]+\" is ambiguous across providers: .+\\. No matching provider is authenticated\\. Use --provider or provider/model\\.(?:\\x1b\\[[0-9;]*m)?$"
+  ],
+  "login_command": "pi auth login <provider>"
+}

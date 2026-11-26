@@ -1,0 +1,18 @@
+{
+  "kind": "facts",
+  "about": "A report whose facts line has an unknown key is still a report, with no facts line.",
+  "input": {
+    "number": 9121,
+    "author": "synthetic-user",
+    "pull_request": false,
+    "title": "Plan page hides the approve button on a narrow phone",
+    "body": "What happened:\nOn a 360-pixel screen the approve button sits under the footer.\n\nOpenWiz feedback facts {\"v\":1,\"extra\":\"nope\"}\n\nOpenWiz feedback operation 3f2a9c4e1b7d40a6958e0c2d7b1a4f63",
+    "labels": [],
+    "milestone": null,
+    "comments": []
+  },
+  "expect": {
+    "is_report": true,
+    "facts": null
+  }
+}

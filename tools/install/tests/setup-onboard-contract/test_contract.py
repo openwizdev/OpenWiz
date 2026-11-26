@@ -285,7 +285,8 @@ class Hosts(unittest.TestCase):
         store = _load('setup_store', ROOT / 'tools/install/setup/store.py')
         edges = [('operator', v) for v in ('', ' ', '\t', ' Synthetic', 'Synthetic ', 'Synthetic\n', 'Syn\x00thetic',
                                            'Syn\x85thetic', '\xa0Synthetic', 'Synthetic\u3000', 'S',
-                                           'Synthetic  Operator', 'S' * 100, 'S' * 101)]
+                                           'Synthetic  Operator', 'S' * 100, 'S' * 101, '\ufeffSynthetic',
+                                           'Synthetic\ufeff', 'Syn\ufeffthetic')]
         edges += [('repository', 'synthetic-owner/' + v) for v in ('.', '..', '...', '.github', '..x', 'x..', '-', '_')]
         edges += [('service_issue', v) for v in (0, 1, 2 ** 53 - 1, 2 ** 53, 2 ** 63)]
         for base in ('cloud-nine-keys', 'local-without-cloudroom-ids'):
@@ -299,6 +300,18 @@ class Hosts(unittest.TestCase):
                         stored = False
                     errors = check.schema_errors(doc, {'$ref': '#/$defs/prepared_project'}, SETUP_SCHEMA)
                     self.assertEqual(not errors, stored, errors)
+
+    def test_operator_edges_follow_the_store_at_every_code_point(self):
+        store = _load('setup_store', ROOT / 'tools/install/setup/store.py')
+        shapes = SETUP_SCHEMA['$defs']['prepared_project']['oneOf']
+        patterns = [shape['properties']['operator']['pattern'] for shape in shapes]
+        self.assertEqual(len(patterns), 2)
+        for pattern in patterns:
+            self.assertIsNone(re.search(r'\\[sSdDwWbB]', pattern), 'engine-dependent class')
+            edge = re.compile(pattern)
+            wrong = [hex(ord(c)) for c in map(chr, range(sys.maxunicode + 1)) for v in (c + 'S', 'S' + c)
+                     if (edge.fullmatch(v) is not None) != store.text(v)]
+            self.assertEqual(wrong, [])
 
     def test_models_host_selects_the_offered_source(self):
         schema = SETUP_SCHEMA.get('$defs', {}).get('models_host_selection', {})

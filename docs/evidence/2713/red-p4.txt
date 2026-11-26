@@ -1,0 +1,21 @@
+# Rehearsal #2583 problem 4 red at the R8 fix, the new test (it replaces test_existing_launcher_is_never_replaced, whose fakeagent case it keeps):
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/vps/test_bootstrap.py BootstrapTest.test_existing_tools_it_did_not_install_are_kept_and_never_run   # 37 agent-CLI refusal stubs first on PATH
+test_existing_tools_it_did_not_install_are_kept_and_never_run (__main__.BootstrapTest.test_existing_tools_it_did_not_install_are_kept_and_never_run) ... FAIL
+
+======================================================================
+FAIL: test_existing_tools_it_did_not_install_are_kept_and_never_run (__main__.BootstrapTest.test_existing_tools_it_did_not_install_are_kept_and_never_run)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_bootstrap.py", line 426, in test_existing_tools_it_did_not_install_are_kept_and_never_run
+    self.assertEqual(read(self.fx.calls).count(' ran '), 0, read(self.fx.calls))
+AssertionError: 1 != 0 : curl --version
+gh --version
+fakedroid --version
+runpane --version
+fakeagent ran --version
+
+
+----------------------------------------------------------------------
+Ran 1 tests in <t>s
+
+FAILED (failures=1)

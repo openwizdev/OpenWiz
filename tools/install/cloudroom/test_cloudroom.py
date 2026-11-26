@@ -63,6 +63,7 @@ class FakeHost(cloudroom.Host):
         for name in (APPIMAGE, DMG):
             self.web[RELEASE + name] = (FIXTURES / name).read_bytes()
         self.status = None
+        self.cloud_status = None
         self.sign_in_reply = (FIXTURES / 'cloud-sign-in.json').read_bytes()
         self.lose_download = False
         self.during_download = None
@@ -115,6 +116,14 @@ class FakeHost(cloudroom.Host):
                 return 0, (FIXTURES / f'cloud-{self.status}.json').read_bytes()
             if argv[1:] == ['cloud', 'sign-in', '--json']:
                 return self.sign_in_code, self.sign_in_reply
+            if argv[1:] == ['status', '--json']:
+                if self.cloud_status == 'timeout':
+                    return None, b''
+                if self.cloud_status is None:
+                    return 1, b''
+                if isinstance(self.cloud_status, bytes):
+                    return 0, self.cloud_status
+                return 0, json.dumps(self.cloud_status).encode()
             return 2, b''
         if name == 'hdiutil' and argv[1] == 'attach':
             mount = Path(argv[argv.index('-mountpoint') + 1])
@@ -167,6 +176,15 @@ class FakeHost(cloudroom.Host):
     def launcher(self, status='signed-in'):
         self.status = status
         path = self.home / '.local/bin/room-cli'
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('#!/bin/sh\nexit 0\n')
+        path.chmod(0o700)
+
+    def cloud_launcher(self, reply=None):
+        self.cloud_status = ({'childThreads': [], 'thread': {'id': 'thr_syn_0001', 'projectId': 'prj_syn_0001',
+                                                             'archived': False, 'status': 'active'}}
+                             if reply is None else reply)
+        path = self.root / 'usr/local/bin/room-cli'
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text('#!/bin/sh\nexit 0\n')
         path.chmod(0o700)
@@ -1224,9 +1242,11 @@ class Packaged(Base):
 
         before = files()
         out, err = io.StringIO(), io.StringIO()
+        real_is_file = Path.is_file
         with patch.dict(os.environ, HOME=str(self.host.home)), \
                 patch('platform.system', return_value='Linux'), \
                 patch('platform.machine', return_value='x86_64'), \
+                patch.object(Path, 'is_file', lambda p: False if p == Path('/usr/local/bin/room-cli') else real_is_file(p)), \
                 patch('urllib.request.OpenerDirector.open', fetch), \
                 patch('subprocess.Popen', side_effect=AssertionError('no program may run')), \
                 patch.object(sys, 'argv', [str(HERE / 'cloudroom.py'), 'install', '--state-dir', str(self.state)]), \
@@ -1247,7 +1267,7 @@ class Packaged(Base):
         self.assertEqual(result.returncode, 0, result.stderr)
         value = json.loads(result.stdout)
         self.assertEqual(value['schema'], 'openwiz.cloudroom-setup.v1')
-        self.assertIn(value['code'], ('cloudroom_not_installed', 'cloudroom_unsupported'))
+        self.assertIn(value['code'], ('cloudroom_not_installed', 'cloudroom_unsupported', 'cloudroom_login_verified'))
 
     def test_the_setup_check_records_the_tools_code_from_the_packaged_runtime(self):
         runtime = self.base / 'build/runtime'
@@ -1275,6 +1295,56 @@ class Packaged(Base):
                 self.assertEqual(saved['observations']['cloudroom']['code'], expected)
                 self.assertNotIn('owner@example.invalid', result.stdout + (self.state / 'setup/state.json').read_text())
         self.assertEqual(calls.read_text(), 'cloud status --json\n' * 2, 'one login read per check, nothing else')
+
+
+class CloudThread(Base):
+    def test_cloud_thread_is_accepted_on_linux_arm64_and_x86_64(self):
+        for machine in ('aarch64', 'x86_64'):
+            with self.subTest(machine=machine):
+                base = self.base / f'cloud-{machine}'
+                base.mkdir()
+                host = FakeHost(base, 'Linux', machine)
+                host.environ = {}
+                (host.root / 'dev/fuse').unlink()
+                host.cloud_launcher()
+                state = base / 'state'
+                for result in (cloudroom.status(host, state),
+                               cloudroom.install(host, state),
+                               cloudroom.install(host, state, yes=True),
+                               cloudroom.sign_in(host, state)):
+                    self.assertEqual(result['code'], 'cloudroom_login_verified')
+                    self.assertIsNone(result['operation'])
+                    self.assertIsNone(result['opened'])
+                    raw = json.dumps(result)
+                    self.assertNotIn('thr_syn_0001', raw)
+                    self.assertNotIn('prj_syn_0001', raw)
+                self.assertEqual(host.fetched, [])
+                self.assertEqual(host.opened, [])
+                self.assertTrue(host.calls)
+                self.assertTrue(all(call == [str(host.root / 'usr/local/bin/room-cli'), 'status', '--json']
+                                    for call in host.calls), host.calls)
+
+    def test_cloud_thread_detection_fails_closed_on_bad_or_non_linux_answers(self):
+        cases = (
+            ('Linux', 'aarch64', 'timeout', 'cloudroom_unsupported'),
+            ('Linux', 'aarch64', b'not json', 'cloudroom_unsupported'),
+            ('Linux', 'aarch64', b'{"thread":{"id":"thr_syn_0001","id":"thr_syn_0002","projectId":"prj_syn_0001"}}',
+             'cloudroom_unsupported'),
+            ('Linux', 'aarch64', {'thread': {'id': '', 'projectId': 'prj_syn_0001'}}, 'cloudroom_unsupported'),
+            ('Linux', 'aarch64', {'thread': {'id': 'thr_syn_0001'}}, 'cloudroom_unsupported'),
+            ('Linux', 'aarch64', {'thread': {'id': 'thr_syn_0001', 'projectId': 'prj_syn_0001', 'archived': True}},
+             'cloudroom_unsupported'),
+            ('Linux', 'x86_64', b'{}', 'cloudroom_not_installed'),
+            ('Darwin', 'x86_64', {'thread': {'id': 'thr_syn_0001', 'projectId': 'prj_syn_0001', 'archived': False}},
+             'cloudroom_unsupported'),
+        )
+        for index, (system, machine, reply, expected) in enumerate(cases):
+            with self.subTest(index=index, system=system, machine=machine):
+                base = self.base / f'bad-{index}'
+                base.mkdir()
+                host = FakeHost(base, system, machine)
+                host.cloud_launcher(reply)
+                self.assertEqual(cloudroom.status(host, base / 'state')['code'], expected)
 
 
 if __name__ == '__main__':

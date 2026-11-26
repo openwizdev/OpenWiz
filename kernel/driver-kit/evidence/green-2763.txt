@@ -1,0 +1,13 @@
+# green for openwizdev/openwiz#2763 and #2842 at f9c1bae8: the kernel kits' CI lane, run locally with agent CLIs stubbed first on PATH and env -u OPENWIZ_GITHUB_APP_KEY
+kernel/driver-kit/test_kit.py exit=0 431s Ran 31 tests in 431.270s OK
+kernel/driver-kit/test_hostkey.py exit=0 30s Ran 25 tests in 29.610s OK
+adapters/local/test_driver.py exit=0 67s Ran 23 tests in 67.503s OK
+adapters/local/test_harnesses.py exit=0 34s
+adapters/boat/test_driver.py exit=0 76s Ran 39 tests in 76.041s OK
+adapters/template/test_driver.py exit=0 25s Ran 21 tests in 24.824s OK
+adapters/cloudroom/test_driver.py exit=0 24s Ran 28 tests in 23.721s OK
+adapters/devin/test_driver.py exit=0 3s Ran 6 tests in 2.625s OK
+adapters/openclaw/test_driver.py exit=0 6s Ran 14 tests in 6.565s OK
+# per-call case alone (#2842 R1), at the fixture's 3 s child:
+Ran 1 test in 85.670s
+OK

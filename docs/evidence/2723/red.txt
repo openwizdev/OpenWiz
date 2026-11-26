@@ -1,0 +1,209 @@
+$ PATH=<stubs>:$PATH env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/test_rig.py   # red, before the fix, 37 refusing agent-CLI stubs first on PATH
+test_a_dirty_checkout_exits_2_and_runs_nothing (__main__.Rig.test_a_dirty_checkout_exits_2_and_runs_nothing) ... ok
+test_a_held_lock_exits_0_and_runs_nothing (__main__.Rig.test_a_held_lock_exits_0_and_runs_nothing) ... ok
+test_a_host_whose_cost_is_not_none_is_skipped_as_cost_before_any_status_probe_runs (__main__.Rig.test_a_host_whose_cost_is_not_none_is_skipped_as_cost_before_any_status_probe_runs) ...
+  test_a_host_whose_cost_is_not_none_is_skipped_as_cost_before_any_status_probe_runs (__main__.Rig.test_a_host_whose_cost_is_not_none_is_skipped_as_cost_before_any_status_probe_runs) [fixture-cost] ... FAIL
+  test_a_host_whose_cost_is_not_none_is_skipped_as_cost_before_any_status_probe_runs (__main__.Rig.test_a_host_whose_cost_is_not_none_is_skipped_as_cost_before_any_status_probe_runs) [fixture-paid] ... FAIL
+test_a_kit_line_quoting_the_checkout_or_the_repository_is_withheld_from_the_record_and_shown_on_stderr (__main__.Rig.test_a_kit_line_quoting_the_checkout_or_the_repository_is_withheld_from_the_record_and_shown_on_stderr) ... ok
+test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept (__main__.Rig.test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept) ... ok
+test_a_lock_error_other_than_another_run_exits_2 (__main__.Rig.test_a_lock_error_other_than_another_run_exits_2) ... ok
+test_a_missing_signed_out_or_possibly_paid_host_is_skipped_and_recorded_and_starts_no_kit (__main__.Rig.test_a_missing_signed_out_or_possibly_paid_host_is_skipped_and_recorded_and_starts_no_kit) ... ok
+test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works (__main__.Rig.test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works) ...
+  test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works (__main__.Rig.test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works) [retired/../hosts-link/../hosts] ... FAIL
+  test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works (__main__.Rig.test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works) [rig.py/../hosts-link/../hosts] ... FAIL
+  test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works (__main__.Rig.test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works) [retired/../fixtures/hosts] ... FAIL
+  test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works (__main__.Rig.test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works) [<tmp>/checkout/kernel/live-rig/retired/../hosts-link/../hosts] ... FAIL
+  test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works (__main__.Rig.test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works) [<tmp>/checkout/kernel/live-rig/rig.py/../hosts-link/../hosts] ... FAIL
+test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works (__main__.Rig.test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works) ... FAIL
+test_a_planted_drivers_failing_kit_exits_1_with_its_count (__main__.Rig.test_a_planted_drivers_failing_kit_exits_1_with_its_count) ... ok
+test_a_signed_in_host_with_free_runs_runs_five_of_five_and_writes_its_record (__main__.Rig.test_a_signed_in_host_with_free_runs_runs_five_of_five_and_writes_its_record) ... ok
+test_a_symlinked_host_config_or_hosts_folder_exits_2_and_runs_nothing (__main__.Rig.test_a_symlinked_host_config_or_hosts_folder_exits_2_and_runs_nothing) ... ok
+test_an_unknown_host_or_a_bad_host_config_exits_2_and_only_json_files_are_hosts (__main__.Rig.test_an_unknown_host_or_a_bad_host_config_exits_2_and_only_json_files_are_hosts) ... ok
+test_case_equivalent_host_or_record_names_exit_2_before_any_run (__main__.Rig.test_case_equivalent_host_or_record_names_exit_2_before_any_run) ... ok
+test_every_host_in_one_run_keeps_paths_logins_the_repository_and_planted_secrets_out (__main__.Rig.test_every_host_in_one_run_keeps_paths_logins_the_repository_and_planted_secrets_out) ... ok
+test_hosts_outside_the_checkout_or_untracked_exit_2_and_run_nothing (__main__.Rig.test_hosts_outside_the_checkout_or_untracked_exit_2_and_run_nothing) ... ok
+test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons (__main__.Rig.test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons) ... ok
+test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes (__main__.Rig.test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes) ... ok
+
+======================================================================
+FAIL: test_a_host_whose_cost_is_not_none_is_skipped_as_cost_before_any_status_probe_runs (__main__.Rig.test_a_host_whose_cost_is_not_none_is_skipped_as_cost_before_any_status_probe_runs) [fixture-cost]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+AssertionError: 'not signed in: sh' != 'cost'
+- not signed in: sh
++ cost
+
+
+======================================================================
+FAIL: test_a_host_whose_cost_is_not_none_is_skipped_as_cost_before_any_status_probe_runs (__main__.Rig.test_a_host_whose_cost_is_not_none_is_skipped_as_cost_before_any_status_probe_runs) [fixture-paid]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+AssertionError: 'not signed in: sh' != 'cost'
+- not signed in: sh
++ cost
+
+
+======================================================================
+FAIL: test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works (__main__.Rig.test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works) [retired/../hosts-link/../hosts]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+AssertionError: Tuples differ: (0, 'skipped fixture-linked fake-harness: cost\n') != (2, '')
+
+First differing element 0:
+0
+2
+
+- (0, 'skipped fixture-linked fake-harness: cost\n')
++ (2, '') :
+
+======================================================================
+FAIL: test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works (__main__.Rig.test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works) [rig.py/../hosts-link/../hosts]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+AssertionError: Tuples differ: (0, 'skipped fixture-linked fake-harness: cost\n') != (2, '')
+
+First differing element 0:
+0
+2
+
+- (0, 'skipped fixture-linked fake-harness: cost\n')
++ (2, '') :
+
+======================================================================
+FAIL: test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works (__main__.Rig.test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works) [retired/../fixtures/hosts]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+AssertionError: Tuples differ: (0, 'skipped fixture-linked fake-harness: cost\n') != (2, '')
+
+First differing element 0:
+0
+2
+
+- (0, 'skipped fixture-linked fake-harness: cost\n')
++ (2, '') :
+
+======================================================================
+FAIL: test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works (__main__.Rig.test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works) [<tmp>/checkout/kernel/live-rig/retired/../hosts-link/../hosts]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+AssertionError: Tuples differ: (0, 'skipped fixture-linked fake-harness: cost\n') != (2, '')
+
+First differing element 0:
+0
+2
+
+- (0, 'skipped fixture-linked fake-harness: cost\n')
++ (2, '') :
+
+======================================================================
+FAIL: test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works (__main__.Rig.test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works) [<tmp>/checkout/kernel/live-rig/rig.py/../hosts-link/../hosts]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+AssertionError: Tuples differ: (0, 'skipped fixture-linked fake-harness: cost\n') != (2, '')
+
+First differing element 0:
+0
+2
+
+- (0, 'skipped fixture-linked fake-harness: cost\n')
++ (2, '') :
+
+======================================================================
+FAIL: test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works (__main__.Rig.test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+AssertionError: True is not false
+
+----------------------------------------------------------------------
+Ran 17 tests in 106.186s
+
+FAILED (failures=8)
+
+$ PATH=<stubs>:$PATH env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/test_rig.py   # red, at 3c6836ea1d22f009a8dddb520f3a48162e604d09, before the fix, 37 refusing agent-CLI stubs first on PATH
+test_a_dirty_checkout_exits_2_and_runs_nothing (__main__.Rig.test_a_dirty_checkout_exits_2_and_runs_nothing) ... ok
+test_a_failing_probe_behind_env_and_name_value_words_names_its_program (__main__.Rig.test_a_failing_probe_behind_env_and_name_value_words_names_its_program) ...
+  test_a_failing_probe_behind_env_and_name_value_words_names_its_program (__main__.Rig.test_a_failing_probe_behind_env_and_name_value_words_names_its_program) [['env', 'GH_TELEMETRY=0', 'fake-signed-out', 'status']] ... FAIL
+  test_a_failing_probe_behind_env_and_name_value_words_names_its_program (__main__.Rig.test_a_failing_probe_behind_env_and_name_value_words_names_its_program) [['env', 'A=1', 'B_2=x y', 'fake-signed-out']] ... FAIL
+  test_a_failing_probe_behind_env_and_name_value_words_names_its_program (__main__.Rig.test_a_failing_probe_behind_env_and_name_value_words_names_its_program) [['env', 'GH_TELEMETRY=0', 'false']] ... FAIL
+test_a_held_lock_exits_0_and_runs_nothing (__main__.Rig.test_a_held_lock_exits_0_and_runs_nothing) ... ok
+test_a_host_whose_cost_is_not_none_is_skipped_as_cost_before_any_status_probe_runs (__main__.Rig.test_a_host_whose_cost_is_not_none_is_skipped_as_cost_before_any_status_probe_runs) ... ok
+test_a_kit_line_quoting_the_checkout_or_the_repository_is_withheld_from_the_record_and_shown_on_stderr (__main__.Rig.test_a_kit_line_quoting_the_checkout_or_the_repository_is_withheld_from_the_record_and_shown_on_stderr) ... ok
+test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept (__main__.Rig.test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept) ... ok
+test_a_lock_error_other_than_another_run_exits_2 (__main__.Rig.test_a_lock_error_other_than_another_run_exits_2) ... ok
+test_a_missing_signed_out_or_possibly_paid_host_is_skipped_and_recorded_and_starts_no_kit (__main__.Rig.test_a_missing_signed_out_or_possibly_paid_host_is_skipped_and_recorded_and_starts_no_kit) ... ok
+test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works (__main__.Rig.test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works) ... ok
+test_a_planted_drivers_failing_kit_exits_1_with_its_count (__main__.Rig.test_a_planted_drivers_failing_kit_exits_1_with_its_count) ... ok
+test_a_signed_in_host_with_free_runs_runs_five_of_five_and_writes_its_record (__main__.Rig.test_a_signed_in_host_with_free_runs_runs_five_of_five_and_writes_its_record) ... ok
+test_a_symlinked_host_config_or_hosts_folder_exits_2_and_runs_nothing (__main__.Rig.test_a_symlinked_host_config_or_hosts_folder_exits_2_and_runs_nothing) ... ok
+test_an_unknown_host_or_a_bad_host_config_exits_2_and_only_json_files_are_hosts (__main__.Rig.test_an_unknown_host_or_a_bad_host_config_exits_2_and_only_json_files_are_hosts) ... ok
+test_case_equivalent_host_or_record_names_exit_2_before_any_run (__main__.Rig.test_case_equivalent_host_or_record_names_exit_2_before_any_run) ... ok
+test_every_host_in_one_run_keeps_paths_logins_the_repository_and_planted_secrets_out (__main__.Rig.test_every_host_in_one_run_keeps_paths_logins_the_repository_and_planted_secrets_out) ... ok
+test_hosts_outside_the_checkout_or_untracked_exit_2_and_run_nothing (__main__.Rig.test_hosts_outside_the_checkout_or_untracked_exit_2_and_run_nothing) ... ok
+test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons (__main__.Rig.test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons) ... ok
+test_the_login_read_runs_gh_with_gh_telemetry_0_and_the_rest_of_the_environment_unchanged (__main__.Rig.test_the_login_read_runs_gh_with_gh_telemetry_0_and_the_rest_of_the_environment_unchanged) ... FAIL
+test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes (__main__.Rig.test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes) ... ok
+
+======================================================================
+FAIL: test_a_failing_probe_behind_env_and_name_value_words_names_its_program (__main__.Rig.test_a_failing_probe_behind_env_and_name_value_words_names_its_program) [['env', 'GH_TELEMETRY=0', 'fake-signed-out', 'status']]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+AssertionError: 'not signed in: env' != 'not signed in: fake-signed-out'
+- not signed in: env
++ not signed in: fake-signed-out
+
+
+======================================================================
+FAIL: test_a_failing_probe_behind_env_and_name_value_words_names_its_program (__main__.Rig.test_a_failing_probe_behind_env_and_name_value_words_names_its_program) [['env', 'A=1', 'B_2=x y', 'fake-signed-out']]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+AssertionError: 'not signed in: env' != 'not signed in: fake-signed-out'
+- not signed in: env
++ not signed in: fake-signed-out
+
+
+======================================================================
+FAIL: test_a_failing_probe_behind_env_and_name_value_words_names_its_program (__main__.Rig.test_a_failing_probe_behind_env_and_name_value_words_names_its_program) [['env', 'GH_TELEMETRY=0', 'false']]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+AssertionError: 'not signed in: env' != 'not signed in: false'
+- not signed in: env
+?                 --
++ not signed in: false
+?                ++++
+
+
+======================================================================
+FAIL: test_the_login_read_runs_gh_with_gh_telemetry_0_and_the_rest_of_the_environment_unchanged (__main__.Rig.test_the_login_read_runs_gh_with_gh_telemetry_0_and_the_rest_of_the_environment_unchanged)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+AssertionError: 'unset kept' != '0 kept'
+- unset kept
++ 0 kept
+
+
+----------------------------------------------------------------------
+Ran 19 tests in 108.664s
+
+FAILED (failures=4)
+
+R1 prefix lookup proof: ran Rig.test_a_failed_hosts_prefix_lookup_refuses_before_loading_configs
+with rig.py from 2a4bd15d84732603069a0674d362b0f5711dd03b, an injected EACCES on
+a prefix, and the same fixtures and refusing stubs.
+AssertionError: Refused not raised
+Ran 1 test
+FAILED (failures=1)
+
+CI reproduction at c91037d85af934d4bfc8072bdcc44f26593338d8.
+$ PATH=<stubs>:$PATH env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/test_heads.py
+FAIL: test_a_host_not_signed_in_is_skipped_and_starts_no_kit
+The fixture ran a kit with --allow-cost; the assertion expected a sign-in skip.
+Ran 15 tests
+FAILED (failures=1)
+
+$ PATH=<stubs>:$PATH env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/vps/test_hosts.py
+FAIL: test_each_config_gives_its_exact_skip_line_and_starts_nothing (9 subtests)
+The old expectations wanted a sign-in skip; the paid hosts skipped for cost.
+FAIL: test_status_checks_call_only_read_only_status_commands
+The old assertion expected probe calls; the log was empty.
+Ran 9 tests
+FAILED (failures=10)

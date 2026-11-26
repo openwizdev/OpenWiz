@@ -10,13 +10,15 @@ on the owner's machine, under contracts/token-service.v1.md.
                            refusal as one JSON line on stdout
 
 It listens on no port: agents run `mint` through the owner's machine pairing or
-locally. Only this tool reads the App's key, <state>/service/app/private-key.pem,
+locally. Every answer holds its token only sealed (RSA-OAEP) to the request's one-time
+answer_key. Only this tool reads the App's key, <state>/service/app/private-key.pem,
 and only to sign the App's JWT; the key and every token stay off the command
 line, standard error and the mint log. The mint log is
 <state>/service/token-service/mint-log.jsonl, owner-only, one line per request
 and never a token. mint-token.py stays byte-identical to the copy WizSkills'
 launch-fleet carries: this tool uses the same guards from app.py.
 """
+import base64
 from datetime import datetime
 import json
 import os
@@ -44,6 +46,11 @@ LEVEL = {"read": 0, "write": 1}
 REQUESTER = re.compile(r"[a-z][a-z0-9-]{0,63}")
 PERMISSION = re.compile(r"[a-z][a-z_]*")
 TOKEN = re.compile(r"[A-Za-z0-9._~+/-]+=*")
+ANSWER_KEY = re.compile(r"-{5}BEGIN PUBLIC KEY-{5}\nMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEA"
+                        r"[g-z0-9+/][A-Za-z0-9+/]{19}\n(?:[A-Za-z0-9+/]{64}\n){7}"
+                        r"[A-Za-z0-9+/]{43}[BDFHJLNPRTVXZbdfhjlnprtvxz13579/]AgMBAAE=\n-{5}END PUBLIC KEY-{5}\n")
+OAEP = ("-pkeyopt", "rsa_padding_mode:oaep", "-pkeyopt", "rsa_oaep_md:sha256", "-pkeyopt", "rsa_mgf1_md:sha256")
+BLOCK_HOLDS, BLOCK, MOST_BLOCKS = 318, 384, 8
 REFRESH, LONGEST, HANDOVER = 300, 3900, 10
 REQUEST_LIMIT = 64 * 1024
 FOLDER, STARTED, LOG = "token-service", "started", "mint-log.jsonl"
@@ -67,10 +74,11 @@ def request_of(data):
         value = app.parse_json(data.decode("utf-8"))
     except (ValueError, RecursionError):
         raise Refused("usage") from None
-    check(set(value) == {"schema", "kind", "requester", "repositories", "permissions"}, "usage")
+    check(set(value) == {"schema", "kind", "requester", "answer_key", "repositories", "permissions"}, "usage")
     check(value["schema"] == SCHEMA and value["kind"] == "request", "usage")
     requester, repositories, permissions = value["requester"], value["repositories"], value["permissions"]
     check(isinstance(requester, str) and REQUESTER.fullmatch(requester) is not None, "usage")
+    check(isinstance(value["answer_key"], str) and ANSWER_KEY.fullmatch(value["answer_key"]) is not None, "usage")
     check(isinstance(repositories, list) and repositories, "usage")
     for name in repositories:
         check(isinstance(name, str) and app.REPOSITORY.fullmatch(name) is not None
@@ -109,6 +117,23 @@ def started(directory):
         return None
     mode = value.get("mode")
     return mode if set(value) == {"mode"} and mode in ("user", "factory") else None
+
+
+def seal(token, answer_key):
+    data, sealed = token.encode("ascii"), b""
+    app.require(0 < len(data) <= MOST_BLOCKS * BLOCK_HOLDS)
+    for at in range(0, len(data), BLOCK_HOLDS):
+        reader, writer = os.pipe()
+        try:
+            with os.fdopen(writer, "wb") as pipe:
+                pipe.write(answer_key.encode("ascii"))
+            block = app.openssl(["pkeyutl", "-encrypt", "-pubin", "-inkey", f"/dev/fd/{reader}", *OAEP],
+                                data[at:at + BLOCK_HOLDS], pass_fds=(reader,))
+        finally:
+            os.close(reader)
+        app.require(len(block) == BLOCK)
+        sealed += block
+    return base64.b64encode(sealed).decode("ascii")
 
 
 def mint(api, request, setting):
@@ -164,11 +189,15 @@ def mint(api, request, setting):
             expires_at = int(datetime.fromisoformat(result["expires_at"].replace("Z", "+00:00")).timestamp())
         except Exception:
             raise Refused("github") from None
+        try:
+            sealed = seal(token, request["answer_key"])
+        except Exception:
+            raise Refused("unavailable") from None
         check(fresh(expires_at), "expiry")
     except Refused:
         app.revoke(api["base"], token)
         raise
-    return token, expires_at
+    return sealed, expires_at
 
 
 def fresh(expires_at):
@@ -181,9 +210,9 @@ def serve(api, log, data, setting):
     try:
         request = request_of(data)
         line.update(requester=request["requester"], repositories=request["repositories"])
-        token, expires_at = mint(api, request, setting)
+        sealed, expires_at = mint(api, request, setting)
         line.update(permissions=request["permissions"], outcome="minted", expires_at=expires_at)
-        message = {"schema": SCHEMA, "kind": "answer", "token": token, "expires_at": expires_at,
+        message = {"schema": SCHEMA, "kind": "answer", "sealed_token": sealed, "expires_at": expires_at,
                    "repositories": request["repositories"], "permissions": request["permissions"]}
     except Refused as refused:
         line["outcome"] = refused.code

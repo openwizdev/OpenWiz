@@ -37,6 +37,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import unittest
+from unittest import mock
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[3]
@@ -49,7 +50,7 @@ VERSION = '0.0.99'
 NAME = 'openwiz-' + TARGET
 BASE = 'https://github.com/openwizdev/OpenWiz/releases/'
 LINE = 'Install OpenWiz from github.com/openwizdev/OpenWiz'
-ORDER = ['Preflight', 'Verified install', 'Setup and connections', 'Skills into your agents, then a restart', 'Teach',
+ORDER = ['Preflight', 'Verified install', 'Setup and connections', 'Skills into your agents, then carry on', 'Teach',
          'The onboarding road']
 # #2293 (PR6, copy only): independent literals for the free-only release copy.
 FREE_ONLY = ('OpenWiz is free now. Paid plans come later. '
@@ -417,10 +418,13 @@ class InstallJourney(unittest.TestCase):
         done = []
 
         def preflight():
-            # The actual entry on this machine's real PATH and disk; the host is
-            # the journey's supported Linux target, so any CI host replays it.
+            (c.dir / 'ldd').mkdir()
+            (c.dir / 'ldd/ldd').write_text('#!/bin/sh\necho "ldd (Synthetic GLIBC 2.34-0) 2.34"\n')
+            (c.dir / 'ldd/ldd').chmod(0o755)
             out = io.StringIO()
-            self.assertEqual(entry().main(['preflight'], host=('Linux', 'x86_64'), stdout=out), 0, out.getvalue())
+            with mock.patch.dict(os.environ, PATH='%s:%s' % (c.dir / 'ldd', os.environ.get('PATH', ''))):
+                code = entry().main(['preflight'], host=('Linux', 'x86_64'), stdout=out)
+            self.assertEqual(code, 0, out.getvalue())
             result = type('Result', (), {'stdout': out.getvalue()})
             report = json.loads(result.stdout)
             self.assertEqual(report['schema'], 'openwiz.preflight.v1')
@@ -428,6 +432,8 @@ class InstallJourney(unittest.TestCase):
             self.assertTrue(report['ready'])
             ids = [check['id'] for check in report['checks']]
             self.assertEqual(ids, ['python', 'target', 'disk', 'glibc', 'room-cli', 'gh', 'git'])
+            self.assertEqual([check['next'] for check in report['checks'] if check['id'] == 'glibc'],
+                             ['glibc 2.34 is enough.'])
             self.assertNotIn('cargo', result.stdout)
 
         def verified_install():
@@ -466,9 +472,9 @@ class InstallJourney(unittest.TestCase):
             shipped = sorted(p.name for p in (self.build / 'runtime/skills').iterdir() if p.is_dir())
             self.assertEqual(sorted(p.name for p in (c.home / '.claude/skills').iterdir()), shipped)
             self.assertTrue((c.home / '.claude/skills/install/.openwiz-skill').is_file(), "the installer's own copy")
-            restart = section(ROOT / 'skills/install/SKILL.md', 'Skills into your agents, then a restart')
+            carry_on = section(ROOT / 'skills/install/SKILL.md', 'Skills into your agents, then carry on')
             for host in ('local', 'boat', 'cloud'):
-                self.assertIn('`continue the OpenWiz install with host %s and release <tag>`' % host, restart)
+                self.assertIn('`continue the OpenWiz install with host %s and release <tag>`' % host, carry_on)
 
         def teach():
             installed = self.build / 'runtime/skills/install'
@@ -499,7 +505,7 @@ class InstallJourney(unittest.TestCase):
 
         runners = {'Preflight': preflight, 'Verified install': verified_install,
                    'Setup and connections': setup_and_connections,
-                   'Skills into your agents, then a restart': skills_into_agents, 'Teach': teach,
+                   'Skills into your agents, then carry on': skills_into_agents, 'Teach': teach,
                    'The onboarding road': first_fleet}
         skill = ROOT / 'skills/install/SKILL.md'
         self.assertEqual(steps(skill), ORDER)
@@ -547,6 +553,51 @@ class InstallJourney(unittest.TestCase):
         self.assertFalse(c.downloads.exists())
         self.assertEqual(os.readlink(c.root / 'current'), first['build'], 'the last good build stays selected')
         self.assertFalse((c.root / 'state/service/builds' / ('2' * 40)).exists())
+
+    def test_a_repair_refused_for_zero_free_bytes_keeps_the_builds_mode(self):
+        c = Consumer(self)
+        installer = entry().installer
+        build = Path(self.install(c, release(c.dir / 'published'))[0]['build'])
+        build.chmod(0o000)
+        self.addCleanup(build.chmod, 0o700)
+        name = c.downloads / (NAME + '.manifest.json')
+        checksum = (c.downloads / (NAME + '.sha256')).read_text().split()[0]
+        archive = c.downloads / json.loads(name.read_text())['archive']
+        with self.assertRaisesRegex(installer.Refused, 'insufficient disk space'):
+            installer.install(name, archive, checksum, c.root, TARGET, free_bytes=lambda _: 0)
+        self.assertEqual(build.lstat().st_mode & 0o777, 0o000)
+        self.assertEqual(sorted(p.name for p in build.parent.iterdir()), [build.name])
+
+    def test_a_repair_interrupted_just_after_the_swap_keeps_the_replacements_mode(self):
+        c = Consumer(self)
+        installer = entry().installer
+        build = Path(self.install(c, release(c.dir / 'published'))[0]['build'])
+        build.chmod(0o000)
+        self.addCleanup(lambda: [p.chmod(0o700) for p in build.parent.iterdir()])
+        name = c.downloads / (NAME + '.manifest.json')
+        checksum = (c.downloads / (NAME + '.sha256')).read_text().split()[0]
+        archive = c.downloads / json.loads(name.read_text())['archive']
+        rename, swapped = os.rename, []
+
+        def swap(source, destination):
+            rename(source, destination)
+            swapped.append(Path(source).name.startswith('.stage-') and Path(destination) == build)
+
+        def interrupt_on_the_next_line(frame, event, _):
+            if frame.f_code is not installer.install.__code__:
+                return None
+            if event == 'line' and any(swapped):
+                raise KeyboardInterrupt
+            return interrupt_on_the_next_line
+
+        sys.settrace(interrupt_on_the_next_line)
+        try:
+            with mock.patch.object(installer.os, 'rename', swap), self.assertRaises(KeyboardInterrupt):
+                installer.install(name, archive, checksum, c.root, TARGET)
+        finally:
+            sys.settrace(None)
+        self.assertEqual(build.lstat().st_mode & 0o777, 0o700)
+        self.assertTrue(os.access(build / 'openwiz', os.X_OK))
 
     def test_a_repeated_install_reuses_the_verified_build(self):
         c = Consumer(self)
@@ -813,7 +864,8 @@ class InstallJourney(unittest.TestCase):
         for host, target in ((('Darwin', 'arm64'), 'aarch64-apple-darwin'),
                              (('Darwin', 'x86_64'), 'x86_64-apple-darwin'),
                              (('Linux', 'x86_64'), 'x86_64-unknown-linux-gnu'),
-                             (('Linux', 'aarch64'), None), (('Windows', 'AMD64'), None)):
+                             (('Linux', 'aarch64'), 'aarch64-unknown-linux-gnu'),
+                             (('Linux', 'armv7l'), None), (('Windows', 'AMD64'), None)):
             out = io.StringIO()
             code = install.main(['preflight'], host=host, stdout=out)
             report = json.loads(out.getvalue())

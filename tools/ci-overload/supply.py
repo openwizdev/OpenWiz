@@ -7,10 +7,14 @@ import sys
 import tempfile
 
 sys.dont_write_bytecode = True
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'collector'))
-import collect_ci
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+try:
+    import read_queue
+except ImportError:
+    read_queue = None
 
-DESCRIPTION = """MT6 (#825): the overload guard's supplier. One on-demand collector read, written as the guard's input."""
+DESCRIPTION = """MT6 (#825): the overload guard's supplier. One on-demand queue read, written as the guard's input."""
+READ_FAILS = (OSError, ValueError, TypeError, KeyError, ArithmeticError)
 
 
 def write(path, data):
@@ -38,16 +42,16 @@ def main(argv=None):
     except OSError:
         print('supply: the previous observation could not be removed', file=sys.stderr)
         return 1
-    try:
-        fact = collect_ci.read(args.repository, ['queue'])['ci']['queue']
-    except (collect_ci.Refused, ValueError):
-        print('supply: the collector refused the queue read', file=sys.stderr)
-        return 1
-    if fact['value'] is None:
-        print('supply: the collector\'s queue fact is unavailable', file=sys.stderr)
+    if read_queue is None:
+        print('supply: the queue reader could not be imported', file=sys.stderr)
         return 1
     try:
-        write(args.output, collect_ci.wire(fact['value']['observation']))
+        observation = read_queue.observe(args.repository)
+    except (read_queue.Fail, *READ_FAILS):
+        print('supply: the queue read failed', file=sys.stderr)
+        return 1
+    try:
+        write(args.output, read_queue.wire(observation))
     except OSError:
         print('supply: the observation could not be written', file=sys.stderr)
         return 1

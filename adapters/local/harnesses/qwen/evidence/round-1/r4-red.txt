@@ -1,0 +1,4 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY PATH=<31 refusing stubs>:$PATH python3 -I adapters/local/harnesses/qwen/test_row.py   (R4 red: test_row.py needs the README to say what each mode does headless; the README is unchanged)
+fail: the README modes table has no column for what each mode does headless
+test_row.py: 14 bad lines refused, 6 documented lines taken, 8 sign-in refusals checked, modes checked: fail
+exit 1

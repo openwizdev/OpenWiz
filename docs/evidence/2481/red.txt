@@ -1,0 +1,115 @@
+# Red run (#2481, no cloudroom.json yet) on origin/main 7dd3a90f plus the test: PATH=<37 refusing stubs>:$PATH env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/hosts/test_cloudroom.py
+test_gh_missing_is_skipped_and_runs_no_status_command (__main__.CloudroomHost.test_gh_missing_is_skipped_and_runs_no_status_command) ... FAIL
+test_gh_signed_out_is_skipped (__main__.CloudroomHost.test_gh_signed_out_is_skipped) ... FAIL
+test_room_cli_missing_is_skipped_and_runs_no_status_command (__main__.CloudroomHost.test_room_cli_missing_is_skipped_and_runs_no_status_command) ... FAIL
+test_room_cli_signed_out_is_skipped_and_reads_nothing_more (__main__.CloudroomHost.test_room_cli_signed_out_is_skipped_and_reads_nothing_more) ... FAIL
+test_signed_in_everywhere_is_skipped_as_cost_and_starts_nothing (__main__.CloudroomHost.test_signed_in_everywhere_is_skipped_as_cost_and_starts_nothing) ... FAIL
+test_the_config_checks_only_the_cited_read_only_status_commands (__main__.CloudroomHost.test_the_config_checks_only_the_cited_read_only_status_commands) ... FAIL
+
+======================================================================
+FAIL: test_gh_missing_is_skipped_and_runs_no_status_command (__main__.CloudroomHost.test_gh_missing_is_skipped_and_runs_no_status_command)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/hosts/test_cloudroom.py", line 134, in test_gh_missing_is_skipped_and_runs_no_status_command
+    self.assertEqual(self.rig(missing=('gh',)), [])
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<checkout>/kernel/live-rig/hosts/test_cloudroom.py", line 81, in rig
+    self.assertEqual((p.returncode, p.stdout.splitlines()),
+AssertionError: Tuples differ: (2, []) != (0, ['skipped Cloudroom claude: not installed: gh'])
+
+First differing element 0:
+2
+0
+
+- (2, [])
++ (0, ['skipped Cloudroom claude: not installed: gh']) : rig.py: no host config names Cloudroom
+
+
+======================================================================
+FAIL: test_gh_signed_out_is_skipped (__main__.CloudroomHost.test_gh_signed_out_is_skipped)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/hosts/test_cloudroom.py", line 126, in test_gh_signed_out_is_skipped
+    self.assertEqual(self.rig(signed_in=('room-cli',)), [STATUS['room-cli'], STATUS['gh']])
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<checkout>/kernel/live-rig/hosts/test_cloudroom.py", line 81, in rig
+    self.assertEqual((p.returncode, p.stdout.splitlines()),
+AssertionError: Tuples differ: (2, []) != (0, ['skipped Cloudroom claude: not signed in: gh'])
+
+First differing element 0:
+2
+0
+
+- (2, [])
++ (0, ['skipped Cloudroom claude: not signed in: gh']) : rig.py: no host config names Cloudroom
+
+
+======================================================================
+FAIL: test_room_cli_missing_is_skipped_and_runs_no_status_command (__main__.CloudroomHost.test_room_cli_missing_is_skipped_and_runs_no_status_command)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/hosts/test_cloudroom.py", line 130, in test_room_cli_missing_is_skipped_and_runs_no_status_command
+    self.assertEqual(self.rig(missing=('room-cli',)), [])
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<checkout>/kernel/live-rig/hosts/test_cloudroom.py", line 81, in rig
+    self.assertEqual((p.returncode, p.stdout.splitlines()),
+AssertionError: Tuples differ: (2, []) != (0, ['skipped Cloudroom claude: not installed: room-cli'])
+
+First differing element 0:
+2
+0
+
+- (2, [])
++ (0, ['skipped Cloudroom claude: not installed: room-cli']) : rig.py: no host config names Cloudroom
+
+
+======================================================================
+FAIL: test_room_cli_signed_out_is_skipped_and_reads_nothing_more (__main__.CloudroomHost.test_room_cli_signed_out_is_skipped_and_reads_nothing_more)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/hosts/test_cloudroom.py", line 122, in test_room_cli_signed_out_is_skipped_and_reads_nothing_more
+    self.assertEqual(self.rig(signed_in=('gh',)), [STATUS['room-cli']])
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<checkout>/kernel/live-rig/hosts/test_cloudroom.py", line 81, in rig
+    self.assertEqual((p.returncode, p.stdout.splitlines()),
+AssertionError: Tuples differ: (2, []) != (0, ['skipped Cloudroom claude: not signed in: room-cli'])
+
+First differing element 0:
+2
+0
+
+- (2, [])
++ (0, ['skipped Cloudroom claude: not signed in: room-cli']) : rig.py: no host config names Cloudroom
+
+
+======================================================================
+FAIL: test_signed_in_everywhere_is_skipped_as_cost_and_starts_nothing (__main__.CloudroomHost.test_signed_in_everywhere_is_skipped_as_cost_and_starts_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/hosts/test_cloudroom.py", line 118, in test_signed_in_everywhere_is_skipped_as_cost_and_starts_nothing
+    self.assertEqual(self.rig(), [STATUS['room-cli'], STATUS['gh']])
+                     ^^^^^^^^^^
+  File "<checkout>/kernel/live-rig/hosts/test_cloudroom.py", line 81, in rig
+    self.assertEqual((p.returncode, p.stdout.splitlines()),
+AssertionError: Tuples differ: (2, []) != (0, ['skipped Cloudroom claude: cost'])
+
+First differing element 0:
+2
+0
+
+- (2, [])
++ (0, ['skipped Cloudroom claude: cost']) : rig.py: no host config names Cloudroom
+
+
+======================================================================
+FAIL: test_the_config_checks_only_the_cited_read_only_status_commands (__main__.CloudroomHost.test_the_config_checks_only_the_cited_read_only_status_commands)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/hosts/test_cloudroom.py", line 103, in test_the_config_checks_only_the_cited_read_only_status_commands
+    self.assertTrue(os.path.isfile(os.path.join(HERE, 'cloudroom.json')),
+AssertionError: False is not true : kernel/live-rig/hosts/cloudroom.json is missing
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.281s
+
+FAILED (failures=6)

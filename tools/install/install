@@ -42,7 +42,8 @@ DESCRIPTION = """OpenWiz's install entry (#1109): the commands the install skill
       update channel. No effects. Prints "not installed" and exits 1 when no
       build is selected at ROOT.
   install skills --root ROOT [--state-root STATE]
-      Verifies the selected build, then copies its skills into ROOT/skills and
+      Verifies the selected build, then copies its skills into ROOT/skills (with
+      its contracts and skill list beside them, where their scripts read them) and
       into each harness present here: Claude Code, Codex ($CODEX_HOME when
       set), Cursor, OpenCode and Grok (contracts/install.v1.md, "Harness
       skills"). Each skill and harness stands alone: the user's own
@@ -52,7 +53,8 @@ DESCRIPTION = """OpenWiz's install entry (#1109): the commands the install skill
 
   install remove --root ROOT [--state-root STATE] [--yes]
       Previews deleting exactly what OpenWiz made (#2162): the current link,
-      channel.json, install.lock, its marked skill copies in ROOT/skills, the
+      channel.json, install.lock, its marked skill copies in ROOT/skills and
+      the copies beside them (ROOT/contracts, ROOT/.claude-plugin), the
       verified builds and the named settings in the state root
       (docs/install.md, "Remove it"); with --yes it deletes them, then removes
       each folder left empty. Anything else stays, links are never followed,
@@ -73,9 +75,11 @@ import harness
 import pull
 
 HOSTS = {('Darwin', 'arm64'): 'aarch64-apple-darwin', ('Darwin', 'x86_64'): 'x86_64-apple-darwin',
-         ('Linux', 'x86_64'): 'x86_64-unknown-linux-gnu'}
+         ('Linux', 'x86_64'): 'x86_64-unknown-linux-gnu', ('Linux', 'aarch64'): 'aarch64-unknown-linux-gnu'}
 NOTES = {('Darwin', 'x86_64'): 'Supported. CloudRoom has no Intel Mac build, so on this Mac, agents run on this'
-         ' computer or on boat.dev.'}
+         ' computer or on boat.dev.',
+         ('Linux', 'aarch64'): 'Supported. CloudRoom has no Linux ARM desktop build; outside a CloudRoom sandbox,'
+         ' agents run on this computer or on boat.dev.'}
 DISK = 512 * 1024 * 1024
 GLIBC = (2, 34)
 TOOLS = (('room-cli', 'Optional: CloudRoom is needed only if you pick it as the host; then install the CloudRoom'
@@ -125,7 +129,7 @@ def preflight(host, which, disk):
          else 'Install Python 3.9 or later.'},
         {'id': 'target', 'state': 'ok' if target else 'refused',
          'next': NOTES.get(host, 'Supported.') if target else
-         'OpenWiz installs on macOS on Apple silicon and on Linux on x86_64.'},
+         'OpenWiz installs on macOS (Apple silicon or Intel) and on Linux (x86_64 or aarch64).'},
     ]
     free = disk()
     checks.append({'id': 'disk', 'state': 'ok' if free is not None and free >= DISK else 'refused',
@@ -357,6 +361,17 @@ def marked_skills(folder):
     return names
 
 
+def marked_beside(base):
+    names = []
+    for name in harness.BESIDE:
+        try:
+            if owned(base / name, stat.S_ISDIR) and harness.ours(base / name):
+                names.append(name)
+        except installer.Refused:
+            pass
+    return names
+
+
 def remove(root, state_root, yes, home, codex_home=None):
     root = Path(root)
     installer.require(root.is_absolute(), 'the install root must be an absolute path')
@@ -367,13 +382,15 @@ def remove(root, state_root, yes, home, codex_home=None):
     path = root / 'install.lock'
     if not owned(root, stat.S_ISDIR) or not (yes or os.path.lexists(path)):
         return remove_unlocked(root, state, state_root, yes, home, codex_home)
-    flags, made, held = os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK, True, False
+    flags, made, held = os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK, yes, False
     try:
         try:
-            lock = os.open(path, flags | os.O_CREAT | os.O_EXCL, 0o600)
+            lock = os.open(path, flags | (os.O_CREAT | os.O_EXCL if yes else 0), 0o600)
         except FileExistsError:
             lock, made = os.open(path, flags), False
     except OSError as error:
+        if not yes and isinstance(error, FileNotFoundError):
+            return remove_unlocked(root, state, state_root, yes, home, codex_home)
         raise installer.Refused('install remove could not open %s as its lock (%s), so nothing was changed'
                                 % (path, error.strerror)) from None
     try:
@@ -410,6 +427,7 @@ def remove_unlocked(root, state, state_root, yes, home, codex_home, made=None):
     if owned(channel, stat.S_ISREG) and channel.read_bytes() == CHANNEL:
         delete.append(channel)
     delete += [root / 'skills' / name for name in marked_skills(root / 'skills')]
+    delete += [root / name for name in marked_beside(root)]
     delete += [builds / name for name in installer.entries(builds) if verified_build(builds / name)]
     delete += [state / name for name in SETTINGS if os.path.lexists(state / name)]
     if made in delete:
@@ -417,16 +435,19 @@ def remove_unlocked(root, state, state_root, yes, home, codex_home, made=None):
     folders = (root / 'skills', builds, state / 'service', state, root)
     rows = []
     for name, relative, _ in harness.HARNESSES:
-        folder = (Path(codex_home) if name == 'codex' and codex_home else Path(home) / relative) / 'skills'
-        names = marked_skills(folder)
-        if names:
-            rows.append({'id': name, 'path': str(folder), 'names': names})
+        base = Path(codex_home) if name == 'codex' and codex_home else Path(home) / relative
+        names, beside = marked_skills(base / 'skills'), marked_beside(base)
+        if names or beside:
+            row = {'id': name, 'path': str(base / 'skills'), 'names': names}
+            if beside:
+                row['beside'] = [str(base / n) for n in beside]
+            rows.append(row)
     value = {'schema': 'openwiz.install-remove.v1', 'root': str(root), 'state_root': str(state),
              'delete': [str(path) for path in delete], 'skills': rows}
     if not delete:
         return dict(value, outcome='not installed', reason='Nothing here is OpenWiz\'s; nothing was changed.'), 1
     hand = (' Your agents still hold OpenWiz\'s skill copies: delete the listed folders by name from each path '
-            'in skills; other skills there are yours.' if rows else '')
+            'in skills, and each folder in its beside; other skills there are yours.' if rows else '')
     if not yes:
         return dict(value, outcome='preview', next='Run install remove --root %s%s --yes to delete exactly these; '
                     'anything else stays.%s' % (shlex.quote(str(root)), ' --state-root ' + shlex.quote(str(state))

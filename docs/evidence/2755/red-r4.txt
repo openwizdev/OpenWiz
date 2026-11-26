@@ -1,0 +1,25 @@
+test_a_full_or_paged_comment_window_is_refused_after_one_read_even_from_the_saved_etag (__main__.Heads.test_a_full_or_paged_comment_window_is_refused_after_one_read_even_from_the_saved_etag) ... FAIL
+
+======================================================================
+FAIL: test_a_full_or_paged_comment_window_is_refused_after_one_read_even_from_the_saved_etag (__main__.Heads.test_a_full_or_paged_comment_window_is_refused_after_one_read_even_from_the_saved_etag)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_heads.py", line 329, in test_a_full_or_paged_comment_window_is_refused_after_one_read_even_from_the_saved_etag
+    self.assertEqual((code, out), (0, 'skipped fixture-five: cost\n') if run == 1 else (
+AssertionError: Tuples differ: (0, 'ran fixture-five: 5 of 5 at bfbfb414e[1091 chars]s\n') != (1, 'refused fixture-five: #101 has more c[64 chars]n\n')
+
+First differing element 0:
+0
+1
+
+Diff is 1429 characters long. Set self.maxDiff to None to see it. : pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 2
+pass wake: the run edited builder status note 2
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+
+
+----------------------------------------------------------------------
+Ran 1 test in 21.007s
+
+FAILED (failures=1)

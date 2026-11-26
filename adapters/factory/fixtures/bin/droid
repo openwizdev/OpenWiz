@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+import json, os, re, subprocess, sys, time, uuid
+
+args = sys.argv[1:]
+
+
+def refuse(why):
+    print('Error: ' + why, file=sys.stderr)
+    sys.exit(1)
+
+
+def option(name):
+    return args[args.index(name) + 1] if name in args else None
+
+
+home = os.environ['FAKE_FACTORY_HOME']
+if os.environ.get('FAKE_WORKER'):
+    while os.getppid() == int(os.environ['FAKE_WORKER']):
+        time.sleep(0.01)
+    session, prompt = os.environ['FAKE_SESSION'], args[-1]
+    skill = re.search(r'with the ([a-z0-9-]+) skill', prompt).group(1)
+    woken = 'woken' in os.environ['FAKE_KIND']
+    now = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+    body = '\n'.join(['<!-- openwiz:status v1 -->', 'agent: builder', 'state: working', 'harness: Droid',
+                      'model: ' + option('-m'), 'skills: %s@0.1.2' % skill,
+                      'step: ' + ('woke and read the ticket again' if woken else 'started the throwaway ticket'),
+                      'time: ' + now]) + '\n'
+    path = os.environ['KIT_TRACKER']
+    with open(path) as f:
+        tracker = json.load(f)
+    with open(os.path.join(home, session)) as f:
+        note = json.load(f).get('note')
+    if note is None:
+        note = 1 + max([c['id'] for c in tracker['comments']], default=0)
+        tracker['comments'].append({'id': note, 'author': 'example-bot[bot]', 'updated_at': now, 'body': body})
+        with open(os.path.join(home, session), 'w') as f:
+            json.dump({'note': note}, f)
+    else:
+        [c.update(body=body, updated_at=now) for c in tracker['comments'] if c['id'] == note]
+    with open(path + '.%d' % os.getpid(), 'w') as f:
+        json.dump(tracker, f)
+    os.replace(path + '.%d' % os.getpid(), path)
+    time.sleep(120)
+    sys.exit(0)
+
+if args[:1] != ['exec']:
+    refuse('this fake only runs `droid exec`')
+if '--skip-permissions-unsafe' in args or option('--auto') != 'medium' or option('-o') != 'json':
+    refuse('this fake expects --auto medium and -o json')
+if os.environ.get('FAKE_SIGNED_OUT'):
+    refuse('not signed in to Factory')
+cwd, model = option('--cwd'), option('-m')
+if not cwd or not os.path.isabs(cwd) or not os.path.isdir(cwd) or not model:
+    refuse('--cwd needs an absolute folder, and -m a model')
+os.makedirs(home, exist_ok=True)
+session = option('-s')
+if session is None:
+    session = str(uuid.uuid4())
+    with open(os.path.join(home, session), 'w') as f:
+        json.dump({}, f)
+elif not os.path.exists(os.path.join(home, session)):
+    refuse('session %s not found' % session)
+kind = 'woken' if '-s' in args else 'first'
+if os.environ.get('FAKE_ENV_LOG'):
+    with open(os.environ['FAKE_ENV_LOG'], 'w') as f:
+        json.dump(dict(os.environ), f)
+print('Synthetic droid progress: FAKE-STDOUT-MARKER', flush=True)
+print('Synthetic droid diagnostic: FAKE-STDERR-MARKER', file=sys.stderr, flush=True)
+worker = subprocess.Popen([sys.executable] + sys.argv, start_new_session=True, stdin=subprocess.DEVNULL,
+                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                          env=dict(os.environ, FAKE_WORKER=str(os.getpid()), FAKE_SESSION=session, FAKE_KIND=kind))
+if os.environ.get('FAKE_TURNS'):
+    with open(os.environ['FAKE_TURNS'], 'a') as f:
+        f.write('%d %d %s %s\n' % (os.getpid(), worker.pid, session, kind))
+print(json.dumps({'type': 'result', 'subtype': 'success', 'is_error': False, 'duration_ms': 5, 'num_turns': 1,
+                  'result': 'Synthetic turn.', 'session_id': session}))

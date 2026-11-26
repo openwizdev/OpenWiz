@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+import importlib.machinery, importlib.util, os, sys
+sys.dont_write_bytecode = True
+path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'key-host', 'driver')
+spec = importlib.util.spec_from_loader('keyhost', importlib.machinery.SourceFileLoader('keyhost', path))
+d = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(d)
+t = d.t
+base_launch = d.keyed_launch
+
+
+def strict_launch(req, run, woken):
+    if not woken:
+        repo = d.ask('GET', '/v1/repositories')
+        if not isinstance(repo, dict) or repo.get('repository') != req['repository']:
+            raise t.Refused('repository not found on host', 'check the repository name')
+        model = d.ask('GET', '/v1/models')
+        if not isinstance(model, dict) or model.get('model') != req['model']:
+            raise t.Refused('model profile not found on host', 'check the model name')
+    return base_launch(req, run, woken)
+
+
+t.launch = strict_launch
+if __name__ == '__main__':
+    t.main()

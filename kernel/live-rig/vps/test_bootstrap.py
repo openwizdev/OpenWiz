@@ -6,10 +6,12 @@ import os
 import platform
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tarfile
 import tempfile
+import time
 import unittest
 import zipfile
 
@@ -17,8 +19,9 @@ sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.abspath(__file__))
 BOOTSTRAP = os.path.join(HERE, 'bootstrap.sh')
 TOOLS = os.path.join(HERE, 'tools.json')
-AGENT_CLIS = ('claude codex cursor-agent agent pi opencode copilot goose gemini kimi qwen cline kilo crush vibe '
-              'auggie kiro-cli junie amp agy oz sculpt hermes acpx droid').split()
+AGENT_CLIS = ('claude codex cursor-agent agent cursor pi opencode copilot goose gemini kimi qwen cline kilo kilocode '
+              'crush vibe auggie kiro-cli junie amp agy oz sculpt hermes acpx droid boat room-cli runpane pane '
+              'openhands devin warp grok codespaces conductor').split()
 PLATFORMS = ['linux-x86_64', 'linux-aarch64', 'darwin-x86_64', 'darwin-arm64']
 PLANTED = {'GH_TOKEN': 'synthetic-planted-value', 'ANTHROPIC_API_KEY': 'synthetic-planted-value',
            'HERMES_INSTALL_CHANNEL': 'main', 'HERMES_INSTALL_DIR': '/synthetic/elsewhere'}
@@ -42,6 +45,11 @@ def read(path):
     if not os.path.exists(path):
         return ''
     with open(path) as f:
+        return f.read()
+
+
+def read_bytes(path):
+    with open(path, 'rb') as f:
         return f.read()
 
 
@@ -91,17 +99,39 @@ class Fixture:
                 t.addfile(info, io.BytesIO(body))
         return path
 
-    def wheel(self, name, version):
+    def wheel(self, name, version, tag='', gate=None, fail_if=None):
         path = os.path.join(self.dl, name)
+        wait = ''
+        if gate:
+            wait = ('    import os, time\n'
+                    '    open(%r, "w").close()\n'
+                    '    while not os.path.exists(%r):\n'
+                    '        time.sleep(0.02)\n' % (gate + '.probing', gate + '.go'))
+        fail = ''
+        if fail_if:
+            fail = ('    import os\n'
+                    '    if os.path.exists(%r):\n'
+                    '        return 1\n' % fail_if)
         with zipfile.ZipFile(path, 'w') as z:
             z.writestr('fakewheel/__init__.py', '')
             z.writestr('fakewheel/cli.py', 'import sys\n'
-                       'def main():\n'
+                       'def main():\n' + wait + fail +
                        '    with open(%r, "a") as f:\n'
-                       '        f.write("runpane " + " ".join(sys.argv[1:]) + "\\n")\n'
+                       '        f.write("runpane%s " + " ".join(sys.argv[1:]) + "\\n")\n'
                        '    print("fake %s (synthetic)")\n'
-                       '    return 0\n' % (self.calls, version))
+                       '    return 0\n' % (self.calls, tag and ':' + tag, version))
         return path
+
+    def repin(self, tag, gate=None, fail_if=None):
+        with open(self.tools) as f:
+            manifest = json.load(f)
+        path = self.wheel('fake-2.4.246-%s.whl' % tag, '2.4.246', tag=tag, gate=gate, fail_if=fail_if)
+        pane = [t for t in manifest['tools'] if t['name'] == 'runpane'][0]
+        pane['files'] = {'any': {'url': 'file://' + path, 'sha256': sha256(path)}}
+        tools = os.path.join(self.root, 'tools-%s.json' % tag)
+        with open(tools, 'w') as f:
+            json.dump(manifest, f)
+        return tools, sha256(path)
 
     def installer_that_tries_sudo(self, name):
         payload = self.raw('fakeagent.payload', '3.2.1')
@@ -154,12 +184,21 @@ class Fixture:
             json.dump({'tools': tools}, f)
         return path
 
-    def run(self, *args, tools=None):
-        env = dict(PLANTED, HOME=self.home, LANG='C', TMPDIR=self.tmp, PATH=os.pathsep.join(
+    def env(self):
+        return dict(PLANTED, HOME=self.home, LANG='C', TMPDIR=self.tmp, PATH=os.pathsep.join(
             [self.stubs, self.bin, '/usr/bin', '/bin']), http_proxy=DEAD_PROXY, https_proxy=DEAD_PROXY,
             HTTP_PROXY=DEAD_PROXY, HTTPS_PROXY=DEAD_PROXY, ALL_PROXY=DEAD_PROXY, no_proxy='', NO_PROXY='')
-        return subprocess.run(['bash', BOOTSTRAP, '--tools', tools or self.tools] + list(args), env=env,
-                              cwd=self.root, capture_output=True, text=True, timeout=120)
+
+    def run(self, *args, tools=None, timeout=120):
+        return subprocess.run(['bash', BOOTSTRAP, '--tools', tools or self.tools] + list(args), env=self.env(),
+                              cwd=self.root, capture_output=True, text=True, timeout=timeout)
+
+    def start(self, tag, tools):
+        out, err = (os.path.join(self.root, '%s.%s' % (tag, x)) for x in ('out', 'err'))
+        with open(out, 'w') as o, open(err, 'w') as e:
+            proc = subprocess.Popen(['bash', BOOTSTRAP, '--tools', tools], env=self.env(), cwd=self.root,
+                                    stdout=o, stderr=e)
+        return proc, out, err
 
     def remove_downloads(self):
         for name in os.listdir(self.dl):
@@ -170,6 +209,14 @@ class Fixture:
         for d, _, files in os.walk(self.home):
             found += [os.path.join(d, f) for f in files]
         return sorted(found)
+
+
+def wait_for(check):
+    for _ in range(3000):
+        if check():
+            return
+        time.sleep(0.02)
+    raise AssertionError('timed out waiting for the fixture')
 
 
 class BootstrapTest(unittest.TestCase):
@@ -303,6 +350,201 @@ class BootstrapTest(unittest.TestCase):
         self.assertEqual(subprocess.run([launcher, '--version'], capture_output=True, text=True).stdout,
                          'fake 2.4.246 (synthetic)\n')
 
+    def assert_runpane_at(self, pin):
+        lib = os.path.join(self.fx.prefix, 'lib', 'openwiz-vps')
+        with open(os.path.join(lib, 'runpane.json')) as f:
+            stamp = json.load(f)
+        launcher = os.path.join(self.fx.prefix, 'bin', 'runpane')
+        self.assertEqual(stamp, {'version': '2.4.246', 'sha256': pin, 'launcher_type': 'file',
+                                 'launcher': sha256(launcher)})
+        wheel = os.path.join(lib, 'wheels', 'runpane', pin + '.whl')
+        self.assertEqual(re.findall(r"(%s/[^' ]+\.whl)" % re.escape(lib), read(launcher)), [wheel])
+        self.assertEqual(os.listdir(os.path.dirname(wheel)), [pin + '.whl'])
+        self.assertEqual(sha256(wheel), pin)
+        self.assertEqual(subprocess.run([launcher, '--version'], capture_output=True, text=True).stdout,
+                         'fake 2.4.246 (synthetic)\n')
+
+    def plant_corrupt_cache(self, pin):
+        cache = os.path.join(self.fx.prefix, 'lib', 'openwiz-vps', 'wheels', 'runpane', pin + '.whl')
+        shutil.copy(self.fx.wheel('corrupt.whl', '2.4.246', tag='corrupt'), cache)
+        self.assertNotEqual(sha256(cache), pin)
+        return cache
+
+    def test_corrupt_cached_wheel_is_never_imported(self):
+        self.assertEqual(self.fx.run().returncode, 0)
+        tools, pin = self.fx.repin('valid')
+        cache = self.plant_corrupt_cache(pin)
+        r = self.fx.run(tools=tools)
+        self.assertNotIn('runpane:corrupt', read(self.fx.calls))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertRegex(r.stdout, '(?m)^installed runpane 2.4.246$')
+        self.assertEqual(sha256(cache), pin)
+        self.assert_runpane_at(pin)
+
+    def test_failed_recovery_from_a_corrupt_cache_keeps_the_working_tool(self):
+        self.assertEqual(self.fx.run().returncode, 0)
+        with open(os.path.join(self.fx.prefix, 'lib', 'openwiz-vps', 'runpane.json')) as f:
+            working = json.load(f)['sha256']
+        tools, pin = self.fx.repin('valid')
+        cache = self.plant_corrupt_cache(pin)
+        os.makedirs(cache + '.part')
+        before = {p: sha256(p) for p in self.fx.tree()}
+        r = self.fx.run(tools=tools)
+        self.assertNotIn('runpane:corrupt', read(self.fx.calls))
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn('left out runpane: its cached wheel fails its checksum and cannot be replaced: '
+                      'IsADirectoryError (the existing one is kept)', self.summary(r.stdout)[1])
+        self.assertEqual({p: sha256(p) for p in self.fx.tree()}, before)
+        os.rmdir(cache + '.part')
+        os.remove(cache)
+        self.assert_runpane_at(working)
+
+    def test_overlapping_repins_leave_one_verified_install(self):
+        self.assertEqual(self.fx.run().returncode, 0)
+        gate = os.path.join(self.root, 'gate')
+        tools_a, _ = self.fx.repin('a', gate=gate)
+        tools_b, pin_b = self.fx.repin('b')
+        a, a_out, a_err = self.fx.start('a', tools_a)
+        self.addCleanup(a.kill)
+        wait_for(lambda: os.path.exists(gate + '.probing') or a.poll() is not None)
+        self.assertIsNone(a.poll(), read(a_out) + read(a_err))
+        b, b_out, b_err = self.fx.start('b', tools_b)
+        self.addCleanup(b.kill)
+        wait_for(lambda: b.poll() is not None or 'waiting for another bootstrap' in read(b_err))
+        open(gate + '.go', 'w').close()
+        for proc, out, err in ((a, a_out, a_err), (b, b_out, b_err)):
+            self.assertEqual(proc.wait(timeout=120), 0, read(out) + read(err))
+            self.assertRegex(read(out), '(?m)^installed runpane 2.4.246$')
+        self.assertIn('bootstrap: waiting for another bootstrap on %s' % self.fx.prefix, read(b_err))
+        self.assert_runpane_at(pin_b)
+
+    def hand_replace(self, name):
+        launcher = os.path.join(self.fx.prefix, 'bin', name)
+        script(launcher, 'echo "%s ran by hand $*" >> "%s"\necho "fake 2.4.246 (synthetic)"\n' % (name, self.fx.calls))
+        return launcher, sha256(launcher)
+
+    def assert_kept_by_hand(self, r, name, launcher, before):
+        self.assertNotIn('ran by hand', read(self.fx.calls))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn('left out %s: your existing %s is not the copy this bootstrap installed there (or its record is '
+                      'too old to tell), so it is kept and never run; move it aside to install the pinned 2.4.246'
+                      % (name, launcher), self.summary(r.stdout)[1])
+        self.assertEqual(sha256(launcher), before)
+
+    def test_a_hand_replaced_launcher_is_kept_on_a_repin(self):
+        self.assertEqual(self.fx.run().returncode, 0)
+        launcher, before = self.hand_replace('runpane')
+        tools, _ = self.fx.repin('valid')
+        r = self.fx.run(tools=tools)
+        self.assert_kept_by_hand(r, 'runpane', launcher, before)
+
+    def test_a_stamp_that_names_no_launcher_keeps_it(self):
+        self.assertEqual(self.fx.run().returncode, 0)
+        stamp = os.path.join(self.fx.prefix, 'lib', 'openwiz-vps', 'runpane.json')
+        with open(stamp) as f:
+            legacy = {k: v for k, v in json.load(f).items() if k in ('version', 'sha256')}
+        with open(stamp, 'w') as f:
+            json.dump(legacy, f)
+        launcher, before = self.hand_replace('runpane')
+        r = self.fx.run()
+        self.assert_kept_by_hand(r, 'runpane', launcher, before)
+
+    def test_a_user_symlink_to_a_stamped_binary_survives_a_repin(self):
+        self.assertEqual(self.fx.run().returncode, 0)
+        launcher = os.path.join(self.fx.prefix, 'bin', 'fakedroid')
+        moved = os.path.join(self.root, 'moved-fakedroid')
+        shutil.move(launcher, moved)
+        before = sha256(moved)
+        os.symlink(moved, launcher)
+        r = self.fx.run(tools=self.fx.write_tools(droid_version='1.17.3', droid_says='1.17.3'))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertTrue(os.path.islink(launcher), 'user symlink was replaced on repin')
+        self.assertEqual(os.readlink(launcher), moved)
+        self.assertEqual(sha256(moved), before)
+        self.assertIn('left out fakedroid: your existing %s is not the copy this bootstrap installed there (or its '
+                      'record is too old to tell), so it is kept and never run; move it aside to install the pinned '
+                      '1.17.3' % launcher, self.summary(r.stdout)[1])
+        self.assertEqual(read(self.fx.calls).splitlines().count('fakedroid --version'), 1)
+
+    def test_an_unrecognised_launcher_entry_type_fails_closed(self):
+        self.assertEqual(self.fx.run().returncode, 0)
+        launcher = os.path.join(self.fx.prefix, 'bin', 'fakedroid')
+        before = sha256(launcher)
+        stamp = os.path.join(self.fx.prefix, 'lib', 'openwiz-vps', 'fakedroid.json')
+        with open(stamp) as f:
+            data = json.load(f)
+        data['launcher_type'] = 'unrecognised'
+        with open(stamp, 'w') as f:
+            json.dump(data, f)
+        r = self.fx.run(tools=self.fx.write_tools(droid_version='1.17.3', droid_says='1.17.3'))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn('left out fakedroid: your existing %s is not the copy this bootstrap installed there (or its '
+                      'record is too old to tell), so it is kept and never run; move it aside to install the pinned '
+                      '1.17.3' % launcher, self.summary(r.stdout)[1])
+        self.assertEqual(sha256(launcher), before)
+
+    def test_a_failed_same_pin_probe_leaves_the_active_install_byte_identical(self):
+        fail_if = os.path.join(self.root, 'fail-probe')
+        tools, pin = self.fx.repin('probe', fail_if=fail_if)
+        self.assertEqual(self.fx.run(tools=tools).returncode, 0)
+        wheel = self.plant_corrupt_cache(pin)
+        launcher = os.path.join(self.fx.prefix, 'bin', 'runpane')
+        stamp = os.path.join(self.fx.prefix, 'lib', 'openwiz-vps', 'runpane.json')
+        before = {p: read_bytes(p) for p in (launcher, wheel, stamp)}
+        open(fail_if, 'w').close()
+        r = self.fx.run(tools=tools)
+        self.assertNotIn('runpane:corrupt', read(self.fx.calls))
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn('left out runpane: `runpane --version` does not name 2.4.246 (the existing one is kept)',
+                      self.summary(r.stdout)[1])
+        for p, expected in before.items():
+            self.assertTrue(os.path.isfile(p), 'active file missing after failed probe: %s' % p)
+            self.assertEqual(read_bytes(p), expected, 'active file changed after failed probe: %s' % p)
+
+    def test_a_fifo_at_a_stamped_launcher_path_is_refused_without_opening(self):
+        self.assertEqual(self.fx.run().returncode, 0)
+        launcher = os.path.join(self.fx.prefix, 'bin', 'fakedroid')
+        os.remove(launcher)
+        os.mkfifo(launcher)
+        try:
+            r = self.fx.run(tools=self.fx.write_tools(droid_version='1.17.3', droid_says='1.17.3'), timeout=5)
+        except subprocess.TimeoutExpired:
+            self.fail('bootstrap blocked opening a FIFO at %s' % launcher)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertTrue(stat.S_ISFIFO(os.lstat(launcher).st_mode), 'FIFO was replaced or removed')
+        self.assertIn('left out fakedroid: your existing %s is not the copy this bootstrap installed there (or its '
+                      'record is too old to tell), so it is kept and never run; move it aside to install the pinned '
+                      '1.17.3' % launcher, self.summary(r.stdout)[1])
+
+    def test_sign_in_page_notes_earlier_install_waits_for_2929(self):
+        page = read(os.path.join(HERE, 'SIGN-IN.md'))
+        self.assertRegex(page, r'(?i)earlier bootstrap install[^\n]*#2929[^\n]*re-running',
+                         'SIGN-IN.md does not note that an earlier bootstrap install waits for #2929')
+        self.assertRegex(page, r"(?i)fresh install[^\n]*(?:not affected|isn't affected)",
+                         'SIGN-IN.md does not note that a fresh install is not affected')
+
+    def test_a_same_pin_rerun_hashes_the_active_wheel(self):
+        self.assertEqual(self.fx.run().returncode, 0)
+        with open(os.path.join(self.fx.prefix, 'lib', 'openwiz-vps', 'runpane.json')) as f:
+            pin = json.load(f)['sha256']
+        wheel = self.plant_corrupt_cache(pin)
+        saved = os.path.join(self.root, 'saved-downloads')
+        shutil.copytree(self.fx.dl, saved)
+        self.fx.remove_downloads()
+        offline = self.fx.run()
+        self.assertNotIn('runpane:corrupt', read(self.fx.calls))
+        self.assertEqual(offline.returncode, 1, offline.stdout + offline.stderr)
+        self.assertTrue(any(x.startswith('left out runpane: download failed: ') for x in self.summary(offline.stdout)[1]),
+                        offline.stdout)
+        for name in os.listdir(saved):
+            shutil.copy(os.path.join(saved, name), self.fx.dl)
+        r = self.fx.run()
+        self.assertNotIn('runpane:corrupt', read(self.fx.calls))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertRegex(r.stdout, '(?m)^installed runpane 2.4.246$')
+        self.assertEqual(sha256(wheel), pin)
+        self.assert_runpane_at(pin)
+
     def test_home_only_installer_is_refused_under_another_prefix(self):
         prefix = os.path.join(self.root, 'elsewhere')
         r = self.fx.run('--prefix', prefix)
@@ -314,17 +556,40 @@ class BootstrapTest(unittest.TestCase):
         self.assertEqual(self.fx.tree(), [])
         self.assertTrue(os.path.isfile(os.path.join(prefix, 'bin', 'gh')))
 
-    def test_existing_launcher_is_never_replaced(self):
+    def test_existing_tools_it_did_not_install_are_kept_and_never_run(self):
+        pins = {'curl': '8.23.0', 'fakedroid': '1.17.2', 'runpane': '2.4.246', 'fakeagent': '3.2.1'}
+        os.makedirs(os.path.join(self.fx.prefix, 'bin'))
+        for name in pins:
+            script(os.path.join(self.fx.prefix, 'bin', name),
+                   'echo "%s ran $*" >> "%s"\necho "fake %s (synthetic)"\n' % (name, self.fx.calls, pins[name]))
+        before = {p: sha256(p) for p in self.fx.tree()}
+        r = self.fx.run()
+        self.assertEqual(read(self.fx.calls).count(' ran '), 0, read(self.fx.calls))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        line, rest = self.summary(r.stdout)
+        self.assertEqual(line, 'bootstrap: 2 installed, 2 already there, 5 left out')
+        for name, version in pins.items():
+            self.assertIn('left out %s: your existing %s was not installed by this bootstrap, so it is kept and never '
+                          'run; move it aside to install the pinned %s'
+                          % (name, os.path.join(self.fx.prefix, 'bin', name), version), rest)
+        self.assertEqual({p: sha256(p) for p in self.fx.tree() if p in before}, before)
+        self.assertEqual(read(self.fx.installer_log), '')
+
+    def test_an_older_pin_of_an_installed_tool_is_kept_and_its_installer_never_rerun(self):
+        self.assertEqual(self.fx.run().returncode, 0)
+        stamp = os.path.join(self.fx.prefix, 'lib', 'openwiz-vps', 'fakeagent.json')
+        with open(stamp) as f:
+            older = dict(json.load(f), version='3.2.0', sha256='0' * 64)
+        with open(stamp, 'w') as f:
+            json.dump(older, f)
         launcher = os.path.join(self.fx.prefix, 'bin', 'fakeagent')
-        os.makedirs(os.path.dirname(launcher))
-        script(launcher, 'echo "fake 2.0.0 (synthetic)"\n')
-        working = sha256(launcher)
+        before, calls, installer_log = sha256(launcher), read(self.fx.calls), read(self.fx.installer_log)
         r = self.fx.run()
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertIn('left out fakeagent: your existing %s is kept (it does not name 3.2.1); move it aside to '
-                      'install the pinned one' % launcher, self.summary(r.stdout)[1])
-        self.assertEqual(sha256(launcher), working)
-        self.assertEqual(read(self.fx.installer_log), '')
+        self.assertIn('left out fakeagent: your existing %s is kept and not run, since its installer would overwrite '
+                      'it in place; move it aside to install the pinned 3.2.1' % launcher, self.summary(r.stdout)[1])
+        self.assertEqual((sha256(launcher), read(self.fx.calls), read(self.fx.installer_log)),
+                         (before, calls, installer_log))
 
     def test_too_old_system_tool_is_left_out_with_its_reason(self):
         script(os.path.join(self.fx.bin, 'git'), 'echo "git version 1.8.5 (synthetic)"\n')
