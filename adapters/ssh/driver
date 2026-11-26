@@ -94,6 +94,9 @@ def command(req, run, woken):
     remote = [mapping.get(arg, arg) for arg in argument_template()]
     argv = ['ssh', '-o', 'BatchMode=yes', '-o', 'ClearAllForwardings=yes', '-o', 'ForwardAgent=no',
             destination(), '--', 'env', 'OPENWIZ_SSH_RUN=%s' % run, req['harness']] + remote
+    if leaked(argv, secret_values()):
+        raise Refused('the ssh command would carry a secret from the environment',
+                      'take it out of OPENWIZ_SSH_ARGS and the brief; pass secrets only in the environment on the VPS')
     if not shutil.which('ssh'):
         raise Refused('ssh is not installed', 'install ssh, then start again')
     return argv
