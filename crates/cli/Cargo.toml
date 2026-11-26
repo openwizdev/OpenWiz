@@ -4,6 +4,7 @@ description = "The openwiz command: a thin client that parses commands and print
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 publish.workspace = true
 
 [[bin]]

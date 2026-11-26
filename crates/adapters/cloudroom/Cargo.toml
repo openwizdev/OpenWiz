@@ -4,6 +4,7 @@ description = "OpenWiz adapter for CloudRoom: read-only session reads through ro
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 publish.workspace = true
 
 [dependencies]
