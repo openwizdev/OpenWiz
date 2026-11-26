@@ -103,6 +103,9 @@ class InstallPhrase(unittest.TestCase):
         self.assertIn('When `<version>` is not `0.1.1`, stop unless that guide expects `<version>`', section)
         self.assertIn('command reference for OpenWiz 0.1.1', guide)
         self.assertNotIn('command reference for that same tag', guide)
+        self.assertNotIn('Linux on ARM is not supported', guide)
+        self.assertIn('ARM64 (aarch64)', guide)
+        self.assertIn('hard `GLIBC_2.39` requirement does not start', guide)
         self.assertIn('docs/install.md#openwiz-010', (ROOT / 'README.md').read_text(encoding='utf-8'))
 
     def test_a_stale_pin_fails_even_when_the_urls_are_present(self):

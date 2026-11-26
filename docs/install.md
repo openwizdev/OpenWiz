@@ -12,7 +12,7 @@ Using Grok Bot? See [Grok Bot + OpenWiz](grok-bot.md).
 
 ## Before you start
 
-- **A supported computer:** macOS on Apple silicon or Intel, or Linux on x86_64 with glibc 2.34 or later (`ldd --version` shows it). Linux on ARM is not supported. **An Intel Mac installs with no CloudRoom,** on 0.1.1 and on 0.1.0 alike: preflight reads it ready. CloudRoom has no Intel Mac build, so on an Intel Mac, agents run on this computer or on boat.dev. On Linux older than glibc 2.39, `openwiz` may print a `GLIBC_2.39` warning and still work.
+- **A supported computer:** macOS on Apple silicon or Intel, or Linux on x86_64 or ARM64 (aarch64) with glibc 2.34 or later (`ldd --version` shows it). **An Intel Mac installs with no CloudRoom,** on 0.1.1 and on 0.1.0 alike: preflight reads it ready. CloudRoom has no Intel Mac build and no ARM64 Linux build, so on an Intel Mac or on ARM64 Linux, agents run on this computer or on boat.dev. On x86_64 Linux older than glibc 2.39, `openwiz` may print a `GLIBC_2.39` warning and still work. On ARM64 Linux the package has to be built for glibc 2.34; a hard `GLIBC_2.39` requirement does not start.
 - **Python 3.9 or later, `git`, and the GitHub CLI** (`gh`, signed in with `gh auth login`).
 - **Where your agents run,** asked first, before anything else: this computer, boat.dev or CloudRoom. CloudRoom is optional: only the CloudRoom choice needs it installed.
   - **This computer:** the Claude Code or Codex you're signed in to, and your `gh` login. Nothing else to sign in to.
