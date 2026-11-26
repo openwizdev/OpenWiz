@@ -1,11 +1,4 @@
 #!/usr/bin/env python3
-"""Open, comment on, or close the one "Daily install check failed" issue.
-
-A neutral run (the published tag has no tools/rehearsal/rehearse.py) exits 0 and
-leaves that issue alone. A pass on every rehearse target comments and closes
-every open one. Any other result comments on the open one, or opens one, and
-exits 1.
-"""
 import argparse
 import json
 import subprocess
