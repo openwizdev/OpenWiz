@@ -4,7 +4,7 @@ Tell your coding agent (Claude Code, Codex, Cursor or another):
 
 > Install OpenWiz
 
-That phrase is the whole install instruction. The agent follows [Install OpenWiz](../AGENTS.md#install-openwiz), which reads GitHub's Latest release and the install skill at the `commit` in that tag's `wizskills.lock`. The numbered steps below are the command reference for that same tag. `<tag>` is the release tag; for the 0.1.1 release it is `v0.1.1`. This page says what the install does, the commands it runs, what it may change, and how to recover or remove it. Those commands are the reference the agent runs.
+That phrase is the whole install instruction. The agent follows [Install OpenWiz](../AGENTS.md#install-openwiz). The numbered steps below are the command reference for OpenWiz 0.1.1. `<tag>` in them is `v0.1.1`. They are not the steps for 0.1.0, and not the steps for a later release. This page says what that install does, the commands it runs, what it may change, and how to recover or remove it.
 
 Using Grok Bot? See [Grok Bot + OpenWiz](grok-bot.md).
 

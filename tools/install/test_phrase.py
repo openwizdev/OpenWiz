@@ -97,6 +97,11 @@ class InstallPhrase(unittest.TestCase):
         self.assertIn('`v0.1.0`', section)
         self.assertIn(commit, (ROOT / 'wizskills.lock').read_text(encoding='utf-8'))
         self.assertIn('including `v0.1.1`', section)
+        self.assertIn('expect build identity `0.1.1`', section)
+        self.assertIn('When `<version>` is not `0.1.1`, stop unless that guide expects `<version>`', section)
+        self.assertIn('command reference for OpenWiz 0.1.1', guide)
+        self.assertNotIn('command reference for that same tag', guide)
+        self.assertIn('docs/install.md#openwiz-010', (ROOT / 'README.md').read_text(encoding='utf-8'))
 
     def test_a_stale_pin_fails_even_when_the_urls_are_present(self):
         version, _ = lock_pin()

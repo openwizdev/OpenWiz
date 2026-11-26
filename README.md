@@ -19,9 +19,9 @@ Tell your coding agent (Claude Code, Codex, Cursor or another):
 
 That phrase is the whole install instruction. The agent follows [Install OpenWiz](AGENTS.md#install-openwiz): it reads GitHub's Latest release and that release's install skill, then runs the install. You need Python 3.9 or later, `git`, and the GitHub CLI (`gh`). It asks where your agents run: **this computer**, with the Claude Code or Codex you're signed in to; **boat.dev**; or **[CloudRoom](https://cloudroom.dev)**. CloudRoom is optional: the install never needs it, and its install and sign-in run only if you pick it. It checks your computer, installs the verified prebuilt release (no Rust or Node), puts OpenWiz's skills into your agents, and checks each connection. Nothing starts until you approve a plan. OpenWiz is free. Your model and host charges are your own.
 
-The commands the agent runs are the reference in the [install guide](docs/install.md).
+### OpenWiz 0.1.0
 
-OpenWiz 0.1.0 ("OpenWiz 0.01") is the current release. In 0.1.0 the automatic fleet runs in CloudRoom; without CloudRoom you plan, start each builder by hand on this computer or on boat.dev, and review its pull request yourself. The [install guide's 0.1.0 steps](docs/install.md#openwiz-010) name that release's skill.
+OpenWiz 0.1.0 ("OpenWiz 0.01") is the current release. Its commands are the [install guide's 0.1.0 steps](docs/install.md#openwiz-010). In 0.1.0 the automatic fleet runs in CloudRoom; without CloudRoom you plan, start each builder by hand on this computer or on boat.dev, and review its pull request yourself.
 
 ### OpenWiz 0.1.1
 

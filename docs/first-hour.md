@@ -17,8 +17,8 @@ six steps, and each step shows only what OpenWiz has actually read:
    > Install OpenWiz
 
    That phrase is the whole install instruction. The agent follows
-   [Install OpenWiz](../AGENTS.md#install-openwiz). The commands are in
-   [the install guide](install.md).
+   [Install OpenWiz](../AGENTS.md#install-openwiz). Today's commands are the
+   [0.1.0 steps](install.md#openwiz-010).
 2. **Connect your accounts.** **Open setup** goes to the setup page. Each
    connection is checked on its own, and CloudRoom's one sign-in screen is on
    the CloudRoom step. Setup checks your agent harness login. It does not check
