@@ -15,6 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fakeworld
+import jev_judge
 import records
 
 API = 'https://api.anthropic.com/v1/messages'
@@ -140,7 +141,10 @@ JUDGE = ('You check one reply an agent gave at the end of a task. You see only t
          '{"verdict": "pass" or "fail", "reason": "<one sentence>"}.')
 
 
-def judge(rubric, final, settings, call):
+def judge(rubric, final, settings, call, ask=None):
+    decided = jev_judge.try_jev(rubric, final, ask)
+    if decided is not None:
+        return decided, None
     body = {'model': settings['judge_model'], 'max_tokens': settings.get('judge_max_tokens', 1000), 'system': JUDGE,
             'messages': [{'role': 'user', 'content': f'Rule:\n{rubric}\n\nReply:\n<<<\n{final}\n>>>'}]}
     resp, stop, error = call(body)
@@ -887,6 +891,10 @@ def hermes_run_case(case, settings, snapshot, repeat, budget_usd=None, checkpoin
     stop = 'end_turn' if final else 'turn_cap'
     rubric = case.get('expect', {}).get('final')
     if stop == 'end_turn' and rubric:
+        decided = jev_judge.try_jev(rubric, final)
+        if decided is not None:
+            judgment = decided
+            return transcript()
         got, failed = session(f'Rule:\n{rubric}\n\nReply:\n<<<\n{final}\n>>>', JUDGE, None,
                               settings.get('judge_max_tokens', 1000), h['judge_max_api_calls'], set())
         if failed:

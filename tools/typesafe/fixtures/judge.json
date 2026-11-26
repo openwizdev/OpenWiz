@@ -1,0 +1,114 @@
+{
+  "schema": "openwiz.typesafe-bench.judge.v1",
+  "note": "recorded answers are inputs to the decision code, not live Jev calls",
+  "cases": [
+    {
+      "id": "meets",
+      "rule": "The reply names the file it changed.",
+      "reply": "Changed tools/typesafe/client.py so the key stays in the environment.",
+      "expected": "pass",
+      "old_model_text": "{\"verdict\": \"pass\", \"reason\": \"The reply meets the rule.\"}",
+      "recorded": {
+        "model": "jev-1.14.0",
+        "answers": {
+          "verdict": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.88,
+            "probabilities": {"pass": 0.92, "fail": 0.08}
+          }
+        }
+      }
+    },
+    {
+      "id": "misses",
+      "rule": "The reply names the file it changed.",
+      "reply": "Done.",
+      "expected": "fail",
+      "old_model_text": "{\"verdict\": \"fail\", \"reason\": \"The reply does not meet the rule.\"}",
+      "recorded": {
+        "model": "jev-1.14.0",
+        "answers": {
+          "verdict": {
+            "type": "choice",
+            "choice": "fail",
+            "confidence": 0.8,
+            "probabilities": {"pass": 0.09, "fail": 0.91}
+          }
+        }
+      }
+    },
+    {
+      "id": "old-parser-garbage",
+      "rule": "The reply names the file it changed.",
+      "reply": "Done.",
+      "expected": "fail",
+      "old_model_text": "sure, pass",
+      "recorded": {
+        "model": "jev-1.14.0",
+        "answers": {
+          "verdict": {
+            "type": "choice",
+            "choice": "fail",
+            "confidence": 0.9,
+            "probabilities": {"pass": 0.05, "fail": 0.95}
+          }
+        }
+      }
+    },
+    {
+      "id": "low-confidence-falls-back",
+      "rule": "The reply names the file it changed.",
+      "reply": "Changed tools/typesafe/client.py.",
+      "expected": "pass",
+      "old_model_text": "{\"verdict\": \"pass\", \"reason\": \"The reply meets the rule.\"}",
+      "recorded": {
+        "model": "jev-1.14.0",
+        "answers": {
+          "verdict": {
+            "type": "choice",
+            "choice": "fail",
+            "confidence": 0.4,
+            "probabilities": {"pass": 0.45, "fail": 0.55}
+          }
+        }
+      }
+    },
+    {
+      "id": "recorded-choice-wrong",
+      "rule": "The reply names the file it changed.",
+      "reply": "Done.",
+      "expected": "fail",
+      "old_model_text": "{\"verdict\": \"fail\", \"reason\": \"The reply does not meet the rule.\"}",
+      "recorded": {
+        "model": "jev-1.14.0",
+        "answers": {
+          "verdict": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.95,
+            "probabilities": {"pass": 0.99, "fail": 0.01}
+          }
+        }
+      }
+    },
+    {
+      "id": "old-empty-reason",
+      "rule": "The reply names the file it changed.",
+      "reply": "Changed tools/typesafe/client.py.",
+      "expected": "pass",
+      "old_model_text": "{\"verdict\": \"pass\", \"reason\": \"\"}",
+      "recorded": {
+        "model": "jev-1.14.0",
+        "answers": {
+          "verdict": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.8,
+            "probabilities": {"pass": 0.8, "fail": 0.2}
+          }
+        }
+      }
+    }
+  ]
+}

@@ -27,7 +27,8 @@ import score as S
 import tokens as T
 
 REPO = HERE.parent.parent
-CODE = ['contract.md', 'fakeworld.py', 'score.py', 'records.py', 'cases.py', 'driver.py', 'tokens.py', 'eval.py']
+CODE = ['contract.md', 'fakeworld.py', 'score.py', 'records.py', 'cases.py', 'driver.py', 'jev_judge.py',
+        'tokens.py', 'eval.py']
 
 
 def git(*args):
