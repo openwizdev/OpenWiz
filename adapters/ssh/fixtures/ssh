@@ -2,12 +2,17 @@
 import json
 import os
 import sys
+import time
 
 args = sys.argv[1:]
 log = os.environ.get('OPENWIZ_SSH_LOG')
 if log:
     with open(log, 'a') as handle:
         handle.write(json.dumps(args) + '\n')
+hold = os.environ.get('OPENWIZ_SSH_HOLD', '')
+if hold.isdigit():
+    time.sleep(int(hold))
+    sys.exit(0)
 if '--' not in args:
     sys.exit(2)
 command = args[args.index('--') + 1:]

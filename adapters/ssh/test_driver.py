@@ -73,6 +73,46 @@ class SshDriver(unittest.TestCase):
         self.assertNotIn(CANARY, json.dumps(self.logged()))
         self.call('stop', {'run': out['run']})
 
+    def test_a_name_that_contains_key_is_refused_before_ssh_starts(self):
+        value = 'canary-synthetic-0123456789'
+        for name in ('MYKEY', 'APIKEY'):
+            with self.subTest(name=name):
+                if os.path.exists(self.log):
+                    os.remove(self.log)
+                code, out = self.call('start', START, **{name: value, 'OPENWIZ_SSH_ARGS': json.dumps(
+                    ['--model', '{model}', '-p', '{prompt}', value])})
+                self.assertEqual(code, 1, out)
+                self.assertEqual(out['error'], 'the ssh command would carry a secret from the environment')
+                self.assertEqual(self.logged(), [])
+
+    def test_a_wake_while_ssh_is_alive_starts_no_second_one(self):
+        code, out = self.call('start', START, OPENWIZ_SSH_HOLD='30')
+        self.assertEqual(code, 0, out)
+        self.addCleanup(self.call, 'stop', {'run': out['run']})
+        self.assertEqual(len(self.logged()), 1)
+        code, woke = self.call('wake', {'run': out['run']})
+        self.assertEqual(code, 0, woke)
+        self.assertEqual(woke['woke'], True)
+        self.assertEqual(len(self.logged()), 1)
+
+    def test_stop_does_not_signal_a_pid_that_is_not_the_recorded_ssh(self):
+        code, out = self.call('start', START, OPENWIZ_SSH_HOLD='30')
+        self.assertEqual(code, 0, out)
+        path = os.path.join(self.env['OPENWIZ_SSH_STATE'], out['run'] + '.json')
+        with open(path) as handle:
+            state = json.load(handle)
+        original = state['pids'][0]
+        original_pid = original['pid'] if isinstance(original, dict) else original
+        self.addCleanup(os.kill, original_pid, 15)
+        victim = subprocess.Popen(['sleep', '60'], start_new_session=True)
+        self.addCleanup(victim.kill)
+        state['pids'] = [victim.pid]
+        with open(path, 'w') as handle:
+            json.dump(state, handle)
+        code, stopped = self.call('stop', {'run': out['run']})
+        self.assertEqual(code, 0, stopped)
+        self.assertIsNone(victim.poll())
+
     def test_kit_passes_all_five(self):
         process = subprocess.run([sys.executable, '-I', os.path.join(KIT, 'kit.py'), '--driver', DRIVER,
                                  '--repo', 'example/site', '--ticket', '7', '--harness', 'fake-harness',
