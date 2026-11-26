@@ -92,68 +92,6 @@ def integration(cli, fake):
 
 
 
-def bind(value, inputs):
-    if isinstance(value, str) and value.startswith('@'):
-        return inputs[value[1:]]
-    if isinstance(value, list):
-        return [bind(v, inputs) for v in value]
-    if isinstance(value, dict):
-        return {k: bind(v, inputs) for k, v in value.items()}
-    return value
-
-
-def standard_step(name, inputs):
-    template = json.loads((HERE / 'combined.template.json').read_text())
-    return bind(next(s for s in template['steps'] if s['id'] == name), inputs)
-
-
-def receipt_case(cli, fake, case):
-    with world(cli, fake) as (root, kit, scenario, scenario_file):
-        replies = []
-        inputs = {'openwiz': str(cli), 'send_thread': 'thr_syn_0001',
-                  'send_op': 'op-smoke-message', 'project': 'prj_syn_0001',
-                  'harness': 'codex', 'model': 'syn-codex-model-01',
-                  'effort': 'high', 'new_op': 'op-smoke-new',
-                  'new_preview_checks': [{'path': '/schema', 'equals': 'openwiz.new-thread-preview.v1'},
-                                         {'path': '/verdict/kind', 'equals': 'ready'}]}
-        if case == 'ready-preview':
-            project_file = ROOT / 'tests/fixtures/room-cli-0.43.1/normal/project-list.json'
-            projects = json.loads(project_file.read_text())
-            projects[0]['gitRemoteUrl'] = 'https://github.com/synthetic-owner/synthetic-repo.git'
-            replies = [
-                {'argv': ['project', 'list', '--json', '--include-personal'], 'stdout': json.dumps(projects)},
-                {'argv': ['cloud', 'status', '--json'], 'stdout_file': str(ROOT / 'tests/fixtures/room-cli-v127/new-thread/cloud-status.json')}]
-            step = standard_step('new_preview', inputs)
-        else:
-            filename = 'tell-cloud-queue-observed.json' if case == 'queued-send' else 'tell-sent.json'
-            replies = [{'argv': ['thread', 'tell', 'thr_syn_0001', '--mode', 'queue', '--json', '--'],
-                        'any_text': True, 'stdout_file': str(ROOT / 'tests/fixtures/room-cli-0.43.1/send' / filename)}]
-            step = standard_step('send_once', inputs)
-        scenario['synthetic_assumptions'].append('Smoke-case project settings and operation ids are synthetic; receipts reuse the documented existing fixtures.')
-        scenario['responses'] = replies + scenario['responses']
-        scenario_file.write_text(json.dumps(scenario))
-        kit['steps'].insert(0, step)
-        path = root / 'kit.json'
-        path.write_text(json.dumps(kit))
-        argv = [sys.executable, '-I', str(HERE / 'smoke.py'), '--kit', str(path),
-                '--state', str(root / 'checkpoint'), '--fixture']
-        result = subprocess.run(argv, capture_output=True, text=True, timeout=30)
-        assert result.returncode == 0, result.stdout + result.stderr
-        assert json.loads(result.stdout)['verdict'] == 'pass'
-        calls = [json.loads(line) for line in (root / 'invocations.log').read_text().splitlines()]
-        tells = sum(c[:2] == ['thread', 'tell'] for c in calls)
-        spawns = sum(c[:2] == ['thread', 'spawn'] for c in calls)
-        assert spawns == 0
-        assert tells == (0 if case == 'ready-preview' else 1)
-        result = subprocess.run(argv, capture_output=True, text=True, timeout=30)
-        assert result.returncode == 0, result.stdout + result.stderr
-        after = [json.loads(line) for line in (root / 'invocations.log').read_text().splitlines()]
-        assert sum(c[:2] == ['thread', 'tell'] for c in after) == tells
-        if case == 'ready-preview':
-            assert not (root / 'product-state/new-threads').exists()
-        print(json.dumps({'case': case, 'result': 'pass', 'tells': tells, 'spawns': spawns, 'live': 'not_run'}))
-
-
 KEEPER = 'test_smoke.Sheet.test_driver_steps_start_wake_and_stop_one_run_through_the_runner'
 RETIRED_RECEIPT_CASES = {
     'ready-preview': KEEPER,
@@ -166,7 +104,7 @@ def argument_parser():
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument('--cli', required=True, type=Path)
     parser.add_argument('--fake', required=True, type=Path)
-    parser.add_argument('--case', choices=['integration', 'ready-preview', 'accepted-send', 'queued-send'], default='integration')
+    parser.add_argument('--case', choices=['integration'], default='integration')
     return parser
 
 
@@ -193,11 +131,7 @@ class RetiredReceiptCases(unittest.TestCase):
 
 def main():
     args = argument_parser().parse_args()
-    cli, fake = args.cli.resolve(), args.fake.resolve()
-    if args.case == 'integration':
-        integration(cli, fake)
-    else:
-        receipt_case(cli, fake, args.case)
+    integration(args.cli.resolve(), args.fake.resolve())
 
 
 if __name__ == '__main__':
