@@ -515,6 +515,7 @@ class Kit(unittest.TestCase):
         k = kit.Kit.__new__(kit.Kit)
         k.lock, k.leaks, k.mark = threading.RLock(), [], mark
         k.groups, k.sessions, k.owned, k.hidden = set(), set(), {}, set()
+        k.ps_session = None
         k.seen, k.env, k.listed_pids, k.since = False, {}, set(), 0
         return k
 
@@ -636,6 +637,44 @@ class Kit(unittest.TestCase):
             os.environ['PATH'] = old_path
             if 'open' in kit.__dict__:
                 del kit.open
+
+    def test_a_macos_session_pointer_does_not_widen_the_kits_own_session(self):
+        mark = 'OPENWIZ_KIT_RUN=' + secrets.token_hex(8)
+        kit = module(os.path.join(HERE, 'kit.py'))
+        scan = self._scan_kit(kit, mark)
+        kid = os.getpid()
+        child, sibling, outsider, leader, leftover = (2100000001 + n for n in range(5))
+        own, other, far = 'ffffff80000000a1', 'ffffff80000000b2', 'ffffff80000000c3'
+        same = os.getpgrp()
+        rows = {
+            kid: '1 %d %s Ss python' % (same, own),
+            child: '%d %d %s S python' % (kid, same, own),
+            sibling: '1 %d %s S python' % (sibling, own),
+            outsider: '1 %d %s S python' % (outsider, far),
+            leader: '%d %d %s S python' % (kid, leader, other),
+            leftover: '1 %d %s S python' % (leftover, other),
+        }
+        marked = {child, leader, leftover}
+        calls = []
+
+        def fake_ps(*args):
+            calls.append(args)
+            pids, flags = (), args
+            if args and isinstance(args[0], tuple):
+                pids, flags = args[0], args[1:]
+            if '-E' in flags:
+                return {pid: 'python ' + mark if pid in marked else 'python' for pid in pids}
+            return rows
+
+        scan.ps = fake_ps
+        list(scan.listed())
+        reads = self._environment_reads(calls)
+        opened = {pid for pids in reads for pid in pids}
+        self.assertIn(child, opened, 'the scan did not read a marked child in the kit session')
+        self.assertIn(leader, opened, 'the scan did not read a marked process in another session')
+        self.assertIn(leftover, opened, 'the scan missed a leftover that stayed in that other session')
+        self.assertNotIn(sibling, opened, "the scan read another process in the kit's own session")
+        self.assertNotIn(outsider, opened, "the scan read an unrelated session")
 
     def test_a_path_diagnostic_never_prints_the_active_canary(self):
         kit = module(os.path.join(HERE, 'kit.py'))

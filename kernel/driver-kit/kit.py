@@ -415,6 +415,7 @@ class Kit:
         self.leaks = []
         self.run, self.stopped = None, False
         self.groups, self.sessions, self.owned = set(), set(), {}
+        self.ps_session = None
         self.lock = threading.RLock()
         self.runtime, self.listed_pids, self.active, self.hidden = set(), set(), set(), set()
         self.since = started_at('self') if PROC else 0
@@ -498,12 +499,33 @@ class Kit:
         except (AttributeError, OSError):
             return None
 
+    @staticmethod
+    def session_value(text):
+        text = str(text).strip()
+        if not text:
+            return None
+        try:
+            return int(text, 10)
+        except ValueError:
+            try:
+                return int(text, 16)
+            except ValueError:
+                return text
+
     def note_marked(self, pid, group, session, since):
         self.owned[int(pid)] = since
         if group != os.getpgrp():
             self.groups.add(group)
+        if session is None:
+            return
+        if self.ps_session is not None:
+            if session != self.ps_session:
+                self.sessions.add(session)
+            return
+        if not PROC:
+            return
         own = self.own_session()
-        if session is not None and session != own:
+        if own is not None and session != own:
             self.sessions.add(session)
 
     # PRIVACY: the leftover scan opens an environment only for a process in this set, never an unrelated one.
@@ -637,9 +659,15 @@ class Kit:
         meta, cmds = {}, {}
         for pid, row in args.items():
             f = row.split(None, 4)
-            if len(f) < 4 or f[3].startswith('Z') or pid == os.getpid():
+            if len(f) < 4:
                 continue
-            ppid, group, session = int(f[0]), int(f[1]), int(f[2])
+            session = self.session_value(f[2])
+            if pid == os.getpid():
+                self.ps_session = session
+                continue
+            if f[3].startswith('Z'):
+                continue
+            ppid, group = int(f[0]), int(f[1])
             meta[pid] = (ppid, group, session, None)
             cmds[pid] = f[4] if len(f) > 4 else ''
         mark = re.compile(r'(?:^|\s)%s(?:\s|$)' % re.escape(self.mark))
