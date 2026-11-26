@@ -384,5 +384,16 @@ class Path_(Installer):
         self.assertEqual(code, 5)
 
 
+class InstallSuccessNote(unittest.TestCase):
+    def test_the_note_is_the_mark_on_utf8_and_plain_otherwise(self):
+        self.assertEqual(entry.install_success_line(True), '🧙‍♂️🪄 OpenWiz is installed.')
+        self.assertEqual(entry.install_success_line(False), 'OpenWiz is installed.')
+        self.assertFalse(entry.utf8_locale({}))
+        self.assertFalse(entry.utf8_locale({'LC_ALL': 'C', 'LANG': 'en_US.UTF-8'}))
+        self.assertTrue(entry.utf8_locale({'LC_ALL': 'C.UTF-8'}))
+        self.assertTrue(entry.utf8_locale({'LANG': 'en_US.utf8'}))
+        self.assertTrue(entry.utf8_locale({'LC_ALL': '', 'LANG': 'en_US.UTF-8'}))
+
+
 if __name__ == '__main__':
     unittest.main()

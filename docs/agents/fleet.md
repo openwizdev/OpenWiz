@@ -182,3 +182,7 @@ Source: the first six rows are the fleet's action gates; the next three are the 
 - **Never retarget a pull request:** close it and open a new one against the other base. Never force-push.
 
 Source: Jake, 2026-10-30, 2026-11-01 and 2026-11-05 (ADR 0008; [private record](https://github.com/jparker2006/ClosedWiz/issues/1275#issuecomment-6704671951)); release rules in [ADR 0020](../adr/0020-release-on-demand.md).
+
+## The mark
+
+OpenWiz agents use 🧙‍♂️🪄 in pull request titles, release notes and announcements where it fits. The pair is the wizard factory mark, a light public face for this software factory. It stays off identifiers, package names, file names, commit trailers, and any output a script or a test parses. On a terminal that is not UTF-8, write OpenWiz with no mark.

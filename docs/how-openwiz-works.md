@@ -2,7 +2,7 @@
 
 ![How OpenWiz works](how-openwiz-works.png)
 
-OpenWiz runs a software factory on top of CloudRoom. Four parts:
+OpenWiz 🧙‍♂️🪄 runs a software factory on top of CloudRoom, a wizard factory. Four parts:
 
 - **You** use the OpenWiz app, CLI or phone to approve plans, answer "Needs you" and watch progress. An orchestrator chat (an agent you talk to for grills, plans and "where are we") is optional: the factory runs without one.
 - **GitHub is the memory.** A fleet is one approved spec and its tickets; every decision and result is a record on GitHub (issues, pull requests, reviews, CI).
