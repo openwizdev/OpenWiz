@@ -1,12 +1,4 @@
 #!/usr/bin/env python3
-"""The public install instruction is the phrase `Install OpenWiz`.
-
-A person says that phrase to a coding agent. The files below are what that
-agent reads, and each quotes the phrase on its own line. `tools/install/install
---help` names the same phrase and keeps the commands as the reference the
-agent runs. The pinned WizSkills install skill still quotes the older line
-until its pin moves; `tests/journey/test_journey.py` checks that copy.
-"""
 import unittest
 from pathlib import Path
 
