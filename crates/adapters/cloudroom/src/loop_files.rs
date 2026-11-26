@@ -157,15 +157,16 @@ pub fn read_loop_folder(dir: &Path, catalog: bool) -> io::Result<FolderRead> {
         if !bytes.ends_with(b".md") || bytes == b"README.md" {
             continue;
         }
+        if !std::fs::metadata(entry.path())?.is_file() {
+            continue;
+        }
         let Some(name) = name.to_str() else {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 "a file name is not UTF-8",
             ));
         };
-        if std::fs::metadata(entry.path())?.is_file() {
-            names.push(name.to_owned());
-        }
+        names.push(name.to_owned());
     }
     names.sort_unstable();
     let mut files = Vec::new();
