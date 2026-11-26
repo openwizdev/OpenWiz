@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import os
+import shlex
 import sys
 import time
 
@@ -18,4 +19,10 @@ if '--' not in args:
 command = args[args.index('--') + 1:]
 if not command:
     sys.exit(2)
-os.execvp(command[0], command)
+try:
+    parsed = shlex.split(' '.join(command))
+except ValueError:
+    sys.exit(2)
+if not parsed:
+    sys.exit(2)
+os.execvp(parsed[0], parsed)

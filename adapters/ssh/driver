@@ -4,6 +4,7 @@ import json
 import os
 import re
 import secrets
+import shlex
 import shutil
 import signal
 import subprocess
@@ -88,14 +89,42 @@ def destination():
     return value
 
 
+def include_path(path):
+    if re.fullmatch(r'[A-Za-z0-9_./@+-]+', path):
+        return path
+    if any(mark in path for mark in '"\n\r'):
+        raise Refused('an ssh config path cannot be included',
+                      'move that ssh config to a path without quotes or newlines')
+    return '"' + path + '"'
+
+
+def client_config():
+    ensure()
+    lines = []
+    for path in ('/etc/ssh/ssh_config', os.path.expanduser('~/.ssh/config')):
+        if os.path.isfile(path):
+            lines.append('Include ' + include_path(path))
+    lines.extend(['Match final', '    SendEnv -*', ''])
+    path = os.path.join(STATE, 'ssh-config')
+    temporary = path + '.tmp'
+    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(descriptor, 'w') as handle:
+        handle.write('\n'.join(lines))
+    os.chmod(temporary, 0o600)
+    os.replace(temporary, path)
+    return path
+
+
 def command(req, run, woken):
     what = 'You were woken: read the ticket again and carry on' if woken else 'Build the ticket'
     prompt = '%s: %s#%d, with the %s skill.' % (what, req['repository'], req['ticket'], req['skill'])
     mapping = {'{prompt}': prompt, '{model}': req['model'], '{session}': run}
     remote = [mapping.get(arg, arg) for arg in argument_template()]
-    argv = ['ssh', '-o', 'BatchMode=yes', '-o', 'ClearAllForwardings=yes', '-o', 'ForwardAgent=no',
-            destination(), '--', 'env', 'OPENWIZ_SSH_RUN=%s' % run, req['harness']] + remote
-    if leaked(argv, secret_values()):
+    parts = ['env', 'OPENWIZ_SSH_RUN=%s' % run, req['harness']] + remote
+    argv = ['ssh', '-F', client_config(), '-o', 'BatchMode=yes', '-o', 'ClearAllForwardings=yes',
+            '-o', 'ForwardAgent=no', destination(), '--', ' '.join(shlex.quote(part) for part in parts)]
+    secrets_found = secret_values()
+    if leaked(parts, secrets_found) or leaked(argv, secrets_found):
         raise Refused('the ssh command would carry a secret from the environment',
                       'take it out of OPENWIZ_SSH_ARGS and the brief; pass secrets only in the environment on the VPS')
     if not shutil.which('ssh'):

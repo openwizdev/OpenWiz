@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import os
+import shlex
 import shutil
 import stat
 import subprocess
@@ -65,6 +66,33 @@ class SshDriver(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertEqual(out['error'], 'the ssh command would carry a secret from the environment')
         self.assertEqual(self.logged(), [])
+
+    def test_the_brief_stays_one_argument_and_sendenv_is_cleared(self):
+        home = os.path.join(self.folder, 'home')
+        os.makedirs(os.path.join(home, '.ssh'))
+        with open(os.path.join(home, '.ssh', 'config'), 'w') as handle:
+            handle.write('SendEnv SYNTHETIC_TOKEN\n')
+        started = dict(START, model='synthetic model')
+        code, out = self.call('start', started, HOME=home)
+        self.assertEqual(code, 0, out)
+        self.addCleanup(self.call, 'stop', {'run': out['run']})
+        argv = self.logged()[0]
+        remote = argv[argv.index('--') + 1:]
+        self.assertEqual(len(remote), 1)
+        parsed = shlex.split(remote[0])
+        prompt = 'Build the ticket: example/site#7, with the build-ticket skill.'
+        self.assertEqual(parsed[parsed.index('-p') + 1], prompt)
+        self.assertEqual(parsed[parsed.index('--model') + 1], 'synthetic model')
+        config = argv[argv.index('-F') + 1]
+        with open(config) as handle:
+            text = handle.read()
+        self.assertIn('SendEnv -*', text)
+        self.assertIn(os.path.join(home, '.ssh', 'config'), text)
+        listed = subprocess.run(['/usr/bin/ssh', '-G', '-F', config, 'builder@vps.example'],
+                                capture_output=True, text=True, timeout=10)
+        self.assertEqual(listed.returncode, 0, listed.stderr)
+        sent = [line.split()[1] for line in listed.stdout.splitlines() if line.lower().startswith('sendenv ')]
+        self.assertEqual(sent, [])
 
     def test_a_secret_left_only_in_the_environment_never_reaches_ssh(self):
         code, out = self.call('start', START, SYNTHETIC_API_KEY=CANARY)
