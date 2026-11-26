@@ -38,8 +38,10 @@ def pin_failures(section, guide, version):
         failures.append('the agent section does not derive the skill from the release tag\'s wizskills.lock commit')
     if 'stop and say so' not in section:
         failures.append('a release with no wizskills.lock commit does not stop')
-    if '--branch <tag>' not in section:
-        failures.append('the agent section does not clone the resolved release tag')
+    if 'git clone --depth 1 --branch "$tag" -- https://github.com/openwizdev/OpenWiz' not in section:
+        failures.append('the agent section clones without -- before the repository')
+    if 'v[0-9]+\\.[0-9]+\\.[0-9]+' not in section or '[0-9a-f]{40}' not in section:
+        failures.append('the agent section does not require a release tag and a 40-hex commit')
     if '--branch v0.1.1' in section:
         failures.append('the agent section clones v0.1.1')
     for tag in SKILL_TAG.findall(section):
@@ -48,8 +50,8 @@ def pin_failures(section, guide, version):
         failures.append('an open-ended range is pinned to one WizSkills tag')
     if 'wizskills.lock' not in guide:
         failures.append('the install guide does not name wizskills.lock')
-    if '--branch <tag>' not in guide:
-        failures.append('the install guide does not clone the release tag')
+    if 'git clone --depth 1 --branch "$tag" -- https://github.com/openwizdev/OpenWiz' not in guide:
+        failures.append('the install guide clones without -- before the repository')
     if '--branch v0.1.1' in guide:
         failures.append('the install guide clones --branch v0.1.1')
     for tag in SKILL_TAG.findall(guide):
@@ -95,7 +97,9 @@ class InstallPhrase(unittest.TestCase):
         self.assertIn('`0.1.0`', section)
         self.assertIn('docs/install.md#openwiz-010', section)
         self.assertIn('`v0.1.0`', section)
-        self.assertIn(commit, (ROOT / 'wizskills.lock').read_text(encoding='utf-8'))
+        self.assertNotEqual(commit, '33eef93ba30cd8db256f6fe270e3ed28747a79bd')
+        self.assertNotIn('blob/%s/' % commit, section)
+        self.assertNotIn('blob/%s/' % commit, guide)
         self.assertIn('including `v0.1.1`', section)
         self.assertIn('openwiz=$(mktemp -d)', section)
         self.assertIn("not the `commit` in that tag's `wizskills.lock`", section)
