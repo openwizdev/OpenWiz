@@ -1,0 +1,118 @@
+FFFFFFFFFFFFFF
+======================================================================
+FAIL: test_a_good_package_installs_only_after_yes (__main__.FetchTests.test_a_good_package_installs_only_after_yes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/agent/repos/OpenWiz/tools/install/drivers/test_fetch.py", line 206, in test_a_good_package_installs_only_after_yes
+    self.assertIn('example-publisher', err)
+AssertionError: 'example-publisher' not found in ''
+
+======================================================================
+FAIL: test_a_listed_driver_needs_its_own_yes (__main__.FetchTests.test_a_listed_driver_needs_its_own_yes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/agent/repos/OpenWiz/tools/install/drivers/test_fetch.py", line 256, in test_a_listed_driver_needs_its_own_yes
+    self.assertIn('has not passed the kit', err)
+AssertionError: 'has not passed the kit' not found in ''
+
+======================================================================
+FAIL: test_a_pin_is_the_yes_and_a_core_driver_is_not_fetched (__main__.FetchTests.test_a_pin_is_the_yes_and_a_core_driver_is_not_fetched)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/agent/repos/OpenWiz/tools/install/drivers/test_fetch.py", line 346, in test_a_pin_is_the_yes_and_a_core_driver_is_not_fetched
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {"error": "the fetcher is not built", "next": "build it"}
+
+
+======================================================================
+FAIL: test_a_redirect_off_github_is_refused (__main__.FetchTests.test_a_redirect_off_github_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/agent/repos/OpenWiz/tools/install/drivers/test_fetch.py", line 330, in test_a_redirect_off_github_is_refused
+    self.assertIn('off GitHub', out)
+AssertionError: 'off GitHub' not found in '{"error": "the fetcher is not built", "next": "build it"}\n'
+
+======================================================================
+FAIL: test_each_broken_fixture_is_refused_and_not_run (__main__.FetchTests.test_each_broken_fixture_is_refused_and_not_run) (case='wrong-checksum')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/agent/repos/OpenWiz/tools/install/drivers/test_fetch.py", line 243, in test_each_broken_fixture_is_refused_and_not_run
+    self.assertIn(phrase, body['error'] + body['next'])
+AssertionError: 'pinned checksum' not found in 'the fetcher is not builtbuild it'
+
+======================================================================
+FAIL: test_each_broken_fixture_is_refused_and_not_run (__main__.FetchTests.test_each_broken_fixture_is_refused_and_not_run) (case='extra-file')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/agent/repos/OpenWiz/tools/install/drivers/test_fetch.py", line 243, in test_each_broken_fixture_is_refused_and_not_run
+    self.assertIn(phrase, body['error'] + body['next'])
+AssertionError: 'does not name' not found in 'the fetcher is not builtbuild it'
+
+======================================================================
+FAIL: test_each_broken_fixture_is_refused_and_not_run (__main__.FetchTests.test_each_broken_fixture_is_refused_and_not_run) (case='missing-file')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/agent/repos/OpenWiz/tools/install/drivers/test_fetch.py", line 243, in test_each_broken_fixture_is_refused_and_not_run
+    self.assertIn(phrase, body['error'] + body['next'])
+AssertionError: 'missing a file' not found in 'the fetcher is not builtbuild it'
+
+======================================================================
+FAIL: test_each_broken_fixture_is_refused_and_not_run (__main__.FetchTests.test_each_broken_fixture_is_refused_and_not_run) (case='link')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/agent/repos/OpenWiz/tools/install/drivers/test_fetch.py", line 243, in test_each_broken_fixture_is_refused_and_not_run
+    self.assertIn(phrase, body['error'] + body['next'])
+AssertionError: 'regular file' not found in 'the fetcher is not builtbuild it'
+
+======================================================================
+FAIL: test_each_broken_fixture_is_refused_and_not_run (__main__.FetchTests.test_each_broken_fixture_is_refused_and_not_run) (case='wrong-mode')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/agent/repos/OpenWiz/tools/install/drivers/test_fetch.py", line 243, in test_each_broken_fixture_is_refused_and_not_run
+    self.assertIn(phrase, body['error'] + body['next'])
+AssertionError: 'wrong mode' not found in 'the fetcher is not builtbuild it'
+
+======================================================================
+FAIL: test_each_broken_fixture_is_refused_and_not_run (__main__.FetchTests.test_each_broken_fixture_is_refused_and_not_run) (case='wrong-driver-name')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/agent/repos/OpenWiz/tools/install/drivers/test_fetch.py", line 243, in test_each_broken_fixture_is_refused_and_not_run
+    self.assertIn(phrase, body['error'] + body['next'])
+AssertionError: 'does not match' not found in 'the fetcher is not builtbuild it'
+
+======================================================================
+FAIL: test_each_broken_fixture_is_refused_and_not_run (__main__.FetchTests.test_each_broken_fixture_is_refused_and_not_run) (case='changed-schema')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/agent/repos/OpenWiz/tools/install/drivers/test_fetch.py", line 243, in test_each_broken_fixture_is_refused_and_not_run
+    self.assertIn(phrase, body['error'] + body['next'])
+AssertionError: 'openwiz update' not found in 'the fetcher is not builtbuild it'
+
+======================================================================
+FAIL: test_each_broken_fixture_is_refused_and_not_run (__main__.FetchTests.test_each_broken_fixture_is_refused_and_not_run) (case='off-repository')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/agent/repos/OpenWiz/tools/install/drivers/test_fetch.py", line 243, in test_each_broken_fixture_is_refused_and_not_run
+    self.assertIn(phrase, body['error'] + body['next'])
+AssertionError: 'not this repository' not found in 'the fetcher is not builtbuild it'
+
+======================================================================
+FAIL: test_each_broken_fixture_is_refused_and_not_run (__main__.FetchTests.test_each_broken_fixture_is_refused_and_not_run) (case='wrong-file-hash')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/agent/repos/OpenWiz/tools/install/drivers/test_fetch.py", line 243, in test_each_broken_fixture_is_refused_and_not_run
+    self.assertIn(phrase, body['error'] + body['next'])
+AssertionError: 'manifest hash' not found in 'the fetcher is not builtbuild it'
+
+======================================================================
+FAIL: test_update_moves_the_same_publisher_and_asks_otherwise (__main__.FetchTests.test_update_moves_the_same_publisher_and_asks_otherwise)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/agent/repos/OpenWiz/tools/install/drivers/test_fetch.py", line 267, in test_update_moves_the_same_publisher_and_asks_otherwise
+    self.assertEqual(self.add(answer='yes')[0], 0)
+AssertionError: 1 != 0
+
+----------------------------------------------------------------------
+Ran 6 tests in 3.012s
+
+FAILED (failures=14)
