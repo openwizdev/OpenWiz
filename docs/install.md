@@ -4,7 +4,7 @@ Tell your coding agent (Claude Code, Codex, Cursor or another):
 
 > Install OpenWiz
 
-That phrase is the whole install instruction. The agent follows [Install OpenWiz](../AGENTS.md#install-openwiz), which reads GitHub's Latest release and that release's install skill. The numbered steps below are for 0.1.1 and follow the [install skill](https://github.com/openwizdev/WizSkills/blob/v0.4.0/skills/install/SKILL.md). This page says what the install does, the commands it runs, what it may change, and how to recover or remove it. Those commands are the reference the agent runs.
+That phrase is the whole install instruction. The agent follows [Install OpenWiz](../AGENTS.md#install-openwiz), which reads GitHub's Latest release and the install skill at the `commit` in that tag's `wizskills.lock`. The numbered steps below are the command reference for that same tag. `<tag>` is the release tag; for the 0.1.1 release it is `v0.1.1`. This page says what the install does, the commands it runs, what it may change, and how to recover or remove it. Those commands are the reference the agent runs.
 
 Using Grok Bot? See [Grok Bot + OpenWiz](grok-bot.md).
 
@@ -24,7 +24,7 @@ Using Grok Bot? See [Grok Bot + OpenWiz](grok-bot.md).
 
 The agent runs each command itself and reads its JSON. `<root>` is the install folder, by default `~/.local/lib/openwiz`: use a new or empty folder that holds nothing else, because the installer also accepts a folder that already has other files in it. If you give `install install` a separate `--state-root`, it too must be a new or empty folder used by OpenWiz alone, never one shared with another app. `<target>` is `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-gnu` or `aarch64-unknown-linux-gnu`.
 
-1. **Preflight.** It clones this repository at the `v0.1.1` tag into a private temporary folder as `$openwiz` (`git clone --depth 1 --branch v0.1.1 https://github.com/openwizdev/OpenWiz "$openwiz"`) and checks this computer: Python, a supported system, free disk space, and whether `room-cli`, `gh` and `git` are installed. It reads only; anything missing comes with its next step. A missing `room-cli` never stops it: it says CloudRoom is optional, needed only if you pick it. On an Intel Mac it reads ready and notes that agents run on this computer or on boat.dev.
+1. **Preflight.** It clones this repository at `<tag>` into a private temporary folder as `$openwiz` (`git clone --depth 1 --branch <tag> https://github.com/openwizdev/OpenWiz "$openwiz"`) and checks this computer: Python, a supported system, free disk space, and whether `room-cli`, `gh` and `git` are installed. It reads only; anything missing comes with its next step. A missing `room-cli` never stops it: it says CloudRoom is optional, needed only if you pick it. On an Intel Mac it reads ready and notes that agents run on this computer or on boat.dev.
 
    ```sh
    python3 -I "$openwiz"/tools/install/install preflight
@@ -53,7 +53,7 @@ The agent runs each command itself and reads its JSON. `<root>` is the install f
    - **GitHub:** `runtime/setup/github_login.py sign-in --state-dir <state>` reuses your existing `gh` login, or shows what GitHub's own browser sign-in will do and waits for your yes. You paste no token.
    - **`identity_unreadable`** (for `personal_github`): GitHub's answer could not be read just then. Wait a minute and run `check` again; it usually clears.
 
-4. **Skills into your agents, then a restart.** Only now, with setup checked and the logins done, it copies OpenWiz's skills from the 0.1.1 package (WizSkills 0.4.0) into each agent found on this computer: `~/.claude/skills` (Claude Code), `~/.codex/skills` (Codex), `~/.cursor/skills` (Cursor), `~/.config/opencode/skills` (OpenCode) and `~/.grok/skills` (Grok). A skill of yours with the same name stops the step before anything is written.
+4. **Skills into your agents, then a restart.** Only now, with setup checked and the logins done, it copies OpenWiz's skills from that release's package (the WizSkills release recorded by `wizskills.lock` on `<tag>`) into each agent found on this computer: `~/.claude/skills` (Claude Code), `~/.codex/skills` (Codex), `~/.cursor/skills` (Cursor), `~/.config/opencode/skills` (OpenCode) and `~/.grok/skills` (Grok). A skill of yours with the same name stops the step before anything is written.
 
    ```sh
    python3 -I "$openwiz"/tools/install/install skills --root <root>
@@ -91,7 +91,7 @@ Start a new session of your agent and say "continue the OpenWiz install": every 
 Ask the agent to remove OpenWiz. It goes in this order:
 
 - **First, the heartbeat,** if a fleet runs on this computer or boat.dev. From the installed launch-fleet skill's folder (for example `~/.claude/skills/launch-fleet`), `python3 -I scripts/heartbeat.py status <owner>/<repo> <spec>` shows the job. `heartbeat.py pause <owner>/<repo> <spec>` stops it for now (`resume` brings it back). `heartbeat.py remove <owner>/<repo> <spec>` takes down the schedule, stops the fleet's orchestrator and deletes the heartbeat's state. Remove each one before deleting OpenWiz's files, or the job keeps running.
-- **Then the install:** `python3 -I "$openwiz"/tools/install/install remove --root <root>` (from a 0.1.1 clone, as in step 1; add `--state-root <state>` if you gave one) previews exactly what OpenWiz made: the `current` link, `channel.json`, `install.lock`, its marked skill copies in `<root>/skills`, the verified builds and its settings in `<state>`. With `--yes` it deletes exactly those, then removes each folder left empty. Anything else stays, links are never followed, and it refuses while an install or update is running.
+- **Then the install:** `python3 -I "$openwiz"/tools/install/install remove --root <root>` (from the `<tag>` clone in step 1; add `--state-root <state>` if you gave one) previews exactly what OpenWiz made: the `current` link, `channel.json`, `install.lock`, its marked skill copies in `<root>/skills`, the verified builds and its settings in `<state>`. With `--yes` it deletes exactly those, then removes each folder left empty. Anything else stays, links are never followed, and it refuses while an install or update is running.
 - **The skill copies in your agents stay:** `install remove` lists, for each agent, a `path` (a shared folder such as `~/.claude/skills`) and the `names` of OpenWiz's skill folders inside it. Remove just those named folders inside each `path`, never the listed folder itself: it also holds your own skills.
 - Your repositories, branches, pull requests and CloudRoom threads are your work and are never deleted.
 

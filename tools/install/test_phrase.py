@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import json
+import re
 import unittest
 from pathlib import Path
 
@@ -15,7 +17,46 @@ SURFACES = (
 FORBIDDEN = 'Install OpenWiz from'
 SKILL_010 = ('https://github.com/openwizdev/WizSkills/blob/'
              '33eef93ba30cd8db256f6fe270e3ed28747a79bd/skills/install/SKILL.md')
-SKILL_011 = 'https://github.com/openwizdev/WizSkills/blob/v0.4.0/skills/install/SKILL.md'
+SKILL_TAG = re.compile(
+    r'https://github\.com/openwizdev/WizSkills/blob/(v[0-9][^/\s)]*)/skills/install/SKILL\.md')
+OPEN_RANGE = re.compile(r'\bor later\b|\bonward\b|\band later\b|\bor newer\b')
+
+
+def lock_pin():
+    data = json.loads((ROOT / 'wizskills.lock').read_text(encoding='utf-8'))
+    version, commit = data['version'], data['commit']
+    if not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', version):
+        raise ValueError('wizskills.lock version')
+    if not re.fullmatch(r'[0-9a-f]{40}', commit):
+        raise ValueError('wizskills.lock commit')
+    return version, commit
+
+
+def pin_failures(section, guide, version):
+    failures = []
+    if 'wizskills.lock' not in section or '<commit>' not in section:
+        failures.append('the agent section does not derive the skill from the release tag\'s wizskills.lock commit')
+    if 'stop and say so' not in section:
+        failures.append('a release with no wizskills.lock commit does not stop')
+    if '--branch <tag>' not in section:
+        failures.append('the agent section does not clone the resolved release tag')
+    if '--branch v0.1.1' in section:
+        failures.append('the agent section clones v0.1.1')
+    for tag in SKILL_TAG.findall(section):
+        failures.append('the agent section hardcodes %s instead of the lock commit' % tag)
+    if OPEN_RANGE.search(section) and ('v0.4.0' in section or SKILL_TAG.search(section)):
+        failures.append('an open-ended range is pinned to one WizSkills tag')
+    if 'wizskills.lock' not in guide:
+        failures.append('the install guide does not name wizskills.lock')
+    if '--branch <tag>' not in guide:
+        failures.append('the install guide does not clone the release tag')
+    if '--branch v0.1.1' in guide:
+        failures.append('the install guide clones --branch v0.1.1')
+    for tag in SKILL_TAG.findall(guide):
+        failures.append('the install guide hardcodes %s; wizskills.lock is %s' % (tag, version))
+    if 'WizSkills 0.4.0' in guide and version != '0.4.0':
+        failures.append('the install guide names WizSkills 0.4.0 while wizskills.lock is %s' % version)
+    return failures
 
 
 class InstallPhrase(unittest.TestCase):
@@ -45,27 +86,33 @@ class InstallPhrase(unittest.TestCase):
         ):
             self.assertIn(needed, section, needed)
 
-    def test_each_release_keeps_its_own_skill(self):
+    def test_the_checkout_follows_the_lock(self):
+        version, commit = lock_pin()
         section = self.section()
-        rows = [line.strip() for line in section.splitlines() if line.strip().startswith('- ')]
-        self.assertEqual(len(rows), 3, rows)
-        one_oh, one_one, other = rows
-        self.assertTrue(one_oh.startswith('- `0.1.0`:'), one_oh)
-        self.assertIn(SKILL_010, one_oh)
-        self.assertIn('docs/install.md#openwiz-010', one_oh)
-        self.assertIn('`v0.1.0`', one_oh)
-        self.assertNotIn(SKILL_011, one_oh)
-        self.assertTrue(one_one.startswith('- `0.1.1`:'), one_one)
-        self.assertNotIn('or later', one_one)
-        self.assertIn(SKILL_011, one_one)
-        self.assertIn('`v0.1.1`', one_one)
-        self.assertNotIn(SKILL_010, one_one)
-        self.assertTrue(other.startswith('- Any other `<tag>`:'), other)
-        self.assertIn('--branch <tag>', other)
-        self.assertIn('wizskills.lock', other)
-        self.assertIn('stop and say', other)
-        self.assertNotIn('v0.1.1', other)
-        self.assertNotIn(SKILL_011, other)
+        guide = (ROOT / 'docs/install.md').read_text(encoding='utf-8')
+        self.assertEqual(pin_failures(section, guide, version), [])
+        self.assertIn(SKILL_010, section)
+        self.assertIn('`0.1.0`', section)
+        self.assertIn('docs/install.md#openwiz-010', section)
+        self.assertIn('`v0.1.0`', section)
+        self.assertIn(commit, (ROOT / 'wizskills.lock').read_text(encoding='utf-8'))
+        self.assertIn('including `v0.1.1`', section)
+
+    def test_a_stale_pin_fails_even_when_the_urls_are_present(self):
+        version, _ = lock_pin()
+        self.assertNotEqual(version, '0.4.0')
+        stale_section = (
+            '- For `0.1.1` or later, the skill is '
+            'https://github.com/openwizdev/WizSkills/blob/v0.4.0/skills/install/SKILL.md '
+            'and the steps clone --branch v0.1.1.\n')
+        stale_guide = (
+            'follow https://github.com/openwizdev/WizSkills/blob/v0.4.0/skills/install/SKILL.md. '
+            'git clone --depth 1 --branch v0.1.1 https://github.com/openwizdev/OpenWiz "$openwiz" '
+            '(WizSkills 0.4.0)\n')
+        failures = pin_failures(stale_section, stale_guide, version)
+        self.assertTrue(any('v0.4.0' in item for item in failures), failures)
+        self.assertTrue(any('v0.1.1' in item for item in failures), failures)
+        self.assertTrue(any(version in item for item in failures), failures)
 
     def test_the_pages_point_at_the_agent_section(self):
         for name in ('README.md', 'docs/install.md', 'docs/first-hour.md', 'docs/grok-bot.md'):

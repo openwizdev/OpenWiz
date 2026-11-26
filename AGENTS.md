@@ -24,10 +24,9 @@ curl -sS --proto '=https' -o /dev/null -w '%{redirect_url}\n' https://github.com
 
 The printed URL ends in `/tag/<tag>`. `<version>` is `<tag>` without the leading `v`. With no `/tag/` in the URL, GitHub has no Latest release: stop and say so.
 
-2. Match `<version>` to one row and follow that row from the top in this session. Run the commands yourself.
-   - `0.1.0`: the skill is https://github.com/openwizdev/WizSkills/blob/33eef93ba30cd8db256f6fe270e3ed28747a79bd/skills/install/SKILL.md and the command reference is [the 0.1.0 steps](docs/install.md#openwiz-010). Clone tag `v0.1.0`. When the skill cannot be read, follow those steps.
-   - `0.1.1`: the skill is https://github.com/openwizdev/WizSkills/blob/v0.4.0/skills/install/SKILL.md and the command reference is the numbered steps in [the install guide](docs/install.md). Those steps clone tag `v0.1.1`. When the skill cannot be read, follow those numbered steps.
-   - Any other `<tag>`: clone that tag with `git clone --depth 1 --branch <tag> https://github.com/openwizdev/OpenWiz "$openwiz"` and follow the install skill that clone records. Its `wizskills.lock` `version` is the WizSkills release, and the skill is `https://github.com/openwizdev/WizSkills/blob/v<version>/skills/install/SKILL.md`. When that clone has no `version`, stop and say this release records no install skill.
+2. Read that release's install skill and follow it from the top in this session. Run the commands yourself.
+   - `0.1.0`: the skill is https://github.com/openwizdev/WizSkills/blob/33eef93ba30cd8db256f6fe270e3ed28747a79bd/skills/install/SKILL.md and the command reference is [the 0.1.0 steps](docs/install.md#openwiz-010). Clone tag `v0.1.0`. When the skill cannot be read, follow those steps. This release's skill is that commit.
+   - Any other `<tag>`, including `v0.1.1`: clone that tag with `git clone --depth 1 --branch <tag> https://github.com/openwizdev/OpenWiz "$openwiz"`. Read `wizskills.lock` in that clone. The skill is `https://github.com/openwizdev/WizSkills/blob/<commit>/skills/install/SKILL.md`, where `<commit>` is the lock's `commit`. The lock's `version` is that WizSkills release. The command reference is `docs/install.md` in the clone. When the skill cannot be read, follow that file and run each command yourself. The clone is already at `<tag>`. When the clone has no `wizskills.lock`, or the lock has no `commit`, stop and say so.
 
 CloudRoom is optional. Its install and sign-in run only when the person picks CloudRoom.
 
