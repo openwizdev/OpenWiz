@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os, subprocess, sys, tempfile
 
-HERE = os.path.dirname(os.path.abspath(__file__))
+HERE = os.path.dirname(os.path.realpath(__file__))
 FAKE = os.path.join(HERE, 'fake')
 LIB = os.path.abspath(os.path.join(HERE, '..', '..', 'fixtures'))
 PROMPT = 'Build the ticket: example/site#7, with the build-ticket skill.'
@@ -12,13 +12,14 @@ WAKE_LINE = ['run', '--quiet', '--verbose', '--session', SID, '-y', '--', WAKE]
 REFUSED = {
     'api key flag': ['run', '--api-key', 'synthetic-canary-0000-2918', *START],
     'api key equals': ['run', '--api-key=synthetic-canary-0000-2918', *START],
-    'token equals in an argument': ['run', '--quiet', '--verbose', '--model', 'token=synthetic-canary-0000-2918', '-y',
-                                    '--', PROMPT],
-    'unlisted reasoning effort': [*START[:5], '--reasoning-effort', 'turbo', '--', PROMPT],
-    'double yolo': ['run', '--quiet', '--verbose', '--model', 'synthetic-1', '-yy', '--', PROMPT],
-    'session last': ['session', 'last', '--json'],
-    'prompt with no end of flags': ['run', '--quiet', '--verbose', '--model', 'synthetic-1', '-y', PROMPT],
-    'continue the newest session': ['run', '--quiet', '--verbose', '--continue', '-y', '--', PROMPT],
+    'key-shaped model': ['run', '--quiet', '--verbose', '--model', 'token=synthetic-canary-0000-2918', '-y', '--',
+                         PROMPT],
+    'unlisted reasoning effort': [*START[:6], '--reasoning-effort', 'turbo', '--', PROMPT],
+    'effort flag the command does not have': [*START[:6], '--effort', 'high', '--', PROMPT],
+    'session and continue together': ['run', '--quiet', '--verbose', '--session', SID, '--continue', '-y', '--',
+                                      PROMPT],
+    'no prompt': ['run', '--quiet', '--verbose', '--model', 'synthetic-1', '-y'],
+    'unknown flag': ['run', '--quiet', '--verbose', '--model', 'synthetic-1', '-y', '--bogus', '--', PROMPT],
     'missing run': ['--quiet', '--verbose', '--model', 'synthetic-1', '-y', '--', PROMPT],
 }
 SIGNED_OUT = "no providers configured - please run 'crush' to set up a provider interactively"
@@ -38,7 +39,7 @@ for name, argv in REFUSED.items():
         failed += 1
         print('fail %s: exited %s, not 2' % (name, got.returncode))
 
-with_effort = [*START[:5], '--reasoning-effort', 'high', '--', PROMPT]
+with_effort = [*START[:6], '--reasoning-effort', 'high', '--', PROMPT]
 with tempfile.TemporaryDirectory() as tmp:
     allowed = run(with_effort, FAKE_CLI_RECORD_ONLY='1', FAKE_CLI_RECORD=os.path.join(tmp, 'start'))
     woke = run(WAKE_LINE, FAKE_CLI_RECORD_ONLY='1', FAKE_CLI_RECORD=os.path.join(tmp, 'wake'))
