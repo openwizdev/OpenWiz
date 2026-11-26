@@ -159,6 +159,9 @@ def look(pid):
     except (OSError, subprocess.TimeoutExpired):
         return None, None
     if done.returncode != 0:
+        err = done.stderr.lower()
+        if err.strip() and 'no such' not in err:
+            return None, None
         return False, None
     start = done.stdout.strip()
     return (True, start) if start else (None, None)
@@ -207,16 +210,31 @@ def launch(argv):
     return {'pid': process.pid, 'start': start if alive else None}
 
 
+def carries(pid, run):
+    needle = ('OPENWIZ_SSH_RUN=%s' % run).encode()
+    try:
+        with open('/proc/%d/environ' % pid, 'rb') as handle:
+            return needle in handle.read()
+    except OSError:
+        return False
+
+
 def end(run, records):
-    victims = {record['pid'] for record in records if ours(record) is True}
-    victims |= set(marked(run))
     for sig, pause in ((signal.SIGTERM, 0.2), (signal.SIGKILL, 0.2)):
+        victims = {record['pid'] for record in records if isinstance(record, dict) and ours(record) is True}
+        victims |= {pid for pid in marked(run) if pid > 1 and carries(pid, run)}
+        sent = False
         for pid in victims:
+            if pid <= 1:
+                continue
             try:
                 os.kill(pid, sig)
             except OSError:
                 pass
-        time.sleep(pause)
+            else:
+                sent = True
+        if sent:
+            time.sleep(pause)
 
 
 def answer(value):

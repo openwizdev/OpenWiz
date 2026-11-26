@@ -75,7 +75,7 @@ class SshDriver(unittest.TestCase):
 
     def test_a_name_that_contains_key_is_refused_before_ssh_starts(self):
         value = 'canary-synthetic-0123456789'
-        for name in ('MYKEY', 'APIKEY'):
+        for name in ('MYKEY', 'APIKEY', 'MYTOKEN', 'MYPASSWORD', 'mykey'):
             with self.subTest(name=name):
                 if os.path.exists(self.log):
                     os.remove(self.log)
@@ -128,6 +128,55 @@ class SshDriver(unittest.TestCase):
         code, stopped = self.call('stop', {'run': out['run']})
         self.assertEqual(code, 0, stopped)
         self.assertIsNone(victim.poll())
+
+    def test_a_recycled_pid_with_a_different_start_time_is_not_signalled(self):
+        code, out = self.call('start', START, OPENWIZ_SSH_HOLD='30')
+        self.assertEqual(code, 0, out)
+        path = os.path.join(self.env['OPENWIZ_SSH_STATE'], out['run'] + '.json')
+        with open(path) as handle:
+            state = json.load(handle)
+        record = state['pids'][0]
+        pid = record['pid']
+        self.assertNotEqual(record['start'], '1')
+        record['start'] = '1'
+        with open(path, 'w') as handle:
+            json.dump(state, handle)
+        self.addCleanup(self.reap, pid)
+        code, woke = self.call('wake', {'run': out['run']})
+        self.assertEqual(code, 0, woke)
+        self.assertEqual(len(self.lines(2)), 2)
+        with open(path) as handle:
+            saved = json.load(handle)
+        self.assertNotEqual(saved['pids'][-1].get('pid'), pid)
+        self.assertTrue(self.running(pid))
+        code, stopped = self.call('stop', {'run': out['run']})
+        self.assertEqual(code, 0, stopped)
+        self.assertTrue(self.running(pid))
+
+    def lines(self, count):
+        deadline = time.time() + 2
+        rows = []
+        while time.time() < deadline:
+            if os.path.exists(self.log):
+                with open(self.log) as handle:
+                    rows = [json.loads(line) for line in handle if line.strip()]
+            if len(rows) >= count:
+                return rows
+            time.sleep(0.05)
+        return rows
+
+    def running(self, pid):
+        try:
+            os.kill(pid, 0)
+        except OSError:
+            return False
+        return True
+
+    def reap(self, pid):
+        try:
+            os.kill(pid, 15)
+        except OSError:
+            pass
 
     def test_kit_passes_all_five(self):
         process = subprocess.run([sys.executable, '-I', os.path.join(KIT, 'kit.py'), '--driver', DRIVER,
