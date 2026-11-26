@@ -80,7 +80,13 @@ def errors(value, schema, root, at="$"):
                     chosen = [report]
                     break
             if not chosen:
-                chosen = [report for _, report in reports]
+                typed = []
+                for sub, report in reports:
+                    spec = resolve(sub, root).get("type")
+                    names = spec if isinstance(spec, list) else [spec] if spec else []
+                    if names and any(type_ok(value, name) for name in names):
+                        typed.append(report)
+                chosen = typed or [report for _, report in reports]
             for report in chosen:
                 found.extend(report)
     if "if" in schema:
@@ -153,6 +159,49 @@ def direction_holds(delta):
         return False
     want = "up" if delta["value"] > 0 else "down" if delta["value"] < 0 else "flat"
     return delta["direction"] == want
+
+
+def coverage(metric, at, cost):
+    found = []
+    known, total = metric["known_count"], metric["total_count"]
+    if known > total:
+        found.append(f"{at}: known_count above total_count")
+    if cost and metric["state"] == "known" and known != total:
+        found.append(f"{at}: known cost must cover every pull request")
+    if cost and metric["state"] == "partial" and not 0 < known < total:
+        found.append(f"{at}: partial cost must be a strict subset")
+    return found
+
+
+def delta_rules(delta, at):
+    found = []
+    if delta["total_count"] != 2:
+        found.append(f"{at}: total_count is not 2")
+    if delta["known_count"] > delta["total_count"]:
+        found.append(f"{at}: known_count above total_count")
+    if delta["state"] in ("known", "partial") and delta["known_count"] != 2:
+        found.append(f"{at}: a numeric delta counts both weeks")
+    if not direction_holds(delta):
+        found.append(f"{at}: direction does not match the value")
+    return found
+
+
+def outside(doc):
+    if doc.get("kind") not in ("report", "aggregate"):
+        return []
+    found = []
+    try:
+        aligned = windows_hold(doc)
+    except (KeyError, ValueError):
+        aligned = False
+    if not aligned:
+        found.append("$.windows: not the fixed-PST pair")
+    for side, metrics in doc["metrics"].items():
+        for name, metric in metrics.items():
+            found += coverage(metric, f"$.metrics.{side}.{name}", name in COST)
+    for name, delta in doc["week_over_week"].items():
+        found += delta_rules(delta, f"$.week_over_week.{name}")
+    return found
 
 
 def pin_of(text):
@@ -248,6 +297,41 @@ class Proof(unittest.TestCase):
         raw = (INVALID / "repeated-key.json").read_text(encoding="utf-8")
         with self.assertRaises(ValueError):
             json.loads(raw, object_pairs_hook=pairs)
+
+    def test_rules_the_schema_cannot_see(self):
+        for name in ("report-opted-in.json", "report-opted-out.json", "report-partial.json",
+                     "report-zero-merges.json", "aggregate.json"):
+            self.assertEqual(outside(self.valid[name]), [], name)
+        report = json.loads(json.dumps(self.valid["report-opted-in.json"]))
+        report["metrics"]["this_week"]["money_saved_usd"]["net_of_known_cost_usd"] = -12.5
+        self.assertEqual(self.validate(report), [], "a negative net is a measured loss")
+        self.assertEqual(outside(report), [])
+        report["metrics"]["this_week"]["merged_prs"]["value"] = 4.5
+        self.assertIn("not integer", "\n".join(self.validate(report)))
+        report = json.loads(json.dumps(self.valid["report-opted-in.json"]))
+        report["metrics"]["this_week"]["hours_saved"]["value"] = -1
+        self.assertIn("below 0", "\n".join(self.validate(report)))
+        report = json.loads(json.dumps(self.valid["report-opted-in.json"]))
+        report["metrics"]["this_week"]["merged_prs"]["known_count"] = 5
+        report["metrics"]["this_week"]["merged_prs"]["total_count"] = 1
+        self.assertEqual(self.validate(report), [])
+        self.assertIn("known_count above total_count", "\n".join(outside(report)))
+        report = json.loads(json.dumps(self.valid["report-opted-in.json"]))
+        report["metrics"]["this_week"]["cost_per_merged_pr_credits"]["known_count"] = 1
+        self.assertEqual(self.validate(report), [])
+        self.assertIn("known cost must cover every pull request", "\n".join(outside(report)))
+        report = json.loads(json.dumps(self.valid["report-opted-in.json"]))
+        report["week_over_week"]["merged_prs"]["direction"] = "down"
+        self.assertEqual(self.validate(report), [])
+        self.assertIn("direction does not match the value", "\n".join(outside(report)))
+        report = json.loads(json.dumps(self.valid["report-opted-in.json"]))
+        report["windows"]["this_week"]["start"] = "2030-01-09T08:00:00Z"
+        self.assertEqual(self.validate(report), [])
+        self.assertIn("not the fixed-PST pair", "\n".join(outside(report)))
+        report = json.loads(json.dumps(self.valid["report-opted-in.json"]))
+        report["week_over_week"]["merged_prs"]["total_count"] = 1
+        self.assertEqual(self.validate(report), [])
+        self.assertIn("total_count is not 2", "\n".join(outside(report)))
 
     def test_fixtures_use_synthetic_identifiers_only(self):
         blobs = [self.contract, SCHEMA_PATH.read_text(encoding="utf-8")]

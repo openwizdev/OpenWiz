@@ -10,9 +10,10 @@ no GitHub read, no ledger read, and no telemetry upload. A fixture that passes
 proves the documents agree, never that a meter has run.
 
 Where this prose and [`value-meter.v1.schema.json`](value-meter.v1.schema.json)
-disagree, the contract is wrong and must be fixed. Rules a schema cannot see
-(duplicate keys, window arithmetic, and which states may be partial) are
-stated here and checked by `contracts/fixtures/value-meter/test_fixtures.py`.
+disagree, the contract is wrong and must be fixed. Rules a schema cannot see (duplicate keys, window arithmetic,
+`known_count` against `total_count`, cost-state coverage, a delta
+`total_count` of 2, and direction against the sign of the value) are stated
+here and checked by `contracts/fixtures/value-meter/test_fixtures.py`.
 
 ## The pin
 
@@ -146,12 +147,19 @@ never greater than `total_count`. For a cost metric, `known` requires
 `0 < known_count < total_count`. `known_count == 0` is `unknown`, not a zero
 cost.
 
+`merged_prs` `value`, when known, is a nonnegative integer. A numeric
+`hours_saved`, gross `money_saved_usd`, or cost-per-pull-request `value` is
+nonnegative. The net is the only money figure that may be negative.
+
 `money_saved_usd` also has `net_of_known_cost_usd` and `net_reason`. `value`
-is the gross saving. The net is gross minus the sum of known `cost_usd` on
-the pull requests in that window, and only when every one of those pull
-requests has a known USD cost. Otherwise the net is `null` and `net_reason`
-is non-empty. A null net is not stored as zero. When the net is a number,
-`net_reason` is `null`.
+is the gross saving. The net is that gross minus the sum of `cost_usd` on
+the pull requests in the window. It is a finite number only when the gross
+is known, the window contains at least one pull request, and every one of
+those pull requests has a known USD cost. That number may be negative when
+the cost exceeds the gross. Otherwise the net is `null` and `net_reason` is
+non-empty. A null net is not stored as zero. When the net is a number,
+`net_reason` is `null`. A complete window with no merged pull request keeps
+a null net, because there is no USD cost to subtract.
 
 ### How each figure is computed
 
@@ -239,7 +247,7 @@ object cannot repeat a key.
 | `report-opted-in.json` | Both weeks known, including a measured net |
 | `report-opted-out.json` | Every metric unknown, no invented zero |
 | `report-partial.json` | Hours unconfigured, partial credit cost, mixed deltas |
-| `report-zero-merges.json` | Complete read, `merged_prs` 0, cost per PR unknown |
+| `report-zero-merges.json` | Complete read, `merged_prs` 0, cost per PR unknown, net null |
 | `aggregate.json` | The same known weeks with no repository text |
 
 Run:

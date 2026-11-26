@@ -25,8 +25,10 @@
       "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T08:00:00Z$"
     },
     "nonnegative": {"type": "number", "minimum": 0},
+    "finite": {"type": "number"},
     "positive": {"type": "number", "exclusiveMinimum": 0},
     "nullable_nonnegative": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/nonnegative"}]},
+    "nullable_number": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/finite"}]},
     "nullable_positive": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/positive"}]},
     "reason": {"type": ["string", "null"]},
     "count": {"type": "integer", "minimum": 0},
@@ -68,7 +70,7 @@
         },
         {
           "if": {"required": ["state"], "properties": {"state": {"const": "known"}}},
-          "then": {"properties": {"value": {"type": "number"}, "reason": {"type": "null"}}}
+          "then": {"properties": {"value": {"type": "number", "minimum": 0}, "reason": {"type": "null"}}}
         }
       ]
     },
@@ -82,7 +84,7 @@
         "known_count": {"$ref": "#/$defs/count"},
         "total_count": {"$ref": "#/$defs/count"},
         "reason": {"$ref": "#/$defs/reason"},
-        "net_of_known_cost_usd": {"$ref": "#/$defs/nullable_nonnegative"},
+        "net_of_known_cost_usd": {"$ref": "#/$defs/nullable_number"},
         "net_reason": {"$ref": "#/$defs/reason"}
       },
       "allOf": [
@@ -98,7 +100,7 @@
         },
         {
           "if": {"required": ["state"], "properties": {"state": {"const": "known"}}},
-          "then": {"properties": {"value": {"type": "number"}, "reason": {"type": "null"}}}
+          "then": {"properties": {"value": {"type": "number", "minimum": 0}, "reason": {"type": "null"}}}
         },
         {
           "if": {"required": ["net_of_known_cost_usd"], "properties": {"net_of_known_cost_usd": {"type": "null"}}},
@@ -130,7 +132,7 @@
           "if": {"required": ["state"], "properties": {"state": {"const": "known"}}},
           "then": {
             "properties": {
-              "value": {"type": "number"},
+              "value": {"type": "number", "minimum": 0},
               "reason": {"type": "null"},
               "known_count": {"minimum": 1}
             }
@@ -140,7 +142,7 @@
           "if": {"required": ["state"], "properties": {"state": {"const": "partial"}}},
           "then": {
             "properties": {
-              "value": {"type": "number"},
+              "value": {"type": "number", "minimum": 0},
               "reason": {"type": "string", "minLength": 1},
               "known_count": {"minimum": 1}
             }
@@ -159,7 +161,15 @@
         "cost_per_merged_pr_usd"
       ],
       "properties": {
-        "merged_prs": {"$ref": "#/$defs/count_metric"},
+        "merged_prs": {
+          "allOf": [
+            {"$ref": "#/$defs/count_metric"},
+            {
+              "if": {"required": ["state"], "properties": {"state": {"const": "known"}}},
+              "then": {"properties": {"value": {"type": "integer"}}}
+            }
+          ]
+        },
         "hours_saved": {"$ref": "#/$defs/count_metric"},
         "money_saved_usd": {"$ref": "#/$defs/money_metric"},
         "cost_per_merged_pr_credits": {"$ref": "#/$defs/cost_metric"},
