@@ -30,6 +30,11 @@ jobs:
           sparse-checkout: |
             /.github/actions/changelog/
             /.github/workflows/changelog.yml
+            /changes/
+            /tools/release/entry.py
+            /tools/release/check.py
+            /tools/release/repository.py
+            /tools/release/moved.json
       - name: Report checkout failure
         if: ${{ failure() && steps.checkout.outcome == 'failure' }}
         run: |
@@ -54,3 +59,17 @@ jobs:
       - name: Synthetic pull requests
         run: python3 -I .github/actions/changelog/test_check.py
       - uses: ./.github/actions/changelog
+      # #1768: fail the pull request when a changed changes/ line has no version
+      # milestone, instead of failing release notes after it merges.
+      - name: Changelog line version milestones
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          QUEUE_BASE: ${{ github.event.merge_group.base_sha }}
+        run: |
+          set -eu
+          if [ "$EVENT" = merge_group ]; then BASE="$QUEUE_BASE"; else BASE="$PR_BASE"; fi
+          test -n "$BASE"
+          git fetch --no-tags --depth=1 origin "$BASE"
+          python3 -I tools/release/entry.py --repo "$GITHUB_WORKSPACE" --base "$BASE" changes/

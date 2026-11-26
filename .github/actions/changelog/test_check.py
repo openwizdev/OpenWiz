@@ -158,6 +158,10 @@ sys.exit(reply.get("exit", 0))
         self.assertIn("persist-credentials: false", workflow)
         self.assertIn("python3 -I .github/actions/changelog/test_check.py", workflow)
         self.assertIn("uses: ./.github/actions/changelog", workflow)
+        self.assertIn(
+            'python3 -I tools/release/entry.py --repo "$GITHUB_WORKSPACE" --base "$BASE" changes/',
+            workflow)
+        self.assertIn("Changelog line version milestones", workflow)
 
     def test_checkout_failure_is_reported_only_when_checkout_failed(self):
         workflow = (HERE.parents[1] / "workflows/changelog.yml").read_text()

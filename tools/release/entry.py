@@ -1,11 +1,16 @@
+import sys
+from pathlib import Path
+
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import argparse
 import datetime
 import json
-from pathlib import Path
 import re
-import sys
 
 from repository import repository
-from check import Refused, blob, command, git_env, require, sha, shape, tree, unique
+from check import Refused, blob, command, git, git_env, require, sha, shape, tree, unique
 
 VERSION = r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
 GENERATED = {"CHANGELOG.md", "ROADMAP.md"}
@@ -203,15 +208,26 @@ def moved(doc):
 MOVED = moved(json.loads((Path(__file__).resolve().parent / "moved.json").read_text(), object_pairs_hook=unique))
 
 
-def sections(check, source, versions, excluded):
+def source_lines(check, source, excluded, only=None):
+    """The source check release notes use for every changes/ line.
+
+    `only` limits that check to those paths (a pull request's added or modified
+    lines). None checks the whole changes tree, which is what note generation does.
+    A recorded exclusion is left out. A moved line whose OpenWiz ticket is absent
+    must be one of those exclusions. Every other line is read with issue(), which
+    refuses a missing or non-version milestone.
+    """
     a = check.args
-    tickets = []
     paths = tree(a.repo, source, ["changes"])
+    universe = paths if only is None else only
     lines = {}
-    for path in paths:
+    for path in universe:
         if path != "changes/README.md" and not path.startswith("changes/notes/"):
             lines[path] = re.fullmatch(CHANGE, path)
             require(lines[path] is not None, f"entry: invalid changelog filename {path}")
+            if only is not None:
+                require(path in paths, f"entry: missing changelog source {path}")
+    tickets = []
     for path, match in lines.items():
         number = int(match[2])
         old = bool(match[1]) or (number in MOVED and f"changes/closedwiz-{number}.md" not in paths)
@@ -231,6 +247,16 @@ def sections(check, source, versions, excluded):
         require(lookup is not None, f"entry: {path}: ClosedWiz #{number} has no OpenWiz ticket: "
                 "record it as an exclusion")
         tickets.append((number, path, moved_issue(a.repo, lookup, number if old else None)))
+    return paths, tickets
+
+
+def changed_changelog_paths(repo, base, source, directory):
+    output = git(repo, "diff", "--name-only", "--diff-filter=ACMR", "-M", base, source, "--", directory)
+    return [line for line in output.decode("utf-8").splitlines() if line]
+
+
+def sections(check, source, versions, excluded):
+    paths, tickets = source_lines(check, source, excluded)
     missing = sorted(set(excluded) - set(paths))
     require(not missing, "entry: excluded source missing: " + ", ".join(missing))
     names = [v["version"] for v in versions]
@@ -359,3 +385,47 @@ def generate(check, source, base_files):
             log=a.evidence/"roadmap.log")
     check.entry_text = text
     return {"CHANGELOG.md": changelog, "ROADMAP.md": roadmap.read_bytes()}
+
+
+def main(argv=None):
+    """Check added or modified changes/ lines against the source rules.
+
+    `changes/` with `--base` checks the diff. Explicit files are checked at `--source`.
+    """
+    parser = argparse.ArgumentParser(prog="entry.py", description="Check changes/ lines for a version milestone.")
+    parser.add_argument("--repo", required=True)
+    parser.add_argument("--base", help="with a changes directory, check lines added or modified since this commit")
+    parser.add_argument("--source", default="HEAD")
+    parser.add_argument("paths", nargs="+")
+    args = parser.parse_args(argv)
+    repo = str(Path(args.repo).resolve())
+    selected = []
+    for path in args.paths:
+        normalized = path[2:] if path.startswith("./") else path
+        if normalized in {"changes", "changes/"} or normalized.endswith("/"):
+            require(args.base, "entry: checking a changes directory needs --base")
+            selected.extend(changed_changelog_paths(repo, args.base, args.source, normalized.rstrip("/")))
+        else:
+            selected.append(normalized)
+    ordered = []
+    for path in selected:
+        if path == "changes/README.md" or path.startswith("changes/notes/"):
+            continue
+        if path not in ordered:
+            ordered.append(path)
+    if not ordered:
+        print("entry: pass (no changed changelog line)")
+        return 0
+    check = argparse.Namespace(args=argparse.Namespace(repo=repo))
+    source_lines(check, args.source, {}, only=ordered)
+    noun = "changelog line" if len(ordered) == 1 else "changelog lines"
+    print(f"entry: pass ({len(ordered)} {noun})")
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except Refused as error:
+        print(error, file=sys.stderr)
+        sys.exit(1)
