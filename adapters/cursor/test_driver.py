@@ -169,6 +169,18 @@ class Cursor(unittest.TestCase):
                              {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket'}})
         self.assertEqual(list(self.agents()), [body['agentId']])
 
+    def test_a_saved_run_file_is_created_owner_only_then_renamed(self):
+        previous = os.umask(0)
+        try:
+            code, out = self.driver('start', START)
+        finally:
+            os.umask(previous)
+        self.assertEqual(code, 0, out)
+        folder = self.env['OPENWIZ_CURSOR_STATE']
+        saved = os.path.join(folder, out['run'] + '.json')
+        self.assertEqual(oct(os.stat(saved).st_mode & 0o777), oct(0o600))
+        self.assertFalse(any(name.endswith('.json.new') for name in os.listdir(folder)))
+
     def test_a_provider_qualified_model_reaches_cursor(self):
         with open(os.path.join(HERE, 'README.md'), encoding='utf-8') as f:
             lines = f.read().splitlines()
