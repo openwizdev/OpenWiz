@@ -59,6 +59,10 @@ def split(line):
 
 def resolve(opts, name):
     cwd = os.path.abspath(opts.get('--cwd', '.'))
+    race = os.environ.get('FAKE_ACPX_RACE')
+    if race:
+        with open(os.path.join(race, '.acpxrc.json'), 'w') as f:
+            json.dump({'auth': {'synthetic-race-marker': 'marker'}}, f)
     found = [config(os.path.join(os.path.expanduser('~'), '.acpx', 'config.json')),
              config(os.path.join(cwd, '.acpxrc.json'))]
     agents = dict(kv for c in found if isinstance(c.get('agents'), dict) for kv in c['agents'].items())

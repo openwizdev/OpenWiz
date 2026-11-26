@@ -120,8 +120,9 @@ class OpenClaw(unittest.TestCase):
             return []
         return calls
 
-    def adapter(self):
-        return ['env', 'HOME=' + self.home] + CLAUDE
+    def adapter(self, run):
+        script = "cd '%s' && exec %s" % (os.path.join(self.state, 'work', run), ' '.join(CLAUDE))
+        return ['env', 'HOME=' + self.home, 'sh', '-c', script]
 
     def acpx(self):
         return [c['args'] for c in self.seen()]
@@ -174,7 +175,7 @@ class OpenClaw(unittest.TestCase):
                                                      ['prompt', '-s', run, '--no-wait'],
                                                      ['prompt', '-s', run, '--no-wait'], ['cancel', '-s', run],
                                                      ['sessions', 'close', run]])
-        self.assertEqual([c['ran'] for c in self.seen()], [self.adapter()] * 5)
+        self.assertEqual([c['ran'] for c in self.seen()], [self.adapter(run)] * 5)
         for c, (g, _) in zip(calls, split):
             self.assertNotIn('--approve-all', c)
             self.assertFalse(any('gateway' in a for a in c), c)
@@ -253,10 +254,11 @@ class OpenClaw(unittest.TestCase):
         self.assertTrue(self.until(lambda: len(self.logged()) == 1))
         self.assertEqual(self.driver('wake', out), (0, dict(out, woke=True)))
         self.assertEqual(self.driver('stop', out, FAKE_REMAP_ON_CANCEL='1'), (0, dict(out, stopped=True)))
-        self.assertTrue(os.path.exists(os.path.join(self.state, 'work', out['run'], '.acpxrc.json')))
         seen = self.seen()
+        cwd = seen[-1]['args'][seen[-1]['args'].index('--cwd') + 1]
+        self.assertTrue(os.path.exists(os.path.join(cwd, '.acpxrc.json')))
         self.assertEqual([c['auth'] for c in seen], [[]] * len(seen), 'acpx loaded the project config')
-        self.assertEqual([c['ran'] for c in seen], [self.adapter()] * 4)
+        self.assertEqual([c['ran'] for c in seen], [self.adapter(out['run'])] * 4)
         self.assertEqual(owned(), [])
 
     def test_a_project_acpx_config_in_the_run_folder_never_reaches_acpx(self):
@@ -302,7 +304,8 @@ class OpenClaw(unittest.TestCase):
         seen = self.seen()
         self.assertEqual(len(seen), 9)
         for c in seen:
-            self.assertEqual((c['ran'], c['auth']), (self.adapter(), []))
+            run = c['args'][c['args'].index('--cwd') + 1].rsplit('/', 1)[-1]
+            self.assertEqual((c['ran'], c['auth']), (self.adapter(run), []))
             self.assertTrue(c['home'].startswith(self.state + os.sep), c['home'])
             self.assertFalse(os.path.exists(os.path.join(c['home'], '.acpx', 'config.json')))
 

@@ -53,14 +53,25 @@ class Project(Refused):
     pass
 
 
+def shell(text):
+    return "'" + text.replace("'", "'\\''") + "'"
+
+
 def acpx(run, *args, harness):
-    project = os.path.join(STATE, 'work', run, '.acpxrc.json')
+    work = os.path.join(STATE, 'work', run)
+    project = os.path.join(work, '.acpxrc.json')
     if os.path.lexists(project):
         raise Project('the run\'s folder holds %s, an acpx project config, so acpx was not run' % project,
                       'delete that file without opening it (the driver never reads it), then try again')
+    folder = os.path.join(STATE, 'acpx', run)
+    os.makedirs(folder, mode=0o700, exist_ok=True)
+    launch = os.path.join(folder, '.acpxrc.json')
+    if os.path.lexists(launch):
+        raise Project('the acpx launch folder holds %s, an acpx project config, so acpx was not run' % launch,
+                      'delete that file without opening it (the driver never reads it), then try again')
     home = ''.join('\\' + c for c in os.path.expanduser('~'))
-    return ['acpx', '--cwd', os.path.join(STATE, 'work', run), '--agent',
-            'env HOME=%s %s' % (home, AGENTS[harness])] + list(args)
+    agent = 'env HOME=%s sh -c %s' % (home, shell('cd %s && exec %s' % (shell(work), AGENTS[harness])))
+    return ['acpx', '--cwd', folder, '--agent', agent] + list(args)
 
 
 def opening(req, run):
