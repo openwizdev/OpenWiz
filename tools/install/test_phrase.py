@@ -2,7 +2,6 @@
 import importlib.util
 import json
 import re
-import subprocess
 import unittest
 from pathlib import Path
 
@@ -21,7 +20,9 @@ SKILL_010 = ('https://github.com/openwizdev/WizSkills/blob/'
              '33eef93ba30cd8db256f6fe270e3ed28747a79bd/skills/install/SKILL.md')
 SKILL_TAG = re.compile(
     r'https://github\.com/openwizdev/WizSkills/blob/(v[0-9][^/\s)]*)/skills/install/SKILL\.md')
-OPEN_RANGE = re.compile(r'\bor later\b|\bonward\b|\band later\b|\bor newer\b')
+OPEN_RANGE = re.compile(r'\bv?\d+\.\d+\.\d+\s+(?:or later|or newer|and later|onward)\b')
+NAMED_SKILL = re.compile(r'WizSkills (\d+\.\d+\.\d+)')
+MISSING_LOCK = 'lock has no `commit`, stop and say so'
 TAG_PATTERN = r'v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)'
 COMMIT_PATTERN = r'[0-9a-f]{40}'
 REPO = 'https://github.com/openwizdev/OpenWiz'
@@ -47,30 +48,11 @@ def lock_pin():
     return version, commit
 
 
-def published_commit(version):
-    if re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', version) is None:
-        raise ValueError('version')
-    ref = 'refs/tags/v%s^{}' % version
-    done = subprocess.run(
-        ['git', 'ls-remote', 'https://github.com/openwizdev/WizSkills.git', ref],
-        cwd='/', capture_output=True, text=True, timeout=60)
-    if done.returncode != 0:
-        raise AssertionError('wizskills tag v%s' % version)
-    found = []
-    for line in done.stdout.splitlines():
-        oid, _, name = line.partition('\t')
-        if name == ref and re.fullmatch(COMMIT_PATTERN, oid):
-            found.append(oid)
-    if len(found) != 1:
-        raise AssertionError('wizskills tag v%s' % version)
-    return found[0]
-
-
 def pin_failures(section, guide, version):
     failures = []
     if 'wizskills.lock' not in section or '<commit>' not in section:
         failures.append('the agent section does not derive the skill from the release tag\'s wizskills.lock commit')
-    if 'stop and say so' not in section:
+    if MISSING_LOCK not in section:
         failures.append('a release with no wizskills.lock commit does not stop')
     if SAFE_CLONE not in section:
         failures.append('the agent section clones without -- before the repository')
@@ -90,8 +72,9 @@ def pin_failures(section, guide, version):
         failures.append('the install guide clones --branch v0.1.1')
     for tag in SKILL_TAG.findall(guide):
         failures.append('the install guide hardcodes %s; wizskills.lock is %s' % (tag, version))
-    if 'WizSkills 0.4.0' in guide and version != '0.4.0':
-        failures.append('the install guide names WizSkills 0.4.0 while wizskills.lock is %s' % version)
+    for named in NAMED_SKILL.findall(guide):
+        if named != version:
+            failures.append('the install guide names WizSkills %s while wizskills.lock is %s' % (named, version))
     return failures
 
 
@@ -161,7 +144,7 @@ class InstallPhrase(unittest.TestCase):
         self.assertNotEqual(commit, '33eef93ba30cd8db256f6fe270e3ed28747a79bd')
         self.assertNotIn('blob/%s/' % commit, section)
         self.assertNotIn('blob/%s/' % commit, guide)
-        self.assertEqual(commit, published_commit(version))
+        self.assertIn(MISSING_LOCK, section)
         self.assertIn('including `v0.1.1`', section)
         self.assertIn('openwiz=$(mktemp -d)', section)
         self.assertIn("not the `commit` in that tag's `wizskills.lock`", section)
@@ -174,14 +157,50 @@ class InstallPhrase(unittest.TestCase):
         self.assertIn('hard `GLIBC_2.39` requirement does not start', guide)
         self.assertIn('docs/install.md#openwiz-010', (ROOT / 'README.md').read_text(encoding='utf-8'))
 
-    def test_a_lock_that_only_matches_itself_is_not_the_published_tag(self):
-        version, commit = lock_pin()
-        source = published_commit(version)
+    def test_a_lock_that_only_matches_itself_is_not_proof(self):
+        _, commit = lock_pin()
         forged = 'a' * 40
         forged_lock = (ROOT / 'wizskills.lock').read_text(encoding='utf-8').replace(commit, forged)
         self.assertIn(forged, forged_lock)
-        self.assertNotEqual(forged, source)
-        self.assertEqual(commit, source)
+        self.assertNotEqual(forged, commit)
+        self.assertNotIn('blob/%s/' % commit, self.section())
+
+    def test_each_pin_failure_is_its_own_case(self):
+        version = '9.9.9'
+        whole = TAG_PATTERN + ' ' + COMMIT_PATTERN + ' whole value'
+        section = 'wizskills.lock <commit> ' + MISSING_LOCK + '\n' + SAFE_CLONE + '\n' + whole
+        guide = 'wizskills.lock ' + whole + '\n' + SAFE_CLONE + '\n'
+        self.assertEqual(pin_failures(section, guide, version), [])
+        python_only = section + '\nYou need Python 3.9 or later.\n'
+        self.assertEqual(pin_failures(python_only, guide, version), [])
+        cases = (
+            (section.replace('wizskills.lock', 'lockfile'), guide, 'does not derive'),
+            (section.replace('<commit>', '<sha>'), guide, 'does not derive'),
+            (section.replace(MISSING_LOCK, 'GitHub has no Latest release: stop and say so'), guide, 'does not stop'),
+            (section.replace(SAFE_CLONE, 'git clone --branch "$tag" ' + REPO), guide, 'clones without'),
+            (section.replace(TAG_PATTERN, 'v[0-9]+'), guide, 'whole tag'),
+            (section.replace(COMMIT_PATTERN, '[0-9a-f]+'), guide, 'whole tag'),
+            (section.replace('whole value', 'a prefix'), guide, 'whole tag'),
+            (section + '\n--branch v0.1.1\n', guide, 'clones v0.1.1'),
+            (section + '\nhttps://github.com/openwizdev/WizSkills/blob/v9.9.9/skills/install/SKILL.md\n',
+             guide, 'hardcodes v9.9.9'),
+            (section + '\n0.1.1 or later https://github.com/openwizdev/WizSkills/blob/v1.2.3/skills/install/SKILL.md\n',
+             guide, 'open-ended range'),
+            (section, guide.replace('wizskills.lock', 'lockfile'), 'does not name wizskills.lock'),
+            (section, guide.replace(SAFE_CLONE, 'git clone --branch <tag> ' + REPO), 'whole-value'),
+            (section, guide.replace(TAG_PATTERN, 'v[0-9]+'), 'whole-value'),
+            (section, guide.replace('whole value', 'a prefix'), 'whole-value'),
+            (section, guide + '\n--branch v0.1.1\n', 'clones --branch v0.1.1'),
+            (section, guide + '\nhttps://github.com/openwizdev/WizSkills/blob/v1.2.3/skills/install/SKILL.md\n',
+             'hardcodes v1.2.3'),
+            (section, guide + '\nWizSkills 1.2.3\n', 'names WizSkills 1.2.3'),
+        )
+        for bad_section, bad_guide, needle in cases:
+            with self.subTest(needle=needle):
+                failures = pin_failures(bad_section, bad_guide, version)
+                self.assertTrue(any(needle in item for item in failures), failures)
+        same = pin_failures(section, guide + '\nWizSkills 9.9.9\n', version)
+        self.assertFalse(any('names WizSkills' in item for item in same), same)
 
     def test_a_stale_pin_fails_even_when_the_urls_are_present(self):
         version, _ = lock_pin()
