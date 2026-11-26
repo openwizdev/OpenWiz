@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
-from contextlib import contextmanager
+from contextlib import contextmanager, redirect_stderr
 import argparse
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
+import runpy
 import subprocess
 import sys
 import tempfile
+import unittest
 
 DESCRIPTION = """Small integration with the repository's real fixture dispatch and Rust fake.
 
@@ -151,12 +154,45 @@ def receipt_case(cli, fake, case):
         print(json.dumps({'case': case, 'result': 'pass', 'tells': tells, 'spawns': spawns, 'live': 'not_run'}))
 
 
-def main():
+KEEPER = 'test_smoke.Sheet.test_driver_steps_start_wake_and_stop_one_run_through_the_runner'
+RETIRED_RECEIPT_CASES = {
+    'ready-preview': KEEPER,
+    'accepted-send': KEEPER,
+    'queued-send': KEEPER,
+}
+
+
+def argument_parser():
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument('--cli', required=True, type=Path)
     parser.add_argument('--fake', required=True, type=Path)
     parser.add_argument('--case', choices=['integration', 'ready-preview', 'accepted-send', 'queued-send'], default='integration')
-    args = parser.parse_args()
+    return parser
+
+
+class RetiredReceiptCases(unittest.TestCase):
+    def test_receipt_case_is_gone(self):
+        self.assertEqual([name for name in globals() if name == 'receipt_case'], [])
+
+    def test_retired_receipt_cases_are_refused_and_name_their_keeper(self):
+        parser = argument_parser()
+        sink = io.StringIO()
+        for case, keeper in RETIRED_RECEIPT_CASES.items():
+            with self.subTest(case=case):
+                with redirect_stderr(sink):
+                    with self.assertRaises(SystemExit) as caught:
+                        parser.parse_args(['--cli', 'synthetic-cli', '--fake', 'synthetic-fake', '--case', case])
+                self.assertEqual(caught.exception.code, 2)
+                self.assertEqual(keeper, KEEPER)
+        self.assertEqual(parser.parse_args(['--cli', 'synthetic-cli', '--fake', 'synthetic-fake']).case, 'integration')
+        self.assertTrue(callable(integration))
+        method = KEEPER.rpartition('.')[2]
+        sheet = runpy.run_path(str(HERE / 'test_smoke.py'))['Sheet']
+        self.assertTrue(callable(getattr(sheet, method)))
+
+
+def main():
+    args = argument_parser().parse_args()
     cli, fake = args.cli.resolve(), args.fake.resolve()
     if args.case == 'integration':
         integration(cli, fake)
@@ -165,4 +201,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    if '--cli' not in sys.argv and '--help' not in sys.argv and '-h' not in sys.argv:
+        unittest.main()
+    else:
+        main()
