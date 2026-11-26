@@ -1,11 +1,4 @@
 #!/usr/bin/env python3
-"""P1 (#3290): the value-meter contract's schema accepts the valid fixtures and rejects the invalid ones.
-
-Offline and credential-free. It reads only contracts/. Run it from anywhere:
-
-    python3 -I contracts/fixtures/value-meter/test_fixtures.py
-    python3 -I contracts/fixtures/value-meter/test_fixtures.py demo
-"""
 import json
 import math
 from datetime import datetime, timedelta, timezone
@@ -69,7 +62,6 @@ def type_ok(value, kind):
 
 
 def errors(value, schema, root, at="$"):
-    """The subset of JSON Schema this contract uses. A list of failures, empty when it holds."""
     schema = resolve(schema, root)
     found = []
     if "allOf" in schema:
@@ -183,7 +175,6 @@ class Proof(unittest.TestCase):
         return errors(document, self.schema, self.schema)
 
     def test_valid_fixtures_match_the_schema(self):
-        # catches: a fixture the contract names that the schema rejects.
         self.assertGreaterEqual(set(self.valid), {
             "config-opted-in.json", "config-opted-out.json", "pr-record-known.json",
             "pr-record-unknown.json", "collection-complete.json", "report-opted-in.json",
@@ -193,7 +184,6 @@ class Proof(unittest.TestCase):
             self.assertEqual(self.validate(document), [], name)
 
     def test_invalid_fixtures_fail_with_the_named_error(self):
-        # catches: a schema that accepts an invented zero, a bad repo, or a silent unknown.
         self.assertEqual(set(self.expect), set(self.invalid))
         for name, document in self.invalid.items():
             found = self.validate(document)
@@ -201,7 +191,6 @@ class Proof(unittest.TestCase):
             self.assertIn(self.expect[name], "\n".join(found), name)
 
     def test_windows_and_honesty_rules_hold_on_the_valid_reports(self):
-        # catches: a report whose weeks are unequal or whose unknown value is a number.
         for name in ("report-opted-in.json", "report-opted-out.json", "report-partial.json",
                      "report-zero-merges.json", "aggregate.json"):
             self.assertTrue(windows_hold(self.valid[name]), name)
@@ -235,7 +224,6 @@ class Proof(unittest.TestCase):
                 self.assertIsNone(value["value"])
 
     def test_the_aggregate_carries_no_repository_or_private_token(self):
-        # catches: an export that keeps a repo name, title, or thread id.
         text = json.dumps(self.valid["aggregate.json"])
         self.assertNotIn("repository", text)
         self.assertNotIn("synthetic-owner", text)
@@ -243,7 +231,6 @@ class Proof(unittest.TestCase):
         self.assertNotIn("/", text)
 
     def test_the_contract_pins_the_seam_and_the_schema_name(self):
-        # catches: a contract that drops the L1 section seam or renames the schema.
         self.assertEqual(self.pin["schema"], "openwiz.value-meter.v1")
         self.assertEqual(self.schema["title"], "openwiz.value-meter.v1")
         self.assertIn("render_section(report) -> str", self.contract)
@@ -253,7 +240,6 @@ class Proof(unittest.TestCase):
         self.assertEqual(self.pin["windows"]["boundary_utc"], "08:00:00Z")
 
     def test_a_non_finite_rate_and_a_repeated_key_are_refused(self):
-        # catches: a reader that keeps NaN or the last copy of a repeated key.
         config = dict(self.valid["config-opted-in.json"])
         config["hours_per_merged_pr"] = float("nan")
         self.assertNotEqual(self.validate(config), [])
@@ -264,7 +250,6 @@ class Proof(unittest.TestCase):
             json.loads(raw, object_pairs_hook=pairs)
 
     def test_fixtures_use_synthetic_identifiers_only(self):
-        # catches: a real thread id, home directory, or mailbox in the contract or fixtures.
         blobs = [self.contract, SCHEMA_PATH.read_text(encoding="utf-8")]
         blobs += [path.read_text(encoding="utf-8") for path in HERE.rglob("*.json")]
         for blob in blobs:
