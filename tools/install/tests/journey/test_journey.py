@@ -49,6 +49,9 @@ TARGET = 'x86_64-unknown-linux-gnu'
 VERSION = '0.0.99'
 NAME = 'openwiz-' + TARGET
 BASE = 'https://github.com/openwizdev/OpenWiz/releases/'
+# The pinned install skill still quotes this longer line. The public instruction
+# is `Install OpenWiz` (tools/install/test_phrase.py). Change this when that pin's
+# skill quotes the public phrase.
 LINE = 'Install OpenWiz from github.com/openwizdev/OpenWiz'
 ORDER = ['Preflight', 'Verified install', 'Setup and connections', 'Skills into your agents, then carry on', 'Teach',
          'The onboarding road']

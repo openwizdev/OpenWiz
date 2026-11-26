@@ -1,10 +1,10 @@
 # Install OpenWiz
 
-Paste this one line into the coding agent you already use (Claude Code, Codex or another):
+Tell your coding agent (Claude Code, Codex, Cursor or another):
 
-> Install OpenWiz from github.com/openwizdev/OpenWiz
+> Install OpenWiz
 
-The agent follows the [install skill](https://github.com/openwizdev/WizSkills/blob/v0.4.0/skills/install/SKILL.md). This page says what it does, the commands it runs, what it may change, and how to recover or remove it.
+That phrase is the whole install instruction. The agent follows [Install OpenWiz](../AGENTS.md#install-openwiz), which reads GitHub's Latest release and that release's install skill. The numbered steps below are for 0.1.1 and follow the [install skill](https://github.com/openwizdev/WizSkills/blob/v0.4.0/skills/install/SKILL.md). This page says what the install does, the commands it runs, what it may change, and how to recover or remove it. Those commands are the reference the agent runs.
 
 Using Grok Bot? See [Grok Bot + OpenWiz](grok-bot.md).
 

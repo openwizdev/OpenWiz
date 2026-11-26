@@ -17,6 +17,9 @@ sys.dont_write_bytecode = True
 
 DESCRIPTION = """OpenWiz's install entry (#1109): the commands the install skill runs.
 
+The install instruction is: Install OpenWiz. Say that to a coding agent. These
+commands are the reference that agent runs.
+
   install preflight
       Reads this machine only: Python, the supported target, free disk space,
       on Linux the glibc version (from ldd --version; 2.34 or later), and

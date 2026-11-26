@@ -12,8 +12,11 @@ Open `http://127.0.0.1:7370/#first-hour`. On a computer, **First hour** is
 also in the sidebar. On a phone, search for "Go to First hour". The page shows
 six steps, and each step shows only what OpenWiz has actually read:
 
-1. **Install OpenWiz.** Paste the one install line into your coding agent; see
-   [Install OpenWiz](install.md).
+1. **Install OpenWiz.** Tell your coding agent:
+
+   > Install OpenWiz
+
+   That phrase is the whole install instruction. See [Install OpenWiz](install.md).
 2. **Connect your accounts.** **Open setup** goes to the setup page. Each
    connection is checked on its own, and CloudRoom's one sign-in screen is on
    the CloudRoom step. Setup checks your agent harness login. It does not check

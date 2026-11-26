@@ -8,6 +8,30 @@ OpenWiz runs coding agents in fleets: the user approves a plan, and agents build
 - Once per clone, `git config core.hooksPath .githooks`: the pre-push hook runs the privacy check.
 - The skills read the project's settings in [`docs/agents/`](docs/agents/). Change a skill in WizSkills and move the `wizskills.lock` pin, never here.
 
+## Install OpenWiz
+
+The install instruction is exactly this phrase:
+
+> Install OpenWiz
+
+A person says that to their coding agent (Claude Code, Codex, Cursor or another). That phrase is enough to start. Ask only where your agents run, and for a yes before each change the install shows. The repository is https://github.com/openwizdev/OpenWiz. You need Python 3.9 or later, `git` and `gh`.
+
+1. Resolve the release:
+
+```sh
+curl -sS --proto '=https' -o /dev/null -w '%{redirect_url}\n' https://github.com/openwizdev/OpenWiz/releases/latest
+```
+
+The printed URL ends in `/tag/<tag>`. `<version>` is `<tag>` without the leading `v`. With no `/tag/` in the URL, GitHub has no Latest release: stop and say so.
+
+2. Read that release's install skill and follow it from the top in this session. Run the commands yourself.
+   - For `0.1.0`, the skill is https://github.com/openwizdev/WizSkills/blob/33eef93ba30cd8db256f6fe270e3ed28747a79bd/skills/install/SKILL.md and the command reference is [the 0.1.0 steps](docs/install.md#openwiz-010).
+   - For `0.1.1` or later, the skill is https://github.com/openwizdev/WizSkills/blob/v0.4.0/skills/install/SKILL.md and the command reference is the numbered steps in [the install guide](docs/install.md).
+
+3. When the skill cannot be read, follow the command reference in that same guide and run each command yourself. Clone `https://github.com/openwizdev/OpenWiz` at `<tag>` into a private temporary folder first.
+
+CloudRoom is optional. Its install and sign-in run only when the person picks CloudRoom.
+
 ## Public and private
 
 Everything on this repository is public; private records live in `jparker2006/ClosedWiz`. Before any public write, read the [public-writes card](docs/agents/public-writes.md); `python3 -I skills/launch-fleet/scripts/context.py <role>` prints it with your role's settings. Release, publishing, privacy-check and importer work also needs the full [open development contract](contracts/open-development.v1.md).
