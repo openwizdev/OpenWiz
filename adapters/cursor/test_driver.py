@@ -169,6 +169,29 @@ class Cursor(unittest.TestCase):
                              {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket'}})
         self.assertEqual(list(self.agents()), [body['agentId']])
 
+    def test_a_provider_qualified_model_reaches_cursor(self):
+        with open(os.path.join(HERE, 'README.md'), encoding='utf-8') as f:
+            lines = f.read().splitlines()
+        login = next(i for i, line in enumerate(lines) if line.startswith('Login:'))
+        following = next(line for line in lines[login + 1:] if line.strip())
+        self.assertTrue(following.startswith("Effort: the host can't set it"), following)
+        qualified = 'openrouter/anthropic/claude-sonnet-4.6'
+        longest = 'm' * 49 + '/' + 'n' * 50
+        self.assertEqual(len(longest), 100)
+        sent = []
+        for model in (qualified, longest):
+            code, out = self.driver('start', dict(START, model=model))
+            self.assertEqual(code, 0, out)
+            sent.append(json.loads(self.calls()[-1]['body'])['model']['id'])
+            self.assertEqual(self.driver('stop', out), (0, dict(out, stopped=True)))
+        self.assertEqual(sent, [qualified, longest])
+        before = len(self.calls())
+        over = longest + 'x'
+        code, err = self.driver('start', dict(START, model=over))
+        self.assertEqual((code, err), (1, {'error': 'model is not valid',
+                                            'next': 'fix model as `driver schema` shows'}))
+        self.assertEqual(len(self.calls()), before, 'a model past 100 characters was sent')
+
     def test_the_key_never_passes_through_the_driver(self):
         hosts = hostkey.registry()
         self.assertIn(HOST, hosts)
