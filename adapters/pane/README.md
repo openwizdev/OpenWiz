@@ -1,6 +1,7 @@
 # Pane driver
 
 Login: stays on your machine
+Effort: the host can't set it (Pane's `panes create` has no effort flag, and this driver adds none, so a start that names an effort is refused and creates nothing)
 
 A [driver v1](../../kernel/driver.v1.md) that runs each builder in its own Pane, through your own `runpane` CLI and the [Pane](https://runpane.com) app on your computer. A Pane is a git worktree on its own branch, with tabs; each run is one Pane with one agent tab. One Python file, standard library only. **Platforms:** Linux and macOS, Python 3.9 or later, wherever Pane runs; its fixture tests run on Linux (they check their own fake agents through `/proc`). Runs are saved in `$OPENWIZ_PANE_STATE` (default `~/.local/state/openwiz-pane`), owner-only.
 
@@ -8,11 +9,13 @@ A [driver v1](../../kernel/driver.v1.md) that runs each builder in its own Pane,
 
 | Command | What it does in Pane |
 | --- | --- |
-| `start` | Finds the one checkout saved in Pane (`runpane repos list`) whose `origin` remote is exactly that GitHub repository: every fetch and push URL, as your own `git remote get-url --all [--push] origin` resolves them (includes, `insteadOf` and `pushurl` applied, nothing contacted; git gets only `PATH`, `HOME`, `XDG_CONFIG_HOME`, `LANG` and `LC_ALL` from your environment, never a token or key). A fork of another owner, or a checkout whose URLs disagree, never matches. Then `runpane panes create --repo <its id> --name openwiz-<run> --agent <harness> --tool-command "<program> --model <model>" --prompt <the ticket and skill> --source agent --wait-ready`. It answers once Pane has seen the agent's input box and delivered the prompt. If the agent never gets ready, it closes the tab and archives the new Pane before refusing, also when Pane answers that failure with `ok: false`. |
-| `wake` | `runpane panels submit --panel <the run's tab>`: the same agent, in the same tab, reads its ticket again and edits its own status note. A stopped run is never woken. |
-| `stop` | `runpane panels close --force` closes the tab, which ends its agent even mid-turn. Then `runpane panes archive --remove-worktree` removes the Pane and its worktree; Pane keeps the local branch. The driver never forces an archive. When Pane refuses it, for example because the worktree holds work not yet committed or pushed, the driver keeps the Pane `openwiz-<run>` and its worktree on disk and still answers `stopped`: the agent has ended. Push or discard that work; a later stop of the same run tries the archive again, and also answers `stopped`. Only a tab Pane could not close makes stop answer an error. |
+| `start` | Finds the one checkout saved in Pane (`runpane repos list`) whose `origin` remote is exactly that GitHub repository: every fetch and push URL, as your own `git remote get-url --all [--push] origin` resolves them (includes, `insteadOf` and `pushurl` applied, nothing contacted; git gets only `PATH`, `HOME`, `XDG_CONFIG_HOME`, `LANG` and `LC_ALL` from your environment, never a token or key). A fork of another owner, or a checkout whose URLs disagree, never matches. Then `runpane panes create --repo <its id> --name openwiz-<run> --agent <harness> --tool-command "<program> --model <model>" --prompt <the ticket and skill> --source agent --wait-ready`. It answers once Pane has seen the agent's input box and delivered the prompt. If the agent never gets ready, it closes the tab and archives the new Pane before refusing, also when Pane answers that failure with `ok: false`. If `panes create` does not answer in time, the run is not marked stopped: its outcome is unknown, and the error names the run to stop. |
+| `wake` | `runpane panels submit --panel <the run's tab>`: the same agent, in the same tab, reads its ticket again and edits its own status note. A stopped run, or one whose start never finished, is never woken. |
+| `stop` | For a run whose `panes create` never answered, `runpane panes list` finds Pane `openwiz-<run>` and `runpane panels list` finds its one agent tab. If neither shows that Pane, nothing was started. If the lookup cannot tell, stop refuses and the run stays recoverable: it does not answer `stopped`. Otherwise `runpane panels close --force` closes the tab, which ends its agent even mid-turn. Then `runpane panes archive --remove-worktree` removes the Pane and its worktree; Pane keeps the local branch. The driver never forces an archive. When Pane refuses it, for example because the worktree holds work not yet committed or pushed, the driver keeps the Pane `openwiz-<run>` and its worktree on disk and still answers `stopped`: the agent has ended. Push or discard that work; a later stop of the same run tries the archive again, and also answers `stopped`. A tab Pane could not close also makes stop answer an error. |
 
-`version` adds `many-at-once` to `can`: Pane runs many Panes side by side.
+`version` adds `many-at-once` to `can`: Pane runs many Panes side by side. It does not list `effort`: a start that names one is refused and creates nothing.
+
+Each `runpane` call waits up to 100 seconds, or `OPENWIZ_PANE_RUNPANE_SECONDS` when that is a whole number from 1 to 100. A call that does not answer has an unknown outcome, and the driver does not call that run stopped.
 
 The tab is opened with `--source agent`, because Pane lets an agent close only a tab an agent opened.
 
@@ -55,3 +58,4 @@ It plays Pane and its agents. It keeps its Panes in the JSON file `FAKE_PANE_STA
 | `FAKE_PANE_READY` | `no`: the tab's command exits before its agent's input box is ready |
 | `FAKE_PANE_DIRTY` | `uncommitted` or `unpushed`: what archive's safety check finds in the worktree |
 | `FAKE_PANE_CALLS` | A file each call's arguments are appended to, one JSON array per line |
+| `FAKE_PANE_HANG` | `create`: the Pane and its agent are saved, then `panes create` never answers. `before-create`: `panes create` never answers and saves nothing. `list`: `panes list` never answers |

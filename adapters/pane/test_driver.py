@@ -104,7 +104,7 @@ class Pane(unittest.TestCase):
                            env=self.env, capture_output=True, text=True, timeout=300)
         self.assertEqual((p.returncode, p.stdout.splitlines()), (0, [
             'pass version: openwiz:records v1, and the schema is driver v1',
-            'pass start: the run posted builder status note 1',
+            'pass start: the run posted builder status note 1; effort: a start with it was refused, as the README\'s Effort: line says',
             'pass wake: the run edited builder status note 1',
             'pass stop: the run ended, and a wake after it is refused',
             'pass token: no login or token passed through the driver']), p.stderr)
@@ -207,6 +207,71 @@ class Pane(unittest.TestCase):
                 self.assertNotIn(value, json.dumps(out))
                 self.assertEqual([c for c in self.called() if value in json.dumps(c)], [])
         self.assertFalse([c for c in self.called() if c[:2] == ['panes', 'create']])
+
+    def test_a_provider_qualified_model_is_accepted_up_to_100_characters(self):
+        qualified = 'openrouter/anthropic/claude-sonnet-4.6'
+        wide = 'openrouter/' + 'a' * (100 - len('openrouter/'))
+        self.assertEqual(len(wide), 100)
+        for i, model in enumerate((qualified, wide)):
+            with self.subTest(model=model[:24]):
+                code, out = self.driver('start', dict(REQUEST, model=model),
+                                        FAKE_PANE_STATE=os.path.join(self.folder, 'pane-model-%d.json' % i))
+                self.assertEqual(code, 0, out)
+        commands = [c for c in self.called() if c[:2] == ['panes', 'create']]
+        self.assertEqual([c[c.index('--tool-command') + 1] for c in commands],
+                         ['claude --model ' + qualified, 'claude --model ' + wide])
+        code, out = self.driver('start', dict(REQUEST, model=wide + 'b'))
+        self.assertEqual(code, 1, out)
+        self.assertIn('model is not valid', out['error'])
+        self.assertEqual(len([c for c in self.called() if c[:2] == ['panes', 'create']]), 2)
+
+    def test_the_effort_line_is_directly_under_the_login_line(self):
+        with open(os.path.join(HERE, 'README.md')) as f:
+            lines = f.read().splitlines()
+        login = next(i for i, line in enumerate(lines) if line.startswith('Login:'))
+        self.assertTrue(lines[login + 1].startswith("Effort: the host can't set it"), lines[login:login + 2])
+        code, out = self.driver('start', dict(REQUEST, effort='medium'))
+        self.assertEqual(code, 1, out)
+        self.assertFalse([c for c in self.called() if c[:2] == ['panes', 'create']])
+
+    def runs(self):
+        return sorted(name[:-5] for name in os.listdir(self.env['OPENWIZ_PANE_STATE']) if name.endswith('.json'))
+
+    def saved_run(self, run):
+        with open(os.path.join(self.env['OPENWIZ_PANE_STATE'], run + '.json')) as f:
+            return json.load(f)
+
+    def test_a_create_that_times_out_stays_recoverable_until_stop_closes_the_agent(self):
+        code, out = self.driver('start', REQUEST, FAKE_PANE_HANG='create', OPENWIZ_PANE_RUNPANE_SECONDS='1')
+        self.assertEqual(code, 1, out)
+        self.assertNotIn('stopped', out)
+        [run] = self.runs()
+        self.assertIn(run, out['next'])
+        state = self.saved_run(run)
+        self.assertEqual((state['stopped'], state['pane'], state['panel']), (False, None, None))
+        agent = self.pane()['panels']['panel-1']['agent']
+        self.assertTrue(self.alive(agent))
+        code, refused = self.driver('stop', {'run': run}, FAKE_PANE_HANG='list', OPENWIZ_PANE_RUNPANE_SECONDS='1')
+        self.assertEqual(code, 1, refused)
+        self.assertNotIn('stopped', refused)
+        self.assertTrue(self.alive(agent))
+        self.assertFalse(self.saved_run(run)['stopped'])
+        self.assertEqual(self.driver('stop', {'run': run}, OPENWIZ_PANE_RUNPANE_SECONDS='1'),
+                         (0, {'run': run, 'stopped': True}))
+        self.assertFalse(self.alive(agent))
+        self.assertEqual(self.pane()['panes']['pane-1']['archived'], True)
+        self.assertFalse([c for c in self.called() if '--force' in c and c[:2] == ['panes', 'archive']])
+
+    def test_a_create_that_times_out_before_a_pane_exists_answers_stopped_only_once_none_is_there(self):
+        code, out = self.driver('start', REQUEST, FAKE_PANE_HANG='before-create', OPENWIZ_PANE_RUNPANE_SECONDS='1')
+        self.assertEqual(code, 1, out)
+        self.assertNotIn('stopped', out)
+        [run] = self.runs()
+        self.assertFalse(self.saved_run(run)['stopped'])
+        self.assertEqual(self.pane()['panes'], {})
+        self.assertEqual(self.driver('stop', {'run': run}, OPENWIZ_PANE_RUNPANE_SECONDS='1'),
+                         (0, {'run': run, 'stopped': True}))
+        self.assertFalse([c for c in self.called() if c[:2] in (['panels', 'close'], ['panes', 'archive'])])
 
     def test_git_sees_only_non_secret_settings(self):
         planted = dict(GITHUB_TOKEN='synthetic-github-value', EXAMPLE_API_KEY='synthetic-api-value', LANG='C.UTF-8',

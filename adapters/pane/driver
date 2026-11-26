@@ -7,7 +7,7 @@ VERSION = {'driver': 'pane', 'records': ['openwiz:records v1'], 'can': ['start',
 PROGRAMS = {'claude': 'claude', 'codex': 'codex', 'cursor': 'cursor-agent', 'opencode': 'opencode', 'pi': 'pi'}
 START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
          'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
-         'model': r'[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}'}
+         'model': r'(?=.{1,100}$)[A-Za-z0-9][A-Za-z0-9 ._:@+-]*(/[A-Za-z0-9][A-Za-z0-9 ._:@+-]*)*'}
 RUN = {'run': r'run-[0-9a-f]{12}'}
 ID = re.compile(r'[A-Za-z0-9_.:-]{1,100}')
 CODE = re.compile(r'[a-z0-9][a-z0-9._-]{0,59}')
@@ -22,6 +22,10 @@ UNWRITABLE = 'make OPENWIZ_PANE_STATE (or ~/.local/state/openwiz-pane) a folder 
 
 
 class Refused(Exception):
+    pass
+
+
+class Unknown(Refused):
     pass
 
 
@@ -70,16 +74,21 @@ def answer_of(text):
     return None
 
 
-def runpane(then, *args, wait=100):
+def runpane_seconds():
+    raw = os.environ.get('OPENWIZ_PANE_RUNPANE_SECONDS', '')
+    return int(raw) if raw.isdigit() and 1 <= int(raw) <= 100 else 100
+
+
+def runpane(then, *args):
     program = shutil.which('runpane')
     if not program:
         raise Refused('the runpane CLI is not installed here',
                       'install Pane and its runpane CLI, open the Pane app, then ' + then)
     try:
         p = subprocess.run([program] + list(args) + ['--json'], stdin=subprocess.DEVNULL, capture_output=True,
-                           text=True, timeout=wait)
+                           text=True, timeout=runpane_seconds())
     except subprocess.TimeoutExpired:
-        raise Refused('runpane %s %s took too long; its outcome is unknown' % args[:2],
+        raise Unknown('runpane %s %s took too long; its outcome is unknown' % args[:2],
                       'check the Pane app, then ' + then)
     out = answer_of(p.stdout)
     if p.returncode == 0 and out and out.get('ok') is True:
@@ -219,6 +228,10 @@ def start(req):
                       req['harness'], '--tool-command', command, '--prompt', prompt_text(req, False),
                       '--source', 'agent', '--no-focus', '--no-expect-report', '--wait-ready',
                       '--ready-timeout-ms', str(READY_MS), '--yes')
+    except Unknown:
+        keep(run, state)
+        raise Refused('runpane panes create took too long; its outcome is unknown',
+                      'stop run %s to close Pane %s if Pane started its agent, then start again' % (run, name))
     except Refused as e:
         out = e.out if isinstance(e, Failed) and created(e.out) else None
         if out is None:
@@ -256,6 +269,46 @@ def start(req):
     raise Refused(why, step)
 
 
+def rows(out, key):
+    value = out.get(key) if isinstance(out, dict) else None
+    return value if isinstance(value, list) else None
+
+
+def pane_named(name):
+    panes = rows(runpane('stop the run again', 'panes', 'list'), 'panes')
+    if panes is None:
+        raise Refused('Pane gave no pane list, so whether %s is running is unknown' % name,
+                      'check the Pane app, then stop the run again')
+    found = [p['paneId'] for p in panes if isinstance(p, dict) and p.get('name') == name
+             and p.get('archived') is not True and text_id(p.get('paneId'))]
+    if len(found) > 1:
+        raise Refused('Pane has more than one Pane named %s, so which agent is running is unknown' % name,
+                      'close that agent in the Pane app, then stop the run again')
+    return found[0] if found else None
+
+
+def agent_panel(pane_id):
+    panels = rows(runpane('stop the run again', 'panels', 'list', '--pane', pane_id), 'panels')
+    if panels is None:
+        raise Refused('Pane gave no tab list for %s, so whether its agent is running is unknown' % pane_id,
+                      'check the Pane app, then stop the run again')
+    agents = [p['panelId'] for p in panels if isinstance(p, dict) and text_id(p.get('panelId'))
+              and isinstance(p.get('openedBy'), dict) and p['openedBy'].get('source') == 'agent']
+    if len(agents) != 1:
+        raise Refused('Pane %s has no single agent tab to close, so whether its agent ended is unknown' % pane_id,
+                      'close that Pane in the Pane app, then stop the run again')
+    return agents[0]
+
+
+def recover(run, state):
+    if state.get('panel') or state.get('absent'):
+        return state
+    pane_id = pane_named('openwiz-' + run)
+    if pane_id is None:
+        return dict(state, absent=True)
+    return dict(state, pane=pane_id, panel=agent_panel(pane_id))
+
+
 def wake(run):
     lock(run)
     state = saved(run)
@@ -270,7 +323,7 @@ def wake(run):
 
 def stop(run):
     lock(run)
-    state = saved(run)
+    state = recover(run, saved(run))
     try:
         saved(run, dict(state, stopped=True))
     except OSError:

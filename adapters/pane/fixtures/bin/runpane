@@ -99,6 +99,8 @@ def create(args):
              '--no-expect-report', '--wait-ready', '--yes', '--json'])
     if f['--source'] != 'agent':
         fail('invalid-source', 'synthetic: only an agent-opened tab can be closed by an agent')
+    if os.environ.get('FAKE_PANE_HANG') == 'before-create':
+        time.sleep(30)
     words = shlex.split(f['--tool-command'])
     if len(words) != 3 or words[0] != PROGRAMS.get(f['--agent']) or words[1] != '--model':
         fail('invalid-tool-command', 'synthetic: the tool command does not run the declared agent')
@@ -122,6 +124,8 @@ def create(args):
         return repo[0], pane, panel, worktree
 
     repo, pane, panel, worktree = update(make)
+    if os.environ.get('FAKE_PANE_HANG') == 'create':
+        time.sleep(30)
     readiness = {'ok': ready, 'condition': 'ready', 'matched': ready, 'timedOut': False, 'elapsedMs': 40,
                  'state': 'ready' if ready else 'exited'}
     if not ready:
@@ -196,6 +200,32 @@ def archive(args):
          'worktreeCleanup': 'completed', 'worktreePath': worktree, 'safetyCheck': check})
 
 
+def panes(args):
+    flags(args, ['--json'], [])
+    need(args, ['--json'])
+    if os.environ.get('FAKE_PANE_HANG') == 'list':
+        time.sleep(30)
+
+    def read(state):
+        return [{'id': pid, 'paneId': pid, 'name': pane['name'], 'status': 'active', 'worktreePath': pane['worktree'],
+                 'repoId': 1, 'panelCount': 1, 'pinned': False, 'agentStatus': 'active', 'ownership': 'pane',
+                 'archived': pane['archived']} for pid, pane in state['panes'].items()]
+
+    say({'ok': True, 'panes': update(read)})
+
+
+def panels(args):
+    f = flags(args, ['--json'], ['--pane'])
+    need(f, ['--pane', '--json'])
+
+    def read(state):
+        return [{'id': pid, 'panelId': pid, 'paneId': panel['pane'], 'type': 'terminal', 'title': 'agent',
+                 'active': not panel['closed'], 'openedBy': {'source': 'agent'}}
+                for pid, panel in state['panels'].items() if panel['pane'] == f['--pane'] and not panel['closed']]
+
+    say({'ok': True, 'paneId': f['--pane'], 'panels': update(read)})
+
+
 def repos(args):
     flags(args, ['--json'], [])
     need(args, ['--json'])
@@ -207,6 +237,7 @@ def main():
         with open(os.environ['FAKE_PANE_CALLS'], 'a') as f:
             f.write(json.dumps(ARGS) + '\n')
     verbs = {('repos', 'list'): ('repos', repos), ('panes', 'create'): ('create', create),
+             ('panes', 'list'): ('panes', panes), ('panels', 'list'): ('panels', panels),
              ('panels', 'submit'): ('submit', submit), ('panels', 'close'): ('close', close),
              ('panes', 'archive'): ('archive', archive)}
     name, verb = verbs.get(tuple(ARGS[:2]), (None, None))
