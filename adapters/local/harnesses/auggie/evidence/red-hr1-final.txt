@@ -1,0 +1,16 @@
+Command: env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/local/harnesses/auggie/test_row.py
+Safety: 40 no-op agent CLI stubs first on PATH.
+pass auggie row: not installed: a D3 error whose next says to install auggie, starting nothing
+pass auggie row: not signed in: a D3 error that says so, whose next names auggie auth login
+Traceback (most recent call last):
+  File "adapters/local/harnesses/auggie/test_row.py", line 63, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "adapters/local/harnesses/auggie/test_row.py", line 56, in main
+    passed = check()
+             ^^^^^^^
+  File "adapters/local/harnesses/auggie/test_row.py", line 47, in first_json_line_names_the_session
+    return th.local.reported_session('run-synthetic', session) == ID
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: reported_session() missing 1 required positional argument: 'first'
+Exit: 1

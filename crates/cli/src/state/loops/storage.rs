@@ -106,12 +106,6 @@ impl Storage {
         }
         Ok(state)
     }
-    fn index(&self) -> Result<Vec<String>, String> {
-        Reader {
-            dir: self.dir.clone(),
-        }
-        .index()
-    }
     pub fn runs(&self) -> Result<Vec<Value>, String> {
         Reader {
             dir: self.dir.clone(),
@@ -264,35 +258,8 @@ impl Reader {
 }
 
 impl Storage {
-    pub fn save_switches(&self, enabled: &serde_json::Map<String, Value>) -> Result<(), String> {
-        let mut state = self.switch_state()?;
-        state.enabled = enabled.clone();
-        self.save_switch_state(&state)
-    }
     pub fn save_switch_state(&self, state: &SwitchState) -> Result<(), String> {
         self.save("enabled.json", &serde_json::json!({"schema":"openwiz.loop-switches.v1", "enabled":state.enabled,"events":state.events}))
-    }
-    pub fn save_run(&self, run: &Value) -> Result<(), String> {
-        document::validate("run", run)?;
-        let id = run["id"].as_str().unwrap();
-        let mut ids = self.index()?;
-        if !ids.iter().any(|old| old == id) {
-            ids.push(id.to_owned());
-            ids.sort();
-            self.save("index.json", &serde_json::json!(ids))?;
-        }
-        self.save(&format!("runs/{}.json", run["id"].as_str().unwrap()), run)
-    }
-    pub fn settled_agents(&self) -> Result<Option<Value>, String> {
-        let path = self.dir.join("settled.json");
-        match fs::symlink_metadata(&path) {
-            Ok(_) => inspect(&path, false)?,
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
-            Err(_) => return Err("cannot inspect settled loop agents".to_owned()),
-        }
-        let text =
-            fs::read_to_string(path).map_err(|_| "cannot read settled loop agents".to_owned())?;
-        document::parse(&text).map(Some)
     }
     pub fn save(&self, name: &str, value: &Value) -> Result<(), String> {
         let path = self.dir.join(name);
@@ -343,58 +310,6 @@ fn validate_enabled(enabled: &serde_json::Map<String, Value>) -> Result<(), Stri
         return Err("invalid durable loop switches".to_owned());
     }
     Ok(())
-}
-
-#[derive(Debug, PartialEq)]
-pub struct Snapshot {
-    pub runs: Vec<Value>,
-    pub enabled: serde_json::Map<String, Value>,
-}
-pub fn read_snapshot(root: &Path) -> Result<Snapshot, String> {
-    if !root.is_absolute()
-        || root.components().any(|c| {
-            !matches!(
-                c,
-                std::path::Component::RootDir | std::path::Component::Normal(_)
-            )
-        })
-    {
-        return Err("invalid loop state path".into());
-    }
-    for ancestor in root.ancestors() {
-        let m =
-            fs::symlink_metadata(ancestor).map_err(|_| "cannot inspect loop state ancestors")?;
-        if m.file_type().is_symlink()
-            || !m.is_dir()
-            || ancestor
-                .join(".git")
-                .try_exists()
-                .map_err(|_| "cannot inspect loop state boundary")?
-        {
-            return Err("unsafe loop state boundary".into());
-        }
-    }
-    for path in [
-        root.to_owned(),
-        root.join("service"),
-        root.join("service/loops"),
-        root.join("service/loops/runs"),
-    ] {
-        inspect(&path, true)?;
-    }
-    let reader = Reader {
-        dir: root.join("service/loops"),
-    };
-    let collect = || -> Result<_, String> { Ok((reader.runs()?, reader.switch_state()?)) };
-    let (runs, switches) = collect()?;
-    let (again, next) = collect()?;
-    if runs != again || switches.enabled != next.enabled || switches.events != next.events {
-        return Err("loop observation changed during read".into());
-    }
-    Ok(Snapshot {
-        runs,
-        enabled: switches.enabled,
-    })
 }
 
 #[cfg(test)]

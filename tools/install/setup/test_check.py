@@ -323,6 +323,21 @@ class IntelMac(unittest.TestCase):
         (self.base / 'Applications/Cloudroom.app').mkdir(parents=True)
         self.assertEqual(self.cloudroom.status(self.host(), self.base / 'state')['code'], 'cloudroom_reused')
 
+    def test_a_cloudroom_cloud_thread_passes_setup_check_without_cloudroom_unsupported(self):
+        home = self.base / 'home/synthetic'
+        home.mkdir(parents=True, exist_ok=True)
+        launcher = self.base / 'usr/local/bin/room-cli'
+        launcher.parent.mkdir(parents=True, exist_ok=True)
+        launcher.write_text('#!/bin/sh\nprintf \'{"childThreads":[],"thread":{"id":"thr_syn_0001","projectId":"prj_syn_0001","archived":false}}\'\n')
+        launcher.chmod(0o700)
+        host = self.cloudroom.Host('Linux', 'aarch64', home=home, root=self.base)
+        code = self.cloudroom.status(host, self.base / 'state')['code']
+        self.assertEqual(code, 'cloudroom_login_verified')
+        results = {c: next(iter(NEXT_MUST_NAME[c])) for c in NEXT_MUST_NAME}
+        results['cloudroom'] = code
+        step = check_answering(self.base / 'state', results)['next']['cloudroom']
+        self.assertIn('None', step)
+
 
 class SetupSignerIsFixed(unittest.TestCase):
     def setUp(self):

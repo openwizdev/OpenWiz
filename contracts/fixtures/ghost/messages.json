@@ -1,0 +1,234 @@
+{
+  "pair_request": {
+    "code": "SYN-4242",
+    "surface": "openwiz-app"
+  },
+  "pair_response": {
+    "schema": "openwiz.ghost.v1",
+    "token": "tok_syn_0000000000000001",
+    "surface": "openwiz-app"
+  },
+  "health_request": {},
+  "health_response": {
+    "schema": "openwiz.ghost.v1",
+    "status": "ok",
+    "version": "0.2.0",
+    "tiers": {
+      "recall": true,
+      "small_model": false,
+      "draft": false
+    },
+    "logging_enabled": false,
+    "context_revision": "ctx-syn-0001"
+  },
+  "context_request": {
+    "if_revision": "ctx-syn-0000"
+  },
+  "context_response": {
+    "schema": "openwiz.ghost.v1",
+    "revision": "ctx-syn-0001",
+    "unchanged": true,
+    "pack": null
+  },
+  "turns_request": {
+    "session_id": "thr_syn_demo_01",
+    "agent": "orchestrator",
+    "turns": [
+      {
+        "role": "agent",
+        "text": "Approve #42 and take all recs for J1?",
+        "asks_user": true
+      }
+    ]
+  },
+  "turns_response": {
+    "schema": "openwiz.ghost.v1",
+    "revision": "ctx-syn-0002",
+    "draft_queued": true
+  },
+  "complete_request": {
+    "session_id": "thr_syn_demo_01",
+    "surface": "openwiz-app",
+    "prefix": "approve #4",
+    "seq": 1
+  },
+  "complete_response": {
+    "schema": "openwiz.ghost.v1",
+    "seq": 1,
+    "suggestion": {
+      "id": "sug_syn_0001",
+      "text": "2 and merge",
+      "full_text": "approve #42 and merge",
+      "tier": "recall",
+      "confidence": 0.92,
+      "latency_ms": 1.2
+    }
+  },
+  "draft_request": {
+    "session_id": "thr_syn_demo_01",
+    "surface": "openwiz-app"
+  },
+  "draft_response": {
+    "schema": "openwiz.ghost.v1",
+    "draft": {
+      "id": "drf_syn_0001",
+      "text": "J1 all recs, approve #42 and merge.",
+      "precomputed": true,
+      "latency_ms": 2.4
+    }
+  },
+  "feedback_request": {
+    "schema": "openwiz.ghost.v1",
+    "kind": "event",
+    "at": "2026-11-24T12:00:00Z",
+    "suggestion_id": "sug_syn_0001",
+    "session_id": "thr_syn_demo_01",
+    "surface": "openwiz-app",
+    "outcome": "accepted_all",
+    "tier": "recall",
+    "confidence": 0.92,
+    "latency_ms": 1.2,
+    "chars_accepted": 11
+  },
+  "feedback_response": {
+    "schema": "openwiz.ghost.v1",
+    "recorded": true,
+    "logged": false
+  },
+  "bench_request": {
+    "source": "fixtures",
+    "surface": "cli",
+    "replay_path": null
+  },
+  "bench_response": {
+    "schema": "openwiz.ghost.v1",
+    "kind": "bench_report",
+    "source": "fixtures",
+    "messages": 6,
+    "overall": {
+      "shown": 5,
+      "accepted": 4,
+      "acceptance_rate": 0.8,
+      "chars_saved_per_message": 9.5,
+      "suggestions_per_message": 0.83,
+      "p50_latency_ms": 1.1,
+      "p90_latency_ms": 2.3
+    },
+    "per_tier": [
+      {
+        "tier": "recall",
+        "metrics": {
+          "shown": 5,
+          "accepted": 4,
+          "acceptance_rate": 0.8,
+          "chars_saved_per_message": 9.5,
+          "suggestions_per_message": 0.83,
+          "p50_latency_ms": 1.1,
+          "p90_latency_ms": 2.3
+        }
+      }
+    ],
+    "per_surface": [
+      {
+        "surface": "openwiz-app",
+        "metrics": {
+          "shown": 3,
+          "accepted": 3,
+          "acceptance_rate": 1.0,
+          "chars_saved_per_message": 11.0,
+          "suggestions_per_message": 1.0,
+          "p50_latency_ms": 1.0,
+          "p90_latency_ms": 1.8
+        }
+      }
+    ]
+  },
+  "refusal": {
+    "refusal": {
+      "code": "origin_not_allowed",
+      "message": "Origin is not on the ghost.v1 allowlist."
+    }
+  },
+  "stdio_request": {
+    "id": "req_syn_1",
+    "route": "complete",
+    "body": {
+      "session_id": "thr_syn_demo_01",
+      "surface": "cli",
+      "prefix": "J1",
+      "seq": 1
+    }
+  },
+  "stdio_response": {
+    "id": "req_syn_1",
+    "status": 200,
+    "body": {
+      "schema": "openwiz.ghost.v1",
+      "seq": 1,
+      "suggestion": {
+        "id": "sug_syn_0002",
+        "text": " all recs",
+        "full_text": "J1 all recs",
+        "tier": "recall",
+        "confidence": 0.95,
+        "latency_ms": 0.9
+      }
+    }
+  },
+  "event": {
+    "schema": "openwiz.ghost.v1",
+    "kind": "event",
+    "at": "2026-11-24T12:00:01Z",
+    "suggestion_id": "sug_syn_0002",
+    "session_id": "thr_syn_demo_01",
+    "surface": "openwiz-app",
+    "outcome": "typed_through",
+    "tier": "recall",
+    "confidence": 0.95,
+    "latency_ms": 0.9,
+    "chars_accepted": 3
+  },
+  "bench_report": {
+    "schema": "openwiz.ghost.v1",
+    "kind": "bench_report",
+    "source": "fixtures",
+    "messages": 6,
+    "overall": {
+      "shown": 5,
+      "accepted": 4,
+      "acceptance_rate": 0.8,
+      "chars_saved_per_message": 9.5,
+      "suggestions_per_message": 0.83,
+      "p50_latency_ms": 1.1,
+      "p90_latency_ms": 2.3
+    },
+    "per_tier": [
+      {
+        "tier": "recall",
+        "metrics": {
+          "shown": 5,
+          "accepted": 4,
+          "acceptance_rate": 0.8,
+          "chars_saved_per_message": 9.5,
+          "suggestions_per_message": 0.83,
+          "p50_latency_ms": 1.1,
+          "p90_latency_ms": 2.3
+        }
+      }
+    ],
+    "per_surface": [
+      {
+        "surface": "openwiz-app",
+        "metrics": {
+          "shown": 3,
+          "accepted": 3,
+          "acceptance_rate": 1.0,
+          "chars_saved_per_message": 11.0,
+          "suggestions_per_message": 1.0,
+          "p50_latency_ms": 1.0,
+          "p90_latency_ms": 1.8
+        }
+      }
+    ]
+  }
+}

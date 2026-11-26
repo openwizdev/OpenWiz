@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import base64
 import contextlib
 import fcntl
 import hashlib
@@ -28,6 +29,9 @@ WITHHELD = "openwiz: openwiz[bot] token withheld from git ({}); git stops rather
 REQUESTER = re.compile(r"[a-z][a-z0-9-]{0,63}")
 REPOSITORY = re.compile(r"[A-Za-z0-9-]+/[A-Za-z0-9_.-]+")
 TOKEN = re.compile(r"[A-Za-z0-9._~+/-]+=*")
+OPENSSL, OPENSSL_TIMEOUT_S = "/usr/bin/openssl", 30
+OAEP = ("-pkeyopt", "rsa_padding_mode:oaep", "-pkeyopt", "rsa_oaep_md:sha256", "-pkeyopt", "rsa_mgf1_md:sha256")
+BLOCK_HOLDS, BLOCK, MOST_BLOCKS = 318, 384, 8
 REFUSAL_MESSAGE = re.compile(r"Token refused: [^\n]+\.")
 GIT_HELPER_KEY = "credential.https://github.com.helper"
 RUN_MARK, GIT_MARK = "OPENWIZ_AGENT_TOKEN_RUN", "OPENWIZ_AGENT_TOKEN_GIT_AT"
@@ -90,19 +94,63 @@ def ask(argv, request, env):
     return ("bad-answer" if isinstance(message, dict) else "unreachable"), None
 
 
-def check_answer(message, wanted, now):
+def openssl(args, data=b"", fds=()):
+    try:
+        done = subprocess.run([OPENSSL, *args], input=data, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                              env={}, pass_fds=fds, timeout=OPENSSL_TIMEOUT_S)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return done.stdout if done.returncode == 0 else None
+
+
+def one_time_key():
+    private = openssl(["genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:3072"])
+    public = openssl(["pkey", "-pubout"], private) if private else None
+    return (private, public.decode("ascii")) if public else (None, None)
+
+
+def opened(sealed, private):
+    try:
+        data = base64.b64decode(sealed, validate=True)
+    except ValueError:
+        return None
+    if not data or len(data) % BLOCK or len(data) > MOST_BLOCKS * BLOCK:
+        return None
+    token = b""
+    for at in range(0, len(data), BLOCK):
+        reader, writer = os.pipe()
+        try:
+            with os.fdopen(writer, "wb") as pipe:
+                pipe.write(private)
+            part = openssl(["pkeyutl", "-decrypt", "-inkey", f"/dev/fd/{reader}", *OAEP],
+                           data[at:at + BLOCK], fds=(reader,))
+        finally:
+            os.close(reader)
+        if not part or (len(part) != BLOCK_HOLDS and at + BLOCK < len(data)):
+            return None
+        token += part
+    try:
+        return token.decode("ascii")
+    except ValueError:
+        return None
+
+
+def check_answer(message, wanted, private):
     if not (isinstance(message, dict) and set(message) == {
-            "schema", "kind", "token", "expires_at", "repositories", "permissions"}):
+            "schema", "kind", "sealed_token", "expires_at", "repositories", "permissions"}):
         return None
     expires_at = message["expires_at"]
     if (message["schema"] != SCHEMA or message["kind"] != "answer"
-            or not isinstance(message["token"], str) or not TOKEN.fullmatch(message["token"])
+            or not isinstance(message["sealed_token"], str)
             or type(expires_at) is not int
-            or not REFRESH_AT_S < expires_at - now <= MAX_LIFETIME_S
             or message["repositories"] != wanted["repositories"]
             or message["permissions"] != wanted["permissions"]):
         return None
-    return message["token"], expires_at
+    token = opened(message["sealed_token"], private)
+    if (not token or not TOKEN.fullmatch(token)
+            or not REFRESH_AT_S < expires_at - int(time.time()) <= MAX_LIFETIME_S):
+        return None
+    return token, expires_at
 
 
 def route(env):
@@ -119,12 +167,15 @@ def route(env):
 
 
 def mint(argv, wanted, env):
-    request = json.dumps({"schema": SCHEMA, "kind": "request", **wanted}).encode() + b"\n"
+    private, answer_key = one_time_key()
+    if not private:
+        return "unreachable", None, None
+    request = json.dumps({"schema": SCHEMA, "kind": "request", "answer_key": answer_key, **wanted}).encode() + b"\n"
     call_env = {k: v for k, v in env.items() if k not in ("GH_TOKEN", LEGACY_APP_KEY)}
     reason, message = ask(argv, request, call_env)
     if reason:
         return reason, None, None
-    got = check_answer(message, wanted, int(time.time()))
+    got = check_answer(message, wanted, private)
     return ("bad-answer", None, None) if got is None else (None, *got)
 
 

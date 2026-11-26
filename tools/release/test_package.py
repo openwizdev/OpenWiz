@@ -146,6 +146,9 @@ class Package(unittest.TestCase):
                    'adapters/boat/schema.json': (ROOT / 'adapters/template/schema.json').read_bytes(),
                    'adapters/local/driver': b'#!/usr/bin/env python3\nprint("synthetic local driver")\n',
                    'adapters/local/schema.json': b'{"synthetic": "local schema"}\n',
+                   'adapters/made-up/driver': b'#!/usr/bin/env python3\nprint("synthetic new driver")\n',
+                   'adapters/made-up/schema.json': b'{"synthetic": "new schema"}\n',
+                   'adapters/made-up/fixtures/deep/host.json': b'{"synthetic": "extra file"}\n',
                    **{path: (ROOT / path).read_bytes() for path in kit}}
         left = ('adapters/boat/README.md', 'adapters/boat/test_driver.py', 'adapters/boat/fixtures/bin/boat',
                 'adapters/boat/evidence/red.txt', 'adapters/template/driver', 'adapters/template/schema.json',
@@ -153,20 +156,27 @@ class Package(unittest.TestCase):
                 'kernel/driver-kit/README.md', 'kernel/driver-kit/test_kit.py',
                 'kernel/driver-kit/fixtures/fake-harness', 'kernel/records-kit/test_check.py',
                 'kernel/records/backfill.md')
+        releases = {'adapters/boat/release.json': [], 'adapters/local/release.json': [],
+                    'adapters/devin/release.json': ['README.md', 'fixtures/kit-host.json'],
+                    'adapters/made-up/release.json': ['fixtures/deep/host.json'],
+                    'adapters/boat/fixtures/release.json': []}
         with tempfile.TemporaryDirectory(prefix='openwiz-driver-products-') as temporary:
             root = Path(temporary)
             binaries = root / 'bin'
             binaries.mkdir()
             runtime_root(self, root)
-            for path, data in [*carried.items(), *((path, b'synthetic, never carried\n') for path in left)]:
+            listed = {path: json.dumps({'extra_files': extra}).encode() for path, extra in releases.items()}
+            for path, data in [*carried.items(), *listed.items(),
+                               *((path, b'synthetic, never carried\n') for path in left)]:
                 (root / path).parent.mkdir(parents=True, exist_ok=True)
                 (root / path).write_bytes(data)
             # A driver on disk that the source commit doesn't track is never carried.
-            source = commit(root, 'skills', 'tools', 'kernel', *(p for p in [*carried, *left]
+            source = commit(root, 'skills', 'tools', 'kernel', *(p for p in [*carried, *listed, *left]
                                                                  if p.startswith('adapters/') and '/cloudroom/' not in p))
             (root / 'adapters/cloudroom').mkdir()
             (root / 'adapters/cloudroom/driver').write_bytes(b'untracked synthetic driver\n')
             (root / 'adapters/cloudroom/schema.json').write_bytes(b'{}\n')
+            (root / 'adapters/cloudroom/release.json').write_bytes(b'{"extra_files": []}\n')
             target = TARGETS[0]
             (root / 'job').mkdir()
             (root / 'tracker.json').write_text(json.dumps({'record_authors': ['synthetic-author'], 'comments': []}))
@@ -192,12 +202,17 @@ class Package(unittest.TestCase):
                 executable = path.endswith('/driver')
                 self.assertEqual(assets['runtime/' + path]['mode'], '0700' if executable else '0600', path)
                 self.assertEqual(os.access(adapters.parent / path, os.X_OK), executable, path)
+            fixtures = adapters.parent / 'kernel/driver-kit/fixtures'
+            fixtures.mkdir()
+            shutil.copy2(ROOT / 'kernel/driver-kit/fixtures/fake-harness', fixtures)
+            (fixtures / 'devin').symlink_to('fake-harness')
+            fixture_path = os.pathsep.join((str(fixtures), os.environ['PATH']))
             # The installed kit's first check, `version`, passes against the installed driver.
             checked = subprocess.run([sys.executable, '-I', 'kernel/driver-kit/kit.py', '--driver', 'adapters/boat/driver',
-                                      '--repo', 'synthetic/throwaway', '--ticket', '1', '--harness', 'absent-harness',
+                                      '--repo', 'synthetic/throwaway', '--ticket', '1', '--harness', 'fake-harness',
                                       '--model', 'synthetic', '--tracker', str(root / 'tracker.json'), '--wait', '1'],
                                      cwd=adapters.parent, capture_output=True, text=True, timeout=120,
-                                     env={'PATH': os.environ['PATH']})
+                                     env={'PATH': fixture_path, 'OPENWIZ_TEMPLATE_LIVE': '1'})
             self.assertEqual(checked.stdout.splitlines()[:1],
                              ['pass version: openwiz:records v1, and the schema is driver v1'], checked.stderr)
             devin = subprocess.run([str(adapters / 'devin/driver'), 'start'], input=json.dumps(
@@ -211,11 +226,84 @@ class Package(unittest.TestCase):
                                     '--repo', 'synthetic/throwaway', '--ticket', '1', '--harness', 'devin',
                                     '--model', 'default', '--tracker', str(root / 'tracker.json'), '--wait', '1'],
                                    cwd=adapters.parent, capture_output=True, text=True, timeout=300,
-                                   env={'PATH': os.environ['PATH'], 'HOME': str(root), 'DEVIN_ORG_ID': 'org-syn0001',
+                                   env={'PATH': fixture_path, 'HOME': str(root), 'DEVIN_ORG_ID': 'org-syn0001',
                                         'OPENWIZ_HOSTKEY_TEST_ORIGIN': 'http://127.0.0.1:9'})
             self.assertEqual(keyed.stdout.splitlines()[-1:], [
                 'pass token: no login or token passed through the driver, and on start, wake and stop the devin key '
                 'reached its host only from the key helper, in its header'], keyed.stderr)
+
+    def test_every_driver_shipped_before_its_folder_decided_still_ships_the_same_files(self):
+        hosts = ('boat', 'cloudroom', 'devin', 'factory', 'hermes', 'local', 'openclaw')
+        before = {f'runtime/adapters/{host}/{name}' for host in hosts for name in ('driver', 'schema.json')}
+        before |= {'runtime/adapters/devin/README.md', 'runtime/adapters/devin/fixtures/kit-host.json'}
+        with tempfile.TemporaryDirectory(prefix='openwiz-driver-set-') as temporary:
+            root = Path(temporary)
+            runtime_root(self, root)
+            shutil.copytree(ROOT / 'adapters', root / 'adapters')
+            result, output = collected(root, commit(root, 'skills', 'tools', 'adapters'))
+            self.assertEqual(result.returncode, 0, result.stderr)
+            assets = {row['path'] for row in json.loads(Path(str(output) + '.json').read_bytes())['assets']}
+            self.assertEqual(sorted(before - assets), [])
+            self.assertEqual([p for p in assets if p.startswith('runtime/adapters/template/')], [])
+
+    def test_a_malformed_release_json_stops_the_build_and_is_named(self):
+        listed = lambda *names: json.dumps({'extra_files': names}).encode()
+        bad = {'not JSON': b'{', 'not UTF-8': b'{"extra_files": ["\xff"]}', 'an array': b'[]', 'empty': b'',
+               'no key': b'{}', 'another key': b'{"extra_files": [], "ship": true}',
+               'a repeated key': b'{"extra_files": ["README.md"], "extra_files": []}',
+               'not a list': b'{"extra_files": "README.md"}', 'null': b'{"extra_files": null}',
+               'a number': b'{"extra_files": [1]}', 'deep nesting': b'[' * 200000,
+               'a repeated file': listed('README.md', 'README.md'), 'the driver': listed('driver'),
+               'the schema': listed('schema.json'), 'absolute': listed('/README.md'),
+               'outside': listed('../boat/README.md'), 'a dot': listed('./README.md'),
+               'a doubled slash': listed('fixtures//host.json'), 'an empty name': listed(''),
+               'a folder': listed('fixtures'), 'missing': listed('absent.md'),
+               'untracked': listed('untracked.md'), 'a link': listed('link.md'),
+               'a surrogate': b'{"extra_files": ["\\ud800"]}'}
+        good = listed('README.md', 'fixtures/host.json')
+        for case, data in [('good', good), *bad.items()]:
+            with self.subTest(case), tempfile.TemporaryDirectory(prefix='openwiz-release-json-') as temporary:
+                root = Path(temporary)
+                runtime_root(self, root)
+                folder = root / 'adapters/made-up'
+                (folder / 'fixtures').mkdir(parents=True)
+                for name in ('driver', 'schema.json', 'README.md', 'fixtures/host.json'):
+                    (folder / name).write_bytes(b'synthetic\n')
+                (folder / 'link.md').symlink_to('README.md')
+                (folder / 'release.json').write_bytes(data)
+                source = commit(root, 'skills', 'tools', 'adapters')
+                (folder / 'untracked.md').write_bytes(b'synthetic\n')
+                (folder / 'release.json').write_bytes(good)
+                result, output = collected(root, source)
+                if case == 'good':
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    continue
+                self.assertEqual((result.returncode, result.stderr), (1,
+                    'build-products: refused adapters/made-up/release.json: not {"extra_files": [...]} naming '
+                    'tracked regular files in its folder\n'))
+                self.assertFalse(output.exists())
+
+    def test_a_release_json_that_can_not_ship_a_driver_is_named(self):
+        for folder, names, kind in (('made-up', ('schema.json',), 'file'), ('made-up', ('driver',), 'file'),
+                                    ('Made_Up', ('driver', 'schema.json'), 'file'),
+                                    ('made-up', ('driver', 'schema.json'), 'link')):
+            with self.subTest(folder=folder, names=names, kind=kind), \
+                    tempfile.TemporaryDirectory(prefix='openwiz-release-json-') as temporary:
+                root = Path(temporary)
+                runtime_root(self, root)
+                home = root / 'adapters' / folder
+                home.mkdir(parents=True)
+                for name in names:
+                    (home / name).write_bytes(b'synthetic\n')
+                if kind == 'link':
+                    (home / 'real.json').write_bytes(b'{"extra_files": []}')
+                    (home / 'release.json').symlink_to('real.json')
+                else:
+                    (home / 'release.json').write_bytes(b'{"extra_files": []}')
+                result, output = collected(root, commit(root, 'skills', 'tools', 'adapters'))
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertIn(f'build-products: refused adapters/{folder}/release.json: ', result.stderr)
+                self.assertFalse(output.exists())
 
     def test_installed_build_carries_the_wizskills_root_files_its_skills_read(self):
         release = ROOT / '.wizskills'
@@ -261,7 +349,8 @@ class Package(unittest.TestCase):
     def test_installed_boat_driver_finds_the_wizskills_pin(self):
         release = ROOT / '.wizskills'
         self.assertTrue((release / '.git').is_dir(), 'Install the pinned WizSkills first: tools/wizskills/install.py')
-        driver = ('adapters/boat/driver', 'adapters/boat/schema.json', 'kernel/driver-kit/kit.py',
+        driver = ('adapters/boat/driver', 'adapters/boat/schema.json', 'adapters/boat/release.json',
+                  'kernel/driver-kit/kit.py',
                   'kernel/driver-kit/schema.json', 'kernel/records-kit/check.py', 'kernel/records.v1.md',
                   'kernel/driver-kit/hostkey.py', 'kernel/driver-kit/hosts.json')
         with tempfile.TemporaryDirectory(prefix='openwiz-boat-pin-') as temporary:
@@ -417,6 +506,15 @@ def commit(root, *paths):
                   '-c', 'commit.gpgsign=false', 'commit', '-q', '-m', 'Synthetic runtime fixture']):
         subprocess.run(['git', '-C', str(root), *args], check=True, capture_output=True)
     return subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True).strip()
+
+
+def collected(root, source):
+    (root / 'bin').mkdir()
+    (root / 'job').mkdir()
+    receipts = build(root / 'bin', source, TARGETS[0], root / 'job')
+    output = root / 'products'
+    return subprocess.run(collector(root, root / 'bin', output, source, TARGETS[0], receipts),
+                          capture_output=True, text=True), output
 
 
 def query_with_spy(program, work):

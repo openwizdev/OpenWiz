@@ -1,0 +1,3 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY PATH=<31 refusing stubs>:$PATH python3 -I adapters/local/harnesses/qwen/test_row.py   (R3 fixed: the README names the chat recording prerequisite beside start and wake)
+test_row.py: 14 bad lines refused, 6 documented lines taken, 8 sign-in refusals checked, modes checked: ok
+exit 0

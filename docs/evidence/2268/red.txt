@@ -1,0 +1,19 @@
+$ python3 -I tools/line-budget/test_check.py   # against a stub check.py
+FAIL: test_a_ceiling_change_needs_its_pointer (__main__.Ceiling.test_a_ceiling_change_needs_its_pointer)
+AssertionError: 0 != 1
+FAIL: test_exception_lines (__main__.Ceiling.test_exception_lines)
+AssertionError: 0 != 1 : ('No exception here.', '', '')
+FAIL: test_lockfiles_binaries_and_symlinks_do_not_count (__main__.Ceiling.test_lockfiles_binaries_and_symlinks_do_not_count)
+AssertionError: Regex didn't match: '(?m)^  lockfiles +0 +500 +\\+500$' not found in ''
+FAIL: test_queue_ref_names_its_pull_request (__main__.Ceiling.test_queue_ref_names_its_pull_request)
+AssertionError: None != 4101
+FAIL: test_total_always_passes (__main__.Ceiling.test_total_always_passes)
+AssertionError: 'total, lockfiles excluded: 21 of 20' not found in ''
+FAIL: test_under_and_at_pass_over_fails_naming_the_numbers (__main__.Ceiling.test_under_and_at_pass_over_fails_naming_the_numbers)
+AssertionError: 0 != 1 : (10, '', '')
+FAIL: test_unreadable_input_exits_2 (__main__.Ceiling.test_unreadable_input_exits_2)
+AssertionError: 0 != 2
+FAIL: test_matches_the_reference_pipeline (__main__.Counter.test_matches_the_reference_pipeline)
+AssertionError: None != 90
+Ran 8 tests in 0.359s
+FAILED (failures=8)

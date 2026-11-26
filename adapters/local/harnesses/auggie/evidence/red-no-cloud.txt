@@ -1,0 +1,9 @@
+# Red (R1): the fake requires --no-cloud on start and wake; row.json still omits it.
+# Commands: env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/local/test_harnesses.py --rows adapters/local/harnesses; env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/local/harnesses/auggie/test_row.py
+# 40 no-op stubs for every known agent CLI were first on PATH; no real agent CLI ran.
+fail auggie: kit: fail start: run run-137fc40aacc2: the first turn ended at once: the harness failed (exit 2)
+# exit 1
+pass auggie row: not installed: a D3 error whose next says to install auggie, starting nothing
+fail auggie row: not signed in: a D3 error that says so, whose next names auggie auth login
+pass auggie row: the session header: the driver reads the id from 1.2.2's first JSON line
+# exit 1

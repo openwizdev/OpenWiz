@@ -1,7 +1,6 @@
 pub mod allowlist;
 pub mod app;
 pub mod decisions;
-pub mod events;
 pub mod fleets;
 pub mod plan;
 pub mod process;

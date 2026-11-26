@@ -1,0 +1,12 @@
+$ python3 -I adapters/local/harnesses/pi/test_row.py   (fake with its refusals removed)
+fail pi row: the fake exits 2 on --session-id with --continue
+fail pi row: the fake exits 2 on a --session-id that starts with a dot
+fail pi row: the fake exits 2 on a --session-id with a slash
+fail pi row: the fake exits 2 on a prompt that starts with @, which pi reads as a file
+fail pi row: the fake exits 2 on a start prompt on a wake line
+fail pi row: the fake exits 2 on a start with no prompt
+fail pi row: the fake exits 2 on a wake prompt on a start line
+fail pi row: the fake exits 2 on a wake with no session id
+fail pi row: the fake exits 2 on an unknown --mode
+fail pi row: the fake exits 2 on an unknown short option
+exit 1

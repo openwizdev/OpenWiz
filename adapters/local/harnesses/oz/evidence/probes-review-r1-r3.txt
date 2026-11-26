@@ -1,0 +1,11 @@
+# Mutation probes for review R1 to R3 (each undone after its run); agent-CLI stubs first on PATH, OPENWIZ_GITHUB_APP_KEY unset
+
+## signed_out back to its first two patterns (the head 2361efc9 row)
+$ python3 -I adapters/local/harnesses/oz/test_row.py | grep ^fail
+fail oz: not signed in (invalid: "Your credentials are invalid ...") is a D3 error that says so, and its next names oz login
+fail oz: not signed in (june: "You are not logged in - ...") is a D3 error that says so, and its next names oz login
+fail oz: not signed in (june-invalid: "Your credentials are invalid ...") is a D3 error that says so, and its next names oz login
+
+## the fake's option-as-value refusal removed
+$ python3 -I adapters/local/harnesses/oz/test_row.py | grep ^fail
+fail oz: the fake exits 2 on an option where --model needs its value

@@ -1,0 +1,3 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/local/test_harnesses.py --rows adapters/local/harnesses   # 31 refusing stubs first on PATH
+fail gemini: row.json effort: it has no effort form; give an effort map or "none: <one line why>"
+exit 1

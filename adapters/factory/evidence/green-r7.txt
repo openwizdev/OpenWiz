@@ -1,0 +1,19 @@
+# Green after R7 and the platform line (fixtures only, synthetic droid)
+$ python3 -I adapters/factory/test_driver.py
+test_kit_passes_all_five (__main__.Factory.test_kit_passes_all_five) ... ok
+test_other_harness_is_refused_before_anything_runs (__main__.Factory.test_other_harness_is_refused_before_anything_runs) ... ok
+test_readme_opens_with_the_login_line_under_its_title (__main__.Factory.test_readme_opens_with_the_login_line_under_its_title) ... ok
+test_relative_state_still_runs_the_turn (__main__.Factory.test_relative_state_still_runs_the_turn) ... ok
+test_state_is_owner_only (__main__.Factory.test_state_is_owner_only) ... ok
+test_state_keeps_only_the_session_id (__main__.Factory.test_state_keeps_only_the_session_id) ... ok
+test_state_others_can_read_is_refused_before_anything_runs (__main__.Factory.test_state_others_can_read_is_refused_before_anything_runs) ... ok
+test_stop_and_wake_refuse_a_run_they_cannot_trust (__main__.Factory.test_stop_and_wake_refuse_a_run_they_cannot_trust) ... ok
+test_turn_inherits_the_callers_environment_unchanged (__main__.Factory.test_turn_inherits_the_callers_environment_unchanged) ... ok
+test_wake_without_a_session_starts_nothing (__main__.Factory.test_wake_without_a_session_starts_nothing) ... ok
+
+----------------------------------------------------------------------
+Ran 10 tests in 3.160s
+
+OK
+$ python3 -I tools/comment-check/check.py diff --base origin/main
+comment-check: ok

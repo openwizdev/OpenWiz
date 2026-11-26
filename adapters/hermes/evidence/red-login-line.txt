@@ -1,0 +1,22 @@
+# Red run (driver v1, login line section from #2026): the README's login line above its title.
+test_the_readme_says_where_the_login_lives_under_its_title (__main__.Hermes.test_the_readme_says_where_the_login_lives_under_its_title) ... FAIL
+
+======================================================================
+FAIL: test_the_readme_says_where_the_login_lives_under_its_title (__main__.Hermes.test_the_readme_says_where_the_login_lives_under_its_title)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/hermes/test_driver.py", line 211, in test_the_readme_says_where_the_login_lives_under_its_title
+    self.assertEqual(lines[:3], ['# Hermes driver', '', 'Login: stays on your machine'])
+AssertionError: Lists differ: ['Login: stays on your machine', '', '# Hermes driver'] != ['# Hermes driver', '', 'Login: stays on your machine']
+
+First differing element 0:
+'Login: stays on your machine'
+'# Hermes driver'
+
+- ['Login: stays on your machine', '', '# Hermes driver']
++ ['# Hermes driver', '', 'Login: stays on your machine']
+
+----------------------------------------------------------------------
+Ran 1 test in 0.001s
+
+FAILED (failures=1)

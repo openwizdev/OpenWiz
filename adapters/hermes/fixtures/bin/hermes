@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+import fcntl, json, os, re, signal, subprocess, sys, time
+
+ARGS = sys.argv[1:]
+with open(os.path.join(os.environ['HOME'], '.fake-hermes.json')) as conf:
+    CONF = json.load(conf)
+HOME = CONF['hermes_home']
+
+
+def say(**line):
+    print(json.dumps(dict(line, timestamp=int(time.time() * 1000))), flush=True)
+
+
+def log(*fields):
+    with open(CONF['turns'], 'a') as f:
+        f.write(' '.join(str(x) for x in fields) + ' ' + json.dumps(ARGS) + '\n')
+
+
+def sessions(change):
+    os.makedirs(HOME, exist_ok=True)
+    path = os.path.join(HOME, 'sessions.json')
+    with open(path + '.lock', 'w') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            with open(path) as f:
+                known = json.load(f)
+        except FileNotFoundError:
+            known = {}
+        out = change(known)
+        with open(path + '.new', 'w') as f:
+            json.dump(known, f)
+        os.replace(path + '.new', path)
+        return out
+
+
+def note(session, woken, model, skill):
+    path, now = CONF['tracker'], time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+    body = '\n'.join(['<!-- openwiz:status v1 -->', 'agent: builder', 'state: working', 'harness: Fake',
+                      'model: ' + model, 'skills: %s@0.1.2' % skill,
+                      'step: ' + ('woke and read the ticket again' if woken else 'started the throwaway ticket'),
+                      'time: ' + now]) + '\n'
+    with open(path) as f:
+        tracker = json.load(f)
+    if session.get('note') is None:
+        session['note'] = 1 + max([c['id'] for c in tracker['comments']], default=0)
+        tracker['comments'].append({'id': session['note'], 'author': 'example-bot[bot]', 'updated_at': now,
+                                    'body': body})
+    else:
+        [c for c in tracker['comments'] if c['id'] == session['note']][0].update(body=body, updated_at=now)
+    with open(path + '.%d' % os.getpid(), 'w') as f:
+        json.dump(tracker, f)
+    os.replace(path + '.%d' % os.getpid(), path)
+
+
+def chat(args):
+    m = re.fullmatch(r'--oneshot\x00--format\x00stream-json\x00--source\x00tool(?:\x00-s\x00([a-z-]+))?'
+                     r'(?:\x00-m\x00([^\x00]+))?(?:\x00--resume\x00(\S+))?\x00-q\x00([^\x00]+)', '\x00'.join(args))
+    if not m:
+        print('hermes chat: unexpected arguments', file=sys.stderr)
+        sys.exit(2)
+    preload, model, resume, text = m.groups()
+    skill = re.search(r'the ([a-z0-9-]+) skill', text).group(1)
+    shown = re.search(r'with the model (\S+?)[.,]? ', text)
+
+    def open_session(known):
+        if resume is None:
+            sid = 'ses_fake%04d' % (len(known) + 1)
+            known[sid] = {'note': None}
+        elif resume not in known:
+            return None
+        sid = resume or sid
+        note(known[sid], resume is not None, model or (shown.group(1) if shown else 'hermes-default'), skill)
+        return sid
+
+    sid = sessions(open_session)
+    if sid is None:
+        say(type='result', session_id=resume, exit_code=1, text='', error='no session ' + resume)
+        sys.exit(1)
+    interrupted = []
+    signal.signal(signal.SIGINT, lambda *_: interrupted.append(1))
+    with open(CONF['envs'], 'a') as f:
+        f.write(json.dumps({'pid': os.getpid(), 'env': dict(os.environ)}) + '\n')
+    if not CONF.get('no_init'):
+        say(type='system', subtype='init', model=model or 'hermes-default', session_id=sid)
+    worker = subprocess.Popen(['sleep', '120'], start_new_session=True, stdin=subprocess.DEVNULL,
+                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    log(os.getpid(), worker.pid, sid, 'woken' if resume else 'first')
+    for _ in range(CONF.get('loud', 1)):
+        say(type='text', text='SYNTHETIC-TRANSCRIPT-LINE ' + 'x' * 200)
+    while os.path.exists(CONF['hold']) and not interrupted:
+        time.sleep(0.05)
+    if interrupted:
+        log(os.getpid(), worker.pid, sid, 'interrupted')
+        say(type='result', session_id=sid, exit_code=130, text='Interrupted.')
+        sys.exit(130)
+    say(type='result', session_id=sid, exit_code=0, text='Done.')
+
+
+def main():
+    if ARGS[:1] == ['chat']:
+        chat(ARGS[1:])
+    elif ARGS == ['--version']:
+        print('Hermes Agent v0.0.0 (synthetic)')
+    else:
+        print('hermes: unexpected arguments', file=sys.stderr)
+        sys.exit(2)
+
+
+if __name__ == '__main__':
+    main()

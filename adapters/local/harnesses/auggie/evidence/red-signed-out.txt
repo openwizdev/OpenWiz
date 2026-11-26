@@ -1,0 +1,7 @@
+# Red at 10ff3eef: test_row.py asked the driver to say "not signed in" for 1.2.2's signed-out line; it says "the harness failed".
+# Kept red on #2439's final ruling: HR1's revision 4 adds optional signed_out patterns and a login_command; this row fills them once HR1's head moves.
+# Command: env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/local/harnesses/auggie/test_row.py (no-op agent-CLI stubs first on PATH)
+pass auggie row: not installed: a D3 error whose next says to install auggie, starting nothing
+fail auggie row: not signed in: a D3 error that says the harness is not signed in, with a next
+pass auggie row: the session header: the driver reads the id from 1.2.2's first JSON line
+# exit 1

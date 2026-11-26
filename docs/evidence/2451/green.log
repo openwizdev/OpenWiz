@@ -1,0 +1,16 @@
+Green run, at the gate: python3 tools/release/test_candidate.py Rehearsal
+
+test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish (__main__.Rehearsal.test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish) ... ok
+Ran 1 test in 83.553s
+OK
+
+Full release suite: python3 tools/release/test.py
+Ran 286 tests in 284.375s
+OK
+
+Rows 1 to 18 unchanged:
+git diff -U0 origin/main...HEAD -- tools/release/candidate.py | grep -c '^-[^-]'
+0
+ast.dump of the 26 functions named in rows 1 to 18 and their shared helpers, origin/main against the head:
+changed: none
+changed functions at the head: evaluate, publish; added: rehearsal_run, rehearsal_receipt, rehearsal_reasons

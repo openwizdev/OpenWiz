@@ -1,0 +1,4 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/local/harnesses/kilo/test_row.py
+# HR1 revision 4 merged (a19ebeab); row.json has no signed_out or login_command yet; agent-CLI stubs first on PATH
+fail kilo test_row.py: not signed in: each of Kilo's signed-out lines is a D3 error saying so, whose next names kilo auth login
+exit 1
