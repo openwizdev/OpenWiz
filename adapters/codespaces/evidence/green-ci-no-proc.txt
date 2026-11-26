@@ -1,0 +1,14 @@
+# Same probe, with the fix: the woken turn is held until stop ends it.
+$ python3 -I adapters/codespaces/test_driver.py Codespaces.test_kit_passes_all_five_without_proc_as_on_macos
+.
+----------------------------------------------------------------------
+Ran 1 test in 9.313s
+
+OK
+# Without the probe, the 42 agent-CLI stubs first on PATH.
+$ python3 -I adapters/codespaces/test_driver.py
+.....................
+----------------------------------------------------------------------
+Ran 21 tests in 45.062s
+
+OK

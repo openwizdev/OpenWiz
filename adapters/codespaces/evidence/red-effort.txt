@@ -1,0 +1,15 @@
+# Red (J318): the effort-field proof against the driver before it named effort
+$ python3 -I adapters/codespaces/test_driver.py Codespaces.test_the_prechecks_refuse_before_any_codespace_create
+F
+======================================================================
+FAIL: test_the_prechecks_refuse_before_any_codespace_create (__main__.Codespaces.test_the_prechecks_refuse_before_any_codespace_create)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "~/work/OpenWiz/adapters/codespaces/test_driver.py", line 190, in test_the_prechecks_refuse_before_any_codespace_create
+    self.assertIn('does not carry effort yet', err['error'])
+AssertionError: 'does not carry effort yet' not found in 'the input needs exactly repository, ticket, skill, harness, model'
+
+----------------------------------------------------------------------
+Ran 1 test in 0.517s
+
+FAILED (failures=1)

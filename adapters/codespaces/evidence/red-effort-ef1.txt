@@ -1,0 +1,18 @@
+Red run for the EF1 effort criterion at a24e9f469 (EF1 merged, schema copied) plus the new test and fake-harness change, agent-CLI no-op stubs first on PATH:
+env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/codespaces/test_driver.py -v <the new test> <a wake test that reads FAKE_TURNS>
+
+test_an_effort_reaches_the_fake_harness_on_start_and_every_wake_and_none_passes_no_flag (__main__.Codespaces.test_an_effort_reaches_the_fake_harness_on_start_and_every_wake_and_none_passes_no_flag) ... FAIL
+test_a_wake_after_github_stopped_the_codespace_resumes_the_same_session (__main__.Codespaces.test_a_wake_after_github_stopped_the_codespace_resumes_the_same_session) ... ok
+
+======================================================================
+FAIL: test_an_effort_reaches_the_fake_harness_on_start_and_every_wake_and_none_passes_no_flag (__main__.Codespaces.test_an_effort_reaches_the_fake_harness_on_start_and_every_wake_and_none_passes_no_flag)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/codespaces/test_driver.py", line 239, in test_an_effort_reaches_the_fake_harness_on_start_and_every_wake_and_none_passes_no_flag
+    self.assertIn('effort', json.loads(version.stdout)['can'])
+AssertionError: 'effort' not found in ['start', 'wake', 'stop', 'many-at-once', 'own-sandbox']
+
+----------------------------------------------------------------------
+Ran 2 tests in 1.604s
+
+FAILED (failures=1)

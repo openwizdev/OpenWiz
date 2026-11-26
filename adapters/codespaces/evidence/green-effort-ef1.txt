@@ -1,0 +1,9 @@
+Green run for the EF1 effort criterion, agent-CLI no-op stubs (42) first on PATH:
+env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/codespaces/test_driver.py -v <the new test>
+
+test_an_effort_reaches_the_fake_harness_on_start_and_every_wake_and_none_passes_no_flag (__main__.Codespaces.test_an_effort_reaches_the_fake_harness_on_start_and_every_wake_and_none_passes_no_flag) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test
+
+OK

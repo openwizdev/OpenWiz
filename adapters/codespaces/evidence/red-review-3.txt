@@ -1,0 +1,65 @@
+Red run for review R1 to R4 at b105dd4e plus these tests, agent-CLI no-op stubs first on PATH:
+env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/codespaces/test_driver.py -v <the five new tests>
+
+test_a_turn_inherits_the_environment_natively_and_reads_no_ambient_value (__main__.Codespaces.test_a_turn_inherits_the_environment_natively_and_reads_no_ambient_value) ... FAIL
+  test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call (__main__.Codespaces.test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call) (key='model', value='prefix CLAUDE_CODE_OAUTH_TOKEN') ... FAIL
+  test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call (__main__.Codespaces.test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call) (key='model', value='claude-CLAUDE_CODE_OAUTH_TOKEN') ... FAIL
+  test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call (__main__.Codespaces.test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call) (key='model', value='claude-ANTHROPIC_API_KEY') ... FAIL
+  test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call (__main__.Codespaces.test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call) (key='model', value='claude-CODEX_API_KEY') ... FAIL
+  test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call (__main__.Codespaces.test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call) (key='model', value='claude-OPENAI_API_KEY') ... FAIL
+  test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call (__main__.Codespaces.test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call) (key='model', value='claude-GITHUB_TOKEN') ... FAIL
+  test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call (__main__.Codespaces.test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call) (key='model', value='claude-GH_TOKEN') ... FAIL
+  test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call (__main__.Codespaces.test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call) (key='model', value='claude opus') ... FAIL
+  test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call (__main__.Codespaces.test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call) (key='repository', value='example/GITHUB_TOKEN') ... FAIL
+  test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call (__main__.Codespaces.test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call) (key='model', value='x-gh_token') ... FAIL
+  test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call (__main__.Codespaces.test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call) (saved_model='claude-ANTHROPIC_API_KEY') ... FAIL
+  test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call (__main__.Codespaces.test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call) (saved_model='claude opus') ... FAIL
+test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call (__main__.Codespaces.test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call) ... FAIL
+  test_a_start_whose_harness_refuses_after_the_marker_fails_and_stops_the_codespace (__main__.Codespaces.test_a_start_whose_harness_refuses_after_the_marker_fails_and_stops_the_codespace) (case='the codespace gives no login', harness='claude') ... FAIL
+  test_a_start_whose_harness_refuses_after_the_marker_fails_and_stops_the_codespace (__main__.Codespaces.test_a_start_whose_harness_refuses_after_the_marker_fails_and_stops_the_codespace) (case='the harness logs a refusal and runs on', harness='claude') ... FAIL
+  test_a_start_whose_harness_refuses_after_the_marker_fails_and_stops_the_codespace (__main__.Codespaces.test_a_start_whose_harness_refuses_after_the_marker_fails_and_stops_the_codespace) (case='the harness logs a refusal and runs on', harness='codex') ... FAIL
+  test_a_wake_whose_harness_refuses_to_resume_fails (__main__.Codespaces.test_a_wake_whose_harness_refuses_to_resume_fails) (harness='claude') ... FAIL
+  test_a_wake_whose_harness_refuses_to_resume_fails (__main__.Codespaces.test_a_wake_whose_harness_refuses_to_resume_fails) (harness='codex') ... FAIL
+test_the_state_folder_and_every_file_in_it_are_owner_only (__main__.Codespaces.test_the_state_folder_and_every_file_in_it_are_owner_only) ... FAIL
+FAIL: test_a_turn_inherits_the_environment_natively_and_reads_no_ambient_value (__main__.Codespaces.test_a_turn_inherits_the_environment_natively_and_reads_no_ambient_value)
+AssertionError: 'turn\nturn\n' != ''
+FAIL: test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call (__main__.Codespaces.test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call) (key='model', value='prefix CLAUDE_CODE_OAUTH_TOKEN')
+AssertionError: 0 != 1 : {'run': 'cs-5723f7e2fff1'}
+FAIL: test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call (__main__.Codespaces.test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call) (key='model', value='claude-CLAUDE_CODE_OAUTH_TOKEN')
+AssertionError: 0 != 1 : {'run': 'cs-234e501ee030'}
+FAIL: test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call (__main__.Codespaces.test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call) (key='model', value='claude-ANTHROPIC_API_KEY')
+AssertionError: 0 != 1 : {'run': 'cs-0a9197cfc94e'}
+FAIL: test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call (__main__.Codespaces.test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call) (key='model', value='claude-CODEX_API_KEY')
+AssertionError: 0 != 1 : {'run': 'cs-cd8c06cb9256'}
+FAIL: test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call (__main__.Codespaces.test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call) (key='model', value='claude-OPENAI_API_KEY')
+AssertionError: 0 != 1 : {'run': 'cs-b3a6ed0631c6'}
+FAIL: test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call (__main__.Codespaces.test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call) (key='model', value='claude-GITHUB_TOKEN')
+AssertionError: 0 != 1 : {'run': 'cs-a398d8cd2c25'}
+FAIL: test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call (__main__.Codespaces.test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call) (key='model', value='claude-GH_TOKEN')
+AssertionError: 0 != 1 : {'run': 'cs-4d8f9822592d'}
+FAIL: test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call (__main__.Codespaces.test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call) (key='model', value='claude opus')
+AssertionError: 0 != 1 : {'run': 'cs-c760d5a91cd5'}
+FAIL: test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call (__main__.Codespaces.test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call) (key='repository', value='example/GITHUB_TOKEN')
+AssertionError: False is not true : {'error': 'your Codespaces secret CLAUDE_CODE_OAUTH_TOKEN is not set for example/GITHUB_TOKEN, so nothing was created', 'next': 'add example/GITHUB_TOKEN to its repositories yourself in github.com/settings/codespaces, then start again'}
+FAIL: test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call (__main__.Codespaces.test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call) (key='model', value='x-gh_token')
+AssertionError: 0 != 1 : {'run': 'cs-bfb51eb1b747'}
+FAIL: test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call (__main__.Codespaces.test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call) (saved_model='claude-ANTHROPIC_API_KEY')
+AssertionError: 0 != 1 : {'run': 'cs-5e460c455ef9', 'woke': True}
+FAIL: test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call (__main__.Codespaces.test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call) (saved_model='claude opus')
+AssertionError: 0 != 1 : {'run': 'cs-5e460c455ef9', 'woke': True}
+FAIL: test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call (__main__.Codespaces.test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call)
+AssertionError: 12 != 1
+FAIL: test_a_start_whose_harness_refuses_after_the_marker_fails_and_stops_the_codespace (__main__.Codespaces.test_a_start_whose_harness_refuses_after_the_marker_fails_and_stops_the_codespace) (case='the codespace gives no login', harness='claude')
+AssertionError: 0 != 1 : {'run': 'cs-1f7aba314268'}
+FAIL: test_a_start_whose_harness_refuses_after_the_marker_fails_and_stops_the_codespace (__main__.Codespaces.test_a_start_whose_harness_refuses_after_the_marker_fails_and_stops_the_codespace) (case='the harness logs a refusal and runs on', harness='claude')
+AssertionError: 0 != 1 : {'run': 'cs-c7aaada2bf4c'}
+FAIL: test_a_start_whose_harness_refuses_after_the_marker_fails_and_stops_the_codespace (__main__.Codespaces.test_a_start_whose_harness_refuses_after_the_marker_fails_and_stops_the_codespace) (case='the harness logs a refusal and runs on', harness='codex')
+AssertionError: 0 != 1 : {'run': 'cs-ea254a81b173'}
+FAIL: test_a_wake_whose_harness_refuses_to_resume_fails (__main__.Codespaces.test_a_wake_whose_harness_refuses_to_resume_fails) (harness='claude')
+AssertionError: 0 != 1 : {'run': 'cs-e7baa6510c60', 'woke': True}
+FAIL: test_a_wake_whose_harness_refuses_to_resume_fails (__main__.Codespaces.test_a_wake_whose_harness_refuses_to_resume_fails) (harness='codex')
+AssertionError: 0 != 1 : {'run': 'cs-14a8d519cc99', 'woke': True}
+FAIL: test_the_state_folder_and_every_file_in_it_are_owner_only (__main__.Codespaces.test_the_state_folder_and_every_file_in_it_are_owner_only)
+AssertionError: 493 != 448
+Ran 5 tests in 10.137s
+FAILED (failures=20)

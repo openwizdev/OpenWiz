@@ -1,0 +1,33 @@
+# Green (review R1 to R4): the driver tests, then the kit at the default 20 s settle window, with the no-op agent-CLI stubs first on PATH
+$ PATH=<stubs>:$PATH env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/codespaces/test_driver.py -v
+test_a_rebuilt_codespace_refuses_the_wake_in_one_line (__main__.Codespaces.test_a_rebuilt_codespace_refuses_the_wake_in_one_line) ... ok
+test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call (__main__.Codespaces.test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call) ... ok
+test_a_start_whose_cleanup_stop_fails_retries_then_names_the_run_to_stop (__main__.Codespaces.test_a_start_whose_cleanup_stop_fails_retries_then_names_the_run_to_stop) ... ok
+test_a_start_whose_harness_refuses_after_the_marker_fails_and_stops_the_codespace (__main__.Codespaces.test_a_start_whose_harness_refuses_after_the_marker_fails_and_stops_the_codespace) ... ok
+test_a_start_whose_turn_never_began_is_refused_and_stops_the_codespace (__main__.Codespaces.test_a_start_whose_turn_never_began_is_refused_and_stops_the_codespace) ... ok
+test_a_turn_inherits_the_environment_natively_and_reads_no_ambient_value (__main__.Codespaces.test_a_turn_inherits_the_environment_natively_and_reads_no_ambient_value) ... ok
+test_a_wake_after_github_stopped_the_codespace_resumes_the_same_session (__main__.Codespaces.test_a_wake_after_github_stopped_the_codespace_resumes_the_same_session) ... ok
+test_a_wake_after_stop_or_for_an_unknown_run_is_refused (__main__.Codespaces.test_a_wake_after_stop_or_for_an_unknown_run_is_refused) ... ok
+test_a_wake_while_the_turn_runs_starts_nothing (__main__.Codespaces.test_a_wake_while_the_turn_runs_starts_nothing) ... ok
+test_a_wake_whose_harness_refuses_to_resume_fails (__main__.Codespaces.test_a_wake_whose_harness_refuses_to_resume_fails) ... ok
+test_create_takes_the_specs_flags_and_always_names_a_machine (__main__.Codespaces.test_create_takes_the_specs_flags_and_always_names_a_machine) ... ok
+test_every_stop_confirms_the_codespace_stopped_with_gh_codespace_view (__main__.Codespaces.test_every_stop_confirms_the_codespace_stopped_with_gh_codespace_view) ... ok
+test_gh_text_never_reaches_an_answer_and_a_failed_start_step_stops_the_codespace (__main__.Codespaces.test_gh_text_never_reaches_an_answer_and_a_failed_start_step_stops_the_codespace) ... ok
+test_kit_passes_all_five_for_each_harness (__main__.Codespaces.test_kit_passes_all_five_for_each_harness) ... ok
+test_kit_passes_all_five_without_proc_as_on_macos (__main__.Codespaces.test_kit_passes_all_five_without_proc_as_on_macos) ... ok
+test_no_ssh_command_names_or_expands_a_secret (__main__.Codespaces.test_no_ssh_command_names_or_expands_a_secret) ... ok
+test_start_refuses_a_credential_by_its_shape_and_never_reads_the_environment_for_one (__main__.Codespaces.test_start_refuses_a_credential_by_its_shape_and_never_reads_the_environment_for_one) ... ok
+test_stop_never_reads_a_codespace_missing_from_a_cut_list_as_stopped (__main__.Codespaces.test_stop_never_reads_a_codespace_missing_from_a_cut_list_as_stopped) ... ok
+test_the_prechecks_refuse_before_any_codespace_create (__main__.Codespaces.test_the_prechecks_refuse_before_any_codespace_create) ... ok
+test_the_state_folder_and_every_file_in_it_are_owner_only (__main__.Codespaces.test_the_state_folder_and_every_file_in_it_are_owner_only) ... ok
+Ran 20 tests in 42.142s
+OK
+
+$ the two kit tests with OPENWIZ_CODESPACES_SETTLE unset (default 20 s)
+test_kit_passes_all_five_for_each_harness (__main__.Default.test_kit_passes_all_five_for_each_harness) ... ok
+test_kit_passes_all_five_without_proc_as_on_macos (__main__.Default.test_kit_passes_all_five_without_proc_as_on_macos) ... ok
+Ran 2 tests in 4.459s
+OK
+
+$ python3 -I tools/comment-check/check.py diff --base origin/main
+comment-check: ok

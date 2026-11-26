@@ -1,0 +1,19 @@
+# Green with the no-op agent-CLI stubs first on PATH (the planner's safety rule): a private stub folder holds claude, codex, cursor-agent, agent, pi, opencode, copilot, goose, gemini, kimi, qwen, cline, kilo, crush, vibe, auggie, kiro-cli, junie, amp, agy, oz, sculpt, hermes, acpx and droid, each refusing with exit 1. No real gh is on this PATH: fixtures/bin/gh is the fake. Inside the fake codespace, fixtures/codespace-bin's fake harnesses come first.
+$ PATH=<stubs>:adapters/codespaces/fixtures/bin:<tools> python3 -I kernel/driver-kit/kit.py --driver adapters/codespaces/driver --repo example/site --ticket 7 --harness claude --model claude-opus-5-5 --tracker <tmp>/tracker.json --wait 8
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 1
+pass wake: the run edited builder status note 1
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+exit 0
+$ PATH=<stubs>:adapters/codespaces/fixtures/bin:<tools> python3 -I kernel/driver-kit/kit.py --driver adapters/codespaces/driver --repo example/site --ticket 7 --harness codex --model gpt-6.2-sol --tracker <tmp>/tracker.json --wait 8
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 1
+pass wake: the run edited builder status note 1
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+exit 0
+$ PATH=<stubs>:$PATH python3 -I adapters/codespaces/test_driver.py   (the tests then set their own PATH: fixtures and tools only, and assert no real claude, codex, git or npm on it)
+Ran 10 tests in 11.768s
+
+OK

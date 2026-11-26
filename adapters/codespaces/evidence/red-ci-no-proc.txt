@@ -1,0 +1,32 @@
+# Probe (local, not committed): kernel/driver-kit/kit.py's listed() sleeps 1 s first, as a slow CI runner scans late.
+# Test at bff7c2fa (first turn exits at once). Same failure as CI run at bff7c2fa.
+$ python3 -I adapters/codespaces/test_driver.py Codespaces.test_kit_passes_all_five_without_proc_as_on_macos
+F
+======================================================================
+FAIL: test_kit_passes_all_five_without_proc_as_on_macos (__main__.Codespaces.test_kit_passes_all_five_without_proc_as_on_macos)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<tmp>", line 178, in test_kit_passes_all_five_without_proc_as_on_macos
+    self.assertEqual((p.returncode, p.stdout.splitlines()), (0, PASS), p.stderr)
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[355 chars]ed']) != (0, ['pass version: openwiz:records v1, an[245 chars]er'])
+
+First differing element 0:
+1
+0
+
+- (1,
++ (0,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 1',
+    'pass wake: the run edited builder status note 1',
++   'pass stop: the run ended, and a wake after it is refused',
++   'pass token: no login or token passed through the driver'])
+-   'fail stop: ps -E never showed a process of this run, so the kit cannot tell '
+-   'which processes the driver started',
+-   'fail token: ps -E never showed a process of this run, so the kit cannot '
+-   'tell which processes the driver started']) : 
+
+----------------------------------------------------------------------
+Ran 1 test in 4.982s
+
+FAILED (failures=1)
