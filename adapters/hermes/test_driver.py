@@ -23,6 +23,8 @@ CALLER_ONLY = 'synthetic-caller-only-value'
 LOCALE_LOOKALIKE = 'synthetic-lc-named-app-value'
 REQUEST = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude',
            'model': 'synthetic-model-1'}
+CANT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at "
+        "the host's default")
 PR_SET_CHILD_SUBREAPER = 36
 CHILD_ENV_ALLOWED = {'HOME', 'PATH', 'LANG', 'LC_ALL', 'OPENWIZ_RUN', 'OPENWIZ_KIT_RUN'}
 
@@ -123,6 +125,59 @@ class Hermes(unittest.TestCase):
         with open(self.tracker) as f:
             return [(c['id'], c['body'].split('step: ')[1].split('\n')[0]) for c in json.load(f)['comments']]
 
+    def test_version_lists_effort(self):
+        code, out = self.driver('version', {})
+        self.assertEqual(code, 0, out)
+        self.assertEqual(set(out), {'driver', 'records', 'can'})
+        self.assertIn('effort', out['can'])
+
+    def test_a_hermes_start_passes_reasoning_at_start_and_wake(self):
+        code, out = self.driver('start', dict(REQUEST, harness='hermes', effort='medium'))
+        self.assertEqual(code, 0, out)
+        self.assertTrue(self.until(lambda: self.logged() and not self.alive(self.logged()[-1][0])),
+                        'the first turn never ended')
+        self.assertEqual(self.driver('wake', out), (0, dict(out, woke=True)))
+        self.assertTrue(self.until(lambda: len(self.logged()) >= 2), 'the wake started no turn')
+        for row in self.logged()[-2:]:
+            argv = row[4]
+            self.assertEqual(argv[argv.index('--reasoning') + 1], 'medium')
+
+    def test_an_effort_hermes_cannot_set_is_refused_and_starts_nothing(self):
+        cases = (dict(REQUEST, effort='medium'), dict(REQUEST, harness='codex', effort='high'),
+                 dict(REQUEST, harness='hermes', effort='ultracode'), dict(REQUEST, harness='pi', effort='medium'))
+        for req in cases:
+            with self.subTest(harness=req['harness'], effort=req['effort']):
+                code, out = self.driver('start', req)
+                self.assertEqual((code, out['next']), (1, CANT), out)
+                self.assertIn(req['harness'], out['error'])
+                self.assertIn(req['effort'], out['error'])
+        self.assertEqual((self.logged(), self.ours()), ([], []))
+        self.assertFalse(os.path.isdir(self.state) and os.listdir(self.state), 'a refused start saved a run')
+
+    def test_the_readme_effort_line_sits_under_login(self):
+        with open(os.path.join(HERE, 'README.md')) as f:
+            lines = f.read().splitlines()
+        login = lines.index('Login: stays on your machine')
+        effort = next(i for i, line in enumerate(lines) if line.startswith('Effort:'))
+        self.assertEqual(effort, login + 2)
+        self.assertTrue(lines[effort].startswith('Effort: passed as `hermes chat --reasoning <level>`'))
+        rest = lines[effort + 1:]
+        while rest and not rest[0].strip():
+            rest.pop(0)
+        rows = []
+        for row in rest:
+            if not row.startswith('|'):
+                break
+            rows.append(row)
+        table = {}
+        for row in rows:
+            cells = [c.strip() for c in row.strip().strip('|').split('|')]
+            if len(cells) >= 2 and cells[0] not in ('Harness', '---'):
+                table[cells[0].strip('`')] = cells[1]
+        self.assertTrue(table['hermes'].startswith('`--reasoning <level>`'))
+        self.assertTrue(table['claude'].startswith("can't"))
+        self.assertTrue(table['codex'].startswith("can't"))
+
     def test_kit_passes_all_five(self):
         p = subprocess.run([sys.executable, '-I', KIT, '--driver', DRIVER, '--repo', 'example/site',
                             '--ticket', '7', '--harness', 'claude', '--model', 'synthetic-model-1',
@@ -130,7 +185,8 @@ class Hermes(unittest.TestCase):
                            env=self.env, capture_output=True, text=True, timeout=300)
         self.assertEqual((p.returncode, p.stdout.splitlines()), (0, [
             'pass version: openwiz:records v1, and the schema is driver v1',
-            'pass start: the run posted builder status note 1',
+            'pass start: the run posted builder status note 1; effort: refused for claude with the refusal text, '
+            'as the README says',
             'pass wake: the run edited builder status note 1',
             'pass stop: the run ended, and a wake after it is refused',
             'pass token: no login or token passed through the driver']), p.stderr)
@@ -155,7 +211,8 @@ class Hermes(unittest.TestCase):
         code, out = self.driver('start', dict(REQUEST, harness='hermes'))
         self.assertEqual(code, 0, out)
         argv = self.until(lambda: len(self.logged()) == 5) and self.logged()[-1][4]
-        self.assertEqual((argv[argv.index('-m') + 1], '-s' in argv), ('synthetic-model-1', False))
+        self.assertEqual((argv[argv.index('-m') + 1], '-s' in argv, '--reasoning' in argv),
+                         ('synthetic-model-1', False, False))
 
     def test_a_wake_during_a_turn_runs_once_that_turn_ends(self):
         open(self.hold, 'w').close()

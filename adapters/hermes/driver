@@ -3,10 +3,14 @@ import ctypes, fcntl, json, os, re, secrets, select, shutil, signal, subprocess,
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATE = os.environ.get('OPENWIZ_HERMES_STATE') or os.path.expanduser('~/.local/state/openwiz-hermes')
-VERSION = {'driver': 'hermes', 'records': ['openwiz:records v1'], 'can': ['start', 'wake', 'stop']}
+VERSION = {'driver': 'hermes', 'records': ['openwiz:records v1'], 'can': ['start', 'wake', 'stop', 'effort']}
 START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
          'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
          'model': r'[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}'}
+EFFORT = {'effort': r'[a-z][a-z0-9-]{0,19}'}
+LEVELS = ('none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra')
+CANT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at "
+        "the host's default")
 RUN = {'run': r'run-[0-9a-f]{12}'}
 TERMINATE_GRACE_SECONDS = 10
 INTERRUPT_SETTLE_SECONDS = 10
@@ -30,24 +34,38 @@ def unique(pairs):
     return dict(pairs)
 
 
-def read(fields):
+def read(fields, optional=None):
+    optional = optional or {}
     try:
         req = json.loads(sys.stdin.read(), object_pairs_hook=unique)
     except ValueError:
         raise Refused('the input is not JSON', 'send one JSON object on stdin, as `driver schema` shows')
-    if not isinstance(req, dict) or set(req) != set(fields):
-        raise Refused('the input needs exactly ' + ', '.join(fields), 'send only those fields; never a login')
-    for key, pattern in fields.items():
+    if not isinstance(req, dict) or not set(fields) <= set(req) <= set(fields) | set(optional):
+        raise Refused('the input needs exactly ' + ', '.join(fields)
+                      + ''.join(', and optionally ' + k for k in optional), 'send only those fields; never a login')
+    for key, pattern in dict(fields, **optional).items():
+        if key not in req:
+            continue
         v = req[key]
         if not (type(v) is int and v > 0 if pattern is None else isinstance(v, str) and re.fullmatch(pattern, v)):
             raise Refused(key + ' is not valid', 'fix ' + key + ' as `driver schema` shows')
     return req
 
 
+def passed_effort(req):
+    if 'effort' not in req:
+        return
+    if req['harness'] == 'hermes' and req['effort'] in LEVELS:
+        return
+    raise Refused('Hermes cannot set effort %s for harness %s' % (req['effort'], req['harness']), CANT)
+
+
 def command(req, session):
     what = 'You were woken: read the ticket again and carry on' if session else 'Build the ticket'
     prompt = '%s: %s#%d, with the %s skill.' % (what, req['repository'], req['ticket'], req['skill'])
     cmd = ['hermes', 'chat', '--oneshot', '--format', 'stream-json', '--source', 'tool']
+    if 'effort' in req:
+        cmd += ['--reasoning', req['effort']]
     tool = HERMES_SKILL_FOR_HARNESS[req['harness']]
     if tool:
         cmd += ['-s', tool]
@@ -307,7 +325,8 @@ def answer(cmd):
         with open(os.path.join(HERE, 'schema.json')) as f:
             return json.load(f)
     if cmd == 'start':
-        req, run = read(START), 'run-' + secrets.token_hex(6)
+        req, run = read(START, EFFORT), 'run-' + secrets.token_hex(6)
+        passed_effort(req)
         if req['harness'] not in HERMES_SKILL_FOR_HARNESS:
             raise Refused('Hermes cannot run harness ' + req['harness'],
                           'use one of: ' + ', '.join(HERMES_SKILL_FOR_HARNESS))

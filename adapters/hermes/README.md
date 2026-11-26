@@ -2,11 +2,19 @@
 
 Login: stays on your machine
 
+Effort: passed as `hermes chat --reasoning <level>`, for none, minimal, low, medium, high, xhigh, max and ultra, on harness `hermes` only ([Hermes CLI commands](https://hermes-agent.nousresearch.com/docs/reference/cli-commands)). Any other harness or level is refused with driver v1's refusal text before a run is saved or a turn starts. A start without an effort runs at Hermes' default.
+
+| Harness | Effort |
+| --- | --- |
+| `hermes` | `--reasoning <level>`, for none, minimal, low, medium, high, xhigh, max and ultra |
+| `claude` | can't (Hermes' claude-code skill chooses the inner CLI's effort; `hermes chat` has no flag that sets it) |
+| `codex` | can't (Hermes' codex skill chooses the inner CLI's effort; `hermes chat` has no flag that sets it) |
+
 A [driver v1](../../kernel/driver.v1.md) that runs each builder in [Hermes](https://hermes-agent.nousresearch.com) (Nous Research's `hermes-agent`) on this machine, through your own `hermes` CLI. One Python file, standard library only. **Platforms:** Linux only, Python 3.9 or later (it keeps each turn's processes with `/proc` and a subreaper; it does not run on macOS yet). Built from [`adapters/template/`](../template/README.md). Runs are saved in `$OPENWIZ_HERMES_STATE` (default `~/.local/state/openwiz-hermes`), owner-only.
 
 | Command | What it does in Hermes |
 | --- | --- |
-| `start` | `hermes chat --oneshot --format stream-json --source tool` with the ticket and skill as its query, under the driver's own supervisor. It answers once Hermes' first `system` `init` line names the session, and saves that `session_id` with the run. The supervisor reads Hermes' output only for that id and discards the rest: no transcript is written to disk. If no session is reported within 60 seconds, or the turn ends without one, it ends the turn and refuses. |
+| `start` | `hermes chat --oneshot --format stream-json --source tool` with the ticket and skill as its query, and `--reasoning <level>` when the start carries an effort the harness can take, under the driver's own supervisor. It answers once Hermes' first `system` `init` line names the session, and saves that `session_id` with the run. The supervisor reads Hermes' output only for that id and discards the rest: no transcript is written to disk. If no session is reported within 60 seconds, or the turn ends without one, it ends the turn and refuses. |
 | `wake` | The same command with `--resume <session_id>`: the same Hermes session and transcript, so the agent edits its own status note. If the last turn still runs, the wake is saved and its supervisor runs that resumed turn as soon as the last one ends, so a wake is never dropped (several wakes during one turn give one resumed turn). A wake after `stop` is refused. |
 | `stop` | Sends the turn's processes SIGINT, Hermes' Ctrl-C, so the turn is interrupted and settles cancelled (its `result` ends `exit_code: 130`). Whatever still runs after 10 seconds it ends with SIGTERM and then SIGKILL, every process the run's turns started, through the template's supervisor. |
 
@@ -24,7 +32,7 @@ Hermes is its own agent. It reaches Claude Code and Codex only through its bundl
 
 Any other `harness` is refused. What this can't control:
 
-- For `claude` and `codex`, `model` and `skill` reach the inner CLI only as words in Hermes' prompt. Hermes runs on its own configured model, and the inner CLI's flags, effort and permissions are whatever Hermes' skill chooses.
+- For `claude` and `codex`, `model` and `skill` reach the inner CLI only as words in Hermes' prompt. Hermes runs on its own configured model, and the inner CLI's flags and permissions are whatever Hermes' skill chooses. A start that sets an effort for either harness is refused: `--reasoning` sets Hermes' own effort, not the inner CLI's.
 - `stop` interrupts and ends what runs on this machine under the turn. If your Hermes setup hands a turn to its gateway or to a remote terminal backend, ending it there is Hermes' job, and the live check shows whether it does.
 - The driver adds no `--yolo`. Hermes' own approval settings decide whether the agent may run commands without asking, and a turn with no terminal can't answer a prompt.
 
