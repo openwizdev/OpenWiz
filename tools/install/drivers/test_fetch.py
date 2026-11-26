@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Fetcher proofs against a loopback GitHub. No network."""
 import hashlib
 import importlib.util
 from io import StringIO

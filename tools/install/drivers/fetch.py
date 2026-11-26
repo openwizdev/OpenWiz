@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-"""Find, check, ask and install a driver package.
-
-The user's add is the yes for a first-party pin. A verified listing needs
-``--answer yes``. A listed driver needs ``--answer install-unverified`` after
-the warning. Nothing from the archive runs before those checks and that yes.
-"""
 import argparse
 import datetime
 import gzip
@@ -203,8 +197,6 @@ def read_regular(path, label):
 
 
 class Client:
-    """HTTPS to GitHub, or the loopback stand-in. The host is still checked."""
-
     def __init__(self, loopback):
         self.address = None
         if loopback:
