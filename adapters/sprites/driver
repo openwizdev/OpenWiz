@@ -1,0 +1,1176 @@
+#!/usr/bin/env python3
+import ctypes, fcntl, json, os, re, secrets, shutil, signal, subprocess, sys, time
+import uuid
+
+sys.dont_write_bytecode = True
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+STATE = os.environ.get('OPENWIZ_SPRITES_STATE') or os.path.expanduser('~/.local/state/openwiz-sprites')
+VERSION = {'driver': 'sprites', 'records': ['openwiz:records v1'],
+           'can': ['start', 'wake', 'stop', 'many-at-once', 'own-sandbox', 'effort']}
+GATEWAY = 'https://api.sprites.dev/v1/gateway/'
+HARNESSES = {
+    'claude': {'connection': 'OPENWIZ_SPRITES_ANTHROPIC', 'provider': 'anthropic', 'path': '',
+               'base': 'ANTHROPIC_BASE_URL', 'key': 'ANTHROPIC_API_KEY', 'package': '@anthropic-ai/claude-code',
+               'efforts': ('low', 'medium', 'high', 'xhigh', 'max')},
+    'codex': {'connection': 'OPENWIZ_SPRITES_OPENAI', 'provider': 'openai', 'path': '/v1',
+              'base': 'OPENAI_BASE_URL', 'key': 'CODEX_API_KEY', 'package': '@openai/codex',
+              'efforts': ('low', 'medium', 'high', 'xhigh', 'max', 'ultra')}}
+GITHUB_CONNECTION = 'OPENWIZ_SPRITES_GITHUB'
+ORGANIZATION = 'OPENWIZ_SPRITES_ORG'
+PLACEHOLDER_KEY = 'openwiz-sprites-gateway-holds-the-key'
+LABEL = 'openwiz'
+REFUSE_EFFORT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster to "
+                 "run it at the host's default")
+START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
+         'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
+         'model': r'(?=.{1,100}$)[A-Za-z0-9][A-Za-z0-9 ._:@+-]*(/[A-Za-z0-9][A-Za-z0-9 ._:@+-]*)*'}
+OPTIONAL = {'effort': r'[a-z][a-z0-9-]{0,19}'}
+RUN = {'run': r'sp-[0-9a-f]{12}'}
+CONNECTION_ID = re.compile(r'[A-Za-z0-9][A-Za-z0-9_-]{0,99}')
+SESSION = re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}')
+API_WAIT_SECONDS = 60
+READ_SPRITE = ['-sS', '-w', '\n%{http_code}']
+CREATE_WAIT_SECONDS = 300
+INSTALL_WAIT_SECONDS = 300
+REACH_WAIT_SECONDS = 180
+TURN_BEGAN_WAIT_SECONDS = 60
+TURN_BEGAN = 'openwiz-turn-began'
+DEFAULT_SETTLE_SECONDS, MAX_SETTLE_SECONDS = 20, 60
+EXIT_RECORD_WAIT_SECONDS = 5
+HARNESS_REFUSALS = re.compile(r'no conversation found|not logged in|please run /login|invalid api key|'
+                              r'401 unauthorized|403 forbidden|authentication_error|failed to authenticate', re.I)
+DESTROY_TRIES, DESTROY_RETRY_PAUSE_SECONDS = 2, 2
+MACOS_SECONDS_BETWEEN_LOOKS = 0.2
+LOOKS_PER_OUTPUT_CHECK = 5
+GRACE_SECONDS_BEFORE_KILL = 10
+UNWRITABLE = ('make OPENWIZ_SPRITES_STATE (or ~/.local/state/openwiz-sprites) a folder of your own that you can '
+              'write')
+CREDENTIAL_SHAPES = re.compile(
+    r'\b(?:[a-z_]*token|[a-z_]*key|secret|password|passwd|pwd|sig|signature|auth|credentials?)\s*='
+    r'|\b(?:password|passwd|secret|token)\s*:\s*\S|\bbearer\s+\S'
+    r'|gh[pousr]_[A-Za-z0-9]{8,}|github_pat_|AKIA[0-9A-Z]{16}|xox[abposr]-|sk-[A-Za-z0-9_-]{16,}', re.I)
+# PRIVACY: sprite's own words (its stderr, its output on a failure) are only classified, never repeated
+SIGNED_OUT = re.compile(r'sign|login|auth|401|unauthori[sz]ed|expired|token', re.I)
+SIGN_IN = 'sign in with `sprite login` yourself'
+INSTALL_REFUSALS = ((r'refused: tag v\S+ is not the pinned commit', 'its tag is not the pinned commit'),
+                    (r'refused: commit \S+ is not the pinned tree', 'its commit is not the pinned tree'),
+                    (r'refused: the installed release is not the pinned (?:commit|tree)',
+                     'the installed release is not the pinned one'),
+                    (r'refused: \S+ exists', 'another skill of that name is installed there'),
+                    (r'refused: the harness did not install', 'the harness did not install'))
+TURN = ('cd "$HOME/$1" 2>/dev/null || cd "$HOME"; shift; . "$HOME/.openwiz/env" && command -v "$1" >/dev/null 2>&1 '
+        '&& echo %s && exec "$@"' % TURN_BEGAN)
+REACH = 'if test -e "$HOME/.openwiz/runs/$1"; then echo openwiz-home-ok; else echo openwiz-home-lost; fi'
+
+
+class Refused(Exception):
+    pass
+
+
+def line(text):
+    text = ' '.join(str(text).split()) or 'no detail'
+    return text if len(text) <= 300 else text[:297] + '...'
+
+
+def unique(pairs):
+    if len({k for k, _ in pairs}) != len(pairs):
+        raise Refused('a key is repeated', 'send each key once')
+    return dict(pairs)
+
+
+def read(fields, optional=None):
+    optional = optional or {}
+    try:
+        req = json.loads(sys.stdin.read(), object_pairs_hook=unique)
+    except ValueError:
+        raise Refused('the input is not JSON', 'send one JSON object on stdin, as `driver schema` shows')
+    if not isinstance(req, dict) or not set(fields) <= set(req) or set(req) - set(fields) - set(optional):
+        raise Refused('the input needs exactly ' + ', '.join(fields) + (', and optionally ' + ', '.join(optional)
+                                                                        if optional else ''),
+                      'send only those fields; never a login')
+    for key, pattern in list(fields.items()) + [(k, p) for k, p in optional.items() if k in req]:
+        v = req[key]
+        if not (type(v) is int and v > 0 if pattern is None else isinstance(v, str) and re.fullmatch(pattern, v)):
+            raise Refused(key + ' is not valid', 'fix ' + key + ' as `driver schema` shows')
+    return req
+
+
+def looks_like_credential(text):
+    return bool(CREDENTIAL_SHAPES.search(text))
+
+
+def no_credentials(req):
+    # PRIVACY: runs before anything is saved or started, and the refusal names the field, never its value.
+    for key in list(START) + list(OPTIONAL):
+        if isinstance(req.get(key), str) and looks_like_credential(req[key]):
+            raise Refused('%s looks like a credential, so nothing was saved or started' % key,
+                          'send the %s itself in %s; never a login, key or token' % (key, key))
+    return req
+
+
+def harness_of(req):
+    if req['harness'] not in HARNESSES and 'effort' in req:
+        raise Refused('Sprites runs no harness %s here, so it takes no effort %s, and nothing was created'
+                      % (req['harness'], req['effort']), REFUSE_EFFORT)
+    if req['harness'] not in HARNESSES:
+        raise Refused('Sprites runs no harness %s here, so nothing was created' % req['harness'],
+                      'use one of: ' + ', '.join(HARNESSES))
+    found = HARNESSES[req['harness']]
+    if 'effort' in req and req['effort'] not in found['efforts']:
+        raise Refused('harness %s here takes no effort %s, so nothing was created' % (req['harness'], req['effort']),
+                      REFUSE_EFFORT)
+    return found
+
+
+def connection(name):
+    # PRIVACY: a connection id names a connector and is not a secret, but a refusal still names only the variable.
+    value = os.environ.get(name) or ''
+    if not value:
+        raise Refused('%s is not set, so nothing was created' % name,
+                      'set %s to your connector\'s connection id, from its page in the Fly.io dashboard, then start '
+                      'again' % name)
+    if not CONNECTION_ID.fullmatch(value) or looks_like_credential(value):
+        raise Refused('%s is not a connection id, so nothing was created' % name,
+                      'set %s to the connection id on the connector\'s page, never a key, then start again' % name)
+    return value
+
+
+def gateways(harness):
+    found = HARNESSES[harness]
+    return {found['base']: GATEWAY + found['provider'] + '/' + connection(found['connection']) + found['path'],
+            'OPENWIZ_GITHUB_API': GATEWAY + 'github/' + connection(GITHUB_CONNECTION)}
+
+
+def organization():
+    value = os.environ.get(ORGANIZATION) or ''
+    if not CONNECTION_ID.fullmatch(value) or looks_like_credential(value):
+        raise Refused('%s does not name a Fly organization, so nothing was created' % ORGANIZATION,
+                      'set %s to the Fly organization your connectors are in, as `sprite org list` names it, then '
+                      'start again' % ORGANIZATION)
+    return value
+
+
+def settle_seconds():
+    raw = os.environ.get('OPENWIZ_SPRITES_SETTLE') or str(DEFAULT_SETTLE_SECONDS)
+    try:
+        seconds = float(raw)
+    except ValueError:
+        seconds = float('nan')
+    if not 0 < seconds <= MAX_SETTLE_SECONDS:
+        raise Refused('OPENWIZ_SPRITES_SETTLE is not a number of seconds above 0 and at most %d; nothing was '
+                      'started' % MAX_SETTLE_SECONDS, 'unset it, or set it to a number of seconds up to %d, then try '
+                      'again' % MAX_SETTLE_SECONDS)
+    return seconds
+
+
+def sprite_program():
+    found = shutil.which('sprite')
+    if not found:
+        raise Refused('the sprite CLI is not installed here, so nothing was created',
+                      "install Fly's sprite CLI (docs.fly.io/sprites/cli/installation) and sign in to it yourself")
+    return found
+
+
+def sprite_error(what, stderr, then):
+    if SIGNED_OUT.search(stderr):
+        why, step = 'sprite is not signed in', SIGN_IN
+    else:
+        why = 'sprite gave an error the driver does not repeat' if stderr.strip() else 'sprite gave no answer'
+        step = 'run `sprite %s` by hand to read what it says' % what
+    return Refused(line('sprite %s failed: %s' % (what, why)), line('%s, then %s' % (step, then)))
+
+
+def sprite(what, then, args, wait=API_WAIT_SECONDS, stdin=None):
+    try:
+        p = subprocess.run([sprite_program()] + args, input=stdin, stdin=None if stdin is not None else
+                           subprocess.DEVNULL, capture_output=True, text=True, timeout=wait)
+    except subprocess.TimeoutExpired:
+        raise Refused('sprite %s took too long; its outcome is unknown' % what, line(then))
+    if p.returncode != 0:
+        raise sprite_error(what, p.stderr[-400:], then)
+    return p.stdout
+
+
+def execute(name, org, words):
+    return [sprite_program(), 'exec', '-o', org, '-s', name, '--no-stdin', '--'] + words
+
+
+def lines_of(text):
+    return [x.strip() for x in text.splitlines() if x.strip()]
+
+
+def pinned_skills():
+    try:
+        with open(os.path.join(HERE, '..', '..', 'wizskills.lock')) as f:
+            lock = json.load(f)
+        assert set(lock) == {'version', 'commit', 'tree'} and re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', lock['version'])
+        assert all(re.fullmatch(r'[0-9a-f]{40}', lock[k]) for k in ('commit', 'tree'))
+        return lock
+    except (OSError, ValueError, TypeError, AssertionError):
+        raise Refused("OpenWiz's wizskills.lock is missing or malformed, so nothing was created",
+                      'run the driver from an OpenWiz checkout whose wizskills.lock pins a WizSkills release')
+PUSH_HELPER = r'''#!/usr/bin/env python3
+import base64, json, os, re, subprocess, sys, urllib.error, urllib.parse, urllib.request
+from datetime import datetime, timezone
+
+ABOUT = """openwiz-push <branch>: publish a local branch to GitHub through the Sprites gateway's GitHub connector, in
+place of `git push`, which this Sprite has no login for. It sends the branch's new commits with GitHub's Git Database
+API (blobs, trees, commits, then the ref) to $OPENWIZ_GITHUB_API, with no Authorization header: the gateway adds the
+login. It only fast-forwards, uploads no blob a commit GitHub holds already reaches, refuses a push of more than 200 changed
+files, checks that GitHub wrote every object with the same sha as here, and moves the branch last, so a refusal
+leaves the branch on GitHub as it was."""
+ORIGIN = re.compile(r'(?:https://github\.com/|git@github\.com:|ssh://git@github\.com/)'
+                    r'([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+?)(?:\.git)?/?')
+WHO = re.compile(r'(.*) <(.*)> ([0-9]+) ([+-][0-9]{4})')
+MOST_FILES = 200
+
+
+def refuse(why):
+    sys.stderr.write('openwiz-push: refused: %s\n' % why)
+    sys.exit(1)
+
+
+def git(*args, data=None):
+    p = subprocess.run(['git'] + list(args), input=data, capture_output=True)
+    if p.returncode:
+        refuse('git %s failed: %s' % (args[0], p.stderr.decode(errors='replace').strip()[:300]))
+    return p.stdout
+
+
+def text(*args):
+    return git(*args).decode().strip()
+
+
+def holds(*args):
+    return subprocess.run(['git'] + list(args), capture_output=True).returncode == 0
+
+
+class GitHub:
+    def __init__(self, base, repo):
+        self.base, self.repo = base.rstrip('/'), repo
+
+    def call(self, method, path, body=None):
+        request = urllib.request.Request(
+            '%s/repos/%s/git/%s' % (self.base, self.repo, urllib.parse.quote(path, safe='/')), method=method,
+            data=None if body is None else json.dumps(body).encode(),
+            headers={'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28',
+                     'User-Agent': 'openwiz-push', 'Content-Type': 'application/json'})
+        try:
+            with urllib.request.urlopen(request, timeout=120) as answer:
+                return answer.status, json.loads(answer.read() or b'null')
+        except urllib.error.HTTPError as e:
+            try:
+                message = json.loads(e.read()).get('message')
+            except (ValueError, AttributeError):
+                message = None
+            return e.code, {'message': message}
+        except (urllib.error.URLError, OSError) as e:
+            refuse('the gateway at $OPENWIZ_GITHUB_API did not answer: %s' % e)
+
+    def made(self, method, path, body, want, what):
+        code, answer = self.call(method, path, body)
+        if code not in (200, 201) or not isinstance(answer, dict):
+            refuse('GitHub refused %s with HTTP %d: %s' % (what, code, (answer or {}).get('message')))
+        if want is not None and answer.get('sha') != want:
+            refuse('GitHub wrote %s as %s, not %s as here, so nothing was moved' % (what, answer.get('sha'), want))
+        return answer
+
+
+def parsed(sha):
+    raw = git('cat-file', 'commit', sha)
+    head, _, message = raw.partition(b'\n\n')
+    commit = {'parents': []}
+    for row in head.decode(errors='replace').split('\n'):
+        key, _, value = row.partition(' ')
+        if key == 'tree':
+            commit['tree'] = value
+        elif key == 'parent':
+            commit['parents'].append(value)
+        elif key in ('author', 'committer'):
+            who = WHO.fullmatch(value)
+            if not who:
+                refuse('commit %s has an %s line this helper cannot read' % (sha, key))
+            name, email, stamp, zone = who.groups()
+            if zone != '+0000':
+                refuse('commit %s was made at time zone %s, and GitHub writes commit dates in UTC, so it would get '
+                       'another sha: make your commits with TZ=UTC (git commit --amend --reset-author for the last '
+                       'one), then push again' % (sha, zone))
+            commit[key] = {'name': name, 'email': email, 'date': datetime.fromtimestamp(
+                int(stamp), timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}
+        else:
+            refuse('commit %s carries a %s header, which GitHub\'s API cannot write again; make it again '
+                   'without one (no signing), then push again' % (sha, key or 'continuation'))
+    try:
+        commit['message'] = message.decode()
+    except UnicodeDecodeError:
+        refuse('commit %s has a message that is not UTF-8' % sha)
+    return commit
+
+
+def changes(parent, sha):
+    out = git('diff-tree', '-r', '-z', '--no-renames', '--no-commit-id', *([parent, sha] if parent else ['--root', sha]))
+    fields, found = out.split(b'\0'), []
+    for at in range(0, len(fields) - 1, 2):
+        old_mode, new_mode, old_sha, new_sha, status = fields[at].decode()[1:].split(' ')
+        found.append((status, fields[at + 1].decode(), old_mode, new_mode, old_sha, new_sha))
+    return found
+
+
+def kind(mode):
+    return 'commit' if mode == '160000' else 'blob'
+
+
+def blobs_under(commits):
+    found = git('rev-list', '--objects', '--no-object-names', *commits) if commits else b''
+    kinds = git('cat-file', '--batch-check=%(objecttype) %(objectname)', data=found) if found else b''
+    return {sha for kind, sha in (row.split() for row in kinds.decode().splitlines()) if kind == 'blob'}
+
+
+def main():
+    if len(sys.argv) != 2 or sys.argv[1] in ('-h', '--help'):
+        sys.stderr.write('usage: openwiz-push <branch>\n%s\n' % ABOUT)
+        sys.exit(2)
+    branch = sys.argv[1]
+    if branch.startswith('-') or not holds('check-ref-format', '--branch', branch):
+        refuse('%r is not a branch name' % branch)
+    base = os.environ.get('OPENWIZ_GITHUB_API', '')
+    if not re.match(r'https?://', base):
+        refuse('OPENWIZ_GITHUB_API is not set: run openwiz-push in the Sprite the OpenWiz driver started')
+    origin = ORIGIN.fullmatch(text('remote', 'get-url', 'origin')) if holds('remote', 'get-url', 'origin') else None
+    if not origin:
+        refuse('origin is not a github.com repository: clone it from https://github.com/<owner>/<name>.git')
+    github = GitHub(base, '%s/%s' % origin.groups())
+    if not holds('rev-parse', '--verify', '-q', 'refs/heads/%s^{commit}' % branch):
+        refuse('there is no local branch %s here' % branch)
+    local = text('rev-parse', 'refs/heads/%s^{commit}' % branch)
+    code, answer = github.call('GET', 'ref/heads/' + branch)
+    if code not in (200, 404):
+        refuse('GitHub did not say where %s is: HTTP %d: %s' % (branch, code, (answer or {}).get('message')))
+    remote = answer['object']['sha'] if code == 200 else None
+    if remote == local:
+        git('update-ref', 'refs/remotes/origin/' + branch, local)
+        print('openwiz-push: %s is up to date on GitHub at %s' % (branch, local))
+        return
+    if remote and not (holds('cat-file', '-e', remote + '^{commit}') and
+                       holds('merge-base', '--is-ancestor', remote, local)):
+        refuse('%s on GitHub is at %s, and this is not a fast-forward of it: bring that commit in (git fetch '
+               'origin %s), rebase onto it, then push again' % (branch, remote, branch))
+    new = text('rev-list', '--topo-order', '--reverse', local, '--not', *([remote] if remote else []),
+               '--remotes=origin').split()
+    commits = {sha: parsed(sha) for sha in new}
+    changed = {sha: changes(commits[sha]['parents'][0] if commits[sha]['parents'] else None, sha) for sha in new}
+    paths = {c[1] for found in changed.values() for c in found}
+    if len(paths) > MOST_FILES:
+        refuse('this push changes %d files, more than the %d openwiz-push sends at once: push it in smaller '
+               'steps' % (len(paths), MOST_FILES))
+    under = sorted({p for c in commits.values() for p in c['parents']} - set(commits) - {remote})
+    for parent in under:
+        if github.call('GET', 'commits/' + parent)[0] != 200:
+            refuse('commit %s, under the new ones, is not on GitHub: push the branch it came from first' % parent)
+    held = blobs_under(under + ([remote] if remote else []))
+    for sha in new:
+        commit = commits[sha]
+        first = commit['parents'][0] if commit['parents'] else None
+        entries = []
+        for status, path, old_mode, new_mode, old_sha, new_sha in changed[sha]:
+            if status == 'D':
+                entries.append({'path': path, 'mode': old_mode, 'type': kind(old_mode), 'sha': None})
+                continue
+            if kind(new_mode) == 'blob' and new_sha not in held:
+                github.made('POST', 'blobs', {'encoding': 'base64', 'content': base64.b64encode(
+                    git('cat-file', 'blob', new_sha)).decode()}, new_sha, 'blob %s of %s' % (new_sha, path))
+                held.add(new_sha)
+            entries.append({'path': path, 'mode': new_mode, 'type': kind(new_mode), 'sha': new_sha})
+        if entries:
+            body = {'tree': entries}
+            if first:
+                body['base_tree'] = text('rev-parse', first + '^{tree}')
+            github.made('POST', 'trees', body, commit['tree'], 'the tree of commit %s' % sha)
+        github.made('POST', 'commits', {k: commit[k] for k in ('message', 'tree', 'parents', 'author', 'committer')},
+                    sha, 'commit %s' % sha)
+    if remote:
+        moved = github.made('PATCH', 'refs/heads/' + branch, {'sha': local, 'force': False}, None,
+                            'the fast-forward of %s (someone may have moved it: fetch, rebase, push again)' % branch)
+    else:
+        moved = github.made('POST', 'refs', {'ref': 'refs/heads/' + branch, 'sha': local}, None,
+                            'the new branch %s (it may exist now: push again)' % branch)
+    if (moved.get('ref'), (moved.get('object') or {}).get('sha')) != ('refs/heads/' + branch, local):
+        refuse('GitHub answered the move of %s without naming %s: check the branch on GitHub' % (branch, local))
+    git('update-ref', 'refs/remotes/origin/' + branch, local)
+    print('openwiz-push: pushed %s to GitHub at %s (%d new commits) through the Sprites gateway'
+          % (branch, local, len(new)))
+
+
+if __name__ == '__main__':
+    main()
+'''
+
+
+def path(run, name):
+    return os.path.join(STATE, '%s.%s' % (run, name))
+
+
+def private_state():
+    os.makedirs(STATE, mode=0o700, exist_ok=True)
+    os.chmod(STATE, 0o700)
+    found = os.stat(STATE)
+    if found.st_uid != os.getuid() or found.st_mode & 0o077:
+        raise PermissionError('the state folder is not owner-only')
+
+
+def private(name, flags=os.O_WRONLY | os.O_CREAT | os.O_TRUNC):
+    fd = os.open(name, flags | os.O_NOFOLLOW, 0o600)
+    try:
+        os.fchmod(fd, 0o600)
+    except OSError:
+        os.close(fd)
+        raise
+    return fd
+
+
+LINUX = os.path.isdir('/proc/self') and hasattr(os, 'pidfd_open')
+PR_SET_CHILD_SUBREAPER = 36
+
+
+def ps(*args):
+    try:
+        p = subprocess.Popen(['ps'] + list(args), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, text=True)
+        out, err = p.communicate(timeout=30)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        raise OSError('ps did not run: %s' % e)
+    if p.returncode and err.strip():
+        raise OSError('ps failed: %s' % err.strip()[:100])
+    return out.splitlines(), p.pid
+
+
+# PRIVACY: reads only ps's process table (pid, parent, group, state, start time), never any environment.
+def members(roots, recorded, writers=()):
+    rows, me = ps('-A', '-o', 'pid=', '-o', 'ppid=', '-o', 'pgid=', '-o', 'stat=', '-o', 'lstart=')
+    started, children, found = {}, {}, set()
+    for row in rows:
+        f = row.split(None, 4)
+        if len(f) < 5 or f[3].startswith('Z'):
+            continue
+        pid, ppid, group = int(f[0]), int(f[1]), int(f[2])
+        started[pid] = f[4].strip()
+        children.setdefault(ppid, []).append(pid)
+        if group in roots or recorded.get(pid) == started[pid] or pid in writers:
+            found.add(pid)
+    todo = list(roots) + list(found)
+    while todo:
+        for c in children.get(todo.pop(), []):
+            if c not in found:
+                found.add(c)
+                todo.append(c)
+    return {p: started[p] for p in found - set(roots) - {os.getpid(), me}}
+
+
+# PRIVACY: asks lsof only which processes hold this run's own turn logs open for writing, never any environment.
+def writing_to(paths):
+    if not paths:
+        return set()
+    try:
+        out = subprocess.run(['lsof', '-F', 'pa', '--'] + list(paths), stdin=subprocess.DEVNULL,
+                             capture_output=True, text=True, timeout=30).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return set()
+    found, pid = set(), None
+    for field in out.splitlines():
+        if field[:1] == 'p' and field[1:].isdigit():
+            pid = int(field[1:])
+        elif field[:1] == 'a' and field[1:2] in ('w', 'u') and pid is not None:
+            found.add(pid)
+    return found
+
+
+def turn_logs(run):
+    try:
+        names = os.listdir(STATE)
+    except FileNotFoundError:
+        return []
+    return sorted(os.path.join(STATE, n) for n in names if n.startswith(run + '.') and n.endswith('.log'))
+
+
+def since(pid):
+    if not LINUX:
+        row = ps('-o', 'stat=', '-o', 'lstart=', '-p', str(pid))[0]
+        return row[0].split(None, 1)[1].strip() if row and not row[0].lstrip().startswith('Z') else None
+    try:
+        with open('/proc/%d/stat' % pid) as f:
+            fields = f.read().rpartition(')')[2].split()
+    except OSError:
+        return None
+    return None if fields[0] == 'Z' else int(fields[19])
+
+
+def descendants(pid):
+    children = {}
+    for p in filter(str.isdigit, os.listdir('/proc')):
+        try:
+            with open('/proc/%s/stat' % p) as f:
+                fields = f.read().rpartition(')')[2].split()
+        except OSError:
+            continue
+        if fields[0] != 'Z':
+            children.setdefault(int(fields[1]), []).append(int(p))
+    found, todo = set(), [pid]
+    while todo:
+        for c in children.get(todo.pop(), []):
+            if c not in found:
+                found.add(c)
+                todo.append(c)
+    return found
+
+
+def supervisor_record(log, supervisor):
+    return '%s.%d.sup' % (log[:-len('.log')], supervisor)
+
+
+def record_this_supervisor(log, kept=None, exited=None):
+    record = supervisor_record(log, os.getpid())
+    with os.fdopen(private(record + '.new'), 'w') as f:
+        json.dump({'supervisor': os.getpid(), 'supervisor_since': since(os.getpid()), 'kept': kept or {},
+                   'exit': exited}, f)
+    os.replace(record + '.new', record)
+
+
+def supervise(run, log, cmd):
+    if not re.fullmatch(RUN['run'], run):
+        print(json.dumps({'error': 'the run id is not valid'}), flush=True)
+        return
+    os.environ['OPENWIZ_RUN'] = run
+    if LINUX and ctypes.CDLL(None, use_errno=True).prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0) != 0:
+        print(json.dumps({'error': "this host cannot keep a turn's processes together"}), flush=True)
+        return
+    try:
+        record_this_supervisor(log)
+        with open(log, 'a') as out:
+            turn = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=out, stderr=subprocess.STDOUT)
+    except OSError as e:
+        print(json.dumps({'error': e.strerror}), flush=True)
+        return
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+    print(json.dumps({'pid': turn.pid, 'since': since(turn.pid)}), flush=True)
+    os.dup2(os.open(os.devnull, os.O_WRONLY), 1)
+    kept, exited = {}, []
+
+    def reaped(pid, status):
+        if pid == turn.pid and not exited:
+            exited.append(os.waitstatus_to_exitcode(status))
+            try:
+                record_this_supervisor(log, {str(p): t for p, t in kept.items()}, exited[0])
+            except OSError:
+                pass
+    if LINUX:
+        while True:
+            try:
+                reaped(*os.wait())
+            except ChildProcessError:
+                return
+    looks = 0
+    while True:
+        children_left = any_child_running_after_reaping(reaped)
+        scanned = looks % LOOKS_PER_OUTPUT_CHECK == 0
+        now = members({os.getpid()}, kept, writing_to([log]) if scanned else ())
+        if not children_left and not now and not scanned:
+            now = members({os.getpid()}, kept, writing_to([log]))
+        looks += 1
+        if now != kept:
+            kept = now
+            try:
+                record_this_supervisor(log, {str(p): t for p, t in kept.items()}, exited[0] if exited else None)
+            except OSError:
+                pass
+        if not children_left and not kept:
+            return
+        time.sleep(MACOS_SECONDS_BETWEEN_LOOKS)
+
+
+def any_child_running_after_reaping(reaped):
+    while True:
+        try:
+            pid, status = os.waitpid(-1, os.WNOHANG)
+        except ChildProcessError:
+            return False
+        if pid == 0:
+            return True
+        reaped(pid, status)
+
+
+def running(turn):
+    return bool(turn) and turn['since'] is not None and since(turn['pid']) == turn['since']
+
+
+def end(turns, run, logs):
+    kept = [(t['supervisor'], t['supervisor_since']) for t in turns if t and t['supervisor_since'] is not None]
+    left = set()
+    for sig, wait in ((signal.SIGTERM, GRACE_SECONDS_BEFORE_KILL), (signal.SIGKILL, 2)):
+        sent, deadline = set(), time.monotonic() + wait
+        while time.monotonic() < deadline:
+            kept = [(p, t) for p, t in kept if since(p) == t]
+            if not LINUX:
+                supervisors = {s for s, _ in kept}
+                left = set(members(supervisors, recorded_by(run, supervisors), writing_to(logs)))
+                if not kept and not left:
+                    return
+                for p in left - sent:
+                    try:
+                        os.kill(p, sig)
+                        sent.add(p)
+                    except OSError:
+                        pass
+                time.sleep(0.1)
+                continue
+            if not kept:
+                return
+            pinned = {}
+            for p in set().union(*(descendants(s) for s, _ in kept)) - sent:
+                try:
+                    pinned[p] = os.pidfd_open(p)
+                except OSError:
+                    pass
+            under = set().union(*(descendants(s) for s, _ in kept))
+            for p, fd in pinned.items():
+                try:
+                    if p in under:
+                        sent.add(p)
+                        signal.pidfd_send_signal(fd, sig)
+                except OSError:
+                    pass
+                finally:
+                    os.close(fd)
+            time.sleep(0.1)
+    raise Refused('run %s still has local processes after stop' % run,
+                  'stop it again, or end its processes by hand: they run under process %s'
+                  % ', '.join(str(p) for p in [p for p, _ in kept] or sorted(left)))
+
+
+def saved(run, state=None):
+    if state is not None:
+        private_state()
+        with os.fdopen(private(path(run, 'json.new')), 'w') as f:
+            json.dump(state, f)
+        os.replace(path(run, 'json.new'), path(run, 'json'))
+        return state
+    try:
+        with open(path(run, 'json')) as f:
+            return json.load(f)
+    except FileNotFoundError:
+        raise Refused('no run ' + run, 'check the run id that `driver start` printed')
+
+
+def lock(run, create):
+    if not os.path.exists(path(run, 'json')):
+        raise Refused('no run ' + run, 'check the run id that `driver start` printed')
+    if not create and not os.path.exists(path(run, 'lock')):
+        raise Refused('run %s has lost its lock file, which may have marked a stop' % run,
+                      'stop it, then start a new run')
+    try:
+        private_state()
+        fcntl.flock(private(path(run, 'lock'), os.O_RDONLY | (os.O_CREAT if create else 0)), fcntl.LOCK_EX)
+    except OSError:
+        raise Refused('the driver cannot lock run %s in its state folder' % run, UNWRITABLE)
+
+
+STOP_MARK_MTIME = 1
+
+
+def mark_stopping(run):
+    marked = False
+    try:
+        fd = os.open(path(run, 'lock'), os.O_WRONLY | os.O_TRUNC)
+        try:
+            marked = os.write(fd, b'stopping\n') == 9
+        finally:
+            os.close(fd)
+    except OSError:
+        pass
+    try:
+        os.utime(path(run, 'lock'), (STOP_MARK_MTIME, STOP_MARK_MTIME))
+        marked = True
+    except OSError:
+        pass
+    return marked
+
+
+def stopping(run):
+    try:
+        with open(path(run, 'lock'), 'rb') as f:
+            return f.read(9) == b'stopping\n' or os.fstat(f.fileno()).st_mtime == STOP_MARK_MTIME
+    except FileNotFoundError:
+        return True
+
+
+def supervisor_records(run):
+    try:
+        names = os.listdir(STATE)
+    except FileNotFoundError:
+        return []
+    return sorted(os.path.join(STATE, n) for n in names if n.startswith(run + '.') and n.endswith('.sup'))
+
+
+def recorded_by(run, supervisors):
+    recorded = {}
+    for name in supervisor_records(run):
+        try:
+            with open(name) as f:
+                kept = json.load(f)
+            if kept['supervisor'] in supervisors:
+                recorded.update({int(p): t for p, t in kept['kept'].items() if isinstance(t, str)})
+        except (OSError, ValueError, KeyError, TypeError, AttributeError):
+            continue
+    return recorded
+
+
+# PRIVACY: finds a run's unsaved turns only by the records their supervisors wrote in its state folder, never
+def strays(run, known):
+    found = []
+    for name in supervisor_records(run):
+        try:
+            with open(name) as f:
+                kept = json.load(f)
+            p, t = kept['supervisor'], kept['supervisor_since']
+        except (OSError, ValueError, KeyError, TypeError):
+            continue
+        if type(p) is int and p > 0 and p not in known and t is not None and since(p) == t:
+            found.append({'supervisor': p, 'supervisor_since': t})
+    return found
+
+
+def reported(what, failures, then):
+    return Refused(line('; '.join([what] + [f.args[0] for f in failures])),
+                   line('; '.join([f.args[1] for f in failures] + ([then] if then else []))))
+
+
+
+INSTALL = r'''set -eu
+v=%(version)s c=%(commit)s t=%(tree)s u=https://github.com/openwizdev/WizSkills.git
+d=$(mktemp -d)
+trap 'rm -rf "$d"' EXIT
+refuse() { echo "refused: $1" >&2; exit 1; }
+git init -q --bare "$d/r.git"
+git --git-dir "$d/r.git" fetch -q --no-tags "$u" "refs/tags/v$v:refs/tags/v$v"
+[ "$(git --git-dir "$d/r.git" rev-parse "refs/tags/v$v^{commit}")" = "$c" ] || refuse "tag v$v is not the pinned commit"
+[ "$(git --git-dir "$d/r.git" rev-parse "$c^{tree}")" = "$t" ] || refuse "commit $c is not the pinned tree"
+git --git-dir "$d/r.git" show "$c:install.sh" > "$d/install.sh"
+GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="url.file://$d/r.git.insteadOf" GIT_CONFIG_VALUE_0="$u" \
+  sh "$d/install.sh" --version "$v" --dest "$HOME/wizskills"
+[ "$(git -C "$HOME/wizskills" rev-parse HEAD)" = "$c" ] || refuse "the installed release is not the pinned commit"
+[ "$(git -C "$HOME/wizskills" rev-parse 'HEAD^{tree}')" = "$t" ] || refuse "the installed release is not the pinned tree"
+for root in "$HOME/.claude/skills" "$HOME/.agents/skills"; do
+  mkdir -p "$root"
+  for skill in "$HOME/wizskills/skills/"*/; do
+    skill=${skill%%/}
+    link=$root/${skill##*/}
+    if [ -e "$link" ] || [ -L "$link" ]; then
+      [ "$(readlink "$link")" = "$skill" ] || refuse "$link exists"
+    else
+      ln -s "$skill" "$link"
+    fi
+  done
+done
+command -v %(harness)s >/dev/null 2>&1 || npm install -g --silent %(package)s >/dev/null 2>&1 || true
+command -v %(harness)s >/dev/null 2>&1 || refuse "the harness did not install"
+mkdir -p "$HOME/.openwiz/bin" "$HOME/.openwiz/runs"
+cat > "$HOME/.openwiz/bin/openwiz-push" <<'OPENWIZ_PUSH_HELPER_END'
+@@OPENWIZ_PUSH_HELPER@@OPENWIZ_PUSH_HELPER_END
+chmod 755 "$HOME/.openwiz/bin/openwiz-push"
+(umask 077 && cat > "$HOME/.openwiz/env" <<'OPENWIZ_ENV_END'
+@@OPENWIZ_ENV@@OPENWIZ_ENV_END
+)
+: > "$HOME/.openwiz/runs/%(run)s"
+echo "openwiz-ready $v"
+'''
+
+
+def install(name, org, lock, req, run, urls):
+    found = HARNESSES[req['harness']]
+    exports = dict(urls, **{found['key']: PLACEHOLDER_KEY})
+    env = ''.join("export %s='%s'\n" % (k, v) for k, v in sorted(exports.items()))
+    env += 'export PATH="$HOME/.openwiz/bin:$PATH"\n'
+    script = (INSTALL % dict(lock, harness=req['harness'], package=found['package'], run=run)).replace(
+        '@@OPENWIZ_PUSH_HELPER@@', PUSH_HELPER).replace('@@OPENWIZ_ENV@@', env)
+    try:
+        p = subprocess.run([sprite_program(), 'exec', '-o', org, '-s', name, '--stdin', '--', 'sh', '-s'], input=script,
+                           capture_output=True, text=True, timeout=INSTALL_WAIT_SECONDS)
+        out = p.stdout + p.stderr
+        done = p.returncode == 0 and ('openwiz-ready ' + lock['version']) in p.stdout
+    except subprocess.TimeoutExpired:
+        out, done = '', False
+    if not done:
+        refused = [why for pattern, why in INSTALL_REFUSALS if re.search(pattern, out)]
+        raise Refused(line('the pinned WizSkills skills (%s), %s and openwiz-push could not be installed in Sprite %s: '
+                           '%s' % (lock['version'], req['harness'], name, refused[0] if refused else
+                                   'sprite gave an error the driver does not repeat')),
+                      line('check that the Sprite reaches github.com and npm, and that no other skill of that name '
+                           'is installed there, then start again'))
+
+
+def reach(name, org, run):
+    then = 'wake it again'
+    try:
+        p = subprocess.run(execute(name, org, ['sh', '-c', REACH, 'openwiz-reach', run]), stdin=subprocess.DEVNULL,
+                           capture_output=True, text=True, timeout=REACH_WAIT_SECONDS)
+    except subprocess.TimeoutExpired:
+        raise Refused('sprite exec did not reach Sprite %s in time, so the run is not woken' % name,
+                      'check `sprite list -o %s --prefix %s` for it, then %s' % (org, name, then))
+    found = lines_of(p.stdout)
+    if p.returncode == 0 and found[-1:] == ['openwiz-home-lost']:
+        raise Refused(line('Sprite %s lost its run\'s files, and the agent\'s session with them, so run %s is not '
+                           'woken' % (name, run)), 'stop it, then start a new run')
+    if p.returncode != 0 or found[-1:] != ['openwiz-home-ok']:
+        raise sprite_error('exec -o %s -s %s' % (org, name), p.stderr[-400:], then)
+
+
+def prompt_text(req, woken):
+    what = 'You were woken: read the ticket again and carry on' if woken else 'Build the ticket'
+    folder = req['repository'].partition('/')[2]
+    effort = '%s effort' % req['effort'] if req.get('effort') else 'default effort'
+    return ('%s: GitHub repository %s, ticket #%d, with the %s skill (~/wizskills/skills/%s/SKILL.md). This Sprite '
+            'has no GitHub login of its own: the Sprites gateway holds it. Clone the repository into ~/%s if it is '
+            'not there yet (git clone https://github.com/%s.git), and follow its instructions. Make every GitHub '
+            'API call (your status note, comments, the pull request, CI reads) as a plain REST call to '
+            '$OPENWIZ_GITHUB_API in place of https://api.github.com, with no Authorization header: the gateway adds '
+            'the login. Publish your branch with `openwiz-push <branch>`, never `git push`: it sends the branch\'s '
+            'new commits through the gateway and only fast-forwards. Make your commits with TZ=UTC and unsigned. '
+            'This run uses the %s, so your status note\'s model field is `<your model> %s`, such as `Opus 5.5 %s`.'
+            % (what, req['repository'], req['ticket'], req['skill'], req['skill'], folder, req['repository'],
+               'host\'s default effort' if effort == 'default effort' else effort, effort, effort))
+
+
+def harness_command(state):
+    req, woken, session = state['request'], bool(state['turns']), state['session']
+    effort = req.get('effort')
+    if req['harness'] == 'claude':
+        words = ['claude', '-p', '--dangerously-skip-permissions', '--model', req['model']] + (
+            ['--effort', effort] if effort else []) + ['--resume' if woken else '--session-id', session]
+    else:
+        words = ['codex', 'exec'] + (['resume'] if woken else []) + [
+            '--json', '--dangerously-bypass-approvals-and-sandbox', '--skip-git-repo-check', '-m', req['model']] + (
+            ['-c', 'model_reasoning_effort=' + effort] if effort else []) + ([session] if woken else [])
+    return ['sh', '-c', TURN, 'openwiz-turn', req['repository'].partition('/')[2]] + words + [prompt_text(req, woken)]
+
+
+def turn(state, run, settle):
+    woken = bool(state['turns'])
+    log = path(run, '%d.log' % len(state['turns']))
+    command = harness_command(state)
+    os.close(private(log))
+    then = 'wake it again' if woken else 'start again'
+    os.environ['OPENWIZ_RUN'] = run
+    try:
+        sup = subprocess.Popen([sys.executable, '-I', os.path.abspath(__file__), '--turn', run, log] +
+                               execute(state['sprite'], state['org'], command), start_new_session=True,
+                               stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        with sup.stdout:
+            first = sup.stdout.readline()
+    except OSError as e:
+        raise Refused('sprite exec did not start: %s' % e.strerror, 'check that `sprite` runs by hand, then ' + then)
+    try:
+        started = json.loads(first)
+    except ValueError:
+        started = {'error': 'its supervisor did not answer'}
+    if 'pid' not in started:
+        raise Refused('sprite exec did not start: %s' % started['error'],
+                      'check that `sprite` runs by hand, then ' + then)
+    now = {'pid': started['pid'], 'since': started['since'], 'supervisor': sup.pid, 'supervisor_since': since(sup.pid)}
+    needs_thread = not woken and state['request']['harness'] == 'codex'
+    deadline = time.monotonic() + TURN_BEGAN_WAIT_SECONDS
+    while True:
+        ended_before_this_read = not running(now)
+        with open(log, errors='replace') as f:
+            text = f.read().splitlines()
+        began = TURN_BEGAN in (x.strip() for x in text)
+        found = [x.get('thread_id') for x in map(event, text) if x.get('type') == 'thread.started']
+        thread = found[0] if found and isinstance(found[0], str) and SESSION.fullmatch(found[0]) else None
+        if began and (thread or not needs_thread):
+            settled(run, state, now, log, settle)
+            return now, thread or state['session']
+        if ended_before_this_read or (found and not thread) or time.monotonic() > deadline:
+            end([now], run, [log])
+            what = 'the %s turn did not begin' % state['request']['harness'] if not began else 'codex printed no thread id'
+            raise Refused(line('%s in Sprite %s, so the run did not %s' % (what, state['sprite'],
+                                                                         'wake' if woken else 'start')),
+                          line('read %s for why; check that its connector lets Sprites labelled %s in, then %s'
+                               % (log, LABEL, then)))
+        time.sleep(0.1)
+
+
+def exit_of(log, supervisor):
+    try:
+        with open(supervisor_record(log, supervisor)) as f:
+            code = json.load(f).get('exit')
+    except (OSError, ValueError, AttributeError):
+        return None
+    return code if type(code) is int else None
+
+
+def settled(run, state, now, log, settle):
+    woken, harness = bool(state['turns']), state['request']['harness']
+    deadline, ended_at = time.monotonic() + settle, None
+    while True:
+        ended_before_this_read = not running(now)
+        if ended_before_this_read and ended_at is None:
+            ended_at = time.monotonic()
+        with open(log, errors='replace') as f:
+            text = f.read().splitlines()
+        after = text[[x.strip() for x in text].index(TURN_BEGAN) + 1:]
+        code = exit_of(log, now['supervisor']) if ended_before_this_read else None
+        if any(HARNESS_REFUSALS.search(x) for x in after if event(x).get('type', 'error') in ('error', 'turn.failed')):
+            why = 'refused to %s' % ('resume its session' if woken else 'start')
+            break
+        if ended_before_this_read and code == 0:
+            return
+        if ended_before_this_read and code is not None:
+            why = 'exited with status %d' % code
+            break
+        if ended_before_this_read and time.monotonic() > ended_at + EXIT_RECORD_WAIT_SECONDS:
+            why = 'ended with no exit status'
+            break
+        if not ended_before_this_read and time.monotonic() > deadline:
+            return
+        time.sleep(0.1)
+    end([now], run, [log])
+    raise Refused(line('the %s turn %s in Sprite %s, so the run did not %s'
+                       % (harness, why, state['sprite'], 'wake' if woken else 'start')),
+                  line('read %s for why; check that its connector lets Sprites labelled %s in%s, then %s'
+                       % (log, LABEL, '; if it lost its session, stop the run and start a new one' if woken else '',
+                          'wake it again' if woken else 'start again')))
+
+
+def event(text):
+    try:
+        item = json.loads(text)
+    except ValueError:
+        return {}
+    return item if isinstance(item, dict) else {}
+
+
+def sprite_read(name, org):
+    try:
+        out = sprite('api', 'stop the run again', ['api', '-o', org, '/sprites/' + name, '--'] + READ_SPRITE)
+    except Refused:
+        return None
+    body, _, code = out.rstrip('\n').rpartition('\n')
+    if code == '404':
+        return False
+    try:
+        shown = json.loads(body)
+        return shown if code == '200' and (shown.get('name'), shown.get('organization')) == (name, org) and \
+            isinstance(shown.get('id'), str) and shown['id'] else None
+    except (ValueError, AttributeError):
+        return None
+
+
+def sprite_gone(name, org, known):
+    shown = sprite_read(name, org)
+    if shown is None or shown is False and not known:
+        return None
+    return shown is False or bool(known) and shown['id'] != known
+
+
+def destroy_sprite(name, org, known):
+    failed = None
+    for attempt in range(DESTROY_TRIES):
+        gone = sprite_gone(name, org, known) if known else False
+        if gone is False:
+            try:
+                sprite('destroy', 'stop the run again', ['destroy', '-o', org, '--force', name])
+                failed = Refused('sprite destroy answered, but Sprite %s is still there' % name, 'stop the run again')
+            except Refused as e:
+                failed = e
+            gone = sprite_gone(name, org, known)
+        if gone:
+            return
+        if gone is None:
+            failed = Refused('sprite api could not confirm that Sprite %s is gone' % name, 'stop the run again')
+        if attempt + 1 < DESTROY_TRIES:
+            time.sleep(DESTROY_RETRY_PAUSE_SECONDS)
+    raise failed
+
+
+def shutdown(run, turns, name, org, known, logs=None):
+    failures = []
+    try:
+        end(turns + strays(run, {t['supervisor'] for t in turns}), run, turn_logs(run) if logs is None else logs)
+    except Refused as e:
+        failures.append(e)
+    except Exception as e:
+        failures.append(Refused('the driver could not end its local processes: %s' % type(e).__name__,
+                                "end this run's processes by hand: they carry OPENWIZ_RUN=%s" % run))
+    if name:
+        try:
+            destroy_sprite(name, org, known)
+        except Refused as e:
+            failures.append(Refused(line('its Sprite %s may still be there, billing storage: %s' % (name, e.args[0])),
+                                    line('stop run %s again, or run `sprite destroy -o %s --force %s` yourself, and '
+                                         'check `sprite info -o %s %s` says it is not found'
+                                         % (run, org, name, org, name))))
+    return failures
+
+
+def abandon(run, state, error):
+    what = error.args[0] if isinstance(error, Refused) else 'the driver failed: ' + type(error).__name__
+    failures = shutdown(run, [], state['sprite'], state['org'], state.get('id'),
+                        [path(run, '%d.log' % len(state['turns']))])
+    try:
+        saved(run, dict(state, stopped=True))
+    except OSError:
+        pass
+    return reported(what, failures, '') if failures else None
+
+
+def unsaved(run, state, now, cmd, log):
+    failures = shutdown(run, [now], state['sprite'] if cmd == 'start' else None, state['org'], state.get('id'), [log])
+    if failures:
+        raise reported('run %s began a turn it could not save, and could not confirm everything ended; its '
+                       'outcome is unknown' % run, failures, 'read the ticket for what its agent did')
+    raise Refused('run %s began a turn it could not save, so the driver ended it; its outcome is unknown' % run,
+                  'read the ticket for what its agent did before you %s' % (
+                      'start a new run' if cmd == 'start' else 'wake it again'))
+
+
+def start(req):
+    harness_of(req)
+    urls, org = gateways(req['harness']), organization()
+    sprite_program()
+    lock, settle = pinned_skills(), settle_seconds()
+    run = 'sp-' + secrets.token_hex(6)
+    name = 'openwiz-' + run
+    state = {'request': req, 'sprite': None, 'session': str(uuid.uuid4()) if req['harness'] == 'claude' else None,
+             'org': org, 'id': None, 'turns': [], 'stopped': False, 'starting': True}
+    try:
+        saved(run, state)
+        os.close(private(path(run, 'lock'), os.O_WRONLY | os.O_CREAT))
+    except OSError:
+        raise Refused('the driver cannot save runs in its state folder, so nothing was created', UNWRITABLE)
+    try:
+        sprite('create', 'check `sprite list -o %s --prefix %s`; if it shows a Sprite, run `sprite destroy -o %s '
+                         '--force %s` yourself, then start again' % (org, name, org, name),
+               ['create', '-o', org, '--skip-console', '--label', LABEL, name], CREATE_WAIT_SECONDS)
+    except Refused:
+        try:
+            saved(run, dict(state, stopped=True))
+        except OSError:
+            pass
+        raise
+    state['sprite'] = name
+    try:
+        try:
+            saved(run, state)
+        except OSError:
+            raise Refused('the driver cannot save run %s; its new Sprite is destroyed' % run,
+                          UNWRITABLE + ', then start again')
+        shown = sprite_read(name, org)
+        if not shown:
+            raise Refused('sprite api could not read its new Sprite back, so no stop could be confirmed; the run did '
+                          'not start', 'check that `sprite api -o %s /sprites/%s` answers that Sprite, then start '
+                          'again' % (org, name))
+        state['id'] = shown['id']
+        try:
+            saved(run, state)
+        except OSError:
+            raise Refused('the driver cannot save run %s; its new Sprite is destroyed' % run,
+                          UNWRITABLE + ', then start again')
+        install(name, org, lock, req, run, urls)
+        now, session = turn(state, run, settle)
+        if looks_like_credential(session):
+            end([now], run, [path(run, '0.log')])
+            raise Refused('codex printed a thread id that looks like a credential, so the run did not start',
+                          'start again')
+        try:
+            saved(run, dict(state, turns=[now], session=session, starting=False))
+        except OSError:
+            unsaved(run, state, now, 'start', path(run, '0.log'))
+    except Exception as e:
+        instead = abandon(run, state, e)
+        if instead:
+            raise instead from e
+        raise
+    return {'run': run}
+
+
+def wake(run):
+    lock(run, False)
+    state = saved(run)
+    if state['stopped']:
+        raise Refused('run %s is stopped' % run, 'start a new run')
+    if stopping(run):
+        raise Refused('a stop of run %s could not save that the run is stopped' % run,
+                      'stop it again; it stays stopped and is never woken')
+    if state.get('starting'):
+        raise Refused('run %s never finished starting' % run, 'stop it, then start a new run')
+    if state['turns'] and running(state['turns'][-1]):
+        return {'run': run, 'woke': True}
+    settle = settle_seconds()
+    try:
+        saved(run, state)
+    except OSError:
+        raise Refused('the driver cannot save run %s; nothing was started' % run, UNWRITABLE + ', then wake it')
+    reach(state['sprite'], state['org'], run)
+    now, _ = turn(state, run, settle)
+    try:
+        saved(run, dict(state, turns=state['turns'] + [now]))
+    except OSError:
+        unsaved(run, state, now, 'wake', path(run, '%d.log' % len(state['turns'])))
+    return {'run': run, 'woke': True}
+
+
+def stop(run):
+    lock(run, True)
+    state = saved(run)
+    marked = mark_stopping(run)
+    try:
+        saved(run, dict(state, stopped=True))
+        kept = True
+    except OSError:
+        kept = False
+    failures = shutdown(run, state['turns'], state['sprite'], state['org'], state.get('id'))
+    every_process_ended = not failures
+    for name in os.listdir(STATE):
+        if name.startswith(run + '.') and (name.endswith('.log') or name.endswith('.sup') and every_process_ended):
+            try:
+                os.remove(os.path.join(STATE, name))
+            except OSError:
+                pass
+    if not kept:
+        failures.append(Refused('the driver could not save that it is stopped%s' % (
+                                    '' if marked else ', nor mark it stopping: do not wake it'),
+                                UNWRITABLE + ', then stop it again'))
+    if failures:
+        raise reported('run %s did not stop cleanly' % run, failures, '')
+    return {'run': run, 'stopped': True}
+
+
+def answer(cmd):
+    if cmd == 'version':
+        return VERSION
+    if cmd == 'schema':
+        with open(os.path.join(HERE, 'schema.json')) as f:
+            return json.load(f)
+    if cmd == 'start':
+        return start(no_credentials(read(START, OPTIONAL)))
+    if cmd in ('wake', 'stop'):
+        run = read(RUN)['run']
+        return wake(run) if cmd == 'wake' else stop(run)
+    raise Refused('unknown command', 'run one of: version, schema, start, wake, stop')
+
+
+def main():
+    if len(sys.argv) > 4 and sys.argv[1] == '--turn':
+        return supervise(sys.argv[2], sys.argv[3], sys.argv[4:])
+    try:
+        out, code = answer(sys.argv[1] if len(sys.argv) == 2 else ''), 0
+    except Refused as e:
+        out, code = {'error': e.args[0], 'next': e.args[1]}, 1
+    except Exception as e:
+        out, code = {'error': 'the driver failed: ' + type(e).__name__,
+                     'next': 'read its code and fix it; check `sprite list --prefix openwiz-` for what is running'}, 1
+    print(json.dumps(out))
+    sys.exit(code)
+
+
+if __name__ == '__main__':
+    main()
