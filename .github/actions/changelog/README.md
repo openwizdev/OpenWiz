@@ -29,7 +29,8 @@ reason against `changes/README.md`.
 On a pull request or merge group, the workflow then runs
 `tools/release/entry.py` over `changes/` for lines added or modified since the
 base. That is the release source check: a line whose ticket has no version
-milestone fails the pull request. Lines the diff did not change are left to
+milestone fails the pull request. The workflow token has `issues: read` so
+that check can read the ticket. Lines the diff did not change are left to
 release, including moved lines recorded there as exclusions.
 
 GitHub's [file-list API](https://docs.github.com/en/rest/pulls/pulls#list-pull-requests-files)
