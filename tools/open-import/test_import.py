@@ -36,10 +36,14 @@ CLASSIFIED_2405 = (
     ('tools/notifications/discovery-kit.md', 'public', 'notification discovery kit, schema and tests'),
 )
 CARRIED = REVIEWED_CARRIAGE + tuple(row[0] for row in CLASSIFIED_2405)
-
+TREE = HERE.parents[1]
 
 
 class Import(unittest.TestCase):
+    def test_reviewed_carriage_names_files_in_this_tree(self):
+        missing = [name for name in CARRIED if not (TREE / name).is_file()]
+        self.assertEqual(missing, [])
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
