@@ -261,6 +261,9 @@ def wake():
     if code is None:
         raise Refused('Cursor gave no answer to the wake of run %s, so whether it woke is unknown' % run,
                       'read the ticket; Cursor runs one turn per agent at a time, so waking again never starts two')
+    if code >= 500:
+        raise Refused('Cursor could not wake run %s just now (%s); the failure is transient' % (run, why(code, answer)),
+                      'wake it again: Cursor runs one turn per agent at a time, so waking again never starts two')
     if code in (200, 201) or why(code, answer) == 'HTTP 409 agent_busy':
         return {'run': run, 'woke': True}
     raise refused(code, answer, 'wake run %s' % run, 'stop it, then start a new run')
