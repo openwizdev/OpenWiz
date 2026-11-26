@@ -206,6 +206,76 @@ class SshDriver(unittest.TestCase):
         except OSError:
             pass
 
+    def test_two_starts_do_not_share_one_ssh_config(self):
+        code, first = self.call('start', START, OPENWIZ_SSH_HOLD='30')
+        self.assertEqual(code, 0, first)
+        code, second = self.call('start', START, OPENWIZ_SSH_HOLD='30')
+        self.assertEqual(code, 0, second)
+        self.addCleanup(self.call, 'stop', {'run': first['run']})
+        self.addCleanup(self.call, 'stop', {'run': second['run']})
+        configs = [row[row.index('-F') + 1] for row in self.lines(2) if '-F' in row]
+        self.assertGreaterEqual(len(configs), 2)
+        self.assertNotEqual(configs[0], configs[1])
+        self.assertNotIn('ssh-config.tmp', ' '.join(configs))
+
+    def test_the_user_ssh_config_is_included_before_the_system_one(self):
+        home = os.path.join(self.folder, 'home')
+        os.makedirs(os.path.join(home, '.ssh'))
+        with open(os.path.join(home, '.ssh', 'config'), 'w') as handle:
+            handle.write('Host *\n')
+        code, out = self.call('start', START, HOME=home, OPENWIZ_SSH_HOLD='30')
+        self.assertEqual(code, 0, out)
+        self.addCleanup(self.call, 'stop', {'run': out['run']})
+        config = self.logged()[0]
+        config = config[config.index('-F') + 1]
+        text = open(config).read().splitlines()
+        user = next(i for i, line in enumerate(text) if home in line)
+        system = next(i for i, line in enumerate(text) if '/etc/ssh/ssh_config' in line)
+        self.assertLess(user, system)
+
+    def test_a_wake_that_cannot_save_ends_the_ssh_it_started(self):
+        code, out = self.call('start', START, OPENWIZ_SSH_HOLD='30')
+        self.assertEqual(code, 0, out)
+        path = os.path.join(self.env['OPENWIZ_SSH_STATE'], out['run'] + '.json')
+        with open(path) as handle:
+            pid = json.load(handle)['pids'][0]['pid']
+        os.kill(pid, 9)
+        for _ in range(40):
+            if not self.running(pid):
+                break
+            time.sleep(0.05)
+        self.assertFalse(self.running(pid))
+        os.mkdir(path + '.tmp')
+        code, woke = self.call('wake', {'run': out['run']}, OPENWIZ_SSH_HOLD='30')
+        text = woke if isinstance(woke, str) else json.dumps(woke)
+        self.assertEqual(code, 1, text)
+        self.assertIn('could not be saved', text)
+        self.assertFalse(self.still_has(out['run']))
+
+    def still_has(self, run):
+        needle = ('OPENWIZ_SSH_RUN=%s' % run).encode()
+        if not os.path.isdir('/proc'):
+            return False
+        for name in os.listdir('/proc'):
+            if not name.isdigit():
+                continue
+            try:
+                with open('/proc/%s/cmdline' % name, 'rb') as handle:
+                    command = handle.read()
+            except OSError:
+                continue
+            if needle in command and name != str(os.getpid()):
+                return True
+        return False
+
+    def test_stop_asks_the_vps_to_end_the_harness(self):
+        code, out = self.call('start', START, OPENWIZ_SSH_HOLD='30')
+        self.assertEqual(code, 0, out)
+        code, stopped = self.call('stop', {'run': out['run']})
+        self.assertEqual(code, 0, stopped)
+        self.assertIn('pkill -TERM -f --', json.dumps(self.logged()))
+        self.assertIn('OPENWIZ_SSH_RUN=%s' % out['run'], json.dumps(self.logged()))
+
     def test_kit_passes_all_five(self):
         process = subprocess.run([sys.executable, '-I', os.path.join(KIT, 'kit.py'), '--driver', DRIVER,
                                  '--repo', 'example/site', '--ticket', '7', '--harness', 'fake-harness',
