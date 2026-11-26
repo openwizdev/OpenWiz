@@ -163,7 +163,71 @@ sys.exit(reply.get("exit", 0))
         self.assertIn(
             'python3 -I tools/release/entry.py --repo "$GITHUB_WORKSPACE" --base "$BASE" changes/',
             workflow)
+        self.assertIn("python3 -I .github/actions/changelog/check.py milestone-lines", workflow)
         self.assertIn("Changelog line version milestones", workflow)
+        self.assertNotIn("PR_BASE", workflow)
+
+    def run_milestone(self, files, event="pull_request", mutate=None):
+        replies = [{"data": [files]}]
+        if mutate:
+            mutate(replies)
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            (folder / "replies").write_text(json.dumps(replies))
+            fake = folder / "gh"
+            fake.write_text('''#!/usr/bin/env python3
+import json, os, pathlib, sys
+folder = pathlib.Path(os.environ["FAKE_DIR"])
+log = folder / "calls"
+calls = log.read_text().splitlines() if log.exists() else []
+with log.open("a") as out:
+    out.write(json.dumps(sys.argv[1:]) + "\\n")
+reply = json.loads((folder / "replies").read_text())[len(calls)]
+print(reply.get("raw", json.dumps(reply.get("data"))))
+sys.exit(reply.get("exit", 0))
+''')
+            fake.chmod(0o755)
+            env = dict(os.environ, PATH=f"{folder}:{os.environ['PATH']}",
+                       FAKE_DIR=directory, EVENT=event, REPO="synthetic/project",
+                       PR="4102")
+            result = subprocess.run(
+                [sys.executable, "-I", str(HERE / "check.py"), "milestone-lines"],
+                env=env, capture_output=True, text=True)
+            calls = folder / "calls"
+            recorded = [json.loads(line) for line in calls.read_text().splitlines()] if calls.exists() else []
+        return result, recorded
+
+    def test_milestone_lines_are_the_pull_request_file_list(self):
+        result, calls = self.run_milestone([
+            PRODUCT, LINE, {"filename": "changes/7001.md", "status": "removed"},
+            {"filename": "changes/README.md", "status": "modified"},
+            {"filename": "changes/notes/4101.md", "status": "added"},
+            {"filename": "changes/closedwiz-121.md", "status": "modified"},
+            {"filename": "changes/4102.md", "status": "renamed", "previous_filename": "changes/4100.md"},
+        ])
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.stdout.splitlines(),
+                         ["changes/4101.md", "changes/closedwiz-121.md", "changes/4102.md"])
+        self.assertEqual(result.stderr, "")
+        self.assertEqual(calls, [[
+            "api", "--paginate", "--slurp",
+            "repos/synthetic/project/pulls/4102/files?per_page=100"]])
+
+    def test_milestone_lines_ignore_an_empty_list_and_refuse_a_bad_read(self):
+        result, calls = self.run_milestone([])
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.stdout, "")
+        self.assertEqual(calls[0][0], "api")
+        refused, _ = self.run_milestone([LINE], event="merge_group")
+        self.assertEqual(refused.returncode, 1, refused.stdout + refused.stderr)
+        self.assertIn("unsupported event", refused.stderr)
+        for mutation in [lambda r: r[0].update(exit=1),
+                         lambda r: r[0].update(data={"message": "failure"}),
+                         lambda r: r[0].update(data=[[dict(LINE, status="unknown")]])]:
+            with self.subTest(mutation=mutation):
+                failed, _ = self.run_milestone([LINE], mutate=mutation)
+                self.assertEqual(failed.returncode, 1, failed.stdout + failed.stderr)
+                self.assertNotIn("{", failed.stderr)
 
     def test_checkout_failure_is_reported_only_when_checkout_failed(self):
         workflow = (HERE.parents[1] / "workflows/changelog.yml").read_text()

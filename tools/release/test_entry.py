@@ -755,6 +755,19 @@ class SourceCheck(unittest.TestCase):
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertIn("entry: ticket 7001 has no version milestone", result.stderr)
 
+    def test_named_path_ignores_another_unversioned_line(self):
+        self.issue(7001, None)
+        self.plant(7001)
+        self.issue(4101, {"number": 23, "title": "0.1.1"})
+        self.plant(4101, "You can check a changelog line before it merges.")
+        self.commit("both")
+        result = subprocess.run([sys.executable, "-I", str(Path(__file__).resolve().parent / "entry.py"),
+                                 "--repo", str(self.repo), "changes/4101.md"],
+                                env=self.env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.stdout.strip(), "entry: pass (1 changelog line)")
+        self.assertNotIn("7001", result.stdout + result.stderr)
+
     def test_versioned_change_ignores_an_older_unversioned_line(self):
         self.issue(7001, None)
         self.plant(7001)

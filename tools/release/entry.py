@@ -382,7 +382,7 @@ def generate(check, source, base_files):
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="entry.py", description="Check changes/ lines for a version milestone.")
     parser.add_argument("--repo", required=True)
-    parser.add_argument("--base", help="with a changes directory, check lines added or modified since this commit")
+    parser.add_argument("--base", help="with a changes directory, check lines that differ from this commit")
     parser.add_argument("--source", default="HEAD")
     parser.add_argument("paths", nargs="+")
     args = parser.parse_args(argv)

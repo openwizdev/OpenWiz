@@ -26,12 +26,13 @@ This checks presence, not the line's wording or its association to a ticket.
 The reviewer still checks format, public wording, truth and any exemption's
 reason against `changes/README.md`.
 
-On a pull request or merge group, the workflow then runs
-`tools/release/entry.py` over `changes/` for lines added or modified since the
-base. That is the release source check: a line whose ticket has no version
-milestone fails the pull request. The workflow token has `issues: read` so
-that check can read the ticket. Lines the diff did not change are left to
-release, including moved lines recorded there as exclusions.
+On a pull request, `check.py milestone-lines` prints the changelog lines in
+GitHub's changed-file list, and the workflow runs `tools/release/entry.py` on
+those paths. A line the pull request did not change is left to release,
+including one edited later on the base branch. On a merge group, the workflow
+runs that command with `--base` set to the group's base. A line whose ticket
+has no version milestone fails the job. The token has `issues: read` so it can
+read that milestone.
 
 GitHub's [file-list API](https://docs.github.com/en/rest/pulls/pulls#list-pull-requests-files)
 returns at most 3000 files. Larger PRs fail closed, including labelled ones.
