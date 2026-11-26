@@ -1,0 +1,17 @@
+# Red run: a 5xx on wake is reported as a refusal to stop and start a new run.
+# Command: python3 -I adapters/cursor/test_driver.py Cursor.test_a_server_error_on_wake_is_transient_and_the_run_stays_wakeable
+# Paths in the traceback read <repo>.
+test_a_server_error_on_wake_is_transient_and_the_run_stays_wakeable (__main__.Cursor.test_a_server_error_on_wake_is_transient_and_the_run_stays_wakeable) ... FAIL
+
+======================================================================
+FAIL: test_a_server_error_on_wake_is_transient_and_the_run_stays_wakeable (__main__.Cursor.test_a_server_error_on_wake_is_transient_and_the_run_stays_wakeable)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/cursor/test_driver.py", line 331, in test_a_server_error_on_wake_is_transient_and_the_run_stays_wakeable
+    self.assertNotIn('refused', err['error'])
+AssertionError: 'refused' unexpectedly found in 'Cursor refused to wake run run-76402d937aca (HTTP 500 fake_failure)'
+
+----------------------------------------------------------------------
+Ran 1 test in 0.260s
+
+FAILED (failures=1)

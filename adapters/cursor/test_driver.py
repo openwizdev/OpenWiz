@@ -321,6 +321,19 @@ class Cursor(unittest.TestCase):
         [agent] = self.agents().values()
         self.assertIn('build-ticket skill', agent['prompt'])
 
+    def test_a_server_error_on_wake_is_transient_and_the_run_stays_wakeable(self):
+        code, out = self.driver('start', START)
+        self.assertEqual(code, 0, out)
+        self.assertTrue(self.until(lambda: not any(alive(p) for p, _ in self.logged(1))), 'the fake run did not end')
+        self.fault({'POST /runs': 500})
+        code, err = self.driver('wake', out)
+        self.assertEqual(code, 1, err)
+        self.assertNotIn('refused', err['error'])
+        self.assertNotIn('start a new run', err['next'])
+        self.assertIn('wake it again', err['next'])
+        self.fault({})
+        self.assertEqual(self.driver('wake', out), (0, dict(out, woke=True)))
+
     def test_stop_cancels_the_active_run_then_archives_and_never_deletes(self):
         open(self.hold, 'w').close()
         code, out = self.driver('start', START)
