@@ -1,0 +1,15 @@
+{
+  "schema": "openwiz.typesafe-bench.plan-limit.v1",
+  "note": "recorded_noul values are fixture input, not live Jev calls",
+  "cases": [
+    {"id": "exact-reached", "text": "Claude usage limit reached", "expected": true, "recorded_noul": null},
+    {"id": "exact-hit", "text": "You've hit your limit", "expected": true, "recorded_noul": null},
+    {"id": "exact-reset", "text": "You've hit your limit · resets 04:00 UTC", "expected": true, "recorded_noul": null},
+    {"id": "ordinary", "text": "All checks passed", "expected": false, "recorded_noul": 0.02},
+    {"id": "paraphrase-plan", "text": "Please wait. The Claude plan limit was reached and the session stopped.", "expected": true, "recorded_noul": 0.96},
+    {"id": "paraphrase-rate", "text": "rate limit: retry this Claude session after the window", "expected": true, "recorded_noul": 0.93},
+    {"id": "word-limit", "text": "the ticket says the word limit in its title", "expected": false, "recorded_noul": 0.2},
+    {"id": "sign-in", "text": "not signed in: run login", "expected": false, "recorded_noul": 0.15},
+    {"id": "confident-wrong", "text": "build failed: exit 1", "expected": false, "recorded_noul": 0.97}
+  ]
+}

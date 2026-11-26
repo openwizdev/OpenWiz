@@ -1119,7 +1119,7 @@ impl World {
                     .filter(|o| o.problems.is_empty())
                     .is_some_and(|o| {
                         [o.output, o.error].iter().any(
-                            |f| matches!(f, Fact::Known(Some(text)) if claude_plan_limit(text)),
+                            |f| matches!(f, Fact::Known(Some(text)) if super::typesafe::plan_limit(text)),
                         )
                     });
             Some(BuilderSource {
@@ -1424,17 +1424,6 @@ fn start_facts(r: &StartRecord, comments: &[Comment]) -> Vec<Start> {
             }
         })
         .collect()
-}
-
-fn claude_plan_limit(text: &str) -> bool {
-    text.lines().any(|line| {
-        let line = line.trim();
-        line == "Claude usage limit reached"
-            || line == "You've hit your limit"
-            || line
-                .strip_prefix("You've hit your limit · resets ")
-                .is_some_and(|s| !s.is_empty())
-    })
 }
 
 #[cfg(test)]
