@@ -257,6 +257,30 @@ class Cursor(unittest.TestCase):
         with open(os.path.abspath(__file__)) as f:
             self.assertNotIn('/' + 'environ', f.read())
 
+    def test_a_live_fake_agent_is_seen_when_proc_is_missing(self):
+        open(self.hold, 'w').close()
+        code, out = self.driver('start', START)
+        self.assertEqual(code, 0, out)
+        [(pid, _)] = self.logged(1)
+        self.assertEqual(self.running(), [pid])
+        import builtins
+        real = builtins.open
+
+        def hidden(file, *args, **kwargs):
+            name = file.decode() if isinstance(file, bytes) else file
+            if isinstance(name, str) and (name == '/proc' or name.startswith('/proc/')):
+                raise FileNotFoundError(2, 'No such file or directory', file)
+            return real(file, *args, **kwargs)
+
+        builtins.open = hidden
+        try:
+            self.assertTrue(alive(pid), 'a live agent looks dead without /proc')
+            self.assertTrue(self.fake_agent(pid), 'the fake agent is not recognized without /proc')
+            self.assertEqual(self.running(), [pid])
+        finally:
+            builtins.open = real
+        os.remove(self.hold)
+
     def test_an_installed_driver_starts_with_the_pin_its_build_names(self):
         runtime = os.path.join(self.folder, 'current', 'runtime')
         os.makedirs(os.path.join(runtime, 'adapters', 'cursor'))
