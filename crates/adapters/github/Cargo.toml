@@ -11,5 +11,9 @@ openwiz-core = { path = "../../core" }
 serde.workspace = true
 serde_json.workspace = true
 
+[[bench]]
+name = "parse"
+harness = false
+
 [lints]
 workspace = true
