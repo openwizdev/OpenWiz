@@ -166,7 +166,6 @@ def answer(cmd):
         if 'effort' in req:
             if req['effort'] not in EFFORTS:
                 raise Refused('Ona cannot set effort %s for harness codex' % req['effort'], NO_EFFORT)
-            # The kit proves this value is the effort word. EFFORTS names Ona's documented enum suffixes.
             settings['reasoningEffort'] = req['effort']
         lost = 'look for a new OpenWiz run in Ona, stop it, then retry'
         status, started = ask(AGENT + 'StartAgent', {
