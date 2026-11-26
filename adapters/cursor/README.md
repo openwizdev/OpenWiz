@@ -7,7 +7,7 @@ Effort: the host can't set it (the driver uses the Cloud Agents API's model ID a
 - The key is your own `CURSOR_API_KEY`, or the keychain entry `openwiz-cursor-cloud` when that variable is unset.
 - OpenWiz never stores it. Removing it from your environment or keychain only stops OpenWiz using it here; the key stays valid at Cursor until you revoke it in Cursor's dashboard (API Keys). If it may have leaked, revoke it there.
 
-A [driver v1](../../kernel/driver.v1.md) that runs each builder as one [Cursor cloud agent](https://cursor.com/docs/cloud-agent), on its own Cursor-hosted machine, through Cursor's Cloud Agents API (v1, public beta). One Python file, standard library only. **Platforms:** Linux and macOS, Python 3.9 or later. Runs are saved in `$OPENWIZ_CURSOR_STATE` (default `~/.local/state/openwiz-cursor`), owner-only.
+A [driver v1](../../kernel/driver.v1.md) that runs each builder as one [Cursor cloud agent](https://cursor.com/docs/cloud-agent), on its own Cursor-hosted machine, through Cursor's Cloud Agents API (v1, public beta). One Python file, standard library only. **Platforms:** Linux and macOS, Python 3.9 or later. Runs are saved in `$OPENWIZ_CURSOR_STATE` (default `~/.local/state/openwiz-cursor`), owner-only: the folder is mode 0700, and each run file is created mode 0600 and then renamed into place.
 
 Every Cursor call goes through the kit's key helper, [`hostkey.py`](../../kernel/driver-kit/hostkey.py), for host `cursor-cloud` (driver v1 N4). The driver sends it only a method, a path and a body. The helper alone reads the key and sends it to Cursor's registered address (`https://api.cursor.com`, in [`hosts.json`](../../kernel/driver-kit/hosts.json)). The driver never reads, names or passes the key, and never builds a URL.
 
