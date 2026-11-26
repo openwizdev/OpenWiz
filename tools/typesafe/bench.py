@@ -23,6 +23,7 @@ import jev_judge
 import jev_mentions
 import plan_limit
 import tokens
+import turn_end
 import verdict
 
 FIXTURES = HERE / 'fixtures'
@@ -76,6 +77,18 @@ def score_mentions(data):
     return len(data['cases']), old_hit, shaped_hit
 
 
+def score_turn_end(data):
+    old_hit = shaped_hit = 0
+    for row in data['cases']:
+        structured = any(event.get('event') == 'usage_limit' for event in row['events'])
+        old = structured
+        shaped = structured or (row['noul'] is not None and turn_end.usage_limit(
+            row['text'], _Recorded({'limit': row['noul']})))
+        old_hit += int(old == row['expected'])
+        shaped_hit += int(shaped == row['expected'])
+    return len(data['cases']), old_hit, shaped_hit
+
+
 def score_verdict(data):
     old_hit = shaped_hit = 0
     for row in data['cases']:
@@ -89,6 +102,7 @@ HANDLERS = {
     'openwiz.typesafe-bench.plan-limit.v1': ('plan-limit', score_plan_limit),
     'openwiz.typesafe-bench.verdict.v1': ('verdict', score_verdict),
     'openwiz.typesafe-bench.mentions.v1': ('mentions', score_mentions),
+    'openwiz.typesafe-bench.turn-end.v1': ('turn-end', score_turn_end),
 }
 
 
@@ -145,6 +159,43 @@ def main(argv):
                 response = None
             hit += int(plan_limit.shaped(row['text'], response) == row['expected'])
         print(f'plan-limit live: {hit}/{len(data["cases"])} matched the fixture label')
+    for path in paths:
+        data = json.loads(path.read_text())
+        if data['schema'] != 'openwiz.typesafe-bench.verdict.v1':
+            continue
+        hit = 0
+        for row in data['cases']:
+            try:
+                response = ask.system_one(row['line'], verdict.QUESTIONS)
+            except client.TypeSafeError:
+                response = None
+            hit += int(verdict.shaped(row['line'], response) == row['expected'])
+        print(f'verdict live: {hit}/{len(data["cases"])} matched the fixture label')
+    for path in paths:
+        data = json.loads(path.read_text())
+        if data['schema'] != 'openwiz.typesafe-bench.mentions.v1':
+            continue
+        hit = 0
+        for row in data['cases']:
+            found = tokens.named_docs(row['text']) | jev_mentions.extra(row['text'], ask)
+            hit += int(found == set(row['expected']))
+        print(f'mentions live: {hit}/{len(data["cases"])} matched the fixture label')
+    for path in paths:
+        data = json.loads(path.read_text())
+        if data['schema'] != 'openwiz.typesafe-bench.turn-end.v1':
+            continue
+        hit = 0
+        for row in data['cases']:
+            structured = any(event.get('event') == 'usage_limit' for event in row['events'])
+            value = None
+            if row['text']:
+                try:
+                    value = client.noul(ask.system_one(row['text'], turn_end.QUESTIONS), 'limit')
+                except client.TypeSafeError:
+                    value = None
+            shaped = structured or (value is not None and value >= turn_end.YES)
+            hit += int(shaped == row['expected'])
+        print(f'turn-end live: {hit}/{len(data["cases"])} matched the fixture label')
     return 0
 
 

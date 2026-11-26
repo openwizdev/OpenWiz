@@ -1,0 +1,48 @@
+{
+  "schema": "openwiz.typesafe-bench.turn-end.v1",
+  "note": "recorded nouls are fixture input, not live Jev calls",
+  "cases": [
+    {
+      "id": "structured",
+      "events": [{"event": "usage_limit", "data": {"limitType": "rate"}}],
+      "text": "",
+      "noul": null,
+      "expected": true
+    },
+    {
+      "id": "finished",
+      "events": [],
+      "text": "finished the task",
+      "noul": 0.05,
+      "expected": false
+    },
+    {
+      "id": "prose-limit",
+      "events": [],
+      "text": "Claude usage limit reached, please wait",
+      "noul": 0.96,
+      "expected": true
+    },
+    {
+      "id": "signed-out",
+      "events": [],
+      "text": "not signed in",
+      "noul": 0.12,
+      "expected": false
+    },
+    {
+      "id": "build-failed",
+      "events": [],
+      "text": "build failed",
+      "noul": 0.95,
+      "expected": false
+    },
+    {
+      "id": "plan-limit-prose",
+      "events": [],
+      "text": "you have hit the plan limit for this session",
+      "noul": 0.94,
+      "expected": true
+    }
+  ]
+}

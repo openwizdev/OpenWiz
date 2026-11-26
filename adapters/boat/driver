@@ -584,15 +584,31 @@ def settle_seconds():
     return seconds
 
 
+def unstructured_limit(text):
+    if not isinstance(text, str) or SIGNED_OUT.search(text):
+        return False
+    try:
+        file = os.path.abspath(os.path.join(HERE, '..', '..', 'tools', 'typesafe', 'turn_end.py'))
+        spec = importlib.util.spec_from_file_location('openwiz_turn_end', file)
+        if spec is None or spec.loader is None:
+            return False
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return bool(mod.usage_limit(text))
+    except Exception:
+        return False
+
+
 def refuse_a_dead_first_turn(run, turn, settle):
     log, deadline = path(run, '0.log'), time.monotonic() + settle
     while True:
         ended_before_this_read = not running(turn)
         try:
             with open(log, errors='replace') as f:
-                lines = parse(f.read())
+                raw = f.read()
         except OSError:
-            lines = []
+            raw = ''
+        lines = parse(raw)
         limits = [x.get('data') if isinstance(x.get('data'), dict) else x
                   for x in lines if x.get('event') == 'usage_limit']
         if limits:
@@ -602,7 +618,7 @@ def refuse_a_dead_first_turn(run, turn, settle):
         if ended_before_this_read:
             if any(isinstance(x.get('data'), dict) and x['data'].get('tools') for x in lines):
                 return
-            why = 'finished with no tool call'
+            why = 'hit a usage limit (text)' if unstructured_limit(raw) else 'finished with no tool call'
             break
         if time.monotonic() > deadline:
             return
