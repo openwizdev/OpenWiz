@@ -1,1 +1,13 @@
-{}
+{
+  "harness": "sculpt",
+  "program": "sculpt",
+  "start": ["agent", "create", "--prompt", "{prompt}", "--model", "{model}", "--json", "{mode}"],
+  "wake": ["agent", "send", "{session}", "{prompt}", "--model", "{model}", "--follow", "{mode}"],
+  "session": {"pattern": "\"id\": \"([A-Za-z0-9._:-]{1,100})\""},
+  "modes": {"default": []},
+  "env": {},
+  "effort": "none: sculpt agent create and send have no effort flag at sculptor-v0.50.0 (imbue-ai/sculptor tools/sculpt/sculpt/commands/agent.py); effort is the app chat selector (SPEC.md 7.3), not a CLI flag",
+  "login": "the harness's own login on this machine (for example the Claude CLI Sculptor runs); sculpt fetches its backend session token itself, and the driver never reads or passes a login",
+  "daemon": "none",
+  "stop": ["sculpt", "agent", "delete", "{session}", "-y"]
+}

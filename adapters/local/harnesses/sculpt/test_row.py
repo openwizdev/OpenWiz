@@ -108,8 +108,8 @@ with th.ThrowawayMachine(ROWS, NAME, 'sculpt', FAKE, MODE) as env:
     turns = env.records()
     first = turns[0]['argv'] if turns else []
     check('start runs `sculpt agent create --prompt <prompt> --model <m> --json`',
-          code == 0 and first[:3] == ['agent', 'create', '--prompt'] and first[-3:] == ['--model', 'synthetic-1', '--json']
-          and PROMPT in first)
+          code == 0 and len(first) == 7 and first[:3] == ['agent', 'create', '--prompt']
+          and first[4:] == ['--model', 'synthetic-1', '--json'] and 'with the build-ticket skill' in first[3])
     second = turns[1]['argv'] if len(turns) > 1 else []
     check('wake runs `sculpt agent send <id> <prompt> --model <m> --follow` with the start\'s agent id',
           woke[0] == 0 and len(turns) == 2 and second[:2] == ['agent', 'send'] and second[2] == turns[0]['session']

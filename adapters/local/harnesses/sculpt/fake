@@ -1,0 +1,95 @@
+#!/usr/bin/env python3
+import json, os, signal, sys
+
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.environ['FAKE_CLI_LIB'])
+import fake_cli
+
+CREATE_VALUED = {'--prompt': 'prompt', '-p': 'prompt', '--model': 'model', '-m': 'model'}
+SEND_VALUED = {'--model': 'model', '-m': 'model'}
+FLAGS = {'--json': 'json', '--follow': 'follow', '-f': 'follow', '-y': 'yes', '--yes': 'yes'}
+
+
+def options(args, valued, allowed):
+    got, flags, pos = {}, set(), []
+    while args:
+        name = args[0]
+        if name in valued:
+            key = valued[name]
+            if len(args) < 2 or key in got or (args[1].startswith('-') and args[1] != '-'):
+                fake_cli.refuse()
+            got[key], args = args[1], args[2:]
+        elif name in allowed:
+            flag = FLAGS[name]
+            if flag in flags:
+                fake_cli.refuse()
+            flags.add(flag)
+            args = args[1:]
+        elif name.startswith('-'):
+            fake_cli.refuse()
+        else:
+            pos.append(name)
+            args = args[1:]
+    return got, flags, pos
+
+
+def remember(session, pid):
+    fd = os.open(os.environ['FAKE_CLI_RECORD'] + '.backends', os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
+    with os.fdopen(fd, 'w') as f:
+        f.write(json.dumps({'session': session, 'pid': pid}) + '\n')
+
+
+def backend_pid(session):
+    try:
+        with open(os.environ['FAKE_CLI_RECORD'] + '.backends') as f:
+            rows = [json.loads(line) for line in f if line.strip()]
+    except OSError:
+        return None
+    found = [row['pid'] for row in rows if row.get('session') == session]
+    return found[-1] if found else None
+
+
+def start_backend(session):
+    how = 'via-running-hub' if os.environ.get('FAKE_CLI_HOST') else 'detached'
+    pid, _ = fake_cli.background_service(how)
+    remember(session, pid)
+
+
+def end_backend(session):
+    pid = backend_pid(session)
+    if pid is None:
+        fake_cli.refuse()
+    try:
+        os.kill(pid, signal.SIGKILL)
+    except OSError:
+        pass
+
+
+args = sys.argv[1:]
+if args[:2] == ['agent', 'create']:
+    got, flags, pos = options(args[2:], CREATE_VALUED, {'--json'})
+    if pos or 'prompt' not in got or 'model' not in got or 'json' not in flags or got['prompt'].startswith('You were woken'):
+        fake_cli.refuse()
+
+    def announce(session):
+        start_backend(session)
+        return json.dumps({'id': session, 'title': 'synthetic', 'status': 'running', 'model': got['model'],
+                           'workspace_id': 'ws_synthetic', 'created_at': '2026-01-01T00:00:00Z'}, indent=2)
+
+    fake_cli.turn(got['prompt'], got['model'], None, announce)
+elif args[:2] == ['agent', 'send']:
+    got, flags, pos = options(args[2:], SEND_VALUED, {'--follow', '-f'})
+    if len(pos) != 2 or 'model' not in got or 'follow' not in flags or not pos[1].startswith('You were woken'):
+        fake_cli.refuse()
+    fake_cli.turn(pos[1], got['model'], pos[0], None)
+elif args[:2] == ['agent', 'delete']:
+    got, flags, pos = options(args[2:], {}, {'-y', '--yes'})
+    if got or len(pos) != 1 or 'yes' not in flags:
+        fake_cli.refuse()
+    end_backend(pos[0])
+elif args[:2] == ['agent', 'interrupt']:
+    got, flags, pos = options(args[2:], {}, set())
+    if got or flags or len(pos) != 1 or backend_pid(pos[0]) is None:
+        fake_cli.refuse()
+else:
+    fake_cli.refuse()
