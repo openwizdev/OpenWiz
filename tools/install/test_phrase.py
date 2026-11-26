@@ -27,27 +27,48 @@ class InstallPhrase(unittest.TestCase):
                 self.assertIn(QUOTE, lines)
                 self.assertNotIn(FORBIDDEN, text)
 
-    def test_the_agent_section_is_enough_to_start(self):
+    def section(self):
         text = (ROOT / 'AGENTS.md').read_text(encoding='utf-8')
         parts = text.split('## Install OpenWiz', 1)
         self.assertEqual(len(parts), 2, 'AGENTS.md has an Install OpenWiz section')
-        section = parts[1].split('\n## ', 1)[0]
+        return parts[1].split('\n## ', 1)[0]
+
+    def test_the_agent_section_is_enough_to_start(self):
+        section = self.section()
         for needed in (
             QUOTE,
             'That phrase is enough to start.',
             'https://github.com/openwizdev/OpenWiz/releases/latest',
             'https://github.com/openwizdev/OpenWiz',
-            SKILL_010,
-            SKILL_011,
-            'docs/install.md#openwiz-010',
-            'docs/install.md',
             'where your agents run',
             'yes before each change',
         ):
             self.assertIn(needed, section, needed)
 
-    def test_readme_and_guide_point_at_the_agent_section(self):
-        for name in ('README.md', 'docs/install.md'):
+    def test_each_release_keeps_its_own_skill(self):
+        section = self.section()
+        rows = [line.strip() for line in section.splitlines() if line.strip().startswith('- ')]
+        self.assertEqual(len(rows), 3, rows)
+        one_oh, one_one, other = rows
+        self.assertTrue(one_oh.startswith('- `0.1.0`:'), one_oh)
+        self.assertIn(SKILL_010, one_oh)
+        self.assertIn('docs/install.md#openwiz-010', one_oh)
+        self.assertIn('`v0.1.0`', one_oh)
+        self.assertNotIn(SKILL_011, one_oh)
+        self.assertTrue(one_one.startswith('- `0.1.1`:'), one_one)
+        self.assertNotIn('or later', one_one)
+        self.assertIn(SKILL_011, one_one)
+        self.assertIn('`v0.1.1`', one_one)
+        self.assertNotIn(SKILL_010, one_one)
+        self.assertTrue(other.startswith('- Any other `<tag>`:'), other)
+        self.assertIn('--branch <tag>', other)
+        self.assertIn('wizskills.lock', other)
+        self.assertIn('stop and say', other)
+        self.assertNotIn('v0.1.1', other)
+        self.assertNotIn(SKILL_011, other)
+
+    def test_the_pages_point_at_the_agent_section(self):
+        for name in ('README.md', 'docs/install.md', 'docs/first-hour.md', 'docs/grok-bot.md'):
             text = (ROOT / name).read_text(encoding='utf-8')
             with self.subTest(name):
                 self.assertIn('AGENTS.md#install-openwiz', text)

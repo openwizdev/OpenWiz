@@ -41,7 +41,7 @@ Today a fleet starts from your computer, not from Grok Bot. In Claude Code, Code
 
 > Install OpenWiz
 
-That phrase is the whole install instruction. Then follow [Install OpenWiz](install.md) and [Your first hour](first-hour.md). The fleet runs on CloudRoom. Your Bot may be able to follow it through the same GitHub issues and pull requests, for example "Use where-are-we on my repository". Untested.
+That phrase is the whole install instruction. The agent follows [Install OpenWiz](../AGENTS.md#install-openwiz). The commands are in [the install guide](install.md), then [Your first hour](first-hour.md). The fleet runs on CloudRoom. Your Bot may be able to follow it through the same GitHub issues and pull requests, for example "Use where-are-we on my repository". Untested.
 
 ## What works today, in 0.1.1 and later
 
