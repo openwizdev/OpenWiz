@@ -618,6 +618,17 @@ def text_id(value):
     return value if isinstance(value, str) and ID.fullmatch(value) else None
 
 
+def known_credential(value):
+    try:
+        return credential_check()(value)
+    except Refused:
+        return False
+
+
+def usable_sandbox(value):
+    return text_id(value) is not None and not known_credential(value)
+
+
 def conversation(item):
     """The conversation id of a `boat prompt --json` line: under `data`, as boat CLI 1.0.103 prints it."""
     data = item.get('data')
@@ -904,6 +915,13 @@ def wake(run):
 def stop(run):
     lock(run, True)
     state = saved(run)
+    if not usable_sandbox(state.get('sandbox')):
+        failures = shutdown(run, state['turns'], None, None, False)
+        why = 'run %s has no usable sandbox id, so its sandbox was not stopped' % run
+        manual = 'stop the sandbox named openwiz-%s in `boat list` yourself' % run
+        if failures:
+            raise reported(why, failures, manual)
+        raise Refused(why, manual)
     marked = mark_stopping(run)  # first, so no later wake undoes this stop even if the save below fails
     try:  # before ending anything, so no wake starts a turn meanwhile
         saved(run, dict(state, stopped=True))

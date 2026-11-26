@@ -549,6 +549,64 @@ class Boat(unittest.TestCase):
         self.assertNotIn(marker, json.dumps(err))
         self.assertIn('sandbox id', err['error'])
 
+    def test_an_unusable_sandbox_id_is_refused_and_stop_does_not_claim_success(self):
+        other = 'bx_other' + self.mark
+        decoy = 'bx_decoy' + self.mark
+        cases = (('malformed', 'bx ' + self.mark), ('credential', 'sk-' + 'Synthetic0Boat0Id' + self.mark))
+        for kind, bad in cases:
+            with self.subTest(kind=kind):
+                with open(self.env['FAKE_BOAT_STATE'], 'w') as f:
+                    json.dump({'sandboxes': {
+                        other: {'name': 'other-sandbox', 'state': 'running', 'conversations': {}, 'interrupts': 0},
+                        decoy: {'name': 'openwiz-run-' + 'f' * 12, 'state': 'running', 'conversations': {},
+                                'interrupts': 0}}}, f)
+                args = os.path.join(self.folder, 'boat-args-' + kind)
+                env = dict(self.env, FAKE_BOAT_ID=bad, FAKE_BOAT_ARGS=args)
+
+                def run(cmd, request):
+                    return subprocess.run([DRIVER, cmd], input=json.dumps(request), env=env,
+                                          capture_output=True, text=True, timeout=120)
+
+                started = run('start', REQUEST)
+                self.assertEqual(started.returncode, 1, started.stdout)
+                err = json.loads(started.stdout)
+                run_id = re.search(r'openwiz-(run-[0-9a-f]{12})', err['next']).group(1)
+                self.assertIn('sandbox id', err['error'])
+                self.assertNotIn('stopped', err)
+                self.assertNotIn(bad, started.stdout + started.stderr)
+                state_dir = self.env['OPENWIZ_BOAT_STATE']
+                saved = []
+                for name in os.listdir(state_dir):
+                    with open(os.path.join(state_dir, name), errors='replace') as f:
+                        saved.append(f.read())
+                self.assertNotIn(bad, '\n'.join(saved))
+                with open(os.path.join(state_dir, run_id + '.json')) as f:
+                    self.assertIsNone(json.load(f)['sandbox'])
+                with open(args) as f:
+                    recorded_text = f.read()
+                recorded = [json.loads(row) for row in recorded_text.splitlines()]
+                self.assertEqual([row[0] for row in recorded], ['new'])
+                self.assertNotIn(bad, recorded_text)
+                self.assertEqual(self.sandboxes(), {bad: 'running', other: 'running', decoy: 'running'})
+                stopped = run('stop', {'run': run_id})
+                self.assertEqual(stopped.returncode, 1, stopped.stdout)
+                answer = json.loads(stopped.stdout)
+                self.assertNotIn('stopped', answer)
+                self.assertIn('was not stopped', answer['error'])
+                self.assertIn('openwiz-' + run_id, answer['next'])
+                self.assertNotIn(bad, stopped.stdout + stopped.stderr)
+                with open(args) as f:
+                    self.assertEqual([json.loads(row)[0] for row in f], ['new'])
+                self.assertEqual(self.sandboxes(), {bad: 'running', other: 'running', decoy: 'running'})
+                woken = run('wake', {'run': run_id})
+                self.assertEqual(woken.returncode, 1, woken.stdout)
+                self.assertNotIn('stopped', json.loads(woken.stdout))
+                self.assertNotIn(bad, woken.stdout + woken.stderr)
+                with open(args) as f:
+                    self.assertEqual([json.loads(row)[0] for row in f], ['new'])
+                self.assertEqual(self.sandboxes()[other], 'running')
+                self.assertEqual(self.sandboxes()[decoy], 'running')
+
     def test_a_start_that_fails_leaves_no_sandbox_running(self):
         # catches: a sandbox left running (and billing) when the agent can't start, or created for a
         # harness boat doesn't have.
