@@ -1,0 +1,13 @@
+{
+  "host": "fixture-quoting",
+  "harness": "fake-harness",
+  "model": "Synthetic 1",
+  "date": "2026-11-26",
+  "driver_commit": "2b0b0d192d9013f223279d507bc7a809540f66da",
+  "kit_commit": "2b0b0d192d9013f223279d507bc7a809540f66da",
+  "outcome": "ran",
+  "skipped": null,
+  "kit_exit": 1,
+  "stdout": "fail version: withheld\nfail start: withheld\nfail wake: not run: start failed\nfail stop: not run: start failed\nfail token: withheld\n",
+  "seconds": 0
+}

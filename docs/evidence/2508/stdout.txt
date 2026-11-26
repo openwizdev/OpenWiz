@@ -1,0 +1,6 @@
+skipped fixture-cost fake-harness: cost
+skipped fixture-missing fake-harness: not installed: rig-fixture-not-installed
+ran fixture-planted fake-harness: 0 of 5
+ran fixture-quoting fake-harness: 0 of 5
+skipped fixture-signed-out fake-harness: not signed in: fake-signed-out
+ran fixture-template fake-harness: 5 of 5

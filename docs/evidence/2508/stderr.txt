@@ -1,0 +1,15 @@
+fail version: version did not finish: [Errno 2] No such file or directory: 'adapters/planted/driver'
+fail start: effort: start did not finish: [Errno 2] No such file or directory: 'adapters/planted/driver'
+fail wake: not run: start failed
+fail stop: not run: start failed
+fail token: its answer to a token field: start did not finish: [Errno 2] No such file or directory: 'adapters/planted/driver'
+fail version: version did not finish: [Errno 2] No such file or directory: 'adapters/quoting/driver'
+fail start: effort: start did not finish: [Errno 2] No such file or directory: 'adapters/quoting/driver'
+fail wake: not run: start failed
+fail stop: not run: start failed
+fail token: its answer to a token field: start did not finish: [Errno 2] No such file or directory: 'adapters/quoting/driver'
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 2; effort: medium reached a process the run started
+pass wake: the run edited builder status note 2
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
