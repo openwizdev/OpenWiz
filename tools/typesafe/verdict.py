@@ -13,25 +13,6 @@ import client
 import decide
 
 SHA = re.compile(r'[0-9a-f]{40}\Z')
-QUESTIONS = {
-    'kind': {
-        'type': 'choice',
-        'instructions': 'What verdict does this review comment give?',
-        'criteria': {
-            'approve': 'The reviewer approves the commit.',
-            'changes': 'The reviewer wants changes on the commit.',
-            'not_a_verdict': 'This is not an approve or changes verdict.',
-        },
-    },
-    'is_verdict': {
-        'type': 'noul',
-        'instructions': 'This comment is a reviewer\'s approve or request-changes verdict for the commit it names.',
-        'criteria': {
-            'true': 'The reviewer is giving a verdict on that commit.',
-            'false': 'The line only mentions a verdict, or it is not one.',
-        },
-    },
-}
 
 
 def exact(line):

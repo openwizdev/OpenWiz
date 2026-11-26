@@ -6,42 +6,42 @@
       "id": "structured",
       "events": [{"event": "usage_limit", "data": {"limitType": "rate"}}],
       "text": "",
-      "noul": null,
+      "nouls": null,
       "expected": true
     },
     {
       "id": "finished",
       "events": [],
       "text": "finished the task",
-      "noul": 0.05,
+      "nouls": {"plan_limit": 0.05, "rate_limit": 0.04},
       "expected": false
     },
     {
       "id": "prose-limit",
       "events": [],
       "text": "Claude usage limit reached, please wait",
-      "noul": 0.96,
+      "nouls": {"plan_limit": 0.96, "rate_limit": 0.08},
       "expected": true
     },
     {
       "id": "signed-out",
       "events": [],
       "text": "not signed in",
-      "noul": 0.12,
+      "nouls": {"plan_limit": 0.08, "rate_limit": 0.06},
       "expected": false
     },
     {
       "id": "build-failed",
       "events": [],
       "text": "build failed",
-      "noul": 0.95,
+      "nouls": {"plan_limit": 0.95, "rate_limit": 0.04},
       "expected": false
     },
     {
       "id": "plan-limit-prose",
       "events": [],
       "text": "you have hit the plan limit for this session",
-      "noul": 0.94,
+      "nouls": {"plan_limit": 0.94, "rate_limit": 0.08},
       "expected": true
     }
   ]

@@ -143,6 +143,32 @@
           "terms": [{"question": "adr", "weight": 1}]
         }
       }
+    },
+    "turn_end": {
+      "combine": "noisy_or",
+      "act": 0.9,
+      "terms": [
+        {"question": "plan_limit", "weight": 1},
+        {"question": "rate_limit", "weight": 1}
+      ],
+      "questions": {
+        "plan_limit": {
+          "type": "noul",
+          "instructions": "Does the log say this run stopped because its plan usage limit was reached?",
+          "criteria": {
+            "true": "A plan usage limit stopped the run.",
+            "false": "The log does not say a plan usage limit stopped the run."
+          }
+        },
+        "rate_limit": {
+          "type": "noul",
+          "instructions": "Does the log say this run stopped because a rate limit was reached?",
+          "criteria": {
+            "true": "A rate limit stopped the run.",
+            "false": "The log does not say a rate limit stopped the run."
+          }
+        }
+      }
     }
   }
 }

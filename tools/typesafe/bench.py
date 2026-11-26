@@ -82,8 +82,8 @@ def score_turn_end(data):
     for row in data['cases']:
         structured = any(event.get('event') == 'usage_limit' for event in row['events'])
         old = structured
-        shaped = structured or (row['noul'] is not None and turn_end.usage_limit(
-            row['text'], _Recorded({'limit': row['noul']})))
+        shaped = structured or (row.get('nouls') is not None and turn_end.usage_limit(
+            row['text'], _Recorded(row['nouls'])))
         old_hit += int(old == row['expected'])
         shaped_hit += int(shaped == row['expected'])
     return len(data['cases']), old_hit, shaped_hit
@@ -166,7 +166,7 @@ def main(argv):
         hit = 0
         for row in data['cases']:
             try:
-                response = ask.system_one(row['line'], verdict.QUESTIONS)
+                response = ask.system_one(row['line'], decide.questions('verdict'))
             except client.TypeSafeError:
                 response = None
             hit += int(verdict.shaped(row['line'], response) == row['expected'])
@@ -187,13 +187,10 @@ def main(argv):
         hit = 0
         for row in data['cases']:
             structured = any(event.get('event') == 'usage_limit' for event in row['events'])
-            value = None
-            if row['text']:
-                try:
-                    value = client.noul(ask.system_one(row['text'], turn_end.QUESTIONS), 'limit')
-                except client.TypeSafeError:
-                    value = None
-            shaped = structured or (value is not None and value >= turn_end.YES)
+            if structured or not row['text']:
+                shaped = structured
+            else:
+                shaped = turn_end.usage_limit(row['text'], ask)
             hit += int(shaped == row['expected'])
         print(f'turn-end live: {hit}/{len(data["cases"])} matched the fixture label')
     return 0
