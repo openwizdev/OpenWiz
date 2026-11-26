@@ -2,7 +2,7 @@
 import json, os, subprocess, sys, tempfile
 
 sys.dont_write_bytecode = True
-HERE = os.path.dirname(os.path.abspath(__file__))
+HERE = os.path.dirname(os.path.realpath(__file__))
 FAKE = os.path.join(HERE, 'fake')
 LIB = os.path.abspath(os.path.join(HERE, '..', '..', 'fixtures'))
 START_PROMPT = 'Build the ticket: example/site#7, with the build-ticket skill. Keep one status note there.'

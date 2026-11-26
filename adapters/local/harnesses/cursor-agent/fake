@@ -15,23 +15,10 @@ SESSION = r'[A-Za-z0-9._:-]{1,100}'
 SIGNED_OUT = 'Not authenticated. Run agent login or set CURSOR_API_KEY.'
 
 
-def dropped_login_flag(argv):
-    kept, skip = [], False
-    for arg in argv:
-        if skip:
-            skip = False
-            continue
-        if arg == '--api-key':
-            skip = True
-            continue
-        if arg.startswith('--api-key='):
-            continue
-        kept.append(arg)
-    return kept
-
-
 def parse(argv):
-    a = dropped_login_flag(argv)
+    if any(arg == '--api-key' or arg.startswith('--api-key=') for arg in argv):
+        fake_cli.refuse()
+    a = argv
     if a[:3] != ['-p', '--output-format', 'json']:
         fake_cli.refuse()
     a, session = a[3:], None
