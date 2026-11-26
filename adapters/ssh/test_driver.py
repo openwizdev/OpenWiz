@@ -60,7 +60,6 @@ class SshDriver(unittest.TestCase):
         return rows
 
     def test_a_secret_in_the_argument_template_is_refused_before_ssh_starts(self):
-        # catches: a secret from the environment copied onto the ssh command line
         code, out = self.call('start', START, SYNTHETIC_API_KEY=CANARY,
                               OPENWIZ_SSH_ARGS=json.dumps(['--model', '{model}', '-p', '{prompt}', CANARY]))
         self.assertEqual(code, 1)
