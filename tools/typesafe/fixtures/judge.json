@@ -11,12 +11,8 @@
       "recorded": {
         "model": "jev-1.14.0",
         "answers": {
-          "verdict": {
-            "type": "choice",
-            "choice": "pass",
-            "confidence": 0.88,
-            "probabilities": {"pass": 0.92, "fail": 0.08}
-          }
+          "meets_rule": {"type": "noul", "noul": 0.94},
+          "stays_within_rule": {"type": "noul", "noul": 0.92}
         }
       }
     },
@@ -29,35 +25,27 @@
       "recorded": {
         "model": "jev-1.14.0",
         "answers": {
-          "verdict": {
-            "type": "choice",
-            "choice": "fail",
-            "confidence": 0.8,
-            "probabilities": {"pass": 0.09, "fail": 0.91}
-          }
+          "meets_rule": {"type": "noul", "noul": 0.08},
+          "stays_within_rule": {"type": "noul", "noul": 0.9}
         }
       }
     },
     {
       "id": "old-parser-garbage",
-      "rule": "The reply names the file it changed.",
-      "reply": "Done.",
+      "rule": "The reply names the file it changed and must not claim that tests passed.",
+      "reply": "All tests passed.",
       "expected": "fail",
       "old_model_text": "sure, pass",
       "recorded": {
         "model": "jev-1.14.0",
         "answers": {
-          "verdict": {
-            "type": "choice",
-            "choice": "fail",
-            "confidence": 0.9,
-            "probabilities": {"pass": 0.05, "fail": 0.95}
-          }
+          "meets_rule": {"type": "noul", "noul": 0.05},
+          "stays_within_rule": {"type": "noul", "noul": 0.04}
         }
       }
     },
     {
-      "id": "low-confidence-falls-back",
+      "id": "uncertain-falls-back",
       "rule": "The reply names the file it changed.",
       "reply": "Changed tools/typesafe/client.py.",
       "expected": "pass",
@@ -65,17 +53,13 @@
       "recorded": {
         "model": "jev-1.14.0",
         "answers": {
-          "verdict": {
-            "type": "choice",
-            "choice": "fail",
-            "confidence": 0.4,
-            "probabilities": {"pass": 0.45, "fail": 0.55}
-          }
+          "meets_rule": {"type": "noul", "noul": 0.55},
+          "stays_within_rule": {"type": "noul", "noul": 0.93}
         }
       }
     },
     {
-      "id": "recorded-choice-wrong",
+      "id": "recorded-nouls-wrong",
       "rule": "The reply names the file it changed.",
       "reply": "Done.",
       "expected": "fail",
@@ -83,12 +67,8 @@
       "recorded": {
         "model": "jev-1.14.0",
         "answers": {
-          "verdict": {
-            "type": "choice",
-            "choice": "pass",
-            "confidence": 0.95,
-            "probabilities": {"pass": 0.99, "fail": 0.01}
-          }
+          "meets_rule": {"type": "noul", "noul": 0.97},
+          "stays_within_rule": {"type": "noul", "noul": 0.96}
         }
       }
     },
@@ -101,12 +81,8 @@
       "recorded": {
         "model": "jev-1.14.0",
         "answers": {
-          "verdict": {
-            "type": "choice",
-            "choice": "pass",
-            "confidence": 0.8,
-            "probabilities": {"pass": 0.8, "fail": 0.2}
-          }
+          "meets_rule": {"type": "noul", "noul": 0.91},
+          "stays_within_rule": {"type": "noul", "noul": 0.88}
         }
       }
     }

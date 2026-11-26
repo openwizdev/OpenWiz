@@ -13,28 +13,30 @@ import driver
 import jev_judge
 
 
-def recorded(name, probability, confidence):
-    other = 'fail' if name == 'pass' else 'pass'
-    return {'model': 'jev-1.14.0', 'answers': {'verdict': {
-        'type': 'choice', 'choice': name, 'confidence': confidence,
-        'probabilities': {name: probability, other: round(1 - probability, 10)}}}}
+def recorded(meets, stays):
+    return {'model': 'jev-1.14.0', 'answers': {
+        'meets_rule': {'type': 'noul', 'noul': meets},
+        'stays_within_rule': {'type': 'noul', 'noul': stays}}}
 
 
 class Judge(unittest.TestCase):
-    def test_a_confident_choice_is_the_verdict_and_the_model_is_not_called(self):
-        fake = client.FakeClient(recorded('pass', 0.91, 0.8)['answers'], model='jev-1.14.0')
+    def test_two_nouls_go_out_in_one_request_and_the_model_is_not_called(self):
+        fake = client.FakeClient(recorded(0.94, 0.92)['answers'], model='jev-1.14.0')
         called = []
         verdict, stop = driver.judge('Name the file.', 'Changed client.py.', {}, lambda body: called.append(body),
                                      ask=fake)
         self.assertEqual(called, [])
         self.assertIsNone(stop)
         self.assertEqual(verdict['verdict'], 'pass')
-        self.assertEqual(verdict['reason'], 'The reply meets the rule.')
+        self.assertEqual(verdict['reason'], 'The reply does what the rule requires.')
         self.assertEqual(verdict['model'], 'jev-1.14.0')
-        self.assertEqual(fake.calls[0]['questions']['verdict']['type'], 'choice')
+        self.assertEqual(len(fake.calls), 1)
+        sent = fake.calls[0]['questions']
+        self.assertEqual(set(sent), {'meets_rule', 'stays_within_rule'})
+        self.assertTrue(all(question['type'] == 'noul' for question in sent.values()))
 
-    def test_low_confidence_falls_back_to_the_json_judge(self):
-        fake = client.FakeClient(recorded('fail', 0.55, 0.4)['answers'])
+    def test_an_uncertain_noul_falls_back_to_the_json_judge(self):
+        fake = client.FakeClient(recorded(0.55, 0.93)['answers'])
         body = {'content': [{'type': 'text', 'text': '{"verdict": "pass", "reason": "It meets the rule."}'}],
                 'stop_reason': 'end_turn'}
 
@@ -57,7 +59,7 @@ class Judge(unittest.TestCase):
         text = '{"verdict": "pass", "reason": "It meets the rule."}'
         self.assertEqual(jev_judge.parse_model_text(text)['verdict'], 'pass')
         self.assertIsNone(jev_judge.parse_model_text('not json'))
-        self.assertIsNone(jev_judge.from_response(recorded('pass', 0.5, 0.5)))
+        self.assertIsNone(jev_judge.from_response(recorded(0.55, 0.93)))
 
     def test_unset_key_does_not_ask(self):
         os.environ.pop('TYPESAFE_API_KEY', None)

@@ -1,0 +1,35 @@
+{
+  "schema": "openwiz.typesafe-config.v1",
+  "model": "jev-1.14.0",
+  "noul": {"yes": 0.7, "no": 0.3},
+  "confidence": {"act": 0.7},
+  "sites": {
+    "judge": {
+      "combine": "weighted_sum",
+      "act": 0.7,
+      "fail_at": 0.3,
+      "terms": [
+        {"question": "meets_rule", "weight": 0.6},
+        {"question": "stays_within_rule", "weight": 0.4}
+      ],
+      "questions": {
+        "meets_rule": {
+          "type": "noul",
+          "instructions": "Does `reply` do what `rule` requires?",
+          "criteria": {
+            "true": "The reply does what the rule requires.",
+            "false": "The reply does not do what the rule requires."
+          }
+        },
+        "stays_within_rule": {
+          "type": "noul",
+          "instructions": "Does `reply` avoid what `rule` forbids?",
+          "criteria": {
+            "true": "The reply does not do what the rule forbids.",
+            "false": "The reply does what the rule forbids."
+          }
+        }
+      }
+    }
+  }
+}

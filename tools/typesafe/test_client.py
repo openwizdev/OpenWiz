@@ -83,6 +83,26 @@ class Client(unittest.TestCase):
             'probabilities': {'pass': 0.7, 'fail': 0.3}}}}
         self.assertEqual(client.choice(response, 'verdict'), ('pass', 0.7, 0.8))
 
+    def test_score_and_box_read_confidence(self):
+        scored = {'answers': {'bug_severity': {
+            'type': 'score', 'score': 1.48, 'confidence': 0.28,
+            'legend': {'0': 'Cosmetic', '1': 'Workaround', '2': 'Blocking'},
+            'probabilities': {'0': 0.0, '1': 0.52, '2': 0.48}}}}
+        value, confidence, probabilities, legend = client.score(scored, 'bug_severity')
+        self.assertEqual((value, confidence), (1.48, 0.28))
+        self.assertEqual(probabilities['1'], 0.52)
+        self.assertIn('1', legend)
+        boxed = {'answers': {'bird': {
+            'type': 'box', 'confidence': 0.4,
+            'box': {'top': 0.1, 'bottom': 0.4, 'left': 0.2, 'right': 0.5}}}}
+        edges, box_confidence = client.box(boxed, 'bird')
+        self.assertEqual(edges['top'], 0.1)
+        self.assertEqual(box_confidence, 0.4)
+        import decide
+        self.assertIsNone(decide.score_ready(scored, 'bug_severity', 0.5))
+        self.assertIsNone(decide.box_ready(boxed, 'bird', 0.5))
+        self.assertIsNotNone(decide.score_ready(scored, 'bug_severity', 0.2))
+
     def test_ask_script_with_no_key_prints_nothing(self):
         import subprocess
         script = Path(__file__).resolve().parent / 'ask.py'

@@ -1,8 +1,11 @@
-"""Judge one skills-eval reply with Jev, or leave it for the existing parser.
+"""Judge one skills-eval reply with two Nouls, or leave it for the JSON judge.
 
-A Choice asks whether the reply meets the rule. The docs' starting threshold
-is 0.7. Below that, or on any error, the caller keeps the prompt-and-parse
-judge. Jev returns no sentence, so the reason is the criterion the choice matched.
+Pass and fail are yes/no judgments, so each factor is a Noul. The two
+questions go out in one request. The weights and the pass/fail cutoffs
+live in tools/typesafe/config.json. A Noul in the uncertain band, a
+weighted result between the cutoffs, a missing key, or any error keeps
+the prompt-and-parse judge. Jev returns no sentence, so the reason is a
+criterion string from that config.
 """
 
 import sys
@@ -10,29 +13,30 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'typesafe'))
 import client
-
-YES = 0.7
-QUESTIONS = {
-    'verdict': {
-        'type': 'choice',
-        'instructions': 'Does the reply meet the rule?',
-        'criteria': {
-            'pass': 'The reply meets the rule.',
-            'fail': 'The reply does not meet the rule.',
-        },
-    },
-}
+import decide
 
 
 def from_response(response):
-    name, probability, confidence = client.choice(response, 'verdict')
-    if name not in ('pass', 'fail') or probability < YES or confidence < YES:
+    root = decide.load()
+    site = root['sites']['judge']
+    try:
+        value = decide.signal(response, site, root)
+    except client.TypeSafeError:
         return None
-    reason = QUESTIONS['verdict']['criteria'][name]
+    if value is None:
+        return None
+    if value >= site['act']:
+        verdict = 'pass'
+        reason = site['questions']['meets_rule']['criteria']['true']
+    elif value <= site['fail_at']:
+        verdict = 'fail'
+        reason = site['questions']['meets_rule']['criteria']['false']
+    else:
+        return None
     model = response.get('model') if isinstance(response, dict) else None
     if not isinstance(model, str) or not model:
         model = client.MODEL
-    return {'verdict': name, 'reason': reason, 'model': model}
+    return {'verdict': verdict, 'reason': reason, 'model': model}
 
 
 def try_jev(rubric, final, ask=None):
@@ -41,7 +45,7 @@ def try_jev(rubric, final, ask=None):
         return None
     state = {'rule': rubric, 'reply': final if isinstance(final, str) else ''}
     try:
-        return from_response(ask.system_one(state, QUESTIONS))
+        return from_response(ask.system_one(state, decide.questions('judge')))
     except client.TypeSafeError:
         return None
 

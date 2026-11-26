@@ -148,6 +148,40 @@ def choice(response, name):
     return name_of, float(probability), float(confidence)
 
 
+def score(response, name):
+    """The position, its confidence, the level probabilities, and the legend."""
+    answer = _answer(response, name, 'score')
+    value = answer.get('score')
+    confidence = answer.get('confidence')
+    probabilities = answer.get('probabilities')
+    legend = answer.get('legend')
+    if (not _finite(value) or not _finite(confidence) or not isinstance(probabilities, dict)
+            or not isinstance(legend, dict)):
+        raise TypeSafeError('shape')
+    if not 0 <= confidence <= 1 or not probabilities:
+        raise TypeSafeError('shape')
+    for probability in probabilities.values():
+        if not _finite(probability) or not 0 <= probability <= 1:
+            raise TypeSafeError('shape')
+    return float(value), float(confidence), probabilities, legend
+
+
+def box(response, name):
+    """The four edges as fractions of the image, and the answer's confidence."""
+    answer = _answer(response, name, 'box')
+    edges = answer.get('box')
+    confidence = answer.get('confidence')
+    if not isinstance(edges, dict) or not _finite(confidence) or not 0 <= confidence <= 1:
+        raise TypeSafeError('shape')
+    found = {}
+    for edge in ('top', 'bottom', 'left', 'right'):
+        value = edges.get(edge)
+        if not _finite(value) or not 0 <= value <= 1:
+            raise TypeSafeError('shape')
+        found[edge] = float(value)
+    return found, float(confidence)
+
+
 def _answer(response, name, kind):
     if not isinstance(response, dict):
         raise TypeSafeError('shape')
