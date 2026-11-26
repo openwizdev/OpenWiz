@@ -4,7 +4,7 @@ A **harness row** is how one more agent CLI runs on the [local driver](README.md
 
 ## 1. The row
 
-A row is `adapters/local/harnesses/<harness>/row.json`, read with standard-library JSON, never run as code. It is one JSON object with each key once, with exactly these fields, plus the three optional ones below:
+A row is `adapters/local/harnesses/<harness>/row.json`, read with standard-library JSON, never run as code. It is one JSON object with each key once, with exactly these fields, plus the five optional ones below:
 
 | Field | What it holds |
 | --- | --- |
@@ -20,6 +20,8 @@ A row is `adapters/local/harnesses/<harness>/row.json`, read with standard-libra
 | `signed_out` (optional) | A list of fixed, case-insensitive patterns, specific to this CLI, that mean it isn't signed in; each is matched anywhere in a line of the first turn's own output (never the clone's), a JSON line included |
 | `login_command` (optional; required with `signed_out`) | The exact command the user runs to sign in, such as `example-cli login`. `login` keeps its meaning: where the login lives |
 | `login_env` (optional; needs `login_command`) | The NAME of one environment variable the user may set for the CLI instead of signing in, such as `EXAMPLE_CLI_API_KEY`; never its value |
+| `precheck` (optional) | `{"run": [<program>, <arguments>...], "match": "<pattern>"}`: a read-only command the driver runs before the first turn, such as listing a model's effort levels, and the fixed pattern its output must match for the start to go ahead |
+| `stop` (optional) | `[<program>, <arguments>...]` holding `{session}`: the command the driver runs to end the run's own session before it ends the run's process tree, such as a CLI's interrupt for a session that lives in its own backend |
 
 - **Placeholders.** A placeholder fills a whole argument, never part of one (`--model={model}` breaks the row), and appears at most once in a list. `{prompt}`, `{model}` and `{session}` each become one argument. `{mode}` splices the approved mode's fixed arguments, and `{effort}` the requested effort's (section 4). A fixed argument holds no placeholder.
 - **Start** holds `{prompt}`, `{model}` and `{mode}`. **Wake** holds `{prompt}`, `{mode}` and `{session}`: wake must hold `{session}`. Start holds `{session}` only when the session is chosen.
@@ -32,6 +34,7 @@ A row is `adapters/local/harnesses/<harness>/row.json`, read with standard-libra
 - **Signed out:** each `signed_out` pattern is one line, compiles as a regular expression, holds no placeholder and nothing credential-shaped. No pattern is a program: the driver only matches it. A row's pattern matches anywhere in a line of the turn's output, case-insensitively, inside a JSON line too; the driver's own sign-in diagnostics keep their line-start rule. `login_command` is one line of up to 200 characters, with no placeholder and nothing credential-shaped; the driver never runs it.
 - **Login env:** `login_env` matches `^[A-Z][A-Z0-9_]{1,63}$`, passes the kit's `holds_credential` as a name, and is not a name in the row's `env`. The row's not-signed-in `next` (section 3) must fit D3's 300 characters, or the row is refused. The driver never reads, checks, passes or prints the variable's value: the CLI gets it only from the environment the user ran the driver in (driver v1 N2).
 - **No credential in an argument:** every fixed argument in `start`, `wake`, `modes` and `effort` passes the kit's `holds_credential`, alone, as a flag and its value (`--flag=value` and `--flag value`), and in the start and wake lines with each mode and effort spliced in. The driver saves these arguments with the run and passes them in the process's argv, so a row that breaks this is refused naming only its field.
+- **Precheck and stop:** each list starts with the row's `program`, exactly, and holds 1 to 29 arguments after it, each one line; the driver runs the path it found for `program` at start, never another program and never through a shell. `precheck`'s `run` may hold only `{model}` and `{effort}`, and `stop` only `{session}`, each at most once and as a whole argument; `stop` must hold `{session}`, so it can reach only its own run's session. Every fixed argument passes the kit's `holds_credential` as above. `match` is one line holding no placeholder but `{model}` and `{effort}`, which the driver fills with the start's values as literal text; it compiles, holds nothing credential-shaped and does not match empty output.
 - **Env:** each name is capitals, digits and `_`, starting with a capital and not with `OPENWIZ_`; each value is one line that passes the kit's `holds_credential`, alone and as `NAME=value`. The driver adds `env`, and a requested effort's `env` setting, to the harness's own environment only: the turn's supervisor and the tools it uses to find and stop processes keep the driver's environment.
 
 ## 2. The row folder
@@ -51,8 +54,10 @@ A row ticket owns only its folder. No row edits the driver, this file, the local
 - It loads a row only for the harness that a start names, and only when that harness isn't built in. A row that is missing, has a repeated key or breaks this contract is a D3 error that names the row file, never its contents, and starts nothing. The "use one of" error lists the built-ins plus the row folders.
 - The row's `program` must be on `PATH`, and the approved mode must be one of its `modes`; otherwise `start` refuses and starts nothing.
 - A turn gets the row's `env` added to its environment, and only the approved mode's arguments.
+- **Precheck:** after both approval checks and before the first turn, the driver runs the row's `precheck` with the start's model and effort; a precheck that names `{effort}` is skipped for a start without an effort. It runs with stdin closed, in a new empty folder (never the clone), in its own process group, with the row's `env` (and the effort's setting) added for it alone, for at most 30 seconds; its output goes only to the run's log. It passes only when it exits 0 and `match` is found in its output (multi-line, case-sensitive, within its first MiB). Anything else (a non-zero exit, no match, the time limit or a failure to run) is a D3 error naming the reason in fixed words, and no turn starts. Its output is left out of the first turn's sign-in and refusal checks.
+- **Stop:** before it ends the process tree, the driver runs the row's `stop` once, with the run's own session id: the saved one, or the one wake would read from the first turn's output. It runs as the precheck does, for at most 20 seconds. With no turn yet it isn't run. With no usable session id (none yet, or one starting with `-`), it is skipped. A skipped, failing or timed-out stop never skips the process-tree kill: `stop` still answers as driver v1 says, and says what happened in fixed words on stderr and in the run's log, never the command's output. The precheck's and stop's process group is killed once they end. A process they start that leaves that group (a daemon) is outside the driver's reach, on Linux and macOS alike.
 - When a first turn that ended at once printed a line its row's `signed_out` matches (or one of the driver's own sign-in diagnostics), `start` fails, even when the turn exited 0, with `the harness is not signed in`, a D3 error, and its `next` names the row's `login_command`, never a generic failure. With `login_env`, that `next` is `sign in with <login_command>, or set <login_env> for <program> yourself, then start again`, followed by `; <log> has the turn's output` only while the whole `next` fits in 300 characters.
-- What stays the same: stop (it ends the whole process tree), the approvals, the fleet.md `Harness permission mode` row, the first-turn watch and the credential check.
+- What stays the same: stop (it ends the whole process tree, after the row's `stop` when it has one), the approvals, the fleet.md `Harness permission mode` row, the first-turn watch and the credential check.
 
 ## 4. Effort (J318)
 
@@ -84,9 +89,10 @@ A start with an effort never falls back to a default. Built-in `claude` and `cod
 7. needs the background process, when the row declares one, to have ended after stop, and none when it declares `none`;
 8. for a row with `signed_out`, needs a first turn whose fake prints its signed-out line to fail `start` with `the harness is not signed in` and a `next` naming the row's `login_command`; with `login_env`, needs that exact `next` with a canary value set under the name, the value in the CLI's environment, and the value in no answer, state file or argv;
 9. for each listed effort value, needs a start carrying it to put its arguments on the fake's command line or its setting in the fake's environment; and needs a start with an effort the row can't take to refuse with the `next` above and start nothing;
-10. runs the row's `test_row.py`, if there is one.
+10. runs the row's `test_row.py`, if there is one;
+11. needs the program to have run exactly once per turn, plus once for `precheck` (before the first turn, with the model filled in, unless it names `{effort}`) and once for `stop` (with the run's session, while the turns still ran), with the row's `env`. First, for a row with `precheck`, a start with the row's own fake must pass it.
 
-It prints one line per row: `pass <row>: ...`, or `fail <row>: <rule>: <reason>`, where the rule is `row.json <field>` for a contract rule, or `folder`, `kit`, `session`, `env`, `daemon`, `signed_out`, `login_env`, `effort` or `test_row.py`. A folder with no `row.json` gives `fail <row>: row.json is missing`. The kit's files are not changed.
+It prints one line per row: `pass <row>: ...`, or `fail <row>: <rule>: <reason>`, where the rule is `row.json <field>` for a contract rule, or `folder`, `kit`, `session`, `env`, `daemon`, `precheck`, `commands`, `stop`, `signed_out`, `login_env`, `effort` or `test_row.py`. A folder with no `row.json` gives `fail <row>: row.json is missing`. The kit's files are not changed.
 
 ## 6. The fake library
 

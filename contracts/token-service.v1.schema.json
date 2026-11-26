@@ -24,27 +24,29 @@
       "additionalProperties": {"enum": ["read", "write"]}
     },
     "requester": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+    "answer_key": {"type": "string", "pattern": "^-{5}BEGIN PUBLIC KEY-{5}\\nMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEA[g-z0-9+/][A-Za-z0-9+/]{19}\\n(?:[A-Za-z0-9+/]{64}\\n){7}[A-Za-z0-9+/]{43}[BDFHJLNPRTVXZbdfhjlnprtvxz13579/]AgMBAAE=\\n-{5}END PUBLIC KEY-{5}\\n(?![\\s\\S])"},
     "unix": {"type": "integer", "minimum": 0},
     "request": {
       "type": "object",
-      "required": ["schema", "kind", "requester", "repositories", "permissions"],
+      "required": ["schema", "kind", "requester", "answer_key", "repositories", "permissions"],
       "additionalProperties": false,
       "properties": {
         "schema": {"$ref": "#/$defs/schema"},
         "kind": {"const": "request"},
         "requester": {"$ref": "#/$defs/requester"},
+        "answer_key": {"$ref": "#/$defs/answer_key"},
         "repositories": {"$ref": "#/$defs/repositories"},
         "permissions": {"$ref": "#/$defs/permissions"}
       }
     },
     "answer": {
       "type": "object",
-      "required": ["schema", "kind", "token", "expires_at", "repositories", "permissions"],
+      "required": ["schema", "kind", "sealed_token", "expires_at", "repositories", "permissions"],
       "additionalProperties": false,
       "properties": {
         "schema": {"$ref": "#/$defs/schema"},
         "kind": {"const": "answer"},
-        "token": {"type": "string", "pattern": "^[A-Za-z0-9._~+/-]+=*$"},
+        "sealed_token": {"type": "string", "pattern": "^(?:[A-Za-z0-9+/]{512}){1,8}$"},
         "expires_at": {"$ref": "#/$defs/unix"},
         "repositories": {"$ref": "#/$defs/repositories"},
         "permissions": {"$ref": "#/$defs/permissions"}

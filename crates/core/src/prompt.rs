@@ -13,8 +13,6 @@ use crate::model::Timestamp;
 
 pub use crate::attachment::AttachmentId;
 
-pub const PROMPT_SCHEMA_ID: &str = "openwiz.prompt.v1";
-
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct PromptPayload {
     pub text: String,

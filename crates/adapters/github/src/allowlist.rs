@@ -13,7 +13,6 @@ pub const MODULES: &[Module] = &[
     plan::ALLOWLIST,
     decisions::ALLOWLIST,
     tick::ALLOWLIST,
-    crate::events::ALLOWLIST,
 ];
 
 pub fn allowed(argv: &[&str]) -> bool {

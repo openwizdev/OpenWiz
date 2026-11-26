@@ -1,0 +1,129 @@
+[
+  {
+    "kind": "package",
+    "value": {
+      "driver": "synthetic-host",
+      "repository": "example-publisher/example-driver",
+      "version": "1.2.3",
+      "commit": "abcd",
+      "asset_url": "https://github.com/example-publisher/example-driver/releases/download/v1.2.3/driver.tar.gz",
+      "kit_commit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "sha256": "a8705d3afdacc8ba582a072e80e166adebb32db5d2e9671181af919c8bf57bf5"
+    },
+    "error": [
+      "commit",
+      "pattern"
+    ]
+  },
+  {
+    "kind": "package",
+    "value": {
+      "driver": "synthetic-host",
+      "repository": "example-publisher/example-driver",
+      "version": "1.2.3",
+      "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "asset_url": "http://github.com/example-publisher/example-driver/releases/download/v1.2.3/driver.tar.gz",
+      "kit_commit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "sha256": "a8705d3afdacc8ba582a072e80e166adebb32db5d2e9671181af919c8bf57bf5"
+    },
+    "error": [
+      "asset_url",
+      "pattern"
+    ]
+  },
+  {
+    "kind": "package",
+    "value": {
+      "driver": "synthetic-host",
+      "repository": "example-publisher/example-driver",
+      "version": "1.2.3",
+      "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "asset_url": "https://github.com/example-publisher/example-driver/releases/download/v1.2.3/driver.tar.gz",
+      "kit_commit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "sha256": "a8705d3afdacc8ba582a072e80e166adebb32db5d2e9671181af919c8bf57bf5",
+      "unexpected": true
+    },
+    "error": [
+      "",
+      "additionalProperties"
+    ]
+  },
+  {
+    "kind": "key_host",
+    "value": {
+      "origin": "https://api.example.invalid/path",
+      "variable": "SYNTHETIC_HOST_KEY",
+      "keychain": "synthetic-host"
+    },
+    "error": [
+      "origin",
+      "pattern"
+    ]
+  },
+  {
+    "kind": "key_host",
+    "value": {
+      "origin": "https://api.example.invalid",
+      "variable": "not-an-env-name",
+      "keychain": "synthetic-host"
+    },
+    "error": [
+      "variable",
+      "pattern"
+    ]
+  },
+  {
+    "kind": "manifest",
+    "value": {
+      "driver": "synthetic-host",
+      "version": "1.2.3",
+      "driver_contract": "openwiz:driver v9",
+      "kit_commit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "files": [
+        {
+          "path": "driver",
+          "mode": "0700",
+          "sha256": "e8024e4f21493bab999e41f40fbdedcbb0c3715c62c559117fc02d0ae52077fe"
+        },
+        {
+          "path": "schema.json",
+          "mode": "0600",
+          "sha256": "78b13503e4a1a7c124ad677469a7ef2eb636ec0d004aa2f1ad7b53bbfa993445"
+        },
+        {
+          "path": "README.md",
+          "mode": "0600",
+          "sha256": "8436c0d6f2bcc6c20dbf747545ed68caf6b4b47fa793fae0c536187380f62487"
+        }
+      ]
+    },
+    "error": [
+      "driver_contract",
+      "const"
+    ]
+  },
+  {
+    "kind": "pin",
+    "value": {
+      "contract": "openwiz.driver-package.v1",
+      "pins": {}
+    },
+    "error": [
+      "pins",
+      "type"
+    ]
+  },
+  {
+    "kind": "approval",
+    "value": {
+      "repository": "example-publisher/example-driver",
+      "version": "1.2.3",
+      "sha256": "abcd",
+      "publisher": "example-publisher"
+    },
+    "error": [
+      "sha256",
+      "pattern"
+    ]
+  }
+]

@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+import os, re, sys
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.environ['FAKE_CLI_LIB'])
+import fake_cli
+
+HELP = '''The fake row-commands-cli: its synthetic --help allows only:
+  row-commands-cli run (--session-id|--resume) <uuid> --model <m> [--yes] [--effort low|high] <prompt>
+  row-commands-cli models <m> --verbose
+  row-commands-cli stop --session <uuid>
+with ROW_COMMANDS_CLI_BACKEND=local.'''
+UUID = r'[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}'
+
+if sys.argv[1:] == ['--help']:
+    print(HELP)
+    sys.exit(0)
+a = sys.argv[1:]
+if os.environ.get('ROW_COMMANDS_CLI_BACKEND') != 'local':
+    fake_cli.refuse()
+if len(a) == 3 and a[0] == 'models' and a[2] == '--verbose':
+    print('synthetic precheck output 4f1c')
+    print('model %s ready' % a[1])
+    sys.exit(0)
+if len(a) == 3 and a[:2] == ['stop', '--session'] and re.fullmatch(UUID, a[2]):
+    print('synthetic stop output 9b2e')
+    sys.exit(0)
+if len(a) < 6 or a[0] != 'run' or a[1] not in ('--session-id', '--resume') or not re.fullmatch(UUID, a[2]) or \
+        a[3] != '--model':
+    fake_cli.refuse()
+woken, model, rest = a[1] == '--resume', a[4], a[5:]
+if rest[:1] == ['--yes']:
+    rest = rest[1:]
+if not woken and rest[:1] == ['--effort'] and len(rest) > 1 and rest[1] in ('low', 'high'):
+    rest = rest[2:]
+if len(rest) != 1 or woken != rest[0].startswith('You were woken'):
+    fake_cli.refuse()
+fake_cli.turn(rest[0], model, a[2])

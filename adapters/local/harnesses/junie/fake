@@ -1,0 +1,29 @@
+#!/usr/bin/env python3
+import json, os, re, sys
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.environ['FAKE_CLI_LIB'])
+import fake_cli
+
+HELP = '''The fake junie (JetBrains Junie CLI 26.9.7): it allows only the forms the row uses, each a
+subset of `junie --help` 26.9.7:
+  junie --skip-update-check --output-format json --model <m> --task <prompt>
+  junie --skip-update-check --output-format json --session-id <id> --resume --model <m> --task <prompt>
+It reports the session id as one JSON line, {"sessionId": ...}, as `--output-format json` does. Signed
+out (FAKE_CLI_SIGNED_OUT=1) it answers as a signed-out Junie 26.9.7 does: one {"errors": [...]} line, exit 0.'''
+SIGNED_OUT = {'errors': ['Cannot find authorization. Please authenticate before running Junie.']}
+
+if sys.argv[1:] == ['--help']:
+    print(HELP)
+    sys.exit(0)
+a = sys.argv[1:]
+if a[:3] != ['--skip-update-check', '--output-format', 'json']:
+    fake_cli.refuse()
+a, session = a[3:], None
+if a[:1] == ['--session-id'] and len(a) > 2 and a[2] == '--resume':
+    session, a = a[1], a[3:]
+    if not re.fullmatch(r'[A-Za-z0-9._:-]{1,100}', session):
+        fake_cli.refuse()
+if len(a) != 4 or a[0] != '--model' or a[2] != '--task' or not a[1] or not a[3]:
+    fake_cli.refuse()
+fake_cli.turn(a[3], a[1], session, lambda sid: json.dumps({'sessionId': sid, 'taskName': 'fake task'}),
+              signed_out=json.dumps(SIGNED_OUT), signed_out_exit=0)

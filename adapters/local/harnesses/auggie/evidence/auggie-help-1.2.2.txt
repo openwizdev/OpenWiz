@@ -1,0 +1,126 @@
+auggie - AI coding assistant with read, bash, edit, write tools
+
+Usage:
+  auggie [options] [@files...] [messages...]
+
+Commands:
+  auggie install <source> [-l]     Install extension source and add to settings
+  auggie remove <source> [-l]      Remove extension source from settings
+  auggie uninstall <source> [-l]   Alias for remove
+  auggie update [source]           Update installed extensions (skips pinned sources)
+  auggie upgrade                   Upgrade the official npm installation
+  auggie list                      List installed extensions from settings
+  auggie config                    Open TUI to enable/disable package resources
+  auggie command [list|help|name]   List, inspect, or execute saved commands (alias: commands)
+  auggie cloud <command>           Manage cloud resources (environments, sandbox providers, secrets)
+  auggie daemon [options]          Run the cloud agent daemon (requires cloud-agent access)
+  auggie session stats             Show session statistics including cost/credit usage
+  auggie mcp <command>             Manage MCP servers (list/add/add-json/remove)
+  auggie session list              List saved sessions from the current workspace (--all, --json, -n)
+  auggie auth login [--headless] [--json]  Authenticate the platform session in session.json
+  auggie auth logout               Remove the local platform session without server revocation
+  auggie auth status               Show the current platform authentication status
+  auggie token revoke              Revoke tokens for the current authenticated user in the current tenant, then remove the CLI-owned local session
+  auggie tokens revoke             Alias for token revoke
+  auggie model list [search]       List available models (with optional fuzzy search)
+  auggie <command> --help          Show command-specific help
+
+Use token revoke when tokens must also be revoked on the server.
+
+Options:
+  --model <pattern>              Model pattern or ID (supports "provider/id" and optional ":<thinking>")
+  --append-system-prompt <text>  Append text or file contents to the system prompt
+  --acp                          Start in ACP mode (Agent Client Protocol over STDIO)
+  --mode <mode>                  Output mode: text (default), stream, json, rpc, or acp
+  --print, -p                    Non-interactive mode: process prompt and exit
+  --show-cost                    Include cost/credit usage in print-mode output
+  --continue, -c                 Continue previous session
+  --resume, -r                   Select a session to resume
+  --session <path>               Use specific session file
+  --fork <path>                  Fork specific session file or partial UUID into a new session
+  --session-dir <dir>            Directory for session storage and lookup
+  --augment-cache-dir <dir>      Root config/cache directory (default: ~/.augment); relocates the whole config root
+  --augment-session-json <json-or-path>
+                                 Authenticate with inline session JSON or a session-file path; valid input takes precedence over other sources
+  --workspace-root, -w <path>    Workspace root directory (auto-detects git root if absent)
+  --add-workspace <path>         Additional workspace folder to index (repeatable; progress is reported for the primary workspace only)
+  --discover-workspaces[=depth]  Force git-repo discovery under a non-git workspace root (adopts the first as primary, the rest as additional); optional depth 1-5 (default 1)
+  --no-discover-workspaces       Disable git-repo auto-discovery entirely
+  --worktree [slug]              Create or reuse a git worktree (auto-generates slug if omitted)
+  --no-session                   Don't save session (ephemeral)
+  --models <patterns>            Comma-separated model patterns for Ctrl+P cycling
+                                 Supports globs (anthropic/*, *sonnet*) and fuzzy matching
+  --no-tools                     Disable all built-in tools
+  --tools <tools>                Comma-separated list of tools to enable (default: read,bash,edit,write)
+                                 Available: read, bash, edit, write, grep, find, ls
+  --remove-tool <tool>           Remove a tool by name (repeatable)
+  --thinking <effort>            Set a model-supported reasoning effort; use "default" to clear the override
+                                 Inspect selectableEffortLevels with "model list --json"
+  --extension, -e <path>         Load an extension file (can be used multiple times)
+  --plugin-dir <path>            Load and enable plugins from a local marketplace directory (repeatable)
+  --no-extensions, -ne           Disable extension discovery (explicit -e paths still work)
+  --enable-hashline              Enable the hashline-edit extension (overrides read/edit) for this run
+  --enable-otel                  Enable OpenTelemetry export for this run (telemetry is off by default)
+  --enable-tool-search           Hide individual MCP tools behind find-tool/execute-tool gateway tools for this run
+  --mcp-config <cfg>             MCP server config as inline JSON or a JSON file path (repeatable); overrides settings.json MCP servers
+  --permission <rule>            Tool-permission rule in 'tool-name:policy' format (repeatable); e.g. git:deny, bash:webhook-policy(url), read:script-policy(path). Evaluated most-restrictive-wins with settings.json toolPermissions
+  --skill <path>                 Load a skill file or directory (can be used multiple times)
+  --no-skills, -ns               Disable skills discovery and loading
+  --rule <path>                  Load a rule file or directory (can be used multiple times)
+  --no-rules                     Disable rule discovery and loading
+  --prompt-template <path>       Load a prompt template file or directory (can be used multiple times)
+  --no-prompt-templates, -np     Disable prompt template discovery and loading
+  --theme <path>                 Load a theme file or directory (can be used multiple times)
+  --no-themes                    Disable theme discovery and loading
+  --export <file>                Export session file to HTML and exit
+  --list-models [search]         List available models (alias: auggie model list [search] [--json])
+  --check-startup                Boot, collect startup diagnostics, print JSON, exit (0=clean, 1=any issue)
+  --verbose                      Force verbose startup (overrides quietStartup setting)
+  --offline                      Disable startup network operations (same as PI_OFFLINE=1)
+  --log-file <path>              Path to log file. If not specified, logs to a temp file.
+  --log-level <level>            Log level: error, warn, info (default), debug.
+  --help, -h                     Show this help
+  --version, -v                  Show version number
+
+Extensions can register additional flags (e.g., --plan from plan-mode extension).
+Extension CLI Flags:
+  --cloud                     Enable cloud mode: stream this session to Poseidon so it's visible and steerable from the Augment web UI (overrides the saved preference).
+  --no-cloud                  Force-disable cloud mode (overrides --cloud and persisted state).
+  --cloud-agent <value>       Bind to an existing Poseidon agent by id (implies --cloud). Use this to connect the CLI to an agent created in the web UI so the agent's capability-derived remote tools (GitHub App, Linear, etc.) become available to the local model.
+  --parent-daemon-id <value>  Parent daemon VMID (internal use only)
+  --daemon-command-id <value> Originating daemon command ID (internal use only)
+  --wait-for-indexing         Block the first agent turn until workspace indexing completes (or is skipped / fails). Useful for non-interactive runs.
+  --wait-for-indexing-on-retrievalInternal: wait for primary workspace readiness before executing codebase-retrieval. Used by the v2 cloud run-as-agent compatibility path.
+  --allow-indexing            Automatically allow indexing for the current workspace and skip the confirmation prompt. The workspace is added to the persisted allowlist.
+  --enhance-prompt            Enhance prompt before sending
+
+
+Examples:
+  # Interactive mode
+  auggie
+
+  # Interactive mode with initial prompt
+  auggie "List all .ts files in src/"
+
+  # Include files in initial message
+  auggie @prompt.md @image.png "What color is the sky?"
+
+  # Non-interactive mode (process and exit)
+  auggie -p "List all .ts files in src/"
+
+  # Continue previous session
+  auggie --continue "What did we discuss?"
+
+  # Use different model
+  auggie --model sonnet "Help me refactor this code"
+
+  # Use model with thinking level shorthand
+  auggie --model sonnet:high "Solve this complex problem"
+
+  # Limit model cycling to specific models
+  auggie --models claude-sonnet,claude-haiku,gpt-4o
+
+  # Export a session file to HTML
+  auggie --export ~/.augment/sessions-v2/--path--/session.jsonl
+  auggie --export session.jsonl output.html
+

@@ -1,0 +1,13 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY PATH=<31 refusing stubs>:$PATH python3 -I test_row.py
+(a copy of this folder whose fake skips any option it does not know, instead of exiting 2)
+fail: the fake allowed ['-p', 'Work on the ticket with the build-ticket skill.', '--output-format', 'stream-json', '-m', 'kimi-code/kimi-for-coding', '--yolo'] (exit 0)
+fail: the fake allowed ['-p', 'Work on the ticket with the build-ticket skill.', '--output-format', 'stream-json', '-m', 'kimi-code/kimi-for-coding', '-y'] (exit 0)
+fail: the fake allowed ['-p', 'Work on the ticket with the build-ticket skill.', '--output-format', 'stream-json', '-m', 'kimi-code/kimi-for-coding', '--yes'] (exit 0)
+fail: the fake allowed ['-p', 'Work on the ticket with the build-ticket skill.', '--output-format', 'stream-json', '-m', 'kimi-code/kimi-for-coding', '--auto-approve'] (exit 0)
+fail: the fake allowed ['-p', 'Work on the ticket with the build-ticket skill.', '--output-format', 'stream-json', '-m', 'kimi-code/kimi-for-coding', '--auto'] (exit 0)
+fail: the fake allowed ['-p', 'Work on the ticket with the build-ticket skill.', '--output-format', 'stream-json', '-m', 'kimi-code/kimi-for-coding', '--plan'] (exit 0)
+fail: the fake allowed ['--continue', '-p', 'Work on the ticket with the build-ticket skill.', '--output-format', 'stream-json', '-m', 'kimi-code/kimi-for-coding'] (exit 0)
+fail: the fake allowed ['-p', 'Work on the ticket with the build-ticket skill.', '--output-format', 'stream-json', '-m', 'kimi-code/kimi-for-coding', 'extra'] (exit 0)
+fail: the fake allowed ['-S', 'fake-1', '-p', 'You were woken. Carry on with the build-ticket skill.', '--yolo'] (exit 0)
+fail
+exit 1

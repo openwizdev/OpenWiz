@@ -1,0 +1,208 @@
+test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) ... 
+  test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) (copy='current', live='', harness='claude') ... FAIL
+  test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) (copy='current', live='', harness='codex') ... FAIL
+  test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) (copy='current', live='', harness='synthetic-harness') ... FAIL
+  test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) (copy='current', live='1', harness='claude') ... FAIL
+  test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) (copy='current', live='1', harness='codex') ... FAIL
+  test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) (copy='current', live='1', harness='synthetic-harness') ... FAIL
+  test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) (copy='older', live='', harness='claude') ... FAIL
+  test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) (copy='older', live='', harness='synthetic-harness') ... FAIL
+  test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) (copy='tighter', live='', harness='claude') ... FAIL
+  test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) (copy='tighter', live='1', harness='synthetic-harness') ... FAIL
+test_the_kit_treats_only_a_driver_holding_the_templates_command_as_the_template (__main__.Kit.test_the_kit_treats_only_a_driver_holding_the_templates_command_as_the_template) ... 
+  test_the_kit_treats_only_a_driver_holding_the_templates_command_as_the_template (__main__.Kit.test_the_kit_treats_only_a_driver_holding_the_templates_command_as_the_template) (driver='copy-older/driver') ... FAIL
+  test_the_kit_treats_only_a_driver_holding_the_templates_command_as_the_template (__main__.Kit.test_the_kit_treats_only_a_driver_holding_the_templates_command_as_the_template) (driver='copy-tighter/driver') ... FAIL
+
+======================================================================
+FAIL: test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) (copy='current', live='', harness='claude')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 165, in test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness
+    self.assertEqual((code, out), (2, []), err)
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[238 chars]er']) != (2, [])
+
+First differing element 0:
+1
+2
+
++ (2, [])
+- (1,
+-  ['pass version: openwiz:records v1, and the schema is driver v1',
+-   'fail start: the template starts no harness unless OPENWIZ_TEMPLATE_LIVE=1 '
+-   'is set',
+-   'fail wake: not run: start failed',
+-   'fail stop: not run: start failed',
+-   'pass token: no login or token passed through the driver']) : 
+
+======================================================================
+FAIL: test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) (copy='current', live='', harness='codex')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 165, in test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness
+    self.assertEqual((code, out), (2, []), err)
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[238 chars]er']) != (2, [])
+
+First differing element 0:
+1
+2
+
++ (2, [])
+- (1,
+-  ['pass version: openwiz:records v1, and the schema is driver v1',
+-   'fail start: the template starts no harness unless OPENWIZ_TEMPLATE_LIVE=1 '
+-   'is set',
+-   'fail wake: not run: start failed',
+-   'fail stop: not run: start failed',
+-   'pass token: no login or token passed through the driver']) : 
+
+======================================================================
+FAIL: test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) (copy='current', live='', harness='synthetic-harness')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 165, in test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness
+    self.assertEqual((code, out), (2, []), err)
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[238 chars]er']) != (2, [])
+
+First differing element 0:
+1
+2
+
++ (2, [])
+- (1,
+-  ['pass version: openwiz:records v1, and the schema is driver v1',
+-   'fail start: the template starts no harness unless OPENWIZ_TEMPLATE_LIVE=1 '
+-   'is set',
+-   'fail wake: not run: start failed',
+-   'fail stop: not run: start failed',
+-   'pass token: no login or token passed through the driver']) : 
+
+======================================================================
+FAIL: test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) (copy='current', live='1', harness='claude')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 165, in test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness
+    self.assertEqual((code, out), (2, []), err)
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[218 chars]er']) != (2, [])
+
+First differing element 0:
+1
+2
+
++ (2, [])
+- (1,
+-  ['pass version: openwiz:records v1, and the schema is driver v1',
+-   'fail start: no builder status note appeared within 2 seconds',
+-   'fail wake: not run: start failed',
+-   'fail stop: not run: start failed',
+-   'pass token: no login or token passed through the driver']) : 
+
+======================================================================
+FAIL: test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) (copy='current', live='1', harness='codex')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 165, in test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness
+    self.assertEqual((code, out), (2, []), err)
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[218 chars]er']) != (2, [])
+
+First differing element 0:
+1
+2
+
++ (2, [])
+- (1,
+-  ['pass version: openwiz:records v1, and the schema is driver v1',
+-   'fail start: no builder status note appeared within 2 seconds',
+-   'fail wake: not run: start failed',
+-   'fail stop: not run: start failed',
+-   'pass token: no login or token passed through the driver']) : 
+
+======================================================================
+FAIL: test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) (copy='current', live='1', harness='synthetic-harness')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 164, in test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness
+    self.assertFalse(os.path.exists(ran), 'the kit started a real %s through the template' % name)
+AssertionError: True is not false : the kit started a real synthetic-harness through the template
+
+======================================================================
+FAIL: test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) (copy='older', live='', harness='claude')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 164, in test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness
+    self.assertFalse(os.path.exists(ran), 'the kit started a real %s through the template' % name)
+AssertionError: True is not false : the kit started a real claude through the template
+
+======================================================================
+FAIL: test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) (copy='older', live='', harness='synthetic-harness')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 164, in test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness
+    self.assertFalse(os.path.exists(ran), 'the kit started a real %s through the template' % name)
+AssertionError: True is not false : the kit started a real synthetic-harness through the template
+
+======================================================================
+FAIL: test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) (copy='tighter', live='', harness='claude')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 165, in test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness
+    self.assertEqual((code, out), (2, []), err)
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[238 chars]er']) != (2, [])
+
+First differing element 0:
+1
+2
+
++ (2, [])
+- (1,
+-  ['pass version: openwiz:records v1, and the schema is driver v1',
+-   'fail start: the template starts no harness unless OPENWIZ_TEMPLATE_LIVE=1 '
+-   'is set',
+-   'fail wake: not run: start failed',
+-   'fail stop: not run: start failed',
+-   'pass token: no login or token passed through the driver']) : 
+
+======================================================================
+FAIL: test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) (copy='tighter', live='1', harness='synthetic-harness')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 164, in test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness
+    self.assertFalse(os.path.exists(ran), 'the kit started a real %s through the template' % name)
+AssertionError: True is not false : the kit started a real synthetic-harness through the template
+
+======================================================================
+FAIL: test_the_kit_treats_only_a_driver_holding_the_templates_command_as_the_template (__main__.Kit.test_the_kit_treats_only_a_driver_holding_the_templates_command_as_the_template) (driver='copy-older/driver')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 184, in test_the_kit_treats_only_a_driver_holding_the_templates_command_as_the_template
+    self.assertEqual(kit.holds_template_command(driver), held)
+AssertionError: False != True
+
+======================================================================
+FAIL: test_the_kit_treats_only_a_driver_holding_the_templates_command_as_the_template (__main__.Kit.test_the_kit_treats_only_a_driver_holding_the_templates_command_as_the_template) (driver='copy-tighter/driver')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 184, in test_the_kit_treats_only_a_driver_holding_the_templates_command_as_the_template
+    self.assertEqual(kit.holds_template_command(driver), held)
+AssertionError: False != True
+
+----------------------------------------------------------------------
+Ran 2 tests in 14.418s
+
+FAILED (failures=12)
+test_the_readmes_start_example_answers_as_documented (__main__.Template.test_the_readmes_start_example_answers_as_documented) ... FAIL
+
+======================================================================
+FAIL: test_the_readmes_start_example_answers_as_documented (__main__.Template.test_the_readmes_start_example_answers_as_documented)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/template/test_driver.py", line 217, in test_the_readmes_start_example_answers_as_documented
+    self.assertEqual(self.call('start', json.loads(found.group(1)), OPENWIZ_TEMPLATE_LIVE='')[1],
+AssertionError: {'error': 'harness claude is not installed [72 chars]ain'} != {'run': 'run-0123456789ab'}
++ {'run': 'run-0123456789ab'}
+- {'error': 'harness claude is not installed here',
+-  'next': 'install claude and sign in to it yourself, then start again'}
+
+----------------------------------------------------------------------
+Ran 1 test in 0.038s
+
+FAILED (failures=1)

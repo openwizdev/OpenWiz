@@ -1,0 +1,4 @@
+$ python3 -I adapters/local/test_harnesses.py   (R1 red: fake takes only the census wake line; row.json still passes --model {model} on wake)
+rows in adapters/local/harnesses: pi
+fail pi: kit: fail wake: builder status note 1 did not change after the wake
+exit 1

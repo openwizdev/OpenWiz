@@ -132,7 +132,7 @@ class CloudroomHost(unittest.TestCase):
         self.rig('not signed in: room-cli', signed_out='room-cli', expected_probes=[STATUS['room-cli']])
 
     def test_gh_signed_out_runs_with_telemetry_disabled(self):
-        self.rig('not signed in: env', signed_out='gh', expected_probes=[STATUS['room-cli'], STATUS['gh']])
+        self.rig('not signed in: gh', signed_out='gh', expected_probes=[STATUS['room-cli'], STATUS['gh']])
 
     def test_room_cli_missing_is_skipped_and_runs_no_status_command(self):
         self.rig('not installed: room-cli', missing='room-cli', expected_probes=[])

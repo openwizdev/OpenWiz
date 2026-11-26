@@ -1,0 +1,6 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/local/harnesses/gemini/test_row.py   # 31 refusing stubs first on PATH
+fail: a first turn signed out with api-key-missing gave 'run run-<id>: the first turn ended at once: the harness failed (exit 41)', not the harness is not signed in naming gemini
+fail: a first turn signed out with vertex-missing gave 'run run-<id>: the first turn ended at once: the harness failed (exit 41)', not the harness is not signed in naming gemini
+fail: a first turn signed out with manual-authorization gave 'run run-<id>: the first turn ended at once: the harness failed (exit 41)', not the harness is not signed in naming gemini
+test_row.py: 15 refusals and 4 signed-out first turns checked, 3 failed
+exit 1

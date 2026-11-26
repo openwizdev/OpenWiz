@@ -1,0 +1,28 @@
+$ probe: wake without --model {model} (the fake refuses it, as pi 1.6.0 forms allow only the two lines)
+fail pi: kit: fail wake: builder status note 1 did not change after the wake
+$ probe: the fake prints a line no signed_out pattern matches
+fail pi: signed_out: a signed-out first turn did not fail start with 'the harness is not signed in' and a next naming the row's login_command
+$ probe: the row declares daemon none
+fail pi: daemon: the fake started a background process, but the row declares none
+$ probe: the row claims effort high as --thinking high with {effort} in start
+fail pi: effort: a start with effort high was refused
+
+$ probe: wake passes --model {model} again (R1 undone)
+fail pi: kit: fail wake: builder status note 1 did not change after the wake
+$ probe: the unanchored signed_out patterns of 89fc50d0 (R3 undone)
+fail pi row: the driver's first-turn check accepts an assistant message that quotes the missing-key error
+fail pi row: the driver's first-turn check accepts an assistant message that says the missing-key error exists
+fail pi row: the driver's first-turn check accepts tool output that quotes the ambiguous-model diagnostic
+fail pi row: the driver's first-turn check accepts tool output that quotes the expired-login error
+exit 1
+$ probe: the same three patterns without their ^ and $ anchors
+fail pi row: the driver's first-turn check accepts an assistant message that quotes the missing-key error
+fail pi row: the driver's first-turn check accepts an assistant message that says the missing-key error exists
+exit 1
+$ probe: the fake takes an empty or blank --model (R4 undone)
+fail pi row: the fake exits 2 on a start with a blank --model
+fail pi row: the fake exits 2 on a start with an empty --model, which pi skips
+exit 1
+$ probe: the R2 command, start with model openai/gpt-4o (disputed: driver v1 model grammar, unchanged)
+{"error": "model is not valid", "next": "fix model as `driver schema` shows"}
+exit 1

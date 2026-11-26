@@ -1,0 +1,5 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY PATH=<31 refusing stubs>:$PATH python3 -I test_row.py
+fail: the background process does not lead its own session and process group, as a kimi Bash task does
+fail: the background process has stdio ['/dev/null', '/dev/null', '/dev/null'], not the pipes a kimi Bash task has
+fail
+exit 1

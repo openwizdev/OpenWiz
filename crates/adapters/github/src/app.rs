@@ -67,7 +67,6 @@ pub struct App {
     root: PathBuf,
     identity: Identity,
     mode: Mode,
-    event_reads: bool,
     gh: PathBuf,
     exchange: Arc<dyn Exchange>,
     clock: Arc<dyn Clock>,
@@ -124,31 +123,12 @@ impl App {
             root: root.to_owned(),
             identity,
             mode,
-            event_reads: false,
             gh,
             exchange,
             clock,
             cache: Mutex::new(Cache::Empty),
             refreshed: Condvar::new(),
         })
-    }
-    pub fn open_for_events(
-        root: &Path,
-        identity: Identity,
-        gh: PathBuf,
-        exchange: Arc<dyn Exchange>,
-        clock: Arc<dyn Clock>,
-    ) -> Result<Self, Error> {
-        let mut app = Self::open(root, identity, gh, exchange, clock)?;
-        app.event_reads = true;
-        Ok(app)
-    }
-    fn requested_permissions(&self) -> Value {
-        if self.event_reads {
-            json!({"metadata":"read","contents":"read","issues":"read","pull_requests":"read","checks":"read","actions":"read","repository_hooks":"read"})
-        } else {
-            permissions()
-        }
     }
     pub fn execute(&self, call: &Invocation, deadline: Instant) -> Result<Vec<u8>, Error> {
         if Instant::now() >= deadline {
@@ -211,20 +191,15 @@ impl App {
     fn mint(&self, key: &Key, now: u64, deadline: Instant) -> Result<Cached, Error> {
         let jwt = app_jwt(key, self.identity.app_id, now, deadline)?;
         self.owner_bound(&jwt, deadline)?;
-        let body = token_body(&self.identity.repository, &self.requested_permissions())?;
+        let wanted = permissions();
+        let body = token_body(&self.identity.repository, &wanted)?;
         let raw = self.exchange.exchange(
             self.identity.installation_id,
             &jwt,
             body.as_bytes(),
             deadline,
         )?;
-        checked_token(
-            &raw,
-            &self.identity.repository,
-            &self.requested_permissions(),
-            self.event_reads,
-            now,
-        )
+        checked_token(&raw, &self.identity.repository, &wanted, false, now)
     }
 }
 

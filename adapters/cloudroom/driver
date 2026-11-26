@@ -110,10 +110,9 @@ def room_said(out, err):
         out = said['error'] if isinstance(said, dict) and isinstance(said.get('error'), str) else out
     except ValueError:
         pass
-    told = out + ' ' + err
-    if SIGNED_OUT.search(told):
+    if SIGNED_OUT.search(out) or SIGNED_OUT.search(err):
         return 'room-cli is not signed in'
-    return 'room-cli gave an error the driver does not repeat' if told.strip() else 'room-cli gave no answer'
+    return 'room-cli gave an error the driver does not repeat' if (out + err).strip() else 'room-cli gave no answer'
 
 
 def room(*args, sent_provider=None):

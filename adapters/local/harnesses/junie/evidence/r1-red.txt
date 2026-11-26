@@ -1,0 +1,4 @@
+pass junie start: a signed-out response asks the user to sign in
+fail a successful Junie result quoting the diagnostic was treated as signed out
+fail junie test_row.py: 1 problem(s)
+Exit: 1

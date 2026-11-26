@@ -48,6 +48,10 @@ def read(fields):
 
 
 def command(req, woken):
+    if os.environ.get('OPENWIZ_TEMPLATE_LIVE') != '1':
+        raise Refused('the template starts no harness unless OPENWIZ_TEMPLATE_LIVE=1 is set',
+                      'write your own command for your harness, '
+                      'or set OPENWIZ_TEMPLATE_LIVE=1 on purpose for a live check')
     what = 'You were woken: read the ticket again and carry on' if woken else 'Build the ticket'
     prompt = '%s: %s#%d, with the %s skill.' % (what, req['repository'], req['ticket'], req['skill'])
     effort = [EFFORTS[req['harness']][0], req['effort']] if 'effort' in req else []
@@ -265,11 +269,12 @@ def any_child_running_after_reaping():
 
 
 def launch(req, run, woken):
+    cmd = command(req, woken)
     if not shutil.which(req['harness']):
         raise Refused('harness %s is not installed here' % req['harness'],
                       'install %s and sign in to it yourself, then start again' % req['harness'])
     try:
-        sup = subprocess.Popen([sys.executable, '-I', os.path.abspath(__file__), '--turn'] + command(req, woken),
+        sup = subprocess.Popen([sys.executable, '-I', os.path.abspath(__file__), '--turn'] + cmd,
                                env=dict(os.environ, OPENWIZ_RUN=run), start_new_session=True,
                                stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         with sup.stdout:

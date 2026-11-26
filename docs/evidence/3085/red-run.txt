@@ -1,0 +1,366 @@
+Red run (#3085): the new and changed proofs on the code, schema and contract before the fix. Synthetic values only.
+
+$ python3 -I contracts/fixtures/token-service/test_fixtures.py
+FAIL: test_every_invalid_message_fails_the_schema (__main__.Invalid.test_every_invalid_message_fails_the_schema)
+  File "contracts/fixtures/token-service/test_fixtures.py", line 371, in test_every_invalid_message_fails_the_schema
+    self.assertNotEqual(self.valid(case["message"]), [], case["name"])
+AssertionError: [] == [] : an answer whose token is not sealed
+FAIL: test_each_case_is_valid_and_its_outcome_follows_the_pin (__main__.Requests.test_each_case_is_valid_and_its_outcome_follows_the_pin)
+  File "contracts/fixtures/token-service/test_fixtures.py", line 238, in test_each_case_is_valid_and_its_outcome_follows_the_pin
+    self.assertEqual(self.valid(out["message"]), [], name)
+AssertionError: Lists differ: ['$: matches 0 of oneOf'] != []
+FAIL: test_the_pin_says_how_a_token_is_sealed (__main__.Sealing.test_the_pin_says_how_a_token_is_sealed)
+  File "contracts/fixtures/token-service/test_fixtures.py", line 220, in test_the_pin_says_how_a_token_is_sealed
+    self.assertEqual(self.pin["request"].get("answer_key"), {
+AssertionError: None != {'form': 'RSA 3072-bit, exponent 65537, a[119 chars]age'}
+FAIL: test_the_schema_takes_only_an_rsa_3072_answer_key (__main__.Sealing.test_the_schema_takes_only_an_rsa_3072_answer_key)
+  File "contracts/fixtures/token-service/test_fixtures.py", line 210, in test_the_schema_takes_only_an_rsa_3072_answer_key
+    self.assertEqual(self.valid(request), [])
+AssertionError: Lists differ: ['$: matches 0 of oneOf'] != []
+FAIL: test_the_service_has_no_port_and_takes_the_request_on_stdin (__main__.ThePin.test_the_service_has_no_port_and_takes_the_request_on_stdin)
+  File "contracts/fixtures/token-service/test_fixtures.py", line 188, in test_the_service_has_no_port_and_takes_the_request_on_stdin
+    self.assertEqual(crossing.get("only"), "sealed, as piped stdout of one room-cli mac run --stdin call")
+AssertionError: 'piped stdout of one room-cli mac run --stdin call' != 'sealed, as piped stdout of one room-cli mac run --stdin call'
+Ran 19 tests
+FAILED (failures=5)
+
+$ python3 -I tools/github-app/test_token_service.py SealingTests RequestFixtureTests.test_every_request_fixture_gets_its_answer_exit_and_log_line NeverExposedTests.test_t
+ERROR: test_the_log_and_state_hold_no_token_and_the_key_and_log_stay_owner_only (__main__.NeverExposedTests.test_the_log_and_state_hold_no_token_and_the_key_and_log_stay_
+  File "tools/github-app/test_token_service.py", line 352, in test_the_log_and_state_hold_no_token_and_the_key_and_log_stay_owner_only
+    self.assertEqual(ASKER.open(json.loads(done.stdout)["sealed_token"]), "synthetic-secret-token")
+KeyError: 'sealed_token'
+FAIL: test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing (__main__.SealingTests.test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing) [missing]
+  File "tools/github-app/test_token_service.py", line 310, in test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing
+    self.assertEqual((done.returncode, json.loads(done.stdout).get("refusal"), done.stderr),
+AssertionError: Tuples differ: (0, None, '') != (2, 'usage', '')
+FAIL: test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing (__main__.SealingTests.test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing) [empty]
+  File "tools/github-app/test_token_service.py", line 312, in test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing
+    self.assertEqual(calls, [])
+AssertionError: Lists differ: [('GET', '/app', None), ('GET', '/repos/Sy[151 chars]'}})] != []
+FAIL: test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing (__main__.SealingTests.test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing) [not text]
+  File "tools/github-app/test_token_service.py", line 312, in test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing
+    self.assertEqual(calls, [])
+AssertionError: Lists differ: [('GET', '/app', None), ('GET', '/repos/Sy[151 chars]'}})] != []
+FAIL: test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing (__main__.SealingTests.test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing) [malformed]
+  File "tools/github-app/test_token_service.py", line 312, in test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing
+    self.assertEqual(calls, [])
+AssertionError: Lists differ: [('GET', '/app', None), ('GET', '/repos/Sy[151 chars]'}})] != []
+FAIL: test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing (__main__.SealingTests.test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing) [a private key]
+  File "tools/github-app/test_token_service.py", line 312, in test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing
+    self.assertEqual(calls, [])
+AssertionError: Lists differ: [('GET', '/app', None), ('GET', '/repos/Sy[151 chars]'}})] != []
+FAIL: test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing (__main__.SealingTests.test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing) [cut short]
+  File "tools/github-app/test_token_service.py", line 312, in test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing
+    self.assertEqual(calls, [])
+AssertionError: Lists differ: [('GET', '/app', None), ('GET', '/repos/Sy[151 chars]'}})] != []
+FAIL: test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing (__main__.SealingTests.test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing) [junk after]
+  File "tools/github-app/test_token_service.py", line 312, in test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing
+    self.assertEqual(calls, [])
+AssertionError: Lists differ: [('GET', '/app', None), ('GET', '/repos/Sy[151 chars]'}})] != []
+FAIL: test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing (__main__.SealingTests.test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing) [a second key]
+  File "tools/github-app/test_token_service.py", line 312, in test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing
+    self.assertEqual(calls, [])
+AssertionError: Lists differ: [('GET', '/app', None), ('GET', '/repos/Sy[151 chars]'}})] != []
+FAIL: test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing (__main__.SealingTests.test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing) [CRLF]
+  File "tools/github-app/test_token_service.py", line 312, in test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing
+    self.assertEqual(calls, [])
+AssertionError: Lists differ: [('GET', '/app', None), ('GET', '/repos/Sy[151 chars]'}})] != []
+FAIL: test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing (__main__.SealingTests.test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing) [broken base64]
+  File "tools/github-app/test_token_service.py", line 312, in test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing
+    self.assertEqual(calls, [])
+AssertionError: Lists differ: [('GET', '/app', None), ('GET', '/repos/Sy[151 chars]'}})] != []
+FAIL: test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing (__main__.SealingTests.test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing) [2048]
+  File "tools/github-app/test_token_service.py", line 312, in test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing
+    self.assertEqual(calls, [])
+AssertionError: Lists differ: [('GET', '/app', None), ('GET', '/repos/Sy[151 chars]'}})] != []
+FAIL: test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing (__main__.SealingTests.test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing) [4096]
+  File "tools/github-app/test_token_service.py", line 312, in test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing
+    self.assertEqual(calls, [])
+AssertionError: Lists differ: [('GET', '/app', None), ('GET', '/repos/Sy[151 chars]'}})] != []
+FAIL: test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing (__main__.SealingTests.test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing) [3071]
+  File "tools/github-app/test_token_service.py", line 312, in test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing
+    self.assertEqual(calls, [])
+AssertionError: Lists differ: [('GET', '/app', None), ('GET', '/repos/Sy[151 chars]'}})] != []
+FAIL: test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing (__main__.SealingTests.test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing) [exponent 1]
+  File "tools/github-app/test_token_service.py", line 312, in test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing
+    self.assertEqual(calls, [])
+AssertionError: Lists differ: [('GET', '/app', None), ('GET', '/repos/Sy[151 chars]'}})] != []
+FAIL: test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing (__main__.SealingTests.test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing) [exponent 3]
+  File "tools/github-app/test_token_service.py", line 312, in test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing
+    self.assertEqual(calls, [])
+AssertionError: Lists differ: [('GET', '/app', None), ('GET', '/repos/Sy[151 chars]'}})] != []
+FAIL: test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing (__main__.SealingTests.test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing) [EC]
+  File "tools/github-app/test_token_service.py", line 312, in test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing
+    self.assertEqual(calls, [])
+AssertionError: Lists differ: [('GET', '/app', None), ('GET', '/repos/Sy[151 chars]'}})] != []
+FAIL: test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing (__main__.SealingTests.test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing) [Ed25519]
+  File "tools/github-app/test_token_service.py", line 312, in test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing
+    self.assertEqual(calls, [])
+AssertionError: Lists differ: [('GET', '/app', None), ('GET', '/repos/Sy[151 chars]'}})] != []
+FAIL: test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing (__main__.SealingTests.test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing) [RSA-PSS]
+  File "tools/github-app/test_token_service.py", line 312, in test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing
+    self.assertEqual(calls, [])
+AssertionError: Lists differ: [('GET', '/app', None), ('GET', '/repos/Sy[151 chars]'}})] != []
+FAIL: test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing (__main__.SealingTests.test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing)
+  File "tools/github-app/test_token_service.py", line 314, in test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing
+    self.assertEqual(self.mint(url, SMALL).returncode, 0, "the good key still mints")
+AssertionError: 2 != 0 : the good key still mints
+FAIL: test_a_token_of_any_length_github_gives_is_sealed_or_revoked (__main__.SealingTests.test_a_token_of_any_length_github_gives_is_sealed_or_revoked) [40]
+  File "tools/github-app/test_token_service.py", line 280, in test_a_token_of_any_length_github_gives_is_sealed_or_revoked
+    self.assertEqual((done.returncode, done.stderr), (0, ""))
+AssertionError: Tuples differ: (2, '') != (0, '')
+FAIL: test_a_token_of_any_length_github_gives_is_sealed_or_revoked (__main__.SealingTests.test_a_token_of_any_length_github_gives_is_sealed_or_revoked) [318]
+  File "tools/github-app/test_token_service.py", line 280, in test_a_token_of_any_length_github_gives_is_sealed_or_revoked
+    self.assertEqual((done.returncode, done.stderr), (0, ""))
+AssertionError: Tuples differ: (2, '') != (0, '')
+FAIL: test_a_token_of_any_length_github_gives_is_sealed_or_revoked (__main__.SealingTests.test_a_token_of_any_length_github_gives_is_sealed_or_revoked) [319]
+  File "tools/github-app/test_token_service.py", line 280, in test_a_token_of_any_length_github_gives_is_sealed_or_revoked
+    self.assertEqual((done.returncode, done.stderr), (0, ""))
+AssertionError: Tuples differ: (2, '') != (0, '')
+FAIL: test_a_token_of_any_length_github_gives_is_sealed_or_revoked (__main__.SealingTests.test_a_token_of_any_length_github_gives_is_sealed_or_revoked) [520]
+  File "tools/github-app/test_token_service.py", line 280, in test_a_token_of_any_length_github_gives_is_sealed_or_revoked
+    self.assertEqual((done.returncode, done.stderr), (0, ""))
+AssertionError: Tuples differ: (2, '') != (0, '')
+FAIL: test_a_token_of_any_length_github_gives_is_sealed_or_revoked (__main__.SealingTests.test_a_token_of_any_length_github_gives_is_sealed_or_revoked) [2544]
+  File "tools/github-app/test_token_service.py", line 280, in test_a_token_of_any_length_github_gives_is_sealed_or_revoked
+    self.assertEqual((done.returncode, done.stderr), (0, ""))
+AssertionError: Tuples differ: (2, '') != (0, '')
+FAIL: test_a_token_of_any_length_github_gives_is_sealed_or_revoked (__main__.SealingTests.test_a_token_of_any_length_github_gives_is_sealed_or_revoked)
+  File "tools/github-app/test_token_service.py", line 286, in test_a_token_of_any_length_github_gives_is_sealed_or_revoked
+    self.assertEqual((done.returncode, json.loads(done.stdout).get("refusal")), (1, "unavailable"))
+AssertionError: Tuples differ: (2, 'usage') != (1, 'unavailable')
+FAIL: test_the_token_and_the_answer_key_reach_openssl_only_through_pipes (__main__.SealingTests.test_the_token_and_the_answer_key_reach_openssl_only_through_pipes)
+  File "tools/github-app/test_token_service.py", line 321, in test_the_token_and_the_answer_key_reach_openssl_only_through_pipes
+    self.assertEqual(self.mint(url, SMALL, audit=log).returncode, 0)
+AssertionError: 2 != 0
+FAIL: test_every_request_fixture_gets_its_answer_exit_and_log_line (__main__.RequestFixtureTests.test_every_request_fixture_gets_its_answer_exit_and_log_line) [a good wri
+  File "tools/github-app/test_token_service.py", line 208, in test_every_request_fixture_gets_its_answer_exit_and_log_line
+    self.assertEqual((done.returncode, done.stderr), (case["out"]["exit"], ""))
+AssertionError: Tuples differ: (2, '') != (0, '')
+FAIL: test_every_request_fixture_gets_its_answer_exit_and_log_line (__main__.RequestFixtureTests.test_every_request_fixture_gets_its_answer_exit_and_log_line) [a good rea
+  File "tools/github-app/test_token_service.py", line 208, in test_every_request_fixture_gets_its_answer_exit_and_log_line
+    self.assertEqual((done.returncode, done.stderr), (case["out"]["exit"], ""))
+AssertionError: Tuples differ: (2, '') != (0, '')
+FAIL: test_every_request_fixture_gets_its_answer_exit_and_log_line (__main__.RequestFixtureTests.test_every_request_fixture_gets_its_answer_exit_and_log_line) [a request 
+  File "tools/github-app/test_token_service.py", line 208, in test_every_request_fixture_gets_its_answer_exit_and_log_line
+    self.assertEqual((done.returncode, done.stderr), (case["out"]["exit"], ""))
+AssertionError: Tuples differ: (0, '') != (2, '')
+FAIL: test_every_request_fixture_gets_its_answer_exit_and_log_line (__main__.RequestFixtureTests.test_every_request_fixture_gets_its_answer_exit_and_log_line) [repository
+  File "tools/github-app/test_token_service.py", line 208, in test_every_request_fixture_gets_its_answer_exit_and_log_line
+    self.assertEqual((done.returncode, done.stderr), (case["out"]["exit"], ""))
+AssertionError: Tuples differ: (2, '') != (0, '')
+FAIL: test_every_request_fixture_gets_its_answer_exit_and_log_line (__main__.RequestFixtureTests.test_every_request_fixture_gets_its_answer_exit_and_log_line) [repositori
+  File "tools/github-app/test_token_service.py", line 215, in test_every_request_fixture_gets_its_answer_exit_and_log_line
+    self.assertEqual(got, message)
+AssertionError: {'sch[60 chars]l': 'usage', 'message': 'Token refused: the re[42 chars]st.'} != {'sch[60 chars]l': 'one-owner', 'message': 'Token refused: th[33 chars]er.
+FAIL: test_every_request_fixture_gets_its_answer_exit_and_log_line (__main__.RequestFixtureTests.test_every_request_fixture_gets_its_answer_exit_and_log_line) [a reposito
+  File "tools/github-app/test_token_service.py", line 208, in test_every_request_fixture_gets_its_answer_exit_and_log_line
+    self.assertEqual((done.returncode, done.stderr), (case["out"]["exit"], ""))
+AssertionError: Tuples differ: (2, '') != (3, '')
+FAIL: test_every_request_fixture_gets_its_answer_exit_and_log_line (__main__.RequestFixtureTests.test_every_request_fixture_gets_its_answer_exit_and_log_line) [a permissi
+  File "tools/github-app/test_token_service.py", line 208, in test_every_request_fixture_gets_its_answer_exit_and_log_line
+    self.assertEqual((done.returncode, done.stderr), (case["out"]["exit"], ""))
+AssertionError: Tuples differ: (2, '') != (5, '')
+FAIL: test_every_request_fixture_gets_its_answer_exit_and_log_line (__main__.RequestFixtureTests.test_every_request_fixture_gets_its_answer_exit_and_log_line) [a permissi
+  File "tools/github-app/test_token_service.py", line 208, in test_every_request_fixture_gets_its_answer_exit_and_log_line
+    self.assertEqual((done.returncode, done.stderr), (case["out"]["exit"], ""))
+AssertionError: Tuples differ: (2, '') != (5, '')
+FAIL: test_every_request_fixture_gets_its_answer_exit_and_log_line (__main__.RequestFixtureTests.test_every_request_fixture_gets_its_answer_exit_and_log_line) [GitHub ref
+  File "tools/github-app/test_token_service.py", line 208, in test_every_request_fixture_gets_its_answer_exit_and_log_line
+    self.assertEqual((done.returncode, done.stderr), (case["out"]["exit"], ""))
+AssertionError: Tuples differ: (2, '') != (5, '')
+FAIL: test_every_request_fixture_gets_its_answer_exit_and_log_line (__main__.RequestFixtureTests.test_every_request_fixture_gets_its_answer_exit_and_log_line) [GitHub's t
+  File "tools/github-app/test_token_service.py", line 208, in test_every_request_fixture_gets_its_answer_exit_and_log_line
+    self.assertEqual((done.returncode, done.stderr), (case["out"]["exit"], ""))
+AssertionError: Tuples differ: (2, '') != (5, '')
+FAIL: test_every_request_fixture_gets_its_answer_exit_and_log_line (__main__.RequestFixtureTests.test_every_request_fixture_gets_its_answer_exit_and_log_line) [the servic
+  File "tools/github-app/test_token_service.py", line 208, in test_every_request_fixture_gets_its_answer_exit_and_log_line
+    self.assertEqual((done.returncode, done.stderr), (case["out"]["exit"], ""))
+AssertionError: Tuples differ: (2, '') != (1, '')
+Ran 5 tests
+FAILED (failures=37, errors=1)
+
+$ python3 -I tools/github-app/test_app_select.py SelectorTests.test_named_uses_exactly_the_named_app SelectorTests.test_every_mode_refuses_an_invalid_request_before_any_s
+FAIL: test_named_uses_exactly_the_named_app (__main__.SelectorTests.test_named_uses_exactly_the_named_app)
+  File "tools/github-app/test_app_select.py", line 202, in test_named_uses_exactly_the_named_app
+    self.assert_minted_by(self.select(url, request("synthetic-owner/shared")), url, "b")
+  File "tools/github-app/test_app_select.py", line 162, in assert_minted_by
+    self.assertEqual((done.returncode, done.stderr), (0, ""))
+AssertionError: Tuples differ: (2, '') != (0, '')
+FAIL: test_every_mode_refuses_an_invalid_request_before_any_service_call (__main__.SelectorTests.test_every_mode_refuses_an_invalid_request_before_any_service_call) (conf
+  File "tools/github-app/test_app_select.py", line 229, in test_every_mode_refuses_an_invalid_request_before_any_service_call
+    self.assert_refused(self.select(url, message), calls, 2, refusal, sentence="")
+  File "tools/github-app/test_app_select.py", line 171, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", sentence))
+AssertionError: Tuples differ: (2, '[65 chars]l": "usage", "message": "Token refused: the re[50 chars], '') != (2, '[65 chars]l": "one-owner", "message": "Token refused: 
+FAIL: test_every_mode_refuses_an_invalid_request_before_any_service_call (__main__.SelectorTests.test_every_mode_refuses_an_invalid_request_before_any_service_call) (conf
+  File "tools/github-app/test_app_select.py", line 229, in test_every_mode_refuses_an_invalid_request_before_any_service_call
+    self.assert_refused(self.select(url, message), calls, 2, refusal, sentence="")
+  File "tools/github-app/test_app_select.py", line 171, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", sentence))
+AssertionError: Tuples differ: (0, '{"schema": "openwiz.token-service.v1"[161 chars], '') != (2, '{"schema": "openwiz.token-service.v1"[124 chars], '')
+FAIL: test_every_mode_refuses_an_invalid_request_before_any_service_call (__main__.SelectorTests.test_every_mode_refuses_an_invalid_request_before_any_service_call) (conf
+  File "tools/github-app/test_app_select.py", line 229, in test_every_mode_refuses_an_invalid_request_before_any_service_call
+    self.assert_refused(self.select(url, message), calls, 2, refusal, sentence="")
+  File "tools/github-app/test_app_select.py", line 173, in assert_refused
+    self.assertEqual(self.service_calls(), [], "no service call")
+AssertionError: Lists differ: [['/usr/bin/python3', '-I', '<home>/...']] != []
+FAIL: test_every_mode_refuses_an_invalid_request_before_any_service_call (__main__.SelectorTests.test_every_mode_refuses_an_invalid_request_before_any_service_call) (conf
+  File "tools/github-app/test_app_select.py", line 229, in test_every_mode_refuses_an_invalid_request_before_any_service_call
+    self.assert_refused(self.select(url, message), calls, 2, refusal, sentence="")
+  File "tools/github-app/test_app_select.py", line 171, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", sentence))
+AssertionError: Tuples differ: (2, '[65 chars]l": "usage", "message": "Token refused: the re[50 chars], '') != (2, '[65 chars]l": "one-owner", "message": "Token refused: 
+FAIL: test_every_mode_refuses_an_invalid_request_before_any_service_call (__main__.SelectorTests.test_every_mode_refuses_an_invalid_request_before_any_service_call) (conf
+  File "tools/github-app/test_app_select.py", line 229, in test_every_mode_refuses_an_invalid_request_before_any_service_call
+    self.assert_refused(self.select(url, message), calls, 2, refusal, sentence="")
+  File "tools/github-app/test_app_select.py", line 173, in assert_refused
+    self.assertEqual(self.service_calls(), [], "no service call")
+AssertionError: Lists differ: [['/usr/bin/python3', '-I', '<home>/...']] != []
+FAIL: test_every_mode_refuses_an_invalid_request_before_any_service_call (__main__.SelectorTests.test_every_mode_refuses_an_invalid_request_before_any_service_call) (conf
+  File "tools/github-app/test_app_select.py", line 229, in test_every_mode_refuses_an_invalid_request_before_any_service_call
+    self.assert_refused(self.select(url, message), calls, 2, refusal, sentence="")
+  File "tools/github-app/test_app_select.py", line 173, in assert_refused
+    self.assertEqual(self.service_calls(), [], "no service call")
+AssertionError: Lists differ: [['/usr/bin/python3', '-I', '<home>/...']] != []
+FAIL: test_every_mode_refuses_an_invalid_request_before_any_service_call (__main__.SelectorTests.test_every_mode_refuses_an_invalid_request_before_any_service_call) (conf
+  File "tools/github-app/test_app_select.py", line 229, in test_every_mode_refuses_an_invalid_request_before_any_service_call
+    self.assert_refused(self.select(url, message), calls, 2, refusal, sentence="")
+  File "tools/github-app/test_app_select.py", line 171, in assert_refused
+    self.assertEqual((done.returncode, done.stdout, done.stderr), (exit_code, json.dumps(answer) + "\n", sentence))
+AssertionError: Tuples differ: (0, '{"schema": "openwiz.token-service.v1"[161 chars], '') != (2, '{"schema": "openwiz.token-service.v1"[124 chars], '')
+FAIL: test_every_mode_refuses_an_invalid_request_before_any_service_call (__main__.SelectorTests.test_every_mode_refuses_an_invalid_request_before_any_service_call) (conf
+  File "tools/github-app/test_app_select.py", line 229, in test_every_mode_refuses_an_invalid_request_before_any_service_call
+    self.assert_refused(self.select(url, message), calls, 2, refusal, sentence="")
+  File "tools/github-app/test_app_select.py", line 173, in assert_refused
+    self.assertEqual(self.service_calls(), [], "no service call")
+AssertionError: Lists differ: [['/usr/bin/python3', '-I', '<home>/...']] != []
+FAIL: test_every_mode_refuses_an_invalid_request_before_any_service_call (__main__.SelectorTests.test_every_mode_refuses_an_invalid_request_before_any_service_call)
+  File "tools/github-app/test_app_select.py", line 183, in tearDown
+    self.assertNotIn(secret, content, f"a secret reached {place}")
+AssertionError: b'synthetic-token-1001' unexpectedly found in b'{"schema": "openwiz.token-service.v1", "kind": "answer", "token": "synthetic-token-1001", "expires_at": <n
+Ran 2 tests
+FAILED (failures=10)
+
+$ python3 -I tools/github-app/test_agent_token.py Sealed MintedToken.test_the_request_names_repositories_and_permissions_only Fallback.test_each_fixture_fallback_reason
+ERROR: test_the_request_names_repositories_and_permissions_only (__main__.MintedToken.test_the_request_names_repositories_and_permissions_only)
+  File "tools/github-app/test_agent_token.py", line 293, in test_the_request_names_repositories_and_permissions_only
+    self.assertEqual(CONTRACT.errors(key, SCHEMA["$defs"]["answer_key"], SCHEMA), [])
+KeyError: 'answer_key'
+FAIL: test_a_helper_that_cannot_make_its_key_asks_nothing (__main__.Sealed.test_a_helper_that_cannot_make_its_key_asks_nothing)
+  File "tools/github-app/test_agent_token.py", line 449, in test_a_helper_that_cannot_make_its_key_asks_nothing
+    self.assertEqual(self.calls(), [])
+AssertionError: Lists differ: [{'name': 'room-cli', 'args': ['mac'], 'st[365 chars]ne]}] != []
+FAIL: test_the_opened_token_is_githubs_on_both_routes_and_only_there (__main__.Sealed.test_the_opened_token_is_githubs_on_both_routes_and_only_there) (route='pairing', le
+  File "tools/github-app/test_agent_token.py", line 427, in test_the_opened_token_is_githubs_on_both_routes_and_only_there
+    self.assert_never_exposed(done, tokens=(token,))
+  File "tools/github-app/test_agent_token.py", line 244, in assert_never_exposed
+    self.assertNotIn(token.encode(), path.read_bytes(), path)
+AssertionError: b'synthetic-agent-token-1' unexpectedly found in b'{"schema": "openwiz.token-service.v1", "kind": "request", "requester": "builder-1", "repositories": ["s
+FAIL: test_the_opened_token_is_githubs_on_both_routes_and_only_there (__main__.Sealed.test_the_opened_token_is_githubs_on_both_routes_and_only_there) (route='pairing', le
+  File "tools/github-app/test_agent_token.py", line 427, in test_the_opened_token_is_githubs_on_both_routes_and_only_there
+    self.assert_never_exposed(done, tokens=(token,))
+  File "tools/github-app/test_agent_token.py", line 244, in assert_never_exposed
+    self.assertNotIn(token.encode(), path.read_bytes(), path)
+AssertionError: b'ghs-a1_.b-a1_.b-a1_.b-a1_.b-a1_.b-a1_.b-a1_.b-a1_.b-a1_.b-a1_.b-a1_.b-a1_.b-a1_.b-a1_.b-a1_.b-a1_.b-a1_.b-a1_.b-a1_.b-a1_.b-a1_.b-a1_.b-a1_.b-a1_.b-a1_.
+FAIL: test_the_opened_token_is_githubs_on_both_routes_and_only_there (__main__.Sealed.test_the_opened_token_is_githubs_on_both_routes_and_only_there)
+  File "tools/github-app/test_agent_token.py", line 431, in test_the_opened_token_is_githubs_on_both_routes_and_only_there
+    self.assertNotIn("token", record[1])
+AssertionError: 'token' unexpectedly found in {'schema': 'openwiz.token-service.v1', 'kind': 'answer', 'token': 'synthetic-agent-token-1', 'expires_at': <n>, 'repositorie
+FAIL: test_the_private_key_is_only_ever_in_memory_and_a_pipe (__main__.Sealed.test_the_private_key_is_only_ever_in_memory_and_a_pipe)
+  File "tools/github-app/test_agent_token.py", line 439, in test_the_private_key_is_only_ever_in_memory_and_a_pipe
+    self.assertEqual(done.stderr, "")
+AssertionError: "openwiz: no openwiz[bot] token (unreacha[36 chars]nt\n" != ''
+FAIL: test_each_fixture_fallback_reason (__main__.Fallback.test_each_fixture_fallback_reason) (reason='bad-answer', item='{"schema": "openwiz.token-service.v1", "kind": "
+  File "tools/github-app/test_agent_token.py", line 510, in test_each_fixture_fallback_reason
+    self.assert_fallback(result, reason)
+  File "tools/github-app/test_agent_token.py", line 253, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: "open[14 chars]z[bot] token (unreachable); using the owner's GitHub account\n" != "open[14 chars]z[bot] token (bad-answer); using the owner's GitHub accou
+FAIL: test_each_fixture_fallback_reason (__main__.Fallback.test_each_fixture_fallback_reason) (reason='bad-answer', item='{"schema": "openwiz.token-service.v1", "kind": "
+  File "tools/github-app/test_agent_token.py", line 510, in test_each_fixture_fallback_reason
+    self.assert_fallback(result, reason)
+  File "tools/github-app/test_agent_token.py", line 253, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: "open[14 chars]z[bot] token (unreachable); using the owner's GitHub account\n" != "open[14 chars]z[bot] token (bad-answer); using the owner's GitHub accou
+FAIL: test_each_fixture_fallback_reason (__main__.Fallback.test_each_fixture_fallback_reason) (reason='bad-answer', item='{"schema": "openwiz.token-service.v1", "kind": "
+  File "tools/github-app/test_agent_token.py", line 510, in test_each_fixture_fallback_reason
+    self.assert_fallback(result, reason)
+  File "tools/github-app/test_agent_token.py", line 253, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: "open[14 chars]z[bot] token (unreachable); using the owner's GitHub account\n" != "open[14 chars]z[bot] token (bad-answer); using the owner's GitHub accou
+FAIL: test_each_fixture_fallback_reason (__main__.Fallback.test_each_fixture_fallback_reason) (reason='bad-answer', item='{"schema": "openwiz.token-service.v1", "kind": "
+  File "tools/github-app/test_agent_token.py", line 510, in test_each_fixture_fallback_reason
+    self.assert_fallback(result, reason)
+  File "tools/github-app/test_agent_token.py", line 253, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: "open[14 chars]z[bot] token (unreachable); using the owner's GitHub account\n" != "open[14 chars]z[bot] token (bad-answer); using the owner's GitHub accou
+FAIL: test_each_fixture_fallback_reason (__main__.Fallback.test_each_fixture_fallback_reason) (reason='bad-answer', item='{"schema": "openwiz.token-service.v1", "kind": "
+  File "tools/github-app/test_agent_token.py", line 510, in test_each_fixture_fallback_reason
+    self.assert_fallback(result, reason)
+  File "tools/github-app/test_agent_token.py", line 253, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: "open[14 chars]z[bot] token (unreachable); using the owner's GitHub account\n" != "open[14 chars]z[bot] token (bad-answer); using the owner's GitHub accou
+FAIL: test_each_fixture_fallback_reason (__main__.Fallback.test_each_fixture_fallback_reason) (reason='bad-answer', item='{"schema": "openwiz.token-service.v1", "kind": "
+  File "tools/github-app/test_agent_token.py", line 510, in test_each_fixture_fallback_reason
+    self.assert_fallback(result, reason)
+  File "tools/github-app/test_agent_token.py", line 253, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: '' != "openwiz: no openwiz[bot] token (bad-answ[35 chars]nt\n"
+FAIL: test_each_fixture_fallback_reason (__main__.Fallback.test_each_fixture_fallback_reason) (reason='bad-answer', item='{"schema": "openwiz.token-service.v1", "token": 
+  File "tools/github-app/test_agent_token.py", line 510, in test_each_fixture_fallback_reason
+    self.assert_fallback(result, reason)
+  File "tools/github-app/test_agent_token.py", line 253, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: '' != "openwiz: no openwiz[bot] token (bad-answ[35 chars]nt\n"
+FAIL: test_each_fixture_fallback_reason (__main__.Fallback.test_each_fixture_fallback_reason) (reason='bad-answer', item='{"schema": "openwiz.token-service.v1", "kind": "
+  File "tools/github-app/test_agent_token.py", line 510, in test_each_fixture_fallback_reason
+    self.assert_fallback(result, reason)
+  File "tools/github-app/test_agent_token.py", line 253, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: '' != "openwiz: no openwiz[bot] token (bad-answ[35 chars]nt\n"
+FAIL: test_each_fixture_fallback_reason (__main__.Fallback.test_each_fixture_fallback_reason) (reason='bad-answer', item='{"schema": "openwiz.token-service.v1", "kind": "
+  File "tools/github-app/test_agent_token.py", line 510, in test_each_fixture_fallback_reason
+    self.assert_fallback(result, reason)
+  File "tools/github-app/test_agent_token.py", line 253, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: '' != "openwiz: no openwiz[bot] token (bad-answ[35 chars]nt\n"
+FAIL: test_each_fixture_fallback_reason (__main__.Fallback.test_each_fixture_fallback_reason) (reason='bad-answer', item='{"schema": "openwiz.token-service.v1", "kind": "
+  File "tools/github-app/test_agent_token.py", line 510, in test_each_fixture_fallback_reason
+    self.assert_fallback(result, reason)
+  File "tools/github-app/test_agent_token.py", line 253, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: '' != "openwiz: no openwiz[bot] token (bad-answ[35 chars]nt\n"
+FAIL: test_each_fixture_fallback_reason (__main__.Fallback.test_each_fixture_fallback_reason) (reason='bad-answer', item='{"schema": "openwiz.token-service.v1", "kind": "
+  File "tools/github-app/test_agent_token.py", line 510, in test_each_fixture_fallback_reason
+    self.assert_fallback(result, reason)
+  File "tools/github-app/test_agent_token.py", line 253, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: '' != "openwiz: no openwiz[bot] token (bad-answ[35 chars]nt\n"
+FAIL: test_each_fixture_fallback_reason (__main__.Fallback.test_each_fixture_fallback_reason) (reason='bad-answer', item='{"schema": "openwiz.token-service.v1", "kind": "
+  File "tools/github-app/test_agent_token.py", line 510, in test_each_fixture_fallback_reason
+    self.assert_fallback(result, reason)
+  File "tools/github-app/test_agent_token.py", line 253, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: '' != "openwiz: no openwiz[bot] token (bad-answ[35 chars]nt\n"
+FAIL: test_each_fixture_fallback_reason (__main__.Fallback.test_each_fixture_fallback_reason) (reason='bad-answer', item='{"schema": "openwiz.token-service.v1", "kind": "
+  File "tools/github-app/test_agent_token.py", line 510, in test_each_fixture_fallback_reason
+    self.assert_fallback(result, reason)
+  File "tools/github-app/test_agent_token.py", line 253, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: '' != "openwiz: no openwiz[bot] token (bad-answ[35 chars]nt\n"
+FAIL: test_each_fixture_fallback_reason (__main__.Fallback.test_each_fixture_fallback_reason) (reason='bad-answer', item='{"schema": "openwiz.token-service.v1", "kind": "
+  File "tools/github-app/test_agent_token.py", line 510, in test_each_fixture_fallback_reason
+    self.assert_fallback(result, reason)
+  File "tools/github-app/test_agent_token.py", line 253, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: '' != "openwiz: no openwiz[bot] token (bad-answ[35 chars]nt\n"
+FAIL: test_each_fixture_fallback_reason (__main__.Fallback.test_each_fixture_fallback_reason) (reason='bad-answer', item='{"schema": "openwiz.token-service.v1", "kind": "
+  File "tools/github-app/test_agent_token.py", line 510, in test_each_fixture_fallback_reason
+    self.assert_fallback(result, reason)
+  File "tools/github-app/test_agent_token.py", line 253, in assert_fallback
+    self.assertEqual(result.stderr, NOTE.replace("<reason>", reason) + "\n")
+AssertionError: '' != "openwiz: no openwiz[bot] token (bad-answ[35 chars]nt\n"
+Ran 5 tests
+FAILED (failures=20, errors=1)
+

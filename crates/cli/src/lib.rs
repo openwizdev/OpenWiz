@@ -1,6 +1,7 @@
 pub mod agent_help;
 pub mod fleet;
 pub mod fleets;
+pub mod ghost;
 pub mod github_token;
 pub mod init;
 pub mod loop_files;

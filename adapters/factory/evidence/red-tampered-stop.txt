@@ -1,0 +1,29 @@
+# D6 ruling red: stop on a tampered folder refuses instead of ending the run's own processes (synthetic, fixtures only)
+$ python3 -I adapters/factory/test_driver.py Factory.test_stop_on_a_tampered_folder_still_ends_the_runs_own_processes
+test_stop_on_a_tampered_folder_still_ends_the_runs_own_processes (__main__.Factory.test_stop_on_a_tampered_folder_still_ends_the_runs_own_processes) ... FAIL
+
+======================================================================
+FAIL: test_stop_on_a_tampered_folder_still_ends_the_runs_own_processes (__main__.Factory.test_stop_on_a_tampered_folder_still_ends_the_runs_own_processes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/factory/test_driver.py", line 213, in test_stop_on_a_tampered_folder_still_ends_the_runs_own_processes
+    self.assertEqual(self.call('stop', out), (0, dict(out, stopped=True)))
+AssertionError: Tuples differ: (1, {'error': 'the state folder <tmp>[279 chars]in"}) != (0, {'run': 'run-84dcc3a15a44', 'stopped': True})
+
+First differing element 0:
+1
+0
+
++ (0, {'run': 'run-84dcc3a15a44', 'stopped': True})
+- (1,
+-  {'error': 'the state folder <tmp>/state or a file in it is not '
+-            'yours alone, so the driver will not trust the runs saved there; '
+-            'nothing was ended or started',
+-   'next': "end the run's processes by hand if it still runs, run chmod 700 on "
+-           'the folder and chmod 600 on its files if they are your own, then '
+-           'try again'})
+
+----------------------------------------------------------------------
+Ran 1 test in 0.160s
+
+FAILED (failures=1)

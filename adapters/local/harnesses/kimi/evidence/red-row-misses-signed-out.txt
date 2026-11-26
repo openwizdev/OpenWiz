@@ -1,0 +1,5 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY PATH=<31 refusing stubs>:$PATH python3 -I test_row.py
+fail: the row has no login_command `kimi login`
+fail: signed-out turn printed '{"role":"meta","type":"session.resume_hint","session_id":"fake-<hex>","command":"kimi -r fake-<hex>","content":"To resume this session: kimi -r fake-<hex>"}\n' (exit 0), which the row's signed_out misses
+fail
+exit 1

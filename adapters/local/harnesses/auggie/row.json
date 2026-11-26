@@ -1,0 +1,42 @@
+{
+  "harness": "auggie",
+  "program": "auggie",
+  "start": [
+    "--no-cloud",
+    "-p",
+    "--mode",
+    "json",
+    "--model",
+    "{model}",
+    "{mode}",
+    "{prompt}"
+  ],
+  "wake": [
+    "--session",
+    "{session}",
+    "--no-cloud",
+    "-p",
+    "--mode",
+    "json",
+    "--model",
+    "{model}",
+    "{mode}",
+    "{prompt}"
+  ],
+  "session": {
+    "json": [
+      "id"
+    ]
+  },
+  "modes": {
+    "full-access": []
+  },
+  "env": {},
+  "effort": "none: auggie 1.2.2 --thinking runs at the model default with only a stderr warning when the model can't take the effort (the 1.2.2 code; docs.augmentcode.com/cli/reference)",
+  "login": "auggie's own login, saved by `auggie auth login` in ~/.augment/session.json",
+  "daemon": "auggie's bash tool can leave background commands running detached, in their own process group; on Linux stop ends them with the process tree, while macOS waits on the live check (#2448)",
+  "signed_out": [
+    "No API key found for "
+  ],
+  "login_command": "auggie auth login"
+}
