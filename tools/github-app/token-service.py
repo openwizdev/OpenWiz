@@ -197,7 +197,7 @@ def mint(api, request, setting):
     except Refused:
         app.revoke(api["base"], token)
         raise
-    return sealed, expires_at
+    return sealed, expires_at, token
 
 
 def fresh(expires_at):
@@ -207,22 +207,42 @@ def fresh(expires_at):
 def serve(api, log, data, setting):
     now = time.time()
     line = {"schema": SCHEMA, "kind": "mint-log", "at": int(now), "requester": "-"}
+    token = None
     try:
         request = request_of(data)
         line.update(requester=request["requester"], repositories=request["repositories"])
-        sealed, expires_at = mint(api, request, setting)
+        sealed, expires_at, token = mint(api, request, setting)
         line.update(permissions=request["permissions"], outcome="minted", expires_at=expires_at)
         message = {"schema": SCHEMA, "kind": "answer", "sealed_token": sealed, "expires_at": expires_at,
                    "repositories": request["repositories"], "permissions": request["permissions"]}
     except Refused as refused:
+        token = None
         line["outcome"] = refused.code
         message = refusal(refused.code)
     except Exception:
+        token = None
         line["outcome"] = "unavailable"
         message = refusal("unavailable")
+
+    def too_old():
+        nonlocal message, token
+        if token is None or fresh(expires_at):
+            return False
+        app.revoke(api["base"], token)
+        token = None
+        line["outcome"] = "expiry"
+        message = refusal("expiry")
+        return True
+
+    os.fsync(log)
+    too_old()
     entry = (json.dumps(line) + "\n").encode()
     app.require(os.write(log, entry) == len(entry))
     os.fsync(log)
+    if too_old():
+        entry = (json.dumps(line) + "\n").encode()
+        app.require(os.write(log, entry) == len(entry))
+        os.fsync(log)
     return message, REFUSALS[message["refusal"]][0] if message["kind"] == "refusal" else 0
 
 

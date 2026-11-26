@@ -164,11 +164,13 @@ class ServiceFixture(unittest.TestCase):
         return subprocess.run(["python3", "-I", str(SERVICE), command, "--state-dir", str(self.state)],
                               capture_output=True, text=True, timeout=60, env=dict(os.environ, **(env or {})))
 
-    def mint(self, endpoint, request, env=None, audit=None):
+    def mint(self, endpoint, request, env=None, audit=None, script=None):
         text = request if isinstance(request, str) else json.dumps(request)
         self.clock.write_text(str(NOW))
         environment = {k: v for k, v in os.environ.items() if k != "OPENWIZ_GITHUB_APP_MODE"}
-        return subprocess.run(["python3", "-I", "-c", AUDIT if audit else CLOCK, *([str(audit)] if audit else []),
+        program = script or (AUDIT if audit else CLOCK)
+        prefix = [str(audit)] if audit else []
+        return subprocess.run(["python3", "-I", "-c", program, *prefix,
                                str(self.clock), str(SERVICE), "mint",
                                "--state-dir", str(self.state), "--api-base", endpoint],
                               input=text, capture_output=True, text=True, timeout=60,
@@ -266,6 +268,36 @@ class RequestFixtureTests(ServiceFixture):
             self.assertEqual(self.logged()[-1]["outcome"], "expiry")
             fake["expires_at"] = NOW + 15 + 311
             self.assertEqual(self.mint(url, SMALL).returncode, 0)
+
+    def test_a_slow_audit_sync_is_refused_when_it_uses_up_the_handover_allowance(self):
+        slow = ("import os, runpy, sys, time\n"
+                "clock = sys.argv[1]\n"
+                "def now():\n"
+                "    return float(open(clock).read())\n"
+                "time.time = now\n"
+                "real = os.fsync\n"
+                "def fsync(fd):\n"
+                "    try:\n"
+                "        name = os.readlink('/proc/self/fd/%d' % fd)\n"
+                "    except OSError:\n"
+                "        name = ''\n"
+                "    if name.endswith('mint-log.jsonl'):\n"
+                "        with open(clock + '.next', 'w') as handle:\n"
+                "            handle.write(str(now() + 12))\n"
+                "        os.replace(clock + '.next', clock)\n"
+                "    return real(fd)\n"
+                "os.fsync = fsync\n"
+                "sys.argv = sys.argv[2:]\n"
+                "runpy.run_path(sys.argv[0], run_name='__main__')\n")
+        with fake_github(self.pem, REQUESTS["installed"]) as (url, calls, fake):
+            fake["expires_at"] = NOW + 311
+            done = self.mint(url, SMALL, script=slow)
+            self.assertEqual((done.returncode, json.loads(done.stdout).get("refusal")), (5, "expiry"))
+            self.assertEqual(self.logged()[-1]["outcome"], "expiry")
+            self.assertNotIn("sealed_token", done.stdout)
+            self.assertEqual(revoked(calls), ["Bearer synthetic-token"])
+            fake["expires_at"] = NOW + 360
+            self.assertEqual(self.mint(url, SMALL, script=slow).returncode, 0)
 
 
 class SealingTests(ServiceFixture):
