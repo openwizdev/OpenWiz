@@ -1,0 +1,13 @@
+{
+  "api_key_env": null,
+  "corpus": "docs",
+  "enabled": false,
+  "endpoint": "http://127.0.0.1:8000/v1",
+  "experimental": true,
+  "fallback": "retrieval",
+  "include_brain": true,
+  "max_passages": 4,
+  "model": "memo",
+  "schema": "openwiz.memo.v1",
+  "timeout_seconds": 30
+}
