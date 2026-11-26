@@ -1,16 +1,36 @@
 #!/bin/sh
 set -eu
 scope=--workspace
-case "$#:${1:-}" in
-  0:) ;;
-  1:--targets-only) scope="-p openwiz-tests" ;;
-  *) echo "usage: sh ci/rust-tests.sh [--targets-only]" >&2; exit 2 ;;
-esac
-root="${RUST_TESTS_ROOT:-}"
-cg="$root/sys/fs/cgroup"
 num() {
   case "$1" in '' | *[!0-9]* | ???????????????????*) return 1 ;; esac
 }
+floor_check() {
+  hint="$1" file="$2"
+  shift 2
+  f="$(tr -d ' \t\r\n' < "$file" | sed -n 's/^{"rust":\([0-9][0-9]*\)}$/\1/p')" || f=
+  num "$f" || { echo "rust-tests: $file has no rust floor" >&2; return 1; }
+  for log; do [ -f "$log" ] && [ -r "$log" ] || { echo "rust-tests: $log can't be read" >&2; return 1; }; done
+  n="$(cat "$@" | awk '/^test result: ok\. [0-9]+ passed;/ { n += $4 } END { print n + 0 }')" || n=
+  num "$n" || { echo "rust-tests: the test summaries can't be read" >&2; return 1; }
+  echo "rust-tests: ran $n tests, floor is $f"
+  [ "$n" -ge "$f" ] || { echo "ran $n tests, floor is $f: a suite stopped loading" >&2; return 1; }
+  [ "$hint" = no ] || [ "$n" -le $((f + 100)) ] || echo "rust-tests: ran $n tests, more than 100 over the floor $f: raise it in ci/test-floor.json"
+}
+floor_file="$(dirname "$0")/test-floor.json"
+usage() { echo "usage: sh ci/rust-tests.sh [--targets-only | --floor-check <floor json> <log>...]" >&2; exit 2; }
+case "$#:${1:-}" in
+  0:) ;;
+  1:--targets-only) scope="-p openwiz-tests" ;;
+  *:--floor-check)
+    [ $# -ge 3 ] || usage
+    shift
+    floor_check yes "$@"
+    exit
+    ;;
+  *) usage ;;
+esac
+root="${RUST_TESTS_ROOT:-}"
+cg="$root/sys/fs/cgroup"
 limits() {
   [ -f "$cg/cgroup.controllers" ] || { echo "no cgroup v2 at /sys/fs/cgroup"; return; }
   rel="$(sed -n 's/^0:://p' "$root/proc/self/cgroup" 2> /dev/null)" || rel=
@@ -104,6 +124,11 @@ echo "rust-tests: the fixture release build took $(($(date +%s) - prebuild_began
 
 finish() {
   rc="$1"
+  if [ "$rc" = 0 ]; then
+    hint=no
+    [ "$scope" = --workspace ] || hint=yes
+    floor_check "$hint" "$floor_file" "$out"/*.log || rc=1
+  fi
   peak_line
   frame end
   exit "$rc"
@@ -135,7 +160,8 @@ if [ -n "$why" ]; then
   rc=0
   began="$(date +%s)"
   # shellcheck disable=SC2086 # the skip arguments, split
-  cargo test $scope --locked -- --test-threads=8 $skip || rc=$?
+  { cargo test $scope --locked -- --test-threads=8 $skip || echo "$?" > "$out/all.rc"; } | tee "$out/all.log"
+  [ ! -f "$out/all.rc" ] || rc="$(cat "$out/all.rc")"
   frame "rust-tests: cargo test $scope exited $rc after $(($(date +%s) - began)) s"
   finish "$rc"
 fi

@@ -1,0 +1,23 @@
+{
+  "driver": "synthetic-host",
+  "version": "1.2.3",
+  "driver_contract": "openwiz:driver v1",
+  "kit_commit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "files": [
+    {
+      "path": "driver",
+      "mode": "0700",
+      "sha256": "e8024e4f21493bab999e41f40fbdedcbb0c3715c62c559117fc02d0ae52077fe"
+    },
+    {
+      "path": "schema.json",
+      "mode": "0600",
+      "sha256": "f0f04a426a57de723a9c8795265b161ca53b6ab5fb64df0d2e12b6e6fa89ab38"
+    },
+    {
+      "path": "README.md",
+      "mode": "0600",
+      "sha256": "8436c0d6f2bcc6c20dbf747545ed68caf6b4b47fa793fae0c536187380f62487"
+    }
+  ]
+}

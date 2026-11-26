@@ -308,7 +308,7 @@ class Check(unittest.TestCase):
         self.verdict(self.call('--tree', self.tree), rule)
 
     def test_hosted_workflows(self):
-        labels = ('ubuntu-latest', 'ubuntu-24.04', 'ubuntu-slim', 'macos-15', 'macos-15-intel')
+        labels = ('ubuntu-latest', 'ubuntu-24.04', 'ubuntu-24.04-arm', 'ubuntu-slim', 'macos-15', 'macos-15-intel')
         for label in labels:
             for runner in (label, '[' + label + ']', "'" + label + "'"):
                 self.workflow('on: push\njobs:\n  test:\n    runs-on: ' + runner + '\n    steps:\n      - run: echo ok\n')
@@ -424,6 +424,7 @@ class Check(unittest.TestCase):
         self.assertEqual(rc, 1 if rule else 0, out.getvalue())
         if rule:
             self.assertIn(rule + ' ', out.getvalue())
+        return out.getvalue()
 
     def scan_git(self, *args):
         children, start = [], subprocess.Popen
@@ -531,8 +532,16 @@ class Check(unittest.TestCase):
 
     def test_clean_history_and_commit_emails(self):
         self.make_repo()
-        for email in (PRIVATE_MAIL, 'robin@users.noreply.github.com', 'noreply@github.com'):
-            self.git('commit', '--allow-empty', '-qm', 'clean', GIT_AUTHOR_EMAIL=email, GIT_COMMITTER_EMAIL=email)
+        bot = '41898282+synthetic-bot[bot]@users.noreply.github.com'
+        for author, committer in (
+            (PRIVATE_MAIL, PRIVATE_MAIL),
+            ('robin@users.noreply.github.com', 'robin@users.noreply.github.com'),
+            (bot, bot),
+            (PRIVATE_MAIL, 'noreply@github.com'),
+            (bot, 'noreply@github.com'),
+        ):
+            self.git('commit', '--allow-empty', '-qm', 'clean',
+                     GIT_AUTHOR_EMAIL=author, GIT_COMMITTER_EMAIL=committer)
         self.history()
         self.verdict(self.call('--repo', self.repo, '--base', self.anchor, '--head', 'HEAD'), 'C1')
 
@@ -546,11 +555,31 @@ class Check(unittest.TestCase):
 
     def test_bad_author_or_committer(self):
         self.make_repo()
-        for key in ('GIT_AUTHOR_EMAIL', 'GIT_COMMITTER_EMAIL'):
-            for email in (BAD_MAIL, 'robin@example.com', 'git@github.com', '@users.noreply.github.com'):
+        cases = (
+            ('GIT_AUTHOR_EMAIL', 'author', (
+                BAD_MAIL, 'robin@example.com', 'git@github.com', 'noreply@github.com',
+                '@users.noreply.github.com', 'synthetic-bot[bot]@users.noreply.github.com',
+                '0+synthetic-bot[bot]@users.noreply.github.com',
+            )),
+            ('GIT_COMMITTER_EMAIL', 'committer', (
+                BAD_MAIL, 'robin@example.com', 'git@github.com',
+                '@users.noreply.github.com', 'synthetic-bot[bot]@users.noreply.github.com',
+                '0+synthetic-bot[bot]@users.noreply.github.com',
+            )),
+        )
+        for key, role, emails in cases:
+            for email in emails:
                 self.git('reset', '--soft', self.anchor)
                 self.git('commit', '--allow-empty', '-qm', 'clean', **{key: email})
-                self.history('C3')
+                out = self.history('C3')
+                self.assertIn(f'C3 commit-1-{role}:1', out)
+                self.assertNotIn(email, out)
+        self.git('reset', '--soft', self.anchor)
+        self.git('commit', '--allow-empty', '-qm', 'older personal commit',
+                 GIT_AUTHOR_EMAIL=BAD_MAIL, GIT_COMMITTER_EMAIL=BAD_MAIL)
+        old_base = self.git('rev-parse', 'HEAD')
+        self.git('commit', '--allow-empty', '-qm', 'clean follow-up')
+        self.history(base=old_base)
 
     def test_merged_private_ancestry_and_replace_objects(self):
         self.make_repo()

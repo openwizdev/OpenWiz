@@ -133,6 +133,8 @@ EFFORT_KEY = {
                         "fake devin host", 'pass wake: the run edited builder status note 3', PASS[3], KEY_PASS],
     'planted/effort-dropped-key-host': [PASS[0], "fail start: effort: medium never reached the kit's fake devin host"]
     + NOT_RUN + [KEY_PASS],
+    'planted/effort-cleanup-only': [PASS[0], "fail start: effort: medium never reached the kit's fake devin host"]
+    + NOT_RUN + [KEY_PASS],
     'planted/effort-key-host-starts-then-refuses': [PASS[0], "fail start: effort: start refused medium with the "
                                                     "refusal text after it sent the kit's fake devin host a start "
                                                     "request"] + NOT_RUN + [KEY_PASS],
@@ -758,6 +760,21 @@ class Kit(unittest.TestCase):
                 self.setUp()
                 code, out, host = self.keyed(os.path.join(FIXTURES, name, 'driver'))
                 self.assertEqual((code, out), (0 if all(x.startswith('pass') for x in lines) else 1, lines))
+
+    def test_key_host_effort_on_creation_still_counts_when_start_also_posts_a_prompt(self):
+        driver = os.path.join(FIXTURES, 'planted', 'effort-cleanup-only', 'driver')
+        code, out, _ = self.keyed(driver, KIT_EFFORT_RECEIPT='create-then-prompt')
+        self.maxDiff = None
+        self.assertEqual((code, out), (0, EFFORT_KEY['effort-key-host']))
+
+    def test_effort_on_another_key_host_request_does_not_count(self):
+        name = 'planted/effort-cleanup-only'
+        for mode in ('cleanup-post', 'start-get', 'start-second-post'):
+            with self.subTest(mode):
+                self.tearDown()
+                self.setUp()
+                code, out, _ = self.keyed(os.path.join(FIXTURES, name, 'driver'), KIT_EFFORT_RECEIPT=mode)
+                self.assertEqual((code, out), (1, EFFORT_KEY[name]))
 
     def stock_copies(self):
         with open(TEMPLATE) as f:

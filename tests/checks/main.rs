@@ -15,6 +15,7 @@ mod fixture_scan;
 mod schema_conformance;
 mod skills;
 mod strict_json;
+mod test_floor;
 
 #[allow(
     dead_code,

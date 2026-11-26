@@ -19,8 +19,9 @@ python3 -I tools/ci-overload/test_supply.py           # the supplier from a clea
 | Oldest required queued job waits 300 s or more | alarm, pause |
 | REST or GraphQL remaining below 10% of its limit, or an active secondary backoff | alarm, pause |
 | Oldest wait 900 s or more, or a pool exhausted | escalation due, pause |
-| Missing, stale, partial or invalid input or state | unknown, pause |
+| Missing input file | unknown (refuses this call; does not latch durable pause) |
+| Stale, partial or invalid input or state | unknown, pause |
 
-While paused, `merge-batch`, `automatic-refresh` and `nonessential-poll` are refused; `completion` and `reconciliation` stay allowed so admitted work can finish. `fleet.sh overload` runs the supplier first when `LAUNCH_FLEET_OVERLOAD_SUPPLY` names it.
+While paused, `merge-batch`, `automatic-refresh` and `nonessential-poll` are refused; `completion` and `reconciliation` stay allowed so admitted work can finish. `fleet.sh overload` runs `LAUNCH_FLEET_OVERLOAD_SUPPLY` when set, or its shipped default supplier when neither `LAUNCH_FLEET_OVERLOAD_SUPPLY` nor `LAUNCH_FLEET_OVERLOAD_INPUT` is set.
 
-The pause is durable: keep one private state path per repository, never in a temporary folder, and keep its `<state>.pending/` journal beside it. A later healthy snapshot never clears it. **There is no resume command:** ask Jake before clearing a pause, and never delete or replace the state to do it. `escalation: due_not_sent` means only that an escalation is due; this tool sends nothing.
+The pause is durable: keep one private state path per repository, never in a temporary folder, and keep its `<state>.pending/` journal beside it. A later healthy snapshot never clears it (there is **no automatic resumption**). Once the operator confirms the overload is resolved, clear the durable pause and its pending journal under the state lock with `python3 -I tools/ci-overload/alarm.py --repository OWNER/NAME --state /abs/private/pause.json --action resume` (or `fleet.sh overload resume`), rather than deleting files manually. `escalation: due_not_sent` means only that an escalation is due; this tool sends nothing.

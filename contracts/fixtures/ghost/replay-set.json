@@ -1,0 +1,43 @@
+{
+  "schema": "openwiz.ghost.v1",
+  "kind": "replay_fixtures",
+  "context_fixture": "context-pack.json",
+  "messages": [
+    {
+      "id": "msg_syn_01",
+      "surface": "openwiz-app",
+      "session_id": "thr_syn_demo_01",
+      "text": "J1 all recs"
+    },
+    {
+      "id": "msg_syn_02",
+      "surface": "openwiz-app",
+      "session_id": "thr_syn_demo_01",
+      "text": "approve #42 and merge"
+    },
+    {
+      "id": "msg_syn_03",
+      "surface": "openwiz-app",
+      "session_id": "thr_syn_demo_01",
+      "text": "ship magic-link sign-in"
+    },
+    {
+      "id": "msg_syn_04",
+      "surface": "t3-code",
+      "session_id": "thr_syn_demo_02",
+      "text": "all recs on the seat billing spec"
+    },
+    {
+      "id": "msg_syn_05",
+      "surface": "bb-plugin",
+      "session_id": "thr_syn_demo_03",
+      "text": "looks good, merge it"
+    },
+    {
+      "id": "msg_syn_06",
+      "surface": "cli",
+      "session_id": "thr_syn_demo_04",
+      "text": "check the plan graph before we start"
+    }
+  ]
+}

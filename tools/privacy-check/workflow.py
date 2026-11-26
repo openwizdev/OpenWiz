@@ -163,7 +163,7 @@ def parse(source):
     return value
 
 
-HOSTED = {'ubuntu-latest', 'ubuntu-24.04', 'ubuntu-slim', 'macos-15', 'macos-15-intel'}
+HOSTED = {'ubuntu-latest', 'ubuntu-24.04', 'ubuntu-24.04-arm', 'ubuntu-slim', 'macos-15', 'macos-15-intel'}
 
 
 def allowed_runner(value, job):
