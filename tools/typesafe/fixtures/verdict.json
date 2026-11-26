@@ -1,0 +1,184 @@
+{
+  "schema": "openwiz.typesafe-bench.verdict.v1",
+  "note": "recorded answers are fixture input, not live Jev calls",
+  "sha": "abababababababababababababababababababab",
+  "cases": [
+    {
+      "id": "exact-approve",
+      "line": "VERDICT: APPROVE at abababababababababababababababababababab",
+      "expected": "APPROVE",
+      "recorded": {
+        "answers": {}
+      }
+    },
+    {
+      "id": "exact-changes",
+      "line": "VERDICT: CHANGES at abababababababababababababababababababab",
+      "expected": "CHANGES",
+      "recorded": {
+        "answers": {}
+      }
+    },
+    {
+      "id": "approved",
+      "line": "VERDICT: APPROVED at abababababababababababababababababababab",
+      "expected": "APPROVE",
+      "recorded": {
+        "answers": {
+          "kind": {
+            "type": "choice",
+            "choice": "approve",
+            "confidence": 0.96,
+            "probabilities": {
+              "approve": 0.97,
+              "changes": 0.02,
+              "not_a_verdict": 0.01
+            }
+          },
+          "is_verdict": {
+            "type": "noul",
+            "noul": 0.95
+          }
+        }
+      }
+    },
+    {
+      "id": "lowercase",
+      "line": "VERDICT: approve at abababababababababababababababababababab",
+      "expected": "APPROVE",
+      "recorded": {
+        "answers": {
+          "kind": {
+            "type": "choice",
+            "choice": "approve",
+            "confidence": 0.93,
+            "probabilities": {
+              "approve": 0.94,
+              "changes": 0.03,
+              "not_a_verdict": 0.03
+            }
+          },
+          "is_verdict": {
+            "type": "noul",
+            "noul": 0.92
+          }
+        }
+      }
+    },
+    {
+      "id": "please-change",
+      "line": "VERDICT: please change this at abababababababababababababababababababab",
+      "expected": "CHANGES",
+      "recorded": {
+        "answers": {
+          "kind": {
+            "type": "choice",
+            "choice": "changes",
+            "confidence": 0.91,
+            "probabilities": {
+              "approve": 0.04,
+              "changes": 0.94,
+              "not_a_verdict": 0.02
+            }
+          },
+          "is_verdict": {
+            "type": "noul",
+            "noul": 0.93
+          }
+        }
+      }
+    },
+    {
+      "id": "not-a-verdict",
+      "line": "VERDICT: do not approve at abababababababababababababababababababab",
+      "expected": null,
+      "recorded": {
+        "answers": {
+          "kind": {
+            "type": "choice",
+            "choice": "not_a_verdict",
+            "confidence": 0.9,
+            "probabilities": {
+              "approve": 0.05,
+              "changes": 0.05,
+              "not_a_verdict": 0.9
+            }
+          },
+          "is_verdict": {
+            "type": "noul",
+            "noul": 0.1
+          }
+        }
+      }
+    },
+    {
+      "id": "short-commit",
+      "line": "VERDICT: APPROVED at abc",
+      "expected": null,
+      "recorded": {
+        "answers": {
+          "kind": {
+            "type": "choice",
+            "choice": "approve",
+            "confidence": 0.99,
+            "probabilities": {
+              "approve": 0.99,
+              "changes": 0.0,
+              "not_a_verdict": 0.01
+            }
+          },
+          "is_verdict": {
+            "type": "noul",
+            "noul": 0.99
+          }
+        }
+      }
+    },
+    {
+      "id": "low-confidence",
+      "line": "VERDICT: looks good at abababababababababababababababababababab",
+      "expected": "APPROVE",
+      "recorded": {
+        "answers": {
+          "kind": {
+            "type": "choice",
+            "choice": "approve",
+            "confidence": 0.4,
+            "probabilities": {
+              "approve": 0.99,
+              "changes": 0.0,
+              "not_a_verdict": 0.01
+            }
+          },
+          "is_verdict": {
+            "type": "noul",
+            "noul": 0.95
+          }
+        }
+      }
+    },
+    {
+      "id": "passing-mention",
+      "line": "VERDICT: ship it at abababababababababababababababababababab",
+      "expected": null,
+      "recorded": {
+        "answers": {
+          "kind": {
+            "type": "choice",
+            "choice": "approve",
+            "confidence": 0.99,
+            "probabilities": {
+              "approve": 0.99,
+              "changes": 0.0,
+              "not_a_verdict": 0.01
+            }
+          },
+          "is_verdict": {
+            "type": "noul",
+            "noul": 0.2
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1054,11 +1054,18 @@ impl World {
                     subject: reads.subject,
                     ci: reads.ci,
                     base_now: Some(reads.base_now),
-                    reports: c
-                        .iter()
-                        .filter(|c| records::first(c).starts_with("VERDICT:"))
-                        .map(Comment::report)
-                        .collect(),
+                    reports: {
+                        let decider = super::typesafe::env_decider();
+                        c.iter()
+                            .filter(|c| records::first(c).starts_with("VERDICT:"))
+                            .map(|c| {
+                                let mut report = c.report();
+                                report.text =
+                                    super::typesafe::verdict_text(&report.text, decider.as_ref());
+                                report
+                            })
+                            .collect()
+                    },
                     starts: ps,
                     records: records::pr_records(c, &retired_rechecks[&p.number]),
                 })))

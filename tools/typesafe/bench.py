@@ -21,6 +21,7 @@ import client
 import decide
 import jev_judge
 import plan_limit
+import verdict
 
 FIXTURES = HERE / 'fixtures'
 
@@ -53,9 +54,18 @@ def score_plan_limit(data):
     return len(data['cases']), old_hit, shaped_hit
 
 
+def score_verdict(data):
+    old_hit = shaped_hit = 0
+    for row in data['cases']:
+        old_hit += int(verdict.exact(row['line']) == row['expected'])
+        shaped_hit += int(verdict.shaped(row['line'], row['recorded']) == row['expected'])
+    return len(data['cases']), old_hit, shaped_hit
+
+
 HANDLERS = {
     'openwiz.typesafe-bench.judge.v1': ('judge', score_judge),
     'openwiz.typesafe-bench.plan-limit.v1': ('plan-limit', score_plan_limit),
+    'openwiz.typesafe-bench.verdict.v1': ('verdict', score_verdict),
 }
 
 

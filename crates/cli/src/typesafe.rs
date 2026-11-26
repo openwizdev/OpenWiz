@@ -4,6 +4,7 @@
 //! by `tools/typesafe/ask.py` so the key stays in the environment and off the
 //! command line.
 
+use openwiz_core::fleet::model::Commit;
 use serde_json::{Value, json};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
@@ -191,6 +192,104 @@ pub fn plan_limit(text: &str) -> bool {
     plan_limit_with(text, env_decider().as_ref())
 }
 
+struct Chosen {
+    name: String,
+    probability: f64,
+    confidence: f64,
+}
+
+fn choice(response: &Value, name: &str) -> Option<Chosen> {
+    let answer = response.get("answers")?.get(name)?;
+    if answer.get("type")?.as_str()? != "choice" {
+        return None;
+    }
+    let picked = answer.get("choice")?.as_str()?;
+    let confidence = answer.get("confidence")?.as_f64()?;
+    let probability = answer.get("probabilities")?.get(picked)?.as_f64()?;
+    if !(0.0..=1.0).contains(&confidence) || !(0.0..=1.0).contains(&probability) {
+        return None;
+    }
+    Some(Chosen {
+        name: picked.to_owned(),
+        probability,
+        confidence,
+    })
+}
+
+fn exact_verdict(line: &str) -> Option<&'static str> {
+    let rest = line.strip_prefix("VERDICT: ")?;
+    let (word, commit) = rest.split_once(" at ")?;
+    Commit::parse(commit)?;
+    match word {
+        "APPROVE" => Some("APPROVE"),
+        "CHANGES" => Some("CHANGES"),
+        _ => None,
+    }
+}
+
+/// Rename the word on a `VERDICT:` line that already names a full commit.
+/// `None` means leave the line alone: it is already exact, the commit does not
+/// parse, Jev is unsure, or the call failed.
+pub fn canonical_verdict_line(line: &str, decider: &dyn Decisions) -> Option<String> {
+    if exact_verdict(line).is_some() {
+        return None;
+    }
+    let rest = line.strip_prefix("VERDICT: ")?;
+    let (_, commit) = rest.split_once(" at ")?;
+    let commit = Commit::parse(commit)?;
+    let questions = json!({
+        "kind": {
+            "type": "choice",
+            "instructions": "What verdict does this review comment give?",
+            "criteria": {
+                "approve": "The reviewer approves the commit.",
+                "changes": "The reviewer wants changes on the commit.",
+                "not_a_verdict": "This is not an approve or changes verdict."
+            }
+        },
+        "is_verdict": {
+            "type": "noul",
+            "instructions": "This comment is a reviewer's approve or request-changes verdict for the commit it names.",
+            "criteria": {
+                "true": "The reviewer is giving a verdict on that commit.",
+                "false": "The line only mentions a verdict, or it is not one."
+            }
+        }
+    });
+    let response = decider.ask(line, &questions)?;
+    let chosen = choice(&response, "kind")?;
+    if chosen.probability < ACT || chosen.confidence < ACT || noul(&response, "is_verdict")? < ACT {
+        return None;
+    }
+    let word = match chosen.name.as_str() {
+        "approve" => "APPROVE",
+        "changes" => "CHANGES",
+        _ => return None,
+    };
+    Some(format!("VERDICT: {word} at {}", commit.as_str()))
+}
+
+pub fn verdict_text(body: &str, decider: &dyn Decisions) -> String {
+    let Some(first) = body.lines().next() else {
+        return body.to_owned();
+    };
+    let Some(line) = canonical_verdict_line(first, decider) else {
+        return body.to_owned();
+    };
+    match body.split_once('\n') {
+        Some((_, rest)) => format!("{line}\n{rest}"),
+        None => line,
+    }
+}
+
+#[cfg(test)]
+fn accepted_verdict(line: &str, decider: &dyn Decisions) -> Option<&'static str> {
+    if let Some(word) = exact_verdict(line) {
+        return Some(word);
+    }
+    exact_verdict(&canonical_verdict_line(line, decider)?)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -291,5 +390,56 @@ mod tests {
         assert!(!output.status.success());
         assert!(output.stdout.is_empty());
         assert!(output.stderr.is_empty());
+    }
+
+    #[test]
+    fn a_rewritten_verdict_keeps_the_findings() {
+        let sha = "ab".repeat(20);
+        let body = format!("VERDICT: APPROVED at {sha}\n\n- **R1 [low]** synthetic");
+        let text = verdict_text(&body, &Scripted(verdict_body("approve", 0.97, 0.96, 0.95)));
+        assert_eq!(
+            text,
+            format!("VERDICT: APPROVE at {sha}\n\n- **R1 [low]** synthetic")
+        );
+    }
+
+    #[test]
+    fn recorded_verdict_counts() {
+        let raw = include_str!("../../../tools/typesafe/fixtures/verdict.json");
+        let data: Value = serde_json::from_str(raw).unwrap();
+        let cases = data["cases"].as_array().unwrap();
+        let mut old_hit = 0;
+        let mut shaped_hit = 0;
+        for case in cases {
+            let line = case["line"].as_str().unwrap();
+            let expected = case["expected"].as_str();
+            let recorded = &case["recorded"];
+            let old = exact_verdict(line);
+            let shaped = accepted_verdict(line, &Scripted(recorded.clone()));
+            old_hit += usize::from(old == expected);
+            shaped_hit += usize::from(shaped == expected);
+        }
+        assert_eq!((cases.len(), old_hit, shaped_hit), (9, 5, 8));
+    }
+
+    fn verdict_body(name: &str, probability: f64, confidence: f64, noul: f64) -> Value {
+        let mut probabilities = serde_json::Map::new();
+        for key in ["approve", "changes", "not_a_verdict"] {
+            probabilities.insert(
+                key.to_owned(),
+                json!(if key == name { probability } else { 0.0 }),
+            );
+        }
+        json!({
+            "answers": {
+                "kind": {
+                    "type": "choice",
+                    "choice": name,
+                    "confidence": confidence,
+                    "probabilities": probabilities
+                },
+                "is_verdict": {"type": "noul", "noul": noul}
+            }
+        })
     }
 }
