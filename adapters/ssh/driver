@@ -248,19 +248,41 @@ def carries(pid, run):
 
 def remote_stop(run):
     marker = 'OPENWIZ_SSH_RUN=%s' % run
-    script = 'pkill -TERM -f -- ' + shlex.quote(marker) + ' || true'
+    script = (
+        'needle=$1; hits=; '
+        'for dir in /proc/[0-9]*; do '
+        'pid=${dir##*/}; '
+        'case $pid in *[!0-9]*) continue ;; esac; '
+        '[ "$pid" -gt 1 ] || continue; '
+        '[ "$pid" = "$$" ] && continue; '
+        'envf=$dir/environ; '
+        '[ -r "$envf" ] || continue; '
+        'if tr "\\0" "\\n" < "$envf" | grep -Fxq "$needle"; then '
+        'kill -TERM "$pid" 2>/dev/null || true; '
+        'hits="$hits $pid"; '
+        'fi; '
+        'done; '
+        '[ -n "$hits" ] || exit 0; '
+        'sleep 0.2; '
+        'for pid in $hits; do kill -KILL "$pid" 2>/dev/null || true; done'
+    )
+    command = ' '.join(shlex.quote(part) for part in ('sh', '-c', script, 'sh', marker))
+    argv = ['ssh', '-F', client_config(run + '-stop'), '-o', 'BatchMode=yes',
+            '-o', 'ClearAllForwardings=yes', '-o', 'ForwardAgent=no', destination(), '--', command]
+    if leaked([command], secret_values()) or leaked(argv, secret_values()):
+        raise Refused('the ssh command would carry a secret from the environment',
+                      'take it out of OPENWIZ_SSH_ARGS and the brief; pass secrets only in the environment on the VPS')
+    if not shutil.which('ssh'):
+        raise Refused('ssh is not installed', 'install ssh, then start again')
     try:
-        argv = ['ssh', '-F', client_config(run + '-stop'), '-o', 'BatchMode=yes',
-                '-o', 'ClearAllForwardings=yes', '-o', 'ForwardAgent=no', destination(), '--', script]
-    except Refused:
-        return
-    if leaked(argv, secret_values()):
-        return
-    try:
-        subprocess.run(argv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                       stderr=subprocess.DEVNULL, timeout=15, start_new_session=True)
-    except (OSError, subprocess.TimeoutExpired):
-        pass
+        done = subprocess.run(argv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL, timeout=30, start_new_session=True)
+    except subprocess.TimeoutExpired:
+        raise Refused('the VPS did not finish ending run %s' % run, 'check the VPS, then stop the run again')
+    except OSError as error:
+        raise Refused('ssh did not start: %s' % (error.strerror or 'unknown'), 'check ssh and OPENWIZ_SSH_TARGET')
+    if done.returncode != 0:
+        raise Refused('the VPS did not end run %s' % run, 'check the VPS, then stop the run again')
 
 
 def end(run, records):
@@ -340,12 +362,16 @@ def stop(run):
         try:
             write_json(path_of(run), state)
         except OSError:
-            remote_stop(run)
-            end(run, state['pids'])
+            try:
+                remote_stop(run)
+            finally:
+                end(run, state['pids'])
             raise Refused('run %s has ended, but the driver could not save that it is stopped' % run,
                           'make OPENWIZ_SSH_STATE a folder you can write, then stop it again')
-        remote_stop(run)
-        end(run, state['pids'])
+        try:
+            remote_stop(run)
+        finally:
+            end(run, state['pids'])
         return {'run': run, 'stopped': True}
     finally:
         os.close(descriptor)

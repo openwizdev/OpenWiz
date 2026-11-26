@@ -25,6 +25,4 @@ except ValueError:
     sys.exit(2)
 if not parsed:
     sys.exit(2)
-if parsed[:4] == ['pkill', '-TERM', '-f', '--']:
-    sys.exit(0)
 os.execvp(parsed[0], parsed)

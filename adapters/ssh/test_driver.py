@@ -274,7 +274,7 @@ class SshDriver(unittest.TestCase):
         self.assertEqual(code, 0, out)
         code, stopped = self.call('stop', {'run': out['run']})
         self.assertEqual(code, 0, stopped)
-        self.assertIn('pkill -TERM -f --', json.dumps(self.logged()))
+        self.assertIn('kill -TERM', json.dumps(self.logged()))
         self.assertIn('OPENWIZ_SSH_RUN=%s' % out['run'], json.dumps(self.logged()))
 
     def test_stop_ends_a_harness_that_keeps_the_run_only_in_its_environment(self):
