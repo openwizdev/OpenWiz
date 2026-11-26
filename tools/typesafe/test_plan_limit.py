@@ -11,7 +11,7 @@ import bench
 class PlanLimit(unittest.TestCase):
     def test_recorded_counts(self):
         data = json.loads((Path(__file__).resolve().parent / 'fixtures' / 'plan_limit.json').read_text())
-        self.assertEqual(bench.score_plan_limit(data), (9, 7, 8))
+        self.assertEqual(bench.score_plan_limit(data), (9, 8, 8))
 
 
 if __name__ == '__main__':

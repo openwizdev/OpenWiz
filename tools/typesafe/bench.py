@@ -18,6 +18,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent / 'skills-eval'))
 import client
+import decide
 import jev_judge
 import plan_limit
 
@@ -48,7 +49,7 @@ def score_plan_limit(data):
     old_hit = shaped_hit = 0
     for row in data['cases']:
         old_hit += int(plan_limit.exact(row['text']) == row['expected'])
-        shaped_hit += int(plan_limit.shaped(row['text'], row['recorded_noul']) == row['expected'])
+        shaped_hit += int(plan_limit.shaped(row['text'], row['recorded']) == row['expected'])
     return len(data['cases']), old_hit, shaped_hit
 
 
@@ -106,10 +107,10 @@ def main(argv):
         hit = 0
         for row in data['cases']:
             try:
-                value = client.noul(ask.system_one(row['text'], plan_limit.QUESTION), 'limit')
+                response = ask.system_one(row['text'], decide.questions('plan_limit'))
             except client.TypeSafeError:
-                value = None
-            hit += int(plan_limit.shaped(row['text'], value) == row['expected'])
+                response = None
+            hit += int(plan_limit.shaped(row['text'], response) == row['expected'])
         print(f'plan-limit live: {hit}/{len(data["cases"])} matched the fixture label')
     return 0
 

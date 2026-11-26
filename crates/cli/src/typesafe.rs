@@ -10,10 +10,6 @@ use std::process::{Command, Stdio};
 
 const MODEL: &str = "jev-1.14.0";
 const MAX_STATE_CHARS: usize = 24_000;
-/// A false yes restarts a builder on another model family, or accepts a
-/// review verdict. The docs' starting point is 0.7; this is higher because
-/// acting on a false yes is expensive.
-const ACT: f64 = 0.9;
 
 pub trait Decisions {
     fn ask(&self, state: &str, questions: &Value) -> Option<Value>;
@@ -133,27 +129,62 @@ pub fn exact_plan_limit(text: &str) -> bool {
     })
 }
 
-const LIMIT_QUESTION: &str =
-    "The session output says this Claude run stopped because its plan usage limit was reached.";
+fn config() -> Value {
+    serde_json::from_str(include_str!("../../../tools/typesafe/config.json"))
+        .expect("tools/typesafe/config.json is json")
+}
+
+/// Weighted sum or noisy-or from `config.json`. `None` is the uncertain band
+/// or a response that does not match the site, and the caller falls back.
+fn combined(response: &Value, config: &Value, site_name: &str) -> Option<f64> {
+    let site = config.get("sites")?.get(site_name)?;
+    let no = config.get("noul")?.get("no")?.as_f64()?;
+    let yes = config.get("noul")?.get("yes")?.as_f64()?;
+    let terms = site.get("terms")?.as_array()?;
+    let mut parts = Vec::new();
+    for term in terms {
+        let mut value = noul(response, term.get("question")?.as_str()?)?;
+        if value > no && value < yes {
+            return None;
+        }
+        if term.get("invert").and_then(Value::as_bool).unwrap_or(false) {
+            value = 1.0 - value;
+        }
+        parts.push((term.get("weight")?.as_f64()?, value));
+    }
+    match site.get("combine")?.as_str()? {
+        "weighted_sum" => Some(parts.iter().map(|(weight, value)| weight * value).sum()),
+        "noisy_or" => {
+            let product = parts.iter().fold(1.0, |acc, (weight, value)| {
+                acc * (1.0 - (weight * value).clamp(0.0, 1.0))
+            });
+            Some(1.0 - product)
+        }
+        _ => None,
+    }
+}
 
 pub fn plan_limit_with(text: &str, decider: &dyn Decisions) -> bool {
     if exact_plan_limit(text) {
         return true;
     }
-    let questions = json!({
-        "limit": {
-            "type": "noul",
-            "instructions": LIMIT_QUESTION,
-            "criteria": {
-                "true": "The text says a plan, quota, or rate limit stopped the run and it should wait.",
-                "false": "The text is ordinary work, a normal failure, or a sign-in problem."
-            }
-        }
-    });
-    decider
-        .ask(text, &questions)
-        .and_then(|response| noul(&response, "limit"))
-        .is_some_and(|value| value >= ACT)
+    let config = config();
+    let Some(site) = config
+        .get("sites")
+        .and_then(|sites| sites.get("plan_limit"))
+    else {
+        return false;
+    };
+    let Some(questions) = site.get("questions") else {
+        return false;
+    };
+    let Some(response) = decider.ask(text, questions) else {
+        return false;
+    };
+    let Some(act) = site.get("act").and_then(Value::as_f64) else {
+        return false;
+    };
+    combined(&response, &config, "plan_limit").is_some_and(|value| value >= act)
 }
 
 pub fn plan_limit(text: &str) -> bool {
@@ -164,8 +195,12 @@ pub fn plan_limit(text: &str) -> bool {
 mod tests {
     use super::*;
 
-    fn limit_answer(value: f64) -> Value {
-        json!({"answers": {"limit": {"type": "noul", "noul": value}}})
+    fn limit_answer(plan: f64, ordinary: f64, sign_in: f64) -> Value {
+        json!({"answers": {
+            "plan_limit": {"type": "noul", "noul": plan},
+            "ordinary_work": {"type": "noul", "noul": ordinary},
+            "sign_in": {"type": "noul", "noul": sign_in}
+        }})
     }
 
     #[test]
@@ -186,22 +221,24 @@ mod tests {
     }
 
     #[test]
-    fn a_paraphrase_needs_a_high_noul_and_a_miss_stays_a_miss() {
-        assert!(!plan_limit_with(
-            "please wait, the plan limit stopped the run",
-            &Absent
-        ));
+    fn a_paraphrase_needs_a_clear_weighted_yes_and_a_miss_stays_a_miss() {
+        let text = "please wait, the plan limit stopped the run";
+        assert!(!plan_limit_with(text, &Absent));
         assert!(plan_limit_with(
-            "please wait, the plan limit stopped the run",
-            &Scripted(limit_answer(0.95))
+            text,
+            &Scripted(limit_answer(0.96, 0.04, 0.02))
         ));
         assert!(!plan_limit_with(
-            "please wait, the plan limit stopped the run",
-            &Scripted(limit_answer(0.5))
+            text,
+            &Scripted(limit_answer(0.55, 0.02, 0.02))
+        ));
+        assert!(!plan_limit_with(
+            text,
+            &Scripted(limit_answer(0.8, 0.02, 0.02))
         ));
         assert!(!plan_limit_with(
             "not signed in",
-            &Scripted(limit_answer(0.1))
+            &Scripted(limit_answer(0.12, 0.1, 0.94))
         ));
     }
 
@@ -215,12 +252,20 @@ mod tests {
         for case in cases {
             let text = case["text"].as_str().unwrap();
             let expected = case["expected"].as_bool().unwrap();
-            let recorded = case["recorded_noul"].as_f64();
+            let recorded = &case["recorded"];
             old_hit += usize::from(exact_plan_limit(text) == expected);
-            let shaped = exact_plan_limit(text) || recorded.is_some_and(|value| value >= ACT);
+            let shaped = if exact_plan_limit(text) {
+                true
+            } else if recorded.is_null() {
+                false
+            } else {
+                combined(recorded, &config(), "plan_limit").is_some_and(|value| {
+                    value >= config()["sites"]["plan_limit"]["act"].as_f64().unwrap()
+                })
+            };
             shaped_hit += usize::from(shaped == expected);
         }
-        assert_eq!((cases.len(), old_hit, shaped_hit), (9, 7, 8));
+        assert_eq!((cases.len(), old_hit, shaped_hit), (9, 8, 8));
     }
 
     #[test]

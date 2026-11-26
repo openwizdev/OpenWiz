@@ -1,20 +1,15 @@
-"""The previous plan-limit lines, and the same 0.9 noul gate the Rust caller uses.
+"""The previous plan-limit lines, and the weighted Nouls in config.json.
 
 Keep `exact` equal to `exact_plan_limit` in `crates/cli/src/typesafe.rs`.
+A plan-limit stop, ordinary work, and a sign-in problem are three questions
+in one request. The weights are in the config. An uncertain Noul, a missing
+key, or any error leaves the exact lines as the only match.
 """
 
-ACT = 0.9
+import client
+import decide
+
 RESET = "You've hit your limit · resets "
-QUESTION = {
-    'limit': {
-        'type': 'noul',
-        'instructions': 'The session output says this Claude run stopped because its plan usage limit was reached.',
-        'criteria': {
-            'true': 'The text says a plan, quota, or rate limit stopped the run and it should wait.',
-            'false': 'The text is ordinary work, a normal failure, or a sign-in problem.',
-        },
-    },
-}
 
 
 def exact(text):
@@ -28,4 +23,14 @@ def exact(text):
 
 
 def shaped(text, recorded):
-    return exact(text) or (recorded is not None and recorded >= ACT)
+    if exact(text):
+        return True
+    if not isinstance(recorded, dict):
+        return False
+    root = decide.load()
+    site = root['sites']['plan_limit']
+    try:
+        value = decide.signal(recorded, site, root)
+    except client.TypeSafeError:
+        return False
+    return value is not None and value >= site['act']
