@@ -1,0 +1,431 @@
+$ python3 -I adapters/warp-oz/test_driver.py   # R1 and R2 proofs before the fix (35 refusing agent-CLI stubs first on PATH, env -u OPENWIZ_GITHUB_APP_KEY)
+# Run ids are the fake host's random UUIDs.
+.FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF......
+======================================================================
+FAIL: test_a_run_saved_but_not_cancelled_says_so (__main__.Driver.test_a_run_saved_but_not_cancelled_says_so) (cancel={'status': 200, 'body': None})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 241, in test_a_run_saved_but_not_cancelled_says_so
+    self.assertIn(said, out['error'])
+AssertionError: 'could not cancel' not found in 'the driver could not save run 22222222-2222-2222-2222-222222222222, so it cancelled it; its outcome is unknown'
+
+======================================================================
+FAIL: test_a_run_saved_but_not_cancelled_says_so (__main__.Driver.test_a_run_saved_but_not_cancelled_says_so) (cancel={'status': 200, 'body': '33333333-3333-3333-3333-333333333333'})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 241, in test_a_run_saved_but_not_cancelled_says_so
+    self.assertIn(said, out['error'])
+AssertionError: 'could not cancel' not found in 'the driver could not save run 22222222-2222-2222-2222-222222222222, so it cancelled it; its outcome is unknown'
+
+======================================================================
+FAIL: test_a_saved_run_is_read_only_in_its_exact_shape (__main__.Driver.test_a_saved_run_is_read_only_in_its_exact_shape) (record={'request': {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude', 'model': 'default'}, 'stopped': False, 'ended': 'false'}, cmd='wake')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 265, in test_a_saved_run_is_read_only_in_its_exact_shape
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'a9657117-aa57-4633-b9cf-a74ce911e935', 'woke': True}
+
+======================================================================
+FAIL: test_a_saved_run_is_read_only_in_its_exact_shape (__main__.Driver.test_a_saved_run_is_read_only_in_its_exact_shape) (record={'request': {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude', 'model': 'default'}, 'stopped': False, 'ended': 'false'}, cmd='stop')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 265, in test_a_saved_run_is_read_only_in_its_exact_shape
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'a9657117-aa57-4633-b9cf-a74ce911e935', 'stopped': True}
+
+======================================================================
+FAIL: test_a_saved_run_is_read_only_in_its_exact_shape (__main__.Driver.test_a_saved_run_is_read_only_in_its_exact_shape) (record={'request': {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude', 'model': 'default'}, 'stopped': 'false', 'ended': False}, cmd='stop')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 265, in test_a_saved_run_is_read_only_in_its_exact_shape
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'a9657117-aa57-4633-b9cf-a74ce911e935', 'stopped': True}
+
+======================================================================
+FAIL: test_a_saved_run_is_read_only_in_its_exact_shape (__main__.Driver.test_a_saved_run_is_read_only_in_its_exact_shape) (record={'request': {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude', 'model': 'default'}, 'stopped': 0, 'ended': 0}, cmd='wake')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 265, in test_a_saved_run_is_read_only_in_its_exact_shape
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'a9657117-aa57-4633-b9cf-a74ce911e935', 'woke': True}
+
+======================================================================
+FAIL: test_a_saved_run_is_read_only_in_its_exact_shape (__main__.Driver.test_a_saved_run_is_read_only_in_its_exact_shape) (record={'request': {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude', 'model': 'default'}, 'stopped': 0, 'ended': 0}, cmd='stop')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 265, in test_a_saved_run_is_read_only_in_its_exact_shape
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'a9657117-aa57-4633-b9cf-a74ce911e935', 'stopped': True}
+
+======================================================================
+FAIL: test_a_saved_run_is_read_only_in_its_exact_shape (__main__.Driver.test_a_saved_run_is_read_only_in_its_exact_shape) (record={'request': {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude', 'model': 'default'}, 'stopped': True, 'ended': 1}, cmd='stop')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 265, in test_a_saved_run_is_read_only_in_its_exact_shape
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'a9657117-aa57-4633-b9cf-a74ce911e935', 'stopped': True}
+
+======================================================================
+FAIL: test_a_saved_run_is_read_only_in_its_exact_shape (__main__.Driver.test_a_saved_run_is_read_only_in_its_exact_shape) (record={'request': {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude', 'model': 'default'}, 'stopped': False, 'ended': True}, cmd='wake')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 265, in test_a_saved_run_is_read_only_in_its_exact_shape
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'a9657117-aa57-4633-b9cf-a74ce911e935', 'woke': True}
+
+======================================================================
+FAIL: test_a_saved_run_is_read_only_in_its_exact_shape (__main__.Driver.test_a_saved_run_is_read_only_in_its_exact_shape) (record={'request': {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude', 'model': 'default'}, 'stopped': False, 'ended': True}, cmd='stop')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 265, in test_a_saved_run_is_read_only_in_its_exact_shape
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'a9657117-aa57-4633-b9cf-a74ce911e935', 'stopped': True}
+
+======================================================================
+FAIL: test_a_saved_run_is_read_only_in_its_exact_shape (__main__.Driver.test_a_saved_run_is_read_only_in_its_exact_shape) (record={'request': {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude', 'model': 'default'}, 'stopped': False}, cmd='wake')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 265, in test_a_saved_run_is_read_only_in_its_exact_shape
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'a9657117-aa57-4633-b9cf-a74ce911e935', 'woke': True}
+
+======================================================================
+FAIL: test_a_saved_run_is_read_only_in_its_exact_shape (__main__.Driver.test_a_saved_run_is_read_only_in_its_exact_shape) (record={'request': {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude', 'model': 'default'}, 'stopped': False}, cmd='stop')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 266, in test_a_saved_run_is_read_only_in_its_exact_shape
+    self.assertIn(run, out['error'])
+AssertionError: 'a9657117-aa57-4633-b9cf-a74ce911e935' not found in 'the driver failed: KeyError'
+
+======================================================================
+FAIL: test_a_saved_run_is_read_only_in_its_exact_shape (__main__.Driver.test_a_saved_run_is_read_only_in_its_exact_shape) (record={'request': {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude', 'model': 'default'}, 'stopped': False, 'ended': False, 'extra': 1}, cmd='wake')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 265, in test_a_saved_run_is_read_only_in_its_exact_shape
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'a9657117-aa57-4633-b9cf-a74ce911e935', 'woke': True}
+
+======================================================================
+FAIL: test_a_saved_run_is_read_only_in_its_exact_shape (__main__.Driver.test_a_saved_run_is_read_only_in_its_exact_shape) (record={'request': {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude', 'model': 'default'}, 'stopped': False, 'ended': False, 'extra': 1}, cmd='stop')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 265, in test_a_saved_run_is_read_only_in_its_exact_shape
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'a9657117-aa57-4633-b9cf-a74ce911e935', 'stopped': True}
+
+======================================================================
+FAIL: test_a_saved_run_is_read_only_in_its_exact_shape (__main__.Driver.test_a_saved_run_is_read_only_in_its_exact_shape) (record={'request': {'repository': 'example/site', 'ticket': '7', 'skill': 'build-ticket', 'harness': 'claude', 'model': 'default'}, 'stopped': False, 'ended': False}, cmd='wake')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 266, in test_a_saved_run_is_read_only_in_its_exact_shape
+    self.assertIn(run, out['error'])
+AssertionError: 'a9657117-aa57-4633-b9cf-a74ce911e935' not found in 'the driver failed: TypeError'
+
+======================================================================
+FAIL: test_a_saved_run_is_read_only_in_its_exact_shape (__main__.Driver.test_a_saved_run_is_read_only_in_its_exact_shape) (record={'request': {'repository': 'example/site', 'ticket': '7', 'skill': 'build-ticket', 'harness': 'claude', 'model': 'default'}, 'stopped': False, 'ended': False}, cmd='stop')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 265, in test_a_saved_run_is_read_only_in_its_exact_shape
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'a9657117-aa57-4633-b9cf-a74ce911e935', 'stopped': True}
+
+======================================================================
+FAIL: test_a_saved_run_is_read_only_in_its_exact_shape (__main__.Driver.test_a_saved_run_is_read_only_in_its_exact_shape) (record={'request': {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'oz', 'model': 'default'}, 'stopped': False, 'ended': False}, cmd='wake')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 265, in test_a_saved_run_is_read_only_in_its_exact_shape
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'a9657117-aa57-4633-b9cf-a74ce911e935', 'woke': True}
+
+======================================================================
+FAIL: test_a_saved_run_is_read_only_in_its_exact_shape (__main__.Driver.test_a_saved_run_is_read_only_in_its_exact_shape) (record={'request': {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'oz', 'model': 'default'}, 'stopped': False, 'ended': False}, cmd='stop')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 265, in test_a_saved_run_is_read_only_in_its_exact_shape
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'a9657117-aa57-4633-b9cf-a74ce911e935', 'stopped': True}
+
+======================================================================
+FAIL: test_a_saved_run_is_read_only_in_its_exact_shape (__main__.Driver.test_a_saved_run_is_read_only_in_its_exact_shape) (record={'request': 'x', 'stopped': False, 'ended': False}, cmd='wake')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 266, in test_a_saved_run_is_read_only_in_its_exact_shape
+    self.assertIn(run, out['error'])
+AssertionError: 'a9657117-aa57-4633-b9cf-a74ce911e935' not found in 'the driver failed: TypeError'
+
+======================================================================
+FAIL: test_a_saved_run_is_read_only_in_its_exact_shape (__main__.Driver.test_a_saved_run_is_read_only_in_its_exact_shape) (record={'request': 'x', 'stopped': False, 'ended': False}, cmd='stop')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 265, in test_a_saved_run_is_read_only_in_its_exact_shape
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'a9657117-aa57-4633-b9cf-a74ce911e935', 'stopped': True}
+
+======================================================================
+FAIL: test_a_saved_run_is_read_only_in_its_exact_shape (__main__.Driver.test_a_saved_run_is_read_only_in_its_exact_shape) (record=[{'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude', 'model': 'default'}, False, False], cmd='wake')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 266, in test_a_saved_run_is_read_only_in_its_exact_shape
+    self.assertIn(run, out['error'])
+AssertionError: 'a9657117-aa57-4633-b9cf-a74ce911e935' not found in 'the driver failed: TypeError'
+
+======================================================================
+FAIL: test_a_saved_run_is_read_only_in_its_exact_shape (__main__.Driver.test_a_saved_run_is_read_only_in_its_exact_shape) (record=[{'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude', 'model': 'default'}, False, False], cmd='stop')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 266, in test_a_saved_run_is_read_only_in_its_exact_shape
+    self.assertIn(run, out['error'])
+AssertionError: 'a9657117-aa57-4633-b9cf-a74ce911e935' not found in 'the driver failed: TypeError'
+
+======================================================================
+FAIL: test_a_saved_run_is_read_only_in_its_exact_shape (__main__.Driver.test_a_saved_run_is_read_only_in_its_exact_shape) (record=None, cmd='wake')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 266, in test_a_saved_run_is_read_only_in_its_exact_shape
+    self.assertIn(run, out['error'])
+AssertionError: 'a9657117-aa57-4633-b9cf-a74ce911e935' not found in 'the driver failed: TypeError'
+
+======================================================================
+FAIL: test_a_saved_run_is_read_only_in_its_exact_shape (__main__.Driver.test_a_saved_run_is_read_only_in_its_exact_shape) (record=None, cmd='stop')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 266, in test_a_saved_run_is_read_only_in_its_exact_shape
+    self.assertIn(run, out['error'])
+AssertionError: 'a9657117-aa57-4633-b9cf-a74ce911e935' not found in 'the driver failed: TypeError'
+
+======================================================================
+FAIL: test_a_saved_run_is_read_only_in_its_exact_shape (__main__.Driver.test_a_saved_run_is_read_only_in_its_exact_shape) (record='{"request": 1, "request": 2}', cmd='wake')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 266, in test_a_saved_run_is_read_only_in_its_exact_shape
+    self.assertIn(run, out['error'])
+AssertionError: 'a9657117-aa57-4633-b9cf-a74ce911e935' not found in 'the driver failed: KeyError'
+
+======================================================================
+FAIL: test_a_saved_run_is_read_only_in_its_exact_shape (__main__.Driver.test_a_saved_run_is_read_only_in_its_exact_shape) (record='{"request": 1, "request": 2}', cmd='stop')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 266, in test_a_saved_run_is_read_only_in_its_exact_shape
+    self.assertIn(run, out['error'])
+AssertionError: 'a9657117-aa57-4633-b9cf-a74ce911e935' not found in 'the driver failed: KeyError'
+
+======================================================================
+FAIL: test_a_saved_run_is_read_only_in_its_exact_shape (__main__.Driver.test_a_saved_run_is_read_only_in_its_exact_shape) (inaccessible='wake')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 278, in test_a_saved_run_is_read_only_in_its_exact_shape
+    self.assertNotIn('no run', out['error'])
+AssertionError: 'no run' unexpectedly found in 'no run a9657117-aa57-4633-b9cf-a74ce911e935'
+
+======================================================================
+FAIL: test_a_saved_run_is_read_only_in_its_exact_shape (__main__.Driver.test_a_saved_run_is_read_only_in_its_exact_shape) (inaccessible='stop')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 278, in test_a_saved_run_is_read_only_in_its_exact_shape
+    self.assertNotIn('no run', out['error'])
+AssertionError: 'no run' unexpectedly found in 'no run a9657117-aa57-4633-b9cf-a74ce911e935'
+
+======================================================================
+FAIL: test_a_saved_run_is_read_only_in_its_exact_shape (__main__.Driver.test_a_saved_run_is_read_only_in_its_exact_shape)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 282, in test_a_saved_run_is_read_only_in_its_exact_shape
+    self.assertEqual(len(self.calls()), 1, 'a malformed, unreadable or missing record reached Warp')
+AssertionError: 13 != 1 : a malformed, unreadable or missing record reached Warp
+
+======================================================================
+FAIL: test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable (__main__.Driver.test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable) (wake={'status': 200, 'body': None})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 183, in test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd', 'woke': True}
+
+======================================================================
+FAIL: test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable (__main__.Driver.test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable) (wake={'status': 200, 'raw': 'not json'})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 183, in test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd', 'woke': True}
+
+======================================================================
+FAIL: test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable (__main__.Driver.test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable) (wake={'status': 200, 'body': {}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 183, in test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd', 'woke': True}
+
+======================================================================
+FAIL: test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable (__main__.Driver.test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable) (wake={'status': 200, 'body': {'followup_id': 'f1', 'outcome': 'delivered'}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 183, in test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd', 'woke': True}
+
+======================================================================
+FAIL: test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable (__main__.Driver.test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable) (wake={'status': 200, 'body': {'followup_id': 7, 'outcome': 'live_session'}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 183, in test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd', 'woke': True}
+
+======================================================================
+FAIL: test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable (__main__.Driver.test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable) (wake={'status': 200, 'body': {'followup_id': None, 'outcome': 'live_session'}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 183, in test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd', 'woke': True}
+
+======================================================================
+FAIL: test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable (__main__.Driver.test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable) (wake={'status': 200, 'body': {'followup_id': 'f1', 'outcome': 'live_session', 'extra': 1}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 183, in test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd', 'woke': True}
+
+======================================================================
+FAIL: test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable (__main__.Driver.test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable) (wake={'status': 202, 'body': {'followup_id': 'f1', 'outcome': 'live_session'}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 183, in test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd', 'woke': True}
+
+======================================================================
+FAIL: test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable (__main__.Driver.test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable) (stop={'POST cancel': {'status': 200, 'body': None}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 212, in test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd', 'stopped': True}
+
+======================================================================
+FAIL: test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable (__main__.Driver.test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable) (stop={'POST cancel': {'status': 200, 'raw': '{not json'}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 212, in test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd', 'stopped': True}
+
+======================================================================
+FAIL: test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable (__main__.Driver.test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable) (stop={'POST cancel': {'status': 200, 'body': {'run_id': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd'}}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 212, in test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd', 'stopped': True}
+
+======================================================================
+FAIL: test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable (__main__.Driver.test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable) (stop={'POST cancel': {'status': 200, 'body': '11111111-1111-1111-1111-111111111111'}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 212, in test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd', 'stopped': True}
+
+======================================================================
+FAIL: test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable (__main__.Driver.test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable) (stop={'POST cancel': {'status': 204, 'body': None}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 212, in test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd', 'stopped': True}
+
+======================================================================
+FAIL: test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable (__main__.Driver.test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable) (stop={'POST cancel': {'status': 400, 'body': {'error': 'bad request'}}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 212, in test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd', 'stopped': True}
+
+======================================================================
+FAIL: test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable (__main__.Driver.test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable) (stop={'POST cancel': {'status': 404, 'body': None}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 212, in test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd', 'stopped': True}
+
+======================================================================
+FAIL: test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable (__main__.Driver.test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable) (stop={'POST cancel': {'status': 400, 'body': {'type': 'https://example.invalid/errors', 'title': 'Bad Request', 'status': 404, 'error': 'the run is already in a terminal state'}}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 212, in test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd', 'stopped': True}
+
+======================================================================
+FAIL: test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable (__main__.Driver.test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable) (stop={'POST cancel': {'status': 400, 'body': {'type': 'https://example.invalid/errors', 'title': 'Bad Request', 'status': 400, 'error': 'the run is already in a terminal state'}}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 212, in test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd', 'stopped': True}
+
+======================================================================
+FAIL: test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable (__main__.Driver.test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable) (stop={'POST cancel': {'status': 400, 'body': {'type': 'https://example.invalid/errors', 'title': 'Bad Request', 'status': 400, 'error': 'the run is already in a terminal state'}}, 'GET run': {'status': 200, 'body': None}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 212, in test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd', 'stopped': True}
+
+======================================================================
+FAIL: test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable (__main__.Driver.test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable) (stop={'POST cancel': {'status': 400, 'body': {'type': 'https://example.invalid/errors', 'title': 'Bad Request', 'status': 400, 'error': 'the run is already in a terminal state'}}, 'GET run': {'status': 200, 'body': {'run_id': '11111111-1111-1111-1111-111111111111', 'task_id': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd', 'title': 'synthetic run', 'state': 'CANCELLED', 'prompt': 'p', 'created_at': 't', 'finished_at': None, 'updated_at': 't', 'root_run_id': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd'}}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 212, in test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd', 'stopped': True}
+
+======================================================================
+FAIL: test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable (__main__.Driver.test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable) (stop={'POST cancel': {'status': 400, 'body': {'type': 'https://example.invalid/errors', 'title': 'Bad Request', 'status': 400, 'error': 'the run is already in a terminal state'}}, 'GET run': {'status': 200, 'body': {'run_id': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd', 'task_id': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd', 'title': 'synthetic run', 'state': 'cancelled', 'prompt': 'p', 'created_at': 't', 'finished_at': None, 'updated_at': 't', 'root_run_id': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd'}}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 212, in test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd', 'stopped': True}
+
+======================================================================
+FAIL: test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable (__main__.Driver.test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable) (stop={'POST cancel': {'status': 400, 'body': {'type': 'https://example.invalid/errors', 'title': 'Bad Request', 'status': 400, 'error': 'the run is already in a terminal state'}}, 'GET run': {'status': 404, 'body': {'type': 'https://example.invalid/errors', 'title': 'Not Found', 'status': 404, 'error': 'run not found'}}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 212, in test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd', 'stopped': True}
+
+======================================================================
+FAIL: test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable (__main__.Driver.test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable) (stop={'POST cancel': {'status': 404, 'body': {'type': 'https://example.invalid/errors', 'title': 'Not Found', 'status': 404, 'error': 'run not found'}}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 212, in test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd', 'stopped': True}
+
+======================================================================
+FAIL: test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable (__main__.Driver.test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable) (stop={'POST cancel': {'status': 404, 'body': {'type': 'https://example.invalid/errors', 'title': 'Not Found', 'status': 404, 'error': 'run not found'}}, 'GET run': {'status': 404, 'body': None}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 212, in test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd', 'stopped': True}
+
+======================================================================
+FAIL: test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable (__main__.Driver.test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable) (stop={'POST cancel': {'status': 404, 'body': {'type': 'https://example.invalid/errors', 'title': 'Not Found', 'status': 404, 'error': 'run not found'}}, 'GET run': {'status': 500, 'body': {'type': 'https://example.invalid/errors', 'title': 'Not Found', 'status': 404, 'error': 'run not found'}}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 212, in test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': '27d01ca8-ce3e-4f34-a6d5-983c1d134abd', 'stopped': True}
+
+----------------------------------------------------------------------
+Ran 10 tests in 5.732s
+
+FAILED (failures=53)

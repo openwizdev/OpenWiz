@@ -1,0 +1,16 @@
+Warp Oz key-host proof after merging main
+
+Tested driver and kit sources at 774b1222.
+All driver and kit commands ran with 35 refusing agent CLI stubs first on PATH and env -u OPENWIZ_GITHUB_APP_KEY.
+
+python3 -I adapters/warp-oz/test_driver.py: 7 passed
+python3 -I kernel/driver-kit/test_kit.py: 26 passed
+python3 -I kernel/driver-kit/test_hostkey.py: 25 passed
+The adapter schema matched the kit schema byte for byte.
+
+Standalone kit against the loopback Warp Oz fixture and synthetic tracker:
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 1
+pass wake: the run edited builder status note 1
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver, and on start, wake and stop the warp-oz key reached its host only from the key helper, in its header

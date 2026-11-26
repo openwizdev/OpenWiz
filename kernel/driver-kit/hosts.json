@@ -4,5 +4,11 @@
     "variable": "DEVIN_API_KEY",
     "keychain": "openwiz-devin",
     "header": "authorization-bearer"
+  },
+  "warp-oz": {
+    "origin": "https://app.warp.dev",
+    "variable": "WARP_API_KEY",
+    "keychain": "openwiz-warp-oz",
+    "header": "authorization-bearer"
   }
 }

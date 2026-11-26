@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+import http.server, json, os, re, sys, time, uuid
+
+TRACKER, LOG, FAULTS = sys.argv[1:4]
+TEST_KEY = os.environ['FAKE_WARP_OZ_KEY']
+KEY_PATH = '/.openwiz/hostkey-test-key'
+RUNS = {}
+CREATE = re.compile(r'/api/v1/agent/runs')
+ONE = re.compile(r'/api/v1/agent/runs/([0-9a-f-]{36})/(followups|cancel)')
+READ = re.compile(r'/api/v1/agent/runs/([0-9a-f-]{36})')
+ENDED = ('SUCCEEDED', 'FAILED', 'ERROR', 'CANCELLED')
+
+
+def note(run, woken):
+    now = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+    skill = re.search(r'with the ([a-z0-9-]+) skill', run['prompt']).group(1)
+    body = '\n'.join(['<!-- openwiz:status v1 -->', 'agent: builder', 'state: working', 'harness: ' + run['harness'],
+                      'model: ' + run['model'], 'skills: %s@0.1.2' % skill,
+                      'step: ' + ('woke and read the ticket again' if woken else 'started the throwaway ticket'),
+                      'time: ' + now]) + '\n'
+    with open(TRACKER) as f:
+        tracker = json.load(f)
+    if woken:
+        [c for c in tracker['comments'] if c['id'] == run['note']][0].update(body=body, updated_at=now)
+    else:
+        run['note'] = 1 + max([c['id'] for c in tracker['comments']], default=0)
+        tracker['comments'].append({'id': run['note'], 'author': 'example-bot[bot]', 'updated_at': now, 'body': body})
+    with open(TRACKER + '.new', 'w') as f:
+        json.dump(tracker, f)
+    os.replace(TRACKER + '.new', TRACKER)
+
+
+def problem(status, error):
+    return status, {'type': 'https://example.invalid/errors', 'title': error, 'status': status, 'error': error}
+
+
+class Warp(http.server.BaseHTTPRequestHandler):
+    def log_message(self, *args):
+        pass
+
+    def reply(self, status, body, raw=None):
+        data = json.dumps(body).encode() if raw is None else raw.encode()
+        self.send_response(status)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Content-Length', str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def answer(self, body):
+        create, one, read = CREATE.fullmatch(self.path), ONE.fullmatch(self.path), READ.fullmatch(self.path)
+        if self.command == 'GET' and read:
+            run = RUNS.get(read.group(1))
+            if run is None:
+                return problem(404, 'run not found')
+            return 200, {'run_id': read.group(1), 'task_id': read.group(1), 'title': 'synthetic run',
+                         'state': run['state'], 'prompt': run['prompt'], 'created_at': '2026-01-01T00:00:00Z',
+                         'finished_at': None, 'updated_at': '2026-01-01T00:00:00Z', 'root_run_id': read.group(1)}
+        if self.command != 'POST' or not (create or one):
+            return problem(404, 'not an agent runs call')
+        if create:
+            config = body.get('config', {})
+            harness = config.get('harness', {})
+            secret = config.get('harness_auth_secrets', {}).get('%s_auth_secret_name' % harness.get('type'))
+            if not body.get('prompt') or harness.get('type') not in ('claude', 'codex') or not secret:
+                return problem(400, 'a run needs a prompt, a harness and its auth secret name')
+            run = str(uuid.uuid4())
+            RUNS[run] = {'prompt': body['prompt'], 'harness': harness['type'],
+                         'model': harness.get('model_id', 'default'), 'state': 'QUEUED'}
+            note(RUNS[run], False)
+            return 200, {'run_id': run, 'task_id': run, 'state': 'QUEUED'}
+        run = RUNS.get(one.group(1))
+        if run is None:
+            return problem(404, 'run not found')
+        if one.group(2) == 'followups':
+            note(run, True)
+            return 200, {'followup_id': str(uuid.uuid4()), 'outcome': 'live_session'}
+        if run['state'] in ENDED:
+            return problem(400, 'the run is already in a terminal state')
+        run['state'] = 'CANCELLED'
+        return 200, one.group(1)
+
+    def handle_one(self):
+        if self.command == 'GET' and self.path == KEY_PATH:
+            return self.reply(200, {'key': TEST_KEY})
+        raw = self.rfile.read(int(self.headers.get('Content-Length') or 0))
+        body = json.loads(raw) if raw else None
+        with open(LOG, 'a') as f:
+            f.write(json.dumps({'method': self.command, 'path': self.path, 'body': body,
+                                'authorization': self.headers.get('Authorization')}) + '\n')
+        kind = ('create' if CREATE.fullmatch(self.path) else 'run' if READ.fullmatch(self.path) else
+                (ONE.fullmatch(self.path) or [None] * 3)[2])
+        with open(FAULTS) as f:
+            fault = json.load(f).get('%s %s' % (self.command, kind))
+        if fault:
+            return self.reply(fault['status'], fault.get('body'), fault.get('raw'))
+        self.reply(*self.answer(body or {}))
+
+    do_GET = do_POST = do_DELETE = do_PUT = handle_one
+
+
+server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Warp)
+print('http://127.0.0.1:%d' % server.server_address[1], flush=True)
+server.serve_forever()

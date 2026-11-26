@@ -1,0 +1,277 @@
+#!/usr/bin/env python3
+# SECURITY: every Warp Oz call goes through the kit's key helper (driver v1 N4). This file sends it only a host name,
+# a method, a path and a body, never a key or an address, and never reads the key itself. The harness login is a
+# secret Warp holds: the driver sends only its name.
+import fcntl, json, os, re, subprocess, sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+HELPER = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'hostkey.py')
+HOST = 'warp-oz'
+RUNS = '/api/v1/agent/runs'
+STATE = os.environ.get('OPENWIZ_WARP_OZ_STATE') or os.path.expanduser('~/.local/state/openwiz-warp-oz')
+VERSION = {'driver': 'warp-oz', 'records': ['openwiz:records v1'], 'can': ['start', 'wake', 'stop', 'effort']}
+START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
+         'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'claude|codex',
+         'model': r'[A-Za-z0-9][A-Za-z0-9._:-]{0,59}'}
+WARP_RUN_UUID = r'[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}'
+RUN = {'run': WARP_RUN_UUID}
+EFFORT = r'[a-z][a-z0-9-]{0,19}'
+REASONING_LEVELS = {'codex': ('low', 'medium', 'high', 'xhigh')}
+CANT_SET_EFFORT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster to "
+                   "run it at the host's default")
+LOGIN = {'claude': 'OPENWIZ_WARP_CLAUDE_LOGIN', 'codex': 'OPENWIZ_WARP_CODEX_LOGIN'}
+NAME = re.compile(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,99}')
+ENVIRONMENT = 'OPENWIZ_WARP_ENVIRONMENT'
+ENDED = ('SUCCEEDED', 'FAILED', 'ERROR', 'CANCELLED')
+OUTCOMES = ('live_session', 'queued_prompt', 'handoff_execution', 'queue_pending')
+PROBLEM = {'type': str, 'title': str, 'status': int, 'error': str}
+SAVE = 'make OPENWIZ_WARP_OZ_STATE (or ~/.local/state/openwiz-warp-oz) a folder you can write'
+
+
+class Refused(Exception):
+    pass
+
+
+def unique(pairs):
+    if len({k for k, _ in pairs}) != len(pairs):
+        raise Refused('a key is repeated', 'send each key once')
+    return dict(pairs)
+
+
+def read(fields, optional=None):
+    try:
+        req = json.loads(sys.stdin.read(), object_pairs_hook=unique)
+    except ValueError:
+        raise Refused('the input is not JSON', 'send one JSON object on stdin, as `driver schema` shows')
+    return valid(req, fields, optional)
+
+
+def valid(req, fields, optional=None):
+    optional = optional or {}
+    if not isinstance(req, dict) or not set(fields) <= set(req) <= set(fields) | set(optional):
+        wanted = ', '.join(fields) + ''.join(', and optionally ' + k for k in optional)
+        raise Refused('the input needs exactly ' + wanted, 'send only those fields; never a login')
+    for key, pattern in dict(fields, **optional).items():
+        if key not in req:
+            continue
+        v = req[key]
+        if not (type(v) is int and v > 0 if pattern is None else isinstance(v, str) and re.fullmatch(pattern, v)):
+            raise Refused(key + ' is not valid', 'fix ' + key + ' as `driver schema` shows; harness is claude '
+                          'or codex')
+    return req
+
+
+def named(variable, what):
+    value = os.environ.get(variable, '')
+    if not NAME.fullmatch(value):
+        raise Refused('%s is not set to %s' % (variable, what), 'set %s as adapters/warp-oz/README.md says'
+                      % variable)
+    return value
+
+
+def config(req):
+    harness = {'type': req['harness']}
+    if req['model'] != 'default':
+        harness['model_id'] = req['model']
+    if 'effort' in req:
+        if req['effort'] not in REASONING_LEVELS.get(req['harness'], ()):
+            raise Refused('Warp Oz can\'t set effort %s for the %s harness' % (req['effort'], req['harness']),
+                          CANT_SET_EFFORT)
+        harness['reasoning_level'] = req['effort']
+    out = {'harness': harness, 'harness_auth_secrets': {
+        '%s_auth_secret_name' % req['harness']: named(LOGIN[req['harness']], 'the name of your Warp secret for '
+                                                      'the %s harness' % req['harness'])}}
+    if os.environ.get(ENVIRONMENT):
+        out['environment_id'] = named(ENVIRONMENT, 'a Warp environment id')
+    return out
+
+
+def ask(method, path, body=None):
+    request = {'host': HOST, 'method': method, 'path': path}
+    if body is not None:
+        request['body'] = body
+    try:
+        p = subprocess.run([sys.executable, '-I', HELPER], input=json.dumps(request), capture_output=True,
+                           text=True, timeout=120)
+        out = json.loads(p.stdout, object_pairs_hook=unique)
+    except (OSError, subprocess.TimeoutExpired, ValueError, Refused):
+        raise Refused('the key helper kernel/driver-kit/hostkey.py gave no answer', 'run it by hand to see why')
+    if p.returncode == 1 and isinstance(out, dict) and set(out) == {'error', 'next'}:
+        raise Refused(('the key helper refused: ' + str(out['error']))[:300], str(out['next'])[:300])
+    if p.returncode or not (isinstance(out, dict) and set(out) == {'status', 'body'} and type(out['status']) is int
+                            and 100 <= out['status'] <= 599):
+        raise Refused('the key helper kernel/driver-kit/hostkey.py gave an answer the driver cannot read',
+                      'run it by hand to see why')
+    status, answer = out['status'], out['body']
+    if status in (401, 403):
+        raise Refused('Warp refused the key (%d)' % status, 'check your Warp API key, as adapters/warp-oz/README.md '
+                      'says')
+    return status, answer
+
+
+def failed(what, status):
+    return Refused('Warp answered %d to %s' % (status, what), 'check Warp\'s status, then retry')
+
+
+def prompt(req, woken):
+    what = 'You were woken: read the ticket again and carry on' if woken else 'Build the ticket'
+    return '%s: %s#%d, with the %s skill.' % (what, req['repository'], req['ticket'], req['skill'])
+
+
+def missing(run):
+    return Refused('no run ' + run, 'check the run id that `driver start` printed')
+
+
+def lock(run):
+    try:
+        os.stat(os.path.join(STATE, run + '.json'))
+    except FileNotFoundError:
+        raise missing(run)
+    except OSError:
+        raise Refused('the driver cannot read run %s in its state folder' % run, SAVE)
+    try:
+        fcntl.flock(os.open(os.path.join(STATE, run + '.lock'), os.O_RDONLY | os.O_CREAT, 0o600), fcntl.LOCK_EX)
+    except OSError:
+        raise Refused('the driver cannot lock run %s in its state folder' % run, SAVE)
+
+
+def save(path, state):
+    with open(path + '.new', 'w') as f:
+        json.dump(state, f)
+    os.replace(path + '.new', path)
+
+
+def saved(run):
+    try:
+        with open(os.path.join(STATE, run + '.json')) as f:
+            state = json.load(f, object_pairs_hook=unique)
+    except FileNotFoundError:
+        raise missing(run)
+    except (OSError, ValueError, Refused):
+        raise Refused('the driver cannot read run %s' % run, SAVE)
+    try:
+        if not (isinstance(state, dict) and set(state) == {'request', 'stopped', 'ended'}
+                and type(state['stopped']) is bool and type(state['ended']) is bool
+                and state['stopped'] >= state['ended']):
+            raise Refused()
+        valid(state['request'], START, {'effort': EFFORT})
+    except Refused:
+        raise Refused('the saved record of run %s is not one the driver wrote' % run,
+                      'check run %s in Warp and cancel it there if it still runs; then start a new run' % run)
+    return state
+
+
+def problem(status, answer):
+    return (isinstance(answer, dict) and set(PROBLEM) <= set(answer)
+            and all(type(answer[k]) is t for k, t in PROBLEM.items()) and answer['status'] == status)
+
+
+def cancel(run):
+    status, answer = ask('POST', '%s/%s/cancel' % (RUNS, run))
+    if status == 200 and answer == run:
+        return True
+    if status in (400, 404) and problem(status, answer):
+        read, item = ask('GET', '%s/%s' % (RUNS, run))
+        if read == 200 and isinstance(item, dict) and item.get('run_id') == run and item.get('state') in ENDED:
+            return True
+        if status == read == 404 and problem(404, item):
+            return True
+    elif status == 409:
+        raise failed('the cancel of run ' + run, status)
+    raise Refused('Warp\'s answer to the cancel of run %s does not show it ended, so it may still run' % run,
+                  'check run %s in Warp, then run `driver stop` again' % run)
+
+
+def start():
+    req = read(START, {'effort': EFFORT})
+    body = {'prompt': prompt(req, False), 'config': config(req)}
+    try:
+        os.makedirs(STATE, mode=0o700, exist_ok=True)
+        pending = os.path.join(STATE, 'starting-%d' % os.getpid())
+        save(pending, {})
+    except OSError:
+        raise Refused('the driver cannot save runs in its state folder; nothing was started', SAVE)
+    try:
+        status, answer = ask('POST', RUNS, body)
+        if not 200 <= status < 300:
+            raise failed('the new run', status)
+        run = answer.get('run_id') if isinstance(answer, dict) else None
+        if not (isinstance(run, str) and re.fullmatch(WARP_RUN_UUID, run)):
+            raise Refused('Warp answered no run id the driver can keep, so the outcome is unknown',
+                          'look for a new run in Warp and cancel it there before you start again')
+    finally:
+        try:
+            os.remove(pending)
+        except OSError:
+            pass
+    try:
+        save(os.path.join(STATE, run + '.json'), {'request': req, 'stopped': False, 'ended': False})
+    except OSError:
+        try:
+            ended = cancel(run)
+        except Refused:
+            ended = False
+        raise Refused('the driver could not save run %s, %s; its outcome is unknown'
+                      % (run, 'so it cancelled it' if ended else 'and could not cancel it'),
+                      'cancel it in Warp if it still runs, and read the ticket before you start again')
+    return {'run': run}
+
+
+def wake_or_stop(cmd):
+    run = read(RUN)['run']
+    lock(run)
+    state = saved(run)
+    path = '%s/%s' % (RUNS, run)
+    if cmd == 'wake':
+        if state['stopped']:
+            raise Refused('run %s is stopped' % run, 'start a new run')
+        status, answer = ask('POST', path + '/followups', {'message': prompt(state['request'], True)})
+        if status != 200:
+            raise failed('the follow-up to run ' + run, status)
+        if not (isinstance(answer, dict) and set(answer) == {'followup_id', 'outcome'}
+                and answer['outcome'] in OUTCOMES and (isinstance(answer['followup_id'], str) and answer['followup_id']
+                                                       or answer['followup_id'] is None
+                                                       and answer['outcome'] == 'queued_prompt')):
+            raise Refused('Warp\'s answer to the follow-up to run %s is not its receipt, so the wake may not have '
+                          'arrived' % run, 'check run %s in Warp before you wake it again' % run)
+        return {'run': run, 'woke': True}
+    if state['ended']:
+        return {'run': run, 'stopped': True}
+    try:
+        save(os.path.join(STATE, run + '.json'), dict(state, stopped=True))
+    except OSError:
+        raise Refused('the driver cannot save that run %s is stopping; nothing was sent' % run, SAVE)
+    cancel(run)
+    try:
+        save(os.path.join(STATE, run + '.json'), dict(state, stopped=True, ended=True))
+    except OSError:
+        raise Refused('run %s was cancelled, but the driver could not save that' % run, SAVE)
+    return {'run': run, 'stopped': True}
+
+
+def answer(cmd):
+    if cmd == 'version':
+        return VERSION
+    if cmd == 'schema':
+        with open(os.path.join(HERE, 'schema.json')) as f:
+            return json.load(f)
+    if cmd == 'start':
+        return start()
+    if cmd in ('wake', 'stop'):
+        return wake_or_stop(cmd)
+    raise Refused('unknown command', 'run one of: version, schema, start, wake, stop')
+
+
+def main():
+    try:
+        out, code = answer(sys.argv[1] if len(sys.argv) == 2 else ''), 0
+    except Refused as e:
+        out, code = {'error': e.args[0], 'next': e.args[1]}, 1
+    except Exception as e:
+        out, code = {'error': 'the driver failed: ' + type(e).__name__, 'next': 'read its code, fix it, retry'}, 1
+    print(json.dumps(out))
+    sys.exit(code)
+
+
+if __name__ == '__main__':
+    main()
