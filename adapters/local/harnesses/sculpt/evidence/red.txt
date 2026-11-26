@@ -6,6 +6,9 @@ fail sculpt: create starts a backend session that is not a child of the sculpt p
 fail sculpt: interrupt is a documented command and leaves the backend session running
 fail sculpt: delete without -y exits 2 and leaves the backend session running
 fail sculpt: delete -y ends that backend session
+fail sculpt: interrupt after delete exits 2 and the backend stays ended
+fail sculpt: send after delete exits 2
+fail sculpt: a second delete exits 2
 fail sculpt: start runs `sculpt agent create --prompt <prompt> --model <m> --json`
 fail sculpt: wake runs `sculpt agent send <id> <prompt> --model <m> --follow` with the start's agent id
 fail sculpt: the agent id read from the indented "id" line is the id wake sends
@@ -19,11 +22,12 @@ fail sculpt: the fake exits 2 on a repeated --prompt
 fail sculpt: the fake exits 2 on agent run
 fail sculpt: the fake exits 2 on sculpt run
 fail sculpt: the fake exits 2 on delete without an agent id
-fail sculpt: effort low is refused with the fixed next, starting nothing
-fail sculpt: effort medium is refused with the fixed next, starting nothing
-fail sculpt: effort high is refused with the fixed next, starting nothing
-fail sculpt: effort xhigh is refused with the fixed next, starting nothing
-fail sculpt: effort max is refused with the fixed next, starting nothing
+fail sculpt: the fake exits 2 on an empty --model
+fail sculpt: the fake exits 2 on a blank --model
+fail sculpt: the fake exits 2 on send to an unknown id
+fail sculpt: delete -y ends only the named backend and leaves the other running
+fail sculpt: delete -y of the remaining backend ends it
+fail sculpt: delete whose recorded start time does not match exits 2 and does not kill that process
 exit=1
 
 $ python3 -I adapters/local/test_harnesses.py
@@ -56,7 +60,7 @@ fail stop-other-program: row.json stop: it runs another program; it starts with 
 fail stop-placeholder: row.json stop: it takes only {session}, once and as a whole argument
 fail wake-no-session: row.json wake: it has no {session}
 pass driver: a broken row's D3 error names its row file and fits the error schema: a row folder with no row.json, a harness that is not a string, and a 60-character harness with a missing field
-fail driver: a row's session id and signed_out patterns are read from its first turn's output, never the clone's, and the first line that has the session's JSON path decides it
+pass driver: a row's session id and signed_out patterns are read from its first turn's output, never the clone's, and the first line that has the session's JSON path decides it
 pass driver: an effort the row can't take is refused before the driver looks for its program, and a row's effort ids are lower-case words of up to 20 characters
 pass driver: a row whose fixed arguments in start, wake, modes or effort look like a credential, joined or as a flag and its value, is refused naming only its field
 pass driver: a precheck that exits non-zero, does not match or runs past its timeout is a D3 refusal that starts no turn, runs outside the clone with the row's env, and keeps its output in the run's log only

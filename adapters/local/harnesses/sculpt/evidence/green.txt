@@ -6,6 +6,9 @@ pass sculpt: create starts a backend session that is not a child of the sculpt p
 pass sculpt: interrupt is a documented command and leaves the backend session running
 pass sculpt: delete without -y exits 2 and leaves the backend session running
 pass sculpt: delete -y ends that backend session
+pass sculpt: interrupt after delete exits 2 and the backend stays ended
+pass sculpt: send after delete exits 2
+pass sculpt: a second delete exits 2
 pass sculpt: start runs `sculpt agent create --prompt <prompt> --model <m> --json`
 pass sculpt: wake runs `sculpt agent send <id> <prompt> --model <m> --follow` with the start's agent id
 pass sculpt: the agent id read from the indented "id" line is the id wake sends
@@ -19,6 +22,13 @@ pass sculpt: the fake exits 2 on a repeated --prompt
 pass sculpt: the fake exits 2 on agent run
 pass sculpt: the fake exits 2 on sculpt run
 pass sculpt: the fake exits 2 on delete without an agent id
+pass sculpt: the fake exits 2 on an empty --model
+pass sculpt: the fake exits 2 on a blank --model
+pass sculpt: the fake exits 2 on send to an unknown id
+pass sculpt: delete -y ends only the named backend and leaves the other running
+pass sculpt: delete -y of the remaining backend ends it
+pass sculpt: delete whose recorded start time does not match exits 2 and does not kill that process
+pass sculpt: the session pattern reads the agent id line and not workspace_id
 pass sculpt: effort low is refused with the fixed next, starting nothing
 pass sculpt: effort medium is refused with the fixed next, starting nothing
 pass sculpt: effort high is refused with the fixed next, starting nothing
