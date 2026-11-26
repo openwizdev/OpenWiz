@@ -3471,6 +3471,23 @@ mod plan_tests {
     }
 
     #[test]
+    fn a_folder_skips_a_non_utf8_subdirectory_and_errors_on_a_non_utf8_file() {
+        use std::os::unix::ffi::OsStrExt;
+        let root = scratch("subdir-name");
+        std::fs::write(root.join("a.md"), format!("{WEBHOOK}---\nGo.\n")).unwrap();
+        std::fs::create_dir(root.join(std::ffi::OsStr::from_bytes(b"\xff.md"))).unwrap();
+        let folder = read_loop_folder(&root, false).unwrap();
+        assert_eq!(folder.files.len(), 1);
+        assert_eq!(folder.files[0].0, "a.md");
+        assert!(folder.files[0].1.refusals.is_empty());
+        std::fs::write(root.join(std::ffi::OsStr::from_bytes(b"\xfe.md")), "x").unwrap();
+        let error = read_loop_folder(&root, false).unwrap_err();
+        assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+        assert_eq!(error.to_string(), "a file name is not UTF-8");
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
     fn a_lone_opening_line_lacks_only_its_closing_line() {
         assert_eq!(codes("---"), [("frontmatter-end", "file".to_owned())]);
         assert_eq!(codes("--"), [("frontmatter-start", "file".to_owned())]);
