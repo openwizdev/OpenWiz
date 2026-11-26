@@ -11,7 +11,7 @@ run says whether a stranger could install exactly those bytes:
 | `rehearse-linux` | `x86_64-unknown-linux-gnu` | a `debian:12` container on `ubuntu-24.04`, with only Python 3, Git and CA certificates installed |
 | `rehearse-macos` | `aarch64-apple-darwin` | `macos-15`, the system `/usr/bin/python3`, a fresh `HOME` |
 | `rehearse-macos` | `x86_64-apple-darwin` | `macos-15-intel`, the same |
-| Daily install check (`install-daily.yml`) | all three | the same machines, once a day, on the latest published release's assets and its tag's own `rehearse.py` (a tag without one is neutral, one notice line, no issue change); a failure opens or comments on the one `Daily install check failed` issue, and a pass closes it |
+| Daily install check (`install-daily.yml`) | all three | the same machines, once a day, on the latest published release's assets and its tag's own `rehearse.py` (a tag without one is neutral, one notice line, no issue change); a failure opens or comments on the one `Daily install check failed` issue, and a pass closes it. `daily.py` does that open, comment and close; `test_daily.py` is its fixture test |
 
 Each job downloads that run's own artifact for its target and uploads its receipt as
 `openwiz-rehearsal-<version>-<target>`. The `rehearsal` job is green only when every rehearse

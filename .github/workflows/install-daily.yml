@@ -3,13 +3,10 @@ on:
   schedule:
     - cron: '17 6 * * *'
   workflow_dispatch:
-  pull_request:
-    paths:
-      - .github/workflows/install-daily.yml
 permissions:
   contents: read
 concurrency:
-  group: install-daily-${{ github.event_name == 'pull_request' && github.ref || 'track' }}
+  group: install-daily
   cancel-in-progress: false
 jobs:
   release:
@@ -48,8 +45,6 @@ jobs:
           path: packages/
           if-no-files-found: error
           retention-days: 7
-      - name: Forced failure (temporary proof commit, reverted in this pull request)
-        run: echo "forced failure for the pull request's red proof"; exit 1
 
   rehearse-linux:
     name: rehearse x86_64-unknown-linux-gnu
@@ -148,6 +143,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       actions: read
+      contents: read
       issues: write
     env:
       GH_TOKEN: ${{ github.token }}
@@ -158,32 +154,18 @@ jobs:
       LINUX: ${{ needs.rehearse-linux.result }}
       MACOS: ${{ needs.rehearse-macos.result }}
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Open, comment on or close the one tracking issue
         run: |
-          title='Daily install check failed'
-          run="$GITHUB_SERVER_URL/$REPO/actions/runs/$GITHUB_RUN_ID"
-          open=$(gh issue list --repo "$REPO" --state open --search 'author:app/github-actions in:title "Daily install check failed"' \
-            --json number,title --jq "[.[] | select(.title == \"$title\") | .number] | sort | .[]")
-          echo "release: $RELEASE; rehearsal: ${REHEARSAL:-unknown}; rehearse-linux: $LINUX; rehearse-macos: $MACOS; open: ${open:-none}"
-          if [ "$RELEASE" = success ] && [ "$REHEARSAL" = no ]; then
-            echo "neutral: $TAG has no tools/rehearsal/rehearse.py; the tracking issue is left as it is"
-            exit 0
-          fi
-          if [ "$RELEASE" = success ] && [ "$LINUX" = success ] && [ "$MACOS" = success ]; then
-            for n in $open; do
-              gh issue comment "$n" --repo "$REPO" --body "Passed on every target for ${TAG}: $run"
-              gh issue close "$n" --repo "$REPO" --reason completed
-            done
-            exit 0
-          fi
-          failed=$(gh api "repos/$REPO/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs" --paginate \
-            --jq '.jobs[] | select(.name != "track" and .conclusion != "success") | "- `\(.name)`: \(.conclusion)"')
-          body=$(printf 'The daily install check of the latest published release (%s) failed.\n\n%s\n\nRun: %s\n' \
-            "${TAG:-unknown}" "${failed:-the jobs could not be read}" "$run")
-          first=$(echo "$open" | head -n 1)
-          if [ -n "$first" ]; then
-            gh issue comment "$first" --repo "$REPO" --body "$body"
-          else
-            gh issue create --repo "$REPO" --title "$title" --body "$body"
-          fi
-          exit 1
+          python3 -I tools/rehearsal/daily.py \
+            --repo "$REPO" \
+            --tag "$TAG" \
+            --run "$GITHUB_SERVER_URL/$REPO/actions/runs/$GITHUB_RUN_ID" \
+            --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --release "$RELEASE" \
+            --rehearsal "$REHEARSAL" \
+            --linux "$LINUX" \
+            --macos "$MACOS"
