@@ -103,12 +103,28 @@ class SshDriver(unittest.TestCase):
             state = json.load(handle)
         original = state['pids'][0]
         original_pid = original['pid'] if isinstance(original, dict) else original
-        self.addCleanup(os.kill, original_pid, 15)
+
+        def end_original():
+            try:
+                os.kill(original_pid, 15)
+            except OSError:
+                pass
+
+        self.addCleanup(end_original)
         victim = subprocess.Popen(['sleep', '60'], start_new_session=True)
-        self.addCleanup(victim.kill)
+
+        def end_victim():
+            if victim.poll() is None:
+                victim.kill()
+                victim.wait(timeout=5)
+
+        self.addCleanup(end_victim)
         state['pids'] = [victim.pid]
         with open(path, 'w') as handle:
             json.dump(state, handle)
+        code, woke = self.call('wake', {'run': out['run']})
+        self.assertEqual(code, 0, woke)
+        self.assertEqual(len(self.logged()), 1)
         code, stopped = self.call('stop', {'run': out['run']})
         self.assertEqual(code, 0, stopped)
         self.assertIsNone(victim.poll())

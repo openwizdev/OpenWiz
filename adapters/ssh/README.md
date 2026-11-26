@@ -9,7 +9,7 @@ Set `OPENWIZ_SSH_TARGET` to `user@host`. The remote command is `env OPENWIZ_SSH_
 
 A value of an environment variable whose name contains `KEY`, `TOKEN`, `SECRET` or `PASSWORD`, when it is at least 8 characters, is never placed on that command line. The driver adds no login field and does not forward the local environment. Sign in on the VPS, and let `ssh` use the operator's own agent or config.
 
-On Linux, `stop` ends every process of the run that still carries `OPENWIZ_SSH_RUN`. On macOS, `stop` ends the `ssh` process group; a program that leaves that group can outlive it. A wake while that `ssh` is still running starts no second one.
+`stop` signals the recorded `ssh` only when its start time still matches, and on Linux every other process of the run that still carries `OPENWIZ_SSH_RUN`. A reused pid is not signalled. A wake while that `ssh` is still running, or while its start time cannot be read, starts no second one.
 
 Wake for a fleet on this host is the existing heartbeat (cron or a systemd user timer) or an outside always-on runner. This driver does not call room-cli.
 

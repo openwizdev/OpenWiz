@@ -18,7 +18,7 @@ START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket':
          'model': r'(?=.{1,100}$)[A-Za-z0-9][A-Za-z0-9 ._:@+-]*(/[A-Za-z0-9][A-Za-z0-9 ._:@+-]*)*'}
 RUN = {'run': r'run-[0-9a-f]{12}'}
 TARGET = re.compile(r'[A-Za-z][A-Za-z0-9._-]{0,31}@[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*')
-SECRET_NAME = re.compile(r'(^|_)(KEY|TOKEN|SECRET|PASSWORD)($|_)')
+SECRET_WORDS = ('KEY', 'TOKEN', 'SECRET', 'PASSWORD')
 PLACE = {'{prompt}', '{model}', '{session}'}
 DEFAULT_ARGS = ['--model', '{model}', '-p', '{prompt}']
 
@@ -50,7 +50,8 @@ def read(fields):
 def secret_values():
     found = []
     for name, value in os.environ.items():
-        if SECRET_NAME.search(name) and isinstance(value, str) and len(value) >= 8:
+        folded = name.upper()
+        if any(word in folded for word in SECRET_WORDS) and isinstance(value, str) and len(value) >= 8:
             found.append(value)
     return found
 
@@ -139,13 +140,42 @@ def lock(run):
     return descriptor
 
 
-def started(pid):
+def look(pid):
+    if os.path.isdir('/proc'):
+        try:
+            with open('/proc/%d/stat' % pid) as handle:
+                fields = handle.read().rpartition(')')[2].split()
+            state, start = fields[0], fields[19]
+        except FileNotFoundError:
+            return False, None
+        except (OSError, IndexError):
+            return None, None
+        if state in 'ZX':
+            return False, None
+        return True, start
     try:
-        with open('/proc/%d/stat' % pid) as handle:
-            fields = handle.read().rpartition(')')[2].split()
-    except (OSError, IndexError):
-        return False
-    return fields[0] not in 'ZX'
+        done = subprocess.run(['ps', '-p', str(pid), '-o', 'lstart='], stdin=subprocess.DEVNULL,
+                              capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.TimeoutExpired):
+        return None, None
+    if done.returncode != 0:
+        return False, None
+    start = done.stdout.strip()
+    return (True, start) if start else (None, None)
+
+
+def ours(record):
+    if isinstance(record, int):
+        record = {'pid': record, 'start': None}
+    if not isinstance(record, dict) or not isinstance(record.get('pid'), int):
+        return None
+    alive, start = look(record['pid'])
+    if alive is None or not alive:
+        return alive
+    recorded = record.get('start')
+    if not recorded or not start or recorded != start:
+        return None if not recorded or not start else False
+    return True
 
 
 def marked(run):
@@ -173,11 +203,13 @@ def launch(argv):
     except OSError as error:
         raise Refused('ssh did not start: %s' % (error.strerror or 'unknown'),
                       'check ssh and OPENWIZ_SSH_TARGET')
-    return process.pid
+    alive, start = look(process.pid)
+    return {'pid': process.pid, 'start': start if alive else None}
 
 
-def end(run, pids):
-    victims = set(pids) | set(marked(run))
+def end(run, records):
+    victims = {record['pid'] for record in records if ours(record) is True}
+    victims |= set(marked(run))
     for sig, pause in ((signal.SIGTERM, 0.2), (signal.SIGKILL, 0.2)):
         for pid in victims:
             try:
@@ -204,14 +236,14 @@ def start(req):
     argv = command(req, run, False)
     write_json(path_of(run), {'request': req, 'stopped': False, 'pids': []})
     try:
-        pid = launch(argv)
+        record = launch(argv)
     except Refused:
         os.remove(path_of(run))
         raise
     try:
-        write_json(path_of(run), {'request': req, 'stopped': False, 'pids': [pid]})
+        write_json(path_of(run), {'request': req, 'stopped': False, 'pids': [record]})
     except OSError:
-        end(run, [pid])
+        end(run, [record])
         raise Refused('run %s started but could not be saved, so it was ended' % run,
                       'check OPENWIZ_SSH_STATE, then look for a leftover ssh before starting again')
     return {'run': run}
@@ -223,10 +255,10 @@ def wake(run):
         state = load(run)
         if state['stopped']:
             raise Refused('run %s is stopped' % run, 'start a new run')
-        if any(started(pid) for pid in state['pids']):
+        if any(ours(record) is not False for record in state['pids']):
             return {'run': run, 'woke': True}
-        pid = launch(command(state['request'], run, True))
-        state['pids'] = [pid for pid in state['pids'] if started(pid)] + [pid]
+        record = launch(command(state['request'], run, True))
+        state['pids'] = [item for item in state['pids'] if ours(item) is True] + [record]
         write_json(path_of(run), state)
         return {'run': run, 'woke': True}
     finally:
