@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import re
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -43,6 +44,25 @@ def lock_pin():
     if not re.fullmatch(r'[0-9a-f]{40}', commit):
         raise ValueError('wizskills.lock commit')
     return version, commit
+
+
+def published_commit(version):
+    if re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', version) is None:
+        raise ValueError('version')
+    ref = 'refs/tags/v%s^{}' % version
+    done = subprocess.run(
+        ['git', 'ls-remote', 'https://github.com/openwizdev/WizSkills.git', ref],
+        cwd='/', capture_output=True, text=True, timeout=60)
+    if done.returncode != 0:
+        raise AssertionError('wizskills tag v%s' % version)
+    found = []
+    for line in done.stdout.splitlines():
+        oid, _, name = line.partition('\t')
+        if name == ref and re.fullmatch(COMMIT_PATTERN, oid):
+            found.append(oid)
+    if len(found) != 1:
+        raise AssertionError('wizskills tag v%s' % version)
+    return found[0]
 
 
 def pin_failures(section, guide, version):
@@ -140,6 +160,7 @@ class InstallPhrase(unittest.TestCase):
         self.assertNotEqual(commit, '33eef93ba30cd8db256f6fe270e3ed28747a79bd')
         self.assertNotIn('blob/%s/' % commit, section)
         self.assertNotIn('blob/%s/' % commit, guide)
+        self.assertEqual(commit, published_commit(version))
         self.assertIn('including `v0.1.1`', section)
         self.assertIn('openwiz=$(mktemp -d)', section)
         self.assertIn("not the `commit` in that tag's `wizskills.lock`", section)
@@ -151,6 +172,15 @@ class InstallPhrase(unittest.TestCase):
         self.assertIn('ARM64 (aarch64)', guide)
         self.assertIn('hard `GLIBC_2.39` requirement does not start', guide)
         self.assertIn('docs/install.md#openwiz-010', (ROOT / 'README.md').read_text(encoding='utf-8'))
+
+    def test_a_lock_that_only_matches_itself_is_not_the_published_tag(self):
+        version, commit = lock_pin()
+        source = published_commit(version)
+        forged = 'a' * 40
+        forged_lock = (ROOT / 'wizskills.lock').read_text(encoding='utf-8').replace(commit, forged)
+        self.assertIn(forged, forged_lock)
+        self.assertNotEqual(forged, source)
+        self.assertEqual(commit, source)
 
     def test_a_stale_pin_fails_even_when_the_urls_are_present(self):
         version, _ = lock_pin()
