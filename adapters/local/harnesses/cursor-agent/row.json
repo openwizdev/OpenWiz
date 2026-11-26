@@ -1,0 +1,43 @@
+{
+  "harness": "cursor-agent",
+  "program": "agent",
+  "start": [
+    "-p",
+    "--output-format",
+    "json",
+    "--model",
+    "{model}",
+    "{mode}",
+    "{prompt}"
+  ],
+  "wake": [
+    "-p",
+    "--output-format",
+    "json",
+    "--resume",
+    "{session}",
+    "--model",
+    "{model}",
+    "{mode}",
+    "{prompt}"
+  ],
+  "session": {
+    "json": [
+      "session_id"
+    ]
+  },
+  "modes": {
+    "force": [
+      "--force"
+    ]
+  },
+  "env": {},
+  "effort": "none: the Cursor CLI parameters reference lists no effort flag the row can pass (https://cursor.com/docs/cli/reference/parameters)",
+  "login": "Cursor CLI's own login: agent login stores it in the system keyring, or an owner-only file when no keyring is available, or the user sets CURSOR_API_KEY; the driver never reads or passes it",
+  "daemon": "none",
+  "signed_out": [
+    "Not authenticated"
+  ],
+  "login_command": "agent login",
+  "login_env": "CURSOR_API_KEY"
+}

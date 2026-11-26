@@ -1,0 +1,3 @@
+fail: a login flag and its value exited 0, not 2
+fail: a login flag with the value joined exited 0, not 2
+test_row.py: 15 refusals checked, 2 failed
