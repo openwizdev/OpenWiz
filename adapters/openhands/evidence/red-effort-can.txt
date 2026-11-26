@@ -1,0 +1,26 @@
+$ python3 -I adapters/openhands/test_driver.py -k version   (agent CLI stubs first on PATH)
+F
+======================================================================
+FAIL: test_version_and_schema (__main__.Driver.test_version_and_schema)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/openhands/test_driver.py", line 283, in test_version_and_schema
+    self.assertEqual(self.driver('version'), (0, {'driver': 'openhands', 'records': ['openwiz:records v1'],
+AssertionError: Tuples differ: (0, {[39 chars]nwiz:records v1'], 'can': ['start', 'wake', 'stop']}) != (0, {[39 chars]nwiz:records v1'], 'can': ['start', 'wake', 'stop', 'effort']})
+
+First differing element 1:
+{'dri[34 chars]enwiz:records v1'], 'can': ['start', 'wake', 'stop']}
+{'dri[34 chars]enwiz:records v1'], 'can': ['start', 'wake', 'stop', 'effort']}
+
+  (0,
+-  {'can': ['start', 'wake', 'stop'],
++  {'can': ['start', 'wake', 'stop', 'effort'],
+?                                  ++++++++++
+
+    'driver': 'openhands',
+    'records': ['openwiz:records v1']})
+
+----------------------------------------------------------------------
+Ran 1 test in 0.503s
+
+FAILED (failures=1)

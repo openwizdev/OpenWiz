@@ -1,0 +1,25 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/openhands/test_driver.py -v -k test_start_refuses_effort_before_any_request
+test_start_refuses_effort_before_any_request (__main__.Driver.test_start_refuses_effort_before_any_request) ... FAIL
+
+======================================================================
+FAIL: test_start_refuses_effort_before_any_request (__main__.Driver.test_start_refuses_effort_before_any_request)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/openhands/test_driver.py", line 227, in test_start_refuses_effort_before_any_request
+    self.assertEqual((code, out), (1, {
+AssertionError: Tuples differ: (0, {'run': '<synthetic-run-id>'}) != (1, {'error': 'OpenHands Cloud cannot set [170 chars]lt"})
+
+First differing element 0:
+0
+1
+
+- (0, {'run': '<synthetic-run-id>'})
++ (1,
++  {'error': 'OpenHands Cloud cannot set effort high for harness claude-code',
++   'next': "this host can't set effort: remove the effort for this harness in "
++           "your Models table or Roster to run it at the host's default"})
+
+----------------------------------------------------------------------
+Ran 1 test in 0.799s
+
+FAILED (failures=1)

@@ -1,0 +1,6 @@
+$ python3 -I adapters/openhands/test_driver.py -k effort   (agent CLI stubs first on PATH)
+ERROR: test_an_effort_the_host_refuses_starts_nothing (__main__.Driver.test_an_effort_the_host_refuses_starts_nothing)
+FAIL: test_effort_reaches_the_host_before_the_first_turn (__main__.Driver.test_effort_reaches_the_host_before_the_first_turn)
+AssertionError: 1 != 0 : {'error': 'OpenHands Cloud cannot set effort high for harness claude-code', 'next': "this host can't set effort: remove the effort for this harness in your Models table or Ros
+Ran 3 tests in 1.698s
+FAILED (failures=1, errors=1)

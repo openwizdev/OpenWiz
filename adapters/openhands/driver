@@ -1,0 +1,268 @@
+#!/usr/bin/env python3
+# SECURITY: driver v1 N4. Every OpenHands Cloud call goes through the kit's key helper, which alone reads the key
+# and picks the address; this driver sends it only a host name, a method, a path and a body, and never names, reads
+# or prints the key. It shows no text the host answered: each error names only the status, the method and the path.
+import json, os, re, subprocess, sys, time, uuid
+sys.dont_write_bytecode = True
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+HELPER = os.path.realpath(os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'hostkey.py'))
+HOST = 'openhands'
+VERSION = {'driver': 'openhands', 'records': ['openwiz:records v1'], 'can': ['start', 'wake', 'stop']}
+START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
+         'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
+         'model': r'[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}'}
+UUID = r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+RUN = {'run': UUID}
+SANDBOX = ('STARTING', 'RUNNING', 'PAUSED', 'ERROR', 'MISSING')
+TASK = ('WORKING', 'WAITING_FOR_SANDBOX', 'PREPARING_REPOSITORY', 'RUNNING_SETUP_SCRIPT', 'SETTING_UP_GIT_HOOKS',
+        'SETTING_UP_SKILLS', 'STARTING_CONVERSATION', 'READY', 'ERROR')
+HARNESSES = {'claude': 'claude-code', 'claude-code': 'claude-code', 'codex': 'codex'}
+PROFILE = re.compile(r'[A-Za-z0-9][A-Za-z0-9._-]{0,63}')
+POLL = float(os.environ.get('OPENWIZ_OPENHANDS_POLL') or 3)
+WAIT = float(os.environ.get('OPENWIZ_OPENHANDS_WAIT') or 90)
+EFFORT = r'[a-z][a-z0-9-]{0,19}'
+NO_EFFORT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster to run it "
+             "at the host's default")
+WOKEN = 'You were woken: read the ticket again and carry on.'
+
+
+class Refused(Exception):
+    pass
+
+
+def unique(pairs):
+    if len({k for k, _ in pairs}) != len(pairs):
+        raise Refused('a key is repeated', 'send each key once')
+    return dict(pairs)
+
+
+def read(fields):
+    try:
+        req = json.loads(sys.stdin.read(), object_pairs_hook=unique)
+    except ValueError:
+        raise Refused('the input is not JSON', 'send one JSON object on stdin, as `driver schema` shows')
+    optional = {'effort': EFFORT} if fields is START else {}
+    if not isinstance(req, dict) or not set(fields) <= set(req) <= set(fields) | set(optional):
+        raise Refused('the input needs exactly ' + ', '.join(fields) + (', and optionally effort' if optional else ''),
+                      'send only those fields; never a login')
+    for key, pattern in dict(fields, **optional).items():
+        if key not in req:
+            continue
+        v = req[key]
+        if not (type(v) is int and v > 0 if pattern is None else isinstance(v, str) and re.fullmatch(pattern, v)):
+            raise Refused(key + ' is not valid', 'fix ' + key + ' as `driver schema` shows')
+    return req
+
+
+def ask(method, path, body=None, also=()):
+    request = {'host': HOST, 'method': method, 'path': path}
+    if body is not None:
+        request['body'] = body
+    try:
+        p = subprocess.run([sys.executable, '-I', HELPER], input=json.dumps(request), capture_output=True,
+                           text=True, timeout=110)
+        out = json.loads(p.stdout)
+    except (OSError, subprocess.TimeoutExpired, ValueError):
+        raise Refused('the key helper gave no answer', 'run kernel/driver-kit/hostkey.py by hand to see why')
+    if p.returncode:
+        if not (isinstance(out, dict) and isinstance(out.get('error'), str) and isinstance(out.get('next'), str)):
+            raise Refused('the key helper gave no answer', 'run kernel/driver-kit/hostkey.py by hand to see why')
+        raise Refused('the key helper refused: ' + out['error'], out['next'])
+    if not (isinstance(out, dict) and type(out.get('status')) is int and 'body' in out):
+        raise Refused('the key helper gave no answer', 'run kernel/driver-kit/hostkey.py by hand to see why')
+    if not (out['status'] == 200 or out['status'] in also):
+        raise Refused('OpenHands Cloud answered %d to %s %s' % (out['status'], method, path.partition('?')[0]),
+                      'check your key and OpenHands Cloud\'s status, then retry')
+    return out['status'], out['body']
+
+
+def untrusted(run, method, path):
+    return Refused('run %s: OpenHands Cloud\'s answer to %s %s is not the shape it documents' % (
+        run, method, path.partition('?')[0]), 'check run %s in OpenHands Cloud, then retry' % run)
+
+
+def act(run, method, path, body=None, also=()):
+    status, got = ask(method, path, body, also)
+    if status == 200 and not (isinstance(got, dict) and got.get('success') is True):
+        raise Refused('run %s: OpenHands Cloud did not confirm %s %s' % (run, method, path),
+                      'check run %s in OpenHands Cloud, then retry' % run)
+    return status, got
+
+
+def profile(harness, model):
+    server = HARNESSES[harness]
+    _, listed = ask('GET', '/api/agent-profiles')
+    if not (isinstance(listed, dict) and isinstance(listed.get('profiles'), list)):
+        raise Refused('OpenHands Cloud\'s answer to GET /api/agent-profiles is not the shape it documents',
+                      'check OpenHands Cloud\'s status, then start again')
+    for p in listed['profiles']:
+        if not (isinstance(p, dict) and p.get('agent_kind') == 'acp' and isinstance(p.get('name'), str)
+                and PROFILE.fullmatch(p['name']) and p.get('scope', 'org') in ('personal', 'org')):
+            continue
+        _, detail = ask('GET', '/api/agent-profiles/%s?scope=%s' % (p['name'], p.get('scope', 'org')))
+        found = detail.get('profile') if isinstance(detail, dict) else None
+        if not isinstance(found, dict):
+            continue
+        if (found.get('agent_kind') == 'acp' and found.get('acp_server') == server and found.get('acp_model') == model
+                and isinstance(found.get('id'), str) and re.fullmatch(UUID, found['id'], re.I)):
+            return found['id']
+    raise Refused('OpenHands Cloud has no ACP agent profile for %s with model %s' % (harness, model),
+                  'in OpenHands Cloud, add an agent profile with acp_server %s and acp_model %s, with its harness '
+                  'login as a secret, then start again' % (server, model))
+
+
+def same(a, b):
+    return isinstance(a, str) and a.replace('-', '').lower() == b.replace('-', '')
+
+
+def conversation(run):
+    path = '/api/v1/app-conversations?ids=' + run
+    _, found = ask('GET', path)
+    if not (isinstance(found, list) and len(found) == 1):
+        raise untrusted(run, 'GET', path)
+    conv = found[0]
+    if conv is None:
+        return None
+    if not (isinstance(conv, dict) and same(conv.get('id'), run) and isinstance(conv.get('sandbox_id'), str)
+            and PROFILE.fullmatch(conv['sandbox_id']) and conv.get('sandbox_status') in SANDBOX):
+        raise untrusted(run, 'GET', path)
+    return conv
+
+
+def lookup(run):
+    conv = conversation(run)
+    if conv:
+        return 'ready', conv
+    path = '/api/v1/app-conversations/start-tasks/search?conversation_id__eq=' + run
+    _, tasks = ask('GET', path)
+    items = tasks.get('items') if isinstance(tasks, dict) else None
+    if not (isinstance(items, list) and len(items) <= 1 and all(isinstance(t, dict) for t in items)):
+        raise untrusted(run, 'GET', path)
+    if not items:
+        return 'unknown', None
+    status, made = items[0].get('status'), items[0].get('app_conversation_id')
+    if status not in TASK or made is not None and not same(made, run):
+        raise untrusted(run, 'GET', path)
+    if status == 'READY':
+        conv = conversation(run)
+        return ('ready', conv) if conv else ('stopped', None)
+    return ('failed' if status == 'ERROR' else 'starting'), None
+
+
+def started(run):
+    state, conv = lookup(run)
+    end = time.monotonic() + WAIT
+    while state == 'starting' and time.monotonic() < end:
+        time.sleep(POLL)
+        state, conv = lookup(run)
+    return state, conv
+
+
+def send(run, message, end):
+    path = '/api/v1/app-conversations/%s/send-message' % run
+    while True:
+        status, _ = act(run, 'POST', path, message, also=(409,))
+        if status != 409:
+            return
+        if time.monotonic() > end:
+            raise Refused('run %s\'s sandbox did not come back on OpenHands Cloud' % run, 'wake run %s again soon' % run)
+        time.sleep(POLL)
+
+
+def end_run(run, conv):
+    if conv['sandbox_status'] != 'MISSING':
+        status, _ = act(run, 'POST', '/api/v1/sandboxes/%s/pause' % conv['sandbox_id'], also=(404,))
+        if status == 404:
+            now = conversation(run)
+            if now and now['sandbox_status'] not in ('PAUSED', 'MISSING'):
+                raise Refused('run %s: OpenHands Cloud did not pause its sandbox' % run,
+                              'check run %s in OpenHands Cloud, then stop it again' % run)
+    path = '/api/v1/app-conversations/' + run
+    status, _ = act(run, 'DELETE', path, also=(404,))
+    if status == 404 and conversation(run):
+        raise Refused('run %s: OpenHands Cloud did not delete the conversation' % run,
+                      'check run %s in OpenHands Cloud, then stop it again' % run)
+
+
+def wake(run):
+    state, conv = started(run)
+    if state == 'starting':
+        raise Refused('run %s is still starting on OpenHands Cloud' % run, 'wake run %s again in a minute' % run)
+    if state != 'ready':
+        raise Refused({'unknown': 'OpenHands Cloud has no run %s', 'stopped': 'run %s is stopped',
+                       'failed': 'run %s never started on OpenHands Cloud'}[state] % run, 'start a new run')
+    end = time.monotonic() + WAIT
+    if conv['sandbox_status'] == 'PAUSED':
+        act(run, 'POST', '/api/v1/sandboxes/%s/resume' % conv['sandbox_id'])
+    send(run, {'role': 'user', 'run': True, 'content': [{'type': 'text', 'text': WOKEN}]}, end)
+    return {'run': run, 'woke': True}
+
+
+def stop(run):
+    state, conv = started(run)
+    if state == 'starting':
+        raise Refused('run %s is still starting on OpenHands Cloud' % run, 'stop run %s again in a minute' % run)
+    if state == 'ready':
+        end_run(run, conv)
+    return {'run': run, 'stopped': True}
+
+
+def answer(cmd):
+    if cmd == 'version':
+        return VERSION
+    if cmd == 'schema':
+        with open(os.path.join(HERE, 'schema.json')) as f:
+            return json.load(f)
+    if cmd == 'start':
+        req = read(START)
+        if 'effort' in req:
+            raise Refused('OpenHands Cloud cannot set effort %s for harness %s' % (req['effort'], req['harness']),
+                          NO_EFFORT)
+        if req['harness'] not in HARNESSES:
+            raise Refused('harness %s is not one OpenHands Cloud runs for OpenWiz' % req['harness'],
+                          'use claude-code (or claude) or codex')
+        chosen, run = profile(req['harness'], req['model']), str(uuid.uuid4())
+        prompt = 'Build the ticket: %s#%d, with the %s skill.' % (req['repository'], req['ticket'], req['skill'])
+        message = {'role': 'user', 'run': True, 'content': [{'type': 'text', 'text': prompt}]}
+        create = {'conversation_id': run, 'agent_profile_id': chosen, 'selected_repository': req['repository'],
+                  'git_provider': 'github', 'title': 'OpenWiz: %s#%d' % (req['repository'], req['ticket']),
+                  'initial_message': message}
+        try:
+            _, task = ask('POST', '/api/v1/app-conversations', create)
+            if not (isinstance(task, dict) and isinstance(task.get('id'), str) and task.get('status') in TASK
+                    and (task.get('app_conversation_id') is None or same(task['app_conversation_id'], run))):
+                raise Refused('OpenHands Cloud\'s answer to POST /api/v1/app-conversations is not the shape it '
+                              'documents', '')
+            if task['status'] == 'ERROR':
+                raise Refused('OpenHands Cloud could not start the conversation', '')
+        except Exception as e:
+            why = e.args[0] if isinstance(e, Refused) else 'the driver failed: ' + type(e).__name__
+            raise Refused('run %s may have started: %s' % (run, why),
+                          'stop run %s with `driver stop`, then start again' % run)
+        return {'run': run}
+    if cmd in ('wake', 'stop'):
+        run = read(RUN)['run']
+        try:
+            return (wake if cmd == 'wake' else stop)(run)
+        except Exception as e:
+            why = e.args[0] if isinstance(e, Refused) else 'the driver failed: ' + type(e).__name__
+            if isinstance(e, Refused) and run in why:
+                raise
+            raise Refused('run %s: %s' % (run, why), 'check run %s in OpenHands Cloud, then retry' % run)
+    raise Refused('unknown command', 'run one of: version, schema, start, wake, stop')
+
+
+def main():
+    try:
+        out, code = answer(sys.argv[1] if len(sys.argv) == 2 else ''), 0
+    except Refused as e:
+        out, code = {'error': e.args[0], 'next': e.args[1]}, 1
+    except Exception as e:
+        out, code = {'error': 'the driver failed: ' + type(e).__name__, 'next': 'read its code, fix it, retry'}, 1
+    print(json.dumps(out))
+    sys.exit(code)
+
+
+if __name__ == '__main__':
+    main()

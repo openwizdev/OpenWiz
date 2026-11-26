@@ -1,0 +1,7 @@
+$ python3 -I kernel/driver-kit/kit.py --driver adapters/openhands/driver (the template, copied and renamed) --repo example/site --ticket 7 --harness claude-code --model "Synthetic 1" --tracker <synthetic tracker> --wait 8, on the fake OpenHands Cloud
+pass version: openwiz:records v1, and the schema is driver v1
+fail start: harness claude-code is not installed here
+fail wake: not run: start failed
+fail stop: not run: start failed
+fail token: the openhands key never reached the kit's fake host
+exit 1

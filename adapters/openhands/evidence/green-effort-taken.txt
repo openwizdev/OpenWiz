@@ -1,0 +1,6 @@
+$ python3 -I adapters/openhands/test_driver.py -k effort -k version   (agent CLI stubs first on PATH; KY1 at 2292b177 and EF1 at 371c9cbf merged in)
+....
+----------------------------------------------------------------------
+Ran 4 tests in 2.848s
+
+OK
