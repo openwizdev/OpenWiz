@@ -8,8 +8,10 @@ import os
 import re
 import secrets
 import select
+import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import unicodedata
@@ -45,6 +47,12 @@ KEYWORDS = {'$schema', 'type', 'required', 'additionalProperties', 'properties',
             'maxLength', 'minimum', 'items', 'minItems', 'uniqueItems', 'enum', 'const', 'allOf', 'contains'}
 TYPES = {'object': dict, 'array': list, 'string': str, 'boolean': bool}
 PROC = os.path.isdir('/proc/self')
+TEMPLATE = os.path.join(HERE, '..', '..', 'adapters', 'template', 'driver')
+AGENT_CLIS = ('claude', 'claude-code', 'codex', 'cursor-agent', 'agent', 'pi', 'opencode', 'openclaw', 'copilot',
+              'goose', 'gemini', 'kimi', 'qwen', 'cline', 'kilo', 'crush', 'vibe', 'auggie', 'kiro-cli', 'junie', 'amp',
+              'agy', 'oz', 'sculpt', 'hermes', 'acpx', 'droid', 'aider')
+STUB = '#!/bin/sh\necho "kit.py: refused: $0 is an agent CLI, and a driver that still holds the template\'s command ' \
+       'never starts one" >&2\nexit 1\n'
 EFFORT = re.compile(r'[a-z][a-z0-9-]{0,19}')
 REFUSAL = ("this host can't set effort: remove the effort for this harness in your Models table or Roster to run it "
            "at the host's default")
@@ -57,6 +65,43 @@ PROBE = ['-I', '-c', "import sys; sys.stdout.write('.'); sys.stdout.flush(); sys
 
 class Unusable(Exception):
     pass
+
+
+STOCK_LAUNCHES = (
+    "return [req['harness'], '--model', req['model'], '-p', prompt]",
+    "return [req['harness'], '--model', req['model']] + effort + ['-p', prompt]",
+)
+FIXTURE_FOLDERS = (os.path.join(HERE, 'fixtures'), os.path.join(HERE, '..', '..', 'adapters', 'template', 'fixtures'))
+
+
+def _bare(text):
+    return re.sub(r'\s+', '', text)
+
+
+def holds_template_command(driver):
+    # SAFETY: a driver the kit can't read, or holding any stock template's launch line, counts as the template.
+    try:
+        with open(TEMPLATE) as f:
+            found = re.search(r'^def command\(.*?(?=^\S)', f.read(), re.S | re.M)
+        with open(driver) as f:
+            text = _bare(f.read())
+    except (OSError, UnicodeDecodeError):
+        return True
+    return not found or any(_bare(s) in text for s in STOCK_LAUNCHES) or _bare(found.group(0)) in text
+
+
+def fixture_harness(name, path):
+    found = shutil.which(name, path=path)
+    folders = {os.path.realpath(f) for f in FIXTURE_FOLDERS}
+    return bool(found) and os.path.dirname(os.path.realpath(found)) in folders
+
+
+def stub_agent_clis(folder):
+    for name in AGENT_CLIS:
+        with open(os.path.join(folder, name), 'w') as f:
+            f.write(STUB)
+        os.chmod(os.path.join(folder, name), 0o700)
+    return folder
 
 
 def _unique(pairs):
@@ -184,8 +229,63 @@ class Request(tuple):
     phase = None
 
 
+PROBE_REPO = 'example/site'
+START_FIELDS = ('repository', 'ticket', 'skill', 'harness', 'model')
+ECHO_PLACEHOLDER = re.compile(
+    r'\{\{(?:request\.([A-Za-z_][A-Za-z0-9_-]*(?:\.[A-Za-z_][A-Za-z0-9_-]*)*)|start\.([a-z]+))\}\}')
+
+
+def _validate_echo(value):
+    has_req, has_start = False, False
+    if isinstance(value, str):
+        if '{{' in value or '}}' in value:
+            m = ECHO_PLACEHOLDER.fullmatch(value)
+            if not m or (m.group(2) is not None and m.group(2) not in START_FIELDS):
+                raise ValueError('malformed echo placeholder (expected {{request.<field>}} or {{start.<field>}})')
+            return m.group(1) is not None, m.group(2) is not None
+        return False, False
+    if isinstance(value, dict):
+        for k, v in value.items():
+            if '{{' in k or '}}' in k:
+                raise ValueError(
+                    'malformed echo placeholder (expected {{request.<field>}} or {{start.<field>}} as a string value)')
+            r, s = _validate_echo(v)
+            has_req, has_start = has_req or r, has_start or s
+        return has_req, has_start
+    if isinstance(value, list):
+        for item in value:
+            r, s = _validate_echo(item)
+            has_req, has_start = has_req or r, has_start or s
+        return has_req, has_start
+    return False, False
+
+
+def _render_echo(value, req, start):
+    if isinstance(value, str):
+        m = ECHO_PLACEHOLDER.fullmatch(value)
+        if not m:
+            return value
+        if m.group(2) is not None:
+            if not isinstance(start, dict) or m.group(2) not in start:
+                raise KeyError(m.group(2))
+            return start[m.group(2)]
+        cur = req
+        for part in m.group(1).split('.'):
+            if not isinstance(cur, dict) or part not in cur:
+                raise KeyError(part)
+            cur = cur[part]
+        return cur
+    if isinstance(value, dict):
+        return {k: _render_echo(v, req, start) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_render_echo(v, req, start) for v in value]
+    return value
+
+
 class FakeHost:
-    def __init__(self, status=200, headers=(), body=b'{}', answers=(), test_key=None, trust=None, phase=None):
+    def __init__(self, status=200, headers=(), body=b'{}', answers=(), test_key=None, trust=None, phase=None,
+                 start=None):
+        templated = [(a,) + _validate_echo(a['body']) for a in answers]
         self.requests, self.fetches = [], []
         self.lock = threading.Lock()
         host = self
@@ -212,9 +312,24 @@ class FakeHost:
                     record.phase = phase() if phase else None
                     with host.lock:
                         host.requests.append(record)
-                    for a in answers:
+                    for a, uses_req, uses_start in templated:
                         if a['method'] == self.command and re.fullmatch(a['path'], self.path.partition('?')[0]):
-                            code, data = a['status'], json.dumps(a['body']).encode()
+                            if uses_req or uses_start:
+                                try:
+                                    req_body = None
+                                    if uses_req:
+                                        req_body = parse(sent.decode('utf-8'))
+                                        if not isinstance(req_body, dict):
+                                            raise ValueError('not an object')
+                                    rendered = _render_echo(a['body'], req_body, start)
+                                except (UnicodeDecodeError, ValueError):
+                                    code, data = 400, json.dumps({'error': 'request body is not a JSON object'}).encode()
+                                except KeyError:
+                                    code, data = 400, json.dumps({'error': 'echo field missing from request'}).encode()
+                                else:
+                                    code, data = a['status'], json.dumps(rendered).encode()
+                            else:
+                                code, data = a['status'], json.dumps(a['body']).encode()
                             break
                 self.send_response(code)
                 for k, v in headers:
@@ -305,6 +420,13 @@ class Kit:
         self.since = started_at('self') if PROC else 0
         self.seen = PROC
         self.blind = None if PROC else self.unseen()
+        self.stubs = None
+        if holds_template_command(args.driver):
+            if not fixture_harness(args.harness, self.env.get('PATH', os.defpath)):
+                raise Unusable("the driver still holds the template's command, and harness %s is not one of the kit's "
+                               "fixtures, so the kit ran nothing: write your own command first" % args.harness)
+            self.stubs = stub_agent_clis(tempfile.mkdtemp(prefix='openwiz-kit-stubs-'))
+            self.env['PATH'] = self.stubs + os.pathsep + self.env.get('PATH', os.defpath)
         self.can, self.setting, self.effort_seen = [], None, False
 
     def leak(self, what):
@@ -780,16 +902,15 @@ class Kit:
         try:
             kind, v = self.call('start', request, env, canary)
             with host.lock:
-                posted = any(line.startswith('POST ') for line, _, _ in host.requests)
+                start_posts = [body for line, _, body in host.requests if line.startswith('POST ')]
             if kind == 'ok':
                 self.call('stop', {'run': v['run']}, env, canary)
                 self.wait(lambda: not any(True for _ in self.started()))
         finally:
             host.close()
-        with host.lock:
-            bodies = [body for _, _, body in host.requests]
         field = self.setting and self.setting[0] == 'field' and self.setting[1]
-        return kind, v, posted, bool(field) and any(holds_field(b, field, request['effort']) for b in bodies)
+        reached = bool(field) and bool(start_posts) and holds_field(start_posts[0], field, request['effort'])
+        return kind, v, bool(start_posts), reached
 
     def key_hosts(self):
         try:
@@ -885,6 +1006,7 @@ class Kit:
                         type(a['status']) is int and 100 <= a['status'] <= 599):
                     raise ValueError('an answer is not a method, a path pattern and a status')
                 re.compile(a['path'])
+                _validate_echo(a['body'])
             return answers
         except FileNotFoundError:
             return []
@@ -1004,17 +1126,18 @@ class Kit:
         self.file_check(entry)
         canary = (name, 'kit-canary-' + secrets.token_hex(16))
         self.active.add(canary[1])
+        a = self.args
+        probe = {'repository': PROBE_REPO, 'ticket': a.ticket, 'skill': a.skill,
+                 'harness': a.harness, 'model': a.model}
         phase, server = {'now': None}, []
         host = FakeHost(answers=self.lifecycle(), test_key=canary[1], phase=lambda: phase['now'],
-                        trust=lambda port: self.trusted_helper(port, server[0]))
+                        trust=lambda port: self.trusted_helper(port, server[0]), start=probe)
         server.append(host.server.server_address[1])
         env = {k: v for k, v in self.env.items() if k != entry['variable']}
         env[OVERRIDE] = host.origin
-        a = self.args
         try:
             phase['now'] = 'start'
-            kind, v = self.sampled('start', {'repository': a.repo, 'ticket': a.ticket, 'skill': a.skill,
-                                             'harness': a.harness, 'model': a.model}, env, canary)
+            kind, v = self.sampled('start', probe, env, canary)
             run = v['run'] if kind == 'ok' else 'kit-key-run'
             for op in ('wake', 'stop'):
                 phase['now'] = op
@@ -1119,7 +1242,7 @@ def main(argv):
     ap.add_argument('--tracker', help='a local throwaway tracker file, read instead of GitHub')
     ap.add_argument('--wait', type=int, default=900, help='seconds to wait for each note change')
     args = ap.parse_args(argv)
-    failed = False
+    failed, kit = False, None
     try:
         kit = Kit(args, Ticket(args.repo, args.ticket, args.tracker))
         for name, (verdict, what) in kit.checks():
@@ -1128,6 +1251,9 @@ def main(argv):
     except (Unusable, records_kit.Unreadable) as e:
         print('kit.py: %s' % e, file=sys.stderr)
         return 2
+    finally:
+        if kit and kit.stubs:
+            shutil.rmtree(kit.stubs, ignore_errors=True)
     return 1 if failed else 0
 
 

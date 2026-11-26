@@ -15,6 +15,7 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 
 sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -35,14 +36,15 @@ SKIPS = {'fixture-missing': 'not installed: rig-fixture-not-installed',
 EARLIER = '<!-- openwiz:status v1 -->\nagent: builder\nstate: stopped\nharness: Fake\nmodel: m\n' \
           'skills: build-ticket@0.1.2\nstep: an earlier run\ntime: 2030-01-02T03:04:05Z\n'
 # SAFETY: no-op stubs first on PATH for every agent CLI, so a fixture mistake can never start a real one.
-AGENT_CLIS = ['claude', 'codex', 'cursor-agent', 'agent', 'pi', 'opencode', 'copilot', 'goose', 'gemini', 'kimi',
-              'qwen', 'cline', 'kilo', 'crush', 'vibe', 'auggie', 'kiro-cli', 'junie', 'amp', 'agy', 'oz', 'sculpt',
-              'hermes', 'acpx', 'droid']
+AGENT_CLIS = ['claude', 'codex', 'cursor-agent', 'agent', 'cursor', 'pi', 'opencode', 'copilot', 'goose', 'gemini',
+              'kimi', 'qwen', 'cline', 'kilo', 'kilocode', 'crush', 'vibe', 'auggie', 'kiro-cli', 'junie', 'amp', 'agy',
+              'oz', 'sculpt', 'hermes', 'acpx', 'droid', 'boat', 'room-cli', 'runpane', 'pane', 'openhands', 'devin',
+              'warp', 'grok', 'codespaces', 'conductor']
 COPIED = ['kernel/live-rig/rig.py', 'kernel/live-rig/fixtures/hosts', 'kernel/driver-kit/kit.py',
           'kernel/driver-kit/hostkey.py', 'kernel/driver-kit/hosts.json', 'kernel/driver-kit/schema.json',
-          'kernel/driver-kit/fixtures/base', 'kernel/driver-kit/fixtures/planted', 'kernel/records-kit/check.py',
-          'kernel/records.v1.md', 'adapters/template/driver', 'adapters/template/README.md',
-          'adapters/template/schema.json']
+          'kernel/driver-kit/fixtures/base', 'kernel/driver-kit/fixtures/fake-harness',
+          'kernel/driver-kit/fixtures/planted', 'kernel/records-kit/check.py', 'kernel/records.v1.md',
+          'adapters/template/driver', 'adapters/template/README.md', 'adapters/template/schema.json']
 
 
 def git(cwd, *args):
@@ -90,12 +92,13 @@ class Rig(unittest.TestCase):
             with open(os.path.join(stubs, name), 'w') as f:
                 f.write('#!/bin/sh\necho "%s: refused, the rig tests never start an agent CLI" >&2\nexit 1\n' % name)
             os.chmod(os.path.join(stubs, name), 0o700)
-        path = os.pathsep.join([stubs, FAKES, os.path.join(ROOT, 'kernel', 'driver-kit', 'fixtures'),
+        path = os.pathsep.join([stubs, FAKES, os.path.join(self.checkout, 'kernel', 'driver-kit', 'fixtures'),
                                 os.environ['PATH']])
         self.assertEqual({shutil.which(name, path=path) for name in AGENT_CLIS},
                          {os.path.join(stubs, name) for name in AGENT_CLIS})
         self.env = dict(os.environ, PATH=path, KIT_TRACKER=tracker, RIG_GH_LOG=self.gh_log, RIG_GH_LOGIN=LOGIN,
                         RIG_GH_REPO=REPO, RIG_GH_TICKET=str(TICKET), GH_TOKEN=SECRET, RIG_PLANTED_KEY=SECRET,
+                        OPENWIZ_TEMPLATE_LIVE='1',
                         OPENWIZ_TEMPLATE_STATE=os.path.join(self.folder, 'state'))
 
     def tearDown(self):
@@ -318,6 +321,72 @@ class Rig(unittest.TestCase):
         self.assertIn('rig.py: --hosts', p.stderr)
         self.assertEqual((self.kit_calls(), self.records()), ([], []))
 
+    def test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works(self):
+        marker = os.path.join(self.folder, 'status-ran')
+        with open(os.path.join(self.hosts, 'cost-unknown.json')) as f:
+            config = json.load(f)
+        self.commit_host('linked.json', dict(config, host='fixture-linked', signed_in=[['touch', marker]]))
+        live_rig = os.path.join(self.checkout, 'kernel', 'live-rig')
+        os.symlink('fixtures/hosts', os.path.join(live_rig, 'hosts-link'))
+        git(self.checkout, 'add', '-A')
+        git(self.checkout, 'commit', '-q', '-m', 'a linked hosts folder')
+        command = self.command('--host', 'fixture-linked')
+        at = command.index('--hosts') + 1
+        command[at] = os.path.join(live_rig, 'hosts-link', '..', 'hosts')
+        p = subprocess.run(command, env=self.env, capture_output=True, text=True, timeout=60)
+        self.assertEqual((p.returncode, p.stdout), (2, ''), p.stderr)
+        self.assertIn('rig.py: --hosts goes through a symlink', p.stderr)
+        self.assertFalse(os.path.exists(marker))
+        self.assertEqual((self.kit_calls(), self.records()), ([], []))
+        for given in ('retired/../hosts-link/../hosts', 'rig.py/../hosts-link/../hosts', 'retired/../fixtures/hosts',
+                      os.path.join(live_rig, 'retired', '..', 'hosts-link', '..', 'hosts'),
+                      os.path.join(live_rig, 'rig.py', '..', 'hosts-link', '..', 'hosts')):
+            with self.subTest(given):
+                command[at] = given
+                p = subprocess.run(command, cwd=live_rig, env=self.env, capture_output=True, text=True, timeout=60)
+                self.assertEqual((p.returncode, p.stdout), (2, ''), p.stderr)
+                self.assertIn('rig.py: ', p.stderr)
+                self.assertEqual((self.kit_calls(), self.records()), ([], []))
+        command[at] = os.path.join(live_rig, 'fixtures', '..', 'fixtures', 'hosts')
+        p = subprocess.run(command, env=self.env, capture_output=True, text=True, timeout=60)
+        self.assertEqual((p.returncode, p.stdout), (0, 'skipped fixture-linked fake-harness: cost\n'), p.stderr)
+        self.assertFalse(os.path.exists(marker))
+        self.assertEqual(len(self.records()), 1)
+
+    def test_a_failed_hosts_prefix_lookup_refuses_before_loading_configs(self):
+        rig = self.module()
+        prefix = os.path.dirname(self.hosts)
+        lstat = os.lstat
+
+        def refuse_prefix(path):
+            if path == prefix:
+                raise PermissionError(errno.EACCES, 'Permission denied')
+            return lstat(path)
+
+        with patch.object(os, 'lstat', side_effect=refuse_prefix):
+            with self.assertRaisesRegex(rig.Refused, 'cannot look up a step of --hosts'):
+                rig.load_hosts(self.hosts, None)
+
+    def test_a_host_whose_cost_is_not_none_is_skipped_as_cost_before_any_status_probe_runs(self):
+        marker = os.path.join(self.folder, 'status-ran')
+        with open(os.path.join(self.hosts, 'cost-unknown.json')) as f:
+            config = json.load(f)
+        probe = [['sh', '-c', 'touch "$0"; exit 1', marker]]
+        self.commit_host('paid.json', dict(config, host='fixture-paid', cost='paid', signed_in=probe))
+        self.commit_host('cost-unknown.json', dict(config, signed_in=probe))
+        self.head = git(self.checkout, 'rev-parse', 'HEAD')
+        rig = self.module()
+        for host, name in (('fixture-cost', 'cost-unknown.json'), ('fixture-paid', 'paid.json')):
+            with self.subTest(host):
+                self.assertEqual(rig.check_host(rig.load_host(os.path.join(self.hosts, name))), 'cost')
+                code, out, err = self.rig('--host', host)
+                self.assertEqual((code, out), (0, ['skipped %s fake-harness: cost' % host]), err)
+                record = self.record(host)
+                self.assertEqual({k: record[k] for k in KEYS[6:10]},
+                                 {'outcome': 'skipped', 'skipped': 'cost', 'kit_exit': None, 'stdout': None})
+                self.assertFalse(os.path.exists(marker))
+                self.assertEqual(self.kit_calls(), [])
+
     def test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons(self):
         rig = self.module()
         files = {'fixture-template': 'template.json', 'fixture-missing': 'missing.json',
@@ -327,6 +396,36 @@ class Rig(unittest.TestCase):
                 config = rig.load_host(os.path.join(self.hosts, files[host]))
                 self.assertEqual((config['host'], rig.check_host(config)), (host, why))
         self.assertEqual(self.kit_calls(), [])
+
+    def test_a_failing_probe_behind_env_and_name_value_words_names_its_program(self):
+        rig = self.module()
+        with open(os.path.join(self.hosts, 'template.json')) as f:
+            config = json.load(f)
+        for probe, why in ((['env', 'GH_TELEMETRY=0', 'fake-signed-out', 'status'], 'not signed in: fake-signed-out'),
+                           (['env', 'A=1', 'B_2=x y', 'fake-signed-out'], 'not signed in: fake-signed-out'),
+                           (['env', 'GH_TELEMETRY=0', 'false'], 'not signed in: false'),
+                           (['env', '-i', 'false'], 'not signed in: env'),
+                           (['fake-signed-out', 'status'], 'not signed in: fake-signed-out')):
+            with self.subTest(probe):
+                self.assertEqual(rig.check_host(dict(config, signed_in=[probe])), why)
+        self.assertIsNone(rig.check_host(dict(config, signed_in=[['env', 'GH_TELEMETRY=0', 'fake-signed-in']])))
+
+    def test_the_login_read_runs_gh_with_gh_telemetry_0_and_the_rest_of_the_environment_unchanged(self):
+        rig = self.module()
+        seen, fake = os.path.join(self.folder, 'gh-env'), tempfile.mkdtemp(dir=self.folder)
+        with open(os.path.join(fake, 'gh'), 'w') as f:
+            f.write('#!/bin/sh\nprintf "%%s %%s" "${GH_TELEMETRY-unset}" "$RIG_GH_LOGIN" > "%s"\necho %s\n' % (seen, LOGIN))
+        os.chmod(os.path.join(fake, 'gh'), 0o700)
+        os.environ['PATH'] = os.pathsep.join([fake, os.environ['PATH']])
+        old = {k: os.environ.get(k) for k in ('GH_TELEMETRY', 'RIG_GH_LOGIN')}
+        self.addCleanup(lambda: [os.environ.pop(k, None) if v is None else os.environ.__setitem__(k, v)
+                                 for k, v in old.items()])
+        os.environ.pop('GH_TELEMETRY', None)
+        os.environ['RIG_GH_LOGIN'] = 'kept'
+        self.assertEqual(rig.signed_in_login(), LOGIN)
+        with open(seen) as f:
+            self.assertEqual(f.read(), '0 kept')
+        self.assertNotIn('GH_TELEMETRY', os.environ)
 
     def test_every_host_in_one_run_keeps_paths_logins_the_repository_and_planted_secrets_out(self):
         code, out, err = self.rig()

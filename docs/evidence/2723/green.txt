@@ -1,0 +1,33 @@
+$ PATH=<stubs>:$PATH env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/test_rig.py   # at 00f26b4241254579d883113c4bb8db0434ded5cf, green, 37 refusing agent-CLI stubs first on PATH
+test_a_dirty_checkout_exits_2_and_runs_nothing (__main__.Rig.test_a_dirty_checkout_exits_2_and_runs_nothing) ... ok
+test_a_held_lock_exits_0_and_runs_nothing (__main__.Rig.test_a_held_lock_exits_0_and_runs_nothing) ... ok
+test_a_host_whose_cost_is_not_none_is_skipped_as_cost_before_any_status_probe_runs (__main__.Rig.test_a_host_whose_cost_is_not_none_is_skipped_as_cost_before_any_status_probe_runs) ... ok
+test_a_kit_line_quoting_the_checkout_or_the_repository_is_withheld_from_the_record_and_shown_on_stderr (__main__.Rig.test_a_kit_line_quoting_the_checkout_or_the_repository_is_withheld_from_the_record_and_shown_on_stderr) ... ok
+test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept (__main__.Rig.test_a_line_with_any_path_a_non_ascii_or_other_unusual_character_is_withheld_and_clean_lines_kept) ... ok
+test_a_lock_error_other_than_another_run_exits_2 (__main__.Rig.test_a_lock_error_other_than_another_run_exits_2) ... ok
+test_a_missing_signed_out_or_possibly_paid_host_is_skipped_and_recorded_and_starts_no_kit (__main__.Rig.test_a_missing_signed_out_or_possibly_paid_host_is_skipped_and_recorded_and_starts_no_kit) ... ok
+test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works (__main__.Rig.test_a_parent_step_hiding_a_symlink_in_hosts_exits_2_and_a_plain_parent_step_still_works) ... ok
+test_a_planted_drivers_failing_kit_exits_1_with_its_count (__main__.Rig.test_a_planted_drivers_failing_kit_exits_1_with_its_count) ... ok
+test_a_signed_in_host_with_free_runs_runs_five_of_five_and_writes_its_record (__main__.Rig.test_a_signed_in_host_with_free_runs_runs_five_of_five_and_writes_its_record) ... ok
+test_a_symlinked_host_config_or_hosts_folder_exits_2_and_runs_nothing (__main__.Rig.test_a_symlinked_host_config_or_hosts_folder_exits_2_and_runs_nothing) ... ok
+test_an_unknown_host_or_a_bad_host_config_exits_2_and_only_json_files_are_hosts (__main__.Rig.test_an_unknown_host_or_a_bad_host_config_exits_2_and_only_json_files_are_hosts) ... ok
+test_case_equivalent_host_or_record_names_exit_2_before_any_run (__main__.Rig.test_case_equivalent_host_or_record_names_exit_2_before_any_run) ... ok
+test_every_host_in_one_run_keeps_paths_logins_the_repository_and_planted_secrets_out (__main__.Rig.test_every_host_in_one_run_keeps_paths_logins_the_repository_and_planted_secrets_out) ... ok
+test_hosts_outside_the_checkout_or_untracked_exit_2_and_run_nothing (__main__.Rig.test_hosts_outside_the_checkout_or_untracked_exit_2_and_run_nothing) ... ok
+test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons (__main__.Rig.test_load_host_and_check_host_are_importable_and_give_the_exact_skip_reasons) ... ok
+test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes (__main__.Rig.test_the_record_keeps_only_the_five_check_lines_each_free_of_paths_the_repository_the_login_and_shapes) ... ok
+
+----------------------------------------------------------------------
+Ran 17 tests in 107.355s
+
+OK
+
+Fixture checkpoint at 59e35cef6c542cb1a1047cb9052eb86b5eef9c3b.
+PATH=<stubs>:$PATH env -u OPENWIZ_GITHUB_APP_KEY python3 -I <suite>
+The 37 agent CLI stubs, plus refusing curl and gh fallbacks, went first on PATH.
+Fixture fakes supplied the expected CLI responses.
+kernel/live-rig/test_rig.py: 20 tests, OK
+kernel/live-rig/test_heads.py: 15 tests, OK
+kernel/live-rig/test_receipt.py: 42 tests, OK (skipped=2)
+kernel/live-rig/vps/test_bootstrap.py: 11 tests, OK
+kernel/live-rig/vps/test_hosts.py: 9 tests, OK

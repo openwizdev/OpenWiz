@@ -1,0 +1,24 @@
+FAIL README.md: no clearly marked 0.1.0 section (a heading naming 0.1.0)
+FAIL README.md: the default path links the 0.1.0 maintenance skill (maint/0.2)
+FAIL README.md: the default path does not link the 0.1.1 install skill at WizSkills v0.4.0
+FAIL README.md: says an Intel Mac installs only from 0.1.1
+FAIL README.md: says the schedule wakes the fleet every ten minutes
+FAIL docs/install.md: no clearly marked 0.1.0 section (a heading naming 0.1.0)
+FAIL docs/install.md: the default path links the 0.1.0 maintenance skill (maint/0.2)
+FAIL docs/install.md: the default path does not link the 0.1.1 install skill at WizSkills v0.4.0
+FAIL docs/install.md: says an Intel Mac installs only from 0.1.1
+FAIL docs/install.md: says the schedule wakes the fleet every ten minutes
+FAIL docs/install.md: the default path still overwrites the install skill with maint/0.2
+FAIL docs/install.md: preflight does not clone the v0.1.1 tag
+FAIL docs/install.md: the build identity check does not expect 0.1.1
+FAIL docs/install.md: never says the heartbeat checks every ten minutes and wakes only when work is due
+FAIL docs/install.md: never says boat.dev fleets use the local heartbeat too
+FAIL docs/install.md: never lists jq as a heartbeat prerequisite
+FAIL docs/install.md: never says a review by the same family is marked
+FAIL docs/install.md: "Remove it" never names `heartbeat.py remove`
+FAIL docs/install.md: "Remove it" never names `heartbeat.py pause`
+FAIL docs/install.md: "Remove it" never names `install remove`
+FAIL docs/install.md: says there is no remove command
+FAIL docs/install.md: the boat.dev prerequisites omit GitHub write access and the harness key in boat's dashboard
+22 failures
+exit 1

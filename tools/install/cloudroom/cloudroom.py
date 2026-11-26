@@ -68,6 +68,8 @@ TARGETS = {('Darwin', 'arm64'): ('macos-arm64', 'arm64', 'dmg'),
 DESTINATIONS = {'macos-arm64': '/Applications/Cloudroom.app', 'linux-x64': '~/Applications/Cloudroom.AppImage'}
 LAUNCHER = '.local/bin/room-cli'
 ROOM_CLI_CALLS = (('cloud', 'status', '--json'), ('cloud', 'sign-in', '--json'))
+CLOUD_LAUNCHER = 'usr/local/bin/room-cli'
+CLOUD_STATUS_CALL = ('status', '--json')
 PHASES = ('proposed', 'installing', 'applied', 'failed', 'refused', 'uncertain')
 REASONS = ('proposed', 'installed', 'existing', 'declined', 'checksum_mismatch', 'download_failed',
            'install_failed', 'unverified', 'lost_reply')
@@ -553,10 +555,35 @@ def login_code(host):
     return 'cloudroom_login_unknown'
 
 
+def cloud_thread(host):
+    if host.system != 'Linux':
+        return False
+    launcher = host.root / CLOUD_LAUNCHER
+    if not launcher.is_file():
+        return False
+    code, out = host.run([str(launcher), *CLOUD_STATUS_CALL], TIMEOUT)
+    if code != 0:
+        return False
+    try:
+        value = json.loads(out, object_pairs_hook=store.unique)
+    except (ValueError, Refused):
+        return False
+    if type(value) is not dict:
+        return False
+    thread = value.get('thread')
+    if type(thread) is not dict or thread.get('archived', False) is not False:
+        return False
+    thread_id, project_id = thread.get('id'), thread.get('projectId')
+    return (isinstance(thread_id, str) and store.CLOUD_ID.fullmatch(thread_id) is not None
+            and isinstance(project_id, str) and store.CLOUD_ID.fullmatch(project_id) is not None)
+
+
 def code_for(host, operation):
     code = install_code(host, operation)
     if code in ('cloudroom_installed', 'cloudroom_reused'):
         return login_code(host) or code
+    if code in ('cloudroom_not_installed', 'cloudroom_unsupported') and cloud_thread(host):
+        return 'cloudroom_login_verified'
     return code
 
 
@@ -607,6 +634,8 @@ def install(host, state_dir, yes=False, decline=False, operation=None):
             return answer('cloudroom_reused')
         if blocked(host, saved):
             return answer('cloudroom_destination_blocked')
+        if cloud_thread(host):
+            return answer('cloudroom_login_verified')
         name = target(host)
         source = resolve(host, name) if name else None
         if source is None:
@@ -755,6 +784,8 @@ def sign_in(host, state_dir):
     records = Records(state_dir)
     operation = records.read()
     installed = install_code(host, operation)
+    if installed in ('cloudroom_not_installed', 'cloudroom_unsupported') and cloud_thread(host):
+        return answer('cloudroom_login_verified')
     require(installed in ('cloudroom_installed', 'cloudroom_reused'), 'CloudRoom is not installed here; install it first')
     linux_needs(host, operation)
     code = login_code(host) or installed

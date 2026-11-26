@@ -2,10 +2,7 @@ use std::fmt;
 use std::time::Duration;
 
 use serde::de::{self, MapAccess, Unexpected, Visitor};
-use serde::ser::SerializeMap;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-
-pub const ATTACHMENT_SCHEMA_ID: &str = "openwiz.attachment.v1";
 
 pub const IMAGE_MAX_BYTES: u64 = 10 * 1024 * 1024;
 
@@ -22,8 +19,6 @@ pub const ATTACHMENT_ID_MAX_LEN: usize = 64;
 pub const SNIFF_BYTES: usize = 4096;
 
 pub const UNSENT_TTL: Duration = Duration::from_secs(24 * 60 * 60);
-
-pub const FREE_DISK_FLOOR_BYTES: u64 = 1024 * 1024 * 1024;
 
 pub const IMAGE_TYPED_EXTENSIONS: &[&str] = &[
     "3ds", "apng", "avci", "avcs", "avif", "azv", "b16", "bmp", "btf", "btif", "cgm", "cmx", "dds",
@@ -202,32 +197,6 @@ impl std::error::Error for InvalidAttachment {}
 pub struct SafeName(String);
 
 impl SafeName {
-    pub fn from_original(original: &str) -> Self {
-        let base = original.rsplit(['/', '\\']).next().unwrap_or_default();
-        if matches!(base, "" | "." | "..") {
-            return Self("attachment".to_owned());
-        }
-        let mut leading = true;
-        let mut name: String = base
-            .chars()
-            .map(|c| {
-                leading &= matches!(c, '.' | '-');
-                if allowed(c) && !leading { c } else { '_' }
-            })
-            .collect();
-        if name.len() > SAFE_NAME_MAX_BYTES {
-            name = match name.rfind('.').filter(|&dot| dot > 0) {
-                Some(dot) if name.len() - dot < SAFE_NAME_MAX_BYTES => {
-                    let extension = &name[dot..];
-                    let stem = &name[..SAFE_NAME_MAX_BYTES - extension.len()];
-                    format!("{stem}{extension}")
-                }
-                _ => name[..SAFE_NAME_MAX_BYTES].to_owned(),
-            };
-        }
-        Self(name)
-    }
-
     pub fn parse(name: &str) -> Result<Self, InvalidAttachment> {
         let valid = !name.is_empty()
             && name.len() <= SAFE_NAME_MAX_BYTES
@@ -566,127 +535,6 @@ pub fn check(name: &SafeName, head: &[u8], size_bytes: u64) -> Result<Kind, Fail
     Ok(kind)
 }
 
-pub fn staging_room(free_bytes: u64, incoming_bytes: u64) -> Result<(), FailReason> {
-    match free_bytes.checked_sub(incoming_bytes) {
-        Some(left) if left >= FREE_DISK_FLOOR_BYTES => Ok(()),
-        _ => Err(FailReason::LowDisk),
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Readiness {
-    Selected,
-    Uploading,
-    Ready,
-    Failed { reason: FailReason },
-    Removed,
-    Expired,
-}
-
-#[derive(Clone, Copy, PartialEq)]
-enum State {
-    Selected,
-    Uploading,
-    Ready,
-    Failed,
-    Removed,
-    Expired,
-}
-
-impl Labels for State {
-    fn labels() -> &'static [(&'static str, Self)] {
-        &[
-            ("selected", Self::Selected),
-            ("uploading", Self::Uploading),
-            ("ready", Self::Ready),
-            ("failed", Self::Failed),
-            ("removed", Self::Removed),
-            ("expired", Self::Expired),
-        ]
-    }
-}
-
-impl<'de> Deserialize<'de> for State {
-    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
-        read_label(d)
-    }
-}
-
-impl Serialize for Readiness {
-    fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
-        let (state, reason) = match *self {
-            Self::Selected => (State::Selected, None),
-            Self::Uploading => (State::Uploading, None),
-            Self::Ready => (State::Ready, None),
-            Self::Failed { reason } => (State::Failed, Some(reason)),
-            Self::Removed => (State::Removed, None),
-            Self::Expired => (State::Expired, None),
-        };
-        let mut map = s.serialize_map(Some(1 + usize::from(reason.is_some())))?;
-        map.serialize_entry("state", state.label())?;
-        if let Some(reason) = reason {
-            map.serialize_entry("reason", reason.label())?;
-        }
-        map.end()
-    }
-}
-
-struct ReadinessVisitor;
-
-impl<'de> Visitor<'de> for ReadinessVisitor {
-    type Value = Readiness;
-
-    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("a readiness object")
-    }
-
-    fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Readiness, A::Error> {
-        let (mut state, mut reason): (Option<State>, Option<FailReason>) = (None, None);
-        while let Some(key) = map.next_key::<String>()? {
-            match key.as_str() {
-                "state" => once(&mut map, &mut state, "state")?,
-                "reason" => once(&mut map, &mut reason, "reason")?,
-                other => return Err(de::Error::unknown_field(other, &["state", "reason"])),
-            }
-        }
-        let state = state.ok_or_else(|| de::Error::missing_field("state"))?;
-        Ok(match (state, reason) {
-            (State::Failed, Some(reason)) => Readiness::Failed { reason },
-            (State::Failed, None) => return Err(de::Error::missing_field("reason")),
-            (_, Some(_)) => return Err(de::Error::unknown_field("reason", &["state"])),
-            (State::Selected, None) => Readiness::Selected,
-            (State::Uploading, None) => Readiness::Uploading,
-            (State::Ready, None) => Readiness::Ready,
-            (State::Removed, None) => Readiness::Removed,
-            (State::Expired, None) => Readiness::Expired,
-        })
-    }
-}
-
-impl<'de> Deserialize<'de> for Readiness {
-    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
-        d.deserialize_map(ReadinessVisitor)
-    }
-}
-
-impl Readiness {
-    pub fn can_become(self, next: Readiness) -> bool {
-        use Readiness::*;
-        matches!(
-            (self, next),
-            (Selected, Uploading | Removed)
-                | (Uploading, Ready | Removed)
-                | (Ready, Removed | Expired)
-                | (Selected | Uploading | Ready, Failed { .. })
-                | (Failed { .. }, Uploading | Removed)
-        )
-    }
-
-    pub fn is_ready(self) -> bool {
-        self == Readiness::Ready
-    }
-}
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Claim {
     Unclaimed,
@@ -726,16 +574,6 @@ pub fn retention(stored: Stored) -> Retention {
             }
             Claim::Unclaimed | Claim::Failed => Retention::Keep,
         },
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct RemoveRefused(pub Claim);
-
-pub fn can_remove(claim: Claim) -> Result<(), RemoveRefused> {
-    match claim {
-        Claim::Dispatching | Claim::Uncertain => Err(RemoveRefused(claim)),
-        Claim::Unclaimed | Claim::Accepted | Claim::Failed => Ok(()),
     }
 }
 

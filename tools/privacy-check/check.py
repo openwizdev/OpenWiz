@@ -31,7 +31,7 @@ INVENTED = re.compile(r'\b(?:for example|e\.g\.|invented|hypothetical|synthetic|
 ABBREVIATION = re.compile(r'\b(?:e\.g|i\.e|etc|vs|cf)\.', re.IGNORECASE)
 SENTENCE_END = re.compile(r'[.!?](?=\s|$)')
 COMMENT = re.compile(r'^\s*(?:#+|//+|/?\*+|>+|--)?\s*')
-COMMIT_EMAIL = re.compile(r'(?:[1-9][0-9]*\+[A-Za-z0-9][A-Za-z0-9-]*|[A-Za-z0-9][A-Za-z0-9-]*)@users\.noreply\.github\.com|noreply@github\.com')
+COMMIT_EMAIL = re.compile(r'(?:[1-9][0-9]*\+[A-Za-z0-9][A-Za-z0-9-]*(?:\[bot\])?|[A-Za-z0-9][A-Za-z0-9-]*)@users\.noreply\.github\.com')
 
 
 class Unreadable(Exception):
@@ -215,6 +215,10 @@ def allowed_email(value):
             (domain == 'github.com' and local in {'noreply', 'git', 'user', 'pass'}))
 
 
+def allowed_commit_email(role, value):
+    return bool(COMMIT_EMAIL.fullmatch(value)) or (role == 'committer' and value == 'noreply@github.com')
+
+
 def git_environment():
     env = {k: v for k, v in os.environ.items() if not k.startswith('GIT_')}
     env.update(GIT_NO_REPLACE_OBJECTS='1', GIT_NO_LAZY_FETCH='1', GIT_TERMINAL_PROMPT='0')
@@ -313,7 +317,7 @@ def history(checker, repo, base, head, upstream=None):
                 checker.refuse('C3', f'commit-{index}-{role}')
                 continue
             email = re.fullmatch(r'.* <([^<>]*)> [0-9]+ [+-][0-9]{4}', rows[0])
-            if not email or not COMMIT_EMAIL.fullmatch(email[1]):
+            if not email or not allowed_commit_email(role, email[1]):
                 checker.refuse('C3', f'commit-{index}-{role}')
     return hashes
 

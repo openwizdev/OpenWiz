@@ -98,11 +98,11 @@ jobs:
   release:
     if: ${{ github.event.pull_request.draft != true }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
-        part: [1, 2]
+        part: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -116,31 +116,29 @@ jobs:
       - name: The release proofs
         if: matrix.part == 1
         run: python3 tools/release/test.py
-      - name: The kernel kits' tests
-        if: matrix.part == 2
+      - name: The kernel kits' tests (part 1)
+        if: matrix.part == 3
         run: |
-          python3 -I kernel/records-kit/test_check.py
           python3 -I kernel/driver-kit/test_kit.py
-          python3 -I kernel/driver-kit/test_hostkey.py
-          env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/driver-kit/test_stubs.py
-          python3 -I adapters/local/test_driver.py
-          python3 -I adapters/local/test_harnesses.py
-          python3 -I adapters/boat/test_driver.py
-          python3 -I adapters/cursor/test_driver.py
-          python3 -I kernel/records/model/test_model.py
-          python3 -I adapters/template/test_driver.py
-          python3 -I adapters/cloudroom/test_driver.py
-          python3 -I adapters/devin/test_driver.py
-          python3 -I adapters/openclaw/test_driver.py
-          python3 -I contracts/fixtures/feedback-loop/test_check.py
-          python3 -I tools/bench/first-fleet/test_bench.py
           python3 -I tools/ci-overload/test_supply.py
+          python3 -I tools/bench/first-fleet/test_bench.py
+          python3 -I kernel/records-kit/test_check.py
+          python3 -I ci/test_ci_driver_tests.py
+          env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/driver-kit/test_stubs.py
+          python3 -I contracts/fixtures/feedback-loop/test_check.py
+      - name: The kernel kits' tests (part 2)
+        if: matrix.part == 4
+        run: |
+          python3 -I ci/driver-tests.py
+          python3 -I kernel/records/model/test_model.py
+          python3 -I kernel/driver-kit/test_hostkey.py
       - name: The live-check rig's tests
         if: matrix.part == 2
         run: |
           stubs=$(mktemp -d)
-          for cli in claude codex cursor-agent agent pi opencode copilot goose gemini kimi qwen cline kilo crush \
-              vibe auggie kiro-cli junie amp agy oz sculpt hermes acpx droid; do
+          for cli in claude codex cursor-agent agent cursor pi opencode copilot goose gemini kimi qwen cline kilo \
+              kilocode crush vibe auggie kiro-cli junie amp agy oz sculpt hermes acpx droid boat room-cli runpane \
+              pane openhands devin warp grok codespaces conductor; do
             printf '#!/bin/sh\necho "%s: refused, CI never starts an agent CLI" >&2\nexit 1\n' "$cli" > "$stubs/$cli"
             chmod +x "$stubs/$cli"
           done
@@ -173,6 +171,7 @@ jobs:
           python3 -I -B tools/install/setup/test_github_login.py
           python3 -I tools/install/tests/skills-linked-config/test_linked_config.py
           python3 -I tools/rehearsal/test_rehearse.py
+          python3 -I tools/install/tests/installed-contracts/test_installed_contracts.py
       - name: The GitHub App
         if: matrix.part == 2
         run: |
@@ -224,10 +223,41 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
         run: python3 -I tools/owned-paths/check.py --repo "$GITHUB_REPOSITORY" --pr "$PR"
 
+  line-budget:
+    if: ${{ github.event.pull_request.draft != true }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Python
+        run: sh .github/actions/docs-only/python.sh
+      - name: The line-budget tests
+        run: python3 -I tools/line-budget/test_check.py
+      - name: The line budget
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+          QUEUE_BASE: ${{ github.event.merge_group.base_sha }}
+          QUEUE_REF: ${{ github.event.merge_group.head_ref }}
+        run: |
+          case "$EVENT" in
+            pull_request)
+              git fetch --no-tags --depth=2 origin "$GITHUB_SHA"
+              python3 -I tools/line-budget/check.py --base HEAD^1 --merge HEAD --pr "$PR" --repo "$GITHUB_REPOSITORY" ;;
+            merge_group)
+              git fetch --no-tags --depth=1 origin "$QUEUE_BASE"
+              python3 -I tools/line-budget/check.py --base "$QUEUE_BASE" --merge HEAD --pr "$QUEUE_REF" --repo "$GITHUB_REPOSITORY" ;;
+            *)
+              python3 -I tools/line-budget/check.py --total HEAD ;;
+          esac
+
   # The required check: a draft fails it, and so does any job above that did
   # not pass (owned-paths runs on pull requests only).
   ci:
-    needs: [lint, rust, release, owned-paths]
+    needs: [lint, rust, release, owned-paths, line-budget]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5

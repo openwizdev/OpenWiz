@@ -1,0 +1,17 @@
+# Green run (after review R1-R5, the login line section, and re-check R2 and R6): python3 -I adapters/hermes/test_driver.py, on fixtures/bin/hermes. PATH is fixtures/bin, /usr/bin and /bin only; each test first checks no real claude, codex or hermes is reachable on it.
+test_a_start_it_cannot_run_starts_nothing (__main__.Hermes.test_a_start_it_cannot_run_starts_nothing) ... ok
+test_a_start_without_a_session_starts_nothing_wakeable (__main__.Hermes.test_a_start_without_a_session_starts_nothing_wakeable) ... ok
+test_a_wake_during_a_turn_runs_once_that_turn_ends (__main__.Hermes.test_a_wake_during_a_turn_runs_once_that_turn_ends) ... ok
+test_cleanup_reads_no_process_before_it_knows_the_process_is_ours (__main__.Hermes.test_cleanup_reads_no_process_before_it_knows_the_process_is_ours) ... ok
+test_hermes_gets_only_the_environment_it_needs (__main__.Hermes.test_hermes_gets_only_the_environment_it_needs) ... ok
+test_kit_passes_all_five (__main__.Hermes.test_kit_passes_all_five) ... ok
+test_stop_interrupts_the_turn_then_ends_everything (__main__.Hermes.test_stop_interrupts_the_turn_then_ends_everything) ... ok
+test_the_readme_leads_with_the_fixture_run (__main__.Hermes.test_the_readme_leads_with_the_fixture_run) ... ok
+test_the_readme_says_where_the_login_lives_under_its_title (__main__.Hermes.test_the_readme_says_where_the_login_lives_under_its_title) ... ok
+test_the_turns_output_never_reaches_the_disk (__main__.Hermes.test_the_turns_output_never_reaches_the_disk) ... ok
+test_wake_resumes_the_session_its_start_reported (__main__.Hermes.test_wake_resumes_the_session_its_start_reported) ... ok
+
+----------------------------------------------------------------------
+Ran 11 tests in 3.542s
+
+OK

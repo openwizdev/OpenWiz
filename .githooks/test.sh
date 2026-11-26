@@ -80,3 +80,28 @@ git -C "$remote" show-ref --verify --quiet refs/heads/topic || status=$?
 [ "$(git -C "$remote" rev-parse refs/heads/keep)" = "$base" ] ||
   fail 'the deletion changed keep'
 echo 'ok: deletion removes only the named ref'
+
+git -C "$work" reset --hard -q "$clean"
+personal_email='robin''@''mail.invalid'
+GIT_AUTHOR_EMAIL="$personal_email" git -C "$work" commit --allow-empty -qm 'Personal author email'
+if git -C "$work" push fixture HEAD:refs/heads/keep > "$tmp/refusal" 2>&1; then
+  fail 'a personal author email must stop the push'
+fi
+grep -q '^C3 commit-1-author:1$' "$tmp/refusal" || { cat "$tmp/refusal" >&2; fail 'expected C3 author refusal'; }
+! grep -Fq "$personal_email" "$tmp/refusal" || { cat "$tmp/refusal" >&2; fail 'refusal leaked author email'; }
+
+git -C "$work" reset --hard -q "$clean"
+GIT_COMMITTER_EMAIL="$personal_email" git -C "$work" commit --allow-empty -qm 'Personal committer email'
+if git -C "$work" push fixture HEAD:refs/heads/keep > "$tmp/refusal" 2>&1; then
+  fail 'a personal committer email must stop the push'
+fi
+grep -q '^C3 commit-1-committer:1$' "$tmp/refusal" || { cat "$tmp/refusal" >&2; fail 'expected C3 committer refusal'; }
+! grep -Fq "$personal_email" "$tmp/refusal" || { cat "$tmp/refusal" >&2; fail 'refusal leaked committer email'; }
+
+git -C "$work" reset --hard -q "$clean"
+GIT_AUTHOR_EMAIL='41898282+synthetic-bot[bot]@users.noreply.github.com' \
+  GIT_COMMITTER_EMAIL='noreply@github.com' \
+  git -C "$work" commit --allow-empty -qm 'Bot author with GitHub web-flow committer'
+git -C "$work" push fixture HEAD:refs/heads/keep ||
+  fail 'bot author with GitHub web-flow committer must pass'
+echo 'ok: commit email checks enforce noreply, bot and web-flow committer rules'

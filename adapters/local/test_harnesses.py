@@ -55,6 +55,22 @@ PLANTED = {
     'signed-out-bad-pattern': 'fail signed-out-bad-pattern: row.json signed_out: a pattern does not compile',
     'effort-missing': 'fail effort-missing: row.json effort: it has no effort form; give an effort map or '
                       '"none: <one line why>"',
+    'row-commands': 'pass row-commands: ' + GOOD,
+    'precheck-other-program': "fail precheck-other-program: row.json precheck: it runs another program; it starts with "
+                              "the row's program",
+    'stop-other-program': "fail stop-other-program: row.json stop: it runs another program; it starts with the row's "
+                          "program",
+    'precheck-placeholder': 'fail precheck-placeholder: row.json precheck: it takes only {model} and {effort}, each '
+                            'once and as a whole argument',
+    'stop-placeholder': 'fail stop-placeholder: row.json stop: it takes only {session}, once and as a whole argument',
+    'stop-no-session': "fail stop-no-session: row.json stop: it has no {session}, so it could reach other runs' "
+                       "sessions",
+    'precheck-credential': 'fail precheck-credential: row.json precheck: a fixed argument looks like a credential; a '
+                           'row holds no login, key or token',
+    'precheck-matches-anything': 'fail precheck-matches-anything: row.json precheck: its match pattern matches empty '
+                                 'output, so it would pass anything',
+    'precheck-unmatched': "fail precheck-unmatched: precheck: a start with the row's own fake was refused by its "
+                          "precheck",
 }
 ERROR = kit.load_schema()['error']
 WRAPPER = '''import importlib.machinery, importlib.util, sys
@@ -64,6 +80,60 @@ t = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(t)
 t.START['effort'] = t.EFFORT
 t.main()
+'''
+SHORT_COMMANDS = WRAPPER.replace("t.START['effort'] = t.EFFORT", 't.PRECHECK_SECONDS = t.STOP_SECONDS = 1')
+CALLS = '''import json, os, sys, time
+sys.dont_write_bytecode = True
+folder, fake = %r, %r
+
+
+def alive(turn):
+    if not os.path.isdir('/proc/self'):
+        try:
+            os.kill(turn['supervisor'], 0)
+            return True
+        except OSError:
+            return False
+    try:
+        with open('/proc/%%d/stat' %% turn['supervisor']) as f:
+            fields = f.read().rpartition(')')[2].split()
+    except OSError:
+        return False
+    return fields[0] != 'Z' and int(fields[19]) == turn['supervisor_since']
+
+
+def turns_alive():
+    found = []
+    for name in sorted(os.listdir(os.path.join(folder, 'state'))):
+        if name.startswith('run-') and name.endswith('.json'):
+            try:
+                with open(os.path.join(folder, 'state', name)) as f:
+                    found += [alive(t) for t in json.load(f)['turns']]
+            except (OSError, ValueError, KeyError):
+                continue
+    return any(found)
+
+
+try:
+    with open(os.path.join(folder, 'control')) as f:
+        control = f.read()
+except FileNotFoundError:
+    control = ''
+args = sys.argv[1:]
+names = [n for n in os.environ.get('FAKE_CLI_ENV', '').split(',') if n]
+with open(os.open(os.path.join(folder, 'calls'), os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600), 'w') as f:
+    f.write(json.dumps({'argv': args, 'env': {n: os.environ.get(n) for n in names}, 'turns_alive': turns_alive(),
+                        'cwd': os.getcwd(), 'pid': os.getpid()}) + '\\n')
+if control and args[:1] != ['run']:
+    print('synthetic %%s output 7d3a' %% control, flush=True)
+    if control == 'effort':
+        print('effort %%s for %%s' %% (args[-1], args[1]), flush=True)
+    if control == 'signed-out-elsewhere':
+        print('warning: not logged in to another provider\\nmodel %%s ready' %% args[1], flush=True)
+    if control == 'hang':
+        time.sleep(300)
+    sys.exit(1 if control == 'exit' else 0)
+os.execv(fake, [fake] + args)
 '''
 
 
@@ -133,7 +203,9 @@ class ThrowawayMachine:
                 f.write('#!/bin/sh\necho "stub: %s is a no-op stub; no real agent CLI runs here" >&2\nexit 1\n' % stub)
             os.chmod(os.path.join(stubs, stub), 0o700)
         if program:
-            os.symlink(fake, os.path.join(binary, program))
+            with open(os.path.join(binary, program), 'w') as f:
+                f.write('#!%s -I\n' % sys.executable + CALLS % (self.folder, fake))
+            os.chmod(os.path.join(binary, program), 0o700)
         if clone_says is None:
             os.symlink(os.path.join(FIXTURES, 'gh'), os.path.join(binary, 'gh'))
         else:
@@ -176,6 +248,51 @@ class ThrowawayMachine:
                 return [json.loads(line) for line in f]
         except FileNotFoundError:
             return []
+
+    def calls(self):
+        try:
+            with open(os.path.join(self.folder, 'calls')) as f:
+                return [json.loads(line) for line in f]
+        except FileNotFoundError:
+            return []
+
+    def control(self, what):
+        with open(os.path.join(self.folder, 'control'), 'w') as f:
+            f.write(what)
+
+    def forget_calls(self):
+        for name in ('calls', 'rec', 'control'):
+            with contextlib.suppress(FileNotFoundError):
+                os.remove(os.path.join(self.folder, name))
+
+    def short_driver(self):
+        path = os.path.join(self.folder, 'driver-short-commands')
+        with open(path, 'w') as f:
+            f.write('#!%s\n' % sys.executable + SHORT_COMMANDS % self.driver_path)
+        os.chmod(path, 0o700)
+        return path
+
+    def raw(self, cmd, request, program=None, **env):
+        try:
+            p = subprocess.run([program or self.driver_path, cmd], input=json.dumps(request),
+                               env=dict(self.env, **env), capture_output=True, text=True, timeout=120)
+        except subprocess.TimeoutExpired:
+            return None, {}, ''
+        try:
+            return p.returncode, json.loads(p.stdout), p.stdout + p.stderr
+        except ValueError:
+            return p.returncode, {}, p.stdout + p.stderr
+
+    def log(self, run):
+        try:
+            with open(os.path.join(self.state, run + '.log'), errors='replace') as f:
+                return f.read()
+        except OSError:
+            return ''
+
+    def state_of(self, run):
+        with open(os.path.join(self.state, run + '.json')) as f:
+            return json.load(f)
 
     def runs(self):
         return sorted(f for f in os.listdir(self.state) if f.startswith('run-') and f.endswith('.json'))
@@ -278,6 +395,42 @@ def check_turns(env, row):
         raise Fail('daemon', 'the background process the row declares still runs after stop')
 
 
+def filled(args, values):
+    return [values.get(a, a) for a in args]
+
+
+def names_effort(row):
+    return 'precheck' in row and '{effort}' in json.dumps(row['precheck'])
+
+
+def check_precheck(env, row):
+    if 'precheck' not in row:
+        return
+    code, out = env.start(FAKE_CLI_RECORD_ONLY='1')
+    if code == 0:
+        env.driver('stop', out)
+    env.forget_calls()
+    if code:
+        raise Fail('precheck', "a start with the row's own fake was refused by its precheck")
+
+
+def check_commands(env, row):
+    turns, calls = env.records(), env.calls()
+    session = turns[0]['session']
+    want = [t['argv'] for t in turns]
+    if 'precheck' in row and not names_effort(row):
+        want.insert(0, filled(row['precheck']['run'][1:], {'{model}': 'synthetic-1'}))
+    if 'stop' in row:
+        want.append(filled(row['stop'][1:], {'{session}': session}))
+    if [c['argv'] for c in calls] != want:
+        raise Fail('commands', 'the program ran %d times, not exactly once for each turn%s' % (
+            len(calls), ''.join(', ' + f for f in ('precheck', 'stop') if f in row)))
+    if 'stop' in row and not calls[-1]['turns_alive']:
+        raise Fail('stop', "the row's stop ran after the turns had ended, not before the process tree was ended")
+    if any(c['env'].get(k) != v for c in calls for k, v in row['env'].items()):
+        raise Fail('env', "the row's precheck or stop did not get the row's env")
+
+
 def check_signed_out(env, row):
     if not row.get('signed_out'):
         return
@@ -337,11 +490,13 @@ def check(rows, name):
         names = set(row['env']) | {k for s in row['effort'].values() if isinstance(s, dict) for k in s['env']} \
             if isinstance(row['effort'], dict) else set(row['env'])
         with ThrowawayMachine(rows, name, row['program'], fake, next(iter(row['modes'])), sorted(names)) as env:
+            check_precheck(env, row)
             lines = env.kit()
             if lines != PASS:
                 raise Fail('kit', next((x for x in lines if not x.startswith('pass ')),
                                        'it gave %d lines' % len(lines)))
             check_turns(env, row)
+            check_commands(env, row)
             check_signed_out(env, row)
             check_effort(env, row)
         test = os.path.join(folder, 'test_row.py')
@@ -461,6 +616,178 @@ def busy_wake_needs_no_write(env):
         len(env.records()) == before + 1
 
 
+def commands_machine(planted, rows=None, name='row-commands', program='row-commands-cli'):
+    return ThrowawayMachine(rows or planted, name, program, os.path.join(planted, name, 'fake'), 'auto',
+                            ('ROW_COMMANDS_CLI_BACKEND', 'EXAMPLE_CLI_BACKEND'))
+
+
+def gone(pid):
+    return until(lambda: since(pid) is None)
+
+
+def precheck_refusals_start_nothing(planted):
+    ok = True
+    for control, why in (('exit', 'it exited 1'), ('mismatch', "its output did not match the row's pattern"),
+                         ('hang', 'it ran past its 1-second limit')):
+        with commands_machine(planted) as env:
+            env.control(control)
+            code, out, said = env.raw('start', {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket',
+                                                'harness': 'row-commands', 'model': 'synthetic-1'}, env.short_driver())
+            run = next((r[:-5] for r in env.runs()), None)
+            calls = env.calls()
+            state = env.state_of(run) if run else {}
+            ok = (code == 1 and kit.invalid(out, ERROR) is None and why in out['error'] and
+                  'nothing was started' in out['error'] and env.records() == [] and len(calls) == 1 and
+                  calls[0]['argv'] == ['models', 'synthetic-1', '--verbose'] and
+                  calls[0]['env'].get('ROW_COMMANDS_CLI_BACKEND') == 'local' and
+                  not calls[0]['cwd'].startswith(os.path.join(env.state, 'work')) and
+                  state.get('turns') == [] and state.get('stopped') is True and
+                  '7d3a' in env.log(run) and '7d3a' not in said and gone(calls[0]['pid'])) and ok
+    return ok
+
+
+def precheck_output_is_not_the_turns(planted):
+    with commands_machine(planted) as env:
+        env.control('signed-out-elsewhere')
+        code, out = env.start(FAKE_CLI_RECORD_ONLY='1')
+        if code == 0:
+            env.driver('stop', out)
+        calls = env.calls()
+    return code == 0 and [c['argv'][:1] for c in calls] == [['models'], ['run'], ['stop']]
+
+
+def precheck_effort_skipped_and_escaped(planted):
+    check = {'run': ['row-commands-cli', 'models', '{model}', '--effort', '{effort}'],
+             'match': '^effort {effort} for {model}$'}
+    with tempfile.TemporaryDirectory(prefix='variant-') as rows:
+        shutil.copytree(os.path.join(planted, 'row-commands'), os.path.join(rows, 'row-commands'))
+        with open(os.path.join(rows, 'row-commands', 'row.json')) as f:
+            row = json.load(f)
+        with open(os.path.join(rows, 'row-commands', 'row.json'), 'w') as f:
+            json.dump(dict(row, precheck=check), f)
+        with commands_machine(planted, rows) as env:
+            env.control('effort')
+            plain_code, plain = env.start(FAKE_CLI_RECORD_ONLY='1')
+            skipped = [c['argv'][:1] for c in env.calls()] == [['run']]
+            env.driver('stop', plain)
+            env.forget_calls()
+            env.control('effort')
+            code, out = env.driver('start', {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket',
+                                             'harness': 'row-commands', 'model': 'synthetic+1', 'effort': 'high'},
+                                   env.wrapper, FAKE_CLI_RECORD_ONLY='1')
+            env.driver('stop', out)
+            calls = env.calls()
+    return plain_code == 0 and skipped and code == 0 and calls[0]['argv'] == ['models', 'synthetic+1', '--effort', 'high'] \
+        and [c['argv'][:1] for c in calls] == [['models'], ['run'], ['stop']]
+
+
+def failing_stop_still_ends_the_tree(planted):
+    ok = True
+    for control, why in (('exit', "the row's stop exited 1"),
+                         ('hang', "the row's stop ran past its 1-second limit")):
+        with commands_machine(planted) as env:
+            code, out = env.start()
+            if code:
+                return False
+            state = env.state_of(out['run'])
+            env.control(control)
+            stopped, answer, said = env.raw('stop', out, env.short_driver())
+            calls = env.calls()
+            ok = (stopped == 0 and answer == {'run': out['run'], 'stopped': True} and why in said and
+                  "the driver still ended the run's process tree" in said and '7d3a' not in said and
+                  '7d3a' in env.log(out['run']) and why in env.log(out['run']) and
+                  calls[-1]['argv'] == ['stop', '--session', state['session']] and calls[-1]['turns_alive'] and
+                  gone(calls[-1]['pid']) and all(gone(t['supervisor']) for t in state['turns'])) and ok
+    return ok
+
+
+def stop_uses_only_the_runs_own_session(planted):
+    stop = ['example-cli', 'stop', '--session', '{session}']
+    ok = True
+    with example_variant('example', stop=stop) as rows:
+        for prelude, quiet, want in ((None, None, True), ('{"session": {"id": "--all"}}', '1', False),
+                                     (None, '1', False)):
+            with commands_machine(planted, rows, 'example', 'example-cli') as env:
+                env.control('quiet')
+                extra = dict(FAKE_CLI_PRELUDE=prelude) if prelude else {}
+                code, out = env.start(FAKE_CLI_QUIET=quiet or '', **extra)
+                state = env.state_of(out['run']) if code == 0 else {'turns': []}
+                stopped, answer, said = env.raw('stop', out)
+                session = env.records()[0]['session'] if env.records() else None
+                calls = [c['argv'] for c in env.calls() if c['argv'][:1] == ['stop']]
+                ok = (code == 0 and stopped == 0 and all(gone(t['supervisor']) for t in state['turns']) and
+                      (calls == [['stop', '--session', session]] if want else
+                       calls == [] and "the row's stop was skipped: the run has no session id it can pass" in said)) \
+                    and ok
+    return ok
+
+
+def row_commands_keep_the_drivers_environment(planted):
+    before = dict(os.environ)
+    if not hasattr(local, 'row_command'):
+        return False
+    with tempfile.TemporaryDirectory(prefix='env-') as folder:
+        probe = os.path.join(folder, 'probe')
+        with open(probe, 'w') as f:
+            f.write('#!/bin/sh\nprintf "%%s" "$ROW_COMMANDS_CLI_BACKEND" > %s\n' % shlex.quote(probe + '.out'))
+        os.chmod(probe, 0o700)
+        saved, local.STATE = local.STATE, folder
+        try:
+            result = local.row_command('run-000000000000', [probe], {'ROW_COMMANDS_CLI_BACKEND': 'local'}, 5)
+        finally:
+            local.STATE = saved
+        try:
+            with open(probe + '.out') as f:
+                got = f.read()
+        except OSError:
+            got = None
+    return result[0] == 0 and got == 'local' and dict(os.environ) == before
+
+
+def precheck_that_cannot_run_is_refused(planted):
+    with open(os.path.join(planted, 'row-commands', 'row.json')) as f:
+        state = {'request': {'harness': 'row-commands', 'model': 'synthetic-1'}, 'program': 'row-commands-cli',
+                 'row': json.load(f)}
+    saved = local.row_command
+    local.row_command = lambda *_: (_ for _ in ()).throw(OSError('no temporary folder: synthetic'))
+    try:
+        local.precheck('run-000000000000', state)
+        return False
+    except local.Refused as e:
+        return 'it could not run; nothing was started' in str(e.args[0])
+    except OSError:
+        return False
+    finally:
+        local.row_command = saved
+
+
+def row_command_ended_when_its_watch_fails(planted):
+    if not os.path.isdir('/proc/self'):
+        return True
+    looks, saved = [], (local.STATE, local.LINUX, local.ps)
+
+    def ps_fails_on_its_third_look(*args):
+        looks.append(args)
+        if len(looks) > 2:
+            raise OSError('ps did not run: synthetic')
+        return saved[2](*args)
+
+    with tempfile.TemporaryDirectory(prefix='watch-') as folder:
+        pid = os.path.join(folder, 'pid')
+        local.STATE, local.LINUX, local.ps = folder, False, ps_fails_on_its_third_look
+        try:
+            local.row_command('run-000000000000', ['/bin/sh', '-c', 'echo $$ > %s; exec sleep 300' % shlex.quote(pid)],
+                              {}, 30)
+            raised = False
+        except OSError:
+            raised = True
+        finally:
+            local.STATE, local.LINUX, local.ps = saved
+        with open(pid) as f:
+            child = int(f.read())
+    return raised and len(looks) == 3 and gone(child)
+
+
 def longest_login_env_fits(planted):
     good = local.read_row(os.path.join(planted, 'login-env-good', 'row.json'), 'login-env-good')
     try:
@@ -499,6 +826,24 @@ def check_driver(rows):
               "ids are lower-case words of up to 20 characters", effort_checked_first_with_its_grammar(rows)),
              ("a row whose fixed arguments in start, wake, modes or effort look like a credential, joined or as a "
               "flag and its value, is refused naming only its field", credential_arguments_refused(rows)),
+             ("a precheck that exits non-zero, does not match or runs past its timeout is a D3 refusal that starts "
+              "no turn, runs outside the clone with the row's env, and keeps its output in the run's log only",
+              precheck_refusals_start_nothing(rows)),
+             ("a precheck that cannot open the run's log or its folder is the same D3 refusal, so its run is saved "
+              "as stopped", precheck_that_cannot_run_is_refused(rows)),
+             ("a precheck's output is left out of the first turn's sign-in check, so a first turn that ends at once "
+              "with exit 0 still starts", precheck_output_is_not_the_turns(rows)),
+             ("a precheck that names {effort} is skipped for a start without an effort, and its model and effort "
+              "fill whole arguments and match as literal text", precheck_effort_skipped_and_escaped(rows)),
+             ("a row's stop runs with the run's session while the turns still run, and a failing or hanging stop "
+              "still ends the process tree, saying so in fixed words with its output in the run's log only",
+              failing_stop_still_ends_the_tree(rows)),
+             ("a row's stop gets only its run's own reported session, and is skipped, still ending the tree, when "
+              "there is none or it starts with a dash", stop_uses_only_the_runs_own_session(rows)),
+             ("a precheck's or stop's env reaches only its own process, never the driver's environment",
+              row_commands_keep_the_drivers_environment(rows)),
+             ("a precheck or stop is still ended when the driver's watch on it fails, as when ps fails on macOS",
+              row_command_ended_when_its_watch_fails(rows)),
              ("the longest valid login_env row's not-signed-in next fits D3's 300 characters, one character more "
               "refuses the row, and so does a row whose env sets its login_env", longest_login_env_fits(rows))]
     if os.path.isdir('/proc/self'):

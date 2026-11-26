@@ -35,7 +35,7 @@ AUTH = {'GH_TOKEN': SECRET, 'GITHUB_TOKEN': SECRET, 'GH_ENTERPRISE_TOKEN': SECRE
         'GH_HOST': 'example.invalid'}
 CHECKOUT = ['kernel/live-rig/heads.py', 'kernel/live-rig/rig.py', 'kernel/live-rig/receipt.py', 'kernel/driver-kit/kit.py',
             'kernel/driver-kit/hostkey.py', 'kernel/driver-kit/hosts.json', 'kernel/driver-kit/schema.json',
-            'kernel/records-kit/check.py', 'kernel/records.v1.md']
+            'kernel/driver-kit/fixtures/fake-harness', 'kernel/records-kit/check.py', 'kernel/records.v1.md']
 DRIVER_PR_HEAD = {'adapters/template/driver': os.path.join(ROOT, 'adapters', 'template', 'driver'),
            'adapters/template/README.md': os.path.join(ROOT, 'adapters', 'template', 'README.md'),
            'adapters/template/schema.json': os.path.join(ROOT, 'adapters', 'template', 'schema.json'),
@@ -128,8 +128,8 @@ class Heads(unittest.TestCase):
             with open(os.path.join(stubs, name), 'w') as f:
                 f.write('#!/bin/sh\necho "%s: refused, the heads tests never start an agent CLI" >&2\nexit 1\n' % name)
             os.chmod(os.path.join(stubs, name), 0o700)
-        path = os.pathsep.join([stubs, os.path.join(FIX, 'bin'), os.path.join(ROOT, 'kernel', 'driver-kit', 'fixtures'),
-                                os.environ['PATH']])
+        path = os.pathsep.join([stubs, os.path.join(FIX, 'bin'),
+                                os.path.join(self.checkout, 'kernel', 'driver-kit', 'fixtures'), os.environ['PATH']])
         self.assertEqual({shutil.which(name, path=path) for name in AGENT_CLIS},
                          {os.path.join(stubs, name) for name in AGENT_CLIS})
         self.assertEqual(shutil.which('gh', path=path), os.path.join(FIX, 'bin', 'gh'))
@@ -138,6 +138,7 @@ class Heads(unittest.TestCase):
         self.env = dict(env, PATH=path, KIT_TRACKER=tracker, HEADS_TEST=self.mark, HEADS_GH_LOG=self.gh_log,
                         HEADS_GH_STATE=self.state, HEADS_COMMENTS=self.comments, HEADS_KIT_REPO=REPO,
                         HEADS_KIT_TICKET=str(TICKET), HEADS_GH_LOGIN=LOGIN, **AUTH,
+                        OPENWIZ_TEMPLATE_LIVE='1',
                         OPENWIZ_TEMPLATE_STATE=os.path.join(self.folder, 'template-state'))
 
     def tearDown(self):

@@ -1,0 +1,17 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/driver-kit/test_kit.py
+test_each_key_host_effort_driver_prints_its_own_start_line ... ok
+test_effort_on_another_key_host_request_does_not_count ... ok
+test_key_host_effort_on_creation_still_counts_when_start_also_posts_a_prompt ... ok
+Ran 52 tests
+OK
+
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/driver-kit/test_hostkey.py
+Ran 25 tests
+OK
+
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/driver-kit/test_stubs.py
+Ran 3 tests
+OK
+
+$ cargo fmt --check
+OK

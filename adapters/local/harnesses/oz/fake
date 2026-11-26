@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+import json, os, sys
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.environ['FAKE_CLI_LIB'])
+import fake_cli
+
+HELP = '''The fake oz (Warp's Oz CLI): it allows only the documented local run, `oz agent run`, with:
+  --prompt|-p <text> (required), --model <id>, --output-format json|ndjson|pretty|text,
+  --conversation <id>, --profile <id>, --cwd|-C <path>, --name|-n <name>, each at most once,
+  and each value not an option.
+Its --help, like the real one, lists no effort, reasoning or thinking flag, and the row never passes --api-key.'''
+VALUED = {'--prompt': 'prompt', '-p': 'prompt', '--model': 'model', '--output-format': 'format',
+          '--conversation': 'conversation', '--profile': 'profile', '--cwd': 'cwd', '-C': 'cwd',
+          '--name': 'name', '-n': 'name'}
+SIGNED_OUT = {'client': 'Error: You are not logged in. Please log in again with `oz login` to continue.',
+              'server': "Error: Failed to authenticate with server - please log in via 'oz login', provide an API key "
+                        "via '--api-key <key>', or set the WARP_API_KEY environment variable",
+              'invalid': 'Error: Your credentials are invalid. Please log in again with `oz login` to continue. '
+                         'If it appears that you are already logged in, log out and log in again.',
+              'june': 'Error: You are not logged in - please log in with `oz login` to continue.',
+              'june-invalid': 'Error: Your credentials are invalid. Please log in again with `oz login`.'}
+
+if sys.argv[1:] == ['--help']:
+    print(HELP)
+    sys.exit(0)
+args = sys.argv[1:]
+if args[:2] != ['agent', 'run']:
+    fake_cli.refuse()
+args, got = args[2:], {}
+while args:
+    if args[0] not in VALUED or len(args) < 2 or VALUED[args[0]] in got or (args[1].startswith('-') and args[1] != '-'):
+        fake_cli.refuse()
+    got[VALUED[args[0]]], args = args[1], args[2:]
+fmt = got.get('format', 'pretty')
+if 'prompt' not in got or fmt not in ('json', 'ndjson', 'pretty', 'text'):
+    fake_cli.refuse()
+if ('conversation' in got) != got['prompt'].startswith('You were woken'):
+    fake_cli.refuse()
+
+
+def announce(conversation_id):
+    if fmt in ('json', 'ndjson'):
+        return json.dumps({'type': 'system', 'event_type': 'conversation_started', 'conversation_id': conversation_id},
+                          separators=(',', ':'))
+    return 'New conversation started with debug ID: %s\n' % conversation_id
+
+
+fake_cli.turn(got['prompt'], got.get('model', 'auto'), got.get('conversation'), announce, daemon='pty-shell',
+              signed_out=SIGNED_OUT[os.environ.get('OZ_FAKE_SIGNED_OUT', 'client')])

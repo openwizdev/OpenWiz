@@ -182,7 +182,7 @@ class Local(unittest.TestCase):
         self.assertEqual([json.loads(line) for line in self.lines(self.kit_log)],
                          [['--driver', 'adapters/local/driver', '--repo', REPO, '--ticket', str(TICKET),
                            '--harness', 'claude', '--model', 'claude-opus-5-5', '--wait', '900']])
-        self.assertEqual(self.lines(self.fake_log), ['gh GH_TELEMETRY=0 config get -h github.com user', 'gh GH_TELEMETRY=unset api user --jq .login'])
+        self.assertEqual(self.lines(self.fake_log), ['gh GH_TELEMETRY=0 config get -h github.com user', 'gh GH_TELEMETRY=0 api user --jq .login'])
 
     def test_gh_signed_in_runs_the_kit_once_and_never_asks_claude_or_codex(self):
         for installed in (('claude', 'codex', 'gh'), ('claude', 'gh')):
@@ -198,9 +198,9 @@ class Local(unittest.TestCase):
     def test_gh_not_signed_in_is_skipped_with_its_exact_line_and_starts_no_kit(self):
         self.fakes()
         code, out, err = self.rig(signed_out=['gh'])
-        self.assertEqual((code, out), (0, ['skipped local claude: not signed in: env']), err)
+        self.assertEqual((code, out), (0, ['skipped local claude: not signed in: gh']), err)
         self.assertEqual({k: self.record()[k] for k in KEYS[6:10]},
-                         {'outcome': 'skipped', 'skipped': 'not signed in: env', 'kit_exit': None, 'stdout': None})
+                         {'outcome': 'skipped', 'skipped': 'not signed in: gh', 'kit_exit': None, 'stdout': None})
         self.assertEqual((self.lines(self.kit_log), self.lines(self.fake_log)), ([], ['gh GH_TELEMETRY=0 config get -h github.com user']))
 
     def test_a_missing_program_is_skipped_with_its_exact_line_and_runs_no_status_command_or_kit(self):
@@ -224,9 +224,8 @@ class Local(unittest.TestCase):
                 self.assertEqual((code, out), (0, ['skipped local claude: cost']), err)
                 self.assertEqual({k: self.record()[k] for k in KEYS[6:10]},
                                  {'outcome': 'skipped', 'skipped': 'cost', 'kit_exit': None, 'stdout': None})
-                self.assertEqual((self.lines(self.kit_log), self.lines(self.fake_log)), ([], ['gh GH_TELEMETRY=0 config get -h github.com user']))
+                self.assertEqual((self.lines(self.kit_log), self.lines(self.fake_log)), ([], []))
                 shutil.rmtree(self.out)
-                os.remove(self.fake_log)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

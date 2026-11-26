@@ -1,0 +1,14 @@
+# Auggie CLI 1.2.2: how --thinking handles an effort the model can't take.
+# Read from the 1.2.2 package code (auggie-v2.mjs), not from a paid run. Names and values are synthetic.
+#
+# The values the CLI knows:
+#   ["off","minimal","low","medium","high","xhigh"]
+# Each model accepts only its own efforts. Session start checks the requested effort against them
+# (the code, shortened):
+#   let A = check(model, requested);
+#   !A.valid && model && requested && console.warn(unsupported(model, requested));
+#   ... the run continues with A.effort, which is the model default ...
+# The warning text:
+#   Reasoning effort "<effort>" is not supported by <provider>/<model>. Supported values: default, <list>. Using the model default.
+# The --model <m>:<effort> form does the same: an invalid effort becomes "default", with the same warning.
+# Neither path exits non-zero or refuses to start.
