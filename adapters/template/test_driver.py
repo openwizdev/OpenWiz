@@ -624,6 +624,24 @@ class Template(unittest.TestCase):
                 self.assertEqual(self.asked_ps_for_environments(calls), [], 'the driver asked ps for process environments')
 
 
+    def test_a_run_saved_by_the_older_template_stops_and_does_not_wake(self):
+        run = 'run-' + secrets.token_hex(6)
+        folder = self.env['OPENWIZ_TEMPLATE_STATE']
+        os.makedirs(folder)
+        held = subprocess.Popen(['sleep', '120'], env=dict(os.environ, OPENWIZ_RUN=run), start_new_session=True,
+                                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.addCleanup(held.kill)
+        record = {'request': START, 'turns': [held.pid], 'stopped': False}
+        with open(os.path.join(folder, run + '.json'), 'w') as f:
+            json.dump(record, f)
+        code, out = self.call('wake', {'run': run})
+        self.assertEqual(code, 1, out)
+        self.assertIn('older template', out['error'])
+        self.assertNotIn('TypeError', json.dumps(out))
+        self.assertTrue(alive(held.pid))
+        code, out = self.call('stop', {'run': run})
+        self.assertEqual((code, out.get('stopped'), alive(held.pid)), (0, True, False), out)
+
     def test_a_provider_qualified_model_reaches_the_harness(self):
         self.env['FAKE_ARGS'] = os.path.join(self.folder, 'args')
         code, out = self.call('start', dict(START, model='kimi-code/kimi-for-coding'))

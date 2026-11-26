@@ -294,6 +294,37 @@ def running(turn, run):
     return bool(turn) and turn['since'] is not None and since(turn['pid']) == turn['since']
 
 
+def legacy_turns(turns):
+    return isinstance(turns, list) and bool(turns) and all(type(t) is int for t in turns)
+
+
+def end_legacy(turns, run):
+    if not all(type(pid) is int and pid > 0 for pid in turns):
+        raise Refused('run %s was saved by an older template and a turn is not a pid, so it was not stopped' % run,
+                      'end its processes by hand')
+    mark = ('OPENWIZ_RUN=' + run).encode()
+    for pid in turns:
+        try:
+            with open('/proc/%d/environ' % pid, 'rb') as f:
+                if mark not in f.read().split(b'\0'):
+                    continue
+        except OSError:
+            continue
+        for sig in (signal.SIGTERM, signal.SIGKILL):
+            try:
+                os.kill(pid, 0)
+            except OSError:
+                break
+            try:
+                os.killpg(pid, sig)
+            except OSError:
+                try:
+                    os.kill(pid, sig)
+                except OSError:
+                    break
+            time.sleep(0.05)
+
+
 def end(turns, run):
     kept = [(t['supervisor'], t['supervisor_since']) for t in turns if t and t['supervisor_since'] is not None]
     if lsof_failed_in(run, kept):
@@ -407,6 +438,15 @@ def answer(cmd):
         lock(run)
         state = saved(run)
         if cmd == 'stop':
+            if legacy_turns(state['turns']):
+                end_legacy(state['turns'], run)
+                try:
+                    saved(run, dict(state, stopped=True))
+                except OSError:
+                    raise Refused('run %s has ended, but the driver could not save that it is stopped' % run,
+                                  'make OPENWIZ_TEMPLATE_STATE (or ~/.local/state/openwiz-template) a folder you can '
+                                  'write, then stop it again')
+                return {'run': run, 'stopped': True}
             try:
                 saved(run, dict(state, stopped=True))
                 kept = True
@@ -426,6 +466,9 @@ def answer(cmd):
             return {'run': run, 'stopped': True}
         if state['stopped']:
             raise Refused('run %s is stopped' % run, 'start a new run')
+        if legacy_turns(state['turns']):
+            raise Refused('run %s was saved by an older template, so it was not woken' % run,
+                          'stop it, then start a new run')
         if state.get('starting'):
             raise Refused('run %s never finished starting' % run, 'stop it, then start a new run')
         if state['turns'] and running(state['turns'][-1], run):
