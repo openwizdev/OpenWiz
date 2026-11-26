@@ -22,7 +22,7 @@ A person says that to their coding agent (Claude Code, Codex, Cursor or another)
 curl -sS --proto '=https' -o /dev/null -w '%{redirect_url}\n' https://github.com/openwizdev/OpenWiz/releases/latest
 ```
 
-The printed URL ends in `/tag/<tag>`. `<version>` is `<tag>` without the leading `v`. With no `/tag/` in the URL, GitHub has no Latest release: stop and say so. Use `<tag>` only when it matches `v[0-9]+\.[0-9]+\.[0-9]+`. Use `<commit>` only when it matches `[0-9a-f]{40}`. Any other value stops the install.
+The printed URL ends in `/tag/<tag>`. `<version>` is `<tag>` without the leading `v`. With no `/tag/` in the URL, GitHub has no Latest release: stop and say so. Use `<tag>` only when the whole value matches `v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)`. Use `<commit>` only when the whole value matches `[0-9a-f]{40}`. Any other value stops the install, including one that starts with `-`.
 
 2. Read that release's install skill and follow it from the top in this session. Run the commands yourself.
    - `0.1.0`: the skill is https://github.com/openwizdev/WizSkills/blob/33eef93ba30cd8db256f6fe270e3ed28747a79bd/skills/install/SKILL.md and the command reference is [the 0.1.0 steps](docs/install.md#openwiz-010). Clone tag `v0.1.0`. When the skill cannot be read, follow those steps. This release's skill is that commit, not the `commit` in that tag's `wizskills.lock`.

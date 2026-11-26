@@ -20,6 +20,19 @@ SKILL_010 = ('https://github.com/openwizdev/WizSkills/blob/'
 SKILL_TAG = re.compile(
     r'https://github\.com/openwizdev/WizSkills/blob/(v[0-9][^/\s)]*)/skills/install/SKILL\.md')
 OPEN_RANGE = re.compile(r'\bor later\b|\bonward\b|\band later\b|\bor newer\b')
+TAG_PATTERN = r'v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)'
+COMMIT_PATTERN = r'[0-9a-f]{40}'
+REPO = 'https://github.com/openwizdev/OpenWiz'
+SAFE_CLONE = 'git clone --depth 1 --branch "$tag" -- ' + REPO + ' "$openwiz"'
+
+
+def clone_argv(tag, directory):
+    if re.fullmatch(TAG_PATTERN, tag) is None:
+        raise ValueError('tag')
+    if (not isinstance(directory, str) or not directory or directory.startswith('-')
+            or '\n' in directory or '\x00' in directory):
+        raise ValueError('directory')
+    return ['git', 'clone', '--depth', '1', '--branch', tag, '--', REPO, directory]
 
 
 def lock_pin():
@@ -38,10 +51,10 @@ def pin_failures(section, guide, version):
         failures.append('the agent section does not derive the skill from the release tag\'s wizskills.lock commit')
     if 'stop and say so' not in section:
         failures.append('a release with no wizskills.lock commit does not stop')
-    if 'git clone --depth 1 --branch "$tag" -- https://github.com/openwizdev/OpenWiz' not in section:
+    if SAFE_CLONE not in section:
         failures.append('the agent section clones without -- before the repository')
-    if 'v[0-9]+\\.[0-9]+\\.[0-9]+' not in section or '[0-9a-f]{40}' not in section:
-        failures.append('the agent section does not require a release tag and a 40-hex commit')
+    if TAG_PATTERN not in section or COMMIT_PATTERN not in section or 'whole value' not in section:
+        failures.append('the agent section does not require the whole tag and the whole commit')
     if '--branch v0.1.1' in section:
         failures.append('the agent section clones v0.1.1')
     for tag in SKILL_TAG.findall(section):
@@ -50,8 +63,8 @@ def pin_failures(section, guide, version):
         failures.append('an open-ended range is pinned to one WizSkills tag')
     if 'wizskills.lock' not in guide:
         failures.append('the install guide does not name wizskills.lock')
-    if 'git clone --depth 1 --branch "$tag" -- https://github.com/openwizdev/OpenWiz' not in guide:
-        failures.append('the install guide clones without -- before the repository')
+    if SAFE_CLONE not in guide or TAG_PATTERN not in guide or 'whole value' not in guide:
+        failures.append('the install guide clones without a whole-value tag check and --')
     if '--branch v0.1.1' in guide:
         failures.append('the install guide clones --branch v0.1.1')
     for tag in SKILL_TAG.findall(guide):
@@ -87,6 +100,33 @@ class InstallPhrase(unittest.TestCase):
             'yes before each change',
         ):
             self.assertIn(needed, section, needed)
+
+    def test_tag_and_commit_cannot_inject_clone_options(self):
+        loose = re.compile(r'v[0-9]+\.[0-9]+\.[0-9]+')
+        self.assertIsNotNone(loose.search('v0.1.1 --upload-pack=evil'))
+        argv = clone_argv('v0.1.1', '/tmp/openwiz-synthetic')
+        self.assertEqual(argv, [
+            'git', 'clone', '--depth', '1', '--branch', 'v0.1.1', '--',
+            REPO, '/tmp/openwiz-synthetic'])
+        for bad in ('-c', '--upload-pack=evil', 'v0.1.1 --upload-pack=evil',
+                    'v0.1.1;rm', '', 'v01.2.3', 'v0.1.1-rc.1'):
+            with self.subTest(tag=bad):
+                with self.assertRaises(ValueError):
+                    clone_argv(bad, '/tmp/openwiz-synthetic')
+        with self.assertRaises(ValueError):
+            clone_argv('v0.1.1', '--separate-git-dir=/tmp/openwiz-synthetic')
+        for bad in ('-deadbeef', '--upload-pack=evil', 'cf2abfe', '',
+                    'CF2ABFE13020661b47c47adb71afa993caaf16bf',
+                    'cf2abfe13020661b47c47adb71afa993caaf16bf extra'):
+            with self.subTest(commit=bad):
+                self.assertIsNone(re.fullmatch(COMMIT_PATTERN, bad))
+        section = self.section()
+        guide = (ROOT / 'docs/install.md').read_text(encoding='utf-8')
+        self.assertIn(TAG_PATTERN, section)
+        self.assertIn(COMMIT_PATTERN, section)
+        self.assertIn(TAG_PATTERN, guide)
+        self.assertIn(SAFE_CLONE, section)
+        self.assertIn(SAFE_CLONE, guide)
 
     def test_the_checkout_follows_the_lock(self):
         version, commit = lock_pin()
