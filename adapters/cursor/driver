@@ -173,9 +173,11 @@ def ending(agent, known):
     if code != 200 or not isinstance(answer, dict):
         failed = ['reading agent %s (%s)' % (agent, 'no answer' if code is None else why(code, answer))]
         run = None
+    elif answer.get('status') == 'ARCHIVED':
+        return []
     else:
         failed, run = [], answer.get('latestRunId')
-    if isinstance(run, str) and re.fullmatch(r'[A-Za-z0-9_-]{1,100}', run) and answer.get('status') != 'ARCHIVED':
+    if isinstance(run, str) and re.fullmatch(r'[A-Za-z0-9_-]{1,100}', run):
         code, answer = api('POST', '/agents/%s/runs/%s/cancel' % (agent, run))
         if code not in (200, 409):
             failed.append('cancelling run %s (%s)' % (run, 'no answer' if code is None else why(code, answer)))
