@@ -97,6 +97,8 @@ class InstallPhrase(unittest.TestCase):
         self.assertIn('`v0.1.0`', section)
         self.assertIn(commit, (ROOT / 'wizskills.lock').read_text(encoding='utf-8'))
         self.assertIn('including `v0.1.1`', section)
+        self.assertIn('openwiz=$(mktemp -d)', section)
+        self.assertIn("not the `commit` in that tag's `wizskills.lock`", section)
         self.assertIn('expect build identity `0.1.1`', section)
         self.assertIn('When `<version>` is not `0.1.1`, stop unless that guide expects `<version>`', section)
         self.assertIn('command reference for OpenWiz 0.1.1', guide)
