@@ -19,7 +19,7 @@ Every Cursor call goes through the kit's key helper, [`hostkey.py`](../../kernel
 
 **The skills pin.** From a checkout, the prompt names the WizSkills release in `wizskills.lock`. From an install, which has no lock, it names the OpenWiz commit in the runtime's `openwiz-build.txt`, and the agent reads `wizskills.lock` at that commit before fetching the release and checking its commit and tree.
 
-**Cursor runs its own agent.** `harness` must be `cursor`: Cursor cloud agents run only Cursor's agent, not Claude Code or Codex, and the driver refuses any other harness. `model` is passed as Cursor's `model.id` unchanged; Cursor lists the ones you can use (`GET /v1/models`).
+**Cursor runs its own agent.** `harness` must be `cursor`: Cursor cloud agents run only Cursor's agent, not Claude Code or Codex, and the driver refuses any other harness. `model` is passed as Cursor's `model.id` unchanged, including a provider-qualified id such as `openrouter/anthropic/claude-sonnet-4.6`, up to 100 characters, as driver v1's schema allows. Cursor lists the ones you can use (`GET /v1/models`).
 
 **Never two agents, never one left running.** Cursor runs one run per agent at a time, so a wake during an active run starts nothing. The driver saves the agent's id before it creates the agent, so a stop always reaches it. A wake, a stop and a start hold the run's lock, so they take turns. A stop marks the run stopped before it calls Cursor. If it can't save that, it still cancels and archives the agent, and a later wake is refused because Cursor shows the agent archived.
 
