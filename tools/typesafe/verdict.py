@@ -1,12 +1,17 @@
-"""Exact `VERDICT:` lines, and the 0.9 gate in `canonical_verdict_line`.
+"""Exact `VERDICT:` lines, and the confidence gate in `canonical_verdict_line`.
 
 Keep this equal to `crates/cli/src/typesafe.rs`. The commit comes from the
-line. A recorded answer never supplies one.
+line. A Choice of approve or changes is paired with a companion Noul that
+asks whether either option fits. There is no none-of-the-above option.
+Low Choice confidence, or a companion Noul in the uncertain band, leaves
+the line unchanged.
 """
 
 import re
 
-ACT = 0.9
+import client
+import decide
+
 SHA = re.compile(r'[0-9a-f]{40}\Z')
 
 
@@ -26,20 +31,25 @@ def shaped(line, recorded):
     found = exact(line)
     if found:
         return found
-    if exact(line) is None and not _commit(line):
+    if not _commit(line) or not isinstance(recorded, dict):
         return None
-    answers = (recorded or {}).get('answers') or {}
-    kind = answers.get('kind') or {}
-    name = kind.get('choice')
-    probabilities = kind.get('probabilities') or {}
-    confidence = kind.get('confidence')
-    noul = (answers.get('is_verdict') or {}).get('noul')
-    probability = probabilities.get(name)
-    if name not in ('approve', 'changes'):
+    root = decide.load()
+    site = root['sites']['verdict']
+    try:
+        ready = decide.choice_ready(recorded, 'kind', site['confidence'])
+        companion = client.noul(recorded, 'is_verdict')
+    except client.TypeSafeError:
         return None
-    if not _high(probability) or not _high(confidence) or not _high(noul):
+    if ready is None or decide.uncertain_noul(companion, root):
         return None
-    return 'APPROVE' if name == 'approve' else 'CHANGES'
+    if companion < site['companion_yes']:
+        return None
+    name = ready[0]
+    if name == 'approve':
+        return 'APPROVE'
+    if name == 'changes':
+        return 'CHANGES'
+    return None
 
 
 def _commit(line):
@@ -48,7 +58,3 @@ def _commit(line):
         return False
     _, commit = rest.split(' at ', 1)
     return SHA.fullmatch(commit) is not None
-
-
-def _high(value):
-    return type(value) in (int, float) and value >= ACT

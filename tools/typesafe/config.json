@@ -65,6 +65,28 @@
           }
         }
       }
+    },
+    "verdict": {
+      "confidence": 0.9,
+      "companion_yes": 0.9,
+      "questions": {
+        "kind": {
+          "type": "choice",
+          "instructions": "What verdict does this review comment give?",
+          "criteria": {
+            "approve": "The reviewer approves the commit.",
+            "changes": "The reviewer wants changes on the commit."
+          }
+        },
+        "is_verdict": {
+          "type": "noul",
+          "instructions": "This comment is a reviewer's approve or request-changes verdict for the commit it names.",
+          "criteria": {
+            "true": "The reviewer is giving a verdict on that commit.",
+            "false": "The line only mentions a verdict, or it is not one."
+          }
+        }
+      }
     }
   }
 }

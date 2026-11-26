@@ -194,7 +194,6 @@ pub fn plan_limit(text: &str) -> bool {
 
 struct Chosen {
     name: String,
-    probability: f64,
     confidence: f64,
 }
 
@@ -211,7 +210,6 @@ fn choice(response: &Value, name: &str) -> Option<Chosen> {
     }
     Some(Chosen {
         name: picked.to_owned(),
-        probability,
         confidence,
     })
 }
@@ -237,28 +235,20 @@ pub fn canonical_verdict_line(line: &str, decider: &dyn Decisions) -> Option<Str
     let rest = line.strip_prefix("VERDICT: ")?;
     let (_, commit) = rest.split_once(" at ")?;
     let commit = Commit::parse(commit)?;
-    let questions = json!({
-        "kind": {
-            "type": "choice",
-            "instructions": "What verdict does this review comment give?",
-            "criteria": {
-                "approve": "The reviewer approves the commit.",
-                "changes": "The reviewer wants changes on the commit.",
-                "not_a_verdict": "This is not an approve or changes verdict."
-            }
-        },
-        "is_verdict": {
-            "type": "noul",
-            "instructions": "This comment is a reviewer's approve or request-changes verdict for the commit it names.",
-            "criteria": {
-                "true": "The reviewer is giving a verdict on that commit.",
-                "false": "The line only mentions a verdict, or it is not one."
-            }
-        }
-    });
-    let response = decider.ask(line, &questions)?;
+    let config = config();
+    let site = config.get("sites")?.get("verdict")?;
+    let response = decider.ask(line, site.get("questions")?)?;
     let chosen = choice(&response, "kind")?;
-    if chosen.probability < ACT || chosen.confidence < ACT || noul(&response, "is_verdict")? < ACT {
+    if chosen.confidence < site.get("confidence")?.as_f64()? {
+        return None;
+    }
+    let companion = noul(&response, "is_verdict")?;
+    let no = config.get("noul")?.get("no")?.as_f64()?;
+    let yes = config.get("noul")?.get("yes")?.as_f64()?;
+    if companion > no && companion < yes {
+        return None;
+    }
+    if companion < site.get("companion_yes")?.as_f64()? {
         return None;
     }
     let word = match chosen.name.as_str() {
@@ -424,7 +414,7 @@ mod tests {
 
     fn verdict_body(name: &str, probability: f64, confidence: f64, noul: f64) -> Value {
         let mut probabilities = serde_json::Map::new();
-        for key in ["approve", "changes", "not_a_verdict"] {
+        for key in ["approve", "changes"] {
             probabilities.insert(
                 key.to_owned(),
                 json!(if key == name { probability } else { 0.0 }),
