@@ -505,15 +505,13 @@ class Kit:
         if not text:
             return None
         try:
-            return int(text, 10)
+            return int(text, 16)
         except ValueError:
-            try:
-                return int(text, 16)
-            except ValueError:
-                return text
+            return text
 
     def note_marked(self, pid, group, session, since):
-        self.owned[int(pid)] = since
+        if since is not None:
+            self.owned[int(pid)] = since
         if group != os.getpgrp():
             self.groups.add(group)
         if session is None:
@@ -547,10 +545,19 @@ class Kit:
         found.discard(os.getpid())
         return found
 
+    def prune_tracked(self, meta):
+        for pid, since in list(self.owned.items()):
+            row = meta.get(pid)
+            if row is None or since is None or row[3] != since:
+                del self.owned[pid]
+        self.groups &= {row[1] for row in meta.values()}
+        self.sessions &= {row[2] for row in meta.values() if row[2] is not None}
+
     def table(self):
         rows = self.process_rows()
         meta = {pid: (ppid, group, session, int(since))
                 for pid, (ppid, uid, group, session, since, state) in rows.items()}
+        self.prune_tracked(meta)
         found, seen = {}, set()
         while True:
             scope = self.run_scope(meta) - seen
@@ -619,6 +626,8 @@ class Kit:
         pids, flags = (), args
         if args and isinstance(args[0], tuple):
             pids, flags = args[0], args[1:]
+            if not pids:
+                return {}
         cmd = ['ps', '-ww']
         if pids:
             cmd.extend(['-p', ','.join(str(int(pid)) for pid in pids)])
@@ -670,6 +679,7 @@ class Kit:
             ppid, group = int(f[0]), int(f[1])
             meta[pid] = (ppid, group, session, None)
             cmds[pid] = f[4] if len(f) > 4 else ''
+        self.prune_tracked(meta)
         mark = re.compile(r'(?:^|\s)%s(?:\s|$)' % re.escape(self.mark))
         found, seen = {}, set()
         while True:

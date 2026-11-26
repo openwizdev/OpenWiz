@@ -472,7 +472,7 @@ class Kit(unittest.TestCase):
         time.sleep(0.05)
         k = kit.Kit.__new__(kit.Kit)
         k.lock, k.leaks, k.mark, k.hidden = threading.RLock(), [], 'OPENWIZ_KIT_RUN=synthetic', set()
-        k.groups, k.sessions, k.owned = set(), set(), {}
+        k.groups, k.sessions, k.owned, k.ps_session = set(), set(), {}, None
         k.since = started_at(str(older.pid)) + 1
         time.sleep(0.05)
         newer = hidden()
@@ -675,6 +675,95 @@ class Kit(unittest.TestCase):
         self.assertIn(leftover, opened, 'the scan missed a leftover that stayed in that other session')
         self.assertNotIn(sibling, opened, "the scan read another process in the kit's own session")
         self.assertNotIn(outsider, opened, "the scan read an unrelated session")
+
+    def test_a_digit_only_session_pointer_does_not_match_a_different_hex_pointer(self):
+        kit = module(os.path.join(HERE, 'kit.py'))
+        self.assertNotEqual(kit.Kit.session_value('10'), kit.Kit.session_value('a'),
+                            'a digit-only session pointer matched a different hex pointer')
+        self.assertEqual(kit.Kit.session_value('10'), kit.Kit.session_value('10'))
+        self.assertEqual(kit.Kit.session_value('A'), kit.Kit.session_value('a'))
+        mark = 'OPENWIZ_KIT_RUN=' + secrets.token_hex(8)
+        scan = self._scan_kit(kit, mark)
+        kid = os.getpid()
+        leader, leftover, sibling = 2100000101, 2100000102, 2100000103
+        same = os.getpgrp()
+        rows = {
+            kid: '1 %d 10 Ss python' % same,
+            leader: '%d %d a S python' % (kid, leader),
+            leftover: '1 %d a S python' % leftover,
+            sibling: '1 %d 10 S python' % sibling,
+        }
+        calls = []
+
+        def fake_ps(*args):
+            calls.append(args)
+            flags = [a for a in args if not isinstance(a, tuple)]
+            pids = next((a for a in args if isinstance(a, tuple)), ())
+            if '-E' in flags:
+                shown = {leader, leftover}
+                return {pid: 'python ' + mark if pid in shown else 'python' for pid in pids}
+            return rows
+
+        scan.ps = fake_ps
+        list(scan.listed())
+        opened = {pid for pids in self._environment_reads(calls) for pid in pids}
+        self.assertIn(leftover, opened, 'the scan missed a leftover in a session whose pointer is only hex letters')
+        self.assertNotIn(sibling, opened, 'a digit-only session pointer matched a different hex pointer')
+
+    def test_a_reused_macos_pid_is_not_read_and_a_finished_session_is_forgotten(self):
+        mark = 'OPENWIZ_KIT_RUN=' + secrets.token_hex(8)
+        kit = module(os.path.join(HERE, 'kit.py'))
+        scan = self._scan_kit(kit, mark)
+        kid = os.getpid()
+        reused, outsider = 2100000201, 2100000202
+        same = os.getpgrp()
+        own, other, far = 'ffffff80000000a1', 'ffffff80000000b2', 'ffffff80000000c3'
+        stages = [
+            {kid: '1 %d %s Ss python' % (same, own),
+             reused: '%d %d %s S python' % (kid, reused, other)},
+            {kid: '1 %d %s Ss python' % (same, own)},
+            {kid: '1 %d %s Ss python' % (same, own),
+             reused: '1 %d %s S python' % (reused + 1, far),
+             outsider: '1 %d %s S python' % (outsider, other)},
+        ]
+        stage = {'n': 0}
+        calls = []
+
+        def fake_ps(*args):
+            calls.append(args)
+            flags = [a for a in args if not isinstance(a, tuple)]
+            pids = next((a for a in args if isinstance(a, tuple)), ())
+            if '-E' in flags:
+                return {pid: 'python ' + (mark if pid == reused and stage['n'] == 0 else '') for pid in pids}
+            return stages[stage['n']]
+
+        scan.ps = fake_ps
+        list(scan.listed())
+        stage['n'] = 1
+        calls.clear()
+        list(scan.listed())
+        stage['n'] = 2
+        calls.clear()
+        list(scan.listed())
+        opened = {pid for pids in self._environment_reads(calls) for pid in pids}
+        self.assertNotIn(reused, opened, 'the scan read a reused pid it had recorded without a start time')
+        self.assertNotIn(outsider, opened, 'the scan read a process in a session that had already ended')
+
+    def test_an_empty_pid_list_does_not_ask_ps_for_every_process(self):
+        kit = module(os.path.join(HERE, 'kit.py'))
+        ran = []
+        real = kit.subprocess.run
+
+        def run(cmd, **kwargs):
+            ran.append(list(cmd))
+            raise AssertionError('ps ran for an empty pid list: %s' % cmd)
+
+        kit.subprocess.run = run
+        try:
+            self.assertEqual(kit.Kit.ps((), '-o', 'command=', '-E'), {})
+            self.assertEqual(ran, [], 'an empty pid list asked ps for every process')
+        finally:
+            kit.subprocess.run = real
 
     def test_a_path_diagnostic_never_prints_the_active_canary(self):
         kit = module(os.path.join(HERE, 'kit.py'))
