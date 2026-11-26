@@ -1,0 +1,48 @@
+{
+  "schema": "openwiz.typesafe-bench.mentions.v1",
+  "note": "recorded nouls are fixture input, not live Jev calls",
+  "cases": [
+    {
+      "id": "names-agents",
+      "text": "Read agents.md before editing.",
+      "expected": ["AGENTS.md"],
+      "nouls": {"agents": 0.2, "glossary": 0.0, "adr": 0.0}
+    },
+    {
+      "id": "agent-instructions",
+      "text": "Follow the project agent instructions before you edit.",
+      "expected": ["AGENTS.md"],
+      "nouls": {"agents": 0.94, "glossary": 0.0, "adr": 0.0}
+    },
+    {
+      "id": "glossary-word",
+      "text": "Use the glossary for names.",
+      "expected": ["GLOSSARY.md"],
+      "nouls": {"agents": 0.0, "glossary": 0.2, "adr": 0.0}
+    },
+    {
+      "id": "adr-word",
+      "text": "See the ADR for the merge rule.",
+      "expected": ["docs/adr/"],
+      "nouls": {"agents": 0.0, "glossary": 0.0, "adr": 0.2}
+    },
+    {
+      "id": "ordinary",
+      "text": "This is ordinary setup text.",
+      "expected": [],
+      "nouls": {"agents": 0.04, "glossary": 0.03, "adr": 0.02}
+    },
+    {
+      "id": "decision-record",
+      "text": "Read the decision record for why the fleet merges.",
+      "expected": ["docs/adr/"],
+      "nouls": {"agents": 0.05, "glossary": 0.0, "adr": 0.92}
+    },
+    {
+      "id": "glossary-inside-a-word",
+      "text": "The label is glossary-free.",
+      "expected": [],
+      "nouls": {"agents": 0.0, "glossary": 0.1, "adr": 0.0}
+    }
+  ]
+}

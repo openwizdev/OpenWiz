@@ -29,6 +29,17 @@ def mentions(skill, text, exists, lst=lambda p: []):
             elif re.fullmatch(r'[\w.-]+(/[\w.-]+)*/?', tok) and '/' in tok.strip('/') + ('/' if tok.endswith('/') else '') \
                     and tok.strip('./') and lst(cand.rstrip('/') + '/'):
                 found.add(cand.rstrip('/') + '/')
+    found |= named_docs(text)
+    try:
+        import jev_mentions
+        found |= jev_mentions.extra(text)
+    except Exception:
+        pass
+    return found
+
+
+def named_docs(text):
+    found = set()
     low = text.lower()
     if re.search(r"agents\.md|claude\.md|project's instructions|project instructions", low):
         found.add('AGENTS.md')

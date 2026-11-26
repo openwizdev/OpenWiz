@@ -20,7 +20,9 @@ sys.path.insert(0, str(HERE.parent / 'skills-eval'))
 import client
 import decide
 import jev_judge
+import jev_mentions
 import plan_limit
+import tokens
 import verdict
 
 FIXTURES = HERE / 'fixtures'
@@ -54,6 +56,26 @@ def score_plan_limit(data):
     return len(data['cases']), old_hit, shaped_hit
 
 
+class _Recorded:
+    def __init__(self, nouls):
+        self._nouls = nouls
+
+    def system_one(self, state, questions, model=client.MODEL):
+        answers = {name: {'type': 'noul', 'noul': value} for name, value in self._nouls.items()}
+        return {'model': model, 'answers': answers}
+
+
+def score_mentions(data):
+    old_hit = shaped_hit = 0
+    for row in data['cases']:
+        old = tokens.named_docs(row['text'])
+        shaped = old | jev_mentions.extra(row['text'], _Recorded(row['nouls']))
+        expected = set(row['expected'])
+        old_hit += int(old == expected)
+        shaped_hit += int(shaped == expected)
+    return len(data['cases']), old_hit, shaped_hit
+
+
 def score_verdict(data):
     old_hit = shaped_hit = 0
     for row in data['cases']:
@@ -66,6 +88,7 @@ HANDLERS = {
     'openwiz.typesafe-bench.judge.v1': ('judge', score_judge),
     'openwiz.typesafe-bench.plan-limit.v1': ('plan-limit', score_plan_limit),
     'openwiz.typesafe-bench.verdict.v1': ('verdict', score_verdict),
+    'openwiz.typesafe-bench.mentions.v1': ('mentions', score_mentions),
 }
 
 

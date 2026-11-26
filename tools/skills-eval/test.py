@@ -17,6 +17,7 @@ def load_tests(loader, standard_tests, pattern):
     standard_tests.addTests(loader.loadTestsFromName('test_client'))
     standard_tests.addTests(loader.loadTestsFromName('test_plan_limit'))
     standard_tests.addTests(loader.loadTestsFromName('test_verdict'))
+    standard_tests.addTests(loader.loadTestsFromName('test_mentions'))
     standard_tests.addTests(loader.loadTestsFromName('test_jev_judge'))
     return standard_tests
 
