@@ -59,8 +59,6 @@ jobs:
       - name: Synthetic pull requests
         run: python3 -I .github/actions/changelog/test_check.py
       - uses: ./.github/actions/changelog
-      # #1768: fail the pull request when a changed changes/ line has no version
-      # milestone, instead of failing release notes after it merges.
       - name: Changelog line version milestones
         env:
           GH_TOKEN: ${{ github.token }}

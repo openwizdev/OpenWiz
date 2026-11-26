@@ -674,8 +674,6 @@ sys.exit(subprocess.run(["/usr/bin/jq", "-cr", args[args.index("--jq")+1]],
 
 
 class SourceCheck(unittest.TestCase):
-    """#1768: a changed changes/ line with no version milestone fails; a versioned line passes."""
-
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(prefix="entry-source-")
         self.addCleanup(self.tmp.cleanup)

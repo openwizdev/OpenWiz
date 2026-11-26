@@ -209,14 +209,6 @@ MOVED = moved(json.loads((Path(__file__).resolve().parent / "moved.json").read_t
 
 
 def source_lines(check, source, excluded, only=None):
-    """The source check release notes use for every changes/ line.
-
-    `only` limits that check to those paths (a pull request's added or modified
-    lines). None checks the whole changes tree, which is what note generation does.
-    A recorded exclusion is left out. A moved line whose OpenWiz ticket is absent
-    must be one of those exclusions. Every other line is read with issue(), which
-    refuses a missing or non-version milestone.
-    """
     a = check.args
     paths = tree(a.repo, source, ["changes"])
     universe = paths if only is None else only
@@ -388,10 +380,6 @@ def generate(check, source, base_files):
 
 
 def main(argv=None):
-    """Check added or modified changes/ lines against the source rules.
-
-    `changes/` with `--base` checks the diff. Explicit files are checked at `--source`.
-    """
     parser = argparse.ArgumentParser(prog="entry.py", description="Check changes/ lines for a version milestone.")
     parser.add_argument("--repo", required=True)
     parser.add_argument("--base", help="with a changes directory, check lines added or modified since this commit")
