@@ -359,6 +359,28 @@ class FetchTests(unittest.TestCase):
         self.assertEqual(self.calls, [])
         self.assertFalse((self.root / 'drivers').exists())
 
+    def test_a_missing_root_and_a_failed_receipt_are_refused(self):
+        self.publish(self.package(), FIXTURES / 'good')
+        missing = self.root.parent / 'missing'
+        code, out, _ = self.command('list', '--root', str(missing))
+        self.assertEqual(code, 1)
+        self.assertIn('private directory', json.loads(out)['error'])
+        code, out, _ = self.command(
+            'add', 'synthetic-host', '--root', str(missing), '--build', str(self.build),
+            '--market-commit', MARKET, '--loopback', self.loopback, '--answer', 'yes')
+        self.assertEqual(code, 1, out)
+        self.assertIn('private directory', json.loads(out)['error'])
+        self.assertEqual(self.calls, [])
+        path = '/openwizdev/WizMarket/%s/receipts/synthetic-host/2030-01-02-%s.txt' % (
+            MARKET, self.package()['commit'][:12])
+        self.server.routes[('raw.githubusercontent.com', path)] = self.server.routes[
+            ('raw.githubusercontent.com', path)].replace(b'pass start:', b'fail start:')
+        code, out, _ = self.add(answer='yes')
+        self.assertEqual(code, 1, out)
+        self.assertIn('receipt', json.loads(out)['error'])
+        self.assertEqual(self.calls, [])
+        self.assertFalse((self.root / 'drivers').exists())
+
 
 if __name__ == '__main__':
     unittest.main()

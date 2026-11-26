@@ -183,7 +183,11 @@ def guard(path):
 
 
 def private(path):
-    meta = path.lstat()
+    try:
+        meta = path.lstat()
+    except OSError:
+        raise Refused('the install root must be a private directory you own',
+                      'create it as mode 0700 and owned by you; nothing was written')
     if not stat.S_ISDIR(meta.st_mode) or meta.st_uid != os.getuid() or meta.st_mode & 0o077:
         raise Refused('the install root must be a private directory you own',
                       'set it to mode 0700; nothing was written')
@@ -517,7 +521,7 @@ def gate(checked, answer, ask):
 def spawn(program):
     return subprocess.run(
         [str(program), 'version'], cwd=str(program.parent), capture_output=True, timeout=30,
-        env={'PATH': '/usr/bin:/bin', 'HOME': '/tmp'})
+        stdin=subprocess.DEVNULL, env={'PATH': '/usr/bin:/bin', 'HOME': '/tmp'})
 
 
 def stage_and_run(build, checked):
@@ -578,22 +582,24 @@ def write_file(path, data, mode):
 
 
 def install(root, checked):
-    stage_and_run(checked.pop('build'), checked)
     guard(root)
     private(root)
     drivers = root / 'drivers'
-    if drivers.is_symlink():
+    if drivers.is_symlink() or (drivers.exists() and not drivers.is_dir()):
         raise Refused('the drivers folder is a link',
                       'use a real drivers directory you own; nothing was written')
+    if drivers.exists():
+        private(drivers)
+        guard(drivers)
+    dest = drivers / checked['name']
+    if dest.is_symlink() or (dest.exists() and not dest.is_dir()):
+        raise Refused('the driver folder is a link',
+                      'remove the link and add the driver again; nothing was replaced')
+    stage_and_run(checked.pop('build'), checked)
     if not drivers.exists():
         drivers.mkdir(mode=0o700)
     os.chmod(drivers, 0o700)
     private(drivers)
-    guard(drivers)
-    dest = drivers / checked['name']
-    if dest.is_symlink():
-        raise Refused('the driver folder is a link',
-                      'remove the link and add the driver again; nothing was replaced')
     token = secrets.token_hex(8)
     stage = drivers / ('.staging-%s-%s' % (checked['name'], token))
     backup = drivers / ('.backup-%s-%s' % (checked['name'], token))
@@ -667,24 +673,47 @@ def load_pin(build, name):
     return found
 
 
-def bind_receipt(text, package):
-    if text.count('\n') != 14 or not text.endswith('\n'):
+def filled(line, prefix):
+    return line.startswith(prefix) and len(line) > len(prefix) and line[len(prefix)] != ' '
+
+
+def bind_receipt(text, package, path, listing_id):
+    found = re.fullmatch(
+        r'receipts/([a-z0-9-]+)/([0-9]{4}-[0-9]{2}-[0-9]{2})-([0-9a-f]{12})\.txt', path)
+    if (found is None or found.group(1) != listing_id or '\r' in text
+            or text.count('\n') != 14 or not text.endswith('\n')):
+        return None
+    file_date, prefix = found.group(2), found.group(3)
+    if prefix != package['commit'][:12]:
         return None
     lines = text.splitlines()
-    driver = '# driver: %s@%s' % (package['repository'], package['commit'])
-    kit = '# kit: openwizdev/OpenWiz@%s' % package['kit_commit']
-    if len(lines) != 14 or lines[2] != driver or lines[3] != kit or lines[13] != 'Result: 5 of 5 pass':
-        return None
-    if not lines[6].startswith('# date: '):
-        return None
-    date = lines[6][len('# date: '):]
-    if not re.fullmatch(r'[0-9]{4}-[0-9]{2}-[0-9]{2}', date):
+    if len(lines) != 14:
         return None
     try:
-        datetime.date.fromisoformat(date)
+        datetime.date.fromisoformat(file_date)
     except ValueError:
         return None
-    return date
+    variable = ((1, '# host: '), (4, '# harness: '), (5, '# model: '),
+                (7, '# run by: '), (8, 'pass version: '), (11, 'pass stop: '))
+    if any(not filled(lines[index], prefix) for index, prefix in variable):
+        return None
+    if lines[0] != '# listing: ' + listing_id:
+        return None
+    if lines[2] != '# driver: %s@%s' % (package['repository'], package['commit']):
+        return None
+    if lines[3] != '# kit: openwizdev/OpenWiz@%s' % package['kit_commit']:
+        return None
+    if lines[6] != '# date: ' + file_date:
+        return None
+    if lines[9] != 'pass start: the run posted builder status note <note>':
+        return None
+    if lines[10] != 'pass wake: the run edited builder status note <note>':
+        return None
+    if lines[12] != 'pass token: no login or token passed through the driver':
+        return None
+    if lines[13] != 'Result: 5 of 5 pass':
+        return None
+    return file_date
 
 
 def market_listing(client, commit, name):
@@ -718,13 +747,13 @@ def market_listing(client, commit, name):
             continue
         package = body.get('package')
         if isinstance(package, dict) and package.get('driver') == name:
-            matches.append(body)
+            matches.append((body, filename[:-len('.json')]))
     if not matches:
         return None
     if len(matches) > 1:
         raise Refused('more than one WizMarket listing matches this host',
                       'use a snapshot with one listing for this driver; nothing was installed')
-    body = matches[0]
+    body, listing_id = matches[0]
     tags = body.get('tags')
     if not isinstance(tags, list) or not ({'driver', 'harness'} & set(tags)):
         raise Refused('this listing is not a driver',
@@ -739,18 +768,18 @@ def market_listing(client, commit, name):
         proof = body.get('proof')
         path = proof.get('receipt') if isinstance(proof, dict) else None
         if not isinstance(path, str) or not RECEIPT_PATH.fullmatch(path):
-            raise Refused("this verified listing's receipt is not for the pinned commit",
-                          'do not install it; the receipt must match the package commit')
+            raise Refused("this verified listing's receipt is not a reviewed receipt for the pinned commit",
+                          'do not install it; the receipt must match the package and the kit run')
         try:
             text = client.get(
                 'https://raw.githubusercontent.com/openwizdev/WizMarket/%s/%s' % (commit, path), 'read').decode('utf-8')
         except (UnicodeError, Refused):
-            raise Refused("this verified listing's receipt is not for the pinned commit",
-                          'do not install it; the receipt must match the package commit')
-        date = bind_receipt(text, body['package'])
+            raise Refused("this verified listing's receipt is not a reviewed receipt for the pinned commit",
+                          'do not install it; the receipt must match the package and the kit run')
+        date = bind_receipt(text, body['package'], path, listing_id)
         if date is None:
-            raise Refused("this verified listing's receipt is not for the pinned commit",
-                          'do not install it; the receipt must match the package commit')
+            raise Refused("this verified listing's receipt is not a reviewed receipt for the pinned commit",
+                          'do not install it; the receipt must match the package and the kit run')
     return body['package'], publisher, 'verified' if status == 'verified' else 'listed', date
 
 
