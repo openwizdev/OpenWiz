@@ -4,5 +4,11 @@
     "variable": "DEVIN_API_KEY",
     "keychain": "openwiz-devin",
     "header": "authorization-bearer"
+  },
+  "capy": {
+    "origin": "https://api.capy.ai",
+    "variable": "CAPY_API_KEY",
+    "keychain": "openwiz-capy",
+    "header": "authorization-bearer"
   }
 }
