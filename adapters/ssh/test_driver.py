@@ -277,6 +277,21 @@ class SshDriver(unittest.TestCase):
         self.assertIn('pkill -TERM -f --', json.dumps(self.logged()))
         self.assertIn('OPENWIZ_SSH_RUN=%s' % out['run'], json.dumps(self.logged()))
 
+    def test_stop_ends_a_harness_that_keeps_the_run_only_in_its_environment(self):
+        code, out = self.call('start', START, OPENWIZ_SSH_HOLD='30')
+        self.assertEqual(code, 0, out)
+        run = out['run']
+        code, stopped = self.call('stop', {'run': run})
+        self.assertEqual(code, 0, stopped)
+        with open(self.log) as handle:
+            rows = [json.loads(line) for line in handle if line.strip()]
+        remote = [row[row.index('--') + 1] for row in rows if '--' in row and 'fake-harness' not in row[row.index('--') + 1]]
+        self.assertEqual(len(remote), 1, rows)
+        sleeper = subprocess.Popen(['sleep', '60'], env=dict(os.environ, OPENWIZ_SSH_RUN=run), start_new_session=True)
+        self.addCleanup(self.reap, sleeper.pid)
+        subprocess.run(['sh', '-c', remote[0]], timeout=10)
+        self.assertIsNotNone(sleeper.poll())
+
     def test_kit_passes_all_five(self):
         process = subprocess.run([sys.executable, '-I', os.path.join(KIT, 'kit.py'), '--driver', DRIVER,
                                  '--repo', 'example/site', '--ticket', '7', '--harness', 'fake-harness',
