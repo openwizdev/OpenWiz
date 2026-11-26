@@ -472,6 +472,7 @@ class Kit(unittest.TestCase):
         time.sleep(0.05)
         k = kit.Kit.__new__(kit.Kit)
         k.lock, k.leaks, k.mark, k.hidden = threading.RLock(), [], 'OPENWIZ_KIT_RUN=synthetic', set()
+        k.groups, k.sessions, k.owned = set(), set(), {}
         k.since = started_at(str(older.pid)) + 1
         time.sleep(0.05)
         newer = hidden()
@@ -492,6 +493,149 @@ class Kit(unittest.TestCase):
         self.assertEqual(once, kit.HIDDEN_TRIES - 1, 'only the hidden process newer than the kit is retried')
         self.assertEqual(len(pauses), once, 'a process already found hidden was retried again')
         self.assertEqual(k.leaks, ['a process of the driver hides its details, so the kit cannot check it'])
+
+    def _ppid(self, pid):
+        with open('/proc/%d/stat' % pid) as f:
+            return int(f.read().rpartition(')')[2].split()[1])
+
+    def _alive(self, pid):
+        try:
+            os.kill(pid, 0)
+        except OSError:
+            return False
+        return True
+
+    def _end(self, pid):
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except OSError:
+            pass
+
+    def _scan_kit(self, kit, mark):
+        k = kit.Kit.__new__(kit.Kit)
+        k.lock, k.leaks, k.mark = threading.RLock(), [], mark
+        k.groups, k.sessions, k.owned, k.hidden = set(), set(), {}, set()
+        k.seen, k.env, k.listed_pids, k.since = False, {}, set(), 0
+        return k
+
+    def _environment_reads(self, calls):
+        reads = []
+        for args in calls:
+            pids = ()
+            flags = [a for a in args if not isinstance(a, tuple)]
+            for a in args:
+                if isinstance(a, tuple):
+                    pids = a
+            if '-E' in flags:
+                reads.append(pids)
+        return reads
+
+    def test_the_leftover_scan_reads_no_unrelated_process_environment(self):
+        unrelated_script = (
+            'import os, sys, time\n'
+            'if os.fork():\n'
+            '    os._exit(0)\n'
+            'os.setsid()\n'
+            'if os.fork():\n'
+            '    os._exit(0)\n'
+            'os.write(1, b"%d\\n" % os.getpid())\n'
+            'time.sleep(120)\n')
+        leader_script = (
+            'import os, signal, sys, time\n'
+            'signal.signal(signal.SIGHUP, signal.SIG_IGN)\n'
+            'open(sys.argv[1], "w").close()\n'
+            'while not os.path.exists(sys.argv[2]):\n'
+            '    time.sleep(0.01)\n'
+            'pid = os.fork()\n'
+            'if pid == 0:\n'
+            '    signal.signal(signal.SIGHUP, signal.SIG_IGN)\n'
+            '    os.setpgrp()\n'
+            '    os.write(1, b"%d\\n" % os.getpid())\n'
+            '    time.sleep(120)\n'
+            '    os._exit(0)\n'
+            'time.sleep(120)\n')
+        mark = 'OPENWIZ_KIT_RUN=' + secrets.token_hex(8)
+        unrelated = subprocess.Popen([sys.executable, '-c', unrelated_script], stdout=subprocess.PIPE)
+        unrelated_pid = int(unrelated.stdout.readline())
+        unrelated.stdout.close()
+        unrelated.wait(timeout=5)
+        self.addCleanup(self._end, unrelated_pid)
+        ready, go = os.path.join(self.folder, 'leader-ready'), os.path.join(self.folder, 'leader-go')
+        leader = subprocess.Popen(
+            [sys.executable, '-c', leader_script, ready, go], stdout=subprocess.PIPE, start_new_session=True,
+            env=dict(os.environ, OPENWIZ_KIT_RUN=mark.split('=', 1)[1]))
+        self.addCleanup(leader.wait)
+        self.addCleanup(leader.kill)
+        deadline = time.monotonic() + 5
+        while not os.path.exists(ready):
+            self.assertLess(time.monotonic(), deadline, 'the run leader did not start')
+            time.sleep(0.01)
+        self.assertNotEqual(self._ppid(unrelated_pid), os.getpid(),
+                            'the unrelated process is still a child of the scan')
+        kit = module(os.path.join(HERE, 'kit.py'))
+        linux = self._scan_kit(kit, mark)
+        opened = []
+
+        def watch(path, *args, **kwargs):
+            text = path if isinstance(path, str) else ''
+            if text.endswith('/environ'):
+                opened.append(int(text.rstrip('/').split('/')[-2]))
+            return open(path, *args, **kwargs)
+
+        calls = []
+        macos = self._scan_kit(kit, mark)
+
+        def record(*args):
+            calls.append(args)
+            return kit.Kit.ps(*args)
+
+        macos.ps = record
+        old_path = os.environ.get('PATH', '')
+        if os.path.isdir('/proc/self'):
+            kit.open = watch
+        os.environ['PATH'] = NO_PROC + os.pathsep + old_path
+        try:
+            if os.path.isdir('/proc/self'):
+                linux.table()
+                self.assertNotIn(unrelated_pid, opened,
+                                 "the leftover scan read an unrelated process's environment")
+                self.assertIn(leader.pid, opened, 'the leftover scan did not read a process of the run')
+            list(macos.listed())
+            self.assertIsNone(macos.unseen(), 'the visibility probe could not see its own environment')
+            reads = self._environment_reads(calls)
+            self.assertTrue(reads, 'the leftover scan never read an environment')
+            self.assertTrue(all(reads), 'the leftover scan read environments without naming the processes')
+            self.assertNotIn(unrelated_pid, {pid for pids in reads for pid in pids},
+                             "the leftover scan read an unrelated process's environment")
+            self.assertIn(leader.pid, {pid for pids in reads for pid in pids},
+                          'the leftover scan did not read a process of the run')
+            opened.clear()
+            calls.clear()
+            open(go, 'w').close()
+            leftover = int(leader.stdout.readline())
+            leader.stdout.close()
+            self.addCleanup(self._end, leftover)
+            os.kill(leader.pid, signal.SIGTERM)
+            leader.wait(timeout=5)
+            self.assertTrue(self._alive(leftover), 'the leftover process died with its leader')
+            self.assertNotEqual(self._ppid(leftover), os.getpid(), 'the leftover is still a descendant of the scan')
+            self.assertNotEqual(self._ppid(leftover), leader.pid, 'the leftover is still a child of the leader')
+            if os.path.isdir('/proc/self'):
+                linux.table()
+                self.assertNotIn(unrelated_pid, opened,
+                                 "the leftover scan read an unrelated process's environment")
+                self.assertIn(leftover, opened,
+                              "the leftover scan missed a process that stayed in the run's session")
+            list(macos.listed())
+            reads = self._environment_reads(calls)
+            self.assertNotIn(unrelated_pid, {pid for pids in reads for pid in pids},
+                             "the leftover scan read an unrelated process's environment")
+            self.assertIn(leftover, {pid for pids in reads for pid in pids},
+                          "the leftover scan missed a process that stayed in the run's session")
+        finally:
+            os.environ['PATH'] = old_path
+            if 'open' in kit.__dict__:
+                del kit.open
 
     def test_a_path_diagnostic_never_prints_the_active_canary(self):
         kit = module(os.path.join(HERE, 'kit.py'))

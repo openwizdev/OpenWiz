@@ -414,7 +414,7 @@ class Kit:
         self.env = dict(os.environ, OPENWIZ_KIT_RUN=self.mark.partition('=')[2])
         self.leaks = []
         self.run, self.stopped = None, False
-        self.groups = set()
+        self.groups, self.sessions, self.owned = set(), set(), {}
         self.lock = threading.RLock()
         self.runtime, self.listed_pids, self.active, self.hidden = set(), set(), set(), set()
         self.since = started_at('self') if PROC else 0
@@ -476,29 +476,80 @@ class Kit:
                     group == os.getpgrp() or self.under_run(table, ppid)):
                 self.leak('a process of the driver hides its details, so the kit cannot check it')
 
-    def table(self):
+    def process_rows(self):
         found = {}
-        for pid in filter(str.isdigit, os.listdir('/proc')):
+        for name in filter(str.isdigit, os.listdir('/proc')):
+            pid = int(name)
             try:
-                with open('/proc/%s/stat' % pid) as f:
+                with open('/proc/%d/stat' % pid) as f:
                     fields = f.read().rpartition(')')[2].split()
-                state, ppid, group, since = fields[0], int(fields[1]), int(fields[2]), fields[19]
-                with open('/proc/%s/status' % pid) as f:
+                state, ppid, group, session = fields[0], int(fields[1]), int(fields[2]), int(fields[3])
+                since = fields[19]
+                with open('/proc/%d/status' % pid) as f:
                     uid = int(next(row for row in f if row.startswith('Uid:')).split()[1])
             except (OSError, ValueError, IndexError, StopIteration):
                 continue
-            candidate = uid == os.getuid() and int(since) > self.since and (pid, since) not in self.hidden
-            try:
-                env, cmd = self.details(pid, HIDDEN_TRIES if candidate else 1)
-            except PermissionError:
-                if state in 'ZX' or not self.running(pid):
-                    continue
-                self.hidden.add((pid, since))
-                env = cmd = None
-            except OSError:
-                continue
-            found[pid] = (ppid, uid, env, cmd, group, int(since))
+            found[pid] = (ppid, uid, group, session, since, state)
         return found
+
+    def own_session(self):
+        try:
+            return os.getsid(0)
+        except (AttributeError, OSError):
+            return None
+
+    def note_marked(self, pid, group, session, since):
+        self.owned[int(pid)] = since
+        if group != os.getpgrp():
+            self.groups.add(group)
+        own = self.own_session()
+        if session is not None and session != own:
+            self.sessions.add(session)
+
+    # PRIVACY: the leftover scan opens an environment only for a process in this set, never an unrelated one.
+    def run_scope(self, meta):
+        children = {}
+        for pid, (ppid, group, session, since) in meta.items():
+            children.setdefault(ppid, []).append(pid)
+        seeds = [os.getpid()]
+        for pid, (ppid, group, session, since) in meta.items():
+            if (pid in self.owned and self.owned[pid] == since) or group in self.groups or session in self.sessions:
+                seeds.append(pid)
+        found, todo = set(), seeds
+        while todo:
+            pid = todo.pop()
+            if pid in found:
+                continue
+            found.add(pid)
+            todo.extend(children.get(pid, ()))
+        found.discard(os.getpid())
+        return found
+
+    def table(self):
+        rows = self.process_rows()
+        meta = {pid: (ppid, group, session, int(since))
+                for pid, (ppid, uid, group, session, since, state) in rows.items()}
+        found, seen = {}, set()
+        while True:
+            scope = self.run_scope(meta) - seen
+            if not scope:
+                return found
+            for pid in scope:
+                seen.add(pid)
+                ppid, uid, group, session, since, state = rows[pid]
+                candidate = uid == os.getuid() and int(since) > self.since and (str(pid), since) not in self.hidden
+                try:
+                    env, cmd = self.details(str(pid), HIDDEN_TRIES if candidate else 1)
+                except PermissionError:
+                    if state in 'ZX' or not self.running(str(pid)):
+                        continue
+                    self.hidden.add((str(pid), since))
+                    env = cmd = None
+                except OSError:
+                    continue
+                if env is not None and self.mark in env:
+                    self.note_marked(pid, group, session, int(since))
+                found[str(pid)] = (ppid, uid, env, cmd, group, int(since))
 
     @staticmethod
     def details(pid, tries=HIDDEN_TRIES):
@@ -543,14 +594,27 @@ class Kit:
 
     @staticmethod
     def ps(*args):
+        pids, flags = (), args
+        if args and isinstance(args[0], tuple):
+            pids, flags = args[0], args[1:]
+        cmd = ['ps', '-ww']
+        if pids:
+            cmd.extend(['-p', ','.join(str(int(pid)) for pid in pids)])
+        else:
+            cmd.append('-A')
         try:
-            p = subprocess.run(['ps', '-A', '-ww', '-o', 'pid='] + list(args), stdin=subprocess.DEVNULL,
+            p = subprocess.run(cmd + ['-o', 'pid='] + list(flags), stdin=subprocess.DEVNULL,
                                capture_output=True, text=True, timeout=30)
         except (OSError, subprocess.TimeoutExpired) as e:
             raise Unusable('ps did not run: %s' % e)
-        if p.returncode:
+        if p.returncode and not p.stdout.strip():
+            if pids and not p.stderr.strip():
+                return {}
             raise Unusable('ps failed: %s' % p.stderr.strip()[:200])
-        return {int(pid): rest for pid, _, rest in (row.strip().partition(' ') for row in p.stdout.splitlines())}
+        if p.returncode and p.stderr.strip():
+            raise Unusable('ps failed: %s' % p.stderr.strip()[:200])
+        return {int(pid): rest for pid, _, rest in (row.strip().partition(' ') for row in p.stdout.splitlines())
+                if pid}
 
     def unseen(self):
         probe = 'OPENWIZ_KIT_PROBE=' + self.mark.partition('=')[2]
@@ -559,7 +623,7 @@ class Kit:
         try:
             ready = select.select([p.stdout], [], [], 30)[0] and os.read(p.stdout.fileno(), 1) == b'.'
             if ready and re.search(r'(?:^|\s)%s(?:\s|$)' % re.escape(probe),
-                                   self.ps('-o', 'command=', '-E').get(p.pid, '')):
+                                   self.ps((p.pid,), '-o', 'command=', '-E').get(p.pid, '')):
                 return None
         finally:
             p.stdin.close()
@@ -569,23 +633,34 @@ class Kit:
         return "ps shows no process's environment here, so the kit cannot tell which processes the driver started"
 
     def listed(self):
-        args = self.ps('-o', 'pgid=', '-o', 'stat=', '-o', 'command=')
-        full = self.ps('-o', 'command=', '-E')
-        mark = re.compile(r'(?:^|\s)%s(?:\s|$)' % re.escape(self.mark))
-        found = []
+        args = self.ps('-o', 'ppid=', '-o', 'pgid=', '-o', 'sess=', '-o', 'stat=', '-o', 'command=')
+        meta, cmds = {}, {}
         for pid, row in args.items():
-            f = row.split(None, 2)
-            if len(f) < 2 or f[1].startswith('Z') or pid == os.getpid():
+            f = row.split(None, 4)
+            if len(f) < 4 or f[3].startswith('Z') or pid == os.getpid():
                 continue
-            group, cmd = int(f[0]), f[2] if len(f) > 2 else ''
-            words = full.get(pid, '').strip()
-            text = ' ' + (words[len(cmd):] if words.startswith(cmd) else words)
-            marked = bool(mark.search(text))
-            self.seen = self.seen or marked
-            if marked and group != os.getpgrp():
-                self.groups.add(group)
-            found.append((pid, (group, cmd, text, marked)))
-        for pid, (group, cmd, text, marked) in found:
+            ppid, group, session = int(f[0]), int(f[1]), int(f[2])
+            meta[pid] = (ppid, group, session, None)
+            cmds[pid] = f[4] if len(f) > 4 else ''
+        mark = re.compile(r'(?:^|\s)%s(?:\s|$)' % re.escape(self.mark))
+        found, seen = {}, set()
+        while True:
+            scope = [pid for pid in self.run_scope(meta) if pid not in seen]
+            if not scope:
+                break
+            full = self.ps(tuple(scope), '-o', 'command=', '-E')
+            for pid in scope:
+                seen.add(pid)
+                group, session = meta[pid][1], meta[pid][2]
+                cmd = cmds[pid]
+                words = full.get(pid, '').strip()
+                text = ' ' + (words[len(cmd):] if words.startswith(cmd) else words)
+                marked = bool(mark.search(text))
+                self.seen = self.seen or marked
+                if marked:
+                    self.note_marked(pid, group, session, None)
+                found[pid] = (group, cmd, text, marked)
+        for pid, (group, cmd, text, marked) in found.items():
             if marked or group in self.groups:
                 self.listed_pids.add(pid)
                 for k, v in self.env.items():
@@ -1086,7 +1161,7 @@ class Kit:
     def environment_names(self, pid):
         if not PROC:
             try:
-                row = self.ps('-o', 'command=', '-E').get(pid)
+                row = self.ps((pid,), '-o', 'command=', '-E').get(pid)
             except Unusable:
                 return None
             if row is None or not re.search(r'(?:^|\s)%s(?:\s|$)' % re.escape(self.mark), row):
