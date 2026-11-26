@@ -26,12 +26,20 @@ hostkey = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(hostkey)
 
 
+def process_row(pid, column):
+    try:
+        p = subprocess.run(['ps', '-p', str(pid), '-o', column + '='], capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.TimeoutExpired):
+        return ''
+    return p.stdout.strip() if p.returncode == 0 else ''
+
+
 def alive(pid):
     try:
         with open('/proc/%d/stat' % pid) as f:
             return f.read().rpartition(')')[2].split()[0] != 'Z'
     except OSError:
-        return False
+        return process_row(pid, 'stat')[:1] not in ('', 'Z')
 
 
 class Cursor(unittest.TestCase):
@@ -80,11 +88,12 @@ class Cursor(unittest.TestCase):
         return [pid for pid, _ in self.logged() if alive(pid) and self.fake_agent(pid)]
 
     def fake_agent(self, pid):
+        needle = os.path.join(HERE, 'fixtures', 'fake-agent')
         try:
             with open('/proc/%d/cmdline' % pid, 'rb') as f:
-                return os.path.join(HERE, 'fixtures', 'fake-agent').encode() in f.read().split(b'\0')
+                return needle.encode() in f.read().split(b'\0')
         except OSError:
-            return False
+            return needle in process_row(pid, 'command')
 
     def fault(self, faults):
         with open(self.faults, 'w') as f:

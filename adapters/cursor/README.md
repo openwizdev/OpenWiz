@@ -41,7 +41,7 @@ Cursor bills cloud agents at its model rates, against your plan.
 python3 -I adapters/cursor/test_driver.py      # on a synthetic Cursor; nothing reaches the network
 ```
 
-Each test builds its environment from scratch, with PATH limited to one folder holding only `python3`, so no real CLI is reachable, and points the key helper at the fake Cursor on `127.0.0.1`. Cleanup ends only the fake agent runs the tests logged themselves.
+Each test builds its environment from scratch, with PATH limited to one folder holding only `python3`, so no real CLI is reachable, and points the key helper at the fake Cursor on `127.0.0.1`. Cleanup ends only the fake agent runs the tests logged themselves. Where `/proc` is missing, as on macOS, those checks use `ps` instead.
 
 ## The live check (on a real Cursor account; spends money)
 
