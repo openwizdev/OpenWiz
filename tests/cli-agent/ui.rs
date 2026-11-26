@@ -72,10 +72,16 @@ fn neither_ui_nor_a_bare_openwiz_starts_the_terminal_app() {
     assert_eq!(bare.status.code(), Some(0), "{text}");
     let help = sandbox.run(&["--help"]);
     assert_eq!(help.status.code(), Some(0));
+    let help_text = String::from_utf8_lossy(&help.stdout);
+    let banner = if text.starts_with("🧙‍♂️🪄 OpenWiz\n") {
+        "🧙‍♂️🪄 OpenWiz\n"
+    } else {
+        "OpenWiz\n"
+    };
     assert_eq!(
         text,
-        String::from_utf8_lossy(&help.stdout),
-        "bare is the help"
+        format!("{banner}{help_text}"),
+        "bare is the help, after the terminal banner"
     );
     assert!(!text.contains("openwiz ui"), "{text}");
 

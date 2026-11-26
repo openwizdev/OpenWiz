@@ -103,7 +103,6 @@ def install_success_line(utf8):
 
 
 def say_installed(out):
-    # Human terminals only. Stdout stays one JSON object for scripts.
     if getattr(out, 'isatty', lambda: False)() and sys.stderr.isatty():
         print(install_success_line(utf8_locale(os.environ)), file=sys.stderr)
 

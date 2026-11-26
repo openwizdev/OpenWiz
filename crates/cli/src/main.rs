@@ -105,7 +105,6 @@ fn utf8_locale() -> bool {
     )
 }
 
-// Human help on a terminal. Piped output and `--json` stay byte-for-byte plain.
 fn banner_line(args: &[OsString], terminal: bool, utf8: bool) -> Option<&'static str> {
     let words = args
         .iter()
