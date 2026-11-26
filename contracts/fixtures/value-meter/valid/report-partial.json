@@ -1,0 +1,140 @@
+{
+  "schema": "openwiz.value-meter.v1",
+  "kind": "report",
+  "opted_in": true,
+  "as_of": "2030-01-15T18:30:00Z",
+  "windows": {
+    "timezone": "fixed-PST",
+    "end": "2030-01-15T08:00:00Z",
+    "this_week": {
+      "start": "2030-01-08T08:00:00Z",
+      "end": "2030-01-15T08:00:00Z"
+    },
+    "last_week": {
+      "start": "2030-01-01T08:00:00Z",
+      "end": "2030-01-08T08:00:00Z"
+    }
+  },
+  "metrics": {
+    "this_week": {
+      "merged_prs": {
+        "state": "known",
+        "value": 4,
+        "known_count": 4,
+        "total_count": 4,
+        "reason": null
+      },
+      "hours_saved": {
+        "state": "unknown",
+        "value": null,
+        "known_count": 0,
+        "total_count": 0,
+        "reason": "hours_per_merged_pr is not configured"
+      },
+      "money_saved_usd": {
+        "state": "unknown",
+        "value": null,
+        "known_count": 0,
+        "total_count": 0,
+        "reason": "hours saved is unknown",
+        "net_of_known_cost_usd": null,
+        "net_reason": "hours saved is unknown"
+      },
+      "cost_per_merged_pr_credits": {
+        "state": "partial",
+        "value": 11,
+        "known_count": 2,
+        "total_count": 4,
+        "reason": "2 of 4 merged pull requests had a known credit cost"
+      },
+      "cost_per_merged_pr_usd": {
+        "state": "unknown",
+        "value": null,
+        "known_count": 0,
+        "total_count": 4,
+        "reason": "no merged pull request in the window had a known USD cost"
+      }
+    },
+    "last_week": {
+      "merged_prs": {
+        "state": "known",
+        "value": 2,
+        "known_count": 2,
+        "total_count": 2,
+        "reason": null
+      },
+      "hours_saved": {
+        "state": "unknown",
+        "value": null,
+        "known_count": 0,
+        "total_count": 0,
+        "reason": "hours_per_merged_pr is not configured"
+      },
+      "money_saved_usd": {
+        "state": "unknown",
+        "value": null,
+        "known_count": 0,
+        "total_count": 0,
+        "reason": "hours saved is unknown",
+        "net_of_known_cost_usd": null,
+        "net_reason": "hours saved is unknown"
+      },
+      "cost_per_merged_pr_credits": {
+        "state": "partial",
+        "value": 9,
+        "known_count": 1,
+        "total_count": 2,
+        "reason": "1 of 2 merged pull requests had a known credit cost"
+      },
+      "cost_per_merged_pr_usd": {
+        "state": "partial",
+        "value": 4,
+        "known_count": 1,
+        "total_count": 2,
+        "reason": "1 of 2 merged pull requests had a known USD cost"
+      }
+    }
+  },
+  "week_over_week": {
+    "merged_prs": {
+      "state": "known",
+      "value": 2,
+      "direction": "up",
+      "known_count": 2,
+      "total_count": 2,
+      "reason": null
+    },
+    "hours_saved": {
+      "state": "unknown",
+      "value": null,
+      "direction": "unknown",
+      "known_count": 0,
+      "total_count": 2,
+      "reason": "hours_per_merged_pr is not configured"
+    },
+    "money_saved_usd": {
+      "state": "unknown",
+      "value": null,
+      "direction": "unknown",
+      "known_count": 0,
+      "total_count": 2,
+      "reason": "hours saved is unknown"
+    },
+    "cost_per_merged_pr_credits": {
+      "state": "partial",
+      "value": 2,
+      "direction": "up",
+      "known_count": 2,
+      "total_count": 2,
+      "reason": "one week has a partial credit cost"
+    },
+    "cost_per_merged_pr_usd": {
+      "state": "unknown",
+      "value": null,
+      "direction": "unknown",
+      "known_count": 0,
+      "total_count": 2,
+      "reason": "this week has no known USD cost"
+    }
+  }
+}
