@@ -73,13 +73,12 @@ def release_path(name, text):
             failures.append(f'{name}: pins WizSkills 0.4.0')
         if '--branch v0.1.1' in text:
             failures.append(f'{name}: clones the fixed v0.1.1 tag')
-    if name == 'docs/install.md':
         if 'wizskills.lock' not in default:
             failures.append(f'{name}: the default path does not derive the skill from wizskills.lock')
         if 'git clone --depth 1 --branch "$tag" -- https://github.com/openwizdev/OpenWiz' not in default:
-            failures.append(f'{name}: preflight does not clone the release tag with -- before the repository')
+            failures.append(f'{name}: the default path does not clone the release tag with -- before the repository')
         if 'v(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)' not in default:
-            failures.append(f'{name}: preflight does not check the whole tag against a strict pattern')
+            failures.append(f'{name}: the default path does not check the whole tag against a strict pattern')
     if re.search(r'Intel Mac[^.]*from 0\.1\.1', text):
         failures.append(f'{name}: says an Intel Mac installs only from 0.1.1')
     if re.search(r'(?i)wakes the fleet every ten minutes', text):

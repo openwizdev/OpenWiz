@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import importlib.util
 import json
 import re
 import subprocess
@@ -197,6 +198,21 @@ class InstallPhrase(unittest.TestCase):
         self.assertTrue(any('v0.4.0' in item for item in failures), failures)
         self.assertTrue(any('v0.1.1' in item for item in failures), failures)
         self.assertTrue(any(version in item for item in failures), failures)
+
+    def test_readme_is_covered_by_the_release_pin_check(self):
+        path = ROOT / 'docs/evidence/2227/check_docs.py'
+        spec = importlib.util.spec_from_file_location('check_docs_2227', path)
+        check = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(check)
+        bare = '# Readme\n\n## OpenWiz 0.1.0\n\nSee docs/install.md#openwiz-010.\n'
+        failures = check.release_path('README.md', bare)
+        self.assertTrue(any('wizskills.lock' in item for item in failures), failures)
+        self.assertTrue(any('clone' in item for item in failures), failures)
+        self.assertTrue(any('pattern' in item for item in failures), failures)
+        real = check.release_path('README.md', (ROOT / 'README.md').read_text(encoding='utf-8'))
+        pin = [item for item in real if 'wizskills.lock' in item or 'clone' in item
+               or 'v0.4.0' in item or 'pattern' in item]
+        self.assertEqual(pin, [])
 
     def test_the_pages_point_at_the_agent_section(self):
         for name in ('README.md', 'docs/install.md', 'docs/first-hour.md', 'docs/grok-bot.md'):
