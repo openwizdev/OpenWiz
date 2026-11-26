@@ -50,7 +50,6 @@ def backend_row(session):
 
 
 def live_pid(session):
-    # A reused pid has a different start time. Kill only the process create recorded.
     row = backend_row(session)
     if row is None or fake_cli.since(row['pid']) != row['since']:
         return None
