@@ -425,6 +425,37 @@ class Cursor(unittest.TestCase):
         self.assertEqual(code, 1, err)
         self.assertEqual(len(self.logged()), 1, 'a wake reopened the stopped run')
 
+    def test_a_second_stop_does_not_archive_again(self):
+        code, out = self.driver('start', START)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.driver('stop', out)[0], 0)
+        self.assertEqual(self.driver('stop', out), (0, dict(out, stopped=True)))
+        archives = [call for call in self.calls() if call['path'].endswith('/archive')]
+        self.assertEqual(len(archives), 1)
+
+    def test_a_server_error_while_waking_is_not_a_refusal(self):
+        open(self.hold, 'w').close()
+        code, out = self.driver('start', START)
+        self.assertEqual(code, 0, out)
+        os.remove(self.hold)
+        self.assertTrue(self.until(lambda: not self.running()), 'the fake run did not end')
+        self.fault({'POST /runs': 500})
+        code, err = self.driver('wake', out)
+        self.assertEqual(code, 1, err)
+        self.assertNotIn('refused', err['error'].lower())
+        self.assertIn('unknown', err['error'])
+        self.assertIn('500', err['error'])
+
+    def test_a_saved_run_is_not_group_readable(self):
+        previous = os.umask(0)
+        try:
+            code, out = self.driver('start', START)
+            self.assertEqual(code, 0, out)
+            mode = os.stat(os.path.join(self.env['OPENWIZ_CURSOR_STATE'], out['run'] + '.json')).st_mode & 0o777
+            self.assertEqual(mode, 0o600)
+        finally:
+            os.umask(previous)
+
     def test_a_failed_archive_is_reported_with_the_agent_to_archive(self):
         code, out = self.driver('start', START)
         self.assertEqual(code, 0, out)

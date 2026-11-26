@@ -137,6 +137,7 @@ def saved(run, state=None):
         fd = os.open(new, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
         with os.fdopen(fd, 'w') as f:
             json.dump(state, f)
+        os.chmod(new, 0o600)
         os.replace(new, path(run, '.json'))
         return state
     try:
@@ -260,12 +261,12 @@ def wake():
     if answer.get('status') == 'ACTIVE':
         return {'run': run, 'woke': True}
     code, answer = api('POST', '/agents/%s/runs' % state['agent'], {'prompt': {'text': prompt(state['request'])}})
-    if code is None:
-        raise Refused('Cursor gave no answer to the wake of run %s, so whether it woke is unknown' % run,
-                      'read the ticket; Cursor runs one turn per agent at a time, so waking again never starts two')
-    if code >= 500:
-        raise Refused('Cursor could not wake run %s just now (%s); the failure is transient' % (run, why(code, answer)),
-                      'wake it again: Cursor runs one turn per agent at a time, so waking again never starts two')
+    if code is None or code >= 500:
+        detail = 'no answer' if code is None else 'HTTP %d' % code
+        nxt = 'read the ticket; Cursor runs one turn per agent at a time, so waking again never starts two'
+        if code is not None and code >= 500:
+            nxt = 'wake it again: ' + nxt
+        raise Refused('Cursor failed while waking run %s (%s); whether it woke is unknown' % (run, detail), nxt)
     if code in (200, 201) or why(code, answer) == 'HTTP 409 agent_busy':
         return {'run': run, 'woke': True}
     raise refused(code, answer, 'wake run %s' % run, 'stop it, then start a new run')
