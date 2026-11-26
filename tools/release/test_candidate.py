@@ -1159,8 +1159,11 @@ class Candidate(World):
         self.assertEqual(self.receipt('products', 'ci'), (0, {'status': 'recorded', 'gate': 'products'}))
         self.assertEqual(self.writes(), [])
 
+    def packaged(self, path):
+        return rl4.PACKAGED.get(path, 'runtime/' + path)
+
     def swap_packaged(self, products, identity, runtime, selection, first, second):
-        names = ('runtime/' + first, 'runtime/' + second)
+        names = (self.packaged(first), self.packaged(second))
         data = [(products / name).read_bytes() for name in names]
         for name, bytes_ in zip(names, reversed(data)):
             (products / name).write_bytes(bytes_)
@@ -1210,6 +1213,17 @@ class Candidate(World):
     def test_r1_a_locked_contract_packaged_at_another_contracts_path_is_refused(self):
         self.lock_mode()
         self.swapped = ('contracts/alpha.v1.md', 'contracts/beta.v1.md')
+        self.smoke_kit()
+        self.artifacts()
+        self.made = self.body()
+        self.assertEqual(self.prepare()[0], 0)
+        self.decisions()
+        self.checks()
+        self.blocked(self.receipt('products', 'ci'), 'products_unverified')
+        self.assertEqual(self.writes(), [])
+
+    def test_a_swapped_openwiz_runtime_pair_is_refused(self):
+        self.swapped = ('tools/install/install.py', 'tools/install/pull.py')
         self.smoke_kit()
         self.artifacts()
         self.made = self.body()
