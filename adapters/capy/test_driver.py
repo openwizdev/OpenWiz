@@ -210,6 +210,7 @@ class Driver(unittest.TestCase):
 
     def test_lost_create_replies_leave_time_for_recovery_before_the_kit_timeout(self):
         capy = module(DRIVER, 'capy_driver')
+        capy.STATE, capy.POLL = self.env['OPENWIZ_CAPY_STATE'], 3
         clock = mock.Mock()
         clock.monotonic.return_value = 0
         creates = []
@@ -217,7 +218,7 @@ class Driver(unittest.TestCase):
         def advance(seconds):
             clock.monotonic.return_value += seconds
 
-        def helper(argv, *, input, timeout, **kwargs):
+        def helper(argv, *, input, timeout, **_):
             sent = json.loads(input)
             status, body = self.host.route(sent['method'], sent['path'], sent.get('body'))
             if sent['method'] == 'GET':
@@ -229,7 +230,6 @@ class Driver(unittest.TestCase):
 
         clock.sleep.side_effect = advance
         with mock.patch.dict(os.environ, self.env, clear=True), mock.patch.object(capy, 'time', clock), \
-                mock.patch.object(capy, 'STATE', self.env['OPENWIZ_CAPY_STATE']), \
                 mock.patch.object(capy.subprocess, 'run', side_effect=helper):
             os.environ.pop('CAPY_PROJECT_ID', None)
             with self.assertRaises(capy.Refused) as failure:

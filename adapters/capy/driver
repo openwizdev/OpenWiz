@@ -20,8 +20,10 @@ PROJECT = r'[A-Za-z0-9][A-Za-z0-9_.:-]{0,190}'
 PROVIDERS = {'claude': 'anthropic', 'claude-code': 'anthropic', 'codex': 'openai'}
 POLL = float(os.environ.get('OPENWIZ_CAPY_POLL') or 3)
 WAIT_AT_MOST = 30
+START_TIMEOUT, START_CALL_TIMEOUT = 110, 60
 STATE = os.environ.get('OPENWIZ_CAPY_STATE') or os.path.expanduser('~/.local/state/openwiz/capy')
-UNSENT = tuple('the key helper refused: ' + why for why in (
+START_EXPIRED = 'the start ran out of time before '
+UNSENT = (START_EXPIRED,) + tuple('the key helper refused: ' + why for why in (
     'no key in either ', 'the key in ', "the kit's fake host gave no test key", 'the request holds the key',
     'OPENWIZ_HOSTKEY_TEST_ORIGIN is not'))
 NO_EFFORT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster to run it "
@@ -68,13 +70,17 @@ def read(fields):
     return req
 
 
-def ask(method, path, body=None, also=()):
+def ask(method, path, body=None, also=(), *, deadline=None):
     request = {'host': HOST, 'method': method, 'path': path}
     if body is not None:
         request['body'] = body
+    timeout = 110 if deadline is None else min(START_CALL_TIMEOUT, deadline - time.monotonic())
+    if timeout <= 0:
+        raise Refused(START_EXPIRED + method + ' ' + path,
+                      'check Capy\'s status, then start again')
     try:
         p = subprocess.run([sys.executable, '-I', HELPER], input=json.dumps(request), capture_output=True,
-                           text=True, timeout=110)
+                           text=True, timeout=timeout)
         out = json.loads(p.stdout)
     except (OSError, subprocess.TimeoutExpired, ValueError):
         raise Refused('the key helper gave no answer', 'run kernel/driver-kit/hostkey.py by hand to see why')
@@ -120,14 +126,14 @@ def no_effort(req):
                    NO_EFFORT)
 
 
-def project(repository):
+def project(repository, deadline):
     chosen = os.environ.get('CAPY_PROJECT_ID')
     if chosen is not None:
         if not re.fullmatch(PROJECT, chosen):
             raise Refused('CAPY_PROJECT_ID is not a Capy project id',
                           'set CAPY_PROJECT_ID to a project id from Capy\'s Settings, Projects & setup, or unset it')
         return chosen
-    status, listed = ask('GET', '/api/v1/projects')
+    status, listed = ask('GET', '/api/v1/projects', deadline=deadline)
     items = listed['items'] if status == 200 and shaped(listed, {'items'}) else None
     if not (isinstance(items, list) and all(
             shaped(p, PROJECT_KEYS) and isinstance(p['id'], str) and re.fullmatch(PROJECT, p['id'])
@@ -148,8 +154,8 @@ def project(repository):
     return lists[0]
 
 
-def rejected(req, model):
-    status, listed = ask('GET', '/api/v1/models')
+def rejected(req, model, deadline):
+    status, listed = ask('GET', '/api/v1/models', deadline=deadline)
     items = listed['items'] if status == 200 and shaped(listed, {'items', 'default'}) and isinstance(
         listed['default'], dict) else None
     found = [m for m in items if shaped(m, MODEL_KEYS) and m['id'] == model['modelId']] if isinstance(
@@ -183,17 +189,20 @@ def retry_after(got):
     return None
 
 
-def waited(got):
+def wait_to_retry(got, deadline):
     delay = retry_after(got)
-    if delay is None:
-        return POLL
-    if delay > WAIT_AT_MOST:
+    if delay is not None and delay > WAIT_AT_MOST:
         raise Refused('Capy answered 429 to POST /api/v1/threads and asked to wait %d seconds' % delay,
                       'wait that long, then start again')
-    return delay
+    delay = POLL if delay is None else delay
+    if delay >= deadline - time.monotonic():
+        return False
+    time.sleep(delay)
+    return True
 
 
 def create(req):
+    deadline = time.monotonic() + START_TIMEOUT
     model = {'modelId': model_id(req)}
     if 'effort' in req:
         if req['effort'] not in REASONING:
@@ -202,7 +211,7 @@ def create(req):
     title = 'OpenWiz: %s#%d' % (req['repository'], req['ticket'])
     # External: a resent create with the same requestId converges on the same Capy thread, never a second billable
     # run (https://docs.capy.ai/api-reference/overview#idempotency).
-    body = {'requestId': str(uuid.uuid4()), 'projectId': project(req['repository']), 'title': title,
+    body = {'requestId': str(uuid.uuid4()), 'projectId': project(req['repository'], deadline), 'title': title,
             'message': 'Build the ticket: %s#%d, with the %s skill.' % (req['repository'], req['ticket'], req['skill']),
             'model': model}
     lost = fit('archive the Capy thread titled %s if it is there, then start again' % title,
@@ -216,7 +225,7 @@ def create(req):
     unsure = None
     for attempt in (1, 2):
         try:
-            status, got = ask('POST', '/api/v1/threads', body, also=tuple(range(400, 600)))
+            status, got = ask('POST', '/api/v1/threads', body, also=tuple(range(400, 600)), deadline=deadline)
         except Refused as e:
             if not unsure and e.args[0].startswith(UNSENT):
                 raise
@@ -225,18 +234,21 @@ def create(req):
             break
         if status is not None and status >= 500:
             unsure = unsure or 'Capy answered %d to POST /api/v1/threads' % status
-        if unsure and attempt == 2:
-            raise Refused(unsure + ', so a thread may have started', lost)
-        if status == 429 and attempt == 2:
+        if unsure:
+            if attempt == 2 or POLL >= deadline - time.monotonic():
+                raise Refused(unsure + ', so a thread may have started', lost)
+            time.sleep(POLL)
+            continue
+        if status == 429:
+            if attempt == 1 and wait_to_retry(got, deadline):
+                continue
             delay = retry_after(got)
             wait = 'a minute' if delay is None else '%d seconds' % delay
-            raise Refused('Capy answered 429 to POST /api/v1/threads twice', 'wait %s, then start again' % wait)
-        if unsure or status == 429:
-            time.sleep(POLL if unsure else waited(got))
-            continue
+            why = ' twice' if attempt == 2 else ' too late to retry this start'
+            raise Refused('Capy answered 429 to POST /api/v1/threads' + why, 'wait %s, then start again' % wait)
         if status == 400 and shaped(got, {'_tag', 'message', 'candidates'}) and got[
                 '_tag'] == 'ModelSelection.Rejected':
-            rejected(req, model)
+            rejected(req, model, deadline)
         raise Refused('Capy answered %d to POST /api/v1/threads' % status,
                       'check your key, your Capy project and the start\'s fields, then start again')
     run = obj(got).get('id')
