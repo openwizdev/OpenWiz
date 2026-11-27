@@ -8,14 +8,15 @@ session, so a codespace whose home was lost can't resume. With its skill install
 note in KIT_TRACKER, and each resumed turn edits it. It logs `<pid> <session> first|woken <effort or ->` to FAKE_TURNS
 (Claude's `--effort <e>`, Codex's `-c model_reasoning_effort=<e>`, each optional), and runs
 while the file FAKE_HOLD exists (only a resumed turn when the file holds `woken`). With FAKE_HARNESS_401
-set, it then prints a synthetic `401 Unauthorized` line (for codex, an `error` event), as a harness whose login the service refuses does while it retries; set to `in-a-tool-output`, codex
-instead prints the words of a refusal in a command's output, as a healthy turn may."""
+set, it reports a synthetic 401 as a Codex error or a Claude API retry. With `in-a-tool-output`, it puts the words
+of a refusal in normal output instead."""
 import json, os, re, sys, time, uuid
 
 name, a = os.path.basename(sys.argv[0]), sys.argv[1:]
 UUID = r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
 if name == 'claude':
-    m = re.fullmatch(r'-p\0--dangerously-skip-permissions\0--model\0([^\0]+)(?:\0--effort\0([a-z][a-z0-9-]*))?'
+    m = re.fullmatch(r'-p\0--dangerously-skip-permissions\0--output-format\0stream-json\0--verbose'
+                     r'\0--model\0([^\0]+)(?:\0--effort\0([a-z][a-z0-9-]*))?'
                      r'\0--(session-id|resume)\0(%s)\0([^\0]+)' % UUID, '\0'.join(a))
     model, effort, kind, session, prompt = m.groups() if m else (None,) * 5
     resume, logins = kind == 'resume', ('CLAUDE_CODE_OAUTH_TOKEN', 'ANTHROPIC_API_KEY')
@@ -61,13 +62,21 @@ with open(held, 'w') as f:
 if os.environ.get('FAKE_TURNS'):
     with open(os.environ['FAKE_TURNS'], 'a') as f:
         f.write('%d %s %s %s\n' % (os.getpid(), session, 'woken' if resume else 'first', effort or '-'))
-if os.environ.get('FAKE_HARNESS_401') == 'in-a-tool-output' and name == 'codex':
-    print(json.dumps({'type': 'item.completed', 'item': {'type': 'command_execution',
-                                                         'aggregated_output': 'You are not logged in (synthetic)'}}))
+if os.environ.get('FAKE_HARNESS_401') == 'in-a-tool-output':
+    answer = 'I added a regression test.\u2028401 Unauthorized is covered.'
+    if name == 'codex':
+        print(json.dumps({'type': 'item.completed', 'item': {'type': 'command_execution',
+                                                             'aggregated_output': answer}}), flush=True)
+    else:
+        print(json.dumps({'type': 'assistant', 'message': {'content': [{'type': 'text', 'text': answer}]}},
+                         ensure_ascii=False), flush=True)
+        print(json.dumps({'type': 'result', 'subtype': 'success', 'is_error': False, 'result': answer},
+                         ensure_ascii=False), flush=True)
 elif os.environ.get('FAKE_HARNESS_401') and name == 'codex':
     print(json.dumps({'type': 'error', 'message': 'unexpected status 401 Unauthorized (synthetic)'}), flush=True)
 elif os.environ.get('FAKE_HARNESS_401'):
-    print('ERROR: unexpected status 401 Unauthorized (synthetic)', flush=True)
+    print(json.dumps({'type': 'system', 'subtype': 'api_retry', 'error_status': 401,
+                      'error': 'authentication_failed'}), flush=True)
 def held():
     try:
         with open(os.environ.get('FAKE_HOLD') or os.devnull) as f:

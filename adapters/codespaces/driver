@@ -305,7 +305,8 @@ def harness_command(state):
     req, woken, session = state['request'], bool(state['turns']), state['session']
     fit_for_ssh(req, 'no turn was started', 'start a new run')
     if req['harness'] == 'claude':
-        words = ['claude', '-p', '--dangerously-skip-permissions', '--model', req['model']] + (
+        words = ['claude', '-p', '--dangerously-skip-permissions', '--output-format', 'stream-json', '--verbose',
+                 '--model', req['model']] + (
             ['--effort', req['effort']] if 'effort' in req else []) + [
             '--resume' if woken else '--session-id', session, prompt_text(req, woken)]
     else:
@@ -716,10 +717,10 @@ def settled(run, state, now, log, settle):
         if ended_before_this_read and ended_at is None:
             ended_at = time.monotonic()
         with open(log, errors='replace') as f:
-            text = f.read().splitlines()
+            text = f.read().split('\n')
         after = text[[x.strip() for x in text].index(TURN_BEGAN) + 1:]
         code = exit_of(log, now['supervisor']) if ended_before_this_read else None
-        if any(HARNESS_REFUSALS.search(x) for x in after if event(x).get('type', 'error') in ('error', 'turn.failed')):
+        if any(harness_refused(line, harness) for line in after):
             why = 'refused to %s' % ('resume its session' if woken else 'start')
             break
         if ended_before_this_read and code == 0:
@@ -747,6 +748,20 @@ def event(text):
     except ValueError:
         return {}
     return item if isinstance(item, dict) else {}
+
+
+def harness_refused(line, harness):
+    item = event(line)
+    kind = item.get('type')
+    if kind is None:
+        return not line.lstrip().startswith('{') and bool(HARNESS_REFUSALS.search(line))
+    if harness == 'codex':
+        return kind in ('error', 'turn.failed') and bool(HARNESS_REFUSALS.search(line))
+    if kind == 'result' and item.get('is_error') is True:
+        return bool(HARNESS_REFUSALS.search(line))
+    if kind == 'system' and item.get('subtype') == 'api_retry':
+        return item.get('error_status') == 401 or item.get('error') == 'authentication_failed'
+    return kind == 'assistant' and item.get('error') == 'authentication_failed'
 
 
 def codespace_state(name):

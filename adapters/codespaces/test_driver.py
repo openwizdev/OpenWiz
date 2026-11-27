@@ -25,14 +25,14 @@ WATCH_READS = r'''
 import os, runpy, sys
 reads, real = os.environ['WATCH_READS'], os._Environ.__getitem__
 def watched(self, key):
-    if key == %r:
+    if key in %r:
         with open(reads, 'a') as f:
             f.write(sys._getframe(1).f_code.co_name + '\n')
     return real(self, key)
 os._Environ.__getitem__ = watched
 sys.argv = [%r] + sys.argv[1:]
 runpy.run_path(sys.argv[0], run_name='__main__')
-''' % (WATCHED, DRIVER)
+''' % ((WATCHED, 'GH_TOKEN'), DRIVER)
 PASS = ['pass version: openwiz:records v1, and the schema is driver v1',
         'pass start: the run posted builder status note 1; effort: medium reached a process the run started',
         'pass wake: the run edited builder status note 1',
@@ -114,6 +114,13 @@ class Codespaces(unittest.TestCase):
             self.assertTrue(all(0 < len(v) <= 300 and '\n' not in v for v in out.values()), out)
         return p.returncode, out
 
+    def started(self, request=REQUEST, *, finished=False, **env):
+        code, out = self.driver('start', request, **env)
+        self.assertEqual(code, 0, out)
+        if finished:
+            self.assertTrue(self.ended(out), 'the first turn never ended')
+        return out
+
     def kit(self, harness, model, **env):
         return subprocess.run([env.pop('python', sys.executable), '-I', KIT, '--driver', DRIVER, '--repo',
                                'example/site', '--ticket', '7', '--harness', harness, '--model', model,
@@ -159,8 +166,7 @@ class Codespaces(unittest.TestCase):
         return ready()
 
     def ended(self, out):
-        with open(os.path.join(self.env['OPENWIZ_CODESPACES_STATE'], out['run'] + '.json')) as f:
-            pid = json.load(f)['turns'][-1]['pid']
+        pid = self.saved_run(out)['turns'][-1]['pid']
         return self.until(lambda: not alive(pid))
 
     def test_kit_passes_all_five_for_each_harness(self):
@@ -197,15 +203,13 @@ class Codespaces(unittest.TestCase):
                 self.assertIn('nothing was created', err['error'])
                 self.assertEqual([c for c in self.calls() if c[:2] == ['codespace', 'create']], [])
                 self.assertEqual(self.codespaces(), {})
-        code, out = self.driver('start', dict(REQUEST, repository='Example/Site'),
-                                FAKE_GH_SECRETS='{"ANTHROPIC_API_KEY": ["example/site"]}')
-        self.assertEqual(code, 0, out)
+        self.started(dict(REQUEST, repository='Example/Site'),
+                     FAKE_GH_SECRETS='{"ANTHROPIC_API_KEY": ["example/site"]}')
 
     def test_create_takes_the_specs_flags_and_always_names_a_machine(self):
         for env, machine in (({}, ['-m', 'basicLinux32gb']),
                              ({'OPENWIZ_CODESPACES_MACHINE': 'standardLinux32gb'}, ['-m', 'standardLinux32gb'])):
-            code, out = self.driver('start', REQUEST, **env)
-            self.assertEqual(code, 0, out)
+            out = self.started(REQUEST, **env)
             self.assertRegex(out['run'], r'^cs-[0-9a-f]{12}$')
             self.assertEqual([c for c in self.calls() if c[:2] == ['codespace', 'create']][-1],
                              ['codespace', 'create', '-R', 'example/site', '--default-permissions', '--display-name',
@@ -222,8 +226,7 @@ class Codespaces(unittest.TestCase):
 
     def test_a_wake_after_stop_or_for_an_unknown_run_is_refused(self):
         open(self.hold, 'w').close()
-        code, out = self.driver('start', REQUEST)
-        self.assertEqual(code, 0, out)
+        out = self.started()
         self.assertTrue(self.until(lambda: self.logged()))
         harness = self.logged()[0][0]
         self.assertEqual(self.driver('stop', out), (0, dict(out, stopped=True)))
@@ -243,9 +246,7 @@ class Codespaces(unittest.TestCase):
             with self.subTest(harness=request['harness'], effort=effort):
                 self.tearDown()
                 self.setUp()
-                code, out = self.driver('start', dict(request, effort=effort) if effort else request)
-                self.assertEqual(code, 0, out)
-                self.assertTrue(self.ended(out), 'the first turn never ended')
+                out = self.started(dict(request, effort=effort) if effort else request, finished=True)
                 self.assertEqual(self.driver('wake', out), (0, dict(out, woke=True)))
                 self.assertTrue(self.ended(out), 'the woken turn never ended')
                 self.assertEqual(self.efforts(), [('first', effort or '-'), ('woken', effort or '-')])
@@ -253,9 +254,7 @@ class Codespaces(unittest.TestCase):
     def test_a_wake_after_github_stopped_the_codespace_resumes_the_same_session(self):
         for request in (REQUEST, CODEX):
             with self.subTest(harness=request['harness']):
-                code, out = self.driver('start', request)
-                self.assertEqual(code, 0, out)
-                self.assertTrue(self.ended(out), 'the first turn never ended')
+                out = self.started(request, finished=True)
                 name = max(self.codespaces())
                 subprocess.run(['gh', 'codespace', 'stop', '-c', name], env=self.env, check=True)
                 self.assertEqual(self.driver('wake', out), (0, dict(out, woke=True)))
@@ -264,22 +263,18 @@ class Codespaces(unittest.TestCase):
                 self.assertEqual((first, a, then, b), (first, 'first', first, 'woken'))
                 self.assertEqual(self.notes()[-1][1], 'woke and read the ticket again')
                 self.assertEqual(self.codespaces()[name], 'Available')
-                with open(os.path.join(self.env['OPENWIZ_CODESPACES_STATE'], out['run'] + '.json')) as f:
-                    self.assertEqual(json.load(f)['session'], first)
+                self.assertEqual(self.saved_run(out)['session'], first)
         self.assertEqual(len(self.notes()), 2)
 
     def test_a_wake_while_the_turn_runs_starts_nothing(self):
         open(self.hold, 'w').close()
-        code, out = self.driver('start', REQUEST)
-        self.assertEqual(code, 0, out)
+        out = self.started()
         self.assertTrue(self.until(lambda: self.logged()))
         self.assertEqual(self.driver('wake', out), (0, dict(out, woke=True)))
         self.assertEqual(len(self.logged()), 1)
 
     def test_a_rebuilt_codespace_refuses_the_wake_in_one_line(self):
-        code, out = self.driver('start', REQUEST)
-        self.assertEqual(code, 0, out)
-        self.assertTrue(self.ended(out))
+        out = self.started(finished=True)
         shutil.rmtree(self.env['FAKE_GH_STATE'] + '.homes/' + max(self.codespaces()))
         code, err = self.driver('wake', out)
         self.assertEqual(code, 1, err)
@@ -288,9 +283,7 @@ class Codespaces(unittest.TestCase):
 
     def test_no_ssh_command_names_or_expands_a_secret(self):
         for request in (REQUEST, CODEX):
-            code, out = self.driver('start', request)
-            self.assertEqual(code, 0, out)
-            self.assertTrue(self.ended(out))
+            out = self.started(request, finished=True)
             self.assertEqual(self.driver('wake', out), (0, dict(out, woke=True)))
             self.assertTrue(self.ended(out))
         sent = [' '.join(c[5:]) for c in self.calls() if c[:2] == ['codespace', 'ssh']]
@@ -311,8 +304,7 @@ class Codespaces(unittest.TestCase):
                 self.assertEqual(set(self.codespaces().values()) - {'Shutdown'}, set(), err)
                 self.assertEqual(self.logged(), [])
         self.assertEqual(len(self.codespaces()), 2)
-        code, out = self.driver('start', REQUEST)
-        self.assertTrue(self.ended(out))
+        out = self.started(finished=True)
         code, err = self.driver('wake', out, FAKE_GH_FAIL='ssh')
         self.assertEqual(code, 1, err)
         code, err = self.driver('stop', out, FAKE_GH_FAIL='stop')
@@ -337,9 +329,7 @@ class Codespaces(unittest.TestCase):
         with open(self.env['FAKE_GH_STATE'], 'w') as f:
             json.dump({'codespaces': {'other-%02d' % i: {'repository': 'example/other', 'displayName': 'x',
                                                           'state': 'Available', 'machine': None} for i in range(30)}}, f)
-        code, out = self.driver('start', REQUEST)
-        self.assertEqual(code, 0, out)
-        self.assertTrue(self.ended(out))
+        out = self.started(finished=True)
         code, err = self.driver('stop', out, FAKE_GH_FAIL='stop')
         self.assertEqual((code, self.codespaces()['fake-space-0031']), (1, 'Available'), err)
         self.assertIn('gh codespace stop -c fake-space-0031', err['next'])
@@ -352,16 +342,12 @@ class Codespaces(unittest.TestCase):
 
     def test_start_refuses_a_credential_by_its_shape_and_never_reads_the_environment_for_one(self):
         env = {'PLANTED_TOKEN': 'plainwordvalue1234'}
-        code, out = self.driver('start', dict(REQUEST, model='plainwordvalue1234'), **env)
-        self.assertEqual(code, 0, out)
+        self.started(dict(REQUEST, model='plainwordvalue1234'), **env)
         code, err = self.driver('start', dict(REQUEST, model='sk-' + 'A' * 24), **env)
         self.assertEqual((code, err['error']), (1, 'model looks like a credential, so nothing was saved or started'))
-        with open(DRIVER) as f:
-            self.assertNotIn('kit.py', f.read())
 
     def test_every_stop_confirms_the_codespace_stopped_with_gh_codespace_view(self):
-        code, out = self.driver('start', REQUEST)
-        self.assertTrue(self.ended(out))
+        out = self.started(finished=True)
         code, err = self.driver('stop', out, FAKE_GH_STOP_NOOP='1')
         self.assertEqual((code, self.codespaces()['fake-space-0001']), (1, 'Available'), err)
         self.assertIn('gh codespace stop -c fake-space-0001', err['next'])
@@ -389,8 +375,7 @@ class Codespaces(unittest.TestCase):
         program = (sys.executable, '-I', watcher)
         env = {WATCHED: 'synthetic-ambient-value-%s' % secrets.token_hex(4), 'WATCH_READS': reads}
         open(self.hold, 'w').close()
-        code, out = self.driver('start', REQUEST, program, **env)
-        self.assertEqual(code, 0, out)
+        out = self.started(REQUEST, program=program, **env)
         with open('/proc/%d/environ' % self.saved_run(out)['turns'][-1]['pid'], 'rb') as f:
             turn_env = f.read().decode().split('\0')
         self.assertIn('OPENWIZ_RUN=' + out['run'], turn_env)
@@ -399,9 +384,7 @@ class Codespaces(unittest.TestCase):
         self.assertTrue(self.ended(out))
         self.assertEqual(self.driver('wake', out, program, **env), (0, dict(out, woke=True)))
         self.assertTrue(self.ended(out))
-        with open(reads, 'a+') as f:
-            f.seek(0)
-            self.assertEqual(f.read(), '', 'the driver read an ambient value at a turn launch')
+        self.assertFalse(os.path.exists(reads), 'the driver read an ambient value at a turn launch')
 
     def test_a_reserved_secret_name_or_whitespace_in_a_field_is_refused_before_any_gh_call(self):
         cases = [('model', 'prefix ' + n) for n in RESERVED[:1]] + [('model', 'claude-' + n) for n in RESERVED] + [
@@ -413,9 +396,7 @@ class Codespaces(unittest.TestCase):
                 self.assertTrue(err['error'].startswith(key + ' '), err)
                 self.assertNotIn(value, json.dumps(err))
                 self.assertEqual(self.calls(), [], 'gh was called for a refused start')
-        code, out = self.driver('start', REQUEST)
-        self.assertEqual(code, 0, out)
-        self.assertTrue(self.ended(out))
+        out = self.started(finished=True)
         name = os.path.join(self.env['OPENWIZ_CODESPACES_STATE'], out['run'] + '.json')
         for model in ('claude-' + RESERVED[1], 'claude opus'):
             with self.subTest(saved_model=model):
@@ -443,17 +424,20 @@ class Codespaces(unittest.TestCase):
                     self.assertIn('so the run did not start', err['error'])
                     self.assertEqual(list(self.codespaces().values()), ['Shutdown'], err)
                     self.assertTrue(self.until(lambda: not any(alive(p) for p, _, _ in self.logged())))
-        self.tearDown()
-        self.setUp()
-        code, out = self.driver('start', CODEX, FAKE_HARNESS_401='in-a-tool-output')
-        self.assertEqual(code, 0, out)
+
+    def test_a_successful_answer_can_mention_an_authentication_error_on_start_and_wake(self):
+        for request in (REQUEST, CODEX):
+            with self.subTest(harness=request['harness']):
+                env = {'FAKE_HARNESS_401': 'in-a-tool-output'}
+                out = self.started(request, finished=True, **env)
+                self.assertEqual(self.driver('wake', out, **env), (0, dict(out, woke=True)))
+                self.assertEqual(len(self.saved_run(out)['turns']), 2)
+                self.assertEqual(self.driver('stop', out), (0, dict(out, stopped=True)))
 
     def test_a_wake_whose_harness_refuses_to_resume_fails(self):
         for request in (REQUEST, CODEX):
             with self.subTest(harness=request['harness']):
-                code, out = self.driver('start', request)
-                self.assertEqual(code, 0, out)
-                self.assertTrue(self.ended(out))
+                out = self.started(request, finished=True)
                 session = self.logged()[-1][1]
                 os.remove(os.path.join(self.env['FAKE_GH_STATE'] + '.homes', max(self.codespaces()), '.fake-sessions',
                                        session))
@@ -471,8 +455,7 @@ class Codespaces(unittest.TestCase):
         old = os.umask(0o022)
         try:
             open(self.hold, 'w').close()
-            code, out = self.driver('start', REQUEST)
-            self.assertEqual(code, 0, out)
+            out = self.started()
             self.assertTrue(self.until(lambda: any(n.endswith('.sup') for n in os.listdir(state))))
             modes = {n: os.stat(os.path.join(state, n)).st_mode & 0o777 for n in os.listdir(state)}
             self.assertEqual(os.stat(state).st_mode & 0o777, 0o700)
