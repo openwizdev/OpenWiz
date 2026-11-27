@@ -2461,7 +2461,8 @@ class ActionsRoute(unittest.TestCase):
                     status = "in_progress" if state["mode"] == "timeout" else "completed"
                     conclusion = "failure" if state["mode"] == "failed-run" else ("success" if status == "completed" else None)
                     self.send_json(200, {"workflow_runs": [{
-                        "id": 501, "name": f"openwiz-mint-{state['nonce']}",
+                        "id": 501, "name": "OpenWiz Token Service",
+                        "display_title": f"openwiz-mint-{state['nonce']}",
                         "head_branch": "main", "event": "workflow_dispatch",
                         "status": status, "conclusion": conclusion,
                     }]})
@@ -2523,8 +2524,8 @@ class ActionsRoute(unittest.TestCase):
         return env, state
 
     def test_actions_round_trip_and_deletes_artifact(self):
-        # comment-ok: catches: wrong-host credentials, broken round trip or main ref, auth on redirect,
-        # or an artifact left behind after download.
+        # comment-ok: catches: matching the workflow name instead of the run title, wrong-host credentials,
+        # wrong dispatch ref, auth on redirect, or an artifact left behind after download.
         env, state = self.start_fake("ok")
         gh = self.root / "gh"
         gh.write_text("#!/bin/sh\n"
