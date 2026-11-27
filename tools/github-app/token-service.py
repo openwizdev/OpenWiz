@@ -19,7 +19,9 @@ and never a token. mint-token.py stays byte-identical to the copy WizSkills'
 launch-fleet carries: this tool uses the same guards from app.py.
 """
 import base64
+import contextlib
 from datetime import datetime
+import fcntl
 import json
 import os
 from pathlib import Path
@@ -216,34 +218,52 @@ def serve(api, log, data, setting):
         message = {"schema": SCHEMA, "kind": "answer", "sealed_token": sealed, "expires_at": expires_at,
                    "repositories": request["repositories"], "permissions": request["permissions"]}
     except Refused as refused:
-        token = None
         line["outcome"] = refused.code
         message = refusal(refused.code)
     except Exception:
-        token = None
         line["outcome"] = "unavailable"
         message = refusal("unavailable")
-
-    def too_old():
-        nonlocal message, token
-        if token is None or fresh(expires_at):
-            return False
+    try:
+        fcntl.flock(log, fcntl.LOCK_EX)
+        try:
+            message = audit(log, line, message)
+        finally:
+            with contextlib.suppress(OSError):
+                fcntl.flock(log, fcntl.LOCK_UN)
+    except Exception:
+        message = refusal("unavailable")
+    if token is not None and message["kind"] == "refusal":
         app.revoke(api["base"], token)
-        token = None
-        line["outcome"] = "expiry"
-        message = refusal("expiry")
-        return True
+    return message, REFUSALS[message["refusal"]][0] if message["kind"] == "refusal" else 0
 
-    os.fsync(log)
-    too_old()
+
+def audit(log, line, message):
+    start = os.lseek(log, 0, os.SEEK_END)
+    try:
+        record(log, start, line)
+        if message["kind"] == "answer" and not fresh(message["expires_at"]):
+            message = refusal("expiry")
+            record(log, start, refused_line(line, "expiry"))
+    except Exception:
+        message = refusal("unavailable")
+        try:
+            record(log, start, refused_line(line, "unavailable"))
+        except Exception:
+            with contextlib.suppress(OSError):
+                os.ftruncate(log, start)
+    return message
+
+
+def record(log, start, line):
     entry = (json.dumps(line) + "\n").encode()
+    os.ftruncate(log, start)
     app.require(os.write(log, entry) == len(entry))
     os.fsync(log)
-    if too_old():
-        entry = (json.dumps(line) + "\n").encode()
-        app.require(os.write(log, entry) == len(entry))
-        os.fsync(log)
-    return message, REFUSALS[message["refusal"]][0] if message["kind"] == "refusal" else 0
+
+
+def refused_line(line, code):
+    kept = {key: value for key, value in line.items() if key not in ("permissions", "expires_at")}
+    return dict(kept, outcome=code)
 
 
 def refusal(code):
