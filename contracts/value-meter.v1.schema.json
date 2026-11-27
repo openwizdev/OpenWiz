@@ -14,7 +14,27 @@
     "schema_name": {"const": "openwiz.value-meter.v1"},
     "repo": {
       "type": "string",
-      "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]{1,100}$"
+      "pattern": "^[a-z0-9][a-z0-9-]{0,38}/[a-z0-9._-]{1,100}$"
+    },
+    "aggregate_reason": {
+      "type": "string",
+      "enum": [
+        "unconfigured_repos",
+        "unconfigured_rate",
+        "incomplete_read",
+        "no_merged_prs",
+        "no_known_cost",
+        "partial_cost_coverage",
+        "upstream_unknown",
+        "week_unknown",
+        "week_partial"
+      ]
+    },
+    "nullable_aggregate_reason": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/aggregate_reason"}
+      ]
     },
     "utc": {
       "type": "string",
@@ -311,6 +331,79 @@
         }
       ]
     },
+    "aggregate_count_metric": {
+      "allOf": [
+        {"$ref": "#/$defs/count_metric"},
+        {"properties": {"reason": {"$ref": "#/$defs/nullable_aggregate_reason"}}}
+      ]
+    },
+    "aggregate_money_metric": {
+      "allOf": [
+        {"$ref": "#/$defs/money_metric"},
+        {
+          "properties": {
+            "reason": {"$ref": "#/$defs/nullable_aggregate_reason"},
+            "net_reason": {"$ref": "#/$defs/nullable_aggregate_reason"}
+          }
+        }
+      ]
+    },
+    "aggregate_cost_metric": {
+      "allOf": [
+        {"$ref": "#/$defs/cost_metric"},
+        {"properties": {"reason": {"$ref": "#/$defs/nullable_aggregate_reason"}}}
+      ]
+    },
+    "aggregate_week_metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "merged_prs",
+        "hours_saved",
+        "money_saved_usd",
+        "cost_per_merged_pr_credits",
+        "cost_per_merged_pr_usd"
+      ],
+      "properties": {
+        "merged_prs": {
+          "allOf": [
+            {"$ref": "#/$defs/aggregate_count_metric"},
+            {
+              "if": {"required": ["state"], "properties": {"state": {"const": "known"}}},
+              "then": {"properties": {"value": {"type": "integer"}}}
+            }
+          ]
+        },
+        "hours_saved": {"$ref": "#/$defs/aggregate_count_metric"},
+        "money_saved_usd": {"$ref": "#/$defs/aggregate_money_metric"},
+        "cost_per_merged_pr_credits": {"$ref": "#/$defs/aggregate_cost_metric"},
+        "cost_per_merged_pr_usd": {"$ref": "#/$defs/aggregate_cost_metric"}
+      }
+    },
+    "aggregate_delta": {
+      "allOf": [
+        {"$ref": "#/$defs/delta"},
+        {"properties": {"reason": {"$ref": "#/$defs/nullable_aggregate_reason"}}}
+      ]
+    },
+    "aggregate_deltas": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "merged_prs",
+        "hours_saved",
+        "money_saved_usd",
+        "cost_per_merged_pr_credits",
+        "cost_per_merged_pr_usd"
+      ],
+      "properties": {
+        "merged_prs": {"$ref": "#/$defs/aggregate_delta"},
+        "hours_saved": {"$ref": "#/$defs/aggregate_delta"},
+        "money_saved_usd": {"$ref": "#/$defs/aggregate_delta"},
+        "cost_per_merged_pr_credits": {"$ref": "#/$defs/aggregate_delta"},
+        "cost_per_merged_pr_usd": {"$ref": "#/$defs/aggregate_delta"}
+      }
+    },
     "collection": {
       "type": "object",
       "additionalProperties": false,
@@ -318,8 +411,8 @@
       "properties": {
         "schema": {"$ref": "#/$defs/schema_name"},
         "kind": {"const": "collection"},
-        "reads": {"type": "array", "items": {"$ref": "#/$defs/read"}},
-        "records": {"type": "array", "items": {"$ref": "#/$defs/pr_record"}}
+        "reads": {"type": "array", "items": {"$ref": "#/$defs/read"}, "uniqueItems": true},
+        "records": {"type": "array", "items": {"$ref": "#/$defs/pr_record"}, "uniqueItems": true}
       }
     },
     "report": {
@@ -358,11 +451,11 @@
           "additionalProperties": false,
           "required": ["this_week", "last_week"],
           "properties": {
-            "this_week": {"$ref": "#/$defs/week_metrics"},
-            "last_week": {"$ref": "#/$defs/week_metrics"}
+            "this_week": {"$ref": "#/$defs/aggregate_week_metrics"},
+            "last_week": {"$ref": "#/$defs/aggregate_week_metrics"}
           }
         },
-        "week_over_week": {"$ref": "#/$defs/deltas"}
+        "week_over_week": {"$ref": "#/$defs/aggregate_deltas"}
       }
     }
   }

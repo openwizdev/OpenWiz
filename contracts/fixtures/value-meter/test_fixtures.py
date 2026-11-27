@@ -177,9 +177,47 @@ def measured(value):
     return type(value) in (int, float)
 
 
+def normalize_repos(repos):
+    seen, out = set(), []
+    for repo in repos:
+        key = repo.lower()
+        if key not in seen:
+            seen.add(key)
+            out.append(key)
+    return out
+
+
+def deduplicate_records(records):
+    seen, out = set(), []
+    for record in records:
+        repo = record["repository"].lower()
+        key = (repo, record["pull_request"])
+        if key not in seen:
+            seen.add(key)
+            out.append(dict(record, repository=repo))
+    return out
+
+
+def collection_complete(doc):
+    reads = doc.get("reads") or []
+    return bool(reads) and all(read.get("status") == "complete" for read in reads)
+
+
+def expected_delta_state(this, last):
+    states = (this["state"], last["state"])
+    if "unknown" in states:
+        return "unknown"
+    if "partial" in states:
+        return "partial"
+    return "known"
+
+
 def delta_rules(this, last, delta, at):
     found = []
     numeric = sum(measured(row["value"]) for row in (this, last))
+    want_state = expected_delta_state(this, last)
+    if delta["state"] != want_state:
+        found.append(f"{at}: state {delta['state']!r} does not match expected {want_state!r}")
     if delta["total_count"] != 2:
         found.append(f"{at}: total_count is not 2")
     if delta["known_count"] > delta["total_count"]:
@@ -196,7 +234,32 @@ def delta_rules(this, last, delta, at):
 
 
 def outside(doc):
-    if doc.get("kind") not in ("report", "aggregate"):
+    kind = doc.get("kind")
+    if kind == "config":
+        seen, found = set(), []
+        for index, repo in enumerate(doc.get("repos", [])):
+            key = repo.lower()
+            if key in seen:
+                found.append(f"$.repos[{index}]: duplicate repository {key}")
+            seen.add(key)
+        return found
+    if kind == "collection":
+        found, read_repos, seen_prs = [], set(), set()
+        for index, read in enumerate(doc.get("reads", [])):
+            key = read["repository"].lower()
+            if key in read_repos:
+                found.append(f"$.reads[{index}]: duplicate repository {key}")
+            read_repos.add(key)
+        for index, record in enumerate(doc.get("records", [])):
+            repo = record["repository"].lower()
+            if repo not in read_repos:
+                found.append(f"$.records[{index}]: repository {repo} not in reads")
+            pair = (repo, record["pull_request"])
+            if pair in seen_prs:
+                found.append(f"$.records[{index}]: duplicate pull request {repo}#{record['pull_request']}")
+            seen_prs.add(pair)
+        return found
+    if kind not in ("report", "aggregate"):
         return []
     found = []
     try:
@@ -235,10 +298,11 @@ class Proof(unittest.TestCase):
 
     def test_valid_fixtures_match_the_schema(self):
         self.assertGreaterEqual(set(self.valid), {
-            "config-opted-in.json", "config-opted-out.json", "pr-record-known.json",
-            "pr-record-unknown.json", "collection-complete.json", "report-opted-in.json",
-            "report-opted-out.json", "report-partial.json", "report-zero-merges.json",
-            "aggregate.json"})
+            "config-opted-in.json", "config-opted-out.json", "config-enabled-no-repos.json",
+            "pr-record-known.json", "pr-record-unknown.json", "collection-complete.json",
+            "collection-empty.json", "report-opted-in.json", "report-opted-out.json",
+            "report-partial.json", "report-zero-merges.json", "report-unconfigured-repos.json",
+            "aggregate.json", "aggregate-partial.json"})
         for name, document in self.valid.items():
             self.assertEqual(self.validate(document), [], name)
 
@@ -251,7 +315,8 @@ class Proof(unittest.TestCase):
 
     def test_windows_and_honesty_rules_hold_on_the_valid_reports(self):
         for name in ("report-opted-in.json", "report-opted-out.json", "report-partial.json",
-                     "report-zero-merges.json", "aggregate.json"):
+                     "report-zero-merges.json", "report-unconfigured-repos.json",
+                     "aggregate.json", "aggregate-partial.json"):
             self.assertTrue(windows_hold(self.valid[name]), name)
             for side in ("this_week", "last_week"):
                 for metric, value in self.valid[name]["metrics"][side].items():
@@ -270,6 +335,15 @@ class Proof(unittest.TestCase):
         for metric in COST:
             self.assertEqual(zero[metric]["state"], "unknown")
             self.assertIsNone(zero[metric]["value"])
+        unconfigured = self.valid["report-unconfigured-repos.json"]
+        self.assertIs(unconfigured["opted_in"], True)
+        for side in unconfigured["metrics"].values():
+            for value in side.values():
+                self.assertEqual(value["state"], "unknown")
+                self.assertIsNone(value["value"])
+        for delta in unconfigured["week_over_week"].values():
+            self.assertEqual(delta["state"], "unknown")
+            self.assertIsNone(delta["value"])
         partial = self.valid["report-partial.json"]["metrics"]["this_week"]
         self.assertEqual(partial["hours_saved"]["state"], "unknown")
         self.assertEqual(partial["cost_per_merged_pr_credits"]["state"], "partial")
@@ -283,11 +357,27 @@ class Proof(unittest.TestCase):
                 self.assertIsNone(value["value"])
 
     def test_the_aggregate_carries_no_repository_or_private_token(self):
-        text = json.dumps(self.valid["aggregate.json"])
-        self.assertNotIn("repository", text)
-        self.assertNotIn("synthetic-owner", text)
-        self.assertIsNone(PRIVATE.search(text))
-        self.assertNotIn("/", text)
+        for name in ("aggregate.json", "aggregate-partial.json"):
+            text = json.dumps(self.valid[name])
+            self.assertNotIn("repository", text, name)
+            self.assertNotIn("synthetic-owner", text, name)
+            self.assertIsNone(PRIVATE.search(text), name)
+            self.assertNotIn("/", text, name)
+        for path_fn in (
+            lambda d: d["metrics"]["this_week"]["cost_per_merged_pr_usd"].__setitem__(
+                "reason", "failed reading synthetic-owner/synthetic-repo"),
+            lambda d: d["metrics"]["this_week"]["money_saved_usd"].__setitem__(
+                "net_reason", "failed reading synthetic-owner/synthetic-repo"),
+            lambda d: d["metrics"]["this_week"]["cost_per_merged_pr_credits"].__setitem__(
+                "reason", "2 of 4 merged pull requests had a known credit cost"),
+            lambda d: d["metrics"]["this_week"]["hours_saved"].__setitem__(
+                "reason", "hours_per_merged_pr is not configured"),
+            lambda d: d["week_over_week"]["cost_per_merged_pr_usd"].__setitem__(
+                "reason", "synthetic-owner/synthetic-repo was incomplete"),
+        ):
+            agg = json.loads(json.dumps(self.valid["aggregate-partial.json"]))
+            path_fn(agg)
+            self.assertNotEqual(self.validate(agg), [], agg)
 
     def test_the_contract_pins_the_seam_and_the_schema_name(self):
         self.assertEqual(self.pin["schema"], "openwiz.value-meter.v1")
@@ -297,6 +387,52 @@ class Proof(unittest.TestCase):
         self.assertEqual(self.pin["defaults"]["enabled"], False)
         self.assertEqual(self.pin["defaults"]["share_aggregates"], False)
         self.assertEqual(self.pin["windows"]["boundary_utc"], "08:00:00Z")
+        self.assertEqual(self.pin["aggregate_reasons"], self.schema["$defs"]["aggregate_reason"]["enum"])
+        self.assertNotIn("case-sensitively", self.contract)
+
+    def test_empty_source_list_is_unconfigured_and_case_variants_deduplicate(self):
+        self.assertFalse(collection_complete(self.valid["collection-empty.json"]))
+        zero_collection = {
+            "schema": "openwiz.value-meter.v1",
+            "kind": "collection",
+            "reads": [{"repository": "synthetic-owner/synthetic-repo", "status": "complete", "reason": None}],
+            "records": [],
+        }
+        self.assertEqual(self.validate(zero_collection), [])
+        self.assertEqual(outside(zero_collection), [])
+        self.assertTrue(collection_complete(zero_collection))
+        partial_reads = json.loads(json.dumps(zero_collection))
+        partial_reads["reads"].append({"repository": "synthetic-owner/other-repo",
+                                       "status": "incomplete", "reason": "rate limited"})
+        self.assertFalse(collection_complete(partial_reads))
+        lower_dup_config = json.loads(json.dumps(self.valid["config-opted-in.json"]))
+        lower_dup_config["repos"].append("synthetic-owner/synthetic-repo")
+        self.assertIn("repeated items", "\n".join(self.validate(lower_dup_config)))
+        self.assertIn("duplicate repository", "\n".join(outside(lower_dup_config)))
+        orphan = json.loads(json.dumps(self.valid["collection-complete.json"]))
+        orphan["reads"] = []
+        self.assertIn("not in reads", "\n".join(outside(orphan)))
+        dup_config = self.invalid["config-duplicate-repo-case.json"]
+        self.assertIn("duplicate repository", "\n".join(outside(dup_config)))
+        dup_collection = self.invalid["collection-duplicate-pr-case.json"]
+        dup_errors = "\n".join(outside(dup_collection))
+        self.assertIn("duplicate repository", dup_errors)
+        self.assertIn("duplicate pull request", dup_errors)
+        lower_dup_reads = json.loads(json.dumps(self.valid["collection-complete.json"]))
+        lower_dup_reads["reads"].append({"repository": "synthetic-owner/synthetic-repo",
+                                         "status": "incomplete", "reason": "rate limited"})
+        self.assertIn("duplicate repository", "\n".join(outside(lower_dup_reads)))
+        lower_dup_pr = json.loads(json.dumps(self.valid["collection-complete.json"]))
+        second = json.loads(json.dumps(lower_dup_pr["records"][0]))
+        second["cost_credits"] = 25
+        lower_dup_pr["records"].append(second)
+        self.assertIn("duplicate pull request", "\n".join(outside(lower_dup_pr)))
+        normalized = normalize_repos(["Synthetic-Owner/Synthetic-Repo", "synthetic-owner/synthetic-repo"])
+        self.assertEqual(normalized, ["synthetic-owner/synthetic-repo"])
+        deduped = deduplicate_records(dup_collection["records"])
+        self.assertEqual(len(deduped), 1)
+        self.assertEqual((deduped[0]["repository"], deduped[0]["pull_request"]),
+                         ("synthetic-owner/synthetic-repo", 7))
 
     def test_a_non_finite_rate_and_a_repeated_key_are_refused(self):
         config = dict(self.valid["config-opted-in.json"])
@@ -309,9 +445,8 @@ class Proof(unittest.TestCase):
             json.loads(raw, object_pairs_hook=pairs)
 
     def test_rules_the_schema_cannot_see(self):
-        for name in ("report-opted-in.json", "report-opted-out.json", "report-partial.json",
-                     "report-zero-merges.json", "aggregate.json"):
-            self.assertEqual(outside(self.valid[name]), [], name)
+        for name, document in self.valid.items():
+            self.assertEqual(outside(document), [], name)
         report = json.loads(json.dumps(self.valid["report-opted-in.json"]))
         report["metrics"]["this_week"]["money_saved_usd"]["net_of_known_cost_usd"] = -12.5
         self.assertEqual(self.validate(report), [], "a negative net is a measured loss")
@@ -346,6 +481,29 @@ class Proof(unittest.TestCase):
         self.assertEqual(report["week_over_week"]["cost_per_merged_pr_usd"]["known_count"], 1)
         report["week_over_week"]["cost_per_merged_pr_usd"]["known_count"] = 0
         self.assertIn("known_count is not the numeric weeks", "\n".join(outside(report)))
+        report = json.loads(json.dumps(self.valid["report-partial.json"]))
+        report["week_over_week"]["cost_per_merged_pr_credits"]["state"] = "known"
+        report["week_over_week"]["cost_per_merged_pr_credits"]["reason"] = None
+        self.assertEqual(self.validate(report), [])
+        self.assertIn("state 'known' does not match expected 'partial'", "\n".join(outside(report)))
+        report = json.loads(json.dumps(self.valid["report-opted-in.json"]))
+        report["week_over_week"]["merged_prs"] = {
+            "state": "unknown", "value": None, "direction": "unknown",
+            "known_count": 2, "total_count": 2, "reason": "forced unknown",
+        }
+        self.assertEqual(self.validate(report), [])
+        self.assertIn("state 'unknown' does not match expected 'known'", "\n".join(outside(report)))
+        report = json.loads(json.dumps(self.valid["report-opted-in.json"]))
+        report["metrics"]["this_week"]["cost_per_merged_pr_credits"]["state"] = "partial"
+        report["metrics"]["this_week"]["cost_per_merged_pr_credits"]["known_count"] = 2
+        report["metrics"]["this_week"]["cost_per_merged_pr_credits"]["reason"] = "2 of 4 known"
+        self.assertEqual(self.validate(report), [])
+        self.assertIn("state 'known' does not match expected 'partial'", "\n".join(outside(report)))
+        report = json.loads(json.dumps(self.valid["report-partial.json"]))
+        report["week_over_week"]["cost_per_merged_pr_usd"]["state"] = "partial"
+        report["week_over_week"]["cost_per_merged_pr_usd"]["value"] = 0
+        report["week_over_week"]["cost_per_merged_pr_usd"]["direction"] = "flat"
+        self.assertIn("state 'partial' does not match expected 'unknown'", "\n".join(outside(report)))
 
     def test_fixtures_use_synthetic_identifiers_only(self):
         blobs = [self.contract, SCHEMA_PATH.read_text(encoding="utf-8")]

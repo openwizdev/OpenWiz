@@ -1,7 +1,10 @@
 {
+  "aggregate-with-repo-in-reason.json": "$.metrics.this_week.cost_per_merged_pr_usd.reason: not in [",
   "aggregate-with-repository.json": "$: unexpected repository",
   "bad-direction.json": "$.week_over_week.merged_prs.direction: not in ['up', 'down', 'flat']",
-  "bad-repo.json": "$.repos[0]: does not match ^[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]{1,100}$",
+  "bad-repo.json": "$.repos[0]: does not match ^[a-z0-9][a-z0-9-]{0,38}/[a-z0-9._-]{1,100}$",
+  "collection-duplicate-pr-case.json": "$.reads[0].repository: does not match ^[a-z0-9][a-z0-9-]{0,38}/[a-z0-9._-]{1,100}$",
+  "config-duplicate-repo-case.json": "$.repos[0]: does not match ^[a-z0-9][a-z0-9-]{0,38}/[a-z0-9._-]{1,100}$",
   "enabled-string.json": "$.enabled: not boolean",
   "extra-field.json": "$: unexpected note",
   "incomplete-read-without-reason.json": "$.reads[0].reason: not string",
