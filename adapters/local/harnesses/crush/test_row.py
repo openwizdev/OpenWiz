@@ -73,8 +73,8 @@ with machine() as env:
           and stopped == {'run': out['run'], 'stopped': True} and gone)
 
 # A user with both OpenRouter and Anthropic configured: Crush reads a first segment naming a configured provider as
-# a filter, so the README's example must name its provider in full to find exactly one model.
-OPENROUTER_SONNET = 'anthropic/claude-sonnet-4.6'
+# a filter, so the README's example names its provider in full to find exactly one model.
+OPENROUTER_SONNET = 'openrouter/anthropic/claude-sonnet-4.6'
 BOTH = {'FAKE_CRUSH_PROVIDERS': 'openrouter,anthropic'}
 with machine() as env:
     code, out = env.driver('start', {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket',
