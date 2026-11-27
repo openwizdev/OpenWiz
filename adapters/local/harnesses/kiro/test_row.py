@@ -50,13 +50,20 @@ for how, lines in (('both', 'its runError line and its stderr line'), ('json', '
               and out.get('next', '').split('; ')[0] == SIGN_IN and '"stage":"auth"' in log)
         stop_all(env)
 
-for mode, flags in (('permissions-yaml', []), ('trust-all-tools', ['--trust-all-tools'])):
-    with th.ThrowawayMachine(ROWS, NAME, 'kiro-cli', FAKE, mode) as env:
-        code, out = env.start(FAKE_CLI_RECORD_ONLY='1')
-        env.driver('stop', out)
-        argv = env.records()[-1]['argv'] if env.records() else []
-        check('mode %s starts `kiro-cli %s`' % (mode, ' '.join(HEADLESS + ['--model', '<m>'] + flags + ['<prompt>'])),
-              code == 0 and argv[:-1] == HEADLESS + ['--model', 'synthetic-1'] + flags)
+with th.ThrowawayMachine(ROWS, NAME, 'kiro-cli', FAKE, 'trust-all-tools') as env:
+    code, out = env.start(FAKE_CLI_RECORD_ONLY='1')
+    env.driver('stop', out)
+    argv = env.records()[-1]['argv'] if env.records() else []
+    check('mode trust-all-tools starts `kiro-cli %s`' % ' '.join(HEADLESS + ['--model', '<m>', '--trust-all-tools',
+                                                                        '<prompt>']),
+          code == 0 and argv[:-1] == HEADLESS + ['--model', 'synthetic-1', '--trust-all-tools'])
+
+with th.ThrowawayMachine(ROWS, NAME, 'kiro-cli', FAKE, 'permissions-yaml') as env:
+    code, out = env.start(FAKE_CLI_RECORD_ONLY='1')
+    check('mode permissions-yaml is refused before kiro-cli runs: a headless run would load the clone\'s own hooks',
+          code == 1 and th.kit.invalid(out, th.ERROR) is None and 'is not one its row lists' in out.get('error', '')
+          and env.records() == [])
+    stop_all(env)
 
 with th.ThrowawayMachine(ROWS, NAME, 'kiro-cli', FAKE, 'trust-all-tools') as env:
     for level in ('low', 'medium', 'high', 'xhigh', 'max'):

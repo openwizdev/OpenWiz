@@ -31,8 +31,7 @@
   "modes": {
     "trust-all-tools": [
       "--trust-all-tools"
-    ],
-    "permissions-yaml": []
+    ]
   },
   "env": {},
   "effort": "none: kiro-cli's --effort warns and runs on when the model can't take the level, with no documented check first (kiro.dev/docs/cli/headless, kiro.dev/docs/models/effort, kiro-cli 3.5.0)",
