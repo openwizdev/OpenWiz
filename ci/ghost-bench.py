@@ -1,14 +1,4 @@
 #!/usr/bin/env python3
-"""CI gate for the ghost bench (ticket 3152).
-
-    python3 -I ci/ghost-bench.py check REPORT.json
-
-Exit 0 when the report's p90 latency is absent or at most the recorded
-maximum and its acceptance and characters saved are at least the baseline
-in contracts/fixtures/ghost/bench-baseline.json. Exit 1 when the report is
-below that bar. Exit 2 when a file cannot be read. Prints a fixed line, never
-the report body.
-"""
 
 import json
 import sys

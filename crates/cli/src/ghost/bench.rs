@@ -1,10 +1,3 @@
-//! `openwiz ghost bench`: replay messages keystroke by keystroke and print a
-//! `bench_report`. The fixture completer stands in for the engine until GS2
-//! (#3150) is merged; it speaks the contract's suggestion shape.
-//!
-//! GS2 dispatches with
-//! `bench::run_with(&args[1..], out, err, &|name| std::env::var_os(name))`.
-
 use std::collections::BTreeSet;
 use std::ffi::OsString;
 use std::fs;
@@ -95,8 +88,6 @@ pub fn replay_file(
     replay_loaded(&messages, &pack, None, model, "fixtures", log_state)
 }
 
-/// Sent replay. When `skill` is set, its phrases and codes replace the context
-/// pack's skill section, and any entry in `never_suggest` is not offered.
 pub fn replay_sent(
     replay_path: &Path,
     model: FixtureModel,

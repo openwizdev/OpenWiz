@@ -1,9 +1,3 @@
-//! Opt-in local ghost event log. Off unless `ghost/settings.json` is exactly
-//! `{"logging":true}`. The one log file is `ghost/events.jsonl`.
-//!
-//! GS2 dispatches `openwiz ghost forget` with
-//! `log::run_with(&args[1..], out, err, &|name| std::env::var_os(name))`.
-
 use std::ffi::OsString;
 use std::fs::{self, DirBuilder, OpenOptions};
 use std::io::Write;
@@ -137,8 +131,6 @@ pub fn read_event_file(path: &Path) -> Result<Vec<Value>, String> {
     Ok(events)
 }
 
-/// Deletes `ghost/events.jsonl` and nothing else. A symlink at that path is
-/// removed without following it. Missing is success.
 pub fn forget(state: &Path) -> Result<bool, String> {
     require_state(state)?;
     let path = events_path(state);
