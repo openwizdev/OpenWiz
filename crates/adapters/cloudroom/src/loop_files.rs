@@ -220,6 +220,7 @@ fn check_text(folder: &Path, run: &str) -> CheckText {
     }
 }
 
+#[derive(Debug, PartialEq)]
 enum LineError {
     Syntax,
     Json(String),
@@ -240,12 +241,8 @@ fn read_line(line: &str) -> Result<(&str, Json), LineError> {
     if value.starts_with([' ', '\t']) || value.ends_with([' ', '\t']) {
         return Err(LineError::Syntax);
     }
-    let mut parser = Parser {
-        s: value.as_bytes(),
-        i: 0,
-        duplicate: None,
-    };
-    let parsed = parser.value(key);
+    let mut parser = Parser::new(value.as_bytes(), key);
+    let parsed = parser.value();
     match parsed {
         Some(json) if parser.i == parser.s.len() => match parser.duplicate {
             Some(path) => Err(LineError::Duplicate(path)),
@@ -297,13 +294,27 @@ impl Json {
     }
 }
 
+const MAX_DEPTH: usize = 127;
+
 struct Parser<'a> {
     s: &'a [u8],
     i: usize,
+    path: String,
+    depth: usize,
     duplicate: Option<String>,
 }
 
-impl Parser<'_> {
+impl<'a> Parser<'a> {
+    fn new(s: &'a [u8], path: &str) -> Self {
+        Self {
+            s,
+            i: 0,
+            path: path.to_owned(),
+            depth: 0,
+            duplicate: None,
+        }
+    }
+
     fn peek(&self) -> Option<u8> {
         self.s.get(self.i).copied()
     }
@@ -320,57 +331,76 @@ impl Parser<'_> {
             .then(|| self.i += word.len())
     }
 
-    fn value(&mut self, path: &str) -> Option<Json> {
+    fn value(&mut self) -> Option<Json> {
         match self.peek()? {
-            b'{' => {
+            open @ (b'{' | b'[') => {
+                if self.depth == MAX_DEPTH {
+                    return None;
+                }
+                self.depth += 1;
                 self.i += 1;
-                let mut pairs: Vec<(String, Json)> = Vec::new();
-                self.space();
-                if self.eat(b"}").is_some() {
-                    return Some(Json::Object(pairs));
-                }
-                loop {
-                    self.space();
-                    let key = self.string()?;
-                    self.space();
-                    self.eat(b":")?;
-                    self.space();
-                    let child = format!("{path}.{key}");
-                    let value = self.value(&child)?;
-                    if pairs.iter().any(|(k, _)| *k == key) {
-                        self.duplicate.get_or_insert(child);
-                    } else {
-                        pairs.push((key, value));
-                    }
-                    self.space();
-                    if self.eat(b",").is_none() {
-                        self.eat(b"}")?;
-                        return Some(Json::Object(pairs));
-                    }
-                }
-            }
-            b'[' => {
-                self.i += 1;
-                let mut items = Vec::new();
-                self.space();
-                if self.eat(b"]").is_some() {
-                    return Some(Json::Array(items));
-                }
-                loop {
-                    self.space();
-                    items.push(self.value(path)?);
-                    self.space();
-                    if self.eat(b",").is_none() {
-                        self.eat(b"]")?;
-                        return Some(Json::Array(items));
-                    }
-                }
+                let value = if open == b'{' {
+                    self.object()
+                } else {
+                    self.array()
+                };
+                self.depth -= 1;
+                value
             }
             b'"' => self.string().map(Json::String),
             b't' => self.eat(b"true").map(|()| Json::Bool(true)),
             b'f' => self.eat(b"false").map(|()| Json::Bool(false)),
             b'n' => self.eat(b"null").map(|()| Json::Null),
             _ => self.number(),
+        }
+    }
+
+    fn object(&mut self) -> Option<Json> {
+        let mut pairs: Vec<(String, Json)> = Vec::new();
+        self.space();
+        if self.eat(b"}").is_some() {
+            return Some(Json::Object(pairs));
+        }
+        loop {
+            self.space();
+            let key = self.string()?;
+            self.space();
+            self.eat(b":")?;
+            self.space();
+            let parent = self.path.len();
+            self.path.push('.');
+            self.path.push_str(&key);
+            let value = self.value()?;
+            if pairs.iter().any(|(k, _)| *k == key) {
+                if self.duplicate.is_none() {
+                    self.duplicate = Some(self.path.clone());
+                }
+            } else {
+                pairs.push((key, value));
+            }
+            self.path.truncate(parent);
+            self.space();
+            if self.eat(b",").is_none() {
+                self.eat(b"}")?;
+                return Some(Json::Object(pairs));
+            }
+        }
+    }
+
+    fn array(&mut self) -> Option<Json> {
+        let mut items = Vec::new();
+        self.space();
+        if self.eat(b"]").is_some() {
+            return Some(Json::Array(items));
+        }
+        loop {
+            self.space();
+            items.push(self.value()?);
+            self.space();
+            if self.eat(b",").is_none() {
+                self.eat(b"]")?;
+                return Some(Json::Array(items));
+            }
         }
     }
 
@@ -422,11 +452,17 @@ impl Parser<'_> {
         self.eat(b"\"")?;
         let mut out = Vec::new();
         loop {
+            let rest = &self.s[self.i..];
+            let plain = rest
+                .iter()
+                .position(|&c| c == b'"' || c == b'\\' || c < 0x20)
+                .unwrap_or(rest.len());
+            out.extend_from_slice(&rest[..plain]);
+            self.i += plain;
             let c = self.peek()?;
             self.i += 1;
             match c {
                 b'"' => return String::from_utf8(out).ok(),
-                0..=0x1f => return None,
                 b'\\' => {
                     let e = self.peek()?;
                     self.i += 1;
@@ -455,7 +491,7 @@ impl Parser<'_> {
                     };
                     out.extend_from_slice(ch.encode_utf8(&mut [0; 4]).as_bytes());
                 }
-                _ => out.push(c),
+                _ => return None,
             }
         }
     }
@@ -1280,15 +1316,61 @@ impl Json {
     }
 }
 
+struct Strict;
+
+impl<'de> serde::Deserialize<'de> for Strict {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        deserializer.deserialize_any(Strict)
+    }
+}
+
+impl<'de> serde::de::Visitor<'de> for Strict {
+    type Value = Strict;
+
+    fn expecting(&self, out: &mut std::fmt::Formatter) -> std::fmt::Result {
+        out.write_str("any JSON value")
+    }
+
+    fn visit_bool<E>(self, _: bool) -> Result<Strict, E> {
+        Ok(Strict)
+    }
+
+    fn visit_i64<E>(self, _: i64) -> Result<Strict, E> {
+        Ok(Strict)
+    }
+
+    fn visit_u64<E>(self, _: u64) -> Result<Strict, E> {
+        Ok(Strict)
+    }
+
+    fn visit_f64<E>(self, _: f64) -> Result<Strict, E> {
+        Ok(Strict)
+    }
+
+    fn visit_str<E>(self, _: &str) -> Result<Strict, E> {
+        Ok(Strict)
+    }
+
+    fn visit_unit<E>(self) -> Result<Strict, E> {
+        Ok(Strict)
+    }
+
+    fn visit_seq<A: serde::de::SeqAccess<'de>>(self, mut items: A) -> Result<Strict, A::Error> {
+        while items.next_element::<Strict>()?.is_some() {}
+        Ok(Strict)
+    }
+
+    fn visit_map<A: serde::de::MapAccess<'de>>(self, mut pairs: A) -> Result<Strict, A::Error> {
+        while pairs.next_entry::<Strict, Strict>()?.is_some() {}
+        Ok(Strict)
+    }
+}
+
 fn parse_document(bytes: &[u8]) -> Option<Json> {
-    serde_json::from_slice::<Value>(bytes).ok()?;
-    let mut parser = Parser {
-        s: bytes,
-        i: 0,
-        duplicate: None,
-    };
+    serde_json::from_slice::<Strict>(bytes).ok()?;
+    let mut parser = Parser::new(bytes, "");
     parser.space();
-    let value = parser.value("")?;
+    let value = parser.value()?;
     parser.space();
     (parser.i == bytes.len() && parser.duplicate.is_none()).then_some(value)
 }
@@ -1876,11 +1958,17 @@ pub fn plan(
     now: i64,
 ) -> Plan {
     let in_project: Vec<&LiveLoop> = live.iter().filter(|l| l.project_id == project).collect();
+    let markers: Vec<Option<&str>> = in_project
+        .iter()
+        .map(|l| split_marker(&l.name).map(|(id, _)| id))
+        .collect();
+    let mut derived: Option<Vec<Option<String>>> = None;
     let managed = |id: &str| -> Vec<&LiveLoop> {
         in_project
             .iter()
-            .copied()
-            .filter(|l| split_marker(&l.name).is_some_and(|(m, _)| m == id))
+            .zip(&markers)
+            .filter(|(_, marker)| **marker == Some(id))
+            .map(|(l, _)| *l)
             .collect()
     };
     let mut claimed: BTreeMap<String, String> = BTreeMap::new();
@@ -1972,9 +2060,16 @@ pub fn plan(
             continue;
         }
         if target.is_none()
-            && in_project
+            && derived
+                .get_or_insert_with(|| {
+                    in_project
+                        .iter()
+                        .zip(&markers)
+                        .map(|(l, marker)| marker.is_none().then(|| derived_id(&l.name)))
+                        .collect()
+                })
                 .iter()
-                .any(|l| split_marker(&l.name).is_none() && derived_id(&l.name) == file.id)
+                .any(|id| id.as_deref() == Some(file.id.as_str()))
         {
             item.refusals.push(Refusal::new("cf-unmarked-match", "id", "an unmarked Cloudroom loop in this project has this name; adopt it or choose another id"));
             items.push(item);
@@ -3496,5 +3591,586 @@ mod plan_tests {
                 ("undeclared-param", "body".to_owned())
             ]
         );
+    }
+}
+
+#[cfg(test)]
+mod oracle_tests {
+    use super::*;
+
+    struct Rng(u64);
+
+    impl Rng {
+        fn next(&mut self) -> u64 {
+            self.0 ^= self.0 << 13;
+            self.0 ^= self.0 >> 7;
+            self.0 ^= self.0 << 17;
+            self.0
+        }
+
+        fn below(&mut self, n: usize) -> usize {
+            (self.next() % n as u64) as usize
+        }
+
+        fn pick<'a>(&mut self, items: &[&'a str]) -> &'a str {
+            items[self.below(items.len())]
+        }
+    }
+
+    const PIECES: &[&str] = &[
+        "\"plain\"",
+        "\"é ü 漢\"",
+        "\"esc \\\" \\\\ \\/ \\b \\f \\n \\r \\t\"",
+        "\"\\u0041\\u00e9\\u6f22\"",
+        "\"\\ud83d\\ude00\"",
+        "\"\\ud83d\"",
+        "\"\\ude00\"",
+        "\"\\ud83d\\u0041\"",
+        "\"\\x\"",
+        "\"tab\there\"",
+        "\"\"",
+        "\"unterminated",
+        "0",
+        "-0",
+        "01",
+        "12",
+        "-3.25",
+        "1.",
+        "2e5",
+        "2E-5",
+        "1e308",
+        "1e309",
+        "-1e309",
+        "9223372036854775807",
+        "9223372036854775808",
+        "-9223372036854775809",
+        "true",
+        "false",
+        "null",
+        "tru",
+        "nul",
+        "{}",
+        "[]",
+        " ",
+        "\t",
+        "\n",
+        "\r",
+        ",",
+        ":",
+        "}",
+        "]",
+    ];
+
+    fn document(rng: &mut Rng, depth: usize) -> String {
+        match rng.below(if depth > 6 { 3 } else { 6 }) {
+            0 | 1 => rng.pick(PIECES).to_owned(),
+            2 => rng
+                .pick(&["\"a\"", "\"b\"", "1", "null", "\"\\u00e9\""])
+                .to_owned(),
+            3 => {
+                let items: Vec<String> = (0..rng.below(4))
+                    .map(|_| document(rng, depth + 1))
+                    .collect();
+                let gap = rng.pick(&["", " ", "\n "]);
+                format!("[{gap}{}{gap}]", items.join(rng.pick(&[",", ", ", " ,"])))
+            }
+            _ => {
+                let pairs: Vec<String> = (0..rng.below(4))
+                    .map(|_| {
+                        let key = rng.pick(&["\"a\"", "\"b\"", "\"a.b\"", "\"\\u0061\"", "\"\""]);
+                        format!(
+                            "{key}{}{}",
+                            rng.pick(&[":", ": ", " : "]),
+                            document(rng, depth + 1)
+                        )
+                    })
+                    .collect();
+                format!("{{{}}}", pairs.join(rng.pick(&[",", ", "])))
+            }
+        }
+    }
+
+    #[test]
+    fn one_pass_reader_matches_the_previous_reader() {
+        let mut rng = Rng(0x9e37_79b9_7f4a_7c15);
+        let mut documents: Vec<Vec<u8>> = PIECES.iter().map(|p| p.as_bytes().to_vec()).collect();
+        documents.extend([
+            b"{\"a\": 1, \"a\": 2}".to_vec(),
+            b"{\"a\": {\"b\": 1, \"b\": {\"c\": 1, \"c\": 2}}, \"a\": 3}".to_vec(),
+            b"[{\"x\": 1, \"x\": 1}, {\"y\": [1, {\"z\": 1, \"z\": 1}]}]".to_vec(),
+            b"\"\xff\"".to_vec(),
+            b"\"\xc3\"".to_vec(),
+            b"[1, 2] x".to_vec(),
+            b" {\"a\": 1} \n".to_vec(),
+        ]);
+        for _ in 0..20_000 {
+            documents.push(document(&mut rng, 0).into_bytes());
+        }
+        let mut accepted = 0;
+        for bytes in &documents {
+            let new = parse_document(bytes);
+            accepted += usize::from(new.is_some());
+            assert_eq!(
+                new,
+                previous::parse_document(bytes),
+                "{:?}",
+                String::from_utf8_lossy(bytes)
+            );
+            if let Ok(text) = std::str::from_utf8(bytes) {
+                let line = format!("key: {text}");
+                assert_eq!(read_line(&line), previous::read_line(&line), "{line:?}");
+            }
+        }
+        assert!(accepted > 2_000, "{accepted}");
+    }
+
+    #[test]
+    fn values_nest_as_deep_as_serde_json_reads_and_no_deeper() {
+        let nested = |depth: usize| format!("{}{}", "[".repeat(depth), "]".repeat(depth));
+        assert!(serde_json::from_str::<Value>(&nested(MAX_DEPTH)).is_ok());
+        assert!(serde_json::from_str::<Value>(&nested(MAX_DEPTH + 1)).is_err());
+        for depth in [MAX_DEPTH, MAX_DEPTH + 1] {
+            let text = nested(depth);
+            assert_eq!(
+                parse_document(text.as_bytes()),
+                previous::parse_document(text.as_bytes())
+            );
+        }
+        assert!(read_line(&format!("key: {}", nested(MAX_DEPTH))).is_ok());
+        assert_eq!(
+            read_line(&format!("key: {}", nested(MAX_DEPTH + 1))),
+            Err(LineError::Json("key".into()))
+        );
+    }
+
+    #[test]
+    fn a_deeply_nested_frontmatter_value_is_refused_not_a_stack_overflow() {
+        let deep = "[".repeat(200_000) + &"]".repeat(200_000);
+        let text = format!("---\nid: {deep}\nname: \"n\"\n---\nbody\n");
+        let read = read_loop(text.as_bytes(), &mut |_| CheckText::NotFound);
+        assert_eq!(
+            read.refusals,
+            vec![Refusal::new("json", "id", "value is not one JSON value")]
+        );
+    }
+
+    #[test]
+    fn plan_matches_the_previous_plan() {
+        let mut rng = Rng(0x2545_f491_4f6c_dd1d);
+        let ids = [
+            "alpha",
+            "beta",
+            "synthetic-file-1",
+            "synthetic-file-2",
+            "gamma-7",
+        ];
+        let names = [
+            "Alpha",
+            "Beta",
+            "Synthetic File 1",
+            "synthetic file 2",
+            "Gamma 7",
+            "Other",
+        ];
+        for round in 0..400 {
+            let files: Vec<(String, FileRead)> = (0..rng.below(6))
+                .map(|n| {
+                    let id = rng.pick(&ids);
+                    let thread = rng.pick(&["new", "same"]);
+                    let trigger = rng.pick(&[
+                        "{\"cron\": \"0 9 * * 1\", \"timezone\": \"UTC\"}",
+                        "{\"webhook\": true}",
+                        "{\"at\": \"2030-01-02T03:04:05Z\"}",
+                        "{\"in\": \"30m\"}",
+                        "{\"cron\": \"nope\"}",
+                    ]);
+                    let text = format!(
+                        "---\nid: \"{id}\"\nname: \"Loop {n}\"\ntrigger: {trigger}\nthread: \"{thread}\"\n---\nDo the work.\n"
+                    );
+                    (format!("loops/{n}.md"), read_loop(text.as_bytes(), &mut |_| CheckText::NotFound))
+                })
+                .collect();
+            let mut list = String::from("{\"automations\": [");
+            let count = rng.below(8);
+            for n in 0..count {
+                let name = rng.pick(&names);
+                let marked = match rng.below(3) {
+                    0 => String::new(),
+                    _ => format!(" [wizloop:{}]", rng.pick(&ids)),
+                };
+                let project = rng.pick(&["prj_syn_0001", "prj_syn_0001", "prj_syn_0002"]);
+                if n != 0 {
+                    list.push(',');
+                }
+                list.push_str(&format!(
+                    "{{\"id\": \"loop_syn_{n}\", \"project_id\": \"{project}\", \"session_id\": \"thr_syn_0001\", \"name\": \"{name}{marked}\", \"cron\": \"0 9 * * 1\", \"timezone\": \"UTC\", \"run_at\": null, \"webhook\": false, \"new_thread\": {}, \"script\": null, \"agent\": null, \"secrets\": null, \"priority\": 3, \"prompt\": \"Do the work.\", \"enabled\": true}}",
+                    rng.below(2) == 0
+                ));
+            }
+            list.push_str("]}");
+            let live = parse_loop_list(list.as_bytes()).unwrap();
+            let bindings: Vec<(String, String)> = (0..rng.below(3))
+                .map(|_| {
+                    (
+                        rng.pick(&ids).to_owned(),
+                        format!("loop_syn_{}", rng.below(count + 1)),
+                    )
+                })
+                .collect();
+            assert_eq!(
+                plan(&files, &live, "prj_syn_0001", &bindings, 1_893_456_000),
+                previous::plan(&files, &live, "prj_syn_0001", &bindings, 1_893_456_000),
+                "round {round}: {list}"
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod previous {
+    use super::{
+        Action, BTreeMap, BTreeSet, FileRead, Json, LineError, LiveLoop, Plan, PlanItem, Refusal,
+        SAME_THREAD_NOTE, Value, adapter_loop, derived_id, is_name, marker, plan_create,
+        plan_update, split_marker,
+    };
+
+    pub(super) fn read_line(line: &str) -> Result<(&str, Json), LineError> {
+        let (key, value) = line.split_once(": ").ok_or(LineError::Syntax)?;
+        if !is_name(key) {
+            return Err(LineError::Syntax);
+        }
+        if value.starts_with([' ', '\t']) || value.ends_with([' ', '\t']) {
+            return Err(LineError::Syntax);
+        }
+        let mut parser = Parser {
+            s: value.as_bytes(),
+            i: 0,
+            duplicate: None,
+        };
+        let parsed = parser.value(key);
+        match parsed {
+            Some(json) if parser.i == parser.s.len() => match parser.duplicate {
+                Some(path) => Err(LineError::Duplicate(path)),
+                None => Ok((key, json)),
+            },
+            _ => Err(LineError::Json(key.to_owned())),
+        }
+    }
+
+    struct Parser<'a> {
+        s: &'a [u8],
+        i: usize,
+        duplicate: Option<String>,
+    }
+
+    impl Parser<'_> {
+        fn peek(&self) -> Option<u8> {
+            self.s.get(self.i).copied()
+        }
+
+        fn space(&mut self) {
+            while matches!(self.peek(), Some(b' ' | b'\t' | b'\n' | b'\r')) {
+                self.i += 1;
+            }
+        }
+
+        fn eat(&mut self, word: &[u8]) -> Option<()> {
+            self.s[self.i..]
+                .starts_with(word)
+                .then(|| self.i += word.len())
+        }
+
+        fn value(&mut self, path: &str) -> Option<Json> {
+            match self.peek()? {
+                b'{' => {
+                    self.i += 1;
+                    let mut pairs: Vec<(String, Json)> = Vec::new();
+                    self.space();
+                    if self.eat(b"}").is_some() {
+                        return Some(Json::Object(pairs));
+                    }
+                    loop {
+                        self.space();
+                        let key = self.string()?;
+                        self.space();
+                        self.eat(b":")?;
+                        self.space();
+                        let child = format!("{path}.{key}");
+                        let value = self.value(&child)?;
+                        if pairs.iter().any(|(k, _)| *k == key) {
+                            self.duplicate.get_or_insert(child);
+                        } else {
+                            pairs.push((key, value));
+                        }
+                        self.space();
+                        if self.eat(b",").is_none() {
+                            self.eat(b"}")?;
+                            return Some(Json::Object(pairs));
+                        }
+                    }
+                }
+                b'[' => {
+                    self.i += 1;
+                    let mut items = Vec::new();
+                    self.space();
+                    if self.eat(b"]").is_some() {
+                        return Some(Json::Array(items));
+                    }
+                    loop {
+                        self.space();
+                        items.push(self.value(path)?);
+                        self.space();
+                        if self.eat(b",").is_none() {
+                            self.eat(b"]")?;
+                            return Some(Json::Array(items));
+                        }
+                    }
+                }
+                b'"' => self.string().map(Json::String),
+                b't' => self.eat(b"true").map(|()| Json::Bool(true)),
+                b'f' => self.eat(b"false").map(|()| Json::Bool(false)),
+                b'n' => self.eat(b"null").map(|()| Json::Null),
+                _ => self.number(),
+            }
+        }
+
+        fn digits(&mut self) -> usize {
+            let start = self.i;
+            while self.peek().is_some_and(|c| c.is_ascii_digit()) {
+                self.i += 1;
+            }
+            self.i - start
+        }
+
+        fn number(&mut self) -> Option<Json> {
+            let start = self.i;
+            let _ = self.eat(b"-");
+            match self.peek()? {
+                b'0' => self.i += 1,
+                b'1'..=b'9' => {
+                    self.digits();
+                }
+                _ => return None,
+            }
+            let mut integer = true;
+            if self.eat(b".").is_some() {
+                integer = false;
+                (self.digits() > 0).then_some(())?;
+            }
+            if matches!(self.peek(), Some(b'e' | b'E')) {
+                integer = false;
+                self.i += 1;
+                if matches!(self.peek(), Some(b'+' | b'-')) {
+                    self.i += 1;
+                }
+                (self.digits() > 0).then_some(())?;
+            }
+            let text = std::str::from_utf8(&self.s[start..self.i]).ok()?.to_owned();
+            Some(Json::Number { text, integer })
+        }
+
+        fn hex4(&mut self) -> Option<u32> {
+            let hex = self.s.get(self.i..self.i + 4)?;
+            if !hex.iter().all(u8::is_ascii_hexdigit) {
+                return None;
+            }
+            self.i += 4;
+            u32::from_str_radix(std::str::from_utf8(hex).ok()?, 16).ok()
+        }
+
+        fn string(&mut self) -> Option<String> {
+            self.eat(b"\"")?;
+            let mut out = Vec::new();
+            loop {
+                let c = self.peek()?;
+                self.i += 1;
+                match c {
+                    b'"' => return String::from_utf8(out).ok(),
+                    0..=0x1f => return None,
+                    b'\\' => {
+                        let e = self.peek()?;
+                        self.i += 1;
+                        let ch = match e {
+                            b'"' => '"',
+                            b'\\' => '\\',
+                            b'/' => '/',
+                            b'b' => '\u{8}',
+                            b'f' => '\u{c}',
+                            b'n' => '\n',
+                            b'r' => '\r',
+                            b't' => '\t',
+                            b'u' => {
+                                let high = self.hex4()?;
+                                let code = if (0xd800..0xdc00).contains(&high) {
+                                    self.eat(b"\\u")?;
+                                    let low = self.hex4()?;
+                                    (0xdc00..0xe000).contains(&low).then_some(())?;
+                                    0x10000 + ((high - 0xd800) << 10) + (low - 0xdc00)
+                                } else {
+                                    high
+                                };
+                                char::from_u32(code)?
+                            }
+                            _ => return None,
+                        };
+                        out.extend_from_slice(ch.encode_utf8(&mut [0; 4]).as_bytes());
+                    }
+                    _ => out.push(c),
+                }
+            }
+        }
+    }
+
+    pub(super) fn parse_document(bytes: &[u8]) -> Option<Json> {
+        serde_json::from_slice::<Value>(bytes).ok()?;
+        let mut parser = Parser {
+            s: bytes,
+            i: 0,
+            duplicate: None,
+        };
+        parser.space();
+        let value = parser.value("")?;
+        parser.space();
+        (parser.i == bytes.len() && parser.duplicate.is_none()).then_some(value)
+    }
+
+    pub(super) fn plan(
+        files: &[(String, FileRead)],
+        live: &[LiveLoop],
+        project: &str,
+        bindings: &[(String, String)],
+        now: i64,
+    ) -> Plan {
+        let in_project: Vec<&LiveLoop> = live.iter().filter(|l| l.project_id == project).collect();
+        let managed = |id: &str| -> Vec<&LiveLoop> {
+            in_project
+                .iter()
+                .copied()
+                .filter(|l| split_marker(&l.name).is_some_and(|(m, _)| m == id))
+                .collect()
+        };
+        let mut claimed: BTreeMap<String, String> = BTreeMap::new();
+        let mut bound: BTreeSet<String> = BTreeSet::new();
+        let mut items = Vec::new();
+        for (shown, read) in files {
+            let mut item = PlanItem {
+                file: shown.clone(),
+                id: read.id.clone(),
+                action: Action::Refused,
+                loop_id: None,
+                paused: false,
+                commands: Vec::new(),
+                differences: Vec::new(),
+                refusals: Vec::new(),
+                notes: Vec::new(),
+            };
+            let Some(file) = read.file.as_ref().and_then(adapter_loop) else {
+                item.refusals = read.refusals.clone();
+                items.push(item);
+                continue;
+            };
+            let file = &file;
+            if let Some(other) = claimed.get(&file.id) {
+                item.refusals.push(Refusal::new(
+                    "duplicate-id",
+                    "id",
+                    format!("{} is also the id of {other}", file.id),
+                ));
+                items.push(item);
+                continue;
+            }
+            claimed.insert(file.id.clone(), shown.clone());
+            let marked = managed(&file.id);
+            let binding: Vec<&String> = bindings
+                .iter()
+                .filter(|(id, _)| *id == file.id)
+                .map(|(_, l)| l)
+                .collect();
+            let adopt_refusal = |loop_id: &str, reason: &str| {
+                Refusal::new(
+                    "cf-adopt-binding",
+                    "id",
+                    format!("the binding to Cloudroom loop {loop_id} cannot be used: {reason}"),
+                )
+            };
+            let mut adopted = false;
+            let target: Option<&LiveLoop> = if marked.len() > 1 {
+                item.refusals.push(Refusal::new(
+                    "cf-duplicate-marker",
+                    "id",
+                    format!(
+                        "two Cloudroom loops in this project carry {}",
+                        marker(&file.id)
+                    ),
+                ));
+                None
+            } else if let Some(loop_id) = binding.first() {
+                let subject = in_project.iter().find(|l| l.loop_id == **loop_id);
+                let reason = if binding.len() > 1 {
+                    Some("the id is bound more than once")
+                } else if bindings.iter().filter(|(_, l)| l == *loop_id).count() > 1 {
+                    Some("another binding names the same loop")
+                } else if subject.is_none() {
+                    Some("it is not a loop in this project")
+                } else if subject.is_some_and(|l| split_marker(&l.name).is_some()) {
+                    Some("it already carries a marker")
+                } else if !marked.is_empty() {
+                    Some("a loop in this project already carries this file's marker")
+                } else {
+                    None
+                };
+                match reason {
+                    Some(reason) => {
+                        item.refusals.push(adopt_refusal(loop_id, reason));
+                        None
+                    }
+                    None => {
+                        adopted = true;
+                        bound.insert((*loop_id).clone());
+                        subject.copied()
+                    }
+                }
+            } else {
+                marked.first().copied()
+            };
+            if !item.refusals.is_empty() {
+                items.push(item);
+                continue;
+            }
+            if target.is_none()
+                && in_project
+                    .iter()
+                    .any(|l| split_marker(&l.name).is_none() && derived_id(&l.name) == file.id)
+            {
+                item.refusals.push(Refusal::new("cf-unmarked-match", "id", "an unmarked Cloudroom loop in this project has this name; adopt it or choose another id"));
+                items.push(item);
+                continue;
+            }
+            if !file.new_thread {
+                item.notes.push(SAME_THREAD_NOTE.into());
+            }
+            match target {
+                None => plan_create(&mut item, file, now),
+                Some(live) => plan_update(&mut item, file, live, adopted),
+            }
+            items.push(item);
+        }
+        let ids: BTreeSet<&str> = files.iter().filter_map(|(_, f)| f.id.as_deref()).collect();
+        let unmanaged = in_project
+            .iter()
+            .filter(|l| split_marker(&l.name).is_none() && !bound.contains(&l.loop_id))
+            .map(|l| (l.loop_id.clone(), l.name.clone()))
+            .collect();
+        let orphans = in_project
+            .iter()
+            .filter_map(|l| split_marker(&l.name).map(|(id, _)| (l, id)))
+            .filter(|(_, id)| !ids.contains(id))
+            .map(|(l, id)| (l.loop_id.clone(), id.to_owned()))
+            .collect();
+        Plan {
+            items,
+            unmanaged,
+            orphans,
+        }
     }
 }
