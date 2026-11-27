@@ -10,10 +10,6 @@ log = os.environ.get('OPENWIZ_SSH_LOG')
 if log:
     with open(log, 'a') as handle:
         handle.write(json.dumps(args) + '\n')
-hold = os.environ.get('OPENWIZ_SSH_HOLD', '')
-if hold.isdigit():
-    time.sleep(int(hold))
-    sys.exit(0)
 if '--' not in args:
     sys.exit(2)
 command = args[args.index('--') + 1:]
@@ -25,4 +21,12 @@ except ValueError:
     sys.exit(2)
 if not parsed:
     sys.exit(2)
+hold = os.environ.get('OPENWIZ_SSH_HOLD', '')
+if hold.isdigit():
+    ack = next((part for part in parsed if part.startswith('OPENWIZ_SSH_READY:')), None)
+    if ack and not os.environ.get('OPENWIZ_SSH_NO_ACK'):
+        sys.stdout.write(ack + '\n')
+        sys.stdout.flush()
+    time.sleep(int(hold))
+    sys.exit(0)
 os.execvp(parsed[0], parsed)
