@@ -1,0 +1,115 @@
+{
+ "schema": "openwiz.skills-eval.ledger.v1",
+ "skills": {
+  "agent-issue": {
+   "branch": "cursor/agent-records-3d07",
+   "commit": "feac99822f28445d4f9e84ff94c5503422fd1895",
+   "status": "branch-only"
+  },
+  "agent-pr": {
+   "branch": "cursor/agent-records-3d07",
+   "commit": "feac99822f28445d4f9e84ff94c5503422fd1895",
+   "status": "branch-only"
+  },
+  "ask-wiz": {
+   "status": "shipped"
+  },
+  "build-ticket": {
+   "status": "shipped"
+  },
+  "diagnose": {
+   "status": "shipped"
+  },
+  "dream-cycle": {
+   "status": "shipped"
+  },
+  "feedback": {
+   "status": "shipped"
+  },
+  "feedback-triage": {
+   "last_seen": "28fe3416a11314d889cff1e2f337230345ef4897",
+   "status": "historical-only"
+  },
+  "ghost": {
+   "branch": "cursor/ghost-skill-3155-4b0b",
+   "commit": "eeed43dde74be1f1970c7d6be6e99c965d9b8ba0",
+   "status": "branch-only"
+  },
+  "grill": {
+   "status": "shipped"
+  },
+  "handoff": {
+   "status": "shipped"
+  },
+  "hill-climb": {
+   "status": "shipped"
+  },
+  "huntr": {
+   "status": "shipped"
+  },
+  "image": {
+   "status": "shipped"
+  },
+  "install": {
+   "status": "shipped"
+  },
+  "jev": {
+   "branch": "cursor/jev-skill-944b",
+   "commit": "efd591814c1f30d58efaaa9c3a48ed144de3e2fb",
+   "status": "branch-only"
+  },
+  "launch-fleet": {
+   "status": "shipped"
+  },
+  "onboard": {
+   "last_seen": "28fe3416a11314d889cff1e2f337230345ef4897",
+   "status": "historical-only"
+  },
+  "overnight": {
+   "last_seen": "28fe3416a11314d889cff1e2f337230345ef4897",
+   "status": "historical-only"
+  },
+  "plan-graph": {
+   "last_seen": "33539ccc5b27f1cecbb8fa304982e2d6fd199322",
+   "status": "historical-only"
+  },
+  "research": {
+   "status": "shipped"
+  },
+  "review-ticket": {
+   "status": "shipped"
+  },
+  "role-call": {
+   "status": "shipped"
+  },
+  "setup": {
+   "status": "shipped"
+  },
+  "son-of-anton": {
+   "status": "shipped"
+  },
+  "to-spec": {
+   "status": "shipped"
+  },
+  "to-tickets": {
+   "status": "shipped"
+  },
+  "triage": {
+   "status": "shipped"
+  },
+  "wait-what": {
+   "branch": "cursor/wait-what-skill-5c8c",
+   "commit": "03dab4ed7aee7ea161980e6cbff7cb29801c25ba",
+   "status": "branch-only"
+  },
+  "wayfind": {
+   "status": "shipped"
+  },
+  "where-are-we": {
+   "status": "shipped"
+  },
+  "write-driver": {
+   "status": "shipped"
+  }
+ }
+}

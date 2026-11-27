@@ -87,9 +87,6 @@ def plugin(*names):
 
 
 class FakeWizSkills:
-    """A synthetic WizSkills: alpha and beta ship, helper is loaded by alpha but unlisted,
-    gone was removed from main, and side lives only on a branch."""
-
     def __init__(self, root):
         self.path = Path(root, 'wizskills')
         self.path.mkdir()
@@ -164,8 +161,9 @@ class Pinned(unittest.TestCase):
         flags = argparse.Namespace(wizskills=str(self.ws.path), wizskills_commit=self.ws.main)
         with mock.patch.dict(os.environ, {'WIZSKILLS_CHECKOUT': '/nowhere', 'WIZSKILLS_COMMIT': 'a' * 40}):
             self.assertEqual(E.pin_from(flags)['commit'], self.ws.main)
-            self.assertEqual(E.pin_from(argparse.Namespace(wizskills=None, wizskills_commit=None))['checkout'],
-                             Path('/nowhere'))
+        unset = argparse.Namespace(wizskills=None, wizskills_commit=None)
+        with mock.patch.dict(os.environ, {'WIZSKILLS_CHECKOUT': str(self.ws.path), 'WIZSKILLS_COMMIT': self.ws.first}):
+            self.assertEqual(E.pin_from(unset)['commit'], self.ws.first)
 
     def test_the_snapshot_is_the_host_with_wizskills_installed_at_the_pin(self):
         read, lst = E.snapshot('HEAD', self.ws.pin)
