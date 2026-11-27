@@ -10,6 +10,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 
 sys.dont_write_bytecode = True
@@ -60,7 +61,8 @@ class Driver(unittest.TestCase):
         self.addCleanup(shutil.rmtree, self.folder, True)
         self.mark = secrets.token_hex(8)
         self.tracker = tracker(self.folder)
-        self.env = dict(os.environ, KIT_TEST=self.mark, OPENWIZ_CAPY_POLL='0.01')
+        self.env = dict(os.environ, KIT_TEST=self.mark, OPENWIZ_CAPY_POLL='0.01',
+                        OPENWIZ_CAPY_STATE=os.path.join(self.folder, 'state'))
         self.use()
 
     def use(self, **kw):
@@ -163,6 +165,19 @@ class Driver(unittest.TestCase):
         code, out = self.driver('start', dict(START, harness='gemini-cli'))
         self.assertEqual(out, {'error': 'harness gemini-cli is not one Capy runs for OpenWiz',
                                'next': 'use claude-code (or claude) or codex'})
+        self.assertEqual(self.driver('start', dict(START, harness='gemini-cli', effort='high'))[1], {
+            'error': 'Capy cannot run gemini-cli (model claude-synthetic-1) at effort high', 'next': NO_EFFORT})
+        self.assertEqual(self.host.requests, [])
+
+    def test_a_capy_qualified_model_is_kept_and_only_a_bare_one_gets_the_harness_prefix(self):
+        run = self.started(model='anthropic/claude-synthetic-1')
+        self.assertEqual(self.host.threads[run]['create']['model'], {'modelId': 'anthropic/claude-synthetic-1'})
+        run = self.started(harness='codex', model='openai/gpt-synthetic-2', repository='example/other')
+        self.assertEqual(self.host.threads[run]['create']['model'], {'modelId': 'openai/gpt-synthetic-2'})
+        self.host.requests.clear()
+        self.assertEqual(self.driver('start', dict(START, model='openai/gpt-synthetic-2')), (1, {
+            'error': 'model openai/gpt-synthetic-2 is not an anthropic model, as harness claude-code needs',
+            'next': 'name the model bare, or as anthropic/<model>'}))
         self.assertEqual(self.host.requests, [])
 
     def test_effort_reaches_the_host_as_the_model_reasoning_mode(self):
@@ -192,6 +207,32 @@ class Driver(unittest.TestCase):
         self.assertEqual(out, {'error': 'Capy answered 503 to POST /api/v1/threads, so a thread may have started',
                                'next': 'archive the Capy thread titled OpenWiz: example/site#7 if it is there, '
                                        'then start again'})
+        self.use(lose_creates=1, replay=(401, fake.tag('Unauthorized')))
+        self.assertEqual(self.driver('start', START)[1], out)
+        self.assertEqual(len(self.host.threads), 1)
+
+    def test_a_start_the_key_helper_never_sent_keeps_the_helpers_setup_advice(self):
+        self.use(served_key='')
+        self.env['CAPY_PROJECT_ID'] = 'project_synthetic1'
+        out = self.refused('start', START, "the key helper refused: the kit's fake host gave no test key")
+        self.assertTrue(out['next'].startswith('unset OPENWIZ_HOSTKEY_TEST_ORIGIN'), out)
+        self.assertEqual(self.host.requests, [])
+
+    def test_a_rate_limited_create_waits_the_seconds_capy_asks_then_sends_it_once_more(self):
+        self.use(throttle=[1])
+        began = time.monotonic()
+        run = self.started()
+        self.assertGreaterEqual(time.monotonic() - began, 1)
+        first, second = self.host.bodies('POST', '/api/v1/threads')
+        self.assertEqual((first, list(self.host.threads)), (second, [run]))
+        self.use(throttle=[600])
+        self.assertEqual(self.driver('start', START), (1, {
+            'error': 'Capy answered 429 to POST /api/v1/threads and asked to wait 600 seconds',
+            'next': 'wait that long, then start again'}))
+        self.assertEqual((len(self.host.bodies('POST', '/api/v1/threads')), self.host.threads), (1, {}))
+        self.use(throttle=[0, 0])
+        self.assertEqual(self.driver('start', START)[1], {'error': 'Capy answered 429 to POST /api/v1/threads twice',
+                                                          'next': 'wait a minute, then start again'})
 
     def test_wake_steers_a_message_into_the_same_thread_and_its_note_is_edited(self):
         run = self.started()
@@ -213,6 +254,40 @@ class Driver(unittest.TestCase):
         self.assertEqual(self.driver('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
         self.assertEqual((len(self.posts()), self.host.threads[run]['messages']), (2, []))
 
+    def test_a_stop_during_a_wake_of_the_same_run_waits_for_it_and_leaves_the_run_stopped(self):
+        run = self.started()
+        self.host.hold = ('GET', '/api/v1/threads/' + run)
+
+        def begin(cmd):
+            p = subprocess.Popen([DRIVER, cmd], stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=self.env, text=True)
+            p.stdin.write(json.dumps({'run': run}))
+            p.stdin.close()
+            return p
+        wake = begin('wake')
+        self.assertTrue(self.host.held.wait(30))
+        stop = begin('stop')
+        try:
+            stop.wait(1.5)
+        except subprocess.TimeoutExpired:
+            pass
+        self.host.release.set()
+        self.assertEqual([(json.loads(p.stdout.read()), p.wait(60)) for p in (wake, stop)],
+                         [({'run': run, 'woke': True}, 0), ({'run': run, 'stopped': True}, 0)])
+        self.assertTrue(self.host.threads[run]['archived'])
+        self.env['OPENWIZ_CAPY_STATE'] = self.tracker
+        self.host.requests.clear()
+        for cmd in ('wake', 'stop'):
+            self.assertEqual(self.driver(cmd, {'run': run})[1]['error'], 'the driver cannot lock run ' + run)
+        self.assertEqual(self.host.requests, [])
+
+    def test_fields_capy_adds_to_its_answers_change_nothing(self):
+        self.use(widen={'addedLater': [1]})
+        run = self.started()
+        self.assertEqual(self.driver('wake', {'run': run}), (0, {'run': run, 'woke': True}))
+        self.assertEqual(self.driver('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
+        self.assertEqual(self.driver('start', dict(START, effort='xhigh'))[1]['next'], NO_EFFORT)
+        self.assertEqual(self.driver('wake', {'run': 'jam_01UNKNOWN'})[1]['next'], 'start a new run')
+
     def test_an_unknown_run_is_refused_by_wake_and_stop(self):
         for cmd in ('wake', 'stop'):
             self.assertEqual(self.driver(cmd, {'run': 'jam_01UNKNOWN'}),
@@ -227,7 +302,7 @@ class Driver(unittest.TestCase):
                            (404, {'_tag': 'capy/ThreadNotFound', 'threadId': 'jam_other'}), (201, good),
                            (200, dict(good, id='jam_other')), (200, dict(good, archived='yes')),
                            (200, dict(good, status='paused')), (200, dict(good, status='archived')),
-                           (200, dict(good, archived=True, status='working')), (200, dict(good, extra=1)),
+                           (200, dict(good, archived=True, status='working')),
                            (200, {k: v for k, v in good.items() if k != 'usage'})):
             self.host.answers[:] = [('GET', '/api/v1/threads/' + run, code, body)]
             for cmd in ('wake', 'stop'):
@@ -239,7 +314,7 @@ class Driver(unittest.TestCase):
         run = self.started()
         receipt = {'id': '01SYNTHETIC' + '0' * 15, 'deduped': False}
         for code, body in ((200, None), (200, {}), (200, dict(receipt, id='01SHORT')), (202, receipt),
-                           (200, dict(receipt, deduped='no')), (200, dict(receipt, extra=1))):
+                           (200, dict(receipt, deduped='no'))):
             for cmd, route in (('wake', 'message'), ('stop', 'interrupt')):
                 self.host.answers[:] = [('POST', '/api/v1/threads/%s/%s' % (run, route), code, body)]
                 self.host.requests.clear()
@@ -254,9 +329,9 @@ class Driver(unittest.TestCase):
 
     def test_a_project_list_off_its_documented_shape_is_refused_before_any_create(self):
         good, other = fake.PROJECTS
-        for body in (None, {}, {'items': None}, {'items': [good], 'more': 1}, {'items': [good, None]},
+        for body in (None, {}, {'items': None}, {'items': [good, None]},
                      {'items': [dict(good, repos=None)]}, {'items': [{k: v for k, v in good.items() if k != 'repos'}]},
-                     {'items': [dict(good, id=7)]}, {'items': [dict(good, id='')]}, {'items': [dict(good, extra=1)]},
+                     {'items': [dict(good, id=7)]}, {'items': [dict(good, id='')]},
                      {'items': [dict(good, repos=[{'repoFullName': 'Example/Site'}])]},
                      {'items': [good, dict(other, repos='example/other')]}):
             self.host.answers[:] = [('GET', '/api/v1/projects', 200, body)]
@@ -301,7 +376,7 @@ class Driver(unittest.TestCase):
     def test_inputs_off_the_schema_are_refused_before_any_request(self):
         for bad in (dict(START, token='kit-probe-not-a-login'), {k: v for k, v in START.items() if k != 'model'},
                     dict(START, ticket='7'), dict(START, repository='https://example.com/x'),
-                    dict(START, effort='High')):
+                    dict(START, effort='High'), dict(START, model='m' * 101)):
             self.assertEqual(self.driver('start', bad)[0], 1)
         for bad in ({'run': '../x'}, {'run': 'jam_01?x=1'}, {'run': 'jam_01', 'x': 1}, {'run': 'a' * 101}):
             for cmd in ('wake', 'stop'):

@@ -38,11 +38,13 @@ def tag(name, **fields):
 
 class FakeCapy:
 
-    def __init__(self, key, tracker, projects=PROJECTS, models=MODELS, lose_creates=0, served_key=None, answers=()):
+    def __init__(self, key, tracker, projects=PROJECTS, models=MODELS, lose_creates=0, served_key=None, answers=(),
+                 replay=None, throttle=(), widen=None):
         self.key, self.tracker, self.projects, self.models = key, tracker, projects, models
         self.answers = list(answers)
         self.served_key = key if served_key is None else served_key
-        self.lose_creates = lose_creates
+        self.lose_creates, self.replay, self.throttle, self.widen = lose_creates, replay, list(throttle), widen
+        self.hold, self.held, self.release = None, threading.Event(), threading.Event()
         self.requests, self.threads, self.by_request = [], {}, {}
         self.lock = threading.Lock()
         host = self
@@ -64,7 +66,12 @@ class FakeCapy:
                             code, body = host.route(self.command, self.path, json.loads(raw) if raw else None)
                         except ValueError:
                             code, body = 400, tag('InvalidRequest', message='synthetic: unreadable JSON')
-                self.reply(code, body)
+                    held = host.hold == (self.command, self.path)
+                    host.hold = None if held else host.hold
+                if held:
+                    host.held.set()
+                    host.release.wait(60)
+                self.reply(code, host.widened(body))
 
             def reply(self, code, body):
                 data = json.dumps(body).encode()
@@ -84,6 +91,13 @@ class FakeCapy:
     def close(self):
         self.server.shutdown()
         self.server.server_close()
+
+    def widened(self, value):
+        if isinstance(value, list):
+            return [self.widened(v) for v in value]
+        if isinstance(value, dict) and self.widen:
+            return dict({k: self.widened(v) for k, v in value.items()}, **self.widen)
+        return value
 
     def calls(self):
         return [(m, p) for m, p, _, _ in self.requests]
@@ -137,6 +151,10 @@ class FakeCapy:
             if not isinstance(body, dict) or set(body) - CREATE or not {'requestId', 'projectId', 'message'} <= set(
                     body):
                 return 400, tag('InvalidRequest', message='synthetic: not a CreateThreadRequest')
+            if self.throttle:
+                return 429, tag('RateLimited', retryAfterSeconds=self.throttle.pop(0))
+            if self.replay and body['requestId'] in self.by_request:
+                return self.replay
             if body['projectId'] not in [p['id'] for p in self.projects]:
                 return 404, tag('ProjectNotFound', projectId=body['projectId'])
             model = body.get('model')
