@@ -67,6 +67,79 @@ def paused(*args):
 t.running = paused
 t.main()
 '''
+PRE_1590_TEMPLATE = '''import json, os, secrets, subprocess, sys
+cmd = sys.argv[1]
+req = json.loads(sys.stdin.read())
+state_dir = os.environ['OPENWIZ_TEMPLATE_STATE']
+os.makedirs(state_dir, mode=0o700, exist_ok=True)
+def launch(start_req, run, woken):
+    what = 'You were woken: read the ticket again and carry on' if woken else 'Build the ticket'
+    prompt = '%s: %s#%d, with the %s skill.' % (what, start_req['repository'], start_req['ticket'], start_req['skill'])
+    return subprocess.Popen([start_req['harness'], '--model', start_req['model'], '-p', prompt],
+                            env=dict(os.environ, OPENWIZ_RUN=run), start_new_session=True,
+                            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).pid
+if cmd == 'start':
+    run = 'run-' + secrets.token_hex(6)
+    state = {'request': req, 'turns': [launch(req, run, False)], 'stopped': False}
+    with open(os.path.join(state_dir, run + '.json'), 'w') as f:
+        json.dump(state, f)
+    print(json.dumps({'run': run}))
+elif cmd == 'wake':
+    run = req['run']
+    path = os.path.join(state_dir, run + '.json')
+    with open(path) as f:
+        state = json.load(f)
+    state['turns'].append(launch(state['request'], run, True))
+    with open(path, 'w') as f:
+        json.dump(state, f)
+    print(json.dumps({'run': run, 'woke': True}))
+'''
+CHECKPOINT_HARNESS = '''import os, signal, sys, time
+if os.environ.get('IGNORE_TERM'):
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+else:
+    def on_term(*_):
+        time.sleep(0.25)
+        with open(os.environ['CHECKPOINT'], 'w') as f:
+            f.write('saved')
+        sys.exit(0)
+    signal.signal(signal.SIGTERM, on_term)
+with open(os.environ['READY'], 'w') as f:
+    f.write(str(os.getpid()))
+while True:
+    time.sleep(0.05)
+'''
+LEGACY_STOP_WRAPPER = '''import importlib.machinery, importlib.util, os, re, signal, sys
+sys.dont_write_bytecode = True
+if os.environ.get('AUDIT_ENVIRON') or os.environ.get('DENY_ENVIRON'):
+    seen, deny = os.environ.get('AUDIT_ENVIRON'), os.environ.get('DENY_ENVIRON')
+    def audit(event, args):
+        if event == 'open' and isinstance(args[0], (str, bytes)):
+            path = os.fsdecode(args[0])
+            if re.fullmatch(r'/proc/[0-9]+/environ', path):
+                if seen:
+                    with open(seen, 'a') as f:
+                        f.write(path + '\\n')
+                if deny:
+                    raise PermissionError('synthetic environ refusal')
+    sys.addaudithook(audit)
+spec = importlib.util.spec_from_loader('template', importlib.machinery.SourceFileLoader('template', %r))
+t = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(t)
+if os.environ.get('SHORT_GRACE'):
+    t.GRACE = float(os.environ['SHORT_GRACE'])
+    if hasattr(t, 'KILL_GRACE'):
+        t.KILL_GRACE = float(os.environ['SHORT_GRACE'])
+if os.environ.get('DENY_SIGNALS'):
+    def denied(*_):
+        raise PermissionError('synthetic signal refusal')
+    if hasattr(signal, 'pidfd_send_signal'):
+        signal.pidfd_send_signal = denied
+    os.killpg = denied
+    real_kill = os.kill
+    os.kill = lambda pid, sig: real_kill(pid, sig) if sig == 0 else denied(pid, sig)
+t.main()
+'''
 
 
 def pinned_path(folder, *fixtures):
@@ -162,12 +235,17 @@ class Template(unittest.TestCase):
         except OSError:
             return False
 
-    def wrapper(self, name, source):
-        path = os.path.join(self.folder, name)
+    def script(self, name, source, folder=None):
+        folder = folder or self.folder
+        os.makedirs(folder, exist_ok=True)
+        path = os.path.join(folder, name)
         with open(path, 'w') as f:
-            f.write('#!%s\n' % sys.executable + source % DRIVER)
+            f.write('#!%s\n' % sys.executable + source)
         os.chmod(path, 0o700)
         return path
+
+    def wrapper(self, name, source):
+        return self.script(name, source % DRIVER)
 
     def call(self, cmd, request, driver=DRIVER, **env):
         env = dict(self.env, **env)
@@ -625,22 +703,105 @@ class Template(unittest.TestCase):
 
 
     def test_a_run_saved_by_the_older_template_stops_and_does_not_wake(self):
-        run = 'run-' + secrets.token_hex(6)
-        folder = self.env['OPENWIZ_TEMPLATE_STATE']
-        os.makedirs(folder)
-        held = subprocess.Popen(['sleep', '120'], env=dict(os.environ, OPENWIZ_RUN=run), start_new_session=True,
-                                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        self.addCleanup(held.kill)
-        record = {'request': START, 'turns': [held.pid], 'stopped': False}
-        with open(os.path.join(folder, run + '.json'), 'w') as f:
-            json.dump(record, f)
+        old_driver = self.script('pre-1590-driver', PRE_1590_TEMPLATE)
+        code, started = self.call('start', START, driver=old_driver, FAKE_SAME_GROUP='1')
+        self.assertEqual(code, 0, started)
+        run = started['run']
+        [(turn, child, _)] = self.logged(1)
+        record_path = os.path.join(self.env['OPENWIZ_TEMPLATE_STATE'], run + '.json')
+        self.assertEqual(json.loads(read(record_path))['turns'], [turn])
+        self.assertTrue(self.until(lambda: not alive(turn)), 'the legacy harness did not exit')
+        self.assertTrue(alive(child))
         code, out = self.call('wake', {'run': run})
         self.assertEqual(code, 1, out)
         self.assertIn('older template', out['error'])
         self.assertNotIn('TypeError', json.dumps(out))
-        self.assertTrue(alive(held.pid))
-        code, out = self.call('stop', {'run': run})
-        self.assertEqual((code, out.get('stopped'), alive(held.pid)), (0, True, False), out)
+        self.assertEqual(len(self.logged()), 1, 'wake started a second turn for a legacy run')
+        self.assertTrue(alive(child))
+        outsider = subprocess.Popen(['sleep', '120'], start_new_session=True,
+                                    stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.addCleanup(lambda p=outsider: (p.kill(), p.wait()))
+        audited = os.path.join(self.folder, 'environ-opens')
+        driver = self.wrapper('legacy-audit', LEGACY_STOP_WRAPPER)
+        code, out = self.call('stop', {'run': run}, driver=driver, AUDIT_ENVIRON=audited)
+        self.assertEqual((code, out), (0, {'run': run, 'stopped': True}))
+        self.assertFalse(alive(child), 'a worker in the legacy turn group still runs after stop')
+        self.assertEqual(self.marked(), [], 'a legacy run process still runs after stop')
+        self.assertTrue(alive(outsider.pid), 'stop affected an unrelated process')
+        opened = read(audited).splitlines() if os.path.exists(audited) else []
+        self.assertNotIn('/proc/%d/environ' % outsider.pid, opened, 'stop read an unrelated process environment')
+        self.assertEqual(self.call('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
+
+    def test_stop_gives_a_legacy_run_shutdown_grace_before_sigkill(self):
+        old_driver = self.script('pre-1590-driver', PRE_1590_TEMPLATE)
+        fixtures = os.path.join(self.folder, 'checkpoint-fixtures')
+        self.script('fake-harness', CHECKPOINT_HARNESS, folder=fixtures)
+        path = fixtures + os.pathsep + self.env['PATH']
+        ready = os.path.join(self.folder, 'ready-grace')
+        checkpoint = os.path.join(self.folder, 'checkpoint')
+        code, started = self.call('start', START, driver=old_driver, PATH=path, READY=ready, CHECKPOINT=checkpoint)
+        self.assertEqual(code, 0, started)
+        self.assertTrue(self.until(lambda: os.path.exists(ready) and bool(read(ready).strip())))
+        pid = int(read(ready).strip())
+        code, out = self.call('stop', started, PATH=path)
+        self.assertEqual((code, out), (0, dict(started, stopped=True)))
+        self.assertFalse(alive(pid), 'the legacy harness still runs after stop')
+        self.assertTrue(os.path.exists(checkpoint) and read(checkpoint) == 'saved',
+                        'stop killed the legacy harness before it saved its checkpoint')
+        ready_ign = os.path.join(self.folder, 'ready-ignore')
+        code, started_ign = self.call('start', START, driver=old_driver, PATH=path, READY=ready_ign, IGNORE_TERM='1')
+        self.assertEqual(code, 0, started_ign)
+        self.assertTrue(self.until(lambda: os.path.exists(ready_ign) and bool(read(ready_ign).strip())))
+        pid_ign = int(read(ready_ign).strip())
+        driver = self.wrapper('legacy-short-grace', LEGACY_STOP_WRAPPER)
+        t0 = time.monotonic()
+        code, out = self.call('stop', started_ign, driver=driver, PATH=path, SHORT_GRACE='0.4')
+        elapsed = time.monotonic() - t0
+        self.assertEqual((code, out), (0, dict(started_ign, stopped=True)))
+        self.assertGreaterEqual(elapsed, 0.35, 'stop did not wait the shutdown grace before SIGKILL')
+        self.assertFalse(alive(pid_ign), 'a SIGTERM-ignoring legacy harness still runs after stop')
+
+    def test_stop_refuses_a_legacy_run_before_marking_stopped_when_shutdown_is_unconfirmed(self):
+        old_driver = self.script('pre-1590-driver', PRE_1590_TEMPLATE)
+        open(self.hold, 'w').close()
+        code, started = self.call('start', START, driver=old_driver, FAKE_SAME_GROUP='1')
+        self.assertEqual(code, 0, started)
+        [(turn, child, _)] = self.logged(1)
+        record_path = os.path.join(self.env['OPENWIZ_TEMPLATE_STATE'], started['run'] + '.json')
+        driver = self.wrapper('legacy-deny-signals', LEGACY_STOP_WRAPPER)
+        code, out = self.call('stop', started, driver=driver, DENY_SIGNALS='1', SHORT_GRACE='0.2')
+        self.assertEqual(code, 1, out)
+        self.assertIn('still has processes', out['error'])
+        self.assertTrue(out.get('next'), out)
+        self.assertFalse(json.loads(read(record_path))['stopped'], 'stop marked the run stopped despite survivors')
+        self.assertTrue(alive(turn))
+        code, out = self.call('stop', started, driver=driver, DENY_ENVIRON='1')
+        self.assertEqual(code, 1, out)
+        self.assertIn('cannot inspect', out['error'])
+        self.assertTrue(out.get('next'), out)
+        self.assertFalse(json.loads(read(record_path))['stopped'], 'stop marked the run stopped with unreadable environ')
+        self.assertTrue(alive(turn))
+        macos = {'PATH': NO_PROC + os.pathsep + self.env['PATH'], 'NO_PROC_PYTHON': sys.executable}
+        code, out = self.call('stop', started, **macos)
+        self.assertEqual(code, 1, out)
+        self.assertTrue(out.get('error') and out.get('next'), out)
+        self.assertFalse(json.loads(read(record_path))['stopped'], 'stop marked the run stopped without /proc')
+        self.assertTrue(alive(turn))
+        self.assertEqual(self.call('stop', started), (0, dict(started, stopped=True)))
+        self.assertEqual((alive(turn), alive(child)), (False, False))
+        self.assertEqual(self.call('stop', started, **macos), (0, dict(started, stopped=True)))
+
+    def test_stop_does_not_signal_an_unrelated_process_that_reused_a_legacy_pid(self):
+        run = 'run-' + secrets.token_hex(6)
+        folder = self.env['OPENWIZ_TEMPLATE_STATE']
+        os.makedirs(folder, exist_ok=True)
+        unmarked = subprocess.Popen(['sleep', '120'], start_new_session=True,
+                                    stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.addCleanup(lambda p=unmarked: (p.kill(), p.wait()))
+        with open(os.path.join(folder, run + '.json'), 'w') as f:
+            json.dump({'request': START, 'turns': [unmarked.pid], 'stopped': False}, f)
+        self.assertEqual(self.call('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
+        self.assertTrue(alive(unmarked.pid), 'stop signaled a process without OPENWIZ_RUN')
 
     def test_a_provider_qualified_model_reaches_the_harness(self):
         self.env['FAKE_ARGS'] = os.path.join(self.folder, 'args')
