@@ -6,7 +6,7 @@
    "status": 200,
    "body": {
     "id": "jam_01KITTHREAD0000000000000",
-    "projectId": null,
+    "projectId": "{{request.projectId}}",
     "authorId": null,
     "previousAuthorId": null,
     "title": "OpenWiz: kit",
