@@ -217,7 +217,7 @@ impl GhostEngine {
             .context
             .update_turns(req.session_id, req.agent, req.turns)
             .to_owned();
-        // Seam for GS5 (#3153): precompute draft when last turn has asks_user == true.
+
         ok_json(&TurnsResponse {
             schema: SCHEMA_ID.to_owned(),
             revision,
@@ -258,7 +258,6 @@ impl GhostEngine {
             .complete(&req.prefix, self.confidence_threshold);
         let latency_ms = started.elapsed().as_secs_f64() * 1000.0;
 
-        // Seam for GS3 (#3151): blend small-model completion with recall_match.
         let suggestion = recall_match.map(|m| {
             let id = format!("sug_{:04}", self.next_suggestion_id);
             self.next_suggestion_id += 1;
@@ -293,7 +292,7 @@ impl GhostEngine {
         if let Err(why) = validate_draft_request(&req) {
             return RefusalEnvelope::new(RefusalCode::InvalidRequest, why).into_response();
         }
-        // Seam for GS5 (#3153): return precomputed or freshly generated draft.
+
         RefusalEnvelope::new(
             RefusalCode::NotImplemented,
             "draft tier is not built yet (see #3153).",
@@ -316,7 +315,7 @@ impl GhostEngine {
             return RefusalEnvelope::new(RefusalCode::InvalidRequest, why).into_response();
         }
         self.counters.record(&event);
-        // Seam for GS4 (#3152): append event to opt-in local log when enabled.
+
         ok_json(&FeedbackResponse {
             schema: SCHEMA_ID.to_owned(),
             recorded: true,
@@ -338,7 +337,7 @@ impl GhostEngine {
         if let Err(why) = validate_bench_request(&req, is_http) {
             return RefusalEnvelope::new(RefusalCode::InvalidRequest, why).into_response();
         }
-        // Seam for GS4 (#3152): run bench replay and return #/$defs/bench_report.
+
         RefusalEnvelope::new(
             RefusalCode::NotImplemented,
             "bench is not built yet (see #3152).",

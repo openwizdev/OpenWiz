@@ -71,7 +71,6 @@ fn handle_connection(stream: TcpStream, engine: &Arc<Mutex<GhostEngine>>) -> io:
         return Ok(());
     };
 
-    // 1. Host check
     let host_ok = head.headers.get("host").is_some_and(|h| validate_host(h));
     if !host_ok {
         let (status, body) = RefusalEnvelope::new(
@@ -82,7 +81,6 @@ fn handle_connection(stream: TcpStream, engine: &Arc<Mutex<GhostEngine>>) -> io:
         return write_json_response(&mut writer, status, &body, None);
     }
 
-    // 2. Origin check (and CORS preflight)
     let origin = head.headers.get("origin").map(String::as_str);
     if head.method == "OPTIONS" {
         match origin {
@@ -113,7 +111,6 @@ fn handle_connection(stream: TcpStream, engine: &Arc<Mutex<GhostEngine>>) -> io:
         None => None,
     };
 
-    // 3. Pairing token check (required on every HTTP route except POST /ghost/v1/pair)
     let is_pair_route = head.method == "POST" && head.target == "/ghost/v1/pair";
     if !is_pair_route {
         let bearer = head
@@ -143,7 +140,6 @@ fn handle_connection(stream: TcpStream, engine: &Arc<Mutex<GhostEngine>>) -> io:
         }
     }
 
-    // 4. Method, route, and body
     if head.method != "POST" {
         let (status, body) = RefusalEnvelope::new(
             RefusalCode::MethodNotAllowed,

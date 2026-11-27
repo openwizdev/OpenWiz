@@ -71,7 +71,6 @@ impl RecallIndex {
             never_suggest_lower,
         };
 
-        // 1. Grills (highest entity priority: exact grill code -> recommended answer)
         for grill in &pack.open_work.grills {
             let code = grill.code.trim();
             let rec = grill.recommended.trim();
@@ -80,7 +79,6 @@ impl RecallIndex {
             }
         }
 
-        // 2. Tickets (action, approve #N, ship <title>, #N <title>)
         for ticket in &pack.open_work.tickets {
             let action = ticket.action.trim();
             if !action.is_empty() {
@@ -95,7 +93,6 @@ impl RecallIndex {
             }
         }
 
-        // 3. Specs (title and #N <title>)
         for spec in &pack.open_work.specs {
             let title = spec.title.trim();
             if !title.is_empty() {
@@ -104,7 +101,6 @@ impl RecallIndex {
             }
         }
 
-        // 4. Skill phrases
         for phrase in &pack.skill.phrases {
             let p = phrase.trim();
             if !p.is_empty() {
@@ -112,7 +108,6 @@ impl RecallIndex {
             }
         }
 
-        // 5. Glossary terms
         for entry in &pack.glossary {
             let term = entry.term.trim();
             if !term.is_empty() {
@@ -120,7 +115,6 @@ impl RecallIndex {
             }
         }
 
-        // 6. Sent messages and user turns -> phrases + n-grams
         for msg in sent_messages {
             let m = msg.trim();
             if !m.is_empty() {
@@ -175,7 +169,7 @@ impl RecallIndex {
         if words.len() < 2 {
             return;
         }
-        // Index 1-word and 2-word contexts predicting up to 4 following words
+
         for i in 0..words.len().saturating_sub(1) {
             let end = (i + 1 + 4).min(words.len());
             let continuation = words[i + 1..end].join(" ");
@@ -199,12 +193,10 @@ impl RecallIndex {
             return None;
         }
 
-        // 1. Direct full-prefix lookup in entity/phrase trie
         if let Some(m) = self.lookup_trie_prefix(prefix, prefix, 1.0, threshold) {
             return Some(m);
         }
 
-        // 2. Suffix-clause lookup in entity/phrase trie (up to last 4 word starts)
         let mut word_starts: Vec<usize> = Vec::new();
         let mut prev_ws = true;
         for (idx, ch) in prefix.char_indices() {
@@ -231,7 +223,6 @@ impl RecallIndex {
             }
         }
 
-        // 3. N-gram continuation when prefix ends with whitespace
         if prefix.ends_with(char::is_whitespace) {
             let words: Vec<&str> = prefix.split_whitespace().collect();
             if let Some(m) = self.lookup_ngram(prefix, &words, threshold) {
@@ -355,7 +346,7 @@ fn clamp_suggestion(raw: &str) -> String {
     if trimmed_end.is_empty() {
         return String::new();
     }
-    // Preserve a single leading space if present (e.g. " all recs" after "J1").
+
     let leading_space = trimmed_end.starts_with(' ');
     let body = trimmed_end.trim_start();
     let mut out = String::new();

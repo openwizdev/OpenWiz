@@ -291,7 +291,7 @@ fn open_work_from_issues(rows: &[IssueRow]) -> OpenWork {
 fn extract_grills(body: &str, out: &mut Vec<GrillEntry>) {
     for raw_line in body.lines() {
         let line = raw_line.trim();
-        // Table format: | J1 | Question text? | all recs |
+
         if line.starts_with('|') && line.ends_with('|') {
             let cells: Vec<&str> = line.trim_matches('|').split('|').map(str::trim).collect();
             if cells.len() >= 3 {
