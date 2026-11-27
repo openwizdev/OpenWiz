@@ -308,6 +308,21 @@ class Driver(unittest.TestCase):
                 self.assertEqual(self.call('start', dict(START, model=bad))[0], 1)
         self.assertEqual(len(self.calls()), before)
 
+    def test_a_credential_shaped_model_is_refused_before_start(self):
+        for shape, model in (('bearer', 'Bearer synthetic-value'),
+                             ('credential field', 'token: synthetic-value'),
+                             ('qualified token', 'example/' + 'ghp_' + 'Synthetic0' * 3)):
+            with self.subTest(shape=shape):
+                self.assertIsNotNone(kit.SHAPES.search(model))
+                code, out = self.call('start', dict(START, model=model),
+                                      OPENWIZ_HOSTKEY_TEST_ORIGIN='invalid-test-origin')
+                self.assertEqual((code, out), (1, {
+                    'error': 'the model looks like a credential',
+                    'next': 'choose a model id for this harness and keep credentials out of the request',
+                }))
+        self.assertEqual(self.calls(), [])
+        self.assertFalse(os.path.exists(self.env['OPENWIZ_WARP_OZ_STATE']))
+
     def test_a_saved_run_is_read_only_in_its_exact_shape(self):
         run = self.call('start', START)[1]['run']
         record = os.path.join(self.env['OPENWIZ_WARP_OZ_STATE'], run + '.json')
