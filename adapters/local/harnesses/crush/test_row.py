@@ -72,16 +72,15 @@ with machine() as env:
     check('stop leaves no process of the run', started and alive and code_stop == 0
           and stopped == {'run': out['run'], 'stopped': True} and gone)
 
-# A user with both OpenRouter and Anthropic configured: Crush reads a first segment naming a configured provider as
-# a filter, so the README's example names its provider in full to find exactly one model.
 OPENROUTER_SONNET = 'openrouter/anthropic/claude-sonnet-4.6'
-BOTH = {'FAKE_CRUSH_PROVIDERS': 'openrouter,anthropic'}
+OPENROUTER_AND_ANTHROPIC_CONFIGURED = {'FAKE_CRUSH_PROVIDERS': 'openrouter,anthropic'}
 with machine() as env:
-    code, out = env.driver('start', {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket',
-                                     'harness': 'crush', 'model': OPENROUTER_SONNET}, **BOTH)
+    start = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'crush',
+             'model': OPENROUTER_SONNET}
+    code, out = env.driver('start', start, **OPENROUTER_AND_ANTHROPIC_CONFIGURED)
     started = code == 0 and 'run' in out
     first = runner.until(lambda: len(env.records()) == 1) and env.records()[0]
-    woke = env.driver('wake', out, **BOTH) if started else (1, {})
+    woke = env.driver('wake', out, **OPENROUTER_AND_ANTHROPIC_CONFIGURED) if started else (1, {})
     second = runner.until(lambda: len(env.records()) == 2) and env.records()[1]
     if started:
         env.driver('stop', out)

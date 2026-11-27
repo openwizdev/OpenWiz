@@ -24,19 +24,18 @@ if a[:1] == ['--session'] and len(a) > 1:
     session, a = a[1], a[2:]
 if len(a) != 5 or a[0] != '--model' or a[2:4] != ['--yolo', '--']:
     fake_cli.refuse()
-# With FAKE_CRUSH_PROVIDERS (a comma list of configured providers), --model is matched the way Crush v0.102.0 does
-# (internal/app/provider.go, parseModelStr and filter): a first segment that names a configured provider is a provider
-# filter, else the whole string is the model id. Each provider's catalog here is its Sonnet 4.6 entry in catwalk v3.2.9.
-CATALOGS = {'anthropic': ['claude-sonnet-4-6'], 'openrouter': ['anthropic/claude-sonnet-4.6']}
+# External: Crush v0.102.0 reads a first --model segment that names a configured provider as a provider filter,
+# https://github.com/charmbracelet/crush/blob/v0.102.0/internal/app/provider.go#L15-L26
+SONNET_46_IN_CATWALK_V3_2_9 = {'anthropic': ['claude-sonnet-4-6'], 'openrouter': ['anthropic/claude-sonnet-4.6']}
 if os.environ.get('FAKE_CRUSH_PROVIDERS'):
-    providers = {p: CATALOGS[p] for p in os.environ['FAKE_CRUSH_PROVIDERS'].split(',')}
+    providers = {p: SONNET_46_IN_CATWALK_V3_2_9[p] for p in os.environ['FAKE_CRUSH_PROVIDERS'].split(',')}
     head, _, rest = a[1].partition('/')
     only, model = (head, rest) if rest and head in providers else ('', a[1])
     found = [p for p, ids in providers.items() for i in ids
              if i.lower() == model.lower() and (not only or p.lower() == only.lower())]
     if len(found) != 1:
-        print('   ERROR  \n  large model "%s" %s' % (model, 'not found' if not found else 'found in multiple providers'),
-              file=sys.stderr)
+        why = 'not found' if not found else 'found in multiple providers'
+        print('   ERROR  \n  large model "%s" %s' % (model, why), file=sys.stderr)
         sys.exit(1)
 GO_PARSEBOOL_TRUE = ('1', 't', 'T', 'TRUE', 'true', 'True')
 attach = os.environ.get('CRUSH_CLIENT_SERVER') in GO_PARSEBOOL_TRUE
