@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import ast
 import http.client
 import importlib.util
 import json
@@ -20,6 +21,7 @@ KIT = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit')
 HOST = 'cursor-cloud'
 START = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'cursor',
          'model': 'synthetic-model-1'}
+BUILD = '0123456789abcdef0123456789abcdef01234567'
 ENV_KEYS = ('PATH', 'KIT_TRACKER', 'KIT_TEST', 'OPENWIZ_CURSOR_STATE', 'OPENWIZ_HOSTKEY_TEST_ORIGIN')
 _spec = importlib.util.spec_from_file_location('hostkey', os.path.join(KIT, 'hostkey.py'))
 hostkey = importlib.util.module_from_spec(_spec)
@@ -99,8 +101,8 @@ class Cursor(unittest.TestCase):
         with open(self.faults, 'w') as f:
             json.dump(faults, f)
 
-    def driver(self, cmd, request, **env):
-        p = subprocess.run([DRIVER, cmd], input=json.dumps(request), env=dict(self.env, **env),
+    def driver(self, cmd, request, driver=DRIVER, **env):
+        p = subprocess.run([driver, cmd], input=json.dumps(request), env=dict(self.env, **env),
                            capture_output=True, text=True, timeout=120)
         self.assertNotIn(self.key, p.stdout + p.stderr)
         return p.returncode, json.loads(p.stdout)
@@ -186,8 +188,7 @@ class Cursor(unittest.TestCase):
             os.umask(previous)
         self.assertEqual(code, 0, out)
         folder = self.env['OPENWIZ_CURSOR_STATE']
-        saved = os.path.join(folder, out['run'] + '.json')
-        self.assertEqual(oct(os.stat(saved).st_mode & 0o777), oct(0o600))
+        self.assertEqual(oct(os.stat(os.path.join(folder, out['run'] + '.json')).st_mode & 0o777), oct(0o600))
         self.assertFalse(any(name.endswith('.json.new') for name in os.listdir(folder)))
 
     def test_a_provider_qualified_model_reaches_cursor(self):
@@ -262,6 +263,22 @@ class Cursor(unittest.TestCase):
         self.assertIn('nothing was sent', err['error'])
         self.assertEqual((self.calls(), self.on_disk()), ([], ''))
 
+    def test_every_helper_refusal_before_the_network_and_only_those_say_nothing_was_sent(self):
+        with open(os.path.join(KIT, 'hostkey.py')) as f, open(DRIVER) as g:
+            helper, ours = ast.parse(f.read()), ast.parse(g.read()).body
+        listed = next(ast.literal_eval(n.value) for n in ours
+                      if isinstance(n, ast.Assign) and getattr(n.targets[0], 'id', '') == 'REFUSED_BEFORE_SENDING')
+        texts = {True: [], False: [hostkey.FALLBACK['error'], hostkey.LAST_RESORT['error'], 'the key helper failed: ']}
+        for function, n in ((f, n) for f in helper.body if isinstance(f, ast.FunctionDef) for n in ast.walk(f)):
+            text = n.args[0] if isinstance(n, ast.Call) and getattr(n.func, 'id', '') == 'Refused' else \
+                n.value if isinstance(n, ast.Return) and function.name == 'path_fault' else None
+            text = text.left if isinstance(text, ast.BinOp) else text
+            text = text.value if isinstance(text, ast.Constant) else getattr(hostkey, getattr(text, 'id', ''), 0)
+            if isinstance(text, str):
+                texts[function.name not in ('fetch_test_key', 'send', 'answer')].append(text)
+        self.assertEqual((len(texts[True]) > 20, [t for t in texts[True] if not t.startswith(listed)],
+                          [t for t in texts[False] if t.startswith(listed)]), (True, [], []))
+
     def test_the_tests_read_no_other_process_environment(self):
         with open(os.path.abspath(__file__)) as f:
             self.assertNotIn('/' + 'environ', f.read())
@@ -290,24 +307,33 @@ class Cursor(unittest.TestCase):
             builtins.open = real
         os.remove(self.hold)
 
-    def test_an_installed_driver_starts_with_the_pin_its_build_names(self):
+    def install(self):
         runtime = os.path.join(self.folder, 'current', 'runtime')
-        os.makedirs(os.path.join(runtime, 'adapters', 'cursor'))
-        os.makedirs(os.path.join(runtime, 'kernel', 'driver-kit'))
-        for name in ('driver', 'schema.json'):
-            shutil.copy2(os.path.join(HERE, name), os.path.join(runtime, 'adapters', 'cursor', name))
-        for name in ('hostkey.py', 'hosts.json'):
-            shutil.copy2(os.path.join(KIT, name), os.path.join(runtime, 'kernel', 'driver-kit', name))
-        source = '0123456789abcdef0123456789abcdef01234567'
+        keep = {'driver', 'schema.json', 'hostkey.py', 'hosts.json'}
+        for part, origin in (('adapters/cursor', HERE), ('kernel/driver-kit', KIT)):
+            shutil.copytree(origin, os.path.join(runtime, part), ignore=lambda _, names: set(names) - keep)
         with open(os.path.join(runtime, 'openwiz-build.txt'), 'w') as f:
-            f.write('openwiz.package.v1\n0.1.1\n%s\nx86_64-unknown-linux-gnu\n' % source)
-        p = subprocess.run([os.path.join(runtime, 'adapters', 'cursor', 'driver'), 'start'], input=json.dumps(START),
-                           env=self.env, capture_output=True, text=True, timeout=60)
-        self.assertEqual(p.returncode, 0, p.stdout)
+            f.write('openwiz.package.v1\n0.1.1\n%s\nx86_64-unknown-linux-gnu\n' % BUILD)
+        return runtime
+
+    def test_an_installed_driver_starts_with_the_pin_its_build_names(self):
+        code, out = self.driver('start', START, driver=os.path.join(self.install(), 'adapters', 'cursor', 'driver'))
+        self.assertEqual(code, 0, out)
         [call] = self.calls()
         text = json.loads(call['body'])['prompt']['text']
-        for part in ('wizskills.lock', 'https://github.com/openwizdev/OpenWiz', source, 'build-ticket skill'):
+        for part in ('wizskills.lock', 'https://github.com/openwizdev/OpenWiz', BUILD, 'build-ticket skill'):
             self.assertIn(part, text)
+
+    def test_a_helper_error_with_no_next_or_a_control_character_still_fits_the_error_schema(self):
+        runtime = self.install()
+        with open(os.path.join(runtime, 'kernel', 'driver-kit', 'hostkey.py'), 'w') as f:
+            f.write('print(%r)\nraise SystemExit(1)\n' % json.dumps({'error': 'no key in either SYN or \x01\x1b[31m'}))
+        code, err = self.driver('start', START, driver=os.path.join(runtime, 'adapters', 'cursor', 'driver'))
+        with open(os.path.join(HERE, 'schema.json')) as f:
+            fields = json.load(f)['error']['properties']
+        self.assertEqual((code, sorted(err), 'nothing was sent' in err['error'], err['next'] in ('None', ''),
+                          [name for name, rule in fields.items() if not re.search(rule['pattern'], err[name])]),
+                         (1, ['error', 'next'], True, False, []))
 
     def test_a_lost_create_cursor_does_not_show_yet_stays_unconfirmed_and_stoppable(self):
         open(self.hold, 'w').close()
@@ -350,6 +376,9 @@ class Cursor(unittest.TestCase):
         self.assertTrue(agent['archived'])
         self.assertEqual([r['status'] for r in agent['runs']], ['CANCELLED'])
         self.assertEqual(self.running(), [])
+        run = re.search(r'run-[0-9a-f]{12}', out['error']).group()
+        self.fault({'GET /agents/' + agent['id']: 404})
+        self.assertEqual(self.driver('stop', {'run': run}), (0, {'run': run, 'stopped': True}), 'a late create')
 
     def test_a_wake_during_a_run_starts_no_second_run_and_one_after_it_follows_up(self):
         open(self.hold, 'w').close()
@@ -372,11 +401,9 @@ class Cursor(unittest.TestCase):
         self.assertTrue(self.until(lambda: not any(alive(p) for p, _ in self.logged(1))), 'the fake run did not end')
         self.fault({'POST /runs': 500})
         code, err = self.driver('wake', out)
-        self.assertEqual(code, 1, err)
-        self.assertNotIn('refused', err['error'].lower())
-        self.assertEqual(('unknown' in err['error'], '500' in err['error']), (True, True))
-        self.assertNotIn('start a new run', err['next'])
-        self.assertIn('wake it again', err['next'])
+        self.assertEqual((code, 'refused' in err['error'].lower(), 'unknown' in err['error'], '500' in err['error'],
+                          'start a new run' in err['next'], 'wake it again' in err['next']),
+                         (1, False, True, True, False, True), err)
         self.fault({})
         self.assertEqual(self.driver('wake', out), (0, dict(out, woke=True)))
 
@@ -461,6 +488,8 @@ class Cursor(unittest.TestCase):
         self.assertEqual(self.driver('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
         self.assertTrue(self.agents()[agent]['archived'])
         self.assertEqual(self.running(), [])
+        self.fault({'GET /agents/' + agent: 404})
+        self.assertEqual(self.driver('stop', {'run': run}), (0, {'run': run, 'stopped': True}), 'a late create')
 
 
 if __name__ == '__main__':
