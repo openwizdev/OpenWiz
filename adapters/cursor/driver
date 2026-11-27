@@ -18,8 +18,6 @@ CANT_SET_EFFORT = ("this host can't set effort: remove the effort for this harne
 RUN = {'run': r'run-[0-9a-f]{12}'}
 HARNESS = 'cursor'
 SIGN_IN = 'check your Cursor API key and where you keep it, as adapters/cursor/README.md says'
-# The helper's error texts are fixed and it gives no other sign of whether it sent anything, so these are the openings
-# of every refusal it gives before the network, and of no other; test_driver.py holds them to hostkey.py.
 REFUSED_BEFORE_SENDING = ('no key in either ', 'the key in ', "the kit's fake host gave no test key",
                           'OPENWIZ_HOSTKEY_TEST_ORIGIN is not', 'the helper runs only in', 'native TLS loaded',
                           'kernel/driver-kit/hosts.json is not', 'the request holds the key', 'host is not ',
@@ -171,7 +169,6 @@ def lock(run):
 
 
 def end(agent, known=True):
-    # Answers what Cursor did not confirm, and whether Cursor showed the agent, which proves it was created.
     try:
         return ending(agent, known)
     except Refused as e:
@@ -298,7 +295,7 @@ def stop():
         try:
             saved(run, dict(state, stopped=True, starting=False))
         except OSError:
-            pass  # The stop itself is saved; losing this only leaves a later 404 unconfirmed, as before.
+            pass
     if failed:
         raise Refused('run %s: Cursor did not confirm %s' % (run, '; '.join(failed)),
                       'stop it again, or archive agent %s at cursor.com/agents' % state['agent'])
