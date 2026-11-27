@@ -32,6 +32,14 @@ pass a --model with no value: exit 2
 pass an --output-format outside its choices: exit 2
 pass a --sandbox outside its choices: exit 2
 pass a --mode outside its choices: exit 2
+pass a --header without a colon: exit 2
+pass a -H without a colon: exit 2
+pass a --header= without a colon: exit 2
+pass a --header with an empty name: exit 2
+pass a --header with a blank name: exit 2
+pass a --header with whitespace in the name: exit 2
+pass a bad second --header after a valid one: exit 2
+pass a bad first --header before a valid one: exit 2
 pass --stream-partial-output without stream-json: exit 2
 pass --resume with --continue: exit 2
 pass a bare --resume in print mode: exit 2
@@ -43,8 +51,9 @@ pass the json output format: exit 3
 pass a run without --print: exit 3
 pass a run with no --model: exit 3
 pass an untrusted workspace: exit 1
+pass valid --header and -H reach the turn: exit 1
+pass row.json requires explicit force mode: force
+pass driver refuses allowlist approval: refused
 pass the row's start with mode force reaches the turn: exit 1
 pass the row's wake with mode force reaches the turn: exit 1
-pass the row's start with mode allowlist reaches the turn: exit 1
-pass the row's wake with mode allowlist reaches the turn: exit 1
 exit 0

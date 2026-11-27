@@ -31,8 +31,7 @@
   "modes": {
     "force": [
       "--force"
-    ],
-    "allowlist": []
+    ]
   },
   "env": {},
   "effort": "none: agent (Cursor CLI 2026.11.22-e9042b2) has no effort flag or env setting; its --help puts effort only inside a parameterized model id, such as 'claude-opus-4-8[effort=high]'",

@@ -44,7 +44,13 @@ def parse(argv):
             choices = VALUES[name]
             if isinstance(choices, tuple) and value not in choices:
                 fake_cli.refuse()
-            seen[choices if isinstance(choices, str) else name] = value
+            key = choices if isinstance(choices, str) else name
+            if key == '--header':
+                header_name, sep, _ = value.partition(':')
+                if not sep or '\r' in value or '\n' in value or not header_name.strip() or \
+                        any(c.isspace() or ord(c) < 33 for c in header_name.strip()):
+                    fake_cli.refuse()
+            seen[key] = value
         elif name in OPTIONAL:
             if not eq and i + 1 < len(argv) and not argv[i + 1].startswith('-'):
                 i += 1

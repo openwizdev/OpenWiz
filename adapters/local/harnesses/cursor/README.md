@@ -26,7 +26,8 @@ The `cursor` harness row runs Cursor CLI (`agent`) as a builder through the user
 | Mode | Arguments | What it does |
 | --- | --- | --- |
 | `force` | `--force` | "Force allow commands unless explicitly denied": every action runs except what `permissions.deny` and team policies block ([headless](https://cursor.com/docs/cli/headless#file-modification-in-scripts)) |
-| `allowlist` | none | Print mode's default approval rules: workspace edits and allowlisted or sandboxed commands run, and anything that needs approval is rejected ([headless](https://cursor.com/docs/cli/headless#file-modification-in-scripts)) |
+
+No `allowlist` mode is offered: Cursor CLI 2026.11.22-e9042b2 has no flag to enforce `allowlist` over an effective `approvalMode: "unrestricted"` from user or merged project config, so omitting `--force` can still run every action in print mode ([headless](https://cursor.com/docs/cli/headless#file-modification-in-scripts), [configuration](https://cursor.com/docs/cli/reference/configuration#optional-fields)). Requiring explicit approval of `force` prevents an owner from approving `allowlist` and getting Run Everything silently.
 
 ## The census check: do `-p` and `--resume` work together?
 
@@ -38,6 +39,6 @@ The row's effort is `none`. Cursor CLI 2026.11.22-e9042b2 has no effort flag and
 
 ## The fake
 
-`fake` parses the documented global options in any order, as `--name value` or `--name=value`, and exits 2 on anything else: an unknown option, a missing value, a value outside `--output-format`, `--mode` or `--sandbox`'s choices, `--stream-partial-output` without `stream-json`, `--resume` with `--continue`, or a bare `--resume` in print mode. It simulates only the start and wake above, exits 3 on any other documented command line (a subcommand, `--api-key`, or a run other than print mode with `stream-json`), and, without `--trust`, `--force` or `--yolo`, exits 1 as the real CLI does. `test_row.py` checks each of these.
+`fake` parses the documented global options in any order, as `--name value` or `--name=value`, and exits 2 on anything else: an unknown option, a missing value, a value outside `--output-format`, `--mode` or `--sandbox`'s choices, a `-H` or `--header` value without a non-empty `Name: Value` header, `--stream-partial-output` without `stream-json`, `--resume` with `--continue`, or a bare `--resume` in print mode. It simulates only the start and wake above, exits 3 on any other documented command line (a subcommand, `--api-key`, or a run other than print mode with `stream-json`), and, without `--trust`, `--force` or `--yolo`, exits 1 as the real CLI does. `test_row.py` checks each of these.
 
 Synthetic: `fake` is the only CLI here.
