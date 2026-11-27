@@ -30,6 +30,14 @@ KIT_PASS = ['pass version: openwiz:records v1, and the schema is driver v1',
             'key reached its host only from the key helper, in its header']
 
 
+QUALIFIED = 'openrouter/anthropic/claude-sonnet-4.6'
+
+
+def saved(server, model, tag):
+    return {'id': '00000000-0000-4000-8000-00000000000' + tag, 'name': 'saved-' + tag, 'agent_kind': 'acp',
+            'scope': 'personal', 'acp_server': server, 'acp_model': model}
+
+
 def module(path, name):
     spec = importlib.util.spec_from_loader(name, importlib.machinery.SourceFileLoader(name, path))
     m = importlib.util.module_from_spec(spec)
@@ -93,9 +101,9 @@ class Driver(unittest.TestCase):
         with open(self.tracker) as f:
             return [c for c in json.load(f)['comments'] if 'state: working' in c['body']]
 
-    def kit(self, driver=DRIVER, **env):
+    def kit(self, driver=DRIVER, model='Synthetic 1', **env):
         p = subprocess.run([sys.executable, '-I', KIT, '--driver', driver, '--repo', 'example/site', '--ticket', '7',
-                            '--harness', 'claude-code', '--model', 'Synthetic 1', '--tracker', self.tracker,
+                            '--harness', 'claude-code', '--model', model, '--tracker', self.tracker,
                             '--wait', '8'], env=dict(self.env, **env), capture_output=True, text=True, timeout=300)
         return p.returncode, p.stdout.splitlines(), p.stderr
 
@@ -103,6 +111,15 @@ class Driver(unittest.TestCase):
         code, out, err = self.kit()
         self.assertEqual((out, err), (KIT_PASS, ''))
         self.assertEqual(code, 0)
+
+    def test_kit_passes_all_five_on_the_users_saved_profile_model(self):
+        for model in ('claude-sonnet-4.6', QUALIFIED):
+            with self.subTest(model=model):
+                tracker(self.folder)
+                self.host = self.fake(profiles=fake.PROFILES + [saved('claude-code', model, 'e')])
+                code, out, err = self.kit(model=model, OPENWIZ_HOSTKEY_TEST_ORIGIN=self.host.origin)
+                self.assertEqual((out, err), (KIT_PASS, ''))
+                self.assertEqual(code, 0)
 
     def test_every_request_reaches_the_host_with_the_key_header_only(self):
         run = self.started()
@@ -330,6 +347,23 @@ class Driver(unittest.TestCase):
         run = self.started()
         self.assertEqual(self.host.conversations[run]['request']['agent_profile_id'],
                          '00000000-0000-4000-8000-00000000000b')
+
+    def test_start_takes_a_provider_qualified_or_long_model_on_its_exact_profile(self):
+        long_model = 'm' * 62
+        self.host = self.fake(profiles=fake.PROFILES + [saved('claude-code', QUALIFIED, 'e'),
+                                                        saved('codex', long_model, 'f')])
+        self.env['OPENWIZ_HOSTKEY_TEST_ORIGIN'] = self.host.origin
+        for harness, model, chosen in (('claude-code', QUALIFIED, 'e'), ('codex', long_model, 'f')):
+            with self.subTest(model=model):
+                run = self.started(harness=harness, model=model)
+                self.assertEqual(self.host.conversations[run]['request']['agent_profile_id'],
+                                 '00000000-0000-4000-8000-00000000000' + chosen)
+        self.host.requests.clear()
+        for model in ('m' * 101, '/' + QUALIFIED, QUALIFIED + '/', 'openrouter//claude', 'a/-b'):
+            with self.subTest(model=model):
+                self.assertEqual(self.driver('start', dict(START, model=model)),
+                                 (1, {'error': 'model is not valid', 'next': 'fix model as `driver schema` shows'}))
+        self.assertEqual(self.host.requests, [])
 
     def test_unknown_run_is_refused_by_wake(self):
         code, out = self.driver('wake', {'run': '00000000-0000-4000-8000-0000000000ff'})

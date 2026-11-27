@@ -1,0 +1,69 @@
+# Red (#2567 review at fc4da9e): the two new tests against fc4da9e's driver and fixtures/kit-host.json, before the fix.
+# Run: env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/openhands/test_driver.py -k test_start_takes_a_provider_qualified_or_long_model_on_its_exact_profile -k test_kit_passes_all_five_on_the_users_saved_profile_model
+# 35 refusing agent CLI stubs first on PATH. Synthetic fake OpenHands Cloud; no host reached.
+
+FFFF
+======================================================================
+FAIL: test_kit_passes_all_five_on_the_users_saved_profile_model (__main__.Driver.test_kit_passes_all_five_on_the_users_saved_profile_model) (model='claude-sonnet-4.6')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/openhands/test_driver.py", line 120, in test_kit_passes_all_five_on_the_users_saved_profile_model
+    self.assertEqual((out, err), (KIT_PASS, ''))
+AssertionError: Tuples differ: (['pa[292 chars]ed', "fail token: start failed against the kit[56 chars], '') != (['pa[292 chars]ed', 'pass token: no login or token passed thr[121 chars], '')
+
+First differing element 0:
+['pas[291 chars]ed', "fail token: start failed against the kit[51 chars]top"]
+['pas[291 chars]ed', 'pass token: no login or token passed thr[116 chars]der']
+
+  (['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2; effort: a start with it '
+    "was refused, as the README's Effort: line says",
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
+-   "fail token: start failed against the kit's fake host, so the kit could not "
+-   'check wake and stop'],
++   'pass token: no login or token passed through the driver, and on start, wake '
++   'and stop the openhands key reached its host only from the key helper, in '
++   'its header'],
+   '')
+
+======================================================================
+FAIL: test_kit_passes_all_five_on_the_users_saved_profile_model (__main__.Driver.test_kit_passes_all_five_on_the_users_saved_profile_model) (model='openrouter/anthropic/claude-sonnet-4.6')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/openhands/test_driver.py", line 120, in test_kit_passes_all_five_on_the_users_saved_profile_model
+    self.assertEqual((out, err), (KIT_PASS, ''))
+AssertionError: Tuples differ: (['pa[57 chars]v1', 'fail start: model is not valid', 'fail w[131 chars], '') != (['pa[57 chars]v1', "pass start: the run posted builder statu[356 chars], '')
+
+First differing element 0:
+['pas[56 chars]v1', 'fail start: model is not valid', 'fail w[126 chars]ost"]
+['pas[56 chars]v1', "pass start: the run posted builder statu[351 chars]der']
+
+Diff is 702 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_start_takes_a_provider_qualified_or_long_model_on_its_exact_profile (__main__.Driver.test_start_takes_a_provider_qualified_or_long_model_on_its_exact_profile) (model='openrouter/anthropic/claude-sonnet-4.6')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/openhands/test_driver.py", line 357, in test_start_takes_a_provider_qualified_or_long_model_on_its_exact_profile
+    run = self.started(harness=harness, model=model)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<repo>/adapters/openhands/test_driver.py", line 97, in started
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'model is not valid', 'next': 'fix model as `driver schema` shows'}
+
+======================================================================
+FAIL: test_start_takes_a_provider_qualified_or_long_model_on_its_exact_profile (__main__.Driver.test_start_takes_a_provider_qualified_or_long_model_on_its_exact_profile) (model='mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/openhands/test_driver.py", line 357, in test_start_takes_a_provider_qualified_or_long_model_on_its_exact_profile
+    run = self.started(harness=harness, model=model)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<repo>/adapters/openhands/test_driver.py", line 97, in started
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'model is not valid', 'next': 'fix model as `driver schema` shows'}
+
+----------------------------------------------------------------------
+Ran 2 tests in 4.007s
+
+FAILED (failures=4)
