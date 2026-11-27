@@ -182,7 +182,7 @@ def _actions_auth(env):
     if token:
         return token.strip()
     try:
-        done = subprocess.run(["gh", "auth", "token"], stdout=subprocess.PIPE,
+        done = subprocess.run(["gh", "auth", "token", "--hostname", "github.com"], stdout=subprocess.PIPE,
                               stderr=subprocess.DEVNULL, env=clean, timeout=10)
     except (OSError, subprocess.SubprocessError):
         return ""
@@ -304,15 +304,14 @@ def ask_actions(repo, workflow, request, env):
                and type(a.get("id")) is int and a["id"] > 0]
     if len(matches) != 1:
         return "unreachable", None
-    artifact_id = matches[0]["id"]
+    artifact_url = f"{base}/repos/{repo}/actions/artifacts/{matches[0]['id']}"
     try:
         dl_status, zip_bytes = _actions_http(
-            "GET", f"{base}/repos/{repo}/actions/artifacts/{artifact_id}/zip",
-            auth, base, deadline, follow_redirect=True, limit=ACTIONS_ARTIFACT_LIMIT)
+            "GET", f"{artifact_url}/zip", auth, base, deadline,
+            follow_redirect=True, limit=ACTIONS_ARTIFACT_LIMIT)
     finally:
-        _actions_http("DELETE", f"{base}/repos/{repo}/actions/artifacts/{artifact_id}",
-                      auth, base, time.monotonic() + 15.0)
-    if dl_status != 200:
+        delete_status, _ = _actions_http("DELETE", artifact_url, auth, base, time.monotonic() + 15.0)
+    if dl_status != 200 or delete_status != 204:
         return "unreachable", None
     try:
         with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
