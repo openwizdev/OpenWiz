@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import os, subprocess, sys, tempfile
+import json, os, subprocess, sys, tempfile
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 FAKE = os.path.join(HERE, 'fake')
@@ -8,12 +8,15 @@ PROMPT = 'Build the ticket: example/site#7, with the build-ticket skill.'
 WAKE = 'You were woken: take up example/site#7 again, with the build-ticket skill.'
 SID = 'fake-0123456789ab'
 START = ['run', '--quiet', '--verbose', '--model', 'synthetic-1', '-y', '--', PROMPT]
-WAKE_LINE = ['run', '--quiet', '--verbose', '--session', SID, '-y', '--', WAKE]
+WAKE_LINE = ['run', '--quiet', '--verbose', '--session', SID, '--model', 'synthetic-1', '-y', '--', WAKE]
 REFUSED = {
     'api key flag': ['run', '--api-key', 'synthetic-canary-0000-2918', *START],
     'api key equals': ['run', '--api-key=synthetic-canary-0000-2918', *START],
     'key-shaped model': ['run', '--quiet', '--verbose', '--model', 'token=synthetic-canary-0000-2918', '-y', '--',
                          PROMPT],
+    'bare key as the model': ['run', '--quiet', '--verbose', '--model', 'sk-synthetic0000canary0000', '-y', '--',
+                              PROMPT],
+    'wake without a model': ['run', '--quiet', '--verbose', '--session', SID, '-y', '--', WAKE],
     'unlisted reasoning effort': [*START[:6], '--reasoning-effort', 'turbo', '--', PROMPT],
     'effort flag the command does not have': [*START[:6], '--effort', 'high', '--', PROMPT],
     'session and continue together': ['run', '--quiet', '--verbose', '--session', SID, '--continue', '-y', '--',
@@ -33,8 +36,10 @@ def run(argv, **extra):
 
 
 failed = 0
-for name, argv in REFUSED.items():
-    got = run(argv)
+with tempfile.TemporaryDirectory() as tmp:
+    refused = {name: run(argv, FAKE_CLI_RECORD_ONLY='1', FAKE_CLI_RECORD=os.path.join(tmp, 'refused'))
+               for name, argv in REFUSED.items()}
+for name, got in refused.items():
     if got.returncode != 2:
         failed += 1
         print('fail %s: exited %s, not 2' % (name, got.returncode))
@@ -46,6 +51,20 @@ with tempfile.TemporaryDirectory() as tmp:
 if allowed.returncode or 'session_id=' not in allowed.stdout or woke.returncode:
     failed += 1
     print('fail allowed lines: start %s wake %s' % (allowed.returncode, woke.returncode))
+# A first turn can fail before crush saves an assistant reply; crush then restores no model for the session, so a
+# wake without --model runs the default model. The row's own wake line must carry the start's model.
+with open(os.path.join(HERE, 'row.json')) as f:
+    row = json.load(f)
+fills = {'{prompt}': [WAKE], '{model}': ['synthetic-1'], '{session}': [SID], '{mode}': row['modes']['yolo'],
+         '{effort}': []}
+with tempfile.TemporaryDirectory() as tmp:
+    record = os.path.join(tmp, 'wake')
+    again = run([b for a in row['wake'] for b in fills.get(a, [a])], FAKE_CLI_RECORD_ONLY='1', FAKE_CLI_RECORD=record)
+    argv = json.load(open(record))['argv'] if os.path.exists(record) else []
+model = argv[argv.index('--model') + 1] if '--model' in argv[:-1] else None
+if again.returncode or model != 'synthetic-1':
+    failed += 1
+    print('fail wake after a first turn with no reply: the row\'s wake ran without the start\'s model')
 bare = run(START, CRUSH_CLIENT_SERVER='')
 if bare.returncode != 2:
     failed += 1

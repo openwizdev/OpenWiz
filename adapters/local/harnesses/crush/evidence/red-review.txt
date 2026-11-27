@@ -1,0 +1,6 @@
+fail bare key as the model: exited 0, not 2
+fail wake without a model: exited 0, not 2
+fail allowed lines: start 0 wake 2
+fail wake after a first turn with no reply: the row's wake ran without the start's model
+test_row.py: 11 refusals checked, 4 failed
+exit:1
