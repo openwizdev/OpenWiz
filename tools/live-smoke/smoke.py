@@ -793,12 +793,12 @@ def dispatch(path, kit, state, index):
 
 
 def steps(path, kit, state):
-    if all(item['state'] == 'pass' for item in state['steps']):
-        verify_artifacts(kit)
-        if not state['times']['finished']:
-            record(path, kit, state, {'kind': 'finish'})
-        return report(kit, state, 'pass', 'none'), 0
     if any(s.get('teardown') and i['state'] != 'not_run' for s, i in zip(kit['steps'], state['steps'])):
+        if all(item['state'] == 'pass' for item in state['steps']):
+            verify_artifacts(kit)
+            if not state['times']['finished']:
+                record(path, kit, state, {'kind': 'finish'})
+            return report(kit, state, 'pass', 'none'), 0
         return report(kit, state, 'incomplete', 'torn_down'), 3
     if any(s['state'] == 'fail' for s in state['steps']):
         return report(kit, state, 'fail', 'comparison'), 1

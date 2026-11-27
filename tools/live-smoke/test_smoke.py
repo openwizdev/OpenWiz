@@ -127,6 +127,27 @@ class Smoke(FixtureCase):
             'gaps': [], 'data': {'sessions': []}})}
         self.report(self.invoke(), 0)
 
+    def test_completed_run_without_teardown_still_runs_inventory_preflight_on_resume(self):
+        good_ls = dict(self.replies['ls'])
+        doc = self.report(self.invoke(), 0)
+        self.assertEqual((doc['verdict'], doc['reason']), ('pass', 'none'))
+        self.replies['ls'] = {'exit': 1, 'out': '{"schema":"openwiz.cli-error.v1"}'}
+        doc = self.report(self.invoke(), 3)
+        self.assertEqual((doc['verdict'], doc['reason']), ('incomplete', 'bundle_preflight'))
+        self.assertEqual(self.call_list().count(['ls', '--json']), 2)
+        self.assertEqual(self.call_list().count(['send']), 1)
+        _, events = SMOKE.read_journal(self.state)
+        self.rewrite_journal(lambda event: event, events[:-1])
+        doc = self.report(self.invoke(), 3)
+        self.assertEqual((doc['verdict'], doc['reason']), ('incomplete', 'bundle_preflight'))
+        self.assertEqual(json.loads((self.state / 'checkpoint.json').read_text())['times']['finished'], 0)
+        self.replies['ls'] = good_ls
+        doc = self.report(self.invoke(), 0)
+        self.assertEqual((doc['verdict'], doc['reason']), ('pass', 'none'))
+        _, resumed = SMOKE.read_journal(self.state)
+        self.assertEqual([event['kind'] for event in resumed].count('finish'), 1)
+        self.assertEqual(self.call_list().count(['send']), 1)
+
     def test_dry_run_executes_nothing_and_creates_no_state(self):
         doc = self.report(self.run_tool('--dry-run'), 0)
         self.assertEqual(doc['verdict'], 'not_run')
