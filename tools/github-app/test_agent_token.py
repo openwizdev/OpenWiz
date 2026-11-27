@@ -2523,7 +2523,7 @@ class ActionsRoute(unittest.TestCase):
         return env, state
 
     def test_actions_round_trip_and_deletes_artifact(self):
-        # catches: broken actions dispatch/poll/download/open flow, non-main dispatch,
+        # comment-ok: catches: broken actions dispatch/poll/download/open flow, non-main dispatch,
         # leaking Authorization on redirect, or forgetting to delete the artifact after download.
         env, state = self.start_fake("ok")
         private = self.helper.Private(env, create=True)
@@ -2537,7 +2537,7 @@ class ActionsRoute(unittest.TestCase):
         self.assertEqual(state["redirect_auth"], [None], "Authorization must not cross artifact redirect")
 
     def test_actions_failures_fall_back_with_right_reason(self):
-        # catches: wrong fallback reason or leaked/undeleted artifact on missing run, timeout,
+        # comment-ok: catches: wrong fallback reason or leaked/undeleted artifact on missing run, timeout,
         # failed run, missing/tampered artifact, unopenable answer, or contract refusal.
         cases = [
             ("missing-run", "unreachable", []),
@@ -2565,7 +2565,7 @@ class ActionsRoute(unittest.TestCase):
                 self.assertEqual(state["deleted"], expected_deleted)
 
     def test_actions_backs_off_on_403_and_429(self):
-        # catches: failing immediately on GitHub 403/429 instead of backing off and retrying.
+        # comment-ok: catches: failing immediately on GitHub 403/429 instead of backing off and retrying.
         env, state = self.start_fake("backoff")
         private = self.helper.Private(env, create=True)
         self.addCleanup(os.close, private.fd)
@@ -2576,7 +2576,7 @@ class ActionsRoute(unittest.TestCase):
         self.assertEqual(state["deleted"], [701])
 
     def test_actions_never_exposes_plaintext_token(self):
-        # catches: plaintext token appearing in dispatch inputs, fake run logs, artifact zip, or helper output.
+        # comment-ok: catches: plaintext token appearing in dispatch inputs, fake run logs, artifact zip, or helper output.
         env, state = self.start_fake("ok")
         done = subprocess.run([sys.executable, "-I", str(HELPER), "start", *REQ],
                               env=env, capture_output=True, text=True, timeout=30)

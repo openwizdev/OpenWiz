@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Offline security and execution proofs for tools/github-app/mint-workflow.yml (#3235)."""
 import base64
 import importlib.util
 import json
@@ -22,7 +21,6 @@ EXPR_RE = re.compile(r"\$\{\{.*?\}\}")
 
 
 def pinned_openwiz_actions():
-    """Return {action_name: set(shas)} already pinned across OpenWiz's own workflows."""
     pinned = {}
     for path in sorted(WORKFLOWS.glob("*.yml")):
         for line in path.read_text().splitlines():
@@ -36,7 +34,6 @@ def pinned_openwiz_actions():
 
 
 def extract_run_blocks(text):
-    """Extract every `run:` command (inline or block scalar) from a workflow YAML."""
     lines = text.splitlines()
     blocks, i = [], 0
     while i < len(lines):
@@ -64,10 +61,8 @@ def extract_run_blocks(text):
 
 
 def check_template(text, allowed_actions):
-    """Return a list of security violations in a mint-workflow.yml text."""
     errors = []
     lines = text.splitlines()
-    # 1. Top-level `on:` must contain only `workflow_dispatch`.
     on_idx = next((i for i, l in enumerate(lines) if re.match(r"^on:\s*$", l)), None)
     if on_idx is None:
         errors.append("missing top-level on: block")
@@ -81,12 +76,10 @@ def check_template(text, allowed_actions):
                 triggers.append(m.group(1))
         if triggers != ["workflow_dispatch"]:
             errors.append(f"triggers must be workflow_dispatch only, got {triggers!r}")
-    # 2. Key job must name environment: token-service and guard github.ref == 'refs/heads/main'.
     if not re.search(r"(?m)^\s{4}environment:\s*token-service\s*$", text):
         errors.append("missing job environment: token-service")
     if not re.search(r"(?m)^\s{4}if:\s*(?:\$\{\{\s*)?github\.ref\s*==\s*'refs/heads/main'(?:\s*\}\})?\s*$", text):
         errors.append("missing job-level refs/heads/main guard")
-    # 3. OpenWiz checkout must pin a 40-hex commit SHA (never a branch).
     checkout_ok = False
     for i, l in enumerate(lines):
         if re.match(r"^\s+repository:\s*openwizdev/OpenWiz\s*$", l):
@@ -100,7 +93,6 @@ def check_template(text, allowed_actions):
                     break
     if not checkout_ok:
         errors.append("openwizdev/OpenWiz checkout must pin a 40-hex commit sha")
-    # 4. Every `uses:` must be actions/checkout or actions/upload-artifact at an OpenWiz-pinned SHA.
     allowed_names = {"actions/checkout", "actions/upload-artifact"}
     uses_found = []
     for l in lines:
@@ -119,14 +111,12 @@ def check_template(text, allowed_actions):
             errors.append(f"action sha not pinned in OpenWiz workflows: {spec}")
     if not uses_found:
         errors.append("no uses: steps found")
-    # 5. No `${{ }}` expression (especially inputs) inside any `run:` block.
     run_blocks = extract_run_blocks(text)
     if not run_blocks:
         errors.append("no run: block found")
     for block in run_blocks:
         if EXPR_RE.search(block):
             errors.append("expression ${{ }} found inside a run: block")
-    # 6. Artifact upload retention-days: 1.
     if not re.search(r"(?m)^\s+retention-days:\s*1\s*$", text):
         errors.append("missing artifact retention-days: 1")
     return errors
@@ -134,14 +124,14 @@ def check_template(text, allowed_actions):
 
 class MintWorkflowTemplate(unittest.TestCase):
     def test_template_passes_all_security_guards(self):
-        # catches: missing workflow template, non-dispatch trigger, missing token-service env,
+        # comment-ok: catches: missing workflow template, non-dispatch trigger, missing token-service env,
         # unpinned OpenWiz checkout, ${{ inputs }} in run:, or unpinned/foreign action uses.
         self.assertTrue(TEMPLATE.is_file(), "tools/github-app/mint-workflow.yml is missing")
         errors = check_template(TEMPLATE.read_text(), pinned_openwiz_actions())
         self.assertEqual(errors, [], f"template failed guards: {errors}")
 
     def test_template_guard_catches_every_planted_violation(self):
-        # catches: a template guard that passes even when a security invariant is broken.
+        # comment-ok: catches: a template guard that passes even when a security invariant is broken.
         self.assertTrue(TEMPLATE.is_file(), "tools/github-app/mint-workflow.yml is missing")
         good = TEMPLATE.read_text()
         allowed = pinned_openwiz_actions()
@@ -161,7 +151,7 @@ class MintWorkflowTemplate(unittest.TestCase):
 
 class MintWorkflowExecution(unittest.TestCase):
     def test_workflow_run_seals_token_via_pipe_and_logs_only_mint_fields(self):
-        # catches: a workflow script that writes the App key to disk, leaks the plaintext token
+        # comment-ok: catches: a workflow script that writes the App key to disk, leaks the plaintext token
         # to stdout/stderr/summary/artifact, accepts non-main refs, or fails to seal per #3085.
         self.assertTrue(TEMPLATE.is_file(), "tools/github-app/mint-workflow.yml is missing")
         spec = importlib.util.spec_from_file_location("test_token_service", HERE / "test_token_service.py")
@@ -204,14 +194,12 @@ class MintWorkflowExecution(unittest.TestCase):
                     "OPENWIZ_GITHUB_APP_MODE": "user",
                     "OPENWIZ_GITHUB_API_BASE": url,
                 }
-                # Non-main ref must be refused before any GitHub call.
                 bad = subprocess.run(["sh", "-eu", "-c", script], cwd=work, env=base_env,
                                      capture_output=True, text=True, timeout=30)
                 self.assertNotEqual(bad.returncode, 0, "non-main ref must fail")
                 self.assertEqual(calls, [], "non-main ref must make no GitHub call")
                 self.assertFalse((work / "out" / "answer.json").exists())
 
-                # Main ref mints and seals, writes only mint-log fields to summary, never writes key.
                 good = subprocess.run(["sh", "-eu", "-c", script], cwd=work,
                                       env=dict(base_env, GITHUB_REF="refs/heads/main"),
                                       capture_output=True, text=True, timeout=30)
@@ -229,7 +217,6 @@ class MintWorkflowExecution(unittest.TestCase):
                 for blob in (good.stdout, good.stderr, summary_text, answer_text):
                     self.assertNotIn(token, blob)
                     self.assertNotIn("PRIVATE KEY", blob)
-                # Summary carries mint-log fields only.
                 self.assertIn("builder-3235", summary_text)
                 self.assertIn("minted", summary_text)
                 self.assertNotIn("sealed_token", summary_text)
