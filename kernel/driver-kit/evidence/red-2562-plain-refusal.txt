@@ -1,0 +1,33 @@
+#2562 lead ruling (a non-effort refusal is reported plainly), red at 39f1af7f
+
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/driver-kit/test_kit.py Kit.test_a_refusal_that_is_not_about_effort_is_reported_plainly
+test_a_refusal_that_is_not_about_effort_is_reported_plainly (__main__.Kit.test_a_refusal_that_is_not_about_effort_is_reported_plainly) ... 
+  test_a_refusal_that_is_not_about_effort_is_reported_plainly (__main__.Kit.test_a_refusal_that_is_not_about_effort_is_reported_plainly) [planted/effort-refuses-every-start] ... FAIL
+
+======================================================================
+FAIL: test_a_refusal_that_is_not_about_effort_is_reported_plainly (__main__.Kit.test_a_refusal_that_is_not_about_effort_is_reported_plainly) [planted/effort-refuses-every-start]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./kernel/driver-kit/test_kit.py", line 525, in test_a_refusal_that_is_not_about_effort_is_reported_plainly
+    self.assertEqual((code, out), (1, [PASS[0], line] + NOT_RUN + [PASS[4]]), err)
+AssertionError: Tuples differ: (1, [[73 chars]art: effort: start refused medium without the [182 chars]er']) != (1, [[73 chars]art: the sandbox cannot push to example/site',[127 chars]er'])
+
+First differing element 1:
+['pas[69 chars]art: effort: start refused medium without the [181 chars]ver']
+['pas[69 chars]art: the sandbox cannot push to example/site',[126 chars]ver']
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+-   'fail start: effort: start refused medium without the refusal text: the '
+-   'sandbox cannot push to example/site',
++   'fail start: the sandbox cannot push to example/site',
+?    ++++++++++++++++
+
+    'fail wake: not run: start failed',
+    'fail stop: not run: start failed',
+    'pass token: no login or token passed through the driver']) : 
+
+----------------------------------------------------------------------
+Ran 1 test in 0.410s
+
+FAILED (failures=1)

@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+import json, os, sys
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.environ['FAKE_CLI_LIB'])
+import fake_cli
+
+HELP = '''The fake kilo, after `kilo run --help` (Kilo CLI v7.8.32). It allows only:
+  kilo run --format json [--session <sessionID>] --model <provider/model> [--auto] <message>
+Each JSON event line carries "sessionID". Without KILO_NO_DAEMON the run joins an already-running
+kilo daemon and the turn's work happens there, as Kilo's KiloRunDaemon.attach does.
+Signed out (no saved login), it prints Kilo's own 401 error and exits 1.'''
+
+if sys.argv[1:] == ['--help']:
+    print(HELP)
+    sys.exit(0)
+a = sys.argv[1:]
+if a[:3] != ['run', '--format', 'json']:
+    fake_cli.refuse()
+a, session = a[3:], None
+if a[:1] == ['--session'] and len(a) > 1:
+    session, a = a[1], a[2:]
+if a[:1] != ['--model'] or len(a) < 3:
+    fake_cli.refuse()
+model, a = a[1], a[2:]
+if a[:1] == ['--auto']:
+    a = a[1:]
+if len(a) != 1:
+    fake_cli.refuse()
+# External: signed out, Kilo prints its own 401 text as UI.error does and exits 1,
+# https://github.com/Kilo-Org/kilocode/blob/v7.8.32/packages/opencode/src/provider/error.ts
+SIGNED_OUT = os.environ.get('FAKE_KILO_SIGNED_OUT_LINE') or (
+    'Error: Unauthorized: request was blocked by a gateway or proxy. Your authentication token may be missing or '
+    'expired \u2014 try running `kilo auth login <your provider URL>` to re-authenticate.')
+event = lambda sid: json.dumps({'type': 'step_start', 'timestamp': 0, 'sessionID': sid})
+fake_cli.turn(a[0], model, session, event, daemon='tree' if os.environ.get('KILO_NO_DAEMON') else 'via-running-hub',
+              signed_out=SIGNED_OUT)

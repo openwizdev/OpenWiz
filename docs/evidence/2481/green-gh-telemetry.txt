@@ -1,0 +1,14 @@
+# Green run (#2481 R1, with the telemetry opt-out)
+PATH=<37 refusing stubs>:$PATH env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/hosts/test_cloudroom.py
+Exit: 0
+test_gh_missing_is_skipped_and_runs_no_status_command (__main__.CloudroomHost.test_gh_missing_is_skipped_and_runs_no_status_command) ... ok
+test_gh_signed_out_runs_with_telemetry_disabled (__main__.CloudroomHost.test_gh_signed_out_runs_with_telemetry_disabled) ... ok
+test_room_cli_missing_is_skipped_and_runs_no_status_command (__main__.CloudroomHost.test_room_cli_missing_is_skipped_and_runs_no_status_command) ... ok
+test_room_cli_signed_out_stops_before_gh (__main__.CloudroomHost.test_room_cli_signed_out_stops_before_gh) ... ok
+test_the_config_checks_only_the_cited_read_only_status_commands (__main__.CloudroomHost.test_the_config_checks_only_the_cited_read_only_status_commands) ... ok
+test_unknown_cost_skips_the_kit (__main__.CloudroomHost.test_unknown_cost_skips_the_kit) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.394s
+
+OK

@@ -1,0 +1,120 @@
+# The R17 regression against a deliberately naive fix (not committed): in room(), a 'provider models' stderr matching r'Unknown provider (\S+?)\.' raised the refusal with that name in error. The credential reaches error in every case.
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/cloudroom/test_driver.py -v -k lookup_diagnostic   # no-op agent CLI stubs first on PATH
+test_a_lookup_diagnostic_never_reaches_the_answer (__main__.Driver.test_a_lookup_diagnostic_never_reaches_the_answer) ... 
+  test_a_lookup_diagnostic_never_reaches_the_answer (__main__.Driver.test_a_lookup_diagnostic_never_reaches_the_answer) [a mismatched name carrying it] ... FAIL
+  test_a_lookup_diagnostic_never_reaches_the_answer (__main__.Driver.test_a_lookup_diagnostic_never_reaches_the_answer) [after the right line] ... FAIL
+  test_a_lookup_diagnostic_never_reaches_the_answer (__main__.Driver.test_a_lookup_diagnostic_never_reaches_the_answer) [before the right line] ... FAIL
+  test_a_lookup_diagnostic_never_reaches_the_answer (__main__.Driver.test_a_lookup_diagnostic_never_reaches_the_answer) [on the next line] ... FAIL
+  test_a_lookup_diagnostic_never_reaches_the_answer (__main__.Driver.test_a_lookup_diagnostic_never_reaches_the_answer) [the credential on stdout, the right line on stderr] ... FAIL
+
+======================================================================
+FAIL: test_a_lookup_diagnostic_never_reaches_the_answer (__main__.Driver.test_a_lookup_diagnostic_never_reaches_the_answer) [a mismatched name carrying it]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cloudroom/test_driver.py", line 192, in test_a_lookup_diagnostic_never_reaches_the_answer
+    self.assertEqual((code, out), (1, self.lookup_failed()))
+AssertionError: Tuples differ: (1, {'error': "Cloudroom does not know harness GH_TOKEN[209 chars]lt"}) != (1, {'error': 'Cloudroom did not list the levels of har[159 chars]in'})
+
+First differing element 1:
+{'error': "Cloudroom does not know harness GH_TOKEN[208 chars]ult"}
+{'error': 'Cloudroom did not list the levels of har[158 chars]ain'}
+
+  (1,
++  {'error': 'Cloudroom did not list the levels of harness gemini: room-cli gave '
++            'an error the driver does not repeat; nothing was saved or started',
++   'next': 'check `room-cli provider models gemini`, then start again'})
+-  {'error': 'Cloudroom does not know harness '
+-            "GH_TOKEN=synthetic-demo-credential-013a67bf6cf615e4, so it can't "
+-            'set effort for it',
+-   'next': "this host can't set effort: remove the effort for this harness in "
+-           "your Models table or Roster to run it at the host's default"})
+
+======================================================================
+FAIL: test_a_lookup_diagnostic_never_reaches_the_answer (__main__.Driver.test_a_lookup_diagnostic_never_reaches_the_answer) [after the right line]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cloudroom/test_driver.py", line 192, in test_a_lookup_diagnostic_never_reaches_the_answer
+    self.assertEqual((code, out), (1, self.lookup_failed()))
+AssertionError: Tuples differ: (1, {'error': "Cloudroom does not know harness gemini, [164 chars]lt"}) != (1, {'error': 'Cloudroom did not list the levels of har[159 chars]in'})
+
+First differing element 1:
+{'error': "Cloudroom does not know harness gemini, [163 chars]ult"}
+{'error': 'Cloudroom did not list the levels of har[158 chars]ain'}
+
+  (1,
++  {'error': 'Cloudroom did not list the levels of harness gemini: room-cli gave '
++            'an error the driver does not repeat; nothing was saved or started',
++   'next': 'check `room-cli provider models gemini`, then start again'})
+-  {'error': "Cloudroom does not know harness gemini, so it can't set effort for "
+-            'it',
+-   'next': "this host can't set effort: remove the effort for this harness in "
+-           "your Models table or Roster to run it at the host's default"})
+
+======================================================================
+FAIL: test_a_lookup_diagnostic_never_reaches_the_answer (__main__.Driver.test_a_lookup_diagnostic_never_reaches_the_answer) [before the right line]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cloudroom/test_driver.py", line 192, in test_a_lookup_diagnostic_never_reaches_the_answer
+    self.assertEqual((code, out), (1, self.lookup_failed()))
+AssertionError: Tuples differ: (1, {'error': "Cloudroom does not know harness gemini, [164 chars]lt"}) != (1, {'error': 'Cloudroom did not list the levels of har[159 chars]in'})
+
+First differing element 1:
+{'error': "Cloudroom does not know harness gemini, [163 chars]ult"}
+{'error': 'Cloudroom did not list the levels of har[158 chars]ain'}
+
+  (1,
++  {'error': 'Cloudroom did not list the levels of harness gemini: room-cli gave '
++            'an error the driver does not repeat; nothing was saved or started',
++   'next': 'check `room-cli provider models gemini`, then start again'})
+-  {'error': "Cloudroom does not know harness gemini, so it can't set effort for "
+-            'it',
+-   'next': "this host can't set effort: remove the effort for this harness in "
+-           "your Models table or Roster to run it at the host's default"})
+
+======================================================================
+FAIL: test_a_lookup_diagnostic_never_reaches_the_answer (__main__.Driver.test_a_lookup_diagnostic_never_reaches_the_answer) [on the next line]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cloudroom/test_driver.py", line 192, in test_a_lookup_diagnostic_never_reaches_the_answer
+    self.assertEqual((code, out), (1, self.lookup_failed()))
+AssertionError: Tuples differ: (1, {'error': "Cloudroom does not know harness gemini, [164 chars]lt"}) != (1, {'error': 'Cloudroom did not list the levels of har[159 chars]in'})
+
+First differing element 1:
+{'error': "Cloudroom does not know harness gemini, [163 chars]ult"}
+{'error': 'Cloudroom did not list the levels of har[158 chars]ain'}
+
+  (1,
++  {'error': 'Cloudroom did not list the levels of harness gemini: room-cli gave '
++            'an error the driver does not repeat; nothing was saved or started',
++   'next': 'check `room-cli provider models gemini`, then start again'})
+-  {'error': "Cloudroom does not know harness gemini, so it can't set effort for "
+-            'it',
+-   'next': "this host can't set effort: remove the effort for this harness in "
+-           "your Models table or Roster to run it at the host's default"})
+
+======================================================================
+FAIL: test_a_lookup_diagnostic_never_reaches_the_answer (__main__.Driver.test_a_lookup_diagnostic_never_reaches_the_answer) [the credential on stdout, the right line on stderr]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cloudroom/test_driver.py", line 192, in test_a_lookup_diagnostic_never_reaches_the_answer
+    self.assertEqual((code, out), (1, self.lookup_failed()))
+AssertionError: Tuples differ: (1, {'error': "Cloudroom does not know harness gemini, [164 chars]lt"}) != (1, {'error': 'Cloudroom did not list the levels of har[159 chars]in'})
+
+First differing element 1:
+{'error': "Cloudroom does not know harness gemini, [163 chars]ult"}
+{'error': 'Cloudroom did not list the levels of har[158 chars]ain'}
+
+  (1,
++  {'error': 'Cloudroom did not list the levels of harness gemini: room-cli gave '
++            'an error the driver does not repeat; nothing was saved or started',
++   'next': 'check `room-cli provider models gemini`, then start again'})
+-  {'error': "Cloudroom does not know harness gemini, so it can't set effort for "
+-            'it',
+-   'next': "this host can't set effort: remove the effort for this harness in "
+-           "your Models table or Roster to run it at the host's default"})
+
+----------------------------------------------------------------------
+Ran 1 test in 0.446s
+
+FAILED (failures=5)
+exit: 1

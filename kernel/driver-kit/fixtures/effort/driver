@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+import importlib.machinery, importlib.util, io, json, os, sys
+sys.dont_write_bytecode = True
+path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'base', 'driver')
+REFUSAL = ("this host can't set effort: remove the effort for this harness in your Models table or Roster to run it "
+           "at the host's default")
+
+
+def template():
+    spec = importlib.util.spec_from_loader('template', importlib.machinery.SourceFileLoader('template', path))
+    t = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(t)
+    return t
+
+
+EFFORTS = ('low', 'medium', 'high', 'xhigh', 'max')
+
+
+def refuse(t, req):
+    if req['effort'] not in EFFORTS:
+        raise t.Refused('harness %s cannot run at effort %s' % (req['harness'], req['effort']), REFUSAL)
+
+
+def pass_effort(req):
+    return ['--effort', req['effort']] if 'effort' in req else []
+
+
+def apply(t):
+    read, command = t.read, t.command
+    t.VERSION = dict(t.VERSION, can=t.VERSION['can'] + ['effort'])
+
+    def read_effort(fields):
+        if fields is not t.START:
+            return read(fields)
+        raw = sys.stdin.read()
+        sys.stdin = io.StringIO(raw)
+        try:
+            sent = 'effort' in json.loads(raw)
+        except (ValueError, TypeError):
+            sent = False
+        req = read(dict(fields, effort=r'[a-z][a-z0-9-]{0,19}') if sent else fields)
+        if sent:
+            refuse(t, req)
+        return req
+    t.read = read_effort
+    t.command = lambda req, woken: command(req, woken) + pass_effort(req)
+    return t
+
+
+if __name__ == '__main__':
+    apply(template()).main()

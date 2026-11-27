@@ -1,0 +1,14 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/driver-kit/test_kit.py Kit.test_each_key_host_effort_driver_prints_its_own_start_line Kit.test_effort_on_another_key_host_request_does_not_count
+
+test_each_key_host_effort_driver_prints_its_own_start_line [planted/effort-cleanup-only] ... FAIL
+test_effort_on_another_key_host_request_does_not_count [cleanup-post] ... FAIL
+test_effort_on_another_key_host_request_does_not_count [start-get] ... FAIL
+test_effort_on_another_key_host_request_does_not_count [start-second-post] ... FAIL
+
+In each case the kit exited 0 with five pass lines. The expected result was
+exit 1 with a failed start, wake and stop skipped, and a passing key check.
+The passing key-host fixture, the missing-effort fixture and the refusal
+fixture matched their expected results.
+
+Ran 2 tests
+FAILED (failures=4)

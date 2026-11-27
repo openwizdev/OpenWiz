@@ -1,4 +1,4 @@
-$ PATH=<stubs>:$PATH env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/test_rig.py   # at 0a8e9a88e79da25d9bab724874d56da03f4425db (the same tree as the green commit), agent-CLI stubs first on PATH
+$ PATH=<stubs>:$PATH env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/test_rig.py   # at 0a8e9a88e79da25d9bab724874d56da03f4425db (the commit actually tested; the green commit bb91163a8868cd9123b53bed7e52b8f57391bd9c differs from it only in this saved evidence log), agent-CLI stubs first on PATH
 test_a_dirty_checkout_exits_2_and_runs_nothing (__main__.Rig.test_a_dirty_checkout_exits_2_and_runs_nothing) ... ok
 test_a_held_lock_exits_0_and_runs_nothing (__main__.Rig.test_a_held_lock_exits_0_and_runs_nothing) ... ok
 test_a_kit_line_quoting_the_checkout_or_the_repository_is_withheld_from_the_record_and_shown_on_stderr (__main__.Rig.test_a_kit_line_quoting_the_checkout_or_the_repository_is_withheld_from_the_record_and_shown_on_stderr) ... ok

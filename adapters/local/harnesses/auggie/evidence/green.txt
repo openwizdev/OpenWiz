@@ -1,0 +1,25 @@
+# Green: the whole runner, the planted rows and the auggie row, then the row's own test_row.py, after HR1's revision 4.
+# Commands: env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/local/test_harnesses.py; env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/local/harnesses/auggie/test_row.py
+# No-op stubs for every known agent CLI were first on PATH; no real agent CLI ran.
+fail claude: row.json harness: claude is built in, and no row may use a built-in name
+fail credential-env: row.json env: a value looks like a credential; env holds only fixed settings that are not credentials
+fail daemon-survives: daemon: the background process the row declares still runs after stop
+fail effort-missing: row.json effort: it has no effort form; give an effort map or "none: <one line why>"
+fail effort-unpassed: row.json effort: it maps effort values to arguments, but start has no {effort} to pass them
+pass example: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+pass example-none: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+fail larger-argument: row.json start: a placeholder sits inside a larger argument; each fills a whole argument
+fail row-missing: row.json is missing
+fail session-differs: session: the wake turn got a different session id from the start turn
+fail signed-out-bad-pattern: row.json signed_out: a pattern does not compile
+pass signed-out-json: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+fail wake-no-session: row.json wake: it has no {session}
+pass driver: an unknown harness is a D3 error that lists the built-ins and the row folders, and starts nothing
+pass driver: a wake before the reported session id is known is a D3 error that starts nothing
+rows in adapters/local/harnesses: auggie
+pass auggie: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+# exit 0
+pass auggie row: not installed: a D3 error whose next says to install auggie, starting nothing
+pass auggie row: not signed in: a D3 error that says so, whose next names auggie auth login
+pass auggie row: the session header: the driver reads the id from 1.2.2's first JSON line
+# exit 0

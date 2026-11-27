@@ -1,0 +1,5 @@
+# Red: the runner on the auggie row before its fake answers (fake exits 2 on every command line).
+# Command: env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/local/test_harnesses.py --rows adapters/local/harnesses
+# No-op stubs for every known agent CLI were first on PATH.
+fail auggie: kit: fail start: run run-a7d18fedb99c: the first turn ended at once: the harness failed (exit 2)
+# exit 1

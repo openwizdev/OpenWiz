@@ -1,0 +1,7 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/local/test_harnesses.py --rows adapters/local/harnesses
+# row.json env sets KILO_NO_DAEMON=1; the fake has no signed-out turn yet; agent-CLI stubs first on PATH
+fail kilo: test_row.py: it failed (exit 1)
+exit 1
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/local/harnesses/kilo/test_row.py
+fail kilo test_row.py: not signed in: a D3 error whose next points at the log naming kilo auth login
+exit 1

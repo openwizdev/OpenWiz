@@ -1,0 +1,17 @@
+# Auggie CLI 1.2.2, read only, not signed in, synthetic values.
+# Command (in a throwaway worktree):
+#   auggie -p --mode json "hi"
+# stdout, first line (the id and cwd here are synthetic):
+{"type":"session","version":3,"id":"00000000-0000-4000-8000-000000000001","timestamp":"2026-11-22T00:00:00.000Z","cwd":"/tmp/synthetic-worktree"}
+# stderr:
+No API key found for unknown.
+# exit status: 1
+#
+# Wake by that id before any assistant reply is saved:
+#   auggie --session 00000000-0000-4000-8000-000000000001 -p "x"
+No session found matching '00000000-0000-4000-8000-000000000001'
+# exit status: 1
+#
+#   auggie auth status
+Not logged in.
+# exit status: 1

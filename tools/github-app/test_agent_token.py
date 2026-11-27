@@ -31,6 +31,10 @@ REPO = "synthetic-owner/work"
 WRITE = {"metadata": "read", "contents": "write", "issues": "write",
          "pull_requests": "write", "checks": "read", "actions": "read"}
 READ = {name: "read" for name in WRITE}
+sys.dont_write_bytecode = True
+service_spec = importlib.util.spec_from_file_location("test_token_service", HERE / "test_token_service.py")
+SERVICE_TESTS = importlib.util.module_from_spec(service_spec)
+service_spec.loader.exec_module(SERVICE_TESTS)
 TOKEN, TOKEN2 = "synthetic-agent-token-1", "synthetic-agent-token-2"
 REQ = ("--requester", "builder-1", "--repository", REPO)
 NOTE = PIN["fallback"]["note"]
@@ -38,7 +42,23 @@ WITHHELD = "openwiz: openwiz[bot] token withheld from git"
 URL = f"https://github.com/{REPO}"
 
 FAKE = r'''
-import hashlib, json, os, stat, sys, time
+import base64, hashlib, json, os, stat, subprocess, sys, time
+
+
+def seal(token, key):
+    sealed = b""
+    for at in range(0, len(token), 318):
+        reader, writer = os.pipe()
+        os.write(writer, key.encode())
+        os.close(writer)
+        sealed += subprocess.run(
+            ["/usr/bin/openssl", "pkeyutl", "-encrypt", "-pubin", "-inkey", f"/dev/fd/{reader}",
+             "-pkeyopt", "rsa_padding_mode:oaep", "-pkeyopt", "rsa_oaep_md:sha256", "-pkeyopt", "rsa_mgf1_md:sha256"],
+            input=token[at:at + 318].encode(), stdout=subprocess.PIPE, check=True, pass_fds=(reader,)).stdout
+        os.close(reader)
+    return base64.b64encode(sealed).decode()
+
+
 name, args = sys.argv[1], sys.argv[2:]
 stdin = sys.stdin.read() if name != "gh" else ""
 token = os.environ.get("GH_TOKEN")
@@ -56,7 +76,12 @@ calls = [json.loads(line) for line in open(log) if json.loads(line)["name"] != "
 answers = json.load(open(os.environ["FAKE_ANSWERS"]))
 answer = answers[min(len(calls), len(answers)) - 1]
 time.sleep(answer.get("sleep", 0))
-sys.stdout.write(answer.get("stdout", ""))
+out = answer.get("stdout", "")
+if "seal" in answer:
+    out = out.replace("<sealed token>", seal(answer["seal"], answer.get("to") or json.loads(stdin)["answer_key"]))
+with open(log + ".out", "a") as f:
+    f.write(out)
+sys.stdout.write(out)
 sys.stderr.write(answer.get("stderr", ""))
 sys.exit(answer["exit"])
 '''
@@ -108,10 +133,10 @@ def sha(value):
 
 
 def answer(token=TOKEN, left=3600, repositories=(REPO,), permissions=None):
-    body = {"schema": "openwiz.token-service.v1", "kind": "answer", "token": token,
+    body = {"schema": "openwiz.token-service.v1", "kind": "answer", "sealed_token": "<sealed token>",
             "expires_at": int(time.time()) + left, "repositories": list(repositories),
             "permissions": permissions or WRITE}
-    return {"exit": 0, "stdout": json.dumps(body) + "\n"}
+    return {"exit": 0, "stdout": json.dumps(body) + "\n", "seal": token}
 
 
 def refusal(code):
@@ -137,6 +162,9 @@ def load_helper():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+CONTRACT, SCHEMA = SERVICE_TESTS.CONTRACT, SERVICE_TESTS.SCHEMA
 
 
 class Helper(unittest.TestCase):
@@ -261,6 +289,8 @@ class MintedToken(Helper):
         self.answers(answer(permissions=READ))
         self.start("--read")
         request = json.loads(self.one_call()["stdin"])
+        key = request.pop("answer_key", "")
+        self.assertEqual(CONTRACT.errors(key, SCHEMA["$defs"]["answer_key"], SCHEMA), [])
         self.assertEqual(request, {"schema": "openwiz.token-service.v1", "kind": "request",
                                    "requester": "builder-1", "repositories": [REPO], "permissions": READ})
 
@@ -313,6 +343,112 @@ class MintedToken(Helper):
         self.assertEqual((loose.returncode, self.calls()), (2, []), "a directory others can read is refused")
 
 
+AUDIT = r"""
+import json, os, runpy, stat, subprocess, sys
+root, sys.argv = sys.argv[1], sys.argv[2:]
+started, pipes, outside, leaks, lines, busy = [], [], [], [], [], []
+real = subprocess.run
+
+
+def run(args, **kwargs):
+    done = real(args, **kwargs)
+    if "genpkey" in args:
+        lines.extend(line.decode() for line in done.stdout.splitlines() if b"-----" not in line)
+    return done
+
+
+def hook(event, args):
+    if busy:
+        return
+    busy.append(True)
+    if event == "subprocess.Popen":
+        started.append(json.dumps([args[1], dict(os.environ) if args[3] is None else args[3]]))
+        pipes.extend(stat.S_ISFIFO(os.stat(a).st_mode) for a in args[1] if str(a).startswith("/dev/fd/"))
+    if event == "open" and isinstance(args[2], int) and args[2] & 3 and str(args[0]).startswith("/"):
+        outside.extend([] if str(args[0]).startswith((root, "/dev/null")) else [str(args[0])])
+    if event in ("subprocess.Popen", "os.remove", "os.rename"):
+        for folder, _, names in os.walk(root):
+            for name in names:
+                with open(os.path.join(folder, name), errors="replace") as file:
+                    text = file.read()
+                leaks.extend(name for line in lines if line in text)
+    busy.pop()
+
+
+subprocess.run = run
+sys.addaudithook(hook)
+try:
+    runpy.run_path(sys.argv[0], run_name="__main__")
+except SystemExit as done:
+    code = done.code
+started.append(json.dumps(dict(os.environ)))
+leaks += ["argv or environment" for line in lines for text in started if line in text or "PRIVATE KEY" in text]
+keys = [text for text in started if "genpkey" in text]
+print(json.dumps([code, len(lines) > 30, len(keys), pipes, outside, leaks]))
+"""
+
+
+class Sealed(Helper):
+    def service(self):
+        fixture = SERVICE_TESTS.ServiceFixture()
+        fixture.setUp()
+        self.addCleanup(fixture.doCleanups)
+        github = SERVICE_TESTS.fake_github(fixture.pem, [REPO])
+        url, _calls, fake = github.__enter__()
+        self.addCleanup(github.__exit__, None, None, None)
+        fake["expires_at"] = int(time.time()) + 3600
+        wrapped = self.root / "wrapped.py"
+        wrapped.write_text(f"import runpy, sys\nsys.argv = {[str(SERVICE_TESTS.SERVICE), 'mint', '--state-dir', str(fixture.state), '--api-base', url]!r}\n"
+                           "runpy.run_path(sys.argv[0], run_name='__main__')\n")
+        (self.bin / "python3").unlink()
+        self.pairing = self.root / "pairing.log"
+        (self.root / "pair.py").write_text(
+            "import subprocess, sys\nrequest = sys.stdin.buffer.read()\n"
+            "assert sys.argv[1:4] == ['mac', 'run', '--stdin'] and len(sys.argv) == 5\n"
+            "done = subprocess.run(['sh', '-c', sys.argv[4]], input=request, capture_output=True)\n"
+            f"open({str(self.pairing)!r}, 'ab').write(request + done.stdout + done.stderr)\n"
+            "sys.stdout.buffer.write(done.stdout)\nsys.exit(done.returncode)\n")
+        (self.bin / "room-cli").write_text(f'#!/bin/sh\nexec "{sys.executable}" -I "{self.root}/pair.py" "$@"\n')
+        self.env["OPENWIZ_TOKEN_SERVICE"] = str(wrapped)
+        return fixture, fake
+
+    def test_the_opened_token_is_githubs_on_both_routes_and_only_there(self):
+        # comment-ok: catches: a service and helper that seal and open differently, and a plaintext token in
+        # an output, a kept pairing record or the mint log.
+        fixture, fake = self.service()
+        for route in ("local", "pairing"):
+            for token in (TOKEN, "ghs-" + "a1_.b-" * 86):
+                with self.subTest(route=route, length=len(token)):
+                    shutil.rmtree(self.private, True)
+                    fake["token"] = token
+                    done = self.start(OPENWIZ_TOKEN_SERVICE_ROUTE=route)
+                    self.assertEqual((done.returncode, done.stdout, done.stderr), (0, "", ""))
+                    self.assertEqual(self.held()["token"], token)
+                    self.assert_never_exposed(done, tokens=(token,))
+                    fixture.assert_nothing_exposed(token, done.stdout)
+        record = [json.loads(line) for line in self.pairing.read_text().splitlines()]
+        self.assertEqual([row["kind"] for row in record], ["request", "answer"] * 2)
+        self.assertNotIn("token", record[1])
+        self.assertEqual(len({row["answer_key"] for row in record[::2]}), 2, "each request has its own key")
+
+    def test_the_private_key_is_only_ever_in_memory_and_a_pipe(self):
+        # comment-ok: catches: a one-time private key on a command line, in an environment or in any file, even briefly.
+        self.answers(answer(token="synthetic-" + "x1" * 255))
+        done = subprocess.run([sys.executable, "-I", "-c", AUDIT, str(self.root), str(HELPER), "start", *REQ],
+                              capture_output=True, text=True, env=self.env, timeout=60)
+        self.assertEqual(done.stderr, "")
+        self.assertEqual(json.loads(done.stdout), [0, True, 1, [True, True], [], []])
+
+    def test_a_helper_that_cannot_make_its_key_asks_nothing(self):
+        # comment-ok: catches: a request sent with no key, or a traceback in place of the one fallback note.
+        helper = load_helper()
+        helper.OPENSSL = str(self.root / "absent")
+        wanted = {"requester": "builder-1", "repositories": [REPO], "permissions": WRITE}
+        argv = [str(self.bin / "room-cli"), "mac"]
+        self.assertEqual(helper.mint(argv, wanted, self.env), ("unreachable", None, None))
+        self.assertEqual(self.calls(), [])
+
+
 class Fallback(Helper):
     def test_unreachable_service_falls_back_with_one_note(self):
         self.answers({"exit": 1, "stdout": "", "stderr": "synthetic: owner's machine unavailable"})
@@ -351,19 +487,30 @@ class Fallback(Helper):
         wider = answer(repositories=(REPO, "synthetic-owner/other"))
         short = answer(left=200)
         long = answer(left=4000)
-        twice = {"exit": 0, "stdout": answer()["stdout"].replace('"kind"', '"token": "x", "kind"')}
+        twice = {"exit": 0, "stdout": answer()["stdout"].replace('"kind"', '"sealed_token": "x", "kind"')}
+        plain = {"exit": 0, "stdout": answer()["stdout"].replace("sealed_token", "token").replace("<sealed token>", TOKEN)}
+        beside = dict(answer(), stdout=answer()["stdout"].replace('"kind"', '"token": "x", "kind"'))
+        other_key = dict(answer(), to=SERVICE_TESTS.ASKER.key)
+        unsealed = [dict(answer(), stdout=answer()["stdout"].replace("<sealed token>", value))
+                    for value in (TOKEN, "", "A" * 512, "A" * 511 + "!", "<sealed token>" * 9, "<sealed token>" * 2)]
+        listed = dict(answer(), stdout=answer()["stdout"].replace('"<sealed token>"', '["<sealed token>"]'))
         bad_exit = dict(refusal("permission"), exit=0)
         injected = answer(token="synthetic\nusername=x")
         failed_answer = dict(answer(), exit=5)
         for reason, item in [*cases.items(), ("bad-answer", wider), ("bad-answer", short),
                              ("bad-answer", long), ("bad-answer", twice), ("bad-answer", bad_exit),
-                             ("bad-answer", injected), ("bad-answer", failed_answer)]:
+                             ("bad-answer", injected), ("bad-answer", failed_answer), ("bad-answer", plain),
+                             ("bad-answer", beside), ("bad-answer", other_key), ("bad-answer", answer(token="a" * 318 * 9)), ("bad-answer", listed),
+                             *[("bad-answer", item) for item in unsealed]]:
             with self.subTest(reason=reason, item=item["stdout"][:60]):
                 self.log.unlink(missing_ok=True)
                 self.answers(item)
                 result = self.start()
                 self.assertEqual(result.returncode, 0)
                 self.assert_fallback(result, reason)
+                if item in (plain, unsealed[0]):
+                    self.assertIn(TOKEN, Path(f"{self.log}.out").read_text())
+                    Path(f"{self.log}.out").unlink()
                 self.assert_never_exposed(result)
         reasons = {c["reason"] for c in json.loads((FIXTURES / "fallback.json").read_text())["cases"]
                    if "reason" in c}
@@ -988,8 +1135,7 @@ class Revoke(Helper):
         setups = {"no folder": lambda: None,
                   "empty folder": lambda: self.private.mkdir(mode=0o700),
                   "expired token": lambda: (self.minted().write_text(json.dumps(expired))),
-                  "not a token": lambda: (self.minted().write_text(json.dumps({"token": "a b"}))),
-                  "loose folder": lambda: (self.minted(), self.private.chmod(0o755))}
+                  "not a token": lambda: (self.minted().write_text(json.dumps({"token": "a b"})))}
         for name, setup in setups.items():
             with self.subTest(name):
                 shutil.rmtree(self.private, True)
@@ -998,6 +1144,39 @@ class Revoke(Helper):
                 self.assertEqual((done.returncode, done.stdout, done.stderr), (1, "", NO_TOKEN))
                 self.assertEqual(api.seen, [])
                 self.assert_never_exposed(done)
+
+    def test_revoke_names_the_failed_private_folder_check(self):
+        held = self.minted()
+        before = sha(held.read_text())
+        self.private.chmod(0o755)
+        link = self.root / "linked"
+        link.symlink_to(self.private)
+        unsafe_parent = self.root / "shared"
+        unsafe_parent.mkdir()
+        (unsafe_parent / "private").mkdir(mode=0o700)
+        unsafe_parent.chmod(0o777)
+        worktree = self.root / "worktree"
+        (worktree / ".git").mkdir(parents=True)
+        (worktree / "private").mkdir(mode=0o700)
+        cases = (
+            (self.private, "the private token directory must be a 0700 directory you own"),
+            (link, "the private token directory must be a real directory, through no symlink"),
+            (unsafe_parent / "private",
+             "the private token directory must sit in folders only you or root can change"),
+            (worktree / "private", "the private token directory must be outside every Git working tree"),
+            (Path("relative-private"), "the private token directory must be an absolute path"),
+        )
+        api = self.api()
+        for folder, guidance in cases:
+            with self.subTest(guidance=guidance):
+                done = self.revoke(api, OPENWIZ_AGENT_TOKEN_DIR=str(folder))
+                self.assert_never_exposed(done)
+                self.assertEqual((done.returncode, done.stdout, done.stderr),
+                                 (1, "", f"openwiz: openwiz[bot] token not revoked ({guidance})\n"),
+                                 "catches: revoke calls an unsafe token folder empty")
+                self.assertEqual(api.seen, [])
+                self.assertEqual(list(self.private.iterdir()), [held])
+                self.assertEqual(sha(held.read_text()), before)
 
     def test_revoke_https_goes_only_to_the_configured_api_base(self):
         # comment-ok: catches: a revoke that follows a proxy setting or an arbitrary base, sending the
@@ -1448,6 +1627,107 @@ class FinalRound(Helper):
                              "the fresh token it could not store is revoked")
             self.assertNotIn(TOKEN2, err)
 
+    def test_a_mint_that_loses_its_folder_keeps_its_token_for_a_later_revoke(self):
+        # comment-ok: catches: a mint whose folder was deleted in flight and whose emergency DELETE GitHub
+        # refused leaving the fresh token live with no copy, so no later revoke or mint can find it; or the
+        # copy being written through a symlink planted where the folder was.
+        went = "openwiz: agent-token: the private token directory went away, so the new token was "
+        fresh = [("DELETE", sha(f"Bearer {TOKEN2}"))]
+        for later, status, said in (
+                ("revoke", 401, "not revoked (GitHub refused); the token is kept for a later revoke\n"),
+                ("mint", 401, "not revoked (GitHub refused); the token is kept for a later revoke\n"),
+                ("nothing", 204, "revoked\n"),
+                ("a symlink in its place", 401, "not revoked (GitHub refused): suspend the installation\n")):
+            with self.subTest(later=later):
+                elsewhere, planted = self.root / "elsewhere", later == "a symlink in its place"
+                shutil.rmtree(self.private, True)
+                for left in ("gate", "gate.started", "calls.log"):
+                    (self.root / left).unlink(missing_ok=True)
+                self.answers(answer(token=TOKEN2), answer())
+                first, copies = self.api(status=status), []
+                first.during = lambda: copies.append(len(self.side_files()))
+                self.env["OPENWIZ_GITHUB_API_BASE"] = first.base()
+                minting, gate = self.gated()
+                shutil.rmtree(self.private)
+                if planted:
+                    elsewhere.mkdir(mode=0o700)
+                    self.private.symlink_to(elsewhere)
+                    self.addCleanup(self.private.unlink)
+                gate.touch()
+                out, err = minting.communicate(timeout=30)
+                self.assertEqual((minting.returncode, out), (2, ""))
+                self.assertEqual(copies, [0 if planted else 1],
+                                 "the copy is saved before the emergency DELETE is sent, never through a symlink")
+                self.assertEqual(self.deletes(first), fresh)
+                self.assertEqual(err, went + said)
+                sides = self.side_files()
+                self.assertEqual(len(sides), status != 204 and not planted, "kept until GitHub answers 204")
+                self.assertEqual(list(elsewhere.glob("*")), [], "nothing is written where the symlink points")
+                self.assertFalse(self.token_file().exists(), "the refused mint leaves no usable cache")
+                done = [types.SimpleNamespace(stdout=out, stderr=err)]
+                if sides:
+                    self.assertEqual(json.loads(sides[0].read_text())["token"], TOKEN2)
+                    self.assertEqual((sides[0].stat().st_mode & 0o777, self.private.stat().st_mode & 0o777),
+                                     (0o600, 0o700), "owner-only copy in an owner-only folder")
+                    api = self.api()
+                    self.env["OPENWIZ_GITHUB_API_BASE"] = api.base()
+                    done.append(self.start() if later == "mint" else self.revoke(api))
+                    self.assertEqual((done[1].returncode, done[1].stderr), (0, ""))
+                    self.assertEqual(self.deletes(api), fresh, f"a later {later} finds and revokes it")
+                    self.assertEqual(self.side_files(), [])
+                    self.assertEqual(self.token_file().exists(), later == "mint")
+                self.assert_never_exposed(*done)
+
+    def test_a_refused_emergency_delete_reports_kept_only_when_a_copy_is_findable(self):
+        # comment-ok: catches: a refused emergency DELETE reporting the token kept from a save made before
+        # the call, after the folder or its copy was removed while the DELETE was pending, so a later
+        # revoke finds nothing while the owner is told a retry is possible.
+        went = "openwiz: agent-token: the private token directory went away, so the new token was not revoked "
+        fresh = [("DELETE", sha(f"Bearer {TOKEN2}"))]
+        elsewhere = self.root / "elsewhere"
+
+        def unsafe():
+            shutil.rmtree(self.private)
+            elsewhere.mkdir(mode=0o700)
+            self.private.symlink_to(elsewhere)
+
+        for pending, gone, kept in (
+                ("the folder removed", lambda: shutil.rmtree(self.private), True),
+                ("the copy removed", lambda: [path.unlink() for path in self.side_files()], True),
+                ("a symlink in the folder's place", unsafe, False)):
+            with self.subTest(pending=pending):
+                if self.private.is_symlink():
+                    self.private.unlink()
+                shutil.rmtree(self.private, True)
+                for left in ("gate", "gate.started", "calls.log"):
+                    (self.root / left).unlink(missing_ok=True)
+                self.answers(answer(token=TOKEN2), answer())
+                refusing = self.api(status=401)
+                refusing.during = gone
+                self.env["OPENWIZ_GITHUB_API_BASE"] = refusing.base()
+                minting, gate = self.gated()
+                shutil.rmtree(self.private)
+                gate.touch()
+                out, err = minting.communicate(timeout=30)
+                self.assertEqual((minting.returncode, out), (2, ""))
+                self.assertEqual(self.deletes(refusing), fresh)
+                self.assertEqual(err, went + ("(GitHub refused); the token is kept for a later revoke\n" if kept
+                                              else "(GitHub refused): suspend the installation\n"))
+                self.assertEqual(list(elsewhere.glob("*")), [], "nothing is written where the symlink points")
+                done = [types.SimpleNamespace(stdout=out, stderr=err)]
+                if kept:
+                    sides = self.side_files()
+                    self.assertEqual([json.loads(side.read_text())["token"] for side in sides], [TOKEN2])
+                    self.assertEqual((sides[0].stat().st_mode & 0o777, self.private.stat().st_mode & 0o777),
+                                     (0o600, 0o700), "owner-only copy in an owner-only folder")
+                    api = self.api()
+                    done.append(self.revoke(api))
+                    self.assertEqual((done[1].returncode, done[1].stderr), (0, ""))
+                    self.assertEqual(self.deletes(api), fresh, "a later revoke finds and revokes it")
+                    self.assertEqual(self.side_files(), [])
+                self.assert_never_exposed(*done)
+        self.private.unlink()
+
     @unittest.skipUnless(os.path.isdir("/proc/self/fd"), "needs /proc/self/fd")
     def test_r9_no_child_inherits_a_readable_credential_handle(self):
         # comment-ok: catches: a run handing its children an open, readable copy of the token, which a
@@ -1461,6 +1741,253 @@ class FinalRound(Helper):
                          "no fd that reads as a token; only the run's revoke socket, never in a fallback child")
         self.assert_never_exposed(done)
 
+
+class SnapshotByName(Helper):
+    api, minted, inside_run, deletes = Revoke.api, Revoke.minted, RevokeReview.inside_run, FinalRound.deletes
+
+    def test_a_fallback_retires_an_unreadable_run_snapshot_by_name(self):
+        # comment-ok: catches: a fallback that skips a run snapshot it cannot read, leaving it under its
+        # active name, so once it is readable again after GitHub refused the revoke the run's gh gets the token.
+        self.minted()
+        refusing = self.api(status=401)
+        inner = (f'chmod 000 "$OPENWIZ_AGENT_TOKEN_RUN"; OPENWIZ_TOKEN_SERVICE_READBACK=failed "$PY" -I "$H" '
+                 f'start {" ".join(REQ)}; chmod 600 "$OPENWIZ_AGENT_TOKEN_RUN" 2>/dev/null; gh pr list')
+        done = self.inside_run(inner, refusing)
+        self.assertEqual(self.deletes(refusing), [("DELETE", sha(f"Bearer {TOKEN}"))])
+        self.assertEqual((done.returncode, self.calls("gh")), (128, []), "the retired snapshot is never served")
+        self.assertEqual(list(self.private.glob("run-*")), [])
+        self.assert_never_exposed(done)
+
+    WANTED = {"requester": "builder-1", "repositories": [REPO], "permissions": WRITE}
+
+    def loaded(self):
+        helper = load_helper()
+        private = helper.Private(self.env, create=True)
+        self.addCleanup(os.close, private.fd)
+        cache = helper.cache_name(self.WANTED)
+        self.assertEqual(cache, self.token_file().name, "the test and the helper name one request")
+        return helper, private, cache
+
+    def test_a_snapshot_write_never_replaces_a_snapshot_already_at_its_name(self):
+        # comment-ok: catches: a snapshot write that replaces a file already at its name, so a run whose
+        # saved path a later run's name collides with is handed that later run's token.
+        for branch in ("cached", "minted"):
+            with self.subTest(branch):
+                shutil.rmtree(self.private, True)
+                self.minted()
+                helper, private, cache = self.loaded()
+                name = helper.snapshot_prefix(cache) + "0" * 16 + ".json"
+                helper.token_for(private, self.WANTED, self.env, snapshot=name)
+                first = hashlib.sha256((self.private / name).read_bytes()).hexdigest()
+                if branch == "cached":
+                    (self.private / cache).write_text(json.dumps(
+                        {"token": TOKEN2, "expires_at": int(time.time()) + 3600, **self.WANTED}))
+                else:
+                    (self.private / cache).unlink()
+                    self.answers(answer(token=TOKEN2))
+                refused = False
+                try:
+                    helper.token_for(private, self.WANTED, self.env, snapshot=name)
+                except (helper.Refused, FileExistsError):
+                    refused = True
+                self.assertEqual((refused, hashlib.sha256((self.private / name).read_bytes()).hexdigest()),
+                                 (True, first),
+                                 "the second write is refused and the first snapshot is unchanged")
+
+    def test_a_later_run_never_takes_the_name_a_live_run_had_retired(self):
+        # comment-ok: catches: a later run taking the snapshot name a still-running run saved, once a
+        # fallback retired it, so the first run's saved path serves the later run's token.
+        self.minted()
+        helper = load_helper()
+        refusing = self.api(status=401)
+        env = dict(self.env, OPENWIZ_GITHUB_API_BASE=refusing.base())
+        real, forced, seen = helper.secrets.token_hex, ["ab" * 8], {}
+
+        def token_hex(size):
+            return forced.pop() if forced and size == 8 else real(size)
+
+        def later_child(command, child, **kwargs):
+            seen["later"] = child.get(helper.RUN_MARK)
+            reason, token = helper.snapshot_token(seen["first"][helper.RUN_MARK], seen["first"],
+                                                  check=lambda snapshot, env: None)
+            seen["served"] = (reason, token and sha(token))
+            return 0
+
+        def first_child(command, child, **kwargs):
+            seen["first"] = dict(child)
+            helper.start(list(REQ), dict(env, OPENWIZ_TOKEN_SERVICE_READBACK="failed"))
+            self.answers(answer(token=TOKEN2))
+            forced.append("ab" * 8)
+            with mock.patch.object(helper, "execute", later_child):
+                return helper.run([*REQ, "--", "true"], dict(env))
+
+        with mock.patch.object(helper.secrets, "token_hex", token_hex), \
+                mock.patch.object(helper, "execute", first_child), \
+                mock.patch.object(helper.sys, "stderr"):
+            self.assertEqual(helper.run([*REQ, "--", "true"], dict(env)), 0)
+        first = seen["first"][helper.RUN_MARK]
+        self.assertTrue(first.endswith("ab" * 8 + ".json"), "the first run took the forced name")
+        self.assertEqual(seen["served"], ("no current token", None),
+                         "the first run's saved path serves nothing after its snapshot was retired")
+        self.assertTrue(seen["later"] and seen["later"] != first, "the later run got a name of its own")
+        self.assertEqual(sorted(p.name for p in self.private.iterdir() if not p.name.startswith(("token-", "kept-"))),
+                         [], "each run removes its snapshot and its reservation")
+
+    def test_a_later_run_never_takes_the_path_of_a_retired_snapshot_named_before_the_upgrade(self):
+        # comment-ok: catches: an upgraded run whose snapshot name has the shape a pre-upgrade run's
+        # random name had, so once pre-upgrade code retires a still-running legacy run's snapshot
+        # without claiming a slot, a later run can draw that same name and serve its token there.
+        for retired_by in ("upgraded fallback", "pre-upgrade retire"):
+            with self.subTest(retired_by):
+                shutil.rmtree(self.private, True)
+                cache = self.minted()
+                helper, private, cache_file = self.loaded()
+                legacy = self.private / ("run-" + cache.name[len("token-"):][:16] + "ab" * 8 + ".json")
+                legacy.write_text(json.dumps({"token": TOKEN, "expires_at": int(time.time()) + 3600,
+                                              "request": cache.name}))
+                legacy.chmod(0o600)
+                if retired_by == "upgraded fallback":
+                    refusing = self.api(status=401)
+                    self.helper("start", *REQ, OPENWIZ_TOKEN_SERVICE_READBACK="failed",
+                                OPENWIZ_GITHUB_API_BASE=refusing.base())
+                else:
+                    with helper.locked(private):
+                        helper.drop(private, cache_file, cache_file, retire=True)
+                        helper.drop(private, legacy.name, cache_file, retire=True)
+                    self.assertEqual(list(self.private.glob("slot-*")), [], "pre-upgrade retire claims no slot")
+                self.assertFalse(legacy.exists(), "the legacy snapshot was retired")
+                self.answers(answer(token=TOKEN2))
+                real, seen = helper.secrets.token_hex, {}
+
+                def later_child(command, child, **kwargs):
+                    seen["later"] = child.get(helper.RUN_MARK)
+                    reason, token = helper.snapshot_token(
+                        str(legacy), dict(self.env, **{helper.RUN_MARK: str(legacy)}),
+                        check=lambda snapshot, env: None)
+                    seen["served"] = (legacy.exists(), reason, token and sha(token))
+                    return 0
+
+                with mock.patch.object(helper.secrets, "token_hex", lambda size: "ab" * 8 if size == 8 else real(size)), \
+                        mock.patch.object(helper, "execute", later_child), \
+                        mock.patch.object(helper.sys, "stderr"):
+                    self.assertEqual(helper.run([*REQ, "--", "true"], dict(self.env)), 0)
+                self.assertTrue(seen["later"], "the later run was handed a snapshot")
+                self.assertEqual((seen["later"] != str(legacy), seen["served"]),
+                                 (True, (False, "no current token", None)),
+                                 "the legacy run's retired path stays empty and serves nothing while a later run runs")
+
+    def test_a_run_that_cannot_reserve_a_free_name_is_refused(self):
+        # comment-ok: catches: a run that goes on under a name another run still holds once every
+        # name it draws is taken, instead of stopping with no token handed over.
+        self.minted()
+        helper, private, cache = self.loaded()
+        with mock.patch.object(helper.secrets, "token_hex", lambda size: "cd" * size):
+            name = helper.reserve(private, cache)
+            with self.assertRaises(helper.Refused):
+                helper.reserve(private, cache)
+        self.assertEqual([p.name for p in self.private.glob("slot-*")], [helper.slot_name(name)])
+
+    def test_a_fallback_or_revoke_retires_a_readable_snapshot_named_before_the_upgrade(self):
+        # comment-ok: catches: a fallback or revoke that selects snapshots by name alone, so a run started
+        # before the upgrade, whose snapshot has a random name, keeps serving a token that was retired.
+        for route in ("fallback", "revoke"):
+            with self.subTest(route):
+                shutil.rmtree(self.private, True)
+                cache = self.minted()
+                until = int(time.time()) + 3600
+                legacy = self.private / ("run-" + "f0" * 16 + ".json")
+                other = self.private / ("run-" + "0f" * 16 + ".json")
+                legacy.write_text(json.dumps({"token": TOKEN, "expires_at": until, "request": cache.name}))
+                other.write_text(json.dumps({"token": "synthetic-agent-token-3", "expires_at": until,
+                                             "request": "token-" + "0" * 32 + ".json"}))
+                legacy.chmod(0o600)
+                other.chmod(0o600)
+                refusing = self.api(status=401)
+                args = ("start", *REQ) if route == "fallback" else ("revoke", *REQ)
+                done = self.helper(*args, OPENWIZ_TOKEN_SERVICE_READBACK="failed",
+                                   OPENWIZ_GITHUB_API_BASE=refusing.base())
+                self.assertEqual(self.deletes(refusing), [("DELETE", sha(f"Bearer {TOKEN}"))])
+                self.assertEqual(sorted(p.name for p in self.private.glob("run-*")), [other.name],
+                                 "the request's legacy snapshot is retired, and another request's is left")
+                api = self.api()
+                later = self.helper("revoke", *REQ, OPENWIZ_GITHUB_API_BASE=api.base())
+                self.assertEqual((later.returncode, later.stderr), (0, ""), "the kept copy is still revocable")
+                self.assertEqual(self.deletes(api), [("DELETE", sha(f"Bearer {TOKEN}"))])
+                self.assert_never_exposed(done, later)
+
+    def test_a_read_that_fails_never_leaves_a_retired_name_active(self):
+        # comment-ok: catches: a retirement that reads a snapshot or the cache entry before it removes
+        # active names, so one read-time I/O error escapes and every active name stays in place.
+        for route in ("fallback", "revoke"):
+            for bad in ("run-", "token-"):
+                with self.subTest(route=route, unreadable=bad):
+                    shutil.rmtree(self.private, True)
+                    self.minted()
+                    helper, private, cache = self.loaded()
+                    name = helper.snapshot_prefix(cache) + "0" * 16 + ".json"
+                    helper.token_for(private, self.WANTED, self.env, snapshot=name)
+                    broken = os.stat(self.private / (name if bad == "run-" else cache)).st_ino
+                    read = helper.Private.read
+
+                    def failing(folder, entry, broken=broken, read=read):
+                        try:
+                            found = os.stat(entry, dir_fd=folder.fd).st_ino
+                        except OSError:
+                            found = None
+                        if found == broken:
+                            raise OSError(5, "synthetic read failure")
+                        return read(folder, entry)
+
+                    refusing = self.api(status=401)
+                    env = dict(self.env, OPENWIZ_GITHUB_API_BASE=refusing.base(),
+                               OPENWIZ_TOKEN_SERVICE_READBACK="failed")
+                    escaped = None
+                    with mock.patch.object(helper.Private, "read", failing), \
+                            mock.patch.object(helper.sys, "stderr"):
+                        try:
+                            if route == "fallback":
+                                helper.token_for(private, self.WANTED, env)
+                            else:
+                                helper.revoke_request(private, refusing.base(), cache)
+                        except OSError as error:
+                            escaped = error.errno
+                    active = sorted(p.name for p in self.private.iterdir()
+                                    if p.name.startswith(("token-", "run-")))
+                    self.assertEqual((escaped, active), (None, []), "no error escapes and no active name is left")
+                    self.assertEqual(self.deletes(refusing), [("DELETE", sha(f"Bearer {TOKEN}"))])
+
+    def test_a_pre_upgrade_helper_still_retires_an_upgraded_run_snapshot(self):
+        # comment-ok: catches: revoke trusting a pre-upgrade run channel's answer alone, so an
+        # upgraded run's disjoint-shaped snapshot (readable or mode 000) stays active after GitHub
+        # refuses the revoke.
+        for mode in (0o600, 0):
+            with self.subTest(mode=oct(mode)):
+                shutil.rmtree(self.private, True)
+                self.minted()
+                helper, private, cache_file = self.loaded()
+                name = helper.reserve(private, cache_file)
+                helper.token_for(private, self.WANTED, self.env, snapshot=name)
+                snapshot = self.private / name
+                snapshot.chmod(mode)
+                refusing = self.api(status=401)
+                env = dict(self.env, OPENWIZ_GITHUB_API_BASE=refusing.base())
+                with mock.patch.object(helper, "ask_run", return_value="GitHub refused"), \
+                        mock.patch.object(helper.sys, "stderr"):
+                    self.assertEqual(helper.revoke(list(REQ), env), 1)
+                if snapshot.exists():
+                    snapshot.chmod(0o600)
+                reason, served = helper.snapshot_token(
+                    str(snapshot), dict(env, **{helper.RUN_MARK: str(snapshot)}),
+                    check=lambda path, env: None)
+                self.assertEqual((snapshot.exists(), reason, served and sha(served)),
+                                 (False, "no current token", None),
+                                 "upgraded revoke retires the snapshot even after an old run channel answered")
+                if mode == 0o600:
+                    api = self.api()
+                    later = self.helper("revoke", *REQ, OPENWIZ_GITHUB_API_BASE=api.base())
+                    self.assertEqual((later.returncode, later.stderr), (0, ""), "the kept copy is still revocable")
+                    self.assertEqual(self.deletes(api), [("DELETE", sha(f"Bearer {TOKEN}"))])
+                    self.assert_never_exposed(later)
 
 
 def live_token_in(path):
@@ -1739,6 +2266,39 @@ class SystemGh(Helper):
         self.assert_withheld(*self.run_gh(self.table(), at_seal=write_copy), "the gh this run chose was changed",
                              looked=False)
         self.assertEqual(written, [rogue], "the copy really held other bytes when it was sealed")
+
+    def test_a_system_gh_whose_copy_reports_a_missing_seal_gets_nothing(self):
+        # comment-ok: catches: skipping or weakening the seal read-back so a copy reported incompletely sealed reaches the token lookup
+        helper = self.helper_module
+        rows = self.table()
+        self.assertIsNotNone(self.bind(rows))
+        real_seal, real_fcntl = helper.sealed_gh, fcntl.fcntl
+        get_seals = getattr(fcntl, "F_GET_SEALS", 1034)
+        seal_bits = (("seal", 1), ("shrink", 2), ("grow", 4), ("write", 8))
+        all_seals = 1 | 2 | 4 | 8
+
+        for missing, bit in (*seal_bits, ("none", 0)):
+            with self.subTest(missing=missing):
+                read_back = []
+
+                def report_seals(fd, command, *args):
+                    result = real_fcntl(fd, command, *args)
+                    if command == get_seals:
+                        read_back.append(result & all_seals)
+                        return result & ~bit
+                    return result
+
+                def seal_with_report(*args):
+                    with mock.patch.object(helper.fcntl, "fcntl", report_seals):
+                        return real_seal(*args)
+
+                with mock.patch.object(helper, "sealed_gh", seal_with_report):
+                    outcome = self.run_gh(rows)
+                if bit:
+                    self.assert_withheld(*outcome, "the gh this run chose was changed", looked=False)
+                else:
+                    self.assert_ran_checked(*outcome)
+                self.assertEqual(read_back, [all_seals], "one read-back of a fully sealed copy")
 
     def test_the_token_reaches_no_output_log_or_file_outside_the_private_directory(self):
         # comment-ok: catches: a leak check that can't see a seeded leak, or a token that a run writes to stdout,

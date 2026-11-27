@@ -25,6 +25,20 @@ body:
       description: Optional. Steps anyone could follow, with no private details.
     validations:
       required: false
+  - type: input
+    id: version
+    attributes:
+      label: "OpenWiz version, from `openwiz --version`"
+      description: Optional.
+    validations:
+      required: false
+  - type: input
+    id: setup
+    attributes:
+      label: Where your agents run, and which agent and model
+      description: Optional.
+    validations:
+      required: false
   - type: checkboxes
     id: public-words
     attributes:

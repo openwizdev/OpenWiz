@@ -1,0 +1,49 @@
+# Review round 1 (R1, R2) red at e692203d (bootstrap.sh unchanged), the three new tests, R3's 37-name fixture stubs in place:
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/vps/test_bootstrap.py BootstrapTest.test_a_hand_replaced_launcher_is_kept_on_a_repin BootstrapTest.test_a_stamp_that_names_no_launcher_keeps_it BootstrapTest.test_a_same_pin_rerun_hashes_the_active_wheel   # 37 agent-CLI refusal stubs first on PATH
+test_a_hand_replaced_launcher_is_kept_on_a_repin (__main__.BootstrapTest.test_a_hand_replaced_launcher_is_kept_on_a_repin) ... FAIL
+test_a_stamp_that_names_no_launcher_keeps_it (__main__.BootstrapTest.test_a_stamp_that_names_no_launcher_keeps_it) ... FAIL
+test_a_same_pin_rerun_hashes_the_active_wheel (__main__.BootstrapTest.test_a_same_pin_rerun_hashes_the_active_wheel) ... FAIL
+
+======================================================================
+FAIL: test_a_hand_replaced_launcher_is_kept_on_a_repin (__main__.BootstrapTest.test_a_hand_replaced_launcher_is_kept_on_a_repin)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_bootstrap.py", line 426, in test_a_hand_replaced_launcher_is_kept_on_a_repin
+    self.assert_kept_by_hand(r, 'runpane', launcher, before)
+  File "<checkout>/kernel/live-rig/vps/test_bootstrap.py", line 416, in assert_kept_by_hand
+    self.assertIn('left out %s: your existing %s is not the copy this bootstrap installed there (or its record is '
+AssertionError: 'left out runpane: your existing <fixture-home>/.local/bin/runpane is not the copy this bootstrap installed there (or its record is too old to tell), so it is kept and never run; move it aside to install the pinned 2.4.246' not found in ['left out gatedtool: its only download needs a paid account']
+
+======================================================================
+FAIL: test_a_stamp_that_names_no_launcher_keeps_it (__main__.BootstrapTest.test_a_stamp_that_names_no_launcher_keeps_it)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_bootstrap.py", line 437, in test_a_stamp_that_names_no_launcher_keeps_it
+    self.assert_kept_by_hand(r, 'runpane', launcher, before)
+  File "<checkout>/kernel/live-rig/vps/test_bootstrap.py", line 416, in assert_kept_by_hand
+    self.assertIn('left out %s: your existing %s is not the copy this bootstrap installed there (or its record is '
+AssertionError: 'left out runpane: your existing <fixture-home>/.local/bin/runpane is not the copy this bootstrap installed there (or its record is too old to tell), so it is kept and never run; move it aside to install the pinned 2.4.246' not found in ['left out gatedtool: its only download needs a paid account']
+
+======================================================================
+FAIL: test_a_same_pin_rerun_hashes_the_active_wheel (__main__.BootstrapTest.test_a_same_pin_rerun_hashes_the_active_wheel)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_bootstrap.py", line 449, in test_a_same_pin_rerun_hashes_the_active_wheel
+    self.assertEqual(offline.returncode, 1, offline.stdout + offline.stderr)
+AssertionError: 0 != 1 : already there python3 <version>
+already there git 2.43.0
+already there curl 8.23.0
+already there gh 2.105.0
+already there fakedroid 1.17.2
+already there fakeapp 2.4.246
+already there runpane 2.4.246
+already there fakeagent 3.2.1
+left out gatedtool: its only download needs a paid account
+bootstrap: 0 installed, 8 already there, 1 left out
+left out gatedtool: its only download needs a paid account
+
+
+----------------------------------------------------------------------
+Ran 3 tests in <t>s
+
+FAILED (failures=3)

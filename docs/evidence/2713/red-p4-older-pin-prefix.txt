@@ -1,0 +1,16 @@
+# R4: the older-pin test first appeared with its fix (3f6faf74). This run puts the current test file beside the pre-fix bootstrap.sh from 1a8e4060 (scratch copy, never committed):
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I <scratch>/vps/test_bootstrap.py BootstrapTest.test_an_older_pin_of_an_installed_tool_is_kept_and_its_installer_never_rerun   # 37 agent-CLI refusal stubs first on PATH
+test_an_older_pin_of_an_installed_tool_is_kept_and_its_installer_never_rerun (__main__.BootstrapTest.test_an_older_pin_of_an_installed_tool_is_kept_and_its_installer_never_rerun) ... FAIL
+
+======================================================================
+FAIL: test_an_older_pin_of_an_installed_tool_is_kept_and_its_installer_never_rerun (__main__.BootstrapTest.test_an_older_pin_of_an_installed_tool_is_kept_and_its_installer_never_rerun)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<scratch>/vps/test_bootstrap.py", line 503, in test_an_older_pin_of_an_installed_tool_is_kept_and_its_installer_never_rerun
+    self.assertIn('left out fakeagent: your existing %s is kept and not run, since its installer would overwrite '
+AssertionError: 'left out fakeagent: your existing <fixture-home>/.local/bin/fakeagent is kept and not run, since its installer would overwrite it in place; move it aside to install the pinned 3.2.1' not found in ['left out gatedtool: its only download needs a paid account']
+
+----------------------------------------------------------------------
+Ran 1 tests in <t>s
+
+FAILED (failures=1)

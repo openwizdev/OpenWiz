@@ -1,0 +1,185 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I tools/ci-overload/test_supply.py
+F...FFFFFFF.FFFF...
+======================================================================
+FAIL: test_a_backoff_after_a_crossed_reset_keeps_its_deadline (__main__.Supply.test_a_backoff_after_a_crossed_reset_keeps_its_deadline)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/ci-overload/test_supply.py", line 332, in test_a_backoff_after_a_crossed_reset_keeps_its_deadline
+    self.assertEqual(observation['budgets']['rest'],
+AssertionError: {'remaining': 4000, 'limit': 5000, 'reset_at': 17954822[25 chars]2368} != {'remaining': 3000, 'limit': 5000, 'reset_at': 17954858[25 chars]2368}
+  {'limit': 5000,
+-  'remaining': 4000,
+?               ^
+
++  'remaining': 3000,
+?               ^
+
+-  'reset_at': 1795482233,
+?                     ^^^
+
++  'reset_at': 1795485828,
+?                    ++ ^
+
+   'retry_after': 1795482368}
+
+======================================================================
+FAIL: test_a_graphql_probe_without_remaining_writes_complete_false (__main__.Supply.test_a_graphql_probe_without_remaining_writes_complete_false) (case='no data')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/ci-overload/test_supply.py", line 283, in test_a_graphql_probe_without_remaining_writes_complete_false
+    self.assertEqual((observation['complete'], observation['queue']['complete']), (False, False))
+AssertionError: Tuples differ: (True, True) != (False, False)
+
+First differing element 0:
+True
+False
+
+- (True, True)
++ (False, False)
+
+======================================================================
+FAIL: test_a_graphql_probe_without_remaining_writes_complete_false (__main__.Supply.test_a_graphql_probe_without_remaining_writes_complete_false) (case='no rateLimit')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/ci-overload/test_supply.py", line 283, in test_a_graphql_probe_without_remaining_writes_complete_false
+    self.assertEqual((observation['complete'], observation['queue']['complete']), (False, False))
+AssertionError: Tuples differ: (True, True) != (False, False)
+
+First differing element 0:
+True
+False
+
+- (True, True)
++ (False, False)
+
+======================================================================
+FAIL: test_a_graphql_probe_without_remaining_writes_complete_false (__main__.Supply.test_a_graphql_probe_without_remaining_writes_complete_false) (case='no remaining')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/ci-overload/test_supply.py", line 283, in test_a_graphql_probe_without_remaining_writes_complete_false
+    self.assertEqual((observation['complete'], observation['queue']['complete']), (False, False))
+AssertionError: Tuples differ: (True, True) != (False, False)
+
+First differing element 0:
+True
+False
+
+- (True, True)
++ (False, False)
+
+======================================================================
+FAIL: test_a_graphql_probe_without_remaining_writes_complete_false (__main__.Supply.test_a_graphql_probe_without_remaining_writes_complete_false) (case='remaining not an integer')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/ci-overload/test_supply.py", line 283, in test_a_graphql_probe_without_remaining_writes_complete_false
+    self.assertEqual((observation['complete'], observation['queue']['complete']), (False, False))
+AssertionError: Tuples differ: (True, True) != (False, False)
+
+First differing element 0:
+True
+False
+
+- (True, True)
++ (False, False)
+
+======================================================================
+FAIL: test_a_graphql_probe_without_remaining_writes_complete_false (__main__.Supply.test_a_graphql_probe_without_remaining_writes_complete_false) (case='remaining negative')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/ci-overload/test_supply.py", line 283, in test_a_graphql_probe_without_remaining_writes_complete_false
+    self.assertEqual((observation['complete'], observation['queue']['complete']), (False, False))
+AssertionError: Tuples differ: (True, True) != (False, False)
+
+First differing element 0:
+True
+False
+
+- (True, True)
++ (False, False)
+
+======================================================================
+FAIL: test_a_graphql_rate_limit_that_gh_exits_1_on_keeps_its_backoff (__main__.Supply.test_a_graphql_rate_limit_that_gh_exits_1_on_keeps_its_backoff)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/ci-overload/test_supply.py", line 268, in test_a_graphql_rate_limit_that_gh_exits_1_on_keeps_its_backoff
+    self.assertIn(wait, range(55, 61))
+AssertionError: -1795482263 not found in range(55, 61)
+
+======================================================================
+FAIL: test_a_malformed_job_row_gives_the_plain_failure_line (__main__.Supply.test_a_malformed_job_row_gives_the_plain_failure_line)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/ci-overload/test_supply.py", line 342, in test_a_malformed_job_row_gives_the_plain_failure_line
+    self.assertEqual((result.returncode, result.stdout, result.stderr), (1, '', 'supply: the queue read failed\n'))
+AssertionError: Tuples differ: (1, '', 'Traceback (most recent call last):\n  Fil[765 chars]'\n') != (1, '', 'supply: the queue read failed\n')
+
+First differing element 2:
+'Traceback (most recent call last):\n  Fil[764 chars]\'\n'
+'supply: the queue read failed\n'
+
+Diff is 964 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_a_pass_longer_than_the_guards_window_is_not_complete (__main__.Supply.test_a_pass_longer_than_the_guards_window_is_not_complete) (advance=61)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/ci-overload/test_supply.py", line 292, in test_a_pass_longer_than_the_guards_window_is_not_complete
+    self.assertEqual((observation['complete'], observation['queue']['complete']), (complete, complete))
+AssertionError: Tuples differ: (True, True) != (False, False)
+
+First differing element 0:
+True
+False
+
+- (True, True)
++ (False, False)
+
+======================================================================
+FAIL: test_a_repeated_run_or_job_id_in_one_listing_is_not_complete (__main__.Supply.test_a_repeated_run_or_job_id_in_one_listing_is_not_complete) (case='overlapping_pages')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/ci-overload/test_supply.py", line 318, in test_a_repeated_run_or_job_id_in_one_listing_is_not_complete
+    self.assertEqual((observation['complete'], observation['queue']['complete']), (False, False))
+AssertionError: Tuples differ: (True, True) != (False, False)
+
+First differing element 0:
+True
+False
+
+- (True, True)
++ (False, False)
+
+======================================================================
+FAIL: test_a_repeated_run_or_job_id_in_one_listing_is_not_complete (__main__.Supply.test_a_repeated_run_or_job_id_in_one_listing_is_not_complete) (case='one_page')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/ci-overload/test_supply.py", line 318, in test_a_repeated_run_or_job_id_in_one_listing_is_not_complete
+    self.assertEqual((observation['complete'], observation['queue']['complete']), (False, False))
+AssertionError: Tuples differ: (True, True) != (False, False)
+
+First differing element 0:
+True
+False
+
+- (True, True)
++ (False, False)
+
+======================================================================
+FAIL: test_a_repeated_run_or_job_id_in_one_listing_is_not_complete (__main__.Supply.test_a_repeated_run_or_job_id_in_one_listing_is_not_complete) (case='repeated_job')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/ci-overload/test_supply.py", line 318, in test_a_repeated_run_or_job_id_in_one_listing_is_not_complete
+    self.assertEqual((observation['complete'], observation['queue']['complete']), (False, False))
+AssertionError: Tuples differ: (True, True) != (False, False)
+
+First differing element 0:
+True
+False
+
+- (True, True)
++ (False, False)
+
+----------------------------------------------------------------------
+Ran 13 tests in 15.744s
+
+FAILED (failures=12)

@@ -1,0 +1,8 @@
+test_a_blocked_override_value_is_never_fetched_from_the_environment (__main__.Heads.test_a_blocked_override_value_is_never_fetched_from_the_environment) ... refused h: no receipt: refused
+ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.324s
+
+OK
+exit 0

@@ -1,0 +1,14 @@
+{
+  "host": "Cloudroom",
+  "driver": "adapters/cloudroom/driver",
+  "needs": ["room-cli", "gh"],
+  "signed_in": [
+    ["room-cli", "status"],
+    ["env", "GH_TELEMETRY=0", "gh", "config", "get", "-h", "github.com", "user"]
+  ],
+  "cost": "unknown",
+  "runs": [
+    {"harness": "claude", "model": "claude-opus-5-5"}
+  ],
+  "wait": 900
+}

@@ -1,0 +1,62 @@
+{
+  "harness": "qwen",
+  "program": "qwen",
+  "start": [
+    "--output-format",
+    "stream-json",
+    "--session-id",
+    "{session}",
+    "--model",
+    "{model}",
+    "{mode}",
+    "{prompt}"
+  ],
+  "wake": [
+    "--output-format",
+    "stream-json",
+    "--resume",
+    "{session}",
+    "--model",
+    "{model}",
+    "{mode}",
+    "{prompt}"
+  ],
+  "session": {
+    "chosen": "uuid"
+  },
+  "modes": {
+    "yolo": [
+      "--approval-mode",
+      "yolo"
+    ],
+    "auto-edit": [
+      "--approval-mode",
+      "auto-edit"
+    ],
+    "auto": [
+      "--approval-mode",
+      "auto"
+    ],
+    "default": [
+      "--approval-mode",
+      "default"
+    ],
+    "plan": [
+      "--approval-mode",
+      "plan"
+    ]
+  },
+  "env": {},
+  "effort": "none: qwen 0.28.4 has no effort flag or variable; its only effort setting is model.reasoningEffort in settings.json, which each provider clamps or drops per model (packages/cli/src/config/settingsSchema.ts)",
+  "login": "qwen's own login: a Qwen subscription sign-in in ~/.qwen/subscription_credentials.json, or an API key provider in ~/.qwen/settings.json or ~/.qwen/.env, chosen with /auth in an interactive qwen",
+  "daemon": "qwen may start a detached StopFailure hook supervisor (its own session, output closed) when a configured StopFailure hook fires on loop detection; stop ends it through the Linux subreaper, so this row holds on Linux only",
+  "signed_out": [
+    "No auth type is selected\\b",
+    "Qwen OAuth free tier was discontinued\\b",
+    "Missing API key for OpenAI-compatible auth\\b",
+    "environment variable not found( \\(or set settings\\.security\\.auth\\.apiKey\\))?\\. Please set it in your \\.env file or environment variables\\b",
+    "Please re-authenticate with the correct type\\b",
+    "Your login credentials are no longer valid\\. Run /auth to sign in again\\b"
+  ],
+  "login_command": "qwen, then /auth"
+}

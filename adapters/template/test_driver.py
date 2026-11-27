@@ -16,8 +16,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DRIVER = os.path.join(HERE, 'driver')
 NO_PROC = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'fixtures', 'no-proc')
 REPO = os.path.realpath(os.path.join(HERE, '..', '..'))
-HARNESSES = ('claude', 'claude-code', 'codex', 'gemini', 'opencode', 'openclaw', 'cursor-agent', 'amp', 'aider',
-             'goose', 'pi')
+sys.path.insert(0, os.path.join(REPO, 'kernel', 'driver-kit'))
+from stubs import stub_path
+sys.path.pop(0)
+
 TOOLS = ('sh', 'ps', 'lsof', 'awk', 'sleep', 'dirname')
 START = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'fake-harness',
          'model': 'Synthetic 1'}
@@ -74,14 +76,21 @@ def pinned_path(folder, *fixtures):
         if shutil.which(name):
             os.symlink(shutil.which(name), os.path.join(tools, name))
     os.symlink(sys.executable, os.path.join(tools, 'python3'))
-    return no_real_harness(os.pathsep.join(fixtures + (tools,)))
+    guarded = stub_path(path=tools)
+    stub_dir = guarded.split(os.pathsep, 1)[0]
+    path = os.pathsep.join((*fixtures, guarded))
+    no_real_harness(path, stub_dir, fixtures)
+    return path, stub_dir
 
 
-def no_real_harness(path):
-    for name in HARNESSES:
+def no_real_harness(path, stub_dir, fixtures=(os.path.join(HERE, 'fixtures'),)):
+    if stub_dir not in path.split(os.pathsep):
+        raise AssertionError('the shared stub directory is missing from PATH')
+    allowed = {os.path.realpath(stub_dir)} | {os.path.realpath(f) for f in fixtures}
+    for name in os.listdir(stub_dir):
         found = shutil.which(name, path=path)
-        if found and not os.path.realpath(found).startswith(REPO + os.sep):
-            raise AssertionError('%s on the PATH is %s, outside the fixtures: a test could launch a real harness'
+        if found and os.path.dirname(os.path.realpath(found)) not in allowed:
+            raise AssertionError('%s on the PATH is %s, outside the fixtures and stubs: a test could launch a real harness'
                                  % (name, found))
     return path
 
@@ -106,15 +115,22 @@ worker = subprocess.Popen(['sleep', '120'], start_new_session=True, stdin=subpro
 with open(%r, 'w') as f:
     f.write('%%d %%d' %% (os.getpid(), worker.pid))
 """
+NO_LSOF = ('driver: lsof could not run or failed, so the driver could not check which processes hold this '
+           "run's output files open; it ended only the turns' process groups and the processes their "
+           'supervisors recorded')
+
 
 class Template(unittest.TestCase):
     def setUp(self):
         self.folder = tempfile.mkdtemp()
         self.mark = secrets.token_hex(8)
         self.turns, self.hold = os.path.join(self.folder, 'turns'), os.path.join(self.folder, 'hold')
+        path, self.stub_dir = pinned_path(self.folder, os.path.join(HERE, 'fixtures'))
+        self.addCleanup(shutil.rmtree, self.stub_dir)
+        no_real_harness(path, self.stub_dir)
         self.env = dict(os.environ, KIT_TEST=self.mark, FAKE_TURNS=self.turns, FAKE_HOLD=self.hold,
-                        OPENWIZ_TEMPLATE_STATE=os.path.join(self.folder, 'state'),
-                        PATH=pinned_path(self.folder, os.path.join(HERE, 'fixtures')))
+                        OPENWIZ_TEMPLATE_STATE=os.path.join(self.folder, 'state'), OPENWIZ_TEMPLATE_LIVE='1',
+                        PATH=path)
 
     def tearDown(self):
         os.chmod(self.folder, 0o700)
@@ -155,7 +171,7 @@ class Template(unittest.TestCase):
 
     def call(self, cmd, request, driver=DRIVER, **env):
         env = dict(self.env, **env)
-        no_real_harness(env['PATH'])
+        no_real_harness(env['PATH'], self.stub_dir)
         p = subprocess.run([driver, cmd], input=json.dumps(request), env=env, capture_output=True, text=True,
                            timeout=60)
         return p.returncode, json.loads(p.stdout)
@@ -190,11 +206,41 @@ class Template(unittest.TestCase):
             self.setUp()
         finally:
             os.environ['PATH'] = old
-        self.assertIsNone(shutil.which('claude', path=self.env['PATH']), 'the PATH reaches a real claude')
+        self.assertEqual(shutil.which('claude', path=self.env['PATH']), os.path.join(self.stub_dir, 'claude'))
         self.assertEqual(shutil.which('fake-harness', path=self.env['PATH']),
                          os.path.join(HERE, 'fixtures', 'fake-harness'))
         with self.assertRaisesRegex(AssertionError, 'could launch a real harness'):
             self.call('start', dict(START, harness='claude'), PATH=outside + os.pathsep + self.env['PATH'])
+
+    def test_without_the_live_opt_in_start_and_wake_start_no_harness(self):
+        for live in ('', '0', 'yes'):
+            with self.subTest(live=live):
+                code, out = self.call('start', START, OPENWIZ_TEMPLATE_LIVE=live)
+                self.assertEqual((code, out.get('error')),
+                                 (1, 'the template starts no harness unless OPENWIZ_TEMPLATE_LIVE=1 is set'), out)
+        code, run = self.call('start', START)
+        self.assertEqual(code, 0, run)
+        self.logged(1)
+        code, out = self.call('wake', run, OPENWIZ_TEMPLATE_LIVE='')
+        self.assertEqual((code, out.get('error')),
+                         (1, 'the template starts no harness unless OPENWIZ_TEMPLATE_LIVE=1 is set'), out)
+        self.assertEqual(len(self.logged()), 1, 'a turn started without the live opt-in')
+        self.assertEqual(self.call('stop', run), (0, dict(run, stopped=True)))
+
+    def test_a_checkout_executable_outside_the_fixtures_is_refused_as_a_harness(self):
+        local = os.path.join(self.folder, 'local')
+        os.mkdir(local)
+        os.symlink(os.path.realpath(DRIVER), os.path.join(local, 'codex'))
+        self.assertTrue(os.path.realpath(shutil.which('codex', path=local)).startswith(REPO + os.sep))
+        with self.assertRaisesRegex(AssertionError, 'codex on the PATH is .*outside the fixtures'):
+            no_real_harness(local + os.pathsep + self.stub_dir, self.stub_dir)
+
+    def test_the_readmes_start_example_answers_as_documented(self):
+        with open(os.path.join(HERE, 'README.md')) as f:
+            found = re.search(r"^echo '(\{.*\})' \\\n *\| adapters/template/driver start +# (.*)$", f.read(), re.M)
+        self.assertIsNotNone(found, 'the README has no start example')
+        self.assertEqual(self.call('start', json.loads(found.group(1)), OPENWIZ_TEMPLATE_LIVE='')[1],
+                         json.loads(found.group(2)))
 
     def args(self, count=0):
         deadline = time.monotonic() + 10
@@ -491,6 +537,30 @@ class Template(unittest.TestCase):
         self.assertEqual(self.call('stop', out, **macos), (0, dict(out, stopped=True)))
         self.assertFalse(alive(worker), 'a worker the turn handed off as it exited still runs after stop')
 
+    def test_without_proc_as_on_macos_stop_warns_when_lsof_failed_in_a_supervisor_that_has_exited(self):
+        folder, pids = self.harness_handing_off_as_it_exits('fake-harness')
+        broken = os.path.join(self.folder, 'broken-lsof')
+        os.mkdir(broken)
+        with open(os.path.join(broken, 'lsof'), 'w') as f:
+            f.write('#!/bin/sh\necho "lsof: synthetic failure %s" >&2\nexit 1\n' % self.mark)
+        os.chmod(os.path.join(broken, 'lsof'), 0o700)
+        macos = dict(self.env, PATH=os.pathsep.join((broken, folder, NO_PROC, self.env['PATH'])),
+                     NO_PROC_PYTHON=sys.executable)
+        code, out = self.call('start', START, **macos)
+        self.assertEqual(code, 0, out)
+        self.handed_off(pids)
+        state = self.env['OPENWIZ_TEMPLATE_STATE']
+        with open(os.path.join(state, out['run'] + '.json')) as f:
+            supervisor = json.load(f)['turns'][0]['supervisor']
+        self.until(lambda: not alive(supervisor))
+        output = os.path.join(state, '%s.%d.out' % (out['run'], supervisor))
+        self.assertTrue(os.path.exists(output), 'the output file was removed before stop')
+        p = subprocess.run([DRIVER, 'stop'], input=json.dumps(out), env=macos, capture_output=True, text=True, timeout=60)
+        self.assertEqual((p.returncode, json.loads(p.stdout)), (0, dict(out, stopped=True)))
+        self.assertEqual([l for l in p.stderr.splitlines() if 'could not check' in l], [NO_LSOF], p.stderr)
+        self.assertNotIn(self.mark, p.stderr)
+        self.assertEqual([f for f in os.listdir(state) if f.startswith('%s.%d.' % (out['run'], supervisor))], [])
+
     def test_without_proc_as_on_macos_stop_says_when_lsof_cannot_check_the_output_file(self):
         for broken in (False, True):
             with self.subTest(lsof_fails=broken):
@@ -552,6 +622,15 @@ class Template(unittest.TestCase):
                 self.assertFalse(alive(child), 'a grandchild of the harness still runs after stop')
                 self.assertEqual(self.marked(), [], 'a process the run started still runs after stop')
                 self.assertEqual(self.asked_ps_for_environments(calls), [], 'the driver asked ps for process environments')
+
+
+    def test_a_provider_qualified_model_reaches_the_harness(self):
+        self.env['FAKE_ARGS'] = os.path.join(self.folder, 'args')
+        code, out = self.call('start', dict(START, model='kimi-code/kimi-for-coding'))
+        self.assertEqual(code, 0, out)
+        [args] = self.args(1)
+        self.assertEqual(args[args.index('--model') + 1], 'kimi-code/kimi-for-coding')
+        self.assertEqual(self.call('stop', out), (0, dict(out, stopped=True)))
 
 
 if __name__ == '__main__':

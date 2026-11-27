@@ -10,7 +10,7 @@ STATE = os.environ.get('OPENWIZ_DEVIN_STATE') or os.path.expanduser('~/.local/st
 VERSION = {'driver': 'devin', 'records': ['openwiz:records v1'], 'can': ['start', 'wake', 'stop']}
 START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
          'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'devin',
-         'model': r'[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}'}
+         'model': r'(?=.{1,100}$)[A-Za-z0-9][A-Za-z0-9 ._:@+-]*(/[A-Za-z0-9][A-Za-z0-9 ._:@+-]*)*'}
 SESSION = r'devin-[a-z0-9]{1,94}'
 EFFORT = re.compile(r'[a-z][a-z0-9-]{0,19}')
 UNCERTAIN_CREATE = ('look in Devin for a new session on this ticket and terminate it there (or keep it and track it by '

@@ -1,0 +1,8 @@
+test_a_lost_comment_answer_is_found_on_resume_and_a_closed_earlier_pull_request_is_never_adopted (__main__.Heads.test_a_lost_comment_answer_is_found_on_resume_and_a_closed_earlier_pull_request_is_never_adopted) ... ok
+test_a_post_retried_after_a_lost_write_finishes_it_without_a_second_kit_run_comment_or_branch (__main__.Heads.test_a_post_retried_after_a_lost_write_finishes_it_without_a_second_kit_run_comment_or_branch) ... ok
+test_post_reaches_only_the_fake_gh_with_one_comment_per_run_and_one_wizmarket_pull_request (__main__.Heads.test_post_reaches_only_the_fake_gh_with_one_comment_per_run_and_one_wizmarket_pull_request) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 127.139s
+
+OK

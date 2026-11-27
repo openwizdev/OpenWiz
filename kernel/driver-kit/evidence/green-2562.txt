@@ -1,0 +1,67 @@
+# #2562 green at 8e8c6886 (stacked on EF1 371c9cb, KY1 4a8dfe8, polish G 7a5b542), behind no-op agent CLI stubs
+# One case fails, and it fails the same way on KY1's own head 4a8dfe8 in this sandbox: KY1's Linux-only key-undumpable-child.
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/driver-kit/test_kit.py
+test_a_declared_driver_gets_no_note (__main__.Kit.test_a_declared_driver_gets_no_note) ... ok
+test_a_failed_process_watch_fails_the_key_check (__main__.Kit.test_a_failed_process_watch_fails_the_key_check) ... ok
+test_a_failed_start_check_still_stops_its_run (__main__.Kit.test_a_failed_start_check_still_stops_its_run) ... ok
+test_a_helper_without_a_visible_environment_row_is_not_trusted (__main__.Kit.test_a_helper_without_a_visible_environment_row_is_not_trusted) ... ok
+test_a_host_that_answers_a_redirect_fails_start_and_the_redirect_is_never_followed (__main__.Kit.test_a_host_that_answers_a_redirect_fails_start_and_the_redirect_is_never_followed) ... ok
+test_a_key_host_driver_that_uses_only_the_helper_passes_all_five (__main__.Kit.test_a_key_host_driver_that_uses_only_the_helper_passes_all_five) ... ok
+test_a_path_diagnostic_never_prints_the_active_canary (__main__.Kit.test_a_path_diagnostic_never_prints_the_active_canary) ... ok
+test_a_refusal_holding_a_credential_never_reaches_the_output (__main__.Kit.test_a_refusal_holding_a_credential_never_reaches_the_output) ... ok
+test_a_script_whose_path_holds_a_space_is_scanned_on_linux_and_macos (__main__.Kit.test_a_script_whose_path_holds_a_space_is_scanned_on_linux_and_macos) ... ok
+test_each_effort_driver_prints_its_own_start_line (__main__.Kit.test_each_effort_driver_prints_its_own_start_line) ... ok
+test_each_key_host_effort_driver_prints_its_own_start_line (__main__.Kit.test_each_key_host_effort_driver_prints_its_own_start_line) ... ok
+test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) ... ok
+test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) ... 
+  test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-undumpable-child] ... FAIL
+test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) ... ok
+test_no_harness_outside_the_fixtures_is_on_the_tests_path (__main__.Kit.test_no_harness_outside_the_fixtures_is_on_the_tests_path) ... ok
+test_on_macos_a_key_in_an_argument_or_another_variable_is_caught (__main__.Kit.test_on_macos_a_key_in_an_argument_or_another_variable_is_caught) ... ok
+test_probe_only_hides_environments_from_the_kits_own_listing_only (__main__.Kit.test_probe_only_hides_environments_from_the_kits_own_listing_only) ... ok
+test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) ... ok
+test_template_passes_all_five (__main__.Kit.test_template_passes_all_five) ... ok
+test_the_canary_never_reaches_the_driver (__main__.Kit.test_the_canary_never_reaches_the_driver) ... ok
+test_the_effort_flag_names_the_value_the_kit_sends (__main__.Kit.test_the_effort_flag_names_the_value_the_kit_sends) ... ok
+test_the_kit_trusts_only_its_own_interpreter_not_one_on_path (__main__.Kit.test_the_kit_trusts_only_its_own_interpreter_not_one_on_path) ... ok
+test_the_kits_visibility_probe_signals_ready_through_the_macos_shim_and_runs_until_its_stdin_closes (__main__.Kit.test_the_kits_visibility_probe_signals_ready_through_the_macos_shim_and_runs_until_its_stdin_closes) ... ok
+test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) ... ok
+test_without_proc_as_on_macos_a_driver_whose_run_stays_in_the_kits_group_passes_all_five (__main__.Kit.test_without_proc_as_on_macos_a_driver_whose_run_stays_in_the_kits_group_passes_all_five) ... ok
+test_without_proc_as_on_macos_effort_on_a_command_line_is_seen (__main__.Kit.test_without_proc_as_on_macos_effort_on_a_command_line_is_seen) ... ok
+test_without_proc_as_on_macos_the_template_passes_all_five (__main__.Kit.test_without_proc_as_on_macos_the_template_passes_all_five) ... ok
+test_without_proc_or_the_runs_visible_environment_stop_and_token_fail_unverified (__main__.Kit.test_without_proc_or_the_runs_visible_environment_stop_and_token_fail_unverified) ... ok
+test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without (__main__.Kit.test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without) ... ok
+
+======================================================================
+FAIL: test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) [key-undumpable-child]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/kernel/driver-kit/test_kit.py", line 348, in test_each_planted_key_driver_fails_with_its_own_line
+    self.assertEqual((code, out), (0 if all(x.startswith('pass') for x in lines) else 1, lines))
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[345 chars]er']) != (1, ['pass version: openwiz:records v1, an[271 chars]it'])
+
+First differing element 0:
+0
+1
+
+- (0,
++ (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 2',
+    'pass wake: the run edited builder status note 2',
+    'pass stop: the run ended, and a wake after it is refused',
++   'fail token: a process of the driver hides its details, so the kit cannot '
++   'check it'])
+-   'pass token: no login or token passed through the driver, and on start, wake '
+-   'and stop the devin key reached its host only from the key helper, in its '
+-   'header'])
+
+----------------------------------------------------------------------
+Ran 29 tests in 376.500s
+
+FAILED (failures=1)
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/{local,boat,cloudroom,template}/test_driver.py
+adapters/local: OK
+adapters/boat: OK
+adapters/cloudroom: OK
+adapters/template: OK

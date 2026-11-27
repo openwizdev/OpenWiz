@@ -1,0 +1,19 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I tools/ci-overload/test_supply.py -v
+test_a_backoff_after_a_crossed_reset_keeps_its_deadline (__main__.Supply.test_a_backoff_after_a_crossed_reset_keeps_its_deadline) ... ok
+test_a_backoff_signal_gives_its_real_wait (__main__.Supply.test_a_backoff_signal_gives_its_real_wait) ... ok
+test_a_clean_checkout_supplies_a_complete_observation_the_guard_admits (__main__.Supply.test_a_clean_checkout_supplies_a_complete_observation_the_guard_admits) ... ok
+test_a_failing_reader_exits_1_and_writes_nothing (__main__.Supply.test_a_failing_reader_exits_1_and_writes_nothing) ... ok
+test_a_graphql_probe_without_remaining_writes_complete_false (__main__.Supply.test_a_graphql_probe_without_remaining_writes_complete_false) ... ok
+test_a_graphql_rate_limit_that_gh_exits_1_on_keeps_its_backoff (__main__.Supply.test_a_graphql_rate_limit_that_gh_exits_1_on_keeps_its_backoff) ... ok
+test_a_malformed_job_row_gives_the_plain_failure_line (__main__.Supply.test_a_malformed_job_row_gives_the_plain_failure_line) ... ok
+test_a_partial_read_keeps_its_known_exhaustion (__main__.Supply.test_a_partial_read_keeps_its_known_exhaustion) ... ok
+test_a_pass_longer_than_the_guards_window_is_not_complete (__main__.Supply.test_a_pass_longer_than_the_guards_window_is_not_complete) ... ok
+test_a_repeated_run_or_job_id_in_one_listing_is_not_complete (__main__.Supply.test_a_repeated_run_or_job_id_in_one_listing_is_not_complete) ... ok
+test_an_unestablished_page_run_or_attempt_writes_complete_false (__main__.Supply.test_an_unestablished_page_run_or_attempt_writes_complete_false) ... ok
+test_an_unknown_backoff_writes_complete_false (__main__.Supply.test_an_unknown_backoff_writes_complete_false) ... ok
+test_no_backoff_signal_gives_retry_after_0_and_a_complete_observation (__main__.Supply.test_no_backoff_signal_gives_retry_after_0_and_a_complete_observation) ... ok
+
+----------------------------------------------------------------------
+Ran 13 tests in 15.604s
+
+OK

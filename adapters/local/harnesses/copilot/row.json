@@ -1,0 +1,41 @@
+{
+  "harness": "copilot",
+  "program": "copilot",
+  "start": [
+    "-p",
+    "{prompt}",
+    "--output-format",
+    "json",
+    "--session-id",
+    "{session}",
+    "--model",
+    "{model}",
+    "{mode}"
+  ],
+  "wake": [
+    "-p",
+    "{prompt}",
+    "--session-id",
+    "{session}",
+    "{mode}"
+  ],
+  "session": {
+    "chosen": "uuid"
+  },
+  "modes": {
+    "allow-all-tools": [
+      "--allow-all-tools"
+    ],
+    "allow-all": [
+      "--allow-all"
+    ]
+  },
+  "env": {},
+  "effort": "none: GitHub Copilot CLI v1.0.114 leaves unsupported model-specific --reasoning-effort levels unapplied (upstream changelog 1.0.88 and 1.0.110)",
+  "login": "copilot's own login, saved by `copilot login` in the system credential store, or in plain text under ~/.copilot/ (or $COPILOT_HOME) when there is no store",
+  "daemon": "none",
+  "signed_out": [
+    "no authentication information found"
+  ],
+  "login_command": "copilot login"
+}

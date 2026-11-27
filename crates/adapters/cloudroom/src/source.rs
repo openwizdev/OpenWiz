@@ -42,11 +42,6 @@ impl CloudRoomSource {
         Self::new(PROGRAM)
     }
 
-    pub fn with_read_timeout_for_fixtures(mut self, timeout: std::time::Duration) -> Self {
-        self.read_timeout = self.read_timeout.min(timeout);
-        self
-    }
-
     pub fn program(&self) -> &PathBuf {
         &self.program
     }

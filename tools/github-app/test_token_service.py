@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import base64
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -18,12 +19,39 @@ import unittest
 HERE = Path(__file__).resolve().parent
 SERVICE = HERE / "token-service.py"
 FIXTURES = HERE.parents[1] / "contracts/fixtures/token-service"
-REQUESTS = json.loads((FIXTURES / "requests.json").read_text())
 SCHEMA = json.loads((FIXTURES.parents[1] / "token-service.v1.schema.json").read_text())
 sys.dont_write_bytecode = True
 spec = importlib.util.spec_from_file_location("contract_fixtures", FIXTURES / "test_fixtures.py")
 CONTRACT = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(CONTRACT)
+
+
+def openssl(*args, data=b"", fds=()):
+    return subprocess.run(["/usr/bin/openssl", *args], input=data, stdout=subprocess.PIPE,
+                          stderr=subprocess.DEVNULL, check=True, pass_fds=fds).stdout
+
+
+class Asker:
+    def __init__(self, *algorithm):
+        algorithm = algorithm or ("RSA", "-pkeyopt", "rsa_keygen_bits:3072")
+        self.private = openssl("genpkey", "-algorithm", *algorithm)
+        self.key = openssl("pkey", "-pubout", data=self.private).decode()
+
+    def open(self, sealed):
+        data, token = base64.b64decode(sealed, validate=True), b""
+        for at in range(0, len(data), 384):
+            reader, writer = os.pipe()
+            os.write(writer, self.private)
+            os.close(writer)
+            token += openssl("pkeyutl", "-decrypt", "-inkey", f"/dev/fd/{reader}", "-pkeyopt", "rsa_padding_mode:oaep",
+                             "-pkeyopt", "rsa_oaep_md:sha256", "-pkeyopt", "rsa_mgf1_md:sha256",
+                             data=data[at:at + 384], fds=(reader,))
+            os.close(reader)
+        return token.decode()
+
+
+ASKER = Asker()
+REQUESTS = CONTRACT.filled(json.loads((FIXTURES / "requests.json").read_text()), ASKER.key)
 NOW = REQUESTS["now"]
 CASE = {case["name"]: case["request"] for case in REQUESTS["cases"]}
 WRITE = CASE["a good write request gets the App's profile for one repository"]
@@ -33,6 +61,16 @@ CLOCK = ("import runpy, sys, time\n"
          "clock = sys.argv[1]; time.time = lambda: float(open(clock).read())\n"
          "sys.argv = sys.argv[2:]\n"
          "runpy.run_path(sys.argv[0], run_name='__main__')\n")
+AUDIT = ("import json, os, stat, sys\n"
+         "log = open(sys.argv.pop(1), 'a')\n"
+         "def hook(event, args):\n"
+         "    if event == 'subprocess.Popen':\n"
+         "        pipes = [stat.S_ISFIFO(os.stat(a).st_mode) for a in args[1] if a.startswith('/dev/fd/')]\n"
+         "        env = dict(os.environ) if args[3] is None else args[3]\n"
+         "        log.write(json.dumps([args[1], env, pipes]) + '\\n'); log.flush()\n"
+         "    if event == 'open' and isinstance(args[0], (str, bytes)) and args[2] & 3:\n"
+         "        log.write(json.dumps(['OPENED', str(args[0])]) + '\\n'); log.flush()\n"
+         "sys.addaudithook(hook)\n") + CLOCK
 
 
 def revoked(calls):
@@ -126,11 +164,12 @@ class ServiceFixture(unittest.TestCase):
         return subprocess.run(["python3", "-I", str(SERVICE), command, "--state-dir", str(self.state)],
                               capture_output=True, text=True, timeout=60, env=dict(os.environ, **(env or {})))
 
-    def mint(self, endpoint, request, env=None):
+    def mint(self, endpoint, request, env=None, audit=None):
         text = request if isinstance(request, str) else json.dumps(request)
         self.clock.write_text(str(NOW))
         environment = {k: v for k, v in os.environ.items() if k != "OPENWIZ_GITHUB_APP_MODE"}
-        return subprocess.run(["python3", "-I", "-c", CLOCK, str(self.clock), str(SERVICE), "mint",
+        return subprocess.run(["python3", "-I", "-c", AUDIT if audit else CLOCK, *([str(audit)] if audit else []),
+                               str(self.clock), str(SERVICE), "mint",
                                "--state-dir", str(self.state), "--api-base", endpoint],
                               input=text, capture_output=True, text=True, timeout=60,
                               env=dict(environment, **(env or {})))
@@ -156,7 +195,7 @@ class RequestFixtureTests(ServiceFixture):
         for number, case in enumerate(REQUESTS["cases"], 1):
             with self.subTest(case["name"]), fake_github(self.pem, REQUESTS["installed"]) as (url, calls, fake):
                 message = case["out"]["message"]
-                fake["token"] = message.get("token", "synthetic-refused-token")
+                fake["token"] = case.get("token", "synthetic-refused-token")
                 fake["expires_at"] = message.get("expires_at", NOW + 3600)
                 endpoint = url
                 if case.get("github") == "github":
@@ -168,7 +207,12 @@ class RequestFixtureTests(ServiceFixture):
                 done = self.mint(endpoint, case["request"])
                 self.assertEqual((done.returncode, done.stderr), (case["out"]["exit"], ""))
                 self.assertEqual(done.stdout.count("\n"), 1, "one JSON line")
-                self.assertEqual(json.loads(done.stdout), message)
+                got = json.loads(done.stdout)
+                if message["kind"] == "answer":
+                    self.assert_valid(got)
+                    self.assertEqual(ASKER.open(got["sealed_token"]), case["token"])
+                    got["sealed_token"] = message["sealed_token"]
+                self.assertEqual(got, message)
                 self.assertEqual(len(self.logged()), number, "one log line per request")
                 self.assertEqual(self.logged()[-1], case["out"]["log"])
                 self.assert_valid(self.logged()[-1])
@@ -176,15 +220,14 @@ class RequestFixtureTests(ServiceFixture):
                 if message["kind"] == "answer":
                     self.assertEqual(minted[0][2], {"repositories": [r.split("/")[1] for r in case["request"]["repositories"]],
                                                     "permissions": case["request"]["permissions"]})
-                else:
-                    self.assert_nothing_exposed(fake["token"], done.stdout, done.stderr)
+                self.assert_nothing_exposed(fake["token"], done.stdout, done.stderr)
                 if message.get("refusal") in ("usage", "one-owner", "not-installed", "permission"):
                     self.assertEqual(minted, [], "no token is minted for a refused request")
                 if message.get("refusal") in ("usage", "one-owner"):
                     self.assertEqual(calls, [], "no GitHub call for a request refused on its face")
 
     def test_every_message_the_schema_refuses_is_a_usage_refusal_with_no_github_call(self):
-        invalid = json.loads((FIXTURES / "invalid.json").read_text())["cases"]
+        invalid = CONTRACT.filled(json.loads((FIXTURES / "invalid.json").read_text()), ASKER.key)["cases"]
         twice = dict(SMALL, repositories=["synthetic-owner/work", "Synthetic-Owner/Work"])
         for name, message in [(c["name"], c["message"]) for c in invalid] + [("repeated in another case", twice)]:
             with self.subTest(name), fake_github(self.pem, REQUESTS["installed"]) as (url, calls, _fake):
@@ -225,6 +268,67 @@ class RequestFixtureTests(ServiceFixture):
             self.assertEqual(self.mint(url, SMALL).returncode, 0)
 
 
+class SealingTests(ServiceFixture):
+    def test_a_token_of_any_length_github_gives_is_sealed_or_revoked(self):
+        # comment-ok: catches: a service that seals one RSA-OAEP block only, so GitHub's 520-character tokens
+        # are never minted, or one that hands over or keeps a live token it could not seal.
+        with fake_github(self.pem, REQUESTS["installed"]) as (url, calls, fake):
+            for length in (40, 318, 319, 520, 8 * 318):
+                with self.subTest(length):
+                    fake["token"] = ("ghs-" + "a1_.b-" * 500)[:length]
+                    done = self.mint(url, SMALL)
+                    self.assertEqual((done.returncode, done.stderr), (0, ""))
+                    self.assertEqual(ASKER.open(json.loads(done.stdout)["sealed_token"]), fake["token"])
+                    self.assert_nothing_exposed(fake["token"], done.stdout)
+            self.assertEqual(revoked(calls), [])
+            fake["token"] = "a" * (8 * 318 + 1)
+            done = self.mint(url, SMALL)
+            self.assertEqual((done.returncode, json.loads(done.stdout).get("refusal")), (1, "unavailable"))
+            self.assertEqual(revoked(calls), ["Bearer " + fake["token"]])
+            self.assertEqual(self.logged()[-1]["outcome"], "unavailable")
+            self.assert_nothing_exposed(fake["token"], done.stdout, done.stderr)
+
+    def test_a_bad_answer_key_is_a_usage_refusal_and_mints_nothing(self):
+        # comment-ok: catches: a token minted, then sealed to a key that is absent, weak or not the helper's kind.
+        rsa = lambda *options: Asker("RSA", *options).key
+        keys = {"missing": None, "empty": "", "not text": 7, "malformed": "not a key", "a private key": ASKER.private.decode(),
+                "cut short": ASKER.key[:-40], "junk after": ASKER.key + "x", "a second key": ASKER.key * 2, "a blank line after": ASKER.key + "\n",
+                "CRLF": ASKER.key.replace("\n", "\r\n"),
+                "broken base64": ASKER.key.replace("A", "!"), "2048": rsa("-pkeyopt", "rsa_keygen_bits:2048"),
+                "4096": CONTRACT.public_key(4096), "3071": CONTRACT.public_key(3072).replace("/", "B", 1),
+                "exponent 1": CONTRACT.public_key(exponent=1),
+                "exponent 3": rsa("-pkeyopt", "rsa_keygen_bits:3072", "-pkeyopt", "rsa_keygen_pubexp:3"),
+                "EC": Asker("EC", "-pkeyopt", "ec_paramgen_curve:P-256").key, "Ed25519": Asker("ED25519").key,
+                "RSA-PSS": Asker("RSA-PSS", "-pkeyopt", "rsa_keygen_bits:3072").key}
+        with fake_github(self.pem, REQUESTS["installed"]) as (url, calls, _fake):
+            for name, key in keys.items():
+                with self.subTest(name):
+                    request = dict(SMALL, answer_key=key)
+                    if key is None:
+                        del request["answer_key"]
+                    self.assertNotEqual(CONTRACT.errors(request, SCHEMA, SCHEMA), [], "the schema refuses it too")
+                    done = self.mint(url, request)
+                    self.assertEqual((done.returncode, json.loads(done.stdout).get("refusal"), done.stderr),
+                                     (2, "usage", ""))
+                    self.assertEqual(calls, [])
+                    self.assertEqual(set(self.logged()[-1]), {"schema", "kind", "at", "requester", "outcome"})
+            self.assertEqual(self.mint(url, SMALL).returncode, 0, "the good key still mints")
+
+    def test_the_token_and_the_answer_key_reach_openssl_only_through_pipes(self):
+        # comment-ok: catches: a token or key on openssl's command line, in its environment or in a temporary file.
+        log = Path(self.tmp.name) / "audit.jsonl"
+        with fake_github(self.pem, REQUESTS["installed"]) as (url, _calls, fake):
+            fake["token"] = "synthetic-token-" + "x1" * 252
+            self.assertEqual(self.mint(url, SMALL, audit=log).returncode, 0)
+        rows = [json.loads(line) for line in log.read_text().splitlines()]
+        started = [row for row in rows if row[0] != "OPENED"]
+        sealed = [row for row in started if "-encrypt" in row[0]]
+        self.assertEqual([(row[0][0], row[1], row[2]) for row in sealed], [("/usr/bin/openssl", {}, [True])] * 2)
+        for needle in (fake["token"], *ASKER.key.splitlines()[1:-1]):
+            self.assertNotIn(needle, json.dumps(started))
+        self.assertEqual({row[1] for row in rows if row[0] == "OPENED"}, {"mint-log.jsonl"}, "no other file is written")
+
+
 class FactoryTests(ServiceFixture):
     def test_the_factory_setting_given_at_start_holds_for_every_mint(self):
         text = (HERE.parents[1] / "contracts/github-identity.v1.md").read_text()
@@ -246,8 +350,8 @@ class NeverExposedTests(ServiceFixture):
         with fake_github(self.pem, REQUESTS["installed"]) as (url, _calls, fake):
             fake["token"] = "synthetic-secret-token"
             done = self.mint(url, WRITE)
-        self.assertEqual(json.loads(done.stdout)["token"], "synthetic-secret-token")
-        self.assert_nothing_exposed("synthetic-secret-token", done.stderr)
+        self.assertEqual(ASKER.open(json.loads(done.stdout)["sealed_token"]), "synthetic-secret-token")
+        self.assert_nothing_exposed("synthetic-secret-token", done.stdout, done.stderr)
         self.assertEqual(stat.S_IMODE(self.key.stat().st_mode), 0o600)
         self.assertEqual(stat.S_IMODE(self.log.stat().st_mode), 0o600)
         self.assertEqual(stat.S_IMODE(self.log.parent.stat().st_mode), 0o700)

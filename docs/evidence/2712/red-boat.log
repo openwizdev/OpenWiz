@@ -1,0 +1,14 @@
+F
+======================================================================
+FAIL: test_known_boat_guidance_reaches_the_answer_from_stderr (__main__.Boat.test_known_boat_guidance_reaches_the_answer_from_stderr) (cmd='new', how='signed-out')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/boat/test_driver.py", line 696, in test_known_boat_guidance_reaches_the_answer_from_stderr
+    self.assertIn(says, err['next'] if how == 'code' else json.dumps(err))
+AssertionError: 'sign in to boat' not found in '{"error": "boat new failed: provider_not_configured", "next": "connect that harness\'s key or subscription in boat\'s dashboard (Agents & Proxying) yourself, then start again; if `boat list` shows a sandbox named openwiz-run-<id>, stop it first"}'
+
+----------------------------------------------------------------------
+Ran 1 test in 1.224s
+
+FAILED (failures=1)
+exit 1

@@ -1,0 +1,14 @@
+Green at the fix (synthetic, local):
+$ python3 -I tools/install/tests/setup-onboard-contract/test_contract.py
+Ran 28 tests
+OK
+
+ECMAScript check (node v24, every code point except lone surrogates, edge before and after 'S', flags '' and 'u'):
+old shape 0 flags '': 1 mismatches feff
+old shape 0 flags 'u': 1 mismatches feff
+old shape 1 flags '': 1 mismatches feff
+old shape 1 flags 'u': 1 mismatches feff
+new shape 0 flags '': 0 mismatches 
+new shape 0 flags 'u': 0 mismatches 
+new shape 1 flags '': 0 mismatches 
+new shape 1 flags 'u': 0 mismatches 

@@ -335,6 +335,69 @@ class Alarm(unittest.TestCase):
         self.assertFalse(result['allowed'])
         self.assertEqual(self.state.read_text(), '{"paused":true}')
 
+    def test_missing_input_refuses_without_latching_durable_pause(self):
+        missing = self.folder / 'absent.json'
+        result = subprocess.run([sys.executable, '-I', str(HERE / 'alarm.py'),
+            '--repository', REPO, '--input', str(missing), '--state', str(self.state),
+            '--now', str(NOW), '--action', 'merge-batch'], capture_output=True, text=True, timeout=2)
+        self.assertEqual(result.returncode, 1, result.stderr)
+        answer = json.loads(result.stdout)
+        self.assertEqual(answer['level'], 'unknown')
+        self.assertIn('observation_unknown', answer['causes'])
+        self.assertIsNone(answer['pause'])
+        self.assertFalse(self.state.exists())
+        pending = Path(str(self.state) + '.pending')
+        self.assertEqual(list(pending.iterdir()) if pending.exists() else [], [])
+        admitted = self.observe(healthy())
+        self.assertTrue(admitted['allowed'])
+        self.assertFalse(admitted['paused'])
+
+    def test_resume_clears_durable_pause_and_pending_and_refuses_corrupt_or_foreign_state(self):
+        def run_resume():
+            return subprocess.run([sys.executable, '-I', str(HERE / 'alarm.py'),
+                '--repository', REPO, '--state', str(self.state),
+                '--now', str(NOW), '--action', 'resume'], capture_output=True, text=True, timeout=2)
+
+        idle = run_resume()
+        self.assertEqual(idle.returncode, 0, idle.stdout + idle.stderr)
+        self.assertFalse(json.loads(idle.stdout)['resumed'])
+
+        exhausted = healthy()
+        exhausted['budgets']['rest']['remaining'] = 0
+        self.observe(exhausted)
+        self.assertTrue(self.state.exists())
+        self.assertFalse(self.observe(healthy())['allowed'])
+
+        resumed = run_resume()
+        self.assertEqual(resumed.returncode, 0, resumed.stdout + resumed.stderr)
+        res_ans = json.loads(resumed.stdout)
+        self.assertTrue(res_ans['resumed'])
+        self.assertFalse(res_ans['paused'])
+        self.assertFalse(self.state.exists())
+        self.assertTrue(self.observe(healthy())['allowed'])
+
+        with Path(str(self.state) + '.lock').open('a') as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            self.observe(exhausted)
+            busy = run_resume()
+            self.assertEqual(busy.returncode, 1, busy.stdout + busy.stderr)
+            self.assertFalse(json.loads(busy.stdout)['resumed'])
+        cleared = run_resume()
+        self.assertEqual(cleared.returncode, 0, cleared.stdout + cleared.stderr)
+        self.assertEqual(json.loads(cleared.stdout)['cleared_pending'], 1)
+        self.assertTrue(self.observe(healthy())['allowed'])
+
+        self.state.write_text('{"paused":true}')
+        self.assertEqual(run_resume().returncode, 1)
+        self.assertEqual(self.state.read_text(), '{"paused":true}')
+
+        foreign = dict(repository='other-owner/other-repo', paused=True, since=NOW,
+                       level='alarm', causes=['rest_below_ten_percent'],
+                       observed_at=NOW, evidence_sha256='0' * 64)
+        self.state.write_text(json.dumps(foreign))
+        self.assertEqual(run_resume().returncode, 1)
+        self.assertEqual(json.loads(self.state.read_text())['repository'], 'other-owner/other-repo')
+
 
 class Fleet(unittest.TestCase):
     def test_fleet_guard_blocks_new_work_but_allows_completion_without_api_calls(self):
