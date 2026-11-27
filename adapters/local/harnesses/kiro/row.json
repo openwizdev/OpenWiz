@@ -41,5 +41,6 @@
   "signed_out": [
     "\"type\":\"runError\".*\"stage\":\"auth\""
   ],
-  "login_command": "kiro-cli login"
+  "login_command": "kiro-cli login",
+  "login_env": "KIRO_API_KEY"
 }

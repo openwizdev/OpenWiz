@@ -11,6 +11,7 @@ FAKE = os.path.join(HERE, 'fake')
 HEADLESS = ['chat', '--v3', '--no-interactive', '--output-format', 'stream-json']
 NEXT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster to run it "
         "at the host's default")
+SIGN_IN = 'sign in with kiro-cli login, or set KIRO_API_KEY for kiro-cli yourself, then start again'
 failed = []
 
 
@@ -44,9 +45,9 @@ for how, lines in (('both', 'its runError line and its stderr line'), ('json', '
         if env.runs():
             with open(os.path.join(env.state, env.runs()[0][:-len('.json')] + '.log')) as f:
                 log = f.read()
-        check('not signed in (%s) is a D3 error that says so, and its next names kiro-cli login' % lines,
+        check('not signed in (%s) is a D3 error that says so, and its next names kiro-cli login and KIRO_API_KEY' % lines,
               code == 1 and th.kit.invalid(out, th.ERROR) is None and 'not signed in' in out.get('error', '')
-              and 'kiro-cli login' in out.get('next', '') and '"stage":"auth"' in log and 'KIRO_API_KEY' in log)
+              and out.get('next', '').split('; ')[0] == SIGN_IN and '"stage":"auth"' in log)
         stop_all(env)
 
 for mode, flags in (('permissions-yaml', []), ('trust-all-tools', ['--trust-all-tools'])):

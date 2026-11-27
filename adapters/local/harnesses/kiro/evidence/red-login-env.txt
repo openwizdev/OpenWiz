@@ -1,0 +1,14 @@
+# Red: the signed-out next must name both routes (kiro-cli login, KIRO_API_KEY) before the row has login_env; agent-CLI stubs first on PATH, OPENWIZ_GITHUB_APP_KEY unset
+
+$ python3 -I adapters/local/harnesses/kiro/test_row.py
+pass kiro: not installed is a D3 error whose next says to install kiro-cli, and starts nothing
+fail kiro: not signed in (its runError line and its stderr line) is a D3 error that says so, and its next names kiro-cli login and KIRO_API_KEY
+fail kiro: not signed in (its runError line alone) is a D3 error that says so, and its next names kiro-cli login and KIRO_API_KEY
+pass kiro: mode permissions-yaml starts `kiro-cli chat --v3 --no-interactive --output-format stream-json --model <m> <prompt>`
+pass kiro: mode trust-all-tools starts `kiro-cli chat --v3 --no-interactive --output-format stream-json --model <m> --trust-all-tools <prompt>`
+pass kiro: effort low is refused with the fixed next, starting nothing
+pass kiro: effort medium is refused with the fixed next, starting nothing
+pass kiro: effort high is refused with the fixed next, starting nothing
+pass kiro: effort xhigh is refused with the fixed next, starting nothing
+pass kiro: effort max is refused with the fixed next, starting nothing
+exit=1
