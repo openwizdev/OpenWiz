@@ -1,0 +1,29 @@
+$ python3 -I docs/evidence/3084/same_build.py <checkout of c3987718>
+before: 624 files, sha256 6ec6f5d931c89fe4ef554ce74b357b91123a89f4c994e03cb69ea88e836fb74a
+after: 624 files, sha256 6ec6f5d931c89fe4ef554ce74b357b91123a89f4c994e03cb69ea88e836fb74a
+byte-identical: True
+exit 0
+
+$ python3 -I tools/release/test_package.py -k driver -k release_json
+Ran 5 tests in 36.378s
+OK
+$ python3 -I ci/test_ci_driver_tests.py
+Ran 4 tests in 0.390s
+OK
+$ python3 -I ci/driver-tests.py | grep -E "^(==|driver-tests)"  (this branch, whole run, exit 0)
+== adapters/boat/test_driver.py
+== adapters/cloudroom/test_driver.py
+== adapters/devin/test_driver.py
+== adapters/factory/test_driver.py
+== adapters/hermes/test_driver.py
+== adapters/local/test_driver.py
+== adapters/local/test_harnesses.py
+== adapters/openclaw/test_driver.py
+== adapters/template/test_driver.py
+driver-tests: ok (9 test files)
+
+A sample driver pull request, on a scratch clone (the template's driver and schema as adapters/sample, plus release.json, README.md and a test):
+changed: adapters/sample/README.md, driver, release.json, schema.json, test_driver.py, and no other file
+the build: 627 files, up from 624; newly shipped runtime/adapters/sample/README.md, driver and schema.json; lost none
+the runner: == adapters/sample/test_driver.py / sample test ran / driver-tests: ok (1 test files)
+the importer: every sample file carried; nothing under adapters/ or ci/ is left unlisted

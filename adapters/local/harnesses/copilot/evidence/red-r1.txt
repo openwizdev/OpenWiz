@@ -1,0 +1,11 @@
+$ (cd adapters/local/harnesses/copilot && env -u OPENWIZ_GITHUB_APP_KEY PATH="<31 refusing stubs>:$PATH" python3 -I test_row.py)
+# R1 red at c3ff6ccc plus this test: the fake still takes --reasoning-effort on both lines
+fail copilot test_row.py: effort on start exited 0, not 2
+fail copilot test_row.py: effort on start with no mode exited 0, not 2
+fail copilot test_row.py: effort on wake exited 0, not 2
+fail copilot test_row.py: the fake did not record three first turns and three woken turns of one session
+fail copilot test_row.py: 4 problems
+exit 1
+$ env -u OPENWIZ_GITHUB_APP_KEY PATH="<31 refusing stubs>:$PATH" python3 -I adapters/local/test_harnesses.py --rows adapters/local/harnesses
+fail copilot: test_row.py: it failed (exit 1)
+exit 1

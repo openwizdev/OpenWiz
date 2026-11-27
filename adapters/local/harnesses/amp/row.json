@@ -1,0 +1,54 @@
+{
+  "harness": "amp",
+  "program": "amp",
+  "start": [
+    "-x",
+    "{prompt}",
+    "--stream-json",
+    "--no-archive-after-execute",
+    "--model",
+    "{model}",
+    "{mode}",
+    "{effort}"
+  ],
+  "wake": [
+    "threads",
+    "continue",
+    "{session}",
+    "-x",
+    "{prompt}",
+    "--stream-json",
+    "{mode}"
+  ],
+  "session": {
+    "json": [
+      "session_id"
+    ]
+  },
+  "modes": {
+    "allow-all": [
+      "--dangerously-allow-all"
+    ],
+    "default": []
+  },
+  "env": {
+    "AMP_SKIP_UPDATE_CHECK": "1"
+  },
+  "effort": {
+    "none": ["--effort", "none"],
+    "minimal": ["--effort", "minimal"],
+    "low": ["--effort", "low"],
+    "medium": ["--effort", "medium"],
+    "high": ["--effort", "high"],
+    "xhigh": ["--effort", "xhigh"],
+    "max": ["--effort", "max"]
+  },
+  "login": "Amp's own saved account on this machine, from `amp login` (see `amp account list`), or AMP_API_KEY that you set yourself to an access token from your Amp settings; the driver never reads, sets or passes a login",
+  "daemon": "a background subagent runs in the thread on Amp's servers, and its local tool commands run under the turn's amp process; stop ends that process tree, and the server side is the README's census check",
+  "signed_out": [
+    "no (amp )?api key found\\. run .amp login. first",
+    "not logged in( to amp)?\\. run .amp login.",
+    "api key required( for headless mode)?\\. please run .amp login. first"
+  ],
+  "login_command": "amp login"
+}

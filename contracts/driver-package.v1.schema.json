@@ -1,0 +1,302 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OpenWiz driver package v1",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/manifest"
+    },
+    {
+      "$ref": "#/$defs/package"
+    },
+    {
+      "$ref": "#/$defs/key_host"
+    },
+    {
+      "$ref": "#/$defs/pin"
+    },
+    {
+      "$ref": "#/$defs/approval"
+    }
+  ],
+  "$defs": {
+    "driver": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?![\\s\\S])",
+      "maxLength": 40
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)(?![\\s\\S])"
+    },
+    "commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}(?![\\s\\S])"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}(?![\\s\\S])"
+    },
+    "publisher": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?![\\s\\S])",
+      "maxLength": 39
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*/[A-Za-z0-9_-][A-Za-z0-9_.-]*(?![\\s\\S])"
+    },
+    "manifest": {
+      "type": "object",
+      "required": [
+        "driver",
+        "version",
+        "driver_contract",
+        "kit_commit",
+        "files"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "driver": {
+          "$ref": "#/$defs/driver"
+        },
+        "version": {
+          "$ref": "#/$defs/version"
+        },
+        "driver_contract": {
+          "const": "openwiz:driver v1"
+        },
+        "kit_commit": {
+          "$ref": "#/$defs/commit"
+        },
+        "files": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "allOf": [
+            {
+              "contains": {
+                "$ref": "#/$defs/file_0"
+              }
+            },
+            {
+              "contains": {
+                "$ref": "#/$defs/file_1"
+              }
+            },
+            {
+              "contains": {
+                "$ref": "#/$defs/file_2"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "package": {
+      "type": "object",
+      "required": [
+        "driver",
+        "version",
+        "repository",
+        "commit",
+        "asset_url",
+        "sha256",
+        "kit_commit"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "driver": {
+          "$ref": "#/$defs/driver"
+        },
+        "version": {
+          "$ref": "#/$defs/version"
+        },
+        "repository": {
+          "$ref": "#/$defs/repository"
+        },
+        "commit": {
+          "$ref": "#/$defs/commit"
+        },
+        "asset_url": {
+          "type": "string",
+          "pattern": "^https://github\\.com/[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*/[A-Za-z0-9_-][A-Za-z0-9_.-]*/releases/download/v(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)/driver\\.tar\\.gz(?![\\s\\S])"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "kit_commit": {
+          "$ref": "#/$defs/commit"
+        }
+      }
+    },
+    "key_host": {
+      "type": "object",
+      "required": [
+        "origin",
+        "variable",
+        "keychain"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "origin": {
+          "type": "string",
+          "pattern": "^https://[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)+(?![\\s\\S])"
+        },
+        "variable": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]{0,63}(?![\\s\\S])"
+        },
+        "keychain": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*(?![\\s\\S])"
+        }
+      }
+    },
+    "pin": {
+      "type": "object",
+      "required": [
+        "contract",
+        "pins"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "contract": {
+          "const": "openwiz.driver-package.v1"
+        },
+        "pins": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "package",
+              "publisher",
+              "evidence"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "package": {
+                "$ref": "#/$defs/package"
+              },
+              "publisher": {
+                "$ref": "#/$defs/publisher"
+              },
+              "evidence": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "receipt"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "receipt": {
+                        "type": "string",
+                        "pattern": "^https://github\\.com/openwizdev/WizMarket/blob/[0-9a-f]{40}/receipts/[a-z0-9-]+/[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9a-f]{12}\\.txt(?![\\s\\S])"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "bundled_version"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "bundled_version": {
+                        "$ref": "#/$defs/version"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "required": [
+        "repository",
+        "publisher",
+        "version",
+        "sha256"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "repository": {
+          "$ref": "#/$defs/repository"
+        },
+        "publisher": {
+          "$ref": "#/$defs/publisher"
+        },
+        "version": {
+          "$ref": "#/$defs/version"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "file_0": {
+      "type": "object",
+      "required": [
+        "path",
+        "mode",
+        "sha256"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "const": "driver"
+        },
+        "mode": {
+          "const": "0700"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "file_1": {
+      "type": "object",
+      "required": [
+        "path",
+        "mode",
+        "sha256"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "const": "schema.json"
+        },
+        "mode": {
+          "const": "0600"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "file_2": {
+      "type": "object",
+      "required": [
+        "path",
+        "mode",
+        "sha256"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "const": "README.md"
+        },
+        "mode": {
+          "const": "0600"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    }
+  }
+}

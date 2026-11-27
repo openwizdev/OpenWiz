@@ -4,6 +4,7 @@ skills, or (#555) the WizSkills install its lock pins."""
 import argparse
 import json
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -15,12 +16,51 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from product_identity import PROGRAMS as COMPILED, WIZSKILLS, architecture, canonical, expected, git, \
     locked_skills, mode, payload, release_version, verify_programs, verify_runtime
 
-# #1699: the drivers 0.1.0 launches with (KN3 to KN5), each carried when the source tracks it,
-# and the driver kit's files (kit.py reads its schema, ../records.v1.md and ../records-kit/check.py).
-DRIVERS = ('boat', 'cloudroom', 'devin', 'local', 'openclaw', 'tembo')
-KEY_CHECK_FILES = {'devin': ('README.md', 'fixtures/kit-host.json'), 'tembo': ('README.md', 'fixtures/kit-host.json')}
 KIT = ['kernel/driver-kit/kit.py', 'kernel/driver-kit/schema.json', 'kernel/records-kit/check.py',
        'kernel/records.v1.md', 'kernel/driver-kit/hostkey.py', 'kernel/driver-kit/hosts.json']
+INSTALLER_RUNNABLE_FOLDER = re.compile(r'[a-z0-9-]+')
+
+
+class BadRelease(Refused):
+    pass
+
+
+def pairs(items):
+    require(len({key for key, _ in items}) == len(items), 'repeated key')
+    return dict(items)
+
+
+def drivers(root, source):
+    tree = {}
+    for row in git(root, 'ls-tree', '-r', '-z', '--full-tree', '--end-of-options', source,
+                   '--', 'adapters').decode('utf-8').split('\0')[:-1]:
+        entry, path = row.split('\t', 1)
+        tree[path] = entry.split(' ')
+    regular = lambda path: tree.get(path, [''])[0] in ('100644', '100755')
+    selected = []
+    for path in sorted(tree):
+        parts = path.split('/')
+        if len(parts) != 3 or parts[2] != 'release.json':
+            continue
+        folder = path[:-len('release.json')]
+        try:
+            if not INSTALLER_RUNNABLE_FOLDER.fullmatch(parts[1]):
+                raise BadRelease(f'{path}: its folder name is not lowercase letters, digits and hyphens')
+            if not all(regular(folder + name) for name in ('driver', 'schema.json')):
+                raise BadRelease(f'{path}: its folder does not track a regular driver and schema.json')
+            require(regular(path), 'not a regular file')
+            value = json.loads(git(root, 'cat-file', 'blob', tree[path][2]).decode('utf-8'), object_pairs_hook=pairs)
+            require(type(value) is dict and value.keys() == {'extra_files'} and type(value['extra_files']) is list,
+                    'wrong shape')
+            extra = value['extra_files']
+            require(all(type(name) is str and name not in ('driver', 'schema.json') and regular(folder + name)
+                        for name in extra) and len(set(extra)) == len(extra), 'wrong files')
+        except BadRelease:
+            raise
+        except (Refused, ValueError, RecursionError):
+            raise BadRelease(f'{path}: not {{"extra_files": [...]}} naming tracked regular files in its folder') from None
+        selected += [folder + name for name in ('driver', 'schema.json', *extra)]
+    return selected
 
 
 def collect(root, binaries, output, version, source, target, program_receipt):
@@ -88,21 +128,15 @@ def collect(root, binaries, output, version, source, target, program_receipt):
                 and not any(p.is_symlink() for p in (tool, *list(tool.parents)[:3])),
                 'unsafe or missing GitHub sign-in helper')
         files['runtime/setup/github_login.py'] = tool
-    # #1699: the host drivers 0.1.0 launches with, where KN6's caller (launch-fleet's
-    # host.py) runs them, `$OPENWIZ_ADAPTERS/<host>/driver` with OPENWIZ_ADAPTERS the
-    # installed runtime/adapters, and the kernel files the driver kit's checks read. Each
-    # keeps its tracked path under runtime/, so the tracked-tree receipt maps it back.
-    # Only these files: never the template, tests, fixtures, evidence or an untracked file.
     tracked = set(git(root, 'ls-tree', '-r', '-z', '--name-only', '--end-of-options', source,
                       '--', 'adapters', 'kernel').decode('utf-8').split('\0'))
-    selected = [f'adapters/{host}/{name}' for host in DRIVERS if f'adapters/{host}/driver' in tracked
-                for name in ('driver', 'schema.json') + KEY_CHECK_FILES.get(host, ())]
+    selected = drivers(root, source)
     if 'kernel/driver-kit/kit.py' in tracked:
         selected += KIT
     for path in selected:
         tool = root / path
         require(path in tracked and tool.is_file() and tool.stat().st_nlink == 1
-                and not any(p.is_symlink() for p in (tool, *list(tool.parents)[:3])),
+                and not any(p.is_symlink() for p in (tool, *list(tool.parents)[:path.count('/') + 1])),
                 'unsafe or missing driver runtime')
         files['runtime/' + path] = tool
     # #555: a runtime file's repository path, as the receipt records it and the
@@ -176,6 +210,9 @@ def main():
         identity.write_text(json.dumps(products, sort_keys=True, indent=2) + '\n')
         record.write_bytes(canonical(rows) + b'\n')
         return 0
+    except BadRelease as bad:
+        print(f'build-products: refused {bad}', file=sys.stderr)
+        return 1
     except (Refused, OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError):
         print('build-products: refused incomplete or non-native products', file=sys.stderr)
         return 1

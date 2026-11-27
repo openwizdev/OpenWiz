@@ -1,0 +1,24 @@
+Local suite at a5c6440f65f8203e7ab8f88f7633f851587959c5 (code head; this log is the only change on top)
+$ env -u OPENWIZ_GITHUB_APP_KEY cargo fmt --check
+exit 0
+$ env -u OPENWIZ_GITHUB_APP_KEY cargo clippy -p openwiz-cli -p openwiz-tests --all-targets -- -D warnings
+exit 0
+$ env -u OPENWIZ_GITHUB_APP_KEY cargo test -p openwiz-cli
+test tests::help_qualifies_the_json_error_and_stderr_promises ... ok
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.51s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+exit 0
+$ env -u OPENWIZ_GITHUB_APP_KEY cargo test -p openwiz-tests --test proof
+test p04_partial_failures::help_documents_the_commands_the_order_and_the_exit_codes ... ok
+test result: ok. 109 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 15.11s
+exit 0
+$ env -u OPENWIZ_GITHUB_APP_KEY cargo test -p openwiz-tests --test cli-agent
+test results::cp2_all_known_value_options_consume_flag_looking_data ... ok
+test results::cp2_json_help_is_one_document_with_no_reads_or_state ... ok
+test results::cp2_json_selection_respects_values_delimiters_and_invalid_bytes ... ok
+test results::cp2_no_command_json_is_bounded_usage_without_effects ... ok
+test results::cp2_usage_errors_cover_every_dispatch_family_without_effects ... ok
+test result: ok. 122 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.81s
+exit 0

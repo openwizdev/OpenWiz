@@ -1,6 +1,7 @@
 pub mod agent_help;
 pub mod fleet;
 pub mod fleets;
+pub mod ghost;
 pub mod github_token;
 pub mod init;
 pub mod loop_files;
@@ -141,8 +142,9 @@ Exit codes:
   5  models set: not offered, or not writable to the Models table; nothing was changed
 {fleets_exit_codes}{fleet_exit_codes}On an error, stdout is empty unless ls, show or a help command fails to write or
 flush output, when some of it may already be on stdout, or unless --json was given.
-With --json, an error that printed nothing else prints openwiz.cli-error.v1 on stdout.
-Either way, stderr has one line starting with \"openwiz: \".
+With --json, a handled failure with no outcome report of its own prints
+openwiz.cli-error.v1 on stdout; a failed write or flush is the exception and
+prints no JSON error. Diagnostics may appear on stderr either way.
 ",
         default = ops::ListRequest::default().limit,
         kib = FINAL_OUTPUT_MAX_BYTES / 1024,
@@ -737,4 +739,22 @@ fn hinnant_civil_from_days(days: i64) -> (i64, i64, i64) {
     let month = if mp < 10 { mp + 3 } else { mp - 9 };
     let year = yoe + era * 400 + i64::from(month <= 2);
     (year, month, day)
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn help_qualifies_the_json_error_and_stderr_promises() {
+        let help = super::help();
+        assert!(
+            help.contains(
+                "With --json, a handled failure with no outcome report of its own prints\n\
+                 openwiz.cli-error.v1 on stdout; a failed write or flush is the exception and\n\
+                 prints no JSON error. Diagnostics may appear on stderr either way.\n"
+            ),
+            "{help}"
+        );
+        assert!(!help.contains("printed nothing else"), "{help}");
+        assert!(!help.contains("stderr has one line"), "{help}");
+    }
 }

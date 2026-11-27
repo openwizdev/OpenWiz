@@ -1,0 +1,36 @@
+test_a_lost_comment_answer_is_found_on_resume_and_a_closed_earlier_pull_request_is_never_adopted (__main__.Heads.test_a_lost_comment_answer_is_found_on_resume_and_a_closed_earlier_pull_request_is_never_adopted) ... FAIL
+
+======================================================================
+FAIL: test_a_lost_comment_answer_is_found_on_resume_and_a_closed_earlier_pull_request_is_never_adopted (__main__.Heads.test_a_lost_comment_answer_is_found_on_resume_and_a_closed_earlier_pull_request_is_never_adopted)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_heads.py", line 361, in test_a_lost_comment_answer_is_found_on_resume_and_a_closed_earlier_pull_request_is_never_adopted
+    self.assertEqual(len([c for c in self.writes() if c['args'][3].endswith('/comments')]), 1, out)
+AssertionError: 2 != 1 : finishing the publish an earlier --post left unfinished
+posted https://github.com/openwizdev/OpenWiz/pull/201#issuecomment-902
+posted https://github.com/openwizdev/WizMarket/pull/7
+
+
+----------------------------------------------------------------------
+Ran 1 test in 21.252s
+
+FAILED (failures=1)
+
+# The same test with its comment-count line removed, so the closed-pull half shows on its own:
+test_a_lost_comment_answer_is_found_on_resume_and_a_closed_earlier_pull_request_is_never_adopted (__main__.Heads.test_a_lost_comment_answer_is_found_on_resume_and_a_closed_earlier_pull_request_is_never_adopted) ... FAIL
+
+======================================================================
+FAIL: test_a_lost_comment_answer_is_found_on_resume_and_a_closed_earlier_pull_request_is_never_adopted (__main__.Heads.test_a_lost_comment_answer_is_found_on_resume_and_a_closed_earlier_pull_request_is_never_adopted)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_heads.py", line 361, in test_a_lost_comment_answer_is_found_on_resume_and_a_closed_earlier_pull_request_is_never_adopted
+    self.assertEqual(code, 2, out + err)
+AssertionError: 0 != 2 : finishing the publish an earlier --post left unfinished
+posted https://github.com/openwizdev/OpenWiz/pull/201#issuecomment-902
+posted https://github.com/openwizdev/WizMarket/pull/7
+
+
+----------------------------------------------------------------------
+Ran 1 test in 21.232s
+
+FAILED (failures=1)

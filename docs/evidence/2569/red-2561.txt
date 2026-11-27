@@ -1,0 +1,42 @@
+test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) ... 
+  test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) (live='', harness='claude') ... FAIL
+  test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) (live='', harness='codex') ... FAIL
+  test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) (live='1', harness='claude') ... FAIL
+  test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) (live='1', harness='codex') ... FAIL
+
+======================================================================
+FAIL: test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) (live='', harness='claude')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 147, in test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness
+    self.assertFalse(os.path.exists(ran), 'the kit started a real %s through the template' % name)
+AssertionError: True is not false : the kit started a real claude through the template
+
+======================================================================
+FAIL: test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) (live='', harness='codex')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 147, in test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness
+    self.assertFalse(os.path.exists(ran), 'the kit started a real %s through the template' % name)
+AssertionError: True is not false : the kit started a real codex through the template
+
+======================================================================
+FAIL: test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) (live='1', harness='claude')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 147, in test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness
+    self.assertFalse(os.path.exists(ran), 'the kit started a real %s through the template' % name)
+AssertionError: True is not false : the kit started a real claude through the template
+
+======================================================================
+FAIL: test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness (__main__.Kit.test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness) (live='1', harness='codex')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 147, in test_an_unedited_template_copy_run_by_the_kit_starts_no_real_harness
+    self.assertFalse(os.path.exists(ran), 'the kit started a real %s through the template' % name)
+AssertionError: True is not false : the kit started a real codex through the template
+
+----------------------------------------------------------------------
+Ran 1 test in 9.060s
+
+FAILED (failures=4)

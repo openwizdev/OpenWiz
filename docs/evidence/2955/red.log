@@ -1,0 +1,700 @@
+test_the_fixtures_and_template_hold_and_cover_the_loop (__main__.Fixtures.test_the_fixtures_and_template_hold_and_cover_the_loop) ... FAIL
+test_a_case_with_an_unknown_or_repeated_key_is_refused (__main__.PlantedBreaks.test_a_case_with_an_unknown_or_repeated_key_is_refused) ... FAIL
+test_a_failed_criterion_never_goes_to_a_fleet (__main__.PlantedBreaks.test_a_failed_criterion_never_goes_to_a_fleet) ... FAIL
+test_a_held_report_keeps_needs_triage (__main__.PlantedBreaks.test_a_held_report_keeps_needs_triage) ... FAIL
+test_a_marker_counts_only_as_the_last_line (__main__.PlantedBreaks.test_a_marker_counts_only_as_the_last_line) ... FAIL
+test_a_report_link_counts_only_from_a_record_author_and_last (__main__.PlantedBreaks.test_a_report_link_counts_only_from_a_record_author_and_last) ... FAIL
+test_a_second_merge_posts_nothing (__main__.PlantedBreaks.test_a_second_merge_posts_nothing) ... FAIL
+test_an_instruction_carrying_report_is_held (__main__.PlantedBreaks.test_an_instruction_carrying_report_is_held) ... FAIL
+test_facts_line_refuses_line_over_1024_characters (__main__.PlantedBreaks.test_facts_line_refuses_line_over_1024_characters) ... FAIL
+test_facts_line_refuses_repeated_key (__main__.PlantedBreaks.test_facts_line_refuses_repeated_key) ... FAIL
+test_facts_line_refuses_two_facts_lines (__main__.PlantedBreaks.test_facts_line_refuses_two_facts_lines) ... FAIL
+test_facts_line_refuses_unknown_key (__main__.PlantedBreaks.test_facts_line_refuses_unknown_key) ... FAIL
+test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) ... 
+  test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"v":2}') ... FAIL
+  test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"v":true}') ... FAIL
+  test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"kind":"bug"}') ... FAIL
+  test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"v":1,"kind":"feature"}') ... FAIL
+  test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"v":1,"area":"Launch_Fleet"}') ... FAIL
+  test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"v":1,"openwiz":"0.1"}') ... FAIL
+  test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"v":1,"skill":"0.4.0"}') ... FAIL
+  test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"v":1,"os":"freebsd"}') ... FAIL
+  test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"v":1,"arch":"riscv64"}') ... FAIL
+  test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"v":1,"model":"claude opus"}') ... FAIL
+  test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"v":1,"log_lines":41}') ... FAIL
+  test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"v":1,"redactions":10000}') ... FAIL
+  test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"v":1,"log_lines":true}') ... FAIL
+  test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"v": 1}') ... FAIL
+  test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"v":1,"host":"clöud"}') ... FAIL
+test_facts_line_refuses_wrong_key_order (__main__.PlantedBreaks.test_facts_line_refuses_wrong_key_order) ... FAIL
+test_facts_line_refuses_wrong_place (__main__.PlantedBreaks.test_facts_line_refuses_wrong_place) ... FAIL
+test_no_landed_comment_without_a_version_or_a_merge (__main__.PlantedBreaks.test_no_landed_comment_without_a_version_or_a_merge) ... FAIL
+test_only_a_full_closing_line_reaches_the_destination (__main__.PlantedBreaks.test_only_a_full_closing_line_reaches_the_destination) ... FAIL
+test_only_a_record_authors_landed_comment_counts (__main__.PlantedBreaks.test_only_a_record_authors_landed_comment_counts) ... FAIL
+test_the_brief_copies_no_link_or_code_from_the_report (__main__.PlantedBreaks.test_the_brief_copies_no_link_or_code_from_the_report) ... FAIL
+test_the_landed_comment_follows_the_brief_link (__main__.PlantedBreaks.test_the_landed_comment_follows_the_brief_link) ... FAIL
+test_the_landed_comment_names_the_pull_request_in_full (__main__.PlantedBreaks.test_the_landed_comment_names_the_pull_request_in_full) ... FAIL
+test_the_template_asks_only_for_public_words (__main__.PlantedBreaks.test_the_template_asks_only_for_public_words) ... FAIL
+test_the_template_includes_optional_version_and_setup_fields (__main__.PlantedBreaks.test_the_template_includes_optional_version_and_setup_fields) ... FAIL
+test_the_template_keeps_the_approved_warning_and_confirmation (__main__.PlantedBreaks.test_the_template_keeps_the_approved_warning_and_confirmation) ... FAIL
+test_triage_posts_no_comment_on_the_report (__main__.PlantedBreaks.test_triage_posts_no_comment_on_the_report) ... FAIL
+
+======================================================================
+FAIL: test_the_fixtures_and_template_hold_and_cover_the_loop (__main__.Fixtures.test_the_fixtures_and_template_hold_and_cover_the_loop)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 18, in test_the_fixtures_and_template_hold_and_cover_the_loop
+    self.assertEqual(check.check(ROOT), [])
+AssertionError: Lists differ: ["facts-invalid.json: unreadable: 'facts'"[43 chars]ts'"] != []
+
+First list contains 2 additional elements.
+First extra element 0:
+"facts-invalid.json: unreadable: 'facts'"
+
++ []
+- ["facts-invalid.json: unreadable: 'facts'",
+-  "report-with-facts.json: unreadable: 'facts'"]
+
+======================================================================
+FAIL: test_a_case_with_an_unknown_or_repeated_key_is_refused (__main__.PlantedBreaks.test_a_case_with_an_unknown_or_repeated_key_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 121, in test_a_case_with_an_unknown_or_repeated_key_is_refused
+    self.refused(case('landed', lambda d: d['expect'].update(note='x')),
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 53, in refused
+    self.assertEqual(planted(edit), list(expected))
+AssertionError: Lists differ: ["facts-invalid.json: unreadable: 'facts'",[156 chars]ase'] != ["landed.json: unreadable: a landed expecta[66 chars]ase']
+
+First differing element 0:
+"facts-invalid.json: unreadable: 'facts'"
+"landed.json: unreadable: a landed expecta[37 chars]ts']"
+
+First list contains 2 additional elements.
+First extra element 2:
+"report-with-facts.json: unreadable: 'facts'"
+
+- ["facts-invalid.json: unreadable: 'facts'",
+-  'landed.json: unreadable: a landed expectation must have exactly the keys '
+? ^
+
++ ['landed.json: unreadable: a landed expectation must have exactly the keys '
+? ^
+
+   "['posts']",
+-  "report-with-facts.json: unreadable: 'facts'",
+   'fixtures: no landed case']
+
+======================================================================
+FAIL: test_a_failed_criterion_never_goes_to_a_fleet (__main__.PlantedBreaks.test_a_failed_criterion_never_goes_to_a_fleet)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 56, in test_a_failed_criterion_never_goes_to_a_fleet
+    self.refused(case('triage-to-a-fleet', lambda d: d['input']['criteria'].update(no_instructions=False)),
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 53, in refused
+    self.assertEqual(planted(edit), list(expected))
+AssertionError: Lists differ: ["facts-invalid.json: unreadable: 'facts'"[123 chars]ase'] != ['triage-to-a-fleet.json: outcome must be [33 chars]ase']
+
+First differing element 0:
+"facts-invalid.json: unreadable: 'facts'"
+'triage-to-a-fleet.json: outcome must be held'
+
+First list contains 2 additional elements.
+First extra element 2:
+'triage-to-a-fleet.json: outcome must be held'
+
++ ['triage-to-a-fleet.json: outcome must be held', 'fixtures: no to a fleet case']
+- ["facts-invalid.json: unreadable: 'facts'",
+-  "report-with-facts.json: unreadable: 'facts'",
+-  'triage-to-a-fleet.json: outcome must be held',
+-  'fixtures: no to a fleet case']
+
+======================================================================
+FAIL: test_a_held_report_keeps_needs_triage (__main__.PlantedBreaks.test_a_held_report_keeps_needs_triage)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 76, in test_a_held_report_keeps_needs_triage
+    self.refused(case('triage-held-too-big', lambda d: d['expect'].update(report_labels=['feedback'])),
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 53, in refused
+    self.assertEqual(planted(edit), list(expected))
+AssertionError: Lists differ: ["facts-invalid.json: unreadable: 'facts'",[136 chars]e']"] != ["triage-held-too-big.json: the report must[46 chars]e']"]
+
+First differing element 0:
+"facts-invalid.json: unreadable: 'facts'"
+"triage-held-too-big.json: the report must[45 chars]ge']"
+
+First list contains 2 additional elements.
+First extra element 1:
+"report-with-facts.json: unreadable: 'facts'"
+
+- ["facts-invalid.json: unreadable: 'facts'",
+-  "report-with-facts.json: unreadable: 'facts'",
+-  "triage-held-too-big.json: the report must be labelled exactly ['feedback', "
+? ^
+
++ ["triage-held-too-big.json: the report must be labelled exactly ['feedback', "
+? ^
+
+   "'needs-triage']"]
+
+======================================================================
+FAIL: test_a_marker_counts_only_as_the_last_line (__main__.PlantedBreaks.test_a_marker_counts_only_as_the_last_line)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 117, in test_a_marker_counts_only_as_the_last_line
+    self.refused(case('not-a-report', lambda d: d['expect'].update(is_report=True)),
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 53, in refused
+    self.assertEqual(planted(edit), list(expected))
+AssertionError: Lists differ: ["facts-invalid.json: unreadable: 'facts'"[107 chars]ts'"] != ['not-a-report.json: is_report is False, t[17 chars]rue']
+
+First differing element 0:
+"facts-invalid.json: unreadable: 'facts'"
+'not-a-report.json: is_report is False, the case expects True'
+
+First list contains 2 additional elements.
+First extra element 1:
+'not-a-report.json: is_report is False, the case expects True'
+
+- ["facts-invalid.json: unreadable: 'facts'",
+-  'not-a-report.json: is_report is False, the case expects True',
+? ^                                                              ^
+
++ ['not-a-report.json: is_report is False, the case expects True']
+? ^                                                              ^
+
+-  "report-with-facts.json: unreadable: 'facts'"]
+
+======================================================================
+FAIL: test_a_report_link_counts_only_from_a_record_author_and_last (__main__.PlantedBreaks.test_a_report_link_counts_only_from_a_record_author_and_last)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 102, in test_a_report_link_counts_only_from_a_record_author_and_last
+    self.refused(case('report-link-forged', lambda d: d['input']['issue'].update(author='synthetic-maintainer')),
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 53, in refused
+    self.assertEqual(planted(edit), list(expected))
+AssertionError: Lists differ: ["facts-invalid.json: unreadable: 'facts'"[142 chars]ase'] != ['report-link-forged.json: report is 9101,[52 chars]ase']
+
+First differing element 0:
+"facts-invalid.json: unreadable: 'facts'"
+'report-link-forged.json: report is 9101, the case expects None'
+
+First list contains 2 additional elements.
+First extra element 2:
+"report-with-facts.json: unreadable: 'facts'"
+
+- ["facts-invalid.json: unreadable: 'facts'",
+-  'report-link-forged.json: report is 9101, the case expects None',
+? ^
+
++ ['report-link-forged.json: report is 9101, the case expects None',
+? ^
+
+-  "report-with-facts.json: unreadable: 'facts'",
+   'fixtures: no forged link case']
+
+======================================================================
+FAIL: test_a_second_merge_posts_nothing (__main__.PlantedBreaks.test_a_second_merge_posts_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 80, in test_a_second_merge_posts_nothing
+    self.refused(case('landed-second-merge', lambda d: d['expect']['posts'].append([9101, 'x'])),
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 53, in refused
+    self.assertEqual(planted(edit), list(expected))
+AssertionError: Lists differ: ["facts-invalid.json: unreadable: 'facts'"[89 chars]ts'"] != ['landed-second-merge.json: posts must be []']
+
+First differing element 0:
+"facts-invalid.json: unreadable: 'facts'"
+'landed-second-merge.json: posts must be []'
+
+First list contains 2 additional elements.
+First extra element 1:
+'landed-second-merge.json: posts must be []'
+
+- ["facts-invalid.json: unreadable: 'facts'",
+-  'landed-second-merge.json: posts must be []',
+? ^                                            ^
+
++ ['landed-second-merge.json: posts must be []']
+? ^                                            ^
+
+-  "report-with-facts.json: unreadable: 'facts'"]
+
+======================================================================
+FAIL: test_an_instruction_carrying_report_is_held (__main__.PlantedBreaks.test_an_instruction_carrying_report_is_held)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 63, in test_an_instruction_carrying_report_is_held
+    self.refused(case('triage-held-instruction', send), 'triage-held-instruction.json: outcome must be fleet')
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 53, in refused
+    self.assertEqual(planted(edit), list(expected))
+AssertionError: Lists differ: ["facts-invalid.json: unreadable: 'facts'"[98 chars]eet'] != ['triage-held-instruction.json: outcome must be fleet']
+
+First differing element 0:
+"facts-invalid.json: unreadable: 'facts'"
+'triage-held-instruction.json: outcome must be fleet'
+
+First list contains 2 additional elements.
+First extra element 1:
+"report-with-facts.json: unreadable: 'facts'"
+
+- ["facts-invalid.json: unreadable: 'facts'",
+-  "report-with-facts.json: unreadable: 'facts'",
+-  'triage-held-instruction.json: outcome must be fleet']
+? ^
+
++ ['triage-held-instruction.json: outcome must be fleet']
+? ^
+
+
+======================================================================
+FAIL: test_facts_line_refuses_line_over_1024_characters (__main__.PlantedBreaks.test_facts_line_refuses_line_over_1024_characters)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 266, in test_facts_line_refuses_line_over_1024_characters
+    self._expect_facts_refused(self._replace_facts_line(long_facts))
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 201, in _expect_facts_refused
+    self.assertTrue(found[0].startswith('report-with-facts.json: facts is None, the case expects '), found[0])
+AssertionError: False is not true : facts-invalid.json: unreadable: 'facts'
+
+======================================================================
+FAIL: test_facts_line_refuses_repeated_key (__main__.PlantedBreaks.test_facts_line_refuses_repeated_key)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 209, in test_facts_line_refuses_repeated_key
+    self._expect_facts_refused(
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 201, in _expect_facts_refused
+    self.assertTrue(found[0].startswith('report-with-facts.json: facts is None, the case expects '), found[0])
+AssertionError: False is not true : facts-invalid.json: unreadable: 'facts'
+
+======================================================================
+FAIL: test_facts_line_refuses_two_facts_lines (__main__.PlantedBreaks.test_facts_line_refuses_two_facts_lines)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 261, in test_facts_line_refuses_two_facts_lines
+    self._expect_facts_refused(case('report-with-facts', duplicate))
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 201, in _expect_facts_refused
+    self.assertTrue(found[0].startswith('report-with-facts.json: facts is None, the case expects '), found[0])
+AssertionError: False is not true : facts-invalid.json: unreadable: 'facts'
+
+======================================================================
+FAIL: test_facts_line_refuses_unknown_key (__main__.PlantedBreaks.test_facts_line_refuses_unknown_key)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 205, in test_facts_line_refuses_unknown_key
+    self._expect_facts_refused(
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 201, in _expect_facts_refused
+    self.assertTrue(found[0].startswith('report-with-facts.json: facts is None, the case expects '), found[0])
+AssertionError: False is not true : facts-invalid.json: unreadable: 'facts'
+
+======================================================================
+FAIL: test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"v":2}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 236, in test_facts_line_refuses_value_outside_pattern_or_type
+    self._expect_facts_refused(self._replace_facts_line(line))
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 201, in _expect_facts_refused
+    self.assertTrue(found[0].startswith('report-with-facts.json: facts is None, the case expects '), found[0])
+AssertionError: False is not true : facts-invalid.json: unreadable: 'facts'
+
+======================================================================
+FAIL: test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"v":true}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 236, in test_facts_line_refuses_value_outside_pattern_or_type
+    self._expect_facts_refused(self._replace_facts_line(line))
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 201, in _expect_facts_refused
+    self.assertTrue(found[0].startswith('report-with-facts.json: facts is None, the case expects '), found[0])
+AssertionError: False is not true : facts-invalid.json: unreadable: 'facts'
+
+======================================================================
+FAIL: test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"kind":"bug"}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 236, in test_facts_line_refuses_value_outside_pattern_or_type
+    self._expect_facts_refused(self._replace_facts_line(line))
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 201, in _expect_facts_refused
+    self.assertTrue(found[0].startswith('report-with-facts.json: facts is None, the case expects '), found[0])
+AssertionError: False is not true : facts-invalid.json: unreadable: 'facts'
+
+======================================================================
+FAIL: test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"v":1,"kind":"feature"}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 236, in test_facts_line_refuses_value_outside_pattern_or_type
+    self._expect_facts_refused(self._replace_facts_line(line))
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 201, in _expect_facts_refused
+    self.assertTrue(found[0].startswith('report-with-facts.json: facts is None, the case expects '), found[0])
+AssertionError: False is not true : facts-invalid.json: unreadable: 'facts'
+
+======================================================================
+FAIL: test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"v":1,"area":"Launch_Fleet"}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 236, in test_facts_line_refuses_value_outside_pattern_or_type
+    self._expect_facts_refused(self._replace_facts_line(line))
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 201, in _expect_facts_refused
+    self.assertTrue(found[0].startswith('report-with-facts.json: facts is None, the case expects '), found[0])
+AssertionError: False is not true : facts-invalid.json: unreadable: 'facts'
+
+======================================================================
+FAIL: test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"v":1,"openwiz":"0.1"}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 236, in test_facts_line_refuses_value_outside_pattern_or_type
+    self._expect_facts_refused(self._replace_facts_line(line))
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 201, in _expect_facts_refused
+    self.assertTrue(found[0].startswith('report-with-facts.json: facts is None, the case expects '), found[0])
+AssertionError: False is not true : facts-invalid.json: unreadable: 'facts'
+
+======================================================================
+FAIL: test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"v":1,"skill":"0.4.0"}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 236, in test_facts_line_refuses_value_outside_pattern_or_type
+    self._expect_facts_refused(self._replace_facts_line(line))
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 201, in _expect_facts_refused
+    self.assertTrue(found[0].startswith('report-with-facts.json: facts is None, the case expects '), found[0])
+AssertionError: False is not true : facts-invalid.json: unreadable: 'facts'
+
+======================================================================
+FAIL: test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"v":1,"os":"freebsd"}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 236, in test_facts_line_refuses_value_outside_pattern_or_type
+    self._expect_facts_refused(self._replace_facts_line(line))
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 201, in _expect_facts_refused
+    self.assertTrue(found[0].startswith('report-with-facts.json: facts is None, the case expects '), found[0])
+AssertionError: False is not true : facts-invalid.json: unreadable: 'facts'
+
+======================================================================
+FAIL: test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"v":1,"arch":"riscv64"}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 236, in test_facts_line_refuses_value_outside_pattern_or_type
+    self._expect_facts_refused(self._replace_facts_line(line))
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 201, in _expect_facts_refused
+    self.assertTrue(found[0].startswith('report-with-facts.json: facts is None, the case expects '), found[0])
+AssertionError: False is not true : facts-invalid.json: unreadable: 'facts'
+
+======================================================================
+FAIL: test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"v":1,"model":"claude opus"}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 236, in test_facts_line_refuses_value_outside_pattern_or_type
+    self._expect_facts_refused(self._replace_facts_line(line))
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 201, in _expect_facts_refused
+    self.assertTrue(found[0].startswith('report-with-facts.json: facts is None, the case expects '), found[0])
+AssertionError: False is not true : facts-invalid.json: unreadable: 'facts'
+
+======================================================================
+FAIL: test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"v":1,"log_lines":41}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 236, in test_facts_line_refuses_value_outside_pattern_or_type
+    self._expect_facts_refused(self._replace_facts_line(line))
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 201, in _expect_facts_refused
+    self.assertTrue(found[0].startswith('report-with-facts.json: facts is None, the case expects '), found[0])
+AssertionError: False is not true : facts-invalid.json: unreadable: 'facts'
+
+======================================================================
+FAIL: test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"v":1,"redactions":10000}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 236, in test_facts_line_refuses_value_outside_pattern_or_type
+    self._expect_facts_refused(self._replace_facts_line(line))
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 201, in _expect_facts_refused
+    self.assertTrue(found[0].startswith('report-with-facts.json: facts is None, the case expects '), found[0])
+AssertionError: False is not true : facts-invalid.json: unreadable: 'facts'
+
+======================================================================
+FAIL: test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"v":1,"log_lines":true}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 236, in test_facts_line_refuses_value_outside_pattern_or_type
+    self._expect_facts_refused(self._replace_facts_line(line))
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 201, in _expect_facts_refused
+    self.assertTrue(found[0].startswith('report-with-facts.json: facts is None, the case expects '), found[0])
+AssertionError: False is not true : facts-invalid.json: unreadable: 'facts'
+
+======================================================================
+FAIL: test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"v": 1}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 236, in test_facts_line_refuses_value_outside_pattern_or_type
+    self._expect_facts_refused(self._replace_facts_line(line))
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 201, in _expect_facts_refused
+    self.assertTrue(found[0].startswith('report-with-facts.json: facts is None, the case expects '), found[0])
+AssertionError: False is not true : facts-invalid.json: unreadable: 'facts'
+
+======================================================================
+FAIL: test_facts_line_refuses_value_outside_pattern_or_type (__main__.PlantedBreaks.test_facts_line_refuses_value_outside_pattern_or_type) (line='OpenWiz feedback facts {"v":1,"host":"clöud"}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 236, in test_facts_line_refuses_value_outside_pattern_or_type
+    self._expect_facts_refused(self._replace_facts_line(line))
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 201, in _expect_facts_refused
+    self.assertTrue(found[0].startswith('report-with-facts.json: facts is None, the case expects '), found[0])
+AssertionError: False is not true : facts-invalid.json: unreadable: 'facts'
+
+======================================================================
+FAIL: test_facts_line_refuses_wrong_key_order (__main__.PlantedBreaks.test_facts_line_refuses_wrong_key_order)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 213, in test_facts_line_refuses_wrong_key_order
+    self._expect_facts_refused(
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 201, in _expect_facts_refused
+    self.assertTrue(found[0].startswith('report-with-facts.json: facts is None, the case expects '), found[0])
+AssertionError: False is not true : facts-invalid.json: unreadable: 'facts'
+
+======================================================================
+FAIL: test_facts_line_refuses_wrong_place (__main__.PlantedBreaks.test_facts_line_refuses_wrong_place)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 243, in test_facts_line_refuses_wrong_place
+    self._expect_facts_refused(case('report-with-facts', move_to_top))
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 201, in _expect_facts_refused
+    self.assertTrue(found[0].startswith('report-with-facts.json: facts is None, the case expects '), found[0])
+AssertionError: False is not true : facts-invalid.json: unreadable: 'facts'
+
+======================================================================
+FAIL: test_no_landed_comment_without_a_version_or_a_merge (__main__.PlantedBreaks.test_no_landed_comment_without_a_version_or_a_merge)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 92, in test_no_landed_comment_without_a_version_or_a_merge
+    self.refused(case('landed', lambda d: d['input']['issues']['9101'].update(milestone='next')),
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 53, in refused
+    self.assertEqual(planted(edit), list(expected))
+AssertionError: Lists differ: ["facts-invalid.json: unreadable: 'facts'"[104 chars]ase'] != ['landed.json: posts must be []', 'fixture[14 chars]ase']
+
+First differing element 0:
+"facts-invalid.json: unreadable: 'facts'"
+'landed.json: posts must be []'
+
+First list contains 2 additional elements.
+First extra element 2:
+"report-with-facts.json: unreadable: 'facts'"
+
++ ['landed.json: posts must be []', 'fixtures: no landed case']
+- ["facts-invalid.json: unreadable: 'facts'",
+-  'landed.json: posts must be []',
+-  "report-with-facts.json: unreadable: 'facts'",
+-  'fixtures: no landed case']
+
+======================================================================
+FAIL: test_only_a_full_closing_line_reaches_the_destination (__main__.PlantedBreaks.test_only_a_full_closing_line_reaches_the_destination)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 113, in test_only_a_full_closing_line_reaches_the_destination
+    self.refused(case('landed', lambda d: d['input']['pull_request'].update(closes=['Closes #9106', 'Closes #9101'])),
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 53, in refused
+    self.assertEqual(planted(edit), list(expected))
+AssertionError: Lists differ: ["facts-invalid.json: unreadable: 'facts'"[104 chars]ase'] != ['landed.json: posts must be []', 'fixture[14 chars]ase']
+
+First differing element 0:
+"facts-invalid.json: unreadable: 'facts'"
+'landed.json: posts must be []'
+
+First list contains 2 additional elements.
+First extra element 2:
+"report-with-facts.json: unreadable: 'facts'"
+
++ ['landed.json: posts must be []', 'fixtures: no landed case']
+- ["facts-invalid.json: unreadable: 'facts'",
+-  'landed.json: posts must be []',
+-  "report-with-facts.json: unreadable: 'facts'",
+-  'fixtures: no landed case']
+
+======================================================================
+FAIL: test_only_a_record_authors_landed_comment_counts (__main__.PlantedBreaks.test_only_a_record_authors_landed_comment_counts)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 86, in test_only_a_record_authors_landed_comment_counts
+    self.refused(case('landed-second-merge', forge),
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 53, in refused
+    self.assertEqual(planted(edit), list(expected))
+AssertionError: Lists differ: ["facts-invalid.json: unreadable: 'facts'",[229 chars]ase'] != ["landed-second-merge.json: posts must be [[139 chars]ase']
+
+First differing element 0:
+"facts-invalid.json: unreadable: 'facts'"
+"landed-second-merge.json: posts must be [[104 chars].']]"
+
+First list contains 2 additional elements.
+First extra element 2:
+"report-with-facts.json: unreadable: 'facts'"
+
+- ["facts-invalid.json: unreadable: 'facts'",
+-  "landed-second-merge.json: posts must be [[9101, 'Landed: the fix for this "
+? ^
+
++ ["landed-second-merge.json: posts must be [[9101, 'Landed: the fix for this "
+? ^
+
+   "report merged in openwizdev/OpenWiz#9202 and will ship in OpenWiz 9.4.2.']]",
+-  "report-with-facts.json: unreadable: 'facts'",
+   'fixtures: no second merge case']
+
+======================================================================
+FAIL: test_the_brief_copies_no_link_or_code_from_the_report (__main__.PlantedBreaks.test_the_brief_copies_no_link_or_code_from_the_report)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 69, in test_the_brief_copies_no_link_or_code_from_the_report
+    self.refused(case('triage-to-a-fleet', copy), 'triage-to-a-fleet.json: the brief copies a link or code from the report')
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 53, in refused
+    self.assertEqual(planted(edit), list(expected))
+AssertionError: Lists differ: ["facts-invalid.json: unreadable: 'facts'"[118 chars]ort'] != ['triage-to-a-fleet.json: the brief copies[28 chars]ort']
+
+First differing element 0:
+"facts-invalid.json: unreadable: 'facts'"
+'triage-to-a-fleet.json: the brief copies a link or code from the report'
+
+First list contains 2 additional elements.
+First extra element 1:
+"report-with-facts.json: unreadable: 'facts'"
+
+- ["facts-invalid.json: unreadable: 'facts'",
+-  "report-with-facts.json: unreadable: 'facts'",
+-  'triage-to-a-fleet.json: the brief copies a link or code from the report']
+? ^
+
++ ['triage-to-a-fleet.json: the brief copies a link or code from the report']
+? ^
+
+
+======================================================================
+FAIL: test_the_landed_comment_follows_the_brief_link (__main__.PlantedBreaks.test_the_landed_comment_follows_the_brief_link)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 98, in test_the_landed_comment_follows_the_brief_link
+    self.refused(case('landed', lambda d: d['input']['pull_request'].update(closes=['Closes openwizdev/OpenWiz#9101'])),
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 53, in refused
+    self.assertEqual(planted(edit), list(expected))
+AssertionError: Lists differ: ["facts-invalid.json: unreadable: 'facts'"[104 chars]ase'] != ['landed.json: posts must be []', 'fixture[14 chars]ase']
+
+First differing element 0:
+"facts-invalid.json: unreadable: 'facts'"
+'landed.json: posts must be []'
+
+First list contains 2 additional elements.
+First extra element 2:
+"report-with-facts.json: unreadable: 'facts'"
+
++ ['landed.json: posts must be []', 'fixtures: no landed case']
+- ["facts-invalid.json: unreadable: 'facts'",
+-  'landed.json: posts must be []',
+-  "report-with-facts.json: unreadable: 'facts'",
+-  'fixtures: no landed case']
+
+======================================================================
+FAIL: test_the_landed_comment_names_the_pull_request_in_full (__main__.PlantedBreaks.test_the_landed_comment_names_the_pull_request_in_full)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 109, in test_the_landed_comment_names_the_pull_request_in_full
+    self.refused(case('landed', lambda d: d['input']['pull_request'].update(repository='synthetic-org/WizSkills')),
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 53, in refused
+    self.assertEqual(planted(edit), list(expected))
+AssertionError: Lists differ: ["facts-invalid.json: unreadable: 'facts'"[104 chars]ase'] != ['landed.json: posts must be []', 'fixture[14 chars]ase']
+
+First differing element 0:
+"facts-invalid.json: unreadable: 'facts'"
+'landed.json: posts must be []'
+
+First list contains 2 additional elements.
+First extra element 2:
+"report-with-facts.json: unreadable: 'facts'"
+
++ ['landed.json: posts must be []', 'fixtures: no landed case']
+- ["facts-invalid.json: unreadable: 'facts'",
+-  'landed.json: posts must be []',
+-  "report-with-facts.json: unreadable: 'facts'",
+-  'fixtures: no landed case']
+
+======================================================================
+FAIL: test_the_template_asks_only_for_public_words (__main__.PlantedBreaks.test_the_template_asks_only_for_public_words)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 137, in test_the_template_asks_only_for_public_words
+    self.assertEqual(len(found), 2)
+AssertionError: 4 != 2
+
+======================================================================
+FAIL: test_the_template_includes_optional_version_and_setup_fields (__main__.PlantedBreaks.test_the_template_includes_optional_version_and_setup_fields)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 165, in test_the_template_includes_optional_version_and_setup_fields
+    self.assertEqual(ids, [
+AssertionError: Lists differ: [(Non[119 chars]), ('public-words', 'checkboxes', False)] != [(Non[119 chars]), ('version', 'input', False), ('setup', 'inp[46 chars]lse)]
+
+First differing element 4:
+('public-words', 'checkboxes', False)
+('version', 'input', False)
+
+Second list contains 2 additional elements.
+First extra element 5:
+('setup', 'input', False)
+
+  [(None, 'markdown', False),
+   ('what-happened', 'textarea', True),
+   ('expected', 'textarea', True),
+   ('steps', 'textarea', False),
++  ('version', 'input', False),
++  ('setup', 'input', False),
+   ('public-words', 'checkboxes', False)]
+
+======================================================================
+FAIL: test_the_template_keeps_the_approved_warning_and_confirmation (__main__.PlantedBreaks.test_the_template_keeps_the_approved_warning_and_confirmation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 154, in test_the_template_keeps_the_approved_warning_and_confirmation
+    self.refused(template(warning, 'Paste private logs here.'),
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 53, in refused
+    self.assertEqual(planted(edit), list(expected))
+AssertionError: Lists differ: ["facts-invalid.json: unreadable: 'facts'"[109 chars]ing'] != ['template: the template must carry exactl[19 chars]ing']
+
+First differing element 0:
+"facts-invalid.json: unreadable: 'facts'"
+'template: the template must carry exactly the approved warning'
+
+First list contains 2 additional elements.
+First extra element 1:
+"report-with-facts.json: unreadable: 'facts'"
+
+- ["facts-invalid.json: unreadable: 'facts'",
+-  "report-with-facts.json: unreadable: 'facts'",
+-  'template: the template must carry exactly the approved warning']
+? ^
+
++ ['template: the template must carry exactly the approved warning']
+? ^
+
+
+======================================================================
+FAIL: test_triage_posts_no_comment_on_the_report (__main__.PlantedBreaks.test_triage_posts_no_comment_on_the_report)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 72, in test_triage_posts_no_comment_on_the_report
+    self.refused(case('triage-held-too-big', lambda d: d['expect']['report_comments'].append('Thanks!')),
+  File "<checkout>/contracts/fixtures/feedback-loop/test_check.py", line 53, in refused
+    self.assertEqual(planted(edit), list(expected))
+AssertionError: Lists differ: ["facts-invalid.json: unreadable: 'facts'"[110 chars]ort'] != ['triage-held-too-big.json: triage posts n[20 chars]ort']
+
+First differing element 0:
+"facts-invalid.json: unreadable: 'facts'"
+'triage-held-too-big.json: triage posts no comment on the report'
+
+First list contains 2 additional elements.
+First extra element 1:
+"report-with-facts.json: unreadable: 'facts'"
+
+- ["facts-invalid.json: unreadable: 'facts'",
+-  "report-with-facts.json: unreadable: 'facts'",
+-  'triage-held-too-big.json: triage posts no comment on the report']
+? ^
+
++ ['triage-held-too-big.json: triage posts no comment on the report']
+? ^
+
+
+----------------------------------------------------------------------
+Ran 25 tests in 0.152s
+
+FAILED (failures=39)
+EXIT:1

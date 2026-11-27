@@ -1,0 +1,12 @@
+# New zero-free-bytes repair fixture run against the unfixed tools/install/install.py
+F
+======================================================================
+FAIL: test_a_repair_refused_for_zero_free_bytes_keeps_the_builds_mode (tools.install.tests.journey.test_journey.InstallJourney.test_a_repair_refused_for_zero_free_bytes_keeps_the_builds_mode)
+----------------------------------------------------------------------
+  File "tools/install/tests/journey/test_journey.py", line 574, in test_a_repair_refused_for_zero_free_bytes_keeps_the_builds_mode
+AssertionError: 448 != 0
+
+----------------------------------------------------------------------
+Ran 1 test in 0.868s
+
+FAILED (failures=1)

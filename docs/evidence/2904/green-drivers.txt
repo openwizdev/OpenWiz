@@ -1,0 +1,29 @@
+== adapters/template/test_driver.py -k provider_qualified
+test_a_provider_qualified_model_reaches_the_harness (__main__.Template.test_a_provider_qualified_model_reaches_the_harness) ... ok
+Ran 1 test in 0.249s
+OK
+== adapters/boat/test_driver.py -k provider_qualified
+Ran 1 test in 0.669s
+OK
+== adapters/cloudroom/test_driver.py -k provider_qualified
+test_a_provider_qualified_model_reaches_spawn (__main__.Driver.test_a_provider_qualified_model_reaches_spawn) ... ok
+Ran 1 test in 0.083s
+OK
+== adapters/devin/test_driver.py -k provider_qualified
+Ran 1 test in 0.061s
+OK
+== adapters/openclaw/test_driver.py -k provider_qualified
+test_a_provider_qualified_model_reaches_acpx (__main__.OpenClaw.test_a_provider_qualified_model_reaches_acpx) ... ok
+Ran 1 test in 0.146s
+OK
+
+== full suites at this code, each run with python3 -I
+kernel/driver-kit/test_kit.py exit 0 OK
+adapters/boat/test_driver.py exit 0 OK
+adapters/cloudroom/test_driver.py exit 0 OK
+adapters/devin/test_driver.py exit 0 OK
+adapters/local/test_driver.py exit 0 OK
+adapters/openclaw/test_driver.py exit 0 OK
+adapters/template/test_driver.py exit 0 OK
+adapters/local/test_harnesses.py exit 0 rows in adapters/local/harnesses: none yet
+kernel/live-rig/test_rig.py exit 0 OK

@@ -1,0 +1,5 @@
+# Red: an empty amp row (row.json is {}); agent-CLI stubs first on PATH, OPENWIZ_GITHUB_APP_KEY unset
+
+$ python3 -I adapters/local/test_harnesses.py --rows adapters/local/harnesses
+fail amp: row.json effort: it has no effort form; give an effort map or "none: <one line why>"
+exit=1

@@ -1,0 +1,4 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY PATH=<31 refusing stubs>:$PATH python3 -I adapters/local/test_harnesses.py --rows adapters/local/harnesses
+(row.json is {}: the empty kimi row, at 3f486e077adf1531550b7475bb3c67283d4ef7af)
+fail kimi: row.json effort: it has no effort form; give an effort map or "none: <one line why>"
+exit 1

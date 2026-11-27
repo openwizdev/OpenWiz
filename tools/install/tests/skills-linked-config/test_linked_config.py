@@ -105,6 +105,22 @@ class LinkedConfig(base.HarnessSkills):
         self.assertEqual((code, row['state']), (0, 'partial'), result)
         self.assertIn(str(old), row['next'])
 
+    @unittest.skipIf(os.getuid() == 0, 'root ignores write permission')
+    def test_a_read_only_canonical_backup_is_cleanup_advice_and_the_install_is_whole(self):
+        (self.home / '.claude').mkdir()
+        self.assertEqual(self.skills()[0], 0)
+        canonical, old = self.root / 'skills', self.root / 'skills/.openwiz-old-grill'
+        (canonical / 'grill').chmod(0o500)
+        self.addCleanup(lambda: old.exists() and old.chmod(0o700))
+        code, result = self.skills()
+        self.assertEqual((code, result.get('outcome')), (0, 'installed'), result)
+        self.assertEqual({r['id']: r['state'] for r in result['harnesses']}['claude-code'], 'installed')
+        self.assertEqual(base.skill_files(canonical, skip=('.openwiz-old-grill',)),
+                         base.skill_files(self.root / 'current/runtime/skills'))
+        self.assertNotIn('canonical_refused', result)
+        self.assertIn(str(old), result.get('canonical_cleanup', ''))
+        self.assertIn('run this again', result['canonical_cleanup'])
+
 
 class LockedRemove(Remove):
     def test_remove_on_a_root_without_its_lock_holds_one_against_a_new_install(self):
@@ -155,6 +171,26 @@ class LockedRemove(Remove):
         code, value = self.run_entry('remove', '--root', str(self.root), '--yes')
         self.assertEqual((code, value['outcome']), (5, 'refused'), value)
         self.assertIn(str(self.root / 'install.lock'), value['reason'])
+        self.assertTrue((self.root / 'current').is_symlink())
+
+
+    def test_a_preview_whose_lock_vanishes_before_it_opens_stays_read_only(self):
+        self.installed()
+        lock, real_open, seen = self.root / 'install.lock', os.open, []
+
+        def vanish(path, *args, **kwargs):
+            if Path(path) == lock and os.path.lexists(lock):
+                os.unlink(lock)
+            return real_open(path, *args, **kwargs)
+
+        def probe(*args):
+            seen.append(os.path.lexists(lock))
+            return real(*args)
+        real = entry.remove_unlocked
+        with mock.patch.object(entry.os, 'open', vanish), mock.patch.object(entry, 'remove_unlocked', probe):
+            code, value = self.run_entry('remove', '--root', str(self.root))
+        self.assertEqual((code, value['outcome'], seen), (0, 'preview', [False]), value)
+        self.assertFalse(os.path.lexists(lock))
         self.assertTrue((self.root / 'current').is_symlink())
 
 

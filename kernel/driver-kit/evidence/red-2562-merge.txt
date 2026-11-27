@@ -1,0 +1,254 @@
+#2562 main merge, red: the WIP merge (90da347c) keeps the main start unsampled outside the declared, taken form
+
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/driver-kit/test_kit.py Kit.test_each_effort_form_samples_its_one_main_start_and_no_other_start
+test_each_effort_form_samples_its_one_main_start_and_no_other_start (__main__.Kit.test_each_effort_form_samples_its_one_main_start_and_no_other_start) ... 
+  test_each_effort_form_samples_its_one_main_start_and_no_other_start (__main__.Kit.test_each_effort_form_samples_its_one_main_start_and_no_other_start) (form='refused') ... FAIL
+  test_each_effort_form_samples_its_one_main_start_and_no_other_start (__main__.Kit.test_each_effort_form_samples_its_one_main_start_and_no_other_start) (form='undeclared') ... FAIL
+  test_each_effort_form_samples_its_one_main_start_and_no_other_start (__main__.Kit.test_each_effort_form_samples_its_one_main_start_and_no_other_start) (form='key-host') ... FAIL
+
+======================================================================
+FAIL: test_each_effort_form_samples_its_one_main_start_and_no_other_start (__main__.Kit.test_each_effort_form_samples_its_one_main_start_and_no_other_start) (form='refused')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./kernel/driver-kit/test_kit.py", line 654, in test_each_effort_form_samples_its_one_main_start_and_no_other_start
+    self.assertEqual(json.load(f), starts)
+AssertionError: Lists differ: [{'sa[68 chars]ed': 0, 'effort': False, 'token': False, 'cana[72 chars]lse}] != [{'sa[68 chars]ed': 1, 'effort': False, 'token': False, 'cana[72 chars]lse}]
+
+First differing element 1:
+{'sampled': 0, 'effort': False, 'token': False, 'canary': False}
+{'sampled': 1, 'effort': False, 'token': False, 'canary': False}
+
+  [{'canary': False, 'effort': True, 'sampled': 1, 'token': False},
+-  {'canary': False, 'effort': False, 'sampled': 0, 'token': False},
+?                                                ^
+
++  {'canary': False, 'effort': False, 'sampled': 1, 'token': False},
+?                                                ^
+
+   {'canary': False, 'effort': False, 'sampled': 0, 'token': True}]
+
+======================================================================
+FAIL: test_each_effort_form_samples_its_one_main_start_and_no_other_start (__main__.Kit.test_each_effort_form_samples_its_one_main_start_and_no_other_start) (form='undeclared')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./kernel/driver-kit/test_kit.py", line 654, in test_each_effort_form_samples_its_one_main_start_and_no_other_start
+    self.assertEqual(json.load(f), starts)
+AssertionError: Lists differ: [{'sa[68 chars]ed': 0, 'effort': False, 'token': False, 'cana[72 chars]lse}] != [{'sa[68 chars]ed': 1, 'effort': False, 'token': False, 'cana[72 chars]lse}]
+
+First differing element 1:
+{'sampled': 0, 'effort': False, 'token': False, 'canary': False}
+{'sampled': 1, 'effort': False, 'token': False, 'canary': False}
+
+  [{'canary': False, 'effort': True, 'sampled': 0, 'token': False},
+-  {'canary': False, 'effort': False, 'sampled': 0, 'token': False},
+?                                                ^
+
++  {'canary': False, 'effort': False, 'sampled': 1, 'token': False},
+?                                                ^
+
+   {'canary': False, 'effort': False, 'sampled': 0, 'token': True}]
+
+======================================================================
+FAIL: test_each_effort_form_samples_its_one_main_start_and_no_other_start (__main__.Kit.test_each_effort_form_samples_its_one_main_start_and_no_other_start) (form='key-host')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./kernel/driver-kit/test_kit.py", line 654, in test_each_effort_form_samples_its_one_main_start_and_no_other_start
+    self.assertEqual(json.load(f), starts)
+AssertionError: Lists differ: [{'sa[67 chars]ed': 0, 'effort': True, 'token': False, 'canar[136 chars]rue}] != [{'sa[67 chars]ed': 1, 'effort': True, 'token': False, 'canar[136 chars]rue}]
+
+First differing element 1:
+{'sampled': 0, 'effort': True, 'token': False, 'canary': False}
+{'sampled': 1, 'effort': True, 'token': False, 'canary': False}
+
+  [{'canary': True, 'effort': True, 'sampled': 0, 'token': False},
+-  {'canary': False, 'effort': True, 'sampled': 0, 'token': False},
+?                                               ^
+
++  {'canary': False, 'effort': True, 'sampled': 1, 'token': False},
+?                                               ^
+
+   {'canary': False, 'effort': False, 'sampled': 0, 'token': True},
+   {'canary': True, 'effort': False, 'sampled': 1, 'token': False}]
+
+----------------------------------------------------------------------
+Ran 1 test in 4.453s
+
+FAILED (failures=3)
+
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/driver-kit/test_kit.py Kit.test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos
+test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos (__main__.Kit.test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos) ... 
+  test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos (__main__.Kit.test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos) (form='undeclared', python='python3') ... FAIL
+  test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos (__main__.Kit.test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos) (form='undeclared', python='./kernel/driver-kit/fixtures/no-proc/python3') ... FAIL
+  test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos (__main__.Kit.test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos) (form='refused', python='python3') ... FAIL
+  test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos (__main__.Kit.test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos) (form='refused', python='./kernel/driver-kit/fixtures/no-proc/python3') ... FAIL
+  test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos (__main__.Kit.test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos) (form='key-host', python='python3') ... FAIL
+  test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos (__main__.Kit.test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos) (form='key-host', python='./kernel/driver-kit/fixtures/no-proc/python3') ... FAIL
+
+======================================================================
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./kernel/driver-kit/test_kit.py", line 653, in test_each_effort_form_samples_its_one_main_start_and_no_other_start
+    self.assertEqual(json.load(f), starts)
+AssertionError: Lists differ: [{'sampled': 1, 'effort': True, 'token': False, 'canar[137 chars]lse}] != [{'sampled': 0, 'effort': True, 'token': False, 'canar[137 chars]lse}]
+
+First differing element 0:
+{'sampled': 1, 'effort': True, 'token': False, 'canary': False}
+{'sampled': 0, 'effort': True, 'token': False, 'canary': False}
+
+- [{'canary': False, 'effort': True, 'sampled': 1, 'token': False},
+?                                               ^
+
++ [{'canary': False, 'effort': True, 'sampled': 0, 'token': False},
+?                                               ^
+
+-  {'canary': False, 'effort': False, 'sampled': 0, 'token': False},
+?                                                ^
+
++  {'canary': False, 'effort': False, 'sampled': 1, 'token': False},
+?                                                ^
+
+   {'canary': False, 'effort': False, 'sampled': 0, 'token': True}]
+
+======================================================================
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./kernel/driver-kit/test_kit.py", line 653, in test_each_effort_form_samples_its_one_main_start_and_no_other_start
+    self.assertEqual(json.load(f), starts)
+AssertionError: Lists differ: [{'sa[68 chars]ed': 0, 'effort': False, 'token': False, 'cana[72 chars]lse}] != [{'sa[68 chars]ed': 1, 'effort': False, 'token': False, 'cana[72 chars]lse}]
+
+First differing element 1:
+{'sampled': 0, 'effort': False, 'token': False, 'canary': False}
+{'sampled': 1, 'effort': False, 'token': False, 'canary': False}
+
+  [{'canary': False, 'effort': True, 'sampled': 0, 'token': False},
+-  {'canary': False, 'effort': False, 'sampled': 0, 'token': False},
+?                                                ^
+
++  {'canary': False, 'effort': False, 'sampled': 1, 'token': False},
+?                                                ^
+
+   {'canary': False, 'effort': False, 'sampled': 0, 'token': True}]
+
+======================================================================
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./kernel/driver-kit/test_kit.py", line 653, in test_each_effort_form_samples_its_one_main_start_and_no_other_start
+    self.assertEqual(json.load(f), starts)
+AssertionError: Lists differ: [{'sa[67 chars]ed': 0, 'effort': True, 'token': False, 'canar[136 chars]rue}] != [{'sa[67 chars]ed': 1, 'effort': True, 'token': False, 'canar[136 chars]rue}]
+
+First differing element 1:
+{'sampled': 0, 'effort': True, 'token': False, 'canary': False}
+{'sampled': 1, 'effort': True, 'token': False, 'canary': False}
+
+  [{'canary': True, 'effort': True, 'sampled': 0, 'token': False},
+-  {'canary': False, 'effort': True, 'sampled': 0, 'token': False},
+?                                               ^
+
++  {'canary': False, 'effort': True, 'sampled': 1, 'token': False},
+?                                               ^
+
+   {'canary': False, 'effort': False, 'sampled': 0, 'token': True},
+   {'canary': True, 'effort': False, 'sampled': 1, 'token': False}]
+
+======================================================================
+FAIL: test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos (__main__.Kit.test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos) (form='undeclared', python='python3')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./kernel/driver-kit/test_kit.py", line 668, in test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos
+    self.assertEqual([line.partition(':')[0] for line in out],
+AssertionError: Lists differ: ['pass version', 'pass start', 'pass wake', 'pass stop', 'pass token'] != ['pass version', 'pass start', 'pass wake', 'pass stop', 'fail token']
+
+First differing element 4:
+'pass token'
+'fail token'
+
+- ['pass version', 'pass start', 'pass wake', 'pass stop', 'pass token']
+?                                                           ^ ^^
+
++ ['pass version', 'pass start', 'pass wake', 'pass stop', 'fail token']
+?                                                           ^ ^^
+ : ['pass version: openwiz:records v1, and the schema is driver v1', 'pass start: the run posted builder status note 2', 'pass wake: the run edited builder status note 2', 'pass stop: the run ended, and a wake after it is refused', 'pass token: no login or token passed through the driver']
+
+======================================================================
+FAIL: test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos (__main__.Kit.test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos) (form='undeclared', python='./kernel/driver-kit/fixtures/no-proc/python3')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./kernel/driver-kit/test_kit.py", line 668, in test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos
+    self.assertEqual([line.partition(':')[0] for line in out],
+AssertionError: Lists differ: ['pass version', 'pass start', 'pass wake', 'pass stop', 'pass token'] != ['pass version', 'pass start', 'pass wake', 'pass stop', 'fail token']
+
+First differing element 4:
+'pass token'
+'fail token'
+
+- ['pass version', 'pass start', 'pass wake', 'pass stop', 'pass token']
+?                                                           ^ ^^
+
++ ['pass version', 'pass start', 'pass wake', 'pass stop', 'fail token']
+?                                                           ^ ^^
+ : ['pass version: openwiz:records v1, and the schema is driver v1', 'pass start: the run posted builder status note 2', 'pass wake: the run edited builder status note 2', 'pass stop: the run ended, and a wake after it is refused', 'pass token: no login or token passed through the driver']
+
+======================================================================
+FAIL: test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos (__main__.Kit.test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos) (form='refused', python='python3')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./kernel/driver-kit/test_kit.py", line 668, in test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos
+    self.assertEqual([line.partition(':')[0] for line in out],
+AssertionError: Lists differ: ['pass version', 'pass start', 'pass wake', 'pass stop', 'pass token'] != ['pass version', 'pass start', 'pass wake', 'pass stop', 'fail token']
+
+First differing element 4:
+'pass token'
+'fail token'
+
+- ['pass version', 'pass start', 'pass wake', 'pass stop', 'pass token']
+?                                                           ^ ^^
+
++ ['pass version', 'pass start', 'pass wake', 'pass stop', 'fail token']
+?                                                           ^ ^^
+ : ['pass version: openwiz:records v1, and the schema is driver v1', 'pass start: the run posted builder status note 2; effort: refused for fake-harness with the refusal text, as the README says', 'pass wake: the run edited builder status note 2', 'pass stop: the run ended, and a wake after it is refused', 'pass token: no login or token passed through the driver']
+
+======================================================================
+FAIL: test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos (__main__.Kit.test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos) (form='refused', python='./kernel/driver-kit/fixtures/no-proc/python3')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./kernel/driver-kit/test_kit.py", line 668, in test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos
+    self.assertEqual([line.partition(':')[0] for line in out],
+AssertionError: Lists differ: ['pass version', 'pass start', 'pass wake', 'pass stop', 'pass token'] != ['pass version', 'pass start', 'pass wake', 'pass stop', 'fail token']
+
+First differing element 4:
+'pass token'
+'fail token'
+
+- ['pass version', 'pass start', 'pass wake', 'pass stop', 'pass token']
+?                                                           ^ ^^
+
++ ['pass version', 'pass start', 'pass wake', 'pass stop', 'fail token']
+?                                                           ^ ^^
+ : ['pass version: openwiz:records v1, and the schema is driver v1', 'pass start: the run posted builder status note 2; effort: refused for fake-harness with the refusal text, as the README says', 'pass wake: the run edited builder status note 2', 'pass stop: the run ended, and a wake after it is refused', 'pass token: no login or token passed through the driver']
+
+======================================================================
+FAIL: test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos (__main__.Kit.test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos) (form='key-host', python='python3')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./kernel/driver-kit/test_kit.py", line 670, in test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos
+    self.assertEqual(out[4], 'fail token: ' + IN_ARGS)
+AssertionError: "fail token: the driver's file driver nam[32 chars]able" != 'fail token: a process the driver started[35 chars]line'
+- fail token: the driver's file driver names DEVIN_API_KEY, the key's variable
++ fail token: a process the driver started holds a credential on its command line
+
+
+======================================================================
+FAIL: test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos (__main__.Kit.test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos) (form='key-host', python='./kernel/driver-kit/fixtures/no-proc/python3')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./kernel/driver-kit/test_kit.py", line 670, in test_a_child_living_only_during_the_main_start_is_watched_in_every_effort_form_on_linux_and_macos
+    self.assertEqual(out[4], 'fail token: ' + IN_ARGS)
+AssertionError: "fail token: the driver's file driver nam[32 chars]able" != 'fail token: a process the driver started[35 chars]line'
+- fail token: the driver's file driver names DEVIN_API_KEY, the key's variable
++ fail token: a process the driver started holds a credential on its command line
+
+
+----------------------------------------------------------------------
+Ran 2 tests in 23.964s
+
+FAILED (failures=9)

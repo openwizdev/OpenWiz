@@ -1,0 +1,23 @@
+#!/usr/bin/env python3
+import importlib.machinery, importlib.util, os, subprocess, sys
+sys.dont_write_bytecode = True
+HERE = os.path.dirname(os.path.abspath(__file__))
+spec = importlib.util.spec_from_loader('base', importlib.machinery.SourceFileLoader(
+    'base', os.path.join(HERE, '..', 'effort', 'driver')))
+d = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(d)
+d.pass_effort = lambda req: []
+t = d.apply(d.template())
+launch = t.launch
+
+
+def spawn(req, run, woken):
+    if not woken:
+        subprocess.run([sys.executable, '-I', os.path.join(HERE, 'fake-room'), 'thread', 'spawn']
+                       + (['--reasoning-level', req['effort']] if 'effort' in req else []),
+                       stdin=subprocess.DEVNULL, check=True, timeout=60)
+    return launch(req, run, woken)
+
+
+t.launch = spawn
+t.main()

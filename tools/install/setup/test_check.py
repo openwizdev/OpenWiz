@@ -323,6 +323,74 @@ class IntelMac(unittest.TestCase):
         (self.base / 'Applications/Cloudroom.app').mkdir(parents=True)
         self.assertEqual(self.cloudroom.status(self.host(), self.base / 'state')['code'], 'cloudroom_reused')
 
+    def test_a_cloudroom_cloud_thread_passes_setup_check_without_cloudroom_unsupported(self):
+        home = self.base / 'home/synthetic'
+        home.mkdir(parents=True, exist_ok=True)
+        launcher = self.base / 'usr/local/bin/room-cli'
+        launcher.parent.mkdir(parents=True, exist_ok=True)
+        launcher.write_text('#!/bin/sh\nprintf \'{"childThreads":[],"thread":{"id":"thr_syn_0001","projectId":"prj_syn_0001","archived":false}}\'\n')
+        launcher.chmod(0o700)
+        host = self.cloudroom.Host('Linux', 'aarch64', home=home, root=self.base)
+        code = self.cloudroom.status(host, self.base / 'state')['code']
+        self.assertEqual(code, 'cloudroom_login_verified')
+        results = {c: next(iter(NEXT_MUST_NAME[c])) for c in NEXT_MUST_NAME}
+        results['cloudroom'] = code
+        step = check_answering(self.base / 'state', results)['next']['cloudroom']
+        self.assertIn('None', step)
+
+
+class SetupSignerIsFixed(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.root = Path(tmp.name)
+        self.state = self.root / 'state'
+        self.app = self.state / 'service' / 'app'
+        self.app.mkdir(parents=True)
+        for folder in (self.state / 'service', self.app):
+            folder.chmod(0o700)
+        for name, body in (('app.json', b'{"app_id": 1001}'), ('private-key.pem', b'synthetic key\n')):
+            (self.app / name).write_bytes(body)
+            (self.app / name).chmod(0o600)
+        self.bin, self.seen = self.root / 'bin', self.root / 'seen'
+        self.bin.mkdir()
+        self.signer('openssl', 'path')
+        planted = {'PATH': f"{self.bin}:{os.environ.get('PATH', '')}", 'SYNTHETIC_PLANTED': 'planted'}
+        self.patch(mock.patch.dict(os.environ, planted))
+
+    def patch(self, patcher):
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def signer(self, name, label):
+        program = self.bin / name
+        program.write_text(f'#!{sys.executable}\nimport json, os, sys\nsys.stdin.buffer.read()\n'
+                           f'open({str(self.seen)!r}, "a").write(json.dumps([{label!r}, dict(os.environ)]) + "\\n")\n'
+                           'sys.stdout.buffer.write(b"synthetic signature")\n')
+        program.chmod(0o700)
+        return str(program)
+
+    def runs(self):
+        return [json.loads(line) for line in self.seen.read_text().splitlines()] if self.seen.exists() else []
+
+    def test_sign_jwt_runs_only_the_absolute_signer_with_an_empty_environment(self):
+        self.patch(mock.patch.object(setup, 'OPENSSL', self.signer('fixed-openssl', 'fixed')))
+        directory = setup.app_directory(str(self.state))
+        try:
+            jwt = setup.sign_jwt(directory, 1001)
+        finally:
+            os.close(directory)
+        self.assertTrue(jwt.endswith('.' + base64.urlsafe_b64encode(b'synthetic signature').rstrip(b'=').decode()))
+        (label, environment), = self.runs()
+        self.assertEqual(label, 'fixed', 'sign_jwt ran openssl from PATH')
+        self.assertFalse({'PATH', 'SYNTHETIC_PLANTED'} & set(environment), 'sign_jwt passed on its environment')
+
+    def test_a_missing_absolute_signer_is_unusable_and_never_falls_back_to_path(self):
+        self.patch(mock.patch.object(setup, 'OPENSSL', str(self.bin / 'absent')))
+        code, _ = setup.check_app(str(self.state), PROJECT, None, 'http://127.0.0.1:9')
+        self.assertEqual(self.runs(), [], 'a missing signer fell back to openssl on PATH')
+        self.assertEqual(code, 'app_files_unusable')
+
 
 class HostFixtureCase(unittest.TestCase):
     fixtures = json.loads((HERE.parent / 'tests/setup-onboard-contract/fixtures/hosts.json').read_text())

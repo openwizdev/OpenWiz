@@ -1,0 +1,71 @@
+#2562 fix round, red: review R1 to R4 and R7, before the fix. Every run behind no-op agent CLI stubs first on PATH, with env -u OPENWIZ_GITHUB_APP_KEY.
+
+1. R1: the reviewed head with EF6's template (#2590 at 7218ac4) laid over adapters/template; the fixtures wrap the live template.
+$ python3 -I kernel/driver-kit/test_kit.py Kit.test_template_passes_all_five Kit.test_each_effort_driver_prints_its_own_start_line Kit.test_each_planted_driver_fails_its_check
+FAIL: test_template_passes_all_five (__main__.Kit.test_template_passes_all_five)
+AssertionError: Tuples differ: (0, [[109 chars]ote 2; effort: medium reached a process the ru[181 chars], '') != (0, [[109 chars]ote 2', 'pass wake: the run edited builder sta[189 chars]4\n')
+FAIL: test_each_effort_driver_prints_its_own_start_line (__main__.Kit.test_each_effort_driver_prints_its_own_start_line) [effort]
+AssertionError: Tuples differ: (1, ['fail version: can repeats an item', [209 chars]er']) != (0, ['pass version: openwiz:records v1, an[295 chars]er'])
+FAIL: test_each_effort_driver_prints_its_own_start_line (__main__.Kit.test_each_effort_driver_prints_its_own_start_line) [effort-refused]
+AssertionError: Tuples differ: (1, ['fail version: can repeats an item', [209 chars]er']) != (0, ['pass version: openwiz:records v1, an[321 chars]er'])
+FAIL: test_each_effort_driver_prints_its_own_start_line (__main__.Kit.test_each_effort_driver_prints_its_own_start_line) [effort-cant]
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[250 chars]er']) != (0, ['pass version: openwiz:records v1, an[317 chars]er'])
+FAIL: test_each_effort_driver_prints_its_own_start_line (__main__.Kit.test_each_effort_driver_prints_its_own_start_line) [planted/effort-dropped]
+AssertionError: Tuples differ: (1, ['fail version: can repeats an item', 'fail[204 chars]er']) != (1, ['pass version: openwiz:records v1, and the[219 chars]er'])
+FAIL: test_each_effort_driver_prints_its_own_start_line (__main__.Kit.test_each_effort_driver_prints_its_own_start_line) [planted/effort-wrong-next]
+AssertionError: Tuples differ: (1, ['fail version: can repeats an item', 'fail[204 chars]er']) != (1, ['pass version: openwiz:records v1, and the[268 chars]er'])
+FAIL: test_each_effort_driver_prints_its_own_start_line (__main__.Kit.test_each_effort_driver_prints_its_own_start_line) [planted/effort-no-readme-line]
+AssertionError: Tuples differ: (1, ['fail version: can repeats an item', 'fail[204 chars]er']) != (1, ['pass version: openwiz:records v1, and the[245 chars]er'])
+FAIL: test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [token-in-args]
+AssertionError: Tuples differ: (1, [[61 chars]1', 'fail start: effort: its can lists effort,[180 chars]er']) != (1, [[61 chars]1', 'pass start: the run posted builder status[199 chars]ne'])
+FAIL: test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [token-in-env]
+AssertionError: Tuples differ: (1, [[61 chars]1', 'fail start: effort: its can lists effort,[180 chars]er']) != (1, [[61 chars]1', 'pass start: the run posted builder status[226 chars]it'])
+FAIL: test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [echoes-token]
+AssertionError: Tuples differ: (1, [[61 chars]1', 'fail start: effort: its can lists effort,[168 chars]al']) != (1, [[61 chars]1', 'pass start: the run posted builder status[163 chars]al'])
+FAIL: test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [takes-token]
+AssertionError: Tuples differ: (1, [[89 chars] can lists effort, but its README has no Effor[156 chars]it']) != (1, [[89 chars] can does not list effort, but a start with it[143 chars]it'])
+FAIL: test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [stop-leaves-run]
+AssertionError: Tuples differ: (1, [[61 chars]1', 'fail start: effort: its can lists effort,[180 chars]er']) != (1, [[61 chars]1', 'pass start: the run posted builder status[177 chars]er'])
+FAIL: test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [wake-does-nothing]
+AssertionError: Tuples differ: (1, [[61 chars]1', 'fail start: effort: its can lists effort,[180 chars]er']) != (1, [[61 chars]1', 'pass start: the run posted builder status[190 chars]er'])
+FAIL: test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) [old-records]
+AssertionError: Tuples differ: (1, [[44 chars]1', 'fail start: effort: its can lists effort,[180 chars]er']) != (1, [[44 chars]1', 'pass start: the run posted builder status[175 chars]er'])
+Ran 3 tests in 4.236s
+FAILED (failures=15)
+
+2. R1 to R4 and R7: the new and changed proofs on the fixed fixtures, against the unfixed kit.
+$ python3 -I kernel/driver-kit/test_kit.py <the ten cases below>
+FAIL: test_each_effort_driver_prints_its_own_start_line (__main__.Kit.test_each_effort_driver_prints_its_own_start_line) [effort-one-shot]
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[224 chars]er']) != (0, ['pass version: openwiz:records v1, an[295 chars]er'])
+FAIL: test_each_effort_driver_prints_its_own_start_line (__main__.Kit.test_each_effort_driver_prints_its_own_start_line) [planted/effort-refuses-listed]
+AssertionError: Tuples differ: (1, [[60 chars]v1', "fail start: effort: start refused medium[194 chars]er']) != (1, [[60 chars]v1', 'fail start: effort: start refused medium[193 chars]er'])
+FAIL: test_each_effort_driver_prints_its_own_start_line (__main__.Kit.test_each_effort_driver_prints_its_own_start_line) [planted/effort-word-elsewhere]
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[295 chars]er']) != (1, ['pass version: openwiz:records v1, an[224 chars]er'])
+FAIL: test_each_key_host_effort_driver_prints_its_own_start_line (__main__.Kit.test_each_key_host_effort_driver_prints_its_own_start_line) [planted/effort-key-host-starts-then-refuses]
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[421 chars]er']) != (1, ['pass version: openwiz:records v1, an[376 chars]er'])
+FAIL: test_the_effort_word_in_another_input_is_no_receipt (__main__.Kit.test_the_effort_word_in_another_input_is_no_receipt) [planted/effort-dropped]
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[295 chars]er']) != (1, ['pass version: openwiz:records v1, an[224 chars]er'])
+FAIL: test_the_effort_word_in_another_input_is_no_receipt (__main__.Kit.test_the_effort_word_in_another_input_is_no_receipt) [planted/effort-word-elsewhere]
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[295 chars]er']) != (1, ['pass version: openwiz:records v1, an[224 chars]er'])
+FAIL: test_a_word_the_readme_does_not_list_may_be_refused_and_the_rest_runs_without_effort (__main__.Kit.test_a_word_the_readme_does_not_list_may_be_refused_and_the_rest_runs_without_effort)
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[262 chars]er']) != (0, ['pass version: openwiz:records v1, an[340 chars]er'])
+FAIL: test_effort_given_only_to_a_one_shot_host_command_during_start_is_seen (__main__.Kit.test_effort_given_only_to_a_one_shot_host_command_during_start_is_seen)
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[224 chars]er']) != (0, ['pass version: openwiz:records v1, an[295 chars]er'])
+Ran 10 tests in 37.708s
+FAILED (failures=9; one, error-without-next, was a stdin slip in that fixture, fixed before the fix commit, so it is left out here)
+
+R7 is fixture-side: at the reviewed head, error-without-next and refuses-with-credential failed start on the effort probe, so their stop assertions never ran (the reviewed expected lines in test_kit.py).
+
+3. A start taken for a harness the README says can't (found in this round's self-check): the new planted/effort-cant-harness-taken, with that guard in kit.py switched off.
+$ python3 -I kernel/driver-kit/test_kit.py Kit.test_each_effort_driver_prints_its_own_start_line
+FAIL: test_each_effort_driver_prints_its_own_start_line (__main__.Kit.test_each_effort_driver_prints_its_own_start_line) [planted/effort-cant-harness-taken]
+AssertionError: Tuples differ: (0, ['pass version: openwiz:records v1, an[295 chars]er']) != (1, ['pass version: openwiz:records v1, an[254 chars]er'])
+Ran 1 test in 5.019s
+FAILED (failures=1)
+
+4. EF9's README form (lead's follow-up): a setting with two placeholders and a 'for each level' phrase. listed() was extracted from start() unchanged first.
+$ python3 -I kernel/driver-kit/test_kit.py Kit.test_the_setting_is_the_effort_placeholder_and_a_list_follows_the_setting
+FAIL: test_the_setting_is_the_effort_placeholder_and_a_list_follows_the_setting (__main__.Kit.test_the_setting_is_the_effort_placeholder_and_a_list_follows_the_setting) [`set -s <run> effort <effort>`, for each level `claude-agent-acp` 0.95 lists]
+AssertionError: Tuples differ: (('argv', '-s', 'medium'), ['each']) != (('argv', 'effort', 'medium'), None)
+Ran 1 test in 0.030s
+FAILED (failures=1)

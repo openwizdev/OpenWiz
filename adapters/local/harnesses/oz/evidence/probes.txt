@@ -1,0 +1,11 @@
+# Mutation probes on the green row (each undone after its run); agent-CLI stubs first on PATH, OPENWIZ_GITHUB_APP_KEY unset
+
+## session as the JSON key path {"json": ["conversation_id"]} instead of the conversation_started pattern
+$ python3 -I adapters/local/harnesses/oz/test_row.py | grep ^fail
+fail oz: wake runs `oz agent run --conversation <id> --model <m> --prompt <prompt>` with the start's conversation id
+fail oz: the conversation id comes from the conversation_started line, past a hook_notice whose conversation_id is null
+
+## signed_out as ["not authenticated"] instead of oz's two sign-in errors
+$ python3 -I adapters/local/harnesses/oz/test_row.py | grep ^fail
+fail oz: not signed in (client: "You are not logged in ...") is a D3 error that says so, and its next names oz login
+fail oz: not signed in (server: "Failed to authenticate with server ...") is a D3 error that says so, and its next names oz login

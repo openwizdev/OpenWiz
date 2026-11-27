@@ -1,0 +1,4 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/local/harnesses/junie/test_row.py   # row without signed_out
+fail driver: a signed-out Junie start, exit 0, gave exit 0: {"run": "run-4648e031781c"}
+fail junie test_row.py: 1 problem(s)
+exit 1

@@ -238,6 +238,26 @@
       }
     },
     {
+      "name": "a sealed answer the helper's one-time key cannot open",
+      "service": "bad-answer",
+      "reason": "bad-answer",
+      "call": {
+        "exit": 0,
+        "stdout": "<an answer sealed to another key>"
+      },
+      "out": {
+        "gh": "owner",
+        "git": "owner",
+        "token_file": null,
+        "env": {
+          "OPENWIZ_TOKEN_SERVICE": "/synthetic/openwiz/tools/github-app/token-service.py",
+          "OPENWIZ_TOKEN_SERVICE_ROUTE": "pairing",
+          "OPENWIZ_TOKEN_SERVICE_READBACK": "passed"
+        },
+        "stderr": "openwiz: no openwiz[bot] token (bad-answer); using the owner's GitHub account\n"
+      }
+    },
+    {
       "name": "a repository outside the installation",
       "service": "refusal",
       "reason": "not-installed",

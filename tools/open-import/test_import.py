@@ -15,10 +15,6 @@ CLI = HERE / 'import.py'
 CHECKER = HERE.parent / 'privacy-check/check.py'
 
 REVIEWED_CARRIAGE = (
-    'ci/shard/README.md',
-    'ci/shard/shard.py',
-    'ci/shard/test.py',
-    'ci/shard/times.tsv',
     'tools/live-smoke/README.md',
     'tools/live-smoke/browser.mjs',
     'tools/live-smoke/cleanup.py',
@@ -33,13 +29,10 @@ REVIEWED_CARRIAGE = (
 )
 
 CLASSIFIED_2405 = (
-    ('ci/main-batch/shadow.py', 'public', 'C7 combined-main shadow code, tests and synthetic fixtures'),
     ('docs/evidence/ci2-pr-cuts.md', 'public', 'docs: CI2 evidence summaries with private-record pointers'),
     ('docs/security/public-release-review.md', 'public', 'docs: the public release security review'),
     ('docs/spikes/ops-dispatch.md', 'public', 'docs: the ops dispatch discovery report'),
     ('tools/ci-overload/alarm.py', 'public', 'CS5 queue and API overload guard, not the retiring CI overflow switch'),
-    ('tools/live-smoke/restriction.py', 'public', 'live smoke expected-plan restriction code'),
-    ('tools/live-smoke/test_restriction.py', 'public', 'its synthetic test'),
     ('tools/notifications/discovery-kit.md', 'public', 'notification discovery kit, schema and tests'),
 )
 CARRIED = REVIEWED_CARRIAGE + tuple(row[0] for row in CLASSIFIED_2405)

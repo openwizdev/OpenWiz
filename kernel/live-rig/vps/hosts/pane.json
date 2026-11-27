@@ -2,7 +2,7 @@
   "host": "Pane",
   "driver": "adapters/pane/driver",
   "needs": ["runpane", "gh"],
-  "signed_in": [["runpane", "repos", "list", "--json"], ["gh", "auth", "status", "--hostname", "github.com", "--active", "--no-refresh"]],
+  "signed_in": [["runpane", "repos", "list", "--json"], ["env", "GH_TELEMETRY=0", "gh", "config", "get", "-h", "github.com", "user"]],
   "cost": "paid",
   "runs": [{"harness": "claude", "model": "claude-opus-5-5"}],
   "wait": 900

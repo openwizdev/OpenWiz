@@ -1,0 +1,6 @@
+# Red R3: test_row.py before the fix: the fake takes a switch where goose's --model value goes
+# Command: env -u OPENWIZ_GITHUB_APP_KEY python3 -I test_row.py (in the row folder)
+# 31 refusing no-op stubs for the known agent CLIs were first on PATH. No real goose ran.
+fail goose row: the fake exits 2 on a switch where the model goes
+pass goose row: the fake exits 2 on a switch where the text goes
+exit=1

@@ -1,0 +1,11 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 tools/wizskills/test_contract.py -v
+test_duplicate_json_keys_are_refused (__main__.ContractTests.test_duplicate_json_keys_are_refused) ... ok
+test_historical_changelog_headings_are_checked (__main__.ContractTests.test_historical_changelog_headings_are_checked) ... ok
+test_refusal_examples (__main__.ContractTests.test_refusal_examples) ... ok
+test_standalone_resolution_examples_and_safe_diagnostics (__main__.ContractTests.test_standalone_resolution_examples_and_safe_diagnostics) ... ok
+test_valid_package_and_carried_sources (__main__.ContractTests.test_valid_package_and_carried_sources) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.005s
+
+OK

@@ -1,0 +1,61 @@
+#2562 fix round, green: review R1 to R9. Every run behind no-op agent CLI stubs first on PATH (claude, codex, cursor-agent, agent, pi, opencode, copilot, goose, gemini, kimi, qwen, cline, kilo, crush, vibe, auggie, kiro-cli, junie, amp, agy, oz, sculpt, hermes, acpx, droid, boat), with env -u OPENWIZ_GITHUB_APP_KEY.
+
+$ python3 -I kernel/driver-kit/test_kit.py
+test_a_declared_driver_gets_no_note (__main__.Kit.test_a_declared_driver_gets_no_note) ... ok
+test_a_failed_process_watch_fails_the_key_check (__main__.Kit.test_a_failed_process_watch_fails_the_key_check) ... ok
+test_a_failed_start_check_still_stops_its_run (__main__.Kit.test_a_failed_start_check_still_stops_its_run) ... ok
+test_a_helper_without_a_visible_environment_row_is_not_trusted (__main__.Kit.test_a_helper_without_a_visible_environment_row_is_not_trusted) ... ok
+test_a_key_host_driver_that_uses_only_the_helper_passes_all_five (__main__.Kit.test_a_key_host_driver_that_uses_only_the_helper_passes_all_five) ... ok
+test_a_path_diagnostic_never_prints_the_active_canary (__main__.Kit.test_a_path_diagnostic_never_prints_the_active_canary) ... ok
+test_a_refusal_holding_a_credential_never_reaches_the_output (__main__.Kit.test_a_refusal_holding_a_credential_never_reaches_the_output) ... ok
+test_a_script_whose_path_holds_a_space_is_scanned_on_linux_and_macos (__main__.Kit.test_a_script_whose_path_holds_a_space_is_scanned_on_linux_and_macos) ... ok
+test_a_word_the_readme_does_not_list_may_be_refused_and_the_rest_runs_without_effort (__main__.Kit.test_a_word_the_readme_does_not_list_may_be_refused_and_the_rest_runs_without_effort) ... ok
+test_changing_only_the_effort_changes_what_the_kit_saw (__main__.Kit.test_changing_only_the_effort_changes_what_the_kit_saw) ... ok
+test_each_effort_driver_prints_its_own_start_line (__main__.Kit.test_each_effort_driver_prints_its_own_start_line) ... ok
+test_each_key_host_effort_driver_prints_its_own_start_line (__main__.Kit.test_each_key_host_effort_driver_prints_its_own_start_line) ... ok
+test_each_planted_driver_fails_its_check (__main__.Kit.test_each_planted_driver_fails_its_check) ... ok
+test_each_planted_key_driver_fails_with_its_own_line (__main__.Kit.test_each_planted_key_driver_fails_with_its_own_line) ... ok
+test_each_status_contract_credential_format_is_caught (__main__.Kit.test_each_status_contract_credential_format_is_caught) ... ok
+test_effort_given_only_to_a_one_shot_host_command_during_start_is_seen (__main__.Kit.test_effort_given_only_to_a_one_shot_host_command_during_start_is_seen) ... ok
+test_no_harness_outside_the_fixtures_is_on_the_tests_path (__main__.Kit.test_no_harness_outside_the_fixtures_is_on_the_tests_path) ... ok
+test_on_macos_a_key_in_an_argument_or_another_variable_is_caught (__main__.Kit.test_on_macos_a_key_in_an_argument_or_another_variable_is_caught) ... ok
+test_probe_only_hides_environments_from_the_kits_own_listing_only (__main__.Kit.test_probe_only_hides_environments_from_the_kits_own_listing_only) ... ok
+test_template_and_schema_refuse_the_same_starts (__main__.Kit.test_template_and_schema_refuse_the_same_starts) ... ok
+test_template_passes_all_five (__main__.Kit.test_template_passes_all_five) ... ok
+test_the_canary_never_reaches_the_driver (__main__.Kit.test_the_canary_never_reaches_the_driver) ... ok
+test_the_effort_flag_names_the_value_the_kit_sends (__main__.Kit.test_the_effort_flag_names_the_value_the_kit_sends) ... ok
+test_the_effort_word_in_another_input_is_no_receipt (__main__.Kit.test_the_effort_word_in_another_input_is_no_receipt) ... ok
+test_the_fixed_undeclared_driver_passes_all_five_with_the_note_on_stderr (__main__.Kit.test_the_fixed_undeclared_driver_passes_all_five_with_the_note_on_stderr) ... ok
+test_the_kit_trusts_only_its_own_interpreter_not_one_on_path (__main__.Kit.test_the_kit_trusts_only_its_own_interpreter_not_one_on_path) ... ok
+test_the_kits_visibility_probe_signals_ready_through_the_macos_shim_and_runs_until_its_stdin_closes (__main__.Kit.test_the_kits_visibility_probe_signals_ready_through_the_macos_shim_and_runs_until_its_stdin_closes) ... ok
+test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries (__main__.Kit.test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries) ... ok
+test_the_setting_is_the_effort_placeholder_and_a_list_follows_the_setting (__main__.Kit.test_the_setting_is_the_effort_placeholder_and_a_list_follows_the_setting) ... ok
+test_without_proc_as_on_macos_a_driver_whose_run_stays_in_the_kits_group_passes_all_five (__main__.Kit.test_without_proc_as_on_macos_a_driver_whose_run_stays_in_the_kits_group_passes_all_five) ... ok
+test_without_proc_as_on_macos_effort_on_a_command_line_is_seen (__main__.Kit.test_without_proc_as_on_macos_effort_on_a_command_line_is_seen) ... ok
+test_without_proc_as_on_macos_the_template_passes_all_five (__main__.Kit.test_without_proc_as_on_macos_the_template_passes_all_five) ... ok
+test_without_proc_or_the_runs_visible_environment_stop_and_token_fail_unverified (__main__.Kit.test_without_proc_or_the_runs_visible_environment_stop_and_token_fail_unverified) ... ok
+test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without (__main__.Kit.test_without_the_key_helper_the_kit_refuses_a_driver_with_a_readme_and_runs_one_without) ... ok
+Ran 36 tests in 267.255s
+OK
+
+On a scratch merge of EF6 (#2590 at 7218ac4) into this change: kernel/driver-kit/test_kit.py ran 35 tests, OK (before the EF9 parser case was added); adapters/template/test_driver.py OK. The live EF6 template through the kit:
+exit 0
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 2; effort: medium reached a process the run started
+pass wake: the run edited builder status note 2
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+stderr: ''
+exit 0
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 2; effort: refused turbo with the refusal text, a word its README does not list for fake-harness
+pass wake: the run edited builder status note 2
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+stderr: ''
+
+On a scratch merge of EF9 (#2598 at e5c8ac9) into this change, with its fake acpx changed so the queue owner gets no --session-options on its argv (EF9's ruling 5 workaround removed), the kit through adapters/openclaw's test_kit_passes_all_five printed, 5 runs of 5:
+pass start: the run posted builder status note 1; effort: medium reached a process the run started
+With the kit's in-flight sampling switched off, the same run printed:
+fail start: effort: medium never reached a process the run started
+On that merge, unchanged: kernel/driver-kit/test_kit.py ran 36 tests, OK; adapters/openclaw/test_driver.py fails only test_kit_passes_all_five, whose expected start line lacks the "; effort: medium reached a process the run started" suffix this kit now prints for a declared driver.

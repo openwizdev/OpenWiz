@@ -6,8 +6,9 @@ Effort: passed as Tembo's `agentOptions.reasoningLevel` session setting, for Cod
 
 | Harness | Effort |
 | --- | --- |
-| Codex | passed as `agentOptions.reasoningLevel`: `low`, `medium`, `high` or `xhigh` |
-| Claude Code | can't (Tembo documents no reasoning levels for Claude Code) |
+| `codex` | `agentOptions.reasoningLevel`, for low, medium, high and xhigh |
+| `claude-code` | can't (Tembo documents no reasoning levels for Claude Code) |
+| `claude` | can't (the same Claude Code agent as `claude-code`) |
 
 Any other harness or value is refused with driver v1's effort refusal, and nothing runs.
 

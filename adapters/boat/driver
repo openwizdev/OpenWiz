@@ -11,7 +11,7 @@ VERSION = {'driver': 'boat', 'records': ['openwiz:records v1'],
 HARNESSES = ('claude', 'codex', 'pi', 'opencode', 'prime', 'kimi', 'mistral')
 START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
          'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
-         'model': r'[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}'}
+         'model': r'(?=.{1,100}$)[A-Za-z0-9][A-Za-z0-9 ._:@+-]*(/[A-Za-z0-9][A-Za-z0-9 ._:@+-]*)*'}
 EFFORT = {'effort': r'[a-z][a-z0-9-]{0,19}'}
 CANT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at "
         "the host's default")
@@ -116,11 +116,13 @@ def host_said(lines, stderr):
     code = errors[-1].get('code') if errors else None
     if isinstance(code, str) and code in HOST_ERRORS:
         return code, HOST_ERRORS[code]
+    told = ' '.join(str(errors[-1].get(k)) for k in ('error', 'code')) if errors else ''
+    if SIGNED_OUT.search(told):
+        return 'boat is not signed in', SIGN_IN
     for known in HOST_ERRORS:
         if re.search(r'(?<![A-Za-z0-9_])%s(?![A-Za-z0-9_])' % known, stderr):
             return known, HOST_ERRORS[known]
-    told = ' '.join(str(errors[-1].get(k)) for k in ('error', 'code')) if errors else ''
-    if SIGNED_OUT.search(told) or SIGNED_OUT.search(stderr):
+    if SIGNED_OUT.search(stderr):
         return 'boat is not signed in', SIGN_IN
     return ('boat gave an error the driver does not repeat' if told.strip() or stderr.strip()
             else 'boat gave no answer'), None

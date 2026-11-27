@@ -18,9 +18,6 @@ FIXTURES = os.path.join(HERE, 'fixtures', 'receipts')
 COPIED = ['kernel/live-rig/receipt.py', 'kernel/live-rig/rig.py', 'kernel/live-rig/listings.json',
           'kernel/driver-kit/kit.py', 'kernel/driver-kit/schema.json', 'kernel/records-kit/check.py',
           'kernel/records.v1.md']
-VPS_PAIRS = [('Conductor', 'claude', 'opus-5-5-1m'), ('Cursor', 'cursor', 'composer-2.5'),
-             ('Factory', 'droid', 'claude-opus-5-5'), ('Hermes', 'claude', 'claude-opus-5-5'),
-             ('Pane', 'claude', 'claude-opus-5-5')]
 RECORDS = os.path.join(FIXTURES, 'records')
 EXPECTED = os.path.join(FIXTURES, 'expected')
 WIZMARKET_FIXTURE = os.path.join(FIXTURES, 'wizmarket', 'verified-driver.txt')
@@ -93,66 +90,20 @@ def checkout(dest, extra=None, init=True):
     return os.path.join(dest, 'kernel', 'live-rig', 'receipt.py')
 
 
-VPS_CONFIGS = {
-    'conductor.json': (
-        '{\n'
-        '  "host": "Conductor",\n'
-        '  "driver": "adapters/conductor/driver",\n'
-        '  "needs": ["curl", "gh"],\n'
-        '  "signed_in": [["python3", "-I", "-c", "import sys, os; sys.exit(0 if any(n == '
-        '\'CONDUCTOR_API_KEY\' for n in os.environ) else 1)"], ["gh", "auth", "status", '
-        '"--hostname", "github.com", "--active", "--no-refresh"]],\n'
-        '  "cost": "paid",\n'
-        '  "runs": [{"harness": "claude", "model": "opus-5-5-1m"}],\n'
-        '  "wait": 900\n'
-        '}\n'),
-    'cursor.json': (
-        '{\n'
-        '  "host": "Cursor",\n'
-        '  "driver": "adapters/cursor/driver",\n'
-        '  "needs": ["curl", "gh"],\n'
-        '  "signed_in": [["python3", "-I", "-c", "import sys, os; sys.exit(0 if any(n == '
-        '\'CURSOR_API_KEY\' for n in os.environ) else 1)"], ["gh", "auth", "status", "--hostname", '
-        '"github.com", "--active", "--no-refresh"]],\n'
-        '  "cost": "paid",\n'
-        '  "runs": [{"harness": "cursor", "model": "composer-2.5"}],\n'
-        '  "wait": 900\n'
-        '}\n'),
-    'factory.json': (
-        '{\n'
-        '  "host": "Factory",\n'
-        '  "driver": "adapters/factory/driver",\n'
-        '  "needs": ["droid", "gh"],\n'
-        '  "signed_in": [["python3", "-I", "-c", "import sys, os; sys.exit(0 if any(n == '
-        '\'FACTORY_API_KEY\' for n in os.environ) else 1)"], ["gh", "auth", "status", "--hostname", '
-        '"github.com", "--active", "--no-refresh"]],\n'
-        '  "cost": "paid",\n'
-        '  "runs": [{"harness": "droid", "model": "claude-opus-5-5"}],\n'
-        '  "wait": 900\n'
-        '}\n'),
-    'hermes.json': (
-        '{\n'
-        '  "host": "Hermes",\n'
-        '  "driver": "adapters/hermes/driver",\n'
-        '  "needs": ["hermes", "gh"],\n'
-        '  "signed_in": [["gh", "auth", "status", "--hostname", "github.com", "--active", '
-        '"--no-refresh"]],\n'
-        '  "cost": "paid",\n'
-        '  "runs": [{"harness": "claude", "model": "claude-opus-5-5"}],\n'
-        '  "wait": 900\n'
-        '}\n'),
-    'pane.json': (
-        '{\n'
-        '  "host": "Pane",\n'
-        '  "driver": "adapters/pane/driver",\n'
-        '  "needs": ["runpane", "gh"],\n'
-        '  "signed_in": [["runpane", "repos", "list", "--json"], ["gh", "auth", "status", '
-        '"--hostname", "github.com", "--active", "--no-refresh"]],\n'
-        '  "cost": "paid",\n'
-        '  "runs": [{"harness": "claude", "model": "claude-opus-5-5"}],\n'
-        '  "wait": 900\n'
-        '}\n'),
-}
+def tracked_vps_configs():
+    def run(*args):
+        return subprocess.run(['git', '--no-replace-objects', '-C', ROOT] + list(args), check=True,
+                              capture_output=True).stdout.decode()
+    configs = {}
+    for entry in run('ls-tree', '-z', 'HEAD', 'kernel/live-rig/vps/hosts/').split('\0'):
+        meta, _, rel = entry.partition('\t')
+        if rel.endswith('.json') and meta.split(' ')[1] == 'blob':
+            configs[os.path.basename(rel)] = run('cat-file', 'blob', meta.split(' ')[2])
+    return configs
+
+
+VPS_CONFIGS = tracked_vps_configs()
+VPS_PAIRS = [(c['host'], r['harness'], r['model']) for c in map(json.loads, VPS_CONFIGS.values()) for r in c['runs']]
 
 
 def config(host, harness, model, more=()):
@@ -331,23 +282,25 @@ class Receipt(unittest.TestCase):
                 self.refused(record('5-of-5.json', model=value), NOT_CONFIGURED)
         self.refused(record('5-of-5.json', harness='claude-' + LOGIN), NOT_CONFIGURED)
 
-    def test_each_vps_configs_exact_pair_makes_a_receipt(self):
+    def test_each_tracked_vps_configs_runs_entry_makes_a_receipt(self):
         with open(os.path.join(ROOT, 'kernel', 'live-rig', 'listings.json')) as f:
             listings = json.load(f)
-        found = []
-        for name in sorted(VPS_CONFIGS):
-            c = json.loads(VPS_CONFIGS[name])
-            found += [(c['host'], r['harness'], r['model']) for r in c['runs']]
-        self.assertEqual(found, VPS_PAIRS)
+        on_disk = sorted(n for n in os.listdir(os.path.join(ROOT, 'kernel', 'live-rig', 'vps', 'hosts'))
+                         if n.endswith('.json'))
+        self.assertEqual(sorted(VPS_CONFIGS), on_disk)
+        self.assertTrue(VPS_PAIRS)
+        rec = record('5-of-5.json')
         for host, harness, model in VPS_PAIRS:
-            with self.subTest(host=host):
+            with self.subTest(host=host, harness=harness, model=model):
                 self.fresh()
-                p = self.run_receipt(record('5-of-5.json', host=host, harness=harness, model=model),
-                                     listing=listings[host])
+                p = self.run_receipt(dict(rec, host=host, harness=harness, model=model), listing=listings[host])
                 self.assertEqual(p.returncode, 0, p.stderr)
                 text = self.written(os.path.join('receipts', listings[host], '2026-11-01-aaaaaaaaaaaa.txt')).decode()
-                self.assertIn('# host: %s\n' % host, text)
-                self.assertIn('# harness: %s\n# model: %s\n' % (harness, model), text)
+                self.assertEqual(text.splitlines()[:8], [
+                    '# listing: ' + listings[host], '# host: ' + host,
+                    '# driver: openwizdev/OpenWiz@' + rec['driver_commit'],
+                    '# kit: openwizdev/OpenWiz@' + rec['kit_commit'], '# harness: ' + harness, '# model: ' + model,
+                    '# date: 2026-11-01', '# run by: example-runner'])
 
     def test_a_pair_in_no_config_writes_nothing(self):
         for host, harness, model, listing in (
@@ -422,6 +375,40 @@ class Receipt(unittest.TestCase):
     def test_an_invalid_tracked_config_is_one_fixed_line(self):
         dest, receipt = self.own_checkout({'kernel/live-rig/vps/hosts/broken.json': '{"host": "Conductor"}\n'})
         self.refused(record('5-of-5.json'), 'a tracked host config is not a valid host config', receipt=receipt)
+
+    def test_a_worktree_edit_hidden_from_git_cannot_add_a_triple(self):
+        login = record('5-of-5.json', model='claude-' + LOGIN)
+        rel = os.path.join('kernel', 'live-rig', 'hosts', 'local.json')
+        edited = config('local', *CONFIGURED[0], more=CONFIGURED[1:] + [('claude', 'claude-' + LOGIN)])
+        for flag in ('--assume-unchanged', '--skip-worktree'):
+            with self.subTest(flag=flag):
+                dest, receipt = self.own_checkout()
+                with open(os.path.join(dest, rel), 'w') as f:
+                    f.write(edited)
+                git(dest, 'update-index', flag, rel)
+                self.assertEqual(git(dest, 'diff', '--name-only', 'HEAD'), '')
+                self.fresh()
+                self.refused(login, NOT_CONFIGURED, receipt=receipt)
+        dest, receipt = self.own_checkout()
+        with open(os.path.join(dest, rel), 'w') as f:
+            f.write(edited)
+        git(dest, 'add', rel)
+        self.fresh()
+        self.refused(login, NOT_CONFIGURED, receipt=receipt)
+        git(dest, 'checkout', 'HEAD', '--', rel)
+        old = git(dest, 'rev-parse', 'HEAD:' + rel)
+        with open(os.path.join(self.tmp, 'replacement.json'), 'w') as f:
+            f.write(edited)
+        git(dest, 'replace', old, git(dest, 'hash-object', '-w', os.path.join(self.tmp, 'replacement.json')))
+        self.fresh()
+        self.refused(login, NOT_CONFIGURED, receipt=receipt)
+        self.assertEqual(self.run_receipt(record('5-of-5.json'), receipt=receipt).returncode, 0)
+
+    def test_a_too_deep_tracked_config_is_one_fixed_line(self):
+        for text in ('[' * 1500 + ']' * 1500, '{"host": ' * 1500 + '0' + '}' * 1500):
+            with self.subTest(text=text[:8]):
+                dest, receipt = self.own_checkout({'kernel/live-rig/vps/hosts/deep.json': text + '\n'})
+                self.refused(record('5-of-5.json'), 'a tracked host config is not a valid host config', receipt=receipt)
 
     def test_a_configured_private_id_or_credential_still_writes_nothing(self):
         shape = 'claude-sk-' + 'synthetic0receipt0' * 2
@@ -598,6 +585,32 @@ class Receipt(unittest.TestCase):
         p = self.run_receipt(record('5-of-5.json'))
         self.one_line(p, 1, 'the receipt could not be written')
         self.assertEqual(files(self.out), ['receipts'])
+
+    def test_pass_start_accepts_the_kits_effort_suffix_and_refuses_other_suffixes(self):
+        good = [
+            '; effort: medium reached a process the run started',
+            "; effort: medium reached the kit's fake devin host",
+            '; effort: refused for fake-harness with the refusal text, as the README says',
+            '; effort: refused turbo with the refusal text, a word its README does not list for fake-harness',
+            "; effort: a start with it was refused, as the README's Effort: line says",
+        ]
+        base = record('5-of-5.json')
+        for suffix in good:
+            with self.subTest(good=suffix):
+                self.fresh()
+                rec = dict(base, stdout=base['stdout'].replace('note 1000000001\n', 'note 1000000001%s\n' % suffix, 1))
+                p = self.run_receipt(rec)
+                self.assertEqual(p.returncode, 0, p.stderr)
+        for bad in ('; effort: arbitrary text', '; extra: note'):
+            with self.subTest(bad_start=bad):
+                self.fresh()
+                rec = dict(base, stdout=base['stdout'].replace('note 1000000001\n', 'note 1000000001%s\n' % bad, 1))
+                self.refused(rec, "the start line is not kit.py's passing start line")
+        self.fresh()
+        wake = dict(base, stdout=base['stdout'].replace(
+            'edited builder status note 1000000001\n',
+            'edited builder status note 1000000001; effort: medium reached a process the run started\n', 1))
+        self.refused(wake, "the wake line is not kit.py's passing wake line")
 
 
 class WizMarket(unittest.TestCase):

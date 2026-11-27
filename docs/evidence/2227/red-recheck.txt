@@ -1,0 +1,9 @@
+FAIL README.md: the 0.1.0 section does not point to the guide's explicit 0.1.0 steps
+FAIL docs/install.md: the 0.1.0 section does not select the v0.1.0 files explicitly
+FAIL docs/install.md: says this computer runs the orchestrator for boat.dev too
+FAIL docs/install.md: never says the orchestrator starts in a boat.dev sandbox when boat.dev is the host
+FAIL docs/install.md: "run the fleet now" is not qualified for a paused job
+FAIL docs/install.md: tells the reader to delete the listed skill folders, which are shared parents
+FAIL docs/install.md: never says to keep each listed skills folder itself
+7 failures
+exit 1

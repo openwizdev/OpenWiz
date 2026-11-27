@@ -3,11 +3,13 @@ import base64
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import importlib.util
 import json
 import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -20,6 +22,11 @@ SENTENCE = ("App selector refused: set OPENWIZ_APP_SELECT_CONFIG (default ~/.con
             "or \"routes\" that map every requested repository to the same App state.\n")
 PIN = json.loads(re.search(r"```json\n(.*?)\n```", (HERE.parents[1] / "contracts/token-service.v1.md").read_text(),
                           re.S).group(1))
+sys.dont_write_bytecode = True
+spec = importlib.util.spec_from_file_location("test_token_service", HERE / "test_token_service.py")
+SERVICE_TESTS = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(SERVICE_TESTS)
+ASKER = SERVICE_TESTS.ASKER
 APPS = {"a": (1001, 2001, {"synthetic-owner/alpha", "synthetic-owner/shared"}),
         "b": (1002, 2002, {"synthetic-owner/beta", "synthetic-owner/shared"})}
 HOOK = ("import json, runpy, sys\n"
@@ -36,6 +43,7 @@ HOOK = ("import json, runpy, sys\n"
 
 def request(*repositories):
     return {"schema": "openwiz.token-service.v1", "kind": "request", "requester": "builder-2661",
+            "answer_key": ASKER.key,
             "repositories": list(repositories), "permissions": {"metadata": "read"}}
 
 
@@ -152,7 +160,7 @@ class SelectorTests(unittest.TestCase):
     def assert_minted_by(self, done, url, name):
         app_id, installation, _ = APPS[name]
         self.assertEqual((done.returncode, done.stderr), (0, ""))
-        self.assertEqual(json.loads(done.stdout)["token"], f"synthetic-token-{app_id}")
+        self.assertEqual(ASKER.open(json.loads(done.stdout)["sealed_token"]), f"synthetic-token-{app_id}")
         self.assertEqual(self.service_calls()[-1][-5:],
                          ["mint", "--state-dir", str(self.states[name]), "--api-base", url])
 
@@ -168,8 +176,7 @@ class SelectorTests(unittest.TestCase):
     def tearDown(self):
         secrets = [line for key in self.keys for line in key.read_bytes().splitlines()[1:-1]]
         secrets += [f"synthetic-token-{app_id}".encode() for app_id, _, _ in APPS.values()]
-        places = [("stderr", o.encode()) for o in self.outputs[1::2]]
-        places += [("stdout", o.encode()) for o in self.outputs[0::2] if '"kind": "answer"' not in o]
+        places = [("output", o.encode()) for o in self.outputs]
         places += [(str(p), p.read_bytes()) for p in self.root.rglob("*") if p.is_file() and p not in self.keys]
         for place, content in places:
             for secret in secrets:
@@ -208,8 +215,12 @@ class SelectorTests(unittest.TestCase):
             self.assertEqual(calls, [], "no GitHub call at all")
 
     def test_every_mode_refuses_an_invalid_request_before_any_service_call(self):
+        # comment-ok: catches: a selector that starts the service for a request with no usable answer key.
+        keyless = request("synthetic-owner/alpha")
+        del keyless["answer_key"]
         bad = [(request("synthetic-owner/alpha", "other-owner/alpha"), "one-owner"),
-               ({**request("synthetic-owner/alpha"), "extra": 1}, "usage"), (request(), "usage")]
+               ({**request("synthetic-owner/alpha"), "extra": 1}, "usage"), (request(), "usage"),
+               (keyless, "usage"), ({**keyless, "answer_key": "not a key"}, "usage")]
         for config in ({"state_dir": str(self.states["a"])},
                        self.routes(("synthetic-owner/*", "a"), ("other-owner/*", "a"))):
             self.configure(config)

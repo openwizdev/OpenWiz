@@ -1,0 +1,43 @@
+{
+  "harness": "oz",
+  "program": "oz",
+  "start": [
+    "agent",
+    "run",
+    "--output-format",
+    "json",
+    "--model",
+    "{model}",
+    "{mode}",
+    "--prompt",
+    "{prompt}"
+  ],
+  "wake": [
+    "agent",
+    "run",
+    "--conversation",
+    "{session}",
+    "--model",
+    "{model}",
+    "{mode}",
+    "--prompt",
+    "{prompt}"
+  ],
+  "session": {
+    "pattern": "\"event_type\":\"conversation_started\",\"conversation_id\":\"([A-Za-z0-9._:-]{1,100})\""
+  },
+  "modes": {
+    "default-profile": []
+  },
+  "env": {},
+  "effort": "none: oz agent run has no effort flag or setting; Warp puts the reasoning level in the model id (warpdotdev/warp crates/warp_cli at f8223cef, docs.warp.dev/agents/inference/model-choice)",
+  "login": "Warp's own sign-in on this machine: `oz login` (cached by oz), an existing Warp app sign-in, or WARP_API_KEY that you set yourself; the row never reads or passes a login and never uses --api-key",
+  "daemon": "oz runs the agent's commands in a shell on its own pseudo-terminal, in a new session; stop ends it with the process tree",
+  "signed_out": [
+    "you are not logged in\\. please log in again with `oz login`",
+    "failed to authenticate with server - please log in via 'oz login'",
+    "your credentials are invalid\\. please log in again with `oz login`",
+    "you are not logged in - please log in with `oz login`"
+  ],
+  "login_command": "oz login"
+}

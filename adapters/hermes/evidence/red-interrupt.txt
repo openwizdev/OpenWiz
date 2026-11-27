@@ -1,0 +1,22 @@
+# Red run: the stop test against the Hermes driver with only its SIGINT step taken out of end(): the turn is killed and never interrupted.
+test_stop_interrupts_the_turn_then_ends_everything (__main__.Hermes.test_stop_interrupts_the_turn_then_ends_everything) ... FAIL
+
+======================================================================
+FAIL: test_stop_interrupts_the_turn_then_ends_everything (__main__.Hermes.test_stop_interrupts_the_turn_then_ends_everything)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/hermes/test_driver.py", line 144, in test_stop_interrupts_the_turn_then_ends_everything
+    self.assertEqual([t[3] for t in self.logged()], ['first', 'interrupted'], 'stop never interrupted Hermes')
+AssertionError: Lists differ: ['first'] != ['first', 'interrupted']
+
+Second list contains 1 additional elements.
+First extra element 1:
+'interrupted'
+
+- ['first']
++ ['first', 'interrupted'] : stop never interrupted Hermes
+
+----------------------------------------------------------------------
+Ran 1 test in 0.283s
+
+FAILED (failures=1)

@@ -1,0 +1,4 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY PATH="<31 refusing stubs>:$PATH" python3 -I adapters/local/test_harnesses.py --rows adapters/local/harnesses
+# R2 red: row.json daemon is "none", while the fake still starts its detached service
+fail copilot: daemon: the fake started a background process, but the row declares none
+exit 1

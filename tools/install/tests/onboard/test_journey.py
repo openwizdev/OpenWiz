@@ -877,26 +877,29 @@ class Launch(unittest.TestCase):
         self.assertEqual([c[1] for c in j.gh_creates()].count('create'), 1, 'a repeat only reads')
 
     def test_a_lost_create_is_read_before_any_retry(self):
-        # lost: created but no answer, settled by the read-back; unread: the
-        # read-back itself fails, so it stays uncertain and the next run reads
-        # first; fail: nothing was created, so a later yes may create it.
-        for create, fails, first, second, creates in (('lost', 0, 0, 0, 1), ('lost', 2, 6, 6, 1), ('fail', 0, 5, 0, 2)):
-            with self.subTest(create, fails=fails):
+        for create, fails, outcomes, creates in (
+            ('lost', 0, (5, 5), 1),
+            ('lost', 2, (6, 6, 5), 1),
+            ('ok', 2, (6, 6, 0), 1),
+            ('fail', 0, (5, 0), 2),
+        ):
+            with self.subTest(create=create, fails=fails):
                 j = Journey(self)
                 j.repos.write_text(github(create=create, fail_after_create=fails))
-                yes = ['create-repo', '--repo', REPO, '--yes']
-                if fails:
-                    self.assertEqual(j.helper(yes).returncode, 6, j.calls[-1][1].stdout)
-                    self.assertIn('uncertain', j.calls[-1][1].stdout)
-                    self.assertEqual(j.helper(yes).returncode, 6, 'the next read fails too: still uncertain, no create')
-                    self.assertEqual(j.helper(yes).returncode, 0, j.calls[-1][1].stdout)
-                    self.assertEqual([c[1] for c in j.gh_creates()].count('create'), 1, 'read, never created twice')
-                    continue
-                self.assertEqual(j.helper(yes).returncode, first, j.calls[-1][1].stdout)
-                state = json.loads(j.repos.read_text())
-                j.repos.write_text(json.dumps(dict(state, create='ok', view_fails=0)))
-                self.assertEqual(j.helper(yes).returncode, second, j.calls[-1][1].stdout)
+                for index, code in enumerate(outcomes):
+                    if index and create == 'fail':
+                        state = json.loads(j.repos.read_text())
+                        j.repos.write_text(json.dumps(dict(state, create='ok')))
+                    result = j.helper(YES_DEMO)
+                    self.assertEqual(result.returncode, code, result.stdout)
+                    if code == 6:
+                        message = 'is uncertain' if index == 0 else 'Could not read whether'
+                        self.assertIn(message, result.stdout)
+                    if create == 'lost' and code == 5:
+                        self.assertIn('no create reply', result.stdout)
                 self.assertEqual([c[1] for c in j.gh_creates()].count('create'), creates)
+                writes = [call for call in json.loads(j.repos.read_text())['log'] if call[0] != 'GET']
+                self.assertEqual(writes, [['POST', 'user/repos'], *(SEED_WRITES if outcomes[-1] == 0 else [])])
 
     def test_an_existing_or_public_repository_is_never_taken_as_the_demo(self):
         j = Journey(self)
@@ -920,6 +923,8 @@ class Launch(unittest.TestCase):
 
 INIT = ROOT / 'tools/install/setup/init.py'
 YES_DEMO = ['create-repo', '--repo', REPO, '--yes']
+SEED_WRITES = [['POST', 'graphql createCommitOnBranch %s %s' % (REPO, path)]
+               for path in ('tests/test_check.py', '.github/workflows/check.yml')]
 
 
 class DemoToInit(unittest.TestCase):
@@ -964,7 +969,7 @@ class DemoToInit(unittest.TestCase):
         created = j.helper(YES_DEMO)
         self.assertEqual(created.returncode, 0, created.stdout)
         self.assertIn('Created and read back', created.stdout)
-        self.assertEqual(self.writes(j), [['POST', 'user/repos']])
+        self.assertEqual(self.writes(j), [['POST', 'user/repos'], *SEED_WRITES])
 
     # Catches: the default demo created empty, so init's mandatory brain
     # proposal finds no default-branch ref and stops uncertain (the #1074 bug).
@@ -991,7 +996,8 @@ class DemoToInit(unittest.TestCase):
         j = Journey(self)
         preview = j.helper(['create-repo', '--repo', REPO])
         self.assertEqual(preview.returncode, 12, preview.stdout)
-        for words in ('private', REPO, 'README.md', 'initial commit', 'default branch'):
+        for words in ('private', REPO, 'README.md', 'initial commit', 'default branch',
+                      'tests/test_check.py', '.github/workflows/check.yml'):
             self.assertIn(words, preview.stdout)
         self.assertEqual((self.world(j)['repos'], self.writes(j)), ({}, []))
 
@@ -1011,7 +1017,8 @@ class DemoToInit(unittest.TestCase):
                 again = j.helper(YES_DEMO)
                 self.assertEqual(again.returncode, 0, again.stdout)
                 self.assertIn('Created and read back', again.stdout)
-                self.assertEqual(self.writes(j), [['POST', 'user/repos']], 'one create, no seed push, no other write')
+                self.assertEqual(self.writes(j), [['POST', 'user/repos'], *SEED_WRITES],
+                                 'one create and two disclosed seed commits')
 
     # Catches: an onboarding whose own repository exists without a default
     # branch (an interrupted or earlier empty create) being reported created,
@@ -1055,7 +1062,7 @@ class DemoToInit(unittest.TestCase):
         again = j.helper(YES_DEMO)
         self.assertEqual(again.returncode, 0, again.stdout)
         self.assertEqual(self.world(j)['repos'], world['repos'], 'a repeat only reads')
-        self.assertEqual(self.writes(j), [['POST', 'user/repos']])
+        self.assertEqual(self.writes(j), [['POST', 'user/repos'], *SEED_WRITES])
 
 if __name__ == '__main__':
     unittest.main()

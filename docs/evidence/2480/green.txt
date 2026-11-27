@@ -1,0 +1,12 @@
+# Green run (#2480) at 7e2cca38: env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/hosts/test_boat.py
+test_boat_missing_is_skipped_and_runs_no_status_command (__main__.BoatHost.test_boat_missing_is_skipped_and_runs_no_status_command) ... ok
+test_boat_signed_out_is_skipped_and_reads_nothing_more (__main__.BoatHost.test_boat_signed_out_is_skipped_and_reads_nothing_more) ... ok
+test_gh_missing_is_skipped_and_runs_no_status_command (__main__.BoatHost.test_gh_missing_is_skipped_and_runs_no_status_command) ... ok
+test_gh_signed_out_is_skipped (__main__.BoatHost.test_gh_signed_out_is_skipped) ... ok
+test_signed_in_everywhere_is_skipped_as_cost_and_starts_nothing (__main__.BoatHost.test_signed_in_everywhere_is_skipped_as_cost_and_starts_nothing) ... ok
+test_the_config_checks_only_the_cited_read_only_status_commands (__main__.BoatHost.test_the_config_checks_only_the_cited_read_only_status_commands) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.386s
+
+OK

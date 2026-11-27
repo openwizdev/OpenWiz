@@ -1,0 +1,60 @@
+#!/usr/bin/env python3
+import json, os, shutil, subprocess, sys
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.environ['FAKE_CLI_LIB'])
+import fake_cli
+
+HELP = '''The fake kimi, after the `kimi` command reference (Kimi Code CLI 2.7.2). It allows only:
+  kimi -p <prompt> --output-format stream-json -m <model>
+  kimi -S <session_id> -p <prompt> [--output-format text|stream-json] [-m <model>]
+in any order, each option once, with --prompt, --model, --session and --resume as the long forms.
+-p refuses --yolo, --auto and --plan, --output-format needs -p, and the model can't be blank, as kimi's option checks do.
+A stream-json start prints the session.resume_hint meta line that carries session_id.
+Signed out, it prints kimi's missing-login error for the managed:kimi-code provider and exits 1.
+With KIMI_CODE_NO_AUTO_UPDATE=1 a start turn leaves one background Bash task as kimi spawns it on Unix:
+its own session and process group, stdin, stdout and stderr piped back to the turn, on every platform.
+Without it the turn hands work to a process outside it, standing in for kimi's update preflight.'''
+
+LONG = {'-p': 'prompt', '--prompt': 'prompt', '-m': 'model', '--model': 'model', '-S': 'session',
+        '--session': 'session', '-r': 'session', '--resume': 'session', '--output-format': 'format'}
+
+if sys.argv[1:] == ['--help']:
+    print(HELP)
+    sys.exit(0)
+a, got = sys.argv[1:], {}
+while a:
+    name = LONG.get(a[0])
+    if name is None or name in got or len(a) < 2:
+        fake_cli.refuse()
+    got[name], a = a[1], a[2:]
+prompt, fmt, session = got.get('prompt', ''), got.get('format', 'text'), got.get('session')
+if not prompt.strip() or fmt not in ('text', 'stream-json') or (session is not None and not session.strip()) or \
+        ('model' in got and not got['model'].strip()):
+    fake_cli.refuse()
+if session is None and (fmt != 'stream-json' or 'model' not in got):
+    fake_cli.refuse()
+
+TASKS, HUB = [], fake_cli.background_service
+
+
+def background_service(how):
+    if how != 'bash-task':
+        return HUB(how)
+    clean = {'PATH': os.environ['PATH']}
+    TASKS.append(subprocess.Popen([shutil.which('sleep', path=clean['PATH']), '300'], env=clean, start_new_session=True,
+                                  stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE))
+    return [TASKS[-1].pid, fake_cli.since(TASKS[-1].pid)]
+
+
+fake_cli.background_service = background_service
+
+
+def resume_hint(sid):
+    return json.dumps({'role': 'meta', 'type': 'session.resume_hint', 'session_id': sid,
+                       'command': 'kimi -r ' + sid, 'content': 'To resume this session: kimi -r ' + sid},
+                      separators=(',', ':'))
+
+
+fake_cli.turn(prompt, got.get('model', 'the session model'), session, resume_hint,
+              daemon='bash-task' if os.environ.get('KIMI_CODE_NO_AUTO_UPDATE') == '1' else 'via-running-hub',
+              signed_out='error: failed to run prompt: provider managed:kimi-code has no credential configured')

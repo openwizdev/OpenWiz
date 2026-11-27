@@ -48,7 +48,7 @@ real account, repository, harness or fleet.
 
 SCHEMA = 'openwiz.rehearsal.v1'
 STEPS = ('preflight', 'install', 'build_identity', 'setup', 'skills', 'first_fleet_dry_run')
-TARGETS = ('aarch64-apple-darwin', 'x86_64-apple-darwin', 'x86_64-unknown-linux-gnu')
+TARGETS = ('aarch64-apple-darwin', 'x86_64-apple-darwin', 'x86_64-unknown-linux-gnu', 'aarch64-unknown-linux-gnu')
 BUILD_TOOLS = ('cargo', 'rustc', 'rustup', 'npm', 'node', 'npx')
 ALLOWED = ('python3', 'git', 'sh', 'uname', 'ldd')
 ABSENT = ('room-cli', 'cloudroom', 'codex', 'openwiz', 'boat', 'hermes', 'acpx', 'openclaw', 'droid', 'runpane',

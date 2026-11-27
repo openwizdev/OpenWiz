@@ -1,0 +1,4 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/local/harnesses/kilo/test_row.py
+# signed_out still holds PROMOTION_MODEL_LIMIT_REACHED; agent-CLI stubs first on PATH
+fail kilo test_row.py: not signed in: each of Kilo's signed-out lines is a D3 error saying so, whose next names kilo auth login; its free-model limit is not
+exit 1

@@ -15,7 +15,7 @@ import unittest
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
-TARGETS = ('aarch64-apple-darwin', 'x86_64-apple-darwin', 'x86_64-unknown-linux-gnu')
+TARGETS = ('aarch64-apple-darwin', 'x86_64-apple-darwin', 'x86_64-unknown-linux-gnu', 'aarch64-unknown-linux-gnu')
 SOURCE = '1' * 40
 REQUIRED = ['runtime/openwiz-build.txt', 'openwiz', 'runtime/skills/setup/SKILL.md', 'runtime/skills/grill/SKILL.md',
             'runtime/skills/to-tickets/SKILL.md', 'runtime/skills/launch-fleet/SKILL.md',

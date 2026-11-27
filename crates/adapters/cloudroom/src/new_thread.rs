@@ -25,21 +25,6 @@ pub const HARNESS_PROVIDERS: &[(&str, &str)] =
 
 pub const CLI_REASONING_LEVELS: &[&str] = &["low", "medium", "high", "xhigh", "max"];
 
-pub const CATALOGUE_KEYS: &[&str] = &["ready", "harnesses"];
-
-pub const HARNESS_KEYS: &[&str] = &[
-    "id",
-    "model",
-    "reasoning_levels",
-    "models",
-    "attachments",
-    "steer",
-];
-
-pub const MODEL_KEYS: &[&str] = &["model", "reasoning_levels"];
-
-pub const ATTACHMENT_KEYS: &[&str] = &["files", "images"];
-
 pub fn spawn_argv(spawn: &SpawnRequest) -> Result<Vec<String>, InvalidRequest> {
     spawn_invocation(spawn).map(|invocation| invocation.argv())
 }

@@ -1,0 +1,7 @@
+env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/vps/test_hosts.py
+.............
+----------------------------------------------------------------------
+Ran 13 tests
+
+OK
+Exit 0
