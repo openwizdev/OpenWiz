@@ -44,18 +44,11 @@ struct MergeCache {
     contains: BTreeMap<(String, Commit, Commit), Result<bool>>,
 }
 #[derive(Clone)]
+#[cfg_attr(test, derive(Debug, PartialEq))]
 struct OpenReads {
     subject: String,
     ci: Option<CheckRun>,
     base_now: Commit,
-}
-enum Prefetch {
-    Contains(Commit),
-    Open(PrFacts),
-}
-enum Prefetched {
-    Contains(Commit, Result<bool>),
-    Open(Number, Result<OpenReads>),
 }
 fn open_reads(
     gh: &TickReads,
@@ -68,6 +61,69 @@ fn open_reads(
         ci: gh.checks_with_parallelism(pr.number, &pr.head_commit, deadline, parallel_jobs)?,
         base_now: gh.branch(pr.base_branch.as_str(), deadline)?,
     })
+}
+struct HeadReads {
+    subject: String,
+    ci: Option<CheckRun>,
+}
+enum Prefetch {
+    Contains(Commit),
+    Open(PrFacts),
+}
+enum Prefetched {
+    Contains(Commit, Result<bool>),
+    Open(Number, NonEmpty, Result<HeadReads>),
+}
+fn head_reads(
+    gh: &TickReads,
+    pr: &PrFacts,
+    deadline: Instant,
+    parallel_jobs: usize,
+) -> Result<HeadReads> {
+    Ok(HeadReads {
+        subject: gh.subject(&pr.head_commit, deadline)?,
+        ci: gh.checks_with_parallelism(pr.number, &pr.head_commit, deadline, parallel_jobs)?,
+    })
+}
+fn with_bases(
+    gh: &TickReads,
+    heads: Vec<(Number, NonEmpty, Result<HeadReads>)>,
+    deadline: Instant,
+) -> Result<BTreeMap<Number, Result<OpenReads>>> {
+    let bases = heads
+        .iter()
+        .filter(|(_, _, reads)| reads.is_ok())
+        .map(|(_, base, _)| base.as_str().to_owned())
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
+    let mut now = BTreeMap::new();
+    for chunk in bases.chunks(openwiz_core::fleet::tickets::MAX_CONCURRENT_READS) {
+        let answers = std::thread::scope(|scope| {
+            let workers = chunk
+                .iter()
+                .map(|base| scope.spawn(move || (base.clone(), gh.branch(base, deadline))))
+                .collect::<Vec<_>>();
+            workers
+                .into_iter()
+                .map(|worker| worker.join().map_err(|_| "planning worker failed"))
+                .collect::<Result<Vec<_>>>()
+        })?;
+        now.extend(answers);
+    }
+    Ok(heads
+        .into_iter()
+        .map(|(pr, base, reads)| {
+            let reads = reads.and_then(|h| {
+                Ok(OpenReads {
+                    subject: h.subject,
+                    ci: h.ci,
+                    base_now: now[base.as_str()].clone()?,
+                })
+            });
+            (pr, reads)
+        })
+        .collect())
 }
 pub struct Inventory {
     repository: openwiz_adapter_github::tick::Repository,
@@ -590,6 +646,7 @@ impl World {
         };
         let deadline = budget.with_work(work.saturating_add(agent_work))?;
         self.deadline = deadline;
+        let mut opened = Vec::new();
         for chunk in jobs.chunks(openwiz_core::fleet::tickets::MAX_CONCURRENT_READS) {
             let parallel_jobs = openwiz_core::fleet::tickets::MAX_CONCURRENT_READS / chunk.len();
             let answers = std::thread::scope(|scope| {
@@ -604,7 +661,8 @@ impl World {
                             ),
                             Prefetch::Open(p) => Prefetched::Open(
                                 p.number,
-                                open_reads(gh, p, deadline, parallel_jobs),
+                                p.base_branch.clone(),
+                                head_reads(gh, p, deadline, parallel_jobs),
                             ),
                         })
                     })
@@ -622,12 +680,11 @@ impl World {
                             answer,
                         );
                     }
-                    Prefetched::Open(pr, answer) => {
-                        self.pr_reads.insert(pr, answer);
-                    }
+                    Prefetched::Open(pr, base, answer) => opened.push((pr, base, answer)),
                 }
             }
         }
+        self.pr_reads.extend(with_bases(gh, opened, deadline)?);
         Ok(())
     }
     fn fleet(
@@ -715,18 +772,7 @@ impl World {
             fingerprint_now,
             tickets,
             changes,
-            follow_ups: self
-                .issues
-                .values()
-                .filter(|i| {
-                    i.state == openwiz_core::fleet::model::IssueState::Open
-                        && row.sub_issues.nodes.iter().any(|t| {
-                            i.body
-                                .starts_with(&format!("Follow-up of #{} (spec #{spec})", t.number))
-                        })
-                })
-                .map(|i| i.number)
-                .collect(),
+            follow_ups: follow_ups(&self.issues, &row, spec),
             records: spec_records,
         })
     }
@@ -1315,6 +1361,24 @@ fn branch_matches(
     }
 }
 
+fn follow_ups(issues: &BTreeMap<Number, IssueRow>, row: &IssueRow, spec: Number) -> Vec<Number> {
+    let prefixes = row
+        .sub_issues
+        .nodes
+        .iter()
+        .map(|t| format!("Follow-up of #{} (spec #{spec})", t.number))
+        .collect::<Vec<_>>();
+    issues
+        .values()
+        .filter(|i| {
+            i.state == openwiz_core::fleet::model::IssueState::Open
+                && i.body.starts_with("Follow-up of #")
+                && prefixes.iter().any(|p| i.body.starts_with(p.as_str()))
+        })
+        .map(|i| i.number)
+        .collect()
+}
+
 fn links(links: &Links, issues: &BTreeMap<Number, IssueRow>) -> Result<()> {
     if links.total != links.nodes.len() as u64 {
         return Err("incomplete links");
@@ -1449,6 +1513,233 @@ mod budget_tests {
         assert_eq!(
             PlanningDeadline::Initial(original).with_work(5).unwrap(),
             observed - Duration::from_secs(90)
+        );
+    }
+}
+
+#[cfg(test)]
+mod follow_up_tests {
+    use super::*;
+    use openwiz_core::fleet::fleets::Link;
+    use openwiz_core::fleet::model::IssueState;
+
+    fn previous(issues: &BTreeMap<Number, IssueRow>, row: &IssueRow, spec: Number) -> Vec<Number> {
+        issues
+            .values()
+            .filter(|i| {
+                i.state == IssueState::Open
+                    && row.sub_issues.nodes.iter().any(|t| {
+                        i.body
+                            .starts_with(&format!("Follow-up of #{} (spec #{spec})", t.number))
+                    })
+            })
+            .map(|i| i.number)
+            .collect()
+    }
+
+    fn n(v: u64) -> Number {
+        Number::new(v).unwrap()
+    }
+
+    fn row(number: u64, state: IssueState, body: String, subs: &[u64]) -> IssueRow {
+        IssueRow {
+            number: n(number),
+            id: NonEmpty::new(format!("I_{number}")).unwrap(),
+            title: format!("Issue {number}"),
+            state,
+            milestone: None,
+            labels: vec![],
+            body,
+            sub_issues: Links {
+                nodes: subs
+                    .iter()
+                    .map(|&s| Link {
+                        number: n(s),
+                        id: NonEmpty::new(format!("I_{s}")).unwrap(),
+                    })
+                    .collect(),
+                total: subs.len() as u64,
+            },
+            blocked_by: Links {
+                nodes: vec![],
+                total: 0,
+            },
+        }
+    }
+
+    #[test]
+    fn follow_ups_match_the_previous_filter() {
+        let mut seed = 0x9e37_79b9_7f4a_7c15_u64;
+        let mut next = move |m: u64| {
+            seed ^= seed << 13;
+            seed ^= seed >> 7;
+            seed ^= seed << 17;
+            seed % m
+        };
+        let bodies = |t: u64, s: u64, k: u64| match k {
+            0 => format!("Follow-up of #{t} (spec #{s})"),
+            1 => format!("Follow-up of #{t} (spec #{s}) and more\nbody"),
+            2 => format!("Follow-up of #{t}0 (spec #{s})"),
+            3 => format!("Follow-up of #{t} (spec #{s}0)"),
+            4 => format!(" Follow-up of #{t} (spec #{s})"),
+            5 => format!("follow-up of #{t} (spec #{s})"),
+            6 => format!("Follow-up of #{t} (spec #{s}"),
+            7 => "Follow-up of #".to_owned(),
+            8 => String::new(),
+            _ => format!("Unrelated body naming #{t} and spec #{s}"),
+        };
+        for _ in 0..400 {
+            let spec = 1 + next(30);
+            let subs = (0..next(6)).map(|_| 1 + next(40)).collect::<Vec<_>>();
+            let spec_row = row(spec, IssueState::Open, String::new(), &subs);
+            let mut issues = BTreeMap::new();
+            for number in 100..100 + next(25) {
+                let t = if subs.is_empty() || next(4) == 0 {
+                    1 + next(40)
+                } else {
+                    subs[next(subs.len() as u64) as usize]
+                };
+                let s = if next(5) == 0 { 1 + next(30) } else { spec };
+                let state = if next(4) == 0 {
+                    IssueState::Closed
+                } else {
+                    IssueState::Open
+                };
+                issues.insert(n(number), row(number, state, bodies(t, s, next(10)), &[]));
+            }
+            assert_eq!(
+                follow_ups(&issues, &spec_row, n(spec)),
+                previous(&issues, &spec_row, n(spec))
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod base_read_tests {
+    use super::*;
+    use openwiz_adapter_github::process::Executor;
+    use openwiz_core::source::SourceError;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    fn head(pr: u64) -> String {
+        format!("{pr:040x}")
+    }
+
+    fn answer(argv: &[String]) -> Option<String> {
+        let path = argv.get(1).map_or("", String::as_str);
+        let api = path.strip_prefix("repos/{owner}/{repo}/");
+        if let Some(branch) = api.and_then(|p| p.strip_prefix("git/ref/heads/")) {
+            let sha = match branch {
+                "main" => "b".repeat(40),
+                "feature-a" => "a".repeat(40),
+                _ => return None,
+            };
+            return Some(format!("{{\"sha\":\"{sha}\"}}"));
+        }
+        if let Some(sha) = api.and_then(|p| p.strip_prefix("commits/")) {
+            return (sha != head(9))
+                .then(|| format!("{{\"sha\":\"{sha}\",\"subject\":\"Synthetic subject\"}}"));
+        }
+        if let Some(sha) = api
+            .and_then(|p| p.strip_prefix("actions/runs?head_sha="))
+            .and_then(|p| p.strip_suffix("&per_page=100"))
+        {
+            let pr = u64::from_str_radix(sha, 16).ok()?;
+            return Some(format!(
+                "{{\"total_count\":1,\"runs\":[{{\"id\":{pr},\"head_sha\":\"{sha}\",\"event\":\"pull_request\",\"run_attempt\":1,\"updated\":1,\"prs\":[{{\"number\":{pr},\"head\":\"{sha}\",\"base\":\"{}\"}}]}}]}}",
+                "b".repeat(40)
+            ));
+        }
+        if let Some(id) = api
+            .and_then(|p| p.strip_prefix("actions/runs/"))
+            .and_then(|p| p.strip_suffix("/jobs?filter=latest&per_page=100"))
+        {
+            let pr = id.parse::<u64>().ok()?;
+            return Some(format!(
+                "{{\"total_count\":1,\"jobs\":[{{\"id\":{},\"name\":\"rust\",\"status\":\"completed\",\"conclusion\":\"success\",\"head_sha\":\"{}\",\"run_id\":{pr}}}]}}",
+                pr * 10,
+                head(pr)
+            ));
+        }
+        let pr = argv.get(2).and_then(|n| n.parse::<u64>().ok())?;
+        match (argv[0].as_str(), argv[1].as_str()) {
+            ("pr", "checks") => Some("[{\"bucket\":\"pass\",\"name\":\"rust\"}]".to_owned()),
+            ("pr", "view") => Some(format!(
+                "{{\"baseRefName\":\"main\",\"closingIssuesReferences\":[],\"headRefName\":\"synthetic-{pr}\",\"headRefOid\":\"{}\",\"isDraft\":false,\"mergeCommit\":null,\"mergedAt\":null,\"number\":{pr},\"state\":\"OPEN\"}}",
+                head(pr)
+            )),
+            _ => None,
+        }
+    }
+
+    fn pr(number: u64, base: &str) -> PrFacts {
+        PrFacts {
+            number: Number::new(number).unwrap(),
+            draft: false,
+            head_branch: NonEmpty::new(format!("synthetic-{number}")).unwrap(),
+            head_commit: Commit::parse(&head(number)).unwrap(),
+            base_branch: NonEmpty::new(base).unwrap(),
+            closes: vec![],
+        }
+    }
+
+    #[test]
+    fn one_base_read_per_branch_matches_the_per_pr_reads() {
+        let branch_reads = Arc::new(AtomicUsize::new(0));
+        let counted = branch_reads.clone();
+        let gh = TickReads::with_executor(Executor::supplied(Arc::new(move |call, _| {
+            if call
+                .argv()
+                .get(1)
+                .is_some_and(|p| p.contains("git/ref/heads/"))
+            {
+                counted.fetch_add(1, Ordering::Relaxed);
+            }
+            answer(call.argv())
+                .map(String::into_bytes)
+                .ok_or_else(|| SourceError::Unavailable {
+                    detail: "synthetic refusal".to_owned(),
+                })
+        })));
+        let deadline = Instant::now() + std::time::Duration::from_secs(60);
+        let prs = [
+            pr(3, "main"),
+            pr(4, "main"),
+            pr(5, "feature-a"),
+            pr(6, "main"),
+            pr(7, "broken"),
+            pr(8, "broken"),
+            pr(9, "main"),
+            pr(10, "feature-a"),
+        ];
+        let previous = prs
+            .iter()
+            .map(|p| (p.number, open_reads(&gh, p, deadline, 1)))
+            .collect::<BTreeMap<_, _>>();
+        assert_eq!(branch_reads.swap(0, Ordering::Relaxed), 7);
+        let shared = with_bases(
+            &gh,
+            prs.iter()
+                .map(|p| {
+                    (
+                        p.number,
+                        p.base_branch.clone(),
+                        head_reads(&gh, p, deadline, 1),
+                    )
+                })
+                .collect(),
+            deadline,
+        )
+        .unwrap();
+        assert_eq!(branch_reads.load(Ordering::Relaxed), 3);
+        assert_eq!(shared, previous);
+        assert!(previous.values().filter(|r| r.is_ok()).count() == 5);
+        assert_eq!(
+            previous.values().filter(|r| r.is_err()).count(),
+            3,
+            "{previous:?}"
         );
     }
 }

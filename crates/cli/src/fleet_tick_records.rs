@@ -756,3 +756,172 @@ pub fn review_records(comments: &[Comment]) -> Result<Vec<ReviewRecord>> {
     }
     Ok(out)
 }
+
+#[cfg(test)]
+mod fuzz_tests {
+    use super::*;
+
+    const SEEDS: &[&str] = &[
+        "**Plan graph approved by Jake, 2026-10-30, revision 1:** \"approved\"\n\n| Ticket | Title | Blocked by | Label |\n| --- | --- | --- | --- |\n| #10 | Synthetic ticket 10 | none | ready-for-agent |\n| #11 | Synthetic ticket 11 | #10 | ready-for-agent |\n\nFingerprint: `5a46b243aa88e90eaae1c4332f4d625154c4299a6fc3f15f9f75bc6ab414c66c`\n\n```text\nplan-graph revision v2\nspec #9 body sha256 e8ed494ca2bac1d6fd37b4742dcf45b43ac1180e687098745590f3692f90a71a\nticket #10 blocked-by none body sha256 60c009f9e72945c1dc45fe9f9bd9cd09dc092b5f87fcb23e3c873cf4372dca9e title Synthetic ticket 10\n```\n",
+        "**Plan graph approved by Jake, 2026-10-30, revision 2:** \"go\" (\"source\" (nested))\n\n| Ticket | Title | Blocked by | Label |\n| --- | --- | --- | --- |\n| #12 | T | #10, #11 | ready-for-agent |\n",
+        "## GitHub identity\n| Setting | Value |\n| --- | --- |\n| Record authors | `openwiz[bot]`, `syn-owner` |\n",
+        "launch-fleet: start checked, thread thr_syn_1, branch synthetic-branch-10",
+        "launch-fleet: start checked, branch synthetic-branch-10",
+        "launch-fleet: held for #12: contract changed, re-approve. `contracts/a.v1.md`, `contracts/b.v1.md`",
+        "launch-fleet: builder fallback due, thread thr_syn_2, branch b, model m",
+        "launch-fleet: review started 1111111111111111111111111111111111111111, thread thr_syn_3",
+        "launch-fleet: review failed 1111111111111111111111111111111111111111, thread thr_syn_3: timed out",
+        "launch-fleet: review given up 1111111111111111111111111111111111111111: no answer",
+        "launch-fleet: re-check sent 1111111111111111111111111111111111111111, thread thr_syn_4",
+        "launch-fleet: merge blocked 1111111111111111111111111111111111111111: base moved",
+        "launch-fleet: noted #42",
+        "launch-fleet: look: synthetic reason",
+        "launch-fleet: spec summary: merged #10",
+        "VERDICT: APPROVE at 1111111111111111111111111111111111111111\n\n- **R1 [nit]** synthetic",
+        "<!-- openwiz:status v1 -->\nagent: builder\nstate: working\nstep: synthetic\n",
+        "**Owned paths:** `crates/example/one.rs`\n**Relies on:** `contracts/a.v1.md`, `docs/b.md`",
+        "## Builder\n| Setting | Value | `room-cli thread spawn` flag |\n| --- | --- | --- |\n| Harness | Claude Code | `--provider claude-code` |\n| Model | Opus | `--model claude-opus-5-5` |\n| Effort | XHigh | `--reasoning-level xhigh` |\n## CI checks\n| Check | Runs | Required on |\n| --- | --- | --- |\n| `rust` | tests | `main` |\n",
+    ];
+    const PIECES: &[&str] = &[
+        "é",
+        "日本",
+        "\u{200b}",
+        "\u{1f600}",
+        "|",
+        "`",
+        "#",
+        "0",
+        "9",
+        "\n",
+        "\r\n",
+        " ",
+        "\t",
+        "\"",
+        "(",
+        ")",
+        "*",
+        "- [x] ",
+        "```",
+        "~~~",
+        ": ",
+        ", ",
+        "thr_",
+        "#0",
+        "#18446744073709551616",
+        "**",
+        "revision ",
+        "a",
+        "Z",
+    ];
+
+    struct Rng(u64);
+    impl Rng {
+        fn below(&mut self, n: usize) -> usize {
+            self.0 ^= self.0 << 13;
+            self.0 ^= self.0 >> 7;
+            self.0 ^= self.0 << 17;
+            (self.0 % n.max(1) as u64) as usize
+        }
+    }
+
+    fn mutate(rng: &mut Rng, text: &str) -> String {
+        let mut chars = text.chars().collect::<Vec<_>>();
+        for _ in 0..1 + rng.below(6) {
+            let at = rng.below(chars.len() + 1);
+            match rng.below(6) {
+                0 => chars
+                    .splice(at..at, PIECES[rng.below(PIECES.len())].chars())
+                    .for_each(drop),
+                1 if !chars.is_empty() => {
+                    let end = (at + 1 + rng.below(12)).min(chars.len());
+                    chars.drain(at.min(end)..end);
+                }
+                2 if !chars.is_empty() => {
+                    let end = (at + 1 + rng.below(40)).min(chars.len());
+                    let copy = chars[at.min(end)..end].to_vec();
+                    let to = rng.below(chars.len() + 1);
+                    chars.splice(to..to, copy).for_each(drop);
+                }
+                3 => {
+                    let other = SEEDS[rng.below(SEEDS.len())].chars().collect::<Vec<_>>();
+                    let from = rng.below(other.len());
+                    let end = (from + rng.below(80)).min(other.len());
+                    chars
+                        .splice(at..at, other[from..end].iter().copied())
+                        .for_each(drop);
+                }
+                4 if at < chars.len() => {
+                    chars[at] = PIECES[rng.below(PIECES.len())].chars().next().unwrap()
+                }
+                _ => chars.truncate(at),
+            }
+        }
+        chars.into_iter().collect()
+    }
+
+    fn comment(id: u64, body: String) -> Comment {
+        Comment {
+            id: Number::new(id).unwrap(),
+            author: Some("openwiz[bot]".to_owned()),
+            body,
+            created: id,
+            updated: id + 1,
+        }
+    }
+
+    fn exercise(texts: &[String]) {
+        let comments = texts
+            .iter()
+            .enumerate()
+            .map(|(i, t)| comment(i as u64 + 1, t.clone()))
+            .collect::<Vec<_>>();
+        let flags = crate::models::spawn_flags().unwrap();
+        for t in texts {
+            let _ = record_authors(t);
+            let _ = relies(t);
+            let _ = contains_thread_id(t);
+            let _ = openwiz_core::fleet::fleets::template_line(t, "**Owned paths:**");
+            let _ = openwiz_core::fleet::tick::Rules::parse(t, &flags);
+            let _ = openwiz_core::fleet::model::Commit::parse(t);
+            let _ = Fingerprint::parse(t);
+        }
+        for legacy in [false, true] {
+            let _ = approval(&comments, legacy);
+            let _ = check_forms(&comments, legacy);
+        }
+        let _ = review_records(&comments);
+        let _ = pr_records(&comments, &BTreeSet::new());
+        let _ = ticket_records(&comments);
+        let _ = spec_records(&comments);
+        let _ = checked_builder(&comments);
+        let _ = fallback_replacement(&comments);
+        let _ = fallback_due(&comments);
+        let _ = holds(&comments, &[], &BTreeMap::new());
+    }
+
+    #[test]
+    fn mutated_records_never_panic() {
+        let seconds = std::env::var("OPENWIZ_FUZZ_SECONDS")
+            .ok()
+            .and_then(|s| s.parse::<u64>().ok());
+        let started = std::time::Instant::now();
+        let mut rng = Rng(std::env::var("OPENWIZ_FUZZ_SEED")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(0x2545_f491_4f6c_dd1d));
+        let mut cases = 0u64;
+        while seconds.map_or(cases < 2_000, |s| started.elapsed().as_secs() < s) {
+            let texts = (0..1 + rng.below(3))
+                .map(|_| {
+                    let seed = SEEDS[rng.below(SEEDS.len())];
+                    mutate(&mut rng, seed)
+                })
+                .collect::<Vec<_>>();
+            if std::panic::catch_unwind(|| exercise(&texts)).is_err() {
+                panic!("a parser panicked on {texts:?}");
+            }
+            cases += 1;
+        }
+        eprintln!("fuzz: {cases} cases");
+    }
+}
