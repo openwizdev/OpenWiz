@@ -765,6 +765,151 @@ class Kit(unittest.TestCase):
         finally:
             kit.subprocess.run = real
 
+    def test_a_detached_worker_from_the_unsupported_effort_probe_fails_the_leftover_check(self):
+        cases = [('linux', sys.executable, '0'),
+                 ('macos', os.path.join(NO_PROC, 'python3'), '0.15')] if os.path.isdir('/proc/self') else [
+            ('macos', sys.executable, '0.15')]
+        for label, python, delay in cases:
+            with self.subTest(label):
+                self.tearDown()
+                self.setUp()
+                driver = os.path.join(self.folder, 'detached-effort-driver')
+                pid_file = os.path.join(self.folder, 'worker.pid')
+                with open(driver, 'w') as f:
+                    f.write(
+                        '#!%s\n'
+                        'import importlib.machinery, importlib.util, io, json, os, subprocess, sys, time\n'
+                        'sys.dont_write_bytecode = True\n'
+                        'if len(sys.argv) == 2 and sys.argv[1] == "start":\n'
+                        '    raw = sys.stdin.read()\n'
+                        '    req = json.loads(raw)\n'
+                        '    if "effort" in req:\n'
+                        '        p = subprocess.Popen([sys.executable, "-I", "-c", "import time; time.sleep(120)"],\n'
+                        '                             start_new_session=True, stdin=subprocess.DEVNULL,\n'
+                        '                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)\n'
+                        '        with open(%r, "w") as out:\n'
+                        '            out.write(str(p.pid))\n'
+                        '        delay = float(os.environ.get("KIT_PROBE_DELAY", "0"))\n'
+                        '        if delay:\n'
+                        '            time.sleep(delay)\n'
+                        '        print(json.dumps({"error": "effort is not supported", "next": "start without effort"}))\n'
+                        '        sys.exit(1)\n'
+                        '    sys.stdin = io.StringIO(raw)\n'
+                        's = importlib.util.spec_from_loader("base", importlib.machinery.SourceFileLoader("base", %r))\n'
+                        'm = importlib.util.module_from_spec(s)\n'
+                        's.loader.exec_module(m)\n'
+                        'm.main()\n' % (sys.executable, pid_file, os.path.realpath(BASE)))
+                os.chmod(driver, 0o700)
+                extra_env = {'KIT_PROBE_DELAY': delay}
+                if python != sys.executable:
+                    extra_env.update(PATH=NO_PROC + os.pathsep + self.env['PATH'], NO_PROC_PYTHON=sys.executable)
+                code, out, err = self.kit(driver, python=python, wait='1', **extra_env)
+                self.assertTrue(os.path.exists(pid_file), 'the probe did not start its detached worker')
+                with open(pid_file) as f:
+                    worker_pid = int(f.read())
+                self.addCleanup(self._end, worker_pid)
+                self.assertTrue(self._alive(worker_pid), 'the detached worker exited before the check')
+                self._end(worker_pid)
+                self.assertEqual((code, out), (1, [PASS[0], 'fail start: effort: a process the start with effort '
+                                                   'began still runs'] + NOT_RUN + [PASS[4]]), err)
+
+    @unittest.skipUnless(os.path.isdir('/proc/self'), 'reads /proc')
+    def test_without_subreaper_on_linux_the_kit_refuses_to_run(self):
+        probe = (
+            'import ctypes, importlib.machinery, importlib.util, sys\n'
+            'sys.dont_write_bytecode = True\n'
+            'class Deny:\n'
+            '    def __init__(self, *a, **k): pass\n'
+            '    def prctl(self, *a): return -1\n'
+            'ctypes.CDLL = Deny\n'
+            's = importlib.util.spec_from_loader("kit", importlib.machinery.SourceFileLoader("kit", %r))\n'
+            'k = importlib.util.module_from_spec(s)\n'
+            's.loader.exec_module(k)\n'
+            'sys.exit(k.main(sys.argv[1:]))\n' % os.path.join(HERE, 'kit.py'))
+        p = subprocess.run([sys.executable, '-I', '-c', probe, '--driver', BASE, '--repo', 'example/site',
+                            '--ticket', '7', '--harness', 'fake-harness', '--model', 'Synthetic 1',
+                            '--tracker', self.env['KIT_TRACKER'], '--wait', '2'],
+                           env=self.env, capture_output=True, text=True, timeout=60,
+                           cwd=os.path.join(HERE, '..', '..'))
+        self.assertEqual((p.returncode, p.stdout), (2, ''), p.stdout + p.stderr)
+        self.assertIn("kit.py: this host cannot keep a driver's processes under the kit", p.stderr)
+
+    @unittest.skipUnless(os.path.isdir('/proc/self'), 'reads /proc')
+    def test_a_stale_linux_row_for_a_live_unrelated_process_does_not_read_its_environment(self):
+        unrelated_script = (
+            'import os, time\n'
+            'if os.fork():\n'
+            '    os._exit(0)\n'
+            'os.setsid()\n'
+            'if os.fork():\n'
+            '    os._exit(0)\n'
+            'os.write(1, b"%d\\n" % os.getpid())\n'
+            'time.sleep(120)\n')
+        mark = 'OPENWIZ_KIT_RUN=' + secrets.token_hex(8)
+        unrelated = subprocess.Popen([sys.executable, '-c', unrelated_script], stdout=subprocess.PIPE)
+        unrelated_pid = int(unrelated.stdout.readline())
+        unrelated.stdout.close()
+        unrelated.wait(timeout=5)
+        self.addCleanup(self._end, unrelated_pid)
+        leader = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(120)'],
+                                  env=dict(os.environ, OPENWIZ_KIT_RUN=mark.split('=', 1)[1]))
+        self.addCleanup(leader.wait)
+        self.addCleanup(leader.kill)
+        kit = module(os.path.join(HERE, 'kit.py'))
+        linux = self._scan_kit(kit, mark)
+        opened, dir_fds = [], []
+        real_os_open = kit.os.open
+
+        def watch_open(path, *args, **kwargs):
+            text = path if isinstance(path, str) else ''
+            if text.endswith('/environ'):
+                opened.append(int(text.rstrip('/').split('/')[-2]))
+            return open(path, *args, **kwargs)
+
+        def watch_os_open(path, flags, *args, **kwargs):
+            if path == 'environ':
+                dir_fds.append(kwargs.get('dir_fd'))
+            return real_os_open(path, flags, *args, **kwargs)
+
+        real_rows = linux.process_rows
+        kit.open = watch_open
+        kit.os.open = watch_os_open
+        try:
+            current = linux.table()
+            self.assertNotIn(unrelated_pid, opened, "the current row read an unrelated process's environment")
+            self.assertNotIn(str(unrelated_pid), current, 'the current row kept an unrelated process in the table')
+            self.assertIn(leader.pid, opened, 'the scan did not read its own marked child')
+            leader_dir_fds = list(dir_fds)
+            real_since = str(started_at(str(unrelated_pid)))
+            stale_since = str(int(real_since) - 1)
+            for label, make_row in (
+                ('stale child row', lambda r: (os.getpid(), r[1], os.getpgrp(), r[3], stale_since, 'S')),
+                ('stale owned row', lambda r: (1, r[1], r[2], r[3], stale_since, 'S')),
+            ):
+                with self.subTest(label):
+                    opened.clear()
+                    linux.owned.clear()
+                    if label == 'stale owned row':
+                        linux.owned[unrelated_pid] = int(stale_since)
+
+                    def stale_rows(make_row=make_row):
+                        rows = real_rows()
+                        rows[unrelated_pid] = make_row(rows[unrelated_pid])
+                        return rows
+
+                    linux.process_rows = stale_rows
+                    found = linux.table()
+                    self.assertNotIn(unrelated_pid, opened,
+                                     "a stale row caused the scan to open an unrelated process's environment")
+                    self.assertNotIn(str(unrelated_pid), found,
+                                     'a stale row kept an unrelated process in the scan table')
+            self.assertTrue(leader_dir_fds and all(fd is not None for fd in leader_dir_fds),
+                            'the environment open was not bound to a /proc/<pid> directory handle')
+        finally:
+            kit.os.open = real_os_open
+            if 'open' in kit.__dict__:
+                del kit.open
+
     def test_a_path_diagnostic_never_prints_the_active_canary(self):
         kit = module(os.path.join(HERE, 'kit.py'))
         k = kit.Kit.__new__(kit.Kit)

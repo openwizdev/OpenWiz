@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import ctypes
 import http.server
 import importlib.machinery
 import importlib.util
@@ -47,6 +48,7 @@ KEYWORDS = {'$schema', 'type', 'required', 'additionalProperties', 'properties',
             'maxLength', 'minimum', 'items', 'minItems', 'uniqueItems', 'enum', 'const', 'allOf', 'contains'}
 TYPES = {'object': dict, 'array': list, 'string': str, 'boolean': bool}
 PROC = os.path.isdir('/proc/self')
+PR_SET_CHILD_SUBREAPER = 36
 TEMPLATE = os.path.join(HERE, '..', '..', 'adapters', 'template', 'driver')
 AGENT_CLIS = ('claude', 'claude-code', 'codex', 'cursor-agent', 'agent', 'pi', 'opencode', 'openclaw', 'copilot',
               'goose', 'gemini', 'kimi', 'qwen', 'cline', 'kilo', 'crush', 'vibe', 'auggie', 'kiro-cli', 'junie', 'amp',
@@ -204,6 +206,13 @@ def texts(value):
 
 def holds_credential(text):
     return bool(SHAPES.search(text)) or any(v in text for v in SECRETS)
+
+
+def enable_subreaper():
+    try:
+        return ctypes.CDLL(None, use_errno=True).prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0) == 0
+    except (AttributeError, OSError):
+        return False
 
 
 def started_at(pid):
@@ -417,6 +426,7 @@ class Kit:
         self.groups, self.sessions, self.owned = set(), set(), {}
         self.ps_session = None
         self.lock = threading.RLock()
+        self._direct = set()
         self.runtime, self.listed_pids, self.active, self.hidden = set(), set(), set(), set()
         self.since = started_at('self') if PROC else 0
         self.seen = PROC
@@ -428,6 +438,9 @@ class Kit:
                                "fixtures, so the kit ran nothing: write your own command first" % args.harness)
             self.stubs = stub_agent_clis(tempfile.mkdtemp(prefix='openwiz-kit-stubs-'))
             self.env['PATH'] = self.stubs + os.pathsep + self.env.get('PATH', os.defpath)
+        self.subreaper = enable_subreaper() if PROC else False
+        if PROC and not self.subreaper:
+            raise Unusable("this host cannot keep a driver's processes under the kit")
         self.can, self.setting, self.effort_seen = [], None, False
 
     def leak(self, what):
@@ -436,31 +449,52 @@ class Kit:
                 self.leaks.append(what)
 
     def call(self, cmd, request=None, env=None, canary=None):
+        direct = getattr(self, '_direct', None)
         try:
-            p = subprocess.run([self.args.driver, cmd], input='' if request is None else json.dumps(request),
-                               env=env or self.env, capture_output=True, text=True, timeout=120)
+            if direct is None:
+                p = subprocess.run([self.args.driver, cmd], input='' if request is None else json.dumps(request),
+                                   env=env or self.env, capture_output=True, text=True, timeout=120)
+                stdout, stderr, returncode = p.stdout, p.stderr, p.returncode
+            else:
+                with self.lock:
+                    p = subprocess.Popen([self.args.driver, cmd], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                         stderr=subprocess.PIPE, env=env or self.env, text=True)
+                    direct.add(p.pid)
+                try:
+                    stdout, stderr = p.communicate('' if request is None else json.dumps(request), timeout=120)
+                    returncode = p.returncode
+                except subprocess.TimeoutExpired:
+                    p.kill()
+                    p.communicate()
+                    raise
+                finally:
+                    if p.returncode is None:
+                        p.kill()
+                        p.wait()
+                    with self.lock:
+                        direct.discard(p.pid)
         except (OSError, subprocess.TimeoutExpired) as e:
             return 'bad', '%s did not finish: %s' % (cmd, e)
-        if canary and canary[1] in p.stdout + p.stderr:
+        if canary and canary[1] in stdout + stderr:
             # SECURITY: the kit's key canary; nothing of this output is shown.
             self.leak('the driver printed the %s key' % canary[0])
             return 'bad', 'its %s output held the key' % cmd
-        if holds_credential(p.stdout + p.stderr):
+        if holds_credential(stdout + stderr):
             self.leak('the driver printed a credential')
         held = 'bad', 'its %s output held a credential, which the kit does not show' % cmd
-        if holds_credential(p.stdout):
+        if holds_credential(stdout):
             # SECURITY: nothing of it is parsed or shown; any part could carry the credential into the kit's output.
             return held
         try:
-            out = parse(p.stdout)
+            out = parse(stdout)
         except ValueError:
             return 'bad', '%s printed no single JSON value' % cmd
         if any(holds_credential(text) for text in texts(out)):
             self.leak('the driver printed a credential')
             return held
-        if p.returncode not in (0, 1):
-            return 'bad', '%s exited %d' % (cmd, p.returncode)
-        kind, s = ('ok', self.schema['commands'][cmd]['output']) if p.returncode == 0 else ('refused', self.schema['error'])
+        if returncode not in (0, 1):
+            return 'bad', '%s exited %d' % (cmd, returncode)
+        kind, s = ('ok', self.schema['commands'][cmd]['output']) if returncode == 0 else ('refused', self.schema['error'])
         why = invalid(out, s, 'its %s %s' % (cmd, 'answer' if kind == 'ok' else 'error'))
         return ('bad', why) if why else (kind, out)
 
@@ -474,22 +508,39 @@ class Kit:
                 yield cmd, env
         for pid, (ppid, uid, env, cmd, group, since) in table.items():
             if env is None and uid == os.getuid() and since > self.since and (
-                    group == os.getpgrp() or self.under_run(table, ppid)):
+                    ppid == os.getpid() or group == os.getpgrp() or self.under_run(table, ppid)):
                 self.leak('a process of the driver hides its details, so the kit cannot check it')
 
     def process_rows(self):
         found = {}
+        reap = getattr(self, 'subreaper', False)
+        direct = getattr(self, '_direct', ())
         for name in filter(str.isdigit, os.listdir('/proc')):
             pid = int(name)
             try:
-                with open('/proc/%d/stat' % pid) as f:
+                proc = os.open('/proc/%d' % pid, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+            except OSError:
+                continue
+            try:
+                def at(path, flags, proc=proc):
+                    return os.open(os.path.basename(path), flags, dir_fd=proc)
+                with open('/proc/%d/stat' % pid, opener=at) as f:
                     fields = f.read().rpartition(')')[2].split()
                 state, ppid, group, session = fields[0], int(fields[1]), int(fields[2]), int(fields[3])
                 since = fields[19]
-                with open('/proc/%d/status' % pid) as f:
+                if state in 'ZX':
+                    if reap and ppid == os.getpid() and pid not in direct:
+                        try:
+                            os.waitpid(pid, os.WNOHANG)
+                        except ChildProcessError:
+                            pass
+                    continue
+                with open('/proc/%d/status' % pid, opener=at) as f:
                     uid = int(next(row for row in f if row.startswith('Uid:')).split()[1])
             except (OSError, ValueError, IndexError, StopIteration):
                 continue
+            finally:
+                os.close(proc)
             found[pid] = (ppid, uid, group, session, since, state)
         return found
 
@@ -568,9 +619,9 @@ class Kit:
                 ppid, uid, group, session, since, state = rows[pid]
                 candidate = uid == os.getuid() and int(since) > self.since and (str(pid), since) not in self.hidden
                 try:
-                    env, cmd = self.details(str(pid), HIDDEN_TRIES if candidate else 1)
+                    env, cmd = self.details(str(pid), HIDDEN_TRIES if candidate else 1, since)
                 except PermissionError:
-                    if state in 'ZX' or not self.running(str(pid)):
+                    if state in 'ZX' or not self.running(str(pid), since):
                         continue
                     self.hidden.add((str(pid), since))
                     env = cmd = None
@@ -580,18 +631,36 @@ class Kit:
                     self.note_marked(pid, group, session, int(since))
                 found[str(pid)] = (ppid, uid, env, cmd, group, int(since))
 
+    # PRIVACY: pin /proc/<pid> and verify its start time through the handle before opening environ.
     @staticmethod
-    def details(pid, tries=HIDDEN_TRIES):
-        for attempt in range(tries):
-            try:
-                with open('/proc/%s/environ' % pid, 'rb') as f:
-                    env = f.read().decode('utf-8', 'replace').split('\0')
-                with open('/proc/%s/cmdline' % pid, 'rb') as f:
-                    return env, f.read().decode('utf-8', 'replace').split('\0')
-            except PermissionError:
-                if attempt == tries - 1:
-                    raise
-                time.sleep(HIDDEN_PAUSE)
+    def details(pid, tries=HIDDEN_TRIES, since=None):
+        proc = os.open('/proc/%s' % pid, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+
+        def at(path, flags):
+            return os.open(os.path.basename(path), flags, dir_fd=proc)
+
+        try:
+            if since is not None:
+                with open('/proc/%s/stat' % pid, opener=at) as f:
+                    fields = f.read().rpartition(')')[2].split()
+                if len(fields) <= 19 or fields[0] in 'ZX' or fields[19] != str(since):
+                    raise ProcessLookupError()
+            for attempt in range(tries):
+                try:
+                    with open('/proc/%s/environ' % pid, 'rb', opener=at) as f:
+                        env = f.read().decode('utf-8', 'replace').split('\0')
+                    with open('/proc/%s/cmdline' % pid, 'rb', opener=at) as f:
+                        return env, f.read().decode('utf-8', 'replace').split('\0')
+                except PermissionError:
+                    if attempt == tries - 1:
+                        with open('/proc/%s/stat' % pid, opener=at) as f:
+                            fields = f.read().rpartition(')')[2].split()
+                        if len(fields) <= 19 or fields[0] in 'ZX':
+                            raise ProcessLookupError()
+                        raise
+                    time.sleep(HIDDEN_PAUSE)
+        finally:
+            os.close(proc)
 
     @staticmethod
     def folder_of(pid, tries=HIDDEN_TRIES):
@@ -604,11 +673,12 @@ class Kit:
                 time.sleep(HIDDEN_PAUSE)
 
     @staticmethod
-    def running(pid):
+    def running(pid, since=None):
         try:
             with open('/proc/%s/stat' % pid) as f:
-                return f.read().rpartition(')')[2].split()[0] not in 'ZX'
-        except OSError:
+                fields = f.read().rpartition(')')[2].split()
+            return fields[0] not in 'ZX' and (since is None or fields[19] == str(since))
+        except (OSError, IndexError):
             return False
 
     def under_run(self, table, pid):
@@ -886,7 +956,8 @@ class Kit:
             else:
                 request = dict(request, effort=a.effort)
         else:
-            kind, v = self.call('start', dict(request, effort=a.effort))
+            kind, v = self.call('start', dict(request, effort=a.effort)) if PROC else \
+                self._watched('start', dict(request, effort=a.effort))
             if kind == 'ok':
                 self.call('stop', {'run': v['run']})
                 return 'fail', 'effort: its can does not list effort, but a start with it was taken'
@@ -1013,7 +1084,8 @@ class Kit:
         env = {k: v for k, v in self.env.items() if k != self.hosts[name]['variable']}
         env[OVERRIDE] = host.origin
         try:
-            kind, v = self.call('start', request, env, canary)
+            kind, v = self.call('start', request, env, canary) if PROC else \
+                self._watched('start', request, env, canary)
             with host.lock:
                 start_posts = [body for line, _, body in host.requests if line.startswith('POST ')]
             if kind == 'ok':
@@ -1211,12 +1283,12 @@ class Kit:
         except OSError:
             return None
 
-    def sampled(self, cmd, request, env=None, canary=None):
+    def _watched(self, cmd, request, env=None, canary=None, watch_canary=None):
         stop = threading.Event()
 
         def watch():
             try:
-                self.scan(canary)
+                self.scan(watch_canary)
             except Exception:
                 self.leak("the kit's process watch failed, so it cannot check the driver")
                 stop.set()
@@ -1234,6 +1306,9 @@ class Kit:
             watcher.join()
             if not failed:
                 watch()
+
+    def sampled(self, cmd, request, env=None, canary=None):
+        return self._watched(cmd, request, env, canary, canary)
 
     def key_check(self, name, entry):
         self.file_check(entry)
