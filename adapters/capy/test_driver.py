@@ -12,6 +12,7 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest import mock
 
 sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -206,6 +207,40 @@ class Driver(unittest.TestCase):
         out = self.refused('start', START, "the key helper refused: the kit's fake host gave no test key")
         self.assertTrue(out['next'].startswith('unset OPENWIZ_HOSTKEY_TEST_ORIGIN'), out)
         self.assertEqual(self.host.requests, [])
+
+    def test_lost_create_replies_leave_time_for_recovery_before_the_kit_timeout(self):
+        capy = module(DRIVER, 'capy_driver')
+        clock = mock.Mock()
+        clock.monotonic.return_value = 0
+        creates = []
+
+        def advance(seconds):
+            clock.monotonic.return_value += seconds
+
+        def helper(argv, *, input, timeout, **kwargs):
+            sent = json.loads(input)
+            status, body = self.host.route(sent['method'], sent['path'], sent.get('body'))
+            if sent['method'] == 'GET':
+                advance(20)
+                return subprocess.CompletedProcess(argv, 0, json.dumps({'status': status, 'body': body}))
+            creates.append(sent['body']['requestId'])
+            advance(timeout)
+            raise subprocess.TimeoutExpired(argv, timeout)
+
+        clock.sleep.side_effect = advance
+        with mock.patch.dict(os.environ, self.env, clear=True), mock.patch.object(capy, 'time', clock), \
+                mock.patch.object(capy, 'STATE', self.env['OPENWIZ_CAPY_STATE']), \
+                mock.patch.object(capy.subprocess, 'run', side_effect=helper):
+            os.environ.pop('CAPY_PROJECT_ID', None)
+            with self.assertRaises(capy.Refused) as failure:
+                capy.create(START)
+
+        self.assertLess(clock.monotonic(), 120)
+        self.assertEqual(len(creates), 2)
+        self.assertEqual(creates[0], creates[1])
+        self.assertEqual(len(self.host.threads), 1)
+        self.assertIn('a thread may have started', failure.exception.args[0])
+        self.assertIn('archive the Capy thread titled OpenWiz: example/site#7', failure.exception.args[1])
 
     def test_a_rate_limited_create_waits_the_seconds_capy_asks_then_sends_it_once_more(self):
         self.use(throttle=[1])
