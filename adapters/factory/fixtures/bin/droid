@@ -4,6 +4,9 @@ import json, os, re, subprocess, sys, time, uuid
 args = sys.argv[1:]
 
 
+HERE = os.path.dirname(os.path.abspath(__file__))
+
+
 def refuse(why):
     print('Error: ' + why, file=sys.stderr)
     sys.exit(1)
@@ -13,7 +16,50 @@ def option(name):
     return args[args.index(name) + 1] if name in args else None
 
 
-home = os.environ['FAKE_FACTORY_HOME']
+def help_text():
+    how = os.environ.get('FAKE_DROID_HELP', '')
+    name = 'exec-help-1.21.1.txt' if how == 'live' else 'exec-help.txt'
+    with open(os.path.join(HERE, '..', name)) as f:
+        text = f.read()
+    if how == 'bare':
+        return text.split('Available Models:')[0]
+    if how == 'no-details':
+        return text.split('Model details:')[0]
+    if how == 'truncated':
+        head, tail = text.split('Model details:\n', 1)
+        return head + 'Model details:\n' + '\n'.join(tail.splitlines()[:2]) + '\n'
+    if how == 'bad-line':
+        return text.replace('supports reasoning: Yes;', 'reasoning:', 1)
+    if how == 'bad-level':
+        return text.replace('supported: [low, medium, high, xhigh]', 'supported: [low, Medium]', 1)
+    if how == 'empty-levels':
+        return text.replace('supported: [low, medium, high, xhigh]', 'supported: []', 1)
+    return text
+
+
+def model_efforts():
+    lines = help_text().splitlines()
+    models, details = {}, {}
+    for heading, target in (('Available Models:', models), ('Model details:', details)):
+        if heading not in lines:
+            continue
+        for row in lines[lines.index(heading) + 1:]:
+            if not row.strip():
+                break
+            if heading == 'Available Models:':
+                m = re.fullmatch(r'  (\S+)\s+(.+?)', row.rstrip())
+                if m:
+                    models[m.group(1)] = re.sub(r' \(default\)$', '', m.group(2))
+            else:
+                m = re.fullmatch(r'  - (.+): supports reasoning: (Yes|No); supported: \[([^\]]*)\]; default: \S+',
+                                 row.rstrip())
+                if m:
+                    details[m.group(1)] = set() if m.group(2) == 'No' else {
+                        w.strip() for w in m.group(3).split(',') if w.strip()}
+    return {mid: details.get(name, set()) for mid, name in models.items()}
+
+
+home = os.environ.get('FAKE_FACTORY_HOME', '')
 if os.environ.get('FAKE_WORKER'):
     while os.getppid() == int(os.environ['FAKE_WORKER']):
         time.sleep(0.01)
@@ -43,6 +89,20 @@ if os.environ.get('FAKE_WORKER'):
     time.sleep(120)
     sys.exit(0)
 
+if os.environ.get('FAKE_DROID_ARGS'):
+    with open(os.environ['FAKE_DROID_ARGS'], 'a') as f:
+        f.write(json.dumps(args) + '\n')
+
+if args == ['exec', '--help']:
+    marker = os.environ.get('FAKE_MARKER', '')
+    if os.environ.get('FAKE_DROID_FAIL') == 'help':
+        refuse('Synthetic help failure ' + marker)
+    if os.environ.get('FAKE_DROID_HELP') == 'stdout-secret':
+        print('Synthetic stdout diagnostic ' + marker, flush=True)
+        sys.exit(1)
+    print(help_text(), end='')
+    sys.exit(0)
+
 if args[:1] != ['exec']:
     refuse('this fake only runs `droid exec`')
 if '--skip-permissions-unsafe' in args or option('--auto') != 'medium' or option('-o') != 'json':
@@ -52,6 +112,9 @@ if os.environ.get('FAKE_SIGNED_OUT'):
 cwd, model = option('--cwd'), option('-m')
 if not cwd or not os.path.isabs(cwd) or not os.path.isdir(cwd) or not model:
     refuse('--cwd needs an absolute folder, and -m a model')
+requested_effort = option('--reasoning-effort')
+if requested_effort is not None and requested_effort not in model_efforts().get(model, set()):
+    refuse('model %s does not support reasoning effort %s' % (model, requested_effort))
 os.makedirs(home, exist_ok=True)
 session = option('-s')
 if session is None:
