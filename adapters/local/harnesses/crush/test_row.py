@@ -51,8 +51,6 @@ with tempfile.TemporaryDirectory() as tmp:
 if allowed.returncode or 'session_id=' not in allowed.stdout or woke.returncode:
     failed += 1
     print('fail allowed lines: start %s wake %s' % (allowed.returncode, woke.returncode))
-# A first turn can fail before crush saves an assistant reply; crush then restores no model for the session, so a
-# wake without --model runs the default model. The row's own wake line must carry the start's model.
 with open(os.path.join(HERE, 'row.json')) as f:
     row = json.load(f)
 fills = {'{prompt}': [WAKE], '{model}': ['synthetic-1'], '{session}': [SID], '{mode}': row['modes']['yolo'],

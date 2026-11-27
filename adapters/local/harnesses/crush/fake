@@ -21,7 +21,6 @@ KIT = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', '..', '..'
 
 
 def holds_credential():
-    # The same check the local driver runs on a start's fields, so a bare key the driver refuses is refused here too.
     try:
         spec = importlib.util.spec_from_loader('openwiz_driver_kit', importlib.machinery.SourceFileLoader(
             'openwiz_driver_kit', KIT))
