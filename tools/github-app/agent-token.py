@@ -249,7 +249,7 @@ def ask_actions(repo, workflow, request, env):
         return "unreachable", None
     deadline = time.monotonic() + ACTIONS_TIMEOUT_S
     nonce = secrets.token_hex(16)
-    run_name = f"openwiz-mint-{nonce}"
+    run_title = f"openwiz-mint-{nonce}"
     dispatch_url = f"{base}/repos/{repo}/actions/workflows/{workflow}/dispatches"
     status, _ = _actions_http("POST", dispatch_url, auth, base, deadline,
                               body={"ref": "main", "inputs": {"request": request.decode("utf-8").strip(),
@@ -265,7 +265,7 @@ def ask_actions(repo, workflow, request, env):
         payload = _parse(raw) if status == 200 else None
         if isinstance(payload, dict) and isinstance(payload.get("workflow_runs"), list):
             for item in payload["workflow_runs"]:
-                if (isinstance(item, dict) and item.get("name") == run_name
+                if (isinstance(item, dict) and item.get("display_title") == run_title
                         and item.get("head_branch") == "main"
                         and item.get("event") == "workflow_dispatch"
                         and type(item.get("id")) is int and item["id"] > 0):
