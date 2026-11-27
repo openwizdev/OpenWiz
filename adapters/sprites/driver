@@ -954,14 +954,17 @@ def sprite_read(name, org):
     except Refused:
         return None
     body, _, code = out.rstrip('\n').rpartition('\n')
-    if code == '404':
-        return False
     try:
         shown = json.loads(body)
-        return shown if code == '200' and (shown.get('name'), shown.get('organization')) == (name, org) and \
-            isinstance(shown.get('id'), str) and shown['id'] else None
-    except (ValueError, AttributeError):
+    except ValueError:
         return None
+    if not isinstance(shown, dict):
+        return None
+    if code == '404':
+        note = (str(shown.get('message', '')) + ' ' + str(shown.get('error', ''))).lower()
+        return False if shown.get('error') == 'not_found' or 'not found' in note else None
+    return shown if code == '200' and (shown.get('name'), shown.get('organization')) == (name, org) and \
+        isinstance(shown.get('id'), str) and shown['id'] else None
 
 
 def sprite_gone(name, org, known):
@@ -991,7 +994,24 @@ def destroy_sprite(name, org, known):
     raise failed
 
 
-def shutdown(run, turns, name, org, known, logs=None):
+def confirm_absent(name, org, allow_404):
+    failed = None
+    for attempt in range(DESTROY_TRIES):
+        shown = sprite_read(name, org)
+        if shown is False and allow_404:
+            return
+        if shown:
+            raise Refused('Sprite %s exists, with no saved id to prove ownership, so it was not destroyed' % name,
+                          'check `sprite api -o %s /sprites/%s` before destroying it yourself' % (org, name))
+        if shown is False:
+            raise Refused('sprite api could not confirm that Sprite %s is gone' % name, 'stop the run again')
+        failed = Refused('sprite api could not confirm whether Sprite %s exists' % name, 'stop the run again')
+        if attempt + 1 < DESTROY_TRIES:
+            time.sleep(DESTROY_RETRY_PAUSE_SECONDS)
+    raise failed
+
+
+def shutdown(run, turns, name, org, known, logs=None, created=True, rollback=False):
     failures = []
     try:
         end(turns + strays(run, {t['supervisor'] for t in turns}), run, turn_logs(run) if logs is None else logs)
@@ -1002,19 +1022,26 @@ def shutdown(run, turns, name, org, known, logs=None):
                                 "end this run's processes by hand: they carry OPENWIZ_RUN=%s" % run))
     if name:
         try:
-            destroy_sprite(name, org, known)
+            if known or rollback:
+                destroy_sprite(name, org, known)
+            else:
+                confirm_absent(name, org, not created)
         except Refused as e:
+            if known or rollback:
+                guidance = ('stop run %s again, or run `sprite destroy -o %s --force %s` yourself, and '
+                            'check `sprite info -o %s %s` says it is not found' % (run, org, name, org, name))
+            else:
+                guidance = ('check `sprite api -o %s /sprites/%s` to verify ownership before destroying it yourself, '
+                            'then stop run %s again' % (org, name, run))
             failures.append(Refused(line('its Sprite %s may still be there, billing storage: %s' % (name, e.args[0])),
-                                    line('stop run %s again, or run `sprite destroy -o %s --force %s` yourself, and '
-                                         'check `sprite info -o %s %s` says it is not found'
-                                         % (run, org, name, org, name))))
+                                    line(guidance)))
     return failures
 
 
 def abandon(run, state, error):
     what = error.args[0] if isinstance(error, Refused) else 'the driver failed: ' + type(error).__name__
     failures = shutdown(run, [], state['sprite'], state['org'], state.get('id'),
-                        [path(run, '%d.log' % len(state['turns']))])
+                        [path(run, '%d.log' % len(state['turns']))], state.get('created', True), rollback=True)
     try:
         saved(run, dict(state, stopped=True))
     except OSError:
@@ -1023,7 +1050,8 @@ def abandon(run, state, error):
 
 
 def unsaved(run, state, now, cmd, log):
-    failures = shutdown(run, [now], state['sprite'] if cmd == 'start' else None, state['org'], state.get('id'), [log])
+    failures = shutdown(run, [now], state['sprite'] if cmd == 'start' else None, state['org'], state.get('id'), [log],
+                        state.get('created', True), rollback=cmd == 'start')
     if failures:
         raise reported('run %s began a turn it could not save, and could not confirm everything ended; its '
                        'outcome is unknown' % run, failures, 'read the ticket for what its agent did')
@@ -1039,16 +1067,16 @@ def start(req):
     lock, settle = pinned_skills(), settle_seconds()
     run = 'sp-' + secrets.token_hex(6)
     name = 'openwiz-' + run
-    state = {'request': req, 'sprite': None, 'session': str(uuid.uuid4()) if req['harness'] == 'claude' else None,
-             'org': org, 'id': None, 'turns': [], 'stopped': False, 'starting': True}
+    state = {'request': req, 'sprite': name, 'session': str(uuid.uuid4()) if req['harness'] == 'claude' else None,
+             'org': org, 'id': None, 'turns': [], 'stopped': False, 'starting': True, 'created': False}
     try:
         saved(run, state)
         os.close(private(path(run, 'lock'), os.O_WRONLY | os.O_CREAT))
     except OSError:
         raise Refused('the driver cannot save runs in its state folder, so nothing was created', UNWRITABLE)
     try:
-        sprite('create', 'check `sprite list -o %s --prefix %s`; if it shows a Sprite, run `sprite destroy -o %s '
-                         '--force %s` yourself, then start again' % (org, name, org, name),
+        sprite('create', 'check `sprite api -o %s /sprites/%s` before destroying, then stop %s and start again'
+                         % (org, name, run),
                ['create', '-o', org, '--skip-console', '--label', LABEL, name], CREATE_WAIT_SECONDS)
     except Refused:
         try:
@@ -1056,7 +1084,7 @@ def start(req):
         except OSError:
             pass
         raise
-    state['sprite'] = name
+    state['created'] = True
     try:
         try:
             saved(run, state)
@@ -1127,7 +1155,8 @@ def stop(run):
         kept = True
     except OSError:
         kept = False
-    failures = shutdown(run, state['turns'], state['sprite'], state['org'], state.get('id'))
+    failures = shutdown(run, state['turns'], state['sprite'], state['org'], state.get('id'),
+                        created=state.get('created', True))
     every_process_ended = not failures
     for name in os.listdir(STATE):
         if name.startswith(run + '.') and (name.endswith('.log') or name.endswith('.sup') and every_process_ended):

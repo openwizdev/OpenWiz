@@ -11,6 +11,7 @@ command uses the default organization, FAKE_SPRITE_DEFAULT_ORG (else example-org
 each optional:
 FAKE_SPRITE_FAIL     comma-separated commands (create, exec, list, destroy, api) that fail; `destroy*1` fails only the
                      first destroy, `exec@2` only the second exec
+FAKE_SPRITE_CREATE_LOST  create creates the Sprite and then exits 1, as a lost CLI response after Fly created it
 FAKE_SPRITE_DESTROY_NOOP  a destroy that answers 0 and leaves the Sprite there
 FAKE_SPRITE_LIST_TRUNCATED  a list whose first page holds none of the Sprites, with has_more set, as a paginated list
 FAKE_SPRITE_API_404  every `sprite api` read answers 404, as a read on a path the API does not route
@@ -122,6 +123,8 @@ def main():
         if not update(create):
             fail('sprite %s already exists' % a[4])
         os.makedirs(home(a[4]))
+        if os.environ.get('FAKE_SPRITE_CREATE_LOST'):
+            fail('lost response after creating %s' % a[4])
         sys.stderr.write('  synthetic progress: creating your sprite\n')
         print('Created sprite %s' % a[4])
     elif len(a) >= 6 and a[:2] == ['exec', '-s'] and a[3] in ('--stdin', '--no-stdin') and a[4] == '--':

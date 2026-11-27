@@ -586,6 +586,63 @@ class Sprites(unittest.TestCase):
         helper = self.home(out, '.openwiz', 'bin', 'openwiz-push')
         self.assertTrue(os.access(helper, os.X_OK), 'start did not install openwiz-push in the Sprite')
 
+    def test_a_create_with_lost_response_keeps_the_name_and_stop_requires_ownership(self):
+        code, err = self.driver('start', REQUEST, FAKE_SPRITE_CREATE_LOST='1')
+        self.assertEqual(code, 1, err)
+        saved_files = [n[:-5] for n in os.listdir(self.env['OPENWIZ_SPRITES_STATE']) if n.endswith('.json')]
+        self.assertEqual(len(saved_files), 1, saved_files)
+        run, name = saved_files[0], 'openwiz-' + saved_files[0]
+        state = self.saved_run({'run': run})
+        self.assertEqual((state['sprite'], state['id'], state.get('created')), (name, None, False))
+        self.assertEqual((list(self.sprites()), self.args('destroy')), ([name], []))
+        self.assertEqual(self.driver('wake', {'run': run})[0], 1)
+        code, err = self.driver('stop', {'run': run})
+        self.assertEqual((code, list(self.sprites()), self.args('destroy')), (1, [name], []), err)
+        self.assertIn('may still be there', err['error'])
+        self.assertIn('no saved id', err['error'])
+        self.assertTrue(self.args('api'))
+        for env in ({'FAKE_SPRITE_FAIL': 'api'}, {'FAKE_SPRITE_ORG_ANSWER': OTHER_ORG}):
+            with self.subTest(env=env):
+                code, err = self.driver('stop', {'run': run}, **env)
+                self.assertEqual((code, list(self.sprites()), self.args('destroy')), (1, [name], []), err)
+        subprocess.run([os.path.join(HERE, 'fixtures', 'bin', 'sprite'), 'destroy', '-o', ORG, '--force', name],
+                       env=self.env, check=True, capture_output=True)
+        self.assertEqual(self.sprites(), {})
+        destroys = len(self.args('destroy'))
+        self.assertEqual(self.driver('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
+        self.assertEqual(len(self.args('destroy')), destroys)
+
+    def test_a_failed_create_before_creation_verifies_absence_on_stop_without_destroying(self):
+        code, err = self.driver('start', REQUEST, FAKE_SPRITE_FAIL='create')
+        self.assertEqual((code, self.sprites(), self.args('destroy')), (1, {}, []), err)
+        saved_files = [n[:-5] for n in os.listdir(self.env['OPENWIZ_SPRITES_STATE']) if n.endswith('.json')]
+        self.assertEqual(len(saved_files), 1, saved_files)
+        run, name = saved_files[0], 'openwiz-' + saved_files[0]
+        state = self.saved_run({'run': run})
+        self.assertEqual((state['sprite'], state['id'], state.get('created')), (name, None, False))
+        code, err = self.driver('stop', {'run': run}, FAKE_SPRITE_FAIL='api')
+        self.assertEqual((code, self.args('destroy')), (1, []), err)
+        self.assertEqual(self.driver('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
+        self.assertEqual(self.args('destroy'), [])
+        self.assertTrue(self.args('api'))
+
+    def test_a_stop_without_a_saved_id_after_create_never_destroys_or_trusts_404(self):
+        code, err = self.driver('start', REQUEST, FAKE_SPRITE_API_404='1')
+        self.assertEqual(code, 1, err)
+        saved_files = [n[:-5] for n in os.listdir(self.env['OPENWIZ_SPRITES_STATE']) if n.endswith('.json')]
+        self.assertEqual(len(saved_files), 1, saved_files)
+        run = saved_files[0]
+        destroys = len(self.args('destroy'))
+        code, err = self.driver('stop', {'run': run}, FAKE_SPRITE_API_404='1')
+        self.assertEqual((code, len(self.args('destroy'))), (1, destroys), err)
+        self.assertIn('may still be there', err['error'])
+
+    def test_readme_names_the_read_to_delete_window_without_promising_never_deleted(self):
+        with open(os.path.join(HERE, 'README.md')) as f:
+            text = f.read()
+        self.assertNotIn('is never destroyed', text)
+        self.assertIn('no id-scoped delete', text)
+
 
 class Push(unittest.TestCase):
     @classmethod
