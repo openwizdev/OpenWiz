@@ -332,6 +332,22 @@ fn the_complete_scenario_prints_the_contracts_first_example() {
 }
 
 #[test]
+fn every_read_id_is_its_place_in_the_reads() {
+    let (doc, _) = complete("read-order");
+    let ids: Vec<&str> = doc["reads"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|r| r["id"].as_str().unwrap())
+        .collect();
+    assert!(!ids.is_empty());
+    assert_eq!(
+        ids,
+        (1..=ids.len()).map(|n| format!("r{n}")).collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn only_the_allowlisted_reads_run_once_each_and_never_room_cli() {
     let mut want: Vec<Vec<String>> = vec![
         words(&["--version"]),
