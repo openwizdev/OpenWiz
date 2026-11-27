@@ -18,9 +18,12 @@ CANT_SET_EFFORT = ("this host can't set effort: remove the effort for this harne
 RUN = {'run': r'run-[0-9a-f]{12}'}
 HARNESS = 'cursor'
 SIGN_IN = 'check your Cursor API key and where you keep it, as adapters/cursor/README.md says'
+# The helper's error texts are fixed and it gives no other sign of whether it sent anything, so these are the openings
+# of every refusal it gives before the network, and of no other; test_driver.py holds them to hostkey.py.
 REFUSED_BEFORE_SENDING = ('no key in either ', 'the key in ', "the kit's fake host gave no test key",
                           'OPENWIZ_HOSTKEY_TEST_ORIGIN is not', 'the helper runs only in', 'native TLS loaded',
-                          'kernel/driver-kit/hosts.json is not', 'the request holds the key', 'host is not in ')
+                          'kernel/driver-kit/hosts.json is not', 'the request holds the key', 'host is not ',
+                          'the input ', 'a key is repeated', 'method is not', 'path ', 'body is not')
 FIX_STATE = 'make OPENWIZ_CURSOR_STATE (or ~/.local/state/openwiz-cursor) a folder you can write'
 
 
@@ -50,6 +53,10 @@ def read(fields):
     return req
 
 
+def plain(text):
+    return ' '.join(re.sub(r'[\x00-\x1f]', ' ', text).split())
+
+
 def api(method, path, body=None):
     request = {'host': HOST, 'method': method, 'path': '/v1' + path}
     if body is not None:
@@ -61,9 +68,10 @@ def api(method, path, body=None):
         assert isinstance(out, dict)
     except (OSError, subprocess.TimeoutExpired, ValueError, AssertionError):
         return None, None
-    if p.returncode and str(out.get('error')).startswith(REFUSED_BEFORE_SENDING):
-        raise Refused('nothing was sent to Cursor: the key helper refused: ' + str(out.get('error')),
-                      str(out.get('next')))
+    error, then = out.get('error'), out.get('next')
+    if p.returncode and isinstance(error, str) and error.startswith(REFUSED_BEFORE_SENDING):
+        raise Refused('nothing was sent to Cursor: the key helper refused: ' + error,
+                      then if isinstance(then, str) and plain(then) else SIGN_IN)
     if p.returncode or type(out.get('status')) is not int:
         return None, None
     return out['status'], out.get('body') if out.get('body') is not None else {}
@@ -163,21 +171,24 @@ def lock(run):
 
 
 def end(agent, known=True):
+    # Answers what Cursor did not confirm, and whether Cursor showed the agent, which proves it was created.
     try:
         return ending(agent, known)
     except Refused as e:
-        return ['ending agent %s (%s)' % (agent, e.args[0].replace('nothing was sent to Cursor: ', ''))]
+        return ['ending agent %s (%s)' % (agent, e.args[0].replace('nothing was sent to Cursor: ', ''))], False
 
 
 def ending(agent, known):
     code, answer = api('GET', '/agents/' + agent)
     if code == 404:
-        return [] if known else ['whether agent %s was ever created (Cursor shows none yet, and a late create is not ruled out)' % agent]
-    if code != 200 or not isinstance(answer, dict):
+        return ([] if known else ['whether agent %s was ever created (Cursor shows none yet, and a late create is not '
+                                  'ruled out)' % agent]), False
+    seen = code == 200 and isinstance(answer, dict)
+    if not seen:
         failed = ['reading agent %s (%s)' % (agent, 'no answer' if code is None else why(code, answer))]
         run = None
     elif answer.get('status') == 'ARCHIVED':
-        return []
+        return [], True
     else:
         failed, run = [], answer.get('latestRunId')
     if isinstance(run, str) and re.fullmatch(r'[A-Za-z0-9_-]{1,100}', run):
@@ -187,7 +198,7 @@ def ending(agent, known):
     code, answer = api('POST', '/agents/%s/archive' % agent)
     if code != 200:
         failed.append('archiving agent %s (%s)' % (agent, 'no answer' if code is None else why(code, answer)))
-    return failed
+    return failed, seen or code == 200
 
 
 def start():
@@ -214,9 +225,9 @@ def start():
         forget(run)
         raise
     if code is None or code >= 500 or code == 409:
-        failed = end(agent, known=False)
+        failed, seen = end(agent, known=False)
         try:
-            saved(run, dict(state, stopped=True))
+            saved(run, dict(state, stopped=True, starting=not seen))
         except OSError:
             pass
         if failed:
@@ -233,7 +244,7 @@ def start():
     try:
         saved(run, dict(state, starting=False, request={k: req[k] for k in ('repository', 'ticket', 'skill')}))
     except OSError:
-        if end(agent):
+        if end(agent)[0]:
             raise Refused('run %s created agent %s but could not save it, nor confirm ending it; its outcome is '
                           'unknown' % (run, agent), 'archive agent %s at cursor.com/agents, and read the ticket for '
                           'what it did, before you start again' % agent)
@@ -282,7 +293,12 @@ def stop():
         kept = True
     except OSError:
         kept = False
-    failed = end(state['agent'], known=not state['starting'])
+    failed, seen = end(state['agent'], known=not state['starting'])
+    if seen and state['starting'] and kept:
+        try:
+            saved(run, dict(state, stopped=True, starting=False))
+        except OSError:
+            pass  # The stop itself is saved; losing this only leaves a later 404 unconfirmed, as before.
     if failed:
         raise Refused('run %s: Cursor did not confirm %s' % (run, '; '.join(failed)),
                       'stop it again, or archive agent %s at cursor.com/agents' % state['agent'])
@@ -311,7 +327,7 @@ def main():
     except Exception as e:
         out, code = {'error': 'the driver failed: ' + type(e).__name__, 'next': 'read its code, fix it, retry'}, 1
     if code:
-        out = {k: ' '.join(v.split())[:300] for k, v in out.items()}
+        out = {k: plain(v)[:300] for k, v in out.items()}
     print(json.dumps(out))
     sys.exit(code)
 
