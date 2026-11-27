@@ -348,12 +348,18 @@ class Conductor(unittest.TestCase):
         self.assertEqual(code, 0, out)
         self.assertEqual([b.get('effort') for b in self.bodies()], sent + [None], 'an effort was not sent as given')
         before = len(self.calls()[0])
-        for harness, level in (('claude', 'ultracode'), ('claude', 'none'), ('codex', 'max'), ('codex', 'ultra'),
-                               ('cursor', 'max'), ('cursor', 'none'), ('pi', 'high'), ('claude', 'minimal')):
+        for harness, level, named in (('claude', 'ultracode', 'harness claude at effort ultracode'),
+                                      ('claude', 'none', 'harness claude at effort none'),
+                                      ('codex', 'max', 'harness codex at effort max'),
+                                      ('codex', 'ultra', 'harness codex at effort ultra'),
+                                      ('cursor', 'max', 'harness cursor at effort max'),
+                                      ('cursor', 'none', 'harness cursor at effort none'),
+                                      ('pi', 'high', 'that harness at effort high'),
+                                      ('claude', 'minimal', 'harness claude at that effort')):
             with self.subTest(harness=harness, effort=level):
                 code, out = self.driver('start', dict(REQUEST, harness=harness, effort=level))
                 self.assertEqual((code, out['next']), (1, CANT_SET_EFFORT), out)
-                self.assertIn('%s at effort %s' % (harness, level), out['error'])
+                self.assertIn(named, out['error'])
                 self.assertIn('nothing was started', out['error'])
         self.assertEqual(len(self.calls()[0]), before, 'a refused effort reached Conductor')
         with open(os.path.join(HERE, 'README.md')) as f:
@@ -362,6 +368,20 @@ class Conductor(unittest.TestCase):
         self.assertEqual((lines[login + 1], lines[login + 2][:18]), ('', 'Effort: passed as '))
         for harness, levels in EFFORTS.items():
             self.assertIn('| `%s` | `effort`, for %s and %s |' % (harness, ', '.join(levels[:-1]), levels[-1]), lines)
+
+    def test_an_effort_refusal_never_repeats_a_value_it_was_sent(self):
+        marker = self.key[:20]
+        for name, request in (('harness', dict(REQUEST, harness=self.key, effort='high')),
+                              ('effort', dict(REQUEST, effort=marker)),
+                              ('both', dict(REQUEST, harness=self.key, effort=marker))):
+            with self.subTest(name):
+                p = subprocess.run([DRIVER, 'start'], input=json.dumps(request), env=self.env, capture_output=True,
+                                   text=True, timeout=120)
+                self.assertNotIn(marker, p.stdout + p.stderr, 'the effort refusal repeated a pasted key')
+                out = json.loads(p.stdout)
+                self.assertEqual((p.returncode, out['next']), (1, CANT_SET_EFFORT), out)
+                self.assertIn('nothing was started', out['error'])
+        self.assertEqual(self.calls()[0], [], 'a refused effort reached Conductor')
 
     def test_the_fleet_caller_sends_one_create_when_the_answer_is_lost(self):
         for n, fault in enumerate(({'lose': True}, {'status': 503}, {'status': 408}), 1):

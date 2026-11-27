@@ -1,0 +1,22 @@
+# Green (review at df6aeca), after the fix: the effort refusal names a harness or an effort only when it is one of the driver's own words, so a key pasted into either field never reaches the output, and next stays driver v1's exact refusal text.
+# Command: env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/conductor/test_driver.py (with the pinned WizSkills installed)
+
+test_a_failed_archive_says_so_and_the_run_stays_stopped (__main__.Conductor.test_a_failed_archive_says_so_and_the_run_stays_stopped) ... ok
+test_a_lost_start_reply_is_never_retried (__main__.Conductor.test_a_lost_start_reply_is_never_retried) ... ok
+test_a_refused_start_starts_nothing_and_says_what_to_do (__main__.Conductor.test_a_refused_start_starts_nothing_and_says_what_to_do) ... ok
+test_a_start_the_helper_refuses_leaves_no_input_in_run_state (__main__.Conductor.test_a_start_the_helper_refuses_leaves_no_input_in_run_state) ... ok
+test_a_stop_conductor_does_not_confirm_never_says_the_run_stopped (__main__.Conductor.test_a_stop_conductor_does_not_confirm_never_says_the_run_stopped) ... ok
+test_an_effort_conductor_takes_reaches_it_and_any_other_is_refused (__main__.Conductor.test_an_effort_conductor_takes_reaches_it_and_any_other_is_refused) ... ok
+test_an_effort_refusal_never_repeats_a_value_it_was_sent (__main__.Conductor.test_an_effort_refusal_never_repeats_a_value_it_was_sent) ... ok
+test_nothing_is_called_without_a_harness_or_a_state_folder (__main__.Conductor.test_nothing_is_called_without_a_harness_or_a_state_folder) ... ok
+test_start_wake_and_stop_reach_one_workspace (__main__.Conductor.test_start_wake_and_stop_reach_one_workspace) ... ok
+test_the_fleet_caller_sends_one_create_when_the_answer_is_lost (__main__.Conductor.test_the_fleet_caller_sends_one_create_when_the_answer_is_lost) ... ok
+test_the_key_reaches_conductor_only_through_the_helper (__main__.Conductor.test_the_key_reaches_conductor_only_through_the_helper) ... ok
+test_the_kit_passes_all_five (__main__.Conductor.test_the_kit_passes_all_five) ... ok
+test_the_readme_revokes_the_key_at_conductor_before_the_local_copy (__main__.Conductor.test_the_readme_revokes_the_key_at_conductor_before_the_local_copy) ... ok
+test_the_scoped_kit_still_sees_a_process_the_run_leaves (__main__.Conductor.test_the_scoped_kit_still_sees_a_process_the_run_leaves) ... ok
+
+----------------------------------------------------------------------
+Ran 14 tests
+
+OK

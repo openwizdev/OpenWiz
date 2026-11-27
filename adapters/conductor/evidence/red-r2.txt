@@ -7,10 +7,10 @@ test_a_refused_start_starts_nothing_and_says_what_to_do (__main__.Conductor.test
 test_a_start_the_helper_refuses_leaves_no_input_in_run_state (__main__.Conductor.test_a_start_the_helper_refuses_leaves_no_input_in_run_state) ... ok
 test_a_stop_conductor_does_not_confirm_never_says_the_run_stopped (__main__.Conductor.test_a_stop_conductor_does_not_confirm_never_says_the_run_stopped) ... FAIL
 test_an_effort_conductor_takes_reaches_it_and_any_other_is_refused (__main__.Conductor.test_an_effort_conductor_takes_reaches_it_and_any_other_is_refused) ... FAIL
-test_nothing_is_called_without_a_harness_or_a_state_folder (__main__.Conductor.test_nothing_is_called_without_a_harness_or_a_state_folder) ... 
+test_nothing_is_called_without_a_harness_or_a_state_folder (__main__.Conductor.test_nothing_is_called_without_a_harness_or_a_state_folder) ...
   test_nothing_is_called_without_a_harness_or_a_state_folder (__main__.Conductor.test_nothing_is_called_without_a_harness_or_a_state_folder) [an effort that is not a word] ... FAIL
 test_start_wake_and_stop_reach_one_workspace (__main__.Conductor.test_start_wake_and_stop_reach_one_workspace) ... ok
-test_the_fleet_caller_sends_one_create_when_the_answer_is_lost (__main__.Conductor.test_the_fleet_caller_sends_one_create_when_the_answer_is_lost) ... 
+test_the_fleet_caller_sends_one_create_when_the_answer_is_lost (__main__.Conductor.test_the_fleet_caller_sends_one_create_when_the_answer_is_lost) ...
   test_the_fleet_caller_sends_one_create_when_the_answer_is_lost (__main__.Conductor.test_the_fleet_caller_sends_one_create_when_the_answer_is_lost) (fault={'lose': True}) ... FAIL
   test_the_fleet_caller_sends_one_create_when_the_answer_is_lost (__main__.Conductor.test_the_fleet_caller_sends_one_create_when_the_answer_is_lost) (fault={'status': 503}) ... FAIL
   test_the_fleet_caller_sends_one_create_when_the_answer_is_lost (__main__.Conductor.test_the_fleet_caller_sends_one_create_when_the_answer_is_lost) (fault={'status': 408}) ... FAIL
@@ -149,7 +149,7 @@ First differing element 1:
     'pass stop: the run ended, and a wake after it is refused',
     'pass token: no login or token passed through the driver, and on start, wake '
     'and stop the conductor key reached its host only from the key helper, in '
-    'its header']) : 
+    'its header']) :
 
 ======================================================================
 FAIL: test_the_readme_revokes_the_key_at_conductor_before_the_local_copy (__main__.Conductor.test_the_readme_revokes_the_key_at_conductor_before_the_local_copy)
