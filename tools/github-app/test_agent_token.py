@@ -2424,7 +2424,7 @@ class ActionsRoute(unittest.TestCase):
                     state["rate_hits"] += 1
                     self.send_json(429, {"message": "rate limited"}, {"Retry-After": "0"})
                     return
-                state["dispatches"].append({"path": self.path, "body": body})
+                state["dispatches"].append({"path": self.path, "body": body, "auth": self.headers.get("Authorization")})
                 req = json.loads(body["inputs"]["request"])
                 state["nonce"] = body["inputs"]["nonce"]
                 state["logs"].append(json.dumps({"requester": req["requester"], "outcome": "minted"}))
@@ -2434,18 +2434,14 @@ class ActionsRoute(unittest.TestCase):
                     raw = make_zip(json.dumps({"schema": "openwiz.token-service.v1", "kind": "answer",
                                                "sealed_token": "A" * 512, "expires_at": int(time.time()) + 3600,
                                                "repositories": ["other/repo"], "permissions": WRITE}))
-                elif state["mode"] == "unopenable":
-                    raw = make_zip(json.dumps({"schema": "openwiz.token-service.v1", "kind": "answer",
-                                               "sealed_token": seal_to(TOKEN, other_pub),
-                                               "expires_at": int(time.time()) + 3600,
-                                               "repositories": [REPO], "permissions": WRITE}))
                 elif state["mode"] == "refusal":
                     raw = make_zip(json.dumps({"schema": "openwiz.token-service.v1", "kind": "refusal",
                                                "refusal": "not-installed",
                                                "message": PIN["refusals"]["not-installed"]["message"]}))
                 else:
+                    key = other_pub if state["mode"] == "unopenable" else req["answer_key"]
                     raw = make_zip(json.dumps({"schema": "openwiz.token-service.v1", "kind": "answer",
-                                               "sealed_token": seal_to(TOKEN, req["answer_key"]),
+                                               "sealed_token": seal_to(TOKEN, key),
                                                "expires_at": int(time.time()) + 3600,
                                                "repositories": [REPO], "permissions": WRITE}))
                 state["zip"] = raw
@@ -2498,6 +2494,10 @@ class ActionsRoute(unittest.TestCase):
 
             def do_DELETE(self):
                 if self.path == f"/repos/{owner_repo}/actions/artifacts/701":
+                    state["delete_attempted"] = True
+                    if state["mode"] == "delete-failed":
+                        self.send_error(500)
+                        return
                     state["deleted"].append(701)
                     self.send_response(204)
                     self.end_headers()
@@ -2523,9 +2523,18 @@ class ActionsRoute(unittest.TestCase):
         return env, state
 
     def test_actions_round_trip_and_deletes_artifact(self):
-        # comment-ok: catches: broken actions dispatch/poll/download/open flow, non-main dispatch,
-        # leaking Authorization on redirect, or forgetting to delete the artifact after download.
+        # comment-ok: catches: wrong-host credentials, broken round trip or main ref, auth on redirect,
+        # or an artifact left behind after download.
         env, state = self.start_fake("ok")
+        gh = self.root / "gh"
+        gh.write_text("#!/bin/sh\n"
+                      'case "$3:$4" in\n'
+                      "  --hostname:github.com) echo synthetic-owner-account-token ;;\n"
+                      "  *) echo synthetic-enterprise-account-token ;;\n"
+                      "esac\n")
+        gh.chmod(0o700)
+        env.update(PATH=f"{self.root}{os.pathsep}{env['PATH']}", GH_HOST="enterprise.example.invalid")
+        env.pop("GH_TOKEN")
         private = self.helper.Private(env, create=True)
         self.addCleanup(os.close, private.fd)
         token, expires_at = self.helper.token_for(private, self.wanted, env)
@@ -2533,17 +2542,19 @@ class ActionsRoute(unittest.TestCase):
         self.assertGreater(expires_at, int(time.time()) + 300)
         self.assertEqual(len(state["dispatches"]), 1)
         self.assertEqual(state["dispatches"][0]["body"]["ref"], "main")
+        self.assertEqual(state["dispatches"][0]["auth"], "Bearer synthetic-owner-account-token")
         self.assertEqual(state["deleted"], [701], "artifact must be deleted after download")
         self.assertEqual(state["redirect_auth"], [None], "Authorization must not cross artifact redirect")
 
     def test_actions_failures_fall_back_with_right_reason(self):
-        # comment-ok: catches: wrong fallback reason or leaked/undeleted artifact on missing run, timeout,
-        # failed run, missing/tampered artifact, unopenable answer, or contract refusal.
+        # comment-ok: catches: wrong fallback or a returned token after a missing/failed run, timeout,
+        # failed deletion, missing/tampered artifact, unopenable answer, or contract refusal.
         cases = [
             ("missing-run", "unreachable", []),
             ("timeout", "unreachable", []),
             ("failed-run", "unreachable", []),
             ("missing-artifact", "unreachable", []),
+            ("delete-failed", "unreachable", []),
             ("tampered-zip", "bad-answer", [701]),
             ("tampered-body", "bad-answer", [701]),
             ("unopenable", "bad-answer", [701]),
@@ -2552,10 +2563,12 @@ class ActionsRoute(unittest.TestCase):
         for mode, expected_reason, expected_deleted in cases:
             with self.subTest(mode):
                 env, state = self.start_fake(mode)
+                env["OPENWIZ_AGENT_TOKEN_DIR"] = str(self.private / mode)
                 private = self.helper.Private(env, create=True)
                 self.addCleanup(os.close, private.fd)
                 err = []
-                with mock.patch.object(self.helper, "ACTIONS_TIMEOUT_S", 0.08), \
+                with mock.patch.object(self.helper, "ACTIONS_TIMEOUT_S",
+                                       0.08 if mode in ("missing-run", "timeout") else 2), \
                         mock.patch.object(self.helper, "ACTIONS_POLL_S", 0.01), \
                         mock.patch.object(self.helper.sys, "stderr",
                                           types.SimpleNamespace(write=err.append)):
@@ -2563,6 +2576,8 @@ class ActionsRoute(unittest.TestCase):
                 self.assertEqual((token, expires_at), (None, None))
                 self.assertEqual("".join(err), NOTE.replace("<reason>", expected_reason) + "\n")
                 self.assertEqual(state["deleted"], expected_deleted)
+                if mode == "delete-failed":
+                    self.assertEqual((state["redirect_auth"], state["delete_attempted"]), ([None], True))
 
     def test_actions_backs_off_on_403_and_429(self):
         # comment-ok: catches: failing immediately on GitHub 403/429 instead of backing off and retrying.
