@@ -1,20 +1,24 @@
 #!/usr/bin/env python3
 # SECURITY: every Conductor call goes through the kit's key helper (driver v1 N4). This file sends it only a host
 # name, a method, a path and a body, never a key or an address, and never reads the key itself.
-import fcntl, json, os, re, secrets, subprocess, sys
+import fcntl, hashlib, json, os, re, secrets, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 HELPER = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'hostkey.py')
 HOST = 'conductor'
 STATE = os.environ.get('OPENWIZ_CONDUCTOR_STATE') or os.path.expanduser('~/.local/state/openwiz-conductor')
 VERSION = {'driver': 'conductor', 'records': ['openwiz:records v1'],
-           'can': ['start', 'wake', 'stop', 'many-at-once', 'own-sandbox']}
+           'can': ['start', 'wake', 'stop', 'many-at-once', 'own-sandbox', 'effort']}
 START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
          'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
          'model': r'(?=.{1,100}$)[A-Za-z0-9][A-Za-z0-9 ._:@+-]*(/[A-Za-z0-9][A-Za-z0-9 ._:@+-]*)*'}
 RUN = {'run': r'run-[0-9a-f]{12}'}
 HARNESSES = ('claude', 'codex', 'cursor')
-EFFORT = re.compile(r'[a-z][a-z0-9-]{0,19}')
+EFFORT = r'[a-z][a-z0-9-]{0,19}'
+# External: the levels the workspace create takes for every model of each agent (codex max and ultra, and claude
+# ultracode, only for some models), in its OpenAPI document /v0/openapi.json, https://www.conductor.build/docs/api
+EFFORTS = {'claude': ('low', 'medium', 'high', 'xhigh', 'max'), 'codex': ('none', 'low', 'medium', 'high', 'xhigh'),
+           'cursor': ('low', 'medium', 'high', 'xhigh')}
 CANT_SET_EFFORT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster "
                    "to run it at the host's default")
 HELPER_REFUSALS_BEFORE_SENDING = ('no key in either ', 'the key in ', "the kit's fake host gave no test key",
@@ -23,6 +27,8 @@ HELPER_REFUSALS_BEFORE_SENDING = ('no key in either ', 'the key in ', "the kit's
                           'the request holds the key', 'path ', 'method is not', 'body is not', 'the input ')
 KEY_NEXT = 'check your Conductor API key, as adapters/conductor/README.md says, then try again'
 SAVE_NEXT = 'make OPENWIZ_CONDUCTOR_STATE (or ~/.local/state/openwiz-conductor) a folder you can write'
+UNKNOWN_NEXT = ('look for workspace %s in Conductor and archive it if it is there, then `driver stop` run %s, '
+                'before you start again: a second start makes a second workspace')
 
 
 class Refused(Exception):
@@ -52,15 +58,11 @@ def read(fields):
         req = json.loads(sys.stdin.read(), object_pairs_hook=unique)
     except ValueError:
         raise Refused('the input is not JSON', 'send one JSON object on stdin, as `driver schema` shows')
-    if fields is START and isinstance(req, dict) and 'effort' in req:
-        word = req['effort'] if isinstance(req['effort'], str) and EFFORT.fullmatch(req['effort']) else \
-            '(not one plain word)'
-        harness = req.get('harness') if req.get('harness') in HARNESSES else '(not a Conductor harness)'
-        raise Refused('Conductor can\'t run harness %s at effort %s: the driver sends Conductor no effort; '
-                      'nothing was started' % (harness, word), CANT_SET_EFFORT)
-    if not isinstance(req, dict) or set(req) != set(fields):
-        raise Refused('the input needs exactly ' + ', '.join(fields), 'send only those fields; never a login')
-    for key, pattern in fields.items():
+    optional = {'effort': EFFORT} if fields is START else {}
+    if not isinstance(req, dict) or not set(fields) <= set(req) <= set(fields) | set(optional):
+        raise Refused('the input needs exactly ' + ', '.join(fields) + (', and optionally effort' if optional else ''),
+                      'send only those fields; never a login')
+    for key, pattern in dict(fields, **{k: v for k, v in optional.items() if k in req}).items():
         v = req[key]
         if not (type(v) is int and v > 0 if pattern is None else isinstance(v, str) and re.fullmatch(pattern, v)):
             raise Refused(key + ' is not valid', 'fix ' + key + ' as `driver schema` shows')
@@ -142,33 +144,58 @@ def forget(run, state):
 
 
 def archive(state):
+    done = []
     for path in ('/v0/sessions/%s/cancel' % state['session'], '/v0/workspaces/%s/archive' % state['workspace']):
         try:
             status, out = api('POST', path)
-            why = said(status, out)
+            done.append((200 <= status < 300, said(status, out)))
         except (Unsent, Lost) as e:
-            status, why = 0, e.args[0]
-    return 200 <= status < 300, why
+            done.append((False, e.args[0]))
+    return done
+
+
+def hold(run, state):
+    os.makedirs(STATE, mode=0o700, exist_ok=True)
+    fd = os.open(os.path.join(STATE, 'starts.lock'), os.O_RDONLY | os.O_CREAT, 0o600)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        for entry in sorted(os.listdir(STATE)):
+            try:
+                with open(os.path.join(STATE, entry)) as f:
+                    other = json.load(f) if entry.endswith('.json') else None
+            except (OSError, ValueError):
+                continue
+            if isinstance(other, dict) and other.get('starting') is True and other.get('asked') == state['asked']:
+                raise Refused('run %s\'s start of this ticket may have made workspace %s in Conductor; its outcome is '
+                              'still unknown, so nothing was sent' % (entry[:-5], other.get('name')),
+                              UNKNOWN_NEXT % (other.get('name'), entry[:-5]))
+        saved(run, state)
+    finally:
+        os.close(fd)
 
 
 def start():
     req, run = read(START), 'run-' + secrets.token_hex(6)
     name = 'openwiz-' + run
+    if 'effort' in req and req['effort'] not in EFFORTS.get(req['harness'], ()):
+        raise Refused('Conductor can\'t run harness %s at effort %s; nothing was started'
+                      % (req['harness'], req['effort']), CANT_SET_EFFORT)
     if req['harness'] not in HARNESSES:
         raise Refused('Conductor runs no such harness; nothing was started',
                       'use one of: ' + ', '.join(HARNESSES))
-    state = {'name': name, 'workspace': None, 'session': None, 'starting': True, 'stopped': False,
-             'archived': False}
+    state = {'name': name, 'asked': hashlib.sha256(json.dumps(req, sort_keys=True).encode()).hexdigest(),
+             'workspace': None, 'session': None, 'starting': True, 'stopped': False, 'archived': False}
     try:
-        saved(run, state)
+        hold(run, state)
     except OSError:
         raise Refused('the driver cannot save runs in its state folder; nothing was started', SAVE_NEXT)
     nothing = dict(state, starting=False, stopped=True, archived=True)
     body = {'repositoryUrl': 'https://github.com/' + req['repository'], 'name': name, 'agent': req['harness'],
             'model': req['model'], 'message': message(req, False)}
+    if 'effort' in req:
+        body['effort'] = req['effort']
     unknown = Refused('Conductor may have made workspace %s for run %s, but its answer was lost; its outcome is '
-                      'unknown' % (name, run), 'look for workspace %s in Conductor and archive it if it is there, '
-                      'before you start again: a second start makes a second workspace' % name)
+                      'unknown' % (name, run), UNKNOWN_NEXT % (name, run))
     # External: a start is never retried, because every POST /v0/workspaces makes a new workspace,
     # https://www.conductor.build/docs/api
     try:
@@ -193,7 +220,7 @@ def start():
     try:
         saved(run, started)
     except OSError:
-        if archive(started)[0]:
+        if archive(started)[1][0]:
             raise Refused('run %s made workspace %s but could not save it, so the driver archived it; its outcome is '
                           'unknown' % (run, ids[0]), 'read the ticket for what its agent did before you start again')
         raise Refused('run %s made workspace %s but could not save it, and could not archive it; its outcome is '
@@ -203,6 +230,10 @@ def start():
 
 
 def wake(run, state):
+    if state['stopped'] and not state['archived']:
+        raise Refused('run %s is being stopped, and Conductor has not confirmed it, so its session may still be '
+                      'working; nothing was sent' % run, 'stop it again, or archive workspace %s in Conductor '
+                      'yourself' % (state['workspace'] or state['name']))
     if state['stopped']:
         raise Refused('run %s is stopped' % run, 'start a new run')
     if state['starting']:
@@ -229,17 +260,28 @@ def stop(run, state):
     if state['archived']:
         return {'run': run, 'stopped': True}
     if state['workspace'] is None:
-        raise Refused('run %s never got its workspace id from Conductor, so the driver cannot stop it' % run,
-                      'look for workspace %s in Conductor and archive it' % state['name'])
+        try:
+            saved(run, dict(state, starting=False, stopped=True))
+        except OSError:
+            raise Refused('run %s never got its workspace id from Conductor, and the driver could not save that it '
+                          'was stopped' % run, SAVE_NEXT + ', then stop it again')
+        raise Refused('run %s never got its workspace id from Conductor, so the driver cannot stop it; it no longer '
+                      'holds back a new start of its ticket' % run,
+                      'look for workspace %s in Conductor and archive it if it is there' % state['name'])
     try:
         saved(run, dict(state, stopped=True))
         kept = True
     except OSError:
         kept = False
-    archived, why = archive(state)
+    (cancelled, cancel_why), (archived, archive_why) = archive(state)
     if not archived:
-        raise Refused('run %s is stopped, but Conductor did not archive workspace %s (%s)'
-                      % (run, state['workspace'], line(why, 120)),
+        raise Refused(('run %s has not stopped: Conductor cancelled session %s\'s turn but did not archive workspace '
+                       '%s (%s), so the workspace still runs' % (run, state['session'], state['workspace'],
+                                                                 line(archive_why, 80))) if cancelled else
+                      ('run %s may still be working: Conductor did not cancel session %s (%s) or archive workspace '
+                       '%s (%s)' % (run, state['session'], line(cancel_why, 60), state['workspace'],
+                                    line(archive_why, 60))),
+                      ('the driver will not wake it; ' if kept else SAVE_NEXT + '; then ') +
                       'stop it again, or archive workspace %s in Conductor yourself' % state['workspace'])
     try:
         saved(run, dict(state, stopped=True, archived=True))

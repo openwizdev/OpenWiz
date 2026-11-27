@@ -2,18 +2,24 @@
 
 Login: held by Conductor
 
-Effort: the host can't set it (the driver's `POST /v0/workspaces` call sends `agent`, `model` and a message, and no effort setting). A start that carries `effort` is refused, and nothing starts.
+Effort: passed as the `effort` setting of the driver's `POST /v0/workspaces` call, for the harnesses and levels in the table below: the levels Conductor's OpenAPI document (`/v0/openapi.json`) accepts for every model of that agent. Any other harness or level (such as Codex `max` or `ultra`, or Claude `ultracode`, which only some models take) is refused with driver v1's refusal text, and nothing starts; a start without an effort runs at Conductor's default.
+
+| Harness | Effort |
+| --- | --- |
+| `claude` | `effort`, for low, medium, high, xhigh and max |
+| `codex` | `effort`, for none, low, medium, high and xhigh |
+| `cursor` | `effort`, for low, medium, high and xhigh |
 
 - The Conductor API key is your own `CONDUCTOR_API_KEY`, or the keychain entry `openwiz-conductor` when that variable is unset.
-- OpenWiz never stores it. Remove it from your environment or keychain to revoke it.
+- OpenWiz never stores it. To revoke it, delete it on Conductor's API keys page first (the [API docs](https://www.conductor.build/docs/api#try-it) link it), then remove it from your environment or keychain: removing only your copy leaves the key working at Conductor.
 
 A [driver v1](../../kernel/driver.v1.md) that runs each builder in its own [Conductor](https://www.conductor.build) cloud workspace, through Conductor's API (beta, `/v0`). One Python file, standard library only. **Platforms:** Linux and macOS, Python 3.9 or later. Runs are saved in `$OPENWIZ_CONDUCTOR_STATE` (default `~/.local/state/openwiz-conductor`), owner-only.
 
 | Command | What it does on Conductor |
 | --- | --- |
-| `start` | `POST /v0/workspaces` with `repositoryUrl` (`https://github.com/<repository>`), `name` (`openwiz-<run>`, which also names the branch), `agent` (the `harness`), `model` and the first message: the ticket and the skill. It answers once Conductor has made the workspace and its session. **Never retried:** every start makes a new workspace, so when the answer is lost the driver says the outcome is unknown and names the workspace to look for. |
+| `start` | `POST /v0/workspaces` with `repositoryUrl` (`https://github.com/<repository>`), `name` (`openwiz-<run>`, which also names the branch), `agent` (the `harness`), `model`, `effort` when the start has one, and the first message: the ticket and the skill. It answers once Conductor has made the workspace and its session. **Never retried:** every start makes a new workspace, so when the answer is lost the driver says the outcome is unknown and names the workspace to look for. Until you `stop` that run, the same start (a caller's retry included) is refused and sends nothing. |
 | `wake` | `POST /v0/sessions/<session>/messages`: the same agent, in the same session, reads its ticket again and edits its own status note. Sent while the agent works, Conductor steers the message into the running turn, so there is never a second agent. |
-| `stop` | `POST /v0/sessions/<session>/cancel`, then `POST /v0/workspaces/<workspace>/archive`, which stops the workspace's machine (Conductor can restore it later). If Conductor doesn't confirm the archive, the run stays stopped and the answer names the workspace to archive yourself. |
+| `stop` | `POST /v0/sessions/<session>/cancel`, then `POST /v0/workspaces/<workspace>/archive`, which stops the workspace's machine (Conductor can restore it later). If Conductor doesn't confirm the archive, the answer says the run has not stopped (and, when the cancel failed too, that its session may still be working) and names the workspace to archive yourself; the run is never woken again. A run whose start never got its workspace id can't be stopped this way: `stop` says so, and the run no longer holds back a new start. |
 
 `harness` is one of Conductor's agents: `claude`, `codex` or `cursor`. `model` is one of Conductor's model ids for that agent (such as `opus-5-5-1m` or `gpt-6.2-sol`; the OpenAPI document at `/v0/openapi.json` lists them), passed on unchanged. `version` adds `many-at-once` and `own-sandbox` to `can`: every run gets its own cloud workspace.
 
@@ -26,7 +32,7 @@ A [driver v1](../../kernel/driver.v1.md) that runs each builder in its own [Cond
 
 1. A Conductor Pro account with Conductor Cloud, its GitHub App on your repositories, and each repository you run on added to your organization's Cloud Computer.
 2. In Conductor, add the subscription or API key of each agent you use (Settings, Agents), and install the WizSkills skills your fleet runs on the Cloud Computer, so the agent can follow its skill and post its status note.
-3. Create a Conductor API key (the [API docs](https://www.conductor.build/docs/api) say where), and set it as the variable or the keychain entry named at the top of this file. In the keychain, store it as a password whose service is that entry's name (macOS Keychain, or the Secret Service on Linux).
+3. Create a Conductor API key on Conductor's API keys page (the [API docs](https://www.conductor.build/docs/api#try-it) link it), and set it as the variable or the keychain entry named at the top of this file. In the keychain, store it as a password whose service is that entry's name (macOS Keychain, or the Secret Service on Linux).
 
 Conductor bills nothing for model usage: each agent's own account does. Each workspace runs until it is stopped, sleeps or is archived.
 

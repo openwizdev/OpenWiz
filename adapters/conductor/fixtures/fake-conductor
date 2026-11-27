@@ -4,6 +4,8 @@ import http.server, json, os, re, sys, threading, time
 TRACKER, LOG, FAULTS, KEY_FILE, STATE = sys.argv[1:6]
 KEY_PATH = '/.openwiz/hostkey-test-key'
 state = {'workspaces': {}, 'sessions': {}}
+EFFORTS = {'claude': ('low', 'medium', 'high', 'xhigh', 'max', 'ultracode'),
+           'codex': ('none', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra'), 'cursor': ('low', 'medium', 'high', 'xhigh')}
 
 
 def note(session, skill, woken):
@@ -28,8 +30,9 @@ def note(session, skill, woken):
 def call(method, path, body):
     ws, ss = state['workspaces'], state['sessions']
     if method == 'POST' and path == '/v0/workspaces':
-        if not isinstance(body, dict) or set(body) != {'repositoryUrl', 'name', 'agent', 'model', 'message'} or \
-                body['agent'] not in ('claude', 'codex', 'cursor'):
+        if not isinstance(body, dict) or not {'repositoryUrl', 'name', 'agent', 'model', 'message'} <= set(body) <= \
+                {'repositoryUrl', 'name', 'agent', 'model', 'message', 'effort'} or body['agent'] not in EFFORTS or \
+                body.get('effort', 'low') not in EFFORTS[body['agent']]:
             return 400, {'code': 'invalid_request', 'userMessage': 'Invalid request body.'}
         wid, sid = 'ws_fake%04d' % (len(ws) + 1), 'se_fake%04d' % (len(ss) + 1)
         ws[wid] = {'name': body['name'], 'repositoryUrl': body['repositoryUrl'], 'agent': body['agent'],
