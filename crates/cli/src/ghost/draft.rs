@@ -1,10 +1,3 @@
-//! Draft tier for `openwiz.ghost.v1`.
-//!
-//! [`serve`] speaks stdio JSON lines for `turns` and `draft`. Settings are one
-//! JSON object, `{"cli": "<absolute path>"}`, naming the user's own harness
-//! program. GS2 (#3150) calls this when its server dispatches those routes.
-//! A draft is only returned. Nothing is sent and nothing is written.
-
 use std::fmt;
 use std::fs;
 use std::io::{self, BufRead, Read, Write};

@@ -122,7 +122,6 @@ impl Engine {
 impl Drop for Engine {
     fn drop(&mut self) {
         let _ = self.to.flush();
-        // Closing the pipe end is the drop of `to` after this function replaces it.
         let _ = std::mem::replace(&mut self.to, std::io::pipe().expect("pipe").1);
         if let Some(handle) = self.serve.take() {
             let _ = handle.join();

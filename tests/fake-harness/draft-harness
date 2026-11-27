@@ -1,7 +1,4 @@
 #!/usr/bin/python3 -I
-"""Synthetic draft harness: one JSON prompt on stdin, one JSON object on stdout.
-Sibling files of argv[0] (.log, .hold, .go, .fail) belong to the test.
-"""
 import json
 import os
 import sys
@@ -20,7 +17,6 @@ def pairs(items):
 
 
 def net_count():
-    """Socket fds of this process. The net tables are shared by the machine."""
     total = 0
     try:
         names = os.listdir("/proc/self/fd")
