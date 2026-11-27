@@ -1,14 +1,4 @@
 #!/usr/bin/env python3
-"""Offline comparison of the previous decision with a Jev-shaped one.
-
-Recorded answers live in fixtures/. They are not live model output. With
---live and TYPESAFE_API_KEY set, each case is also sent to
-POST /v1/systemone and those counts are printed separately.
-
-  python3 -I tools/typesafe/bench.py
-  TYPESAFE_API_KEY=... python3 -I tools/typesafe/bench.py --live
-"""
-
 import json
 import sys
 from pathlib import Path

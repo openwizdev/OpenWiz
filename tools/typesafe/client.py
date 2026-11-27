@@ -1,18 +1,3 @@
-"""TypeSafe System One client for Jev.
-
-The documented call is POST https://api.typesafe.ai/v1/systemone with
-Authorization: Bearer <key>. The key is read only from the environment
-variable TYPESAFE_API_KEY. This module never logs the key or puts it in
-an error message.
-
-Model id jev-1.14.0 is the version jev-latest pointed at when this was
-written (docs.typesafe.ai/models). A pinned id keeps a threshold from
-moving when the alias does. Output tokens are free; input is $0.042 per
-million tokens. The docs publish no latency SLO. A call that fails, or
-takes longer than the timeout, raises TypeSafeError so the caller can
-keep its previous behaviour.
-"""
-
 import json
 import os
 import urllib.error
@@ -26,12 +11,10 @@ TIMEOUT_S = 10
 
 
 class TypeSafeError(Exception):
-    """A call that did not return a usable answer. The message is a fixed word."""
+    pass
 
 
 class SystemOne:
-    """The small interface every caller uses. Tests pass a fake."""
-
     def system_one(self, state, questions, model=MODEL):
         raise NotImplementedError
 
@@ -88,8 +71,6 @@ class HttpClient(SystemOne):
 
 
 class FakeClient(SystemOne):
-    """Returns a canned response, or raises, and records the call. No network."""
-
     def __init__(self, answers=None, error=None, model=MODEL):
         self._answers = answers
         self._error = error
@@ -116,12 +97,15 @@ def _urlopen(url, body, headers, timeout):
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             return resp.status, resp.read()
     except urllib.error.HTTPError as e:
-        # Read and drop the body so a proxy error page cannot surface later.
-        try:
-            e.read()
-        except Exception:
-            pass
+        _discard_error_page(e)
         return e.code, b''
+
+
+def _discard_error_page(error):
+    try:
+        error.read()
+    except Exception:
+        pass
 
 
 def noul(response, name):
@@ -133,7 +117,6 @@ def noul(response, name):
 
 
 def choice(response, name):
-    """The chosen name, its probability, and the answer's confidence."""
     answer = _answer(response, name, 'choice')
     name_of = answer.get('choice')
     probabilities = answer.get('probabilities')
@@ -149,7 +132,6 @@ def choice(response, name):
 
 
 def score(response, name):
-    """The position, its confidence, the level probabilities, and the legend."""
     answer = _answer(response, name, 'score')
     value = answer.get('score')
     confidence = answer.get('confidence')
@@ -167,7 +149,6 @@ def score(response, name):
 
 
 def box(response, name):
-    """The four edges as fractions of the image, and the answer's confidence."""
     answer = _answer(response, name, 'box')
     edges = answer.get('box')
     confidence = answer.get('confidence')

@@ -1,13 +1,3 @@
-"""Judge one skills-eval reply with two Nouls, or leave it for the JSON judge.
-
-Pass and fail are yes/no judgments, so each factor is a Noul. The two
-questions go out in one request. The weights and the pass/fail cutoffs
-live in tools/typesafe/config.json. A Noul in the uncertain band, a
-weighted result between the cutoffs, a missing key, or any error keeps
-the prompt-and-parse judge. Jev returns no sentence, so the reason is a
-criterion string from that config.
-"""
-
 import sys
 from pathlib import Path
 
@@ -51,7 +41,6 @@ def try_jev(rubric, final, ask=None):
 
 
 def parse_model_text(text):
-    """The existing judge: a JSON object with verdict and a non-empty reason, or None."""
     import json
     try:
         parsed = json.loads(text)
