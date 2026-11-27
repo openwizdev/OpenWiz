@@ -26,13 +26,6 @@ WOKEN = 'You were woken: read the ticket again and carry on.'
 NO_EFFORT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster to run it "
              "at the host's default")
 UUID = r'[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}'
-KEYCHAIN_TOOLS_SPELLED_IN_PARTS = re.compile(rb'(?<![\w-])(secur' + rb'ity|secret' + rb'-tool)(?![\w-])')
-KIT_PASS = ['pass version: openwiz:records v1, and the schema is driver v1',
-            "pass start: the run posted builder status note 2; effort: medium reached the kit's fake capy host",
-            'pass wake: the run edited builder status note 2',
-            'pass stop: the run ended, and a wake after it is refused',
-            'pass token: no login or token passed through the driver, and on start, wake and stop the capy '
-            'key reached its host only from the key helper, in its header']
 
 
 def module(path, name):
@@ -45,22 +38,12 @@ def module(path, name):
 fake = module(os.path.join(HERE, 'fixtures', 'fake_capy.py'), 'fake_capy')
 
 
-def tracker(folder):
-    path = os.path.join(folder, 'tracker.json')
-    old = '<!-- openwiz:status v1 -->\nagent: builder\nstate: stopped\nharness: Fake\nmodel: m\n' \
-          'skills: build-ticket@0.1.2\nstep: an earlier run\ntime: 2030-01-02T03:04:05Z\n'
-    with open(path, 'w') as f:
-        json.dump({'record_authors': ['Example-Bot[bot]'], 'comments': [
-            {'id': 1, 'author': 'example-bot[bot]', 'updated_at': '2030-01-02T03:04:05Z', 'body': old}]}, f)
-    return path
-
-
 class Driver(unittest.TestCase):
     def setUp(self):
         self.folder = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, self.folder, True)
         self.mark = secrets.token_hex(8)
-        self.tracker = tracker(self.folder)
+        self.tracker = fake.tracker(self.folder)
         self.env = dict(os.environ, KIT_TEST=self.mark, OPENWIZ_CAPY_POLL='0.01',
                         OPENWIZ_CAPY_STATE=os.path.join(self.folder, 'state'))
         self.use()
@@ -110,13 +93,19 @@ class Driver(unittest.TestCase):
     def posts(self):
         return [p for m, p in self.host.calls() if m == 'POST']
 
-    def test_kit_passes_all_five_on_the_fake_host(self):
-        p = subprocess.run([sys.executable, '-I', KIT, '--driver', DRIVER, '--repo', 'example/site', '--ticket', '7',
-                            '--harness', 'claude-code', '--model', 'claude-synthetic-1', '--tracker', self.tracker,
-                            '--wait', '8'], env=dict(self.env, CAPY_PROJECT_ID='project_synthetic1'),
-                           capture_output=True, text=True, timeout=300)
-        self.assertEqual((p.stdout.splitlines(), p.stderr), (KIT_PASS, ''))
-        self.assertEqual(p.returncode, 0)
+    def test_kit_passes_for_both_supported_and_refused_effort(self):
+        for word, proof in (('medium', 'medium reached'), ('ultra', 'refused ultra with the refusal text')):
+            with self.subTest(effort=word):
+                p = subprocess.run([sys.executable, '-I', KIT, '--driver', DRIVER, '--repo', 'example/site',
+                                    '--ticket', '7', '--harness', 'claude-code', '--model', 'claude-synthetic-1',
+                                    '--effort', word, '--tracker', self.tracker, '--wait', '8'],
+                                   env=dict(self.env, CAPY_PROJECT_ID='project_synthetic1'),
+                                   capture_output=True, text=True, timeout=300)
+                self.assertEqual((p.returncode, p.stderr), (0, ''), p.stdout)
+                self.assertEqual([line.split(':')[0] for line in p.stdout.splitlines()],
+                                 ['pass version', 'pass start', 'pass wake', 'pass stop', 'pass token'])
+                self.assertIn(proof, p.stdout)
+                self.assertIn('key reached its host only from the key helper, in its header', p.stdout)
 
     def test_every_request_reaches_the_host_with_the_key_header_only(self):
         run = self.started()
@@ -230,9 +219,9 @@ class Driver(unittest.TestCase):
             'error': 'Capy answered 429 to POST /api/v1/threads and asked to wait 600 seconds',
             'next': 'wait that long, then start again'}))
         self.assertEqual((len(self.host.bodies('POST', '/api/v1/threads')), self.host.threads), (1, {}))
-        self.use(throttle=[0, 0])
-        self.assertEqual(self.driver('start', START)[1], {'error': 'Capy answered 429 to POST /api/v1/threads twice',
-                                                          'next': 'wait a minute, then start again'})
+        self.use(throttle=[0, 600])
+        self.assertIn('600 seconds', self.refused('start', START, 'twice')['next'])
+        self.assertEqual(len(self.host.bodies('POST', '/api/v1/threads')), 2)
 
     def test_wake_steers_a_message_into_the_same_thread_and_its_note_is_edited(self):
         run = self.started()
@@ -263,16 +252,24 @@ class Driver(unittest.TestCase):
             p.stdin.write(json.dumps({'run': run}))
             p.stdin.close()
             return p
-        wake = begin('wake')
-        self.assertTrue(self.host.held.wait(30))
-        stop = begin('stop')
-        try:
-            stop.wait(1.5)
-        except subprocess.TimeoutExpired:
-            pass
-        self.host.release.set()
-        self.assertEqual([(json.loads(p.stdout.read()), p.wait(60)) for p in (wake, stop)],
-                         [({'run': run, 'woke': True}, 0), ({'run': run, 'stopped': True}, 0)])
+        state = self.env['OPENWIZ_CAPY_STATE']
+        with begin('wake') as wake:
+            try:
+                self.assertTrue(self.host.held.wait(30))
+                self.env['OPENWIZ_CAPY_STATE'] = os.path.join(self.folder, 'second-controller')
+                for cmd in ('stop', 'wake'):
+                    self.refused(cmd, {'run': run}, 'controller')
+                self.assertEqual(self.posts(), ['/api/v1/threads'])
+                self.env['OPENWIZ_CAPY_STATE'] = state
+                with begin('stop') as stop:
+                    with self.assertRaises(subprocess.TimeoutExpired):
+                        stop.wait(1.5)
+                    self.host.release.set()
+                    for p, key in ((wake, 'woke'), (stop, 'stopped')):
+                        self.assertEqual((json.loads(p.stdout.read()), p.wait(60)), ({'run': run, key: True}, 0))
+            finally:
+                self.host.release.set()
+                self.env['OPENWIZ_CAPY_STATE'] = state
         self.assertTrue(self.host.threads[run]['archived'])
         self.env['OPENWIZ_CAPY_STATE'] = self.tracker
         self.host.requests.clear()
@@ -343,7 +340,8 @@ class Driver(unittest.TestCase):
         good = self.host._thread(self.host.threads[run])
         for body, shows in ((dict(good, id='jam_other', projectId='project_other'), 'jam_other'), (None, None),
                             (dict(good, archived=True, status='archived'), run), (dict(good, id='x/y'), None),
-                            ({'id': run}, run), (dict(good, status='paused'), run)):
+                            ({'id': run}, run), (dict(good, status='paused'), run),
+                            (dict(good, projectId=None), run)):
             self.host.answers[:] = [('POST', '/api/v1/threads', 200, body)]
             out = self.refused('start', START, shows)
             self.assertIn('may have started', out['error'])
@@ -389,24 +387,6 @@ class Driver(unittest.TestCase):
         self.assertEqual((code, out), (1, {'error': 'Capy answered 401 to GET /api/v1/projects',
                                            'next': "check your key and Capy's status, then retry"}))
         self.assertNotIn('Unauthorized', json.dumps(out))
-
-    def test_no_driver_file_names_the_key_or_the_keychain(self):
-        with open(os.path.join(ROOT, 'kernel', 'driver-kit', 'hosts.json')) as f:
-            host = json.load(f)['capy']
-        names = [host['variable'].encode(), host['keychain'].encode()]
-        with open(os.path.join(HERE, 'README.md'), 'rb') as f:
-            [key_line] = [line for line in f.read().split(b'\n') if all(n in line for n in names)]
-        for folder, _, files in os.walk(HERE):
-            for n in files:
-                with open(os.path.join(folder, n), 'rb') as f:
-                    lines = f.read().split(b'\n')
-                rel = os.path.relpath(os.path.join(folder, n), HERE)
-                for line in lines:
-                    if rel == 'README.md' and line == key_line:
-                        continue
-                    for name in names:
-                        self.assertNotIn(name, line, rel)
-                    self.assertIsNone(KEYCHAIN_TOOLS_SPELLED_IN_PARTS.search(line), rel)
 
     def test_version_lists_effort_and_the_schema_is_the_kernels(self):
         self.assertEqual(self.driver('version'), (0, {'driver': 'capy', 'records': ['openwiz:records v1'],

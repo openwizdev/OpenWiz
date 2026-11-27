@@ -36,6 +36,16 @@ def tag(name, **fields):
     return dict({'_tag': 'capy/' + name}, **fields)
 
 
+def tracker(folder):
+    path = os.path.join(folder, 'tracker.json')
+    old = '<!-- openwiz:status v1 -->\nagent: builder\nstate: stopped\nharness: Fake\nmodel: m\n' \
+          'skills: build-ticket@0.1.2\nstep: an earlier run\ntime: 2030-01-02T03:04:05Z\n'
+    with open(path, 'w') as f:
+        json.dump({'record_authors': ['Example-Bot[bot]'], 'comments': [
+            {'id': 1, 'author': 'example-bot[bot]', 'updated_at': '2030-01-02T03:04:05Z', 'body': old}]}, f)
+    return path
+
+
 class FakeCapy:
 
     def __init__(self, key, tracker, projects=PROJECTS, models=MODELS, lose_creates=0, served_key=None, answers=(),
