@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+import errno
+import importlib.machinery
+import importlib.util
 import json
 import os
 import shlex
@@ -9,6 +12,7 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest import mock
 
 sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -291,6 +295,123 @@ class SshDriver(unittest.TestCase):
         self.addCleanup(self.reap, sleeper.pid)
         subprocess.run(['sh', '-c', remote[0]], timeout=10)
         self.assertIsNotNone(sleeper.poll())
+
+    def driver(self):
+        loader = importlib.machinery.SourceFileLoader('ssh_driver', DRIVER)
+        module = importlib.util.module_from_spec(importlib.util.spec_from_loader('ssh_driver', loader))
+        loader.exec_module(module)
+        return module
+
+    def left(self):
+        state = self.env['OPENWIZ_SSH_STATE']
+        return sorted(os.listdir(state)) if os.path.isdir(state) else []
+
+    def test_a_bad_target_is_refused_before_ssh_starts(self):
+        for target in ('', 'vps.example', 'builder@', '@vps.example', '-oProxyCommand=id@vps.example',
+                       'builder@-vps.example', 'builder@vps..example', 'builder@vps.example -p 2',
+                       'builder@vps.example;id', 'builder@vps.example\nHost *'):
+            with self.subTest(target=target):
+                code, out = self.call('start', START, OPENWIZ_SSH_TARGET=target)
+                self.assertEqual(code, 1, out)
+                self.assertEqual(out['error'], 'OPENWIZ_SSH_TARGET must be user@host')
+                self.assertFalse(os.path.exists(self.log))
+                self.assertEqual(self.left(), [])
+
+    def test_a_bad_argument_template_is_refused_before_ssh_starts(self):
+        for raw in ('not json', '"{prompt}"', '{"a": "{prompt}"}', '[]', '["-p"]', '["{prompt}", "{prompt}"]',
+                    '["{prompt}", 7]', '["{prompt}", ""]', '["{prompt}", "{effort}"]', '["{Prompt}", "{prompt}"]',
+                    '["{prompt}", "a\\nb"]', '["{prompt}", "a\\u0000b"]'):
+            with self.subTest(raw=raw):
+                code, out = self.call('start', START, OPENWIZ_SSH_ARGS=raw)
+                self.assertEqual(code, 1, out)
+                self.assertTrue(out['error'].startswith('OPENWIZ_SSH_ARGS '), out)
+                self.assertFalse(os.path.exists(self.log))
+                self.assertEqual(self.left(), [])
+
+    def test_a_custom_template_fills_each_placeholder_as_one_argument(self):
+        code, out = self.call('start', dict(START, model='synthetic model'), OPENWIZ_SSH_HOLD='30',
+                              OPENWIZ_SSH_ARGS=json.dumps(['run', '--model={model}', '{model}', '-s', '{session}',
+                                                           '{prompt}']))
+        self.assertEqual(code, 0, out)
+        self.addCleanup(self.call, 'stop', {'run': out['run']})
+        row = self.logged()[0]
+        self.assertEqual(shlex.split(row[row.index('--') + 1]), [
+            'env', 'OPENWIZ_SSH_RUN=' + out['run'], 'fake-harness', 'run', '--model={model}', 'synthetic model',
+            '-s', out['run'], 'Build the ticket: example/site#7, with the build-ticket skill.'])
+
+    def test_a_state_folder_that_cannot_be_written_is_refused_as_json(self):
+        blocked = os.path.join(self.folder, 'blocked')
+        open(blocked, 'w').close()
+        for cmd, request in (('start', START), ('wake', {'run': 'run-0123456789ab'}),
+                             ('stop', {'run': 'run-0123456789ab'})):
+            with self.subTest(cmd=cmd):
+                code, out = self.call(cmd, request, OPENWIZ_SSH_STATE=os.path.join(blocked, 'state'))
+                self.assertEqual(code, 1, out)
+                self.assertIsInstance(out, dict, out)
+                self.assertEqual(set(out), {'error', 'next'})
+                self.assertFalse(os.path.exists(self.log))
+
+    def test_stop_spares_a_process_whose_environment_only_mentions_the_run(self):
+        code, out = self.call('start', START, OPENWIZ_SSH_HOLD='30')
+        self.assertEqual(code, 0, out)
+        run = out['run']
+        decoy = subprocess.Popen(['sleep', '60'], start_new_session=True, env={
+            'PATH': '/usr/bin:/bin', 'DECOY': 'OPENWIZ_SSH_RUN=' + run, 'OPENWIZ_SSH_RUN': run + '0'})
+        self.addCleanup(self.reap, decoy.pid)
+        code, stopped = self.call('stop', {'run': run})
+        self.assertEqual(code, 0, stopped)
+        self.assertIsNone(decoy.poll())
+
+    @unittest.skipUnless(hasattr(os, 'waitid') and os.path.isdir('/proc'), 'needs waitid and /proc')
+    def test_an_ssh_that_exits_at_once_keeps_its_start_so_a_reused_pid_does_not_block_wake(self):
+        other = subprocess.Popen(['sleep', '60'], start_new_session=True)
+        self.addCleanup(self.reap, other.pid)
+        real = subprocess.Popen
+
+        def exits_at_once(argv, **options):
+            process = real(['true'], **options)
+            os.waitid(os.P_PID, process.pid, os.WEXITED | os.WNOWAIT)
+            return process
+
+        with mock.patch.dict(os.environ, self.env):
+            driver = self.driver()
+            with mock.patch.object(driver.subprocess, 'Popen', exits_at_once):
+                record = driver.launch(['ssh'])
+        self.assertTrue(record['start'], record)
+        run = 'run-0123456789ab'
+        os.makedirs(self.env['OPENWIZ_SSH_STATE'])
+        with open(os.path.join(self.env['OPENWIZ_SSH_STATE'], run + '.json'), 'w') as handle:
+            json.dump({'request': START, 'stopped': False, 'pids': [dict(record, pid=other.pid)]}, handle)
+        code, woke = self.call('wake', {'run': run}, OPENWIZ_SSH_HOLD='30')
+        self.addCleanup(self.call, 'stop', {'run': run})
+        self.assertEqual(code, 0, woke)
+        self.assertEqual(len(self.logged()), 1)
+        self.assertIsNone(other.poll())
+
+    def test_a_stop_that_cannot_save_still_ends_the_run_on_the_vps(self):
+        code, out = self.call('start', START, OPENWIZ_SSH_HOLD='30')
+        self.assertEqual(code, 0, out)
+        run = out['run']
+        with open(os.path.join(self.env['OPENWIZ_SSH_STATE'], run + '.json')) as handle:
+            pid = json.load(handle)['pids'][0]['pid']
+        self.addCleanup(self.reap, pid)
+        state = os.path.realpath(self.env['OPENWIZ_SSH_STATE'])
+        real = tempfile.mkstemp
+        full = OSError(errno.ENOSPC, 'No space left on device')
+
+        def mkstemp(*args, **options):
+            if os.path.realpath(options.get('dir') or tempfile.gettempdir()) == state:
+                raise full
+            return real(*args, **options)
+
+        with mock.patch.dict(os.environ, self.env):
+            driver = self.driver()
+            with mock.patch.object(driver, 'write_json', side_effect=full), \
+                    mock.patch.object(driver.tempfile, 'mkstemp', mkstemp), self.assertRaises(driver.Refused) as refused:
+                driver.stop(run)
+        self.assertIn('could not save that it is stopped', refused.exception.args[0])
+        self.assertIn('kill -TERM', json.dumps(self.lines(2)))
+        self.assertFalse(self.running(pid))
 
     def test_kit_passes_all_five(self):
         process = subprocess.run([sys.executable, '-I', os.path.join(KIT, 'kit.py'), '--driver', DRIVER,
