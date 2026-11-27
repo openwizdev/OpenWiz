@@ -296,7 +296,7 @@ def running(turn, run):
 
 
 def legacy_turns(turns):
-    return isinstance(turns, list) and bool(turns) and any(not isinstance(t, dict) for t in turns)
+    return isinstance(turns, list) and bool(turns) and all(type(t) is int for t in turns)
 
 
 def format_pids(pids):
