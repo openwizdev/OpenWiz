@@ -5,9 +5,21 @@ Effort: passed as each harness's own flag, as the table below says, on the start
 
 | Harness | Effort (`claude`'s levels as its `--help` lists them, `codex`'s as its configuration reference does, since `codex exec --help` lists none; both recorded in `fixtures/help/`) |
 | --- | --- |
-| `claude` | `--effort <level>`, with `CLAUDE_CODE_EFFORT_LEVEL` set to the same level (it outranks the flag), for `low`, `medium`, `high`, `xhigh` and `max` |
-| `codex` | `codex exec -c model_reasoning_effort=<level>`, for `low`, `medium`, `high`, `xhigh`, `max` and `ultra` |
-| a harness row | its row's `effort` form ([harness-row.md](harness-row.md), section 4): the levels its row maps, as its README's `Effort:` line says; a row whose form is `none` can't |
+| `claude` | `--effort <level>`, for low, medium, high, xhigh and max, with `CLAUDE_CODE_EFFORT_LEVEL` set to the same level (it outranks the flag) |
+| `codex` | `codex exec -c model_reasoning_effort=<level>`, for low, medium, high, xhigh, max and ultra |
+| `agy` | `--effort <level>`, for low, medium, high, xhigh and max, at start and at each wake ([its row](harnesses/agy/README.md)) |
+| `amp` | `--effort <level>`, for none, minimal, low, medium, high, xhigh and max, with the model from `--model`, at start only ([its row](harnesses/amp/README.md)) |
+| `auggie` | can't: its row's effort is none ([why](harnesses/auggie/README.md)) |
+| `copilot` | can't: its row's effort is none ([why](harnesses/copilot/README.md)) |
+| `gemini` | can't: its row's effort is none ([why](harnesses/gemini/README.md)) |
+| `goose` | can't: its row's effort is none ([why](harnesses/goose/README.md)) |
+| `junie` | can't: its row's effort is none ([why](harnesses/junie/README.md)) |
+| `kilo` | can't: its row's effort is none ([why](harnesses/kilo/README.md)) |
+| `kimi` | can't: its row's effort is none ([why](harnesses/kimi/README.md)) |
+| `oz` | can't: its row's effort is none ([why](harnesses/oz/README.md)) |
+| `pi` | can't: its row's effort is none ([why](harnesses/pi/README.md)) |
+| `qwen` | can't: its row's effort is none ([why](harnesses/qwen/README.md)) |
+| a row not listed above | its row's `effort` form ([harness-row.md](harness-row.md), section 4), as its README's `Effort:` line says; until its line is added here, the kit run against this driver can't read its effort and fails `start` |
 | any other harness | can't (the driver runs no other harness) |
 
 Both CLIs say the levels a model takes depend on the model, and Claude Code runs a level a model doesn't support at the highest one below it; the driver passes exactly the level it was sent and can't see a model's own list. `ultracode` is not passed: `claude --help` doesn't list it, and Claude Code documents it as a mode that runs at `xhigh`, not an effort level.
