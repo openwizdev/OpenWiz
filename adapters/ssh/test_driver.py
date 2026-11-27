@@ -364,8 +364,6 @@ class SshDriver(unittest.TestCase):
 
     @unittest.skipUnless(hasattr(os, 'waitid') and os.path.isdir('/proc'), 'needs waitid and /proc')
     def test_an_ssh_that_exits_at_once_keeps_its_start_so_a_reused_pid_does_not_block_wake(self):
-        other = subprocess.Popen(['sleep', '60'], start_new_session=True)
-        self.addCleanup(self.reap, other.pid)
         real = subprocess.Popen
 
         def exits_at_once(argv, **options):
@@ -378,6 +376,9 @@ class SshDriver(unittest.TestCase):
             with mock.patch.object(driver.subprocess, 'Popen', exits_at_once):
                 record = driver.launch(['ssh'])
         self.assertTrue(record['start'], record)
+        time.sleep(0.05)
+        other = subprocess.Popen(['sleep', '60'], start_new_session=True)
+        self.addCleanup(self.reap, other.pid)
         run = 'run-0123456789ab'
         os.makedirs(self.env['OPENWIZ_SSH_STATE'])
         with open(os.path.join(self.env['OPENWIZ_SSH_STATE'], run + '.json'), 'w') as handle:

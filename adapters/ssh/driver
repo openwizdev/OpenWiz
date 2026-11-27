@@ -99,14 +99,13 @@ def include_path(path):
     return '"' + path + '"'
 
 
-def client_config(run):
-    ensure()
+def client_config(run, folder):
     lines = []
     for path in (os.path.expanduser('~/.ssh/config'), '/etc/ssh/ssh_config'):
         if os.path.isfile(path):
             lines.append('Include ' + include_path(path))
     lines.extend(['Match final', '    SendEnv -*', ''])
-    descriptor, path = tempfile.mkstemp(prefix=run + '.', suffix='.ssh-config', dir=STATE)
+    descriptor, path = tempfile.mkstemp(prefix=run + '.', suffix='.ssh-config', dir=folder)
     os.chmod(path, 0o600)
     with os.fdopen(descriptor, 'w') as handle:
         handle.write('\n'.join(lines))
@@ -119,14 +118,21 @@ def command(req, run, woken):
     mapping = {'{prompt}': prompt, '{model}': req['model'], '{session}': run}
     remote = [mapping.get(arg, arg) for arg in argument_template()]
     parts = ['env', 'OPENWIZ_SSH_RUN=%s' % run, req['harness']] + remote
-    argv = ['ssh', '-F', client_config(run), '-o', 'BatchMode=yes', '-o', 'ClearAllForwardings=yes',
-            '-o', 'ForwardAgent=no', destination(), '--', ' '.join(shlex.quote(part) for part in parts)]
-    secrets_found = secret_values()
-    if leaked(parts, secrets_found) or leaked(argv, secrets_found):
-        raise Refused('the ssh command would carry a secret from the environment',
-                      'take it out of OPENWIZ_SSH_ARGS and the brief; pass secrets only in the environment on the VPS')
+    return ssh_argv(run, STATE, ' '.join(shlex.quote(part) for part in parts), parts)
+
+
+def ssh_argv(run, folder, remote, parts):
+    target = destination()
     if not shutil.which('ssh'):
         raise Refused('ssh is not installed', 'install ssh, then start again')
+    config = client_config(run, folder)
+    argv = ['ssh', '-F', config, '-o', 'BatchMode=yes', '-o', 'ClearAllForwardings=yes',
+            '-o', 'ForwardAgent=no', target, '--', remote]
+    found = secret_values()
+    if leaked(parts, found) or leaked(argv, found):
+        os.remove(config)
+        raise Refused('the ssh command would carry a secret from the environment',
+                      'take it out of OPENWIZ_SSH_ARGS and the brief; pass secrets only in the environment on the VPS')
     return argv
 
 
@@ -177,9 +183,7 @@ def look(pid):
             return False, None
         except (OSError, IndexError):
             return None, None
-        if state in 'ZX':
-            return False, None
-        return True, start
+        return state not in 'ZX', start
     try:
         done = subprocess.run(['ps', '-p', str(pid), '-o', 'lstart='], stdin=subprocess.DEVNULL,
                               capture_output=True, text=True, timeout=5)
@@ -209,21 +213,10 @@ def ours(record):
 
 
 def marked(run):
-    needle = ('OPENWIZ_SSH_RUN=%s' % run).encode()
-    found = []
     if not os.path.isdir('/proc'):
-        return found
-    for name in os.listdir('/proc'):
-        if not name.isdigit() or int(name) == os.getpid():
-            continue
-        try:
-            with open('/proc/%s/environ' % name, 'rb') as handle:
-                env = handle.read()
-        except OSError:
-            continue
-        if needle in env:
-            found.append(int(name))
-    return found
+        return []
+    return [int(name) for name in os.listdir('/proc')
+            if name.isdigit() and int(name) not in (1, os.getpid()) and carries(int(name), run)]
 
 
 def launch(argv):
@@ -233,15 +226,13 @@ def launch(argv):
     except OSError as error:
         raise Refused('ssh did not start: %s' % (error.strerror or 'unknown'),
                       'check ssh and OPENWIZ_SSH_TARGET')
-    alive, start = look(process.pid)
-    return {'pid': process.pid, 'start': start if alive else None}
+    return {'pid': process.pid, 'start': look(process.pid)[1]}
 
 
 def carries(pid, run):
-    needle = ('OPENWIZ_SSH_RUN=%s' % run).encode()
     try:
         with open('/proc/%d/environ' % pid, 'rb') as handle:
-            return needle in handle.read()
+            return ('OPENWIZ_SSH_RUN=%s' % run).encode() in handle.read().split(b'\0')
     except OSError:
         return False
 
@@ -267,20 +258,15 @@ def remote_stop(run):
         'for pid in $hits; do kill -KILL "$pid" 2>/dev/null || true; done'
     )
     command = ' '.join(shlex.quote(part) for part in ('sh', '-c', script, 'sh', marker))
-    argv = ['ssh', '-F', client_config(run + '-stop'), '-o', 'BatchMode=yes',
-            '-o', 'ClearAllForwardings=yes', '-o', 'ForwardAgent=no', destination(), '--', command]
-    if leaked([command], secret_values()) or leaked(argv, secret_values()):
-        raise Refused('the ssh command would carry a secret from the environment',
-                      'take it out of OPENWIZ_SSH_ARGS and the brief; pass secrets only in the environment on the VPS')
-    if not shutil.which('ssh'):
-        raise Refused('ssh is not installed', 'install ssh, then start again')
-    try:
-        done = subprocess.run(argv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                              stderr=subprocess.DEVNULL, timeout=30, start_new_session=True)
-    except subprocess.TimeoutExpired:
-        raise Refused('the VPS did not finish ending run %s' % run, 'check the VPS, then stop the run again')
-    except OSError as error:
-        raise Refused('ssh did not start: %s' % (error.strerror or 'unknown'), 'check ssh and OPENWIZ_SSH_TARGET')
+    with tempfile.TemporaryDirectory() as folder:
+        argv = ssh_argv(run + '-stop', folder, command, [command])
+        try:
+            done = subprocess.run(argv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                  stderr=subprocess.DEVNULL, timeout=30, start_new_session=True)
+        except subprocess.TimeoutExpired:
+            raise Refused('the VPS did not finish ending run %s' % run, 'check the VPS, then stop the run again')
+        except OSError as error:
+            raise Refused('ssh did not start: %s' % (error.strerror or 'unknown'), 'check ssh and OPENWIZ_SSH_TARGET')
     if done.returncode != 0:
         raise Refused('the VPS did not end run %s' % run, 'check the VPS, then stop the run again')
 
@@ -288,7 +274,7 @@ def remote_stop(run):
 def end(run, records):
     for sig, pause in ((signal.SIGTERM, 0.2), (signal.SIGKILL, 0.2)):
         victims = {record['pid'] for record in records if isinstance(record, dict) and ours(record) is True}
-        victims |= {pid for pid in marked(run) if pid > 1 and carries(pid, run)}
+        victims |= set(marked(run))
         sent = False
         for pid in victims:
             if pid <= 1:
@@ -395,6 +381,9 @@ def main():
             raise Refused('unknown command', 'run one of: version, schema, start, wake, stop')
     except Refused as error:
         return fail(error)
+    except OSError as error:
+        return fail(Refused('the driver could not use a file: %s' % (error.strerror or 'unknown'),
+                            'make OPENWIZ_SSH_STATE and the temporary folder writable, then try again'))
     return 0
 
 
